@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Debug Subscription</title>
+</head>
+
+<body>
+    <h1>Debug Push Subscription</h1>
+    <button id="testBtn">Test Subscription</button>
+    <pre id="output"></pre>
+
+    <script>
+        document.getElementById('testBtn').addEventListener('click', async () => {
+            try {
+                const registration = await navigator.serviceWorker.register('/sw.js');
+
+                // VAPID key - replace with your actual key
+                const vapidKey = 'BLnmUvRO8yAC1nszPgEHZQn-QfZOlh2G3Qj3Zt9AzKw';
+
+                function urlBase64ToUint8Array(base64String) {
+                    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+                    const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                    const rawData = window.atob(base64);
+                    const outputArray = new Uint8Array(rawData.length);
+                    for (let i = 0; i < rawData.length; ++i) {
+                        outputArray[i] = rawData.charCodeAt(i);
+                    }
+                    return outputArray;
+                }
+
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(vapidKey)
+                });
+
+                const subscriptionData = {
+                    endpoint: subscription.endpoint,
+                    keys: {
+                        auth: subscription.getKey('auth') ? btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('auth')))) : '',
+                        p256dh: subscription.getKey('p256dh') ? btoa(String.fromCharCode(...new Uint8Array(subscription.getKey('p256dh')))) : ''
+                    }
+                };
+
+                document.getElementById('output').textContent = JSON.stringify(subscriptionData, null, 2);
+                console.log('Subscription data:', subscriptionData);
+
+            } catch (error) {
+                document.getElementById('output').textContent = 'Error: ' + error.message;
+                console.error('Error:', error);
+            }
+        });
+    </script>
+</body>
+
+</html>

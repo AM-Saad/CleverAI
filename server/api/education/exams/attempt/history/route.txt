@@ -1,0 +1,48 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireRole } from '@/lib/auth';
+import prisma from '@/lib/prisma';
+
+export async function GET(request: NextRequest) {
+  const token = await requireRole(request, ['TEACHER', 'STUDENT']);
+  if (token instanceof NextResponse) return token;
+  const { searchParams } = new URL(request.url);
+  const studentId = searchParams.get('studentId');
+  const examId = searchParams.get('examId');
+  const analytics = searchParams.get('analytics') === 'true';
+
+  let where: any = {};
+  if (token.role === 'STUDENT') {
+    where.studentId = token.id;
+  } else {
+    if (studentId) where.studentId = studentId;
+    if (examId) where.examId = examId;
+  }
+
+  const attempts = await prisma.examAttempt.findMany({
+    where,
+    include: {
+      exam: { include: { lesson: true } },
+      student: { select: { id: true, name: true, phone: true, grade: true } },
+    },
+    orderBy: { startedAt: 'desc' },
+  });
+
+  if (!analytics) {
+    return NextResponse.json(attempts);
+  }
+
+  // Analytics summary
+  const scores = attempts.map((a: any) => a.score ?? 0);
+  const total = attempts.length;
+  const average = total ? scores.reduce((a: number, b: number) => a + b, 0) / total : 0;
+  const best = total ? Math.max(...scores) : null;
+  const worst = total ? Math.min(...scores) : null;
+
+  return NextResponse.json({
+    total,
+    average,
+    best,
+    worst,
+    attempts,
+  });
+}

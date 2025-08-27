@@ -1,0 +1,95 @@
+// import { NextRequest, NextResponse } from 'next/server';
+// import { requireRole } from '@/lib/auth';
+// import prisma from '@/lib/prisma';
+
+// // GET: List chapters (students: filtered by grade, teachers: all their chapters)
+// export async function GET(request: NextRequest) {
+//   const token = await requireRole(request, ['TEACHER', 'STUDENT']);
+//   if (token instanceof NextResponse) return token;
+
+//   let chapters;
+//   if (token.role === 'STUDENT') {
+//     // Students: only chapters for their grade
+//     chapters = await prisma.chapter.findMany({
+//       where: { grade: token.grade },
+//       orderBy: { createdAt: 'desc' },
+//     });
+//   } else {
+//     // Teachers: only their chapters
+//     chapters = await prisma.chapter.findMany({
+//       where: { teacherId: token.id },
+//       orderBy: { createdAt: 'desc' },
+//     });
+//   }
+//   return NextResponse.json(chapters);
+// }
+
+// // POST: Create a new chapter (TEACHER only, order required and unique)
+// export async function POST(request: NextRequest) {
+//   const token = await requireRole(request, ['TEACHER']);
+//   if (token instanceof NextResponse) return token;
+//   const data = await request.json();
+//   const { title, grade, description, metadata, order } = data;
+//   if (!title || !grade || typeof order !== 'number') {
+//     return NextResponse.json({ error: 'Title, grade, and order are required.' }, { status: 400 });
+//   }
+//   // Check for unique order
+//   const existing = await prisma.chapter.findUnique({ where: { order } });
+//   if (existing) {
+//     return NextResponse.json({ error: 'Chapter order must be unique.' }, { status: 409 });
+//   }
+//   const chapter = await prisma.chapter.create({
+//     data: {
+//       title,
+//       grade,
+//       description,
+//       metadata,
+//       order,
+//       teacherId: token.id,
+//     },
+//   });
+//   return NextResponse.json(chapter, { status: 201 });
+// }
+
+// // PATCH: Update a chapter (TEACHER only, cannot update order)
+// export async function PATCH(request: NextRequest) {
+//   const token = await requireRole(request, ['TEACHER']);
+//   if (token instanceof NextResponse) return token;
+//   const data = await request.json();
+//   const { id, title, grade, description, metadata, order } = data;
+//   if (!id) {
+//     return NextResponse.json({ error: 'Chapter id is required.' }, { status: 400 });
+//   }
+//   if (typeof order !== 'undefined') {
+//     return NextResponse.json({ error: 'Chapter order cannot be updated.' }, { status: 400 });
+//   }
+//   // Only allow updating chapters owned by the teacher
+//   const chapter = await prisma.chapter.updateMany({
+//     where: { id, teacherId: token.id },
+//     data: { title, grade, description, metadata },
+//   });
+//   if (chapter.count === 0) {
+//     return NextResponse.json({ error: 'Chapter not found or not authorized.' }, { status: 404 });
+//   }
+//   return NextResponse.json({ message: 'Chapter updated.' });
+// }
+
+
+// // DELETE: Delete a chapter (TEACHER only)
+// export async function DELETE(request: NextRequest) {
+//   const token = await requireRole(request, ['TEACHER']);
+//   if (token instanceof NextResponse) return token;
+//   const data = await request.json();
+//   const { id } = data;
+//   if (!id) {
+//     return NextResponse.json({ error: 'Chapter id is required.' }, { status: 400 });
+//   }
+//   // Only allow deleting chapters owned by the teacher
+//   const chapter = await prisma.chapter.deleteMany({
+//     where: { id, teacherId: token.id },
+//   });
+//   if (chapter.count === 0) {
+//     return NextResponse.json({ error: 'Chapter not found or not authorized.' }, { status: 404 });
+//   }
+//   return NextResponse.json({ message: 'Chapter deleted.' });
+// }

@@ -1,0 +1,130 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireRole } from '@/lib/auth';
+import prisma from '@/lib/prisma';
+
+function isTimedOut(attempt: any, exam: any) {
+  if (!exam.timed || !exam.duration) return false;
+  const started = new Date(attempt.startedAt).getTime();
+  const now = Date.now();
+  return now > started + exam.duration * 60 * 1000;
+}
+
+// POST /start: Start an exam attempt
+export async function POST(request: NextRequest) {
+  const token = await requireRole(request, ['STUDENT']);
+  if (token instanceof NextResponse) return token;
+  const { examId } = await request.json();
+  console.log('Attempt creation request', { studentId: token.id, examId });
+  if (!examId) {
+    console.log('Missing examId');
+    return NextResponse.json({ error: 'examId is required.' }, { status: 400 });
+  }
+  // Check if student has unlocked the lesson for this exam
+  const exam = await prisma.exam.findUnique({ where: { id: examId }, include: { lesson: true } });
+  if (!exam) {
+    console.log('Exam not found', examId);
+    return NextResponse.json({ error: 'Exam not found.' }, { status: 404 });
+  }
+  const lessonUnlock = await prisma.lessonUnlock.findFirst({ where: { studentId: token.id, lessonId: exam.lessonId } });
+  if (!lessonUnlock) {
+    console.log('Lesson not unlocked', { studentId: token.id, lessonId: exam.lessonId });
+    return NextResponse.json({ error: 'You have not unlocked this lesson.' }, { status: 403 });
+  }
+  // Only one active attempt per student per exam
+  const activeAttempt = await prisma.examAttempt.findFirst({ where: { studentId: token.id, examId, status: 'in_progress' } });
+  if (activeAttempt) {
+    console.log('Active attempt exists', activeAttempt.id);
+    return NextResponse.json({ error: 'You already have an active attempt for this exam.', attemptId: activeAttempt.id }, { status: 409 });
+  }
+  const attempt = await prisma.examAttempt.create({
+    data: {
+      studentId: token.id,
+      examId,
+      answers: {},
+      status: 'in_progress',
+      startedAt: new Date(),
+      timedOut: false,
+    },
+  });
+  console.log('Created attempt', attempt);
+  // Return first question and attempt object
+  const questions = await prisma.question.findMany({ where: { examId }, orderBy: { createdAt: 'asc' } });
+  return NextResponse.json({ attempt, question: questions[0], questionIndex: 0, totalQuestions: questions.length });
+}
+
+// POST /answer: Submit answer for current question (with timeout check)
+export async function PATCH(request: NextRequest) {
+  const token = await requireRole(request, ['STUDENT']);
+  if (token instanceof NextResponse) return token;
+  const { attemptId, questionId, answer } = await request.json();
+  if (!attemptId || !questionId) {
+    return NextResponse.json({ error: 'attemptId and questionId are required.' }, { status: 400 });
+  }
+  const attempt = await prisma.examAttempt.findUnique({ where: { id: attemptId } });
+  if (!attempt || attempt.studentId !== token.id) return NextResponse.json({ error: 'Not authorized.' }, { status: 403 });
+  if (attempt.status !== 'in_progress') return NextResponse.json({ error: 'Exam is not in progress.' }, { status: 409 });
+  const exam = await prisma.exam.findUnique({ where: { id: attempt.examId } });
+  if (isTimedOut(attempt, exam)) {
+    // Auto-submit
+    await autoSubmitExamAttempt(attempt, exam, true);
+    return NextResponse.json({ error: 'Time is up. Exam auto-submitted.' }, { status: 410 });
+  }
+  // Get questions in order
+  const questions = await prisma.question.findMany({ where: { examId: attempt.examId }, orderBy: { createdAt: 'asc' } });
+  const answers = attempt.answers || {};
+  // Find current question index
+  const currentIndex = questions.findIndex(q => q.id === questionId);
+  if (currentIndex === -1) return NextResponse.json({ error: 'Invalid question.' }, { status: 400 });
+  // Enforce step-based: must answer current question (next unanswered)
+  const nextUnansweredIndex = questions.findIndex((q, i) => !(q.id in answers));
+  if (currentIndex !== nextUnansweredIndex) {
+    return NextResponse.json({ error: 'You must answer questions in order.' }, { status: 409 });
+  }
+  // Save answer
+  answers[questionId] = answer;
+  await prisma.examAttempt.update({ where: { id: attemptId }, data: { answers } });
+  // Return next question or signal end
+  if (currentIndex + 1 < questions.length) {
+    return NextResponse.json({ nextQuestion: questions[currentIndex + 1], questionIndex: currentIndex + 1, totalQuestions: questions.length });
+  } else {
+    return NextResponse.json({ message: 'All questions answered. Please submit the exam.' });
+  }
+}
+
+// POST /submit: Submit the exam (with timeout check)
+export async function PUT(request: NextRequest) {
+  const token = await requireRole(request, ['STUDENT']);
+  if (token instanceof NextResponse) return token;
+  const { attemptId } = await request.json();
+  if (!attemptId) return NextResponse.json({ error: 'attemptId is required.' }, { status: 400 });
+  const attempt = await prisma.examAttempt.findUnique({ where: { id: attemptId } });
+  if (!attempt || attempt.studentId !== token.id) return NextResponse.json({ error: 'Not authorized.' }, { status: 403 });
+  if (attempt.status !== 'in_progress') return NextResponse.json({ error: 'Exam is not in progress.' }, { status: 409 });
+  const exam = await prisma.exam.findUnique({ where: { id: attempt.examId } });
+  if (isTimedOut(attempt, exam)) {
+    await autoSubmitExamAttempt(attempt, exam, true);
+    return NextResponse.json({ error: 'Time is up. Exam auto-submitted.' }, { status: 410 });
+  }
+  await autoSubmitExamAttempt(attempt, exam, false);
+  return NextResponse.json({ message: 'Exam submitted.' });
+}
+
+async function autoSubmitExamAttempt(attempt: any, exam: any, timedOut: boolean) {
+  const questions = await prisma.question.findMany({ where: { examId: attempt.examId } });
+  const answers = attempt.answers || {};
+  let score = 0;
+  for (const q of questions as any[]) {
+    if (q.type === 'MULTIPLE_CHOICE' && answers[q.id] && q.correctAnswer && answers[q.id] === q.correctAnswer) {
+      score++;
+    }
+  }
+  await prisma.examAttempt.update({
+    where: { id: attempt.id },
+    data: {
+      status: timedOut ? 'timed_out' : 'submitted',
+      submittedAt: new Date(),
+      score,
+      timedOut,
+    },
+  });
+}

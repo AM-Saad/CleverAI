@@ -1,0 +1,264 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+/* @import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap"); */
+@import url("https://fonts.cdnfonts.com/css/helvetica-neue-55");
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+body {
+  /* font-family: "Source Sans 3", sans-serif; */
+  font-family: "Helvetica Neue", sans-serif;
+  background-color: #fff;
+}
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  outline: none;
+}
+a {
+  outline: none;
+}
+
+a:not(.btn):focus-visible {
+  outline: 2px solid #fe9548;
+  -moz-outline-radius: 8px;
+  outline-style: ridge;
+}
+    .blur {
+        --tw-blur: blur(8px)
+    }
+
+.effect {
+    -webkit-backdrop-filter: url(#filter);
+    backdrop-filter: url(#filter);
+    background: light-dark(hsl(0 0% 100%/var(--frost,0)),hsl(0 0% 0%/var(--frost,0)));
+    box-shadow: inset 0 0 0px 0px light-dark( color-mix(in oklch, canvasText, #00000000 5%), color-mix(in oklch, canvasText, #ff0000 5%)), inset 0 0 10px 1px light-dark( color-mix(in oklch, canvasText, #0000 90%), color-mix(in oklch, canvasText, #0000 95%)), 0 4px 16px #11111a00, 0 0px 0px #11111a0d, 0 -1px 11px #0000ff00, inset 0 0px 19px #ffffff00, inset 0 0px 1px #11111a0d, inset 0 2px 5px #ffffff;
+}
+.btn {
+  @apply flex h-10 min-w-[8rem] cursor-pointer items-center justify-center rounded-full px-2 text-center text-sm font-medium shadow transition-all duration-300 ease-in-out hover:shadow-md focus-visible:ring-2 ring-offset-0 ring-[#fe9548] dark:text-background border;
+}
+
+.btn-big {
+  @apply h-10 min-w-[10rem];
+}
+
+.btn-small {
+  @apply h-8 min-w-[5rem] text-xs;
+}
+
+.btn:hover {
+  @apply shadow-lg;
+}
+
+.services-item {
+  @apply rounded-xl p-md shadow-md;
+}
+
+.services-item .head {
+  @apply mb-2 flex items-center gap-x-2;
+}
+
+.services-item h3 {
+  @apply text-left font-medium text-gray-700;
+}
+
+.services-item p {
+  @apply text-left text-sm leading-[1.4] text-gray-400;
+}
+
+.services-item .icon {
+  @apply flex h-7 w-7 items-center justify-center rounded-full;
+}
+
+.services-item:nth-child(1) .icon {
+  background: linear-gradient(135deg, #d8ffa6 0%, #6cf08f 30%, #06d68f 100%);
+}
+
+.services-item:nth-child(2) .icon {
+  background: linear-gradient(135deg, #fff388 0%, #febc58 30%, #ffa234 100%);
+}
+
+.services-item:nth-child(3) .icon {
+  background: linear-gradient(135deg, #a3ebfa 0%, #6fa6fe 30%, #375aff 100%);
+}
+
+.services-item:nth-child(4) .icon {
+  background: linear-gradient(135deg, #ffbbbb 0%, #fe6061 30%, #f53e6c 100%);
+}
+
+.mode {
+  @apply flex cursor-pointer items-center gap-2 rounded-lg p-2 text-left text-sm font-medium;
+}
+
+.mode:hover,
+.mode.active {
+  background-image: linear-gradient(152deg, #00000036, transparent) !important;
+}
+
+.step {
+  @apply gap-4 py-2;
+}
+
+.title {
+  @apply text-2xl font-medium text-gray-600 dark:text-gray-200;
+}
+
+.goBack {
+  @apply cursor-pointer text-sm text-gray-600 dark:text-gray-200;
+}
+
+.form {
+  @apply flex flex-col justify-center rounded;
+}
+
+.input {
+  @apply w-full rounded-md p-1 border min-h-14 text-xs focus:ring-2 ring-offset-0 ring-[#fe9548] focus:border-transparent;
+}
+
+.hint {
+  @apply text-sm text-gray-400;
+}
+
+.project-item {
+  @apply relative flex h-20 flex-col justify-between overflow-hidden rounded p-2 shadow;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    @apply bg-foreground;
+  }
+
+  .glass-bg {
+    @apply bg-gradient-to-bl from-[#1a2a363d] to-[#3f545f66] backdrop-blur-lg;
+  }
+
+
+  h1,
+  h2,
+  h3,
+  h5 {
+    color: #eee !important;
+  }
+
+  p:not(.text-red-400, .text-orange-300) {
+    color: #c0bbbb;
+  }
+
+  .options-select {
+    @apply text-white;
+  }
+
+  .brands .filter {
+    @apply grayscale-0;
+  }
+
+  .mode:hover,
+  .mode.active {
+    background-image: linear-gradient(
+      152deg,
+      #ffffff36,
+      transparent
+    ) !important;
+  }
+
+  .services-item .icon {
+    box-shadow: 0 0 5px gray;
+  }
+}
+
+.animate-gradient {
+  background: linear-gradient(
+    18deg,
+    #f5ded7,
+    #f5ded7,
+    #fff,
+    #fff,
+    #fff,
+    #f5ded7,
+    #f5ded7
+  );
+  background-size: 190% 190% !important;
+  animation: gradient-animation 8s ease-in-out infinite alternate both;
+  font-weight: bold;
+  color: #333;
+}
+
+@keyframes gradient-animation {
+  0% {
+    background-position: right top;
+  }
+
+  50% {
+    background-position: left bottom;
+  }
+
+  100% {
+    background-position: right top;
+  }
+}
+
+@theme {
+  --color-primary: #086ed5;
+  --color-secondary: #F0A500;
+  --color-accent: #f5ded7;
+  --color-background: #FFFFFF;
+  --color-foreground: #1b1b1e;
+
+  --radius-sm: 0.125rem;
+  --radius-md: 0.25rem;
+  --radius-lg: 0.375rem;
+  --radius-xl: 0.5rem;
+    --radius-2xl: 0.625rem;
+
+    --margin-xs : 0.25rem;
+    --margin-sm : 0.5rem;
+  --margin-md : 1rem;
+  --margin-lg : 1.5rem;
+  --margin-xl : 2rem;
+  --margin-2xl : 2.5rem;
+
+
+    --padding-xs : 0.25rem;
+    --padding-sm : 0.5rem;
+    --padding-md : 1rem;
+    --padding-lg : 1.5rem;
+    --padding-xl : 2rem;
+    --padding-2xl : 2.5rem;
+
+
+}
+
+
+@layer base {
+  h1 {
+    @apply text-4xl font-bold;
+  }
+  h2 {
+    @apply text-3xl font-semibold;
+  }
+}
+
+
+/*
+{
+    'black':
+    { DEFAULT: '#000000', 100: '#000000', 200: '#000000', 300: '#000000', 400: '#000000', 500: '#000000', 600: '#333333', 700: '#666666', 800: '#999999', 900: '#cccccc' },
+
+
+    'flame': { DEFAULT: '#cf5c36', 100: '#2a120a', 200: '#542414', 300: '#7e361e', 400: '#a84829', 500: '#cf5c36', 600: '#d87d5e', 700: '#e29d86', 800: '#ecbeaf', 900: '#f5ded7' },
+
+
+     'almond': { DEFAULT: '#f1dabf', 100: '#472d10', 200: '#8e5a1f', 300: '#d28732', 400: '#e2b179', 500: '#f1dabf', 600: '#f4e2cd', 700: '#f7e9d9', 800: '#f9f0e6', 900: '#fcf8f2' },
+
+
+      'mint': { DEFAULT: '#00bd9d', 100: '#00261f', 200: '#004b3f', 300: '#00715e', 400: '#00977e', 500: '#00bd9d', 600: '#00fdd3', 700: '#3effdf', 800: '#7effea', 900: '#bffff4' },
+
+
+       'polynesian_blue': { DEFAULT: '#054a91', 100: '#010f1d', 200: '#021e39', 300: '#032c56', 400: '#043b72', 500: '#054a91', 600: '#086ed5', 700: '#2d92f7', 800: '#73b7fa', 900: '#b9dbfc'
+    }
+ } */

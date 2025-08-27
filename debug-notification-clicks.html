@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Notification Clicks</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .output {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Debug Notification Clicks</h1>
+
+    <div>
+        <button onclick="checkServiceWorker()">1. Check Service Worker Status</button>
+        <button onclick="checkNotificationPermission()">2. Check Notification Permission</button>
+        <button onclick="registerServiceWorker()">3. Register Service Worker</button>
+        <button onclick="testNotification()">4. Test Manual Notification</button>
+        <button onclick="testNotificationClick()">5. Test Notification Click Simulation</button>
+        <button onclick="clearLogs()">Clear Logs</button>
+    </div>
+
+    <div id="output" class="output"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : '';
+            output.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLogs() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        async function checkServiceWorker() {
+            try {
+                if ('serviceWorker' in navigator) {
+                    const registration = await navigator.serviceWorker.getRegistration();
+                    if (registration) {
+                        log(`✅ Service Worker registered: ${registration.scope}`, 'success');
+                        log(`Active: ${!!registration.active}`);
+                        log(`Installing: ${!!registration.installing}`);
+                        log(`Waiting: ${!!registration.waiting}`);
+
+                        if (registration.active) {
+                            log(`SW Script URL: ${registration.active.scriptURL}`);
+                            log(`SW State: ${registration.active.state}`);
+                        }
+                    } else {
+                        log('❌ No Service Worker registered', 'error');
+                    }
+                } else {
+                    log('❌ Service Worker not supported', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error checking service worker: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkNotificationPermission() {
+            try {
+                if ('Notification' in window) {
+                    log(`Notification permission: ${Notification.permission}`);
+                    if (Notification.permission === 'default') {
+                        const permission = await Notification.requestPermission();
+                        log(`Permission after request: ${permission}`);
+                    }
+                } else {
+                    log('❌ Notifications not supported', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error checking notification permission: ${error.message}`, 'error');
+            }
+        }
+
+        async function registerServiceWorker() {
+            try {
+                if ('serviceWorker' in navigator) {
+                    log('Registering service worker...');
+                    const registration = await navigator.serviceWorker.register('/sw.js');
+                    log(`✅ Service Worker registered: ${registration.scope}`, 'success');
+
+                    // Wait for service worker to be ready
+                    await navigator.serviceWorker.ready;
+                    log('✅ Service Worker is ready', 'success');
+
+                    // Set up message listener
+                    navigator.serviceWorker.addEventListener('message', (event) => {
+                        log(`📨 Received message from SW: ${JSON.stringify(event.data)}`);
+                    });
+
+                } else {
+                    log('❌ Service Worker not supported', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error registering service worker: ${error.message}`, 'error');
+            }
+        }
+
+        async function testNotification() {
+            try {
+                if (Notification.permission !== 'granted') {
+                    log('❌ Notification permission not granted', 'error');
+                    return;
+                }
+
+                const registration = await navigator.serviceWorker.ready;
+
+                await registration.showNotification('Test Notification', {
+                    body: 'Click this to test navigation',
+                    icon: '/icons/192x192.png',
+                    tag: 'debug-test',
+                    data: {
+                        url: '/folders',
+                        timestamp: Date.now()
+                    }
+                });
+
+                log('✅ Test notification shown', 'success');
+                log('Try clicking the notification to test navigation');
+
+            } catch (error) {
+                log(`❌ Error showing notification: ${error.message}`, 'error');
+            }
+        }
+
+        async function testNotificationClick() {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+
+                if (registration.active) {
+                    // Send a test message to the service worker
+                    registration.active.postMessage({
+                        type: 'TEST_NOTIFICATION_CLICK',
+                        data: { url: '/folders' }
+                    });
+
+                    log('✅ Sent test message to service worker', 'success');
+                } else {
+                    log('❌ No active service worker', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error testing notification click: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            log('🔄 Debug page loaded');
+            checkServiceWorker();
+        });
+
+        // Listen for service worker messages
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                log(`📨 Message from SW: ${JSON.stringify(event.data)}`);
+
+                if (event.data && event.data.type === 'NOTIFICATION_CLICK_NAVIGATE') {
+                    const targetUrl = event.data.url;
+                    log(`🔗 Navigation request to: ${targetUrl}`, 'success');
+
+                    // For debugging, don't actually navigate
+                    log(`Would navigate to: ${targetUrl}`);
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

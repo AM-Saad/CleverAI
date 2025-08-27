@@ -1,0 +1,141 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireRole } from '@/lib/auth';
+import prisma from '@/lib/prisma';
+
+// GET: List lessons (teachers: by chapter or all, students: by chapter and grade/unlocked)
+export async function GET(request: NextRequest) {
+  const token = await requireRole(request, ['TEACHER', 'STUDENT']);
+  if (token instanceof NextResponse) return token;
+  const { searchParams } = new URL(request.url);
+  const chapterId = searchParams.get('chapterId');
+  // Teachers: allow fetching all lessons if no chapterId is provided
+  if (token.role === 'TEACHER' && !chapterId) {
+    const lessons = await prisma.lesson.findMany({ orderBy: { order: 'asc' } });
+    return NextResponse.json(lessons);
+  }
+  if (!chapterId) {
+    return NextResponse.json({ error: 'chapterId is required.' }, { status: 400 });
+  }
+  let lessons;
+  if (token.role === 'TEACHER') {
+    // Teachers: list all lessons for their chapter
+    lessons = await prisma.lesson.findMany({
+      where: { chapterId, teacherId: token.id },
+      orderBy: { createdAt: 'desc' },
+    });
+    return NextResponse.json(lessons);
+  } else {
+    // Students: list lessons for their grade and unlocked chapters
+    lessons = await prisma.lesson.findMany({
+      where: { chapterId },
+      orderBy: { createdAt: 'desc' },
+    });
+    // If IN_HOUSE, all lessons are unlocked
+    if (token.studentType === 'IN_HOUSE') {
+      const lessonsWithUnlock = lessons.map((lesson: any) => ({ ...lesson, unlocked: true }));
+      return NextResponse.json(lessonsWithUnlock);
+    } else {
+      // ONLINE: check PIN unlock status for each lesson
+      const unlockedLessonIds = (await prisma.pinCode.findMany({
+        where: {
+          studentId: token.id,
+          used: true,
+        },
+        select: { lessonId: true },
+      })).map((pin: any) => pin.lessonId);
+      const lessonsWithUnlock = lessons.map((lesson: any) => ({
+        ...lesson,
+        unlocked: unlockedLessonIds.includes(lesson.id),
+      }));
+      return NextResponse.json(lessonsWithUnlock);
+    }
+  }
+}
+
+// POST: Create a new lesson (TEACHER only, order required and unique)
+export async function POST(request: NextRequest) {
+  const token = await requireRole(request, ['TEACHER']);
+  if (token instanceof NextResponse) return token;
+  const data = await request.json();
+  const { title, chapterId, explanationVideoUrl, solutionVideoUrl, unlockWindowDays, order, chapterOrder } = data;
+  if (!title || !chapterId || !explanationVideoUrl || typeof order !== 'number') {
+    return NextResponse.json({ error: 'Title, chapterId, explanationVideoUrl, and order are required.' }, { status: 400 });
+  }
+  // Check for unique global order
+  const existing = await prisma.lesson.findUnique({ where: { order } });
+  if (existing) {
+    return NextResponse.json({ error: 'Lesson global order must be unique.' }, { status: 409 });
+  }
+  // Optionally check for unique chapterOrder within chapter
+  if (typeof chapterOrder === 'number') {
+    const chapterOrderExists = await prisma.lesson.findFirst({ where: { chapterId, chapterOrder } });
+    if (chapterOrderExists) {
+      return NextResponse.json({ error: 'Lesson chapterOrder must be unique within the chapter.' }, { status: 409 });
+    }
+  }
+  const lesson = await prisma.lesson.create({
+    data: {
+      title,
+      chapterId,
+      explanationVideoUrl,
+      solutionVideoUrl,
+      unlockWindowDays: unlockWindowDays || 7,
+      order,
+      chapterOrder: typeof chapterOrder === 'number' ? chapterOrder : null,
+      teacherId: token.id,
+    },
+  });
+  return NextResponse.json(lesson, { status: 201 });
+}
+
+// PATCH: Update a lesson (TEACHER only, cannot update order)
+export async function PATCH(request: NextRequest) {
+  const token = await requireRole(request, ['TEACHER']);
+  if (token instanceof NextResponse) return token;
+  const data = await request.json();
+  const { id, title, explanationVideoUrl, solutionVideoUrl, unlockWindowDays, order, chapterOrder } = data;
+  if (!id) {
+    return NextResponse.json({ error: 'Lesson id is required.' }, { status: 400 });
+  }
+  if (typeof order !== 'undefined') {
+    return NextResponse.json({ error: 'Lesson order cannot be updated.' }, { status: 400 });
+  }
+  // Optionally check for unique chapterOrder within chapter if updating
+  if (typeof chapterOrder === 'number') {
+    const lessonToUpdate = await prisma.lesson.findUnique({ where: { id } });
+    if (lessonToUpdate && lessonToUpdate.chapterOrder !== chapterOrder) {
+      const chapterOrderExists = await prisma.lesson.findFirst({ where: { chapterId: lessonToUpdate.chapterId, chapterOrder } });
+      if (chapterOrderExists) {
+        return NextResponse.json({ error: 'Lesson chapterOrder must be unique within the chapter.' }, { status: 409 });
+      }
+    }
+  }
+  // Only allow updating lessons owned by the teacher
+  const lesson = await prisma.lesson.updateMany({
+    where: { id, teacherId: token.id },
+    data: { title, explanationVideoUrl, solutionVideoUrl, unlockWindowDays, chapterOrder: typeof chapterOrder === 'number' ? chapterOrder : undefined },
+  });
+  if (lesson.count === 0) {
+    return NextResponse.json({ error: 'Lesson not found or not authorized.' }, { status: 404 });
+  }
+  return NextResponse.json({ message: 'Lesson updated.' });
+}
+
+// DELETE: Delete a lesson (TEACHER only)
+export async function DELETE(request: NextRequest) {
+  const token = await requireRole(request, ['TEACHER']);
+  if (token instanceof NextResponse) return token;
+  const data = await request.json();
+  const { id } = data;
+  if (!id) {
+    return NextResponse.json({ error: 'Lesson id is required.' }, { status: 400 });
+  }
+  // Only allow deleting lessons owned by the teacher
+  const lesson = await prisma.lesson.deleteMany({
+    where: { id, teacherId: token.id },
+  });
+  if (lesson.count === 0) {
+    return NextResponse.json({ error: 'Lesson not found or not authorized.' }, { status: 404 });
+  }
+  return NextResponse.json({ message: 'Lesson deleted.' });
+}
