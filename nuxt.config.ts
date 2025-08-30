@@ -93,14 +93,16 @@ export default defineNuxtConfig({
       enableOnWindowFocus: true,
       // handler: "./config/AuthRefreshHandler.ts",
     },
-    globalAppMiddleware: true,
+    globalAppMiddleware: {
+      isEnabled: false,
+    },
   },
 
   vite: {
     logLevel: "info",
     server: {
       hmr: {
-        port: process.env.APP_PORT!, // Ensure this matches your local dev server
+        port: parseInt(process.env.APP_PORT || '8080'), // Use environment variable
       },
     },
     define: {

@@ -11,7 +11,7 @@ const prisma = new PrismaClient()
 const config = useRuntimeConfig()
 
 export default NuxtAuthHandler({
-  secret: config.public.AUTH_SECRET,
+  secret: config.AUTH_SECRET,
   debug: true,
   providers: [
     // @ts-expect-error Use .default here for it to work during SSR.
@@ -90,7 +90,6 @@ export default NuxtAuthHandler({
 
   pages: {
     signIn: "/auth/signIn",
-    signOut: "/auth/signOut",
     //  error: "/auth/signIn",
     verifyRequest: "/auth/verify-request",
     newUser: "/auth/new-user",

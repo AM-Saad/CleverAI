@@ -40,6 +40,7 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
 import { useGenerateQuiz, useFolder } from '~/composables/folders/useFolders'
+import { extractContentFromFolder } from '~/composables/folders/extractContent'
 import { computed } from 'vue'
 import type { Folder } from '~~/shared/folder.contract'
 
@@ -52,7 +53,7 @@ const existingQuestions = computed(() => (folder.value as Folder | null | undefi
 const questionsToShow = computed(() => questions.value?.length ? questions.value : existingQuestions.value)
 
 const model = computed(() => (folder.value as Folder | null | undefined)?.llmModel)
-const text = computed(() => (folder.value as Folder | null | undefined)?.rawText || undefined)
+const text = computed(() => extractContentFromFolder(folder.value as Folder | null | undefined))
 
 const { questions, generating, genError, generate, rateLimitRemaining } = useGenerateQuiz(model, text, computed(() => id))
 

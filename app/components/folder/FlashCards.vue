@@ -12,9 +12,10 @@
                     <span v-if="!generating">Generate Flashcards</span>
                     <span v-else>Generating…</span>
                 </UButton> -->
-                <button :disabled="generating" class="btn bg-primary " @click="onGenerate">
+                <button :disabled="generating" class="flex items-center btn bg-primary text-accent" @click="onGenerate">
                     <span v-if="!generating">Generate Flashcards</span>
                     <span v-else>Generating…</span>
+                    <icons-stars-generative />
                 </button>
             </div>
         </div>
@@ -48,6 +49,7 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
 import { useGenerateFlashcards, useFolder } from '~/composables/folders/useFolders'
+import { extractContentFromFolder } from '~/composables/folders/extractContent'
 import { computed } from 'vue'
 import type { Folder } from '~~/shared/folder.contract'
 
@@ -57,7 +59,7 @@ const id = route.params.id as string
 const { folder, loading } = useFolder(id)
 
 const model = computed(() => (folder.value as Folder | null | undefined)?.llmModel)
-const text = computed(() => (folder.value as Folder | null | undefined)?.rawText || undefined)
+const text = computed(() => extractContentFromFolder(folder.value as Folder | null | undefined))
 
 const existingFlashcards = computed(() => (folder.value as Folder | null | undefined)?.flashcards || [])
 const { flashcards, generating, genError, generate, rateLimitRemaining } = useGenerateFlashcards(model, text, computed(() => id))

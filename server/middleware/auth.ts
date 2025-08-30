@@ -1,3 +1,4 @@
+// server/middleware/auth.ts
 import { getServerSession } from "#auth"
 import { ErrorFactory, ErrorType } from "~/services/ErrorFactory"
 

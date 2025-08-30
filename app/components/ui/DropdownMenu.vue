@@ -59,7 +59,7 @@ import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/vue"
 const { signOut, data } = useAuth()
 
 const logout = async (): Promise<void> => {
-    await signOut({ callbackUrl: "/" })
+    await signOut({ callbackUrl: "/logout" })
 }
 
 onMounted(() => {

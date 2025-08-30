@@ -43,6 +43,11 @@
 </template>
 
 <script setup lang="ts">
+// Define page meta for authentication
+definePageMeta({
+    middleware: 'role-auth', // Use the role-auth middleware
+})
+
 const show = ref(false);
 
 const { folders, loading, error } = useFolders()

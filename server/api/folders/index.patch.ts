@@ -18,6 +18,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 400, statusMessage: 'Invalid request body' })
     }
     const body = parsed.data
+
     // Ensure folder belongs to the current user
     const existing = await prisma.folder.findFirst({
       where: { id: body.id, userId: user.id },
@@ -27,29 +28,95 @@ export default defineEventHandler(async (event) => {
     }
 
     // Build update payload from allowed fields only
-    const data: Record<string, any> = {}
-    if (typeof body.title === 'string') data.title = body.title
-    if (typeof body.description === 'string' || body.description === null) data.description = body.description ?? null
-    if (typeof body.rawText === 'string' || body.rawText === null) data.rawText = body.rawText ?? null
-    if (typeof body.order === 'number') data.order = body.order
+    const folderData: Record<string, unknown> = {}
+    if (typeof body.title === 'string') folderData.title = body.title
+    if (typeof body.description === 'string' || body.description === null) folderData.description = body.description ?? null
+    if (typeof body.order === 'number') folderData.order = body.order
     if (body.metadata && typeof body.metadata === 'object' && !Array.isArray(body.metadata)) {
-      data.metadata = body.metadata
+      folderData.metadata = body.metadata
     }
     if (typeof body.llmModel === 'string') {
-      if (!LLM_MODELS.includes(body.llmModel as any)) {
+      if (!LLM_MODELS.includes(body.llmModel as typeof LLM_MODELS[number])) {
         throw createError({ statusCode: 400, statusMessage: `Invalid llmModel: ${body.llmModel}` })
       }
-      data.llmModel = body.llmModel
+      folderData.llmModel = body.llmModel
     }
 
-    if (Object.keys(data).length === 0) {
-      throw createError({ statusCode: 400, statusMessage: 'No valid fields to update' })
+    // Handle legacy rawText (deprecated but still supported)
+    if (typeof body.rawText === 'string' || body.rawText === null) {
+      folderData.rawText = body.rawText ?? null
     }
 
-    const updated = await prisma.folder.update({
-      where: { id: body.id },
-      data,
-    })
+    // Handle material content (new preferred approach)
+    let materialCreated = false
+    if (body.materialContent) {
+      const materialData = {
+        folderId: body.id,
+        title: body.materialTitle || 'Folder Content',
+        content: body.materialContent,
+        type: body.materialType || 'text',
+        llmModel: body.llmModel || existing.llmModel,
+      }
+
+      // Create or update material for this folder
+      const existingMaterial = await prisma.material.findFirst({
+        where: { folderId: body.id, title: materialData.title }
+      })
+
+      if (existingMaterial) {
+        await prisma.material.update({
+          where: { id: existingMaterial.id },
+          data: {
+            content: materialData.content,
+            type: materialData.type,
+            llmModel: materialData.llmModel,
+          }
+        })
+      } else {
+        await prisma.material.create({
+          data: materialData
+        })
+      }
+      materialCreated = true
+    }    // Update folder if there are changes
+    let updated = existing
+    if (Object.keys(folderData).length > 0) {
+      updated = await prisma.folder.update({
+        where: { id: body.id },
+        data: folderData,
+        include: {
+          materials: true,
+          flashcards: true,
+          questions: true,
+        }
+      })
+    } else if (materialCreated) {
+      // Fetch updated folder with materials if only material was created
+      const freshFolder = await prisma.folder.findUnique({
+        where: { id: body.id },
+        include: {
+          materials: true,
+          flashcards: true,
+          questions: true,
+        }
+      })
+      if (freshFolder) {
+        updated = freshFolder
+      }
+    } else {
+      // Even if no changes, ensure we return folder with all relations
+      const freshFolder = await prisma.folder.findUnique({
+        where: { id: body.id },
+        include: {
+          materials: true,
+          flashcards: true,
+          questions: true,
+        }
+      })
+      if (freshFolder) {
+        updated = freshFolder
+      }
+    }
 
     // Optional: assert response shape in development
     if (process.env.NODE_ENV === 'development') {

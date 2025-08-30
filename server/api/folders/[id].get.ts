@@ -14,6 +14,7 @@ export default defineEventHandler(async (event) => {
 const folder = await prisma.folder.findFirst({
   where: { id, userId: user.id },
   include: {
+    materials: true,
     flashcards: true,
     questions: true,
   },

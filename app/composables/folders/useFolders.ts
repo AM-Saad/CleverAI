@@ -1,13 +1,13 @@
+import { z } from 'zod'
+import type { CreateFolderDTO, UpdateFolderDTO } from '~~/shared/folder.contract'
 import type { APIError } from "~/services/FetchFactory"
 import type { IFolder } from "~/types/models/folders"
 import { useDataFetch } from "~/composables/shared/useDataFetch"
-import { z } from "zod"
-import type { CreateFolderDTO,  UpdateFolderDTO } from "~/types/dtos/folders"
 import { FolderSchema } from "~~/shared/folder.contract"
 import type { Ref } from 'vue'
 import { LLMGenerateResponse } from '~~/shared/llm-generate.contract'
 import { useSubscription } from "../shared/useSubscription"
-type ZodOut<T> = z.ZodType<T, z.ZodTypeDef, any>
+type ZodOut<T> = z.ZodType<T, z.ZodTypeDef, unknown>
 
 const FolderResponse = z
   .union([FolderSchema, z.object({ data: FolderSchema })])

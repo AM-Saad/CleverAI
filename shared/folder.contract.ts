@@ -25,18 +25,31 @@ const FolderQuestionRelation = z.object({
   updatedAt: z.string().datetime().or(z.date()).or(z.string()).optional(),
 }).passthrough()
 
+const FolderMaterialRelation = z.object({
+  id: z.string().optional(),
+  title: z.string(),
+  content: z.string(),
+  type: z.string().nullable().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  llmModel: z.string().nullable().optional(),
+  llmPrompt: z.string().nullable().optional(),
+  createdAt: z.string().datetime().or(z.date()).or(z.string()).optional(),
+  updatedAt: z.string().datetime().or(z.date()).or(z.string()).optional(),
+}).passthrough()
+
 export const FolderSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string().nullable(),
   userId: z.string(),
-  metadata: z.record(z.unknown()).nullable(),
-  rawText: z.string().nullable(),
+  metadata: z.record(z.string(), z.unknown()).nullable(),
+  rawText: z.string().nullable().optional(), // Keep for backward compatibility, but deprecated
   llmModel: LLMEnum,
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),
   flashcards: z.array(FolderFlashcardRelation).optional(),
   questions: z.array(FolderQuestionRelation).optional(),
+  materials: z.array(FolderMaterialRelation).optional(),
 })
 export type Folder = z.infer<typeof FolderSchema>
 
@@ -44,7 +57,7 @@ export const CreateFolderDTO = z.object({
   title: z.preprocess(trim, z.string().min(1)),
   description: z.preprocess(trim, z.string()).optional(),
   llmModel: LLMEnum.optional(),        // server defaults to 'gpt-3.5'
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 })
 export type CreateFolderDTO = z.infer<typeof CreateFolderDTO>
 
@@ -52,8 +65,12 @@ export const UpdateFolderDTO = z.object({
   title: z.preprocess(trim, z.string()).optional(),
   description: z.preprocess(trim, z.string()).optional(),
   llmModel: LLMEnum.optional(),
-  metadata: z.record(z.unknown()).optional(),
-  rawText: z.preprocess(trim, z.string()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  rawText: z.preprocess(trim, z.string()).optional(), // Deprecated, use materials instead
   order: z.number().optional(),
+  // Add material content directly to folder update for convenience
+  materialContent: z.preprocess(trim, z.string()).optional(),
+  materialTitle: z.preprocess(trim, z.string()).optional(),
+  materialType: z.string().optional(),
 })
 export type UpdateFolderDTO = z.infer<typeof UpdateFolderDTO>
