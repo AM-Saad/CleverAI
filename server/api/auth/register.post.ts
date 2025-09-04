@@ -2,7 +2,7 @@
 import { PrismaClient } from "@prisma/client"
 import bcrypt from "bcryptjs"
 import { z } from "zod"
-import { sendEmail } from "~/utils/sendGrid.server"
+import { sendEmail } from "~/utils/resend.server"
 import { verificationCode } from "~/utils/verificationCode.server"
 const prisma = new PrismaClient()
 
@@ -20,7 +20,8 @@ const userSchema = z.object({
       message: "Confirm Password Must be 30 or less characters long",
     }),
   provider: z.string().optional(),
-  gender: z.string().min(1, { message: "Gender is required" }),
+  gender: z.string().optional(),
+  phone: z.string().min(1, { message: "Phone is required" }),
   role: z.enum(["USER"]).default("USER"),
 })
 
@@ -41,8 +42,6 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-
-      await prisma.user.deleteMany({})
         // Extract user data from request body
     const body = await readBody(event)
 
@@ -99,24 +98,31 @@ export default defineEventHandler(async (event) => {
     const hashedPassword =
       provider === "credentials" ? bcrypt.hashSync(password, 10) : null
 
+    // Generate verification code for credentials users
     let newVerificationCode: null | string = null
+    if (provider === "credentials") {
+      newVerificationCode = await verificationCode()
+    }
+
     // Create a new user in the database
     await prisma.user.create({
       data: {
         name,
         email,
-        password: hashedPassword!,
+        password: hashedPassword || '', // Use empty string for non-credentials users
+        phone: phone || '', // Ensure phone is provided
         passkey_user_id: null,
         auth_provider: provider,
         register_verification: newVerificationCode,
         account_verified: provider === "credentials" ? false : true,
+        email_verified: provider !== "credentials", // Google users are email verified
         gender,
-        phone,
         role,
       },
     })
-    if (provider === "credentials") {
-      newVerificationCode = await verificationCode()
+
+    // Send verification email for credentials users
+    if (provider === "credentials" && newVerificationCode) {
       await sendEmail(email, newVerificationCode)
     }
 

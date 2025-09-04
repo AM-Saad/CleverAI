@@ -69,7 +69,7 @@ const mode = computed(() => {
             open: sheet.open,
             closed: sheet.closed.value,
             constraints: { top: sheet.open, bottom: sheet.closed.value },
-            containerClass: `left-0 right-0 bottom-0 w-full rounded-t-3xl`,
+            containerClass: `left-0 right-0 bottom-0 w-full rounded-t-lg`,
             style: sheet.style,
             isMobile: true,
             handleClass: undefined as unknown as string,
@@ -176,7 +176,7 @@ function handleDragEnd(_: Event, info: DragInfo) {
                 :drag="suspendDrag ? false : mode.axis" :drag-constraints="mode.constraints" :drag-elastic="0"
                 :drag-snap-to-origin="false" :drag-momentum="false" :on-drag-start="handleDragStart"
                 :on-drag-end="handleDragEnd" :class="[
-                    'fixed z-50 cursor-grab active:cursor-grabbing overflow-hidden bg-background shadow-lg',
+                    'fixed z-40 cursor-grab active:cursor-grabbing overflow-hidden bg-gray-100/30 backdrop-blur-md shadow-lg',
                     mode.containerClass
                 ]" :style="mode.style" role="dialog" aria-modal="true" :aria-labelledby="'drawer-title'">
                 <div ref="panelEl" tabindex="-1" @keydown.capture="onKeydown"
@@ -185,11 +185,11 @@ function handleDragEnd(_: Event, info: DragInfo) {
                     :class="['relative h-full', mode.isMobile ? 'p-3 pt-6' : 'p-3 pl-10']">
                     <!-- Drag handle -->
                     <div v-if="mode.isMobile" class="absolute top-2 left-1/2 -translate-x-1/2 flex justify-center">
-                        <div class="w-10 h-1 rounded-full bg-primary opacity-60" />
+                        <div class="w-10 h-1 rounded-full bg-primary " />
                     </div>
                     <div v-else
                         :class="['flex justify-center mb-2 absolute top-1/2 -translate-y-1/2', mode.handleClass]">
-                        <div class="w-1 h-8 bg-primary rounded-full opacity-50" />
+                        <div class="w-1 h-8 bg-primary rounded-full " />
                     </div>
 
                     <!-- Header: slot or fallback title -->

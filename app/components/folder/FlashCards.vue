@@ -7,16 +7,13 @@
                     class="inline-flex items-center text-xs px-2 py-1 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-700/50">
                     Remaining: <span class="ml-1 font-medium">{{ rateLimitRemaining }}</span>
                 </span>
-                <!-- <UButton :size="'xs'" :loading="generating || loading" :disabled="generating || loading"
-                    @click="onGenerate">
-                    <span v-if="!generating">Generate Flashcards</span>
-                    <span v-else>Generating…</span>
-                </UButton> -->
-                <button :disabled="generating" class="flex items-center btn bg-primary text-accent" @click="onGenerate">
+                <UButton class="flex items-center" :size="'lg'" :loading="generating || loading"
+                    :disabled="generating || loading" @click="onGenerate">
                     <span v-if="!generating">Generate Flashcards</span>
                     <span v-else>Generating…</span>
                     <icons-stars-generative />
-                </button>
+                </UButton>
+
             </div>
         </div>
 

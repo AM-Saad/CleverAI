@@ -2,7 +2,7 @@
 <template>
     <div class="mx-auto flex h-screen flex-col justify-between">
         <nav id="nav"
-            class="effect fixed flex font-heading items-center justify-between top-4 px-lg z-[999998] h-14 rounded-lg w-full">
+            class="effect fixed flex font-heading items-center justify-between  px-6 z-50 h-14 rounded w-full">
 
             <div class="flex items-center justify-between w-full">
                 <router-link to="/" class="text-foreground dark:text-background font-medium">
@@ -48,10 +48,10 @@
 
         </nav>
 
-        <div class="flex-1 pt-2xl pb-4">
-            <UNotifications />
+        <div class="flex-1 pb-4">
+            <UToaster />
             <ServiceWorkerUpdateNotification mode="banner" />
-            <div class="py-lg px-lg">
+            <div class="p-20">
 
                 <slot />
             </div>

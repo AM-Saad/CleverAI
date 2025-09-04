@@ -1,0 +1,210 @@
+// app/services/AuthService.ts
+import FetchFactory from './FetchFactory'
+
+export interface IUser {
+  id: string
+  name: string
+  email?: string
+  password: string
+  phone: string
+  gender?: string
+  role: 'USER'
+  createdAt: string
+  updatedAt: string
+  // Authentication fields
+  credentials?: Record<string, unknown>
+  auth_provider?: string
+  account_verified: boolean
+  email_verified: boolean
+  register_verification?: string
+  password_verification?: string
+  passkey_user_id?: string
+}
+
+export interface IRegisterRequest {
+  name: string
+  email: string
+  password: string
+  phone: string
+  gender?: string
+  role?: 'USER'
+  provider?: string
+}
+
+export interface IRegisterResponse {
+  message: string
+  body?: {
+    redirect: string
+  }
+}
+
+class AuthModule extends FetchFactory {
+  private RESOURCE = '/api/auth'
+
+  /**
+   * Register a new user
+   */
+  async register(userData: IRegisterRequest): Promise<IRegisterResponse> {
+    return this.call<IRegisterResponse>(
+      'POST',
+      `${this.RESOURCE}/register`,
+      { ...userData, provider: userData.provider || 'credentials' }
+    )
+  }
+
+  /**
+   * Register user (alternative method using RESOURCES enum)
+   */
+  async registerUser(credentials: {
+    name?: string
+    email: string
+    password?: string
+    confirmPassword?: string
+    provider: string
+  }): Promise<{ message: string; body: unknown }> {
+    return this.call<{ message: string; body: unknown }>(
+      'POST',
+      `/api/auth/register`,
+      credentials
+    )
+  }
+
+  /**
+   * Verify user email
+   */
+  async verify(email: string): Promise<{ message: string }> {
+    return this.call<{ message: string }>(
+      'POST',
+      `${this.RESOURCE}/verification`,
+      { email }
+    )
+  }
+
+  /**
+   * Find user by email
+   */
+  async findUser(email: string): Promise<{ message: string; body: unknown }> {
+    return this.call<{ message: string; body: unknown }>(
+      'POST',
+      `${this.RESOURCE}/find`,
+      { email }
+    )
+  }
+
+  /**
+   * Authenticate user
+   */
+  async authenticate(credentials: { email: string; password: string }): Promise<{ message: string }> {
+    return this.call<{ message: string }>(
+      'POST',
+      `${this.RESOURCE}/authenticate`,
+      credentials
+    )
+  }
+
+  /**
+   * Register passkey
+   */
+  async registerPasskey(email: string): Promise<{ message: string }> {
+    return this.call<{ message: string }>(
+      'POST',
+      `${this.RESOURCE}/passkey/register`,
+      { email }
+    )
+  }
+
+  /**
+   * Get current user profile
+   */
+  async getProfile(): Promise<{ success: boolean; user: IUser }> {
+    return this.call<{ success: boolean; user: IUser }>(
+      'GET',
+      `${this.RESOURCE}/profile`
+    )
+  }
+
+  /**
+   * Update user profile
+   */
+  async updateProfile(updates: Partial<IUser>): Promise<{ success: boolean; user: IUser }> {
+    return this.call<{ success: boolean; user: IUser }>(
+      'PATCH',
+      `${this.RESOURCE}/profile`,
+      updates
+    )
+  }
+
+  /**
+   * Request password reset
+   */
+  async requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+    return this.call<{ success: boolean; message: string }>(
+      'POST',
+      `${this.RESOURCE}/password/forgot`,
+      { email }
+    )
+  }
+
+  /**
+   * Reset password with token
+   */
+  async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
+    return this.call<{ success: boolean; message: string }>(
+      'POST',
+      `${this.RESOURCE}/reset-password`,
+      { token, password: newPassword }
+    )
+  }
+
+  /**
+   * Send verification email
+   */
+  async sendVerificationEmail(email: string): Promise<{ message: string }> {
+    return this.call<{ message: string }>(
+      'POST',
+      `${this.RESOURCE}/verification`,
+      { email }
+    )
+  }
+
+  /**
+   * Verify account with verification code
+   */
+  async verifyAccount(email: string, verification: string): Promise<{ message: string; body?: { redirect: string } }> {
+    return this.call<{ message: string; body?: { redirect: string } }>(
+      'POST',
+      `${this.RESOURCE}/verification/verify`,
+      { email, verification }
+    )
+  }
+
+  /**
+   * Verify forgot password code
+   */
+  async verifyForgotPassword(email: string, verification: string): Promise<{ message: string; body?: { redirect?: string; token?: string } }> {
+    return this.call<{ message: string; body?: { redirect?: string; token?: string } }>(
+      'POST',
+      `${this.RESOURCE}/password/verify`,
+      { email, verification }
+    )
+  }
+
+  /**
+   * Create password
+   */
+  async createPassword(token: string, password: string, confirmPassword: string): Promise<{ message: string; body?: { redirect: string } }> {
+    return this.call<{ message: string; body?: { redirect: string } }>(
+      'POST',
+      '/api/auth/password/create',
+      { password, confirmPassword },
+      {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      }
+    )
+  }
+}
+
+export default AuthModule
+export { AuthModule as AuthService }

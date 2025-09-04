@@ -3,7 +3,7 @@ export default defineNuxtRouteMiddleware((to) => {
   const { status, data } = useAuth()
 
   // Skip auth check for public routes
-  const publicRoutes = ['/auth/signin', '/auth/signup', '/logout', '/auth/error', '/auth/verify-request']
+  const publicRoutes = ['/auth/signin', '/auth/signup', '/logout', '/auth/error', '/auth/verify-request', '/auth/signIn', '/auth/register']
   if (publicRoutes.includes(to.path)) {
     return
   }
@@ -18,21 +18,30 @@ export default defineNuxtRouteMiddleware((to) => {
     return
   }
 
-  // If user is not authenticated and trying to access protected route
-  if (status.value === 'unauthenticated') {
-    return navigateTo('/auth/signin')
-  }
-
-  // If authentication is still loading, wait
+  // If authentication is still loading, show loading state but don't block
   if (status.value === 'loading') {
+    // Add a timeout to prevent infinite loading
+    setTimeout(() => {
+      if (status.value === 'loading') {
+        console.warn('Authentication took too long, redirecting to sign in')
+        navigateTo('/auth/signin')
+      }
+    }, 10000) // 10 second timeout
     return
   }
 
+  // If user is not authenticated and trying to access protected route
+  if (status.value === 'unauthenticated') {
+    console.log('User not authenticated, redirecting to sign in')
+    return navigateTo('/auth/signin')
+  }
+
   // Handle role-based access
-  const user = data.value?.user as any // Cast to handle extended user properties
-  const requiredRole = to.meta.requiredRole
+  const user = data.value?.user as { role?: string } | undefined
+  const requiredRole = to.meta.requiredRole as string | undefined
 
   if (requiredRole && user && (!user.role || user.role !== requiredRole)) {
+    console.warn(`User role ${user.role} does not match required role ${requiredRole}`)
     return navigateTo('/')
   }
 })

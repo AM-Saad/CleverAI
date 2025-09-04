@@ -1,9 +1,17 @@
-import { getServerSession } from "#auth"
+import { safeGetServerSession } from "../../utils/safeGetServerSession"
+
+type SessionWithUser = {
+  user?: {
+    email?: string
+    [key: string]: unknown
+  }
+  [key: string]: unknown
+} | null
 
 export default defineEventHandler(async (event) => {
   try {
-    // Check for authenticated session
-    const session = await getServerSession(event)
+    // Check for authenticated session with safe handling
+    const session = await safeGetServerSession(event) as SessionWithUser
     if (!session || !session.user || !session.user.email) {
       setResponseStatus(event, 401)
       return { error: 'Unauthorized' }
@@ -46,7 +54,7 @@ export default defineEventHandler(async (event) => {
     })
 
     // Calculate totals
-    let totalCalls = usageStats.length
+    const totalCalls = usageStats.length
     let totalPromptTokens = 0
     let totalCompletionTokens = 0
     let totalTokens = 0

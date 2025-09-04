@@ -1,6 +1,14 @@
 // server/middleware/auth.ts
-import { getServerSession } from "#auth"
+import { safeGetServerSession } from "../utils/safeGetServerSession"
 import { ErrorFactory, ErrorType } from "~/services/ErrorFactory"
+
+type SessionWithUser = {
+  user?: {
+    email?: string
+    [key: string]: unknown
+  }
+  [key: string]: unknown
+} | null
 
 export default defineEventHandler(async (event) => {
   // Only protect /api/ endpoints, but NOT /api/auth/*, /api/notifications/*, or /api/test/* (for testing)
@@ -12,14 +20,21 @@ export default defineEventHandler(async (event) => {
     !event.path.startsWith("/api/test/")
   ) {
     console.log("Auth middleware triggered for:", event.path)
-    await requireAuth(event)
+    try {
+      await requireAuth(event)
+    } catch (error) {
+      console.error("Auth middleware error:", error)
+      // Return 401 with proper error response instead of throwing
+      setResponseStatus(event, 401)
+      return { error: 'Unauthorized', message: 'Authentication required' }
+    }
   }
   // Otherwise, allow public access
 })
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function requireAuth(event: any): Promise<any> {
-  const session = await getServerSession(event)
+  const session = await safeGetServerSession(event) as SessionWithUser
   if (!session || !session.user || !session.user.email) {
     setResponseStatus(event, 401)
     console.error("Unauthorized access attempt:", event.path)

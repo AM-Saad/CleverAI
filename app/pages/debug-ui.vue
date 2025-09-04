@@ -10,7 +10,7 @@
                 <h3 class="text-xl font-semibold">Default UButton Variants</h3>
                 <div class="flex flex-wrap gap-4">
                     <UButton>Default Button</UButton>
-                    <UButton variant="solid">Solid Button</UButton>
+                    <UButton variant="solid" size="sm">Solid Button</UButton>
                     <UButton variant="outline">Outline Button</UButton>
                     <UButton variant="soft">Soft Button</UButton>
                     <UButton variant="ghost">Ghost Button</UButton>
@@ -18,30 +18,6 @@
                 </div>
             </div>
 
-            <div class="space-y-4">
-                <h3 class="text-xl font-semibold">Custom Styled Buttons</h3>
-                <div class="flex flex-wrap gap-4">
-                    <UButton
-                        class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300">
-                        Gradient Button
-                    </UButton>
-
-                    <UButton size="xs" :ui="{
-                        font: 'font-bold',
-                        rounded: 'rounded-full',
-                        size: {
-                            xs: ' px-0 py-0 bg-red-600'
-                        }
-                    }">
-                        Green Pill
-                    </UButton>
-
-                    <UButton
-                        class="bg-white text-gray-800 border-2 border-gray-300 hover:border-blue-500 hover:text-blue-500 font-semibold py-2 px-4 rounded-lg transition-all duration-200">
-                        Bordered Button
-                    </UButton>
-                </div>
-            </div>
 
             <div class="space-y-4">
                 <h3 class="text-xl font-semibold">UButton with UI Prop Overrides</h3>
@@ -85,30 +61,6 @@
                 </div>
             </div>
 
-            <div class="space-y-4">
-                <h3 class="text-xl font-semibold">Button Colors</h3>
-                <div class="flex flex-wrap gap-4">
-                    <UButton color="primary">Primary</UButton>
-                    <UButton color="gray">Gray</UButton>
-                    <UButton color="red">Red</UButton>
-                    <UButton color="orange">Orange</UButton>
-                    <UButton color="amber">Amber</UButton>
-                    <UButton color="yellow">Yellow</UButton>
-                    <UButton color="lime">Lime</UButton>
-                    <UButton color="green">Green</UButton>
-                    <UButton color="emerald">Emerald</UButton>
-                    <UButton color="teal">Teal</UButton>
-                    <UButton color="cyan">Cyan</UButton>
-                    <UButton color="sky">Sky</UButton>
-                    <UButton color="blue">Blue</UButton>
-                    <UButton color="indigo">Indigo</UButton>
-                    <UButton color="violet">Violet</UButton>
-                    <UButton color="purple">Purple</UButton>
-                    <UButton color="fuchsia">Fuchsia</UButton>
-                    <UButton color="pink">Pink</UButton>
-                    <UButton color="rose">Rose</UButton>
-                </div>
-            </div>
 
             <div class="space-y-4">
                 <h3 class="text-xl font-semibold">Interactive Button Examples</h3>
@@ -136,118 +88,6 @@
                 </div>
             </div>
 
-            <!-- Custom Styled Button Component -->
-            <div class="space-y-4">
-                <h3 class="text-xl font-semibold">Custom StyledButton Component</h3>
-                <p class="text-gray-600">Reusable button component with theme system</p>
-
-                <div class="space-y-6">
-                    <!-- Theme Examples -->
-                    <div>
-                        <h4 class="text-lg font-medium mb-3">Theme Variants</h4>
-                        <div class="flex flex-wrap gap-3">
-                            <StyledButton theme="primary" @click="buttonClicked">
-                                Primary ({{ clickCount }})
-                            </StyledButton>
-                            <StyledButton theme="secondary" @click="buttonClicked">
-                                Secondary
-                            </StyledButton>
-                            <StyledButton theme="success" @click="buttonClicked">
-                                Success
-                            </StyledButton>
-                            <StyledButton theme="warning" @click="buttonClicked">
-                                Warning
-                            </StyledButton>
-                            <StyledButton theme="danger" @click="buttonClicked">
-                                Danger
-                            </StyledButton>
-                            <StyledButton theme="gradient" @click="buttonClicked">
-                                Gradient
-                            </StyledButton>
-                        </div>
-                    </div>
-
-                    <!-- Size Examples -->
-                    <div>
-                        <h4 class="text-lg font-medium mb-3">Size Variants</h4>
-                        <div class="flex flex-wrap items-center gap-3">
-                            <StyledButton size="xs" theme="primary">
-                                Extra Small
-                            </StyledButton>
-                            <StyledButton size="sm" theme="primary">
-                                Small
-                            </StyledButton>
-                            <StyledButton size="md" theme="primary">
-                                Medium
-                            </StyledButton>
-                            <StyledButton size="lg" theme="primary">
-                                Large
-                            </StyledButton>
-                            <StyledButton size="xl" theme="primary">
-                                Extra Large
-                            </StyledButton>
-                        </div>
-                    </div>
-
-                    <!-- Rounded Examples -->
-                    <div>
-                        <h4 class="text-lg font-medium mb-3">Rounded Variants</h4>
-                        <div class="flex flex-wrap gap-3">
-                            <StyledButton rounded="none" theme="success">
-                                No Rounded
-                            </StyledButton>
-                            <StyledButton rounded="sm" theme="success">
-                                Small Rounded
-                            </StyledButton>
-                            <StyledButton rounded="md" theme="success">
-                                Medium Rounded
-                            </StyledButton>
-                            <StyledButton rounded="lg" theme="success">
-                                Large Rounded
-                            </StyledButton>
-                            <StyledButton rounded="full" theme="success">
-                                Full Rounded
-                            </StyledButton>
-                        </div>
-                    </div>
-
-                    <!-- Elevation Examples -->
-                    <div>
-                        <h4 class="text-lg font-medium mb-3">Elevation Variants</h4>
-                        <div class="flex flex-wrap gap-4">
-                            <StyledButton elevation="none" theme="secondary">
-                                No Shadow
-                            </StyledButton>
-                            <StyledButton elevation="sm" theme="secondary">
-                                Small Shadow
-                            </StyledButton>
-                            <StyledButton elevation="md" theme="secondary">
-                                Medium Shadow
-                            </StyledButton>
-                            <StyledButton elevation="lg" theme="secondary">
-                                Large Shadow
-                            </StyledButton>
-                        </div>
-                    </div>
-
-                    <!-- Combined Examples -->
-                    <div>
-                        <h4 class="text-lg font-medium mb-3">Combined Examples</h4>
-                        <div class="flex flex-wrap gap-3">
-                            <StyledButton theme="gradient" rounded="full" elevation="lg" size="lg"
-                                @click="simulateLoading">
-                                Premium Button
-                            </StyledButton>
-                            <StyledButton theme="danger" rounded="lg" elevation="md" disabled>
-                                Disabled Button
-                            </StyledButton>
-                            <StyledButton theme="success" rounded="sm" elevation="sm" size="sm">
-                                Compact Success
-                            </StyledButton>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
 
         <!-- Input Section (Previous Content) -->
@@ -332,6 +172,94 @@
                 </details>
             </div>
         </div> <!-- Close Input Section -->
+
+        <!-- Sticky Notes Section -->
+        <div class="space-y-6 border-t border-gray-200 pt-8">
+            <h2 class="text-2xl font-bold text-purple-600 border-b border-purple-200 pb-2">📝 Sticky Notes Component
+            </h2>
+
+            <div class="space-y-4">
+                <h3 class="text-xl font-semibold">Interactive Sticky Notes</h3>
+                <p class="text-sm text-gray-600">Double-click or use the edit icon to edit notes. Try different states!
+                </p>
+
+                <div class="flex flex-wrap gap-6 p-4 bg-gray-50 rounded-lg">
+                    <!-- Default note -->
+                    <ui-sticky-note :note="sampleNotes.default" @update="updateNote" @retry="retryNote" />
+
+                    <!-- Small note with text -->
+                    <ui-sticky-note :note="sampleNotes.small" size="sm" @update="updateNote" @retry="retryNote" />
+
+                    <!-- Large note -->
+                    <ui-sticky-note :note="sampleNotes.large" size="lg" placeholder="Add your thoughts here..."
+                        @update="updateNote" @retry="retryNote" />
+
+                    <!-- Loading state -->
+                    <ui-sticky-note :note="sampleNotes.loading" @update="updateNote" @retry="retryNote" />
+
+                    <!-- Error state -->
+                    <ui-sticky-note :note="sampleNotes.error" @update="updateNote" @retry="retryNote" />
+
+                    <!-- Dynamically added notes -->
+                    <ui-sticky-note v-for="note in dynamicNotes" :key="note.id" :note="note" @update="updateNote"
+                        @retry="retryNote" />
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-xl font-semibold">Component Features</h3>
+                <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <ul class="list-disc list-inside text-sm text-purple-700 space-y-1">
+                        <li><strong>Paper-like Design:</strong> Realistic sticky note appearance with shadows and
+                            texture</li>
+                        <li><strong>Double-click to Edit:</strong> Quick access to edit mode</li>
+                        <li><strong>Edit Icon:</strong> Hover to reveal edit button</li>
+                        <li><strong>Multiple Sizes:</strong> sm, md, lg variants</li>
+                        <li><strong>Loading State:</strong> Shows spinner when saving</li>
+                        <li><strong>Error Handling:</strong> Displays errors with retry option</li>
+                        <li><strong>Keyboard Shortcuts:</strong> Ctrl/Cmd+Enter to save, Esc to cancel</li>
+                        <li><strong>Auto-resize:</strong> Textarea adjusts to content</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-xl font-semibold">Usage Example</h3>
+                <details class="bg-gray-100 p-4 rounded">
+                    <summary class="cursor-pointer font-medium">Click to show code example</summary>
+                    <pre class="text-xs mt-2 overflow-x-auto"><code>&lt;StickyNote
+  :note="{
+    id: 'note-1',
+    text: 'My note text',
+    loading: false,
+    error: null
+  }"
+  size="md"
+  placeholder="Add your note..."
+  @update="handleUpdate"
+  @retry="handleRetry"
+/&gt;</code></pre>
+                </details>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-xl font-semibold">Actions</h3>
+                <div class="flex flex-wrap gap-4">
+                    <UButton variant="solid" color="primary" @click="addNewNote">
+                        Add New Note
+                    </UButton>
+                    <UButton variant="outline" color="red" @click="simulateError">
+                        Simulate Error
+                    </UButton>
+                    <UButton variant="outline" color="blue" @click="simulateLoadingAction">
+                        Simulate Loading
+                    </UButton>
+                    <UButton variant="ghost" color="gray" @click="resetNotes">
+                        Reset All Notes
+                    </UButton>
+                </div>
+            </div>
+        </div> <!-- Close Sticky Notes Section -->
     </div> <!-- Close Container -->
 </template>
 
@@ -348,6 +276,50 @@ const testValue6 = ref('')
 const clickCount = ref(0)
 const isLoading = ref(false)
 
+// Sticky Notes state
+const sampleNotes = ref({
+    default: {
+        id: 'note-1',
+        text: '',
+        loading: false,
+        error: null
+    },
+    small: {
+        id: 'note-2',
+        text: 'Quick reminder: Call dentist on Monday',
+        loading: false,
+        error: null
+    },
+    large: {
+        id: 'note-3',
+        text: 'Meeting Notes:\n- Discuss project timeline\n- Review budget requirements\n- Plan next sprint\n- Update stakeholders',
+        loading: false,
+        error: null
+    },
+    loading: {
+        id: 'note-4',
+        text: 'This note is being saved...',
+        loading: true,
+        error: null
+    },
+    error: {
+        id: 'note-5',
+        text: 'Failed to save this note',
+        loading: false,
+        error: 'Network connection failed. Please try again.'
+    }
+})
+
+let noteCounter = 6
+
+// Computed property to get dynamically added notes (excluding the predefined ones)
+const dynamicNotes = computed(() => {
+    const staticKeys = ['default', 'small', 'large', 'loading', 'error']
+    return Object.entries(sampleNotes.value)
+        .filter(([key]) => !staticKeys.includes(key))
+        .map(([, note]) => note)
+})
+
 // Button interaction methods
 const buttonClicked = () => {
     clickCount.value++
@@ -359,5 +331,114 @@ const simulateLoading = async () => {
     isLoading.value = false
 }
 
+// Sticky Notes methods
+const updateNote = async (id, text) => {
+    console.log('Updating note:', id, text)
+
+    // Find the note and update it
+    for (const key in sampleNotes.value) {
+        if (sampleNotes.value[key].id === id) {
+            sampleNotes.value[key].loading = true
+            sampleNotes.value[key].error = null
+
+            // Simulate API call
+            await new Promise(resolve => setTimeout(resolve, 1000))
+
+            // Random chance of failure for demo
+            if (Math.random() < 0.2) {
+                sampleNotes.value[key].loading = false
+                sampleNotes.value[key].error = 'Failed to save. Please try again.'
+                return
+            }
+
+            sampleNotes.value[key].text = text
+            sampleNotes.value[key].loading = false
+            break
+        }
+    }
+}
+
+const retryNote = async (id) => {
+    console.log('Retrying note:', id)
+
+    // Find the note and retry
+    for (const key in sampleNotes.value) {
+        if (sampleNotes.value[key].id === id) {
+            const currentText = sampleNotes.value[key].text
+            sampleNotes.value[key].error = null
+            await updateNote(id, currentText)
+            break
+        }
+    }
+}
+
+const addNewNote = () => {
+    const newNoteId = `note-${noteCounter++}`
+    const newKey = `dynamic-${noteCounter}`
+
+    sampleNotes.value[newKey] = {
+        id: newNoteId,
+        text: '',
+        loading: false,
+        error: null
+    }
+}
+
+const simulateError = () => {
+    // Set the first note to error state
+    sampleNotes.value.default.error = 'Simulated error occurred!'
+    sampleNotes.value.default.loading = false
+}
+
+const simulateLoadingAction = () => {
+    // Set the first note to loading state
+    sampleNotes.value.default.loading = true
+    sampleNotes.value.default.error = null
+
+    setTimeout(() => {
+        sampleNotes.value.default.loading = false
+    }, 3000)
+}
+
+const resetNotes = () => {
+    sampleNotes.value = {
+        default: {
+            id: 'note-1',
+            text: '',
+            loading: false,
+            error: null
+        },
+        small: {
+            id: 'note-2',
+            text: 'Quick reminder: Call dentist on Monday',
+            loading: false,
+            error: null
+        },
+        large: {
+            id: 'note-3',
+            text: 'Meeting Notes:\n- Discuss project timeline\n- Review budget requirements\n- Plan next sprint\n- Update stakeholders',
+            loading: false,
+            error: null
+        },
+        loading: {
+            id: 'note-4',
+            text: 'This note is being saved...',
+            loading: true,
+            error: null
+        },
+        error: {
+            id: 'note-5',
+            text: 'Failed to save this note',
+            loading: false,
+            error: 'Network connection failed. Please try again.'
+        }
+    }
+    noteCounter = 6
+}
+
 const appConfig = useAppConfig()
+console.log('app.config.ts → ui:', appConfig.ui)
+console.log('app.config.ts → name:', appConfig.name)
+
+console.log(useAppConfig().ui.button)
 </script>

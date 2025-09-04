@@ -56,7 +56,7 @@ export default defineEventHandler(async (event) => {
       })
     }
     const email = decoded.email
-    const existingUser = await prisma.users.findFirst({
+    const existingUser = await prisma.user.findFirst({
       where: {
         email,
       },
@@ -88,7 +88,7 @@ export default defineEventHandler(async (event) => {
 
     const hashedPassword = bcrypt.hashSync(password, 10)
 
-    const user = await prisma.users.update({
+    const user = await prisma.user.update({
       where: {
         email,
       },

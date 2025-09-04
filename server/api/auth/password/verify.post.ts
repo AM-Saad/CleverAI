@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const user = await prisma.users.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email },
     })
 
@@ -29,8 +29,8 @@ export default defineEventHandler(async (event) => {
     }
 
     if (
-      !user.register_verification ||
-      user.register_verification !== verification
+      !user.password_verification ||
+      user.password_verification !== verification
     ) {
       setResponseStatus(event, 400)
       return {
@@ -38,51 +38,34 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    await prisma.users.update({
+    const newVerificationCode = await verificationCode()
+
+    const token = jwt.sign(
+      {
+        email: user.email,
+        password_verification: newVerificationCode,
+      },
+      process.env.AUTH_SECRET!,
+      {
+        expiresIn: "1m",
+      },
+    )
+
+    await prisma.user.update({
       where: { email },
       data: {
-        email_verified: true,
-        register_verification: null,
+        password_verification: newVerificationCode,
       },
     })
-
-    if (!user.password) {
-      // Create JWT token
-      const newVerificationCode = await verificationCode()
-
-      const token = jwt.sign(
-        {
-          email: user.email,
-          password_verification: newVerificationCode,
-        },
-        process.env.AUTH_SECRET!,
-        {
-          expiresIn: "1h",
-        },
-      )
-
-      await prisma.users.update({
-        where: { email },
-        data: {
-          password_verification: newVerificationCode,
-        },
-      })
-
-      return {
-        message: `Verification successful, you will now be redirected to create a password for your account`,
-        body: {
-          redirect: `/auth/createPassword?token=${token}`,
-        },
-      }
-    }
 
     return {
       message: "Verification successful",
       body: {
-        redirect: "/auth/signIn",
+        token,
       },
     }
   } catch (error) {
+    console.error('Password verification error:', error)
     throw new Error("Failed to verify authentication response")
   }
 })

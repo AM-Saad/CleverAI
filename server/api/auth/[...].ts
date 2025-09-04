@@ -1,14 +1,54 @@
-/* eslint-disable no-console */
 // file: ~/../server/api/auth/[...].ts
-import GoogleProvider from "next-auth/providers/google"
-import { NuxtAuthHandler } from "#auth"
-import { AuthService } from "~/services/auth"
-import CredentialsProvider from "next-auth/providers/credentials"
 import { PrismaClient } from "@prisma/client"
+import GoogleProvider from "next-auth/providers/google"
+import CredentialsProvider from "next-auth/providers/credentials"
+import { NuxtAuthHandler } from "#auth"
 import bcrypt from "bcryptjs"
 import { verificationCode } from "~/utils/verificationCode.server"
+
 const prisma = new PrismaClient()
 const config = useRuntimeConfig()
+
+// Helper function to register user (replacement for AuthService)
+const registerUser = async (userData: {
+  name?: string
+  email: string
+  password?: string
+  provider: string
+}) => {
+  const existingUser = await prisma.user.findFirst({
+    where: { email: userData.email }
+  })
+
+  if (existingUser && existingUser.email_verified) {
+    return { message: "User already exists" }
+  }
+
+  // Create user with Google OAuth
+  if (userData.provider === 'google') {
+    await prisma.user.upsert({
+      where: { email: userData.email },
+      update: {
+        name: userData.name || userData.email,
+        auth_provider: 'google',
+        email_verified: true,
+        account_verified: true
+      },
+      create: {
+        name: userData.name || userData.email,
+        email: userData.email,
+        password: '', // Google users don't have passwords
+        phone: '', // Will be updated later if needed
+        auth_provider: 'google',
+        email_verified: true,
+        account_verified: true,
+        role: 'USER'
+      }
+    })
+  }
+
+  return { message: "User registered successfully" }
+}
 
 export default NuxtAuthHandler({
   secret: config.AUTH_SECRET,
@@ -106,7 +146,7 @@ export default NuxtAuthHandler({
             },
           })
           if (!user) {
-            await AuthService.register_user({
+            await registerUser({
               name: name || email,
               email: email,
               provider: "google",
@@ -117,7 +157,7 @@ export default NuxtAuthHandler({
         }
       }
       if (params.profile && params.isNewUser && email) {
-        await AuthService.register_user({
+        await registerUser({
           name: name || email,
           email: email,
           provider: "google",
@@ -198,23 +238,5 @@ export default NuxtAuthHandler({
         },
       }
     },
-
-    //  async signIn(params) {
-    //    console.log("callback signIn -> params", params)
-    //    return true
-    //    // const profile = params.profile as GoogleProfile
-    //    // const account = params.account as Account
-    //    // const email = params.email as { verificationRequest: boolean }
-    //    // console.log("callback signIn -> account", account)
-    //    // console.log("callback signIn -> profile", profile)
-    //    // if (account && account.provider === "google") {
-    //    //   console.log(
-    //    //     "callback signIn -> account -> email_verified",
-    //    //     profile.email_verified,
-    //    //   )
-    //    //   //   return profile && profile.email_verified
-    //    // }
-    //    // return true // Do different verification for other providers that don't have `email_verified`
-    //  },
   },
 })

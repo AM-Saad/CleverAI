@@ -22,6 +22,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     provide: {
       api: {
         folders: apiServiceFactory.create("folders"),
+        auth: apiServiceFactory.create("auth"),
       },
     },
   }

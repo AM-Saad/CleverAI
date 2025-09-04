@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
     return "No email found in session"
   }
 
-  const user = await prisma.users.findUnique({
+  const user = await prisma.user.findUnique({
     where: { email },
   })
 

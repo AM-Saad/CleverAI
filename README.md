@@ -4,6 +4,18 @@ CleverAI is a Nuxt 3 + TypeScript application providing AI-powered study tools l
 
 ---
 
+## 📱 Progressive Web App (PWA)
+
+CleverAI is a fully functional Progressive Web App with robust offline capabilities. Users can:
+- Install the app on any device
+- Access content completely offline
+- Navigate between pages without internet connection
+- Experience fast, native-app-like performance
+
+**📖 For detailed PWA implementation, caching strategy, and best practices, see [PWA_CACHING_STRATEGY.md](./PWA_CACHING_STRATEGY.md)**
+
+---
+
 ## Features
 
 - **Folder-based Content** – Create study folders with metadata (e.g., chosen LLM model).

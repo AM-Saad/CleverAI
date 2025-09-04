@@ -1,4 +1,4 @@
-// public/service-worker
+// public/service-worker/index.ts
 /// <reference lib="WebWorker" />
 /// <reference types="vite/client" />
 
@@ -24,7 +24,8 @@ import { clientsClaim } from "workbox-core"
 import { NavigationRoute, registerRoute } from "workbox-routing"
 import { CacheFirst } from "workbox-strategies"
 import { ExpirationPlugin } from "workbox-expiration"
-import { calculate_chunk_size, SW_MESSAGE_TYPE } from "../../app/utils"
+import { calculate_chunk_size } from "../../app/utils/calculate_chunk_size"
+import { SW_MESSAGE_TYPE } from "../../app/utils/constants/sw.enum"
 
 declare let self: ServiceWorkerGlobalScope
 let db: IDBDatabase

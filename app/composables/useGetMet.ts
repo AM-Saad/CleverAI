@@ -1,7 +1,5 @@
-/* eslint-disable no-console */
 import { ref } from "vue"
-import { AuthService } from "~/services/auth"
-//
+
 interface useGetMe {
   error: Ref<string>
   success: Ref<string>
@@ -20,7 +18,8 @@ export function useGetMe(email:string): useGetMe {
 
       loading.value = true
       try {
-         await AuthService.verify(email)
+         const { $api } = useNuxtApp()
+         await $api.auth.findUser(email)
 
       } catch (err) {
         console.log("Error logging in.", err)

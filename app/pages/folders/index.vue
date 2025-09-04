@@ -1,5 +1,5 @@
 <template>
-    <div class="mt-xl">
+    <div>
         <h1 class="text-2xl font-bold ">Folders</h1>
         <div v-if="loading" class="text-gray-500 my-xl">
             <div class="flex items-center gap-4">
@@ -37,7 +37,8 @@
         </div>
         <modals-create-folder-form :show="show" @cancel="show = false" />
         <div class="mt-4">
-            <button class="btn btn-primary" @click="show = true">Create Folder</button>
+
+            <UButton @click="show = true">Create Folder</UButton>
         </div>
     </div>
 </template>

@@ -28,7 +28,7 @@
                                 :aria-expanded="showUpload" aria-controls="upload-materials">
                                 Upload Materials
                             </button>
-                            <FolderUploadMaterialForm :show="showUpload" @closed="showUpload = false"
+                            <FolderUploadMaterialForm :show="showUpload" :backdrop="false" @closed="showUpload = false"
                                 @cancel="showUpload = false" />
                         </div>
                     </div>

@@ -1,5 +1,5 @@
 // server/api/verification.post.ts
-import { sendEmail } from "~/utils/sendGrid.server"
+import { sendEmail } from "~/utils/resend.server"
 import { verificationCode } from "~/utils/verificationCode.server"
 import { PrismaClient } from "@prisma/client"
 const prisma = new PrismaClient()
@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    const user = await prisma.users.findUnique({
+    const user = await prisma.user.findUnique({
       where: { email },
     })
 
@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
     const newVerificationCode = await verificationCode()
     await sendEmail(email, newVerificationCode)
 
-    await prisma.users.update({
+    await prisma.user.update({
       where: { email },
       data: {
         register_verification: newVerificationCode,
@@ -42,6 +42,7 @@ export default defineEventHandler(async (event) => {
       message: "Verification code has been sent to your email",
     }
   } catch (error) {
+    console.error('Verification error:', error)
     throw new Error("Failed to send verification email")
   }
 })

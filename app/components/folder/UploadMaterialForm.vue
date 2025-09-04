@@ -20,6 +20,7 @@ const props = withDefaults(defineProps<{
     lockScroll?: boolean
     threshold?: number
     fastVelocity?: number
+    backdrop?: boolean
 }>(), {
     side: 'right',
     mobile: 'auto',
@@ -31,6 +32,7 @@ const props = withDefaults(defineProps<{
     lockScroll: true,
     threshold: 20,
     fastVelocity: 450,
+    backdrop: true
 })
 
 // ----- Form schema & state -----
@@ -83,7 +85,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
     <ui-drawer :show="props.show" :side="props.side" :mobile="props.mobile" :breakpoint="props.breakpoint"
         :handle-visible="props.handleVisible" :sheet-height="props.sheetHeight" :width-classes="props.widthClasses"
         :teleport-to="props.teleportTo" :lock-scroll="props.lockScroll" :threshold="props.threshold"
-        :fast-velocity="props.fastVelocity" title="Upload Material" @closed="emit('closed')">
+        :backdrop="props.backdrop" :fast-velocity="props.fastVelocity" title="Upload Material" @closed="emit('closed')">
         <template #subtitle>
             <p class="text-sm opacity-70">Upload your material files here.</p>
         </template>

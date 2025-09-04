@@ -48,7 +48,7 @@ export function useDrawerMotion(panelEl: Ref<HTMLElement | null | undefined>, op
   )
 
   const containerClass = computed(() =>
-    `${opts.side === 'right' ? 'top-0 right-0 rounded-l-3xl' : 'top-0 left-0 rounded-r-3xl'} h-full ${opts.widthClasses}`
+    `${opts.side === 'right' ? 'top-0 right-0 rounded-l-lg  ' : 'top-0 left-0 rounded-r-lg    '} h-full ${opts.widthClasses}`
   )
 
   const handleClass = computed(() => (opts.side === 'right' ? 'left-2' : 'right-2'))
