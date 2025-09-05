@@ -116,7 +116,7 @@ export default defineNuxtConfig({
     logLevel: "info",
     server: {
       hmr: {
-        port: 8080, // Match the dev server port
+        port: 3001, // Match the dev server port
       },
     },
     define: {
@@ -136,12 +136,8 @@ export default defineNuxtConfig({
   },
 
   pwa: {
-    strategies: "injectManifest",
-    registerType: "autoUpdate",
-    injectManifest: {
-      swSrc: "./app/public/sw.ts",
-      swDest: "sw.js",
-    },
+    // Disable automatic generation to avoid conflict with manual workbox inject script.
+    disable: true,
     workbox: {
       cleanupOutdatedCaches: true,
       navigateFallback: '/offline',
@@ -407,7 +403,7 @@ export default defineNuxtConfig({
       periodicSyncForUpdates: 20,
     },
     devOptions: {
-      enabled: true,
+      enabled: false,
       suppressWarnings: false,
       navigateFallback: "/",
       navigateFallbackAllowlist: [/^\/.*$/], // Allow all routes to use offline fallback

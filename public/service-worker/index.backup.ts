@@ -33,9 +33,8 @@ let db: IDBDatabase
 // Use workbox clientsClaim to handle clients immediately
 clientsClaim()
 
-// self.__WB_MANIFEST is default injection point
+// Precache manual entries only. The main `sw.js` contains the Workbox injection point.
 precacheAndRoute([
-  ...self.__WB_MANIFEST,
   { url: "/about", revision: null }, // Cache the /about page
   { url: "/offline", revision: null }, // Cache the /offline page
 ])

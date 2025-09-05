@@ -193,6 +193,13 @@ export function useServiceWorkerUpdates() {
         controller: !!navigator.serviceWorker.controller
       })
 
+      // Skip update checks for dev-sw or non-/sw.js scripts to avoid MIME/type errors
+      const scriptUrl = registration.active?.scriptURL || registration.waiting?.scriptURL || registration.installing?.scriptURL || ''
+      if (scriptUrl.includes('dev-sw.js') || !scriptUrl.includes('/sw.js')) {
+        console.warn('⚠️ Skipping update() for non-custom SW:', scriptUrl)
+        return
+      }
+
       // Check for updates
       await registration.update()
       console.log('🔄 Service worker update check complete')

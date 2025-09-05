@@ -56,11 +56,11 @@ import { chromium } from 'playwright';
     // Test offline functionality by simulating network failure
     console.log('\n🌐 Testing offline functionality...');
     await context.setOffline(true);
-    
+
     // Try to navigate to a page that should be cached
     console.log('📄 Navigating to home page while offline...');
     await page.goto('http://localhost:3000', { timeout: 10000 });
-    
+
     const title = await page.title();
     console.log(`✅ Page loaded offline! Title: "${title}"`);
 
@@ -69,7 +69,7 @@ import { chromium } from 'playwright';
     await page.click('a[href="/about"]').catch(() => {
       console.log('   No about link found, that\'s okay');
     });
-    
+
     console.log('\n🎉 Custom service worker test completed successfully!');
     console.log('✅ Your custom service worker is working correctly');
     console.log('✅ Offline functionality is operational');

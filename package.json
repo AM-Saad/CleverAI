@@ -3,8 +3,12 @@
     "private": true,
     "type": "module",
     "scripts": {
-        "build": "nuxt build --vercel-preset",
-        "dev": "nuxt dev --port 8080",
+    "sw:build": "esbuild sw-src/index.ts --bundle --format=iife --outfile=public/sw.js --platform=browser --target=es2019",
+    "prebuild": "yarn sw:build && node scripts/check-sw-placeholder.cjs",
+    "build": "nuxt build --vercel-preset",
+    "build:inject": "yarn build || true && node scripts/inject-sw.cjs",
+    "test:pwa-offline": "playwright test tests/pwa-offline-basic.spec.ts --project=chromium",
+        "dev": "nuxt dev --port 3001",
         "generate": "nuxt generate",
         "preview": "nuxt preview",
         "postinstall": "nuxt prepare",
@@ -107,7 +111,8 @@
         "ts-node": "^10.9.2",
         "tsx": "^4.20.3",
         "typescript": "^5.5.4",
-        "vite-plugin-cross-origin-isolation": "^0.1.6",
+    "vite-plugin-cross-origin-isolation": "^0.1.6",
+    "esbuild": "^0.23.0",
         "vue-tsc": "^2.1.6"
     },
     "config": {
