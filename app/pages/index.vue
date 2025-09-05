@@ -5,7 +5,8 @@
         <section
             class="my-xl flex w-full  shadow rounded-2xl p-lg bg-accent dark:bg-gray-800 animate-gradient h-screen">
             <div class="flex flex-col  gap-2">
-                <motion.h2 :initial="{ opacity: 0, scale: .9 }" :animate="{ opacity: 1, scale: 1 }" :transition="{
+                <motion.h2
+:initial="{ opacity: 0, scale: .9 }" :animate="{ opacity: 1, scale: 1 }" :transition="{
                     duration: 1.9,
                     scale: {
                         type: 'spring',
@@ -15,7 +16,8 @@
                 }" class="text-9xl font-light tracking-tighter text-primary ">
                     Shater AI
                 </motion.h2>
-                <ui-text-generate-effect class="text-4xl font-medium my-4"
+                <ui-text-generate-effect
+class="text-4xl font-medium my-4"
                     :words="'AI, Chatbot, Assistant, Helper, Support, Guide'" />
                 <router-link to="/auth/signup">
                     <ui-button>Start Now</ui-button>

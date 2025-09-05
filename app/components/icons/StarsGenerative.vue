@@ -1,6 +1,7 @@
 <template>
     <div class="relative flex h-5 w-5 rotate-90 items-center justify-center dark:fill-slate-50">
-        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" x="0px" y="0px"
+        <svg
+xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" x="0px" y="0px"
             viewBox="0 0 100 125" class="fill-accent" style="enable-background:new 0 0 100 100; position: relative;"
             xml:space="preserve">
             <g class="star-1">

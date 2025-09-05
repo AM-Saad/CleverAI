@@ -31,7 +31,8 @@ const handleUpgrade = async () => {
     <div class="upgrade-container">
         <div class="upgrade-card">
             <div class="upgrade-icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
+                <svg
+xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none"
                     stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M20.2 7.8l-7.7 7.7-4-4-5.7 5.7" />
                     <path d="M15 7h6v6" />
@@ -42,8 +43,9 @@ const handleUpgrade = async () => {
 
             <div v-if="generationsUsed !== undefined && generationsQuota !== undefined" class="upgrade-quota">
                 <div class="upgrade-progress">
-                    <div class="upgrade-progress-bar"
-                        :style="{ width: `${Math.min(100, (generationsUsed / generationsQuota) * 100)}%` }"></div>
+                    <div
+class="upgrade-progress-bar"
+                        :style="{ width: `${Math.min(100, (generationsUsed / generationsQuota) * 100)}%` }"/>
                 </div>
                 <div class="upgrade-stats">
                     <span>{{ generationsUsed }}/{{ generationsQuota }} generations used</span>
@@ -54,21 +56,24 @@ const handleUpgrade = async () => {
                 <h3>Upgrade to Pro and Get:</h3>
                 <ul>
                     <li>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        <svg
+xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="20 6 9 17 4 12" />
                         </svg>
                         Unlimited AI generations
                     </li>
                     <li>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        <svg
+xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="20 6 9 17 4 12" />
                         </svg>
                         Access to all LLM models
                     </li>
                     <li>
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        <svg
+xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="20 6 9 17 4 12" />
                         </svg>
@@ -77,9 +82,10 @@ const handleUpgrade = async () => {
                 </ul>
             </div>
 
-            <button @click="handleUpgrade" :disabled="isLoading" class="upgrade-button">
+            <button :disabled="isLoading" class="upgrade-button" @click="handleUpgrade">
                 <span v-if="isLoading">
-                    <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                    <svg
+class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
                         viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <path d="M21 12a9 9 0 1 1-6.219-8.56" />

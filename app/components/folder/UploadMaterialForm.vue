@@ -82,7 +82,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 </script>
 
 <template>
-    <ui-drawer :show="props.show" :side="props.side" :mobile="props.mobile" :breakpoint="props.breakpoint"
+    <ui-drawer
+:show="props.show" :side="props.side" :mobile="props.mobile" :breakpoint="props.breakpoint"
         :handle-visible="props.handleVisible" :sheet-height="props.sheetHeight" :width-classes="props.widthClasses"
         :teleport-to="props.teleportTo" :lock-scroll="props.lockScroll" :threshold="props.threshold"
         :backdrop="props.backdrop" :fast-velocity="props.fastVelocity" title="Upload Material" @closed="emit('closed')">
@@ -96,7 +97,8 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
             </UFormField>
 
             <UFormField label="Material Type" name="materialType">
-                <USelect v-model="state.materialType" :options="[
+                <USelect
+v-model="state.materialType" :options="[
                     { label: 'Text', value: 'text' },
                     { label: 'Video', value: 'video' },
                     { label: 'Audio', value: 'audio' },

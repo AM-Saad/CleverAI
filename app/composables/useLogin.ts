@@ -1,4 +1,4 @@
-/* eslint-disable no-console */
+ 
 import { ref } from "vue"
 import { useOffline } from "./useOffline"
 //

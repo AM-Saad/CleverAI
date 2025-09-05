@@ -3,11 +3,13 @@
         <div class="flex items-center justify-end">
             <div class="flex items-center gap-3">
 
-                <span v-if="rateLimitRemaining !== null"
+                <span
+v-if="rateLimitRemaining !== null"
                     class="inline-flex items-center text-xs px-2 py-1 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-700/50">
                     Remaining: <span class="ml-1 font-medium">{{ rateLimitRemaining }}</span>
                 </span>
-                <UButton class="flex items-center" :size="'lg'" :loading="generating || loading"
+                <UButton
+class="flex items-center" :size="'lg'" :loading="generating || loading"
                     :disabled="generating || loading" @click="onGenerate">
                     <span v-if="!generating">Generate Flashcards</span>
                     <span v-else>Generating…</span>
@@ -25,7 +27,8 @@
             {{ genError }}
         </p>
 
-        <div v-if="cardsToShow?.length"
+        <div
+v-if="cardsToShow?.length"
             class="mt-4 grid gap-4 justify-center justify-items-center sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             <div v-for="(card, idx) in cardsToShow" :key="idx">
                 <!-- <div class="font-medium mb-1">Q: {{ card.front }}</div>

@@ -2,7 +2,8 @@
     <div>
         <Html lang="en" />
         <Title>ShaterAI | Your AI-powered Learning Assistant</Title>
-        <Meta lang="en" name="description"
+        <Meta
+lang="en" name="description"
             content="ShaterAI is your AI-powered learning assistant, designed to help you learn more effectively and efficiently."
             theme-color="#f3f4f6" />
         <NuxtErrorBoundary @error="ErrorLogger">

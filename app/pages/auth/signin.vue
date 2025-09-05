@@ -24,18 +24,21 @@ const isValidPassword = computed(() => {
 <template>
     <div
         class="flex items-center justify-center flex-col w-full max-w-lg mx-auto mt-6 sm:mt-20 p-8 rounded-lg dark:bg-transparent">
-        <form ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
+        <form
+ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
             @submit.prevent="handleSubmit">
             <h1 class="title">Login</h1>
             <p class="text-gray-400 text-xs mt-1 mb-8">Login to your account</p>
             <shared-error-message :error="error" />
             <div class="mb-2 mt-2 rounded-md relative transition duration-10 00 text-xs">
-                <ui-input-field id="login-email-client" v-model="credentials.email" type="email" name="email"
+                <ui-input-field
+id="login-email-client" v-model="credentials.email" type="email" name="email"
                     label="Email Address" title="Please enter a valid email address"
                     pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$" tabindex="1" :styles="{
                         inputField: `${isValidEmail ? ' rounded-b-none border-b' : ''}`,
                     }" />
-                <ui-input-field id="login-password-client" v-model="credentials.password" type="password"
+                <ui-input-field
+id="login-password-client" v-model="credentials.password" type="password"
                     name="password" label="Password" title="Please enter a valid password" tabindex="2" :styles="{
                         input: `${isValidPassword ? 'pt-8' : ''}`,
                         inputField: `rounded-t-none  ${!isValidEmail ? ' -translate-y-full -z-10 hidden' : ''}`,
@@ -44,7 +47,8 @@ const isValidPassword = computed(() => {
                     :class="`w-8 h-8 absolute right-2 bottom-2 border rounded-full text-center grid place-items-center cursor-pointer hover:opacity-90 bg-primary hover:shadow ${isValidEmail && isValidPassword ? ' ' : 'opacity-45'}`"
                     type="submit" :disabled="!isValidEmail || !isValidPassword || loading"
                     @click.prevent="handleSubmit">
-                    <icon v-if="!loading" name="i-heroicons-arrow-right" class="w-4 h-4 text-white
+                    <icon
+v-if="!loading" name="i-heroicons-arrow-right" class="w-4 h-4 text-white
 
                     " />
                     <icon v-else name="uil:redo" class="w-4 h-4 animate-spin text-white" />
@@ -68,7 +72,8 @@ const isValidPassword = computed(() => {
             <p class="text-center text-gray-400 text-xs mt-4 mb-2">
                 Or sign in with a social account below 👇
             </p>
-            <button v-for="provider in mappedProviders" :key="provider?.id"
+            <button
+v-for="provider in mappedProviders" :key="provider?.id"
                 class="btn btn-small bg-white dark:bg-[#eb4034] disabled:opacity-50 dark:ring-white" :disabled="loading"
                 type="button" tabindex="5" @click="signIn(provider?.id)">
                 Sign in with {{ provider?.name }}

@@ -91,6 +91,7 @@
         "@nuxt/types": "^2.18.1",
         "@nuxtjs/eslint-config-typescript": "^12.1.0",
         "@nuxtjs/tailwindcss": "^6.8.0",
+        "@playwright/test": "^1.55.0",
         "@sidebase/nuxt-auth": "^0.9.4",
         "@sidebase/nuxt-session": "^0.2.8",
         "@simplewebauthn/types": "^10.0.0",

@@ -3,7 +3,7 @@
         <div class="wrapper">
             <section id="about">
                 <h2>About us</h2>
-                <p></p>
+                <p/>
             </section>
 
             <section id="services" class="my-5 p-5">
@@ -14,12 +14,12 @@
                         <div class="relative z-10">
                             <div class="head">
                                 <div class="icon">
-                                    <img class="h-2/4" src="~/assets/images/free.png" alt="" srcset="" />
+                                    <img class="h-2/4" src="~/assets/images/free.png" alt="" srcset="" >
                                 </div>
                                 <h5>Free</h5>
                             </div>
                             <p>
-                                You don't need to pay anything, no credit card required.<br /><strong>
+                                You don't need to pay anything, no credit card required.<br ><strong>
                                     Enjoy it now</strong>
                             </p>
                         </div>
@@ -29,7 +29,7 @@
                         <div class="relative z-10">
                             <div class="head">
                                 <div class="icon">
-                                    <img class="h-2/4" src="~/assets/images/nodown.png" alt="" srcset="" />
+                                    <img class="h-2/4" src="~/assets/images/nodown.png" alt="" srcset="" >
                                 </div>
                                 <h5>Online(No Downlaod Required)</h5>
                             </div>
@@ -44,7 +44,7 @@
                         <div class="relative z-10">
                             <div class="head">
                                 <div class="icon">
-                                    <img class="h-2/4" src="~/assets/images/screen.png" alt="" srcset="" />
+                                    <img class="h-2/4" src="~/assets/images/screen.png" alt="" srcset="" >
                                     />
                                 </div>
                                 <h5>Flexable</h5>
@@ -57,7 +57,7 @@
                         <div class="relative z-10">
                             <div class="head">
                                 <div class="icon">
-                                    <img class="h-2/4" src="~/assets/images/mic.png" alt="" srcset="" />
+                                    <img class="h-2/4" src="~/assets/images/mic.png" alt="" srcset="" >
                                     />
                                 </div>
                                 <h5>Options</h5>

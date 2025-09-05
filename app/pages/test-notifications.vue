@@ -17,7 +17,8 @@
                 </div>
 
                 <div class="flex gap-2">
-                    <UButton color="primary" :loading="isLoading" :disabled="isSubscribed"
+                    <UButton
+color="primary" :loading="isLoading" :disabled="isSubscribed"
                         @click="registerNotification">
                         Subscribe to Notifications
                     </UButton>
@@ -98,7 +99,8 @@
                         <UButton size="xs" variant="outline" @click="checkForSWUpdates">
                             Check for Updates
                         </UButton>
-                        <UButton v-if="swUpdateAvailable" size="xs" color="primary" :loading="swUpdating"
+                        <UButton
+v-if="swUpdateAvailable" size="xs" color="primary" :loading="swUpdating"
                             @click="applySWUpdate">
                             Apply Update
                         </UButton>

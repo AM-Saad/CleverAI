@@ -38,7 +38,7 @@ const gotit = (): void => {
           muted
           autoplay
           loop
-        ></video>
+        />
         <div class="my-2 flex justify-between gap-3">
           <div class="flex items-center gap-2">
             <input
@@ -46,7 +46,7 @@ const gotit = (): void => {
               type="checkbox"
               name="dontshow"
               @click="dontShow = !dontShow"
-            />
+            >
             <label for="dontShow" class="dark:text-gray-400"
               >Don't Show Again</label
             >

@@ -85,7 +85,7 @@ const handleSubmit = async (): Promise<void> => {
           placeholder="Add your password..."
           autocomplete="false | unknown-autocomplete-value"
           tabindex="1"
-        />
+        >
       </div>
       <div class="form-group">
         <input
@@ -97,7 +97,7 @@ const handleSubmit = async (): Promise<void> => {
           placeholder="Confirm your password..."
           autocomplete="false | unknown-autocomplete-value"
           tabindex="2"
-        />
+        >
       </div>
       <div>
         <button

@@ -86,7 +86,8 @@ const closeModel = (): void => {
                         <UiInput v-model="state.description" />
                     </UFormField>
                     <UFormField label="LLM Model" name="llmModel">
-                        <USelectMenu v-model="state.llmModel" color="neutral" variant="subtle" :items="llmModels"
+                        <USelectMenu
+v-model="state.llmModel" color="neutral" variant="subtle" :items="llmModels"
                             class="w-48 " :ui="{
                                 content: 'z-[9999] bg-white'
                             }" />

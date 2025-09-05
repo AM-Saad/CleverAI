@@ -57,9 +57,8 @@ export default defineNuxtConfig({
     },
   },
   experimental: {
-    compileTemplate: true,
-    templateUtils: true,
-    relativeWatchPaths: true,
+    debugModuleMutation:false,
+
     defaults: {
       useAsyncData: {
         deep: true,
@@ -137,8 +136,205 @@ export default defineNuxtConfig({
   },
 
   pwa: {
-    strategies: "generateSW",
+    strategies: "injectManifest",
     registerType: "autoUpdate",
+    injectManifest: {
+      swSrc: "./app/public/sw.ts",
+      swDest: "sw.js",
+    },
+    workbox: {
+      cleanupOutdatedCaches: true,
+      navigateFallback: '/offline',
+      navigateFallbackDenylist: [/^\/_nuxt\//, /\/api\//],
+      runtimeCaching: [
+        // 1. Images - Basic image files
+        {
+          urlPattern: /\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'images',
+            expiration: {
+              maxEntries: 44,
+              maxAgeSeconds: 7 * 24 * 60 * 60, // 7 Days
+            },
+          },
+        },
+
+        // 2. JavaScript files
+        {
+          urlPattern: /\.(?:js|mjs|ts)$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'javascript',
+            expiration: {
+              maxEntries: 60,
+              maxAgeSeconds: 7 * 24 * 60 * 60,
+            },
+          },
+        },
+
+        // 3. CSS files
+        {
+          urlPattern: /\.(?:css)$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'stylesheets',
+            expiration: {
+              maxEntries: 20,
+              maxAgeSeconds: 7 * 24 * 60 * 60,
+            },
+          },
+        },
+
+        // 4. Vite Development Tools - NetworkFirst for HMR
+        {
+          urlPattern: /^\/_nuxt\/@vite\//,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'vite-dev',
+            networkTimeoutSeconds: 3,
+            expiration: {
+              maxEntries: 10,
+              maxAgeSeconds: 60 * 60, // 1 hour
+            },
+          },
+        },
+
+        // 5. Nuxt Filesystem routes
+        {
+          urlPattern: /^\/_nuxt\/@fs\//,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'nuxt-fs',
+            expiration: {
+              maxEntries: 30,
+              maxAgeSeconds: 7 * 24 * 60 * 60,
+            },
+          },
+        },
+
+        // 6. Nuxt Virtual modules
+        {
+          urlPattern: /^\/_nuxt\/@id\//,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'nuxt-virtual',
+            expiration: {
+              maxEntries: 50,
+              maxAgeSeconds: 3 * 24 * 60 * 60, // 3 days
+            },
+          },
+        },
+
+        // 7. Critical: Vue Plugin Export Helper - This was breaking offline!
+        {
+          urlPattern: /__x00__plugin-vue:export-helper/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'vite-plugin-vue',
+            expiration: {
+              maxEntries: 10,
+              maxAgeSeconds: 24 * 60 * 60, // 1 day
+            },
+          },
+        },
+
+        // 8. All Vite virtual plugins
+        {
+          urlPattern: /__x00__.*/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'vite-plugins',
+            expiration: {
+              maxEntries: 20,
+              maxAgeSeconds: 24 * 60 * 60, // 1 day
+            },
+          },
+        },
+
+        // 9. Vue macro pages
+        {
+          urlPattern: /.*\.vue\?macro=true$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'vue-macro-pages',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 7 * 24 * 60 * 60, // 1 week
+            },
+          },
+        },
+
+        // 10. Image imports with query parameters
+        {
+          urlPattern: /.*\.(png|jpg|jpeg|gif|svg|webp)\?import$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'image-imports',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 7 * 24 * 60 * 60, // 1 week
+            },
+          },
+        },
+
+        // 11. API Session - NetworkFirst for fresh auth
+        {
+          urlPattern: /\/api\/session$/,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'api-session',
+            networkTimeoutSeconds: 3,
+            expiration: {
+              maxEntries: 5,
+              maxAgeSeconds: 5 * 60, // 5 minutes
+            },
+          },
+        },
+
+        // 12. General _nuxt catch-all
+        {
+          urlPattern: /^\/_nuxt\//,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'nuxt-catch-all',
+            expiration: {
+              maxEntries: 500,
+              maxAgeSeconds: 7 * 24 * 60 * 60, // 1 week
+            },
+          },
+        },
+
+        // 13. ✅ CRITICAL: HTML navigations (this fixes your test failures!)
+        {
+          urlPattern: /^\/(?!_nuxt\/|api\/).*/,
+          handler: 'NetworkFirst',
+          options: {
+            cacheName: 'pages',
+            networkTimeoutSeconds: 3,
+            expiration: {
+              maxEntries: 60,
+              maxAgeSeconds: 24 * 60 * 60, // 1 day
+            },
+          },
+        },
+
+        // 14. API GET requests
+        {
+          urlPattern: /\/api\/.*$/,
+          handler: 'NetworkFirst',
+          method: 'GET',
+          options: {
+            cacheName: 'api',
+            networkTimeoutSeconds: 3,
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 10 * 60, // 10 minutes
+            },
+          },
+        },
+      ],
+    },
     manifest: {
       name: "CleverAI",
       short_name: "CleverAI",
@@ -216,303 +412,6 @@ export default defineNuxtConfig({
       navigateFallback: "/",
       navigateFallbackAllowlist: [/^\/.*$/], // Allow all routes to use offline fallback
       type: "module",
-    },
-    workbox: {
-      globPatterns: ["**/*.{js,css,html,ico,png,svg}", "_nuxt/**/*"],
-      navigateFallback: "/",
-      navigateFallbackDenylist: [/^\/_/, /\/api\//], // Exclude internal and API routes
-      runtimeCaching: [
-        {
-          urlPattern: /\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'images',
-            expiration: {
-              maxEntries: 44,
-              maxAgeSeconds: 7 * 24 * 60 * 60, // 7 Days
-            },
-          },
-        },
-        {
-          urlPattern: /^\/_nuxt\//,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'nuxt-assets',
-            expiration: {
-              maxEntries: 100,
-              maxAgeSeconds: 7 * 24 * 60 * 60,
-            },
-          },
-        },
-        {
-          urlPattern: /\.(?:js|mjs|ts)$/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'javascript',
-            expiration: {
-              maxEntries: 60,
-              maxAgeSeconds: 7 * 24 * 60 * 60,
-            },
-          },
-        },
-        {
-          urlPattern: /\.(?:css)$/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'stylesheets',
-            expiration: {
-              maxEntries: 20,
-              maxAgeSeconds: 7 * 24 * 60 * 60,
-            },
-          },
-        },
-        {
-          urlPattern: /^\/_nuxt\/@vite\//,
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'vite-dev',
-            expiration: {
-              maxEntries: 10,
-              maxAgeSeconds: 60 * 60, // 1 hour for dev tools
-            },
-            networkTimeoutSeconds: 3,
-          },
-        },
-        {
-          urlPattern: /^\/_nuxt\/@fs\//,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'nuxt-fs',
-            expiration: {
-              maxEntries: 30,
-              maxAgeSeconds: 7 * 24 * 60 * 60,
-            },
-          },
-        },
-        {
-          urlPattern: /^\/_nuxt\/@id\//,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'nuxt-virtual',
-            expiration: {
-              maxEntries: 50,
-              maxAgeSeconds: 3 * 24 * 60 * 60, // 3 days
-            },
-          },
-        },
-        {
-          urlPattern: /^\/_nuxt\/@vite-plugin-pwa\//,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'pwa-assets',
-            expiration: {
-              maxEntries: 10,
-              maxAgeSeconds: 7 * 24 * 60 * 60,
-            },
-          },
-        },
-        {
-          urlPattern: /\/_nuxt\/.*@vite\/client.*/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'vite-client',
-            expiration: {
-              maxEntries: 10,
-              maxAgeSeconds: 24 * 60 * 60, // 1 day
-            },
-          },
-        },
-        {
-          urlPattern: /\/_nuxt\/.*virtual.*/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'virtual-modules',
-            expiration: {
-              maxEntries: 20,
-              maxAgeSeconds: 24 * 60 * 60, // 1 day
-            },
-          },
-        },
-        {
-          urlPattern: /__x00__plugin-vue:export-helper/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'vite-plugin-vue',
-            expiration: {
-              maxEntries: 10,
-              maxAgeSeconds: 24 * 60 * 60, // 1 day
-            },
-          },
-        },
-        {
-          urlPattern: /__x00__.*/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'vite-plugins',
-            expiration: {
-              maxEntries: 20,
-              maxAgeSeconds: 24 * 60 * 60, // 1 day
-            },
-          },
-        },
-        {
-          urlPattern: /\/_nuxt\/pages\/.*\.vue(\?.*)?$/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'vue-pages',
-            expiration: {
-              maxEntries: 50,
-              maxAgeSeconds: 7 * 24 * 60 * 60, // 1 week
-            },
-          },
-        },
-        {
-          urlPattern: /.*\.vue\?macro=true$/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'vue-macro-pages',
-            expiration: {
-              maxEntries: 100,
-              maxAgeSeconds: 7 * 24 * 60 * 60, // 1 week
-            },
-          },
-        },
-        {
-          // Catch all _nuxt requests for debugging
-          urlPattern: /\/_nuxt\/.*/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'nuxt-catch-all',
-            expiration: {
-              maxEntries: 500,
-              maxAgeSeconds: 7 * 24 * 60 * 60, // 1 week
-            },
-          },
-        },
-        {
-          urlPattern: /\/_nuxt\/@fs\/.*\.vue$/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'node-modules-vue',
-            expiration: {
-              maxEntries: 100,
-              maxAgeSeconds: 7 * 24 * 60 * 60, // 1 week
-            },
-          },
-        },
-        {
-          urlPattern: /\/_nuxt\/builds\/meta\/.*\.json$/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'nuxt-build-meta',
-            expiration: {
-              maxEntries: 10,
-              maxAgeSeconds: 24 * 60 * 60, // 1 day
-            },
-          },
-        },
-        {
-          urlPattern: /.*\.(png|jpg|jpeg|gif|svg|webp)\?import$/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'image-imports',
-            expiration: {
-              maxEntries: 100,
-              maxAgeSeconds: 7 * 24 * 60 * 60, // 1 week
-            },
-          },
-        },
-        {
-          urlPattern: /\/api\/session$/,
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'api-session',
-            expiration: {
-              maxEntries: 5,
-              maxAgeSeconds: 5 * 60, // 5 minutes
-            },
-            networkTimeoutSeconds: 3,
-          },
-        },
-        {
-          urlPattern: /\/_nuxt\/.*\.vue$/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'vue-components',
-            expiration: {
-              maxEntries: 200,
-              maxAgeSeconds: 7 * 24 * 60 * 60, // 1 week
-            },
-          },
-        },
-        {
-          urlPattern: /\/_nuxt\/assets\/images\/.*\.(png|jpg|jpeg|gif|svg|webp)$/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'static-images',
-            expiration: {
-              maxEntries: 100,
-              maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
-            },
-          },
-        },
-        {
-          urlPattern: /\/_nuxt\/.*\/node_modules\/.*$/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'node-modules',
-            expiration: {
-              maxEntries: 100,
-              maxAgeSeconds: 7 * 24 * 60 * 60, // 1 week
-            },
-          },
-        },
-        {
-          urlPattern: /\/favicon\.ico$/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'favicon',
-            expiration: {
-              maxEntries: 5,
-              maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
-            },
-          },
-        },
-        {
-          urlPattern: /\/screenshots\/.*\.(png|jpg|jpeg|gif|svg|webp)$/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'screenshots',
-            expiration: {
-              maxEntries: 20,
-              maxAgeSeconds: 30 * 24 * 60 * 60, // 30 days
-            },
-          },
-        },
-        {
-          urlPattern: /^https?:.*\.(html)$/,
-          handler: 'NetworkFirst',
-          options: {
-            cacheName: 'pages',
-            expiration: {
-              maxEntries: 10,
-              maxAgeSeconds: 24 * 60 * 60, // 1 day
-            },
-          },
-        },
-        {
-          // Ultimate catch-all for offline fallback
-          urlPattern: /.*/,
-          handler: 'CacheFirst',
-          options: {
-            cacheName: 'offline-fallback',
-            expiration: {
-              maxEntries: 1000,
-              maxAgeSeconds: 7 * 24 * 60 * 60, // 1 week
-            },
-          },
-        }
-      ]
     }
   },
 

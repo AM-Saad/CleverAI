@@ -45,7 +45,7 @@ export default defineEventHandler(async (event) => {
   return { error: 'Not authorized.' }
 })
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/explicit-module-boundary-types
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function createLessonUnlock(prisma: any, user: any, lessonId: string, studentType: string, pinCodeId: string | null): Promise<void> {
   await prisma.lessonUnlock.create({
     data: {

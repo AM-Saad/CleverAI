@@ -1,13 +1,15 @@
 <template>
     <div v-if="updateAvailable" class="update-banner">
         <!-- Slide-down notification banner -->
-        <Transition enter-active-class="transition-all duration-300 ease-out"
+        <Transition
+enter-active-class="transition-all duration-300 ease-out"
             enter-from-class="transform -translate-y-full opacity-0"
             enter-to-class="transform translate-y-0 opacity-100"
             leave-active-class="transition-all duration-300 ease-in"
             leave-from-class="transform translate-y-0 opacity-100"
             leave-to-class="transform -translate-y-full opacity-0">
-            <div v-if="showBanner"
+            <div
+v-if="showBanner"
                 class="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg">
                 <div class="container mx-auto px-4 py-3">
                     <div class="flex items-center justify-between">
@@ -34,7 +36,8 @@
 
                         <!-- Actions -->
                         <div v-if="!isUpdating" class="flex items-center space-x-2">
-                            <UButton size="xs" variant="solid" color="primary" :loading="isUpdating"
+                            <UButton
+size="xs" variant="solid" color="primary" :loading="isUpdating"
                                 @click="handleUpdate">
                                 Update Now
                             </UButton>
@@ -66,7 +69,8 @@
             <div class="p-6">
                 <div class="flex items-center space-x-3 mb-4">
                     <div class="flex-shrink-0">
-                        <Icon v-if="isUpdating" name="heroicons:arrow-path"
+                        <Icon
+v-if="isUpdating" name="heroicons:arrow-path"
                             class="w-8 h-8 text-blue-500 animate-spin" />
                         <Icon v-else name="heroicons:sparkles" class="w-8 h-8 text-blue-500" />
                     </div>
@@ -100,7 +104,8 @@
                         <span>{{ refreshing ? '100%' : '60%' }}</span>
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-blue-500 h-2 rounded-full transition-all duration-500"
+                        <div
+class="bg-blue-500 h-2 rounded-full transition-all duration-500"
                             :style="{ width: refreshing ? '100%' : '60%' }" />
                     </div>
                 </div>

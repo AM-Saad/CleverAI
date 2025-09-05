@@ -112,7 +112,8 @@ const startCountDown = (): void => {
 
 <template>
     <div class="flex items-center justify-center flex-col w-full max-w-md mx-auto mt-6 sm:mt-20 p-8 rounded-lg">
-        <form v-if="!emailSent" ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
+        <form
+v-if="!emailSent" ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
             @submit.prevent="handleSendEmail">
             <h1 class="title">Verify your email</h1>
             <p class="text-gray-400 text-xs mb-3 mt-1">
@@ -120,43 +121,50 @@ const startCountDown = (): void => {
             </p>
             <shared-error-message :error="error" />
             <div class="form-group">
-                <input id="login-email-client" v-model="credentials.email" type="email" name="email" class="input"
+                <input
+id="login-email-client" v-model="credentials.email" type="email" name="email" class="input"
                     placeholder="Add your email..." autocomplete="false | unknown-autocomplete-value" tabindex="1"
-                    pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$" title="Please enter a valid email address" />
+                    pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$" title="Please enter a valid email address" >
             </div>
             <div>
-                <button v-if="!emailSent" type="button" class="btn btn-small bg-theme" :disabled="loading" tabindex="2"
+                <button
+v-if="!emailSent" type="button" class="btn btn-small bg-theme" :disabled="loading" tabindex="2"
                     @click.prevent="handleSendEmail">
                     Send
                 </button>
             </div>
         </form>
 
-        <form v-if="emailSent" ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
+        <form
+v-if="emailSent" ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
             @submit.prevent="handleSubmit">
             <h1 class="title">Verify your email</h1>
             <shared-error-message :error="error" />
             <shared-success-message :message="success" />
             <div class="form-group">
-                <input id="login-email-client" v-model="credentials.email" type="email" name="email"
+                <input
+id="login-email-client" v-model="credentials.email" type="email" name="email"
                     class="input disabled:bg-gray-100" placeholder="Add your email..."
                     autocomplete="false | unknown-autocomplete-value" tabindex="1"
                     pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$" title="Please enter a valid email address"
-                    disabled />
+                    disabled >
             </div>
 
             <div class="form-group">
-                <input id="verify-client" v-model="credentials.verification" type="text" name="verify-client"
+                <input
+id="verify-client" v-model="credentials.verification" type="text" name="verify-client"
                     class="input" placeholder="Write the verification code..."
-                    autocomplete="false | unknown-autocomplete-value" tabindex="2" />
+                    autocomplete="false | unknown-autocomplete-value" tabindex="2" >
             </div>
             <div class="flex items-center gap-x-2">
-                <button v-if="emailSent" type="button" class="btn btn-small bg-theme disabled:opacity-50"
+                <button
+v-if="emailSent" type="button" class="btn btn-small bg-theme disabled:opacity-50"
                     :disabled="loading || resendCountDown > 0" tabindex="2" @click.prevent="handleSendEmail">
                     Resend code
                     <span v-if="resendCountDown !== 0"> in {{ resendCountDown }}</span>
                 </button>
-                <button v-if="emailSent" type="submit" class="btn btn-small bg-theme disabled:opacity-50"
+                <button
+v-if="emailSent" type="submit" class="btn btn-small bg-theme disabled:opacity-50"
                     :disabled="loading" tabindex="3" @click.prevent="handleSubmit">
                     Verify
                 </button>

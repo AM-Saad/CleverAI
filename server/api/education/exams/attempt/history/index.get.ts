@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const analytics = query.analytics === 'true'
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let where: any = {}
+  const where: any = {}
   if (user.role === 'STUDENT') {
     where.studentId = user.id
   } else {

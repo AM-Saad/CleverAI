@@ -56,23 +56,27 @@ onMounted(() => {
 
 <template>
     <div class="flex items-center justify-center flex-col w-full max-w-md mx-auto mt-6 sm:mt-20 p-8 rounded-lg">
-        <form ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
+        <form
+ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
             @submit.prevent="handleSubmit">
             <h1 class="title">Create Password</h1>
             <shared-error-message :error="error" />
             <shared-success-message :success="success" />
             <div class="form-group">
-                <input id="login-email-client" v-model="credentials.password" type="password" name="password"
+                <input
+id="login-email-client" v-model="credentials.password" type="password" name="password"
                     class="input" placeholder="Add your password..." autocomplete="false | unknown-autocomplete-value"
-                    tabindex="1" />
+                    tabindex="1" >
             </div>
             <div class="form-group">
-                <input id="login-email-client" v-model="credentials.confirmPassword" type="password"
+                <input
+id="login-email-client" v-model="credentials.confirmPassword" type="password"
                     name="confirmPassword" class="input" placeholder="Confirm your password..."
-                    autocomplete="false | unknown-autocomplete-value" tabindex="2" />
+                    autocomplete="false | unknown-autocomplete-value" tabindex="2" >
             </div>
             <div>
-                <button type="submit" class="btn btn-small bg-theme disabled:opacity-50" :disabled="loading"
+                <button
+type="submit" class="btn btn-small bg-theme disabled:opacity-50" :disabled="loading"
                     tabindex="3" @click.prevent="handleSubmit">
                     Create
                 </button>

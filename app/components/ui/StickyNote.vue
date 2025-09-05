@@ -1,12 +1,12 @@
 <template>
-    <div class="sticky-note relative group" :class="[
+    <div
+class="sticky-note relative group" :class="[
         stickyNoteClasses,
         { 'pointer-events-none': note.loading }
     ]" @dblclick="startEditing">
         <!-- Paper-like background with shadow and texture -->
         <div
-            class="absolute inset-0 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 rounded shadow-lg transform rotate-1 opacity-60">
-        </div>
+            class="absolute inset-0 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 rounded shadow-lg transform rotate-1 opacity-60"/>
         <!-- <div
             class="absolute inset-0 bg-gradient-to-br from-orange-100/20 via-amber-50 to-yellow-100/10 rounded shadow-lg border border-amber-200/10">
         </div> -->
@@ -14,11 +14,13 @@
         <!-- Content area -->
         <div class="relative p-4 h-full flex flex-col">
             <!-- Edit icon -->
-            <button v-if="!isEditing && !note.loading"
+            <button
+v-if="!isEditing && !note.loading"
                 class="absolute top-2 right-2 opacity-0 group-hover:opacity-70 hover:opacity-100 transition-opacity duration-200 text-amber-600 hover:text-amber-800 cursor-pointer"
                 aria-label="Edit note" @click="startEditing">
                 <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    <path
+stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
             </button>
@@ -28,7 +30,8 @@
                 <div class="flex items-center gap-2 text-amber-700">
                     <svg class="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                        <path class="opacity-75" fill="currentColor"
+                        <path
+class="opacity-75" fill="currentColor"
                             d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                     </svg>
                     <span class="text-sm font-medium">Saving...</span>
@@ -38,7 +41,8 @@
             <!-- Error state -->
             <div v-else-if="note.error" class="flex flex-col items-center justify-center h-full text-red-600">
                 <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    <path
+stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span class="text-sm font-medium text-center">{{ note.error }}</span>
@@ -49,7 +53,8 @@
 
             <!-- Edit mode -->
             <template v-else-if="isEditing">
-                <textarea ref="textareaRef" v-model="editText"
+                <textarea
+ref="textareaRef" v-model="editText"
                     class="w-full h-full resize-none bg-transparent border-none outline-none text-amber-900 placeholder-amber-600/50 font-handwriting text-base leading-relaxed p-0"
                     :placeholder="placeholder" :disabled="note.loading" @blur="saveNote" @keydown.esc="cancelEdit"
                     @keydown.ctrl.enter="saveNote" @keydown.meta.enter="saveNote" />
@@ -69,7 +74,8 @@
 
             <!-- Display mode -->
             <div v-else class="flex-1 overflow-hidden">
-                <p v-if="note.text.trim()"
+                <p
+v-if="note.text.trim()"
                     class="text-amber-900 font-handwriting text-base leading-relaxed whitespace-pre-wrap break-words">
                     {{ note.text }}
                 </p>
@@ -81,8 +87,7 @@
 
         <!-- Paper corner fold effect -->
         <div
-            class="absolute top-0 right-0 w-4 h-4 bg-amber-200/40 transform rotate-45 translate-x-2 -translate-y-2 border-l border-b border-amber-300/30">
-        </div>
+            class="absolute top-0 right-0 w-4 h-4 bg-amber-200/40 transform rotate-45 translate-x-2 -translate-y-2 border-l border-b border-amber-300/30"/>
     </div>
 </template>
 

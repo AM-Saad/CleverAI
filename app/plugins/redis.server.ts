@@ -2,7 +2,7 @@ import { defineNuxtPlugin } from '#app'
 
 export default defineNuxtPlugin(async (nuxtApp) => {
   // Ensure this plugin never runs in the browser
-  if (process.client) return
+  if (import.meta.client) return
 
   // Lazy import server-only modules
   const { useRuntimeConfig } = await import('#imports')

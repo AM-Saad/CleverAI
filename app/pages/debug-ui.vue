@@ -22,7 +22,8 @@
             <div class="space-y-4">
                 <h3 class="text-xl font-semibold">UButton with UI Prop Overrides</h3>
                 <div class="flex flex-wrap gap-4">
-                    <UButton :ui="{
+                    <UButton
+:ui="{
                         base: 'focus:outline-none focus-visible:outline-0 disabled:cursor-not-allowed disabled:opacity-75 flex-shrink-0',
                         font: 'font-bold',
                         rounded: 'rounded-xl',
@@ -38,7 +39,8 @@
                         Custom Primary
                     </UButton>
 
-                    <UButton :ui="{
+                    <UButton
+:ui="{
                         color: {
                             orange: {
                                 solid: 'shadow-sm ring-1 ring-inset ring-orange-500 text-white bg-orange-500 hover:bg-orange-600 disabled:bg-orange-400 focus-visible:ring-2 focus-visible:ring-orange-500'
@@ -71,15 +73,18 @@
                         Click Me! ({{ clickCount }})
                     </UButton>
 
-                    <UButton :disabled="isLoading"
+                    <UButton
+:disabled="isLoading"
                         class="bg-green-500 hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed text-white font-semibold  px-8 rounded-xl transition-colors duration-200 "
                         @click="simulateLoading">
                         <span v-if="!isLoading">Load Data</span>
                         <span v-else class="flex items-center gap-2">
                             <svg class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                <circle
+class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                                     stroke-width="4" />
-                                <path class="opacity-75" fill="currentColor"
+                                <path
+class="opacity-75" fill="currentColor"
                                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                             </svg>
                             Loading...
@@ -108,14 +113,16 @@
 
             <div class="space-y-4">
                 <h2 class="text-xl font-semibold">UInput with explicit green border class</h2>
-                <UInput v-model="testValue2" placeholder="This has explicit border-green-500 class"
+                <UInput
+v-model="testValue2" placeholder="This has explicit border-green-500 class"
                     class="!border-green-500 !focus:border-green-600" />
                 <p class="text-sm text-gray-600">Test: This should definitely be green</p>
             </div>
 
             <div class="space-y-4">
                 <h2 class="text-xl font-semibold">UInput with ui prop override</h2>
-                <UInput v-model="testValue4" placeholder="UI prop override test"
+                <UInput
+v-model="testValue4" placeholder="UI prop override test"
                     :ui="{ variant: { outline: 'shadow-sm bg-white text-gray-900 ring-1 ring-inset ring-green-500 focus:ring-2 focus:ring-green-600' } }"
                     variant="outline" />
                 <p class="text-sm text-gray-600">Test: Using ui prop to override styling with ring classes</p>
@@ -123,14 +130,16 @@
 
             <div class="space-y-4">
                 <h2 class="text-xl font-semibold">🎯 UInput with working ring classes</h2>
-                <UInput v-model="testValue6" placeholder="This should work with ring classes"
+                <UInput
+v-model="testValue6" placeholder="This should work with ring classes"
                     class="ring-1 ring-green-500 focus:ring-2 focus:ring-green-600" />
                 <p class="text-sm text-green-600">Test: Using ring classes directly (Nuxt UI style)</p>
             </div>
 
             <div class="space-y-4">
                 <h2 class="text-xl font-semibold">Regular HTML input with Tailwind green border</h2>
-                <input v-model="testValue3" placeholder="Plain HTML input with green border"
+                <input
+v-model="testValue3" placeholder="Plain HTML input with green border"
                     class="border border-green-500 px-3 py-2 rounded focus:border-green-600 focus:outline-none w-full">
                 <p class="text-sm text-gray-600">Test: This should definitely show green to confirm Tailwind works</p>
             </div>
@@ -191,7 +200,8 @@
                     <ui-sticky-note :note="sampleNotes.small" size="sm" @update="updateNote" @retry="retryNote" />
 
                     <!-- Large note -->
-                    <ui-sticky-note :note="sampleNotes.large" size="lg" placeholder="Add your thoughts here..."
+                    <ui-sticky-note
+:note="sampleNotes.large" size="lg" placeholder="Add your thoughts here..."
                         @update="updateNote" @retry="retryNote" />
 
                     <!-- Loading state -->
@@ -201,7 +211,8 @@
                     <ui-sticky-note :note="sampleNotes.error" @update="updateNote" @retry="retryNote" />
 
                     <!-- Dynamically added notes -->
-                    <ui-sticky-note v-for="note in dynamicNotes" :key="note.id" :note="note" @update="updateNote"
+                    <ui-sticky-note
+v-for="note in dynamicNotes" :key="note.id" :note="note" @update="updateNote"
                         @retry="retryNote" />
                 </div>
             </div>

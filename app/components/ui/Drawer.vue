@@ -168,10 +168,12 @@ function handleDragEnd(_: Event, info: DragInfo) {
 <template>
     <Teleport :to="props.teleportTo">
         <div>
-            <div v-if="props.backdrop && showOverlay" class="fixed inset-0 z-40" :class="props.backdropClass"
+            <div
+v-if="props.backdrop && showOverlay" class="fixed inset-0 z-40" :class="props.backdropClass"
                 aria-hidden="true"
                 @click="() => { if (props.closeOnBackdrop) { snapTo(mode.closed); emit('closed') } }" />
-            <Motion ref="formRef" as="div" :initial="mode.axis === 'y' ? { y: 0 } : { x: 0 }"
+            <Motion
+ref="formRef" as="div" :initial="mode.axis === 'y' ? { y: 0 } : { x: 0 }"
                 :animate="mode.axis === 'y' ? { y: targetPos } : { x: targetPos }" :transition="transitionProps"
                 :drag="suspendDrag ? false : mode.axis" :drag-constraints="mode.constraints" :drag-elastic="0"
                 :drag-snap-to-origin="false" :drag-momentum="false" :on-drag-start="handleDragStart"
@@ -179,15 +181,17 @@ function handleDragEnd(_: Event, info: DragInfo) {
                     'fixed z-40 cursor-grab active:cursor-grabbing overflow-hidden bg-gray-100/30 backdrop-blur-md shadow-lg',
                     mode.containerClass
                 ]" :style="mode.style" role="dialog" aria-modal="true" :aria-labelledby="'drawer-title'">
-                <div ref="panelEl" tabindex="-1" @keydown.capture="onKeydown"
-                    @pointerdown.capture="onPointerDownCapture" @pointerup.capture="onPointerUpCapture"
-                    @pointercancel.capture="onPointerCancelCapture"
-                    :class="['relative h-full', mode.isMobile ? 'p-3 pt-6' : 'p-3 pl-10']">
+                <div
+ref="panelEl" tabindex="-1" :class="['relative h-full', mode.isMobile ? 'p-3 pt-6' : 'p-3 pl-10']"
+                    @keydown.capture="onKeydown" @pointerdown.capture="onPointerDownCapture"
+                    @pointerup.capture="onPointerUpCapture"
+                    @pointercancel.capture="onPointerCancelCapture">
                     <!-- Drag handle -->
                     <div v-if="mode.isMobile" class="absolute top-2 left-1/2 -translate-x-1/2 flex justify-center">
                         <div class="w-10 h-1 rounded-full bg-primary " />
                     </div>
-                    <div v-else
+                    <div
+v-else
                         :class="['flex justify-center mb-2 absolute top-1/2 -translate-y-1/2', mode.handleClass]">
                         <div class="w-1 h-8 bg-primary rounded-full " />
                     </div>
@@ -195,7 +199,8 @@ function handleDragEnd(_: Event, info: DragInfo) {
                     <!-- Header: slot or fallback title -->
                     <div class="flex flex-col gap-1">
                         <slot name="header">
-                            <h4 id="drawer-title"
+                            <h4
+id="drawer-title"
                                 class="flex items-center gap-2 text-lg font-semibold dark:text-foreground">
                                 {{ props.title }}
                             </h4>

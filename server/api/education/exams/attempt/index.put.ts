@@ -7,7 +7,7 @@ function isTimedOut(attempt: any, exam: any) {
   return now > started + exam.duration * 60 * 1000;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/explicit-module-boundary-types
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function autoSubmitExamAttempt(prisma: any, attempt: any, exam: any, timedOut: boolean): Promise<void> {
   const questions = await prisma.question.findMany({ where: { examId: attempt.examId } });
   const answers = attempt.answers || {};

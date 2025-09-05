@@ -41,7 +41,8 @@
                     <div class="mb-6">
                         <div class="flex items-center justify-between mb-2">
                             <span class="text-gray-600 dark:text-gray-400">Current Plan</span>
-                            <span :class="{
+                            <span
+:class="{
                                 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300': subscriptionInfo.tier === 'PRO',
                                 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300': subscriptionInfo.tier === 'FREE',
                                 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300': subscriptionInfo.tier === 'ENTERPRISE'
@@ -67,8 +68,9 @@
                         </div>
 
                         <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
-                            <div class="h-2.5 rounded-full bg-primary" :style="{ width: `${usagePercentage}%` }"
-                                :class="{ 'bg-red-500': usagePercentage > 90 }"></div>
+                            <div
+class="h-2.5 rounded-full bg-primary" :style="{ width: `${usagePercentage}%` }"
+                                :class="{ 'bg-red-500': usagePercentage > 90 }"/>
                         </div>
 
                         <p class="text-sm mt-2 text-gray-500 dark:text-gray-400">
@@ -162,7 +164,8 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="feature in llmUsage.byFeature" :key="feature.name"
+                                        <tr
+v-for="feature in llmUsage.byFeature" :key="feature.name"
                                             class="border-b dark:border-gray-700">
                                             <td class="py-2">{{ feature.name }}</td>
                                             <td class="py-2 text-right">{{ feature.calls }}</td>
@@ -188,7 +191,8 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="model in llmUsage.byModel" :key="model.name"
+                                        <tr
+v-for="model in llmUsage.byModel" :key="model.name"
                                             class="border-b dark:border-gray-700">
                                             <td class="py-2">{{ model.name }}</td>
                                             <td class="py-2 text-right">{{ model.calls }}</td>
@@ -215,7 +219,8 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="usage in llmUsage.recentUsage" :key="usage.id"
+                                        <tr
+v-for="usage in llmUsage.recentUsage" :key="usage.id"
                                             class="border-b dark:border-gray-700">
                                             <td class="py-2">{{ formatDate(usage.date) }}</td>
                                             <td class="py-2">{{ usage.feature }}</td>
