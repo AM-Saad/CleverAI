@@ -2139,8 +2139,8 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
   // node_modules/workbox-precaching/utils/deleteOutdatedCaches.js
   var SUBSTRING_TO_FIND = "-precache-";
   var deleteOutdatedCaches = async (currentPrecacheName, substringToFind = SUBSTRING_TO_FIND) => {
-    const cacheNames3 = await self.caches.keys();
-    const cacheNamesToDelete = cacheNames3.filter((cacheName) => {
+    const cacheNames2 = await self.caches.keys();
+    const cacheNamesToDelete = cacheNames2.filter((cacheName) => {
       return cacheName.includes(substringToFind) && cacheName.includes(self.registration.scope) && cacheName !== currentPrecacheName;
     });
     await Promise.all(cacheNamesToDelete.map((cacheName) => self.caches.delete(cacheName)));
@@ -2171,32 +2171,6 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
   function precacheAndRoute(entries, options) {
     precache(entries);
     addRoute(options);
-  }
-
-  // node_modules/workbox-core/registerQuotaErrorCallback.js
-  function registerQuotaErrorCallback(callback) {
-    if (true) {
-      finalAssertExports.isType(callback, "function", {
-        moduleName: "workbox-core",
-        funcName: "register",
-        paramName: "callback"
-      });
-    }
-    quotaErrorCallbacks.add(callback);
-    if (true) {
-      logger.log("Registered a callback to respond to quota errors.", callback);
-    }
-  }
-
-  // node_modules/workbox-core/_private/dontWaitFor.js
-  function dontWaitFor(promise) {
-    void promise.then(() => {
-    });
-  }
-
-  // node_modules/workbox-core/clientsClaim.js
-  function clientsClaim() {
-    self.addEventListener("activate", () => self.clients.claim());
   }
 
   // node_modules/workbox-strategies/utils/messages.js
@@ -2290,165 +2264,6 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   };
 
-  // node_modules/workbox-strategies/NetworkFirst.js
-  var NetworkFirst = class extends Strategy {
-    /**
-     * @param {Object} [options]
-     * @param {string} [options.cacheName] Cache name to store and retrieve
-     * requests. Defaults to cache names provided by
-     * {@link workbox-core.cacheNames}.
-     * @param {Array<Object>} [options.plugins] [Plugins]{@link https://developers.google.com/web/tools/workbox/guides/using-plugins}
-     * to use in conjunction with this caching strategy.
-     * @param {Object} [options.fetchOptions] Values passed along to the
-     * [`init`](https://developer.mozilla.org/en-US/docs/Web/API/WindowOrWorkerGlobalScope/fetch#Parameters)
-     * of [non-navigation](https://github.com/GoogleChrome/workbox/issues/1796)
-     * `fetch()` requests made by this strategy.
-     * @param {Object} [options.matchOptions] [`CacheQueryOptions`](https://w3c.github.io/ServiceWorker/#dictdef-cachequeryoptions)
-     * @param {number} [options.networkTimeoutSeconds] If set, any network requests
-     * that fail to respond within the timeout will fallback to the cache.
-     *
-     * This option can be used to combat
-     * "[lie-fi]{@link https://developers.google.com/web/fundamentals/performance/poor-connectivity/#lie-fi}"
-     * scenarios.
-     */
-    constructor(options = {}) {
-      super(options);
-      if (!this.plugins.some((p) => "cacheWillUpdate" in p)) {
-        this.plugins.unshift(cacheOkAndOpaquePlugin);
-      }
-      this._networkTimeoutSeconds = options.networkTimeoutSeconds || 0;
-      if (true) {
-        if (this._networkTimeoutSeconds) {
-          finalAssertExports.isType(this._networkTimeoutSeconds, "number", {
-            moduleName: "workbox-strategies",
-            className: this.constructor.name,
-            funcName: "constructor",
-            paramName: "networkTimeoutSeconds"
-          });
-        }
-      }
-    }
-    /**
-     * @private
-     * @param {Request|string} request A request to run this strategy for.
-     * @param {workbox-strategies.StrategyHandler} handler The event that
-     *     triggered the request.
-     * @return {Promise<Response>}
-     */
-    async _handle(request, handler) {
-      const logs = [];
-      if (true) {
-        finalAssertExports.isInstance(request, Request, {
-          moduleName: "workbox-strategies",
-          className: this.constructor.name,
-          funcName: "handle",
-          paramName: "makeRequest"
-        });
-      }
-      const promises = [];
-      let timeoutId;
-      if (this._networkTimeoutSeconds) {
-        const { id, promise } = this._getTimeoutPromise({ request, logs, handler });
-        timeoutId = id;
-        promises.push(promise);
-      }
-      const networkPromise = this._getNetworkPromise({
-        timeoutId,
-        request,
-        logs,
-        handler
-      });
-      promises.push(networkPromise);
-      const response = await handler.waitUntil((async () => {
-        return await handler.waitUntil(Promise.race(promises)) || // If Promise.race() resolved with null, it might be due to a network
-        // timeout + a cache miss. If that were to happen, we'd rather wait until
-        // the networkPromise resolves instead of returning null.
-        // Note that it's fine to await an already-resolved promise, so we don't
-        // have to check to see if it's still "in flight".
-        await networkPromise;
-      })());
-      if (true) {
-        logger.groupCollapsed(messages2.strategyStart(this.constructor.name, request));
-        for (const log of logs) {
-          logger.log(log);
-        }
-        messages2.printFinalResponse(response);
-        logger.groupEnd();
-      }
-      if (!response) {
-        throw new WorkboxError("no-response", { url: request.url });
-      }
-      return response;
-    }
-    /**
-     * @param {Object} options
-     * @param {Request} options.request
-     * @param {Array} options.logs A reference to the logs array
-     * @param {Event} options.event
-     * @return {Promise<Response>}
-     *
-     * @private
-     */
-    _getTimeoutPromise({ request, logs, handler }) {
-      let timeoutId;
-      const timeoutPromise = new Promise((resolve) => {
-        const onNetworkTimeout = async () => {
-          if (true) {
-            logs.push(`Timing out the network response at ${this._networkTimeoutSeconds} seconds.`);
-          }
-          resolve(await handler.cacheMatch(request));
-        };
-        timeoutId = setTimeout(onNetworkTimeout, this._networkTimeoutSeconds * 1e3);
-      });
-      return {
-        promise: timeoutPromise,
-        id: timeoutId
-      };
-    }
-    /**
-     * @param {Object} options
-     * @param {number|undefined} options.timeoutId
-     * @param {Request} options.request
-     * @param {Array} options.logs A reference to the logs Array.
-     * @param {Event} options.event
-     * @return {Promise<Response>}
-     *
-     * @private
-     */
-    async _getNetworkPromise({ timeoutId, request, logs, handler }) {
-      let error;
-      let response;
-      try {
-        response = await handler.fetchAndCachePut(request);
-      } catch (fetchError) {
-        if (fetchError instanceof Error) {
-          error = fetchError;
-        }
-      }
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      if (true) {
-        if (response) {
-          logs.push(`Got response from network.`);
-        } else {
-          logs.push(`Unable to get a response from the network. Will respond with a cached response.`);
-        }
-      }
-      if (error || !response) {
-        response = await handler.cacheMatch(request);
-        if (true) {
-          if (response) {
-            logs.push(`Found a cached response in the '${this.cacheName}' cache.`);
-          } else {
-            logs.push(`No response found in the '${this.cacheName}' cache.`);
-          }
-        }
-      }
-      return response;
-    }
-  };
-
   // node_modules/workbox-strategies/StaleWhileRevalidate.js
   var StaleWhileRevalidate = class extends Strategy {
     /**
@@ -2522,6 +2337,12 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       return response;
     }
   };
+
+  // node_modules/workbox-core/_private/dontWaitFor.js
+  function dontWaitFor(promise) {
+    void promise.then(() => {
+    });
+  }
 
   // node_modules/idb/build/wrap-idb-value.js
   var instanceOfAny = (object, constructors) => constructors.some((c) => object instanceof c);
@@ -3028,6 +2849,21 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   };
 
+  // node_modules/workbox-core/registerQuotaErrorCallback.js
+  function registerQuotaErrorCallback(callback) {
+    if (true) {
+      finalAssertExports.isType(callback, "function", {
+        moduleName: "workbox-core",
+        funcName: "register",
+        paramName: "callback"
+      });
+    }
+    quotaErrorCallbacks.add(callback);
+    if (true) {
+      logger.log("Registered a callback to respond to quota errors.", callback);
+    }
+  }
+
   // node_modules/workbox-expiration/ExpirationPlugin.js
   var ExpirationPlugin = class {
     /**
@@ -3199,7 +3035,8 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
 
   // sw-src/index.ts
   (() => {
-    const SW_VERSION = "v1.7.0-enhanced";
+    const SW_VERSION = "v1.8.0-enhanced";
+    const PREWARM_PATHS = ["/", "/about"];
     let DEBUG = false;
     const log = (...args) => {
       if (DEBUG) console.log("[SW]", ...args);
@@ -3225,23 +3062,74 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     function calculateChunkSize(fileSize) {
       return Math.max(256 * 1024, Math.min(5 * 1024 * 1024, Math.ceil(fileSize / 100)));
     }
+    function sleep(ms) {
+      return new Promise((r) => setTimeout(r, ms));
+    }
+    function backoffDelay(baseMs, attempt) {
+      const exp = baseMs * Math.pow(2, attempt);
+      const jitter = Math.random() * exp * 0.4;
+      return Math.floor(exp + jitter);
+    }
     let db = null;
     const DB_NAME2 = "recwide_db";
-    const DB_VERSION = 1;
+    const DB_VERSION = 2;
     function openDatabase() {
       return new Promise((resolve, reject) => {
         const request = indexedDB.open(DB_NAME2, DB_VERSION);
         request.onupgradeneeded = (event) => {
           const target = event.target;
           const upgradeDb = target.result;
+          const tx = target.transaction;
           if (!upgradeDb.objectStoreNames.contains("projects")) {
             const projects = upgradeDb.createObjectStore("projects", { keyPath: "name" });
             projects.createIndex("name", "name", { unique: false });
           }
-          if (!upgradeDb.objectStoreNames.contains("forms")) {
-            const forms = upgradeDb.createObjectStore("forms", { keyPath: "email" });
+          const hasForms = upgradeDb.objectStoreNames.contains("forms");
+          if (!hasForms) {
+            const forms = upgradeDb.createObjectStore("forms", { keyPath: "id" });
             forms.createIndex("email", "email", { unique: false });
+            return;
           }
+          const oldStore = tx.objectStore("forms");
+          const oldKeyPath = oldStore.keyPath;
+          if (oldKeyPath === "id") {
+            try {
+              oldStore.createIndex("email", "email", { unique: false });
+            } catch {
+            }
+            return;
+          }
+          const allReq = oldStore.getAll();
+          allReq.onsuccess = () => {
+            const oldRecords = allReq.result || [];
+            try {
+              upgradeDb.deleteObjectStore("forms");
+            } catch {
+            }
+            const newForms = upgradeDb.createObjectStore("forms", { keyPath: "id" });
+            newForms.createIndex("email", "email", { unique: false });
+            const reinserts = oldRecords.map((rec) => {
+              const id = rec.id || `${rec.email || "unknown"}-${rec.createdAt || Date.now()}`;
+              const toPut = {
+                id,
+                email: rec.email || "unknown",
+                payload: rec.payload,
+                createdAt: rec.createdAt || Date.now()
+              };
+              const putReq = tx.objectStore("forms").add(toPut);
+              putReq.onerror = () => {
+              };
+              return putReq;
+            });
+          };
+          allReq.onerror = () => {
+            try {
+              upgradeDb.deleteObjectStore("forms");
+            } catch {
+            }
+            const newForms = upgradeDb.createObjectStore("forms", { keyPath: "id" });
+            newForms.createIndex("email", "email", { unique: false });
+          };
         };
         request.onsuccess = (e) => {
           db = e.target.result;
@@ -3251,51 +3139,135 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       });
     }
     openDatabase().catch((err) => error("IndexedDB open failed", err));
-    clientsClaim();
     const manifest = self.__WB_MANIFEST || [];
     precacheAndRoute(manifest, { ignoreURLParametersMatching: [/^utm_/, /^fbclid$/] });
     cleanupOutdatedCaches();
     registerRoute(
-      ({ url }) => url.pathname.startsWith("/_nuxt/"),
-      new CacheFirst({
-        cacheName: "nuxt-assets",
-        plugins: [
-          new ExpirationPlugin({ maxEntries: 120, maxAgeSeconds: 30 * 24 * 60 * 60 })
-          // 30 days
-        ]
-      })
-    );
-    registerRoute(
-      ({ request }) => /\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/.test(request.url),
+      ({ request, url }) => url.origin === self.location.origin && /\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/.test(url.pathname),
       new CacheFirst({
         cacheName: "images",
-        plugins: [new ExpirationPlugin({ maxEntries: 80, maxAgeSeconds: 30 * 24 * 60 * 60 })]
+        plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 })]
       })
+    );
+    const assetsStrategy = new CacheFirst({
+      cacheName: "assets",
+      plugins: [new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 7 * 24 * 60 * 60 })]
+    });
+    registerRoute(
+      ({ url, request }) => url.origin === self.location.origin && (url.pathname.startsWith("/_nuxt/") || request.destination === "script" || request.destination === "style"),
+      async ({ event, request }) => {
+        try {
+          return await assetsStrategy.handle({ event, request });
+        } catch (err) {
+          const req = request;
+          const isJsChunk = req.destination === "script" && new URL(req.url).pathname.startsWith("/_nuxt/");
+          if (isJsChunk) {
+            return new Response(
+              "/* offline stub chunk */\nexport default {};\nexport const __offline__ = true;\n",
+              { headers: { "Content-Type": "application/javascript", "Cache-Control": "no-store" }, status: 200 }
+            );
+          }
+          throw err;
+        }
+      }
     );
     registerRoute(
-      ({ request, url }) => (request.destination === "script" || request.destination === "style") && !url.pathname.startsWith("/_nuxt/"),
-      new StaleWhileRevalidate({
-        cacheName: "static-resources",
-        plugins: [new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 14 * 24 * 60 * 60 })]
-      })
+      ({ url }) => url.origin === self.location.origin && (url.pathname === "/manifest.webmanifest" || url.pathname === "/favicon.ico"),
+      new StaleWhileRevalidate({ cacheName: "static" })
     );
+    const AUTH_STUBS = {
+      "/api/auth/session": { user: null, expires: null },
+      "/api/auth/csrf": { csrfToken: null },
+      "/api/auth/providers": {}
+    };
     registerRoute(
-      ({ url, request }) => url.pathname.startsWith("/api/") && request.method === "GET",
-      new NetworkFirst({
-        cacheName: "api-get",
-        networkTimeoutSeconds: 10,
-        plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 5 * 60 })]
-        // 5 minutes
-      })
+      ({ url, request }) => url.origin === self.location.origin && url.pathname.startsWith("/api/auth/") && request.method === "GET",
+      async ({ event }) => {
+        var _a;
+        const req = event.request;
+        const url = new URL(req.url);
+        const cacheName = "api-auth";
+        const cache = await caches.open(cacheName);
+        try {
+          const resp = await fetch(req);
+          const isJson = (_a = resp.headers.get("content-type")) == null ? void 0 : _a.includes("application/json");
+          if (resp.ok && isJson) {
+            try {
+              await cache.put(req, resp.clone());
+            } catch {
+            }
+          }
+          return resp;
+        } catch {
+          const cached = await cache.match(req);
+          if (cached) return cached;
+          if (url.pathname in AUTH_STUBS) {
+            return new Response(JSON.stringify(AUTH_STUBS[url.pathname]), {
+              status: 200,
+              headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
+            });
+          }
+          return new Response("", { status: 503, headers: { "Cache-Control": "no-store" } });
+        }
+      }
     );
-    registerRoute(
-      ({ request }) => request.destination === "font",
-      new StaleWhileRevalidate({
-        cacheName: "fonts",
-        plugins: [new ExpirationPlugin({ maxEntries: 30, maxAgeSeconds: 60 * 24 * 60 * 60 })]
-        // 60 days
-      })
-    );
+    function extractAssetUrls(html) {
+      try {
+        const urls = /* @__PURE__ */ new Set();
+        const re = /\/(?:_nuxt|_assets)\/[A-Za-z0-9._\-\/]+\.(?:js|css|png|jpg|jpeg|webp|svg|ico)/g;
+        let m;
+        while (m = re.exec(html)) urls.add(m[0]);
+        return Array.from(urls);
+      } catch {
+        return [];
+      }
+    }
+    async function prewarmPages(paths) {
+      try {
+        const pageCache = await caches.open("pages");
+        const assetCache = await caches.open("assets");
+        const staticCache = await caches.open("static");
+        const staticWarm = ["/manifest.webmanifest", "/favicon.ico"];
+        for (const s of staticWarm) {
+          try {
+            const r = await fetch(s, { cache: "no-store" });
+            if (r && r.ok) await staticCache.put(new Request(s), r.clone());
+          } catch {
+          }
+        }
+        for (const path of paths) {
+          try {
+            const resp = await fetch(path, { cache: "no-store" });
+            if (resp && resp.ok) {
+              await pageCache.put(new Request(path), resp.clone());
+              log("Prewarmed page:", path);
+              let text = "";
+              try {
+                text = await resp.clone().text();
+              } catch {
+              }
+              if (text) {
+                const assetUrls = extractAssetUrls(text);
+                for (const u of assetUrls) {
+                  try {
+                    const r = await fetch(u, { cache: "no-store" });
+                    if (r && r.ok) await assetCache.put(new Request(u), r.clone());
+                  } catch {
+                  }
+                }
+                if (assetUrls.length) log("Prewarmed assets for", path, assetUrls.length);
+              }
+            } else {
+              warn("Prewarm skipped (non-200):", path, resp == null ? void 0 : resp.status);
+            }
+          } catch (e) {
+            warn("Prewarm failed:", path, e);
+          }
+        }
+      } catch (e) {
+        warn("Prewarm pages error", e);
+      }
+    }
     const swSelf = self;
     swSelf.addEventListener("install", (_event) => {
       log("install event");
@@ -3311,6 +3283,10 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         log("claimed clients");
         const clients = await swSelf.clients.matchAll({ includeUncontrolled: true, type: "window" });
         for (const c of clients) c.postMessage({ type: "SW_ACTIVATED", version: SW_VERSION });
+        try {
+          await prewarmPages(PREWARM_PATHS);
+        } catch {
+        }
       })());
     });
     try {
@@ -3457,14 +3433,114 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     });
     swSelf.addEventListener("fetch", (event) => {
       const req = event.request;
+      const url = new URL(req.url);
+      const isDevHost = self.location.hostname === "localhost" || self.location.hostname === "127.0.0.1" || self.location.hostname.endsWith(".local");
+      if (url.pathname.includes("/@fs/") || url.pathname.includes("/node_modules/") || url.pathname.includes("error-dev.vue") || url.pathname.includes("builds/meta/dev.json") || url.pathname.includes("/@vite/") || url.pathname.includes("/@id/") || url.pathname.includes("/__vite_ping") || url.pathname.includes("/nuxt/dist/app/") || url.pathname.includes("sw.js") || isDevHost && url.searchParams.has("v") && req.mode !== "navigate" || req.url.includes("?import")) {
+        return;
+      }
       if (req.mode === "navigate") {
         event.respondWith((async () => {
           try {
-            return await fetch(req);
+            log("Fetching navigation request:", req.url);
+            const response = await fetch(req);
+            if (response.ok && response.status === 200) {
+              try {
+                const cache = await caches.open("pages");
+                await cache.put(req, response.clone());
+                log("Cached page successfully:", req.url);
+                try {
+                  const html = await response.clone().text();
+                  const assetUrls = extractAssetUrls(html);
+                  if (assetUrls.length) {
+                    const assetCache = await caches.open("assets");
+                    await Promise.all(assetUrls.map(async (u) => {
+                      try {
+                        const r = await fetch(u, { cache: "no-store" });
+                        if (r && r.ok) await assetCache.put(new Request(u), r.clone());
+                      } catch {
+                      }
+                    }));
+                    log("Opportunistically cached assets from navigation:", assetUrls.length);
+                  }
+                } catch {
+                }
+                try {
+                  const keys = await cache.keys();
+                  const MAX_ENTRIES = 100;
+                  if (keys.length > MAX_ENTRIES) {
+                    const toDelete = keys.length - MAX_ENTRIES;
+                    for (let i = 0; i < toDelete; i++) {
+                      await cache.delete(keys[i]);
+                    }
+                  }
+                } catch (e) {
+                  warn("Pages cache cleanup failed", e);
+                }
+              } catch (cacheError) {
+                warn("Failed to cache page:", cacheError);
+              }
+            }
+            return response;
           } catch {
-            const match = await caches.match("/offline", { ignoreSearch: true });
-            if (match) return match;
-            return new Response("<h1>Offline</h1>", { headers: { "Content-Type": "text/html" }, status: 200 });
+            log("Network failed for:", req.url);
+            if (DEBUG) {
+              const cache2 = await caches.open("pages");
+              const cacheKeys = await cache2.keys();
+              log("Pages cache contains:", cacheKeys.map((r) => r.url));
+            }
+            const cache = await caches.open("pages");
+            let cachedResponse = await cache.match(req, { ignoreSearch: true });
+            if (!cachedResponse) {
+              const cleanUrl = new URL(req.url);
+              cleanUrl.search = "";
+              cachedResponse = await cache.match(cleanUrl.toString(), { ignoreSearch: true });
+              log("Tried clean URL:", cleanUrl.toString());
+            }
+            if (cachedResponse) {
+              log("Serving cached page:", req.url);
+              return cachedResponse;
+            }
+            try {
+              const shell = await cache.match("/", { ignoreSearch: true });
+              if (shell) {
+                log("Serving app shell (/) as offline fallback for:", req.url);
+                return shell;
+              }
+              const shellHtml = await cache.match("/index.html", { ignoreSearch: true });
+              if (shellHtml) {
+                log("Serving /index.html as offline fallback for:", req.url);
+                return shellHtml;
+              }
+            } catch (e) {
+              warn("Shell fallback lookup failed", e);
+            }
+            log("No cached page or shell found, serving offline HTML for:", req.url);
+            return new Response(`
+                                <!DOCTYPE html>
+                                <html>
+                                    <head>
+                                        <title>Offline</title>
+                                        <style>
+                                            body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
+                                            .container { max-width: 400px; margin: 0 auto; background: white; padding: 2rem; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+                                            button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer; margin: 10px; }
+                                            button:hover { background: #0056b3; }
+                                        </style>
+                                    </head>
+                                    <body>
+                                            <div class="container">
+                                            <h1>Offline</h1>
+                                            <p>This page isn't available offline yet.</p>
+                                            <p>Please check your connection and try again.</p>
+                                            <button onclick="window.location.reload()">Try Again</button>
+                                            <button onclick="window.location.href='/'">Go Home</button>
+                                            </div>
+                                    </body>
+                                </html>
+                        `, {
+              headers: { "Content-Type": "text/html", "Cache-Control": "no-store" },
+              status: 503
+            });
           }
         })());
       }
@@ -3503,12 +3579,12 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         req.onerror = () => reject(req.error);
       });
     }
-    async function deleteFormEntries(emails) {
-      if (!db || !emails.length) return;
-      await Promise.all(emails.map((email) => new Promise((resolve) => {
+    async function deleteFormEntries(ids) {
+      if (!db || !ids.length) return;
+      await Promise.all(ids.map((id) => new Promise((resolve) => {
         const tx = db.transaction(["forms"], "readwrite");
         const store = tx.objectStore("forms");
-        const delReq = store.delete(email);
+        const delReq = store.delete(id);
         delReq.onsuccess = () => resolve();
         delReq.onerror = () => resolve();
       })));
@@ -3519,7 +3595,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         if (!formData.length) return;
         const response = await sendDataToServer(formData);
         if (!response.ok) throw new Error("Sync failed");
-        await deleteFormEntries(formData.map((f) => f.email));
+        await deleteFormEntries(formData.map((f) => f.id));
         clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNCED, data: { message: `Form data synced (${formData.length} records).` } }));
       } catch (err) {
         error("syncAuthentication error", err);
@@ -3535,7 +3611,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       try {
         const formData = new FormData();
         formData.append("data", JSON.stringify(data));
-        const resp = await fetch("/api/auth", { method: "POST", body: formData, signal: controller.signal });
+        const resp = await fetch("/api/form-sync", { method: "POST", body: formData, signal: controller.signal });
         return resp;
       } finally {
         clearTimeout(timeout2);
@@ -3551,48 +3627,65 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       formData.append("identifier", fileIdentifier);
       try {
         const response = await fetch(uploadUrl, { method: "POST", body: formData, signal: controller.signal });
-        if (!response.ok) throw new Error("Upload failed");
+        if (!response.ok) {
+          const err = new Error("Upload failed");
+          err.status = response.status;
+          const ra = response.headers.get("Retry-After");
+          err.retryAfter = ra ? Math.max(0, Math.floor(Number(ra) * 1e3)) : void 0;
+          throw err;
+        }
       } finally {
         clearTimeout(timeout2);
       }
     }
-    async function uploadFile(file, uploadUrl, retryDelays) {
+    async function uploadFile(file, uploadUrl, _retryDelays) {
       const chunkSize = calculateChunkSize(file.size);
       const totalChunks = Math.ceil(file.size / chunkSize);
-      const fileIdentifier = `${file.name}-${Date.now()}`;
-      const promises = [];
-      for (let i = 0; i < totalChunks; i++) {
+      const fileIdentifier = `${file.name}-${file.size}-${file.lastModified || 0}`;
+      const CHUNK_CONCURRENCY = 3;
+      const BASE_BACKOFF = 1e3;
+      const MAX_ATTEMPTS = 5;
+      const inFlight = [];
+      const runChunk = (i) => (async () => {
         const chunk = file.slice(i * chunkSize, (i + 1) * chunkSize);
-        promises.push((async () => {
-          for (let attempt = 0; attempt < retryDelays.length; attempt++) {
-            try {
-              await uploadChunk({ chunk, index: i, totalChunks, fileIdentifier, uploadUrl });
-              const clients = await swSelf.clients.matchAll({ type: "window" });
-              (clients || []).forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.PROGRESS, data: { identifier: fileIdentifier, index: i, totalChunks } }));
-              break;
-            } catch (err) {
-              if (attempt === retryDelays.length - 1) throw err;
-              await new Promise((r) => setTimeout(r, retryDelays[attempt]));
-            }
+        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+          try {
+            await uploadChunk({ chunk, index: i, totalChunks, fileIdentifier, uploadUrl });
+            const clients = await swSelf.clients.matchAll({ type: "window" });
+            (clients || []).forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.PROGRESS, data: { identifier: fileIdentifier, index: i, totalChunks } }));
+            return;
+          } catch (err) {
+            const e = err;
+            if (attempt === MAX_ATTEMPTS - 1) throw err;
+            const status = e == null ? void 0 : e.status;
+            const retryAfter = e == null ? void 0 : e.retryAfter;
+            const delay = typeof retryAfter === "number" ? retryAfter : backoffDelay(BASE_BACKOFF, attempt);
+            const cushion = status === 413 || status === 429 || status === 503 ? Math.floor(delay * 0.5) : 0;
+            await sleep(delay + cushion);
           }
-        })());
+        }
+      })();
+      for (let i = 0; i < totalChunks; i++) {
+        const p = runChunk(i).finally(() => {
+          const idx = inFlight.indexOf(p);
+          if (idx >= 0) inFlight.splice(idx, 1);
+        });
+        inFlight.push(p);
+        if (inFlight.length >= CHUNK_CONCURRENCY) await Promise.race(inFlight);
       }
+      await Promise.all(inFlight);
       try {
-        await Promise.all(promises);
         const clients = await swSelf.clients.matchAll({ type: "window" });
         clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.FILE_COMPLETE, data: { identifier: fileIdentifier, message: `${file.name} upload complete` } }));
-      } catch (err) {
-        const clients = await swSelf.clients.matchAll({ type: "window" });
-        clients.forEach((c) => c.postMessage({ type: "error", data: { message: `Failed to upload ${file.name}`, identifier: fileIdentifier } }));
-        throw err;
+      } catch {
       }
     }
     async function handleConcurrentUploads(name, files, uploadUrl) {
       const retryDelays = [5e3, 1e4, 15e3];
-      const maxConcurrent = 4;
+      const MAX_FILE_CONCURRENCY = 4;
       const active = [];
       for (const f of files) {
-        if (active.length >= maxConcurrent) await Promise.race(active);
+        if (active.length >= MAX_FILE_CONCURRENCY) await Promise.race(active);
         const p = uploadFile(f, uploadUrl, retryDelays).finally(() => {
           const idx = active.indexOf(p);
           if (idx >= 0) active.splice(idx, 1);

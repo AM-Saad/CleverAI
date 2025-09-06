@@ -1,54 +1,90 @@
+// app/composables/useOffline.ts
+
+/**
+ * Minimal offline form queueing for login (or other small forms).
+ * - Writes records into IndexedDB: DB 'recwide_db', store 'forms' (keyPath: 'id')
+ * - Schedules a one-off Background Sync ('syncForm'); the SW will read & POST them
+ * - NOTE: Do NOT store raw passwords. We only keep the email and a marker.
+ */
+
+type QueuedForm = {
+  id: string
+  email: string
+  payload: Record<string, unknown>
+  createdAt: number
+}
+
+const DB_NAME = 'recwide_db'
+const DB_VERSION = 2 // must match SW migration expectations
+const STORE = 'forms'
+
+function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open(DB_NAME, DB_VERSION)
+
+    req.onupgradeneeded = () => {
+      const db = req.result
+      // (re)create store with the right keyPath; SW expects this shape
+      if (db.objectStoreNames.contains(STORE)) {
+        db.deleteObjectStore(STORE)
+      }
+      const store = db.createObjectStore(STORE, { keyPath: 'id' })
+      try { store.createIndex('email', 'email', { unique: false }) } catch {}
+    }
+
+    req.onsuccess = () => resolve(req.result)
+    req.onerror = () => reject(req.error)
+  })
+}
+
+async function putForm(record: QueuedForm): Promise<void> {
+  const db = await openDB()
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction([STORE], 'readwrite')
+    const store = tx.objectStore(STORE)
+    store.put(record)
+    tx.oncomplete = () => resolve()
+    tx.onerror = () => reject(tx.error)
+  })
+  db.close()
+}
+
 export function useOffline(): {
-  handleOfflineSubmit: (credentials: {
-    email: string
-    password: string
-  }) => Promise<void>
+  handleOfflineSubmit: (credentials: { email: string; password: string }) => Promise<void>
 } {
-  const handleOfflineSubmit = async (credentials: {
-    email: string
-    password: string
-  }): Promise<void> => {
-    // Register a sync event
-    const registration = await navigator.serviceWorker.ready
-    await registration.sync.register("syncForm", {
+  const handleOfflineSubmit = async (credentials: { email: string; password: string }): Promise<void> => {
+    // 1) Queue a sanitized record locally
+    const id = (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`)
+    await putForm({
+      id,
       email: credentials.email,
-      password: credentials.password,
+      // DO NOT store the raw password; keep a marker so the server knows this came from offline
+      payload: { type: 'login', hasPassword: Boolean(credentials.password) },
+      createdAt: Date.now(),
     })
 
-    if ("indexedDB" in window) {
-      const db: IDBDatabase = await indexedDB.open("recwide_db", 1, {
-        upgrade(db) {
-          db.createObjectStore("forms")
-        },
-      })
-
-      db.onsuccess = function (event: Event): void {
-        const target = event.target as IDBOpenDBRequest
-
-        const tx = target.result.transaction("forms", "readwrite")
-        const store = tx.objectStore("forms")
-        store.put({
-          email: credentials.email,
-          password: credentials.password,
-        })
-
-        tx.oncomplete = function (): void {
-          console.log("Form data saved locally.")
-        }
-
-        tx.onerror = function (): void {
-          console.log("Form data not saved locally.")
-        }
-
-        console.log("Form data saved locally and sync event registered.")
-      }
-
-      console.log("Form data saved locally and sync event registered.")
+    // Emit a UI event so the app can show immediate feedback
+    try {
+      window.dispatchEvent(new CustomEvent('offline-form-saved', {
+        detail: { id, email: credentials.email }
+      }))
+    } catch {
+      // window may be undefined in some SSR contexts; ignore
     }
-    console.log("Form data saved locally and sync event registered.")
+
+    // 2) Ask the active SW to run background sync when online
+    try {
+      const reg = await navigator.serviceWorker.ready
+      // This tag is what the SW listens for in its 'sync' event
+      // We cannot pass payload here; the SW reads from IndexedDB instead.
+      // @ts-expect-error - older TS libdefs don't know about SyncManager in some targets
+      await reg.sync?.register?.('syncForm')
+    } catch {
+      // Not supported or denied; no-op.
+    }
+
+    console.log('Form data queued locally and Background Sync requested.')
   }
 
-  return {
-    handleOfflineSubmit,
-  }
+  return { handleOfflineSubmit }
 }

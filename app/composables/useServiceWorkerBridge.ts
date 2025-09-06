@@ -26,6 +26,24 @@ export function useServiceWorkerBridge() {
 
   let messageHandler: ((e: MessageEvent) => void) | null = null
 
+  function wireRegistrationListeners(reg: ServiceWorkerRegistration) {
+    // Detect when a new SW is installed and waiting
+    reg.addEventListener('updatefound', () => {
+      const installing = reg.installing
+      if (!installing) return
+      installing.addEventListener('statechange', () => {
+        if (installing.state === 'installed' && reg.waiting) {
+          updateAvailable.value = true
+        }
+      })
+    })
+
+    // Optional: observe controller changes (used for auto-reload elsewhere if desired)
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      // no-op here; UI component handles actual refresh
+    })
+  }
+
   function postMessage(msg: unknown) {
     if (!registration.value?.active) return
     registration.value.active.postMessage(msg)
@@ -36,6 +54,7 @@ export function useServiceWorkerBridge() {
     if ('serviceWorker' in navigator) {
       registration.value = await navigator.serviceWorker.ready
       if (registration.value.active) isControlling.value = true
+      if (registration.value) wireRegistrationListeners(registration.value)
     }
     return registration.value
   }

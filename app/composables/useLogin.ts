@@ -1,4 +1,4 @@
- 
+
 import { ref } from "vue"
 import { useOffline } from "./useOffline"
 //
@@ -34,7 +34,6 @@ export function useLogin(): useLogin {
       handleOfflineSubmit(credentials)
       return
     } else {
-      console.log("credentials", credentials)
       loading.value = true
       try {
         const response = await signIn("credentials", {
@@ -50,7 +49,7 @@ export function useLogin(): useLogin {
         }
          success.value = "Signed in successfully!"
 
-
+            await router.push("/")
         console.log("Signed in successfully!")
       } catch (err) {
         console.log("Error logging in.", err)
