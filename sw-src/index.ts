@@ -2,6 +2,18 @@
 // TypeScript source of the service worker. Built to public/sw.js before Workbox injectManifest runs.
 // KEEP exactly one occurrence of self.__WB_MANIFEST.
 
+// Import centralized constants
+import {
+  SW_MESSAGE_TYPES,
+  UPLOAD_CONFIG,
+  PREWARM_PATHS,
+  SW_CONFIG,
+  DB_CONFIG,
+  CACHE_NAMES,
+  CACHE_CONFIG,
+  AUTH_STUBS
+} from '../shared/constants'
+
 // Augment the global self type safely
 
 // Bundle Workbox modules directly to avoid cross-origin importScripts and COEP/CORP issues.
@@ -17,8 +29,9 @@ import { ExpirationPlugin } from 'workbox-expiration'
 
 // Wrap logic but avoid nested ambiguous closures for TS parser
 (() => {
-    const SW_VERSION = 'v1.8.0-enhanced'
-    const PREWARM_PATHS = ['/', '/about']
+    // Use centralized SW version
+    const SW_VERSION = SW_CONFIG.VERSION
+    // Use centralized prewarm paths
     // Toggleable debug flag (can be overridden via postMessage later if desired)
     let DEBUG = false // Default off; can be toggled via postMessage.
     const log = (...args: unknown[]) => { if (DEBUG) console.log('[SW]', ...args) }
@@ -81,21 +94,14 @@ import { ExpirationPlugin } from 'workbox-expiration'
         createdAt: number
     }
 
-    // Message types constant
-    const SW_MESSAGE_TYPE = {
-        UPLOAD_START: 'UPLOAD_START',
-        PROGRESS: 'PROGRESS',
-        FILE_COMPLETE: 'FILE_COMPLETE',
-        ALL_FILES_COMPLETE: 'ALL_FILES_COMPLETE',
-        FORM_SYNC_ERROR: 'FORM_SYNC_ERROR',
-        FORM_SYNCED: 'FORM_SYNCED',
-        SYNC_FORM: 'SYNC_FORM'
-    } as const
+    // Message types constant - use centralized constants
+    const SW_MESSAGE_TYPE = SW_MESSAGE_TYPES
 
     // Simple adaptive chunk size calculator (inlined instead of external import)
     function calculateChunkSize(fileSize: number) {
-        // min 256KB, max 5MB, ~100 chunks target
-        return Math.max(256 * 1024, Math.min(5 * 1024 * 1024, Math.ceil(fileSize / 100)))
+        // Use centralized upload config
+        const { MIN, MAX, TARGET_CHUNKS } = UPLOAD_CONFIG.CHUNK_SIZE
+        return Math.max(MIN, Math.min(MAX, Math.ceil(fileSize / TARGET_CHUNKS)))
     }
 
     // --- Exponential backoff helpers for chunked uploads ---
@@ -264,11 +270,7 @@ import { ExpirationPlugin } from 'workbox-expiration'
     )
 
     // 4. Auth API group — network-first GET, stub per path, cache 200 JSON
-    const AUTH_STUBS: Record<string, any> = {
-        '/api/auth/session': { user: null, expires: null },
-        '/api/auth/csrf': { csrfToken: null },
-        '/api/auth/providers': {},
-    }
+    // Use centralized auth stubs from constants
 
     registerRoute(
         ({ url, request }: { url: URL; request: Request }) =>
@@ -387,7 +389,7 @@ import { ExpirationPlugin } from 'workbox-expiration'
             const clients = await swSelf.clients.matchAll({ includeUncontrolled: true, type: 'window' })
             for (const c of clients) c.postMessage({ type: 'SW_ACTIVATED', version: SW_VERSION })
             // Pre-warm critical shell pages so they work offline immediately
-            try { await prewarmPages(PREWARM_PATHS) } catch { /* ignore */ }
+            try { await prewarmPages([...PREWARM_PATHS]) } catch { /* ignore */ }
         })())
     })
 

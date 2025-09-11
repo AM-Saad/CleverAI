@@ -3,8 +3,8 @@ import { requireRole } from '~/../server/middleware/auth'
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ['USER'])
   const prisma = event.context.prisma
-  const body = await readBody(event)
-  const { id } = body
+  const id = getRouterParam(event, 'id')
+
   if (!id) {
     setResponseStatus(event, 400)
     return { error: 'Folder id is required.' }

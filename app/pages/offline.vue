@@ -85,6 +85,8 @@
 </template>
 
 <script setup>
+import { OFFLINE_PAGES, OFFLINE_UI, NETWORK_CONFIG } from '../../shared/constants'
+
 definePageMeta({
     auth: false,
 })
@@ -94,12 +96,8 @@ const isChecking = ref(false)
 const showCachedContent = ref(false)
 const lastChecked = ref(null)
 
-// Common pages that might be cached
-const availablePages = ref([
-    { path: '/', title: 'Homepage' },
-    { path: '/about', title: 'About' },
-    { path: '/profile', title: 'Profile' },
-])
+// Use centralized available pages
+const availablePages = ref([...OFFLINE_PAGES])
 
 const checkConnection = async () => {
     isChecking.value = true
@@ -107,12 +105,12 @@ const checkConnection = async () => {
 
     try {
         // Wait a bit to show the checking state
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        await new Promise(resolve => setTimeout(resolve, NETWORK_CONFIG.CHECK_DELAY))
 
         // Try to fetch a small resource to check connectivity
         const response = await fetch('/favicon.ico', {
             cache: 'no-cache',
-            signal: AbortSignal.timeout(5000)
+            signal: AbortSignal.timeout(NETWORK_CONFIG.CHECK_TIMEOUT)
         })
 
         if (response.ok) {

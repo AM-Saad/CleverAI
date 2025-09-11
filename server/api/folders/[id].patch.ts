@@ -7,6 +7,7 @@ import { UpdateFolderDTO, FolderSchema } from '~~/shared/folder.contract'
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ['USER'])
   const prisma = event.context.prisma
+  const id = getRouterParam(event, 'id')
 
   try {
     const raw = await readBody(event)
@@ -21,7 +22,7 @@ export default defineEventHandler(async (event) => {
 
     // Ensure folder belongs to the current user
     const existing = await prisma.folder.findFirst({
-      where: { id: body.id, userId: user.id },
+      where: { id: id, userId: user.id },
     })
     if (!existing) {
       throw createError({ statusCode: 404, statusMessage: 'Folder not found' })
@@ -51,7 +52,7 @@ export default defineEventHandler(async (event) => {
     let materialCreated = false
     if (body.materialContent) {
       const materialData = {
-        folderId: body.id,
+        folderId: id!,
         title: body.materialTitle || 'Folder Content',
         content: body.materialContent,
         type: body.materialType || 'text',
@@ -60,7 +61,7 @@ export default defineEventHandler(async (event) => {
 
       // Create or update material for this folder
       const existingMaterial = await prisma.material.findFirst({
-        where: { folderId: body.id, title: materialData.title }
+        where: { folderId: id, title: materialData.title }
       })
 
       if (existingMaterial) {
@@ -82,7 +83,7 @@ export default defineEventHandler(async (event) => {
     let updated = existing
     if (Object.keys(folderData).length > 0) {
       updated = await prisma.folder.update({
-        where: { id: body.id },
+        where: { id: id },
         data: folderData,
         include: {
           materials: true,
@@ -93,7 +94,7 @@ export default defineEventHandler(async (event) => {
     } else if (materialCreated) {
       // Fetch updated folder with materials if only material was created
       const freshFolder = await prisma.folder.findUnique({
-        where: { id: body.id },
+        where: { id: id },
         include: {
           materials: true,
           flashcards: true,
@@ -106,7 +107,7 @@ export default defineEventHandler(async (event) => {
     } else {
       // Even if no changes, ensure we return folder with all relations
       const freshFolder = await prisma.folder.findUnique({
-        where: { id: body.id },
+        where: { id: id },
         include: {
           materials: true,
           flashcards: true,

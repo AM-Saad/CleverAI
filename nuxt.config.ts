@@ -7,6 +7,8 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
     debug: true,
+  // Use the existing `app/` folder as Nuxt source directory
+  srcDir: 'app',
 
   modules: [
     "@sidebase/nuxt-auth",
@@ -91,10 +93,21 @@ export default defineNuxtConfig({
         neutral: 'zinc'
       },
     button: {
+    slots: {
+    base: ['rounded-md font-medium inline-flex items-center disabled:cursor-not-allowed aria-disabled:cursor-not-allowed disabled:opacity-75 aria-disabled:opacity-75'],
+    label: 'truncate',
+    leadingIcon: 'shrink-0',
+    leadingAvatar: 'shrink-0',
+    leadingAvatarSize: '',
+    trailingIcon: 'shrink-0'
+  },
+
+    },
+        input: {
       slots: {
-        base: 'rounded-lg', // use --radius-md
+        base: 'rounded-sm py-sm px-sm', // use --radius-md
       }
-    }
+    },
     },
   },
  auth: {
@@ -117,6 +130,14 @@ export default defineNuxtConfig({
     },
   },
 
+  nitro: {
+    esbuild: {
+      options: {
+        target: "es2022", // Support BigInt on server side
+      },
+    },
+  },
+
   vite: {
     logLevel: "info",
     server: {
@@ -130,8 +151,10 @@ export default defineNuxtConfig({
     build: {
       assetsInlineLimit: 4096, // inline assets under 4kb for better performance and reduce requests
       minify: "esbuild",
+      target: "es2022", // Support BigInt and modern JS features
     },
     esbuild: {
+      target: "es2022", // Support BigInt and modern JS features
       // drop: ["console", "debugger"],
     },
     plugins: [
@@ -145,7 +168,7 @@ export default defineNuxtConfig({
   },
 
   ssr: false,
-  css: ["./app/assets/css/main.css"],
+  css: ["~/assets/css/main.css"],
 
   typescript: {
     shim: true,

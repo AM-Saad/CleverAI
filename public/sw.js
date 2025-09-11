@@ -1,4 +1,125 @@
 (() => {
+  // shared/constants/pwa.ts
+  var SW_CONFIG = {
+    VERSION: "v1.8.0-enhanced",
+    DEBUG_QUERY_PARAM: "swDebug",
+    DEBUG_VALUE: "1",
+    UPDATE_CHECK_INTERVAL: 3e4,
+    // 30 seconds
+    UPDATE_SETTLE_DELAY: 1500,
+    // 1.5 seconds
+    NETWORK_TIMEOUT: 2e4,
+    // 20 seconds
+    AUTO_HIDE_BANNER_DELAY: 15e3
+    // 15 seconds
+  };
+  var CACHE_CONFIG = {
+    IMAGES: {
+      MAX_ENTRIES: 50,
+      MAX_AGE_SECONDS: 30 * 24 * 60 * 60
+      // 30 days
+    },
+    ASSETS: {
+      MAX_ENTRIES: 100,
+      MAX_AGE_SECONDS: 7 * 24 * 60 * 60
+      // 7 days
+    },
+    PAGES: {
+      MAX_ENTRIES: 100
+    }
+  };
+  var SW_MESSAGE_TYPES = {
+    // Upload messages
+    UPLOAD_START: "UPLOAD_START",
+    PROGRESS: "PROGRESS",
+    FILE_COMPLETE: "FILE_COMPLETE",
+    ALL_FILES_COMPLETE: "ALL_FILES_COMPLETE",
+    // Sync messages
+    FORM_SYNC_ERROR: "FORM_SYNC_ERROR",
+    FORM_SYNCED: "FORM_SYNCED",
+    SYNC_FORM: "SYNC_FORM",
+    // Service worker control
+    SW_ACTIVATED: "SW_ACTIVATED",
+    SW_CONTROL_CLAIMED: "SW_CONTROL_CLAIMED",
+    SW_UPDATE_AVAILABLE: "SW_UPDATE_AVAILABLE",
+    // User commands
+    SKIP_WAITING: "SKIP_WAITING",
+    CLAIM_CONTROL: "CLAIM_CONTROL",
+    SET_DEBUG: "SET_DEBUG",
+    // Notifications
+    NOTIFICATION_CLICK_NAVIGATE: "NOTIFICATION_CLICK_NAVIGATE",
+    TEST_NOTIFICATION_CLICK: "TEST_NOTIFICATION_CLICK",
+    // Upload files
+    UPLOAD_FILES: "uploadFiles",
+    // Generic error
+    ERROR: "error"
+  };
+  var UPLOAD_CONFIG = {
+    CHUNK_SIZE: {
+      MIN: 256 * 1024,
+      // 256KB
+      MAX: 5 * 1024 * 1024,
+      // 5MB
+      TARGET_CHUNKS: 100
+    },
+    CONCURRENCY: {
+      CHUNKS: 3,
+      FILES: 4
+    },
+    RETRY: {
+      BASE_BACKOFF: 1e3,
+      // 1 second
+      MAX_ATTEMPTS: 5,
+      JITTER_FACTOR: 0.4,
+      // 40% jitter
+      SERVER_ERROR_CUSHION: 0.5
+      // 50% extra delay for server errors
+    },
+    HTTP_STATUS: {
+      PAYLOAD_TOO_LARGE: 413,
+      TOO_MANY_REQUESTS: 429,
+      SERVICE_UNAVAILABLE: 503
+    }
+  };
+  var URL_PATTERNS = {
+    // Development files to skip
+    DEV_FILES: [
+      "/@fs/",
+      "/node_modules/",
+      "error-dev.vue",
+      "builds/meta/dev.json",
+      "/@vite/",
+      "/@id/",
+      "/__vite_ping",
+      "/nuxt/dist/app/",
+      "sw.js"
+    ],
+    // Asset patterns
+    IMAGES: /\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/,
+    NUXT_ASSETS: /\/(?:_nuxt|_assets)\/[A-Za-z0-9._\-/]+\.(?:js|css|png|jpg|jpeg|webp|svg|ico)/g,
+    // API patterns
+    AUTH_API: "/api/auth/",
+    FORM_SYNC_API: "/api/form-sync",
+    // Static files
+    MANIFEST: "/manifest.webmanifest",
+    FAVICON: "/favicon.ico",
+    NUXT_BUILD: "/_nuxt/"
+  };
+  var PREWARM_PATHS = ["/", "/about"];
+  var STATIC_WARM_FILES = [
+    URL_PATTERNS.MANIFEST,
+    URL_PATTERNS.FAVICON
+  ];
+  var AUTH_STUBS = {
+    "/api/auth/session": { user: null, expires: null },
+    "/api/auth/csrf": { csrfToken: null },
+    "/api/auth/providers": {}
+  };
+  var PERIODIC_SYNC_CONFIG = {
+    CONTENT_SYNC_INTERVAL: 60 * 60 * 1e3
+    // 1 hour
+  };
+
   // node_modules/workbox-core/_version.js
   try {
     self["workbox:core:7.2.0"] && _();
@@ -3035,8 +3156,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
 
   // sw-src/index.ts
   (() => {
-    const SW_VERSION = "v1.8.0-enhanced";
-    const PREWARM_PATHS = ["/", "/about"];
+    const SW_VERSION = SW_CONFIG.VERSION;
     let DEBUG = false;
     const log = (...args) => {
       if (DEBUG) console.log("[SW]", ...args);
@@ -3050,17 +3170,10 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       if (new URL(self.location.href).searchParams.get("swDebug") === "1") DEBUG = true;
     } catch {
     }
-    const SW_MESSAGE_TYPE = {
-      UPLOAD_START: "UPLOAD_START",
-      PROGRESS: "PROGRESS",
-      FILE_COMPLETE: "FILE_COMPLETE",
-      ALL_FILES_COMPLETE: "ALL_FILES_COMPLETE",
-      FORM_SYNC_ERROR: "FORM_SYNC_ERROR",
-      FORM_SYNCED: "FORM_SYNCED",
-      SYNC_FORM: "SYNC_FORM"
-    };
+    const SW_MESSAGE_TYPE = SW_MESSAGE_TYPES;
     function calculateChunkSize(fileSize) {
-      return Math.max(256 * 1024, Math.min(5 * 1024 * 1024, Math.ceil(fileSize / 100)));
+      const { MIN, MAX, TARGET_CHUNKS } = UPLOAD_CONFIG.CHUNK_SIZE;
+      return Math.max(MIN, Math.min(MAX, Math.ceil(fileSize / TARGET_CHUNKS)));
     }
     function sleep(ms) {
       return new Promise((r) => setTimeout(r, ms));
@@ -3175,11 +3288,6 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       ({ url }) => url.origin === self.location.origin && (url.pathname === "/manifest.webmanifest" || url.pathname === "/favicon.ico"),
       new StaleWhileRevalidate({ cacheName: "static" })
     );
-    const AUTH_STUBS = {
-      "/api/auth/session": { user: null, expires: null },
-      "/api/auth/csrf": { csrfToken: null },
-      "/api/auth/providers": {}
-    };
     registerRoute(
       ({ url, request }) => url.origin === self.location.origin && url.pathname.startsWith("/api/auth/") && request.method === "GET",
       async ({ event }) => {
@@ -3284,7 +3392,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         const clients = await swSelf.clients.matchAll({ includeUncontrolled: true, type: "window" });
         for (const c of clients) c.postMessage({ type: "SW_ACTIVATED", version: SW_VERSION });
         try {
-          await prewarmPages(PREWARM_PATHS);
+          await prewarmPages([...PREWARM_PATHS]);
         } catch {
         }
       })());

@@ -1,39 +1,57 @@
 // app/plugins/sw-sync.client.ts
-export default defineNuxtPlugin(async () => {
+
+import { SYNC_TAGS, PERIODIC_SYNC_CONFIG } from '../../shared/constants'
+
+// Important: Do NOT block Nuxt mount. Never await a SW that may never be ready in dev.
+export default defineNuxtPlugin(() => {
+  if (import.meta.server) return
   if (!('serviceWorker' in navigator)) return
 
-  // Wait until the SW is controlling the page
-  const reg = await navigator.serviceWorker.ready
-
-  // One-off Background Sync: let the SW run 'syncForm' when online
-  if ('sync' in reg) {
-      try {
-        // @ts-expect-error Background Sync is not in some TS lib DOM versions
-      await reg.sync.register('syncForm')
-    } catch {
-      // not supported / permission denied — ignore silently
-    }
-  }
-
-
-  if ('periodicSync' in reg) {
+  // Fire-and-forget background task. Times out if no SW controls the page.
+  ;(async () => {
     try {
-      // @ts-expect-error periodicSync types are not guaranteed
-      const tags = await reg.periodicSync.getTags?.()
-      if (!tags?.includes('content-sync')) {
-        // @ts-expect-error periodicSync types are not guaranteed
-        await reg.periodicSync.register('content-sync', { minInterval: 60 * 60 * 1000 })
+      const reg = await Promise.race<ServiceWorkerRegistration | null>([
+        navigator.serviceWorker.ready,
+        new Promise(resolve => setTimeout(() => resolve(null), 1500)),
+      ])
+
+      if (!reg) return // no controlling SW (likely dev) – skip silently
+
+      // One-off Background Sync: let the SW run 'syncForm' when online
+      if ('sync' in reg) {
+        try {
+          // @ts-expect-error Background Sync is not in some TS lib DOM versions
+          await reg.sync.register(SYNC_TAGS.FORM)
+        } catch {
+          // not supported / permission denied — ignore silently
+        }
+      }
+
+      // Periodic Sync if available
+      if ('periodicSync' in reg) {
+        try {
+          // @ts-expect-error periodicSync types are not guaranteed
+          const tags = await reg.periodicSync.getTags?.()
+          if (!tags?.includes(SYNC_TAGS.CONTENT)) {
+            // @ts-expect-error periodicSync types are not guaranteed
+            await reg.periodicSync.register(SYNC_TAGS.CONTENT, {
+              minInterval: PERIODIC_SYNC_CONFIG.CONTENT_SYNC_INTERVAL
+            })
+          }
+        } catch {
+          // not supported — ignore
+        }
       }
     } catch {
-      // not supported — ignore
+      // ignore errors – best effort
     }
-  }
+  })()
 })
 
 // Bridge SW postMessage events to DOM CustomEvents for UI toasts
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.addEventListener('message', (e) => {
-    const msg = (e.data || {}) as { type?: string; data?: any }
+  navigator.serviceWorker.addEventListener('message', (e: MessageEvent) => {
+    const msg = (e.data || {}) as { type?: string; data?: unknown }
     switch (msg.type) {
       case 'SYNC_FORM':
         window.dispatchEvent(new CustomEvent('offline-form-sync-started', { detail: msg.data || {} }))

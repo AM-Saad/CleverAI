@@ -56,7 +56,7 @@ class FoldersModule extends FetchFactory {
         "Accept-Language": "en-US",
       },
     }
-        return this.call("PATCH", `${this.RESOURCE}`, { id, ...payload }, fetchOptions)
+    return this.call("PATCH", `${this.RESOURCE}/${id}`, { ...payload }, fetchOptions)
 
   }
 

@@ -7,6 +7,13 @@
  * - NOTE: Do NOT store raw passwords. We only keep the email and a marker.
  */
 
+import {
+  DB_CONFIG,
+  SYNC_TAGS,
+  DOM_EVENTS,
+  SW_MESSAGE_TYPES
+} from '../../shared/constants'
+
 type QueuedForm = {
   id: string
   email: string
@@ -14,9 +21,8 @@ type QueuedForm = {
   createdAt: number
 }
 
-const DB_NAME = 'recwide_db'
-const DB_VERSION = 2 // must match SW migration expectations
-const STORE = 'forms'
+// Use centralized database configuration
+const { NAME: DB_NAME, VERSION: DB_VERSION, STORES: { FORMS: STORE } } = DB_CONFIG
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -65,7 +71,7 @@ export function useOffline(): {
 
     // Emit a UI event so the app can show immediate feedback
     try {
-      window.dispatchEvent(new CustomEvent('offline-form-saved', {
+      window.dispatchEvent(new CustomEvent(DOM_EVENTS.OFFLINE_FORM_SAVED, {
         detail: { id, email: credentials.email }
       }))
     } catch {
@@ -78,7 +84,7 @@ export function useOffline(): {
       // This tag is what the SW listens for in its 'sync' event
       // We cannot pass payload here; the SW reads from IndexedDB instead.
       // @ts-expect-error - older TS libdefs don't know about SyncManager in some targets
-      await reg.sync?.register?.('syncForm')
+      await reg.sync?.register?.(SYNC_TAGS.FORM)
     } catch {
       // Not supported or denied; no-op.
     }

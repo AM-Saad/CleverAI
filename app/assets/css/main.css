@@ -1,9 +1,10 @@
-@import "tailwindcss";
-@import "@nuxt/ui";
-
-/* @import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap"); */
+/* Font imports must come first */
 @import url("https://fonts.cdnfonts.com/css/helvetica-neue-55");
 @import url("https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap");
+/* @import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap"); */
+
+@import "tailwindcss";
+@import "@nuxt/ui";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
@@ -13,15 +14,7 @@ body {
   font-family: "Helvetica Neue", sans-serif;
   background-color: #fff;
 }
-button,
-input,
-select,
-textarea {
-  font-family: inherit;
-  font-size: inherit;
-  line-height: inherit;
-  outline: none;
-}
+
 a {
   outline: none;
 }
@@ -239,11 +232,6 @@ a:not(.btn):focus-visible {
 
 /* Optional: global component shape/layout tokens */
 :root {
-  --ui-radius: 1rem;
-  --ui-radius-lg: 1.5rem;
-
-  --radius-md: var(--ui-radius);
-  --radius-lg: var(--ui-radius-lg);
 
   --ui-container: var(--container-8xl);
   /* Centralized light-mode primary color for Nuxt UI components */

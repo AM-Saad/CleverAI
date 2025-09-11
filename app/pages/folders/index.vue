@@ -17,9 +17,8 @@
                 No folders found.
             </div>
             <ul v-if="folders && folders?.length > 0" class="space-y-4">
-                <li
-v-for="folder in folders" :key="folder.id"
-                    class="p-2  rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-foreground transition-colors">
+                <li v-for="folder in folders" :key="folder.id"
+                    class="p-md rounded-md shadow-sm hover:bg-gray-50 dark:hover:bg-foreground transition-colors">
                     <NuxtLink :to="`/folders/${folder.id}`">
                         <div class="font-semibold text-lg">
                             <icon name="ic:round-folder-open" class="inline-block mr-2 text-primary" />

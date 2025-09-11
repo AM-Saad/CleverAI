@@ -33,7 +33,7 @@ export function useLogin(): useLogin {
     if (!navigator.onLine) {
       handleOfflineSubmit(credentials)
       return
-    } else {
+    }
       loading.value = true
       try {
         const response = await signIn("credentials", {
@@ -58,7 +58,6 @@ export function useLogin(): useLogin {
       } finally {
         loading.value = false
       }
-    }
   }
 
   return {

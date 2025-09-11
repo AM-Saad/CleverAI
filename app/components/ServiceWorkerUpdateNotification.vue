@@ -288,6 +288,8 @@
 </template>
 
 <script setup lang="ts">
+import { SW_CONFIG } from '../../shared/constants'
+
 interface Props {
     mode?: 'banner' | 'modal' | 'auto'
     autoShow?: boolean
@@ -353,7 +355,7 @@ watch(updateAvailable, (available) => {
                     console.log('🔔 ServiceWorkerUpdateNotification: Auto-hiding banner')
                     showBanner.value = false
                 }
-            }, 15000)
+            }, SW_CONFIG.AUTO_HIDE_BANNER_DELAY)
         }
 
         if (props.mode === 'modal') {

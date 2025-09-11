@@ -9,7 +9,7 @@
         "build": "nuxt build --vercel-preset",
        "build:inject": "yarn sw:build && yarn sw:check && nuxt build --vercel-preset",
         "test:pwa-offline": "playwright test tests/pwa-offline-basic.spec.ts --project=chromium",
-        "dev": "nuxt dev --port 3030",
+        "dev": "nuxt dev --port 5174",
         "generate": "nuxt generate",
         "preview": "nuxt preview",
         "postinstall": "nuxt prepare",

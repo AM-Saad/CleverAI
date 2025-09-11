@@ -7,7 +7,6 @@
             theme-color="#f3f4f6" />
         <Link rel="manifest" href="/manifest.webmanifest" />
         <NuxtErrorBoundary @error="ErrorLogger">
-            <VitePwaManifest />
 
             <NuxtLoadingIndicator :duration="4000" :color="'#fe9548'" />
             <UApp>
@@ -16,10 +15,6 @@
                     <NuxtPage />
                 </NuxtLayout>
 
-                <!-- Dev-only Service Worker debug panel -->
-                <ClientOnly>
-                    <ServiceWorkerBridgePanel v-if="isDev" />
-                </ClientOnly>
             </UApp>
         </NuxtErrorBoundary>
     </div>
@@ -27,17 +22,24 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-
+import { onBeforeMount, onMounted, onErrorCaptured } from 'vue'
 
 const router = useRouter();
+console.log('🚀 [APP.VUE] Router initialized:', router);
+
 const ErrorLogger = (): void => {
+    console.error('🚨 [APP.VUE] Error logged, redirecting to error page');
     router.replace({
         name: 'error'
     });
 }
 
-// Render dev tools only in development builds
-const isDev = import.meta.dev;
 
+
+
+onErrorCaptured((err, instance, info) => {
+    console.error('🚨 [APP.VUE] Error captured:', err, instance, info);
+    return false; // Let error propagate
+});
 
 </script>
