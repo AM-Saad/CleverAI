@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
     // Parse and validate request body
     const body = await readBody(event)
     const validatedBody = EnrollCardRequestSchema.parse(body)
-    
+
     // Get authenticated user
     const user = await requireRole(event, ["USER"])
     const prisma = event.context.prisma
@@ -62,16 +62,16 @@ export default defineEventHandler(async (event) => {
         streak: 0
       }
     })
-    
+
     return EnrollCardResponseSchema.parse({
       success: true,
       cardId: card.id,
       message: 'Card enrolled successfully'
     })
-    
+
   } catch (error: unknown) {
     console.error('Error enrolling card:', error)
-    
+
     // Handle validation errors
     if (error instanceof ZodError) {
       throw createError({
@@ -80,12 +80,12 @@ export default defineEventHandler(async (event) => {
         data: error.issues
       })
     }
-    
+
     // Handle createError instances
     if (error && typeof error === 'object' && 'statusCode' in error) {
       throw error
     }
-    
+
     // Handle unexpected errors
     throw ErrorFactory.create(
       ErrorType.Validation,

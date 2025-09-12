@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
     // Parse and validate request body
     const body = await readBody(event)
     const validatedBody = GradeCardRequestSchema.parse(body)
-    
+
     // Get authenticated user
     const user = await requireRole(event, ["USER"])
     const prisma = event.context.prisma
@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
 
     // Parse grade to number for calculations
     const grade = parseInt(validatedBody.grade)
-    
+
     // SM-2 Algorithm implementation
     const { easeFactor, intervalDays, repetitions } = calculateSM2({
       currentEF: cardReview.easeFactor,
@@ -59,7 +59,7 @@ export default defineEventHandler(async (event) => {
         streak: newStreak
       }
     })
-    
+
     return GradeCardResponseSchema.parse({
       success: true,
       nextReviewAt: updatedCard.nextReviewAt.toISOString(),
@@ -67,10 +67,10 @@ export default defineEventHandler(async (event) => {
       easeFactor: updatedCard.easeFactor,
       message: 'Card graded successfully'
     })
-    
+
   } catch (error: unknown) {
     console.error('Error grading card:', error)
-    
+
     // Handle validation errors
     if (error instanceof ZodError) {
       throw createError({
@@ -79,12 +79,12 @@ export default defineEventHandler(async (event) => {
         data: error.issues
       })
     }
-    
+
     // Handle createError instances
     if (error && typeof error === 'object' && 'statusCode' in error) {
       throw error
     }
-    
+
     // Handle unexpected errors
     throw ErrorFactory.create(
       ErrorType.Validation,
@@ -102,7 +102,7 @@ function calculateSM2(params: {
   grade: number
 }): { easeFactor: number; intervalDays: number; repetitions: number } {
   const { currentEF, currentInterval, currentRepetitions, grade } = params
-  
+
   let easeFactor = currentEF
   let intervalDays = currentInterval
   let repetitions = currentRepetitions
@@ -125,7 +125,7 @@ function calculateSM2(params: {
 
   // Update ease factor
   easeFactor = easeFactor + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02))
-  
+
   // Ensure ease factor stays within bounds
   if (easeFactor < 1.3) {
     easeFactor = 1.3

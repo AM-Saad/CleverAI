@@ -3,13 +3,11 @@
         <div class="flex items-center justify-end">
             <div class="flex items-center gap-3">
 
-                <span
-v-if="rateLimitRemaining !== null"
+                <span v-if="rateLimitRemaining !== null"
                     class="inline-flex items-center text-xs px-2 py-1 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-700/50">
                     Remaining: <span class="ml-1 font-medium">{{ rateLimitRemaining }}</span>
                 </span>
-                <UButton
-class="flex items-center" :size="'lg'" :loading="generating || loading"
+                <UButton class="flex items-center" :size="'lg'" :loading="generating || loading"
                     :disabled="generating || loading" @click="onGenerate">
                     <span v-if="!generating">Generate Flashcards</span>
                     <span v-else>Generating…</span>
@@ -27,8 +25,7 @@ class="flex items-center" :size="'lg'" :loading="generating || loading"
             {{ genError }}
         </p>
 
-        <div
-            v-if="cardsToShow?.length"
+        <div v-if="cardsToShow?.length"
             class="mt-4 grid gap-4 justify-center justify-items-center sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             <div v-for="(card, idx) in cardsToShow" :key="idx" class="relative">
                 <ui-flip-card>
@@ -39,13 +36,9 @@ class="flex items-center" :size="'lg'" :loading="generating || loading"
                         <div class="text-base dark:text-neutral-300 mb-4">{{ card.back }}</div>
                         <!-- Enroll Button -->
                         <div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
-                            <ReviewEnrollButton 
-                                v-if="'id' in card && card.id"
-                                :material-id="card.id"
-                                :is-enrolled="enrolledCards.has(card.id)"
-                                @enrolled="handleCardEnrolled"
-                                @error="handleEnrollError"
-                            />
+                            <ReviewEnrollButton v-if="'id' in card && card.id" :material-id="card.id"
+                                :is-enrolled="enrolledCards.has(card.id)" @enrolled="handleCardEnrolled"
+                                @error="handleEnrollError" />
                             <div v-else class="text-xs text-gray-500">
                                 Save card to enable review
                             </div>
@@ -57,10 +50,8 @@ class="flex items-center" :size="'lg'" :loading="generating || loading"
 
         <!-- Review Navigation -->
         <div v-if="cardsToShow?.length" class="mt-8 text-center">
-            <NuxtLink
-                to="/review"
-                class="inline-flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
-            >
+            <NuxtLink to="/review"
+                class="inline-flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors">
                 <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
@@ -98,15 +89,15 @@ async function onGenerate() {
 }
 
 function handleCardEnrolled(response: EnrollCardResponse) {
-  if (response.success && response.cardId) {
-    // Since we're using material ID for enrollment, we need to track differently
-    // For now, we'll just show a success message
-    console.log('Card enrolled successfully:', response.cardId)
-  }
+    if (response.success && response.cardId) {
+        // Since we're using material ID for enrollment, we need to track differently
+        // For now, we'll just show a success message
+        console.log('Card enrolled successfully:', response.cardId)
+    }
 }
 
 function handleEnrollError(error: string) {
-  console.error('Failed to enroll card:', error)
-  // You could show a toast notification here
+    console.error('Failed to enroll card:', error)
+    // You could show a toast notification here
 }
 </script>

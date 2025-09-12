@@ -7,12 +7,12 @@ export default defineEventHandler(async (event) => {
     // Get authenticated user
     const user = await requireRole(event, ["USER"])
     const prisma = event.context.prisma
-    
+
     // Get query parameters
     const query = getQuery(event)
     const folderId = query.folderId as string | undefined
     const limit = parseInt(query.limit as string) || 20
-    
+
     // Build where clause
     const whereClause = {
       userId: user.id,
@@ -74,14 +74,14 @@ export default defineEventHandler(async (event) => {
 
     // Calculate stats
     const totalCards = await prisma.cardReview.count({
-      where: { 
+      where: {
         userId: user.id,
         ...(folderId ? { folderId } : {})
       }
     })
 
     const newCards = await prisma.cardReview.count({
-      where: { 
+      where: {
         userId: user.id,
         repetitions: 0,
         ...(folderId ? { folderId } : {})
@@ -91,13 +91,13 @@ export default defineEventHandler(async (event) => {
     const dueCards = cardReviews.length
 
     const learningCards = await prisma.cardReview.count({
-      where: { 
+      where: {
         userId: user.id,
         repetitions: { gt: 0, lt: 3 },
         ...(folderId ? { folderId } : {})
       }
     })
-    
+
     return ReviewQueueResponseSchema.parse({
       cards,
       stats: {
@@ -107,15 +107,15 @@ export default defineEventHandler(async (event) => {
         learning: learningCards
       }
     })
-    
+
   } catch (error: unknown) {
     console.error('Error fetching review queue:', error)
-    
+
     // Handle createError instances
     if (error && typeof error === 'object' && 'statusCode' in error) {
       throw error
     }
-    
+
     // Handle unexpected errors
     throw ErrorFactory.create(
       ErrorType.Validation,
