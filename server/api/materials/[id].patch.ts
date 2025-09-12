@@ -6,12 +6,13 @@ import { z } from 'zod'
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ['USER'])
   const prisma = event.context.prisma
+  const id = getRouterParam(event, 'id')
 
   try {
     const body = await readBody(event)
-
+    console.log(body)
     // Validate request: require id + allow only fields from UpdateMaterialDTO
-    const ParsedUpdateDTO = UpdateMaterialDTO.extend({ id: z.string() })
+    const ParsedUpdateDTO = UpdateMaterialDTO
     const parsed = ParsedUpdateDTO.safeParse(body)
     if (!parsed.success) {
       throw createError({ statusCode: 400, statusMessage: 'Invalid request body' })
@@ -21,7 +22,7 @@ export default defineEventHandler(async (event) => {
     // Verify material exists and user owns the folder
     const material = await prisma.material.findFirst({
       where: {
-        id: data.id,
+        id: id,
         folder: { userId: user.id }
       }
     })
@@ -48,7 +49,7 @@ export default defineEventHandler(async (event) => {
 
     // Update material
     const updated = await prisma.material.update({
-      where: { id: data.id },
+      where: { id: id },
       data: updateData
     })
 

@@ -82,6 +82,35 @@ graph TD
 
 ## 🔧 Technical Implementation
 
+### Service Architecture
+
+The spaced repetition system follows CleverAI's established service pattern using the `ServiceFactory` and `FetchFactory` architecture:
+
+```typescript
+// Service integration
+const { $api } = useNuxtApp()
+
+// Usage examples
+await $api.review.enroll({ materialId: 'card123' })
+await $api.review.grade({ cardId: 'review456', grade: '4' })
+const queue = await $api.review.getQueue(folderId, 20)
+```
+
+### ReviewService API
+
+```typescript
+export class ReviewService extends FetchFactory {
+  // Enroll material for review
+  async enroll(payload: EnrollCardRequest): Promise<EnrollCardResponse>
+
+  // Grade card with SM-2 algorithm
+  async grade(payload: GradeCardRequest): Promise<GradeCardResponse>
+
+  // Get review queue with filtering
+  async getQueue(folderId?: string, limit?: number): Promise<ReviewQueueResponse>
+}
+```
+
 ### SM-2 Algorithm
 
 The system implements the SuperMemo SM-2 algorithm with the following parameters:
@@ -291,7 +320,7 @@ const SM2_CONFIG = {
 ### Basic Enrollment
 
 ```typescript
-// Using the composable
+// Using the composable (recommended)
 const { enroll, isSubmitting, error } = useCardReview()
 
 const enrollCard = async (materialId: string) => {
@@ -302,12 +331,16 @@ const enrollCard = async (materialId: string) => {
     console.error('Enrollment failed:', error.value)
   }
 }
+
+// Direct service usage
+const { $api } = useNuxtApp()
+const response = await $api.review.enroll({ materialId: 'card123' })
 ```
 
 ### Review Session
 
 ```typescript
-// Fetch review queue
+// Using the composable (recommended)
 const { fetchQueue, grade, currentCard, queueStats } = useCardReview()
 
 // Load cards for review
@@ -315,6 +348,11 @@ await fetchQueue()
 
 // Grade current card
 await grade(currentCard.value.cardId, '4') // Good response
+
+// Direct service usage
+const { $api } = useNuxtApp()
+const queue = await $api.review.getQueue()
+await $api.review.grade({ cardId: 'review123', grade: '5' })
 ```
 
 ### Custom Integration

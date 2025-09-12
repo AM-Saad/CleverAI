@@ -103,7 +103,7 @@
                                 Question
                             </h2>
                             <div class="text-xl font-medium text-gray-900 dark:text-gray-100 leading-relaxed">
-                                {{ currentCard.material.front }}
+                                {{ resourceFront }}
                             </div>
                         </div>
 
@@ -113,7 +113,7 @@
                                 Answer
                             </h3>
                             <div class="text-gray-800 dark:text-gray-200 leading-relaxed whitespace-pre-wrap">
-                                {{ currentCard.material.back }}
+                                {{ resourceBack }}
                             </div>
                         </div>
                     </div>
@@ -137,7 +137,7 @@
                             <div class="grid grid-cols-2 md:grid-cols-6 gap-2">
                                 <button v-for="grade in gradeOptions" :key="grade.value" :disabled="isSubmitting"
                                     class="p-3 text-center border rounded-lg transition-colors hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50"
-                                    :class="grade.colorClass" @click="gradeCard(grade.value)">
+                                    :class="grade.colorClass" @click="handleGradeCard(grade.value)">
                                     <div class="font-semibold">{{ grade.label }}</div>
                                     <div class="text-xs mt-1">{{ grade.description }}</div>
                                 </button>
@@ -151,7 +151,7 @@
 </template>
 
 <script setup lang="ts">
-import type { ReviewCard, ReviewQueueResponse, GradeCardResponse, ReviewGrade } from '~/shared/review.contract'
+import type { ReviewGrade } from '~/shared/review.contract'
 
 // SEO
 useHead({
@@ -161,26 +161,56 @@ useHead({
     ]
 })
 
-// State
-const queue = ref<ReviewCard[]>([])
-const currentCardIndex = ref(0)
+// Get composable for review functionality
+// Use the useCardReview composable instead of managing state manually
+const {
+    reviewQueue,
+    currentCard,
+    currentCardIndex,
+    queueStats,
+    isLoading,
+    isSubmitting,
+    error,
+    hasCards,
+    progress,
+    grade: gradeCard,
+    fetchQueue,
+    clearError
+} = useCardReview()
+
+// Alias queue and stats for compatibility with existing template
+const queue = reviewQueue
+const stats = queueStats
+
+// UI State (not managed by composable)
 const showAnswer = ref(false)
-const isLoading = ref(false)
-const isSubmitting = ref(false)
-const error = ref<string | null>(null)
-const stats = ref({
-    total: 0,
-    new: 0,
-    due: 0,
-    learning: 0
+
+// Initialize on mount
+onMounted(() => {
+    fetchQueue()
 })
 
-// Computed
-const currentCard = computed(() => queue.value[currentCardIndex.value] || null)
-const hasCards = computed(() => queue.value.length > 0)
-const progress = computed(() => {
-    if (!hasCards.value) return 0
-    return Math.round(((currentCardIndex.value + 1) / queue.value.length) * 100)
+// Resource accessors for polymorphic review items
+const resourceFront = computed(() => {
+    const c = currentCard.value
+    if (!c) return ''
+    if (c.resourceType === 'flashcard') {
+        const flashcardResource = c.resource as { front: string; back: string; folderId: string; hint?: string; tags?: string[] }
+        return flashcardResource.front
+    }
+    const materialResource = c.resource as { title: string; content: string; folderId: string; tags?: string[] }
+    return materialResource.title
+})
+
+const resourceBack = computed(() => {
+    const c = currentCard.value
+    if (!c) return ''
+    if (c.resourceType === 'flashcard') {
+        const flashcardResource = c.resource as { front: string; back: string; folderId: string; hint?: string; tags?: string[] }
+        return flashcardResource.back
+    }
+    const materialResource = c.resource as { title: string; content: string; folderId: string; tags?: string[] }
+    return materialResource.content
 })
 
 // Grade options
@@ -223,66 +253,21 @@ const gradeOptions = [
     }
 ]
 
-// Methods
-const fetchQueue = async () => {
-    isLoading.value = true
-    error.value = null
-
-    try {
-        const response = await $fetch<ReviewQueueResponse>('/api/review/queue')
-        queue.value = response.cards
-        stats.value = response.stats
-        currentCardIndex.value = 0
-        showAnswer.value = false
-    } catch (err: unknown) {
-        const errorMsg = err && typeof err === 'object' && 'data' in err
-            ? (err as { data?: { message?: string } }).data?.message
-            : 'Failed to fetch review queue'
-        error.value = errorMsg || 'Failed to fetch review queue'
-    } finally {
-        isLoading.value = false
-    }
-}
-
-const gradeCard = async (grade: ReviewGrade) => {
-    if (!currentCard.value) return
-
-    isSubmitting.value = true
-
-    try {
-        await $fetch<GradeCardResponse>('/api/review/grade', {
-            method: 'POST',
-            body: { cardId: currentCard.value.cardId, grade }
-        })
-
-        // Remove graded card from queue
-        queue.value.splice(currentCardIndex.value, 1)
-        stats.value.due = Math.max(0, stats.value.due - 1)
-
-        // Reset for next card
-        showAnswer.value = false
-
-        // Adjust index if needed
-        if (currentCardIndex.value >= queue.value.length) {
-            currentCardIndex.value = Math.max(0, queue.value.length - 1)
-        }
-
-    } catch (err: unknown) {
-        const errorMsg = err && typeof err === 'object' && 'data' in err
-            ? (err as { data?: { message?: string } }).data?.message
-            : 'Failed to grade card'
-        error.value = errorMsg || 'Failed to grade card'
-    } finally {
-        isSubmitting.value = false
-    }
-}
-
+// Additional methods for this page
 const refreshQueue = () => {
     fetchQueue()
 }
 
-const clearError = () => {
-    error.value = null
+const handleGradeCard = async (gradeValue: ReviewGrade) => {
+    if (!currentCard.value) return
+
+    try {
+        await gradeCard(currentCard.value.cardId, gradeValue)
+        // Reset answer visibility for next card
+        showAnswer.value = false
+    } catch (err) {
+        console.error('Failed to grade card:', err)
+    }
 }
 
 // Initialize

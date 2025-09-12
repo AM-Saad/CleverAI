@@ -26,19 +26,32 @@
         </p>
 
         <div v-if="cardsToShow?.length"
-            class="mt-4 grid gap-4 justify-center justify-items-center sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+            class="mt-4 grid gap-4 justify-center justify-items-center sm:grid-cols-2 md:grid-cols-3 ">
             <div v-for="(card, idx) in cardsToShow" :key="idx" class="relative">
                 <ui-flip-card>
                     <template #front>
                         <div class="font-medium mb-1 text-xl">Q: {{ card.front }}</div>
+                        <!-- Enrollment status indicator -->
+                        <div v-if="'id' in card && card.id && enrolledCards.has(card.id)"
+                            class="absolute top-2 right-2">
+                            <span
+                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd"
+                                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                                ✓
+                            </span>
+                        </div>
                     </template>
                     <template #back>
                         <div class="text-base dark:text-neutral-300 mb-4">{{ card.back }}</div>
                         <!-- Enroll Button -->
                         <div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
-                            <ReviewEnrollButton v-if="'id' in card && card.id" :material-id="card.id"
-                                :is-enrolled="enrolledCards.has(card.id)" @enrolled="handleCardEnrolled"
-                                @error="handleEnrollError" />
+                            <ReviewEnrollButton v-if="'id' in card && card.id" :resource-type="'flashcard'"
+                                :resource-id="card.id" :is-enrolled="enrolledCards.has(card.id)"
+                                @enrolled="handleCardEnrolled" @error="handleEnrollError" />
                             <div v-else class="text-xs text-gray-500">
                                 Save card to enable review
                             </div>
@@ -76,6 +89,7 @@ const { folder, loading } = useFolder(id)
 
 const model = computed(() => (folder.value as Folder | null | undefined)?.llmModel)
 const text = computed(() => extractContentFromFolder(folder.value as Folder | null | undefined))
+console.log(text)
 
 const existingFlashcards = computed(() => (folder.value as Folder | null | undefined)?.flashcards || [])
 const { flashcards, generating, genError, generate, rateLimitRemaining } = useGenerateFlashcards(model, text, computed(() => id))
@@ -84,16 +98,45 @@ const cardsToShow = computed(() => flashcards.value?.length ? flashcards.value :
 // Track enrolled cards
 const enrolledCards = ref(new Set<string>())
 
-async function onGenerate() {
-    await generate()
+// Check enrollment status when cards are available
+watch(cardsToShow, async (cards) => {
+    if (cards && cards.length > 0) {
+        await checkEnrollmentStatus()
+    }
+}, { immediate: true })
+
+async function checkEnrollmentStatus() {
+    const cardIds = cardsToShow.value?.filter(card => card && typeof card === 'object' && 'id' in card && card.id).map(card => (card as { id: string }).id) || []
+    if (cardIds.length === 0) return
+
+    try {
+        const { $api } = useNuxtApp()
+        const response = await $api.review.getEnrollmentStatus(cardIds, 'flashcard')
+
+        // Update enrolled cards Set
+        enrolledCards.value.clear()
+        Object.entries(response.enrollments).forEach(([cardId, isEnrolled]) => {
+            if (isEnrolled) {
+                enrolledCards.value.add(cardId)
+            }
+        })
+    } catch (error) {
+        console.error('Failed to check enrollment status:', error)
+    }
 }
 
 function handleCardEnrolled(response: EnrollCardResponse) {
     if (response.success && response.cardId) {
-        // Since we're using material ID for enrollment, we need to track differently
-        // For now, we'll just show a success message
+        // The response.cardId is the CardReview ID, but we need to track by resource ID
+        // Find which card was just enrolled by checking the EnrollButton's material-id prop
+        // For now, we'll refetch the enrollment status to be sure
+        checkEnrollmentStatus()
         console.log('Card enrolled successfully:', response.cardId)
     }
+}
+
+async function onGenerate() {
+    await generate()
 }
 
 function handleEnrollError(error: string) {

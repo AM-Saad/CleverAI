@@ -9,11 +9,12 @@ export default defineEventHandler(async (event) => {
   const prisma = event.context.prisma
   const id = getRouterParam(event, 'id')
 
+
   try {
     const raw = await readBody(event)
 
     // Validate request: require id + allow only fields from UpdateFolderDTO
-    const ParsedUpdateDTO = UpdateFolderDTO.extend({ id: z.string() })
+    const ParsedUpdateDTO = UpdateFolderDTO
     const parsed = ParsedUpdateDTO.safeParse(raw)
     if (!parsed.success) {
       throw createError({ statusCode: 400, statusMessage: 'Invalid request body' })

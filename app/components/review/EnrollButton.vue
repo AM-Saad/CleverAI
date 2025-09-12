@@ -27,7 +27,9 @@
 import type { EnrollCardResponse } from '~/shared/review.contract'
 
 interface Props {
-    materialId: string
+    materialId?: string
+    resourceType?: 'material' | 'flashcard'
+    resourceId?: string
     isEnrolled?: boolean
 }
 
@@ -48,16 +50,28 @@ const buttonText = computed(() => {
     return 'Add to Review'
 })
 
+// Determine actual resource type and ID
+const actualResourceType = computed(() => {
+    if (props.resourceType) return props.resourceType
+    return props.materialId ? 'material' : 'flashcard'
+})
+
+const actualResourceId = computed(() => {
+    if (props.resourceId) return props.resourceId
+    return props.materialId || ''
+})
+
 // Methods
 const handleEnroll = async () => {
-    if (isSubmitting.value || props.isEnrolled) return
+    if (isSubmitting.value || props.isEnrolled || !actualResourceId.value) return
 
     isSubmitting.value = true
 
     try {
-        const response = await $fetch<EnrollCardResponse>('/api/review/enroll', {
-            method: 'POST',
-            body: { materialId: props.materialId }
+        const { $api } = useNuxtApp()
+        const response = await $api.review.enroll({
+            resourceType: actualResourceType.value,
+            resourceId: actualResourceId.value
         })
 
         if (response.success) {
@@ -66,8 +80,8 @@ const handleEnroll = async () => {
             emit('error', response.message || 'Failed to enroll card')
         }
     } catch (error: unknown) {
-        const errorMsg = error && typeof error === 'object' && 'data' in error
-            ? (error as { data?: { message?: string } }).data?.message
+        const errorMsg = error && typeof error === 'object' && 'message' in error
+            ? (error as { message?: string }).message
             : 'Failed to enroll card'
         emit('error', errorMsg || 'Failed to enroll card')
     } finally {

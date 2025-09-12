@@ -3,7 +3,7 @@
 import type { $Fetch } from "ofetch"
 import { ServiceFactory } from "~/services/ServiceFactory"
 
-export default defineNuxtPlugin((nuxtApp) => {
+export default defineNuxtPlugin((_nuxtApp) => {
   console.log('🌐 [API PLUGIN] Initializing API plugin');
 
   const baseURL = useRuntimeConfig().public.APP_BASE_URL
@@ -35,7 +35,9 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   const services = {
     folders: apiServiceFactory.create("folders"),
+  materials: apiServiceFactory.create("materials"),
     auth: apiServiceFactory.create("auth"),
+    review: apiServiceFactory.create("review"),
   };
 
   console.log('🌐 [API PLUGIN] API services created:', Object.keys(services));

@@ -5,10 +5,23 @@ export const ReviewGradeSchema = z.enum(['0', '1', '2', '3', '4', '5'] as const)
 export type ReviewGrade = z.infer<typeof ReviewGradeSchema>
 
 // Card enrollment request
-export const EnrollCardRequestSchema = z.object({
-  materialId: z.string().min(1, 'Material ID is required'),
-})
-export type EnrollCardRequest = z.infer<typeof EnrollCardRequestSchema>
+// Enrollment request: prefer explicit resourceType + resourceId.
+export const EnrollCardRequestSchema = z
+  .union([
+    z.object({ resourceType: z.enum(['material', 'flashcard'] as const), resourceId: z.string().min(1) }),
+    // backward-compatible shape
+    z.object({ materialId: z.string().min(1) }),
+  ])
+  .refine((val: unknown) => {
+    // Ensure exactly one of the shapes is used
+    if (val && typeof val === 'object' && 'materialId' in val) return true
+    const obj = val as Record<string, unknown>
+    return typeof obj.resourceType === 'string' && typeof obj.resourceId === 'string'
+  }, { message: 'Provide either materialId (deprecated) or resourceType+resourceId' })
+
+export type EnrollCardRequest =
+  | { resourceType: 'material' | 'flashcard'; resourceId: string }
+  | { materialId: string }
 
 export const EnrollCardResponseSchema = z.object({
   success: z.boolean(),
@@ -36,14 +49,26 @@ export type GradeCardResponse = z.infer<typeof GradeCardResponseSchema>
 // Review queue response
 export const ReviewCardSchema = z.object({
   cardId: z.string(),
-  materialId: z.string(),
-  material: z.object({
-    front: z.string(),
-    back: z.string(),
-    hint: z.string().optional(),
-    tags: z.array(z.string()).optional(),
-    folderId: z.string(),
-  }),
+  resourceType: z.enum(['material', 'flashcard'] as const),
+  resourceId: z.string(),
+  // resource payload: for 'flashcard' we include front/back; for 'material' include a canonical material shape
+  resource: z.union([
+    z.object({
+      // flashcard
+      front: z.string(),
+      back: z.string(),
+      hint: z.string().optional(),
+      tags: z.array(z.string()).optional(),
+      folderId: z.string(),
+    }),
+    z.object({
+      // material
+      title: z.string(),
+      content: z.string(),
+      tags: z.array(z.string()).optional(),
+      folderId: z.string(),
+    })
+  ]),
   reviewState: z.object({
     repetitions: z.number(),
     easeFactor: z.number(),

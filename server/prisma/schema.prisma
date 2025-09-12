@@ -139,22 +139,24 @@ model Flashcard {
 enum QuestionType {
     MULTIPLE_CHOICE
     // Extendable for other types
-}
-
-model CardReview {
-    id             String    @id @default(auto()) @map("_id") @db.ObjectId
+}model CardReview {
+    id             String       @id @default(auto()) @map("_id") @db.ObjectId
     userId         String // null if anonymous; better when auth lands
     folderId       String
-    cardId         String // references Flashcard.id
+    cardId         String // polymorphic: references Flashcard.id or Material.id
+    resourceType   String       @default("flashcard") // will store "material" or "flashcard"
+    // Legacy fields for backward compatibility
+    flashcardId    String?      @db.ObjectId
+    materialId     String?      @db.ObjectId
     // SM-2 lite state:
-    intervalDays   Int       @default(0) // I (days)
-    easeFactor     Float     @default(2.5) // EF
-    repetitions    Int       @default(0) // n
+    intervalDays   Int          @default(0) // I (days)
+    easeFactor     Float        @default(2.5) // EF
+    repetitions    Int          @default(0) // n
     nextReviewAt   DateTime // scheduled review date
     lastReviewedAt DateTime?
     // analytics
     lastGrade      Int? // 0..5
-    streak         Int       @default(0)
+    streak         Int          @default(0)
 
     @@unique([userId, cardId])
     @@index([userId, nextReviewAt])

@@ -51,6 +51,13 @@
 
                     </UCarousel>
                 </div>
+                <!-- Materials List Section -->
+                <div class="mt-8">
+                    <h2 class="text-xl font-semibold mb-4">Materials</h2>
+
+                    <MaterialsList :folder-id="`${id as string}`" @removed="() => { }"
+                        @error="(e) => console.error(e)" />
+                </div>
             </div>
 
         </Transition>
@@ -116,5 +123,7 @@ function select(index: number) {
 function toggleUploadForm() {
     showUpload.value = !showUpload.value
 }
+
+const MaterialsList = defineAsyncComponent(() => import('~/components/folder/MaterialsList.vue'))
 
 </script>

@@ -46,7 +46,7 @@
                         Question
                     </h2>
                     <div class="text-xl font-medium text-gray-900 dark:text-gray-100 leading-relaxed">
-                        {{ currentCard.material.front }}
+                        {{ resourceFront }}
                     </div>
                 </div>
 
@@ -57,17 +57,16 @@
                     </h3>
                     <div class="text-gray-800 dark:text-gray-200 leading-relaxed prose prose-sm max-w-none">
                         <!-- Using text content to avoid XSS -->
-                        <div class="whitespace-pre-wrap">{{ formatContent(currentCard.material.back) }}</div>
+                        <div class="whitespace-pre-wrap">{{ formatContent(resourceBack) }}</div>
                     </div>
 
                     <!-- Hint if available -->
-                    <div v-if="currentCard.material.hint"
-                        class="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                    <div v-if="resourceHint" class="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
                         <div class="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1">
                             Hint:
                         </div>
                         <div class="text-yellow-700 dark:text-yellow-300">
-                            {{ currentCard.material.hint }}
+                            {{ resourceHint }}
                         </div>
                     </div>
                 </div>
@@ -189,6 +188,39 @@ const {
     previousCard: goToPreviousCard,
     clearError
 } = useCardReview()
+
+// Resource accessors for polymorphic items
+const resourceFront = computed(() => {
+    const c = currentCard.value
+    if (!c) return ''
+    if (c.resourceType === 'flashcard') {
+        const flashcardResource = c.resource as { front: string; back: string; folderId: string; hint?: string; tags?: string[] }
+        return flashcardResource.front
+    }
+    const materialResource = c.resource as { title: string; content: string; folderId: string; tags?: string[] }
+    return materialResource.title
+})
+
+const resourceBack = computed(() => {
+    const c = currentCard.value
+    if (!c) return ''
+    if (c.resourceType === 'flashcard') {
+        const flashcardResource = c.resource as { front: string; back: string; folderId: string; hint?: string; tags?: string[] }
+        return flashcardResource.back
+    }
+    const materialResource = c.resource as { title: string; content: string; folderId: string; tags?: string[] }
+    return materialResource.content
+})
+
+const resourceHint = computed(() => {
+    const c = currentCard.value
+    if (!c) return undefined
+    if (c.resourceType === 'flashcard') {
+        const flashcardResource = c.resource as { front: string; back: string; folderId: string; hint?: string; tags?: string[] }
+        return flashcardResource.hint
+    }
+    return undefined
+})
 
 // Local state
 const showAnswer = ref(false)

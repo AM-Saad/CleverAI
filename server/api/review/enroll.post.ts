@@ -9,36 +9,46 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     const validatedBody = EnrollCardRequestSchema.parse(body)
 
+    // Normalize incoming payload to resourceType/resourceId
+    let resourceType: 'material' | 'flashcard'
+    let resourceId: string
+    if ('materialId' in validatedBody) {
+      resourceType = 'material'
+      resourceId = validatedBody.materialId
+    } else {
+      resourceType = validatedBody.resourceType
+      resourceId = validatedBody.resourceId
+    }
+
     // Get authenticated user
     const user = await requireRole(event, ["USER"])
     const prisma = event.context.prisma
 
-    // Verify material exists and belongs to user's folders
-    const material = await prisma.material.findFirst({
-      where: {
-        id: validatedBody.materialId,
-        folder: {
-          userId: user.id
-        }
-      },
-      include: {
-        folder: true
-      }
-    })
+    // Try to resolve the provided resource id and validate ownership
+    console.log('Enroll request for id=', resourceId, 'type=', resourceType, 'user=', user.id)
+    let resolvedFolderId: string | null = null
 
-    if (!material) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Material not found or access denied'
+    if (resourceType === 'material') {
+      const material = await prisma.material.findFirst({
+        where: { id: resourceId, folder: { userId: user.id } },
+        include: { folder: true }
       })
+      if (material) resolvedFolderId = material.folderId
+    } else {
+      const flashcard = await prisma.flashcard.findFirst({
+        where: { id: resourceId, folder: { userId: user.id } }
+      })
+      if (flashcard) resolvedFolderId = flashcard.folderId
+    }
+
+    if (!resolvedFolderId) {
+      console.error('Enroll: resource not found or not owned by user', { id: resourceId, resourceType, userId: user.id })
+      throw createError({ statusCode: 404, statusMessage: 'Material not found or access denied' })
     }
 
     // Check if card is already enrolled
     const existingCard = await prisma.cardReview.findFirst({
-      where: {
-        userId: user.id,
-        cardId: validatedBody.materialId // Using materialId as cardId
-      }
+      where: { userId: user.id, cardId: resourceId }
     })
 
     if (existingCard) {
@@ -53,12 +63,12 @@ export default defineEventHandler(async (event) => {
     const card = await prisma.cardReview.create({
       data: {
         userId: user.id,
-        cardId: validatedBody.materialId, // Using materialId as cardId
-        folderId: material.folderId,
+        cardId: resourceId, // store the provided id (flashcard or material)
+        folderId: resolvedFolderId,
         repetitions: 0,
-        easeFactor: 2.5, // default from SRPolicy
+        easeFactor: 2.5,
         intervalDays: 0,
-        nextReviewAt: new Date(), // available for review immediately
+        nextReviewAt: new Date(),
         streak: 0
       }
     })

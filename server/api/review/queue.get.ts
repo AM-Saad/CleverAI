@@ -31,42 +31,79 @@ export default defineEventHandler(async (event) => {
       }
     })
 
-    // Get materials for the cards
-    const materialIds = cardReviews.map(card => card.cardId)
+    // Get both materials and flashcards for the cards
+    const cardIds = cardReviews.map(card => card.cardId)
     const materials = await prisma.material.findMany({
       where: {
-        id: { in: materialIds }
+        id: { in: cardIds }
       },
       include: {
         folder: true
       }
     })
 
-    // Create material lookup map
-    const materialMap = new Map(materials.map(m => [m.id, m]))
+    const flashcards = await prisma.flashcard.findMany({
+      where: {
+        id: { in: cardIds }
+      },
+      include: {
+        folder: true
+      }
+    })
 
-    // Transform to response format
+    // Create lookup maps
+    const materialMap = new Map(materials.map(m => [m.id, m]))
+    const flashcardMap = new Map(flashcards.map(f => [f.id, f]))
+
+    // Transform to response format using new polymorphic contract
     const cards = cardReviews
       .map(cardReview => {
-        const material = materialMap.get(cardReview.cardId)
-        if (!material) return null
+        const resourceType = cardReview.resourceType.toLowerCase() as 'material' | 'flashcard'
 
-        return {
-          cardId: cardReview.id,
-          materialId: cardReview.cardId,
-          material: {
-            front: material.title,
-            back: material.content,
-            hint: undefined,
-            tags: [],
-            folderId: material.folderId
-          },
-          reviewState: {
-            repetitions: cardReview.repetitions,
-            easeFactor: cardReview.easeFactor,
-            intervalDays: cardReview.intervalDays,
-            nextReviewAt: cardReview.nextReviewAt.toISOString(),
-            lastReviewedAt: cardReview.lastReviewedAt?.toISOString()
+        if (resourceType === 'material') {
+          const material = materialMap.get(cardReview.cardId)
+          if (!material) return null
+
+          return {
+            cardId: cardReview.id,
+            resourceType: 'material' as const,
+            resourceId: cardReview.cardId,
+            resource: {
+              title: material.title,
+              content: material.content,
+              tags: [],
+              folderId: material.folderId
+            },
+            reviewState: {
+              repetitions: cardReview.repetitions,
+              easeFactor: cardReview.easeFactor,
+              intervalDays: cardReview.intervalDays,
+              nextReviewAt: cardReview.nextReviewAt.toISOString(),
+              lastReviewedAt: cardReview.lastReviewedAt?.toISOString()
+            }
+          }
+        } else {
+          const flashcard = flashcardMap.get(cardReview.cardId)
+          if (!flashcard) return null
+
+          return {
+            cardId: cardReview.id,
+            resourceType: 'flashcard' as const,
+            resourceId: cardReview.cardId,
+            resource: {
+              front: flashcard.front,
+              back: flashcard.back,
+              hint: undefined,
+              tags: [],
+              folderId: flashcard.folderId
+            },
+            reviewState: {
+              repetitions: cardReview.repetitions,
+              easeFactor: cardReview.easeFactor,
+              intervalDays: cardReview.intervalDays,
+              nextReviewAt: cardReview.nextReviewAt.toISOString(),
+              lastReviewedAt: cardReview.lastReviewedAt?.toISOString()
+            }
           }
         }
       })

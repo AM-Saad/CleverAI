@@ -1,14 +1,14 @@
 import type {
-  EnrollCardRequest,
   EnrollCardResponse,
-  GradeCardRequest,
   GradeCardResponse,
-  ReviewQueueResponse,
   ReviewCard,
   ReviewGrade
 } from '~/shared/review.contract'
 
 export const useCardReview = () => {
+  // Get API service
+  const { $api } = useNuxtApp()
+
   // Reactive state
   const reviewQueue = ref<ReviewCard[]>([])
   const currentCard = ref<ReviewCard | null>(null)
@@ -25,21 +25,17 @@ export const useCardReview = () => {
   const isSubmitting = ref(false)
   const error = ref<string | null>(null)
 
-  // Enroll a material as a review card
-  const enroll = async (materialId: string): Promise<EnrollCardResponse> => {
+  // Enroll a resource as a review card
+  const enroll = async (resourceType: 'material' | 'flashcard', resourceId: string): Promise<EnrollCardResponse> => {
     isSubmitting.value = true
     error.value = null
 
     try {
-      const response = await $fetch<EnrollCardResponse>('/api/review/enroll', {
-        method: 'POST',
-        body: { materialId } satisfies EnrollCardRequest
-      })
-
+      const response = await $api.review.enroll({ resourceType, resourceId })
       return response
     } catch (err: unknown) {
-      const errorMsg = err && typeof err === 'object' && 'data' in err
-        ? (err as { data?: { message?: string } }).data?.message
+      const errorMsg = err && typeof err === 'object' && 'message' in err
+        ? (err as { message?: string }).message
         : 'Failed to enroll card'
       error.value = errorMsg || 'Failed to enroll card'
       throw err
@@ -54,10 +50,7 @@ export const useCardReview = () => {
     error.value = null
 
     try {
-      const response = await $fetch<GradeCardResponse>('/api/review/grade', {
-        method: 'POST',
-        body: { cardId, grade } satisfies GradeCardRequest
-      })
+      const response = await $api.review.grade({ cardId, grade })
 
       // Remove the graded card from the queue
       const cardIndex = reviewQueue.value.findIndex(card => card.cardId === cardId)
@@ -81,8 +74,8 @@ export const useCardReview = () => {
 
       return response
     } catch (err: unknown) {
-      const errorMsg = err && typeof err === 'object' && 'data' in err
-        ? (err as { data?: { message?: string } }).data?.message
+      const errorMsg = err && typeof err === 'object' && 'message' in err
+        ? (err as { message?: string }).message
         : 'Failed to grade card'
       error.value = errorMsg || 'Failed to grade card'
       throw err
@@ -97,11 +90,7 @@ export const useCardReview = () => {
     error.value = null
 
     try {
-      const params = new URLSearchParams()
-      if (folderId) params.append('folderId', folderId)
-      params.append('limit', limit.toString())
-
-      const response = await $fetch<ReviewQueueResponse>(`/api/review/queue?${params}`)
+      const response = await $api.review.getQueue(folderId, limit)
 
       reviewQueue.value = response.cards
       queueStats.value = response.stats
@@ -115,8 +104,8 @@ export const useCardReview = () => {
         currentCardIndex.value = 0
       }
     } catch (err: unknown) {
-      const errorMsg = err && typeof err === 'object' && 'data' in err
-        ? (err as { data?: { message?: string } }).data?.message
+      const errorMsg = err && typeof err === 'object' && 'message' in err
+        ? (err as { message?: string }).message
         : 'Failed to fetch review queue'
       error.value = errorMsg || 'Failed to fetch review queue'
       throw err
