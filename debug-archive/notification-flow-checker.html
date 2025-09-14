@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔔 Notification Flow Checker</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 15px 20px;
+            margin: 15px 0;
+        }
+
+        .code {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            white-space: pre;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .section {
+            margin: 30px 0;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+        }
+
+        .checklist {
+            list-style: none;
+            padding: 0;
+        }
+
+        .checklist li {
+            padding: 8px 0;
+        }
+
+        .check {
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .cross {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔔 Notification Flow Checker</h1>
+
+        <div class="section">
+            <h2>📋 Complete Requirements Checklist</h2>
+
+            <div class="step">
+                <h4>Step 1: Verify Notification Subscription</h4>
+                <ul class="checklist">
+                    <li><span class="check">✓</span> Go to <code>/test-notifications</code></li>
+                    <li><span class="check">✓</span> Check subscription status (should show "Subscribed")</li>
+                    <li><span class="check">✓</span> If not subscribed or expired: Click "🔄 Refresh Subscription"</li>
+                    <li><span class="check">✓</span> Test with "🧪 Test Connection" button</li>
+                </ul>
+            </div>
+
+            <div class="step">
+                <h4>Step 2: Check Notification Preferences</h4>
+                <ul class="checklist">
+                    <li><span class="check">✓</span> Go to Settings → Notifications (or just visit
+                        <code>/settings/notifications</code>)</li>
+                    <li><span class="check">✓</span> Ensure "📚 Card Due Notifications" is <strong>ON</strong></li>
+                    <li><span class="check">✓</span> Set threshold to "⚡ Instant Learner (1+ cards)" for testing</li>
+                    <li><span class="check">✓</span> Set notification time to current time (e.g., if it's 2:30 PM, set
+                        to 14:30)</li>
+                </ul>
+                <div class="status warning">
+                    ⚠️ <strong>Important:</strong> Default threshold is 5 cards. If you only have 1-4 due cards, you
+                    won't get notified!
+                </div>
+            </div>
+
+            <div class="step">
+                <h4>Step 3: Enroll Card & Set Due Time</h4>
+                <ul class="checklist">
+                    <li><span class="check">✓</span> Go to any folder with flashcards</li>
+                    <li><span class="check">✓</span> Click "Enroll in Review" on at least one card</li>
+                    <li><span class="check">✓</span> Open debug panel (gear icon in review interface)</li>
+                    <li><span class="check">✓</span> Set <code>nextReviewAt</code> to current time or 2 minutes from now
+                    </li>
+                    <li><span class="check">✓</span> Apply changes</li>
+                </ul>
+                <div class="code">Example debug settings for immediate notification:
+                    nextReviewAt: 2025-09-13T12:35:00 (current time)
+                    easeFactor: 2.5
+                    intervalDays: 0
+                    repetitions: 0</div>
+            </div>
+
+            <div class="step">
+                <h4>Step 4: Trigger Cron Job</h4>
+                <ul class="checklist">
+                    <li><span class="check">✓</span> Wait for automatic cron (runs every 2 minutes)</li>
+                    <li><span class="check">✓</span> OR manually trigger via terminal:</li>
+                </ul>
+                <div class="code">curl -H "x-cron-secret: test-secret-token-for-debugging" \
+                    http://localhost:3000/api/admin/cron/trigger/check-due-cards</div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🐛 Common Issues & Solutions</h2>
+
+            <div class="status error">
+                <strong>Issue:</strong> "Only X due cards, below threshold of Y"<br>
+                <strong>Solution:</strong> Lower threshold in notification settings or enroll more cards
+            </div>
+
+            <div class="status error">
+                <strong>Issue:</strong> "Already notified recently"<br>
+                <strong>Solution:</strong> Wait 6 hours or reset notification history via database
+            </div>
+
+            <div class="status error">
+                <strong>Issue:</strong> "Push subscription expired (410)"<br>
+                <strong>Solution:</strong> Use "🔄 Refresh Subscription" in test page
+            </div>
+
+            <div class="status error">
+                <strong>Issue:</strong> "No active subscriptions for user"<br>
+                <strong>Solution:</strong> Subscribe to notifications first
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🎯 Quick Test Scenario</h2>
+
+            <div class="step">
+                <h4>Fastest Path to Notification (5 minutes):</h4>
+                <ol>
+                    <li><strong>Subscribe:</strong> Go to <code>/test-notifications</code> → Click "Subscribe" (or
+                        refresh if already subscribed)</li>
+                    <li><strong>Lower Threshold:</strong> Go to Settings → Notifications → Select "⚡ Instant Learner (1+
+                        cards)"</li>
+                    <li><strong>Set Due Time:</strong> Set notification time to current hour (e.g., 14:00 for 2 PM)</li>
+                    <li><strong>Enroll Card:</strong> Enroll any flashcard in spaced repetition</li>
+                    <li><strong>Make It Due:</strong> Use debug panel to set <code>nextReviewAt</code> to current time
+                    </li>
+                    <li><strong>Trigger Cron:</strong> Either wait 2 minutes or run curl command</li>
+                    <li><strong>Check Logs:</strong> Should see "✅ Sent notification to user ..." in server console</li>
+                </ol>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>📊 Expected Server Logs (Success)</h2>
+            <div class="code">🚀 Starting cron job 'check-due-cards'
+                🔔 Starting scheduled card notification check...
+                🔔 Found 1 users with card due notifications enabled
+                📚 User 68a60683031c492736e6b49a has 1 due cards
+                🔔 Sending notification to user 68a60683031c492736e6b49a: 1 cards ready for review
+                ✅ Successfully sent notification to user 68a60683031c492736e6b49a
+                ✅ Sent notification to user 68a60683031c492736e6b49a
+                🔔 Card notification check completed: { processed: 1, notificationsSent: 1, errors: 0, skipped: 0 }
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>🔧 Debug Commands</h2>
+            <button onclick="copyDebugCode()">📋 Copy Debug Code for Browser Console</button>
+            <div id="debugOutput" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <script>
+        function copyDebugCode() {
+            const code = `
+// Run this in browser console on your app to check everything:
+
+// 1. Check subscription status
+console.log('1. Checking subscription...')
+const { checkSubscriptionStatus, isSubscribed } = useNotifications()
+await checkSubscriptionStatus()
+console.log('Subscribed:', isSubscribed.value)
+
+// 2. Check notification preferences (if you're on settings page)
+if (window.location.pathname.includes('settings')) {
+    console.log('2. On settings page - check preferences manually')
+} else {
+    console.log('2. Go to /settings/notifications to check preferences')
+}
+
+// 3. Force refresh subscription if needed
+if (!isSubscribed.value) {
+    console.log('3. Refreshing subscription...')
+    const { refreshSubscription } = useNotifications()
+    await refreshSubscription()
+    console.log('Subscription refreshed!')
+}
+
+// 4. Test connection
+console.log('4. Testing connection...')
+const { testPushNotifications } = await import('~/utils/notificationHelper')
+const result = await testPushNotifications()
+console.log('Connection test result:', result)
+
+console.log('✅ Debug check complete!')
+`;
+
+            navigator.clipboard.writeText(code.trim())
+            document.getElementById('debugOutput').innerHTML =
+                '<div class="status success">📋 Debug code copied to clipboard! Paste in browser console on your app.</div>'
+        }
+    </script>
+</body>
+
+</html>

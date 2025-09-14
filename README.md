@@ -12,7 +12,7 @@ CleverAI is a fully functional Progressive Web App with robust offline capabilit
 - Navigate between pages without internet connection
 - Experience fast, native-app-like performance
 
-**📖 For detailed PWA implementation, caching strategy, and best practices, see [PWA_CACHING_STRATEGY.md](./PWA_CACHING_STRATEGY.md)**
+**📖 For detailed PWA implementation, caching strategy, and best practices, see [docs/PWA.md](./docs/PWA.md)**
 
 ---
 
@@ -20,10 +20,36 @@ CleverAI is a fully functional Progressive Web App with robust offline capabilit
 
 - **Folder-based Content** – Create study folders with metadata (e.g., chosen LLM model).
 - **Flashcards & Quizzes** – Generate from pasted or uploaded content.
+- **Spaced Repetition System** – SM-2 algorithm for optimal memory retention.
+- **Push Notifications** – Intelligent card due reminders with user preferences.
+- **Progressive Web App** – Full offline functionality and installable experience.
 - **Multiple LLM Backends** – Strategy Pattern for GPT-3.5, GPT-4o, Claude, etc.
 - **Clean Architecture** – Service layer, composables, and shared contracts for type safety.
 - **Rate Limiting** – Centralized Redis-backed limiter with in-memory fallback.
 - **Nuxt 3 + TypeScript** – Strong typing, runtimeConfig, and modular API routes.
+
+---
+
+## 📚 Documentation
+
+CleverAI features comprehensive documentation organized by domain:
+
+### 🎯 **Core Documentation**
+- **[📖 Main README](./README.md)** - This file, project overview and setup
+- **[🏗️ Architecture](./ARCHITECTURE.md)** - System architecture and design decisions
+- **[🎨 Style Guide](./STYLEGUIDE.md)** - UI/UX guidelines and theming
+
+### 🚀 **Feature Documentation**
+- **[📱 PWA System](./docs/PWA.md)** - Progressive Web App implementation, service worker, caching
+- **[📚 Spaced Repetition](./docs/SPACED_REPETITION.md)** - SM-2 algorithm, debug controls, analytics
+- **[🔔 Notifications](./docs/NOTIFICATIONS.md)** - Push notifications, user preferences, MongoDB integration
+- **[⏰ Cron & Timing](./docs/CRON_TIMING.md)** - Timezone-aware cron system, scheduling, testing
+
+### 🛠️ **Development**
+- **[🔧 Development Guide](./docs/DEVELOPMENT.md)** - Testing strategies, debug tools, workflows
+
+### 📂 **Archive**
+- **[📦 Documentation Archive](./docs-archive/README.md)** - Historical documentation (consolidated)
 
 ---
 

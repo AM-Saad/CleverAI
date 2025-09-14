@@ -17,14 +17,17 @@
                 </div>
 
                 <div class="flex gap-2">
-                    <UButton
-color="primary" :loading="isLoading" :disabled="isSubscribed"
+                    <UButton color="primary" :loading="isLoading" :disabled="isSubscribed"
                         @click="registerNotification">
                         Subscribe to Notifications
                     </UButton>
 
                     <UButton color="red" variant="outline" :disabled="!isSubscribed" @click="unsubscribe">
                         Unsubscribe
+                    </UButton>
+
+                    <UButton color="orange" variant="outline" :loading="isLoading" @click="refreshSubscription">
+                        🔄 Refresh Subscription
                     </UButton>
 
                     <UButton variant="outline" @click="checkSubscriptionStatus">
@@ -81,6 +84,10 @@ color="primary" :loading="isLoading" :disabled="isSubscribed"
                     Test Direct Notification
                 </UButton>
 
+                <UButton color="blue" variant="outline" :disabled="!isSubscribed" @click="testConnection">
+                    🧪 Test Connection
+                </UButton>
+
                 <!-- Production Service Worker Controls -->
                 <div class="mt-6 p-4 bg-gray-50 rounded-lg">
                     <h3 class="font-medium mb-3">Service Worker Status</h3>
@@ -99,8 +106,7 @@ color="primary" :loading="isLoading" :disabled="isSubscribed"
                         <UButton size="xs" variant="outline" @click="checkForSWUpdates">
                             Check for Updates
                         </UButton>
-                        <UButton
-v-if="swUpdateAvailable" size="xs" color="primary" :loading="swUpdating"
+                        <UButton v-if="swUpdateAvailable" size="xs" color="primary" :loading="swUpdating"
                             @click="applySWUpdate">
                             Apply Update
                         </UButton>
@@ -169,7 +175,8 @@ const {
     isSubscribed,
     registerNotification,
     unsubscribe,
-    checkSubscriptionStatus
+    checkSubscriptionStatus,
+    refreshSubscription
 } = useNotifications()
 
 // Service Worker Updates composable
@@ -304,6 +311,54 @@ async function testDirectNotification() {
 
     } catch (error) {
         console.error('❌ Error showing direct notification:', error)
+    }
+}
+
+// Test connection function
+async function testConnection() {
+    loading.value = true
+    result.value = null
+
+    try {
+        const { testPushNotifications } = await import('~/utils/notificationHelper')
+        const testResult = await testPushNotifications()
+
+        if (testResult.needsRefresh) {
+            // Ask user if they want to refresh
+            const shouldRefresh = confirm('Your push subscription has expired. Would you like to refresh it?')
+            if (shouldRefresh) {
+                await refreshSubscription()
+                // Test again after refresh
+                const retestResult = await testPushNotifications()
+                result.value = {
+                    success: retestResult.success,
+                    status: retestResult.success ? 200 : 500,
+                    data: { message: retestResult.message, details: retestResult.details }
+                }
+            } else {
+                result.value = {
+                    success: false,
+                    status: 410,
+                    data: { message: testResult.message, needsRefresh: true }
+                }
+            }
+        } else {
+            result.value = {
+                success: testResult.success,
+                status: testResult.success ? 200 : 500,
+                data: { message: testResult.message, details: testResult.details }
+            }
+        }
+
+    } catch (error) {
+        const err = error
+        result.value = {
+            success: false,
+            status: 500,
+            data: { message: `Connection test failed: ${err.message}` }
+        }
+    } finally {
+        loading.value = false
     }
 }
 

@@ -20,6 +20,7 @@ export function useNotifications() {
     const isSubscribed = ref(false)
     const config = useRuntimeConfig()
     const { data } = useAuth()
+    // @ts-expect-error - auth user might have id property
     const userId = data.value?.user?.id
 
      const checkPermission = async (): Promise<NotificationPermission> => {
@@ -159,6 +160,45 @@ export function useNotifications() {
         }
     }
 
+    const refreshSubscription = async (): Promise<void> => {
+        console.log('🔄 Refreshing push notification subscription...')
+        try {
+            error.value = null
+            isLoading.value = true
+
+            // First unsubscribe if there's an existing subscription
+            const registration = await navigator.serviceWorker.ready
+            const existingSubscription = await registration.pushManager.getSubscription()
+
+            if (existingSubscription) {
+                console.log('🗑️ Removing existing subscription...')
+                await existingSubscription.unsubscribe()
+
+                // Remove from server database
+                try {
+                    await $fetch('/api/notifications/unsubscribe', {
+                        method: 'POST',
+                        body: { endpoint: existingSubscription.endpoint }
+                    })
+                    console.log('✅ Existing subscription removed from server')
+                } catch (serverError) {
+                    console.warn('⚠️ Failed to remove old subscription from server:', serverError)
+                }
+            }
+
+            // Now create a fresh subscription
+            await registerNotification()
+            console.log('✅ Fresh subscription created!')
+
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Failed to refresh subscription'
+            error.value = errorMessage
+            console.error('❌ Subscription refresh error:', err)
+        } finally {
+            isLoading.value = false
+        }
+    }
+
     return {
         isLoading,
         error,
@@ -167,5 +207,6 @@ export function useNotifications() {
         unsubscribe,
         checkPermission,
         checkSubscriptionStatus,
+        refreshSubscription,
     }
 }

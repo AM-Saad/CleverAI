@@ -9,10 +9,17 @@ This folder contains development and debugging utilities for the CleverAI PWA sy
 - **`emergency-sw-clear.js`** - Emergency service worker cleanup script
 - **`test-custom-sw.js`** - Playwright test for service worker functionality
 
-### Debug HTML Pages
-- **`debug-notification-clicks.html`** - Test page for notification click handling
-- **`debug-subscription.html`** - Test page for push notification subscriptions
-- **`test-notification.html`** - General notification testing page
+### Debug Dashboard
+- **Centralized Debug Dashboard** - Visit `/debug` for comprehensive testing interface
+  - ✅ Notification testing (permission, direct notifications, API tests)
+  - ✅ Service Worker management (status, debug mode, updates)
+  - ✅ Cron & timing gates (trigger tests, cooldown clearing, gate bypass)
+  - ✅ Live logging system with real-time monitoring
+
+### Legacy Debug Files (Archived)
+- **`debug-notification-clicks.html`** - ⚠️ **Moved to debug-archive/** (use `/debug` instead)
+- **`debug-subscription.html`** - ⚠️ **Moved to debug-archive/** (use `/debug` instead)
+- **`test-notification.html`** - ⚠️ **Moved to debug-archive/** (use `/debug` instead)
 
 ## 🚀 Usage
 

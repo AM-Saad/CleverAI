@@ -3,7 +3,7 @@
 
 // ===== SERVICE WORKER CONSTANTS =====
 export const SW_CONFIG = {
-  VERSION: 'v1.8.0-enhanced',
+  VERSION: 'v2.0.0-enhanced',
   DEBUG_QUERY_PARAM: 'swDebug',
   DEBUG_VALUE: '1',
   UPDATE_CHECK_INTERVAL: 30000, // 30 seconds

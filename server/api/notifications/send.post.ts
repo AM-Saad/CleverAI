@@ -32,17 +32,27 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event)
     const message = NotificationSchema.parse(body)
 
-    // TODO: Add proper authentication check when auth is fully implemented
-    // For now, add basic validation that prevents anonymous access in production
-    if (process.env.NODE_ENV === 'production') {
-      // In production, require some form of authorization
-      const authHeader = getHeader(event, 'authorization')
-      if (!authHeader) {
-        throw createError({
-          statusCode: 401,
-          statusMessage: 'Authorization required'
-        })
-      }
+    // Check for authorization - allow internal cron calls with secret token
+    const cronToken = getHeader(event, 'x-cron-secret')
+
+    // Allow internal cron calls with valid secret token
+    const isInternalCronCall = cronToken === process.env.CRON_SECRET_TOKEN
+
+    // Allow authenticated users (check for session cookie)
+    const sessionCookie = getCookie(event, 'next-auth.session-token') || getCookie(event, '__Secure-next-auth.session-token')
+    const isAuthenticatedUser = !!sessionCookie
+
+    if (process.env.NODE_ENV === 'production' && !isInternalCronCall && !isAuthenticatedUser) {
+      // In production, require some form of authorization for non-cron calls
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Authorization required'
+      })
+    }
+
+    // In development, allow all requests
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('🔧 Development mode: allowing all notification requests')
     }
 
     // TODO: Replace with actual session check when auth is implemented

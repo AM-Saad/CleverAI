@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Cron Notifications</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .danger {
+            background: #dc3545;
+        }
+
+        .danger:hover {
+            background: #c82333;
+        }
+
+        .success {
+            background: #28a745;
+        }
+
+        .success:hover {
+            background: #218838;
+        }
+
+        .info {
+            background: #17a2b8;
+        }
+
+        .info:hover {
+            background: #138496;
+        }
+
+        .log-box {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .status.good {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeaa7;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔔 Cron Notification Debugger</h1>
+
+    <div class="container">
+        <h2>Current Status</h2>
+        <div id="status-display">Checking...</div>
+    </div>
+
+    <div class="grid">
+        <div class="container">
+            <h3>1. Service Worker Debug</h3>
+            <button onclick="checkServiceWorker()">Check SW Registration</button>
+            <button onclick="enableSWDebugMode()">Enable SW Debug Mode</button>
+            <button onclick="clearServiceWorkerLogs()">Clear SW Logs</button>
+            <div id="sw-logs" class="log-box"></div>
+        </div>
+
+        <div class="container">
+            <h3>2. Notification Permission</h3>
+            <button onclick="checkNotificationPermission()">Check Permission</button>
+            <button onclick="requestNotificationPermission()">Request Permission</button>
+            <button onclick="testBrowserNotification()">Test Browser Notification</button>
+            <div id="permission-status"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h3>3. Test Notifications</h3>
+        <button onclick="testManualNotification()">Test Manual (Should Work)</button>
+        <button onclick="triggerCronCheck()">Trigger Cron Check</button>
+        <button onclick="bypasGates()" class="info">Bypass All Gates (Temp)</button>
+        <div id="test-results" class="log-box"></div>
+    </div>
+
+    <div class="container">
+        <h3>4. Debug Gates & Cooldowns</h3>
+        <button onclick="checkTimingGates()">Check All Gates</button>
+        <button onclick="clearCooldown()" class="danger">Clear 6-Hour Cooldown</button>
+        <button onclick="enableSendAnytime()" class="success">Enable Send-Anytime Mode</button>
+        <div id="gates-results" class="log-box"></div>
+    </div>
+
+    <div class="container">
+        <h3>5. Live Logs</h3>
+        <button onclick="startLogMonitoring()">Start Monitoring</button>
+        <button onclick="stopLogMonitoring()">Stop Monitoring</button>
+        <button onclick="clearLogs()">Clear Logs</button>
+        <div id="live-logs" class="log-box"></div>
+    </div>
+
+    <script>
+        let logInterval;
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logElement = document.getElementById('live-logs');
+            const statusIcon = type === 'error' ? '❌' : type === 'success' ? '✅' : type === 'warning' ? '⚠️' : 'ℹ️';
+            logElement.textContent += `[${timestamp}] ${statusIcon} ${message}\n`;
+            logElement.scrollTop = logElement.scrollBottom;
+            console.log(`[Debug] ${message}`);
+        }
+
+        async function checkServiceWorker() {
+            try {
+                if (!('serviceWorker' in navigator)) {
+                    log('Service Worker not supported', 'error');
+                    return;
+                }
+
+                const registration = await navigator.serviceWorker.getRegistration();
+                if (!registration) {
+                    log('No Service Worker registered', 'error');
+                    return;
+                }
+
+                log(`SW Registration found: ${registration.scope}`, 'success');
+                log(`SW State: ${registration.active?.state || 'none'}`, 'info');
+
+                const swLogs = document.getElementById('sw-logs');
+                swLogs.textContent = `Registration Scope: ${registration.scope}\n`;
+                swLogs.textContent += `Active State: ${registration.active?.state || 'none'}\n`;
+                swLogs.textContent += `Waiting State: ${registration.waiting?.state || 'none'}\n`;
+                swLogs.textContent += `Installing State: ${registration.installing?.state || 'none'}\n`;
+
+            } catch (error) {
+                log(`SW Check Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function enableSWDebugMode() {
+            try {
+                const registration = await navigator.serviceWorker.getRegistration();
+                if (registration?.active) {
+                    registration.active.postMessage({ type: 'SET_DEBUG', value: true });
+                    log('SW Debug mode enabled', 'success');
+                } else {
+                    log('No active service worker found', 'error');
+                }
+            } catch (error) {
+                log(`Debug mode error: ${error.message}`, 'error');
+            }
+        }
+
+        function clearServiceWorkerLogs() {
+            document.getElementById('sw-logs').textContent = '';
+            log('SW logs cleared', 'info');
+        }
+
+        async function checkNotificationPermission() {
+            if (!('Notification' in window)) {
+                document.getElementById('permission-status').innerHTML =
+                    '<div class="status error">Notifications not supported</div>';
+                return;
+            }
+
+            const permission = Notification.permission;
+            const statusClass = permission === 'granted' ? 'good' :
+                permission === 'denied' ? 'error' : 'warning';
+
+            document.getElementById('permission-status').innerHTML =
+                `<div class="status ${statusClass}">Permission: ${permission}</div>`;
+
+            log(`Notification permission: ${permission}`, permission === 'granted' ? 'success' : 'warning');
+        }
+
+        async function requestNotificationPermission() {
+            try {
+                const permission = await Notification.requestPermission();
+                await checkNotificationPermission();
+                log(`Permission request result: ${permission}`, permission === 'granted' ? 'success' : 'error');
+            } catch (error) {
+                log(`Permission request error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testBrowserNotification() {
+            if (Notification.permission !== 'granted') {
+                log('Need notification permission first', 'warning');
+                return;
+            }
+
+            try {
+                const notification = new Notification('Test Browser Notification', {
+                    body: 'This is a direct browser notification test',
+                    icon: '/icons/icon-192x192.png',
+                    tag: 'browser-test',
+                    requireInteraction: true
+                });
+
+                notification.onclick = () => {
+                    log('Browser notification clicked', 'success');
+                    notification.close();
+                };
+
+                log('Browser notification created', 'success');
+            } catch (error) {
+                log(`Browser notification error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testManualNotification() {
+            try {
+                const response = await fetch('/api/notifications/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: 'Manual Test Notification',
+                        message: 'This should work (manual trigger)',
+                        url: '/review'
+                    })
+                });
+
+                const result = await response.text();
+                const testResults = document.getElementById('test-results');
+                testResults.textContent += `Manual Test Response: ${response.status} ${result}\n`;
+
+                log(`Manual test: ${response.status} ${result}`, response.ok ? 'success' : 'error');
+            } catch (error) {
+                log(`Manual test error: ${error.message}`, 'error');
+            }
+        }
+
+        async function triggerCronCheck() {
+            try {
+                // Try the debug endpoint first (no auth required)
+                const response = await fetch('/api/notifications/debug-cron', {
+                    method: 'GET'
+                });
+
+                const result = await response.text();
+                const testResults = document.getElementById('test-results');
+                testResults.textContent += `Cron Trigger Response: ${response.status} ${result}\n`;
+
+                log(`Cron trigger: ${response.status} ${result}`, response.ok ? 'success' : 'error');
+            } catch (error) {
+                log(`Cron trigger error: ${error.message}`, 'error');
+            }
+        }
+
+        async function bypasGates() {
+            try {
+                // Temporarily enable send-anytime mode
+                const response = await fetch('/api/notifications/preferences', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sendAnytimeOutsideQuietHours: true,
+                        quietHoursEnabled: false, // Disable quiet hours entirely
+                        cardDueEnabled: true,
+                        cardDueTime: "09:00",
+                        cardDueThreshold: 5,
+                        dailyReminderEnabled: false,
+                        dailyReminderTime: "19:00",
+                        timezone: "UTC",
+                        quietHoursStart: "22:00",
+                        quietHoursEnd: "08:00",
+                        activeHoursEnabled: false,
+                        activeHoursStart: '09:00',
+                        activeHoursEnd: '21:00'
+                    })
+                });
+
+                if (response.ok) {
+                    log('Send-anytime mode enabled - gates bypassed', 'success');
+
+                    // Now trigger cron check
+                    setTimeout(() => triggerCronCheck(), 1000);
+                } else {
+                    log(`Failed to bypass gates: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`Bypass gates error: ${error.message}`, 'error');
+            }
+        }
+
+        async function checkTimingGates() {
+            try {
+                // First, get user preferences
+                const prefsResponse = await fetch('/api/notifications/preferences');
+                if (!prefsResponse.ok) {
+                    throw new Error(`Preferences API returned ${prefsResponse.status}`);
+                }
+                const prefsData = await prefsResponse.json();
+                const prefs = prefsData.data || prefsData; // Handle both response formats
+
+                const gatesResults = document.getElementById('gates-results');
+                gatesResults.textContent = 'Checking timing gates...\n';
+
+                gatesResults.textContent += `User Preferences:\n`;
+                gatesResults.textContent += `- Send Anytime Outside Quiet: ${prefs.sendAnytimeOutsideQuietHours}\n`;
+                gatesResults.textContent += `- Quiet Hours: ${prefs.quietHoursEnabled}\n`;
+                gatesResults.textContent += `- Quiet Start: ${prefs.quietHoursStart}\n`;
+                gatesResults.textContent += `- Quiet End: ${prefs.quietHoursEnd}\n`;
+                gatesResults.textContent += `- Active Hours: ${prefs.activeHoursEnabled}\n`;
+                gatesResults.textContent += `- Active Start: ${prefs.activeHoursStart}\n`;
+                gatesResults.textContent += `- Active End: ${prefs.activeHoursEnd}\n`;
+                gatesResults.textContent += `- Timezone: ${prefs.timezone}\n\n`;
+
+                // Check current time
+                const now = new Date();
+                gatesResults.textContent += `Current Time: ${now.toLocaleString()}\n`;
+                gatesResults.textContent += `Current Hour: ${now.getHours()}\n\n`;
+
+                // Check if we're in quiet hours
+                if (prefs.quietHoursEnabled && !prefs.sendAnytimeOutsideQuietHours) {
+                    const quietStart = parseInt(prefs.quietHoursStart);
+                    const quietEnd = parseInt(prefs.quietHoursEnd);
+                    const currentHour = now.getHours();
+
+                    let inQuietHours;
+                    if (quietStart <= quietEnd) {
+                        inQuietHours = currentHour >= quietStart && currentHour < quietEnd;
+                    } else {
+                        inQuietHours = currentHour >= quietStart || currentHour < quietEnd;
+                    }
+
+                    gatesResults.textContent += `❌ In Quiet Hours: ${inQuietHours}\n`;
+                } else {
+                    gatesResults.textContent += `✅ Quiet Hours: Disabled or Send-Anytime enabled\n`;
+                }
+
+                // Check for recent notifications (6-hour cooldown)
+                const recentResponse = await fetch('/api/notifications/recent');
+                if (recentResponse.ok) {
+                    const recent = await recentResponse.json();
+                    gatesResults.textContent += `❌ Recent notifications (6hr): ${recent.count}\n`;
+                    if (recent.count > 0) {
+                        gatesResults.textContent += `   Last sent: ${new Date(recent.lastSent).toLocaleString()}\n`;
+                    }
+                } else {
+                    gatesResults.textContent += `⚠️ Could not check recent notifications\n`;
+                }
+
+                log('Timing gates checked', 'info');
+
+            } catch (error) {
+                log(`Gates check error: ${error.message}`, 'error');
+            }
+        }
+
+        async function clearCooldown() {
+            if (!confirm('This will clear the 6-hour notification cooldown. Continue?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/notifications/clear-cooldown', {
+                    method: 'POST'
+                });
+
+                if (response.ok) {
+                    log('6-hour cooldown cleared', 'success');
+                } else {
+                    log(`Failed to clear cooldown: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`Clear cooldown error: ${error.message}`, 'error');
+            }
+        }
+
+        async function enableSendAnytime() {
+            try {
+                const response = await fetch('/api/notifications/preferences', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        sendAnytimeOutsideQuietHours: true,
+                        quietHoursEnabled: false, // Disable quiet hours entirely
+                        cardDueEnabled: true,
+                        cardDueTime: "09:00",
+                        cardDueThreshold: 5,
+                        dailyReminderEnabled: false,
+                        dailyReminderTime: "19:00",
+                        timezone: "UTC",
+                        quietHoursStart: "22:00",
+                        quietHoursEnd: "08:00",
+                        activeHoursEnabled: false,
+                        activeHoursStart: '09:00',
+                        activeHoursEnd: '21:00'
+                    })
+                });
+
+                if (response.ok) {
+                    log('Send-anytime mode enabled permanently', 'success');
+                } else {
+                    log(`Failed to enable send-anytime: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`Enable send-anytime error: ${error.message}`, 'error');
+            }
+        }
+
+        function startLogMonitoring() {
+            if (logInterval) return;
+
+            log('Starting log monitoring...', 'info');
+
+            // Listen for service worker messages
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.addEventListener('message', (event) => {
+                    if (event.data.type === 'LOG') {
+                        log(`SW: ${event.data.message}`, 'info');
+                    }
+                });
+            }
+
+            logInterval = setInterval(() => {
+                // Could poll for server logs here if needed
+            }, 5000);
+        }
+
+        function stopLogMonitoring() {
+            if (logInterval) {
+                clearInterval(logInterval);
+                logInterval = null;
+                log('Log monitoring stopped', 'info');
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('live-logs').textContent = '';
+        }
+
+        // Initialize on page load
+        window.onload = async () => {
+            log('Debug page loaded', 'info');
+            await checkServiceWorker();
+            await checkNotificationPermission();
+            startLogMonitoring();
+        };
+    </script>
+</body>
+
+</html>

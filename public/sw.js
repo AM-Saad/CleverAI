@@ -1,7 +1,7 @@
 (() => {
   // shared/constants/pwa.ts
   var SW_CONFIG = {
-    VERSION: "v1.8.0-enhanced",
+    VERSION: "v2.0.0-enhanced",
     DEBUG_QUERY_PARAM: "swDebug",
     DEBUG_VALUE: "1",
     UPDATE_CHECK_INTERVAL: 3e4,
@@ -3472,33 +3472,80 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       }
     });
     swSelf.addEventListener("push", (event) => {
-      log("push received");
+      console.log("[SW] \u{1F514} Push event received:", event);
+      console.log("[SW] Push event data exists:", !!event.data);
+      console.log("[SW] Notification permission:", Notification.permission);
       event.waitUntil((async () => {
+        var _a, _b, _c;
         try {
-          if (!event.data) return;
-          const data = (() => {
+          if (!event.data) {
+            console.log("[SW] \u26A0\uFE0F No data in push event - showing fallback notification");
+            await swSelf.registration.showNotification("Card Review", {
+              body: "You have cards to review!",
+              icon: "/icons/192x192.png",
+              badge: "/icons/96x96.png",
+              tag: "card-review-fallback",
+              requireInteraction: true,
+              data: { url: "/review", timestamp: Date.now() }
+            });
+            console.log("[SW] \u2705 Fallback notification shown");
+            return;
+          }
+          let data;
+          try {
+            const rawData = event.data.text();
+            console.log("[SW] Raw push data (text):", rawData);
+            data = JSON.parse(rawData);
+            console.log("[SW] Parsed push data:", data);
+          } catch (parseError) {
+            console.error("[SW] \u274C Failed to parse push data:", parseError);
             try {
-              return event.data.json();
+              data = event.data.json();
+              console.log("[SW] Parsed as JSON directly:", data);
             } catch {
-              return {};
+              console.log("[SW] Using fallback data structure");
+              data = { title: "Card Review", message: "You have cards to review!" };
             }
-          })();
-          const title = data.title || "Notification";
+          }
+          const title = data.title || "Card Review";
           const options = {
-            body: data.message || "",
+            body: data.message || "You have cards to review!",
             icon: data.icon || "/icons/192x192.png",
             badge: "/icons/96x96.png",
-            tag: data.tag || "default",
-            requireInteraction: !!data.requireInteraction,
-            silent: !!data.silent,
-            data: { url: data.url || "/", timestamp: Date.now(), ...data.data || {} }
+            tag: data.tag || "card-review",
+            requireInteraction: false,
+            // Changed: macOS might not show persistent notifications in notification center
+            silent: false,
+            // Never silent for debugging
+            data: {
+              url: data.url || "/review",
+              timestamp: Date.now(),
+              originalData: data,
+              ...data.data || {}
+            }
           };
+          console.log("[SW] \u{1F4E2} Showing notification:", title);
+          console.log("[SW] Notification options:", options);
           await swSelf.registration.showNotification(title, options);
+          console.log("[SW] \u2705 Notification shown successfully!");
+          const notifications = await swSelf.registration.getNotifications();
+          console.log("[SW] Current notifications count:", notifications.length);
+          console.log("[SW] Current notifications:", notifications.map((n) => ({ title: n.title, tag: n.tag })));
         } catch (err) {
-          error("push handler error", err);
+          console.error("[SW] \u274C Push handler error:", err);
+          console.log("[SW] Registration state:", (_b = (_a = swSelf.registration) == null ? void 0 : _a.active) == null ? void 0 : _b.state);
+          console.log("[SW] Registration scope:", (_c = swSelf.registration) == null ? void 0 : _c.scope);
           try {
-            await swSelf.registration.showNotification("CleverAI Notification", { body: "You have a new notification", icon: "/icons/192x192.png", tag: "fallback" });
-          } catch {
+            await swSelf.registration.showNotification("CleverAI - Error Fallback", {
+              body: "Notification received but failed to process properly",
+              icon: "/icons/192x192.png",
+              tag: "error-fallback",
+              requireInteraction: true,
+              data: { url: "/review", timestamp: Date.now() }
+            });
+            console.log("[SW] \u2705 Emergency fallback notification shown");
+          } catch (fallbackError) {
+            console.error("[SW] \u274C Emergency fallback also failed:", fallbackError);
           }
         }
       })());

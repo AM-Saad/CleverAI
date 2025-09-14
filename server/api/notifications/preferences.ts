@@ -2,20 +2,21 @@ import { z } from 'zod'
 import { prisma } from "~~/server/prisma/utils"
 
 const PreferencesSchema = z.object({
-  enabled: z.boolean(),
-  types: z.object({
-    system: z.boolean(),
-    folder_update: z.boolean(),
-    quiz_reminder: z.boolean(),
-    study_reminder: z.boolean(),
-    achievement: z.boolean(),
-    marketing: z.boolean(),
-  }),
-  quietHours: z.object({
-    enabled: z.boolean(),
-    start: z.string().regex(/^\d{2}:\d{2}$/), // HH:MM format
-    end: z.string().regex(/^\d{2}:\d{2}$/),   // HH:MM format
-  }).optional(),
+  cardDueEnabled: z.boolean(),
+  cardDueTime: z.string().regex(/^\d{2}:\d{2}$/), // HH:MM format
+  cardDueThreshold: z.number().min(1).max(100),
+
+  dailyReminderEnabled: z.boolean(),
+  dailyReminderTime: z.string().regex(/^\d{2}:\d{2}$/),
+
+  timezone: z.string(),
+  quietHoursEnabled: z.boolean(),
+  quietHoursStart: z.string().regex(/^\d{2}:\d{2}$/),
+  quietHoursEnd: z.string().regex(/^\d{2}:\d{2}$/),
+  sendAnytimeOutsideQuietHours: z.boolean().default(false),
+  activeHoursEnabled: z.boolean().default(false),
+  activeHoursStart: z.string().regex(/^\d{2}:\d{2}$/).default('09:00'),
+  activeHoursEnd: z.string().regex(/^\d{2}:\d{2}$/).default('21:00'),
 })
 
 export default defineEventHandler(async (event) => {
@@ -37,62 +38,85 @@ export default defineEventHandler(async (event) => {
 
     if (method === 'GET') {
       // Get user's notification preferences
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          // Note: preferences field doesn't exist in schema yet
-          // This would need to be added to the User model
-        }
+      let preferences = await prisma.userNotificationPreferences.findUnique({
+        where: { userId }
       })
 
-      if (!user) {
-        throw createError({
-          statusCode: 404,
-          statusMessage: 'User not found'
+      // If no preferences exist, create default ones
+      if (!preferences) {
+        preferences = await prisma.userNotificationPreferences.create({
+          data: {
+            userId,
+            cardDueEnabled: true,
+            cardDueTime: "09:00",
+            cardDueThreshold: 5,
+            dailyReminderEnabled: false,
+            dailyReminderTime: "19:00",
+            timezone: "UTC",
+            quietHoursEnabled: false,
+            quietHoursStart: "22:00",
+            quietHoursEnd: "08:00",
+            sendAnytimeOutsideQuietHours: false,
+            activeHoursEnabled: false,
+            activeHoursStart: '09:00',
+            activeHoursEnd: '21:00'
+          }
         })
-      }
-
-      // Return default preferences for now
-      const defaultPreferences = {
-        enabled: true,
-        types: {
-          system: true,
-          folder_update: true,
-          quiz_reminder: true,
-          study_reminder: true,
-          achievement: true,
-          marketing: false,
-        },
-        quietHours: {
-          enabled: false,
-          start: "22:00",
-          end: "08:00",
-        }
       }
 
       return {
         success: true,
-        data: defaultPreferences
+        data: {
+          cardDueEnabled: preferences.cardDueEnabled,
+          cardDueTime: preferences.cardDueTime,
+          cardDueThreshold: preferences.cardDueThreshold,
+          dailyReminderEnabled: preferences.dailyReminderEnabled,
+          dailyReminderTime: preferences.dailyReminderTime,
+          timezone: preferences.timezone,
+          quietHoursEnabled: preferences.quietHoursEnabled,
+          quietHoursStart: preferences.quietHoursStart,
+          quietHoursEnd: preferences.quietHoursEnd,
+          sendAnytimeOutsideQuietHours: preferences.sendAnytimeOutsideQuietHours,
+          activeHoursEnabled: preferences.activeHoursEnabled,
+          activeHoursStart: preferences.activeHoursStart,
+          activeHoursEnd: preferences.activeHoursEnd
+        }
       }
     }
 
     if (method === 'PUT') {
       // Update user's notification preferences
       const body = await readBody(event)
-      const preferences = PreferencesSchema.parse(body)
+      const validatedPrefs = PreferencesSchema.parse(body)
 
-      // TODO: Update user preferences in database
-      // This would require adding a preferences field to the User model
-      // await prisma.user.update({
-      //   where: { id: userId },
-      //   data: { preferences }
-      // })
+      // Upsert preferences
+      const preferences = await prisma.userNotificationPreferences.upsert({
+        where: { userId },
+        update: validatedPrefs,
+        create: {
+          userId,
+          ...validatedPrefs
+        }
+      })
 
       return {
         success: true,
         message: 'Preferences updated successfully',
-        data: preferences
+        data: {
+          cardDueEnabled: preferences.cardDueEnabled,
+          cardDueTime: preferences.cardDueTime,
+          cardDueThreshold: preferences.cardDueThreshold,
+          dailyReminderEnabled: preferences.dailyReminderEnabled,
+          dailyReminderTime: preferences.dailyReminderTime,
+          timezone: preferences.timezone,
+          quietHoursEnabled: preferences.quietHoursEnabled,
+          quietHoursStart: preferences.quietHoursStart,
+          quietHoursEnd: preferences.quietHoursEnd,
+          sendAnytimeOutsideQuietHours: preferences.sendAnytimeOutsideQuietHours,
+          activeHoursEnabled: preferences.activeHoursEnabled,
+          activeHoursStart: preferences.activeHoursStart,
+          activeHoursEnd: preferences.activeHoursEnd
+        }
       }
     }
 

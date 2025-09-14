@@ -26,6 +26,8 @@ model User {
     folders                   Folder[]                   @relation("UserFolders")
     subscription              UserSubscription?
     notificationSubscriptions NotificationSubscription[]
+    scheduledNotifications    ScheduledNotification[]
+    notificationPreferences   UserNotificationPreferences?
 
     // --- Authentication fields ---
     credentials           Json?
@@ -295,4 +297,57 @@ model NotificationSubscription {
     @@index([expiresAt])
     @@index([isActive])
     @@index([failureCount])
+}
+
+model ScheduledNotification {
+    id          String   @id @default(auto()) @map("_id") @db.ObjectId
+    userId      String   @db.ObjectId
+    type        String   // 'CARD_DUE', 'STUDY_REMINDER', 'DAILY_REVIEW'
+    scheduledFor DateTime
+    sent        Boolean  @default(false)
+    sentAt      DateTime?
+    metadata    Json?    // Store card count, folder info, etc.
+    failureCount Int     @default(0)
+    lastError   String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    user User @relation(fields: [userId], references: [id])
+
+    @@index([scheduledFor, sent])
+    @@index([userId, type])
+    @@index([sent, scheduledFor])
+    @@map("scheduledNotifications")
+}
+
+model UserNotificationPreferences {
+    id                String   @id @default(auto()) @map("_id") @db.ObjectId
+    userId            String   @unique @db.ObjectId
+
+    // Card due notifications
+    cardDueEnabled    Boolean  @default(true)
+    cardDueTime       String   @default("09:00") // "HH:mm" format
+    cardDueThreshold  Int      @default(5) // Notify when >= 5 cards due
+
+    // Daily study reminders
+    dailyReminderEnabled Boolean @default(false)
+    dailyReminderTime    String  @default("19:00")
+
+    // General settings
+    timezone          String   @default("UTC")
+    quietHoursEnabled Boolean  @default(false)
+    quietHoursStart   String   @default("22:00")
+    quietHoursEnd     String   @default("08:00")
+
+    // Advanced timing
+    sendAnytimeOutsideQuietHours Boolean @default(false)
+    activeHoursEnabled           Boolean @default(false)
+    activeHoursStart             String  @default("09:00")
+    activeHoursEnd               String  @default("21:00")
+
+    createdAt         DateTime @default(now())
+    updatedAt         DateTime @updatedAt
+
+    user User @relation(fields: [userId], references: [id])
+    @@map("userNotificationPreferences")
 }

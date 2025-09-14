@@ -1,6 +1,7 @@
 import { GradeCardRequestSchema, GradeCardResponseSchema } from '~/shared/review.contract'
 import { requireRole } from "~/../server/middleware/auth"
 import { ErrorFactory, ErrorType } from "~/services/ErrorFactory"
+import { scheduleCardDueNotification } from "~~/server/services/NotificationScheduler"
 import { ZodError } from 'zod'
 
 export default defineEventHandler(async (event) => {
@@ -59,6 +60,24 @@ export default defineEventHandler(async (event) => {
         streak: newStreak
       }
     })
+
+    // Schedule notification for the new due date (async, don't wait)
+    scheduleCardDueNotification({
+      userId: user.id,
+      cardId: validatedBody.cardId,
+      scheduledFor: nextReviewAt,
+      content: {
+        title: '📚 Card Review Due',
+        body: 'You have a card ready for review!',
+        icon: '/icons/icon-192.png',
+        tag: `card-due-${validatedBody.cardId}`,
+        data: { cardId: validatedBody.cardId, type: 'card-due' }
+      }
+    })
+      .catch((error: unknown) => {
+        console.error('Failed to schedule card due notification:', error)
+        // Don't fail the main request if notification scheduling fails
+      })
 
     return GradeCardResponseSchema.parse({
       success: true,

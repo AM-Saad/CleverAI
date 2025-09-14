@@ -475,33 +475,90 @@ import { ExpirationPlugin } from 'workbox-expiration'
 
     // --------------------- PUSH NOTIFICATIONS ---------------------
     swSelf.addEventListener('push', (event: PushEvent) => {
-        log('push received')
+        console.log('[SW] 🔔 Push event received:', event);
+        console.log('[SW] Push event data exists:', !!event.data);
+        console.log('[SW] Notification permission:', Notification.permission);
+
         event.waitUntil((async () => {
             try {
-                if (!event.data) return
-                const data: Partial<{ title: string; message: string; icon: string; tag: string; requireInteraction: boolean; silent: boolean; url: string; data: Record<string, unknown> }> = (() => {
+                if (!event.data) {
+                    console.log('[SW] ⚠️ No data in push event - showing fallback notification');
+                    await swSelf.registration.showNotification('Card Review', {
+                        body: 'You have cards to review!',
+                        icon: '/icons/192x192.png',
+                        badge: '/icons/96x96.png',
+                        tag: 'card-review-fallback',
+                        requireInteraction: true,
+                        data: { url: '/review', timestamp: Date.now() }
+                    });
+                    console.log('[SW] ✅ Fallback notification shown');
+                    return;
+                }
+
+                let data: Partial<{ title: string; message: string; icon: string; tag: string; requireInteraction: boolean; silent: boolean; url: string; data: Record<string, unknown> }>;
+
+                try {
+                    const rawData = event.data.text();
+                    console.log('[SW] Raw push data (text):', rawData);
+                    data = JSON.parse(rawData);
+                    console.log('[SW] Parsed push data:', data);
+                } catch (parseError) {
+                    console.error('[SW] ❌ Failed to parse push data:', parseError);
+                    // Try as JSON directly
                     try {
-                        return event.data!.json()
+                        data = event.data.json();
+                        console.log('[SW] Parsed as JSON directly:', data);
                     } catch {
-                        return {}
+                        console.log('[SW] Using fallback data structure');
+                        data = { title: 'Card Review', message: 'You have cards to review!' };
                     }
-                })()
-                const title = data.title || 'Notification'
+                }
+
+                const title = data.title || 'Card Review';
                 const options: NotificationOptions = {
-                    body: data.message || '',
+                    body: data.message || 'You have cards to review!',
                     icon: data.icon || '/icons/192x192.png',
                     badge: '/icons/96x96.png',
-                    tag: data.tag || 'default',
-                    requireInteraction: !!data.requireInteraction,
-                    silent: !!data.silent,
-                    data: { url: data.url || '/', timestamp: Date.now(), ...(data.data || {}) }
-                }
-                await swSelf.registration.showNotification(title, options)
+                    tag: data.tag || 'card-review',
+                    requireInteraction: false, // Changed: macOS might not show persistent notifications in notification center
+                    silent: false, // Never silent for debugging
+                    data: {
+                        url: data.url || '/review',
+                        timestamp: Date.now(),
+                        originalData: data,
+                        ...(data.data || {})
+                    }
+                };
+
+                console.log('[SW] 📢 Showing notification:', title);
+                console.log('[SW] Notification options:', options);
+
+                await swSelf.registration.showNotification(title, options);
+                console.log('[SW] ✅ Notification shown successfully!');
+
+                // Verify notification was created
+                const notifications = await swSelf.registration.getNotifications();
+                console.log('[SW] Current notifications count:', notifications.length);
+                console.log('[SW] Current notifications:', notifications.map(n => ({ title: n.title, tag: n.tag })));
+
             } catch (err) {
-                error('push handler error', err)
+                console.error('[SW] ❌ Push handler error:', err);
+                console.log('[SW] Registration state:', swSelf.registration?.active?.state);
+                console.log('[SW] Registration scope:', swSelf.registration?.scope);
+
+                // Emergency fallback
                 try {
-                    await swSelf.registration.showNotification('CleverAI Notification', { body: 'You have a new notification', icon: '/icons/192x192.png', tag: 'fallback' })
-                } catch { /* ignore */ }
+                    await swSelf.registration.showNotification('CleverAI - Error Fallback', {
+                        body: 'Notification received but failed to process properly',
+                        icon: '/icons/192x192.png',
+                        tag: 'error-fallback',
+                        requireInteraction: true,
+                        data: { url: '/review', timestamp: Date.now() }
+                    });
+                    console.log('[SW] ✅ Emergency fallback notification shown');
+                } catch (fallbackError) {
+                    console.error('[SW] ❌ Emergency fallback also failed:', fallbackError);
+                }
             }
         })())
     })
