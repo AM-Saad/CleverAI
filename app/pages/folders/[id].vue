@@ -21,7 +21,7 @@
                         </p>
                     </div>
                     <div class="flex flex-col items-start gap-1">
-                        <p class="text-xs"><strong>Created At:</strong> {{ createdAt }}</p>
+                        <UiParagraph><strong>Created At:</strong> {{ createdAt }}</UiParagraph>
                         <div class="flex justify-between items-center gap-2">
                             <UButton color="primary" variant="outline" :aria-expanded="showUpload"
                                 aria-controls="upload-materials" @click="toggleUploadForm">
@@ -37,13 +37,19 @@
                 </div>
 
                 <div class="flex-1 w-full my-xl rounded-md">
-                    <div class="flex gap-8 mx-auto border-b border-dark py-sm">
-                        <div v-for="(item, index) in items" :key="index"
-                            class="font-medium hover:opacity-100 transition-opacity rounded cursor-pointer flex items-center text-base gap-1"
-                            :class="{ 'text-primary': activeIndex === index }" @click="select(index)">
-                            <icon :name="item.icon" class="inline-block" />
-                            <span>{{ item.name }}</span>
-                        </div>
+
+                    <div class="border-b border-gray-200 dark:border-gray-700">
+                        <nav class="-mb-px flex space-x-8">
+                            <button v-for="(tab, index) in items" :key="index" :class="[
+                                'flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors',
+                                activeIndex === index
+                                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
+                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                            ]" @click="select(index)">
+                                <UIcon :name="tab.icon" class="w-4 h-4" />
+                                {{ tab.name }}
+                            </button>
+                        </nav>
                     </div>
                     <UCarousel ref="carousel" v-slot="{ item }" :items="items" :prev="{ onClick: onClickPrev }"
                         :next="{ onClick: onClickNext }" class="w-full mx-auto" @select="onSelect">
