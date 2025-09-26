@@ -3,12 +3,23 @@
         <div v-if="loading" class="text-center py-6">Loading materials...</div>
         <div v-else-if="error" class="text-red-600">{{ errorMessage }}</div>
 
-        <ul v-else class="space-y-3">
-            <li v-for="m in materialList" :key="m.id"
-                class="p-4 bg-white dark:bg-gray-800 rounded shadow flex justify-between items-start">
+        <ul v-else class="space-y-3 mt-4">
+            <UiCard tag="article" v-for="m in materialList" :key="m.id">
                 <div class="flex-1">
                     <div class="flex items-center gap-2">
-                        <div class="font-semibold text-lg">{{ m.title }}</div>
+                        <div class="flex w-full justify-between items-center gap-2">
+                            <UiSubtitle>{{ m.title }}</UiSubtitle>
+                            <div class="ml-4 flex-shrink-0 flex gap-2">
+                                <!-- Enrollment button -->
+                                <ReviewEnrollButton :resource-type="'material'" :resource-id="m.id"
+                                    :is-enrolled="enrolledMaterials.has(m.id)" @enrolled="handleMaterialEnrolled"
+                                    @error="handleEnrollError" />
+                                <UButton :disabled="removing" variant="outline" color="error"
+                                    @click="() => confirmRemoval(m.id)">
+                                    Remove</UButton>
+
+                            </div>
+                        </div>
                         <span v-if="enrolledMaterials.has(m.id)"
                             class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
                             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -19,24 +30,24 @@
                             Enrolled
                         </span>
                     </div>
-                    <div class="text-sm text-gray-600 dark:text-gray-400 mt-1 whitespace-pre-wrap">{{ m.content }}</div>
+                    <div>
+                        <UButton size="xs" variant="ghost" class="mb-2" @click="() => toggleContent(m.id)">
+                            <span v-if="!expandedMaterials.has(m.id)">Show Content</span>
+                            <span v-else>Hide Content</span>
+                        </UButton>
+                        <transition name="fade-slide">
+                            <UiCard v-if="expandedMaterials.has(m.id)" tag="article" class="mt-4">
+                                <UiParagraph class="whitespace-pre-wrap">{{ m.content }}</UiParagraph>
+                            </UiCard>
+                        </transition>
+                    </div>
                 </div>
-
-                <div class="ml-4 flex-shrink-0 flex flex-col gap-2">
-                    <!-- Enrollment button -->
-                    <ReviewEnrollButton :resource-type="'material'" :resource-id="m.id"
-                        :is-enrolled="enrolledMaterials.has(m.id)" @enrolled="handleMaterialEnrolled"
-                        @error="handleEnrollError" />
-                    <button class="btn bg-red-600 text-white px-3 py-1 rounded" :disabled="removing"
-                        @click="() => confirmRemoval(m.id)">Remove</button>
-                    <NuxtLink :to="`/materials/${m.id}`"
-                        class="btn bg-gray-200 dark:bg-gray-700 px-3 py-1 rounded text-sm">Open</NuxtLink>
-                </div>
-            </li>
+            </UiCard>
         </ul>
 
-        <div v-if="!loading && materialList.length === 0" class="text-center py-6 text-gray-600">No materials in this
-            folder.</div>
+        <UiParagraph v-if="!loading && materialList.length === 0">
+            No materials in this folder.
+        </UiParagraph>
     </div>
     <!-- Confirmation Modal -->
     <DialogModal :show="showConfirm" @close="() => { showConfirm = false; confirmId = null }">
@@ -70,6 +81,16 @@
 </template>
 
 <script setup lang="ts">
+// Track expanded/collapsed state for each material
+const expandedMaterials = ref(new Set<string>())
+
+function toggleContent(id: string) {
+    if (expandedMaterials.value.has(id)) {
+        expandedMaterials.value.delete(id)
+    } else {
+        expandedMaterials.value.add(id)
+    }
+}
 import { useMaterials } from '~/composables/folders/useMaterials'
 import DialogModal from '~/components/shared/DialogModal.vue'
 import ReviewEnrollButton from '~/components/review/EnrollButton.vue'
@@ -168,5 +189,23 @@ const doConfirmRemove = async () => {
     list-style: none;
     padding: 0;
     margin: 0
+}
+
+/* Transition for material content */
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+    transition: opacity 0.3s, transform 0.3s;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+.fade-slide-enter-to,
+.fade-slide-leave-from {
+    opacity: 1;
+    transform: translateY(0);
 }
 </style>

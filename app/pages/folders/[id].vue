@@ -1,20 +1,19 @@
 <template>
-    <div id="folder-page" class="inline-flex mt-xl overflow-hidden w-full">
+    <div id="folder-page" class="inline-flex overflow-hidden w-full">
         <div v-if="loading">Loading...</div>
         <shared-error-message v-if="error" :error="error.message" />
         <Transition name="fade" mode="out-in" :duration="{
             enter: 300,
             leave: 300
         }">
-            <div v-if="folder"
-                class="bg-white dark:bg-foreground max-w-full order-2 transition-all duration-1000 will-change-auto">
+            <div v-if="folder" class=" max-w-full order-2 transition-all duration-1000 will-change-auto">
                 <div class="flex flex-wrap gap-4 justify-between my-4 pb-4">
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
                             <icon name="bi:folder" class="inline-block text-primary text-2xl" />
-                            <h1 class="font-bold dark:text-background text-2xl">{{ folder?.title }}</h1>
+                            <UiTitle>{{ folder?.title }}</UiTitle>
                             <span v-if="folder.llmModel"
-                                class="inline-flex items-center text-xs px-1 py-1 rounded bg-foreground text-accent dark:bg-neutral-800">
+                                class="inline-flex items-center text-xs px-1 py-1 rounded bg-primary">
                                 Model: <span class="ml-1 font-medium">{{ folder.llmModel.toLocaleUpperCase() }}</span>
                             </span>
                         </div>
@@ -23,11 +22,14 @@
                     </div>
                     <div class="flex flex-col items-start gap-1">
                         <p class="text-xs"><strong>Created At:</strong> {{ createdAt }}</p>
-                        <div class="flex justify-between items-center">
-                            <button class="btn bg-accent text-foreground" :aria-expanded="showUpload"
+                        <div class="flex justify-between items-center gap-2">
+                            <UButton color="primary" variant="outline" :aria-expanded="showUpload"
                                 aria-controls="upload-materials" @click="toggleUploadForm">
                                 Upload Materials
-                            </button>
+                            </UButton>
+                            <UButton color="primary" variant="soft" @click="showMaterialsModal = true">
+                                View Materials
+                            </UButton>
                             <FolderUploadMaterialForm :show="showUpload" :backdrop="false" @closed="showUpload = false"
                                 @cancel="showUpload = false" />
                         </div>
@@ -35,10 +37,10 @@
                 </div>
 
                 <div class="flex-1 w-full my-xl rounded-md">
-                    <div class="flex gap-4 mx-auto border-b border-gray-200 py-sm">
+                    <div class="flex gap-8 mx-auto border-b border-dark py-sm">
                         <div v-for="(item, index) in items" :key="index"
                             class="font-medium hover:opacity-100 transition-opacity rounded cursor-pointer flex items-center text-base gap-1"
-                            :class="{ 'text-secondary': activeIndex === index }" @click="select(index)">
+                            :class="{ 'text-primary': activeIndex === index }" @click="select(index)">
                             <icon :name="item.icon" class="inline-block" />
                             <span>{{ item.name }}</span>
                         </div>
@@ -51,17 +53,27 @@
 
                     </UCarousel>
                 </div>
-                <!-- Materials List Section -->
-                <div class="mt-8">
-                    <h2 class="text-xl font-semibold mb-4">Materials</h2>
-
-                    <MaterialsList :folder-id="`${id as string}`" @removed="() => { }"
-                        @error="(e) => console.error(e)" />
-                </div>
             </div>
 
         </Transition>
 
+        <!-- Materials Modal -->
+        <UiDialogModal :show="showMaterialsModal" @close="showMaterialsModal = false">
+            <template #header>
+                <div class="flex flex-col gap-1">
+                    <h3 class="flex items-center gap-2 text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                        <icon name="bi:folder" class="" />
+                        Materials in {{ folder?.title }}
+                    </h3>
+                    <p class="font-normal text-sm text-neutral-500">
+                        View and manage materials in this folder
+                    </p>
+                </div>
+            </template>
+            <template #body>
+                <MaterialsList :folder-id="`${id as string}`" @removed="() => { }" @error="(e) => console.error(e)" />
+            </template>
+        </UiDialogModal>
 
     </div>
 
@@ -83,6 +95,7 @@ const Questions = defineAsyncComponent(() => import('~/components/folder/Questio
 
 const route = useRoute()
 const showUpload = ref(false)
+const showMaterialsModal = ref(false)
 const id = route.params.id
 const { folder, loading, error } = useFolder(id! as string)
 const createdAt = computed(() => useNuxtLocaleDate(new Date(folder.value?.createdAt || new Date().toISOString())))

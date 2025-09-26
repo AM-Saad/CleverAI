@@ -1,21 +1,29 @@
 <!-- eslint-disable vue/multi-word-component-names -->
 <template>
-    <div class="mx-auto flex h-screen flex-col justify-between">
+    <div class="mx-auto max-w-full flex h-screen flex-col justify-between">
         <nav id="nav"
-            class="effect fixed flex font-heading items-center justify-between  px-6 z-50 h-14 rounded w-full">
+            class="effect fixed flex font-heading items-center justify-between  px-3 md:px-6 z-50 h-14 rounded-full md:rounded container mx-auto left-[50%] -translate-x-1/2 top-4 bg-white/80 backdrop-blur-sm shadow-md w-[calc(100%-1rem)]">
 
             <div class="flex items-center justify-between w-full">
-                <router-link to="/" class="text-foreground dark:text-background font-medium">
+                <router-link to="/" class="text-dark dark:text-light font-medium md:text-2xl">
                     ShaterAI
                 </router-link>
                 <div v-if="status === 'authenticated'" class="flex gap-5">
                     <ui-dropdown-menu />
                 </div>
                 <div v-else-if="status === 'unauthenticated'" class="flex gap-5">
-                    <router-link class="btn btn-small bg-white" to="/auth/signIn">
-                        Login
+                    <router-link to="/auth/signIn">
+                        <UButton variant="subtle">
+
+                            Login
+                        </UButton>
                     </router-link>
-                    <router-link class="btn btn-small bg-primary text-white" to="/auth/signup">Signup</router-link>
+                    <router-link to="/auth/signup">
+                        <UButton>
+
+                            Signup
+                        </UButton>
+                    </router-link>
                 </div>
                 <div v-else>
                     <span>Loading...</span>
@@ -51,7 +59,7 @@
         <div class="flex-1 pb-4">
             <UToaster />
             <ServiceWorkerUpdateNotification mode="banner" />
-            <div class="p-20">
+            <div class="container mx-auto  p-4 pt-24">
 
                 <slot />
             </div>

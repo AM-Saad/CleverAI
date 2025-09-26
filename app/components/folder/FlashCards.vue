@@ -7,8 +7,8 @@
                     class="inline-flex items-center text-xs px-2 py-1 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-700/50">
                     Remaining: <span class="ml-1 font-medium">{{ rateLimitRemaining }}</span>
                 </span>
-                <UButton class="flex items-center" :size="'lg'" :loading="generating || loading"
-                    :disabled="generating || loading" @click="onGenerate">
+                <UButton class="flex items-center" :loading="generating || loading" :disabled="generating || loading"
+                    @click="onGenerate">
                     <span v-if="!generating">Generate Flashcards</span>
                     <span v-else>Generating…</span>
                     <icons-stars-generative />
@@ -17,42 +17,37 @@
             </div>
         </div>
 
-        <p v-if="(!cardsToShow || cardsToShow.length === 0) && !generating" class="mt-2 text-neutral-500">
+        <UiParagraph v-if="(!cardsToShow || cardsToShow.length === 0) && !generating" class="mt-2">
             No flash cards yet. Click “Generate Flashcards” to create some from this folder's content.
-        </p>
+        </UiParagraph>
 
-        <p v-if="genError" class="mt-2 text-error">
+        <UiParagraph v-if="genError" class="mt-2 text-error">
             {{ genError }}
-        </p>
+        </UiParagraph>
 
         <div v-if="cardsToShow?.length"
             class="mt-4 grid gap-4 justify-center justify-items-center sm:grid-cols-2 md:grid-cols-3 ">
             <div v-for="(card, idx) in cardsToShow" :key="idx" class="relative">
                 <ui-flip-card>
                     <template #front>
-                        <div class="font-medium mb-1 text-xl">Q: {{ card.front }}</div>
+                        <UiParagraph class="w-4/5">Q: {{ card.front }}</UiParagraph>
                         <!-- Enrollment status indicator -->
                         <div v-if="'id' in card && card.id && enrolledCards.has(card.id)"
                             class="absolute top-2 right-2">
                             <span
-                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd"
-                                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                        clip-rule="evenodd" />
-                                </svg>
+                                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-light border">
                                 ✓
                             </span>
                         </div>
                     </template>
                     <template #back>
-                        <div class="text-base dark:text-neutral-300 mb-4">{{ card.back }}</div>
+                        <UiParagraph class="mb-4">{{ card.back }}</UiParagraph>
                         <!-- Enroll Button -->
                         <div class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600">
                             <ReviewEnrollButton v-if="'id' in card && card.id" :resource-type="'flashcard'"
                                 :resource-id="card.id" :is-enrolled="enrolledCards.has(card.id)"
                                 @enrolled="handleCardEnrolled" @error="handleEnrollError" />
-                            <div v-else class="text-xs text-gray-500">
+                            <div v-else class="text-xs">
                                 Save card to enable review
                             </div>
                         </div>
@@ -63,13 +58,12 @@
 
         <!-- Review Navigation -->
         <div v-if="cardsToShow?.length" class="mt-8 text-center">
-            <NuxtLink to="/review"
-                class="inline-flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors">
+            <UButton to="/review">
                 <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
                 Start Review Session
-            </NuxtLink>
+            </UButton>
         </div>
     </div>
 </template>

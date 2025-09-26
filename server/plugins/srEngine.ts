@@ -3,7 +3,6 @@
 import { DefaultSREngine } from '~/domain/sr/SREngine'
 import { Sm2Scheduler } from '~/domain/sr/SRScheduler'
 
-import type { CardRepository } from '~/domain/repositories/CardRepository'
 import { PrismaCardReviewRepository } from '~/domain/repositories/PrismaCardReviewRepository'
 import { PrismaCardRepository } from '~/domain/repositories/PrismaCardRepository'
 

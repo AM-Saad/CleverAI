@@ -83,33 +83,44 @@ export default defineNuxtConfig({
       meta: [{ name: 'theme-color', content: '#f3f4f6' }]
     }
   },
-  appConfig: {
-    // you don't need to include this: only for testing purposes
-    buildDate: new Date().toISOString(),
-    ui: {
-      colors: {
-        primary: 'secondary',
-        secondary: 'green',
-        neutral: 'zinc'
-      },
-    button: {
-    slots: {
-    base: ['rounded-md font-medium inline-flex items-center disabled:cursor-not-allowed aria-disabled:cursor-not-allowed disabled:opacity-75 aria-disabled:opacity-75'],
-    label: 'truncate',
-    leadingIcon: 'shrink-0',
-    leadingAvatar: 'shrink-0',
-    leadingAvatarSize: '',
-    trailingIcon: 'shrink-0'
-  },
+//   appConfig: {
+//     // you don't need to include this: only for testing purposes
+//     buildDate: new Date().toISOString(),
+//     ui: {
+//       colors: {
+//         primary: 'primary',
+//         dark: 'dark',
+//         light: 'light',
+//         muted: 'muted',
+//       },
+//     button: {
+//     slots: {
+//     base: ['rounded-md font-medium inline-flex items-center disabled:cursor-not-allowed aria-disabled:cursor-not-allowed disabled:opacity-75 aria-disabled:opacity-75'],
+//     label: 'truncate',
+//     leadingIcon: 'shrink-0',
+//     leadingAvatar: 'shrink-0',
+//     leadingAvatarSize: '',
+//     trailingIcon: 'shrink-0'
+//   },
 
-    },
-        input: {
-      slots: {
-        base: 'rounded-sm py-sm px-sm', // use --radius-md
-      }
-    },
-    },
-  },
+//     },
+//         input: {
+//       slots: {
+//         base: 'rounded-sm py-sm px-sm', // use --radius-md
+//       }
+//     },
+//     },
+//   },
+//     colorMode: {
+//     preference: 'light',
+//     fallback: 'light',
+//     hid: 'nuxt-color-mode-script',
+//     globalName: '__NUXT_COLOR_MODE__',
+//     componentName: 'ColorScheme',
+//     classPrefix: '',
+//     classSuffix: '',
+//     storageKey: 'nuxt-color-mode'
+//   },
  auth: {
     isEnabled: true,
     originEnvKey: "AUTH_ORIGIN",

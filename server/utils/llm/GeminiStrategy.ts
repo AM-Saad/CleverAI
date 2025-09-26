@@ -66,7 +66,7 @@ function extractJsonArrayOrObject(s: string): string {
 
 export class GeminiStrategy implements LLMStrategy {
   private client: GoogleGenerativeAI
-  private static readonly MODEL = 'gemini-1.5-flash' // adjust if you prefer 1.5-flash for speed/cost
+  private static readonly MODEL = 'gemini-2.0-flash-lite' // adjust if you prefer 1.5-flash for speed/cost
   private onMeasure?: (m: LlmMeasured) => void
 
   constructor(onMeasure?: (m: LlmMeasured) => void) {

@@ -12,15 +12,17 @@
                 leave-active-class="transition ease-in duration-75" leave-from-class="transform opacity-100 scale-100"
                 leave-to-class="transform opacity-0 scale-95">
                 <MenuItems
-                    class="bg-background dark:bg-foreground absolute right-0 z-10 w-56 origin-top-right overflow-hidden rounded-xl shadow-lg  dark:ring-white ring-opacity-5 focus:outline-none">
+                    class="bg-light dark:bg-darks absolute right-0 z-10 w-56 origin-top-right overflow-hidden rounded-xl shadow-lg  dark:ring-white ring-opacity-5 focus:outline-none">
                     <div class="overflow-hidden">
                         <MenuItem v-slot="{ active }">
                         <router-link to="/profile" tabindex="1" :class="[
                             active
-                                ? 'bg-accent text-gray-900 dark:text-gray-300 dark:bg-slate-600'
-                                : 'text-gray-700 dark:text-gray-200',
-                            'block p-sm text-sm',
+                                ? 'bg-primary '
+                                : '',
+                            'flex items-center gap-2 p-sm text-sm text-dark',
                         ]">
+                            <UIcon :name="'i-heroicons-user'" class="w-4 h-4" />
+
                             My Account
                         </router-link>
                         </MenuItem>
@@ -28,10 +30,11 @@
                         <MenuItem v-slot="{ active }">
                         <router-link to="/folders" tabindex="2" :class="[
                             active
-                                ? 'bg-accent text-gray-900 dark:text-gray-300 dark:bg-slate-600'
-                                : 'text-gray-700 dark:text-gray-200',
-                            'block p-sm text-sm',
+                                ? 'bg-primary text-dark'
+                                : '',
+                            'flex items-center gap-2 p-sm text-sm text-dark',
                         ]">
+                            <UIcon :name="'i-heroicons-folder-open'" class="w-4 h-4" />
                             Folders
                         </router-link>
 
@@ -39,10 +42,11 @@
                         <MenuItem v-slot="{ active }">
                         <router-link to="/settings" tabindex="2" :class="[
                             active
-                                ? 'bg-accent text-gray-900 dark:text-gray-300 dark:bg-slate-600'
-                                : 'text-gray-700 dark:text-gray-200',
-                            'block p-sm text-sm',
+                                ? 'bg-primary'
+                                : '',
+                            'flex items-center gap-2 p-sm text-sm text-dark',
                         ]">
+                            <UIcon :name="'i-heroicons-cog-6-tooth'" class="w-4 h-4" />
                             Settings
                         </router-link>
                         </MenuItem>
@@ -50,10 +54,11 @@
                         <MenuItem v-slot="{ active }">
                         <a tabindex="3" :class="[
                             active
-                                ? 'bg-accent text-gray-900 dark:text-gray-300 dark:bg-slate-600'
-                                : 'text-gray-700 dark:text-gray-200',
-                            'block p-sm text-sm cursor-pointer',
+                                ? 'bg-primary'
+                                : '',
+                            'flex items-center gap-2 p-sm text-sm text-dark',
                         ]" @click.prevent="logout">
+                            <UIcon :name="'i-heroicons-arrow-right-on-rectangle'" class="w-4 h-4" />
                             Sign out
                         </a>
                         </MenuItem>

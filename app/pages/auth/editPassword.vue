@@ -107,65 +107,54 @@ onMounted(() => {
 
 <template>
     <div>
-        <div
-v-if="!verified"
-            class="flex items-center justify-center flex-col w-full max-w-md mx-auto mt-6 sm:mt-20  p-8 rounded-lg ">
-            <form
-v-if="!emailSent" ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
+        <div v-if="!verified" class="flex items-center justify-center flex-col w-full max-w-xl mx-auto">
+            <form v-if="!emailSent" ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
                 @submit.prevent="handleSendEmail">
-                <h1 class="title">
+                <UiTitle>
                     {{ createNewPassword ? "Create" : "Reset" }} Password
-                </h1>
-                <p class="text-gray-400 text-xs mb-3 mt-1">
+                </UiTitle>
+                <UiParagraph size="sm" color="muted">
                     Enter your email to receive a verification code
-                </p>
+                </UiParagraph>
                 <shared-error-message :error="error" />
                 <div class="form-group">
-                    <input
-id="login-email-client" v-model="credentials.email" type="email" name="email" class="input"
-                        placeholder="Add your email..." autocomplete="false | unknown-autocomplete-value" tabindex="1"
-                        pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$" title="Please enter a valid email address" >
+                    <ui-input-field id="register-email-client" v-model="credentials.email!" :type='"email"' name="email"
+                        label="Email Address" title="Please enter a valid email address" tabindex="2" />
                 </div>
                 <div>
-                    <button
-v-if="!emailSent" type="button" class="btn btn-small bg-theme disabled:opacity-50"
-                        :disabled="loading" tabindex="2" @click.prevent="handleSendEmail">
+                    <UButton v-if="!emailSent" type="button" :disabled="loading" tabindex="2"
+                        @click.prevent="handleSendEmail">
                         Send
-                    </button>
+                    </UButton>
                 </div>
             </form>
 
-            <form
-v-if="emailSent" ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
+            <form v-if="emailSent" ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
                 @submit.prevent="handleSubmit">
-                <h1 class="title">
+                <UiTitle>
                     {{ createNewPassword ? "Create" : "Reset" }} Password
-                </h1>
+                </UiTitle>
                 <shared-error-message :error="error" />
                 <shared-success-message :message="success" />
                 <div class="form-group">
-                    <input
-id="login-email-client" v-model="credentials.email" type="email" name="email"
+                    <input id="login-email-client" v-model="credentials.email" type="email" name="email"
                         class="input disabled:bg-gray-100" placeholder="Add your email..."
                         autocomplete="false | unknown-autocomplete-value" tabindex="1"
                         pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$" title="Please enter a valid email address"
-                        disabled >
+                        disabled>
                 </div>
 
                 <div class="form-group">
-                    <input
-id="verify-client" v-model="credentials.verification" type="text" name="verify-client"
+                    <input id="verify-client" v-model="credentials.verification" type="text" name="verify-client"
                         class="input" placeholder="Write the verification code..."
-                        autocomplete="false | unknown-autocomplete-value" tabindex="2" >
+                        autocomplete="false | unknown-autocomplete-value" tabindex="2">
                 </div>
                 <div class="flex items-center gap-x-2">
-                    <button
-v-if="emailSent" type="button" class="btn btn-small bg-theme disabled:opacity-50"
+                    <button v-if="emailSent" type="button" class="btn btn-small bg-theme disabled:opacity-50"
                         :disabled="loading || countDown > 0" tabindex="2" @click.prevent="handleSendEmail">
                         Resend code <span v-if="countDown !== 0"> in {{ countDown }}</span>
                     </button>
-                    <button
-v-if="emailSent" type="submit" class="btn btn-small bg-theme disabled:opacity-50"
+                    <button v-if="emailSent" type="submit" class="btn btn-small bg-theme disabled:opacity-50"
                         :disabled="loading" tabindex="3" @click.prevent="handleSubmit">
                         Verify
                     </button>

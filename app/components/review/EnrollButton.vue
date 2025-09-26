@@ -1,7 +1,6 @@
 <template>
-    <button :disabled="isSubmitting || isEnrolled"
-        class="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-medium rounded-lg transition-colors"
-        @click="handleEnroll">
+    <UButton :disabled="isSubmitting || isEnrolled" class="inline-flex items-center transition-colors"
+        :variant="isEnrolled ? 'outline' : 'solid'" @click="handleEnroll">
         <svg v-if="isSubmitting" class="animate-spin -ml-1 mr-3 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg"
             fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
@@ -20,7 +19,7 @@
         </svg>
 
         {{ buttonText }}
-    </button>
+    </UButton>
 </template>
 
 <script setup lang="ts">

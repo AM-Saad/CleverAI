@@ -2,9 +2,8 @@
     <div>
         <Title>Shater AI | Your AI Companion</Title>
 
-        <section
-            class="my-xl flex w-full  shadow rounded-2xl p-lg bg-accent dark:bg-gray-800 animate-gradient h-screen">
-            <div class="flex flex-col  gap-2">
+        <section class="my-xl flex w-full">
+            <div class="flex flex-col gap-2">
                 <motion.h2 :initial="{ opacity: 0, scale: .9 }" :animate="{ opacity: 1, scale: 1 }" :transition="{
                     duration: 1.9,
                     scale: {
@@ -18,14 +17,14 @@
                 <UiTextGenerateEffect class="text-4xl font-medium my-4"
                     :words="'AI, Chatbot, Assistant, Helper, Support, Guide'" />
                 <router-link to="/auth/signup">
-                    <UiButton>Start Now</UiButton>
+                    <UButton>Start Now</UButton>
                 </router-link>
 
             </div>
         </section>
         <div class="wrapper">
             <section class="brands my-xl flex flex-wrap justify-between gap-3">
-                <!-- <div class="text-balance flex justify-center">
+                <div class="text-balance flex justify-center">
                     <h1 class="text-balance text-center text-2xl font-bold">
                         Flashcards, Chatbot, and custom quizzes — all tailored
                         to
@@ -33,7 +32,7 @@
                             make learning fun and effective
                         </UiTextHighlight>
                     </h1>
-                </div> -->
+                </div>
             </section>
 
         </div>
