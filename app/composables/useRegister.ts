@@ -42,7 +42,8 @@ export function useRegister(): useRegister {
       !credentials.value.name ||
       !credentials.value.email ||
       !credentials.value.password ||
-      !credentials.value.gender
+      !credentials.value.gender ||
+      !credentials.value.phone
     ) {
       error.value = "Please add all required information"
       return
@@ -64,7 +65,16 @@ export function useRegister(): useRegister {
 
       const data = await response.json()
       if (!response.ok) {
-        error.value = data.message
+        // Extract field-specific validation errors from nested structure
+        const fieldErrors = extractValidationErrors(data)
+
+        if (fieldErrors.length > 0) {
+          // Show specific field errors
+          error.value = fieldErrors.map(err => `${err.field}: ${err.userMessage}`).join(', ')
+        } else {
+          // Fallback to generic message
+          error.value = data.message || data.statusMessage || "Registration failed"
+        }
         return
       }
       success.value = data.message
@@ -76,6 +86,63 @@ export function useRegister(): useRegister {
     } finally {
       loading.value = false
     }
+  }
+
+  // Helper function to extract validation errors from nested response
+  interface ValidationError {
+    field: string
+    userMessage: string
+  }
+
+  const extractValidationErrors = (errorResponse: unknown): ValidationError[] => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const response = errorResponse as any
+
+      // Try the exact path from the API response: data.error.details.details.details
+      let validationDetails = response?.data?.error?.details?.details?.details
+
+      if (Array.isArray(validationDetails)) {
+        return validationDetails.filter((item: unknown): item is ValidationError => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const errorItem = item as any
+          return Boolean(
+            typeof errorItem?.field === 'string' &&
+            typeof errorItem?.userMessage === 'string'
+          )
+        })
+      }
+
+      // Fallback: try data.error.details.details
+      validationDetails = response?.data?.error?.details?.details
+      if (Array.isArray(validationDetails)) {
+        return validationDetails.filter((item: unknown): item is ValidationError => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const errorItem = item as any
+          return Boolean(
+            typeof errorItem?.field === 'string' &&
+            typeof errorItem?.userMessage === 'string'
+          )
+        })
+      }
+
+      // Final fallback: try data.error.details
+      validationDetails = response?.data?.error?.details
+      if (Array.isArray(validationDetails)) {
+        return validationDetails.filter((item: unknown): item is ValidationError => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const errorItem = item as any
+          return Boolean(
+            typeof errorItem?.field === 'string' &&
+            typeof errorItem?.userMessage === 'string'
+          )
+        })
+      }
+    } catch (e) {
+      console.warn('Failed to extract validation errors:', e)
+    }
+
+    return []
   }
 
   return {

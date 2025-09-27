@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { prisma } from "~~/server/prisma/utils"
+import { safeGetServerSession } from "~~/server/utils/safeGetServerSession"
 
 const SubscriptionSchema = z.object({
   endpoint: z.string().url(),
@@ -7,8 +8,17 @@ const SubscriptionSchema = z.object({
     auth: z.string(),
     p256dh: z.string(),
   }),
-  userId: z.string().optional(), // For testing purposes
+  userId: z.string().optional(), // For testing purposes - will be overridden by session
 })
+
+type SessionWithUser = {
+  user?: {
+    email?: string
+    id?: string
+    [key: string]: unknown
+  }
+  [key: string]: unknown
+} | null
 
 export default defineEventHandler(async (event) => {
   let body: unknown
@@ -18,9 +28,28 @@ export default defineEventHandler(async (event) => {
 
     const subscription = SubscriptionSchema.parse(body)
 
-    // TODO: Get user ID from session when auth is implemented
-    // const session = await getServerSession(event)
-    // const userId = session?.user?.id
+    // Get user ID from session
+    const session = await safeGetServerSession(event) as SessionWithUser
+    if (!session?.user?.email) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized - must be logged in to subscribe to notifications'
+      })
+    }
+
+    // Get user from database to get proper user ID
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!user) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'User not found'
+      })
+    }
+
+    const userId = user.id
 
     // Check if subscription already exists
     const existingSubscription = await prisma.notificationSubscription.findUnique({
@@ -40,7 +69,7 @@ export default defineEventHandler(async (event) => {
       data: {
         endpoint: subscription.endpoint,
         keys: subscription.keys,
-        userId: subscription.userId || null, // Use provided userId or null for anonymous
+        userId: user.id, // Use authenticated user ID
       },
     })
 

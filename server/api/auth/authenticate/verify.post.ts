@@ -1,76 +1,60 @@
 import { PrismaClient } from "@prisma/client"
 import { verifyAuthenticationResponse } from "@simplewebauthn/server" // Replace with your actual library
 import type { AuthenticatorTransportFuture } from "@simplewebauthn/types"
+import { ErrorFactory, withErrorHandling, getErrorContextFromEvent } from "../../../utils/standardErrorHandler"
 
 const prisma = new PrismaClient()
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
-  const session = event.context.session
-  const email = session?.email
-  const config = useRuntimeConfig()
+  return await withErrorHandling(async () => {
+    const context = getErrorContextFromEvent(event as unknown as Record<string, unknown>)
+    const body = await readBody(event)
+    const session = event.context.session
+    const email = session?.email
+    const config = useRuntimeConfig()
 
-  if (!email) {
-    event.res.statusCode = 400
-    return "No email found in session"
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { email },
-  })
-
-  if (!user) {
-    return {
-      status: 404,
-      body: {
-        message: "User not found",
-      },
+    if (!email) {
+      ErrorFactory.unauthorized("No email found in session", context)
     }
-  }
 
-  const credential = await prisma.publickeycreds.findFirst({
-    where: {
-      id: body.id,
-      passkey_user_id: user.id,
-    },
-  })
-  if (!credential) {
-    return {
-      status: 404,
-      body: {
-        message: "Credential not found",
-      },
+    const user = await prisma.user.findUnique({
+      where: { email },
+    })
+
+    if (!user) {
+      ErrorFactory.notFound("user", context)
     }
-  }
 
-  const public_key_uint8Array = new Uint8Array(credential.public_key!)
-  try {
+    const credential = await prisma.publickeycreds.findFirst({
+      where: {
+        id: body.id,
+        passkey_user_id: user!.id,
+      },
+    })
+
+    if (!credential) {
+      ErrorFactory.notFound("credential", context)
+    }
+
+    const public_key_uint8Array = new Uint8Array(credential!.public_key!)
+
     const verification = await verifyAuthenticationResponse({
       response: body,
       expectedChallenge: session?.challenge,
       expectedOrigin: config.public.APP_BASE_URL, // Replace with your origin
       expectedRPID: "localhost", // Replace with your domain
-      authenticator: {
-        ...credential,
-        credentialPublicKey: public_key_uint8Array,
-        counter: credential.counter,
-        transports: credential.transports as AuthenticatorTransportFuture[],
+      credential: {
+        id: credential!.id,
+        publicKey: public_key_uint8Array,
+        counter: credential!.counter,
+        transports: credential!.transports as AuthenticatorTransportFuture[],
       },
     })
 
     if (verification.verified) {
       return { verified: true }
     } else {
-      event.res.statusCode = 400
-      return "Verification failed"
+      ErrorFactory.validation("Authentication verification failed", { verification }, context)
     }
-  } catch (error) {
-    console.error(error)
-    return {
-      status: 500,
-      body: {
-        message: "Internal server error",
-      },
-    }
-  }
+  }, getErrorContextFromEvent(event as unknown as Record<string, unknown>))
 })

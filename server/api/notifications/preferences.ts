@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { prisma } from "~~/server/prisma/utils"
+import { safeGetServerSession } from "~~/server/utils/safeGetServerSession"
 
 const PreferencesSchema = z.object({
   cardDueEnabled: z.boolean(),
@@ -19,22 +20,41 @@ const PreferencesSchema = z.object({
   activeHoursEnd: z.string().regex(/^\d{2}:\d{2}$/).default('21:00'),
 })
 
+type SessionWithUser = {
+  user?: {
+    email?: string
+    id?: string
+    [key: string]: unknown
+  }
+  [key: string]: unknown
+} | null
+
 export default defineEventHandler(async (event) => {
   const method = getMethod(event)
 
   try {
-    // TODO: Get user ID from session when auth is implemented
-    // const session = await getServerSession(event)
-    // if (!session?.user) {
-    //   throw createError({
-    //     statusCode: 401,
-    //     statusMessage: 'Unauthorized'
-    //   })
-    // }
-    // const userId = session.user.id
+    // Get user ID from session
+    const session = await safeGetServerSession(event) as SessionWithUser
+    if (!session?.user?.email) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized'
+      })
+    }
 
-    // For now, use a placeholder user ID
-    const userId = "68a60683031c492736e6b49a" // TODO: Remove when auth is implemented
+    // Get user from database to get proper user ID
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
+
+    if (!user) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'User not found'
+      })
+    }
+
+    const userId = user.id
 
     if (method === 'GET') {
       // Get user's notification preferences

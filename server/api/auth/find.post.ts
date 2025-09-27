@@ -1,48 +1,40 @@
 // server/api/auth/find.post.ts
 import { PrismaClient } from "@prisma/client"
 import { z } from "zod"
+import { ErrorFactory, withErrorHandling, getErrorContextFromEvent } from "../../utils/standardErrorHandler"
+import { validateBody } from "../../utils/validationHandler"
 
 const prisma = new PrismaClient()
 
 const userSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email("Please enter a valid email address"),
 })
 
 export default defineEventHandler(async (event) => {
-  const result = await readValidatedBody(event, (body) =>
-    userSchema.safeParse(body),
-  )
-  if (!result.success) {
-    event.respondWith(
-      new Response(JSON.stringify(result.error.issues), { status: 422 }),
-    )
-  }
-  try {
-    // Extract user data from request body
-    const body = await readBody(event)
-    const { email } = body
+  const context = getErrorContextFromEvent(event as unknown as Record<string, unknown>)
+
+  return await withErrorHandling(async () => {
+    // Read and validate request body using standardized validation
+    const rawBody = await readBody(event)
+    const { email } = await validateBody({ body: rawBody }, userSchema)
+
     const existingUser = await prisma.user.findFirst({
       where: {
         email,
       },
-      include:{
+      include: {
         subscription: true,
         folders: true,
       }
     })
 
     if (!existingUser) {
-      setResponseStatus(event, 400)
-      return {
-        message: "User with this email does not exist.",
-      }
+      ErrorFactory.notFound("user", context)
     }
 
     return {
       body: existingUser,
       message: "User found successfully.",
     }
-  } catch (error) {
-    throw new Error("Registration failed")
-  }
+  }, context)
 })

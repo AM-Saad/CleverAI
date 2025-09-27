@@ -5,6 +5,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { NuxtAuthHandler } from "#auth"
 import bcrypt from "bcryptjs"
 import { verificationCode } from "~/utils/verificationCode.server"
+import { ErrorFactory } from "../../utils/standardErrorHandler"
 
 const prisma = new PrismaClient()
 const config = useRuntimeConfig()
@@ -90,7 +91,7 @@ export default NuxtAuthHandler({
         } })
         console.log("authorize -> user exist", user?.email)
         if (!user) {
-          throw new Error("Invalid Credentials - User Not Found")
+          throw new Error("Invalid credentials - user not found")
         }
 
         if (!user.email_verified) {
@@ -102,7 +103,6 @@ export default NuxtAuthHandler({
         if (!user.password) {
           const newVerificationCode = await verificationCode()
 
-
           await prisma.user.update({
             where: { email },
             data: {
@@ -110,16 +110,15 @@ export default NuxtAuthHandler({
             },
           })
           throw new Error(
-            `Invalid Credentials - Password not set up.  <br/> Please use the provider to login or create a password from <a class='font-bold' href='/auth/editPassword?newPassword=true'>here</a>`,
+            `Password not set up. Please use the provider to login or create a password from <a class='font-bold' href='/auth/editPassword?newPassword=true'>here</a>`,
           )
         }
 
         // Compare the provided password with the hashed password from the database
-
         const valid = await bcrypt.compare(password, user.password)
         console.log("authorize -> valid", valid)
         if (!valid) {
-          throw new Error("Invalid Credentials - Password Incorrect")
+          throw new Error("Invalid credentials - incorrect password")
         }
         // If the password is valid, return the user object
         console.log("authorize -> user", user.email)

@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs"
 import { z } from "zod"
 import jwt from "jsonwebtoken"
 import { isTokenExpired } from "~/utils/isTokenExpired.server"
+import { ErrorFactory, withErrorHandling, getErrorContextFromEvent } from "../../../utils/standardErrorHandler"
+
 const prisma = new PrismaClient()
 
 const userSchema = z.object({
@@ -20,41 +22,32 @@ const userSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
-  const result = await readValidatedBody(event, (body) =>
-    userSchema.safeParse(body),
-  ) // or `.parse` to directly throw an error
-  if (!result.success) {
-    event.respondWith(
-      new Response(
-        JSON.stringify({ message: result.error.issues[0].message }),
-        {
-          status: 422,
-        },
-      ),
-    )
-  }
-  try {
-    const body = await readBody(event)
+  return await withErrorHandling(async () => {
+    const context = getErrorContextFromEvent(event as unknown as Record<string, unknown>)
 
+    // Validate request body
+    const result = await readValidatedBody(event, (body) =>
+      userSchema.safeParse(body),
+    )
+
+    if (!result.success) {
+      ErrorFactory.validation("Invalid password data", result.error.issues, context)
+    }
+
+    const body = await readBody(event)
     const { password, confirmPassword } = body
     const authHeader = event.headers.get("Authorization")
     const token = authHeader?.split(" ")[1] || null
 
     if (!authHeader || !token) {
-      setResponseStatus(event, 401)
-      return {
-        message: "Unauthorized - Missing token",
-      }
+      ErrorFactory.unauthorized("Missing authorization token", context)
     }
 
-    const decoded = jwt.decode(token) as jwt.JwtPayload
+    const decoded = jwt.decode(token!) as jwt.JwtPayload
     if (isTokenExpired(decoded as jwt.JwtPayload)) {
-      throw createError({
-        status: 401,
-        statusMessage: "Unauthorized - Token expired",
-        message: "Unauthorized - Token expired",
-      })
+      ErrorFactory.unauthorized("Token has expired", context)
     }
+
     const email = decoded.email
     const existingUser = await prisma.user.findFirst({
       where: {
@@ -63,27 +56,15 @@ export default defineEventHandler(async (event) => {
     })
 
     if (!existingUser) {
-      throw createError({
-        status: 404,
-        statusMessage: "User not found",
-        message: "User not found",
-      })
+      ErrorFactory.notFound("user", context)
     }
 
-    if (decoded.password_verification !== existingUser.password_verification) {
-      throw createError({
-        status: 401,
-        statusMessage: "Unauthorized",
-        message: "Unauthorized",
-      })
+    if (decoded.password_verification !== existingUser!.password_verification) {
+      ErrorFactory.unauthorized("Invalid verification token", context)
     }
 
     if (password !== confirmPassword) {
-      throw createError({
-        status: 400,
-        statusMessage: "Passwords do not match",
-        message: "Passwords do not match",
-      })
+      ErrorFactory.validation("Passwords do not match", { field: "confirmPassword" }, context)
     }
 
     const hashedPassword = bcrypt.hashSync(password, 10)
@@ -97,8 +78,7 @@ export default defineEventHandler(async (event) => {
         password_verification: null,
       },
     })
+
     return user
-  } catch (error) {
-    return error
-  }
+  }, getErrorContextFromEvent(event as unknown as Record<string, unknown>))
 })

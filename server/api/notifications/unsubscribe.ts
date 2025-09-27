@@ -1,30 +1,55 @@
 import { z } from 'zod'
 import { prisma } from "~~/server/prisma/utils"
+import { safeGetServerSession } from "~~/server/utils/safeGetServerSession"
 
 const UnsubscribeSchema = z.object({
   endpoint: z.string().url(),
 })
+
+type SessionWithUser = {
+  user?: {
+    email?: string
+    id?: string
+    [key: string]: unknown
+  }
+  [key: string]: unknown
+} | null
 
 export default defineEventHandler(async (event) => {
   try {
     const body = await readBody(event)
     const { endpoint } = UnsubscribeSchema.parse(body)
 
-    // TODO: Add authentication check when auth is implemented
-    // const session = await getServerSession(event)
-    // if (!session?.user) {
-    //   throw createError({
-    //     statusCode: 401,
-    //     statusMessage: 'Unauthorized'
-    //   })
-    // }
+    // Get user ID from session
+    const session = await safeGetServerSession(event) as SessionWithUser
+    if (!session?.user?.email) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'Unauthorized - must be logged in to unsubscribe'
+      })
+    }
 
-    // Find and delete the subscription
-    const deletedSubscription = await prisma.notificationSubscription.delete({
-      where: { endpoint }
-    }).catch(() => null) // Handle case where subscription doesn't exist
+    // Get user from database to get proper user ID
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email }
+    })
 
-    if (!deletedSubscription) {
+    if (!user) {
+      throw createError({
+        statusCode: 401,
+        statusMessage: 'User not found'
+      })
+    }
+
+    // Find and delete the subscription (only allow users to unsubscribe their own subscriptions)
+    const deletedSubscription = await prisma.notificationSubscription.deleteMany({
+      where: {
+        endpoint,
+        userId: user.id // Ensure users can only unsubscribe their own subscriptions
+      }
+    })
+
+    if (deletedSubscription.count === 0) {
       return {
         success: true,
         message: "Subscription not found or already removed",
@@ -34,7 +59,7 @@ export default defineEventHandler(async (event) => {
     return {
       success: true,
       message: "Subscription removed successfully",
-      data: deletedSubscription,
+      data: { removedCount: deletedSubscription.count },
     }
   } catch (error) {
     console.error("Failed to remove subscription:", error)

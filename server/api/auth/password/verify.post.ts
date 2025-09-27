@@ -2,47 +2,40 @@
 import jwt from "jsonwebtoken"
 import { PrismaClient } from "@prisma/client"
 import { verificationCode } from "~/utils/verificationCode.server"
+import { ErrorFactory, withErrorHandling, getErrorContextFromEvent } from "../../../utils/standardErrorHandler"
 
 const prisma = new PrismaClient()
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event)
-  const { email, verification } = body
+  return await withErrorHandling(async () => {
+    const context = getErrorContextFromEvent(event as unknown as Record<string, unknown>)
+    const body = await readBody(event)
+    const { email, verification } = body
 
-  if (!email || !verification) {
-    setResponseStatus(event, 400)
-    return {
-      message: "Missing email or verification",
+    if (!email || !verification) {
+      ErrorFactory.validation("Missing email or verification code", { email, verification }, context)
     }
-  }
 
-  try {
     const user = await prisma.user.findUnique({
       where: { email },
     })
 
     if (!user) {
-      setResponseStatus(event, 404)
-      return {
-        message: "User not found",
-      }
+      ErrorFactory.notFound("user", context)
     }
 
     if (
-      !user.password_verification ||
-      user.password_verification !== verification
+      !user!.password_verification ||
+      user!.password_verification !== verification
     ) {
-      setResponseStatus(event, 400)
-      return {
-        message: "Verification does not match",
-      }
+      ErrorFactory.validation("Verification code does not match", { verification }, context)
     }
 
     const newVerificationCode = await verificationCode()
 
     const token = jwt.sign(
       {
-        email: user.email,
+        email: user!.email,
         password_verification: newVerificationCode,
       },
       process.env.AUTH_SECRET!,
@@ -64,8 +57,5 @@ export default defineEventHandler(async (event) => {
         token,
       },
     }
-  } catch (error) {
-    console.error('Password verification error:', error)
-    throw new Error("Failed to verify authentication response")
-  }
+  }, getErrorContextFromEvent(event as unknown as Record<string, unknown>))
 })

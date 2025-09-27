@@ -2,33 +2,42 @@
 import { sendEmail } from "~/utils/resend.server"
 import { verificationCode } from "~/utils/verificationCode.server"
 import { PrismaClient } from "@prisma/client"
+import { ErrorFactory, withErrorHandling, getErrorContextFromEvent } from "../../../utils/standardErrorHandler"
+import { validateBody } from "../../../utils/validationHandler"
+import { z } from "zod"
+
 const prisma = new PrismaClient()
+
+const verificationSchema = z.object({
+  email: z.string().email("Please enter a valid email address")
+})
+
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event) // Get request body
+  const context = getErrorContextFromEvent(event as unknown as Record<string, unknown>)
 
-  const { email } = body
+  return await withErrorHandling(async () => {
+    // Read and validate request body using standardized validation
+    const rawBody = await readBody(event)
+    const { email } = await validateBody({ body: rawBody }, verificationSchema)
 
-  if (!email) {
-    setResponseStatus(event, 400)
-    return {
-      message: "Missing email",
-    }
-  }
-
-  try {
     const user = await prisma.user.findUnique({
       where: { email },
     })
 
     if (!user) {
-      setResponseStatus(event, 404)
-      return {
-        message: "User not found",
-      }
+      ErrorFactory.notFound("user", context)
     }
 
     const newVerificationCode = await verificationCode()
-    await sendEmail(email, newVerificationCode)
+
+    try {
+      await sendEmail(email, newVerificationCode)
+    } catch (emailError) {
+      ErrorFactory.externalService("Email", emailError, {
+        ...context,
+        metadata: { ...context.metadata, service: "email" }
+      })
+    }
 
     await prisma.user.update({
       where: { email },
@@ -41,8 +50,5 @@ export default defineEventHandler(async (event) => {
     return {
       message: "Verification code has been sent to your email",
     }
-  } catch (error) {
-    console.error('Verification error:', error)
-    throw new Error("Failed to send verification email")
-  }
+  }, context)
 })
