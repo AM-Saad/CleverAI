@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { requireRole } from "~/../server/middleware/auth"
+import { Errors, success } from '~~/server/utils/error'
 
 const DebugUpdateSchema = z.object({
   cardId: z.string().min(1),
@@ -15,15 +16,20 @@ const DebugUpdateSchema = z.object({
 export default defineEventHandler(async (event) => {
   // Only allow in development
   if (process.env.NODE_ENV !== 'development') {
-    throw createError({
-      statusCode: 404,
-      statusMessage: 'Not found'
-    })
+    throw Errors.notFound('endpoint')
   }
 
   try {
     const body = await readBody(event)
-    const validatedBody = DebugUpdateSchema.parse(body)
+    let validatedBody
+    try {
+      validatedBody = DebugUpdateSchema.parse(body)
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        throw Errors.badRequest('Invalid debug parameters', e.issues.map(issue => ({ path: issue.path, message: issue.message })))
+      }
+      throw Errors.badRequest('Invalid debug parameters')
+    }
 
     const user = await requireRole(event, ["USER"])
     const prisma = event.context.prisma
@@ -37,10 +43,7 @@ export default defineEventHandler(async (event) => {
     })
 
     if (!cardReview) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Card not found or access denied'
-      })
+      throw Errors.notFound('card')
     }
 
     // Prepare update data
@@ -83,13 +86,17 @@ export default defineEventHandler(async (event) => {
     }
 
     // Update the card
-    const updatedCard = await prisma.cardReview.update({
-      where: { id: validatedBody.cardId },
-      data: updateData
-    })
+    let updatedCard
+    try {
+      updatedCard = await prisma.cardReview.update({
+        where: { id: validatedBody.cardId },
+        data: updateData
+      })
+    } catch {
+      throw Errors.server('Failed to update card debug values')
+    }
 
-    return {
-      success: true,
+    return success({
       message: 'Card debug values updated successfully',
       updatedValues: {
         easeFactor: updatedCard.easeFactor,
@@ -100,26 +107,15 @@ export default defineEventHandler(async (event) => {
         lastReviewedAt: updatedCard.lastReviewedAt?.toISOString(),
         lastGrade: updatedCard.lastGrade
       }
-    }
+    })
 
   } catch (error: unknown) {
     console.error('Debug update error:', error)
 
     if (error instanceof z.ZodError) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid debug parameters',
-        data: error.issues
-      })
+      throw Errors.badRequest('Invalid debug parameters', error.issues.map(issue => ({ path: issue.path, message: issue.message })))
     }
-
-    if (error && typeof error === 'object' && 'statusCode' in error) {
-      throw error
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Failed to update card debug values'
-    })
+    if (error && typeof error === 'object' && 'statusCode' in error) throw error
+    throw Errors.server('Failed to update card debug values')
   }
 })

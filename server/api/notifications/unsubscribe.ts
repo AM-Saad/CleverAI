@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import { prisma } from "~~/server/prisma/utils"
 import { safeGetServerSession } from "~~/server/utils/safeGetServerSession"
+import { Errors, success } from '~~/server/utils/error'
 
 const UnsubscribeSchema = z.object({
   endpoint: z.string().url(),
@@ -16,65 +17,39 @@ type SessionWithUser = {
 } | null
 
 export default defineEventHandler(async (event) => {
+  const raw = await readBody(event)
+  let parsed
   try {
-    const body = await readBody(event)
-    const { endpoint } = UnsubscribeSchema.parse(body)
-
-    // Get user ID from session
-    const session = await safeGetServerSession(event) as SessionWithUser
-    if (!session?.user?.email) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Unauthorized - must be logged in to unsubscribe'
-      })
+    parsed = UnsubscribeSchema.parse(raw)
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      throw Errors.badRequest('Invalid unsubscribe data', e.issues.map(issue => ({ path: issue.path, message: issue.message })))
     }
-
-    // Get user from database to get proper user ID
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    })
-
-    if (!user) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'User not found'
-      })
-    }
-
-    // Find and delete the subscription (only allow users to unsubscribe their own subscriptions)
-    const deletedSubscription = await prisma.notificationSubscription.deleteMany({
-      where: {
-        endpoint,
-        userId: user.id // Ensure users can only unsubscribe their own subscriptions
-      }
-    })
-
-    if (deletedSubscription.count === 0) {
-      return {
-        success: true,
-        message: "Subscription not found or already removed",
-      }
-    }
-
-    return {
-      success: true,
-      message: "Subscription removed successfully",
-      data: { removedCount: deletedSubscription.count },
-    }
-  } catch (error) {
-    console.error("Failed to remove subscription:", error)
-
-    if (error instanceof z.ZodError) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid unsubscribe data',
-        data: error.issues
-      })
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: "Internal Server Error",
-    })
+    throw Errors.badRequest('Invalid unsubscribe data')
   }
+
+  const session = await safeGetServerSession(event) as SessionWithUser
+  if (!session?.user?.email) {
+    throw Errors.unauthorized('Must be logged in to unsubscribe')
+  }
+
+  const user = await prisma.user.findUnique({ where: { email: session.user.email } })
+  if (!user) {
+    throw Errors.unauthorized('User not found')
+  }
+
+  let deletedSubscription
+  try {
+    deletedSubscription = await prisma.notificationSubscription.deleteMany({
+      where: { endpoint: parsed.endpoint, userId: user.id }
+    })
+  } catch {
+    throw Errors.server('Failed to remove subscription')
+  }
+
+  if (deletedSubscription.count === 0) {
+    return success({ message: 'Subscription not found or already removed' })
+  }
+
+  return success({ message: 'Subscription removed successfully', removedCount: deletedSubscription.count })
 })

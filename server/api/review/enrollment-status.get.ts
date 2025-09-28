@@ -1,5 +1,6 @@
 import { requireRole } from "~/../server/middleware/auth"
 import { z } from 'zod'
+import { Errors, success } from '~~/server/utils/error'
 
 const EnrollmentStatusRequestSchema = z.object({
   resourceIds: z.array(z.string()),
@@ -11,46 +12,42 @@ const EnrollmentStatusResponseSchema = z.object({
 })
 
 export default defineEventHandler(async (event) => {
+  // Parse query
+  const rawQuery = getQuery(event)
+  const resourceIds = typeof rawQuery.resourceIds === 'string'
+    ? rawQuery.resourceIds.split(',')
+    : Array.isArray(rawQuery.resourceIds)
+      ? rawQuery.resourceIds
+      : []
+  let validatedQuery
   try {
-    // Parse and validate query parameters
-    const query = getQuery(event)
-    const resourceIds = typeof query.resourceIds === 'string'
-      ? query.resourceIds.split(',')
-      : Array.isArray(query.resourceIds)
-        ? query.resourceIds
-        : []
-
-    const validatedQuery = EnrollmentStatusRequestSchema.parse({
+    validatedQuery = EnrollmentStatusRequestSchema.parse({
       resourceIds,
-      resourceType: query.resourceType
+      resourceType: rawQuery.resourceType
     })
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      throw Errors.badRequest('Invalid enrollment query', e.issues.map(issue => ({ path: issue.path, message: issue.message })))
+    }
+    throw Errors.badRequest('Invalid enrollment query')
+  }
 
-    // Get authenticated user
-    const user = await requireRole(event, ["USER"])
-    const prisma = event.context.prisma
+  const user = await requireRole(event, ["USER"])
+  const prisma = event.context.prisma
 
-    // Check enrollment status for each resource
-    const enrollments: Record<string, boolean> = {}
+  const enrollments: Record<string, boolean> = {}
 
-    for (const resourceId of validatedQuery.resourceIds) {
+  for (const resourceId of validatedQuery.resourceIds) {
+    try {
       const existingCard = await prisma.cardReview.findFirst({
-        where: {
-          userId: user.id,
-          cardId: resourceId
-        }
+        where: { userId: user.id, cardId: resourceId }
       })
       enrollments[resourceId] = !!existingCard
+    } catch {
+      throw Errors.server('Failed to check enrollment status')
     }
-
-    return EnrollmentStatusResponseSchema.parse({
-      enrollments
-    })
-
-  } catch (error: unknown) {
-    console.error('Error checking enrollment status:', error)
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Failed to check enrollment status'
-    })
   }
+
+  const payload = EnrollmentStatusResponseSchema.parse({ enrollments })
+  return success(payload)
 })

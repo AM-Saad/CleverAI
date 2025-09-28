@@ -3,6 +3,7 @@ import webPush from 'web-push'
 import { z } from 'zod'
 import { prisma } from '~~/server/prisma/utils'
 import type { NotificationSubscription } from '@prisma/client'
+import { Errors, success } from '~~/server/utils/error'
 
 type TestResult = {
   success: boolean
@@ -22,10 +23,7 @@ const TestNotificationSchema = z.object({
 export default defineEventHandler(async (event) => {
   // Only allow in development
   if (process.env.NODE_ENV !== 'development') {
-    throw createError({
-      statusCode: 404,
-      statusMessage: 'Not found'
-    })
+    throw Errors.notFound('endpoint')
   }
 
   webPush.setVapidDetails(
@@ -35,9 +33,16 @@ export default defineEventHandler(async (event) => {
   )
 
   try {
-    // Validate request body
     const body = await readBody(event)
-    const validatedNotification = TestNotificationSchema.parse(body)
+    let validatedNotification
+    try {
+      validatedNotification = TestNotificationSchema.parse(body)
+    } catch (e) {
+      if (e instanceof z.ZodError) {
+        throw Errors.badRequest('Invalid notification data', e.issues.map(issue => ({ path: issue.path, message: issue.message })))
+      }
+      throw Errors.badRequest('Invalid notification data')
+    }
 
     console.log('🧪 Test notification request:', validatedNotification)
 
@@ -47,15 +52,12 @@ export default defineEventHandler(async (event) => {
     })
 
     if (subscriptions.length === 0) {
-      return {
-        success: true,
+      return success({
         message: 'No active subscriptions found',
-        data: {
-          sent: 0,
-          failed: 0,
-          subscriptions: 0
-        }
-      }
+        sent: 0,
+        failed: 0,
+        subscriptions: 0
+      })
     }
 
     // Prepare notification payload
@@ -100,32 +102,20 @@ export default defineEventHandler(async (event) => {
 
     console.log(`🧪 Test notification results: ${sent} sent, ${failed} failed`)
 
-    return {
-      success: true,
+    return success({
       message: `Test notification sent to ${sent} of ${subscriptions.length} subscriptions`,
-      data: {
-        sent,
-        failed,
-        subscriptions: subscriptions.length,
-        results: results.map((r: PromiseSettledResult<TestResult>) => r.status === 'fulfilled' ? r.value : { success: false, error: 'Promise rejected' })
-      }
-    }
+      sent,
+      failed,
+      subscriptions: subscriptions.length,
+      results: results.map((r: PromiseSettledResult<TestResult>) => r.status === 'fulfilled' ? r.value : { success: false, error: 'Promise rejected' })
+    })
 
   } catch (error: unknown) {
     console.error('Test notification error:', error)
-
     if (error instanceof z.ZodError) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid notification data',
-        data: error.issues
-      })
+      throw Errors.badRequest('Invalid notification data', error.issues.map(issue => ({ path: issue.path, message: issue.message })))
     }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Failed to send test notification',
-      data: error instanceof Error ? error.message : 'Unknown error'
-    })
+    if (error && typeof error === 'object' && 'statusCode' in error) throw error
+    throw Errors.server('Failed to send test notification')
   }
 })

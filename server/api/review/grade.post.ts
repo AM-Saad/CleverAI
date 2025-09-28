@@ -1,54 +1,48 @@
 import { GradeCardRequestSchema, GradeCardResponseSchema } from '~/shared/review.contract'
 import { requireRole } from "~/../server/middleware/auth"
-import { ErrorFactory, ErrorType } from "~/services/ErrorFactory"
 import { scheduleCardDueNotification } from "~~/server/services/NotificationScheduler"
-import { ZodError } from 'zod'
+import { ZodError, type z } from 'zod'
+import { Errors, success } from '~~/server/utils/error'
 
 export default defineEventHandler(async (event) => {
+  // Parse & validate body
+  let validatedBody: z.infer<typeof GradeCardRequestSchema>
   try {
-    // Parse and validate request body
-    const body = await readBody(event)
-    const validatedBody = GradeCardRequestSchema.parse(body)
-
-    // Get authenticated user
-    const user = await requireRole(event, ["USER"])
-    const prisma = event.context.prisma
-
-    // Find the card review entry
-    const cardReview = await prisma.cardReview.findFirst({
-      where: {
-        id: validatedBody.cardId,
-        userId: user.id
-      }
-    })
-
-    if (!cardReview) {
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Card not found or access denied'
-      })
+    validatedBody = GradeCardRequestSchema.parse(await readBody(event))
+  } catch (e) {
+    if (e instanceof ZodError) {
+      throw Errors.badRequest('Invalid request data', e.issues.map(issue => ({ path: issue.path, message: issue.message })))
     }
+    throw Errors.badRequest('Invalid request data')
+  }
 
-    // Parse grade to number for calculations
-    const grade = parseInt(validatedBody.grade)
+  const user = await requireRole(event, ["USER"])
+  const prisma = event.context.prisma
 
-    // SM-2 Algorithm implementation
-    const { easeFactor, intervalDays, repetitions } = calculateSM2({
-      currentEF: cardReview.easeFactor,
-      currentInterval: cardReview.intervalDays,
-      currentRepetitions: cardReview.repetitions,
-      grade
-    })
+  // Fetch card review ensuring ownership
+  const cardReview = await prisma.cardReview.findFirst({
+    where: { id: validatedBody.cardId, userId: user.id }
+  })
+  if (!cardReview) {
+    throw Errors.notFound('card')
+  }
 
-    // Calculate next review date
-    const nextReviewAt = new Date()
-    nextReviewAt.setDate(nextReviewAt.getDate() + intervalDays)
+  const grade = parseInt(validatedBody.grade)
 
-    // Update streak based on grade
-    const newStreak = grade >= 3 ? cardReview.streak + 1 : 0
+  const { easeFactor, intervalDays, repetitions } = calculateSM2({
+    currentEF: cardReview.easeFactor,
+    currentInterval: cardReview.intervalDays,
+    currentRepetitions: cardReview.repetitions,
+    grade
+  })
 
-    // Update the card review
-    const updatedCard = await prisma.cardReview.update({
+  const nextReviewAt = new Date()
+  nextReviewAt.setDate(nextReviewAt.getDate() + intervalDays)
+  const newStreak = grade >= 3 ? cardReview.streak + 1 : 0
+
+  let updatedCard
+  try {
+    updatedCard = await prisma.cardReview.update({
       where: { id: validatedBody.cardId },
       data: {
         easeFactor,
@@ -60,57 +54,33 @@ export default defineEventHandler(async (event) => {
         streak: newStreak
       }
     })
-
-    // Schedule notification for the new due date (async, don't wait)
-    scheduleCardDueNotification({
-      userId: user.id,
-      cardId: validatedBody.cardId,
-      scheduledFor: nextReviewAt,
-      content: {
-        title: '📚 Card Review Due',
-        body: 'You have a card ready for review!',
-        icon: '/icons/icon-192.png',
-        tag: `card-due-${validatedBody.cardId}`,
-        data: { cardId: validatedBody.cardId, type: 'card-due' }
-      }
-    })
-      .catch((error: unknown) => {
-        console.error('Failed to schedule card due notification:', error)
-        // Don't fail the main request if notification scheduling fails
-      })
-
-    return GradeCardResponseSchema.parse({
-      success: true,
-      nextReviewAt: updatedCard.nextReviewAt.toISOString(),
-      intervalDays: updatedCard.intervalDays,
-      easeFactor: updatedCard.easeFactor,
-      message: 'Card graded successfully'
-    })
-
-  } catch (error: unknown) {
-    console.error('Error grading card:', error)
-
-    // Handle validation errors
-    if (error instanceof ZodError) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid request data',
-        data: error.issues
-      })
-    }
-
-    // Handle createError instances
-    if (error && typeof error === 'object' && 'statusCode' in error) {
-      throw error
-    }
-
-    // Handle unexpected errors
-    throw ErrorFactory.create(
-      ErrorType.Validation,
-      "Review",
-      "Failed to grade card"
-    )
+  } catch {
+    throw Errors.server('Failed to persist card grade')
   }
+
+  // Fire-and-forget notification scheduling
+  scheduleCardDueNotification({
+    userId: user.id,
+    cardId: validatedBody.cardId,
+    scheduledFor: nextReviewAt,
+    content: {
+      title: '📚 Card Review Due',
+      body: 'You have a card ready for review!',
+      icon: '/icons/icon-192.png',
+      tag: `card-due-${validatedBody.cardId}`,
+      data: { cardId: validatedBody.cardId, type: 'card-due' }
+    }
+  }).catch(err => console.error('Failed to schedule card due notification:', err))
+
+  const payload = GradeCardResponseSchema.parse({
+    success: true,
+    nextReviewAt: updatedCard.nextReviewAt.toISOString(),
+    intervalDays: updatedCard.intervalDays,
+    easeFactor: updatedCard.easeFactor,
+    message: 'Card graded successfully'
+  })
+
+  return success(payload)
 })
 
 // SM-2 Algorithm implementation

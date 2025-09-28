@@ -1,163 +1,129 @@
+import { z } from 'zod'
 import { ReviewQueueResponseSchema } from '~/shared/review.contract'
 import { requireRole } from "~/../server/middleware/auth"
-import { ErrorFactory, ErrorType } from "~/services/ErrorFactory"
+import { Errors, success } from '~~/server/utils/error'
+
+// Query validation
+const querySchema = z.object({
+  folderId: z.string().min(1).optional(),
+  limit: z.coerce.number().min(1).max(100).default(20)
+})
 
 export default defineEventHandler(async (event) => {
+  // Auth
+  const user = await requireRole(event, ["USER"]) // will throw standardized auth error on failure
+  const prisma = event.context.prisma
+
+  // Parse & validate query
+  let parsedQuery: z.infer<typeof querySchema>
   try {
-    // Get authenticated user
-    const user = await requireRole(event, ["USER"])
-    const prisma = event.context.prisma
-
-    // Get query parameters
-    const query = getQuery(event)
-    const folderId = query.folderId as string | undefined
-    const limit = parseInt(query.limit as string) || 20
-
-    // Build where clause
-    const whereClause = {
-      userId: user.id,
-      nextReviewAt: {
-        lte: new Date() // Due for review
-      },
-      ...(folderId ? { folderId } : {})
+    parsedQuery = querySchema.parse(getQuery(event))
+  } catch (e) {
+    if (e instanceof z.ZodError) {
+      throw Errors.badRequest('Invalid query parameters', e.issues.map(issue => ({ path: issue.path, message: issue.message })))
     }
+    throw Errors.badRequest('Invalid query parameters')
+  }
+  const { folderId, limit } = parsedQuery
 
-    // Get due cards with material details
-    const cardReviews = await prisma.cardReview.findMany({
+  // Build where clause
+  const whereClause = {
+    userId: user.id,
+    nextReviewAt: { lte: new Date() },
+    ...(folderId ? { folderId } : {})
+  }
+
+  // Fetch due cardReviews
+  let cardReviews
+  try {
+    cardReviews = await prisma.cardReview.findMany({
       where: whereClause,
       take: limit,
-      orderBy: {
-        nextReviewAt: 'asc' // Review oldest due cards first
-      }
+      orderBy: { nextReviewAt: 'asc' }
     })
+  } catch {
+    throw Errors.server('Failed to load review queue')
+  }
 
-    // Get both materials and flashcards for the cards
-    const cardIds = cardReviews.map(card => card.cardId)
-    const materials = await prisma.material.findMany({
-      where: {
-        id: { in: cardIds }
-      },
-      include: {
-        folder: true
-      }
+  const cardIds = cardReviews.map(c => c.cardId)
+
+  // Fetch materials & flashcards in parallel
+  const [materials, flashcards] = await Promise.all([
+    prisma.material.findMany({
+      where: { id: { in: cardIds } },
+      include: { folder: true }
+    }),
+    prisma.flashcard.findMany({
+      where: { id: { in: cardIds } },
+      include: { folder: true }
     })
+  ])
 
-    const flashcards = await prisma.flashcard.findMany({
-      where: {
-        id: { in: cardIds }
-      },
-      include: {
-        folder: true
-      }
-    })
+  const materialMap = new Map(materials.map(m => [m.id, m]))
+  const flashcardMap = new Map(flashcards.map(f => [f.id, f]))
 
-    // Create lookup maps
-    const materialMap = new Map(materials.map(m => [m.id, m]))
-    const flashcardMap = new Map(flashcards.map(f => [f.id, f]))
-
-    // Transform to response format using new polymorphic contract
-    const cards = cardReviews
-      .map(cardReview => {
-        const resourceType = cardReview.resourceType.toLowerCase() as 'material' | 'flashcard'
-
-        if (resourceType === 'material') {
-          const material = materialMap.get(cardReview.cardId)
-          if (!material) return null
-
-          return {
-            cardId: cardReview.id,
-            resourceType: 'material' as const,
-            resourceId: cardReview.cardId,
-            resource: {
-              title: material.title,
-              content: material.content,
-              tags: [],
-              folderId: material.folderId
-            },
-            reviewState: {
-              repetitions: cardReview.repetitions,
-              easeFactor: cardReview.easeFactor,
-              intervalDays: cardReview.intervalDays,
-              nextReviewAt: cardReview.nextReviewAt.toISOString(),
-              lastReviewedAt: cardReview.lastReviewedAt?.toISOString()
-            }
-          }
-        } else {
-          const flashcard = flashcardMap.get(cardReview.cardId)
-          if (!flashcard) return null
-
-          return {
-            cardId: cardReview.id,
-            resourceType: 'flashcard' as const,
-            resourceId: cardReview.cardId,
-            resource: {
-              front: flashcard.front,
-              back: flashcard.back,
-              hint: undefined,
-              tags: [],
-              folderId: flashcard.folderId
-            },
-            reviewState: {
-              repetitions: cardReview.repetitions,
-              easeFactor: cardReview.easeFactor,
-              intervalDays: cardReview.intervalDays,
-              nextReviewAt: cardReview.nextReviewAt.toISOString(),
-              lastReviewedAt: cardReview.lastReviewedAt?.toISOString()
-            }
+  const cards = cardReviews
+    .map(cardReview => {
+      const resourceType = cardReview.resourceType.toLowerCase() as 'material' | 'flashcard'
+      if (resourceType === 'material') {
+        const material = materialMap.get(cardReview.cardId)
+        if (!material) return null
+        return {
+          cardId: cardReview.id,
+          resourceType: 'material' as const,
+          resourceId: cardReview.cardId,
+          resource: {
+            title: material.title,
+            content: material.content,
+            tags: [],
+            folderId: material.folderId
+          },
+          reviewState: {
+            repetitions: cardReview.repetitions,
+            easeFactor: cardReview.easeFactor,
+            intervalDays: cardReview.intervalDays,
+            nextReviewAt: cardReview.nextReviewAt.toISOString(),
+            lastReviewedAt: cardReview.lastReviewedAt?.toISOString()
           }
         }
-      })
-      .filter(Boolean)
-
-    // Calculate stats
-    const totalCards = await prisma.cardReview.count({
-      where: {
-        userId: user.id,
-        ...(folderId ? { folderId } : {})
+      } else {
+        const flashcard = flashcardMap.get(cardReview.cardId)
+        if (!flashcard) return null
+        return {
+          cardId: cardReview.id,
+          resourceType: 'flashcard' as const,
+          resourceId: cardReview.cardId,
+          resource: {
+            front: flashcard.front,
+            back: flashcard.back,
+            hint: undefined,
+            tags: [],
+            folderId: flashcard.folderId
+          },
+          reviewState: {
+            repetitions: cardReview.repetitions,
+            easeFactor: cardReview.easeFactor,
+            intervalDays: cardReview.intervalDays,
+            nextReviewAt: cardReview.nextReviewAt.toISOString(),
+            lastReviewedAt: cardReview.lastReviewedAt?.toISOString()
+          }
+        }
       }
     })
+    .filter(Boolean)
 
-    const newCards = await prisma.cardReview.count({
-      where: {
-        userId: user.id,
-        repetitions: 0,
-        ...(folderId ? { folderId } : {})
-      }
-    })
+  // Stats (execute in parallel where possible)
+  const [totalCards, newCards, learningCards] = await Promise.all([
+    prisma.cardReview.count({ where: { userId: user.id, ...(folderId ? { folderId } : {}) } }),
+    prisma.cardReview.count({ where: { userId: user.id, repetitions: 0, ...(folderId ? { folderId } : {}) } }),
+    prisma.cardReview.count({ where: { userId: user.id, repetitions: { gt: 0, lt: 3 }, ...(folderId ? { folderId } : {}) } })
+  ])
+  const dueCards = cardReviews.length
 
-    const dueCards = cardReviews.length
+  const payload = ReviewQueueResponseSchema.parse({
+    cards,
+    stats: { total: totalCards, new: newCards, due: dueCards, learning: learningCards }
+  })
 
-    const learningCards = await prisma.cardReview.count({
-      where: {
-        userId: user.id,
-        repetitions: { gt: 0, lt: 3 },
-        ...(folderId ? { folderId } : {})
-      }
-    })
-
-    return ReviewQueueResponseSchema.parse({
-      cards,
-      stats: {
-        total: totalCards,
-        new: newCards,
-        due: dueCards,
-        learning: learningCards
-      }
-    })
-
-  } catch (error: unknown) {
-    console.error('Error fetching review queue:', error)
-
-    // Handle createError instances
-    if (error && typeof error === 'object' && 'statusCode' in error) {
-      throw error
-    }
-
-    // Handle unexpected errors
-    throw ErrorFactory.create(
-      ErrorType.Validation,
-      "Review",
-      "Failed to fetch review queue"
-    )
-  }
+  return success(payload)
 })
