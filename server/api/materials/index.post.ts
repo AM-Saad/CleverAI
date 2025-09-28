@@ -1,34 +1,28 @@
 import { requireRole } from '~/../server/middleware/auth'
 import { CreateMaterialDTO, MaterialSchema } from '~~/shared/material.contract'
-import { ResponseBuilder } from '../../utils/standardAPIResponse'
-import { ErrorFactory, getErrorContextFromEvent } from '../../utils/standardErrorHandler'
-import { validateBody } from '../../utils/validationHandler'
+import { Errors, success } from '~~/server/utils/error'
+import { ZodError } from 'zod'
 
 export default defineEventHandler(async (event) => {
-  const context = getErrorContextFromEvent(event as unknown as Record<string, unknown>)
-
-  // Authenticate user
   const user = await requireRole(event, ['USER'])
   const prisma = event.context.prisma
 
-  // Validate request body
   const body = await readBody(event)
-  const data = await validateBody({ body }, CreateMaterialDTO)
-
-  // Verify folder ownership
-  const folder = await prisma.folder.findFirst({
-    where: { id: data.folderId, userId: user.id }
-  })
-
-  if (!folder) {
-    throw ErrorFactory.notFound('folder', {
-      ...context,
-      resource: `folder:${data.folderId}`,
-      metadata: { folderId: data.folderId, userId: user.id }
-    })
+  let data
+  try {
+    data = CreateMaterialDTO.parse(body)
+  } catch (err) {
+    if (err instanceof ZodError) {
+      throw Errors.badRequest('Invalid request body', err.issues.map(i => ({ path: i.path, message: i.message })))
+    }
+    throw Errors.badRequest('Invalid request body')
   }
 
-  // Create material
+  const folder = await prisma.folder.findFirst({ where: { id: data.folderId, userId: user.id } })
+  if (!folder) {
+    throw Errors.notFound('Folder')
+  }
+
   const material = await prisma.material.create({
     data: {
       folderId: data.folderId,
@@ -40,17 +34,9 @@ export default defineEventHandler(async (event) => {
     }
   })
 
-  // Validate response shape in development
   if (process.env.NODE_ENV === 'development') {
     MaterialSchema.parse(material)
   }
 
-  return new ResponseBuilder()
-    .data(material)
-    .context({
-      message: 'Material created successfully',
-      materialId: material.id,
-      folderId: data.folderId
-    })
-    .success()
+  return success(material, { message: 'Material created successfully', materialId: material.id, folderId: data.folderId })
 })

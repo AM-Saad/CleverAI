@@ -5,7 +5,6 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { NuxtAuthHandler } from "#auth"
 import bcrypt from "bcryptjs"
 import { verificationCode } from "~/utils/verificationCode.server"
-import { ErrorFactory } from "../../utils/standardErrorHandler"
 
 const prisma = new PrismaClient()
 const config = useRuntimeConfig()
@@ -185,8 +184,8 @@ export default NuxtAuthHandler({
         token.expires_at =
           Math.floor(Date.now() / 1000) + (account.expires_at || 0)
         token.refresh_token = account.refresh_token ?? token.refresh_token
-        token.provider = "google"
-        token.userRole = "Admin"
+  token.provider = "google"
+  // Preserve user role from DB fetch instead of forcing Admin
       }
       // Credentials login: add user fields
       if (user) {

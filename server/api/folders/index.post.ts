@@ -1,6 +1,7 @@
 import { requireRole } from '~/../server/middleware/auth'
 import { LLM_MODELS } from '~~/shared/llm'
 import { CreateFolderDTO, FolderSchema } from '~~/shared/folder.contract'
+import { Errors, success } from '~~/server/utils/error'
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ['USER'])
@@ -9,18 +10,17 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event)
   const parsed = CreateFolderDTO.safeParse(body)
   if (!parsed.success) {
-    setResponseStatus(event, 400)
-    return { error: 'Invalid request body.' }
+    throw Errors.badRequest('Invalid request body', parsed.error.issues)
   }
   const { llmModel, metadata } = parsed.data
-const title = parsed.data.title.trim()
-const description = parsed.data.description?.trim() ?? null
-  if (llmModel && !LLM_MODELS.includes(llmModel as any)) {
-    setResponseStatus(event, 400)
-    return { error: 'Invalid LLM model.' }
-  }
+  const title = parsed.data.title.trim()
+  const description = parsed.data.description?.trim() ?? null
 
-  // Compute next order for this user
+  if (llmModel && !LLM_MODELS.includes(llmModel as (typeof LLM_MODELS)[number])) {
+    throw Errors.badRequest('Invalid LLM model')
+  }
+  const resolvedModel: (typeof LLM_MODELS)[number] | 'gpt-3.5' = (llmModel && LLM_MODELS.includes(llmModel as (typeof LLM_MODELS)[number])) ? llmModel as (typeof LLM_MODELS)[number] : 'gpt-3.5'
+
   const maxOrder = await prisma.folder.aggregate({
     _max: { order: true },
     where: { userId: user.id },
@@ -31,15 +31,14 @@ const description = parsed.data.description?.trim() ?? null
     data: {
       title,
       description: description ?? null,
-      llmModel: (llmModel as any) ?? 'gpt-3.5',
-      metadata: metadata ?? null,
+      llmModel: resolvedModel,
+      metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : null,
       order: nextOrder,
       user: { connect: { id: user.id } },
     },
   })
 
-  // Optional: assert response shape in dev
   if (process.env.NODE_ENV === 'development') FolderSchema.parse(created)
   setResponseStatus(event, 201)
-  return created
+  return success(created)
 })

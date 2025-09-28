@@ -2,6 +2,7 @@
 import webPush from 'web-push'
 import { z } from 'zod'
 import { prisma } from '~~/server/prisma/utils'
+import { Errors, success } from '~~/server/utils/error'
 
 const NotificationSchema = z.object({
   title: z.string().min(1).max(100),
@@ -27,125 +28,108 @@ export default defineEventHandler(async (event) => {
     process.env.VAPID_PRIVATE_KEY!
   )
 
+  const body = await readBody(event)
+  let message
   try {
-    // Validate request body
-    const body = await readBody(event)
-    const message = NotificationSchema.parse(body)
-
-    // Check for authorization - allow internal cron calls with secret token
-    const cronToken = getHeader(event, 'x-cron-secret')
-
-    // Allow internal cron calls with valid secret token
-    const isInternalCronCall = cronToken === process.env.CRON_SECRET_TOKEN
-
-    // Allow authenticated users (check for session cookie)
-    const sessionCookie = getCookie(event, 'next-auth.session-token') || getCookie(event, '__Secure-next-auth.session-token')
-    const isAuthenticatedUser = !!sessionCookie
-
-    if (process.env.NODE_ENV === 'production' && !isInternalCronCall && !isAuthenticatedUser) {
-      // In production, require some form of authorization for non-cron calls
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Authorization required'
-      })
+    message = NotificationSchema.parse(body)
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      throw Errors.badRequest('Invalid request data', err.issues)
     }
-
-    // In development, allow all requests
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('🔧 Development mode: allowing all notification requests')
-    }
-
-    // TODO: Replace with actual session check when auth is implemented
-    // const session = await getServerSession(event)
-    // if (!session?.user || !session.user.role === 'ADMIN') {
-    //   throw createError({
-    //     statusCode: 401,
-    //     statusMessage: 'Unauthorized - Admin access required'
-    //   })
-    // }
-
-    // Get active subscriptions
-    const subscriptions = await prisma.notificationSubscription.findMany({
-      where: {
-        // If targetUsers specified, filter by userId
-        ...(message.targetUsers && {
-          userId: { in: message.targetUsers }
-        }),
-        // Include anonymous subscriptions when no target users specified
-        ...(!message.targetUsers && {
-          // Get all subscriptions (including ones without userId)
-        })
-      }
-    })
-
-    console.log('🔍 Debug Info:')
-    console.log('- Target Users:', message.targetUsers)
-    console.log('- Found subscriptions:', subscriptions.length)
-    console.log('- Subscription details:', subscriptions.map(s => ({
-      id: s.id,
-      userId: s.userId,
-      endpoint: s.endpoint.substring(0, 50) + '...'
-    })))
-
-    let notificationsSent = 0
-    let notificationsFailed = 0
-
-    for (const subscription of subscriptions) {
-      try {
-        await webPush.sendNotification(
-          {
-            endpoint: subscription.endpoint,
-            keys: subscription.keys
-          },
-          JSON.stringify({
-            title: message.title,
-            message: message.message,
-            icon: message.icon || '/icons/192x192.png',
-            tag: message.tag,
-            requireInteraction: message.requireInteraction || false,
-            url: message.url || '/', // Include URL for navigation
-          })
-        )
-        console.log('Notification sent to:', subscription.endpoint)
-        notificationsSent++
-      } catch (error: unknown) {
-        console.error('Error sending notification:', error)
-        notificationsFailed++
-
-        // Handle expired/invalid subscriptions
-        const webPushError = error as { statusCode?: number }
-        if (webPushError.statusCode === 410 || webPushError.statusCode === 404) {
-          await prisma.notificationSubscription.delete({
-            where: { id: subscription.id }
-          })
-          console.log('Deleted invalid subscription:', subscription.id)
-        }
-      }
-    }
-
-    return {
-      success: true,
-      message: `Notifications sent: ${notificationsSent}, failed: ${notificationsFailed}`,
-      details: {
-        sent: notificationsSent,
-        failed: notificationsFailed,
-        total: subscriptions.length
-      }
-    }
-  } catch (error) {
-    console.error('Failed to send notifications:', error)
-
-    if (error instanceof z.ZodError) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid request data',
-        data: error.issues
-      })
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Internal Server Error'
-    })
+    throw Errors.badRequest('Invalid request data')
   }
+
+  // Check for authorization - allow internal cron calls with secret token
+  const cronToken = getHeader(event, 'x-cron-secret')
+
+  // Allow internal cron calls with valid secret token
+  const isInternalCronCall = cronToken === process.env.CRON_SECRET_TOKEN
+
+  // Allow authenticated users (check for session cookie)
+  const sessionCookie = getCookie(event, 'next-auth.session-token') || getCookie(event, '__Secure-next-auth.session-token')
+  const isAuthenticatedUser = !!sessionCookie
+
+  if (process.env.NODE_ENV === 'production' && !isInternalCronCall && !isAuthenticatedUser) {
+    // In production, require some form of authorization for non-cron calls
+    throw Errors.unauthorized('Authorization required')
+  }
+
+  // In development, allow all requests
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('🔧 Development mode: allowing all notification requests')
+  }
+
+  // TODO: Replace with actual session check when auth is implemented
+  // const session = await getServerSession(event)
+  // if (!session?.user || !session.user.role === 'ADMIN') {
+  //   throw createError({
+  //     statusCode: 401,
+  //     statusMessage: 'Unauthorized - Admin access required'
+  //   })
+  // }
+
+  // Get active subscriptions
+  const subscriptions = await prisma.notificationSubscription.findMany({
+    where: {
+      // If targetUsers specified, filter by userId
+      ...(message.targetUsers && {
+        userId: { in: message.targetUsers }
+      }),
+      // Include anonymous subscriptions when no target users specified
+      ...(!message.targetUsers && {
+        // Get all subscriptions (including ones without userId)
+      })
+    }
+  })
+
+  console.log('🔍 Debug Info:')
+  console.log('- Target Users:', message.targetUsers)
+  console.log('- Found subscriptions:', subscriptions.length)
+  console.log('- Subscription details:', subscriptions.map(s => ({
+    id: s.id,
+    userId: s.userId,
+    endpoint: s.endpoint.substring(0, 50) + '...'
+  })))
+
+  let notificationsSent = 0
+  let notificationsFailed = 0
+
+  for (const subscription of subscriptions) {
+    try {
+      await webPush.sendNotification(
+        {
+          endpoint: subscription.endpoint,
+          keys: subscription.keys
+        },
+        JSON.stringify({
+          title: message.title,
+          message: message.message,
+          icon: message.icon || '/icons/192x192.png',
+          tag: message.tag,
+          requireInteraction: message.requireInteraction || false,
+          url: message.url || '/', // Include URL for navigation
+        })
+      )
+      console.log('Notification sent to:', subscription.endpoint)
+      notificationsSent++
+    } catch (error: unknown) {
+      console.error('Error sending notification:', error)
+      notificationsFailed++
+
+      // Handle expired/invalid subscriptions
+      const webPushError = error as { statusCode?: number }
+      if (webPushError.statusCode === 410 || webPushError.statusCode === 404) {
+        await prisma.notificationSubscription.delete({
+          where: { id: subscription.id }
+        })
+        console.log('Deleted invalid subscription:', subscription.id)
+      }
+    }
+  }
+
+  return success({
+    sent: notificationsSent,
+    failed: notificationsFailed,
+    total: subscriptions.length
+  }, { message: `Notifications sent: ${notificationsSent}, failed: ${notificationsFailed}` })
 })

@@ -1,5 +1,13 @@
 // app/services/AuthService.ts
 import FetchFactory from './FetchFactory'
+import type {
+  AuthRegisterResponse,
+  AuthVerificationResponse,
+  AuthForgotPasswordVerifyResponse,
+  AuthCreatePasswordResponse,
+  AuthFindUserResponse,
+  AuthGenericMessage
+} from '~/types/auth-responses'
 
 export interface IUser {
   id: string
@@ -31,12 +39,7 @@ export interface IRegisterRequest {
   provider?: string
 }
 
-export interface IRegisterResponse {
-  message: string
-  body?: {
-    redirect: string
-  }
-}
+// Replaced inline response interfaces with centralized auth response types
 
 class AuthModule extends FetchFactory {
   private RESOURCE = '/api/auth'
@@ -44,8 +47,8 @@ class AuthModule extends FetchFactory {
   /**
    * Register a new user
    */
-  async register(userData: IRegisterRequest): Promise<IRegisterResponse> {
-    return this.call<IRegisterResponse>(
+  async register(userData: IRegisterRequest): Promise<AuthRegisterResponse> {
+    return this.call<AuthRegisterResponse>(
       'POST',
       `${this.RESOURCE}/register`,
       { ...userData, provider: userData.provider || 'credentials' }
@@ -55,25 +58,15 @@ class AuthModule extends FetchFactory {
   /**
    * Register user (alternative method using RESOURCES enum)
    */
-  async registerUser(credentials: {
-    name?: string
-    email: string
-    password?: string
-    confirmPassword?: string
-    provider: string
-  }): Promise<{ message: string; body: unknown }> {
-    return this.call<{ message: string; body: unknown }>(
-      'POST',
-      `/api/auth/register`,
-      credentials
-    )
+  async registerUser(credentials: { name?: string; email: string; password?: string; confirmPassword?: string; provider: string }): Promise<AuthRegisterResponse> {
+    return this.call<AuthRegisterResponse>('POST', `/api/auth/register`, credentials)
   }
 
   /**
    * Verify user email
    */
-  async verify(email: string): Promise<{ message: string }> {
-    return this.call<{ message: string }>(
+  async verify(email: string): Promise<AuthVerificationResponse> {
+    return this.call<AuthVerificationResponse>(
       'POST',
       `${this.RESOURCE}/verification`,
       { email }
@@ -82,9 +75,10 @@ class AuthModule extends FetchFactory {
 
   /**
    * Find user by email
+   * Updated: returns { user, message }
    */
-  async findUser(email: string): Promise<{ message: string; body: unknown }> {
-    return this.call<{ message: string; body: unknown }>(
+  async findUser(email: string): Promise<AuthFindUserResponse<Partial<IUser>>> {
+    return this.call<AuthFindUserResponse<Partial<IUser>>>(
       'POST',
       `${this.RESOURCE}/find`,
       { email }
@@ -94,8 +88,8 @@ class AuthModule extends FetchFactory {
   /**
    * Authenticate user
    */
-  async authenticate(credentials: { email: string; password: string }): Promise<{ message: string }> {
-    return this.call<{ message: string }>(
+  async authenticate(credentials: { email: string; password: string }): Promise<AuthGenericMessage> {
+    return this.call<AuthGenericMessage>(
       'POST',
       `${this.RESOURCE}/authenticate`,
       credentials
@@ -105,8 +99,8 @@ class AuthModule extends FetchFactory {
   /**
    * Register passkey
    */
-  async registerPasskey(email: string): Promise<{ message: string }> {
-    return this.call<{ message: string }>(
+  async registerPasskey(email: string): Promise<AuthGenericMessage> {
+    return this.call<AuthGenericMessage>(
       'POST',
       `${this.RESOURCE}/passkey/register`,
       { email }
@@ -159,8 +153,8 @@ class AuthModule extends FetchFactory {
   /**
    * Send verification email
    */
-  async sendVerificationEmail(email: string): Promise<{ message: string }> {
-    return this.call<{ message: string }>(
+  async sendVerificationEmail(email: string): Promise<AuthVerificationResponse> {
+    return this.call<AuthVerificationResponse>(
       'POST',
       `${this.RESOURCE}/verification`,
       { email }
@@ -170,8 +164,8 @@ class AuthModule extends FetchFactory {
   /**
    * Verify account with verification code
    */
-  async verifyAccount(email: string, verification: string): Promise<{ message: string; body?: { redirect: string } }> {
-    return this.call<{ message: string; body?: { redirect: string } }>(
+  async verifyAccount(email: string, verification: string): Promise<AuthVerificationResponse> {
+    return this.call<AuthVerificationResponse>(
       'POST',
       `${this.RESOURCE}/verification/verify`,
       { email, verification }
@@ -181,8 +175,8 @@ class AuthModule extends FetchFactory {
   /**
    * Verify forgot password code
    */
-  async verifyForgotPassword(email: string, verification: string): Promise<{ message: string; body?: { redirect?: string; token?: string } }> {
-    return this.call<{ message: string; body?: { redirect?: string; token?: string } }>(
+  async verifyForgotPassword(email: string, verification: string): Promise<AuthForgotPasswordVerifyResponse> {
+    return this.call<AuthForgotPasswordVerifyResponse>(
       'POST',
       `${this.RESOURCE}/password/verify`,
       { email, verification }
@@ -192,16 +186,12 @@ class AuthModule extends FetchFactory {
   /**
    * Create password
    */
-  async createPassword(token: string, password: string, confirmPassword: string): Promise<{ message: string; body?: { redirect: string } }> {
-    return this.call<{ message: string; body?: { redirect: string } }>(
+  async createPassword(token: string, password: string, confirmPassword: string): Promise<AuthCreatePasswordResponse> {
+    return this.call<AuthCreatePasswordResponse>(
       'POST',
       '/api/auth/password/create',
       { password, confirmPassword },
-      {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      }
+      { headers: { 'Authorization': `Bearer ${token}` } }
     )
   }
 }

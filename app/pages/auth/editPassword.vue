@@ -85,9 +85,10 @@ const handleSubmit = async (): Promise<void> => {
 
         success.value = data.message
         verified.value = true
-        token.value = data.body?.token || ""
-        if (data.body?.token) {
-            router.push({ query: { token: data.body.token } })
+        const tokenValue: string | undefined = (data as { token?: string }).token
+        token.value = tokenValue || ""
+        if (tokenValue) {
+            router.push({ query: { token: tokenValue } })
         }
     } catch (err) {
         const serverError = err as Error

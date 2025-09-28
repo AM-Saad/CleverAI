@@ -1,54 +1,42 @@
-// server/api/verification.post.ts
+// server/api/auth/verification/index.post.ts (migrated)
+import { z } from 'zod'
 import { sendEmail } from "~/utils/resend.server"
 import { verificationCode } from "~/utils/verificationCode.server"
-import { PrismaClient } from "@prisma/client"
-import { ErrorFactory, withErrorHandling, getErrorContextFromEvent } from "../../../utils/standardErrorHandler"
-import { validateBody } from "../../../utils/validationHandler"
-import { z } from "zod"
+import { prisma } from '~~/server/prisma/utils'
+import { Errors, success } from '~~/server/utils/error'
 
-const prisma = new PrismaClient()
-
-const verificationSchema = z.object({
-  email: z.string().email("Please enter a valid email address")
+const schema = z.object({
+  email: z.string().email('Please enter a valid email address')
 })
 
 export default defineEventHandler(async (event) => {
-  const context = getErrorContextFromEvent(event as unknown as Record<string, unknown>)
-
-  return await withErrorHandling(async () => {
-    // Read and validate request body using standardized validation
-    const rawBody = await readBody(event)
-    const { email } = await validateBody({ body: rawBody }, verificationSchema)
-
-    const user = await prisma.user.findUnique({
-      where: { email },
-    })
-
-    if (!user) {
-      ErrorFactory.notFound("user", context)
+  const raw = await readBody(event)
+  let parsed: z.infer<typeof schema>
+  try {
+    parsed = schema.parse(raw)
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      throw Errors.badRequest('Invalid email', err.issues.map(i => ({ path: i.path, message: i.message })))
     }
+    throw Errors.badRequest('Invalid email')
+  }
 
-    const newVerificationCode = await verificationCode()
+  const user = await prisma.user.findUnique({ where: { email: parsed.email } })
+  if (!user) {
+    throw Errors.notFound('User')
+  }
 
-    try {
-      await sendEmail(email, newVerificationCode)
-    } catch (emailError) {
-      ErrorFactory.externalService("Email", emailError, {
-        ...context,
-        metadata: { ...context.metadata, service: "email" }
-      })
-    }
+  const code = await verificationCode()
+  try {
+    await sendEmail(parsed.email, code)
+  } catch {
+    throw Errors.server('Failed to send verification email')
+  }
 
-    await prisma.user.update({
-      where: { email },
-      data: {
-        register_verification: newVerificationCode,
-        account_verified: false,
-      },
-    })
+  await prisma.user.update({
+    where: { email: parsed.email },
+    data: { register_verification: code, account_verified: false }
+  })
 
-    return {
-      message: "Verification code has been sent to your email",
-    }
-  }, context)
+  return success({ message: 'Verification code sent' })
 })

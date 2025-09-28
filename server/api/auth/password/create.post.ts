@@ -1,84 +1,65 @@
-// server/api/auth/createPassword.post.ts
-import { PrismaClient } from "@prisma/client"
-import bcrypt from "bcryptjs"
-import { z } from "zod"
-import jwt from "jsonwebtoken"
+// server/api/auth/password/create.post.ts (migrated)
+import bcrypt from 'bcryptjs'
+import { z } from 'zod'
+import jwt from 'jsonwebtoken'
+import { prisma } from '~~/server/prisma/utils'
+import { Errors, success } from '~~/server/utils/error'
 import { isTokenExpired } from "~/utils/isTokenExpired.server"
-import { ErrorFactory, withErrorHandling, getErrorContextFromEvent } from "../../../utils/standardErrorHandler"
 
-const prisma = new PrismaClient()
-
-const userSchema = z.object({
-  password: z
-    .string()
-    .min(8, { message: "Password Must be 8 or more characters long" })
-    .max(30, { message: "Password Must be 30 or less characters long" }),
-  confirmPassword: z
-    .string()
-    .min(8, { message: "Password Must be 8 or more characters long" })
-    .max(30, {
-      message: "Confirm Password Must be 30 or less characters long",
-    }),
+const schema = z.object({
+  password: z.string().min(8, 'Password must be at least 8 characters').max(30, 'Password must be 30 or fewer characters'),
+  confirmPassword: z.string().min(8, 'Confirm Password must be at least 8 characters').max(30, 'Confirm Password must be 30 or fewer characters')
 })
 
 export default defineEventHandler(async (event) => {
-  return await withErrorHandling(async () => {
-    const context = getErrorContextFromEvent(event as unknown as Record<string, unknown>)
-
-    // Validate request body
-    const result = await readValidatedBody(event, (body) =>
-      userSchema.safeParse(body),
-    )
-
-    if (!result.success) {
-      ErrorFactory.validation("Invalid password data", result.error.issues, context)
+  const raw = await readBody(event)
+  let parsed: z.infer<typeof schema>
+  try {
+    parsed = schema.parse(raw)
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      throw Errors.badRequest('Invalid password data', err.issues.map(i => ({ path: i.path, message: i.message })))
     }
+    throw Errors.badRequest('Invalid password data')
+  }
 
-    const body = await readBody(event)
-    const { password, confirmPassword } = body
-    const authHeader = event.headers.get("Authorization")
-    const token = authHeader?.split(" ")[1] || null
+  const authHeader = event.headers.get('Authorization')
+  const token = authHeader?.split(' ')[1]
+  if (!token) {
+    throw Errors.unauthorized('Missing authorization token')
+  }
 
-    if (!authHeader || !token) {
-      ErrorFactory.unauthorized("Missing authorization token", context)
-    }
+  const decoded = jwt.decode(token) as jwt.JwtPayload | null
+  if (!decoded || typeof decoded !== 'object') {
+    throw Errors.unauthorized('Invalid token')
+  }
+  if (isTokenExpired(decoded)) {
+    throw Errors.unauthorized('Token has expired')
+  }
 
-    const decoded = jwt.decode(token!) as jwt.JwtPayload
-    if (isTokenExpired(decoded as jwt.JwtPayload)) {
-      ErrorFactory.unauthorized("Token has expired", context)
-    }
+  const email = decoded.email as string | undefined
+  if (!email) {
+    throw Errors.badRequest('Token missing email')
+  }
 
-    const email = decoded.email
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        email,
-      },
-    })
+  const user = await prisma.user.findFirst({ where: { email } })
+  if (!user) {
+    throw Errors.notFound('User')
+  }
 
-    if (!existingUser) {
-      ErrorFactory.notFound("user", context)
-    }
+  if (decoded.password_verification !== user.password_verification) {
+    throw Errors.unauthorized('Invalid verification token')
+  }
 
-    if (decoded.password_verification !== existingUser!.password_verification) {
-      ErrorFactory.unauthorized("Invalid verification token", context)
-    }
+  if (parsed.password !== parsed.confirmPassword) {
+    throw Errors.badRequest('Passwords do not match', [{ path: ['confirmPassword'], message: 'Passwords do not match' }])
+  }
 
-    if (password !== confirmPassword) {
-      ErrorFactory.validation("Passwords do not match", { field: "confirmPassword" }, context)
-    }
+  const hashedPassword = bcrypt.hashSync(parsed.password, 10)
+  await prisma.user.update({
+    where: { email },
+    data: { password: hashedPassword, password_verification: null }
+  })
 
-    const hashedPassword = bcrypt.hashSync(password, 10)
-
-    const user = await prisma.user.update({
-      where: {
-        email,
-      },
-      data: {
-        password: hashedPassword,
-        password_verification: null,
-      },
-    })
-
-    return user
-  }, getErrorContextFromEvent(event as unknown as Record<string, unknown>))
+  return success({ message: 'Password created successfully' })
 })

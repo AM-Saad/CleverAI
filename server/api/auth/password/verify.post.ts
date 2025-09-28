@@ -1,61 +1,39 @@
-// server/api/verification/verify.post.ts
-import jwt from "jsonwebtoken"
-import { PrismaClient } from "@prisma/client"
+// server/api/auth/password/verify.post.ts (migrated)
+import jwt from 'jsonwebtoken'
+import { z } from 'zod'
+import { prisma } from '~~/server/prisma/utils'
+import { Errors, success } from '~~/server/utils/error'
 import { verificationCode } from "~/utils/verificationCode.server"
-import { ErrorFactory, withErrorHandling, getErrorContextFromEvent } from "../../../utils/standardErrorHandler"
 
-const prisma = new PrismaClient()
+const schema = z.object({
+  email: z.string().email('Please enter a valid email address'),
+  verification: z.string().min(1, 'Verification code is required')
+})
 
 export default defineEventHandler(async (event) => {
-  return await withErrorHandling(async () => {
-    const context = getErrorContextFromEvent(event as unknown as Record<string, unknown>)
-    const body = await readBody(event)
-    const { email, verification } = body
-
-    if (!email || !verification) {
-      ErrorFactory.validation("Missing email or verification code", { email, verification }, context)
+  const raw = await readBody(event)
+  let parsed: z.infer<typeof schema>
+  try {
+    parsed = schema.parse(raw)
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      throw Errors.badRequest('Invalid verification data', err.issues.map(i => ({ path: i.path, message: i.message })))
     }
+    throw Errors.badRequest('Invalid verification data')
+  }
 
-    const user = await prisma.user.findUnique({
-      where: { email },
-    })
+  const user = await prisma.user.findUnique({ where: { email: parsed.email } })
+  if (!user) {
+    throw Errors.notFound('User')
+  }
+  if (!user.password_verification || user.password_verification !== parsed.verification) {
+    throw Errors.badRequest('Verification code does not match')
+  }
 
-    if (!user) {
-      ErrorFactory.notFound("user", context)
-    }
+  const newCode = await verificationCode()
+  const token = jwt.sign({ email: user.email, password_verification: newCode }, process.env.AUTH_SECRET!, { expiresIn: '1m' })
 
-    if (
-      !user!.password_verification ||
-      user!.password_verification !== verification
-    ) {
-      ErrorFactory.validation("Verification code does not match", { verification }, context)
-    }
+  await prisma.user.update({ where: { email: parsed.email }, data: { password_verification: newCode } })
 
-    const newVerificationCode = await verificationCode()
-
-    const token = jwt.sign(
-      {
-        email: user!.email,
-        password_verification: newVerificationCode,
-      },
-      process.env.AUTH_SECRET!,
-      {
-        expiresIn: "1m",
-      },
-    )
-
-    await prisma.user.update({
-      where: { email },
-      data: {
-        password_verification: newVerificationCode,
-      },
-    })
-
-    return {
-      message: "Verification successful",
-      body: {
-        token,
-      },
-    }
-  }, getErrorContextFromEvent(event as unknown as Record<string, unknown>))
+  return success({ message: 'Verification successful', token })
 })

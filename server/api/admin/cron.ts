@@ -1,65 +1,26 @@
-import { cronManager } from "~~/server/services/CronManager"
+import { cronManager } from '~~/server/services/CronManager'
+import { Errors, success } from '~/../server/utils/error'
 
 export default defineEventHandler(async (event) => {
-  try {
-    // Basic security - check for secret token in query params
-    const query = getQuery(event)
-    const secret = query.secret as string
-    const validToken = process.env.CRON_SECRET_TOKEN
-
-    if (!secret || !validToken || secret !== validToken) {
-      throw createError({
-        statusCode: 401,
-        statusMessage: 'Unauthorized - Invalid or missing secret token'
-      })
-    }
-
-    const method = getMethod(event)
-
-    switch (method) {
-      case 'GET':
-        // Get cron status
-        return {
-          success: true,
-          data: cronManager.getAllJobsStatus()
-        }
-
-      case 'POST': {
-        // Trigger a specific job manually
-        const jobName = query.job as string
-        if (!jobName) {
-          throw createError({
-            statusCode: 400,
-            statusMessage: 'Job name is required'
-          })
-        }
-
-        const result = await cronManager.triggerJob(jobName)
-        return {
-          success: result.success,
-          message: result.success
-            ? `Job '${jobName}' triggered successfully`
-            : `Failed to trigger job '${jobName}': ${result.error}`
-        }
-      }
-
-      default:
-        throw createError({
-          statusCode: 405,
-          statusMessage: 'Method not allowed'
-        })
-    }
-
-  } catch (error) {
-    console.error('Error in cron management:', error)
-
-    if (error instanceof Error && 'statusCode' in error) {
-      throw error // Re-throw HTTP errors
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: error instanceof Error ? error.message : 'Unknown error'
-    })
+  const query = getQuery(event)
+  const secret = query.secret as string | undefined
+  const validToken = process.env.CRON_SECRET_TOKEN
+  if (!secret || !validToken || secret !== validToken) {
+    throw Errors.unauthorized('Invalid or missing secret token')
   }
+
+  const method = getMethod(event)
+  if (method === 'GET') {
+    return success(cronManager.getAllJobsStatus())
+  }
+  if (method === 'POST') {
+    const jobName = query.job as string | undefined
+    if (!jobName) throw Errors.badRequest('Job name is required')
+    const result = await cronManager.triggerJob(jobName)
+    if (!result.success) {
+      throw Errors.server(`Failed to trigger job '${jobName}': ${result.error}`)
+    }
+    return success({ job: jobName, triggered: true })
+  }
+  throw Errors.badRequest('Method not allowed')
 })

@@ -1,5 +1,6 @@
 import { defineEventHandler } from 'h3'
 import { PrismaClient } from '@prisma/client'
+import { success, Errors } from '~/../server/utils/error'
 
 const prisma = new PrismaClient()
 
@@ -23,8 +24,7 @@ export default defineEventHandler(async (_event) => {
     const count = recentNotifications.length
     const lastSent = count > 0 ? recentNotifications[0].scheduledFor : null
 
-    return {
-      success: true,
+    return success({
       count,
       lastSent,
       notifications: recentNotifications.map(n => ({
@@ -33,13 +33,9 @@ export default defineEventHandler(async (_event) => {
         sent: n.sent,
         sentAt: n.sentAt
       }))
-    }
-
+    })
   } catch (error) {
     console.error('[API] Recent notifications check error:', error)
-    throw createError({
-      statusCode: 500,
-      statusMessage: 'Failed to check recent notifications'
-    })
+    throw Errors.server('Failed to check recent notifications')
   }
 })

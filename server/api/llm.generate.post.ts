@@ -1,130 +1,114 @@
 // server/api/llm.generate.post.ts
-import { defineEventHandler, readBody, createError } from 'h3'
+import { defineEventHandler, readBody } from 'h3'
 import { requireRole } from '~/../server/middleware/auth'
 import { getLLMStrategy } from '~~/server/utils/llm/LLMFactory'
 import { LLMGenerateRequest, LLMGenerateResponse } from '~~/shared/llm-generate.contract'
 import { logLlmUsage } from '~~/server/utils/llmCost'
 import { checkUserQuota, incrementGenerationCount } from '~~/server/utils/quota'
-import { WINDOW_SEC, applyLimit, getClientIp, setRateLimitHeaders, type MemCounter } from '~~/server/utils/llm/rateLimit'
+import { applyLimit, getClientIp, setRateLimitHeaders, type MemCounter } from '~~/server/utils/llm/rateLimit'
+import { Errors, success } from '~/../server/utils/error'
+
+// Explicit domain unions (mirror zod schema values)
+export type SupportedModel = 'gpt-3.5' | 'gpt-4o' | 'claude' | 'mixtral' | 'gemini'
+export type GenerationTask = 'flashcards' | 'quiz'
+
+interface ParsedRequest {
+  model: SupportedModel
+  task: GenerationTask
+  text: string
+  folderId?: string
+  save?: boolean
+  replace?: boolean
+}
+
+interface Flashcard { front: string; back: string }
+interface QuizQuestion { question: string; choices: string[]; answerIndex: number }
 
 // Minimal in-memory rate limiting: 5 requests per minute per user
 const rateLimitMap: MemCounter = new Map()
 const ipRateLimitMap: MemCounter = new Map()
 
 export default defineEventHandler(async (event) => {
-  // Ensure only authenticated users can generate content (consistent with folders APIs)
   const user = await requireRole(event, ['USER'])
 
-  // --- Check user quota (freemium limit) ---
   const quotaCheck = await checkUserQuota(user.id)
   if (!quotaCheck.canGenerate) {
-    // Set header to inform frontend this is a quota issue, not a rate limit
     event.node.res.setHeader('x-quota-exceeded', 'true')
     event.node.res.setHeader('x-subscription-tier', quotaCheck.subscription.tier)
     event.node.res.setHeader('x-generations-used', String(quotaCheck.subscription.generationsUsed))
     event.node.res.setHeader('x-generations-quota', String(quotaCheck.subscription.generationsQuota))
     event.node.res.setHeader('x-generations-remaining', String(quotaCheck.subscription.remaining))
-
-    throw createError({
-      statusCode: 402, // Payment Required
-      statusMessage: 'Free tier quota exceeded. Please upgrade to continue generating content.',
-      data: {
-        subscription: quotaCheck.subscription,
-        type: 'QUOTA_EXCEEDED'
-      }
+    throw Errors.badRequest('Free tier quota exceeded. Please upgrade to continue generating content.', {
+      subscription: quotaCheck.subscription,
+      type: 'QUOTA_EXCEEDED'
     })
   }
 
-  // --- Rate limits (user + IP) - short-term limits to prevent abuse ---
   const now = Date.now()
-  const windowMs = 60 * 1000 // 1 minute
+  const windowMs = 60 * 1000
   const userRemaining = await applyLimit(`rl:user:${user.id}`, 5, rateLimitMap, now, windowMs)
   const clientIp = getClientIp(event)
   const ipRemaining = await applyLimit(`rl:ip:${clientIp}`, 20, ipRateLimitMap, now, windowMs)
   const overallRemaining = Math.min(userRemaining, ipRemaining)
 
-  // Add quota information to headers
   event.node.res.setHeader('x-subscription-tier', quotaCheck.subscription.tier)
   event.node.res.setHeader('x-generations-used', String(quotaCheck.subscription.generationsUsed))
   event.node.res.setHeader('x-generations-quota', String(quotaCheck.subscription.generationsQuota))
   event.node.res.setHeader('x-generations-remaining', String(quotaCheck.subscription.remaining))
-
-  // Set rate limit headers
   setRateLimitHeaders(event, overallRemaining, userRemaining, ipRemaining, now)
 
-  // Parse and validate request using shared contract
   const raw = await readBody(event)
-  const parsed = LLMGenerateRequest.safeParse(raw)
-  if (!parsed.success) {
-    throw createError({ statusCode: 400, statusMessage: 'Invalid request body' })
+  const parseResult = LLMGenerateRequest.safeParse(raw)
+  if (!parseResult.success) {
+    throw Errors.badRequest('Invalid request body', parseResult.error.flatten())
   }
-  const { model, task, folderId, save, replace } = parsed.data as any
-  let { text } = parsed.data as any
+  const parsed = parseResult.data as ParsedRequest
+  const { model, task, folderId, save, replace, text: originalText } = parsed
+  const text = originalText.trim()
 
-  // Normalize input text
-  text = text.trim()
   const MAX_CHARS = 10_000
-  if (text.length === 0) {
-    throw createError({ statusCode: 400, statusMessage: 'Text is required' })
-  }
-  if (text.length > MAX_CHARS) {
-    throw createError({ statusCode: 413, statusMessage: 'Text too large' })
-  }
+  if (text.length === 0) throw Errors.badRequest('Text is required')
+  if (text.length > MAX_CHARS) throw Errors.badRequest('Text too large')
 
   const prisma = event.context.prisma
   let canSave = false
   if (save && folderId) {
     const ownerFolder = await prisma.folder.findFirst({ where: { id: folderId, userId: user.id } })
-    if (!ownerFolder) {
-      throw createError({ statusCode: 403, statusMessage: 'You do not have access to this folder.' })
-    }
+    if (!ownerFolder) throw Errors.forbidden('You do not have access to this folder.')
     canSave = true
   }
 
-  const strategy = getLLMStrategy(model, {
-    userId: user.id,
-    folderId,
-    feature: task,
-  })
-  if (!strategy) {
-    throw createError({ statusCode: 400, statusMessage: `Unsupported model: ${model}` })
-  }
+  const strategy = getLLMStrategy(model as SupportedModel, { userId: user.id, folderId, feature: task })
+  if (!strategy) throw Errors.badRequest(`Unsupported model: ${model}`)
 
   try {
     if (task === 'flashcards') {
-      const flashcards = await strategy.generateFlashcards(text)
+      const flashcards: Flashcard[] = await strategy.generateFlashcards(text)
       let savedCount: number | undefined
       if (canSave && folderId) {
-        if (replace) {
-          await prisma.flashcard.deleteMany({ where: { folderId } })
-        }
+        if (replace) await prisma.flashcard.deleteMany({ where: { folderId } })
         if (flashcards.length) {
           const res = await prisma.flashcard.createMany({
-            data: flashcards.map(fc => ({ folderId, front: fc.front, back: fc.back })),
+            data: flashcards.map((fc: Flashcard) => ({ folderId, front: fc.front, back: fc.back }))
           })
           savedCount = res.count
-        } else {
-          savedCount = 0
-        }
+        } else savedCount = 0
       }
-      // Set extra debug headers
+
       event.node.res.setHeader('x-llm-save-requested', String(!!save))
       event.node.res.setHeader('x-llm-can-save', String(canSave))
       event.node.res.setHeader('x-llm-generated-count', String(flashcards.length))
       event.node.res.setHeader('x-llm-saved-count', String(savedCount ?? 0))
       event.node.res.setHeader('x-llm-task', task)
 
-      // Increment the user's generation count if successful and they're on free tier
       const updatedQuota = await incrementGenerationCount(user.id)
-
-      // Update quota headers with latest info
       event.node.res.setHeader('x-subscription-tier', updatedQuota.tier)
       event.node.res.setHeader('x-generations-used', String(updatedQuota.generationsUsed))
       event.node.res.setHeader('x-generations-quota', String(updatedQuota.generationsQuota))
       event.node.res.setHeader('x-generations-remaining', String(updatedQuota.remaining))
 
       const response = {
-        task: 'flashcards',
+        task: 'flashcards' as const,
         model,
         flashcards,
         savedCount,
@@ -134,115 +118,68 @@ export default defineEventHandler(async (event) => {
           generationsQuota: updatedQuota.generationsQuota,
           remaining: updatedQuota.remaining
         }
-      } as const
-
-      if (process.env.NODE_ENV === 'development') {
-        LLMGenerateResponse.parse(response)
       }
 
-      // Diagnostics log
-      console.info('[llm.generate] Diagnostics', {
-        requestedSave: !!save,
-        canSave,
-        generatedCount: flashcards.length,
-        savedCount,
-        task,
-        model,
-        subscription: updatedQuota
-      })
+      if (process.env.NODE_ENV === 'development') LLMGenerateResponse.parse(response)
 
-      return response
-    } else {
-      const quiz = await strategy.generateQuiz(text)
-      let savedCount: number | undefined
-      if (canSave && folderId) {
-        if (replace) {
-          await prisma.question.deleteMany({ where: { folderId } })
-        }
-        if (quiz.length) {
-          const res = await prisma.question.createMany({
-            data: quiz.map(q => ({ folderId, question: q.question, choices: q.choices, answerIndex: q.answerIndex })),
-          })
-          savedCount = res.count
-        } else {
-          savedCount = 0
-        }
-      }
-      // Set extra debug headers
-      event.node.res.setHeader('x-llm-save-requested', String(!!save))
-      event.node.res.setHeader('x-llm-can-save', String(canSave))
-      event.node.res.setHeader('x-llm-generated-count', String(quiz.length))
-      event.node.res.setHeader('x-llm-saved-count', String(savedCount ?? 0))
-      event.node.res.setHeader('x-llm-task', task)
-
-      // Increment the user's generation count if successful and they're on free tier
-      const updatedQuota = await incrementGenerationCount(user.id)
-
-      // Update quota headers with latest info
-      event.node.res.setHeader('x-subscription-tier', updatedQuota.tier)
-      event.node.res.setHeader('x-generations-used', String(updatedQuota.generationsUsed))
-      event.node.res.setHeader('x-generations-quota', String(updatedQuota.generationsQuota))
-      event.node.res.setHeader('x-generations-remaining', String(updatedQuota.remaining))
-
-      const response = {
-        task: 'quiz',
-        model,
-        quiz,
-        savedCount,
-        subscription: {
-          tier: updatedQuota.tier,
-          generationsUsed: updatedQuota.generationsUsed,
-          generationsQuota: updatedQuota.generationsQuota,
-          remaining: updatedQuota.remaining
-        }
-      } as const
-
-      if (process.env.NODE_ENV === 'development') {
-        LLMGenerateResponse.parse(response)
-      }
-
-      // Diagnostics log
-      console.info('[llm.generate] Diagnostics', {
-        requestedSave: !!save,
-        canSave,
-        generatedCount: quiz.length,
-        savedCount,
-        task,
-        model,
-        subscription: updatedQuota
-      })
-
-      return response
+      console.info('[llm.generate] Diagnostics', { requestedSave: !!save, canSave, generatedCount: flashcards.length, savedCount, task, model, subscription: updatedQuota })
+      return success(response)
     }
-  } catch (err: any) {
-    // Surface concise error to the client, log details on server
+
+    const quiz: QuizQuestion[] = await strategy.generateQuiz(text)
+    let savedCount: number | undefined
+    if (canSave && folderId) {
+      if (replace) await prisma.question.deleteMany({ where: { folderId } })
+      if (quiz.length) {
+        const res = await prisma.question.createMany({
+          data: quiz.map((q: QuizQuestion) => ({ folderId, question: q.question, choices: q.choices, answerIndex: q.answerIndex }))
+        })
+        savedCount = res.count
+      } else savedCount = 0
+    }
+
+    event.node.res.setHeader('x-llm-save-requested', String(!!save))
+    event.node.res.setHeader('x-llm-can-save', String(canSave))
+    event.node.res.setHeader('x-llm-generated-count', String(quiz.length))
+    event.node.res.setHeader('x-llm-saved-count', String(savedCount ?? 0))
+    event.node.res.setHeader('x-llm-task', task)
+
+    const updatedQuota = await incrementGenerationCount(user.id)
+    event.node.res.setHeader('x-subscription-tier', updatedQuota.tier)
+    event.node.res.setHeader('x-generations-used', String(updatedQuota.generationsUsed))
+    event.node.res.setHeader('x-generations-quota', String(updatedQuota.generationsQuota))
+    event.node.res.setHeader('x-generations-remaining', String(updatedQuota.remaining))
+
+    const response = {
+      task: 'quiz' as const,
+      model,
+      quiz,
+      savedCount,
+      subscription: {
+        tier: updatedQuota.tier,
+        generationsUsed: updatedQuota.generationsUsed,
+        generationsQuota: updatedQuota.generationsQuota,
+        remaining: updatedQuota.remaining
+      }
+    }
+
+    if (process.env.NODE_ENV === 'development') LLMGenerateResponse.parse(response)
+
+    console.info('[llm.generate] Diagnostics', { requestedSave: !!save, canSave, generatedCount: quiz.length, savedCount, task, model, subscription: updatedQuota })
+    return success(response)
+  } catch (err) {
     const provider = model === 'gemini' ? 'google' : 'openai'
     console.error('[llm.generate] strategy error:', err)
     try {
+      const errorObj = err as { status?: number; code?: string; message?: string }
       await logLlmUsage(
-        {
-          provider: provider as 'openai' | 'google',
-          model,
-          promptTokens: 0,
-          completionTokens: 0,
-          totalTokens: 0,
-          rawUsage: null,
-        },
-        {
-          userId: user.id,
-          folderId,
-          feature: task,
-          status: 'error',
-          errorCode: String(err?.status ?? err?.code ?? ''),
-          errorMessage: String(err?.message ?? 'unknown error'),
-        }
+        { provider: provider as 'openai' | 'google', model, promptTokens: 0, completionTokens: 0, totalTokens: 0, rawUsage: null },
+        { userId: user.id, folderId, feature: task, status: 'error', errorCode: String(errorObj?.status ?? errorObj?.code ?? ''), errorMessage: String(errorObj?.message ?? 'unknown error') }
       )
-    } catch (logErr) {
-      // Swallow logging errors to not mask the original failure
-    }
-    if (err?.status === 429 || /quota/i.test(err?.message || '')) {
-      throw createError({ statusCode: 429, statusMessage: 'Quota exceeded. Please check your OpenAI plan/billing or try again later.' })
-    }
-    throw createError({ statusCode: 502, statusMessage: 'Generation failed. Please try again or switch model.' })
+    } catch { /* ignore logging failures */ }
+
+    const message = (err instanceof Error && /quota/i.test(err.message)) ? 'Quota exceeded. Please check your OpenAI plan/billing or try again later.' : 'Generation failed. Please try again or switch model.'
+    if (/quota exceeded|rate limit|429/i.test(message)) throw Errors.rateLimit(message)
+    throw Errors.server(message)
   }
 })

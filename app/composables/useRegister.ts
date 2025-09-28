@@ -1,5 +1,4 @@
 import { ref } from "vue"
-import { RESOURCES } from "~/utils/constants/resources.enum"
 
 //
 interface useRegister {
@@ -55,102 +54,34 @@ export function useRegister(): useRegister {
     }
     loading.value = true
     try {
-      const response = await fetch(RESOURCES.AUTH_REGISTER_USER, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ...credentials.value, provider: "credentials"}),
+      const { $api } = useNuxtApp()
+      const data = await $api.auth.register({
+        name: credentials.value.name,
+        email: credentials.value.email,
+        password: credentials.value.password,
+        phone: credentials.value.phone,
+        gender: credentials.value.gender,
+        role: credentials.value.role as 'USER',
+        provider: 'credentials'
       })
-
-      const data = await response.json()
-      if (!response.ok) {
-        // Extract field-specific validation errors from nested structure
-        const fieldErrors = extractValidationErrors(data)
-
-        if (fieldErrors.length > 0) {
-          // Show specific field errors
-          error.value = fieldErrors.map(err => `${err.field}: ${err.userMessage}`).join(', ')
-        } else {
-          // Fallback to generic message
-          error.value = data.message || data.statusMessage || "Registration failed"
-        }
-        return
-      }
       success.value = data.message
-
-      router.push(data.body.redirect)
+      const maybeRedirect = (data as unknown as { redirect?: string }).redirect
+      if (maybeRedirect) {
+        router.push(maybeRedirect)
+      }
     } catch (err) {
+      // Errors are already normalized by FetchFactory (APIError)
       const serverError = err as Error
-      error.value = serverError.message || "An error occurred"
+      error.value = serverError.message || 'Registration failed'
     } finally {
       loading.value = false
     }
   }
 
   // Helper function to extract validation errors from nested response
-  interface ValidationError {
-    field: string
-    userMessage: string
-  }
+  // (Removed unused ValidationError interface after migration to unified error contract)
 
-  const extractValidationErrors = (errorResponse: unknown): ValidationError[] => {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const response = errorResponse as any
+  // Legacy validation error extraction removed (server now returns normalized errors)
 
-      // Try the exact path from the API response: data.error.details.details.details
-      let validationDetails = response?.data?.error?.details?.details?.details
-
-      if (Array.isArray(validationDetails)) {
-        return validationDetails.filter((item: unknown): item is ValidationError => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const errorItem = item as any
-          return Boolean(
-            typeof errorItem?.field === 'string' &&
-            typeof errorItem?.userMessage === 'string'
-          )
-        })
-      }
-
-      // Fallback: try data.error.details.details
-      validationDetails = response?.data?.error?.details?.details
-      if (Array.isArray(validationDetails)) {
-        return validationDetails.filter((item: unknown): item is ValidationError => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const errorItem = item as any
-          return Boolean(
-            typeof errorItem?.field === 'string' &&
-            typeof errorItem?.userMessage === 'string'
-          )
-        })
-      }
-
-      // Final fallback: try data.error.details
-      validationDetails = response?.data?.error?.details
-      if (Array.isArray(validationDetails)) {
-        return validationDetails.filter((item: unknown): item is ValidationError => {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const errorItem = item as any
-          return Boolean(
-            typeof errorItem?.field === 'string' &&
-            typeof errorItem?.userMessage === 'string'
-          )
-        })
-      }
-    } catch (e) {
-      console.warn('Failed to extract validation errors:', e)
-    }
-
-    return []
-  }
-
-  return {
-    credentials,
-    fieldTypes,
-    error,
-    success,
-    loading,
-    handleSubmit,
-  }
+  return { credentials, fieldTypes, error, success, loading, handleSubmit }
 }

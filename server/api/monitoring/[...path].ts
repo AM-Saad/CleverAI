@@ -1,6 +1,5 @@
 /**
- * Error Monitoring Dashboard API
- * Provides endpoints for monitoring error metrics and system health
+ * Error Monitoring Dashboard API (refactored to unified response helpers)
  */
 
 import {
@@ -12,31 +11,24 @@ import {
   removeAlert,
   CommonAlerts
 } from '../../utils/errorMonitoring'
-import { ResponseBuilder } from '../../utils/standardAPIResponse'
+import { success, Errors } from '~/../server/utils/error'
 
 /**
  * Get error monitoring dashboard data
  */
 export default defineEventHandler(async (event) => {
-  try {
-    const method = getMethod(event)
-    const url = getRouterParam(event, 'path') || ''
+  const method = getMethod(event)
+  const url = getRouterParam(event, 'path') || ''
 
-    switch (method) {
-      case 'GET':
-        return await handleGetRequest(event, url)
-      case 'POST':
-        return await handlePostRequest(event, url)
-      case 'DELETE':
-        return await handleDeleteRequest(event, url)
-      default:
-        throw createError({
-          statusCode: 405,
-          statusMessage: 'Method not allowed'
-        })
-    }
-  } catch (error) {
-    throw error
+  switch (method) {
+    case 'GET':
+      return await handleGetRequest(event, url)
+    case 'POST':
+      return await handlePostRequest(event, url)
+    case 'DELETE':
+      return await handleDeleteRequest(event, url)
+    default:
+      throw Errors.badRequest('Method not allowed')
   }
 })
 
@@ -48,44 +40,43 @@ async function handleGetRequest(event: any, path: string) {
 
   switch (path) {
     case '':
-    case 'dashboard':
+    case 'dashboard': {
       const dashboardData = await getDashboardData()
-      return ResponseBuilder.success(dashboardData, {
+      return success(dashboardData, {
         message: 'Dashboard data retrieved successfully'
       })
+    }
 
-    case 'error-rate':
+    case 'error-rate': {
       const timeWindow = Number(query.timeWindow) || 60
       const errorRate = await getErrorRate(timeWindow)
-      return ResponseBuilder.success(errorRate, {
+      return success(errorRate, {
         message: `Error rate for last ${timeWindow} minutes`,
-        pagination: {
-          timeWindow,
-          windowStart: errorRate.windowStart,
-          windowEnd: errorRate.windowEnd
-        }
+        timeWindow,
+        windowStart: errorRate.windowStart,
+        windowEnd: errorRate.windowEnd
       })
+    }
 
-    case 'performance':
-      const operation = query.operation as string
+    case 'performance': {
+      const operation = query.operation as string | undefined
       const performanceImpact = await getPerformanceImpact(operation)
-      return ResponseBuilder.success(performanceImpact, {
+      return success(performanceImpact, {
         message: operation
           ? `Performance impact for operation: ${operation}`
           : 'Performance impact for all operations'
       })
+    }
 
-    case 'health':
+    case 'health': {
       const healthData = await getSystemHealth()
-      return ResponseBuilder.success(healthData, {
+      return success(healthData, {
         message: 'System health status'
       })
+    }
 
     default:
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Monitoring endpoint not found'
-      })
+      throw Errors.notFound('monitoring endpoint')
   }
 }
 
@@ -96,63 +87,52 @@ async function handlePostRequest(event: any, path: string) {
   const body = await readBody(event)
 
   switch (path) {
-    case 'alerts':
+    case 'alerts': {
       const alertId = await createAlert(body)
-      return ResponseBuilder.success(
+      return success(
         { alertId, config: body },
         { message: 'Alert created successfully' }
       )
+    }
 
-    case 'alerts/init':
+    case 'alerts/init': {
       const alertIds = await initializeDefaultAlerts()
-      return ResponseBuilder.success(
+      return success(
         { alertIds },
         { message: 'Default alerts initialized' }
       )
+    }
 
-    case 'alerts/common':
+    case 'alerts/common': {
       const alertType = body.type as keyof typeof CommonAlerts
-      if (!CommonAlerts[alertType]) {
-        throw createError({
-          statusCode: 400,
-          statusMessage: 'Invalid alert type'
-        })
-      }
+      if (!CommonAlerts[alertType]) throw Errors.badRequest('Invalid alert type')
 
       const commonAlert = CommonAlerts[alertType]()
       const commonAlertId = await createAlert(commonAlert)
-      return ResponseBuilder.success(
+      return success(
         { alertId: commonAlertId, config: commonAlert },
         { message: `${alertType} alert created` }
       )
+    }
 
     default:
-      throw createError({
-        statusCode: 404,
-        statusMessage: 'Alert endpoint not found'
-      })
+      throw Errors.notFound('alert endpoint')
   }
 }
 
 /**
  * Handle DELETE requests for alert removal
  */
-async function handleDeleteRequest(event: any, path: string) {
+async function handleDeleteRequest(_event: any, path: string) {
   const segments = path.split('/')
 
   if (segments[0] === 'alerts' && segments[1]) {
     const alertId = segments[1]
     await removeAlert(alertId)
-    return ResponseBuilder.success(
-      { alertId },
-      { message: 'Alert removed successfully' }
-    )
+    return success({ alertId }, { message: 'Alert removed successfully' })
   }
 
-  throw createError({
-    statusCode: 404,
-    statusMessage: 'Delete endpoint not found'
-  })
+  throw Errors.notFound('delete endpoint')
 }
 
 /**

@@ -1,4 +1,5 @@
 import { requireRole } from '~/../server/middleware/auth'
+import { Errors, success } from '~~/server/utils/error'
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ['USER'])
@@ -6,16 +7,12 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
 
   if (!id) {
-    setResponseStatus(event, 400)
-    return { error: 'Folder id is required.' }
+    throw Errors.badRequest('Folder id is required')
   }
-  // Only allow deleting folders owned by the user
-  const result = await prisma.folder.deleteMany({
-    where: { id, userId: user.id },
-  })
+
+  const result = await prisma.folder.deleteMany({ where: { id, userId: user.id } })
   if (result.count === 0) {
-    setResponseStatus(event, 404)
-    return { error: 'Folder not found or not authorized.' }
+    throw Errors.notFound('Folder')
   }
-  return { success: true }
+  return success({ deleted: true })
 })
