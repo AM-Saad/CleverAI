@@ -1,46 +1,42 @@
-import type { APIError } from '~/services/FetchFactory'
 import type { Material } from '~~/shared/material.contract'
 import { useDataFetch } from '~/composables/shared/useDataFetch'
+import { useOperation } from '~/composables/shared/useOperation'
 import { useNuxtApp } from '#app'
 
 export function useMaterials(folderId: string) {
   const { $api } = useNuxtApp()
 
+  // Main materials data with centralized error handling
   const { data, pending, error, typedError, refresh } = useDataFetch<Material[]>(
     `materials-${folderId}`,
     () => $api.materials.getByFolder(folderId)
   )
 
-  const removing = ref(false)
-  const removeError = ref<unknown>(null)
-  const removeTypedError = ref<APIError | null>(null)
+  // Remove operation with centralized error handling
+  const removeOperation = useOperation<{ success: boolean; message: string }>()
 
-  async function removeMaterial(id: string) {
-    removing.value = true
-    removeError.value = null
-    removeTypedError.value = null
-    try {
-      const res = await $api.materials.delete(id)
-      await refresh()
-      return res
-    } catch (err: unknown) {
-      removeError.value = err
-      removeTypedError.value = err instanceof Error && (err as Error).name === 'APIError' ? (err as APIError) : null
-      throw err
-    } finally {
-      removing.value = false
-    }
+  // Centralized removeMaterial that lets FetchFactory handle all error construction
+  const removeMaterial = async (id: string) => {
+    const result = await removeOperation.execute(async () => {
+      const deleteResult = await $api.materials.delete(id)
+      await refresh() // Refresh the main materials list on successful deletion
+      return deleteResult
+    })
+    return result
   }
 
   return {
+    // Main materials state
     materials: data,
     loading: pending,
     error,
     typedError,
     refresh,
-    removing,
-    removeError,
-    removeTypedError,
+
+    // Remove operation state - all errors centralized via FetchFactory
+    removing: removeOperation.pending,
+    removeError: removeOperation.error,
+    removeTypedError: removeOperation.typedError,
     removeMaterial
   }
 }

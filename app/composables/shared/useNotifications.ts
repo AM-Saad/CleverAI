@@ -100,17 +100,13 @@ export function useNotifications() {
             console.log('Sending subscription data:', subscriptionData)
 
             // Send the subscription object to the server
-            const response = await $fetch("/api/notifications/subscribe", {
+            await $fetch("/api/notifications/subscribe", {
                 method: "POST",
                 body: subscriptionData,
             })
-
-            if (response.success) {
-                isSubscribed.value = true
-                console.log("Subscription successful")
-            } else {
-                throw new Error(response.message || 'Failed to save subscription')
-            }
+            // If request didn't throw, consider it successful under unified contract
+            isSubscribed.value = true
+            console.log("Subscription successful")
 
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to register notifications'

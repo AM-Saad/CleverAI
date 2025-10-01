@@ -1,6 +1,6 @@
 // server/middleware/auth.ts
 import { safeGetServerSession } from "../utils/safeGetServerSession"
-import { ErrorFactory } from "../utils/standardErrorHandler"
+import { Errors } from "../utils/error"
 
 type SessionWithUser = {
   user?: {
@@ -49,8 +49,7 @@ export async function requireAuth(event: any): Promise<any> {
   const session = await safeGetServerSession(event) as SessionWithUser
   if (!session || !session.user || !session.user.email) {
     console.error("Unauthorized access attempt:", event.path)
-    ErrorFactory.unauthorized("Authentication required")
-    return // This will never execute due to ErrorFactory.unauthorized throwing, but satisfies TypeScript
+    throw Errors.unauthorized("Authentication required")
   }
 
   // Now TypeScript knows session is valid
@@ -61,7 +60,7 @@ export async function requireAuth(event: any): Promise<any> {
     where: { email },
   })
   if (!user) {
-    ErrorFactory.unauthorized("User account not found")
+    throw Errors.unauthorized("User account not found")
   }
   event.context.user = user
   return user
@@ -73,7 +72,7 @@ type UserRole = "USER" | "ADMIN";
 export async function requireRole(event: any, roles: UserRole[]): Promise<any> {
   const user = event.context.user || (await requireAuth(event))
   if (!roles.includes(user.role)) {
-    ErrorFactory.forbidden("User does not have the required role")
+    throw Errors.forbidden("User does not have the required role")
   }
   return user
 }

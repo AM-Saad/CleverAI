@@ -1,13 +1,12 @@
 import { z } from 'zod'
 import type { CreateFolderDTO, UpdateFolderDTO } from '~~/shared/folder.contract'
-import type { APIError } from "~/services/FetchFactory"
 import type { IFolder } from "~/types/models/folders"
 import { useDataFetch } from "~/composables/shared/useDataFetch"
+import { useOperation } from "~/composables/shared/useOperation"
 import { FolderSchema } from "~~/shared/folder.contract"
 import type { Ref } from 'vue'
 import { LLMGenerateResponse } from '~~/shared/llm-generate.contract'
 import { useSubscription } from "../shared/useSubscription"
-type ZodOut<T> = z.ZodType<T, z.ZodTypeDef, unknown>
 
 const FolderResponse = z
   .union([FolderSchema, z.object({ data: FolderSchema })])
@@ -16,8 +15,9 @@ const FoldersResponse = z
   .union([z.array(FolderSchema), z.object({ data: z.array(FolderSchema) })])
   .transform(x => (Array.isArray(x) ? x : x.data))
 
-const FoldersResponseSchema: ZodOut<IFolder[]> = FoldersResponse as any
-const FolderResponseSchema:  ZodOut<IFolder>  = FolderResponse  as any
+// Simplified schema assignments without problematic ZodOut type
+const FoldersResponseSchema = FoldersResponse
+const FolderResponseSchema = FolderResponse
 
 
 
@@ -41,32 +41,21 @@ export function useFolders() {
 
 export function useCreateFolder() {
   const { $api } = useNuxtApp()
-  const creating = ref(false)
-  const error = ref<unknown>(null)
-  const typedError = ref<APIError | null>(null)
 
-  async function createFolder(payload: CreateFolderDTO) {
-    creating.value = true
-    error.value = null
-    typedError.value = null
-    try {
-      const folder = await $api.folders.postFolder(payload)
-      return folder
-    } catch (err) {
-      error.value = err
-      // Optionally, handle APIError type here
-      typedError.value = err instanceof Error && (err as any).name === 'APIError' ? (err as APIError) : null
-      throw err
-    } finally {
-      creating.value = false
-    }
+  // Use centralized operation handling - all errors constructed by FetchFactory
+  const createOperation = useOperation<IFolder>()
+
+  const createFolder = async (payload: CreateFolderDTO) => {
+    return await createOperation.execute(async () => {
+      return await $api.folders.postFolder(payload)
+    })
   }
 
   return {
     createFolder,
-    creating,
-    error,
-    typedError,
+    creating: createOperation.pending,
+    error: createOperation.error,
+    typedError: createOperation.typedError,
   }
 }
 
@@ -94,35 +83,22 @@ export const useFolder = (id: string) => {
 
 export function useDeleteFolder(id: string) {
   const { $api } = useNuxtApp()
-  const deleting = ref(false)
-  const error = ref<unknown>(null)
-  const typedError = ref<APIError | null>(null)
-  const result = ref<{ success: boolean } | null>(null)
 
-  async function deleteFolder() {
-    deleting.value = true
-    error.value = null
-    typedError.value = null
-    result.value = null
-    try {
-      const res = await $api.folders.deleteFolder(id)
-      result.value = res
-      return res
-    } catch (err) {
-      error.value = err
-      typedError.value = err instanceof Error && (err as any).name === 'APIError' ? (err as APIError) : null
-      throw err
-    } finally {
-      deleting.value = false
-    }
+  // Use centralized operation handling - all errors constructed by FetchFactory
+  const deleteOperation = useOperation<{ success: boolean }>()
+
+  const deleteFolder = async () => {
+    return await deleteOperation.execute(async () => {
+      return await $api.folders.deleteFolder(id)
+    })
   }
 
   return {
     deleteFolder,
-    deleting,
-    error,
-    typedError,
-    result,
+    deleting: deleteOperation.pending,
+    error: deleteOperation.error,
+    typedError: deleteOperation.typedError,
+    result: deleteOperation.data,
   }
 }
 
@@ -130,31 +106,21 @@ export function useDeleteFolder(id: string) {
 
 export function useUpdateFolder(id: string) {
   const { $api } = useNuxtApp()
-  const updating = ref(false)
-  const error = ref<unknown>(null)
-  const typedError = ref<APIError | null>(null)
 
-  async function updateFolder(payload: UpdateFolderDTO | Record<string, unknown>) {
-    updating.value = true
-    error.value = null
-    typedError.value = null
-    try {
-      const folder = await $api.folders.updateFolder(id, payload)
-      return folder
-    } catch (err) {
-      error.value = err
-      typedError.value = err instanceof Error && (err as any).name === 'APIError' ? (err as APIError) : null
-      throw err
-    } finally {
-      updating.value = false
-    }
+  // Use centralized operation handling - all errors constructed by FetchFactory
+  const updateOperation = useOperation<IFolder>()
+
+  const updateFolder = async (payload: UpdateFolderDTO | Record<string, unknown>) => {
+    return await updateOperation.execute(async () => {
+      return await $api.folders.updateFolder(id, payload)
+    })
   }
 
   return {
     updateFolder,
-    updating,
-    error,
-    typedError,
+    updating: updateOperation.pending,
+    error: updateOperation.error,
+    typedError: updateOperation.typedError,
   }
 }
 

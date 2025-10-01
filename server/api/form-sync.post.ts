@@ -42,7 +42,7 @@ export default defineEventHandler(async (event) => {
   map.set(key, arr)
   if (arr.length > maxReq) {
     setResponseStatus(event, 429)
-    setHeader(event, 'Retry-After', '3') // seconds
+    setHeader(event, 'Retry-After', 3) // seconds
     setHeader(event, 'Cache-Control', 'no-store')
     return { ok: false, error: 'Throttled. Try later.' }
   }

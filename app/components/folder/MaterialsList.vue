@@ -1,6 +1,10 @@
 <template>
     <div class="materials-list">
         <div v-if="loading" class="text-center py-6">Loading materials...</div>
+        <div v-else-if="typedError" class="space-y-2">
+            <UAlert :title="typedError.message"
+                :description="`Error ${typedError.code} (Status: ${typedError.status})`" />
+        </div>
         <div v-else-if="error" class="text-red-600">{{ errorMessage }}</div>
 
         <ul v-else class="space-y-3 mt-4">
@@ -81,6 +85,11 @@
 </template>
 
 <script setup lang="ts">
+import { useMaterials } from '~/composables/folders/useMaterials'
+import DialogModal from '~/components/shared/DialogModal.vue'
+import ReviewEnrollButton from '~/components/review/EnrollButton.vue'
+import type { EnrollCardResponse } from '~/shared/review.contract'
+
 // Track expanded/collapsed state for each material
 const expandedMaterials = ref(new Set<string>())
 
@@ -91,10 +100,6 @@ function toggleContent(id: string) {
         expandedMaterials.value.add(id)
     }
 }
-import { useMaterials } from '~/composables/folders/useMaterials'
-import DialogModal from '~/components/shared/DialogModal.vue'
-import ReviewEnrollButton from '~/components/review/EnrollButton.vue'
-import type { EnrollCardResponse } from '~/shared/review.contract'
 
 const props = defineProps<{ folderId: string }>()
 const emit = defineEmits<{
@@ -102,7 +107,8 @@ const emit = defineEmits<{
     error: [err: string]
 }>()
 
-const { materials, loading, error, removing, removeMaterial } = useMaterials(props.folderId)
+// Centralized error handling - all errors come from FetchFactory
+const { materials, loading, error, typedError, removing, removeTypedError, removeMaterial } = useMaterials(props.folderId)
 
 const materialList = computed(() => materials.value ?? [])
 
@@ -169,17 +175,18 @@ const confirmRemoval = (id: string) => {
 
 const doConfirmRemove = async () => {
     if (!confirmId.value) return
-    try {
-        await removeMaterial(confirmId.value)
+
+    const result = await removeMaterial(confirmId.value)
+    if (result) {
+        // Success - result is not null
         emit('removed', confirmId.value)
-    } catch (err: unknown) {
-        const e = err as unknown as { data?: { message?: string }; message?: string }
-        const msg = e?.data?.message ?? e?.message ?? 'Failed to remove material'
-        emit('error', msg)
-    } finally {
-        showConfirm.value = false
-        confirmId.value = null
+    } else if (removeTypedError.value) {
+        // Error occurred - use centralized error details
+        emit('error', removeTypedError.value.message)
     }
+
+    showConfirm.value = false
+    confirmId.value = null
 }
 
 </script>

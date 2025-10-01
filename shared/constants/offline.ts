@@ -1,7 +1,7 @@
 // shared/constants/offline.ts
 // Constants specific to offline functionality and page management
 
-import type { OfflinePage } from '~/types/offline'
+import type { OfflinePage } from '../../types/offline'
 
 // ===== OFFLINE PAGE DEFINITIONS =====
 export const OFFLINE_PAGES: OfflinePage[] = [

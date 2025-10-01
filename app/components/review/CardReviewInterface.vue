@@ -38,8 +38,7 @@
                     </div>
                     <div>
                         <span class="text-gray-500 dark:text-gray-400">Streak:</span>
-                        <div class="font-mono font-semibold">{{ (currentCard.reviewState as { streak?: number }).streak
-                            || 0 }}</div>
+                        <div class="font-mono font-semibold">{{ getStreak(currentCard.reviewState) }}</div>
                     </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 text-sm">
@@ -760,6 +759,11 @@ const handleKeydown = (event: KeyboardEvent) => {
     }
 }
 
+// Utility functions
+const getStreak = (reviewState: Record<string, unknown>): number => {
+    return (reviewState.streak as number) || 0
+}
+
 // Debug functions (development only)
 const formatDateTime = (dateString: string) => {
     const date = new Date(dateString)
@@ -877,7 +881,7 @@ const loadAnalytics = async () => {
             const response = await $fetch('/api/review/analytics', {
                 query: props.folderId ? { folderId: props.folderId } : {}
             })
-            analytics.value = response as AnalyticsData
+            analytics.value = response.data as AnalyticsData
         } catch (err) {
             console.error('Failed to load analytics:', err)
         }

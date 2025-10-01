@@ -35,6 +35,7 @@ export default defineEventHandler(async (event) => {
 /**
  * Handle GET requests for monitoring data
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function handleGetRequest(event: any, path: string) {
   const query = getQuery(event)
 
@@ -83,6 +84,7 @@ async function handleGetRequest(event: any, path: string) {
 /**
  * Handle POST requests for alert management
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function handlePostRequest(event: any, path: string) {
   const body = await readBody(event)
 
@@ -123,6 +125,7 @@ async function handlePostRequest(event: any, path: string) {
 /**
  * Handle DELETE requests for alert removal
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 async function handleDeleteRequest(_event: any, path: string) {
   const segments = path.split('/')
 
