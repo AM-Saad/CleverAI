@@ -2,10 +2,11 @@
 <template>
     <div class="mx-auto max-w-full flex h-screen flex-col justify-between">
         <nav id="nav"
-            class="effect fixed flex font-heading items-center justify-between  px-3 md:px-6 z-50 h-14 rounded-full md:rounded container mx-auto left-[50%] -translate-x-1/2 top-4 bg-white/80 backdrop-blur-sm shadow-md w-[calc(100%-1rem)]">
+            class=" flex font-heading items-center justify-between px-3 md:px-6 z-50 h-14 rounded-full md:rounded container mx-auto left-[50%] top-4  border-b border-muted w-[calc(100%-1rem)] mb-4">
 
             <div class="flex items-center justify-between w-full">
-                <router-link to="/" class="text-dark dark:text-light font-medium md:text-2xl">
+                <router-link to="/" class="flex items-center gap-4 text-dark dark:text-light font-medium md:text-2xl">
+                    <img class="h-7 dark:invert-[1] dark:filter" src="~/assets/images/CleverAI_icon.svg" alt="">
                     ShaterAI
                 </router-link>
                 <div v-if="status === 'authenticated'" class="flex gap-5">
@@ -59,7 +60,7 @@
         <div class="flex-1 pb-4">
             <UToaster />
             <ServiceWorkerUpdateNotification mode="banner" />
-            <div class="container mx-auto  p-4 pt-24">
+            <div class="container mx-auto  p-4 md:p-0 ">
 
                 <slot />
             </div>

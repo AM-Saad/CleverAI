@@ -19,10 +19,16 @@ export function useGetMe(email:string): useGetMe {
       loading.value = true
       try {
          const { $api } = useNuxtApp()
-         await $api.auth.findUser(email)
+         const result = await $api.auth.findUser(email)
+
+         if (result.success) {
+           success.value = result.data.message
+         } else {
+           error.value = result.error.message
+         }
 
       } catch (err) {
-        console.log("Error logging in.", err)
+        console.log("Error finding user.", err)
         const serverError = err as Error
         error.value = serverError.message || "An error occurred"
       } finally {

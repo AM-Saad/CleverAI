@@ -7,7 +7,7 @@ export function useMaterials(folderId: string) {
   const { $api } = useNuxtApp()
 
   // Main materials data with centralized error handling
-  const { data, pending, error, typedError, refresh } = useDataFetch<Material[]>(
+  const { data, pending, error, refresh } = useDataFetch<Material[]>(
     `materials-${folderId}`,
     () => $api.materials.getByFolder(folderId)
   )
@@ -30,7 +30,6 @@ export function useMaterials(folderId: string) {
     materials: data,
     loading: pending,
     error,
-    typedError,
     refresh,
 
     // Remove operation state - all errors centralized via FetchFactory

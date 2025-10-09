@@ -36,6 +36,7 @@ export default defineNuxtPlugin((_nuxtApp) => {
   const services = {
     folders: apiServiceFactory.create("folders"),
   materials: apiServiceFactory.create("materials"),
+    notes: apiServiceFactory.create("notes"),
     auth: apiServiceFactory.create("auth"),
     review: apiServiceFactory.create("review"),
   };

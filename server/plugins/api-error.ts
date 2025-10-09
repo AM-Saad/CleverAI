@@ -1,15 +1,16 @@
 // Global error normalization for API routes
-// Nitro auto-loads this plugin. We avoid direct import of defineNitroPlugin for type simplicity.
+// Simple: convert any error to consistent JSON format
 import { normalizeError } from '../utils/error'
 
 export default defineNitroPlugin((app) => {
   app.hooks.hook('error', (err, ctx) => {
-    const event = ctx?.event as any
+    const event = ctx?.event
     if (!event) return
 
     // If response already sent, do nothing
     if (event.node.res.headersSent || event.node.res.writableEnded) return
 
+    // Always normalize to consistent format
     const normalized = normalizeError(err)
 
     try {

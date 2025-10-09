@@ -4,11 +4,12 @@ import { RESOURCES } from "~/utils/constants/resources.enum"
 import type { IFolder, } from "~/types/models/folders"
 import type { CreateFolderDTO,UpdateFolderDTO } from "~/types/dtos/folders"
 import type { ZodSchema } from "zod"
+import type { Result } from "~/types/Result"
 
 class FoldersModule extends FetchFactory {
   private RESOURCE = RESOURCES.FOLDERS
 
-  async getFolders(validator?: ZodSchema<IFolder[]>): Promise<IFolder[]> {
+  async getFolders(_validator?: ZodSchema<IFolder[]>): Promise<Result<IFolder[]>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",
@@ -19,11 +20,11 @@ class FoldersModule extends FetchFactory {
       `${this.RESOURCE}`,
       undefined,
       fetchOptions,
-      validator,
+    //   validator,
     )
   }
 
-  async getFolder(id: string, validator?: ZodSchema<IFolder>): Promise<IFolder> {
+  async getFolder(id: string, _validator?: ZodSchema<IFolder>): Promise<Result<IFolder>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",
@@ -34,11 +35,11 @@ class FoldersModule extends FetchFactory {
       `${this.RESOURCE}/${id}`,
       undefined,
       fetchOptions,
-      validator,
+    //   validator,
     )
   }
 
-  async postFolder(payload: Partial<CreateFolderDTO>): Promise<IFolder> {
+  async postFolder(payload: Partial<CreateFolderDTO>): Promise<Result<IFolder>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",
@@ -50,7 +51,7 @@ class FoldersModule extends FetchFactory {
   async updateFolder(
     id: string,
     payload: Partial<UpdateFolderDTO>,
-  ): Promise<IFolder> {
+  ): Promise<Result<IFolder>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",
@@ -60,7 +61,7 @@ class FoldersModule extends FetchFactory {
 
   }
 
-  async deleteFolder(id: string): Promise<{ success: boolean }> {
+  async deleteFolder(id: string): Promise<Result<{ success: boolean }>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",

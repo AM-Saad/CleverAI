@@ -51,7 +51,7 @@ interface Props {
 
 const {
     tag = 'div',
-    variant = 'default',
+    variant = 'outline',
     size = 'md',
     shadow = 'sm',
     hover = 'none',
@@ -60,16 +60,16 @@ const {
 
 const variantClasses = {
     default: 'bg-[color:var(--color-surface)] border border-[color:var(--color-surface-alt)]',
-    outline: 'bg-transparent border border-gray-300 ',
+    outline: 'bg-transparent border border-gray-300 dark:border-muted ',
     ghost: 'bg-transparent border-0',
     elevated: 'bg-[color:var(--color-surface-elevated)] border-0'
 }
 
 const sizeClasses = {
-    sm: 'p-3',
-    md: 'p-4',
-    lg: 'p-6',
-    xl: 'p-8'
+    sm: 'p-2',
+    md: 'p-3',
+    lg: 'p-5',
+    xl: 'p-7'
 }
 
 const shadowClasses = {

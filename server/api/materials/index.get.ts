@@ -4,7 +4,7 @@ import { MaterialSchema } from '~~/shared/material.contract'
 import { Errors, success } from '~~/server/utils/error'
 
 const QuerySchema = z.object({
-  folderId: z.string().uuid('Folder ID must be a valid UUID')
+  folderId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Folder ID must be a valid MongoDB ObjectId')
 })
 
 export default defineEventHandler(async (event) => {
@@ -12,14 +12,17 @@ export default defineEventHandler(async (event) => {
   const prisma = event.context.prisma
 
   const rawQuery = getQuery(event)
+  console.log("rawQuery:", rawQuery)
   let query
   try {
     query = QuerySchema.parse(rawQuery)
+    console.log("Parsed query:", query)
   } catch (err) {
+    console.log("Query parsing error:", err)
     if (err instanceof z.ZodError) {
-      throw Errors.badRequest('Invalid query parameters', err.issues)
+      throw Errors.badRequest('Invalid query parameters..', err.issues)
     }
-    throw Errors.badRequest('Invalid query parameters')
+    throw Errors.badRequest('Invalid query parameters.')
   }
 
   const folder = await prisma.folder.findFirst({ where: { id: query.folderId, userId: user.id } })

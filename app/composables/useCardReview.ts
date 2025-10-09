@@ -31,13 +31,17 @@ export const useCardReview = () => {
     error.value = null
 
     try {
-      const response = await $api.review.enroll({ resourceType, resourceId })
-      return response
+      const result = await $api.review.enroll({ resourceType, resourceId })
+
+      if (result.success) {
+        return result.data
+      } else {
+        error.value = result.error.message
+        throw new Error(result.error.message)
+      }
     } catch (err: unknown) {
-      const errorMsg = err && typeof err === 'object' && 'message' in err
-        ? (err as { message?: string }).message
-        : 'Failed to enroll card'
-      error.value = errorMsg || 'Failed to enroll card'
+      const errorMsg = err instanceof Error ? err.message : 'Failed to enroll card'
+      error.value = errorMsg
       throw err
     } finally {
       isSubmitting.value = false
@@ -50,34 +54,39 @@ export const useCardReview = () => {
     error.value = null
 
     try {
-      const response = await $api.review.grade({ cardId, grade })
+      const result = await $api.review.grade({ cardId, grade })
 
-      // Remove the graded card from the queue
-      const cardIndex = reviewQueue.value.findIndex(card => card.cardId === cardId)
-      if (cardIndex !== -1) {
-        reviewQueue.value.splice(cardIndex, 1)
-        queueStats.value.due = Math.max(0, queueStats.value.due - 1)
+      if (result.success) {
+        const response = result.data
 
-        // Update current card index if needed
-        if (currentCardIndex.value >= reviewQueue.value.length) {
-          currentCardIndex.value = Math.max(0, reviewQueue.value.length - 1)
+        // Remove the graded card from the queue
+        const cardIndex = reviewQueue.value.findIndex(card => card.cardId === cardId)
+        if (cardIndex !== -1) {
+          reviewQueue.value.splice(cardIndex, 1)
+          queueStats.value.due = Math.max(0, queueStats.value.due - 1)
+
+          // Update current card index if needed
+          if (currentCardIndex.value >= reviewQueue.value.length) {
+            currentCardIndex.value = Math.max(0, reviewQueue.value.length - 1)
+          }
+
+          // Update current card
+          if (reviewQueue.value.length > 0) {
+            currentCard.value = reviewQueue.value[currentCardIndex.value] || null
+          } else {
+            currentCard.value = null
+            currentCardIndex.value = 0
+          }
         }
 
-        // Update current card
-        if (reviewQueue.value.length > 0) {
-          currentCard.value = reviewQueue.value[currentCardIndex.value] || null
-        } else {
-          currentCard.value = null
-          currentCardIndex.value = 0
-        }
+        return response
+      } else {
+        error.value = result.error.message
+        throw new Error(result.error.message)
       }
-
-      return response
     } catch (err: unknown) {
-      const errorMsg = err && typeof err === 'object' && 'message' in err
-        ? (err as { message?: string }).message
-        : 'Failed to grade card'
-      error.value = errorMsg || 'Failed to grade card'
+      const errorMsg = err instanceof Error ? err.message : 'Failed to grade card'
+      error.value = errorMsg
       throw err
     } finally {
       isSubmitting.value = false
@@ -90,24 +99,28 @@ export const useCardReview = () => {
     error.value = null
 
     try {
-      const response = await $api.review.getQueue(folderId, limit)
+      const result = await $api.review.getQueue(folderId, limit)
 
-      reviewQueue.value = response.cards
-      queueStats.value = response.stats
+      if (result.success) {
+        const response = result.data
+        reviewQueue.value = response.cards
+        queueStats.value = response.stats
 
-      // Set current card
-      if (reviewQueue.value.length > 0) {
-        currentCardIndex.value = 0
-        currentCard.value = reviewQueue.value[0] || null
+        // Set current card
+        if (reviewQueue.value.length > 0) {
+          currentCardIndex.value = 0
+          currentCard.value = reviewQueue.value[0] || null
+        } else {
+          currentCard.value = null
+          currentCardIndex.value = 0
+        }
       } else {
-        currentCard.value = null
-        currentCardIndex.value = 0
+        error.value = result.error.message
+        throw new Error(result.error.message)
       }
     } catch (err: unknown) {
-      const errorMsg = err && typeof err === 'object' && 'message' in err
-        ? (err as { message?: string }).message
-        : 'Failed to fetch review queue'
-      error.value = errorMsg || 'Failed to fetch review queue'
+      const errorMsg = err instanceof Error ? err.message : 'Failed to fetch review queue'
+      error.value = errorMsg
       throw err
     } finally {
       isLoading.value = false

@@ -3256,10 +3256,10 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     precacheAndRoute(manifest, { ignoreURLParametersMatching: [/^utm_/, /^fbclid$/] });
     cleanupOutdatedCaches();
     registerRoute(
-      ({ request, url }) => url.origin === self.location.origin && /\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/.test(url.pathname),
+      ({ request, url }) => url.origin === self.location.origin && (/\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/.test(url.pathname) || url.pathname.startsWith("/AppImages/")),
       new CacheFirst({
         cacheName: "images",
-        plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 })]
+        plugins: [new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 })]
       })
     );
     const assetsStrategy = new CacheFirst({
@@ -3335,7 +3335,16 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         const pageCache = await caches.open("pages");
         const assetCache = await caches.open("assets");
         const staticCache = await caches.open("static");
-        const staticWarm = ["/manifest.webmanifest", "/favicon.ico"];
+        const staticWarm = [
+          "/manifest.webmanifest",
+          "/favicon.ico",
+          "/AppImages/ios/180.png",
+          // Primary iOS icon
+          "/AppImages/android/android-launchericon-192-192.png",
+          // Primary Android icon
+          "/AppImages/android/android-launchericon-512-512.png"
+          // Maskable icon
+        ];
         for (const s of staticWarm) {
           try {
             const r = await fetch(s, { cache: "no-store" });

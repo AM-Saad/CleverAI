@@ -18,7 +18,7 @@
             </div>
             <ul v-if="folders && folders?.length > 0" class="space-y-4">
                 <li v-for="folder in folders" :key="folder.id">
-                    <UiCard hover="glow">
+                    <UiCard hover="glow" shadow="none">
 
                         <NuxtLink :to="`/folders/${folder.id}`">
                             <div class="mb-2 flex items-center">

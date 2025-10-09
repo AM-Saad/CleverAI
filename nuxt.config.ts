@@ -79,8 +79,36 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      link: [{ rel: 'manifest', href: '/manifest.webmanifest' }],
-      meta: [{ name: 'theme-color', content: '#f3f4f6' }]
+      link: [
+        { rel: 'manifest', href: '/manifest.webmanifest' },
+        // Favicon hierarchy - ICO files for browser tabs and bookmarks
+        { rel: 'icon', type: 'image/x-icon', href: '/App_icon_16x16.ico', sizes: '16x16' },
+        { rel: 'icon', type: 'image/x-icon', href: '/App_icon_32x32.ico', sizes: '32x32' },
+        { rel: 'shortcut icon', href: '/App_icon_16x16.ico' }, // Fallback for older browsers
+        // PNG alternatives for modern browsers
+        { rel: 'icon', type: 'image/png', href: '/AppImages/ios/16.png', sizes: '16x16' },
+        { rel: 'icon', type: 'image/png', href: '/AppImages/ios/32.png', sizes: '32x32' },
+        // iOS specific icons
+        { rel: 'apple-touch-icon', href: '/AppImages/ios/180.png', sizes: '180x180' },
+        { rel: 'apple-touch-icon', href: '/AppImages/ios/152.png', sizes: '152x152' },
+        { rel: 'apple-touch-icon', href: '/AppImages/ios/120.png', sizes: '120x120' },
+        { rel: 'apple-touch-icon', href: '/AppImages/ios/76.png', sizes: '76x76' }
+      ],
+      meta: [
+        { name: 'theme-color', content: '#f3f4f6' },
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
+        // iOS specific meta tags
+        { name: 'apple-mobile-web-app-capable', content: 'yes' },
+        { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
+        { name: 'apple-mobile-web-app-title', content: 'CleverAI' },
+        // Microsoft specific meta tags
+        { name: 'msapplication-TileColor', content: '#f3f4f6' },
+        { name: 'msapplication-TileImage', content: '/AppImages/windows11/Square150x150Logo.scale-200.png' },
+        { name: 'msapplication-config', content: '/browserconfig.xml' },
+        // Android/Chrome specific
+        { name: 'mobile-web-app-capable', content: 'yes' },
+        { name: 'application-name', content: 'CleverAI' }
+      ]
     }
   },
 //   appConfig: {

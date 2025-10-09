@@ -23,10 +23,10 @@
                     {{ idx + 1 }}. {{ q.question }}
                 </div>
                 <ul class="list-disc ml-5">
-                    <li v-for="(choice, cIdx) in q.choices" :key="cIdx"
+                    <!-- <li v-for="(choice, cIdx) in q.choices" :key="cIdx"
                         :class="{ 'font-semibold text-success': cIdx === q.answerIndex }">
                         {{ choice }}
-                    </li>
+                    </li> -->
                 </ul>
             </UiCard>
         </div>

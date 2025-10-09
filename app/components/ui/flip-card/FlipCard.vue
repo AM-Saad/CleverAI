@@ -1,7 +1,7 @@
 <template>
-    <div :class="cn('h-72 w-64 select-none [perspective:1000px]', props.class)">
+    <div :class="cn('h-72 flex-1 w-full select-none [perspective:1000px] mb-4 md:mb-0', props.class)">
         <div :class="cn(
-            'relative h-full rounded-2xl transition-transform duration-500 will-change-transform cursor-pointer text-dark [transform-style:preserve-3d]'
+            'block relative min-w-full h-full rounded-2xl transition-transform duration-500 will-change-transform cursor-pointer text-dark [transform-style:preserve-3d]'
         )" :style="{ transform: wrapperTransform }" @click="flipped = !flipped">
 
             <!-- Front -->

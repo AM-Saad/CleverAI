@@ -72,7 +72,7 @@
                         <div class="mb-2 flex justify-between">
                             <span class="text-gray-600 dark:text-gray-400">AI Generations</span>
                             <span>{{ subscriptionInfo.generationsUsed }} / {{ subscriptionInfo.generationsQuota
-                            }}</span>
+                                }}</span>
                         </div>
 
                         <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
@@ -159,22 +159,22 @@
                             <!-- Usage by Feature -->
                             <div class="mb-8">
                                 <UiSubtitle>Usage by Feature</UiSubtitle>
-                                <div class="overflow-x-auto mt-4">
+                                <div class="overflow-x-auto mt-4 p-sm bg-muted  border-muted rounded">
                                     <table class="w-full text-left">
                                         <thead>
-                                            <tr class="border-b dark:border-gray-700">
-                                                <th class="pb-2">Feature</th>
-                                                <th class="pb-2 text-right">Calls</th>
-                                                <th class="pb-2 text-right">Tokens</th>
-                                                <th class="pb-2 text-right">Cost (USD)</th>
+                                            <tr class="border-b dark:border-gray-700 ">
+                                                <th class="py-1">Feature</th>
+                                                <th class="py-1">Calls</th>
+                                                <th class="py-1">Tokens</th>
+                                                <th class="py-1 text-right">Cost (USD)</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr v-for="feature in llmUsage.byFeature" :key="feature.name"
-                                                class="border-b dark:border-gray-700">
+                                            <tr v-for="(feature, idx) in llmUsage.byFeature" :key="feature.name"
+                                                :class="`${idx !== llmUsage.byFeature.length - 1 ? 'border-b dark:border-gray-700' : ''}`">
                                                 <td class="py-2">{{ feature.name }}</td>
-                                                <td class="py-2 text-right">{{ feature.calls }}</td>
-                                                <td class="py-2 text-right">{{ formatNumber(feature.tokens) }}</td>
+                                                <td class="py-2">{{ feature.calls }}</td>
+                                                <td class="py-2">{{ formatNumber(feature.tokens) }}</td>
                                                 <td class="py-2 text-right">${{ feature.usd.toFixed(4) }}</td>
                                             </tr>
                                         </tbody>
@@ -185,22 +185,22 @@
                             <!-- Usage by Model -->
                             <div class="mb-8">
                                 <UiSubtitle>Usage by Model</UiSubtitle>
-                                <div class="overflow-x-auto mt-4">
+                                <div class="overflow-x-auto mt-4 p-sm bg-muted border-muted rounded">
                                     <table class="w-full text-left">
                                         <thead>
                                             <tr class="border-b dark:border-gray-700">
                                                 <th class="pb-2">Model</th>
-                                                <th class="pb-2 text-right">Calls</th>
-                                                <th class="pb-2 text-right">Tokens</th>
+                                                <th class="pb-2">Calls</th>
+                                                <th class="pb-2">Tokens</th>
                                                 <th class="pb-2 text-right">Cost (USD)</th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr v-for="model in llmUsage.byModel" :key="model.name"
-                                                class="border-b dark:border-gray-700">
+                                            <tr v-for="(model, idx) in llmUsage.byModel" :key="model.name"
+                                                :class="`${idx !== llmUsage.byModel.length - 1 ? 'border-b dark:border-gray-700' : ''}`">
                                                 <td class="py-2">{{ model.name }}</td>
-                                                <td class="py-2 text-right">{{ model.calls }}</td>
-                                                <td class="py-2 text-right">{{ formatNumber(model.tokens) }}</td>
+                                                <td class="py-2">{{ model.calls }}</td>
+                                                <td class="py-2">{{ formatNumber(model.tokens) }}</td>
                                                 <td class="py-2 text-right">${{ model.usd.toFixed(4) }}</td>
                                             </tr>
                                         </tbody>
@@ -211,7 +211,7 @@
                             <!-- Recent Usage -->
                             <div>
                                 <UiSubtitle>Recent Usage</UiSubtitle>
-                                <div class="overflow-x-auto mt-4">
+                                <div class="overflow-x-auto mt-4 p-sm bg-muted border-muted rounded">
                                     <table class="w-full text-left">
                                         <thead>
                                             <tr class="border-b dark:border-gray-700">
@@ -223,8 +223,8 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr v-for="usage in llmUsage.recentUsage" :key="usage.id"
-                                                class="border-b dark:border-gray-700">
+                                            <tr v-for="(usage, idx) in llmUsage.recentUsage" :key="usage.id"
+                                                :class="`${idx !== llmUsage.recentUsage.length - 1 ? 'border-b dark:border-gray-700' : ''}`">
                                                 <td class="py-2">{{ formatDate(usage.date) }}</td>
                                                 <td class="py-2">{{ usage.feature }}</td>
                                                 <td class="py-2">{{ usage.model }}</td>

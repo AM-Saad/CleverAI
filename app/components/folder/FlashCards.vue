@@ -25,10 +25,11 @@
             {{ genError }}
         </UiParagraph>
 
-        <div v-if="cardsToShow?.length"
-            class="mt-4 grid gap-4 justify-center justify-items-center sm:grid-cols-2 md:grid-cols-3 ">
-            <div v-for="(card, idx) in cardsToShow" :key="idx" class="relative">
-                <ui-flip-card>
+        <div v-if="cardsToShow?.length" class="mt-4 select-none ">
+            <UCarousel v-slot="{ item: card }" class-names arrows :items="cardsToShow" :ui="{
+                item: 'select-none basis-[70%] transition-opacity [&:not(.is-snapped)]:opacity-10'
+            }" class="mx-auto max-w-sm">
+                <ui-flip-card class="relative">
                     <template #front>
                         <UiParagraph class="w-4/5">Q: {{ card.front }}</UiParagraph>
                         <!-- Enrollment status indicator -->
@@ -53,7 +54,9 @@
                         </div>
                     </template>
                 </ui-flip-card>
-            </div>
+            </UCarousel>
+
+
         </div>
 
         <!-- Review Navigation -->

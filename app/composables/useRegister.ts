@@ -55,7 +55,7 @@ export function useRegister(): useRegister {
     loading.value = true
     try {
       const { $api } = useNuxtApp()
-      const data = await $api.auth.register({
+      const result = await $api.auth.register({
         name: credentials.value.name,
         email: credentials.value.email,
         password: credentials.value.password,
@@ -64,13 +64,19 @@ export function useRegister(): useRegister {
         role: credentials.value.role as 'USER',
         provider: 'credentials'
       })
-      success.value = data.message
-      const maybeRedirect = (data as unknown as { redirect?: string }).redirect
-      if (maybeRedirect) {
-        router.push(maybeRedirect)
+
+      if (result.success) {
+        const data = result.data
+        success.value = data.message
+        const maybeRedirect = data.redirect
+        if (maybeRedirect) {
+          router.push(maybeRedirect)
+        }
+      } else {
+        error.value = result.error.message
       }
     } catch (err) {
-      // Errors are already normalized by FetchFactory (APIError)
+      // Fallback error handling
       const serverError = err as Error
       error.value = serverError.message || 'Registration failed'
     } finally {

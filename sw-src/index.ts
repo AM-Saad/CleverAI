@@ -211,14 +211,15 @@ import { ExpirationPlugin } from 'workbox-expiration'
     // Our fetch handler below provides an offline fallback for navigations.
 
     // Simple runtime caching strategies - essential assets only
-    // 1. Images - CacheFirst
+    // 1. Images - CacheFirst (includes AppImages directory)
     registerRoute(
         ({ request, url }: { request: Request; url: URL }) =>
             url.origin === self.location.origin &&
-            /\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/.test(url.pathname),
+            (/\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/.test(url.pathname) ||
+             url.pathname.startsWith('/AppImages/')),
         new CacheFirst({
             cacheName: 'images',
-            plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 30 * 24 * 60 * 60 })]
+            plugins: [new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 })]
         })
     )
 
@@ -330,7 +331,13 @@ import { ExpirationPlugin } from 'workbox-expiration'
             const staticCache = await caches.open('static')
 
             // Always consider these tiny static files to avoid noisy logs
-            const staticWarm = ['/manifest.webmanifest', '/favicon.ico']
+            const staticWarm = [
+                '/manifest.webmanifest',
+                '/favicon.ico',
+                '/AppImages/ios/180.png',  // Primary iOS icon
+                '/AppImages/android/android-launchericon-192-192.png', // Primary Android icon
+                '/AppImages/android/android-launchericon-512-512.png'  // Maskable icon
+            ]
             for (const s of staticWarm) {
                 try {
                     const r = await fetch(s, { cache: 'no-store' })

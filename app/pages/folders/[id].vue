@@ -1,27 +1,33 @@
 <template>
-    <div id="folder-page" class="inline-flex overflow-hidden w-full">
+    <div id="folder-page" class=" ">
         <div v-if="loading">Loading...</div>
-        <shared-error-message v-if="error" :error="error.message" />
-        <Transition name="fade" mode="out-in" :duration="{
-            enter: 300,
-            leave: 300
-        }">
-            <div v-if="folder" class=" max-w-full order-2 transition-all duration-1000 will-change-auto">
-                <div class="flex flex-wrap gap-4 justify-between my-4 pb-4">
+
+        <shared-server-error v-model:typed-error="typedError" :loading="loading" />
+
+
+        <Transition name="fade" mode="out-in" :duration="{ enter: 300, leave: 300 }">
+            <div v-if="folder" class="order-2 transition-all duration-1000 will-change-auto">
+                <header class="flex flex-wrap gap-4 justify-between my-4 pb-4">
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
                             <icon name="bi:folder" class="inline-block text-primary text-2xl" />
                             <UiTitle>{{ folder?.title }}</UiTitle>
                             <span v-if="folder.llmModel"
                                 class="inline-flex items-center text-xs px-1 py-1 rounded bg-primary">
-                                Model: <span class="ml-1 font-medium">{{ folder.llmModel.toLocaleUpperCase() }}</span>
+                                Model:
+                                <span class="ml-1 font-medium">
+                                    {{ folder.llmModel.toLocaleUpperCase() }}
+                                </span>
                             </span>
                         </div>
-                        <p class="mt-2">{{ folder?.description ? folder.description : 'No description available.' }}
-                        </p>
+                        <UiParagraph class="mt-2">
+                            {{ folder?.description ?
+                                folder.description : 'No description available.' }}
+                        </UiParagraph>
                     </div>
+
                     <div class="flex flex-col items-start gap-1">
-                        <UiParagraph><strong>Created At:</strong> {{ createdAt }}</UiParagraph>
+                        <UiParagraph size="xs">Created At: {{ createdAt }}</UiParagraph>
                         <div class="flex justify-between items-center gap-2">
                             <UButton color="primary" variant="outline" :aria-expanded="showUpload"
                                 aria-controls="upload-materials" @click="toggleUploadForm">
@@ -34,31 +40,29 @@
                                 @cancel="showUpload = false" />
                         </div>
                     </div>
+                </header>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                    <!-- CAROUSEL Goes Here -->
+                    <UiCard variant="ghost">
+                        <UiTabs v-model="activeIndex" :items="items" @select="select" />
+                        <UCarousel ref="carousel" v-slot="{ item }" :items="items" :prev="{ onClick: onClickPrev }"
+                            :next="{ onClick: onClickNext }" :ui="{ item: 'ps-0', container: '-ms-0' }"
+                            @select="onSelect">
+                            <div class="rounded overflow-scroll">
+                                <component :is="item.component" />
+                            </div>
+
+                        </UCarousel>
+                    </UiCard>
+
+                    <!-- NOTES Goes Here -->
+                    <FolderNotesSection :folder-id="`${id as string}`" />
+
                 </div>
 
-                <div class="flex-1 w-full my-xl rounded-md">
 
-                    <div class="border-b border-gray-200 dark:border-gray-700">
-                        <nav class="-mb-px flex space-x-8">
-                            <button v-for="(tab, index) in items" :key="index" :class="[
-                                'flex items-center gap-2 py-2 px-1 border-b-2 font-medium text-sm transition-colors',
-                                activeIndex === index
-                                    ? 'border-primary-500 text-primary-600 dark:text-primary-400'
-                                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
-                            ]" @click="select(index)">
-                                <UIcon :name="tab.icon" class="w-4 h-4" />
-                                {{ tab.name }}
-                            </button>
-                        </nav>
-                    </div>
-                    <UCarousel ref="carousel" v-slot="{ item }" :items="items" :prev="{ onClick: onClickPrev }"
-                        :next="{ onClick: onClickNext }" class="w-full mx-auto" @select="onSelect">
-                        <div class="rounded overflow-scroll my-lg">
-                            <component :is="item.component" />
-                        </div>
-
-                    </UCarousel>
-                </div>
             </div>
 
         </Transition>
@@ -97,13 +101,14 @@ definePageMeta({
 
 const FlashCards = defineAsyncComponent(() => import('~/components/folder/FlashCards.vue'))
 const Questions = defineAsyncComponent(() => import('~/components/folder/Questions.vue'))
+const UiTabs = defineAsyncComponent(() => import('~/components/ui/UiTabs.vue'))
 
 
 const route = useRoute()
 const showUpload = ref(false)
 const showMaterialsModal = ref(false)
 const id = route.params.id
-const { folder, loading, error } = useFolder(id! as string)
+const { folder, loading, typedError } = useFolder(id! as string)
 const createdAt = computed(() => useNuxtLocaleDate(new Date(folder.value?.createdAt || new Date().toISOString())))
 
 const items = [
@@ -120,6 +125,11 @@ const items = [
 
 ]
 
+watch(typedError, (newError) => {
+    if (newError) {
+        console.error('Error fetching folder:', newError.stack)
+    }
+})
 const carousel = useTemplateRef('carousel')
 const activeIndex = ref(0)
 
@@ -144,5 +154,6 @@ function toggleUploadForm() {
 }
 
 const MaterialsList = defineAsyncComponent(() => import('~/components/folder/MaterialsList.vue'))
+const FolderNotesSection = defineAsyncComponent(() => import('~/components/folder/NotesSection.vue'))
 
 </script>
