@@ -48,20 +48,3 @@ export default defineNuxtPlugin(() => {
   })()
 })
 
-// Bridge SW postMessage events to DOM CustomEvents for UI toasts
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.addEventListener('message', (e: MessageEvent) => {
-    const msg = (e.data || {}) as { type?: string; data?: unknown }
-    switch (msg.type) {
-      case 'SYNC_FORM':
-        window.dispatchEvent(new CustomEvent('offline-form-sync-started', { detail: msg.data || {} }))
-        break
-      case 'FORM_SYNCED':
-        window.dispatchEvent(new CustomEvent('offline-form-synced', { detail: msg.data || {} }))
-        break
-      case 'FORM_SYNC_ERROR':
-        window.dispatchEvent(new CustomEvent('offline-form-sync-error', { detail: msg.data || {} }))
-        break
-    }
-  })
-}

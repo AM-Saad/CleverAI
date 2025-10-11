@@ -45,7 +45,7 @@
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
                     <!-- CAROUSEL Goes Here -->
-                    <UiCard variant="ghost">
+                    <UiCard variant="ghost" class="md:order-1 order-2">
                         <UiTabs v-model="activeIndex" :items="items" @select="select" />
                         <UCarousel ref="carousel" v-slot="{ item }" :items="items" :prev="{ onClick: onClickPrev }"
                             :next="{ onClick: onClickNext }" :ui="{ item: 'ps-0', container: '-ms-0' }"

@@ -1,5 +1,5 @@
 <template>
-    <div class="sticky-note relative group" :class="[
+    <div class="sticky-note w-full relative group" :class="[
         stickyNoteClasses,
         { 'pointer-events-none': note.loading }
     ]" @dblclick="startEditing">
@@ -38,7 +38,7 @@
                         d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <span class="text-sm font-medium text-center">{{ note.error }}</span>
-                <button class="mt-2 text-xs text-red-500 hover:text-red-700 underline" @click="retry">
+                <button class="mt-2 text-xs text-danger hover:text-red-700 underline" @click="retry">
                     Try again
                 </button>
             </div>
@@ -53,7 +53,10 @@
                 <!-- Auto-save hint -->
                 <div class="mt-2 pt-2 border-t border-amber-200/40">
                     <p class="text-xs text-amber-600/70 text-center">
-                        Auto-saving... Press Esc to cancel or click outside to finish
+                        Auto-saving... Press <kbd class="px-1 py-0.5 bg-amber-100 border border-amber-300 rounded">Esc</kbd> to
+                        cancel, <kbd class="px-1 py-0.5 bg-amber-100 border border-amber-300 rounded">Cmd</kbd>+<kbd
+                            class="px-1 py-0.5 bg-amber-100 border border-amber-300 rounded">Enter</kbd> to save
+                        immediately.
                     </p>
                 </div>
             </template>

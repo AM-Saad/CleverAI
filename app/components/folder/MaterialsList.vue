@@ -135,13 +135,6 @@ const expandedMaterials = ref(new Set<string>())
 const fullscreenMaterial = ref<string | null>(null)
 const isTransitioning = ref(false)
 
-function toggleContent(id: string) {
-    if (expandedMaterials.value.has(id)) {
-        expandedMaterials.value.delete(id)
-    } else {
-        expandedMaterials.value.add(id)
-    }
-}
 
 async function toggleFullscreen(id: string) {
     if (isTransitioning.value) return // Prevent multiple clicks during transition
@@ -218,7 +211,7 @@ async function checkEnrollmentStatus() {
         const { $api } = useNuxtApp()
         const result = await $api.review.getEnrollmentStatus(materialIds, 'material')
 
-        if (result.success) {
+        if (result && result.success && result.data && result.data.enrollments && typeof result.data.enrollments === 'object') {
             // Update enrolled materials Set
             enrolledMaterials.value.clear()
             Object.entries(result.data.enrollments).forEach(([materialId, isEnrolled]) => {
@@ -227,7 +220,8 @@ async function checkEnrollmentStatus() {
                 }
             })
         } else {
-            console.error('Failed to check enrollment status:', result.error.message)
+            const errorMessage = result && !result.success && 'error' in result ? result.error?.message : 'Unknown error'
+            console.error('Failed to check enrollment status:', errorMessage)
         }
     } catch (error) {
         console.error('Failed to check enrollment status:', error)

@@ -1,6 +1,7 @@
 
 import { ref } from "vue"
 import { useOffline } from "./useOffline"
+import { DB_CONFIG } from "~~/shared/constants";
 //
 interface useLogin {
   credentials: { email: string; password: string }
@@ -31,7 +32,7 @@ export function useLogin(): useLogin {
     }
 
     if (!navigator.onLine) {
-      handleOfflineSubmit(credentials)
+      handleOfflineSubmit({payload: credentials, storeName: DB_CONFIG.STORES.FORMS, type: 'login'})
       return
     }
       loading.value = true

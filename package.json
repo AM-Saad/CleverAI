@@ -11,7 +11,7 @@
         "test:pwa-offline": "playwright test tests/pwa-offline-basic.spec.ts --project=chromium",
         "dev": "nuxt dev --port 5173",
         "generate": "nuxt generate",
-        "preview": "nuxt preview",
+        "preview": "yarn prebuild && yarn build:inject && nuxt preview",
         "postinstall": "nuxt prepare",
         "typecheck": "nuxt typecheck",
         "start": "nuxt start",

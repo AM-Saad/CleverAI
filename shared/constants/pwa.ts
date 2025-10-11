@@ -19,6 +19,8 @@ export const CACHE_NAMES = {
   IMAGES: 'images',
   STATIC: 'static',
   API_AUTH: 'api-auth',
+  API_FOLDERS: 'api-folders',
+    API_NOTES: 'api-notes',
 } as const
 
 // ===== CACHE CONFIGURATION =====
@@ -43,6 +45,8 @@ export const DB_CONFIG = {
   STORES: {
     PROJECTS: 'projects',
     FORMS: 'forms',
+    FOLDERS : 'folders',
+    NOTES: 'notes'
   },
   INDEXES: {
     NAME: 'name',
@@ -160,7 +164,7 @@ export const URL_PATTERNS = {
 } as const
 
 // ===== PREWARM PATHS =====
-export const PREWARM_PATHS = ['/', '/about'] as const
+export const PREWARM_PATHS = ['/', '/about','/folders'] as const
 
 // ===== STATIC WARM FILES =====
 export const STATIC_WARM_FILES = [

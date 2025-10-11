@@ -5,26 +5,26 @@ interface BaseMsg { type: string }
 interface ActivatedMsg extends BaseMsg { type: 'SW_ACTIVATED'; version: string }
 interface UpdateAvailableMsg extends BaseMsg { type: 'SW_UPDATE_AVAILABLE'; version: string }
 interface ControlClaimedMsg extends BaseMsg { type: 'SW_CONTROL_CLAIMED' }
-interface UploadStartMsg extends BaseMsg { type: 'UPLOAD_START'; data: { message: string } }
-interface ProgressMsg extends BaseMsg { type: 'PROGRESS'; data: { identifier: string; index: number; totalChunks: number } }
-interface FileCompleteMsg extends BaseMsg { type: 'FILE_COMPLETE'; data: { identifier: string; message: string } }
-interface AllFilesCompleteMsg extends BaseMsg { type: 'ALL_FILES_COMPLETE'; data: { message: string } }
 interface FormSyncMsg extends BaseMsg { type: 'SYNC_FORM' | 'FORM_SYNCED' | 'FORM_SYNC_ERROR'; data: { message: string } }
 interface ErrorMsg extends BaseMsg { type: 'error'; data: { message: string; identifier?: string } }
 interface NotificationClickNavigateMsg extends BaseMsg { type: 'NOTIFICATION_CLICK_NAVIGATE'; url: string }
 
-type Incoming = ActivatedMsg | UpdateAvailableMsg | ControlClaimedMsg | UploadStartMsg | ProgressMsg | FileCompleteMsg | AllFilesCompleteMsg | FormSyncMsg | ErrorMsg | NotificationClickNavigateMsg
+type Incoming = ActivatedMsg | UpdateAvailableMsg | ControlClaimedMsg | FormSyncMsg | ErrorMsg | NotificationClickNavigateMsg
+
+// Singleton reactive state shared across all consumers
+const registration = shallowRef<ServiceWorkerRegistration | null>(null)
+const version = ref<string | null>(null)
+const updateAvailable = ref(false)
+const isControlling = ref(false)
+const lastError = ref<string | null>(null)
+const formSyncStatus = ref<string | null>(null)
+const lastFormSyncEventType = ref<'SYNC_FORM' | 'FORM_SYNCED' | 'FORM_SYNC_ERROR' | null>(null)
+const notificationUrl = ref<string | null>(null)
+
+let messageHandler: ((e: MessageEvent) => void) | null = null
+let wired = false
 
 export function useServiceWorkerBridge() {
-  const registration = shallowRef<ServiceWorkerRegistration | null>(null)
-  const version = ref<string | null>(null)
-  const updateAvailable = ref(false)
-  const isControlling = ref(false)
-  const uploads = ref<Record<string, { index: number; totalChunks: number; done: boolean }>>({})
-  const lastError = ref<string | null>(null)
-  const formSyncStatus = ref<string | null>(null)
-
-  let messageHandler: ((e: MessageEvent) => void) | null = null
 
   function wireRegistrationListeners(reg: ServiceWorkerRegistration) {
     // Detect when a new SW is installed and waiting
@@ -63,10 +63,6 @@ export function useServiceWorkerBridge() {
   function claimControl() { postMessage({ type: 'CLAIM_CONTROL' }) }
   function setDebug(value: boolean) { postMessage({ type: 'SET_DEBUG', value }) }
 
-  function uploadFiles(name: string, files: File[], uploadUrl: string) {
-    postMessage({ type: 'uploadFiles', name, files, uploadUrl })
-  }
-
   function handleMessage(evt: MessageEvent) {
     const data: Incoming | undefined = evt.data
     if (!data || typeof data !== 'object') return
@@ -81,32 +77,19 @@ export function useServiceWorkerBridge() {
       case 'SW_CONTROL_CLAIMED':
         isControlling.value = true
         break
-      case 'UPLOAD_START':
-        // no identifier yet, will arrive with PROGRESS
-        break
-      case 'PROGRESS': {
-        const { identifier, index, totalChunks } = (data as ProgressMsg).data
-        uploads.value[identifier] = { index, totalChunks, done: false }
-        break
-      }
-      case 'FILE_COMPLETE': {
-        const { identifier } = (data as FileCompleteMsg).data
-        if (uploads.value[identifier]) uploads.value[identifier].done = true
-        break
-      }
-      case 'ALL_FILES_COMPLETE':
-        // could aggregate done status or emit event
-        break
       case 'SYNC_FORM':
       case 'FORM_SYNCED':
-      case 'FORM_SYNC_ERROR':
-        formSyncStatus.value = (data as FormSyncMsg).data.message
+      case 'FORM_SYNC_ERROR': {
+        const msg = data as FormSyncMsg
+        lastFormSyncEventType.value = msg.type
+        formSyncStatus.value = msg.data.message
         break
+      }
       case 'error':
         lastError.value = (data as ErrorMsg).data.message
         break
       case 'NOTIFICATION_CLICK_NAVIGATE':
-        // App-level router navigation can be triggered by a watcher outside.
+        notificationUrl.value = (data as NotificationClickNavigateMsg).url
         break
     }
   }
@@ -116,10 +99,16 @@ export function useServiceWorkerBridge() {
     if (reg?.waiting) updateAvailable.value = true
   }
 
-  onMounted(async () => {
-    await ensureRegistration()
+  function startListening() {
+    if (wired) return
+    wired = true
     messageHandler = handleMessage
     navigator.serviceWorker.addEventListener('message', messageHandler)
+  }
+
+  onMounted(async () => {
+    await ensureRegistration()
+    startListening()
     checkForWaitingAndSignal().catch(() => {})
   })
 
@@ -138,15 +127,16 @@ export function useServiceWorkerBridge() {
     version,
     updateAvailable,
     isControlling,
-    uploads,
     lastError,
     formSyncStatus,
+    lastFormSyncEventType,
+    notificationUrl,
     ensureRegistration,
     requestSkipWaiting,
     claimControl,
     setDebug,
-    uploadFiles,
-    activateUpdateAndReload
+    activateUpdateAndReload,
+    startListening
   }
 }
 

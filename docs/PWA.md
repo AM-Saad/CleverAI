@@ -62,9 +62,11 @@ open http://localhost:3000/test-enhanced-sw
 | File | Purpose | Edit? |
 |------|---------|-------|
 | `sw-src/index.ts` | **Main service worker source (TypeScript)** | ✅ YES |
-| `app/pages/offline.vue` | **Offline fallback page** | ✅ YES |
+| `shared/idb.ts` | **Shared IndexedDB helper (non-destructive)** | ✅ YES |
+| `app/composables/useServiceWorkerBridge.ts` | **SW message handling (singleton)** | ✅ YES |
 | `app/composables/useOffline.ts` | **Background sync logic** | ✅ YES |
 | `app/plugins/sw-sync.client.ts` | **Sync registration** | ✅ YES |
+| `app/layouts/default.vue` | **SW updates & navigation** | ✅ YES |
 | `public/sw.js` | **Compiled service worker** | ❌ AUTO-GENERATED |
 | `public/manifest.webmanifest` | **PWA manifest** | ✅ YES |
 | `scripts/inject-sw.cjs` | **Workbox injection pipeline** | ⚠️ RARELY |
@@ -82,11 +84,13 @@ graph TD
     B -->|Workbox Injection| C[.output/public/sw.js]
     C -->|Runtime| D[Browser Service Worker]
 
-    E[app/components/] -->|Vue Components| F[Update Notifications]
-    G[app/composables/] -->|Composables| H[SW State Management]
+    E[shared/idb.ts] -->|IndexedDB Helper| F[Client & SW]
+    G[useServiceWorkerBridge] -->|Singleton Pattern| H[SW Messages]
+    I[app/layouts/default.vue] -->|Update UI| J[User Notifications]
 
-    D <-->|Messages| F
-    D <-->|State| H
+    D <-->|Messages| H
+    D <-->|IDB Operations| F
+    H --> I
 ```
 
 ### Core Technologies
@@ -189,7 +193,7 @@ let manifest = selfWithWB.__WB_MANIFEST
 
 ### Main Service Worker (`sw-src/index.ts`)
 
-This is the **comprehensive TypeScript service worker** with advanced PWA features:
+This is the **consolidated TypeScript service worker** with streamlined PWA features:
 
 ```typescript
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
@@ -197,106 +201,123 @@ import { registerRoute } from 'workbox-routing'
 import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { SW_CONFIG, CACHE_NAMES, AUTH_STUBS } from '../shared/constants'
+import { openFormsDB, getAllRecords, deleteRecord } from '../shared/idb'
 
-// Version and configuration
+// Version and configuration from centralized constants
 const SW_VERSION = SW_CONFIG.VERSION
 ```
 
 ### Key Features
 
-1. **Precaching**: All build assets automatically cached
-2. **Runtime Caching**: Strategic caching for different resource types
-3. **Background Sync**: Offline form submissions and file uploads
+1. **Precaching**: All build assets automatically cached using Workbox
+2. **Runtime Caching**: Strategic caching with centralized cache names
+3. **Background Sync**: Form sync using shared IndexedDB helper
 4. **Push Notifications**: Complete notification system with click handling
-5. **Update Management**: Seamless update detection and application
-6. **Error Recovery**: Robust error handling and retry mechanisms
-7. **Development Tools**: Debug features for development environment
+5. **Update Management**: Seamless update detection with user control
+6. **Shared IndexedDB**: Non-destructive schema management via `shared/idb.ts`
+7. **Message Bridge**: Centralized communication via `useServiceWorkerBridge`
+
+### Recent Architectural Improvements ✅
+
+- **✅ IndexedDB Consolidation**: Replaced custom SW IndexedDB with shared helper
+- **✅ Message Type Alignment**: SW and Bridge handle identical message contracts  
+- **✅ Cache Strategy Unification**: All cache names use centralized constants
+- **✅ Duplicate Logic Removal**: Removed deprecated upload functionality
+- **✅ Bundle Size Optimization**: Reduced SW size by 1.8kb through cleanup
 
 ---
 
 ## 🔄 Update System
 
-### Enhanced Service Worker Update Notification
+### Service Worker Update Flow
 
-The `ServiceWorkerUpdateNotification.vue` component is a **comprehensive solution** that combines:
+The update system now uses **consolidated message handling** through `useServiceWorkerBridge`:
 
-- ✅ **User-friendly update notifications** (banner and modal)
-- ✅ **Developer debugging panel** (SW status, uploads, errors)
-- ✅ **Network status monitoring** (online/offline indication)
-- ✅ **Keyboard shortcuts** (development mode)
-- ✅ **File upload progress** (chunked upload tracking)
-- ✅ **Error handling** (comprehensive error display)
-
-#### Enhanced Component Features
-
-```vue
-<!-- Full-featured component usage -->
-<ServiceWorkerUpdateNotification
-  mode="auto"              <!-- banner | modal | auto -->
-  :auto-show="true"        <!-- Automatically show updates -->
-  :enable-debug-panel="true" <!-- Show debug panel (dev mode) -->
-/>
+```mermaid
+graph TD
+    A[SW Detects Update] --> B[SW Posts SW_UPDATE_AVAILABLE]
+    B --> C[useServiceWorkerBridge Receives]
+    C --> D[Sets updateAvailable Ref]
+    D --> E[default.vue Shows Banner]
+    E --> F[User Clicks Update]
+    F --> G[activateUpdateAndReload]
+    G --> H[SW skipWaiting + Reload]
 ```
 
-#### Development Keyboard Shortcuts
+#### Enhanced Message Handling
 
-- **`Ctrl/Cmd + Shift + D`** - Toggle debug panel
-- **`Ctrl/Cmd + Shift + U`** - Force update or simulate update
-- **`Ctrl/Cmd + Shift + R`** - Force page refresh
+```typescript
+// useServiceWorkerBridge.ts - Singleton pattern
+const { updateAvailable, activateUpdateAndReload } = useServiceWorkerBridge()
 
-#### Component Modes
+// SW Update Detection (consolidated)
+watch(updateAvailable, (available) => {
+  if (available) {
+    // Show update banner in layout
+    showUpdateNotification.value = true
+  }
+})
+```
 
-1. **Banner Mode**: Slide-down notification from top
-2. **Modal Mode**: Full-screen update dialog
-3. **Auto Mode**: Banner for regular updates, modal for critical updates
+#### Update Detection Methods
 
-#### Update Detection (`useServiceWorkerUpdates` composable)
-
-- **Automatic Checks**: Every 5 minutes in background
-- **User Control**: Updates only apply when user chooses
-- **Progress Tracking**: Visual progress indicators
-- **Error Recovery**: Graceful fallbacks if updates fail
+- **Automatic Polling**: SW checks for waiting workers every 30 seconds
+- **User Control**: Updates only apply when user chooses via UI
+- **Graceful Fallback**: Maintains app functionality if updates fail
+- **Singleton Communication**: Single message listener prevents conflicts
 
 ---
 
 ## 🛠️ Development Tools
 
-### Dev Mode Controls
+### Debug and Testing
 
-Development mode includes enhanced debugging capabilities:
+Development mode includes enhanced debugging through the **consolidated SW bridge**:
 
-#### **Available Dev Mode Functions**
+#### **Available Debug Functions**
 
-1. **Force SW Update** - Manually triggers service worker update check
-2. **Force SW Control** - Forces service worker to take control of the page
-3. **Manual Refresh** - Simple page reload functionality
-4. **Debug SW** - Comprehensive service worker state logging
-5. **Test SW Message** - Tests message passing between page and service worker
+1. **SW Update Check** - `useServiceWorkerBridge().ensureRegistration()`
+2. **Force SW Control** - `useServiceWorkerBridge().claimControl()`
+3. **Manual Refresh** - Standard `window.location.reload()`
+4. **Debug Mode Toggle** - `useServiceWorkerBridge().setDebug(true)`
+5. **Test Messages** - Direct SW communication via bridge
 
-#### **Enhanced Composable Features**
+#### **Consolidated Composable**
 
 ```typescript
-// Development-only functions (conditionally available)
+// Single source of truth for SW communication
 const {
   // Production functions (always available)
+  registration,
+  version,
   updateAvailable,
-  isUpdating,
-  checkForUpdates,
-  applyUpdate,
+  isControlling,
+  notificationUrl,
 
-  // Development functions (dev mode only)
-  forceServiceWorkerUpdate,
-  forceServiceWorkerControl,
-  manualRefresh,
-  debugServiceWorker
-} = useServiceWorkerUpdates()
+  // SW Control functions
+  requestSkipWaiting,
+  claimControl,
+  setDebug,
+  activateUpdateAndReload,
+
+  // State management
+  formSyncStatus,
+  lastFormSyncEventType,
+  lastError
+} = useServiceWorkerBridge()
 ```
 
 ### Testing Pages
 
-1. **`/test-enhanced-sw`** - Enhanced component testing with all features
-2. **`/debug`** - Comprehensive debug dashboard with live logging
-3. **`/offline`** - Offline experience testing
+1. **`/debug`** - Comprehensive debug dashboard with SW state
+2. **Layout Debug Features** - Built into `default.vue` for real-time testing
+3. **SW Message Testing** - Direct message passing validation
+
+### Development vs Production
+
+- **Development**: Debug logging enabled, SW updates immediate
+- **Production**: Optimized bundle, controlled update flow
+- **Testing**: Comprehensive offline functionality validation
 
 ---
 
@@ -332,12 +353,24 @@ const { NAME: DB_NAME } = DB_CONFIG
 5. **AUTH_STUBS** - Development authentication stubs
 6. **URL_PATTERNS** - Route matching patterns
 
-### Files Refactored
+### Files Refactored & Consolidated
 
-- `sw-src/index.ts` - Service worker constants
-- `app/composables/useOffline.ts` - Offline functionality
-- `app/plugins/sw-sync.client.ts` - Sync registration
-- `app/pages/offline.vue` - Offline experience
+- ✅ `sw-src/index.ts` - **Consolidated SW with shared IDB helper**
+- ✅ `shared/idb.ts` - **Non-destructive IndexedDB operations**
+- ✅ `app/composables/useServiceWorkerBridge.ts` - **Singleton message handling**
+- ✅ `app/composables/useOffline.ts` - **Uses shared IDB helper**
+- ✅ `app/plugins/sw-sync.client.ts` - **Streamlined sync registration**
+- ✅ `app/layouts/default.vue` - **Integrated update notifications**
+- ✅ `shared/constants/pwa.ts` - **Centralized configuration**
+
+#### Recent Consolidation Benefits
+
+1. **Data Safety**: Non-destructive IndexedDB schema upgrades
+2. **Message Reliability**: Singleton pattern prevents duplicate listeners
+3. **Bundle Optimization**: Removed 1.8kb of unused upload code
+4. **Configuration Consistency**: All cache names and constants centralized
+5. **Type Safety**: Full TypeScript coverage across SW and client
+6. **Error Prevention**: Eliminated race conditions in IndexedDB operations
 
 ---
 

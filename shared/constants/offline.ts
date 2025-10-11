@@ -26,6 +26,14 @@ export const OFFLINE_PAGES: OfflinePage[] = [
     icon: 'info',
     priority: 3,
   },
+  {
+    title:'FOLDERS',
+    path: '/folders',
+    description: 'Manage your folders',
+    icon: 'folder',
+    priority: 4,
+
+  }
 ] as const
 
 // ===== OFFLINE UI CONSTANTS =====
@@ -58,4 +66,56 @@ export const OFFLINE_FORM_CONFIG = {
   FORM_EXPIRY_DAYS: 7,
   AUTO_SYNC_DELAY: 2000, // 2 seconds
   SYNC_RETRY_INTERVALS: [1000, 2000, 5000, 10000], // Exponential backoff
+} as const
+
+// ===== FORM SYNC TYPES =====
+export const FORM_SYNC_TYPES = {
+  // Material management
+  UPLOAD_MATERIAL: 'upload-material',
+  UPDATE_MATERIAL: 'update-material',
+  DELETE_MATERIAL: 'delete-material',
+  
+  // Folder management
+  CREATE_FOLDER: 'create-folder',
+  UPDATE_FOLDER: 'update-folder',
+  DELETE_FOLDER: 'delete-folder',
+  
+  // Note management
+  CREATE_NOTE: 'create-note',
+  UPDATE_NOTE: 'update-note',
+  DELETE_NOTE: 'delete-note',
+  
+  // Review system
+  ENROLL_CARD: 'enroll-card',
+  GRADE_CARD: 'grade-card',
+  UNENROLL_CARD: 'unenroll-card',
+  
+  // User preferences
+  UPDATE_PREFERENCES: 'update-preferences',
+  UPDATE_NOTIFICATION_SETTINGS: 'update-notification-settings',
+} as const
+
+// Type for form sync operations
+export type FormSyncType = typeof FORM_SYNC_TYPES[keyof typeof FORM_SYNC_TYPES]
+
+// ===== FORM SYNC HANDLERS MAPPING =====
+export const FORM_SYNC_HANDLERS = {
+  [FORM_SYNC_TYPES.UPLOAD_MATERIAL]: 'material',
+  [FORM_SYNC_TYPES.UPDATE_MATERIAL]: 'material',
+  [FORM_SYNC_TYPES.DELETE_MATERIAL]: 'material',
+  
+  [FORM_SYNC_TYPES.CREATE_FOLDER]: 'folder',
+  [FORM_SYNC_TYPES.UPDATE_FOLDER]: 'folder',
+  [FORM_SYNC_TYPES.DELETE_FOLDER]: 'folder',
+  
+  [FORM_SYNC_TYPES.CREATE_NOTE]: 'note',
+  [FORM_SYNC_TYPES.UPDATE_NOTE]: 'note',
+  [FORM_SYNC_TYPES.DELETE_NOTE]: 'note',
+  
+  [FORM_SYNC_TYPES.ENROLL_CARD]: 'review',
+  [FORM_SYNC_TYPES.GRADE_CARD]: 'review',
+  [FORM_SYNC_TYPES.UNENROLL_CARD]: 'review',
+  
+  [FORM_SYNC_TYPES.UPDATE_PREFERENCES]: 'user',
+  [FORM_SYNC_TYPES.UPDATE_NOTIFICATION_SETTINGS]: 'notification',
 } as const

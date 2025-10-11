@@ -120,7 +120,7 @@ export default NuxtAuthHandler({
           throw new Error("Invalid credentials - incorrect password")
         }
         // If the password is valid, return the user object
-        console.log("authorize -> user", user.email)
+        // console.log("authorize -> user", user.email)
         return user
       },
     }),
@@ -161,7 +161,7 @@ export default NuxtAuthHandler({
           provider: "google",
         })
       }
-      console.log("Event -> signIn", params.user.email)
+      // console.log("Event -> signIn", params.user.email)
     },
     signOut: async (message): Promise<void> => {
       console.log("signOut", message)
@@ -177,7 +177,7 @@ export default NuxtAuthHandler({
     },
 
     async jwt({ token, user, account }) {
-      console.log("callbacks -> jwt -> user", user)
+      // console.log("callbacks -> jwt -> user", user)
       // Google OAuth: add Google-specific fields
       if (account && account.provider === "google") {
         token.access_token = account.access_token
@@ -220,13 +220,13 @@ export default NuxtAuthHandler({
           console.error("JWT callback DB fetch error", e)
         }
       }
-      console.log("callbacks -> jwt -> token", token)
+      // console.log("callbacks -> jwt -> token", token)
       return token
     },
 
     async session({ session, token }) {
-      console.log("session callback - session:", session)
-      console.log("session callback - token:", token)
+      // console.log("session callback - session:", session)
+      // console.log("session callback - token:", token)
       // Merge token fields into session
       return {
         ...session,

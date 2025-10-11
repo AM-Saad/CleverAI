@@ -110,13 +110,15 @@ async function checkEnrollmentStatus() {
         const { $api } = useNuxtApp()
         const response = await $api.review.getEnrollmentStatus(cardIds, 'flashcard')
 
-        // Update enrolled cards Set
+        // Update enrolled cards Set - safely check if enrollments exists
         enrolledCards.value.clear()
-        Object.entries(response.enrollments).forEach(([cardId, isEnrolled]) => {
-            if (isEnrolled) {
-                enrolledCards.value.add(cardId)
-            }
-        })
+        if (response && response.success && response.data && response.data.enrollments && typeof response.data.enrollments === 'object') {
+            Object.entries(response.data.enrollments).forEach(([cardId, isEnrolled]) => {
+                if (isEnrolled) {
+                    enrolledCards.value.add(cardId)
+                }
+            })
+        }
     } catch (error) {
         console.error('Failed to check enrollment status:', error)
     }

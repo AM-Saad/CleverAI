@@ -13,6 +13,15 @@
     AUTO_HIDE_BANNER_DELAY: 15e3
     // 15 seconds
   };
+  var CACHE_NAMES = {
+    PAGES: "pages",
+    ASSETS: "assets",
+    IMAGES: "images",
+    STATIC: "static",
+    API_AUTH: "api-auth",
+    API_FOLDERS: "api-folders",
+    API_NOTES: "api-notes"
+  };
   var CACHE_CONFIG = {
     IMAGES: {
       MAX_ENTRIES: 50,
@@ -26,6 +35,24 @@
     },
     PAGES: {
       MAX_ENTRIES: 100
+    }
+  };
+  var DB_CONFIG = {
+    NAME: "recwide_db",
+    VERSION: 2,
+    STORES: {
+      PROJECTS: "projects",
+      FORMS: "forms",
+      FOLDERS: "folders",
+      NOTES: "notes"
+    },
+    INDEXES: {
+      NAME: "name",
+      EMAIL: "email"
+    },
+    KEY_PATHS: {
+      NAME: "name",
+      ID: "id"
     }
   };
   var SW_MESSAGE_TYPES = {
@@ -53,6 +80,10 @@
     UPLOAD_FILES: "uploadFiles",
     // Generic error
     ERROR: "error"
+  };
+  var SYNC_TAGS = {
+    FORM: "syncForm",
+    CONTENT: "content-sync"
   };
   var UPLOAD_CONFIG = {
     CHUNK_SIZE: {
@@ -105,7 +136,7 @@
     FAVICON: "/favicon.ico",
     NUXT_BUILD: "/_nuxt/"
   };
-  var PREWARM_PATHS = ["/", "/about"];
+  var PREWARM_PATHS = ["/", "/about", "/folders"];
   var STATIC_WARM_FILES = [
     URL_PATTERNS.MANIFEST,
     URL_PATTERNS.FAVICON
@@ -119,6 +150,110 @@
     CONTENT_SYNC_INTERVAL: 60 * 60 * 1e3
     // 1 hour
   };
+
+  // shared/constants/offline.ts
+  var FORM_SYNC_TYPES = {
+    // Material management
+    UPLOAD_MATERIAL: "upload-material",
+    UPDATE_MATERIAL: "update-material",
+    DELETE_MATERIAL: "delete-material",
+    // Folder management
+    CREATE_FOLDER: "create-folder",
+    UPDATE_FOLDER: "update-folder",
+    DELETE_FOLDER: "delete-folder",
+    // Note management
+    CREATE_NOTE: "create-note",
+    UPDATE_NOTE: "update-note",
+    DELETE_NOTE: "delete-note",
+    // Review system
+    ENROLL_CARD: "enroll-card",
+    GRADE_CARD: "grade-card",
+    UNENROLL_CARD: "unenroll-card",
+    // User preferences
+    UPDATE_PREFERENCES: "update-preferences",
+    UPDATE_NOTIFICATION_SETTINGS: "update-notification-settings"
+  };
+  var FORM_SYNC_HANDLERS = {
+    [FORM_SYNC_TYPES.UPLOAD_MATERIAL]: "material",
+    [FORM_SYNC_TYPES.UPDATE_MATERIAL]: "material",
+    [FORM_SYNC_TYPES.DELETE_MATERIAL]: "material",
+    [FORM_SYNC_TYPES.CREATE_FOLDER]: "folder",
+    [FORM_SYNC_TYPES.UPDATE_FOLDER]: "folder",
+    [FORM_SYNC_TYPES.DELETE_FOLDER]: "folder",
+    [FORM_SYNC_TYPES.CREATE_NOTE]: "note",
+    [FORM_SYNC_TYPES.UPDATE_NOTE]: "note",
+    [FORM_SYNC_TYPES.DELETE_NOTE]: "note",
+    [FORM_SYNC_TYPES.ENROLL_CARD]: "review",
+    [FORM_SYNC_TYPES.GRADE_CARD]: "review",
+    [FORM_SYNC_TYPES.UNENROLL_CARD]: "review",
+    [FORM_SYNC_TYPES.UPDATE_PREFERENCES]: "user",
+    [FORM_SYNC_TYPES.UPDATE_NOTIFICATION_SETTINGS]: "notification"
+  };
+
+  // shared/idb.ts
+  function openIDB(options) {
+    const { storeName, keyPath = "id", indexes = [] } = options;
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        let store;
+        if (!db.objectStoreNames.contains(storeName)) {
+          store = db.createObjectStore(storeName, { keyPath });
+        } else {
+          try {
+            const tx = req.transaction;
+            if (tx) {
+              store = tx.objectStore(storeName);
+            } else {
+              return;
+            }
+          } catch {
+            return;
+          }
+        }
+        if (store && indexes.length > 0) {
+          try {
+            for (const { name, keyPath: indexKeyPath, options: options2 } of indexes) {
+              if (!store.indexNames.contains(name)) {
+                store.createIndex(name, indexKeyPath, options2);
+              }
+            }
+          } catch (error) {
+            console.warn("[IDB] Index creation failed:", error);
+          }
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function openFormsDB() {
+    return openIDB({
+      storeName: "forms",
+      keyPath: "id"
+      // Future: add indexes when needed
+      // indexes: [{ name: 'email', keyPath: 'email', options: { unique: false } }]
+    });
+  }
+  async function getAllRecords(db, storeName) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction([storeName], "readonly");
+      const store = tx.objectStore(storeName);
+      const req = store.getAll();
+      req.onsuccess = () => resolve(req.result || []);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  async function deleteRecord(db, storeName, key) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction([storeName], "readwrite");
+      const store = tx.objectStore(storeName);
+      store.delete(key);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  }
 
   // node_modules/workbox-core/_version.js
   try {
@@ -3171,100 +3306,25 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     } catch {
     }
     const SW_MESSAGE_TYPE = SW_MESSAGE_TYPES;
-    function calculateChunkSize(fileSize) {
-      const { MIN, MAX, TARGET_CHUNKS } = UPLOAD_CONFIG.CHUNK_SIZE;
-      return Math.max(MIN, Math.min(MAX, Math.ceil(fileSize / TARGET_CHUNKS)));
-    }
-    function sleep(ms) {
-      return new Promise((r) => setTimeout(r, ms));
-    }
-    function backoffDelay(baseMs, attempt) {
-      const exp = baseMs * Math.pow(2, attempt);
-      const jitter = Math.random() * exp * 0.4;
-      return Math.floor(exp + jitter);
-    }
-    let db = null;
-    const DB_NAME2 = "recwide_db";
-    const DB_VERSION = 2;
-    function openDatabase() {
-      return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME2, DB_VERSION);
-        request.onupgradeneeded = (event) => {
-          const target = event.target;
-          const upgradeDb = target.result;
-          const tx = target.transaction;
-          if (!upgradeDb.objectStoreNames.contains("projects")) {
-            const projects = upgradeDb.createObjectStore("projects", { keyPath: "name" });
-            projects.createIndex("name", "name", { unique: false });
-          }
-          const hasForms = upgradeDb.objectStoreNames.contains("forms");
-          if (!hasForms) {
-            const forms = upgradeDb.createObjectStore("forms", { keyPath: "id" });
-            forms.createIndex("email", "email", { unique: false });
-            return;
-          }
-          const oldStore = tx.objectStore("forms");
-          const oldKeyPath = oldStore.keyPath;
-          if (oldKeyPath === "id") {
-            try {
-              oldStore.createIndex("email", "email", { unique: false });
-            } catch {
-            }
-            return;
-          }
-          const allReq = oldStore.getAll();
-          allReq.onsuccess = () => {
-            const oldRecords = allReq.result || [];
-            try {
-              upgradeDb.deleteObjectStore("forms");
-            } catch {
-            }
-            const newForms = upgradeDb.createObjectStore("forms", { keyPath: "id" });
-            newForms.createIndex("email", "email", { unique: false });
-            const reinserts = oldRecords.map((rec) => {
-              const id = rec.id || `${rec.email || "unknown"}-${rec.createdAt || Date.now()}`;
-              const toPut = {
-                id,
-                email: rec.email || "unknown",
-                payload: rec.payload,
-                createdAt: rec.createdAt || Date.now()
-              };
-              const putReq = tx.objectStore("forms").add(toPut);
-              putReq.onerror = () => {
-              };
-              return putReq;
-            });
-          };
-          allReq.onerror = () => {
-            try {
-              upgradeDb.deleteObjectStore("forms");
-            } catch {
-            }
-            const newForms = upgradeDb.createObjectStore("forms", { keyPath: "id" });
-            newForms.createIndex("email", "email", { unique: false });
-          };
-        };
-        request.onsuccess = (e) => {
-          db = e.target.result;
-          resolve(db);
-        };
-        request.onerror = () => reject(request.error);
-      });
-    }
-    openDatabase().catch((err) => error("IndexedDB open failed", err));
     const manifest = self.__WB_MANIFEST || [];
     precacheAndRoute(manifest, { ignoreURLParametersMatching: [/^utm_/, /^fbclid$/] });
     cleanupOutdatedCaches();
     registerRoute(
-      ({ request, url }) => url.origin === self.location.origin && (/\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/.test(url.pathname) || url.pathname.startsWith("/AppImages/")),
+      ({ request: _request, url }) => url.origin === self.location.origin && (/\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/.test(url.pathname) || url.pathname.startsWith("/AppImages/")),
       new CacheFirst({
-        cacheName: "images",
-        plugins: [new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 })]
+        cacheName: CACHE_NAMES.IMAGES,
+        plugins: [new ExpirationPlugin({
+          maxEntries: CACHE_CONFIG.IMAGES.MAX_ENTRIES,
+          maxAgeSeconds: CACHE_CONFIG.IMAGES.MAX_AGE_SECONDS
+        })]
       })
     );
     const assetsStrategy = new CacheFirst({
-      cacheName: "assets",
-      plugins: [new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 7 * 24 * 60 * 60 })]
+      cacheName: CACHE_NAMES.ASSETS,
+      plugins: [new ExpirationPlugin({
+        maxEntries: CACHE_CONFIG.ASSETS.MAX_ENTRIES,
+        maxAgeSeconds: CACHE_CONFIG.ASSETS.MAX_AGE_SECONDS
+      })]
     });
     registerRoute(
       ({ url, request }) => url.origin === self.location.origin && (url.pathname.startsWith("/_nuxt/") || request.destination === "script" || request.destination === "style"),
@@ -3286,28 +3346,27 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     );
     registerRoute(
       ({ url }) => url.origin === self.location.origin && (url.pathname === "/manifest.webmanifest" || url.pathname === "/favicon.ico"),
-      new StaleWhileRevalidate({ cacheName: "static" })
+      new StaleWhileRevalidate({ cacheName: CACHE_NAMES.STATIC })
     );
     registerRoute(
       ({ url, request }) => url.origin === self.location.origin && url.pathname.startsWith("/api/auth/") && request.method === "GET",
-      async ({ event }) => {
+      async ({ request }) => {
         var _a;
-        const req = event.request;
-        const url = new URL(req.url);
-        const cacheName = "api-auth";
+        const url = new URL(request.url);
+        const cacheName = CACHE_NAMES.API_AUTH;
         const cache = await caches.open(cacheName);
         try {
-          const resp = await fetch(req);
+          const resp = await fetch(request);
           const isJson = (_a = resp.headers.get("content-type")) == null ? void 0 : _a.includes("application/json");
           if (resp.ok && isJson) {
             try {
-              await cache.put(req, resp.clone());
+              await cache.put(request, resp.clone());
             } catch {
             }
           }
           return resp;
         } catch {
-          const cached = await cache.match(req);
+          const cached = await cache.match(request);
           if (cached) return cached;
           if (url.pathname in AUTH_STUBS) {
             return new Response(JSON.stringify(AUTH_STUBS[url.pathname]), {
@@ -3319,10 +3378,79 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         }
       }
     );
+    registerRoute(
+      ({ url, request }) => url.origin === self.location.origin && url.pathname.startsWith("/api/folders") && request.method === "GET",
+      async ({ request }) => {
+        var _a;
+        const cacheName = CACHE_NAMES.API_FOLDERS;
+        const cache = await caches.open(cacheName);
+        try {
+          const resp = await fetch(request);
+          const isJson = (_a = resp.headers.get("content-type")) == null ? void 0 : _a.includes("application/json");
+          if (resp.ok && isJson) {
+            try {
+              await cache.put(request, resp.clone());
+              log("Cached folders response:", request.url);
+            } catch {
+            }
+          }
+          return resp;
+        } catch {
+          log("Folders API network failed, checking cache:", request.url);
+          const cached = await cache.match(request);
+          if (cached) {
+            log("Serving cached folders:", request.url);
+            return cached;
+          }
+          const url = new URL(request.url);
+          if (url.pathname === "/api/folders/count") {
+            return new Response(JSON.stringify({ success: true, data: { count: 0 } }), {
+              status: 200,
+              headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
+            });
+          } else {
+            return new Response(JSON.stringify({ success: true, data: [] }), {
+              status: 200,
+              headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
+            });
+          }
+        }
+      }
+    );
+    registerRoute(
+      ({ url, request }) => url.origin === self.location.origin && url.pathname.startsWith("/api/notes") && request.method === "GET",
+      async ({ request }) => {
+        var _a;
+        const cacheName = CACHE_NAMES.API_NOTES;
+        const cache = await caches.open(cacheName);
+        try {
+          const resp = await fetch(request);
+          const isJson = (_a = resp.headers.get("content-type")) == null ? void 0 : _a.includes("application/json");
+          if (resp.ok && isJson) {
+            try {
+              await cache.put(request, resp.clone());
+              log("Cached notes response:", request.url);
+            } catch {
+            }
+          }
+          return resp;
+        } catch {
+          const cached = await cache.match(request);
+          if (cached) {
+            log("Serving cached notes:", request.url);
+            return cached;
+          }
+          return new Response(JSON.stringify({ success: true, data: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
+          });
+        }
+      }
+    );
     function extractAssetUrls(html) {
       try {
         const urls = /* @__PURE__ */ new Set();
-        const re = /\/(?:_nuxt|_assets)\/[A-Za-z0-9._\-\/]+\.(?:js|css|png|jpg|jpeg|webp|svg|ico)/g;
+        const re = /\/(?:_nuxt|_assets)\/[A-Za-z0-9._/-]+\.(?:js|css|png|jpg|jpeg|webp|svg|ico)/g;
         let m;
         while (m = re.exec(html)) urls.add(m[0]);
         return Array.from(urls);
@@ -3332,9 +3460,9 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
     async function prewarmPages(paths) {
       try {
-        const pageCache = await caches.open("pages");
-        const assetCache = await caches.open("assets");
-        const staticCache = await caches.open("static");
+        const pageCache = await caches.open(CACHE_NAMES.PAGES);
+        const assetCache = await caches.open(CACHE_NAMES.ASSETS);
+        const staticCache = await caches.open(CACHE_NAMES.STATIC);
         const staticWarm = [
           "/manifest.webmanifest",
           "/favicon.ico",
@@ -3461,19 +3589,6 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         })());
         return;
       }
-      if (type === "uploadFiles") {
-        const payload = data;
-        const source = event.source;
-        if (source && "id" in source) {
-          swSelf.clients.get(source.id).then((client) => {
-            client == null ? void 0 : client.postMessage({ type: SW_MESSAGE_TYPE.UPLOAD_START, data: { message: "Upload started" } });
-          });
-        }
-        handleDatabaseOperation({ action: "add", payload: { name: payload.name, files: payload.files } });
-        const ext = event;
-        ext.waitUntil(handleConcurrentUploads(payload.name, payload.files || [], payload.uploadUrl));
-        return;
-      }
       if (type === "SET_DEBUG") {
         DEBUG = !!data.value;
         log("Debug mode set to", DEBUG);
@@ -3587,11 +3702,11 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     });
     swSelf.addEventListener("sync", (event) => {
       const syncEvt = event;
-      if (syncEvt.tag === "syncForm") {
+      if (syncEvt.tag === SYNC_TAGS.FORM) {
         syncEvt.waitUntil((async () => {
           const clients = await swSelf.clients.matchAll({ type: "window" });
           clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.SYNC_FORM, data: { message: "Syncing data.." } }));
-          await syncAuthentication(clients);
+          await syncForms(clients);
         })());
       }
     });
@@ -3609,14 +3724,14 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
             const response = await fetch(req);
             if (response.ok && response.status === 200) {
               try {
-                const cache = await caches.open("pages");
+                const cache = await caches.open(CACHE_NAMES.PAGES);
                 await cache.put(req, response.clone());
                 log("Cached page successfully:", req.url);
                 try {
                   const html = await response.clone().text();
                   const assetUrls = extractAssetUrls(html);
                   if (assetUrls.length) {
-                    const assetCache = await caches.open("assets");
+                    const assetCache = await caches.open(CACHE_NAMES.ASSETS);
                     await Promise.all(assetUrls.map(async (u) => {
                       try {
                         const r = await fetch(u, { cache: "no-store" });
@@ -3630,7 +3745,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
                 }
                 try {
                   const keys = await cache.keys();
-                  const MAX_ENTRIES = 100;
+                  const MAX_ENTRIES = CACHE_CONFIG.PAGES.MAX_ENTRIES;
                   if (keys.length > MAX_ENTRIES) {
                     const toDelete = keys.length - MAX_ENTRIES;
                     for (let i = 0; i < toDelete; i++) {
@@ -3648,11 +3763,11 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           } catch {
             log("Network failed for:", req.url);
             if (DEBUG) {
-              const cache2 = await caches.open("pages");
+              const cache2 = await caches.open(CACHE_NAMES.PAGES);
               const cacheKeys = await cache2.keys();
               log("Pages cache contains:", cacheKeys.map((r) => r.url));
             }
-            const cache = await caches.open("pages");
+            const cache = await caches.open(CACHE_NAMES.PAGES);
             let cachedResponse = await cache.match(req, { ignoreSearch: true });
             if (!cachedResponse) {
               const cleanUrl = new URL(req.url);
@@ -3709,51 +3824,28 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         })());
       }
     });
-    function handleDatabaseOperation(op) {
-      if (!db) return;
-      const tx = db.transaction(["projects"], "readwrite");
-      const store = tx.objectStore("projects");
-      let request;
-      switch (op.action) {
-        case "add":
-          request = store.add(op.payload);
-          break;
-        case "update":
-          request = store.put(op.payload);
-          break;
-        case "delete":
-          request = store.delete(op.payload.name);
-          break;
-        case "get":
-          request = store.get(op.payload.name);
-          break;
-      }
-      if (request) {
-        request.onsuccess = () => log("DB op success", op.action);
-        request.onerror = () => error("DB op error", op.action, request.error);
-      }
-    }
     async function getFormDataAll() {
-      if (!db) return [];
-      return new Promise((resolve, reject) => {
-        const tx = db.transaction(["forms"], "readonly");
-        const store = tx.objectStore("forms");
-        const req = store.getAll();
-        req.onsuccess = () => resolve(req.result || []);
-        req.onerror = () => reject(req.error);
-      });
+      try {
+        const db = await openFormsDB();
+        const records = await getAllRecords(db, DB_CONFIG.STORES.FORMS);
+        db.close();
+        return records;
+      } catch (err) {
+        error("Failed to get form data:", err);
+        return [];
+      }
     }
     async function deleteFormEntries(ids) {
-      if (!db || !ids.length) return;
-      await Promise.all(ids.map((id) => new Promise((resolve) => {
-        const tx = db.transaction(["forms"], "readwrite");
-        const store = tx.objectStore("forms");
-        const delReq = store.delete(id);
-        delReq.onsuccess = () => resolve();
-        delReq.onerror = () => resolve();
-      })));
+      if (!ids.length) return;
+      try {
+        const db = await openFormsDB();
+        await Promise.all(ids.map((id) => deleteRecord(db, DB_CONFIG.STORES.FORMS, id)));
+        db.close();
+      } catch (err) {
+        error("Failed to delete form entries:", err);
+      }
     }
-    async function syncAuthentication(clients) {
+    async function syncForms(clients) {
       try {
         const formData = await getFormDataAll();
         if (!formData.length) return;
@@ -3762,7 +3854,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         await deleteFormEntries(formData.map((f) => f.id));
         clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNCED, data: { message: `Form data synced (${formData.length} records).` } }));
       } catch (err) {
-        error("syncAuthentication error", err);
+        error("syncForms error", err);
         clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNC_ERROR, data: { message: "Form sync failed." } }));
       }
     }
@@ -3773,92 +3865,11 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       const controller = new AbortController();
       const timeout2 = setTimeout(() => controller.abort(), 2e4);
       try {
-        const formData = new FormData();
-        formData.append("data", JSON.stringify(data));
-        const resp = await fetch("/api/form-sync", { method: "POST", body: formData, signal: controller.signal });
+        const resp = await fetch("/api/form-sync", { method: "POST", body: JSON.stringify(data), signal: controller.signal });
         return resp;
       } finally {
         clearTimeout(timeout2);
       }
-    }
-    async function uploadChunk({ chunk, index, totalChunks, fileIdentifier, uploadUrl }) {
-      const controller = new AbortController();
-      const timeout2 = setTimeout(() => controller.abort(), 2e4);
-      const formData = new FormData();
-      formData.append("file", chunk);
-      formData.append("index", String(index));
-      formData.append("totalChunks", String(totalChunks));
-      formData.append("identifier", fileIdentifier);
-      try {
-        const response = await fetch(uploadUrl, { method: "POST", body: formData, signal: controller.signal });
-        if (!response.ok) {
-          const err = new Error("Upload failed");
-          err.status = response.status;
-          const ra = response.headers.get("Retry-After");
-          err.retryAfter = ra ? Math.max(0, Math.floor(Number(ra) * 1e3)) : void 0;
-          throw err;
-        }
-      } finally {
-        clearTimeout(timeout2);
-      }
-    }
-    async function uploadFile(file, uploadUrl, _retryDelays) {
-      const chunkSize = calculateChunkSize(file.size);
-      const totalChunks = Math.ceil(file.size / chunkSize);
-      const fileIdentifier = `${file.name}-${file.size}-${file.lastModified || 0}`;
-      const CHUNK_CONCURRENCY = 3;
-      const BASE_BACKOFF = 1e3;
-      const MAX_ATTEMPTS = 5;
-      const inFlight = [];
-      const runChunk = (i) => (async () => {
-        const chunk = file.slice(i * chunkSize, (i + 1) * chunkSize);
-        for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-          try {
-            await uploadChunk({ chunk, index: i, totalChunks, fileIdentifier, uploadUrl });
-            const clients = await swSelf.clients.matchAll({ type: "window" });
-            (clients || []).forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.PROGRESS, data: { identifier: fileIdentifier, index: i, totalChunks } }));
-            return;
-          } catch (err) {
-            const e = err;
-            if (attempt === MAX_ATTEMPTS - 1) throw err;
-            const status = e == null ? void 0 : e.status;
-            const retryAfter = e == null ? void 0 : e.retryAfter;
-            const delay = typeof retryAfter === "number" ? retryAfter : backoffDelay(BASE_BACKOFF, attempt);
-            const cushion = status === 413 || status === 429 || status === 503 ? Math.floor(delay * 0.5) : 0;
-            await sleep(delay + cushion);
-          }
-        }
-      })();
-      for (let i = 0; i < totalChunks; i++) {
-        const p = runChunk(i).finally(() => {
-          const idx = inFlight.indexOf(p);
-          if (idx >= 0) inFlight.splice(idx, 1);
-        });
-        inFlight.push(p);
-        if (inFlight.length >= CHUNK_CONCURRENCY) await Promise.race(inFlight);
-      }
-      await Promise.all(inFlight);
-      try {
-        const clients = await swSelf.clients.matchAll({ type: "window" });
-        clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.FILE_COMPLETE, data: { identifier: fileIdentifier, message: `${file.name} upload complete` } }));
-      } catch {
-      }
-    }
-    async function handleConcurrentUploads(name, files, uploadUrl) {
-      const retryDelays = [5e3, 1e4, 15e3];
-      const MAX_FILE_CONCURRENCY = 4;
-      const active = [];
-      for (const f of files) {
-        if (active.length >= MAX_FILE_CONCURRENCY) await Promise.race(active);
-        const p = uploadFile(f, uploadUrl, retryDelays).finally(() => {
-          const idx = active.indexOf(p);
-          if (idx >= 0) active.splice(idx, 1);
-        });
-        active.push(p);
-      }
-      await Promise.all(active);
-      const clients = await swSelf.clients.matchAll({ type: "window" });
-      clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.ALL_FILES_COMPLETE, data: { message: "All uploads complete." } }));
     }
   })();
 })();

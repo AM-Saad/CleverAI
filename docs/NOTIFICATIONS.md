@@ -55,8 +55,9 @@ The CleverAI notification system provides intelligent push notifications for car
 📁 Notification System
 ├── 🔧 Client-side
 │   ├── app/composables/useNotifications.ts - Core notification logic
-│   ├── app/components/NotificationPreferences.vue - User settings UI
-│   └── app/pages/test-notifications.vue - Testing interface
+│   ├── app/composables/useServiceWorkerBridge.ts - SW message handling
+│   ├── app/layouts/default.vue - Notification navigation handling
+│   └── app/components/NotificationPreferences.vue - User settings UI
 ├── 🌐 Server-side APIs
 │   ├── server/api/notifications/subscribe.post.ts - Subscription management
 │   ├── server/api/notifications/unsubscribe.post.ts - Unsubscription
@@ -64,14 +65,17 @@ The CleverAI notification system provides intelligent push notifications for car
 │   ├── server/api/notifications/preferences.get.ts - User preferences
 │   └── server/api/notifications/subscriptions.get.ts - List subscriptions
 ├── ⚙️ Service Worker
-│   ├── sw-src/index.ts - Push event handling
+│   ├── sw-src/index.ts - Push event handling (consolidated)
 │   └── public/sw.js - Compiled service worker
 ├── 🗄️ Database
 │   ├── prisma/schema.prisma - MongoDB schema
 │   └── server/utils/cleanupSubscriptions.ts - Maintenance utilities
+├── 🔧 Shared Infrastructure
+│   ├── shared/idb.ts - IndexedDB helper (non-destructive)
+│   ├── shared/constants/pwa.ts - Notification constants
+│   └── types/notifications.ts - TypeScript definitions
 └── 🔧 Utilities
-    ├── server/services/NotificationService.ts - Core service
-    └── types/notifications.ts - TypeScript definitions
+    └── server/services/NotificationService.ts - Core service
 ```
 
 ### Data Flow
@@ -80,19 +84,26 @@ The CleverAI notification system provides intelligent push notifications for car
 graph TD
     A[User Enables Notifications] --> B[Browser Permission Request]
     B --> C[Generate Push Subscription]
-    C --> D[API: /api/notifications/subscribe]
-    D --> E[Store in MongoDB]
+    C --> D[useServiceWorkerBridge]
+    D --> E[API: /api/notifications/subscribe]
+    E --> F[Store in MongoDB]
 
-    F[Cron Job Triggers] --> G[Check Due Cards]
-    G --> H[Query User Preferences]
-    H --> I[Check Threshold]
-    I --> J[Send Notification]
-    J --> K[Service Worker Receives]
-    K --> L[Display Notification]
-    L --> M[Handle Click Events]
+    G[Cron Job Triggers] --> H[Check Due Cards]
+    H --> I[Query User Preferences]
+    I --> J[Check Threshold]
+    J --> K[Send Notification]
+    K --> L[Service Worker Receives]
+    L --> M[shared/idb.ts IndexedDB]
+    M --> N[Display Notification]
+    N --> O[Handle Click Events]
+    O --> P[useServiceWorkerBridge Navigation]
 
-    N[User Changes Preferences] --> O[API: /api/notifications/preferences]
-    O --> P[Update Threshold]
+    Q[User Changes Preferences] --> R[API: /api/notifications/preferences]
+    R --> S[Update Threshold in MongoDB]
+
+    style D fill:#e1f5fe
+    style L fill:#f3e5f5
+    style M fill:#e8f5e8
 ```
 
 ---
@@ -176,6 +187,71 @@ interface UserNotificationPreferences {
   quietHoursEnabled: boolean
   // ... other preferences
 }
+```
+
+---
+
+---
+
+## 🔧 Client-Side Integration
+
+### useServiceWorkerBridge Pattern
+
+The notification system uses a consolidated singleton pattern for all service worker communication:
+
+```typescript
+// app/composables/useServiceWorkerBridge.ts
+const { 
+  isSwRegistered,
+  swUpdateAvailable,
+  registerServiceWorker,
+  updateServiceWorker
+} = useServiceWorkerBridge()
+
+// Reactive state for notifications
+watch(isSwRegistered, (registered) => {
+  if (registered) {
+    // Service worker is ready, can now handle notifications
+    initializeNotifications()
+  }
+})
+```
+
+### Integration with useNotifications
+
+```typescript
+// app/composables/useNotifications.ts
+export const useNotifications = () => {
+  const { isSwRegistered } = useServiceWorkerBridge()
+  
+  const subscribeToNotifications = async () => {
+    if (!isSwRegistered.value) {
+      throw new Error('Service worker not registered')
+    }
+    
+    // Get push subscription through consolidated SW bridge
+    const subscription = await getSubscription()
+    
+    // Use shared API call
+    await $fetch('/api/notifications/subscribe', {
+      method: 'POST',
+      body: { subscription }
+    })
+  }
+}
+```
+
+### Layout Integration
+
+```typescript
+// app/layouts/default.vue
+const { notificationCount } = useNotifications()
+const { isSwRegistered } = useServiceWorkerBridge()
+
+// Reactive notification badge
+const showNotificationBadge = computed(() => 
+  isSwRegistered.value && notificationCount.value > 0
+)
 ```
 
 ---
@@ -426,13 +502,30 @@ const cleanupSubscriptions = async () => {
 
 ## ⚙️ Service Worker Integration
 
+### Consolidated Architecture
+
+The service worker notification system now uses a consolidated architecture with shared IndexedDB operations:
+
+- **📁 sw-src/index.ts**: Main service worker with push event handling
+- **📁 shared/idb.ts**: Shared IndexedDB helper for consistent data operations
+- **📁 useServiceWorkerBridge.ts**: Singleton pattern for SW communication
+- **📁 shared/constants/pwa.ts**: Centralized notification constants
+
 ### Push Event Handling
 
 ```typescript
-// sw-src/index.ts
-self.addEventListener('push', (event) => {
+// sw-src/index.ts - Consolidated implementation
+import { openFormsDB, getAllRecords } from '../shared/idb'
+import { NOTIFICATION_ACTIONS, CACHE_NAMES } from '../shared/constants/pwa'
+
+self.addEventListener('push', async (event) => {
   try {
     const data = event.data?.json() || {}
+    
+    // Store notification data in IndexedDB using shared helper
+    const db = await openFormsDB()
+    // ... store notification data for offline access
+    
     const options = {
       body: data.body || 'You have new cards to review!',
       icon: data.icon || '/icons/icon-192x192.png',
@@ -442,17 +535,7 @@ self.addEventListener('push', (event) => {
         timestamp: Date.now(),
         ...data.data
       },
-      actions: [
-        {
-          action: 'review',
-          title: 'Start Review',
-          icon: '/icons/review-action.png'
-        },
-        {
-          action: 'dismiss',
-          title: 'Dismiss'
-        }
-      ],
+      actions: NOTIFICATION_ACTIONS,
       requireInteraction: true,
       tag: 'card-due-notification'
     }
@@ -462,7 +545,7 @@ self.addEventListener('push', (event) => {
     )
   } catch (error) {
     console.error('Push event error:', error)
-    // Fallback notification
+    // Fallback notification using constants
     event.waitUntil(
       self.registration.showNotification('CleverAI', {
         body: 'You have updates available',
@@ -476,8 +559,8 @@ self.addEventListener('push', (event) => {
 ### Notification Click Handling
 
 ```typescript
-// Handle notification clicks
-self.addEventListener('notificationclick', (event) => {
+// Handle notification clicks with bridge communication
+self.addEventListener('notificationclick', async (event) => {
   event.notification.close()
 
   const action = event.action
@@ -489,15 +572,21 @@ self.addEventListener('notificationclick', (event) => {
 
   const url = action === 'review' ? '/review' : (data.url || '/')
 
+  // Communicate with client through useServiceWorkerBridge
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then((clientList) => {
-      // Try to focus existing window
+    clients.matchAll({ type: 'window' }).then(async (clientList) => {
+      // Try to focus existing window and send navigation message
       for (const client of clientList) {
         if (client.url.includes(self.location.origin)) {
-          return client.focus().then(() => client.navigate(url))
+          // Send message to useServiceWorkerBridge for handling
+          client.postMessage({
+            type: 'NAVIGATE_TO_URL',
+            payload: { url, source: 'notification-click' }
+          })
+          return client.focus()
         }
       }
-      // Open new window
+      // Open new window if no existing client
       return clients.openWindow(url)
     })
   )
@@ -739,6 +828,56 @@ const checkRateLimit = (userId: string) => {
 ---
 
 ## 🔧 Troubleshooting
+
+### Consolidated Architecture Debugging
+
+#### **Service Worker Bridge Issues**
+The singleton useServiceWorkerBridge pattern prevents duplicate listeners but requires proper initialization:
+
+```typescript
+// Debug SW Bridge state
+const { isSwRegistered, swUpdateAvailable } = useServiceWorkerBridge()
+console.log('SW Registered:', isSwRegistered.value)
+console.log('SW Update Available:', swUpdateAvailable.value)
+
+// Check if bridge is properly initialized
+if (!isSwRegistered.value) {
+  await registerServiceWorker()
+}
+```
+
+#### **IndexedDB Shared Helper Issues**
+The shared/idb.ts helper uses non-destructive operations:
+
+```typescript
+// Debug IndexedDB operations
+import { openFormsDB, getAllRecords } from '~/shared/idb'
+
+const debugIndexedDB = async () => {
+  try {
+    const db = await openFormsDB()
+    const records = await getAllRecords('notifications')
+    console.log('IndexedDB Records:', records)
+  } catch (error) {
+    console.error('IndexedDB Error:', error)
+  }
+}
+```
+
+#### **Message Handling Between SW and Client**
+Check communication between service worker and the bridge:
+
+```typescript
+// In service worker (sw-src/index.ts)
+self.addEventListener('message', (event) => {
+  console.log('SW received message:', event.data)
+})
+
+// In client (useServiceWorkerBridge.ts)
+navigator.serviceWorker?.addEventListener('message', (event) => {
+  console.log('Client received SW message:', event.data)
+})
+```
 
 ### Common Issues
 

@@ -27,11 +27,11 @@
         <!-- Error state for initial fetch -->
         <div v-if="error" class="p-4">
             <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                <div class="flex items-center gap-2 text-red-600 dark:text-red-400">
+                <div class="flex items-center gap-2 text-danger dark:text-red-400">
                     <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5" />
                     <span class="font-medium">Failed to load notes</span>
                 </div>
-                <p class="text-sm text-red-500 dark:text-red-300 mt-1">{{ error.message }}</p>
+                <p class="text-sm text-danger dark:text-red-300 mt-1">{{ error.message }}</p>
                 <UButton size="sm" color="error" variant="outline" class="mt-2"
                     @click="() => notesStore.syncWithServer(props.folderId)">
                     Try Again
@@ -55,17 +55,17 @@
             </div>
 
             <!-- Notes grid -->
-            <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4">
-                <div v-for="note in notes" :key="note.id" class="relative group">
-                    <UiStickyNote :note="transformNoteForComponent(note)" size="md"
+            <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4 p-4 relative">
+                <div v-for="note in notes" :key="note.id" class="relative group w-full">
+                    <UiStickyNote :note="transformNoteForComponent(note)" size="lg"
                         placeholder="Double-click to add your note..." @update="handleUpdateNote"
                         @retry="handleRetry" />
 
                     <!-- Delete button -->
                     <button v-if="!isNoteLoading(note.id)"
-                        class="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-lg"
+                        class="absolute -right-2 -top-2 bg-error h-8 w-8 opacity-0 shadow-lg text-white rounded-full transition-opacity duration-200 group-hover:opacity-100 hover:bg-red-600 flex items-center justify-center cursor-pointer"
                         :disabled="false" @click="deleteNote(note.id)">
-                        <UIcon name="i-heroicons-x-mark" class="w-3 h-3" />
+                        <icon name="i-heroicons-trash" class="w-3 h-3" />
                     </button>
                 </div>
             </div>

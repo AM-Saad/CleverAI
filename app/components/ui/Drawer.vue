@@ -5,7 +5,7 @@ import { useDrawerMotion } from '~/composables/ui/useDrawerMotion'
 import { useSheetMotion } from '~/composables/ui/useSheetMotion'
 import { useFocusTrap } from '~/composables/ui/useFocusTrap'
 
-const emit = defineEmits<{ (e: 'closed'): void; (e: 'cancel'): void }>()
+const emit = defineEmits<{ (e: 'closed' | 'cancel'): void }>()
 
 type MobileProp = boolean | 'auto'
 const props = withDefaults(defineProps<{
@@ -178,7 +178,7 @@ ref="formRef" as="div" :initial="mode.axis === 'y' ? { y: 0 } : { x: 0 }"
                 :drag="suspendDrag ? false : mode.axis" :drag-constraints="mode.constraints" :drag-elastic="0"
                 :drag-snap-to-origin="false" :drag-momentum="false" :on-drag-start="handleDragStart"
                 :on-drag-end="handleDragEnd" :class="[
-                    'fixed z-40 cursor-grab active:cursor-grabbing overflow-hidden bg-gray-100/30 backdrop-blur-md shadow-lg',
+                    'fixed cursor-grab active:cursor-grabbing overflow-hidden bg-gray-100/30 backdrop-blur-md shadow-lg',
                     mode.containerClass
                 ]" :style="mode.style" role="dialog" aria-modal="true" :aria-labelledby="'drawer-title'">
                 <div

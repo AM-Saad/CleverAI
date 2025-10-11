@@ -5,14 +5,18 @@
 // Import centralized constants
 import {
   SW_MESSAGE_TYPES,
-  UPLOAD_CONFIG,
   PREWARM_PATHS,
   SW_CONFIG,
   DB_CONFIG,
   CACHE_NAMES,
-  CACHE_CONFIG,
-  AUTH_STUBS
+  CACHE_CONFIG as _CACHE_CONFIG,
+  AUTH_STUBS,
+  SYNC_TAGS,
+  type FormSyncType
 } from '../shared/constants'
+
+// Import shared IndexedDB helpers
+import { openFormsDB, getAllRecords, deleteRecord } from '../shared/idb'
 
 // Augment the global self type safely
 
@@ -24,6 +28,7 @@ import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
 import { registerRoute } from 'workbox-routing'
 import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
+import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
 
 // No global augmentation required; we'll cast when reading __WB_MANIFEST.
 
@@ -43,53 +48,39 @@ import { ExpirationPlugin } from 'workbox-expiration'
     try { if (new URL(self.location.href).searchParams.get('swDebug') === '1') DEBUG = true } catch { /* ignore */ }
 
     // ---------------------------------------------------------------------------
-    // Enhanced SW Features (migrated from legacy implementation)
+    // Enhanced SW Features:
     //  - Push Notifications
     //  - Notification Click Handling
-    //  - Background Sync (one-off)
+    //  - Background Sync (form sync)
     //  - Periodic Sync (if available)
-    //  - IndexedDB (projects/forms) storage helpers
-    //  - Concurrent Chunked Upload Support with Retries
-    //  - Extended Precache entries (/about, /offline)
-    //  - Offline navigation fallback to /offline when network unavailable
+    //  - IndexedDB form storage via shared helper
+    //  - Offline navigation fallback
     // ---------------------------------------------------------------------------
 
     // -------------------------- TYPE DEFINITIONS --------------------------
-    interface UploadStartMessage { type: typeof SW_MESSAGE_TYPE.UPLOAD_START; data: { message: string } }
-    interface ProgressMessage { type: typeof SW_MESSAGE_TYPE.PROGRESS; data: { identifier: string; index: number; totalChunks: number } }
-    interface FileCompleteMessage { type: typeof SW_MESSAGE_TYPE.FILE_COMPLETE; data: { identifier: string; message: string } }
-    interface AllFilesCompleteMessage { type: typeof SW_MESSAGE_TYPE.ALL_FILES_COMPLETE; data: { message: string } }
     interface FormSyncedMessage { type: typeof SW_MESSAGE_TYPE.FORM_SYNCED; data: { message: string } }
     interface FormSyncErrorMessage { type: typeof SW_MESSAGE_TYPE.FORM_SYNC_ERROR; data: { message: string } }
     interface SyncFormNoticeMessage { type: typeof SW_MESSAGE_TYPE.SYNC_FORM; data: { message: string } }
-    type UploadLifecycleMessage = UploadStartMessage | ProgressMessage | FileCompleteMessage | AllFilesCompleteMessage
     type FormSyncLifecycleMessage = FormSyncedMessage | FormSyncErrorMessage | SyncFormNoticeMessage
 
     type _OutgoingSWMessage =
-        | UploadLifecycleMessage
         | FormSyncLifecycleMessage
         | { type: 'SW_ACTIVATED'; version: string }
+        | { type: 'SW_UPDATE_AVAILABLE'; version: string }
         | { type: 'SW_CONTROL_CLAIMED' }
         | { type: 'NOTIFICATION_CLICK_NAVIGATE'; url: string }
         | { type: 'error'; data: { message: string; identifier?: string } }
-
-    interface UploadFilesMessage {
-        type: 'uploadFiles'
-        name: string
-        files: File[]
-        uploadUrl: string
-    }
 
     interface TestNotificationClickMessage { type: 'TEST_NOTIFICATION_CLICK'; data?: { url?: string } }
     interface SkipWaitingMessage { type: 'SKIP_WAITING' }
     interface ClaimControlMessage { type: 'CLAIM_CONTROL' }
     interface ToggleDebugMessage { type: 'SET_DEBUG'; value: boolean }
-    type IncomingSWMessage = UploadFilesMessage | TestNotificationClickMessage | SkipWaitingMessage | ClaimControlMessage | ToggleDebugMessage
+    type IncomingSWMessage = TestNotificationClickMessage | SkipWaitingMessage | ClaimControlMessage | ToggleDebugMessage
 
     // Data types stored in forms object store
     interface StoredFormRecord {
         id: string
-        email: string
+        type: FormSyncType
         payload: unknown
         createdAt: number
     }
@@ -97,106 +88,8 @@ import { ExpirationPlugin } from 'workbox-expiration'
     // Message types constant - use centralized constants
     const SW_MESSAGE_TYPE = SW_MESSAGE_TYPES
 
-    // Simple adaptive chunk size calculator (inlined instead of external import)
-    function calculateChunkSize(fileSize: number) {
-        // Use centralized upload config
-        const { MIN, MAX, TARGET_CHUNKS } = UPLOAD_CONFIG.CHUNK_SIZE
-        return Math.max(MIN, Math.min(MAX, Math.ceil(fileSize / TARGET_CHUNKS)))
-    }
-
-    // --- Exponential backoff helpers for chunked uploads ---
-    function sleep(ms: number) { return new Promise<void>(r => setTimeout(r, ms)) }
-    function backoffDelay(baseMs: number, attempt: number) {
-        const exp = baseMs * Math.pow(2, attempt)
-        const jitter = Math.random() * exp * 0.4 // up to +40% jitter
-        return Math.floor(exp + jitter)
-    }
-
-    // IndexedDB handles
-    let db: IDBDatabase | null = null
-    const DB_NAME = 'recwide_db'
-    const DB_VERSION = 2
-
-    function openDatabase(): Promise<IDBDatabase> {
-        return new Promise((resolve, reject) => {
-            const request = indexedDB.open(DB_NAME, DB_VERSION)
-            request.onupgradeneeded = (event) => {
-                const target = event.target as IDBOpenDBRequest
-                const upgradeDb = target.result
-                const tx = (target.transaction as IDBTransaction)
-
-                // Ensure 'projects' store exists
-                if (!upgradeDb.objectStoreNames.contains('projects')) {
-                    const projects = upgradeDb.createObjectStore('projects', { keyPath: 'name' })
-                    projects.createIndex('name', 'name', { unique: false })
-                }
-
-                // Handle 'forms' store migration to keyPath: 'id'
-                const hasForms = upgradeDb.objectStoreNames.contains('forms')
-                if (!hasForms) {
-                    const forms = upgradeDb.createObjectStore('forms', { keyPath: 'id' })
-                    forms.createIndex('email', 'email', { unique: false })
-                    return
-                }
-
-                // If 'forms' exists, check its keyPath and migrate if needed
-                const oldStore = tx.objectStore('forms')
-                // Detect keyPath (some browsers expose via oldStore.keyPath)
-                const oldKeyPath = (oldStore as unknown as { keyPath?: string | string[] }).keyPath
-
-                if (oldKeyPath === 'id') {
-                    // Already on new schema; ensure index exists
-                    try {
-                        oldStore.createIndex('email', 'email', { unique: false })
-                    } catch { /* index may already exist */ }
-                    return
-                }
-
-                // Collect existing records, then drop & recreate store with new schema
-                const allReq = oldStore.getAll()
-                allReq.onsuccess = () => {
-                    const oldRecords = (allReq.result || []) as Array<Partial<StoredFormRecord> & { email?: string; createdAt?: number; payload?: unknown; id?: string }>
-                    try { upgradeDb.deleteObjectStore('forms') } catch { /* ignore */ }
-                    const newForms = upgradeDb.createObjectStore('forms', { keyPath: 'id' })
-                    newForms.createIndex('email', 'email', { unique: false })
-
-                    // Reinsert with generated ids if missing
-                    const reinserts = oldRecords.map((rec) => {
-                        const id = rec.id || `${rec.email || 'unknown'}-${rec.createdAt || Date.now()}`
-                        const toPut: StoredFormRecord = {
-                            id,
-                            email: (rec.email as string) || 'unknown',
-                            payload: rec.payload as unknown,
-                            createdAt: (rec.createdAt as number) || Date.now(),
-                        }
-                        const putReq = (tx.objectStore('forms') as IDBObjectStore).add(toPut)
-                        putReq.onerror = () => { /* best effort */ }
-                        return putReq
-                    })
-
-                    // No need to wait for completion here; upgrade transaction will commit if no exceptions are thrown
-                }
-                allReq.onerror = () => {
-                    // If we can't read old data, proceed by recreating the store empty
-                    try { upgradeDb.deleteObjectStore('forms') } catch { /* ignore */ }
-                    const newForms = upgradeDb.createObjectStore('forms', { keyPath: 'id' })
-                    newForms.createIndex('email', 'email', { unique: false })
-                }
-            }
-            request.onsuccess = (e) => {
-                db = (e.target as IDBOpenDBRequest).result
-                resolve(db)
-            }
-            request.onerror = () => reject(request.error)
-        })
-    }
-
-    openDatabase().catch(err => error('IndexedDB open failed', err))
-
-    // const calculate_chunk_size = (fileSize: number) => Math.max(262144, Math.min(5242880, Math.ceil(fileSize / 100)))
-
-    // Lazy initialized IndexedDB (placeholder for future use)
-    // const dbPlaceholder: IDBDatabase | null = null
+    // IndexedDB handles - using shared helper for consistency
+    // All IndexedDB operations now use shared/idb.ts for non-destructive schema management
 
     // Workbox setup using bundled modules -------------------------------------------------
 
@@ -210,23 +103,29 @@ import { ExpirationPlugin } from 'workbox-expiration'
     // Navigation handling: For SSR/dev, skip createHandlerBoundToURL which expects a precached URL.
     // Our fetch handler below provides an offline fallback for navigations.
 
-    // Simple runtime caching strategies - essential assets only
+    // Simple runtime caching strategies - using centralized constants
     // 1. Images - CacheFirst (includes AppImages directory)
     registerRoute(
-        ({ request, url }: { request: Request; url: URL }) =>
+        ({ request: _request, url }: { request: Request; url: URL }) =>
             url.origin === self.location.origin &&
             (/\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/.test(url.pathname) ||
              url.pathname.startsWith('/AppImages/')),
         new CacheFirst({
-            cacheName: 'images',
-            plugins: [new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 30 * 24 * 60 * 60 })]
+            cacheName: CACHE_NAMES.IMAGES,
+            plugins: [new ExpirationPlugin({ 
+                maxEntries: _CACHE_CONFIG.IMAGES.MAX_ENTRIES, 
+                maxAgeSeconds: _CACHE_CONFIG.IMAGES.MAX_AGE_SECONDS 
+            })]
         })
     )
 
     // 2. Hashed build assets (JS/CSS) - CacheFirst with safe offline fallback for unknown chunks
     const assetsStrategy = new CacheFirst({
-        cacheName: 'assets',
-        plugins: [new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 7 * 24 * 60 * 60 })]
+        cacheName: CACHE_NAMES.ASSETS,
+        plugins: [new ExpirationPlugin({ 
+            maxEntries: _CACHE_CONFIG.ASSETS.MAX_ENTRIES, 
+            maxAgeSeconds: _CACHE_CONFIG.ASSETS.MAX_AGE_SECONDS 
+        })]
     })
     registerRoute(
         ({ url, request }: { url: URL; request: Request }) =>
@@ -239,7 +138,6 @@ import { ExpirationPlugin } from 'workbox-expiration'
         async ({ event, request }) => {
             try {
                 // Normal cache-first handling
-                // @ts-ignore - Workbox Strategy types
                 return await assetsStrategy.handle({ event, request })
             } catch (err) {
                 // When offline and a lazy JS chunk was never seen before, dynamic import fails hard.
@@ -267,7 +165,7 @@ import { ExpirationPlugin } from 'workbox-expiration'
                 url.pathname === '/manifest.webmanifest' ||
                 url.pathname === '/favicon.ico'
             ),
-        new StaleWhileRevalidate({ cacheName: 'static' })
+        new StaleWhileRevalidate({ cacheName: CACHE_NAMES.STATIC })
     )
 
     // 4. Auth API group — network-first GET, stub per path, cache 200 JSON
@@ -278,26 +176,25 @@ import { ExpirationPlugin } from 'workbox-expiration'
             url.origin === self.location.origin &&
             url.pathname.startsWith('/api/auth/') &&
             request.method === 'GET',
-        async ({ event }: any) => {
-            const req = event.request as Request
-            const url = new URL(req.url)
-            const cacheName = 'api-auth'
+        async ({ request }: RouteHandlerCallbackOptions) => {
+            const url = new URL(request.url)
+            const cacheName = CACHE_NAMES.API_AUTH
             const cache = await caches.open(cacheName)
             try {
-                const resp = await fetch(req)
+                const resp = await fetch(request)
                 // Only cache successful JSON responses
                 const isJson = resp.headers.get('content-type')?.includes('application/json')
                 if (resp.ok && isJson) {
-                    try { await cache.put(req, resp.clone()) } catch { /* ignore quota/errors */ }
+                    try { await cache.put(request, resp.clone()) } catch { /* ignore quota/errors */ }
                 }
                 return resp
             } catch {
                 // offline/network fail: return cached if present
-                const cached = await cache.match(req)
+                const cached = await cache.match(request)
                 if (cached) return cached
                 // otherwise a path-specific stub (only for known GET endpoints)
                 if (url.pathname in AUTH_STUBS) {
-                    return new Response(JSON.stringify(AUTH_STUBS[url.pathname]), {
+                    return new Response(JSON.stringify(AUTH_STUBS[url.pathname as keyof typeof AUTH_STUBS]), {
                         status: 200,
                         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
                     })
@@ -308,6 +205,288 @@ import { ExpirationPlugin } from 'workbox-expiration'
         }
     )
 
+
+
+     // 2. Folders API GET — network-first with cache fallback
+    registerRoute(
+        ({ url, request }: { url: URL; request: Request }) =>
+            url.origin === self.location.origin &&
+            url.pathname.startsWith('/api/folders') &&
+            request.method === 'GET',
+       async ({ request }: RouteHandlerCallbackOptions) => {
+
+            const cacheName = CACHE_NAMES.API_FOLDERS
+            const cache = await caches.open(cacheName)
+            try {
+                const resp = await fetch(request)
+                // Only cache successful JSON responses
+                const isJson = resp.headers.get('content-type')?.includes('application/json')
+                if (resp.ok && isJson) {
+                    try {
+                        await cache.put(request, resp.clone())
+                        log('Cached folders response:', request.url)
+                    } catch { /* ignore quota/errors */ }
+                }
+                return resp
+            } catch {
+                // offline/network fail: return cached if present
+                log('Folders API network failed, checking cache:', request.url)
+                const cached = await cache.match(request)
+                if (cached) {
+                    log('Serving cached folders:', request.url)
+                    return cached
+                }
+                
+                // No cache available - provide graceful fallback based on endpoint
+                const url = new URL(request.url)
+                if (url.pathname === '/api/folders/count') {
+                    // Return count fallback
+                    return new Response(JSON.stringify({ success: true, data: { count: 0 } }), {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+                    })
+                } else {
+                    // Return empty array for list endpoints
+                    return new Response(JSON.stringify({ success: true, data: [] }), {
+                        status: 200,
+                        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+                    })
+                }
+            }
+        }
+    )
+
+    // 3. Notes API GET — network-first with cache fallback
+    registerRoute(
+        ({ url, request }: { url: URL; request: Request }) =>
+            url.origin === self.location.origin &&
+            url.pathname.startsWith('/api/notes') &&
+            request.method === 'GET',
+        async ({ request }: RouteHandlerCallbackOptions) => {
+
+            const cacheName = CACHE_NAMES.API_NOTES
+            const cache = await caches.open(cacheName)
+            try {
+                const resp = await fetch(request)
+                // Only cache successful JSON responses
+                const isJson = resp.headers.get('content-type')?.includes('application/json')
+                if (resp.ok && isJson) {
+                    try {
+                        await cache.put(request, resp.clone())
+                        log('Cached notes response:', request.url)
+                    } catch { /* ignore quota/errors */ }
+                }
+                return resp
+            } catch {
+                // offline/network fail: return cached if present
+                const cached = await cache.match(request)
+                if (cached) {
+                    log('Serving cached notes:', request.url)
+                    return cached
+                }
+                // No cache available - return empty array for graceful degradation
+                return new Response(JSON.stringify({ success: true, data: [] }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+                })
+            }
+        }
+    )
+
+    // // 4. Folders API mutations (POST/PUT/PATCH/DELETE) — store for background sync when offline
+    // registerRoute(
+    //     ({ url, request }: { url: URL; request: Request }) => {
+    //         const shouldHandle = url.origin === self.location.origin &&
+    //             url.pathname.startsWith('/api/folders') &&
+    //             ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)
+
+    //         if (shouldHandle) {
+    //             log('🔄 Folders mutation route handler will handle:', request.method, url.pathname)
+    //         }
+
+    //         return shouldHandle
+    //     },
+    //     async ({ event }: { event: FetchEvent }) => {
+    //         const req = event.request as Request
+    //         log('🚀 Folders mutation handler executing:', req.method, req.url)
+
+    //         try {
+    //             // Try network first
+    //             log('🌐 Attempting network request...')
+    //             const resp = await fetch(req)
+    //             log('✅ Network request successful:', resp.status)
+
+    //             // Clear cache on successful mutations to force fresh data
+    //             if (resp.ok) {
+    //                 try {
+    //                     const cache = await caches.open('api-folders')
+    //                     const keys = await cache.keys()
+    //                     await Promise.all(keys.map(key => cache.delete(key)))
+    //                     log('🗑️ Cleared folders cache after successful mutation')
+    //                 } catch { /* ignore */ }
+    //             }
+    //             return resp
+    //         } catch (error) {
+    //             // Network failed - store in IndexedDB for background sync
+    //             log('❌ Folders mutation failed, storing for background sync:', req.method, req.url, error)
+
+    //             try {
+    //                 if (!db) throw new Error('IndexedDB not available')
+
+    //                 log('💾 Storing folder offline in IndexedDB...')
+    //                 const body = req.method !== 'DELETE' ? await req.clone().json() : null
+    //                 const folderData = {
+    //                     id: `folder_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    //                     method: req.method,
+    //                     url: req.url,
+    //                     body,
+    //                     createdAt: Date.now(),
+    //                     synced: false,
+    //                     pendingAction: req.method.toLowerCase()
+    //                 }
+
+    //                 log('📝 Folder data to store:', folderData)
+
+    //                 const tx = db.transaction(['folders'], 'readwrite')
+    //                 const store = tx.objectStore('folders')
+    //                 await new Promise<void>((resolve, reject) => {
+    //                     const request = store.add(folderData)
+    //                     request.onsuccess = () => {
+    //                         log('✅ Folder stored successfully in IndexedDB')
+    //                         resolve()
+    //                     }
+    //                     request.onerror = () => {
+    //                         error('❌ Failed to store folder in IndexedDB:', request.error)
+    //                         reject(request.error)
+    //                     }
+    //                 })
+
+    //                 // Schedule background sync
+    //                 log('🔄 Scheduling background sync for folders...')
+    //                 await swSelf.registration.sync.register('syncFolders')
+    //                 log('✅ Background sync scheduled')
+
+    //                 // Return optimistic response
+    //                 const response = new Response(JSON.stringify({
+    //                     success: true,
+    //                     data: folderData,
+    //                     offline: true,
+    //                     message: 'Saved offline - will sync when online'
+    //                 }), {
+    //                     status: 200,
+    //                     headers: { 'Content-Type': 'application/json' }
+    //                 })
+
+    //                 log('📤 Returning optimistic response')
+    //                 return response
+    //             } catch (dbError) {
+    //                 error('Failed to store folder mutation for sync:', dbError)
+    //                 throw new Response('Offline storage failed', { status: 503 })
+    //             }
+    //         }
+    //     }
+    // )
+
+    // // 5. Notes API mutations (POST/PUT/PATCH/DELETE) — store for background sync when offline
+    // registerRoute(
+    //     ({ url, request }: { url: URL; request: Request }) => {
+    //         const shouldHandle = url.origin === self.location.origin &&
+    //             url.pathname.startsWith('/api/notes') &&
+    //             ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)
+
+    //         if (shouldHandle) {
+    //             log('🔄 Notes mutation route handler will handle:', request.method, url.pathname)
+    //         }
+
+    //         return shouldHandle
+    //     },
+    //     async ({ event }: { event: FetchEvent }) => {
+    //         const req = event.request as Request
+    //         log('🚀 Notes mutation handler executing:', req.method, req.url)
+
+    //         try {
+    //             // Try network first
+    //             log('🌐 Attempting network request...')
+    //             const resp = await fetch(req)
+    //             log('✅ Network request successful:', resp.status)
+
+    //             // Clear cache on successful mutations to force fresh data
+    //             if (resp.ok) {
+    //                 try {
+    //                     const cache = await caches.open('api-notes')
+    //                     const keys = await cache.keys()
+    //                     await Promise.all(keys.map(key => cache.delete(key)))
+    //                     log('🗑️ Cleared notes cache after successful mutation')
+    //                 } catch { /* ignore */ }
+    //             }
+    //             return resp
+    //         } catch (error) {
+    //             // Network failed - store in IndexedDB for background sync
+    //             log('❌ Notes mutation failed, storing for background sync:', req.method, req.url, error)
+
+    //             try {
+    //                 if (!db) throw new Error('IndexedDB not available')
+
+    //                 log('💾 Storing note offline in IndexedDB...')
+    //                 const body = req.method !== 'DELETE' ? await req.clone().json() : null
+    //                 const noteData = {
+    //                     id: `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+    //                     method: req.method,
+    //                     url: req.url,
+    //                     body,
+    //                     createdAt: Date.now(),
+    //                     synced: false,
+    //                     pendingAction: req.method.toLowerCase()
+    //                 }
+
+    //                 log('📝 Note data to store:', noteData)
+
+    //                 const tx = db.transaction(['notes'], 'readwrite')
+    //                 const store = tx.objectStore('notes')
+    //                 await new Promise<void>((resolve, reject) => {
+    //                     const request = store.add(noteData)
+    //                     request.onsuccess = () => {
+    //                         log('✅ Note stored successfully in IndexedDB')
+    //                         resolve()
+    //                     }
+    //                     request.onerror = () => {
+    //                         error('❌ Failed to store note in IndexedDB:', request.error)
+    //                         reject(request.error)
+    //                     }
+    //                 })
+
+    //                 // Schedule background sync
+    //                 log('🔄 Scheduling background sync for notes...')
+    //                 await swSelf.registration.sync.register('syncNotes')
+    //                 log('✅ Background sync scheduled')
+
+    //                 // Return optimistic response
+    //                 const response = new Response(JSON.stringify({
+    //                     success: true,
+    //                     data: noteData,
+    //                     offline: true,
+    //                     message: 'Saved offline - will sync when online'
+    //                 }), {
+    //                     status: 200,
+    //                     headers: { 'Content-Type': 'application/json' }
+    //                 })
+
+    //                 log('📤 Returning optimistic response')
+    //                 return response
+    //             } catch (dbError) {
+    //                 error('Failed to store note mutation for sync:', dbError)
+    //                 throw new Response('Offline storage failed', { status: 503 })
+    //             }
+    //         }
+    //     }
+    // )
+
+
+
+
+
+
+
     // NOTE: Navigation requests are handled by our custom fetch listener below
     // This avoids Workbox "no-response" errors and gives us full control over offline behavior
 
@@ -316,7 +495,7 @@ import { ExpirationPlugin } from 'workbox-expiration'
         try {
             const urls = new Set<string>()
             // Basic matches for Nuxt hashed chunks and CSS referenced in HTML
-            const re = /\/(?:_nuxt|_assets)\/[A-Za-z0-9._\-\/]+\.(?:js|css|png|jpg|jpeg|webp|svg|ico)/g
+            const re = /\/(?:_nuxt|_assets)\/[A-Za-z0-9._/-]+\.(?:js|css|png|jpg|jpeg|webp|svg|ico)/g
             let m: RegExpExecArray | null
             while ((m = re.exec(html))) urls.add(m[0])
             return Array.from(urls)
@@ -326,9 +505,9 @@ import { ExpirationPlugin } from 'workbox-expiration'
     // Prewarm helper: proactively fetch and cache important pages after activation, and their dependent assets
     async function prewarmPages(paths: string[]) {
         try {
-            const pageCache = await caches.open('pages')
-            const assetCache = await caches.open('assets')
-            const staticCache = await caches.open('static')
+            const pageCache = await caches.open(CACHE_NAMES.PAGES)
+            const assetCache = await caches.open(CACHE_NAMES.ASSETS)
+            const staticCache = await caches.open(CACHE_NAMES.STATIC)
 
             // Always consider these tiny static files to avoid noisy logs
             const staticWarm = [
@@ -458,21 +637,21 @@ import { ExpirationPlugin } from 'workbox-expiration'
             })())
             return
         }
-        if (type === 'uploadFiles') {
-            const payload = data as UploadFilesMessage
-            // broadcast start back to originating client (ExtendableMessageEvent.source is Client | ServiceWorker | MessagePort)
-            const source = event.source
-            if (source && 'id' in source) {
-                swSelf.clients.get((source as Client).id)
-                    .then(client => {
-                        client?.postMessage({ type: SW_MESSAGE_TYPE.UPLOAD_START, data: { message: 'Upload started' } })
-                    })
-            }
-            handleDatabaseOperation({ action: 'add', payload: { name: payload.name, files: payload.files } })
-            const ext = event as ExtendableEvent
-            ext.waitUntil(handleConcurrentUploads(payload.name, payload.files || [], payload.uploadUrl))
-            return
-        }
+        // if (type === 'uploadFiles') {
+        //     const payload = data as UploadFilesMessage
+        //     // broadcast start back to originating client (ExtendableMessageEvent.source is Client | ServiceWorker | MessagePort)
+        //     const source = event.source
+        //     if (source && 'id' in source) {
+        //         swSelf.clients.get((source as Client).id)
+        //             .then(client => {
+        //                 client?.postMessage({ type: SW_MESSAGE_TYPE.UPLOAD_START, data: { message: 'Upload started' } })
+        //             })
+        //     }
+        //     handleDatabaseOperation({ action: 'add', payload: { name: payload.name, files: payload.files } })
+        //     const ext = event as ExtendableEvent
+        //     ext.waitUntil(handleConcurrentUploads(payload.name, payload.files || [], payload.uploadUrl))
+        //     return
+        // }
         if (type === 'SET_DEBUG') {
             DEBUG = !!(data as ToggleDebugMessage).value
             log('Debug mode set to', DEBUG)
@@ -603,12 +782,12 @@ import { ExpirationPlugin } from 'workbox-expiration'
     swSelf.addEventListener('sync', (event: Event) => {
         const syncEvt = event as unknown as { tag?: string; waitUntil: ExtendableEvent['waitUntil'] }
 
-        if (syncEvt.tag === 'syncForm') {
+        if (syncEvt.tag === SYNC_TAGS.FORM) {
             syncEvt.waitUntil((async () => {
 
                 const clients = await swSelf.clients.matchAll({ type: 'window' })
                 clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.SYNC_FORM, data: { message: 'Syncing data..' } }))
-                await syncAuthentication(clients)
+                await syncForms(clients)
 
             })())
         }
@@ -647,7 +826,7 @@ import { ExpirationPlugin } from 'workbox-expiration'
                     // Cache successful responses
                     if (response.ok && response.status === 200) {
                         try {
-                            const cache = await caches.open('pages')
+                            const cache = await caches.open(CACHE_NAMES.PAGES)
                             await cache.put(req, response.clone())
                             log('Cached page successfully:', req.url)
                             // Opportunistically cache assets referenced by this HTML (to reduce offline chunk misses)
@@ -655,7 +834,7 @@ import { ExpirationPlugin } from 'workbox-expiration'
                                 const html = await response.clone().text()
                                 const assetUrls = extractAssetUrls(html)
                                 if (assetUrls.length) {
-                                    const assetCache = await caches.open('assets')
+                                    const assetCache = await caches.open(CACHE_NAMES.ASSETS)
                                     await Promise.all(assetUrls.map(async (u) => {
                                         try {
                                             const r = await fetch(u, { cache: 'no-store' })
@@ -668,7 +847,7 @@ import { ExpirationPlugin } from 'workbox-expiration'
                             // Simple size-based eviction for the 'pages' cache
                             try {
                                 const keys = await cache.keys()
-                                const MAX_ENTRIES = 100
+                                const MAX_ENTRIES = _CACHE_CONFIG.PAGES.MAX_ENTRIES
                                 if (keys.length > MAX_ENTRIES) {
                                     const toDelete = keys.length - MAX_ENTRIES
                                     for (let i = 0; i < toDelete; i++) {
@@ -690,13 +869,13 @@ import { ExpirationPlugin } from 'workbox-expiration'
 
                     // Debug: List what's in the pages cache
                     if (DEBUG) {
-                        const cache = await caches.open('pages')
+                        const cache = await caches.open(CACHE_NAMES.PAGES)
                         const cacheKeys = await cache.keys()
                         log('Pages cache contains:', cacheKeys.map(r => r.url))
                     }
 
                     // Look specifically in the 'pages' cache first
-                    const cache = await caches.open('pages')
+                    const cache = await caches.open(CACHE_NAMES.PAGES)
                     let cachedResponse = await cache.match(req, { ignoreSearch: true })
 
                     if (!cachedResponse) {
@@ -765,53 +944,32 @@ import { ExpirationPlugin } from 'workbox-expiration'
 
 
     // ------------------------ INDEXEDDB HELPERS ------------------------
-    type ProjectRecord = { name: string; files?: File[] }
-    interface DBOpAdd { action: 'add'; payload: ProjectRecord }
-    interface DBOpUpdate { action: 'update'; payload: ProjectRecord }
-    interface DBOpDelete { action: 'delete'; payload: { name: string } }
-    interface DBOpGet { action: 'get'; payload: { name: string } }
-    type DBOperation = DBOpAdd | DBOpUpdate | DBOpDelete | DBOpGet
-
-    function handleDatabaseOperation(op: DBOperation) {
-        if (!db) return
-        const tx = db.transaction(['projects'], 'readwrite')
-        const store = tx.objectStore('projects')
-        let request: IDBRequest | undefined
-        switch (op.action) {
-            case 'add': request = store.add(op.payload); break
-            case 'update': request = store.put(op.payload); break
-            case 'delete': request = store.delete(op.payload.name); break
-            case 'get': request = store.get(op.payload.name); break
-        }
-        if (request) {
-            request.onsuccess = () => log('DB op success', op.action)
-            request.onerror = () => error('DB op error', op.action, request!.error)
-        }
-    }
+    // Using shared IDB helpers for consistency
 
     async function getFormDataAll(): Promise<StoredFormRecord[]> {
-        if (!db) return []
-        return new Promise((resolve, reject) => {
-            const tx = db!.transaction(['forms'], 'readonly')
-            const store = tx.objectStore('forms')
-            const req = store.getAll()
-            req.onsuccess = () => resolve((req.result as StoredFormRecord[]) || [])
-            req.onerror = () => reject(req.error)
-        })
+        try {
+            const db = await openFormsDB()
+            const records = await getAllRecords<StoredFormRecord>(db, DB_CONFIG.STORES.FORMS)
+            db.close()
+            return records
+        } catch (err) {
+            error('Failed to get form data:', err)
+            return []
+        }
     }
 
     async function deleteFormEntries(ids: string[]) {
-        if (!db || !ids.length) return
-        await Promise.all(ids.map(id => new Promise<void>((resolve) => {
-            const tx = db!.transaction(['forms'], 'readwrite')
-            const store = tx.objectStore('forms')
-            const delReq = store.delete(id)
-            delReq.onsuccess = () => resolve()
-            delReq.onerror = () => resolve() // ignore individual failures
-        })))
+        if (!ids.length) return
+        try {
+            const db = await openFormsDB()
+            await Promise.all(ids.map(id => deleteRecord(db, DB_CONFIG.STORES.FORMS, id)))
+            db.close()
+        } catch (err) {
+            error('Failed to delete form entries:', err)
+        }
     }
 
-    async function syncAuthentication(clients: readonly Client[]) {
+    async function syncForms(clients: readonly Client[]) {
         try {
             const formData = await getFormDataAll()
             if (!formData.length) return
@@ -821,7 +979,7 @@ import { ExpirationPlugin } from 'workbox-expiration'
             await deleteFormEntries(formData.map(f => f.id))
             clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNCED, data: { message: `Form data synced (${formData.length} records).` } }))
         } catch (err) {
-            error('syncAuthentication error', err)
+            error('syncForms error', err)
             clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNC_ERROR, data: { message: 'Form sync failed.' } }))
         }
     }
@@ -832,110 +990,18 @@ import { ExpirationPlugin } from 'workbox-expiration'
 
     // removeLocalData intentionally omitted (unused)
 
-    async function sendDataToServer(data: unknown) {
+    async function sendDataToServer(data: StoredFormRecord[]): Promise<Response> {
         const controller = new AbortController()
         const timeout = setTimeout(() => controller.abort(), 20000)
         try {
-            const formData = new FormData()
-            formData.append('data', JSON.stringify(data))
-            const resp = await fetch('/api/form-sync', { method: 'POST', body: formData, signal: controller.signal })
+
+            const resp = await fetch('/api/form-sync', { method: 'POST', body: JSON.stringify(data), signal: controller.signal })
             return resp
         } finally {
             clearTimeout(timeout)
         }
     }
 
-    async function uploadChunk({ chunk, index, totalChunks, fileIdentifier, uploadUrl }: { chunk: Blob; index: number; totalChunks: number; fileIdentifier: string; uploadUrl: string }) {
-        const controller = new AbortController()
-        const timeout = setTimeout(() => controller.abort(), 20000)
-        const formData = new FormData()
-        formData.append('file', chunk)
-        formData.append('index', String(index))
-        formData.append('totalChunks', String(totalChunks))
-        formData.append('identifier', fileIdentifier)
-        try {
-            const response = await fetch(uploadUrl, { method: 'POST', body: formData, signal: controller.signal })
-            if (!response.ok) {
-                const err: any = new Error('Upload failed')
-                err.status = response.status
-                const ra = response.headers.get('Retry-After')
-                err.retryAfter = ra ? Math.max(0, Math.floor(Number(ra) * 1000)) : undefined
-                throw err
-            }
-        } finally {
-            clearTimeout(timeout)
-        }
-    }
-
-    // Enhanced per-file concurrency and exponential backoff retry logic
-    async function uploadFile(file: File, uploadUrl: string, _retryDelays: number[]) {
-        const chunkSize = calculateChunkSize(file.size)
-        const totalChunks = Math.ceil(file.size / chunkSize)
-        // Stable per-file identifier: name + size + firstModified
-        const fileIdentifier = `${file.name}-${file.size}-${(file as any).lastModified || 0}`
-
-        const CHUNK_CONCURRENCY = 3
-        const BASE_BACKOFF = 1000 // 1s base
-        const MAX_ATTEMPTS = 5
-
-        const inFlight: Promise<void>[] = []
-
-        const runChunk = (i: number) => (async () => {
-            const chunk = file.slice(i * chunkSize, (i + 1) * chunkSize)
-            for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-                try {
-                    await uploadChunk({ chunk, index: i, totalChunks, fileIdentifier, uploadUrl })
-                    const clients = await swSelf.clients.matchAll({ type: 'window' })
-                        ; (clients || []).forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.PROGRESS, data: { identifier: fileIdentifier, index: i, totalChunks } }))
-                    return
-                } catch (err) {
-                    const e = err as any
-                    if (attempt === MAX_ATTEMPTS - 1) throw err
-                    const status = e?.status as number | undefined
-                    const retryAfter = e?.retryAfter as number | undefined
-                    // Honor server Retry-After when provided; otherwise exponential backoff with jitter.
-                    const delay = typeof retryAfter === 'number' ? retryAfter : backoffDelay(BASE_BACKOFF, attempt)
-                    // For 413/429/503, add extra cushion
-                    const cushion = (status === 413 || status === 429 || status === 503) ? Math.floor(delay * 0.5) : 0
-                    await sleep(delay + cushion)
-                }
-            }
-        })()
-
-        // Schedule chunks with limited concurrency
-        for (let i = 0; i < totalChunks; i++) {
-            const p = runChunk(i).finally(() => {
-                const idx = inFlight.indexOf(p)
-                if (idx >= 0) inFlight.splice(idx, 1)
-            })
-            inFlight.push(p)
-            if (inFlight.length >= CHUNK_CONCURRENCY) await Promise.race(inFlight)
-        }
-
-        // Wait for remainder
-        await Promise.all(inFlight)
-
-        try {
-            const clients = await swSelf.clients.matchAll({ type: 'window' })
-            clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.FILE_COMPLETE, data: { identifier: fileIdentifier, message: `${file.name} upload complete` } }))
-        } catch { /* noop */ }
-    }
-
-    async function handleConcurrentUploads(name: string, files: File[], uploadUrl: string) {
-        const retryDelays = [5000, 10000, 15000]
-        const MAX_FILE_CONCURRENCY = 4
-        const active: Promise<void>[] = []
-        for (const f of files) {
-            if (active.length >= MAX_FILE_CONCURRENCY) await Promise.race(active)
-            const p = uploadFile(f, uploadUrl, retryDelays).finally(() => {
-                const idx = active.indexOf(p); if (idx >= 0) active.splice(idx, 1)
-            })
-            active.push(p)
-        }
-        await Promise.all(active)
-        const clients = await swSelf.clients.matchAll({ type: 'window' })
-        clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.ALL_FILES_COMPLETE, data: { message: 'All uploads complete.' } }))
-    }
 
     //----------------------------------------------------------------
 })()

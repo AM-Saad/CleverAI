@@ -8,75 +8,52 @@
  */
 
 import {
-  DB_CONFIG,
   SYNC_TAGS,
   DOM_EVENTS,
-  SW_MESSAGE_TYPES
+  type FormSyncType
 } from '../../shared/constants'
+import { openFormsDB, putRecord } from '../../shared/idb'
 
 type QueuedForm = {
   id: string
-  email: string
+  type: FormSyncType
   payload: Record<string, unknown>
   createdAt: number
 }
 
-// Use centralized database configuration
-const { NAME: DB_NAME, VERSION: DB_VERSION, STORES: { FORMS: STORE } } = DB_CONFIG
-
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION)
-
-    req.onupgradeneeded = () => {
-      const db = req.result
-      // (re)create store with the right keyPath; SW expects this shape
-      if (db.objectStoreNames.contains(STORE)) {
-        db.deleteObjectStore(STORE)
-      }
-      const store = db.createObjectStore(STORE, { keyPath: 'id' })
-      try { store.createIndex('email', 'email', { unique: false }) } catch {}
-    }
-
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
-  })
-}
-
-async function putForm(record: QueuedForm): Promise<void> {
-  const db = await openDB()
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction([STORE], 'readwrite')
-    const store = tx.objectStore(STORE)
-    store.put(record)
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
+async function putForm(record: QueuedForm, storeName: string): Promise<void> {
+  const db = await openFormsDB()
+  await putRecord(db, storeName, record)
   db.close()
 }
 
-export function useOffline(): {
-  handleOfflineSubmit: (credentials: { email: string; password: string }) => Promise<void>
-} {
-  const handleOfflineSubmit = async (credentials: { email: string; password: string }): Promise<void> => {
+export function useOffline(){
+
+
+  const handleOfflineSubmit = async (data:{payload: Record<string, unknown>, storeName: string, type: FormSyncType}): Promise<void> => {
     // 1) Queue a sanitized record locally
     const id = (globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(16).slice(2)}`)
+    
     await putForm({
       id,
-      email: credentials.email,
-      // DO NOT store the raw password; keep a marker so the server knows this came from offline
-      payload: { type: 'login', hasPassword: Boolean(credentials.password) },
+      type: data.type,
+      payload: data.payload,
       createdAt: Date.now(),
-    })
+    }, 
+    data.storeName
+  )
+
+
 
     // Emit a UI event so the app can show immediate feedback
     try {
       window.dispatchEvent(new CustomEvent(DOM_EVENTS.OFFLINE_FORM_SAVED, {
-        detail: { id, email: credentials.email }
+        detail: { id, payload: data.payload }
       }))
     } catch {
       // window may be undefined in some SSR contexts; ignore
     }
+
 
     // 2) Ask the active SW to run background sync when online
     try {
@@ -88,6 +65,7 @@ export function useOffline(): {
     } catch {
       // Not supported or denied; no-op.
     }
+
 
     console.log('Form data queued locally and Background Sync requested.')
   }
