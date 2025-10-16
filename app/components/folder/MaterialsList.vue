@@ -16,9 +16,9 @@
                 }">
                 <!-- Sticky header for fullscreen -->
                 <header v-if="fullscreenMaterial === m.id" class="fullscreen-header">
-                    <div class="flex w-full justify-between items-center gap-2">
+                    <div class="flex w-full justify-between items-center gap-2 flex-wrap">
                         <UiSubtitle>{{ m.title }}</UiSubtitle>
-                        <div class="ml-4 flex-shrink-0 flex gap-2">
+                        <div class="flex flex-shrink-0 gap-2">
                             <!-- Fullscreen/Expand button -->
                             <UButton variant="ghost" @click="() => toggleFullscreen(m.id)">
                                 <Icon name="ic:round-fullscreen-exit" size="20" />

@@ -1,13 +1,13 @@
 <template>
-    <div class="mx-auto max-w-full flex h-screen flex-col justify-between">
+    <div class="mx-auto max-w-full flex h-screen flex-col gap-y-4 justify-between">
         <nav 
             id="nav"
-            class=" flex font-heading items-center justify-between px-3 md:px-6 z-50 h-14 rounded-full md:rounded container mx-auto left-[50%] top-4  border-b border-muted w-[calc(100%-1rem)] mb-4"
+            class=" flex font-heading items-center justify-between z-50 py-2 px-0.5 rounded-full md:rounded-lg container mx-auto left-[50%] top-4 border-b border-muted w-[calc(100%-1rem)]"
         >
 
             <div class="flex items-center justify-between w-full">
-                <router-link to="/" class="flex items-center gap-4 text-dark dark:text-light font-medium md:text-2xl">
-                    <img class="h-7 dark:invert-[1] dark:filter" src="~/assets/images/CleverAI_icon.svg" alt="">
+                <router-link to="/" class="flex items-center gap-4 text-dark dark:text-light font-medium md:text-xl">
+                    <img class="h-6 dark:invert-[1] dark:filter" src="~/assets/images/CleverAI_icon.svg" alt="">
                     ShaterAI
                 </router-link>
                 <div v-if="status === 'authenticated'" class="flex gap-5">
@@ -122,13 +122,10 @@
 
         </nav>
 
-        <div class="flex-1 pb-4">
+        <div class=" container mx-auto p-4 overflow-auto h-full w-full">
             <UToaster />
             <ServiceWorkerUpdateNotification mode="banner" />
-            <div class="container mx-auto  p-4 md:p-0 ">
-
                 <slot />
-            </div>
         </div>
         <footer class="rounded-sm p-2">
             <div class="footer-wrapper grid">

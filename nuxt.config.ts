@@ -1,35 +1,34 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
-import process from "node:process"
-import tailwindcss from "@tailwindcss/vite"
+import process from "node:process";
+import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "node:path";
 
 export default defineNuxtConfig({
-  compatibilityDate: '2025-07-15',
+  compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
-    debug: true,
+  debug: true,
   // Use the existing `app/` folder as Nuxt source directory
-  srcDir: 'app',
+  srcDir: "app",
 
   modules: [
     "@sidebase/nuxt-auth",
     "@pinia/nuxt",
     // "@vite-pwa/nuxt",
-    '@nuxt/eslint',
-    '@nuxt/image',
-    '@nuxt/scripts',
+    "@nuxt/eslint",
+    "@nuxt/image",
+    "@nuxt/scripts",
     "@nuxt/icon",
     "@nuxt/ui",
-'@nuxt/devtools',
-
+    "@nuxt/devtools",
   ],
-    future: {
+  future: {
     typescriptBundlerResolution: true,
   },
   alias: {
     string_decoder: "string_decoder/",
-    '~/shared': resolve(__dirname, './shared'),
-      '#shared': resolve(__dirname, './shared'),   // optional extra alias
-        '@shared': resolve(__dirname, './shared'),   // optional extra alias
+    "~/shared": resolve(__dirname, "./shared"),
+    "#shared": resolve(__dirname, "./shared"), // optional extra alias
+    "@shared": resolve(__dirname, "./shared"), // optional extra alias
   },
   hooks: {
     ready: async () => {
@@ -49,9 +48,14 @@ export default defineNuxtConfig({
           "SW",
           "OPENAI_API_KEY",
         ];
-        const missing = required.filter((k) => !process.env[k as keyof NodeJS.ProcessEnv]);
+        const missing = required.filter(
+          (k) => !process.env[k as keyof NodeJS.ProcessEnv]
+        );
         if (missing.length) {
-          console.warn("[env] Missing variables in development:", missing.join(", "));
+          console.warn(
+            "[env] Missing variables in development:",
+            missing.join(", ")
+          );
         } else {
           console.log("[env] All required variables present.");
         }
@@ -59,7 +63,7 @@ export default defineNuxtConfig({
     },
   },
   experimental: {
-    debugModuleMutation:false,
+    debugModuleMutation: false,
 
     defaults: {
       useAsyncData: {
@@ -80,76 +84,118 @@ export default defineNuxtConfig({
   app: {
     head: {
       link: [
-        { rel: 'manifest', href: '/manifest.webmanifest' },
+        { rel: "manifest", href: "/manifest.webmanifest" },
         // Favicon hierarchy - ICO files for browser tabs and bookmarks
-        { rel: 'icon', type: 'image/x-icon', href: '/App_icon_16x16.ico', sizes: '16x16' },
-        { rel: 'icon', type: 'image/x-icon', href: '/App_icon_32x32.ico', sizes: '32x32' },
-        { rel: 'shortcut icon', href: '/App_icon_16x16.ico' }, // Fallback for older browsers
+        {
+          rel: "icon",
+          type: "image/x-icon",
+          href: "/App_icon_16x16.ico",
+          sizes: "16x16",
+        },
+        {
+          rel: "icon",
+          type: "image/x-icon",
+          href: "/App_icon_32x32.ico",
+          sizes: "32x32",
+        },
+        { rel: "shortcut icon", href: "/App_icon_16x16.ico" }, // Fallback for older browsers
         // PNG alternatives for modern browsers
-        { rel: 'icon', type: 'image/png', href: '/AppImages/ios/16.png', sizes: '16x16' },
-        { rel: 'icon', type: 'image/png', href: '/AppImages/ios/32.png', sizes: '32x32' },
+        {
+          rel: "icon",
+          type: "image/png",
+          href: "/AppImages/ios/16.png",
+          sizes: "16x16",
+        },
+        {
+          rel: "icon",
+          type: "image/png",
+          href: "/AppImages/ios/32.png",
+          sizes: "32x32",
+        },
         // iOS specific icons
-        { rel: 'apple-touch-icon', href: '/AppImages/ios/180.png', sizes: '180x180' },
-        { rel: 'apple-touch-icon', href: '/AppImages/ios/152.png', sizes: '152x152' },
-        { rel: 'apple-touch-icon', href: '/AppImages/ios/120.png', sizes: '120x120' },
-        { rel: 'apple-touch-icon', href: '/AppImages/ios/76.png', sizes: '76x76' }
+        {
+          rel: "apple-touch-icon",
+          href: "/AppImages/ios/180.png",
+          sizes: "180x180",
+        },
+        {
+          rel: "apple-touch-icon",
+          href: "/AppImages/ios/152.png",
+          sizes: "152x152",
+        },
+        {
+          rel: "apple-touch-icon",
+          href: "/AppImages/ios/120.png",
+          sizes: "120x120",
+        },
+        {
+          rel: "apple-touch-icon",
+          href: "/AppImages/ios/76.png",
+          sizes: "76x76",
+        },
       ],
       meta: [
-        { name: 'theme-color', content: '#f3f4f6' },
-        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
+        { name: "theme-color", content: "#f3f4f6" },
+        {
+          name: "viewport",
+          content: "width=device-width, initial-scale=1, viewport-fit=cover",
+        },
         // iOS specific meta tags
-        { name: 'apple-mobile-web-app-capable', content: 'yes' },
-        { name: 'apple-mobile-web-app-status-bar-style', content: 'default' },
-        { name: 'apple-mobile-web-app-title', content: 'CleverAI' },
+        { name: "apple-mobile-web-app-capable", content: "yes" },
+        { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+        { name: "apple-mobile-web-app-title", content: "CleverAI" },
         // Microsoft specific meta tags
-        { name: 'msapplication-TileColor', content: '#f3f4f6' },
-        { name: 'msapplication-TileImage', content: '/AppImages/windows11/Square150x150Logo.scale-200.png' },
-        { name: 'msapplication-config', content: '/browserconfig.xml' },
+        { name: "msapplication-TileColor", content: "#f3f4f6" },
+        {
+          name: "msapplication-TileImage",
+          content: "/AppImages/windows11/Square150x150Logo.scale-200.png",
+        },
+        { name: "msapplication-config", content: "/browserconfig.xml" },
         // Android/Chrome specific
-        { name: 'mobile-web-app-capable', content: 'yes' },
-        { name: 'application-name', content: 'CleverAI' }
-      ]
-    }
+        { name: "mobile-web-app-capable", content: "yes" },
+        { name: "application-name", content: "CleverAI" },
+      ],
+    },
   },
-//   appConfig: {
-//     // you don't need to include this: only for testing purposes
-//     buildDate: new Date().toISOString(),
-//     ui: {
-//       colors: {
-//         primary: 'primary',
-//         dark: 'dark',
-//         light: 'light',
-//         muted: 'muted',
-//       },
-//     button: {
-//     slots: {
-//     base: ['rounded-md font-medium inline-flex items-center disabled:cursor-not-allowed aria-disabled:cursor-not-allowed disabled:opacity-75 aria-disabled:opacity-75'],
-//     label: 'truncate',
-//     leadingIcon: 'shrink-0',
-//     leadingAvatar: 'shrink-0',
-//     leadingAvatarSize: '',
-//     trailingIcon: 'shrink-0'
-//   },
+  //   appConfig: {
+  //     // you don't need to include this: only for testing purposes
+  //     buildDate: new Date().toISOString(),
+  //     ui: {
+  //       colors: {
+  //         primary: 'primary',
+  //         dark: 'dark',
+  //         light: 'light',
+  //         muted: 'muted',
+  //       },
+  //     button: {
+  //     slots: {
+  //     base: ['rounded-md font-medium inline-flex items-center disabled:cursor-not-allowed aria-disabled:cursor-not-allowed disabled:opacity-75 aria-disabled:opacity-75'],
+  //     label: 'truncate',
+  //     leadingIcon: 'shrink-0',
+  //     leadingAvatar: 'shrink-0',
+  //     leadingAvatarSize: '',
+  //     trailingIcon: 'shrink-0'
+  //   },
 
-//     },
-//         input: {
-//       slots: {
-//         base: 'rounded-sm py-sm px-sm', // use --radius-md
-//       }
-//     },
-//     },
-//   },
-//     colorMode: {
-//     preference: 'light',
-//     fallback: 'light',
-//     hid: 'nuxt-color-mode-script',
-//     globalName: '__NUXT_COLOR_MODE__',
-//     componentName: 'ColorScheme',
-//     classPrefix: '',
-//     classSuffix: '',
-//     storageKey: 'nuxt-color-mode'
-//   },
- auth: {
+  //     },
+  //         input: {
+  //       slots: {
+  //         base: 'rounded-sm py-sm px-sm', // use --radius-md
+  //       }
+  //     },
+  //     },
+  //   },
+  //     colorMode: {
+  //     preference: 'light',
+  //     fallback: 'light',
+  //     hid: 'nuxt-color-mode-script',
+  //     globalName: '__NUXT_COLOR_MODE__',
+  //     componentName: 'ColorScheme',
+  //     classPrefix: '',
+  //     classSuffix: '',
+  //     storageKey: 'nuxt-color-mode'
+  //   },
+  auth: {
     isEnabled: true,
     originEnvKey: "AUTH_ORIGIN",
     baseURL: process.env.AUTH_ORIGIN + "/api/auth",
@@ -196,10 +242,7 @@ export default defineNuxtConfig({
       target: "es2022", // Support BigInt and modern JS features
       // drop: ["console", "debugger"],
     },
-    plugins: [
-        tailwindcss(),
-
-    ],
+    plugins: [tailwindcss()],
   },
 
   build: {
@@ -214,14 +257,13 @@ export default defineNuxtConfig({
   },
   runtimeConfig: {
     // Private (server only)
-  redisUrl: process.env.REDIS_URL,
+    redisUrl: process.env.REDIS_URL,
     openaiKey: process.env.OPENAI_API_KEY,
-    geminiKey: process.env.GEMINI_API_KEY,           // ← add this
+    geminiKey: process.env.GEMINI_API_KEY, // ← add this
     databaseUrl: process.env.DATABASE_URL,
     AUTH_SECRET: process.env.AUTH_SECRET,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
-
 
     // Public (exposed to client)
     public: {
@@ -232,5 +274,4 @@ export default defineNuxtConfig({
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     },
   },
-
-})
+});

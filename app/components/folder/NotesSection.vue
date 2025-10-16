@@ -4,7 +4,7 @@
         <!-- Header -->
         <header class="flex items-center justify-between  border-b border-gray-200 dark:border-gray-700 py-3 mb-4">
             <div class="flex items-center gap-2">
-                <UIcon name="i-heroicons-document-text" class="w-5 h-5 text-amber-600" />
+
                 <UiSubtitle>Notes</UiSubtitle>
                 <span v-if="notes?.length" class="text-sm text-gray-500 dark:text-gray-400">
                     ({{ notes.length }})
@@ -16,6 +16,13 @@
             </UButton>
         </header>
 
+        <client-only>
+            <shared-tiptap-editor v-model="content"/>
+        </client-only>
+        <div class="output-group">
+            <label>Content</label>
+            <code>{{ content }}</code>
+        </div>
         <!-- Loading state for initial fetch -->
         <div v-if="isFetching" class="flex items-center justify-center p-8">
             <div class="flex items-center gap-2 text-gray-500">
@@ -41,6 +48,26 @@
 
         <!-- Notes content -->
         <div v-if="!isFetching && !error" class="flex-1 overflow-auto ">
+            <!-- Fullscreen backdrop with transition -->
+            <Transition name="backdrop">
+                <div v-if="fullscreenNote" class="fullscreen-backdrop" @click="closeFullscreen" />
+            </Transition>
+
+            <!-- Fullscreen note overlay - disabled for parent/child approach -->
+            <!-- <Transition name="fullscreen">
+                <div v-if="fullscreenNote && getFullscreenNote()" class="fullscreen-note-overlay">
+                    <div class="fullscreen-note-content">
+                        <UiStickyNote 
+                            :note="transformNoteForComponent(getFullscreenNote()!)"
+                            size="lg"
+                            placeholder="Double-click to add your note..." 
+                            @update="handleUpdateNote"
+                            @retry="handleRetry"
+                            @toggle-fullscreen="toggleFullscreen" />
+                    </div>
+                </div>
+            </Transition> -->
+
             <!-- Empty state -->
             <div v-if="!notes?.length" class="flex flex-col items-center justify-center py-12 text-center">
                 <UIcon name="i-heroicons-document-text" class="w-12 h-12 text-gray-300 dark:text-gray-600 mb-4" />
@@ -55,18 +82,20 @@
             </div>
 
             <!-- Notes grid -->
-            <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4 p-4 relative">
+            <!-- Notes grid -->
+            <div v-else class="grid grid-cols-1 sm:grid-cols-2  gap-4 p-4 relative">
                 <div v-for="note in notes" :key="note.id" class="relative group w-full">
-                    <UiStickyNote :note="transformNoteForComponent(note)" size="lg"
-                        placeholder="Double-click to add your note..." @update="handleUpdateNote"
-                        @retry="handleRetry" />
+                    <UiStickyNote :note="transformNoteForComponent(note)" :is-fullscreen="fullscreenNote === note.id"
+                        size="lg" placeholder="Double-click to add your note..." @update="handleUpdateNote"
+                        @retry="handleRetry" @toggle-fullscreen="toggleFullscreen" />
 
-                    <!-- Delete button -->
-                    <button v-if="!isNoteLoading(note.id)"
-                        class="absolute -right-2 -top-2 bg-error h-8 w-8 opacity-0 shadow-lg text-white rounded-full transition-opacity duration-200 group-hover:opacity-100 hover:bg-red-600 flex items-center justify-center cursor-pointer"
+                    <!-- Delete button (hide in fullscreen mode) -->
+                    <UButton v-if="!isNoteLoading(note.id) && fullscreenNote !== note.id"
+                        class="absolute -left-2 -top-2 flex items-center justify-center cursor-pointer"
+                        :class="{ 'opacity-0': isNoteLoading(note.id) }" variant="soft" color="error" size="xs"
                         :disabled="false" @click="deleteNote(note.id)">
                         <icon name="i-heroicons-trash" class="w-3 h-3" />
-                    </button>
+                    </UButton>
                 </div>
             </div>
         </div>
@@ -81,6 +110,7 @@ interface Props {
     folderId: string
 }
 
+const content = ref('')
 const props = defineProps<Props>()
 
 // Use the optimistic notes store
@@ -93,6 +123,9 @@ const notes = computed(() => Array.from(notesStore.notes.value.values()))
 const isFetching = computed(() => notesStore.loadingStates.value.get(props.folderId) ?? false)
 const error = ref<Error | null>(null) // Main error state for critical failures
 
+// Fullscreen state management
+const fullscreenNote = ref<string | null>(null)
+
 // Transform note for StickyNote component
 const transformNoteForComponent = (note: NoteState) => {
     return {
@@ -101,6 +134,27 @@ const transformNoteForComponent = (note: NoteState) => {
         loading: note.isLoading || false,
         error: note.error || null
     }
+}
+
+// Get the fullscreen note data
+const getFullscreenNote = () => {
+    if (!fullscreenNote.value) return null
+    return notes.value.find(note => note.id === fullscreenNote.value) || null
+}
+
+// Fullscreen functionality
+const toggleFullscreen = (noteId: string) => {
+    if (fullscreenNote.value === noteId) {
+        // Close fullscreen
+        fullscreenNote.value = null
+    } else {
+        // Open fullscreen
+        fullscreenNote.value = noteId
+    }
+}
+
+const closeFullscreen = () => {
+    fullscreenNote.value = null
 }
 
 // Check if a note is currently loading
@@ -127,6 +181,19 @@ onMounted(async () => {
     } catch (e: unknown) {
         error.value = e instanceof Error ? e : new Error('Failed to load notes')
     }
+
+    // Add ESC key listener for fullscreen
+    const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && fullscreenNote.value) {
+            closeFullscreen()
+        }
+    }
+    document.addEventListener('keydown', handleEscape)
+
+    // Cleanup on unmount
+    onUnmounted(() => {
+        document.removeEventListener('keydown', handleEscape)
+    })
 })
 
 // Update an existing note (optimistic with debounced save)
@@ -164,5 +231,55 @@ const handleRetry = (id: string) => {
     display: flex;
     flex-direction: column;
     min-height: 0;
+}
+
+/* Backdrop transitions */
+.backdrop-enter-active,
+.backdrop-leave-active {
+    transition: all 0.3s ease-out;
+}
+
+.backdrop-enter-from,
+.backdrop-leave-to {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+}
+
+.backdrop-enter-to,
+.backdrop-leave-from {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+}
+
+/* Fullscreen backdrop */
+.fullscreen-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 50;
+    backdrop-filter: blur(4px);
+    will-change: opacity, backdrop-filter;
+}
+
+/* Performance optimizations */
+.fullscreen-backdrop {
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+/* Accessibility - reduced motion */
+@media (prefers-reduced-motion: reduce) {
+
+    .backdrop-enter-active,
+    .backdrop-leave-active {
+        transition: none !important;
+    }
+
+    .fullscreen-backdrop {
+        backdrop-filter: none !important;
+    }
 }
 </style>

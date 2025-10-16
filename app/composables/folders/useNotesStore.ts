@@ -48,7 +48,7 @@ export function useNotesStore(folderId: string): NotesStore {
     await saveNoteToServer(id, content)
   }
 
-  const { debouncedFunc: debouncedSave } = useDebounce(saveToServer, 800)
+  const { debouncedFunc: debouncedSave } = useDebounce(saveToServer, 300)
 
   // Internal function to save note to server
   const saveNoteToServer = async (id: string, content: string): Promise<boolean> => {

@@ -14,11 +14,11 @@ export type Note = z.infer<typeof NoteSchema>
 
 export const CreateNoteDTO = z.object({
   folderId: z.string(),
-  content: z.preprocess(trim, z.string().min(1)),
+  content: z.preprocess(trim, z.string().min(0)),
 })
 export type CreateNoteDTO = z.infer<typeof CreateNoteDTO>
 
 export const UpdateNoteDTO = z.object({
-  content: z.preprocess(trim, z.string().min(1)),
+  content: z.preprocess(trim, z.string().min(0)),
 })
 export type UpdateNoteDTO = z.infer<typeof UpdateNoteDTO>

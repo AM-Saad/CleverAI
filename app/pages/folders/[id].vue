@@ -1,12 +1,12 @@
 <template>
-    <div id="folder-page" class=" ">
+    <div id="folder-page" class="">
         <div v-if="loading">Loading...</div>
 
         <shared-server-error v-model:typed-error="typedError" :loading="loading" />
 
 
         <Transition name="fade" mode="out-in" :duration="{ enter: 300, leave: 300 }">
-            <div v-if="folder" class="order-2 transition-all duration-1000 will-change-auto">
+            <div v-if="folder" class="transition-all duration-1000 will-change-auto">
                 <header class="flex flex-wrap gap-4 justify-between my-4 pb-4">
                     <div>
                         <div class="flex flex-wrap items-center gap-2">
@@ -42,10 +42,15 @@
                     </div>
                 </header>
 
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 max-h-full overflow-hidden">
+
+                    <!-- NOTES Goes Here -->
+                    <div class="grid  lg:col-span-2 max-h-full ">
+                        <FolderNotesSection :folder-id="`${id as string}`" />
+                    </div>
 
                     <!-- CAROUSEL Goes Here -->
-                    <UiCard variant="ghost" class="md:order-1 order-2">
+                    <UiCard variant="ghost" class=" lg:col-span-1">
                         <UiTabs v-model="activeIndex" :items="items" @select="select" />
                         <UCarousel ref="carousel" v-slot="{ item }" :items="items" :prev="{ onClick: onClickPrev }"
                             :next="{ onClick: onClickNext }" :ui="{ item: 'ps-0', container: '-ms-0' }"
@@ -57,8 +62,6 @@
                         </UCarousel>
                     </UiCard>
 
-                    <!-- NOTES Goes Here -->
-                    <FolderNotesSection :folder-id="`${id as string}`" />
 
                 </div>
 
