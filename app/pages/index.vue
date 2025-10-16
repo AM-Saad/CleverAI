@@ -2,9 +2,8 @@
     <div>
         <Title>Shater AI | Your AI Companion</Title>
 
-        <section
-            class="my-xl flex w-full  shadow rounded-2xl p-lg bg-accent dark:bg-gray-800 animate-gradient h-screen">
-            <div class="flex flex-col  gap-2">
+        <section class="my-xl flex w-full">
+            <div class="flex flex-col gap-2">
                 <motion.h2 :initial="{ opacity: 0, scale: .9 }" :animate="{ opacity: 1, scale: 1 }" :transition="{
                     duration: 1.9,
                     scale: {
@@ -15,25 +14,25 @@
                 }" class="text-9xl font-light tracking-tighter text-primary ">
                     Shater AI
                 </motion.h2>
-                <ui-text-generate-effect class="text-4xl font-medium my-4"
+                <UiTextGenerateEffect class="text-4xl font-medium my-4"
                     :words="'AI, Chatbot, Assistant, Helper, Support, Guide'" />
                 <router-link to="/auth/signup">
-                    <ui-button>Start Now</ui-button>
+                    <UButton>Start Now</UButton>
                 </router-link>
 
             </div>
         </section>
         <div class="wrapper">
             <section class="brands my-xl flex flex-wrap justify-between gap-3">
-                <!-- <div class="text-balance flex justify-center">
+                <div class="text-balance flex justify-center">
                     <h1 class="text-balance text-center text-2xl font-bold">
                         Flashcards, Chatbot, and custom quizzes — all tailored
                         to
-                        <ui-text-highlight class="rounded-lg bg-gradient-to-r from-purple-300 to-orange-300">
+                        <UiTextHighlight class="rounded-lg bg-gradient-to-r from-purple-300 to-orange-300">
                             make learning fun and effective
-                        </ui-text-highlight>
+                        </UiTextHighlight>
                     </h1>
-                </div> -->
+                </div>
             </section>
 
         </div>
@@ -43,6 +42,7 @@
 <script setup lang="ts">
 import { motion } from 'motion-v'
 
+console.log('🏠 [INDEX.VUE] Page script setup initializing...');
 
 definePageMeta({
     title: "Recwide - Free Screen Recorder",
@@ -52,10 +52,13 @@ definePageMeta({
     auth: false,
 })
 
+console.log('🏠 [INDEX.VUE] Page meta defined');
+
 // If you want to use it in setup, import from the nuxtApp.
 // const { $pwa } = useNuxtApp()
 
 async function registerPeriodicSync(): Promise<void> {
+    console.log('🏠 [INDEX.VUE] registerPeriodicSync called');
     const registration = await navigator.serviceWorker.ready
 
     if ("periodicSync" in registration) {
@@ -73,10 +76,17 @@ async function registerPeriodicSync(): Promise<void> {
     }
 }
 
+onBeforeMount(() => {
+    console.log('🏠 [INDEX.VUE] onBeforeMount triggered');
+});
+
 onMounted(() => {
     //   if ($pwa.offlineReady) console.log("App is offline ready")
     //   else console.log("App is not offline ready")
     //   registerPeriodicSync()
-    console.log("Mounted")
+    console.log("🏠 [INDEX.VUE] onMounted triggered - Page mounted successfully")
+    console.log("🏠 [INDEX.VUE] Document body:", document.body);
 })
+
+console.log('🏠 [INDEX.VUE] Page script setup completed');
 </script>

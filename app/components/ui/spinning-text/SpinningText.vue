@@ -63,7 +63,7 @@ const props = withDefaults(defineProps<CircularTextProps>(), {
 });
 
 const letters = computed(() => {
-  let letters = props.text.split("");
+  const letters = props.text.split("");
   letters.push(" ");
   return letters;
 });

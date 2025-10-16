@@ -1,17 +1,18 @@
 <template>
-    <div :class="cn('h-72 w-64 select-none [perspective:1000px]', props.class)">
+    <div :class="cn('h-72 flex-1 w-full select-none [perspective:1000px] mb-4 md:mb-0', props.class)">
         <div :class="cn(
-            'relative h-full rounded-2xl transition-transform duration-500 will-change-transform cursor-pointer [transform-style:preserve-3d]'
+            'block relative min-w-full h-full rounded-2xl transition-transform duration-500 will-change-transform cursor-pointer text-dark [transform-style:preserve-3d]'
         )" :style="{ transform: wrapperTransform }" @click="flipped = !flipped">
+
             <!-- Front -->
             <div
-                class="absolute size-full overflow-hidden rounded-2xl border [backface-visibility:hidden] bg-accent p-4">
+                class="absolute size-full overflow-hidden rounded-2xl border border-dark dark:border-light [backface-visibility:hidden] bg-foreground p-4">
                 <slot name="front" />
             </div>
 
             <!-- Back -->
             <div :class="cn(
-                'absolute h-full w-full overflow-hidden rounded-2xl border bg-black/80 p-4 text-slate-200 [backface-visibility:hidden]'
+                'absolute h-full w-full overflow-hidden rounded-2xl border bg-light dark:bg-dark p-4 text-dark [backface-visibility:hidden]'
             )" :style="{ transform: backTransform }">
                 <slot name="back" />
             </div>

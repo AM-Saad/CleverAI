@@ -1,120 +1,129 @@
 import { z } from 'zod'
 import { prisma } from "~~/server/prisma/utils"
+import { safeGetServerSession } from "~~/server/utils/safeGetServerSession"
+import { Errors, success } from "~~/server/utils/error"
 
 const PreferencesSchema = z.object({
-  enabled: z.boolean(),
-  types: z.object({
-    system: z.boolean(),
-    folder_update: z.boolean(),
-    quiz_reminder: z.boolean(),
-    study_reminder: z.boolean(),
-    achievement: z.boolean(),
-    marketing: z.boolean(),
-  }),
-  quietHours: z.object({
-    enabled: z.boolean(),
-    start: z.string().regex(/^\d{2}:\d{2}$/), // HH:MM format
-    end: z.string().regex(/^\d{2}:\d{2}$/),   // HH:MM format
-  }).optional(),
+  cardDueEnabled: z.boolean(),
+  cardDueTime: z.string().regex(/^\d{2}:\d{2}$/), // HH:MM format
+  cardDueThreshold: z.number().min(1).max(100),
+
+  dailyReminderEnabled: z.boolean(),
+  dailyReminderTime: z.string().regex(/^\d{2}:\d{2}$/),
+
+  timezone: z.string(),
+  quietHoursEnabled: z.boolean(),
+  quietHoursStart: z.string().regex(/^\d{2}:\d{2}$/),
+  quietHoursEnd: z.string().regex(/^\d{2}:\d{2}$/),
+  sendAnytimeOutsideQuietHours: z.boolean().default(false),
+  activeHoursEnabled: z.boolean().default(false),
+  activeHoursStart: z.string().regex(/^\d{2}:\d{2}$/).default('09:00'),
+  activeHoursEnd: z.string().regex(/^\d{2}:\d{2}$/).default('21:00'),
 })
+
+type SessionWithUser = {
+  user?: {
+    email?: string
+    id?: string
+    [key: string]: unknown
+  }
+  [key: string]: unknown
+} | null
 
 export default defineEventHandler(async (event) => {
   const method = getMethod(event)
 
-  try {
-    // TODO: Get user ID from session when auth is implemented
-    // const session = await getServerSession(event)
-    // if (!session?.user) {
-    //   throw createError({
-    //     statusCode: 401,
-    //     statusMessage: 'Unauthorized'
-    //   })
-    // }
-    // const userId = session.user.id
+  // Get user ID from session
+  const session = await safeGetServerSession(event) as SessionWithUser
+  if (!session?.user?.email) {
+    throw Errors.unauthorized()
+  }
 
-    // For now, use a placeholder user ID
-    const userId = "68a60683031c492736e6b49a" // TODO: Remove when auth is implemented
+  // Get user from database to get proper user ID
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email }
+  })
+  if (!user) {
+    throw Errors.unauthorized('User not found')
+  }
+  const userId = user.id
 
-    if (method === 'GET') {
-      // Get user's notification preferences
-      const user = await prisma.user.findUnique({
-        where: { id: userId },
-        select: {
-          id: true,
-          // Note: preferences field doesn't exist in schema yet
-          // This would need to be added to the User model
+  if (method === 'GET') {
+    let preferences = await prisma.userNotificationPreferences.findUnique({ where: { userId } })
+
+    if (!preferences) {
+      preferences = await prisma.userNotificationPreferences.create({
+        data: {
+          userId,
+          cardDueEnabled: true,
+          cardDueTime: "09:00",
+          cardDueThreshold: 5,
+          dailyReminderEnabled: false,
+          dailyReminderTime: "19:00",
+          timezone: "UTC",
+            quietHoursEnabled: false,
+          quietHoursStart: "22:00",
+          quietHoursEnd: "08:00",
+          sendAnytimeOutsideQuietHours: false,
+          activeHoursEnabled: false,
+          activeHoursStart: '09:00',
+          activeHoursEnd: '21:00'
         }
       })
-
-      if (!user) {
-        throw createError({
-          statusCode: 404,
-          statusMessage: 'User not found'
-        })
-      }
-
-      // Return default preferences for now
-      const defaultPreferences = {
-        enabled: true,
-        types: {
-          system: true,
-          folder_update: true,
-          quiz_reminder: true,
-          study_reminder: true,
-          achievement: true,
-          marketing: false,
-        },
-        quietHours: {
-          enabled: false,
-          start: "22:00",
-          end: "08:00",
-        }
-      }
-
-      return {
-        success: true,
-        data: defaultPreferences
-      }
     }
 
-    if (method === 'PUT') {
-      // Update user's notification preferences
-      const body = await readBody(event)
-      const preferences = PreferencesSchema.parse(body)
-
-      // TODO: Update user preferences in database
-      // This would require adding a preferences field to the User model
-      // await prisma.user.update({
-      //   where: { id: userId },
-      //   data: { preferences }
-      // })
-
-      return {
-        success: true,
-        message: 'Preferences updated successfully',
-        data: preferences
-      }
-    }
-
-    throw createError({
-      statusCode: 405,
-      statusMessage: 'Method not allowed'
-    })
-
-  } catch (error) {
-    console.error("Failed to handle notification preferences:", error)
-
-    if (error instanceof z.ZodError) {
-      throw createError({
-        statusCode: 400,
-        statusMessage: 'Invalid preferences data',
-        data: error.issues
-      })
-    }
-
-    throw createError({
-      statusCode: 500,
-      statusMessage: "Internal Server Error",
+    return success({
+      cardDueEnabled: preferences.cardDueEnabled,
+      cardDueTime: preferences.cardDueTime,
+      cardDueThreshold: preferences.cardDueThreshold,
+      dailyReminderEnabled: preferences.dailyReminderEnabled,
+      dailyReminderTime: preferences.dailyReminderTime,
+      timezone: preferences.timezone,
+      quietHoursEnabled: preferences.quietHoursEnabled,
+      quietHoursStart: preferences.quietHoursStart,
+      quietHoursEnd: preferences.quietHoursEnd,
+      sendAnytimeOutsideQuietHours: preferences.sendAnytimeOutsideQuietHours,
+      activeHoursEnabled: preferences.activeHoursEnabled,
+      activeHoursStart: preferences.activeHoursStart,
+      activeHoursEnd: preferences.activeHoursEnd
     })
   }
+
+  if (method === 'PUT') {
+    const body = await readBody(event)
+    let validatedPrefs
+    try {
+      validatedPrefs = PreferencesSchema.parse(body)
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        throw Errors.badRequest('Invalid preferences data', err.issues)
+      }
+      throw Errors.badRequest('Invalid preferences data')
+    }
+
+    const preferences = await prisma.userNotificationPreferences.upsert({
+      where: { userId },
+      update: validatedPrefs,
+      create: { userId, ...validatedPrefs }
+    })
+
+    return success({
+      cardDueEnabled: preferences.cardDueEnabled,
+      cardDueTime: preferences.cardDueTime,
+      cardDueThreshold: preferences.cardDueThreshold,
+      dailyReminderEnabled: preferences.dailyReminderEnabled,
+      dailyReminderTime: preferences.dailyReminderTime,
+      timezone: preferences.timezone,
+      quietHoursEnabled: preferences.quietHoursEnabled,
+      quietHoursStart: preferences.quietHoursStart,
+      quietHoursEnd: preferences.quietHoursEnd,
+      sendAnytimeOutsideQuietHours: preferences.sendAnytimeOutsideQuietHours,
+      activeHoursEnabled: preferences.activeHoursEnabled,
+      activeHoursStart: preferences.activeHoursStart,
+      activeHoursEnd: preferences.activeHoursEnd
+    })
+  }
+
+  // 405 - until helper exists, reuse badRequest? We'll add methodNotAllowed soon.
+  throw Errors.badRequest('Method not allowed')
 })

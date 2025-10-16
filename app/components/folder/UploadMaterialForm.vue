@@ -3,8 +3,9 @@ import * as z from 'zod'
 import type { FormSubmitEvent } from '@nuxt/ui'
 import { useRoute } from 'vue-router'
 import { useUpdateFolder } from '~/composables/folders/useFolders'
+import { DB_CONFIG, FORM_SYNC_TYPES } from '~~/shared/constants';
 
-const emit = defineEmits<{ (e: 'closed'): void; (e: 'cancel'): void }>()
+const emit = defineEmits<{ (e: 'closed' | 'cancel'): void }>()
 
 type MobileProp = boolean | 'auto'
 const props = withDefaults(defineProps<{
@@ -51,8 +52,13 @@ const state = reactive<Schema>({
 })
 
 const route = useRoute()
+const { data } = useAuth()
+
 const id = route.params.id as string
 const { updateFolder, updating, typedError } = useUpdateFolder(id)
+const { handleOfflineSubmit } = useOffline()
+const items = ref(['text', 'video', 'audio', 'pdf', 'url', 'document'])
+
 const toast = useToast()
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
@@ -64,11 +70,30 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
         return
     }
     try {
-        await updateFolder({
+
+        const payload = {
             materialTitle: title,
             materialContent: content,
             materialType: state.materialType
-        })
+        }
+        // handle offline case
+        if (!navigator.onLine) {
+            // Sanitize user data for IndexedDB (only store cloneable properties)
+            const userData = data.value?.user ? {
+                email: data.value.user.email,
+                name: data.value.user.name,
+                image: data.value.user.image
+                // Only include primitive/serializable properties
+            } : null
+
+            handleOfflineSubmit({
+                payload: { ...payload, folderId: id, user: userData },
+                storeName: DB_CONFIG.STORES.FORMS,
+                type: FORM_SYNC_TYPES.UPLOAD_MATERIAL
+            })
+            return
+        }
+        await updateFolder(payload)
         toast.add({ title: 'Saved', description: 'Material uploaded to this folder.', color: 'success' })
         // reset and close
         state.materialTitle = ''
@@ -92,18 +117,16 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
         <UForm :schema="schema" :state="state" class="space-y-2" @submit="onSubmit">
             <UFormField label="Material Title" name="materialTitle">
-                <UInput v-model="state.materialTitle" placeholder="Enter material title" />
+                <UInput v-model="state.materialTitle" placeholder="Enter material title" :ui="{
+                    'root': 'w-full'
+                }" />
             </UFormField>
 
             <UFormField label="Material Type" name="materialType">
-                <USelect v-model="state.materialType" :options="[
-                    { label: 'Text', value: 'text' },
-                    { label: 'Video', value: 'video' },
-                    { label: 'Audio', value: 'audio' },
-                    { label: 'PDF', value: 'pdf' },
-                    { label: 'URL', value: 'url' },
-                    { label: 'Document', value: 'document' }
-                ]" />
+                <USelectMenu v-model="state.materialType" :items="items" :ui="{
+                    'base': 'w-full'
+                }" />
+
             </UFormField>
 
             <UFormField label="Material Content" name="materialContent">

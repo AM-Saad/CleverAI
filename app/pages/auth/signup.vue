@@ -15,47 +15,53 @@ const { handleSubmit, credentials, fieldTypes, error, success, loading } =
 </script>
 
 <template>
-    <div class="flex items-center justify-center flex-col w-full max-w-md mx-auto mt-6 sm:mt-18 p-8 rounded-lg">
+    <div class="flex items-center justify-center flex-col w-full max-w-xl mx-auto">
         <form ref="signup" method="post" class="form" autocomplete="test" @submit.prevent="handleSubmit()">
-            <h1 class="title">Sign up</h1>
-            <p class="text-gray-400 text-xs mb-3 mt-1">
-                By register you will be able to save your projects and retrieve them
-                anytime you need it.
-            </p>
+            <UiTitle>Sign up</UiTitle>
+            <UiParagraph size="sm" color="muted">
+
+                By register you will be able to
+                <strong class="font-semibold">access all the features</strong> of the
+                application!
+
+            </UiParagraph>
             <shared-error-message :error="error" />
             <shared-success-message :message="success ? `${success}` : undefined" />
-            <div class="grid gap-y-4">
+            <div class="mb-2 mt-2 rounded-md relative transition duration-10 00 text-xs">
                 <ui-input-field id="register-name-client" v-model="credentials.name!" :type="fieldTypes.name"
                     name="name" label="Name" title="Please enter your name" tabindex="1" />
                 <ui-input-field id="register-email-client" v-model="credentials.email!" :type="fieldTypes.email"
                     name="email" label="Email Address" title="Please enter a valid email address" tabindex="2" />
+                <ui-input-field id="register-phone-client" v-model="credentials.phone!" :type="fieldTypes.phone"
+                    name="phone" label="Phone" title="Please enter your phone number" tabindex="3" />
                 <ui-input-field id="register-gender-client" v-model="credentials.gender!" :type="fieldTypes.gender"
-                    name="gender" label="Gender" title="Please enter your gender" tabindex="5" />
+                    name="gender" label="Gender" title="Please enter your gender" tabindex="4" />
 
                 <ui-input-field id="login-password-client" v-model="credentials.password!" :type="fieldTypes.password"
-                    name="password" label="Password" title="Please enter a valid password" tabindex="8" />
+                    name="password" label="Password" title="Please enter a valid password" tabindex="5" />
                 <ui-input-field id="login-confirm-password-client" v-model="credentials.confirmPassword!"
                     :type="fieldTypes.confirmPassword" name="confirmPassword" label="Confirm Password"
-                    title="Please enter a valid and matching password" tabindex="9" />
+                    title="Please enter a valid and matching password" tabindex="6" />
             </div>
 
-            <div class="toggle-forms mb-2 text-xs dark:text-gray-200">
-                Already have an account
-                <router-link class="font-semibold underline" tabindex="4" to="/auth/signIn">
-                    Login
-                </router-link>
-            </div>
-            <div>
-                <button type="submit" class="btn btn-small bg-theme disabled:opacity-50" :disabled="loading"
-                    tabindex="5" @click.prevent="handleSubmit">
+            <div class="flex flex-col gap-2 items-start">
+                <UiParagraph size="sm" color="muted">
+
+                    Already have an account
+                    <router-link class="font-semibold underline" tabindex="4" to="/auth/signIn">
+                        Login
+                    </router-link>
+                </UiParagraph>
+                <UButton :disabled="loading" size="lg" tabindex="5" @click.prevent="handleSubmit">
                     Sign up
-                </button>
+                </UButton>
             </div>
         </form>
-        <div v-if="mappedProviders.length" class="flex flex-col justify-center mt-4">
-            <p class="text-center text-gray-400 text-xs mt-4 mb-2">
+        <div v-if="mappedProviders.length" class="flex flex-col justify-center mt-4 gap-y-2">
+            <UiParagraph size="sm" color="muted">
+
                 Or sign up with a social account below 👇
-            </p>
+            </UiParagraph>
             <button v-for="provider in mappedProviders" :key="provider?.id"
                 class="btn btn-small bg-white dark:bg-[#eb4034] dark:ring-white" type="button" tabindex="6"
                 @click="signIn(provider?.id)">

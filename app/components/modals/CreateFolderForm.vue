@@ -66,12 +66,12 @@ const closeModel = (): void => {
         <UiDialogModal :show="props.show" @close="closeModel">
             <template #header>
                 <div class="flex flex-col gap-1">
-                    <h3 class="flex items-center gap-2 text-lg font-semibold text-neutral-900 dark:text-neutral-100">
+                    <UiSubtitle class="flex items-center gap-2 ">
                         <icon name="uil:folder-network" class="" />
                         Create New Folder
-                    </h3>
-                    <p class="font-normal text-sm text-neutral-500">Folder is a container for organizing your content.
-                    </p>
+                    </UiSubtitle>
+                    <UiParagraph size="sm" color="muted">Folder is a container for organizing your content.
+                    </UiParagraph>
                 </div>
 
             </template>
@@ -88,12 +88,12 @@ const closeModel = (): void => {
                     <UFormField label="LLM Model" name="llmModel">
                         <USelectMenu v-model="state.llmModel" color="neutral" variant="subtle" :items="llmModels"
                             class="w-48 " :ui="{
-                                content: 'z-[9999] bg-white'
+                                content: 'z-[9999] '
                             }" />
                         <p class="text-xs text-neutral-500">Select the LLM model for this folder.</p>
                     </UFormField>
 
-                    <UButton type="submit" :loading="creating" :disabled="!canSubmit" class="w-full">
+                    <UButton type="submit" :loading="creating" :disabled="!canSubmit">
 
                         Submit
                     </UButton>

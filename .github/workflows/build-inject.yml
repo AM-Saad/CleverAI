@@ -1,0 +1,40 @@
+name: Build and Inject Service Worker
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build and inject service worker
+        run: yarn build:inject
+
+      - name: Upload built public directory
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-output
+          path: .output/public
+
+      - name: Upload sw.js for quick inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sw-js
+          path: .output/public/sw.js

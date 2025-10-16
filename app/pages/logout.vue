@@ -4,7 +4,8 @@
             <h1 class="text-2xl font-bold mb-4">Signing out...</h1>
             <p class="text-gray-600">You have been signed out successfully.</p>
             <div class="mt-4">
-                <router-link to="/auth/signin"
+                <router-link
+to="/auth/signin"
                     class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
                     Sign In Again
                 </router-link>

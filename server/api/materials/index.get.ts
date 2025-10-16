@@ -1,45 +1,43 @@
+import { z } from 'zod'
 import { requireRole } from '~/../server/middleware/auth'
-import { ErrorFactory, ErrorType } from '~/services/ErrorFactory'
 import { MaterialSchema } from '~~/shared/material.contract'
+import { Errors, success } from '~~/server/utils/error'
+
+const QuerySchema = z.object({
+  folderId: z.string().regex(/^[0-9a-fA-F]{24}$/, 'Folder ID must be a valid MongoDB ObjectId')
+})
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ['USER'])
   const prisma = event.context.prisma
 
+  const rawQuery = getQuery(event)
+  console.log("rawQuery:", rawQuery)
+  let query
   try {
-    const query = getQuery(event)
-    const folderId = query.folderId as string
-
-    if (!folderId) {
-      throw createError({ statusCode: 400, statusMessage: 'folderId query parameter is required' })
+    query = QuerySchema.parse(rawQuery)
+    console.log("Parsed query:", query)
+  } catch (err) {
+    console.log("Query parsing error:", err)
+    if (err instanceof z.ZodError) {
+      throw Errors.badRequest('Invalid query parameters..', err.issues)
     }
-
-    // Verify folder belongs to user
-    const folder = await prisma.folder.findFirst({
-      where: { id: folderId, userId: user.id }
-    })
-    if (!folder) {
-      throw createError({ statusCode: 404, statusMessage: 'Folder not found' })
-    }
-
-    // Get materials for folder
-    const materials = await prisma.material.findMany({
-      where: { folderId },
-      orderBy: { createdAt: 'desc' }
-    })
-
-    // Optional: assert response shape in development
-    if (process.env.NODE_ENV === 'development') {
-      materials.forEach(material => MaterialSchema.parse(material))
-    }
-
-    return materials
-  } catch (error) {
-    console.error('Error fetching materials:', error)
-    throw ErrorFactory.create(
-      ErrorType.Validation,
-      'Materials',
-      'Failed to fetch materials'
-    )
+    throw Errors.badRequest('Invalid query parameters.')
   }
+
+  const folder = await prisma.folder.findFirst({ where: { id: query.folderId, userId: user.id } })
+  if (!folder) {
+    throw Errors.notFound('Folder')
+  }
+
+  const materials = await prisma.material.findMany({
+    where: { folderId: query.folderId },
+    orderBy: { createdAt: 'desc' }
+  })
+
+  if (process.env.NODE_ENV === 'development') {
+    materials.forEach(m => MaterialSchema.parse(m))
+  }
+
+  return success(materials, { count: materials.length, folderId: query.folderId })
 })

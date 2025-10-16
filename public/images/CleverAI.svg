@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 132.7 21.03">
+  <defs>
+    <style>
+      .cls-1 {
+        fill: #f1f1f1;
+      }
+
+      .cls-1, .cls-2, .cls-3, .cls-4 {
+        stroke: #333;
+      }
+
+      .cls-1, .cls-3, .cls-4 {
+        stroke-miterlimit: 10;
+      }
+
+      .cls-1, .cls-4 {
+        stroke-width: .37px;
+      }
+
+      .cls-2 {
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+
+      .cls-2, .cls-3 {
+        stroke-width: .28px;
+      }
+
+      .cls-2, .cls-3, .cls-4 {
+        fill: none;
+      }
+
+      .cls-5 {
+        fill: #333;
+        font-family: SFCompactRounded-Regular, 'SF Compact Rounded';
+        font-size: 25.77px;
+      }
+    </style>
+  </defs>
+  <path class="cls-4" d="M30.61,5.68v-1.03c0-1.15-.67-2.22-1.77-2.84-.61-.34-1.32-.53-2.05-.53h-3.52"/>
+  <path class="cls-1" d="M30.61,5.68v8.74c0,1.15-.67,2.22-1.77,2.84-.61.34-1.32.53-2.05.53H8.55c-.73,0-1.44-.18-2.05-.53-1.1-.62-1.77-1.69-1.77-2.84V5.68s-.57,7.05-.66,9.41c-.1,2.58,2.01,4.67,4.58,4.67h17.95c2.58,0,4.66-2.09,4.57-4.67-.08-2.36-.56-9.41-.56-9.41Z"/>
+  <path class="cls-4" d="M4.73,5.68v-1.03c0-1.15.67-2.22,1.77-2.84.61-.34,1.32-.53,2.05-.53h14.73c.73,0,1.44.18,2.05.53,1.1.62,1.77,1.69,1.77,2.84v9.77c0,1.15-.67,2.22-1.77,2.84-.61.34-1.32.53-2.05.53h-3.43c.73,0,1.44-.18,2.05-.53,1.1-.62,1.77-1.69,1.77-2.84V4.65c0-1.15-.67-2.22-1.77-2.84-.61-.34-1.32-.53-2.05-.53"/>
+  <text class="cls-5" transform="translate(38.25 19.43)"><tspan x="0" y="0">CleverAI</tspan></text>
+  <circle class="cls-3" cx="8.56" cy="13.55" r="1.66"/>
+  <polyline class="cls-2" points="7.89 13.63 8.3 14.04 9.27 13.07"/>
+</svg>

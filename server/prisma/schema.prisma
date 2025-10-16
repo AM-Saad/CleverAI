@@ -1,10 +1,10 @@
 datasource db {
-  provider = "mongodb"
-  url      = env("DATABASE_URL")
+    provider = "mongodb"
+    url      = env("DATABASE_URL")
 }
 
 generator client {
-  provider = "prisma-client-js"
+    provider = "prisma-client-js"
 }
 
 // =========================
@@ -12,67 +12,79 @@ generator client {
 // =========================
 
 model User {
-  id                        String                     @id @default(auto()) @map("_id") @db.ObjectId
-  name                      String
-  email                     String?                    @unique
-  password                  String
-  phone                     String                     @unique
-  gender                    String?
-  role                      UserRole
-  createdAt                 DateTime                   @default(now())
-  updatedAt                 DateTime                   @updatedAt
-  notifications             Notification[]
-  payments                  Payment[]
-  folders                   Folder[]                   @relation("UserFolders")
-  subscription              UserSubscription?
-  notificationSubscriptions NotificationSubscription[]
+    id                        String                     @id @default(auto()) @map("_id") @db.ObjectId
+    name                      String
+    email                     String?                    @unique
+    password                  String
+    phone                     String                     @unique
+    gender                    String?
+    role                      UserRole
+    createdAt                 DateTime                   @default(now())
+    updatedAt                 DateTime                   @updatedAt
+    notifications             Notification[]
+    payments                  Payment[]
+    folders                   Folder[]                   @relation("UserFolders")
+    subscription              UserSubscription?
+    notificationSubscriptions NotificationSubscription[]
+    scheduledNotifications    ScheduledNotification[]
+    notificationPreferences   UserNotificationPreferences?
 
-  // --- Authentication fields ---
-  credentials           Json?
-  auth_provider         String? @default("credentials")
-  account_verified      Boolean @default(false)
-  email_verified        Boolean @default(false)
-  register_verification String?
-  password_verification String?
-  passkey_user_id       String? @db.ObjectId
-  // --- End authentication fields ---
+    // --- Authentication fields ---
+    credentials           Json?
+    auth_provider         String? @default("credentials")
+    account_verified      Boolean @default(false)
+    email_verified        Boolean @default(false)
+    register_verification String?
+    password_verification String?
+    passkey_user_id       String? @db.ObjectId
+    // --- End authentication fields ---
 }
 
 enum UserRole {
-  USER
+    USER
 }
 
 model Folder {
-  id          String      @id @default(auto()) @map("_id") @db.ObjectId
-  title       String
-  description String?
-  metadata    Json?
-  order       Int
-  rawText     String?
-  questions   Question[]
-  flashcards  Flashcard[]
-  materials   Material[]
-  user        User        @relation("UserFolders", fields: [userId], references: [id])
-  userId      String      @db.ObjectId
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  llmModel    String      @default("gpt-3.5")
+    id          String      @id @default(auto()) @map("_id") @db.ObjectId
+    title       String
+    description String?
+    metadata    Json?
+    order       Int
+    rawText     String?
+    questions   Question[]
+    flashcards  Flashcard[]
+    materials   Material[]
+    notes       Note[]
+    user        User        @relation("UserFolders", fields: [userId], references: [id])
+    userId      String      @db.ObjectId
+    createdAt   DateTime    @default(now())
+    updatedAt   DateTime    @updatedAt
+    llmModel    String      @default("gpt-3.5")
 
-  @@unique([userId, order])
+    @@unique([userId, order])
 }
 
 model Material {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  folder    Folder   @relation(fields: [folderId], references: [id])
-  folderId  String   @db.ObjectId
-  title     String
-  content   String
-  type      String? // "video" | "audio" | "text" | "pdf" | etc.
-  metadata  Json?
-  llmModel  String?  @default("gpt-3.5")
-  llmPrompt String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    folder    Folder   @relation(fields: [folderId], references: [id])
+    folderId  String   @db.ObjectId
+    title     String
+    content   String
+    type      String? // "video" | "audio" | "text" | "pdf" | etc.
+    metadata  Json?
+    llmModel  String?  @default("gpt-3.5")
+    llmPrompt String?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model Note {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    folder    Folder   @relation(fields: [folderId], references: [id])
+    folderId  String   @db.ObjectId
+    content   String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 // model Lesson {
@@ -105,184 +117,237 @@ model Material {
 // }
 
 model Question {
-  id          String       @id @default(auto()) @map("_id") @db.ObjectId
-  folder      Folder       @relation(fields: [folderId], references: [id])
-  folderId    String       @db.ObjectId
-  type        QuestionType @default(MULTIPLE_CHOICE)
-  question    String
-  choices     String[] // For MCQ
-  answerIndex Int
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+    id          String       @id @default(auto()) @map("_id") @db.ObjectId
+    folder      Folder       @relation(fields: [folderId], references: [id])
+    folderId    String       @db.ObjectId
+    type        QuestionType @default(MULTIPLE_CHOICE)
+    question    String
+    choices     String[] // For MCQ
+    answerIndex Int
+    createdAt   DateTime     @default(now())
+    updatedAt   DateTime     @updatedAt
 }
 
 model Flashcard {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  folder    Folder   @relation(fields: [folderId], references: [id])
-  folderId  String   @db.ObjectId
-  front     String
-  back      String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    folder    Folder   @relation(fields: [folderId], references: [id])
+    folderId  String   @db.ObjectId
+    front     String
+    back      String
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 enum QuestionType {
-  MULTIPLE_CHOICE
-  // Extendable for other types
-}
+    MULTIPLE_CHOICE
+    // Extendable for other types
+}model CardReview {
+    id             String       @id @default(auto()) @map("_id") @db.ObjectId
+    userId         String // null if anonymous; better when auth lands
+    folderId       String
+    cardId         String // polymorphic: references Flashcard.id or Material.id
+    resourceType   String       @default("flashcard") // will store "material" or "flashcard"
+    // Legacy fields for backward compatibility
+    flashcardId    String?      @db.ObjectId
+    materialId     String?      @db.ObjectId
+    // SM-2 lite state:
+    intervalDays   Int          @default(0) // I (days)
+    easeFactor     Float        @default(2.5) // EF
+    repetitions    Int          @default(0) // n
+    nextReviewAt   DateTime // scheduled review date
+    lastReviewedAt DateTime?
+    // analytics
+    lastGrade      Int? // 0..5
+    streak         Int          @default(0)
 
-model CardReview {
-  id            String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId        String   // null if anonymous; better when auth lands
-  folderId      String
-  cardId        String   // references Flashcard.id
-  // SM-2 lite state:
-  intervalDays  Int      @default(0)   // I (days)
-  easeFactor    Float    @default(2.5) // EF
-  repetitions   Int      @default(0)   // n
-  nextReviewAt  DateTime // scheduled review date
-  lastReviewedAt DateTime?
-  // analytics
-  lastGrade     Int?     // 0..5
-  streak        Int      @default(0)
-
-
-
-  @@index([userId, nextReviewAt])
-  @@index([folderId, nextReviewAt])
-  @@unique([userId, cardId])
+    @@unique([userId, cardId])
+    @@index([userId, nextReviewAt])
+    @@index([folderId, nextReviewAt])
 }
 
 model LlmPrice {
-  id                String  @id @default(auto()) @map("_id") @db.ObjectId
-  provider          String // "openai" | "google"
-  model             String // "gpt-4o" | "gemini-1.5-pro" | ...
-  // If you want exact math, store integer minor units (see note below).
-  inputPer1kMicros  BigInt // price per 1k input tokens, in micro-dollars (USD * 1_000_000)
-  outputPer1kMicros BigInt // price per 1k output tokens, in micro-dollars (USD * 1_000_000)
-  isActive          Boolean @default(true)
+    id                String  @id @default(auto()) @map("_id") @db.ObjectId
+    provider          String // "openai" | "google"
+    model             String // "gpt-4o" | "gemini-1.5-pro" | ...
+    // If you want exact math, store integer minor units (see note below).
+    inputPer1kMicros  BigInt // price per 1k input tokens, in micro-dollars (USD * 1_000_000)
+    outputPer1kMicros BigInt // price per 1k output tokens, in micro-dollars (USD * 1_000_000)
+    isActive          Boolean @default(true)
 
-  @@unique([provider, model], map: "provider_model")
+    @@unique([provider, model], map: "provider_model")
 }
 
 model LlmUsage {
-  id                        String  @id @default(auto()) @map("_id") @db.ObjectId
-  provider                  String // "openai" | "google"
-  model                     String
-  inputPer1kMicrosSnapshot  BigInt? // snapshot of price used at call time
-  outputPer1kMicrosSnapshot BigInt? // snapshot of price used at call time
+    id                        String  @id @default(auto()) @map("_id") @db.ObjectId
+    provider                  String // "openai" | "google"
+    model                     String
+    inputPer1kMicrosSnapshot  BigInt? // snapshot of price used at call time
+    outputPer1kMicrosSnapshot BigInt? // snapshot of price used at call time
 
-  promptTokens     Int
-  completionTokens Int
-  totalTokens      Int
+    promptTokens     Int
+    completionTokens Int
+    totalTokens      Int
 
-  // Using BigInt for micro-dollars.
-  inputUsdMicros  BigInt // micro-dollars
-  outputUsdMicros BigInt // micro-dollars
-  totalUsdMicros  BigInt // micro-dollars
+    // Using BigInt for micro-dollars.
+    inputUsdMicros  BigInt // micro-dollars
+    outputUsdMicros BigInt // micro-dollars
+    totalUsdMicros  BigInt // micro-dollars
 
-  requestId    String? // vendor id if available
-  status       String  @default("success") // "success" | "error"
-  errorCode    String?
-  errorMessage String?
+    requestId    String? // vendor id if available
+    status       String  @default("success") // "success" | "error"
+    errorCode    String?
+    errorMessage String?
 
-  // App context for reporting
-  userId   String?
-  folderId String?
-  feature  String? // "flashcards" | "quiz" | "chat" | etc.
+    // App context for reporting
+    userId   String?
+    folderId String?
+    feature  String? // "flashcards" | "quiz" | "chat" | etc.
 
-  // Debug/audit
-  createdAt    DateTime @default(now())
-  rawUsageJson Json?
-  meta         Json?
-  materialId   String?  @db.ObjectId
+    // Debug/audit
+    createdAt    DateTime @default(now())
+    rawUsageJson Json?
+    meta         Json?
+    materialId   String?  @db.ObjectId
 
-  @@index([provider, model, createdAt])
-  @@index([userId, createdAt])
-  @@index([folderId, createdAt])
+    @@index([provider, model, createdAt])
+    @@index([userId, createdAt])
+    @@index([folderId, createdAt])
 }
 
 model Notification {
-  id      String   @id @default(auto()) @map("_id") @db.ObjectId
-  user    User     @relation(fields: [userId], references: [id])
-  userId  String   @db.ObjectId
-  type    String
-  content String
-  sentAt  DateTime @default(now())
+    id      String   @id @default(auto()) @map("_id") @db.ObjectId
+    user    User     @relation(fields: [userId], references: [id])
+    userId  String   @db.ObjectId
+    type    String
+    content String
+    sentAt  DateTime @default(now())
 }
 
 model Payment {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  user      User     @relation(fields: [userId], references: [id])
-  userId    String   @db.ObjectId
-  amount    Float
-  provider  String
-  status    String
-  createdAt DateTime @default(now())
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    user      User     @relation(fields: [userId], references: [id])
+    userId    String   @db.ObjectId
+    amount    Float
+    provider  String
+    status    String
+    createdAt DateTime @default(now())
 }
 
 model publickeycreds {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  backed_up       Boolean
-  passkey_user_id String   @db.ObjectId
-  public_key      Bytes?
-  credentialID    String
-  transports      String[]
-  counter         Int
+    id              String   @id @default(auto()) @map("_id") @db.ObjectId
+    backed_up       Boolean
+    passkey_user_id String   @db.ObjectId
+    public_key      Bytes?
+    credentialID    String
+    transports      String[]
+    counter         Int
 }
 
 model sessions {
-  id      String   @id @map("_id")
-  expires DateTime @db.Date
-  session Json
+    id      String   @id @map("_id")
+    expires DateTime @db.Date
+    session Json
 
-  @@index([expires], map: "expires_1")
+    @@index([expires], map: "expires_1")
 }
 
 enum SubscriptionTier {
-  FREE
-  PRO
-  ENTERPRISE
+    FREE
+    PRO
+    ENTERPRISE
 }
 
 model UserSubscription {
-  id                   String           @id @default(auto()) @map("_id") @db.ObjectId
-  user                 User             @relation(fields: [userId], references: [id])
-  userId               String           @unique @db.ObjectId
-  tier                 SubscriptionTier @default(FREE)
-  periodStart          DateTime         @default(now())
-  periodEnd            DateTime?
-  generationsUsed      Int              @default(0) // Counter for generations used this period
-  generationsQuota     Int              @default(10) // Default free tier quota
-  stripeCustomerId     String?
-  stripeSubscriptionId String?
-  cancelAtPeriodEnd    Boolean          @default(false)
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
+    id                   String           @id @default(auto()) @map("_id") @db.ObjectId
+    user                 User             @relation(fields: [userId], references: [id])
+    userId               String           @unique @db.ObjectId
+    tier                 SubscriptionTier @default(FREE)
+    periodStart          DateTime         @default(now())
+    periodEnd            DateTime?
+    generationsUsed      Int              @default(0) // Counter for generations used this period
+    generationsQuota     Int              @default(10) // Default free tier quota
+    stripeCustomerId     String?
+    stripeSubscriptionId String?
+    cancelAtPeriodEnd    Boolean          @default(false)
+    createdAt            DateTime         @default(now())
+    updatedAt            DateTime         @updatedAt
 }
 
 type SubscriptionKeys {
-  auth   String
-  p256dh String
+    auth   String
+    p256dh String
 }
 
 model NotificationSubscription {
-  id           String           @id @default(auto()) @map("_id") @db.ObjectId
-  endpoint     String
-  keys         SubscriptionKeys
-  userId       String?          @db.ObjectId
-  user         User?            @relation(fields: [userId], references: [id])
-  createdAt    DateTime         @default(now())
-  expiresAt    DateTime?
-  isActive     Boolean          @default(true)
-  failureCount Int              @default(0)
-  lastSeen     DateTime?
-  userAgent    String?
-  deviceInfo   Json?
+    id           String           @id @default(auto()) @map("_id") @db.ObjectId
+    endpoint     String
+    keys         SubscriptionKeys
+    userId       String?          @db.ObjectId
+    user         User?            @relation(fields: [userId], references: [id])
+    createdAt    DateTime         @default(now())
+    expiresAt    DateTime?
+    isActive     Boolean          @default(true)
+    failureCount Int              @default(0)
+    lastSeen     DateTime?
+    userAgent    String?
+    deviceInfo   Json?
 
-  @@unique([endpoint])
-  @@index([userId])
-  @@index([expiresAt])
-  @@index([isActive])
-  @@index([failureCount])
+    @@unique([endpoint])
+    @@index([userId])
+    @@index([expiresAt])
+    @@index([isActive])
+    @@index([failureCount])
+}
+
+model ScheduledNotification {
+    id          String   @id @default(auto()) @map("_id") @db.ObjectId
+    userId      String   @db.ObjectId
+    type        String   // 'CARD_DUE', 'STUDY_REMINDER', 'DAILY_REVIEW'
+    scheduledFor DateTime
+    sent        Boolean  @default(false)
+    sentAt      DateTime?
+    metadata    Json?    // Store card count, folder info, etc.
+    failureCount Int     @default(0)
+    lastError   String?
+    createdAt   DateTime @default(now())
+    updatedAt   DateTime @updatedAt
+
+    user User @relation(fields: [userId], references: [id])
+
+    @@index([scheduledFor, sent])
+    @@index([userId, type])
+    @@index([sent, scheduledFor])
+    @@map("scheduledNotifications")
+}
+
+model UserNotificationPreferences {
+    id                String   @id @default(auto()) @map("_id") @db.ObjectId
+    userId            String   @unique @db.ObjectId
+
+    // Card due notifications
+    cardDueEnabled    Boolean  @default(true)
+    cardDueTime       String   @default("09:00") // "HH:mm" format
+    cardDueThreshold  Int      @default(5) // Notify when >= 5 cards due
+
+    // Daily study reminders
+    dailyReminderEnabled Boolean @default(false)
+    dailyReminderTime    String  @default("19:00")
+
+    // General settings
+    timezone          String   @default("UTC")
+    quietHoursEnabled Boolean  @default(false)
+    quietHoursStart   String   @default("22:00")
+    quietHoursEnd     String   @default("08:00")
+
+    // Advanced timing
+    sendAnytimeOutsideQuietHours Boolean @default(false)
+    activeHoursEnabled           Boolean @default(false)
+    activeHoursStart             String  @default("09:00")
+    activeHoursEnd               String  @default("21:00")
+
+    createdAt         DateTime @default(now())
+    updatedAt         DateTime @updatedAt
+
+    user User @relation(fields: [userId], references: [id])
+    @@map("userNotificationPreferences")
 }

@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notification Modal Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .code {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: 'Courier New', monospace;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🔔 Notification Modal Test Guide</h1>
+
+        <div class="test-section">
+            <h3>Current Status</h3>
+            <p><strong>✅ Modal positioning fixed:</strong> Modal now uses Teleport to body for proper overlay
+                positioning</p>
+            <p><strong>✅ Smart timing logic:</strong> Uses sophisticated logic to determine when to show modal</p>
+            <p><strong>✅ Count endpoint configured:</strong> API endpoint exists at <code>/api/folders/count</code></p>
+            <p><strong>⚠️ Authentication required:</strong> Endpoint requires login session (that's why curl fails)</p>
+        </div>
+
+        <div class="test-section">
+            <h3>How the Modal System Works</h3>
+            <ol>
+                <li><strong>Plugin loads:</strong> <code>notification-prompt.client.ts</code> starts tracking user
+                    interactions</li>
+                <li><strong>User interacts:</strong> Clicks, scrolls, or keypresses trigger evaluation</li>
+                <li><strong>Smart evaluation:</strong> Checks visit count, previous prompts, folder count (if logged in)
+                </li>
+                <li><strong>Modal appears:</strong> If conditions are met, modal shows via custom event</li>
+                <li><strong>User responds:</strong> Subscribe, dismiss, or "don't ask again"</li>
+            </ol>
+        </div>
+
+        <div class="test-section">
+            <h3>Testing Instructions</h3>
+
+            <h4>1. Test Modal Appearance (Clean State)</h4>
+            <div class="code">
+                // In browser console:
+                localStorage.clear()
+                location.reload()
+                // Then interact with the page (click around)
+            </div>
+
+            <h4>2. Force Show Modal (Testing)</h4>
+            <div class="code">
+                // In browser console:
+                window.dispatchEvent(new CustomEvent('showNotificationModal'))
+            </div>
+
+            <h4>3. Check Current Status</h4>
+            <div class="code">
+                // In browser console:
+                console.log('Visit count:', localStorage.getItem('userVisitCount'))
+                console.log('Last prompted:', localStorage.getItem('notificationPrompted'))
+            </div>
+
+            <h4>4. Reset Everything</h4>
+            <div class="code">
+                // In browser console:
+                localStorage.removeItem('notificationPrompted')
+                localStorage.removeItem('userVisitCount')
+                localStorage.removeItem('lastReviewSession')
+                console.log('Reset complete')
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>Expected Behavior</h3>
+            <ul>
+                <li><strong>First visit:</strong> Modal should appear after user interaction (2 seconds delay)</li>
+                <li><strong>After subscription:</strong> Modal won't appear again</li>
+                <li><strong>After dismissal:</strong> Modal won't appear for 7 days</li>
+                <li><strong>If "don't ask again":</strong> Modal won't appear until user manually resets</li>
+                <li><strong>Logged in users:</strong> Modal considers folder count for better timing</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>Debug Information</h3>
+            <p><strong>Plugin file:</strong> <code>app/plugins/notification-prompt.client.ts</code></p>
+            <p><strong>Modal component:</strong> <code>app/components/modals/NotificationSubscriptionModal.vue</code>
+            </p>
+            <p><strong>Composable:</strong> <code>app/composables/shared/useNotificationPrompt.ts</code></p>
+            <p><strong>API endpoint:</strong> <code>server/api/folders/count.get.ts</code></p>
+            <p><strong>App integration:</strong> <code>app/app.vue</code> (lines 24-30)</p>
+        </div>
+
+        <div class="test-section">
+            <h3>Troubleshooting</h3>
+            <p><strong>Modal appears inline:</strong> Should be fixed with Teleport - refresh browser</p>
+            <p><strong>Modal doesn't appear:</strong> Check console for errors, try forcing with custom event</p>
+            <p><strong>API errors:</strong> Folder count endpoint requires authentication - expected for logged-out
+                testing</p>
+            <p><strong>Timing issues:</strong> Modal has smart delays - be patient or force trigger for testing</p>
+        </div>
+    </div>
+
+    <script>
+        // Helper functions for testing
+        function testModal() {
+            window.dispatchEvent(new CustomEvent('showNotificationModal'));
+            console.log('🔔 Modal trigger event dispatched');
+        }
+
+        function resetState() {
+            localStorage.removeItem('notificationPrompted');
+            localStorage.removeItem('userVisitCount');
+            localStorage.removeItem('lastReviewSession');
+            console.log('🔄 State reset complete');
+        }
+
+        function checkState() {
+            console.log('📊 Current state:');
+            console.log('  Visit count:', localStorage.getItem('userVisitCount') || 'Not set');
+            console.log('  Last prompted:', localStorage.getItem('notificationPrompted') || 'Never');
+            console.log('  Last review:', localStorage.getItem('lastReviewSession') || 'Never');
+        }
+
+        // Add click handlers
+        document.addEventListener('DOMContentLoaded', function () {
+            const container = document.querySelector('.container');
+
+            // Add test buttons
+            const buttonSection = document.createElement('div');
+            buttonSection.className = 'test-section';
+            buttonSection.innerHTML = `
+                <h3>Quick Test Actions</h3>
+                <button onclick="testModal()">🔔 Force Show Modal</button>
+                <button onclick="resetState()">🔄 Reset State</button>
+                <button onclick="checkState()">📊 Check State</button>
+                <button onclick="localStorage.clear(); location.reload()">🗑️ Clear All & Reload</button>
+            `;
+            container.appendChild(buttonSection);
+        });
+    </script>
+</body>
+
+</html>

@@ -1,7 +1,7 @@
 export enum RESOURCES {
   AUTH_REGISTER_USER = "/api/auth/register",
-  AUTH_AUTHENTICATE_USER = "/api/auth/authenticate",
-  AUTH_VERIFY_USER = "/api/auth/find",
+  // AUTH_AUTHENTICATE_USER = "/api/auth/authenticate", // REMOVED: Unused endpoint
+  // AUTH_VERIFY_USER = "/api/auth/find", // REMOVED: Unused endpoint
   AUTH_REGISTER_PASSKEY = "/api/auth/passkeys/register",
   AUTH_AUTHENTICATE_PASSKEY = "/api/auth/passkeys/authenticate",
   AUTH_VERIFY_REGISTER_PASSKEY = "/api/auth/passkeys/register/verify",

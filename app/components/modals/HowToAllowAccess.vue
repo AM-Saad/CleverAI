@@ -42,7 +42,7 @@ const gotit = (): void => {
           muted
           autoplay
           loop
-        ></video>
+        />
         <video
           v-if="needGuide === 'Webcam'"
           class="m-auto block w-11/12 rounded shadow"
@@ -50,7 +50,7 @@ const gotit = (): void => {
           muted
           autoplay
           loop
-        ></video>
+        />
       </template>
     </UiDialogModal>
   </Teleport>

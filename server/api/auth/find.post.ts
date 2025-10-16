@@ -1,48 +1,38 @@
-// server/api/auth/find.post.ts
-import { PrismaClient } from "@prisma/client"
-import { z } from "zod"
-
-const prisma = new PrismaClient()
+// server/api/auth/find.post.ts (migrated)
+import { z } from 'zod'
+import { prisma } from '~~/server/prisma/utils'
+import { Errors, success } from '~~/server/utils/error'
+import type { User } from '@prisma/client'
 
 const userSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email('Please enter a valid email address'),
 })
 
+type SafeUser = Omit<User, 'password' | 'register_verification' | 'password_verification'>
+
 export default defineEventHandler(async (event) => {
-  const result = await readValidatedBody(event, (body) =>
-    userSchema.safeParse(body),
-  )
-  if (!result.success) {
-    event.respondWith(
-      new Response(JSON.stringify(result.error.issues), { status: 422 }),
-    )
-  }
+  const raw = await readBody(event)
+  let parsed
   try {
-    // Extract user data from request body
-    const body = await readBody(event)
-    const { email } = body
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        email,
-      },
-      include:{
-        subscription: true,
-        folders: true,
-      }
-    })
-
-    if (!existingUser) {
-      setResponseStatus(event, 400)
-      return {
-        message: "User with this email does not exist.",
-      }
+    parsed = userSchema.parse(raw)
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      throw Errors.badRequest('Invalid email', err.issues.map(i => ({ path: i.path, message: i.message })))
     }
-
-    return {
-      body: existingUser,
-      message: "User found successfully.",
-    }
-  } catch (error) {
-    throw new Error("Registration failed")
+    throw Errors.badRequest('Invalid email')
   }
+
+  const existingUser = await prisma.user.findFirst({
+    where: { email: parsed.email },
+    include: { subscription: true, folders: true }
+  })
+
+  if (!existingUser) {
+    throw Errors.notFound('User')
+  }
+
+  const { password, register_verification, password_verification, ...rest } = existingUser
+  const safe = rest as SafeUser
+
+  return success({ user: safe, message: 'User found successfully.' })
 })

@@ -22,12 +22,13 @@ const isValidPassword = computed(() => {
 </script>
 
 <template>
-    <div
-        class="flex items-center justify-center flex-col w-full max-w-lg mx-auto mt-6 sm:mt-20 p-8 rounded-lg dark:bg-transparent">
+    <div class="flex items-center justify-center flex-col w-full max-w-xl mx-auto">
         <form ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
             @submit.prevent="handleSubmit">
-            <h1 class="title">Login</h1>
-            <p class="text-gray-400 text-xs mt-1 mb-8">Login to your account</p>
+            <UiTitle>Login</UiTitle>
+            <UiParagraph size="sm" color="muted">
+
+                Login to your account</UiParagraph>
             <shared-error-message :error="error" />
             <div class="mb-2 mt-2 rounded-md relative transition duration-10 00 text-xs">
                 <ui-input-field id="login-email-client" v-model="credentials.email" type="email" name="email"
@@ -50,19 +51,21 @@ const isValidPassword = computed(() => {
                     <icon v-else name="uil:redo" class="w-4 h-4 animate-spin text-white" />
                 </button>
             </div>
+            <div class="toggle-forms mb-2 flex flex-col gap-2 justify-between text-xs dark:text-gray-200">
+                <UiParagraph size="xs" color="muted">
+                    Forgot your password
+                    <router-link tabindex="3" class="font-semibold underline" to="/auth/editPassword">
+                        Reset Password
+                    </router-link>
+                </UiParagraph>
+                <UiParagraph size="xs" color="muted">
+                    You don't have an account
+                    <router-link tabindex="3" class="font-semibold underline" to="/auth/signup">
+                        Signup
+                    </router-link>
+                </UiParagraph>
+            </div>
 
-            <div class="toggle-forms mb-6 text-[10px] dark:text-gray-200 text-gray-600">
-                Forgot your password
-                <router-link tabindex="3" class="font-semibold underline" to="/auth/editPassword">
-                    Reset Password
-                </router-link>
-            </div>
-            <div class="toggle-forms mb-6 text-xs dark:text-gray-200">
-                You don't have an account
-                <router-link tabindex="3" class="font-semibold underline" to="/auth/signup">
-                    Signup
-                </router-link>
-            </div>
         </form>
         <div v-if="mappedProviders.length" class="flex flex-col justify-center mt-4">
             <p class="text-center text-gray-400 text-xs mt-4 mb-2">

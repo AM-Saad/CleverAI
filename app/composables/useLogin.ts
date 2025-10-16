@@ -1,6 +1,7 @@
-/* eslint-disable no-console */
+
 import { ref } from "vue"
 import { useOffline } from "./useOffline"
+import { DB_CONFIG } from "~~/shared/constants";
 //
 interface useLogin {
   credentials: { email: string; password: string }
@@ -31,10 +32,9 @@ export function useLogin(): useLogin {
     }
 
     if (!navigator.onLine) {
-      handleOfflineSubmit(credentials)
+      handleOfflineSubmit({payload: credentials, storeName: DB_CONFIG.STORES.FORMS, type: 'login'})
       return
-    } else {
-      console.log("credentials", credentials)
+    }
       loading.value = true
       try {
         const response = await signIn("credentials", {
@@ -50,7 +50,7 @@ export function useLogin(): useLogin {
         }
          success.value = "Signed in successfully!"
 
-
+            await router.push("/")
         console.log("Signed in successfully!")
       } catch (err) {
         console.log("Error logging in.", err)
@@ -59,7 +59,6 @@ export function useLogin(): useLogin {
       } finally {
         loading.value = false
       }
-    }
   }
 
   return {

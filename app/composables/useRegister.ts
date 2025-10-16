@@ -1,5 +1,4 @@
 import { ref } from "vue"
-import { RESOURCES } from "~/utils/constants/resources.enum"
 
 //
 interface useRegister {
@@ -42,7 +41,8 @@ export function useRegister(): useRegister {
       !credentials.value.name ||
       !credentials.value.email ||
       !credentials.value.password ||
-      !credentials.value.gender
+      !credentials.value.gender ||
+      !credentials.value.phone
     ) {
       error.value = "Please add all required information"
       return
@@ -54,36 +54,40 @@ export function useRegister(): useRegister {
     }
     loading.value = true
     try {
-      const response = await fetch(RESOURCES.AUTH_REGISTER_USER, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ ...credentials.value, provider: "credentials"}),
+      const { $api } = useNuxtApp()
+      const result = await $api.auth.register({
+        name: credentials.value.name,
+        email: credentials.value.email,
+        password: credentials.value.password,
+        phone: credentials.value.phone,
+        gender: credentials.value.gender,
+        role: credentials.value.role as 'USER',
+        provider: 'credentials'
       })
 
-      const data = await response.json()
-      if (!response.ok) {
-        error.value = data.message
-        return
+      if (result.success) {
+        const data = result.data
+        success.value = data.message
+        const maybeRedirect = data.redirect
+        if (maybeRedirect) {
+          router.push(maybeRedirect)
+        }
+      } else {
+        error.value = result.error.message
       }
-      success.value = data.message
-
-      router.push(data.body.redirect)
     } catch (err) {
+      // Fallback error handling
       const serverError = err as Error
-      error.value = serverError.message || "An error occurred"
+      error.value = serverError.message || 'Registration failed'
     } finally {
       loading.value = false
     }
   }
 
-  return {
-    credentials,
-    fieldTypes,
-    error,
-    success,
-    loading,
-    handleSubmit,
-  }
+  // Helper function to extract validation errors from nested response
+  // (Removed unused ValidationError interface after migration to unified error contract)
+
+  // Legacy validation error extraction removed (server now returns normalized errors)
+
+  return { credentials, fieldTypes, error, success, loading, handleSubmit }
 }

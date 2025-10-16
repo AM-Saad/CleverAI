@@ -18,7 +18,7 @@ console.log('Error page loaded with error:', props.error);
                 There was an error 😱
 
                 <h1 class="text-2xl">{{ error?.message || 'Unknown error' }}</h1>
-                <br />
+                <br >
 
                 <NuxtLink class="bg-foreground btn btn-big my-4 text-white" to="/">
                     Navigate home

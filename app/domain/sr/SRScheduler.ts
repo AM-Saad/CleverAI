@@ -8,7 +8,7 @@ export interface SRScheduler {
 
 
 export class Sm2Scheduler implements SRScheduler {
-  next(prev, grade, policy = defaultSRPolicy, now = new Date()) {
+  next(prev: ReviewState, grade: 0|1|2|3|4|5, policy = defaultSRPolicy, now = new Date()): ReviewState {
     const p: SRPolicy = policy;
 
     // Clamp grade defensively

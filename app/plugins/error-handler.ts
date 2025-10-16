@@ -1,6 +1,8 @@
 import type { ComponentPublicInstance } from 'vue'
 
 export default defineNuxtPlugin((nuxtApp) => {
+  console.log('🔧 [ERROR HANDLER PLUGIN] Initializing error handler plugin');
+
   nuxtApp.vueApp.config.errorHandler = (error: unknown, instance: ComponentPublicInstance | null, info: string) => {
     // Enhanced error logging with component details
     console.group("🚨 Global Vue Error Handler");
@@ -60,6 +62,7 @@ export default defineNuxtPlugin((nuxtApp) => {
 
   // Add unhandled promise rejection handler
   if (import.meta.client) {
+    console.log('🔧 [ERROR HANDLER PLUGIN] Setting up client-side error handlers');
     window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
       console.group("❌ Unhandled Promise Rejection");
       console.error("Reason:", event.reason);
@@ -71,4 +74,5 @@ export default defineNuxtPlugin((nuxtApp) => {
     });
   }
 
+  console.log('🔧 [ERROR HANDLER PLUGIN] Error handler plugin initialized successfully');
 })

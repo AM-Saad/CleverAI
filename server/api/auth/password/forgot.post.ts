@@ -1,57 +1,42 @@
-// server/api/verification.post.ts
+// server/api/auth/password/forgot.post.ts (migrated)
+import { z } from 'zod'
 import { sendEmail } from "~/utils/resend.server"
 import { verificationCode } from "~/utils/verificationCode.server"
-import { PrismaClient } from "@prisma/client"
-const prisma = new PrismaClient()
+import { prisma } from '~~/server/prisma/utils'
+import { Errors, success } from '~~/server/utils/error'
+
+const schema = z.object({
+  email: z.string().email('Please enter a valid email address')
+})
+
 export default defineEventHandler(async (event) => {
-  const body = await readBody(event) // Get request body
-
-  const { email } = body
-
-  if (!email) {
-    setResponseStatus(event, 400)
-    return {
-      message: "Missing email",
-    }
-  }
-
+  const raw = await readBody(event)
+  let parsed: z.infer<typeof schema>
   try {
-    const user = await prisma.user.findUnique({
-      where: { email },
-    })
-
-    if (!user) {
-      setResponseStatus(event, 404)
-      return {
-        message: "User not found",
-      }
+    parsed = schema.parse(raw)
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      throw Errors.badRequest('Invalid email', err.issues.map(i => ({ path: i.path, message: i.message })))
     }
-
-    if (!user.email_verified) {
-      setResponseStatus(event, 400)
-      return {
-        message: `This email is not verified. Please verify your email first by clicking <a class="font-bold" href="/auth/verifyAccount?email=${email}">here</a>`,
-      }
-    }
-
-    const newVerificationCode = await verificationCode()
-    await sendEmail(email, newVerificationCode)
-
-    await prisma.user.update({
-      where: { email },
-      data: {
-        password_verification: newVerificationCode,
-      },
-    })
-
-    return {
-      message: "Verification code has been sent to your email",
-      body: {
-        redirect: "/api/password/forgot",
-      },
-    }
-  } catch (error) {
-    console.error('Password reset error:', error)
-    throw new Error("Failed to send verification email")
+    throw Errors.badRequest('Invalid email')
   }
+
+  const user = await prisma.user.findUnique({ where: { email: parsed.email } })
+  if (!user) {
+    throw Errors.notFound('User')
+  }
+  if (!user.email_verified) {
+    throw Errors.badRequest('Email not verified')
+  }
+
+  const code = await verificationCode()
+  try {
+    await sendEmail(parsed.email, code)
+  } catch {
+    throw Errors.server('Failed to send verification email')
+  }
+
+  await prisma.user.update({ where: { email: parsed.email }, data: { password_verification: code } })
+
+  return success({ message: 'Password reset code sent', redirect: '/auth/editPassword' })
 })

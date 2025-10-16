@@ -1,0 +1,123 @@
+<template>
+    <div v-if="ready"
+        class="sw-bridge-panel border rounded-md p-4 text-sm space-y-4 bg-white/70 dark:bg-gray-900/60 backdrop-blur">
+        <header class="flex items-center justify-between">
+            <h3 class="font-semibold flex items-center gap-2">
+                <Icon name="heroicons:cloud" class="w-5 h-5 text-blue-500" />
+                Service Worker
+            </h3>
+            <div class="flex items-center gap-2">
+                <UBadge :color="updateAvailable ? 'warning' : 'success'" variant="subtle">
+                    {{ updateAvailable ? 'Update Available' : 'Active' }}
+                </UBadge>
+                <UBadge v-if="version" color="neutral" variant="outline">v {{ version }}</UBadge>
+            </div>
+        </header>
+
+        <section class="grid grid-cols-2 gap-4">
+            <div class="space-y-2">
+                <p class="font-medium">Controls</p>
+                <div class="flex flex-wrap gap-2">
+                    <UButton size="xs" :disabled="debugEnabled" @click="setDebug(true)">Debug On</UButton>
+                    <UButton size="xs" variant="outline" :disabled="!debugEnabled" @click="setDebug(false)">Debug Off
+                    </UButton>
+                    <UButton v-if="updateAvailable" size="xs" color="warning" @click="activateUpdateAndReload">Apply
+                        Update</UButton>
+                    <UButton size="xs" variant="outline" @click="claimControl">Claim Control</UButton>
+                </div>
+            </div>
+            <div class="space-y-2">
+                <p class="font-medium">Status</p>
+                <ul class="text-xs space-y-1">
+                    <li>Controlling: <strong>{{ isControlling ? 'yes' : 'no' }}</strong></li>
+                    <li>Update: <strong>{{ updateAvailable ? 'available' : 'none' }}</strong></li>
+                    <li>Uploads tracked: <strong>{{ Object.keys(uploads).length }}</strong></li>
+                    <li>Form sync: <strong>{{ formSyncStatus || 'idle' }}</strong></li>
+                </ul>
+            </div>
+        </section>
+
+        <section v-if="Object.keys(uploads).length" class="space-y-2">
+            <p class="font-medium flex items-center gap-2">
+                <Icon name="heroicons:arrow-up-tray" class="w-4 h-4" /> Uploads
+            </p>
+            <div class="space-y-2 max-h-40 overflow-auto pr-1">
+                <div v-for="(u, id) in uploads" :key="id" class="border rounded p-2 flex flex-col gap-1">
+                    <div class="flex justify-between items-center">
+                        <span class="truncate text-xs font-mono">{{ id }}</span>
+                        <span class="text-[10px]" :class="u.done ? 'text-green-600' : 'text-blue-600'">{{ u.done ?
+                            'done' : 'in-progress' }}</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded overflow-hidden">
+                        <div class="h-full bg-blue-500 transition-all"
+                            :style="{ width: ((u.index + 1) / u.totalChunks * 100) + '%' }" />
+                    </div>
+                    <div class="flex justify-between text-[10px] text-gray-500">
+                        <span>{{ u.index + 1 }} / {{ u.totalChunks }}</span>
+                        <span>{{ Math.round((u.index + 1) / u.totalChunks * 100) }}%</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section v-if="lastError" class="text-xs text-red-600 flex items-center gap-2">
+            <Icon name="heroicons:exclamation-triangle" class="w-4 h-4" />
+            {{ lastError }}
+        </section>
+
+        <footer class="pt-2 border-t text-[10px] text-gray-500 flex justify-between items-center">
+            <span>SW Bridge Panel</span>
+            <button class="underline" @click="toggleCollapsed">{{ collapsed ? 'expand' : 'collapse' }}</button>
+        </footer>
+    </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed, watch } from 'vue'
+import { useServiceWorkerBridge } from '../composables/useServiceWorkerBridge'
+
+const debugEnabled = ref(false)
+const collapsed = ref(false)
+
+const {
+    version,
+    updateAvailable,
+    isControlling,
+    uploads,
+    lastError,
+    formSyncStatus,
+    setDebug,
+    claimControl,
+    activateUpdateAndReload
+} = useServiceWorkerBridge()
+
+const ready = computed(() => true)
+
+watch(updateAvailable, (val) => {
+    if (val) console.info('[SW Panel] Update available')
+})
+
+function toggleCollapsed() {
+    collapsed.value = !collapsed.value
+}
+
+watch(collapsed, (c) => {
+    const el = document.querySelector('.sw-bridge-panel') as HTMLElement | null
+    if (el) {
+        el.style.maxHeight = c ? '2.5rem' : '600px'
+        el.style.overflow = c ? 'hidden' : 'auto'
+    }
+})
+
+watch(debugEnabled, (v) => setDebug(v))
+</script>
+
+<style scoped>
+.sw-bridge-panel {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    width: 320px;
+    box-shadow: 0 4px 18px -2px rgba(0, 0, 0, 0.15);
+}
+</style>

@@ -73,7 +73,8 @@ const handleSubscribe = async () => {
                 </div>
 
                 <div class="plan-cards">
-                    <div v-for="plan in plans" :key="plan.id" class="plan-card"
+                    <div
+v-for="plan in plans" :key="plan.id" class="plan-card"
                         :class="{ active: selectedPlan === plan.id }">
                         <div class="plan-header">
                             <h3>{{ plan.name }}</h3>
@@ -85,7 +86,8 @@ const handleSubscribe = async () => {
                         <div class="plan-features">
                             <ul>
                                 <li v-for="(feature, index) in plan.features" :key="index">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
+                                    <svg
+xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                                         fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                         stroke-linejoin="round">
                                         <polyline points="20 6 9 17 4 12" />
@@ -94,10 +96,12 @@ const handleSubscribe = async () => {
                                 </li>
                             </ul>
                         </div>
-                        <button v-if="selectedPlan === plan.id" @click="handleSubscribe" :disabled="upgrading"
-                            class="subscribe-button">
+                        <button
+v-if="selectedPlan === plan.id" :disabled="upgrading" class="subscribe-button"
+                            @click="handleSubscribe">
                             <span v-if="upgrading">
-                                <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+                                <svg
+class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="20" height="20"
                                     viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                     stroke-linecap="round" stroke-linejoin="round">
                                     <path d="M21 12a9 9 0 1 1-6.219-8.56" />
@@ -112,7 +116,8 @@ const handleSubscribe = async () => {
 
             <div class="guarantees">
                 <div class="guarantee-item">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    <svg
+xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                     </svg>
@@ -122,7 +127,8 @@ const handleSubscribe = async () => {
                     </div>
                 </div>
                 <div class="guarantee-item">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    <svg
+xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
                         <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
@@ -133,7 +139,8 @@ const handleSubscribe = async () => {
                     </div>
                 </div>
                 <div class="guarantee-item">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    <svg
+xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
                         stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10" />
                         <path d="M8 14s1.5 2 4 2 4-2 4-2" />

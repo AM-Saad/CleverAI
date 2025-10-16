@@ -1,10 +1,10 @@
 <template>
     <div
-        :class="`form-group min-w-full relative h-14 border has-[:focus-within]:border-primary-300 overflow-hidden rounded ${props.styles?.inputField || ''}`">
+        :class="`form-group min-w-full relative h-14 border has-[:focus-within]:border-primary overflow-hidden rounded ${props.styles?.inputField || ''}`">
         <input :id="props.id" v-model="model" :type="props.type" :name="props.name"
-            :class="`w-full h-full p-3 peer focus:pt-8 ${model ? 'pt-8' : ''} ${props.styles?.input || ''} `"
+            :class="`w-full h-full p-3 peer focus-visible:outline-0 focus:pt-8 ${model ? 'pt-8' : ''} ${props.styles?.input || ''} `"
             tabindex="1" placeholder="" autocomplete="false | unknown-autocomplete-value" :pattern="props.pattern"
-            :title="props.title" />
+            :title="props.title">
         <label :for="props.id" :class="`absolute transition-all duration-300 left-2 text-sm text-gray-400
             ${model ? 'top-2 text-xs' : ' top-4 peer-focus:top-2 peer-focus:text-xs'}
             ${props.styles?.label || ''}

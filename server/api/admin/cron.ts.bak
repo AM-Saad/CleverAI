@@ -1,0 +1,47 @@
+import { cronManager } from '~~/server/services/CronManager'
+import { Errors, success } from '~~/server/utils/error'
+
+export default defineEventHandler(async (event) => {
+  try {
+    // Basic security - check for secret token in query params
+    const query = getQuery(event)
+    const secret = query.secret as string
+    const validToken = process.env.CRON_SECRET_TOKEN
+
+    if (!secret || !validToken || secret !== validToken) {
+      throw Errors.unauthorized('Invalid or missing secret token')
+    }
+
+    const method = getMethod(event)
+
+    switch (method) {
+      case 'GET':
+        // Get cron status
+  return success(cronManager.getAllJobsStatus())
+
+      case 'POST': {
+        // Trigger a specific job manually
+        const jobName = query.job as string
+        if (!jobName) {
+          throw Errors.badRequest('Job name is required')
+        }
+
+        const result = await cronManager.triggerJob(jobName)
+        return success({
+          triggered: result.success,
+          job: jobName,
+          error: result.success ? undefined : result.error
+        }, { message: result.success ? `Job '${jobName}' triggered successfully` : `Failed to trigger job '${jobName}'` })
+      }
+
+      default:
+  throw Errors.methodNotAllowed()
+    }
+
+  } catch (error) {
+    console.error('Error in cron management:', error)
+
+  if (error && typeof error === 'object' && 'statusCode' in error) throw error
+  throw Errors.server(error instanceof Error ? error.message : 'Unknown error')
+  }
+})

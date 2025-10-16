@@ -1,52 +1,44 @@
-import { PrismaClient } from "@prisma/client"
-import { generateAuthenticationOptions } from "@simplewebauthn/server"
-import type {
-  AuthenticatorTransportFuture,
-  Base64URLString,
-} from "@simplewebauthn/types"
+import { z } from 'zod'
+import { generateAuthenticationOptions } from '@simplewebauthn/server'
+import type { AuthenticatorTransportFuture, Base64URLString } from '@simplewebauthn/types'
+import { prisma } from '~~/server/prisma/utils'
+import { Errors, success } from '~~/server/utils/error'
 
-const prisma = new PrismaClient()
+const schema = z.object({
+  email: z.string().email('Please enter a valid email address')
+})
 
-export default defineEventHandler(async (event) => {
-  const { email } = await readBody(event)
-  const session = event.context.session
-  if (!email) {
-    return {
-      status: 400,
-      body: "Email is required",
+export default defineEventHandler( async (event) => {
+  const raw = await readBody(event)
+  let parsed: z.infer<typeof schema>
+  try {
+    parsed = schema.parse(raw)
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      throw Errors.badRequest('Invalid email', err.issues.map(i => ({ path: i.path, message: i.message })))
     }
+    throw Errors.badRequest('Invalid email')
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-  })
-
+  const user = await prisma.user.findUnique({ where: { email: parsed.email } })
   if (!user) {
-    return {
-      status: 404,
-      body: "User not found",
-    }
+    throw Errors.notFound('User')
   }
 
-  const userPasskeys = await prisma.publickeycreds.findMany({
-    where: { passkey_user_id: user.id },
-  })
+  const passkeys = await prisma.publickeycreds.findMany({ where: { passkey_user_id: user.id } })
+  const config = useRuntimeConfig()
+  const rpID: string = typeof config.public.RPID === 'string' && config.public.RPID.length > 0 ? config.public.RPID : 'localhost'
 
   const options = await generateAuthenticationOptions({
-    rpID: "localhost",
-    allowCredentials: userPasskeys.map((passkey) => ({
-      id: passkey.id as Base64URLString,
-      transports: [] as AuthenticatorTransportFuture[],
-    })),
+    rpID,
+    allowCredentials: passkeys.map(pk => ({ id: pk.id as Base64URLString, transports: [] as AuthenticatorTransportFuture[] }))
   })
 
+  const session = event.context.session
   if (session) {
     session.challenge = options.challenge
-    session.email = email
+    session.email = parsed.email
   }
 
-  return {
-    status: 200,
-    body: options,
-  }
+  return success({ options })
 })
