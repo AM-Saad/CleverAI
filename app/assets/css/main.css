@@ -201,7 +201,7 @@ a:not(.btn):focus-visible {
   @apply relative flex h-20 flex-col justify-between overflow-hidden rounded p-2 shadow;
 }
 .tiptap {
-  @apply p-2 dark:bg-light rounded shadow;
+  @apply p-2 dark:bg-light rounded;
   p {
     @apply my-4 first:mt-0 last:mb-0 text-base leading-relaxed dark:text-dark;
   }

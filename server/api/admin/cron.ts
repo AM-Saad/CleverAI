@@ -1,5 +1,4 @@
-import { cronManager } from '~~/server/services/CronManager'
-import { Errors, success } from '~/../server/utils/error'
+import { cronManager } from '@server/services/CronManager'
 
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)

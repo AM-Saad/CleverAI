@@ -10,14 +10,16 @@
  */
 export function getUserLocalTime(timezone: string): Date {
   try {
-    const now = new Date()
+    const now = new Date();
     // Create a new date using the timezone string
-    const userTime = new Date(now.toLocaleString("en-US", { timeZone: timezone }))
-    return userTime
+    const userTime = new Date(
+      now.toLocaleString("en-US", { timeZone: timezone })
+    );
+    return userTime;
   } catch (error) {
-    console.error(`Invalid timezone: ${timezone}`, error)
+    console.error(`Invalid timezone: ${timezone}`, error);
     // Fallback to UTC if timezone is invalid
-    return new Date()
+    return new Date();
   }
 }
 
@@ -28,17 +30,19 @@ export function getUserLocalTime(timezone: string): Date {
  */
 export function getUserLocalTimeString(timezone: string): string {
   try {
-    const now = new Date()
-    return now.toLocaleString("en-US", {
-      timeZone: timezone,
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    }).replace(/:/g, ':')
+    const now = new Date();
+    return now
+      .toLocaleString("en-US", {
+        timeZone: timezone,
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      })
+      .replace(/:/g, ":");
   } catch (error) {
-    console.error(`Error formatting time for timezone: ${timezone}`, error)
+    console.error(`Error formatting time for timezone: ${timezone}`, error);
     // Fallback to UTC time
-    return new Date().toTimeString().slice(0, 5)
+    return new Date().toTimeString().slice(0, 5);
   }
 }
 
@@ -55,18 +59,21 @@ export function isWithinTimeWindow(
   windowMinutes: number = 15
 ): boolean {
   try {
-    const now = getUserLocalTime(timezone)
-    const currentTimeMinutes = now.getHours() * 60 + now.getMinutes()
+    const now = getUserLocalTime(timezone);
+    const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
 
-    const [targetHour, targetMinute] = targetTime.split(':').map(Number)
-    const targetTimeMinutes = targetHour * 60 + targetMinute
+    const [targetHour, targetMinute] = targetTime.split(":").map(Number);
+    const targetTimeMinutes = targetHour * 60 + targetMinute;
 
     // Check if current time is within the window
-    const timeDiff = Math.abs(currentTimeMinutes - targetTimeMinutes)
-    return timeDiff <= windowMinutes
+    const timeDiff = Math.abs(currentTimeMinutes - targetTimeMinutes);
+    return timeDiff <= windowMinutes;
   } catch (error) {
-    console.error(`Error checking time window for timezone: ${timezone}`, error)
-    return false
+    console.error(
+      `Error checking time window for timezone: ${timezone}`,
+      error
+    );
+    return false;
   }
 }
 
@@ -83,18 +90,21 @@ export function isInQuietHours(
   quietHoursEnd: string
 ): boolean {
   try {
-    const currentTime = getUserLocalTimeString(timezone)
+    const currentTime = getUserLocalTimeString(timezone);
 
     if (quietHoursStart <= quietHoursEnd) {
       // Same day range: 09:00 to 17:00
-      return currentTime >= quietHoursStart && currentTime <= quietHoursEnd
+      return currentTime >= quietHoursStart && currentTime <= quietHoursEnd;
     } else {
       // Cross midnight range: 22:00 to 08:00
-      return currentTime >= quietHoursStart || currentTime <= quietHoursEnd
+      return currentTime >= quietHoursStart || currentTime <= quietHoursEnd;
     }
   } catch (error) {
-    console.error(`Error checking quiet hours for timezone: ${timezone}`, error)
-    return false
+    console.error(
+      `Error checking quiet hours for timezone: ${timezone}`,
+      error
+    );
+    return false;
   }
 }
 
@@ -110,16 +120,19 @@ export function isWithinHoursRange(
   end: string
 ): boolean {
   try {
-    const currentTime = getUserLocalTimeString(timezone)
+    const currentTime = getUserLocalTimeString(timezone);
     if (start <= end) {
-      return currentTime >= start && currentTime <= end
+      return currentTime >= start && currentTime <= end;
     } else {
       // Cross-midnight window
-      return currentTime >= start || currentTime <= end
+      return currentTime >= start || currentTime <= end;
     }
   } catch (error) {
-    console.error(`Error checking hours range for timezone: ${timezone}`, error)
-    return true // be permissive on error
+    console.error(
+      `Error checking hours range for timezone: ${timezone}`,
+      error
+    );
+    return true; // be permissive on error
   }
 }
 
@@ -136,23 +149,26 @@ export function convertTimeToTimezone(
   toTimezone: string
 ): string {
   try {
-    const today = new Date().toISOString().split('T')[0] // Get today's date
+    const today = new Date().toISOString().split("T")[0]; // Get today's date
 
     // Create a date in the source timezone
-    const sourceDate = new Date(`${today}T${time}:00`)
+    const sourceDate = new Date(`${today}T${time}:00`);
 
     // Convert to target timezone
     const targetTime = sourceDate.toLocaleString("en-US", {
       timeZone: toTimezone,
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    })
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
 
-    return targetTime
+    return targetTime;
   } catch (error) {
-    console.error(`Error converting time from ${_fromTimezone} to ${toTimezone}`, error)
-    return time // Return original time if conversion fails
+    console.error(
+      `Error converting time from ${_fromTimezone} to ${toTimezone}`,
+      error
+    );
+    return time; // Return original time if conversion fails
   }
 }
 
@@ -163,13 +179,15 @@ export function convertTimeToTimezone(
  */
 export function getTimezoneOffset(timezone: string): number {
   try {
-    const now = new Date()
-    const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000)
-    const localTime = new Date(utcTime + (getTimezoneOffsetMinutes(timezone) * 60000))
-    return (localTime.getTime() - utcTime) / (1000 * 60 * 60)
+    const now = new Date();
+    const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
+    const localTime = new Date(
+      utcTime + getTimezoneOffsetMinutes(timezone) * 60000
+    );
+    return (localTime.getTime() - utcTime) / (1000 * 60 * 60);
   } catch (error) {
-    console.error(`Error getting timezone offset for: ${timezone}`, error)
-    return 0
+    console.error(`Error getting timezone offset for: ${timezone}`, error);
+    return 0;
   }
 }
 
@@ -180,13 +198,16 @@ export function getTimezoneOffset(timezone: string): number {
  */
 function getTimezoneOffsetMinutes(timezone: string): number {
   try {
-    const now = new Date()
-    const utc = new Date(now.toLocaleString('en-US', { timeZone: 'UTC' }))
-    const local = new Date(now.toLocaleString('en-US', { timeZone: timezone }))
-    return (local.getTime() - utc.getTime()) / (1000 * 60)
+    const now = new Date();
+    const utc = new Date(now.toLocaleString("en-US", { timeZone: "UTC" }));
+    const local = new Date(now.toLocaleString("en-US", { timeZone: timezone }));
+    return (local.getTime() - utc.getTime()) / (1000 * 60);
   } catch (_error) {
-    console.error(`Error getting timezone offset minutes for: ${timezone}`, _error)
-    return 0
+    console.error(
+      `Error getting timezone offset minutes for: ${timezone}`,
+      _error
+    );
+    return 0;
   }
 }
 
@@ -198,10 +219,10 @@ function getTimezoneOffsetMinutes(timezone: string): number {
 export function isValidTimezone(timezone: string): boolean {
   try {
     // Test if we can format a date with this timezone
-    new Date().toLocaleString('en-US', { timeZone: timezone })
-    return true
+    new Date().toLocaleString("en-US", { timeZone: timezone });
+    return true;
   } catch {
-    return false
+    return false;
   }
 }
 
@@ -218,31 +239,32 @@ export function getNextNotificationWindow(
   _windowMinutes: number = 15
 ): string {
   try {
-    const now = getUserLocalTime(timezone)
-    const [targetHour, targetMinute] = targetTime.split(':').map(Number)
+    const now = getUserLocalTime(timezone);
+    const [targetHour, targetMinute] = targetTime.split(":").map(Number);
 
     // Create target time for today
-    const targetToday = new Date(now)
-    targetToday.setHours(targetHour, targetMinute, 0, 0)
+    const targetToday = new Date(now);
+    targetToday.setHours(targetHour, targetMinute, 0, 0);
 
     // If target time has passed today, use tomorrow
-    const targetDate = now > targetToday
-      ? new Date(targetToday.getTime() + 24 * 60 * 60 * 1000)
-      : targetToday
+    const targetDate =
+      now > targetToday
+        ? new Date(targetToday.getTime() + 24 * 60 * 60 * 1000)
+        : targetToday;
 
-    const timeDiff = targetDate.getTime() - now.getTime()
-    const hours = Math.floor(timeDiff / (1000 * 60 * 60))
-    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60))
+    const timeDiff = targetDate.getTime() - now.getTime();
+    const hours = Math.floor(timeDiff / (1000 * 60 * 60));
+    const minutes = Math.floor((timeDiff % (1000 * 60 * 60)) / (1000 * 60));
 
     if (hours < 1) {
-      return `in ${minutes} minutes`
+      return `in ${minutes} minutes`;
     } else if (hours < 24) {
-      return `in ${hours} hours and ${minutes} minutes`
+      return `in ${hours} hours and ${minutes} minutes`;
     } else {
-      return `tomorrow at ${targetTime}`
+      return `tomorrow at ${targetTime}`;
     }
   } catch (error) {
-    console.error(`Error calculating next notification window`, error)
-    return 'soon'
+    console.error(`Error calculating next notification window`, error);
+    return "soon";
   }
 }

@@ -4,12 +4,16 @@
  * Ensures identical schema handling and non-destructive migrations.
  */
 
-import { DB_CONFIG } from './constants'
+import { DB_CONFIG } from "./constants/pwa";
 
 export interface IDBHelperOptions {
-  storeName: string
-  keyPath?: string
-  indexes?: Array<{ name: string; keyPath: string; options?: IDBIndexParameters }>
+  storeName: string;
+  keyPath?: string;
+  indexes?: Array<{
+    name: string;
+    keyPath: string;
+    options?: IDBIndexParameters;
+  }>;
 }
 
 /**
@@ -17,31 +21,31 @@ export interface IDBHelperOptions {
  * Creates stores and indexes only if missing; never deletes existing data.
  */
 export function openIDB(options: IDBHelperOptions): Promise<IDBDatabase> {
-  const { storeName, keyPath = 'id', indexes = [] } = options
-  
+  const { storeName, keyPath = "id", indexes = [] } = options;
+
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION)
+    const req = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION);
 
     req.onupgradeneeded = () => {
-      const db = req.result
-      
+      const db = req.result;
+
       // Non-destructive: only create store if missing
-      let store: IDBObjectStore
+      let store: IDBObjectStore;
       if (!db.objectStoreNames.contains(storeName)) {
-        store = db.createObjectStore(storeName, { keyPath })
+        store = db.createObjectStore(storeName, { keyPath });
       } else {
         // Access existing store via upgrade transaction
         try {
-          const tx = req.transaction
+          const tx = req.transaction;
           if (tx) {
-            store = tx.objectStore(storeName)
+            store = tx.objectStore(storeName);
           } else {
             // Fallback: store exists, no upgrade needed
-            return
+            return;
           }
         } catch {
           // Best-effort; continue even if accessing store fails
-          return
+          return;
         }
       }
 
@@ -50,19 +54,19 @@ export function openIDB(options: IDBHelperOptions): Promise<IDBDatabase> {
         try {
           for (const { name, keyPath: indexKeyPath, options } of indexes) {
             if (!store.indexNames.contains(name)) {
-              store.createIndex(name, indexKeyPath, options)
+              store.createIndex(name, indexKeyPath, options);
             }
           }
         } catch (error) {
           // Index creation failed; log but don't reject
-          console.warn('[IDB] Index creation failed:', error)
+          console.warn("[IDB] Index creation failed:", error);
         }
       }
-    }
+    };
 
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
-  })
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
 }
 
 /**
@@ -70,11 +74,11 @@ export function openIDB(options: IDBHelperOptions): Promise<IDBDatabase> {
  */
 export async function openFormsDB(): Promise<IDBDatabase> {
   return openIDB({
-    storeName: 'forms',
-    keyPath: 'id',
+    storeName: "forms",
+    keyPath: "id",
     // Future: add indexes when needed
     // indexes: [{ name: 'email', keyPath: 'email', options: { unique: false } }]
-  })
+  });
 }
 
 /**
@@ -82,41 +86,45 @@ export async function openFormsDB(): Promise<IDBDatabase> {
  * Only keeps primitive types, arrays, and plain objects.
  */
 export function sanitizeForIDB<T>(obj: T): T {
-  if (obj === null || obj === undefined) return obj
+  if (obj === null || obj === undefined) return obj;
 
   // Handle primitives
-  if (typeof obj !== 'object') return obj
+  if (typeof obj !== "object") return obj;
 
   // Handle Date objects
-  if (obj instanceof Date) return obj
+  if (obj instanceof Date) return obj;
 
   // Handle arrays
   if (Array.isArray(obj)) {
-    return obj.map(item => sanitizeForIDB(item)) as T
+    return obj.map((item) => sanitizeForIDB(item)) as T;
   }
 
   // Handle plain objects
   if (obj.constructor === Object || obj.constructor === undefined) {
-    const sanitized = {} as Record<string, unknown>
+    const sanitized = {} as Record<string, unknown>;
     for (const [key, value] of Object.entries(obj)) {
       // Skip functions, symbols, and undefined values
-      if (typeof value === 'function' || typeof value === 'symbol' || value === undefined) {
-        continue
+      if (
+        typeof value === "function" ||
+        typeof value === "symbol" ||
+        value === undefined
+      ) {
+        continue;
       }
       // Recursively sanitize nested objects
-      sanitized[key] = sanitizeForIDB(value)
+      sanitized[key] = sanitizeForIDB(value);
     }
-    return sanitized as T
+    return sanitized as T;
   }
 
   // For other object types (DOM elements, etc.), return a safe representation
   try {
     // Try JSON serialization test - if it fails, the object is not cloneable
-    JSON.stringify(obj)
-    return obj
+    JSON.stringify(obj);
+    return obj;
   } catch {
     // Return a simple string representation for non-cloneable objects
-    return String(obj) as T
+    return String(obj) as T;
   }
 }
 
@@ -129,16 +137,16 @@ export async function putRecord<T>(
   record: T
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const tx = db.transaction([storeName], 'readwrite')
-    const store = tx.objectStore(storeName)
-    
+    const tx = db.transaction([storeName], "readwrite");
+    const store = tx.objectStore(storeName);
+
     // Sanitize the record before storing
-    const sanitizedRecord = sanitizeForIDB(record)
-    
-    store.put(sanitizedRecord)
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
+    const sanitizedRecord = sanitizeForIDB(record);
+
+    store.put(sanitizedRecord);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
 /**
@@ -150,12 +158,12 @@ export async function getRecord<T>(
   key: IDBValidKey
 ): Promise<T | undefined> {
   return new Promise((resolve, reject) => {
-    const tx = db.transaction([storeName], 'readonly')
-    const store = tx.objectStore(storeName)
-    const req = store.get(key)
-    req.onsuccess = () => resolve(req.result)
-    req.onerror = () => reject(req.error)
-  })
+    const tx = db.transaction([storeName], "readonly");
+    const store = tx.objectStore(storeName);
+    const req = store.get(key);
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
 }
 
 /**
@@ -166,12 +174,12 @@ export async function getAllRecords<T>(
   storeName: string
 ): Promise<T[]> {
   return new Promise((resolve, reject) => {
-    const tx = db.transaction([storeName], 'readonly')
-    const store = tx.objectStore(storeName)
-    const req = store.getAll()
-    req.onsuccess = () => resolve(req.result || [])
-    req.onerror = () => reject(req.error)
-  })
+    const tx = db.transaction([storeName], "readonly");
+    const store = tx.objectStore(storeName);
+    const req = store.getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
 }
 
 /**
@@ -183,10 +191,10 @@ export async function deleteRecord(
   key: IDBValidKey
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const tx = db.transaction([storeName], 'readwrite')
-    const store = tx.objectStore(storeName)
-    store.delete(key)
-    tx.oncomplete = () => resolve()
-    tx.onerror = () => reject(tx.error)
-  })
+    const tx = db.transaction([storeName], "readwrite");
+    const store = tx.objectStore(storeName);
+    store.delete(key);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }

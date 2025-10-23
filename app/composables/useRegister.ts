@@ -1,17 +1,17 @@
-import { ref } from "vue"
+import { ref } from "vue";
 
 //
 interface useRegister {
-  credentials: Ref<{ [key: string]: string }>
-  fieldTypes: { [key: string]: string }
-  error: Ref<string>
-  success: Ref<string>
-  loading: Ref<boolean>
-  handleSubmit: () => Promise<void>
+  credentials: Ref<{ [key: string]: string }>;
+  fieldTypes: { [key: string]: string };
+  error: Ref<string>;
+  success: Ref<string>;
+  loading: Ref<boolean>;
+  handleSubmit: () => Promise<void>;
 }
 
 export function useRegister(): useRegister {
-  const router = useRouter()
+  const router = useRouter();
 
   const credentials = ref({
     name: "",
@@ -21,7 +21,7 @@ export function useRegister(): useRegister {
     gender: "",
     phone: "",
     role: "USER",
-  })
+  });
   const fieldTypes = reactive({
     name: "text",
     email: "email",
@@ -29,14 +29,14 @@ export function useRegister(): useRegister {
     confirmPassword: "password",
     gender: "text",
     phone: "text",
-  }) as { [key: string]: string }
+  }) as { [key: string]: string };
 
-  const error = ref("")
-  const success = ref("")
-  const loading = ref(false)
+  const error = ref("");
+  const success = ref("");
+  const loading = ref(false);
 
   const handleSubmit = async (): Promise<void> => {
-    error.value = ""
+    error.value = "";
     if (
       !credentials.value.name ||
       !credentials.value.email ||
@@ -44,50 +44,50 @@ export function useRegister(): useRegister {
       !credentials.value.gender ||
       !credentials.value.phone
     ) {
-      error.value = "Please add all required information"
-      return
+      error.value = "Please add all required information";
+      return;
     }
 
     if (credentials.value.password !== credentials.value.confirmPassword) {
-      error.value = "Passwords do not match"
-      return
+      error.value = "Passwords do not match";
+      return;
     }
-    loading.value = true
+    loading.value = true;
     try {
-      const { $api } = useNuxtApp()
+      const { $api } = useNuxtApp();
       const result = await $api.auth.register({
         name: credentials.value.name,
         email: credentials.value.email,
         password: credentials.value.password,
         phone: credentials.value.phone,
         gender: credentials.value.gender,
-        role: credentials.value.role as 'USER',
-        provider: 'credentials'
-      })
+        role: credentials.value.role as "USER",
+        provider: "credentials",
+      });
 
       if (result.success) {
-        const data = result.data
-        success.value = data.message
-        const maybeRedirect = data.redirect
+        const data = result.data;
+        success.value = data.message;
+        const maybeRedirect = data.redirect;
         if (maybeRedirect) {
-          router.push(maybeRedirect)
+          router.push(maybeRedirect);
         }
       } else {
-        error.value = result.error.message
+        error.value = result.error.message;
       }
     } catch (err) {
       // Fallback error handling
-      const serverError = err as Error
-      error.value = serverError.message || 'Registration failed'
+      const serverError = err as Error;
+      error.value = serverError.message || "Registration failed";
     } finally {
-      loading.value = false
+      loading.value = false;
     }
-  }
+  };
 
   // Helper function to extract validation errors from nested response
   // (Removed unused ValidationError interface after migration to unified error contract)
 
   // Legacy validation error extraction removed (server now returns normalized errors)
 
-  return { credentials, fieldTypes, error, success, loading, handleSubmit }
+  return { credentials, fieldTypes, error, success, loading, handleSubmit };
 }

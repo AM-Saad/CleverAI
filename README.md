@@ -62,7 +62,7 @@ CleverAI features comprehensive documentation organized by domain:
 - **Composables**:
   - `useFolders`, `useGenerateQuiz`, etc. encapsulate API calls and state.
 - **Shared Contracts**:
-  - `~~/shared/*.contract.ts` contains `zod` schemas and TypeScript types for validation.
+  - `~/shared/*.contract.ts` contains `zod` schemas and TypeScript types for validation.
 
 ### Backend
 - **API Routes** (`/server/api/*`):
@@ -71,7 +71,7 @@ CleverAI features comprehensive documentation organized by domain:
 - **Services** (`/server/services/*`):
   - LLM Strategy implementations (OpenAI, Anthropic, etc.).
 - **Utils**:
-  - `~~/server/utils/llm/rateLimit.ts` centralizes rate limit logic.
+  - `~/server/utils/llm/rateLimit.ts` centralizes rate limit logic.
 
 ---
 
@@ -147,7 +147,7 @@ The `/api/llm.generate` endpoint is protected by a **minimal rate limiter** to c
 - **Strategy Pattern** – Select LLM backend dynamically.
 - **Zod Validation** – Schema validation for API payloads.
 - **Centralized Rate Limiting** – Single Redis client via Nuxt plugin, utils for reuse.
-- **Clean Imports** – `~~/` aliases for shared and server-only modules.
+- **Clean Imports** – `~/` aliases for shared and server-only modules.
 
 ---
 

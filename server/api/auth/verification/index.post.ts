@@ -1,9 +1,5 @@
 // server/api/auth/verification/index.post.ts (migrated)
 import { z } from 'zod'
-import { sendEmail } from "~/utils/resend.server"
-import { verificationCode } from "~/utils/verificationCode.server"
-import { prisma } from '~~/server/prisma/utils'
-import { Errors, success } from '~~/server/utils/error'
 
 const schema = z.object({
   email: z.string().email('Please enter a valid email address')

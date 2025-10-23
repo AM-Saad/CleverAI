@@ -1,55 +1,61 @@
-import { z } from 'zod'
-import { prisma } from "~~/server/prisma/utils"
-import { safeGetServerSession } from "~~/server/utils/safeGetServerSession"
-import { Errors, success } from '~~/server/utils/error'
+import { z } from "zod";
+import { safeGetServerSession } from "@server/utils/safeGetServerSession";
 
 const UnsubscribeSchema = z.object({
   endpoint: z.string().url(),
-})
+});
 
 type SessionWithUser = {
   user?: {
-    email?: string
-    id?: string
-    [key: string]: unknown
-  }
-  [key: string]: unknown
-} | null
+    email?: string;
+    id?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+} | null;
 
 export default defineEventHandler(async (event) => {
-  const raw = await readBody(event)
-  let parsed
+  const raw = await readBody(event);
+  let parsed;
   try {
-    parsed = UnsubscribeSchema.parse(raw)
+    parsed = UnsubscribeSchema.parse(raw);
   } catch (e) {
     if (e instanceof z.ZodError) {
-      throw Errors.badRequest('Invalid unsubscribe data', e.issues.map(issue => ({ path: issue.path, message: issue.message })))
+      throw Errors.badRequest(
+        "Invalid unsubscribe data",
+        e.issues.map((issue) => ({ path: issue.path, message: issue.message }))
+      );
     }
-    throw Errors.badRequest('Invalid unsubscribe data')
+    throw Errors.badRequest("Invalid unsubscribe data");
   }
 
-  const session = await safeGetServerSession(event) as SessionWithUser
+  const session = (await safeGetServerSession(event)) as SessionWithUser;
   if (!session?.user?.email) {
-    throw Errors.unauthorized('Must be logged in to unsubscribe')
+    throw Errors.unauthorized("Must be logged in to unsubscribe");
   }
 
-  const user = await prisma.user.findUnique({ where: { email: session.user.email } })
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
   if (!user) {
-    throw Errors.unauthorized('User not found')
+    throw Errors.unauthorized("User not found");
   }
 
-  let deletedSubscription
+  let deletedSubscription;
   try {
     deletedSubscription = await prisma.notificationSubscription.deleteMany({
-      where: { endpoint: parsed.endpoint, userId: user.id }
-    })
+      where: { endpoint: parsed.endpoint, userId: user.id },
+    });
   } catch {
-    throw Errors.server('Failed to remove subscription')
+    throw Errors.server("Failed to remove subscription");
   }
 
   if (deletedSubscription.count === 0) {
-    return success({ message: 'Subscription not found or already removed' })
+    return success({ message: "Subscription not found or already removed" });
   }
 
-  return success({ message: 'Subscription removed successfully', removedCount: deletedSubscription.count })
-})
+  return success({
+    message: "Subscription removed successfully",
+    removedCount: deletedSubscription.count,
+  });
+});

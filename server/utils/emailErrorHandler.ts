@@ -1,24 +1,22 @@
 // server/utils/emailErrorHandler.ts
-import { EmailError, EmailErrorType } from "~/utils/resend.server"
-
 export interface EmailErrorResponse {
-  success: false
+  success: false;
   error: {
-    type: EmailErrorType
-    message: string
-    timestamp: Date
-    emailAddress?: string
-  }
-  statusCode: number
+    type: EmailErrorType;
+    message: string;
+    timestamp: Date;
+    emailAddress?: string;
+  };
+  statusCode: number;
 }
 
 export interface EmailSuccessResponse {
-  success: true
-  emailId: string
-  message: string
+  success: true;
+  emailId: string;
+  message: string;
 }
 
-export type EmailResponse = EmailSuccessResponse | EmailErrorResponse
+export type EmailResponse = EmailSuccessResponse | EmailErrorResponse;
 
 /**
  * Handles email errors and converts them to appropriate HTTP responses
@@ -28,29 +26,29 @@ export type EmailResponse = EmailSuccessResponse | EmailErrorResponse
  */
 export const handleEmailError = (
   error: unknown,
-  fallbackMessage = 'Failed to send email'
+  fallbackMessage = "Failed to send email"
 ): EmailErrorResponse => {
   if (error instanceof EmailError) {
-    let statusCode = 500
+    let statusCode = 500;
 
     switch (error.type) {
       case EmailErrorType.VALIDATION_ERROR:
-        statusCode = 400
-        break
+        statusCode = 400;
+        break;
       case EmailErrorType.AUTHENTICATION_ERROR:
-        statusCode = 401
-        break
+        statusCode = 401;
+        break;
       case EmailErrorType.RATE_LIMIT_ERROR:
-        statusCode = 429
-        break
+        statusCode = 429;
+        break;
       case EmailErrorType.NETWORK_ERROR:
-        statusCode = 503
-        break
+        statusCode = 503;
+        break;
       case EmailErrorType.API_ERROR:
       case EmailErrorType.TEMPLATE_ERROR:
       case EmailErrorType.UNKNOWN_ERROR:
       default:
-        statusCode = 500
+        statusCode = 500;
     }
 
     return {
@@ -59,10 +57,10 @@ export const handleEmailError = (
         type: error.type,
         message: error.message,
         timestamp: error.timestamp,
-        emailAddress: error.emailAddress
+        emailAddress: error.emailAddress,
       },
-      statusCode
-    }
+      statusCode,
+    };
   }
 
   // Handle generic errors
@@ -71,11 +69,11 @@ export const handleEmailError = (
     error: {
       type: EmailErrorType.UNKNOWN_ERROR,
       message: fallbackMessage,
-      timestamp: new Date()
+      timestamp: new Date(),
     },
-    statusCode: 500
-  }
-}
+    statusCode: 500,
+  };
+};
 
 /**
  * Creates a successful email response
@@ -85,12 +83,12 @@ export const handleEmailError = (
  */
 export const createEmailSuccessResponse = (
   emailId: string,
-  message = 'Email sent successfully'
+  message = "Email sent successfully"
 ): EmailSuccessResponse => ({
   success: true,
   emailId,
-  message
-})
+  message,
+});
 
 /**
  * Wrapper for email operations that handles errors consistently
@@ -100,15 +98,15 @@ export const createEmailSuccessResponse = (
  */
 export const wrapEmailOperation = async (
   emailOperation: () => Promise<string>,
-  successMessage = 'Email sent successfully'
+  successMessage = "Email sent successfully"
 ): Promise<EmailResponse> => {
   try {
-    const emailId = await emailOperation()
-    return createEmailSuccessResponse(emailId, successMessage)
+    const emailId = await emailOperation();
+    return createEmailSuccessResponse(emailId, successMessage);
   } catch (error) {
-    return handleEmailError(error)
+    return handleEmailError(error);
   }
-}
+};
 
 /**
  * Logs email operation details for monitoring
@@ -125,19 +123,20 @@ export const logEmailOperation = (
     operation,
     success: result.success,
     timestamp: new Date().toISOString(),
-    recipientEmail: recipientEmail || result.success ? undefined : result.error.emailAddress
-  }
+    recipientEmail:
+      recipientEmail || result.success ? undefined : result.error.emailAddress,
+  };
 
   if (result.success) {
     console.log(`[EMAIL SUCCESS] ${operation}:`, {
       ...logData,
-      emailId: result.emailId
-    })
+      emailId: result.emailId,
+    });
   } else {
     console.error(`[EMAIL ERROR] ${operation}:`, {
       ...logData,
       errorType: result.error.type,
-      errorMessage: result.error.message
-    })
+      errorMessage: result.error.message,
+    });
   }
-}
+};

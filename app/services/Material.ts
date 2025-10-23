@@ -1,6 +1,5 @@
 import FetchFactory from './FetchFactory'
-import type { CreateMaterialDTO, UpdateMaterialDTO, Material } from '~~/shared/material.contract'
-import type { Result } from '~/types/Result'
+import type { Result } from '@/types/Result'
 
 export class MaterialService extends FetchFactory {
   private readonly RESOURCE = '/api/materials'
@@ -15,14 +14,14 @@ export class MaterialService extends FetchFactory {
   /**
    * Create a new material
    */
-  async create(payload: CreateMaterialDTO): Promise<Result<Material>> {
+  async create(payload:typeof CreateMaterialDTO): Promise<Result<Material>> {
     return this.call<Material>('POST', this.RESOURCE, payload)
   }
 
   /**
    * Update an existing material
    */
-  async update(id: string, payload: UpdateMaterialDTO): Promise<Result<Material>> {
+  async update(id: string, payload:typeof UpdateMaterialDTO): Promise<Result<Material>> {
     return this.call<Material>('PATCH', this.RESOURCE, { id, ...payload })
   }
 

@@ -1,7 +1,5 @@
-import { z } from 'zod'
-import { prisma } from "~~/server/prisma/utils"
-import { safeGetServerSession } from "~~/server/utils/safeGetServerSession"
-import { Errors, success } from "~~/server/utils/error"
+import { z } from "zod";
+import { safeGetServerSession } from "@server/utils/safeGetServerSession";
 
 const PreferencesSchema = z.object({
   cardDueEnabled: z.boolean(),
@@ -17,39 +15,47 @@ const PreferencesSchema = z.object({
   quietHoursEnd: z.string().regex(/^\d{2}:\d{2}$/),
   sendAnytimeOutsideQuietHours: z.boolean().default(false),
   activeHoursEnabled: z.boolean().default(false),
-  activeHoursStart: z.string().regex(/^\d{2}:\d{2}$/).default('09:00'),
-  activeHoursEnd: z.string().regex(/^\d{2}:\d{2}$/).default('21:00'),
-})
+  activeHoursStart: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .default("09:00"),
+  activeHoursEnd: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .default("21:00"),
+});
 
 type SessionWithUser = {
   user?: {
-    email?: string
-    id?: string
-    [key: string]: unknown
-  }
-  [key: string]: unknown
-} | null
+    email?: string;
+    id?: string;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+} | null;
 
 export default defineEventHandler(async (event) => {
-  const method = getMethod(event)
+  const method = getMethod(event);
 
   // Get user ID from session
-  const session = await safeGetServerSession(event) as SessionWithUser
+  const session = (await safeGetServerSession(event)) as SessionWithUser;
   if (!session?.user?.email) {
-    throw Errors.unauthorized()
+    throw Errors.unauthorized();
   }
 
   // Get user from database to get proper user ID
   const user = await prisma.user.findUnique({
-    where: { email: session.user.email }
-  })
+    where: { email: session.user.email },
+  });
   if (!user) {
-    throw Errors.unauthorized('User not found')
+    throw Errors.unauthorized("User not found");
   }
-  const userId = user.id
+  const userId = user.id;
 
-  if (method === 'GET') {
-    let preferences = await prisma.userNotificationPreferences.findUnique({ where: { userId } })
+  if (method === "GET") {
+    let preferences = await prisma.userNotificationPreferences.findUnique({
+      where: { userId },
+    });
 
     if (!preferences) {
       preferences = await prisma.userNotificationPreferences.create({
@@ -61,15 +67,15 @@ export default defineEventHandler(async (event) => {
           dailyReminderEnabled: false,
           dailyReminderTime: "19:00",
           timezone: "UTC",
-            quietHoursEnabled: false,
+          quietHoursEnabled: false,
           quietHoursStart: "22:00",
           quietHoursEnd: "08:00",
           sendAnytimeOutsideQuietHours: false,
           activeHoursEnabled: false,
-          activeHoursStart: '09:00',
-          activeHoursEnd: '21:00'
-        }
-      })
+          activeHoursStart: "09:00",
+          activeHoursEnd: "21:00",
+        },
+      });
     }
 
     return success({
@@ -85,27 +91,27 @@ export default defineEventHandler(async (event) => {
       sendAnytimeOutsideQuietHours: preferences.sendAnytimeOutsideQuietHours,
       activeHoursEnabled: preferences.activeHoursEnabled,
       activeHoursStart: preferences.activeHoursStart,
-      activeHoursEnd: preferences.activeHoursEnd
-    })
+      activeHoursEnd: preferences.activeHoursEnd,
+    });
   }
 
-  if (method === 'PUT') {
-    const body = await readBody(event)
-    let validatedPrefs
+  if (method === "PUT") {
+    const body = await readBody(event);
+    let validatedPrefs;
     try {
-      validatedPrefs = PreferencesSchema.parse(body)
+      validatedPrefs = PreferencesSchema.parse(body);
     } catch (err) {
       if (err instanceof z.ZodError) {
-        throw Errors.badRequest('Invalid preferences data', err.issues)
+        throw Errors.badRequest("Invalid preferences data", err.issues);
       }
-      throw Errors.badRequest('Invalid preferences data')
+      throw Errors.badRequest("Invalid preferences data");
     }
 
     const preferences = await prisma.userNotificationPreferences.upsert({
       where: { userId },
       update: validatedPrefs,
-      create: { userId, ...validatedPrefs }
-    })
+      create: { userId, ...validatedPrefs },
+    });
 
     return success({
       cardDueEnabled: preferences.cardDueEnabled,
@@ -120,10 +126,10 @@ export default defineEventHandler(async (event) => {
       sendAnytimeOutsideQuietHours: preferences.sendAnytimeOutsideQuietHours,
       activeHoursEnabled: preferences.activeHoursEnabled,
       activeHoursStart: preferences.activeHoursStart,
-      activeHoursEnd: preferences.activeHoursEnd
-    })
+      activeHoursEnd: preferences.activeHoursEnd,
+    });
   }
 
   // 405 - until helper exists, reuse badRequest? We'll add methodNotAllowed soon.
-  throw Errors.badRequest('Method not allowed')
-})
+  throw Errors.badRequest("Method not allowed");
+});

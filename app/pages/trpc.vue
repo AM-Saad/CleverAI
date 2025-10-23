@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const { $client } = useNuxtApp()
+const { $client } = useNuxtApp();
 
 // const hello = {}
 </script>

@@ -1,7 +1,6 @@
 // server/api/auth/find.post.ts (migrated)
 import { z } from 'zod'
-import { prisma } from '~~/server/prisma/utils'
-import { Errors, success } from '~~/server/utils/error'
+import { Errors, success } from '@server/utils/error'
 import type { User } from '@prisma/client'
 
 const userSchema = z.object({

@@ -12,26 +12,26 @@ export function debounce<T extends (...args: unknown[]) => unknown>(
   wait: number,
   immediate = false
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null
+  let timeout: NodeJS.Timeout | null = null;
 
   return function executedFunction(...args: Parameters<T>) {
     const later = () => {
-      timeout = null
-      if (!immediate) func(...args)
-    }
+      timeout = null;
+      if (!immediate) func(...args);
+    };
 
-    const callNow = immediate && !timeout
+    const callNow = immediate && !timeout;
 
     if (timeout) {
-      clearTimeout(timeout)
+      clearTimeout(timeout);
     }
 
-    timeout = setTimeout(later, wait)
+    timeout = setTimeout(later, wait);
 
     if (callNow) {
-      func(...args)
+      func(...args);
     }
-  }
+  };
 }
 
 /**
@@ -46,25 +46,28 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let inThrottle: boolean
-  let lastFunc: NodeJS.Timeout
-  let lastRan: number
+  let inThrottle: boolean;
+  let lastFunc: NodeJS.Timeout;
+  let lastRan: number;
 
   return function executedFunction(...args: Parameters<T>) {
     if (!inThrottle) {
-      func(...args)
-      lastRan = Date.now()
-      inThrottle = true
+      func(...args);
+      lastRan = Date.now();
+      inThrottle = true;
     } else {
-      clearTimeout(lastFunc)
-      lastFunc = setTimeout(() => {
-        if (Date.now() - lastRan >= wait) {
-          func(...args)
-          lastRan = Date.now()
-        }
-      }, Math.max(wait - (Date.now() - lastRan), 0))
+      clearTimeout(lastFunc);
+      lastFunc = setTimeout(
+        () => {
+          if (Date.now() - lastRan >= wait) {
+            func(...args);
+            lastRan = Date.now();
+          }
+        },
+        Math.max(wait - (Date.now() - lastRan), 0)
+      );
     }
-  }
+  };
 }
 
 /**
@@ -78,45 +81,45 @@ export function useDebounce<TArgs extends unknown[], TReturn = void>(
   func: (...args: TArgs) => TReturn | Promise<TReturn>,
   delay = 300
 ) {
-  const isWaiting = ref(false)
-  let timeoutId: NodeJS.Timeout | null = null
+  const isWaiting = ref(false);
+  let timeoutId: NodeJS.Timeout | null = null;
 
   const debouncedFunc = (...args: TArgs) => {
-    isWaiting.value = true
+    isWaiting.value = true;
 
     if (timeoutId) {
-      clearTimeout(timeoutId)
+      clearTimeout(timeoutId);
     }
 
     timeoutId = setTimeout(() => {
-      func(...args)
-      isWaiting.value = false
-      timeoutId = null
-    }, delay)
-  }
+      func(...args);
+      isWaiting.value = false;
+      timeoutId = null;
+    }, delay);
+  };
 
   const cancel = () => {
     if (timeoutId) {
-      clearTimeout(timeoutId)
-      timeoutId = null
-      isWaiting.value = false
+      clearTimeout(timeoutId);
+      timeoutId = null;
+      isWaiting.value = false;
     }
-  }
+  };
 
   const flush = (...args: TArgs) => {
-    cancel()
-    func(...args)
-  }
+    cancel();
+    func(...args);
+  };
 
   // Cleanup on unmount
   onBeforeUnmount(() => {
-    cancel()
-  })
+    cancel();
+  });
 
   return {
     debouncedFunc,
     isWaiting: readonly(isWaiting),
     cancel,
-    flush
-  }
+    flush,
+  };
 }

@@ -11,5 +11,4 @@ export enum RESOURCES {
   AUTH_FORGOT_PASSWORD = "/api/auth/password/forgot",
   AUTH_FORGOT_VERIFY = "/api/auth/password/verify",
   FOLDERS = "/api/folders",
-
 }

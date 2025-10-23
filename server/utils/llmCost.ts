@@ -1,37 +1,35 @@
-import { PrismaClient } from '@prisma/client'
-const prisma = new PrismaClient()
-
+// server/utils/llmCost.ts
 export type CostInput = {
-  provider: 'openai' | 'google'
-  model: string
-  promptTokens: number
-  completionTokens: number
-}
+  provider: "openai" | "google";
+  model: string;
+  promptTokens: number;
+  completionTokens: number;
+};
 
 export type LlmMeasured = {
-  provider: 'openai' | 'google'
-  model: string
-  promptTokens: number
-  completionTokens: number
-  totalTokens: number
-  requestId?: string
-  rawUsage?: unknown
+  provider: "openai" | "google";
+  model: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  requestId?: string;
+  rawUsage?: unknown;
   meta?: {
-    inputChars?: number
-    outputChars?: number
+    inputChars?: number;
+    outputChars?: number;
     // allow any extra diagnostic fields if needed
-    [k: string]: any
-  }
-}
+    [k: string]: any;
+  };
+};
 
 export type LlmContext = {
-  userId?: string
-  folderId?: string
-  feature?: string // "flashcards" | "quiz" | "chat" | etc.
-  status?: 'success' | 'error'
-  errorCode?: string
-  errorMessage?: string
-}
+  userId?: string;
+  folderId?: string;
+  feature?: string; // "flashcards" | "quiz" | "chat" | etc.
+  status?: "success" | "error";
+  errorCode?: string;
+  errorMessage?: string;
+};
 
 /**
  * Persists a usage row into LlmUsage with exact-cost (micro-dollars) and price snapshots.
@@ -39,20 +37,25 @@ export type LlmContext = {
  */
 export async function logLlmUsage(measured: LlmMeasured, ctx: LlmContext = {}) {
   const price = await prisma.llmPrice.findUnique({
-    where: { provider_model: { provider: measured.provider, model: measured.model } },
+    where: {
+      provider_model: { provider: measured.provider, model: measured.model },
+    },
     select: { inputPer1kMicros: true, outputPer1kMicros: true },
-  })
+  });
 
   if (!price) {
-    throw new Error(`LlmPrice not found for ${measured.provider}:${measured.model}`)
+    throw new Error(
+      `LlmPrice not found for ${measured.provider}:${measured.model}`
+    );
   }
 
-  const { inputUsdMicros, outputUsdMicros, totalUsdMicros } = await estimateCostMicros({
-    provider: measured.provider,
-    model: measured.model,
-    promptTokens: measured.promptTokens,
-    completionTokens: measured.completionTokens,
-  })
+  const { inputUsdMicros, outputUsdMicros, totalUsdMicros } =
+    await estimateCostMicros({
+      provider: measured.provider,
+      model: measured.model,
+      promptTokens: measured.promptTokens,
+      completionTokens: measured.completionTokens,
+    });
 
   await prisma.llmUsage.create({
     data: {
@@ -70,7 +73,7 @@ export async function logLlmUsage(measured: LlmMeasured, ctx: LlmContext = {}) {
       totalUsdMicros,
 
       requestId: measured.requestId,
-      status: ctx.status ?? 'success',
+      status: ctx.status ?? "success",
       errorCode: ctx.errorCode,
       errorMessage: ctx.errorMessage,
 
@@ -81,16 +84,25 @@ export async function logLlmUsage(measured: LlmMeasured, ctx: LlmContext = {}) {
       meta: measured.meta as any,
       rawUsageJson: measured.rawUsage as any,
     },
-  })
+  });
 }
 
-export async function estimateCostMicros({ provider, model, promptTokens, completionTokens }: CostInput) {
+export async function estimateCostMicros({
+  provider,
+  model,
+  promptTokens,
+  completionTokens,
+}: CostInput) {
   const price = await prisma.llmPrice.findUniqueOrThrow({
     where: { provider_model: { provider, model } },
     select: { inputPer1kMicros: true, outputPer1kMicros: true },
-  })
+  });
 
-  const input = BigInt(promptTokens)    * price.inputPer1kMicros  / 1000n
-  const output = BigInt(completionTokens) * price.outputPer1kMicros / 1000n
-  return { inputUsdMicros: input, outputUsdMicros: output, totalUsdMicros: input + output }
+  const input = (BigInt(promptTokens) * price.inputPer1kMicros) / 1000n;
+  const output = (BigInt(completionTokens) * price.outputPer1kMicros) / 1000n;
+  return {
+    inputUsdMicros: input,
+    outputUsdMicros: output,
+    totalUsdMicros: input + output,
+  };
 }

@@ -23,12 +23,11 @@ export default defineNuxtConfig({
   ],
   future: {
     typescriptBundlerResolution: true,
+    compatibilityVersion: 4,
   },
   alias: {
     string_decoder: "string_decoder/",
-    "~/shared": resolve(__dirname, "./shared"),
-    "#shared": resolve(__dirname, "./shared"), // optional extra alias
-    "@shared": resolve(__dirname, "./shared"), // optional extra alias
+    "@server": resolve(__dirname, "./server"),
   },
   hooks: {
     ready: async () => {

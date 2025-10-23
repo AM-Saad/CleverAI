@@ -13,7 +13,7 @@
 </template>
 
 <script>
-  export default {
-    name: 'CodiconUnmute'
-  }
+export default {
+  name: "CodiconUnmute",
+};
 </script>

@@ -1,9 +1,8 @@
 // server/api/notifications/test.post.ts
 import webPush from 'web-push'
 import { z } from 'zod'
-import { prisma } from '~~/server/prisma/utils'
 import type { NotificationSubscription } from '@prisma/client'
-import { Errors, success } from '~~/server/utils/error'
+import { Errors, success } from '@server/utils/error'
 
 type TestResult = {
   success: boolean

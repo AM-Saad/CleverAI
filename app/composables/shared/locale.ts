@@ -1,44 +1,51 @@
-import type { Ref } from 'vue'
+import type { Ref } from "vue";
 
-export const useNuxtLocale = () => useState<string>('locale', () => useDefaultLocale().value)
+export const useNuxtLocale = () =>
+  useState<string>("locale", () => useDefaultLocale().value);
 
-export const useDefaultLocale = (fallback = 'en-US') => {
-  const locale = ref(fallback)
+export const useDefaultLocale = (fallback = "en-US") => {
+  const locale = ref(fallback);
   if (import.meta.server) {
     // Learn more about the nuxtApp interface on https://nuxt.com/docs/guide/going-further/internals#the-nuxtapp-interface
-    const reqLocale = useRequestHeaders()['accept-language']?.split(',')[0]
+    const reqLocale = useRequestHeaders()["accept-language"]?.split(",")[0];
     if (reqLocale) {
-      locale.value = reqLocale
+      locale.value = reqLocale;
     }
-  }
-  else if (import.meta.client) {
-    const navLang = navigator.language
+  } else if (import.meta.client) {
+    const navLang = navigator.language;
     if (navLang) {
-      locale.value = navLang
+      locale.value = navLang;
     }
   }
-  return locale
-}
+  return locale;
+};
 
 export const useNuxtLocales = () => {
-  const locale = useNuxtLocale()
+  const locale = useNuxtLocale();
   const locales = ref([
-    'en-US',
-    'en-GB',
-    'ko-KR',
-    'zh-CN',
-    'ar-EG',
-    'fa-IR',
-    'ja-JP-u-ca-japanese',
-  ])
+    "en-US",
+    "en-GB",
+    "ko-KR",
+    "zh-CN",
+    "ar-EG",
+    "fa-IR",
+    "ja-JP-u-ca-japanese",
+  ]);
   if (!locales.value.includes(locale.value)) {
-    locales.value.unshift(locale.value)
+    locales.value.unshift(locale.value);
   }
-  return locales
-}
+  return locales;
+};
 
 // Using Intl.DateTimeFormat for language-sensitive date and time formatting
 // Learn more: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat
-export const useNuxtLocaleDate = (date: Ref<Date> | Date, locale = useNuxtLocale()) => {
-  return computed(() => new Intl.DateTimeFormat(locale.value, { dateStyle: 'full' }).format(unref(date)))
-}
+export const useNuxtLocaleDate = (
+  date: Ref<Date> | Date,
+  locale = useNuxtLocale(),
+) => {
+  return computed(() =>
+    new Intl.DateTimeFormat(locale.value, { dateStyle: "full" }).format(
+      unref(date),
+    ),
+  );
+};

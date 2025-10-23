@@ -4,20 +4,20 @@ defineProps({
     type: Boolean,
     default: false,
   },
-})
+});
 
-const dontShow = ref(false)
+const dontShow = ref(false);
 
-const emit = defineEmits(["gotit"])
+const emit = defineEmits(["gotit"]);
 
 const gotit = (): void => {
   if (dontShow.value) {
-    localStorage.setItem("guideDismissed", "true")
+    localStorage.setItem("guideDismissed", "true");
   } else {
-    localStorage.setItem("guideDismissed", "false")
+    localStorage.setItem("guideDismissed", "false");
   }
-  emit("gotit")
-}
+  emit("gotit");
+};
 </script>
 
 <template>
@@ -33,12 +33,7 @@ const gotit = (): void => {
         </div>
       </template>
       <template #body>
-        <video
-          src="@/assets/videos/share-sound.mp4"
-          muted
-          autoplay
-          loop
-        />
+        <video src="@/assets/videos/share-sound.mp4" muted autoplay loop />
         <div class="my-2 flex justify-between gap-3">
           <div class="flex items-center gap-2">
             <input
@@ -46,7 +41,7 @@ const gotit = (): void => {
               type="checkbox"
               name="dontshow"
               @click="dontShow = !dontShow"
-            >
+            />
             <label for="dontShow" class="dark:text-gray-400"
               >Don't Show Again</label
             >

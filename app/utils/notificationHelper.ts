@@ -3,10 +3,10 @@
  */
 
 export interface NotificationTestResult {
-  success: boolean
-  message: string
-  needsRefresh?: boolean
-  details?: unknown
+  success: boolean;
+  message: string;
+  needsRefresh?: boolean;
+  details?: unknown;
 }
 
 /**
@@ -15,84 +15,87 @@ export interface NotificationTestResult {
 export async function testPushNotifications(): Promise<NotificationTestResult> {
   try {
     // Check if notifications are supported
-    if (!('Notification' in window)) {
+    if (!("Notification" in window)) {
       return {
         success: false,
-        message: 'Push notifications are not supported in this browser'
-      }
+        message: "Push notifications are not supported in this browser",
+      };
     }
 
     // Check permission
-    if (Notification.permission !== 'granted') {
+    if (Notification.permission !== "granted") {
       return {
         success: false,
-        message: 'Notification permission not granted'
-      }
+        message: "Notification permission not granted",
+      };
     }
 
     // Check service worker
-    if (!('serviceWorker' in navigator)) {
+    if (!("serviceWorker" in navigator)) {
       return {
         success: false,
-        message: 'Service Worker not supported'
-      }
+        message: "Service Worker not supported",
+      };
     }
 
     // Check for active subscription
-    const registration = await navigator.serviceWorker.ready
-    const subscription = await registration.pushManager.getSubscription()
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
 
     if (!subscription) {
       return {
         success: false,
-        message: 'No active push subscription found',
-        needsRefresh: true
-      }
+        message: "No active push subscription found",
+        needsRefresh: true,
+      };
     }
 
     // Try to send a test notification
     try {
-      const response = await $fetch('/api/notifications/send', {
-        method: 'POST',
+      const response = await $fetch("/api/notifications/send", {
+        method: "POST",
         body: {
-          title: '🔔 Connection Test',
-          message: 'Your push notifications are working correctly!',
-          icon: '/icons/192x192.png',
-          tag: 'test-connection',
-          url: '/test-notifications'
-        }
-      })
+          title: "🔔 Connection Test",
+          message: "Your push notifications are working correctly!",
+          icon: "/icons/192x192.png",
+          tag: "test-connection",
+          url: "/test-notifications",
+        },
+      });
 
       return {
         success: true,
-        message: 'Push notifications are working correctly',
-        details: response
-      }
+        message: "Push notifications are working correctly",
+        details: response,
+      };
     } catch (fetchError: unknown) {
       // Check if it's a 410 error (subscription expired)
-      const error = fetchError as { status?: number; data?: { message?: string }; message?: string }
-      if (error.status === 500 && error.data?.message?.includes('410')) {
+      const error = fetchError as {
+        status?: number;
+        data?: { message?: string };
+        message?: string;
+      };
+      if (error.status === 500 && error.data?.message?.includes("410")) {
         return {
           success: false,
-          message: 'Push subscription has expired and needs to be refreshed',
-          needsRefresh: true
-        }
+          message: "Push subscription has expired and needs to be refreshed",
+          needsRefresh: true,
+        };
       }
 
       return {
         success: false,
         message: `Test notification failed: ${error.data?.message || error.message}`,
-        details: fetchError
-      }
+        details: fetchError,
+      };
     }
-
   } catch (error: unknown) {
-    const err = error as { message?: string }
+    const err = error as { message?: string };
     return {
       success: false,
       message: `Error testing push notifications: ${err.message}`,
-      details: error
-    }
+      details: error,
+    };
   }
 }
 
@@ -100,20 +103,20 @@ export async function testPushNotifications(): Promise<NotificationTestResult> {
  * Auto-refresh subscription if it's expired
  */
 export async function autoRefreshIfNeeded(): Promise<boolean> {
-  const testResult = await testPushNotifications()
+  const testResult = await testPushNotifications();
 
   if (testResult.needsRefresh) {
-    console.log('🔄 Auto-refreshing expired push subscription...')
+    console.log("🔄 Auto-refreshing expired push subscription...");
     try {
-      const { refreshSubscription } = useNotifications()
-      await refreshSubscription()
-      console.log('✅ Push subscription refreshed successfully')
-      return true
+      const { refreshSubscription } = useNotifications();
+      await refreshSubscription();
+      console.log("✅ Push subscription refreshed successfully");
+      return true;
     } catch (error) {
-      console.error('❌ Failed to auto-refresh subscription:', error)
-      return false
+      console.error("❌ Failed to auto-refresh subscription:", error);
+      return false;
     }
   }
 
-  return false
+  return false;
 }

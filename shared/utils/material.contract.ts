@@ -1,11 +1,18 @@
 // shared/material.contract.ts
-import { z } from 'zod'
-import { LLMEnum } from './llm'
+import { z } from "zod";
+import { LLMEnum } from "./llm";
 
-const trim = (v: unknown) => (typeof v === 'string' ? v.trim() : v)
+const trim = (v: unknown) => (typeof v === "string" ? v.trim() : v);
 
-export const MaterialTypeEnum = z.enum(['text', 'video', 'audio', 'pdf', 'url', 'document'])
-export type MaterialType = z.infer<typeof MaterialTypeEnum>
+export const MaterialTypeEnum = z.enum([
+  "text",
+  "video",
+  "audio",
+  "pdf",
+  "url",
+  "document",
+]);
+export type MaterialType = z.infer<typeof MaterialTypeEnum>;
 
 export const MaterialSchema = z.object({
   id: z.string(),
@@ -18,8 +25,8 @@ export const MaterialSchema = z.object({
   llmPrompt: z.string().nullable().optional(),
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),
-})
-export type Material = z.infer<typeof MaterialSchema>
+});
+export type Material = z.infer<typeof MaterialSchema>;
 
 export const CreateMaterialDTO = z.object({
   folderId: z.string(),
@@ -29,8 +36,8 @@ export const CreateMaterialDTO = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
   llmModel: LLMEnum.optional(),
   llmPrompt: z.preprocess(trim, z.string()).optional(),
-})
-export type CreateMaterialDTO = z.infer<typeof CreateMaterialDTO>
+});
+export type CreateMaterialDTO = z.infer<typeof CreateMaterialDTO>;
 
 export const UpdateMaterialDTO = z.object({
   title: z.preprocess(trim, z.string().min(1)).optional(),
@@ -39,5 +46,5 @@ export const UpdateMaterialDTO = z.object({
   metadata: z.record(z.string(), z.unknown()).optional(),
   llmModel: LLMEnum.optional(),
   llmPrompt: z.preprocess(trim, z.string()).optional(),
-})
-export type UpdateMaterialDTO = z.infer<typeof UpdateMaterialDTO>
+});
+export type UpdateMaterialDTO = z.infer<typeof UpdateMaterialDTO>;

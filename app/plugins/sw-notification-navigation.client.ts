@@ -6,4 +6,4 @@
 
 export default defineNuxtPlugin(() => {
   // Plugin disabled - functionality consolidated to useServiceWorkerBridge
-})
+});

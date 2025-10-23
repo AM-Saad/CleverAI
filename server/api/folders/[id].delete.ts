@@ -1,18 +1,19 @@
-import { requireRole } from '~/../server/middleware/auth'
-import { Errors, success } from '~~/server/utils/error'
+import { requireRole } from "@server/middleware/auth";
 
 export default defineEventHandler(async (event) => {
-  const user = await requireRole(event, ['USER'])
-  const prisma = event.context.prisma
-  const id = getRouterParam(event, 'id')
+  const user = await requireRole(event, ["USER"]);
+  const prisma = event.context.prisma;
+  const id = getRouterParam(event, "id");
 
   if (!id) {
-    throw Errors.badRequest('Folder id is required')
+    throw Errors.badRequest("Folder id is required");
   }
 
-  const result = await prisma.folder.deleteMany({ where: { id, userId: user.id } })
+  const result = await prisma.folder.deleteMany({
+    where: { id, userId: user.id },
+  });
   if (result.count === 0) {
-    throw Errors.notFound('Folder')
+    throw Errors.notFound("Folder");
   }
-  return success({ deleted: true })
-})
+  return success({ deleted: true });
+});

@@ -1,30 +1,30 @@
 <script setup lang="ts">
-const router = useRouter()
-const route = useRoute()
-const loading = ref(false)
-const error = ref("")
-const success = ref("")
-const token = computed(() => route.query.token as string)
+const router = useRouter();
+const route = useRoute();
+const loading = ref(false);
+const error = ref("");
+const success = ref("");
+const token = computed(() => route.query.token as string);
 // const props = defineProps<{ token: string }>()
 // const token = ref(props.token)
 const credentials = ref({
   password: null,
   confirmPassword: null,
-})
+});
 
 const handleSubmit = async (): Promise<void> => {
-  error.value = ""
+  error.value = "";
 
   if (!credentials.value.password || !credentials.value.confirmPassword) {
-    error.value = "Please add your information"
-    return
+    error.value = "Please add your information";
+    return;
   }
 
   if (credentials.value.password !== credentials.value.confirmPassword) {
-    error.value = "Passwords do not match"
-    return
+    error.value = "Passwords do not match";
+    return;
   }
-  loading.value = true
+  loading.value = true;
 
   try {
     const response = await fetch("/api/password/create", {
@@ -37,27 +37,27 @@ const handleSubmit = async (): Promise<void> => {
         password: credentials.value.password,
         confirmPassword: credentials.value.confirmPassword,
       }),
-    })
+    });
 
-    const data = await response.json()
+    const data = await response.json();
     if (!response.ok) {
-      error.value = data.message
-      return
+      error.value = data.message;
+      return;
     }
     success.value =
-      "Password created successfully, redirecting to login page..."
+      "Password created successfully, redirecting to login page...";
 
     setTimeout(() => {
-      router.push("/auth/signIn")
-    }, 4000)
+      router.push("/auth/signIn");
+    }, 4000);
   } catch (err) {
-    console.error(err)
-    const serverError = err as Error
-    error.value = serverError.message || "An error occurred"
+    console.error(err);
+    const serverError = err as Error;
+    error.value = serverError.message || "An error occurred";
   } finally {
-    loading.value = false
+    loading.value = false;
   }
-}
+};
 </script>
 
 <template>
@@ -85,7 +85,7 @@ const handleSubmit = async (): Promise<void> => {
           placeholder="Add your password..."
           autocomplete="false | unknown-autocomplete-value"
           tabindex="1"
-        >
+        />
       </div>
       <div class="form-group">
         <input
@@ -97,7 +97,7 @@ const handleSubmit = async (): Promise<void> => {
           placeholder="Confirm your password..."
           autocomplete="false | unknown-autocomplete-value"
           tabindex="2"
-        >
+        />
       </div>
       <div>
         <button

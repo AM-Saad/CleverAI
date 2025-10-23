@@ -1,5 +1,5 @@
 (() => {
-  // shared/constants/pwa.ts
+  // app/utils/constants/pwa.ts
   var SW_CONFIG = {
     VERSION: "v2.0.0-enhanced",
     DEBUG_QUERY_PARAM: "swDebug",
@@ -151,46 +151,7 @@
     // 1 hour
   };
 
-  // shared/constants/offline.ts
-  var FORM_SYNC_TYPES = {
-    // Material management
-    UPLOAD_MATERIAL: "upload-material",
-    UPDATE_MATERIAL: "update-material",
-    DELETE_MATERIAL: "delete-material",
-    // Folder management
-    CREATE_FOLDER: "create-folder",
-    UPDATE_FOLDER: "update-folder",
-    DELETE_FOLDER: "delete-folder",
-    // Note management
-    CREATE_NOTE: "create-note",
-    UPDATE_NOTE: "update-note",
-    DELETE_NOTE: "delete-note",
-    // Review system
-    ENROLL_CARD: "enroll-card",
-    GRADE_CARD: "grade-card",
-    UNENROLL_CARD: "unenroll-card",
-    // User preferences
-    UPDATE_PREFERENCES: "update-preferences",
-    UPDATE_NOTIFICATION_SETTINGS: "update-notification-settings"
-  };
-  var FORM_SYNC_HANDLERS = {
-    [FORM_SYNC_TYPES.UPLOAD_MATERIAL]: "material",
-    [FORM_SYNC_TYPES.UPDATE_MATERIAL]: "material",
-    [FORM_SYNC_TYPES.DELETE_MATERIAL]: "material",
-    [FORM_SYNC_TYPES.CREATE_FOLDER]: "folder",
-    [FORM_SYNC_TYPES.UPDATE_FOLDER]: "folder",
-    [FORM_SYNC_TYPES.DELETE_FOLDER]: "folder",
-    [FORM_SYNC_TYPES.CREATE_NOTE]: "note",
-    [FORM_SYNC_TYPES.UPDATE_NOTE]: "note",
-    [FORM_SYNC_TYPES.DELETE_NOTE]: "note",
-    [FORM_SYNC_TYPES.ENROLL_CARD]: "review",
-    [FORM_SYNC_TYPES.GRADE_CARD]: "review",
-    [FORM_SYNC_TYPES.UNENROLL_CARD]: "review",
-    [FORM_SYNC_TYPES.UPDATE_PREFERENCES]: "user",
-    [FORM_SYNC_TYPES.UPDATE_NOTIFICATION_SETTINGS]: "notification"
-  };
-
-  // shared/idb.ts
+  // app/utils/idb.ts
   function openIDB(options) {
     const { storeName, keyPath = "id", indexes = [] } = options;
     return new Promise((resolve, reject) => {
@@ -3824,10 +3785,10 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         })());
       }
     });
-    async function getFormDataAll() {
+    async function getFormDataAll(store) {
       try {
         const db = await openFormsDB();
-        const records = await getAllRecords(db, DB_CONFIG.STORES.FORMS);
+        const records = await getAllRecords(db, store);
         db.close();
         return records;
       } catch (err) {
@@ -3835,11 +3796,11 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         return [];
       }
     }
-    async function deleteFormEntries(ids) {
+    async function deleteFormEntries(ids, store) {
       if (!ids.length) return;
       try {
         const db = await openFormsDB();
-        await Promise.all(ids.map((id) => deleteRecord(db, DB_CONFIG.STORES.FORMS, id)));
+        await Promise.all(ids.map((id) => deleteRecord(db, store, id)));
         db.close();
       } catch (err) {
         error("Failed to delete form entries:", err);
@@ -3851,7 +3812,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         if (!formData.length) return;
         const response = await sendDataToServer(formData);
         if (!response.ok) throw new Error("Sync failed");
-        await deleteFormEntries(formData.map((f) => f.id));
+        await deleteFormEntries(formData.map((f) => f.id), DB_CONFIG.STORES.FORMS);
         clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNCED, data: { message: `Form data synced (${formData.length} records).` } }));
       } catch (err) {
         error("syncForms error", err);

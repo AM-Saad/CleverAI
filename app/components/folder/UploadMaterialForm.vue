@@ -1,142 +1,186 @@
 <script setup lang="ts">
-import * as z from 'zod'
-import type { FormSubmitEvent } from '@nuxt/ui'
-import { useRoute } from 'vue-router'
-import { useUpdateFolder } from '~/composables/folders/useFolders'
-import { DB_CONFIG, FORM_SYNC_TYPES } from '~~/shared/constants';
+import * as z from "zod";
+import type { FormSubmitEvent } from "@nuxt/ui";
+import { useRoute } from "vue-router";
+import { useUpdateFolder } from "~/composables/folders/useFolders";
 
-const emit = defineEmits<{ (e: 'closed' | 'cancel'): void }>()
+const emit = defineEmits<{ (e: "closed" | "cancel"): void }>();
 
-type MobileProp = boolean | 'auto'
-const props = withDefaults(defineProps<{
-    show: boolean
+type MobileProp = boolean | "auto";
+const props = withDefaults(
+  defineProps<{
+    show: boolean;
     // pass‑through Drawer options (all optional)
-    side?: 'right' | 'left'
-    mobile?: MobileProp
-    breakpoint?: string
-    handleVisible?: number
-    sheetHeight?: string
-    widthClasses?: string
-    teleportTo?: string
-    lockScroll?: boolean
-    threshold?: number
-    fastVelocity?: number
-    backdrop?: boolean
-}>(), {
-    side: 'right',
-    mobile: 'auto',
-    breakpoint: '(max-width: 639px)',
+    side?: "right" | "left";
+    mobile?: MobileProp;
+    breakpoint?: string;
+    handleVisible?: number;
+    sheetHeight?: string;
+    widthClasses?: string;
+    teleportTo?: string;
+    lockScroll?: boolean;
+    threshold?: number;
+    fastVelocity?: number;
+    backdrop?: boolean;
+  }>(),
+  {
+    side: "right",
+    mobile: "auto",
+    breakpoint: "(max-width: 639px)",
     handleVisible: 28,
-    sheetHeight: '75vh',
-    widthClasses: 'w-1/3 min-w-60',
-    teleportTo: 'body',
+    sheetHeight: "75vh",
+    widthClasses: "w-1/3 min-w-60",
+    teleportTo: "body",
     lockScroll: true,
     threshold: 20,
     fastVelocity: 450,
-    backdrop: true
-})
+    backdrop: true,
+  },
+);
 
 // ----- Form schema & state -----
 const schema = z.object({
-    materialTitle: z.string().min(1, 'Title is required'),
-    materialType: z.enum(['text', 'video', 'audio', 'pdf', 'url', 'document']).default('text'),
-    materialContent: z.string().min(1, 'Content is required'),
-})
+  materialTitle: z.string().min(1, "Title is required"),
+  materialType: z
+    .enum(["text", "video", "audio", "pdf", "url", "document"])
+    .default("text"),
+  materialContent: z.string().min(1, "Content is required"),
+});
 
-type Schema = z.output<typeof schema>
+type Schema = z.output<typeof schema>;
 
 const state = reactive<Schema>({
-    materialTitle: '',
-    materialType: 'text',
-    materialContent: ''
-})
+  materialTitle: "",
+  materialType: "text",
+  materialContent: "",
+});
 
-const route = useRoute()
-const { data } = useAuth()
+const route = useRoute();
+const { data } = useAuth();
 
-const id = route.params.id as string
-const { updateFolder, updating, typedError } = useUpdateFolder(id)
-const { handleOfflineSubmit } = useOffline()
-const items = ref(['text', 'video', 'audio', 'pdf', 'url', 'document'])
+const id = route.params.id as string;
+const { updateFolder, updating, typedError } = useUpdateFolder(id);
+const { handleOfflineSubmit } = useOffline();
+const items = ref(["text", "video", "audio", "pdf", "url", "document"]);
 
-const toast = useToast()
+const toast = useToast();
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
-    event.preventDefault()
-    const title = state.materialTitle.trim()
-    const content = state.materialContent.trim()
-    if (!title || !content) {
-        toast.add({ title: 'Validation', description: 'Content and title are required', color: 'warning' })
-        return
-    }
-    try {
+  event.preventDefault();
+  const title = state.materialTitle.trim();
+  const content = state.materialContent.trim();
+  if (!title || !content) {
+    toast.add({
+      title: "Validation",
+      description: "Content and title are required",
+      color: "warning",
+    });
+    return;
+  }
+  try {
+    const payload = {
+      materialTitle: title,
+      materialContent: content,
+      materialType: state.materialType,
+    };
+    // handle offline case
+    if (!navigator.onLine) {
+      // Sanitize user data for IndexedDB (only store cloneable properties)
+      const userData = data.value?.user
+        ? {
+            email: data.value.user.email,
+            name: data.value.user.name,
+            image: data.value.user.image,
+            // Only include primitive/serializable properties
+          }
+        : null;
 
-        const payload = {
-            materialTitle: title,
-            materialContent: content,
-            materialType: state.materialType
-        }
-        // handle offline case
-        if (!navigator.onLine) {
-            // Sanitize user data for IndexedDB (only store cloneable properties)
-            const userData = data.value?.user ? {
-                email: data.value.user.email,
-                name: data.value.user.name,
-                image: data.value.user.image
-                // Only include primitive/serializable properties
-            } : null
-
-            handleOfflineSubmit({
-                payload: { ...payload, folderId: id, user: userData },
-                storeName: DB_CONFIG.STORES.FORMS,
-                type: FORM_SYNC_TYPES.UPLOAD_MATERIAL
-            })
-            return
-        }
-        await updateFolder(payload)
-        toast.add({ title: 'Saved', description: 'Material uploaded to this folder.', color: 'success' })
-        // reset and close
-        state.materialTitle = ''
-        state.materialContent = ''
-        state.materialType = 'text'
-        emit('cancel')
-    } catch (err: unknown) {
-        toast.add({ title: 'Error', description: typedError.value?.message || (err as Error)?.message || 'Failed to upload material.', color: 'error' })
+      handleOfflineSubmit({
+        payload: { ...payload, folderId: id, user: userData },
+        storeName: DB_CONFIG.STORES.FORMS,
+        type: FORM_SYNC_TYPES.UPLOAD_MATERIAL,
+      });
+      return;
     }
+    await updateFolder(payload);
+    toast.add({
+      title: "Saved",
+      description: "Material uploaded to this folder.",
+      color: "success",
+    });
+    // reset and close
+    state.materialTitle = "";
+    state.materialContent = "";
+    state.materialType = "text";
+    emit("cancel");
+  } catch (err: unknown) {
+    toast.add({
+      title: "Error",
+      description:
+        typedError.value?.message ||
+        (err as Error)?.message ||
+        "Failed to upload material.",
+      color: "error",
+    });
+  }
 }
 </script>
 
 <template>
-    <ui-drawer :show="props.show" :side="props.side" :mobile="props.mobile" :breakpoint="props.breakpoint"
-        :handle-visible="props.handleVisible" :sheet-height="props.sheetHeight" :width-classes="props.widthClasses"
-        :teleport-to="props.teleportTo" :lock-scroll="props.lockScroll" :threshold="props.threshold"
-        :backdrop="props.backdrop" :fast-velocity="props.fastVelocity" title="Upload Material" @closed="emit('closed')">
-        <template #subtitle>
-            <p class="text-sm opacity-70">Upload your material files here.</p>
-        </template>
+  <ui-drawer
+    :show="props.show"
+    :side="props.side"
+    :mobile="props.mobile"
+    :breakpoint="props.breakpoint"
+    :handle-visible="props.handleVisible"
+    :sheet-height="props.sheetHeight"
+    :width-classes="props.widthClasses"
+    :teleport-to="props.teleportTo"
+    :lock-scroll="props.lockScroll"
+    :threshold="props.threshold"
+    :backdrop="props.backdrop"
+    :fast-velocity="props.fastVelocity"
+    title="Upload Material"
+    @closed="emit('closed')"
+  >
+    <template #subtitle>
+      <p class="text-sm opacity-70">Upload your material files here.</p>
+    </template>
 
-        <UForm :schema="schema" :state="state" class="space-y-2" @submit="onSubmit">
-            <UFormField label="Material Title" name="materialTitle">
-                <UInput v-model="state.materialTitle" placeholder="Enter material title" :ui="{
-                    'root': 'w-full'
-                }" />
-            </UFormField>
+    <UForm :schema="schema" :state="state" class="space-y-2" @submit="onSubmit">
+      <UFormField label="Material Title" name="materialTitle">
+        <UInput
+          v-model="state.materialTitle"
+          placeholder="Enter material title"
+          :ui="{
+            root: 'w-full',
+          }"
+        />
+      </UFormField>
 
-            <UFormField label="Material Type" name="materialType">
-                <USelectMenu v-model="state.materialType" :items="items" :ui="{
-                    'base': 'w-full'
-                }" />
+      <UFormField label="Material Type" name="materialType">
+        <USelectMenu
+          v-model="state.materialType"
+          :items="items"
+          :ui="{
+            base: 'w-full',
+          }"
+        />
+      </UFormField>
 
-            </UFormField>
+      <UFormField label="Material Content" name="materialContent">
+        <UiTextArea
+          v-model="state.materialContent"
+          placeholder="Enter your material content here..."
+        />
+      </UFormField>
 
-            <UFormField label="Material Content" name="materialContent">
-                <UiTextArea v-model="state.materialContent" placeholder="Enter your material content here..." />
-            </UFormField>
-
-            <div class="flex gap-2 mt-3">
-                <UButton type="submit" :loading="updating">Submit</UButton>
-                <UButton color="neutral" variant="soft" @click="emit('cancel')">Cancel</UButton>
-            </div>
-        </UForm>
-    </ui-drawer>
+      <div class="flex gap-2 mt-3">
+        <UButton type="submit" :loading="updating">Submit</UButton>
+        <UButton color="neutral" variant="soft" @click="emit('cancel')"
+          >Cancel</UButton
+        >
+      </div>
+    </UForm>
+  </ui-drawer>
 </template>

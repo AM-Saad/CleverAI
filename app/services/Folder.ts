@@ -1,15 +1,13 @@
 // app/services/Folder.ts
 import FetchFactory from "~/services/FetchFactory"
 import { RESOURCES } from "~/utils/constants/resources.enum"
-import type { IFolder, } from "~/types/models/folders"
-import type { CreateFolderDTO,UpdateFolderDTO } from "~/types/dtos/folders"
 import type { ZodSchema } from "zod"
 import type { Result } from "~/types/Result"
 
 class FoldersModule extends FetchFactory {
   private RESOURCE = RESOURCES.FOLDERS
 
-  async getFolders(_validator?: ZodSchema<IFolder[]>): Promise<Result<IFolder[]>> {
+  async getFolders(_validator?: ZodSchema<Folder[]>): Promise<Result<Folder[]>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",
@@ -24,7 +22,7 @@ class FoldersModule extends FetchFactory {
     )
   }
 
-  async getFolder(id: string, _validator?: ZodSchema<IFolder>): Promise<Result<IFolder>> {
+  async getFolder(id: string, _validator?: ZodSchema<Folder>): Promise<Result<Folder>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",
@@ -39,7 +37,7 @@ class FoldersModule extends FetchFactory {
     )
   }
 
-  async postFolder(payload: Partial<CreateFolderDTO>): Promise<Result<IFolder>> {
+  async postFolder(payload: Partial<typeof CreateFolderDTO>): Promise<Result<Folder>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",
@@ -50,8 +48,8 @@ class FoldersModule extends FetchFactory {
 
   async updateFolder(
     id: string,
-    payload: Partial<UpdateFolderDTO>,
-  ): Promise<Result<IFolder>> {
+    payload: Partial<typeof UpdateFolderDTO>,
+  ): Promise<Result<Folder>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",

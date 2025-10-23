@@ -8,17 +8,17 @@ const props = defineProps({
     type: String,
     default: "Microphone",
   },
-})
+});
 
-const show = ref(props.show)
+const show = ref(props.show);
 
 const emit = defineEmits<{
-  (event: "close"): void
-}>()
+  (event: "close"): void;
+}>();
 
 const gotit = (): void => {
-  emit("close")
-}
+  emit("close");
+};
 </script>
 
 <template>

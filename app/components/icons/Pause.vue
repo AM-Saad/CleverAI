@@ -15,7 +15,7 @@
 </template>
 
 <script>
-  export default {
-    name: 'MaterialSymbolsLightPauseOutlineRounded'
-  }
+export default {
+  name: "MaterialSymbolsLightPauseOutlineRounded",
+};
 </script>

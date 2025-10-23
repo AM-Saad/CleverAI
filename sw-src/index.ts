@@ -2,7 +2,7 @@
 // TypeScript source of the service worker. Built to public/sw.js before Workbox injectManifest runs.
 // KEEP exactly one occurrence of self.__WB_MANIFEST.
 
-// Import centralized constants
+// // Import centralized constants
 import {
   SW_MESSAGE_TYPES,
   PREWARM_PATHS,
@@ -13,10 +13,10 @@ import {
   AUTH_STUBS,
   SYNC_TAGS,
   type FormSyncType
-} from '../shared/constants'
+} from '../app/utils/constants/pwa'
 
-// Import shared IndexedDB helpers
-import { openFormsDB, getAllRecords, deleteRecord } from '../shared/idb'
+// // Import shared IndexedDB helpers
+import { openFormsDB, getAllRecords, deleteRecord } from '../app/utils/idb'
 
 // Augment the global self type safely
 
@@ -946,10 +946,10 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
     // ------------------------ INDEXEDDB HELPERS ------------------------
     // Using shared IDB helpers for consistency
 
-    async function getFormDataAll(): Promise<StoredFormRecord[]> {
+    async function getFormDataAll(store: string): Promise<StoredFormRecord[]> {
         try {
             const db = await openFormsDB()
-            const records = await getAllRecords<StoredFormRecord>(db, DB_CONFIG.STORES.FORMS)
+            const records = await getAllRecords<StoredFormRecord>(db, store)
             db.close()
             return records
         } catch (err) {
@@ -958,11 +958,11 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
         }
     }
 
-    async function deleteFormEntries(ids: string[]) {
+    async function deleteFormEntries(ids: string[], store: string) {
         if (!ids.length) return
         try {
             const db = await openFormsDB()
-            await Promise.all(ids.map(id => deleteRecord(db, DB_CONFIG.STORES.FORMS, id)))
+            await Promise.all(ids.map(id => deleteRecord(db, store, id)))
             db.close()
         } catch (err) {
             error('Failed to delete form entries:', err)
@@ -976,7 +976,7 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
             const response = await sendDataToServer(formData)
             if (!response.ok) throw new Error('Sync failed')
             // Cleanup after confirmed success
-            await deleteFormEntries(formData.map(f => f.id))
+            await deleteFormEntries(formData.map(f => f.id), DB_CONFIG.STORES.FORMS)
             clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNCED, data: { message: `Form data synced (${formData.length} records).` } }))
         } catch (err) {
             error('syncForms error', err)

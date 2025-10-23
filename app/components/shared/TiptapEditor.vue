@@ -1,93 +1,151 @@
 <template>
-  <editor-content :editor="editor" />
+  <div class="tiptap-editor bg-white h-full p-4" @click="{
+    if (isFullScreen) {
+      $event.stopPropagation();
+    }
+  }">
+    <div v-if="editor && isFullScreen" class="flex gap-2 mb-2">
+      <UButton variant="soft" size="xs" type="button" :class="buttonClass(editor.isActive('bold'))"
+        @click.prevent="toggleBold">B</UButton>
+      <UButton variant="soft" size="xs" type="button" :class="buttonClass(editor.isActive('italic'))"
+        @click.prevent="toggleItalic">I</UButton>
+      <UButton variant="soft" size="xs" type="button" :class="buttonClass(editor.isActive('heading', { level: 1 }))"
+        @click.prevent="toggleH1">H1</UButton>
+      <UButton variant="soft" size="xs" type="button" :class="buttonClass(editor.isActive('heading', { level: 2 }))"
+        @click.prevent="toggleH2">H2</UButton>
+      <UButton variant="soft" size="xs" type="button" :class="buttonClass(editor.isActive('bulletList'))"
+        @click.prevent="toggleBulletList">• List</UButton>
+      <UButton variant="soft" size="xs" type="button" :class="buttonClass(editor.isActive('orderedList'))"
+        @click.prevent="toggleOrderedList">1. List</UButton>
+      <!-- <UButton variant="soft"  size="xs" type="button" :class="buttonClass(editor.isActive('link'))" @click.prevent="setLinkPrompt">Link</UButton> -->
+    </div>
+
+    <editor-content :id="id" :editor="editor" />
+  </div>
 </template>
 
 <script>
-import { Editor, EditorContent } from '@tiptap/vue-3'
-import StarterKit from '@tiptap/starter-kit'
-import Document from '@tiptap/extension-document'
-import Paragraph from '@tiptap/extension-paragraph'
-import Text from '@tiptap/extension-text'
-import Heading from '@tiptap/extension-heading'
+import { Editor, EditorContent } from "@tiptap/vue-3";
+import StarterKit from "@tiptap/starter-kit";
+import Link from "@tiptap/extension-link";
 
 export default {
+  name: "SharedTiptapEditor",
+
   components: {
     EditorContent,
   },
 
   props: {
-    value: {
+    // support v-model via modelValue
+    modelValue: {
       type: String,
-      default: '',
+      default: "",
+    },
+    isFullScreen: {
+      type: Boolean,
+      default: false,
+    },
+    id: {
+      type: String,
+      default: "",
     },
   },
+
+  emits: ["update:modelValue"],
 
   data() {
     return {
       editor: null,
-    }
+    };
   },
 
   watch: {
-    value(value) {
-      // HTML
-      const isSame = this.editor.getHTML() === value
-
-      // JSON
-      // const isSame = JSON.stringify(this.editor.getJSON()) === JSON.stringify(value)
-
-      if (isSame) {
-        return
-      }
-
-      this.editor.commands.setContent(value, false)
+    modelValue(value) {
+      if (!this.editor) return;
+      const current = this.editor.getHTML();
+      if (current === value) return;
+      this.editor.commands.setContent(value || "", false);
     },
   },
 
   mounted() {
     this.editor = new Editor({
-      content: this.value,
-      extensions: [StarterKit],
+      content: this.modelValue || "",
+      extensions: [StarterKit, Link.configure({ openOnClick: true })],
       editorProps: {
         attributes: {
-          class: 'prose prose-sm sm:prose-base lg:prose-lg xl:prose-2xl m-5 focus:outline-none',
+          class:
+            "prose prose-sm sm:prose-base lg:prose-lg xl:prose-2xl m-1 focus:outline-none",
         },
       },
-      content: `
-    <h2>
-      Hi there,
-    </h2>
-    <p>
-      this is a basic <em>basic</em> example of <strong>Tiptap</strong>. Sure, there are all kind of basic text styles you’d probably expect from a text editor. But wait until you see the lists:
-    </p>
-    <ul>
-      <li>
-        That’s a bullet list with one …
-      </li>
-      <li>
-        … or two list items.
-      </li>
-    </ul>
-    <p>
-      Isn’t that great? And all of that is editable. But wait, there’s more. Let’s try a code block:
-    </p>
-<pre><code class="language-css">body {
-  display: none;
-}</code></pre>
-    <p>
-      I know, I know, this is impressive. It’s only the tip of the iceberg though. Give it a try and click a little bit around. Don’t forget to check the other examples too.
-    </p>
-    <blockquote>
-      Wow, that’s amazing. Good work, boy! 👏
-      <br />
-      — Mom
-    </blockquote>
-  `,
-    })
+    });
+
+    // Emit updates for v-model
+    this.editor.on("update", () => {
+      const html = this.editor.getHTML();
+      this.$emit("update:modelValue", html);
+    });
   },
 
   beforeUnmount() {
-    this.editor.destroy()
+    if (this.editor) this.editor.destroy();
   },
-}
+
+  methods: {
+    buttonClass(active) {
+      return [
+        // 'px-2 py-1 rounded text-sm border',
+        active ? "bg-amber-200 border-amber-400" : "bg-white border-amber-100",
+      ];
+    },
+
+    toggleBold() {
+      if (!this.editor) return;
+      this.editor.chain().focus().toggleBold().run();
+    },
+
+    toggleItalic() {
+      if (!this.editor) return;
+      this.editor.chain().focus().toggleItalic().run();
+    },
+
+    toggleH1() {
+      if (!this.editor) return;
+      this.editor.chain().focus().toggleHeading({ level: 1 }).run();
+    },
+
+    toggleH2() {
+      if (!this.editor) return;
+      this.editor.chain().focus().toggleHeading({ level: 2 }).run();
+    },
+
+    toggleBulletList() {
+      if (!this.editor) return;
+      this.editor.chain().focus().toggleBulletList().run();
+    },
+
+    toggleOrderedList() {
+      if (!this.editor) return;
+      this.editor.chain().focus().toggleOrderedList().run();
+    },
+
+    setLinkPrompt() {
+      if (!this.editor) return;
+      const previous = this.editor.getAttributes("link").href || "";
+      const url = window.prompt("Enter URL", previous);
+      if (url === null) return;
+      if (url === "") {
+        this.editor.chain().focus().unsetLink().run();
+        return;
+      }
+      this.editor
+        .chain()
+        .focus()
+        .extendMarkRange("link")
+        .setLink({ href: url, target: "_blank", rel: "noopener" })
+        .run();
+    },
+  },
+};
 </script>

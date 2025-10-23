@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest'
 import { setupTestServer, makeTestEvent } from './utils/test-server-utils'
-import enrollHandler from '~/server/api/review/enroll.post'
+import enrollHandler from '@server/api/review/enroll.post'
 
 // NOTE: these test helpers are pseudo-helpers for the repo's test setup.
 // If your repo uses a different runner/mocks, adapt accordingly.

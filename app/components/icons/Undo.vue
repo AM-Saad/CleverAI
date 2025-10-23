@@ -17,7 +17,7 @@
 </template>
 
 <script>
-  export default {
-    name: 'MynauiUndo'
-  }
+export default {
+  name: "MynauiUndo",
+};
 </script>

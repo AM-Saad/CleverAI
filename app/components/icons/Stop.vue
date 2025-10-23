@@ -13,7 +13,7 @@
 </template>
 
 <script>
-  export default {
-    name: 'MaterialSymbolsStopOutlineRounded'
-  }
+export default {
+  name: "MaterialSymbolsStopOutlineRounded",
+};
 </script>

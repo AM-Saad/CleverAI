@@ -17,7 +17,7 @@
 </template>
 
 <script>
-  export default {
-    name: 'StreamlineEntertainmentVolumeMuteSpeakerRemoveVolumeControlAudioMusicMuteOff'
-  }
+export default {
+  name: "StreamlineEntertainmentVolumeMuteSpeakerRemoveVolumeControlAudioMusicMuteOff",
+};
 </script>

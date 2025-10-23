@@ -5,49 +5,49 @@
 
 // Mock data structures for dashboard
 export interface DashboardData {
-  totalErrors: number
-  errorRate: number
-  criticalErrors: number
+  totalErrors: number;
+  errorRate: number;
+  criticalErrors: number;
   recentErrors: Array<{
-    timestamp: Date
-    message: string
-    code: string
-    severity: string
-  }>
-  systemHealth: 'healthy' | 'warning' | 'critical'
+    timestamp: Date;
+    message: string;
+    code: string;
+    severity: string;
+  }>;
+  systemHealth: "healthy" | "warning" | "critical";
 }
 
 export interface ErrorRateData {
-  errorRate: number
-  totalErrors: number
-  windowStart: Date
-  windowEnd: Date
+  errorRate: number;
+  totalErrors: number;
+  windowStart: Date;
+  windowEnd: Date;
   errorsBySeverity: {
-    low: number
-    medium: number
-    high: number
-    critical: number
-  }
+    low: number;
+    medium: number;
+    high: number;
+    critical: number;
+  };
   topErrors: Array<{
-    code: string
-    count: number
-    percentage: number
-  }>
+    code: string;
+    count: number;
+    percentage: number;
+  }>;
 }
 
 export interface PerformanceImpactData {
-  operation: string
-  avgResponseTime: number
-  errorCount: number
-  impactFactor: number
+  operation: string;
+  avgResponseTime: number;
+  errorCount: number;
+  impactFactor: number;
 }
 
 export interface AlertConfig {
-  id?: string
-  name: string
-  condition: string
-  threshold: number
-  enabled: boolean
+  id?: string;
+  name: string;
+  condition: string;
+  threshold: number;
+  enabled: boolean;
 }
 
 // Stub implementations
@@ -58,13 +58,15 @@ export async function getDashboardData(): Promise<DashboardData> {
     errorRate: 0,
     criticalErrors: 0,
     recentErrors: [],
-    systemHealth: 'healthy'
-  }
+    systemHealth: "healthy",
+  };
 }
 
-export async function getErrorRate(timeWindowMinutes: number = 60): Promise<ErrorRateData> {
-  const now = new Date()
-  const windowStart = new Date(now.getTime() - timeWindowMinutes * 60 * 1000)
+export async function getErrorRate(
+  timeWindowMinutes: number = 60
+): Promise<ErrorRateData> {
+  const now = new Date();
+  const windowStart = new Date(now.getTime() - timeWindowMinutes * 60 * 1000);
 
   // TODO: Query actual error logs from database/monitoring system
   return {
@@ -76,49 +78,51 @@ export async function getErrorRate(timeWindowMinutes: number = 60): Promise<Erro
       low: 0,
       medium: 0,
       high: 0,
-      critical: 0
+      critical: 0,
     },
-    topErrors: []
-  }
+    topErrors: [],
+  };
 }
 
-export async function getPerformanceImpact(_operation?: string): Promise<PerformanceImpactData[]> {
+export async function getPerformanceImpact(
+  _operation?: string
+): Promise<PerformanceImpactData[]> {
   // TODO: Implement performance metrics collection
-  return []
+  return [];
 }
 
 export async function initializeDefaultAlerts(): Promise<string[]> {
   // TODO: Create default monitoring alerts
-  return []
+  return [];
 }
 
 export async function createAlert(_config: AlertConfig): Promise<string> {
   // TODO: Store alert configuration
-  return `alert_${Date.now()}`
+  return `alert_${Date.now()}`;
 }
 
 export async function removeAlert(alertId: string): Promise<void> {
   // TODO: Remove alert configuration
-  console.log(`Removing alert: ${alertId}`)
+  console.log(`Removing alert: ${alertId}`);
 }
 
 export const CommonAlerts = {
   highErrorRate: (): AlertConfig => ({
-    name: 'High Error Rate',
-    condition: 'error_rate > threshold',
+    name: "High Error Rate",
+    condition: "error_rate > threshold",
     threshold: 5,
-    enabled: true
+    enabled: true,
   }),
   criticalErrors: (): AlertConfig => ({
-    name: 'Critical Errors Detected',
-    condition: 'critical_errors > threshold',
+    name: "Critical Errors Detected",
+    condition: "critical_errors > threshold",
     threshold: 0,
-    enabled: true
+    enabled: true,
   }),
   slowResponse: (): AlertConfig => ({
-    name: 'Slow Response Time',
-    condition: 'avg_response_time > threshold',
+    name: "Slow Response Time",
+    condition: "avg_response_time > threshold",
     threshold: 1000,
-    enabled: true
-  })
-}
+    enabled: true,
+  }),
+};

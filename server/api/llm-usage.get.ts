@@ -1,10 +1,8 @@
 // server/api/llm-usage.get.ts
-
-// server/api/llm-usage.get.ts
 import { defineEventHandler, getQuery } from 'h3'
-import { PrismaClient } from '@prisma/client'
 
-const prisma = new PrismaClient()
+import { requireRole } from '../middleware/auth'
+
 
 // Helpers
 const usdFromMicros = (micros: bigint | number | null | undefined) => {
@@ -15,6 +13,10 @@ const usdFromMicros = (micros: bigint | number | null | undefined) => {
 const monthKeyUTC = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`
 
 export default defineEventHandler(async (event) => {
+  const user = await requireRole(event, ['USER'])
+  const prisma = event.context.prisma
+
+
   // Query params
   const q = getQuery(event) as Record<string, string | undefined>
   const startParam = q.start // ISO date like 2025-08-01
@@ -30,7 +32,10 @@ export default defineEventHandler(async (event) => {
   const rows = await prisma.llmUsage.findMany({
     where: {
       createdAt: { gte: start, lte: end },
+      userId: user.id,
     },
+    orderBy: { createdAt: 'desc' },
+    take: 10000, // safety limit
   })
 
   // Aggregations
