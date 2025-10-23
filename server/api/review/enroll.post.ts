@@ -44,21 +44,19 @@ export default defineEventHandler(async (event) => {
     throw Errors.notFound("Material");
   }
 
-  const existingCard = await prisma.cardReview.findFirst({
-    where: { userId: user.id, cardId: resourceId },
-  });
-  if (existingCard) {
-    return success(
-      EnrollCardResponseSchema.parse({
-        success: true,
-        cardId: existingCard.id,
-        message: "Card already enrolled",
-      })
-    );
-  }
-
-  const card = await prisma.cardReview.create({
-    data: {
+  // Use upsert to handle concurrent enrollment requests safely
+  // This prevents duplicate CardReview records for the same user+card combination
+  const card = await prisma.cardReview.upsert({
+    where: {
+      userId_cardId: {
+        userId: user.id,
+        cardId: resourceId,
+      },
+    },
+    update: {
+      // No-op update if already exists (just return existing record)
+    },
+    create: {
       userId: user.id,
       cardId: resourceId,
       folderId: resolvedFolderId,
@@ -70,11 +68,14 @@ export default defineEventHandler(async (event) => {
     },
   });
 
+  // Determine if this was a new enrollment or existing
+  const isNewEnrollment = !card.lastReviewedAt;
+
   return success(
     EnrollCardResponseSchema.parse({
       success: true,
       cardId: card.id,
-      message: "Card enrolled successfully",
+      message: isNewEnrollment ? "Card enrolled successfully" : "Card already enrolled",
     })
   );
 });

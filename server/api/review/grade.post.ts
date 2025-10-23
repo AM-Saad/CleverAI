@@ -20,30 +20,57 @@ export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
   const prisma = event.context.prisma;
 
-  // Fetch card review ensuring ownership
-  const cardReview = await prisma.cardReview.findFirst({
-    where: { id: validatedBody.cardId, userId: user.id },
-  });
-  if (!cardReview) {
-    throw Errors.notFound("card");
+  // Check idempotency if requestId provided
+  if (validatedBody.requestId) {
+    const existing = await prisma.gradeRequest.findUnique({
+      where: { requestId: validatedBody.requestId },
+    });
+    if (existing) {
+      // Return cached result
+      const cardReview = await prisma.cardReview.findFirst({
+        where: { id: validatedBody.cardId, userId: user.id },
+      });
+      if (cardReview) {
+        return success(
+          GradeCardResponseSchema.parse({
+            success: true,
+            nextReviewAt: cardReview.nextReviewAt.toISOString(),
+            intervalDays: cardReview.intervalDays,
+            easeFactor: cardReview.easeFactor,
+            message: "Card graded successfully (cached)",
+          })
+        );
+      }
+    }
   }
 
-  const grade = parseInt(validatedBody.grade);
+  // Wrap in transaction to prevent race conditions and ensure atomicity
+  const updatedCard = await prisma.$transaction(async (tx) => {
+    // Fetch card review ensuring ownership (locks row for update)
+    const cardReview = await tx.cardReview.findFirst({
+      where: { id: validatedBody.cardId, userId: user.id },
+    });
+    
+    if (!cardReview) {
+      throw Errors.notFound("card");
+    }
 
-  const { easeFactor, intervalDays, repetitions } = calculateSM2({
-    currentEF: cardReview.easeFactor,
-    currentInterval: cardReview.intervalDays,
-    currentRepetitions: cardReview.repetitions,
-    grade,
-  });
+    const grade = parseInt(validatedBody.grade);
 
-  const nextReviewAt = new Date();
-  nextReviewAt.setDate(nextReviewAt.getDate() + intervalDays);
-  const newStreak = grade >= 3 ? cardReview.streak + 1 : 0;
+    // Calculate new SM-2 values based on current state
+    const { easeFactor, intervalDays, repetitions } = calculateSM2({
+      currentEF: cardReview.easeFactor,
+      currentInterval: cardReview.intervalDays,
+      currentRepetitions: cardReview.repetitions,
+      grade,
+    });
 
-  let updatedCard;
-  try {
-    updatedCard = await prisma.cardReview.update({
+    const nextReviewAt = new Date();
+    nextReviewAt.setDate(nextReviewAt.getDate() + intervalDays);
+    const newStreak = grade >= 3 ? cardReview.streak + 1 : 0;
+
+    // Update card review with new values
+    const updated = await tx.cardReview.update({
       where: { id: validatedBody.cardId },
       data: {
         easeFactor,
@@ -55,15 +82,29 @@ export default defineEventHandler(async (event) => {
         streak: newStreak,
       },
     });
-  } catch {
-    throw Errors.server("Failed to persist card grade");
-  }
 
-  // Fire-and-forget notification scheduling
+    // Record grade request for idempotency (if requestId provided)
+    if (validatedBody.requestId) {
+      await tx.gradeRequest.create({
+        data: {
+          requestId: validatedBody.requestId,
+          userId: user.id,
+          cardId: validatedBody.cardId,
+          grade: grade,
+        },
+      }).catch(() => {
+        // Ignore duplicate key errors from concurrent requests
+      });
+    }
+
+    return updated;
+  });
+
+  // Fire-and-forget notification scheduling (outside transaction)
   scheduleCardDueNotification({
     userId: user.id,
     cardId: validatedBody.cardId,
-    scheduledFor: nextReviewAt,
+    scheduledFor: updatedCard.nextReviewAt,
     content: {
       title: "📚 Card Review Due",
       body: "You have a card ready for review!",

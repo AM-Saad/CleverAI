@@ -65,6 +65,15 @@ export async function checkDueCards() {
           continue;
         }
 
+        // Check if user has snoozed notifications
+        if (userPref.snoozedUntil && userPref.snoozedUntil > now) {
+          console.log(
+            `💤 Skipping user ${userPref.userId} - snoozed until ${userPref.snoozedUntil.toISOString()}`
+          );
+          results.skipped++;
+          continue;
+        }
+
         // Check if it's quiet hours for this user (using timezone)
         if (
           userPref.quietHoursEnabled &&

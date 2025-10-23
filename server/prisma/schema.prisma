@@ -160,9 +160,22 @@ enum QuestionType {
     lastGrade      Int? // 0..5
     streak         Int          @default(0)
 
-    @@unique([userId, cardId])
+    @@unique([userId, cardId], name: "userId_cardId")
     @@index([userId, nextReviewAt])
     @@index([folderId, nextReviewAt])
+}
+
+// Idempotency tracking for grade operations
+model GradeRequest {
+    id          String   @id @default(auto()) @map("_id") @db.ObjectId
+    requestId   String   @unique
+    userId      String
+    cardId      String
+    grade       Int
+    processedAt DateTime @default(now())
+    
+    @@index([userId, cardId])
+    @@index([processedAt])
 }
 
 model LlmPrice {
@@ -303,6 +316,7 @@ model ScheduledNotification {
     id          String   @id @default(auto()) @map("_id") @db.ObjectId
     userId      String   @db.ObjectId
     type        String   // 'CARD_DUE', 'STUDY_REMINDER', 'DAILY_REVIEW'
+    cardId      String?  // For card-specific notifications
     scheduledFor DateTime
     sent        Boolean  @default(false)
     sentAt      DateTime?
@@ -317,6 +331,7 @@ model ScheduledNotification {
     @@index([scheduledFor, sent])
     @@index([userId, type])
     @@index([sent, scheduledFor])
+    @@index([userId, type, cardId, sent])
     @@map("scheduledNotifications")
 }
 
@@ -344,6 +359,9 @@ model UserNotificationPreferences {
     activeHoursEnabled           Boolean @default(false)
     activeHoursStart             String  @default("09:00")
     activeHoursEnd               String  @default("21:00")
+
+    // Snooze functionality
+    snoozedUntil      DateTime?
 
     createdAt         DateTime @default(now())
     updatedAt         DateTime @updatedAt

@@ -1,5 +1,11 @@
 # 🚀 CleverAI PWA Complete Guide
 
+> **⚠️ HISTORICAL DOCUMENT**  
+> This guide has been largely superseded by `../PWA.md` (current documentation).  
+> Kept in archive for historical reference and understanding system evolution.  
+> Some paths and component references may be outdated (e.g., `useServiceWorkerUpdates` consolidated into `useServiceWorkerBridge`).  
+> **For current PWA implementation details, see `../PWA.md`**
+
 > **The Ultimate Progressive Web App Documentation**
 > Everything you need to know about the PWA system, Service Worker, Caching, Notifications, and Build Pipeline
 
@@ -53,8 +59,12 @@ yarn build:inject
 yarn test:pwa-offline
 
 # Debug and development tools
-open http://localhost:3000/debug-ui/
-open http://localhost:3000/test-notifications/
+# Visit the /debug route in development, or open the debug-archive HTML pages directly.
+# Examples:
+#  - /debug
+#  - debug-archive/test-offline-functionality.md (guide)
+#  - debug-archive/test-notification.html
+#  - debug-archive/test-notification-modal.html
 ```
 
 ### Critical Files You Need to Know
@@ -136,13 +146,13 @@ yarn build
 
 ### Build Scripts Explained
 
-#### `scripts/inject-sw.cjs`
+#### `scripts/inject-sw.cjs` (optional)
 ```javascript
-// Workbox manifest injection for production
+// Workbox manifest injection for production (optional helper)
+// Current build:inject does not call this script; use it only if you need
+// to manually run workbox-build's injectManifest after `yarn sw:build`.
 const { injectManifest } = require('workbox-build')
-
-// Injects list of all static assets into service worker
-// Replaces self.__WB_MANIFEST placeholder
+// Replaces the self.__WB_MANIFEST placeholder in public/sw.js
 ```
 
 #### `scripts/check-sw-placeholder.cjs`
@@ -151,19 +161,21 @@ const { injectManifest } = require('workbox-build')
 // Prevents build failures during injection
 ```
 
-### Package.json Scripts
+### Package.json Scripts (current)
 
 ```json
 {
   "scripts": {
-    "sw:build": "esbuild sw-src/index.ts --bundle --outfile=public/sw.js",
+    "sw:build": "esbuild sw-src/index.ts --bundle --format=iife --outfile=public/sw.js --platform=browser --target=es2019",
     "sw:check": "node scripts/check-sw-placeholder.cjs",
-    "build:inject": "yarn sw:build && yarn sw:check && node scripts/inject-sw.cjs",
-    "build": "nuxt build",
-    "dev": "yarn sw:build && nuxt dev"
+    "build:inject": "yarn sw:build && yarn sw:check && nuxt build --vercel-preset",
+    "build": "nuxt build --vercel-preset",
+    "dev": "nuxt dev --port 5173"
   }
 }
 ```
+
+Note: The manual injection script `scripts/inject-sw.cjs` exists, but `build:inject` does not invoke it by default. Ensure the `self.__WB_MANIFEST` placeholder remains in your SW; if you need explicit injection, run the script after `yarn sw:build`.
 
 ### Critical Build Requirement
 
@@ -1373,7 +1385,7 @@ swNotification.value?.resetUpdateState()
 
 ### Testing the Enhanced Component
 
-**Test Page**: Visit `/test-enhanced-sw` to test all features:
+**Test Page**: Visit the `/debug` route in development, or use the debug-archive pages to test features:
 
 - Update simulation
 - Debug panel interaction
@@ -1383,9 +1395,11 @@ swNotification.value?.resetUpdateState()
 
 **Development Testing:**
 ```bash
-# Test the enhanced component
+# Start the dev server
 yarn dev
-open http://localhost:3000/test-enhanced-sw
+# Then open the /debug route or the debug-archive test pages
+# e.g., /debug, debug-archive/test-offline-functionality.md (guide),
+# debug-archive/test-notification.html, debug-archive/test-notification-modal.html
 
 # Test keyboard shortcuts (in browser)
 # Ctrl/Cmd + Shift + D - Toggle debug panel
@@ -1398,9 +1412,9 @@ open http://localhost:3000/test-enhanced-sw
 ### Daily Development Commands
 
 ```bash
-# 1. Start development with service worker compilation
+# 1. Start development server
 yarn dev
-# ↳ Automatically compiles SW + starts Nuxt dev server
+# ↳ Starts Nuxt dev server (run `yarn sw:build` if you changed sw-src/)
 
 # 2. Rebuild service worker only (faster iteration)
 yarn sw:build
@@ -1411,11 +1425,11 @@ yarn test:pwa-offline
 # ↳ Run Playwright PWA offline tests
 
 # 4. Test push notifications
-open http://localhost:3000/test-notifications/
+# Open /debug (development) or use debug-archive/test-notification*.html
 # ↳ Test notification subscription and sending
 
 # 5. Debug service worker and caching
-open http://localhost:3000/debug-ui/
+# Visit /debug in development for diagnostics
 # ↳ Comprehensive debug interface with SW status
 
 # 6. Test background sync
@@ -1424,7 +1438,7 @@ open http://localhost:3000/debug-ui/
 
 ### Enhanced Development Tools
 
-#### Debug UI (`/debug-ui/` page)
+#### Debug UI (`/debug` route)
 - **Service Worker Status**: Version, controlling state, registration info
 - **Cache Inspection**: View all caches and their contents
 - **Background Sync Testing**: Manual sync trigger and status
@@ -1434,9 +1448,10 @@ open http://localhost:3000/debug-ui/
 - **Notification Testing**: Send test notifications with custom payloads
 
 #### Test Pages
-- **`/test-notifications/`**: Complete notification system testing
+- **`debug-archive/test-notification.html`**: Notification system testing
+- **`debug-archive/test-notification-modal.html`**: Modal-based notification testing
 - **`/offline/`**: Enhanced offline experience page
-- **`/debug-ui/`**: Comprehensive development debugging interface
+- **`/debug`**: Development debugging interface
 
 #### Browser DevTools Integration
 ```javascript
@@ -1540,9 +1555,10 @@ test('works offline', async ({ page, context }) => {
 
 #### Service Worker Not Updating
 ```bash
-# Clear all caches and restart
+# Clear caches and restart
 rm -rf public/sw.js .nuxt .output
-yarn sw:build && yarn dev
+yarn sw:build
+yarn dev
 ```
 
 #### Build Injection Failing
@@ -1837,7 +1853,8 @@ navigator.serviceWorker.addEventListener('message', event => {
 rm -rf .nuxt .output public/sw.js
 
 # Rebuild from scratch
-yarn sw:build && yarn dev
+yarn sw:build
+yarn dev
 ```
 
 #### 4. Offline Functionality Broken

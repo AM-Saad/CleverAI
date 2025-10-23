@@ -90,6 +90,48 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
 
     // IndexedDB handles - using shared helper for consistency
     // All IndexedDB operations now use shared/idb.ts for non-destructive schema management
+    let db: IDBDatabase | null = null
+    let dbInitAttempts = 0
+    const MAX_DB_INIT_ATTEMPTS = 3
+
+    async function ensureDB(): Promise<IDBDatabase | null> {
+        if (db) return db
+        
+        if (dbInitAttempts >= MAX_DB_INIT_ATTEMPTS) {
+            error('IndexedDB initialization failed after max attempts')
+            return null
+        }
+        
+        try {
+            dbInitAttempts++
+            db = await openFormsDB()
+            log('IndexedDB initialized successfully')
+            dbInitAttempts = 0 // Reset on success
+            return db
+        } catch (e) {
+            error(`Failed to initialize IndexedDB (attempt ${dbInitAttempts}/${MAX_DB_INIT_ATTEMPTS}):`, e)
+            
+            // Notify user on final failure
+            if (dbInitAttempts >= MAX_DB_INIT_ATTEMPTS) {
+                await notifyClientsOfDBFailure()
+            }
+            
+            return null
+        }
+    }
+
+    async function notifyClientsOfDBFailure() {
+        const clients = await swSelf.clients.matchAll({ type: 'window' })
+        clients.forEach(client => {
+            client.postMessage({
+                type: 'error',
+                data: {
+                    message: 'Offline storage unavailable. Data may not be saved.',
+                    identifier: 'idb-init-failed'
+                }
+            })
+        })
+    }
 
     // Workbox setup using bundled modules -------------------------------------------------
 
@@ -701,7 +743,7 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
                 }
 
                 const title = data.title || 'Card Review';
-                const options: NotificationOptions = {
+                const options = {
                     body: data.message || 'You have cards to review!',
                     icon: data.icon || '/icons/192x192.png',
                     badge: '/icons/96x96.png',
@@ -713,8 +755,23 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
                         timestamp: Date.now(),
                         originalData: data,
                         ...(data.data || {})
-                    }
-                };
+                    },
+                    // Add interactive actions (not in base NotificationOptions type but supported by browsers)
+                    actions: [
+                        {
+                            action: 'review',
+                            title: '📚 Review Now'
+                        },
+                        {
+                            action: 'snooze',
+                            title: '⏰ Snooze 1hr'
+                        },
+                        {
+                            action: 'dismiss',
+                            title: '❌ Dismiss'
+                        }
+                    ]
+                } as NotificationOptions & { actions?: Array<{ action: string; title: string }> };
 
                 console.log('[SW] 📢 Showing notification:', title);
                 console.log('[SW] Notification options:', options);
@@ -750,22 +807,67 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
     })
 
     swSelf.addEventListener('notificationclick', (event: NotificationEvent) => {
+        const action = event.action
+        const ndata = event.notification.data as { url?: string } | undefined
+        
+        console.log('[SW] 🖱️ Notification clicked:', { action, data: ndata })
+        
         event.notification.close()
+        
         event.waitUntil((async () => {
-            const ndata = event.notification.data as { url?: string } | undefined
-            const targetUrl = (ndata?.url) || '/'
-            const clients = await swSelf.clients.matchAll({ type: 'window', includeUncontrolled: true })
-            if (clients.length) {
-                for (const c of clients) c.postMessage({ type: 'NOTIFICATION_CLICK_NAVIGATE', url: targetUrl })
+            // Handle snooze action
+            if (action === 'snooze') {
+                console.log('[SW] ⏰ Snooze action triggered')
                 try {
-                    await (clients[0] as WindowClient).focus()
-                } catch { /* ignore */ }
+                    // Send snooze request to server
+                    await fetch('/api/notifications/snooze', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            duration: 3600, // 1 hour in seconds
+                            timestamp: Date.now()
+                        })
+                    })
+                    console.log('[SW] ✅ Snoozed for 1 hour')
+                } catch (error) {
+                    console.error('[SW] ❌ Snooze failed:', error)
+                }
                 return
             }
+            
+            // Handle dismiss action
+            if (action === 'dismiss') {
+                console.log('[SW] ❌ Dismiss action triggered - notification closed')
+                // Just close, no further action
+                return
+            }
+            
+            // Handle review action or default click (no action specified)
+            const targetUrl = (ndata?.url) || '/'
+            console.log('[SW] 🔗 Navigating to:', targetUrl)
+            
+            const clients = await swSelf.clients.matchAll({ type: 'window', includeUncontrolled: true })
+            if (clients.length) {
+                // Focus existing window and navigate
+                for (const c of clients) {
+                    c.postMessage({ type: 'NOTIFICATION_CLICK_NAVIGATE', url: targetUrl })
+                }
+                try {
+                    await (clients[0] as WindowClient).focus()
+                    console.log('[SW] ✅ Focused existing window')
+                } catch (focusError) {
+                    console.warn('[SW] ⚠️ Could not focus window:', focusError)
+                }
+                return
+            }
+            
+            // No existing window, open new one
             try {
                 await swSelf.clients.openWindow(targetUrl)
+                console.log('[SW] ✅ Opened new window')
+            } catch (openError) {
+                console.error('[SW] ❌ Could not open window:', openError)
             }
-            catch { /* ignore */ }
         })())
     })
 
@@ -784,11 +886,37 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
 
         if (syncEvt.tag === SYNC_TAGS.FORM) {
             syncEvt.waitUntil((async () => {
+                try {
+                    // Ensure DB is available before syncing
+                    const database = await ensureDB()
+                    if (!database) {
+                        warn('IndexedDB unavailable, cannot sync forms')
+                        await notifyClientsOfDBFailure()
+                        return
+                    }
 
-                const clients = await swSelf.clients.matchAll({ type: 'window' })
-                clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.SYNC_FORM, data: { message: 'Syncing data..' } }))
-                await syncForms(clients)
+                    const clients = await swSelf.clients.matchAll({ type: 'window' })
+                    clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.SYNC_FORM, data: { message: 'Syncing data..' } }))
+                    
+                    const records = await getAllRecords<StoredFormRecord>(database, 'forms')
+                    if (records.length === 0) {
+                        log('No forms to sync')
+                        return
+                    }
+                    
+                    // Process sync with records
+                    // await syncForms(clients, records)  // TODO: implement actual sync logic
 
+                } catch (err) {
+                    error('Background sync failed:', err)
+                    const clients = await swSelf.clients.matchAll({ type: 'window' })
+                    clients.forEach(client => {
+                        client.postMessage({
+                            type: SW_MESSAGE_TYPE.FORM_SYNC_ERROR,
+                            data: { message: 'Failed to sync offline data' }
+                        })
+                    })
+                }
             })())
         }
     })
@@ -971,7 +1099,7 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
 
     async function syncForms(clients: readonly Client[]) {
         try {
-            const formData = await getFormDataAll()
+            const formData = await getFormDataAll('forms')
             if (!formData.length) return
             const response = await sendDataToServer(formData)
             if (!response.ok) throw new Error('Sync failed')

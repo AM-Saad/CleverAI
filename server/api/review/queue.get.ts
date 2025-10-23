@@ -27,6 +27,18 @@ export default defineEventHandler(async (event) => {
   }
   const { folderId, limit } = parsedQuery;
 
+  // Validate folder ownership if folderId provided
+  if (folderId) {
+    const folderExists = await prisma.folder.findFirst({
+      where: { id: folderId, userId: user.id },
+      select: { id: true }  // Minimal selection for performance
+    });
+    
+    if (!folderExists) {
+      throw Errors.forbidden("Folder not found or access denied");
+    }
+  }
+
   // Build where clause
   const whereClause = {
     userId: user.id,
@@ -47,21 +59,28 @@ export default defineEventHandler(async (event) => {
   }
 
   const cardIds = cardReviews.map((c) => c.cardId);
+  const folderIds = [...new Set(cardReviews.map((c) => c.folderId))];
 
-  // Fetch materials & flashcards in parallel
-  const [materials, flashcards] = await Promise.all([
+  // Fetch all data in parallel - materials, flashcards, AND folders separately
+  // This avoids N+1 query by fetching folders in one query
+  const [materials, flashcards, folders] = await Promise.all([
     prisma.material.findMany({
       where: { id: { in: cardIds } },
-      include: { folder: true },
+      // Don't include folder - we'll fetch separately
     }),
     prisma.flashcard.findMany({
       where: { id: { in: cardIds } },
-      include: { folder: true },
+      // Don't include folder - we'll fetch separately
+    }),
+    prisma.folder.findMany({
+      where: { id: { in: folderIds } },
+      select: { id: true, title: true, userId: true }
     }),
   ]);
 
   const materialMap = new Map(materials.map((m) => [m.id, m]));
   const flashcardMap = new Map(flashcards.map((f) => [f.id, f]));
+  const folderMap = new Map(folders.map((f) => [f.id, f]));
 
   const cards = cardReviews
     .map((cardReview) => {

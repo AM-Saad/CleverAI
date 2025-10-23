@@ -1,5 +1,21 @@
 # Spaced Repetition Card Review System
 
+> ⚠️ **SUPERSEDED**: This document has been replaced by [../SPACED_REPETITION.md](../SPACED_REPETITION.md)
+> 
+> **Why archived**: The main documentation is more comprehensive, better organized, and includes:
+> - ✅ Complete debug controls documentation with usage guidance
+> - ✅ Comprehensive testing workflows and validation procedures
+> - ✅ Performance & analytics section with detailed metrics
+> - ✅ Troubleshooting guide for common issues
+> - ✅ Domain architecture documentation (DDD pattern)
+> - ✅ Complete API reference with enrollment-status endpoint
+> 
+> **Historical value**: This document provides detailed service architecture explanations and component integration examples that may be useful for understanding the implementation history.
+> 
+> *Last updated: September 2025 → Archived: October 2025*
+
+---
+
 A comprehensive spaced repetition learning system integrated into CleverAI, implementing the SM-2 algorithm for optimal memory retention and learning efficiency. Now featuring advanced analytics, keyboard shortcuts, accessibility features, and enhanced user experience.
 
 ## 🎯 Overview

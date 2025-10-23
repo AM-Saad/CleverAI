@@ -26,7 +26,7 @@ The Spaced Repetition Card Review System transforms any material in your folders
 ### Key Features
 
 - **SM-2 Algorithm Implementation**: Uses the proven SuperMemo SM-2 algorithm for calculating review intervals
-- **6-Level Grading System**: Granular feedback system from "Complete blackout" to "Perfect response"
+- **6-Level Grading System**: Granular feedback system (grades 0-5) from "Again" to "Easy"
 - **Advanced Analytics Dashboard**: Comprehensive statistics with real-time performance tracking
 - **Full Keyboard Navigation**: Complete keyboard shortcuts for power users
 - **Accessibility Features**: WCAG-compliant interface with screen reader support
@@ -66,7 +66,7 @@ The review interface includes powerful enhancements:
 
 #### Keyboard Shortcuts (Press `?` for help)
 - **Space**: Reveal/hide answers
-- **1-6**: Grade cards (1=Again, 6=Perfect)
+- **0-5**: Grade cards (0=Again, 5=Easy)
 - **Arrow Keys**: Navigate between cards
 - **A**: Toggle analytics dashboard
 - **S**: Skip current card
@@ -92,7 +92,7 @@ The SM-2 (SuperMemo-2) algorithm calculates optimal review intervals based on:
 - **Repetitions**: Number of successful reviews
 - **Ease Factor**: Difficulty modifier (1.3 to 2.5+)
 - **Interval**: Days until next review
-- **Grade**: Your performance rating (1-6)
+- **Grade**: Your performance rating (0-5)
 
 ### Default Starting State
 
@@ -110,12 +110,12 @@ When you first enroll a card:
 
 | Grade | Meaning | Algorithm Effect |
 |-------|---------|------------------|
-| 1 | **Complete blackout** | Reset to start, ease factor decreases heavily |
-| 2 | **Hard** (incorrect) | Reset to start, ease factor decreases |
-| 3 | **Hard** (correct with difficulty) | Reset to start, ease factor decreases slightly |
-| 4 | **Good** (correct with hesitation) | Normal progression, ease factor unchanged |
+| 0 | **Again** (complete blackout) | Reset to start, ease factor decreases heavily |
+| 1 | **Hard** (incorrect but familiar) | Reset to start, ease factor decreases |
+| 2 | **Hard** (correct with difficulty) | Reset to start, ease factor decreases slightly |
+| 3 | **Good** (correct with hesitation) | Normal progression, ease factor decreases slightly |
+| 4 | **Good** (correct with effort) | Normal progression, ease factor unchanged |
 | 5 | **Easy** (perfect recall) | Normal progression, ease factor increases |
-| 6 | **Perfect** (too easy) | Normal progression, ease factor increases more |
 
 ### Example 1: Hard → Easy Performance
 
@@ -193,80 +193,229 @@ Learning "casa" (house) - starts easy but later forgotten
 
 ## 🏗️ Architecture & Components
 
-### System Components
+### System Architecture
+
+The spaced repetition system follows a **Domain-Driven Design (DDD)** architecture with clean separation of concerns:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Presentation Layer                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │ Pages        │  │ Components   │  │ Composables  │      │
+│  │ review.vue   │  │ CardReview   │  │ useCardReview│      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│                       Service Layer                          │
+│  ┌──────────────┐                                           │
+│  │ ReviewService│ → FetchFactory → API Endpoints            │
+│  └──────────────┘                                           │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│                        API Layer                             │
+│  POST /api/review/enroll                                    │
+│  POST /api/review/grade  ← Uses Domain Layer                │
+│  GET  /api/review/queue                                     │
+│  GET  /api/review/analytics                                 │
+│  GET  /api/review/enrollment-status                         │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│                      Domain Layer (DDD)                      │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │  SREngine    │  │ SRScheduler  │  │  SRPolicy    │      │
+│  │  (Business)  │  │  (SM-2 Algo) │  │  (Config)    │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+│  ┌──────────────┐  ┌──────────────┐                        │
+│  │ CardReview   │  │  SRTypes     │                        │
+│  │ Repository   │  │  (Domain)    │                        │
+│  └──────────────┘  └──────────────┘                        │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+┌─────────────────────────────────────────────────────────────┐
+│                    Data Layer (Prisma)                       │
+│  CardReview Model → MongoDB                                 │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Domain Layer Components
+
+The domain layer (`app/domain/sr/`) implements core business logic:
+
+#### **SREngine** (Business Logic Orchestrator)
+```typescript
+// app/domain/sr/SREngine.ts
+interface SREngine {
+  enroll(params): Promise<ReviewState>
+  getDailyQueue(query): Promise<ReviewState[]>
+  grade(input): Promise<ReviewState>
+  snooze(params): Promise<ReviewState>
+  suspend(params): Promise<void>
+  resume(params): Promise<void>
+}
+```
+
+**Responsibilities**:
+- Orchestrates review workflows
+- Coordinates between repository and scheduler
+- Handles business rules (daily caps, idempotency)
+- Manages card lifecycle
+
+#### **SRScheduler** (SM-2 Algorithm)
+```typescript
+// app/domain/sr/SRScheduler.ts
+interface SRScheduler {
+  next(prev: ReviewState, grade: 0|1|2|3|4|5, policy?: SRPolicy): ReviewState
+}
+
+class Sm2Scheduler implements SRScheduler {
+  // Pure SM-2 algorithm implementation
+  // No side effects, fully testable
+}
+```
+
+**Responsibilities**:
+- Calculates next review state
+- Implements SM-2 formula
+- Updates ease factor, interval, repetitions
+- Strategy pattern allows future algorithm swaps
+
+#### **SRPolicy** (Configuration)
+```typescript
+// app/domain/sr/SRPolicy.ts
+type SRPolicy = {
+  defaultEaseFactor: 2.5
+  minEaseFactor: 1.3
+  firstIntervalDays: 1
+  secondIntervalDays: 6
+  maxIntervalDays: 180
+  dailyNewCap: 10
+}
+```
+
+**Purpose**: Centralized configuration for algorithm behavior
+
+#### **CardReviewRepository** (Data Access)
+```typescript
+// app/domain/repositories/CardReviewRepository.ts
+interface CardReviewRepository {
+  findByUserAndCard(userId, cardId): Promise<ReviewState | null>
+  create(state): Promise<ReviewState>
+  update(state): Promise<ReviewState>
+  findDue(query): Promise<ReviewState[]>
+  suspend(userId, cardId): Promise<void>
+  resume(userId, cardId): Promise<void>
+}
+```
+
+**Pattern**: Repository pattern abstracts data layer from business logic
+
+#### **SRTypes** (Domain Models)
+```typescript
+// app/domain/sr/SRTypes.ts
+type ReviewState = {
+  cardId: string
+  userId: string
+  folderId: string
+  repetitions: number
+  easeFactor: number
+  intervalDays: number
+  nextReviewAt: Date
+  lastReviewedAt?: Date
+  lastGrade?: number
+}
+```
+
+**Purpose**: Domain-specific type definitions
+
+### Component Tree
 
 ```
 📁 Spaced Repetition System
-├── 🔧 Contracts & Types (shared/review.contract.ts)
+├── 🔧 Contracts & Types (shared/utils/review.contract.ts)
+├── 🧠 Domain Layer (app/domain/sr/) - **DDD Architecture**
+│   ├── SREngine.ts - Business logic orchestrator
+│   ├── SRScheduler.ts - SM-2 algorithm implementation  
+│   ├── SRPolicy.ts - Configuration and defaults
+│   ├── SRTypes.ts - Domain type definitions
+│   └── ReminderService.ts - Notification interface
+├── 📊 Repository Pattern (app/domain/repositories/)
+│   ├── CardReviewRepository.ts - Repository interface
+│   └── PrismaCardReviewRepository.ts - Prisma implementation
 ├── 🌐 API Endpoints (server/api/review/)
 │   ├── enroll.post.ts - Card enrollment
-│   ├── grade.post.ts - SM-2 grading & scheduling
+│   ├── grade.post.ts - SM-2 grading (uses SREngine internally)
 │   ├── queue.get.ts - Review queue management
-│   ├── analytics.get.ts - Performance analytics & statistics
+│   ├── analytics.get.ts - Performance analytics
+│   ├── enrollment-status.get.ts - Bulk enrollment checks
 │   └── debug/update.post.ts - Debug controls (dev-only)
+├── 🔌 Service Layer (app/services/ReviewService.ts)
 ├── ⚡ Composables (app/composables/useCardReview.ts)
 ├── 🎨 UI Components (app/components/review/)
 │   ├── EnrollButton.vue - Material enrollment
-│   ├── CardReviewInterface.vue - Enhanced review interface with analytics
-│   ├── ReviewAnalyticsSummary.vue - Analytics dashboard component
-│   └── DebugPanel.vue - Development testing controls
+│   ├── CardReviewInterface.vue - Review interface with integrated debug panel
+│   └── ReviewAnalyticsSummary.vue - Analytics dashboard
 ├── 📄 Pages (app/pages/review.vue)
-└── 🔗 Integration (app/components/folder/FlashCards.vue)
+└── 🔗 Integration (app/components/folder/)
 ```
 
 ### Data Flow
 
 ```mermaid
 graph TD
-    A[Material in Folder] --> B[Enroll Button]
-    B --> C[API: /api/review/enroll]
-    C --> D[CardReview Database Entry]
-    D --> E[Review Queue]
-    E --> F[Review Interface]
-    F --> G[Grade Submission]
-    G --> H[API: /api/review/grade]
-    H --> I[SM-2 Algorithm]
-    I --> J[Update Intervals & Schedule]
-    J --> K[Next Review Date]
-
-    L[Debug Panel] --> M[API: /api/review/debug/update]
-    M --> N[Manual Algorithm Testing]
+    A[User Action] --> B[Enroll/Grade/Queue]
+    B --> C[ReviewService]
+    C --> D[API Endpoints]
+    D --> E[SREngine - Domain Layer]
+    E --> F[SRScheduler - SM-2]
+    E --> G[CardReviewRepository]
+    F --> H[Calculate Next State]
+    G --> I[Prisma/Database]
+    H --> E
+    I --> J[Update CardReview]
 ```
 
-### Database Schema
+**Key Architecture Benefits**:
+- ✅ **Testable**: Domain logic isolated from infrastructure
+- ✅ **Flexible**: Can swap algorithms via SRScheduler interface
+- ✅ **Maintainable**: Clear separation of concerns
+- ✅ **Type-Safe**: Full TypeScript + Zod validation
 
-```sql
--- Core card review table
-CREATE TABLE CardReview (
-  id                STRING PRIMARY KEY,
-  userId            STRING NOT NULL,
-  materialId        STRING NOT NULL,
-  enrolledAt        DATETIME DEFAULT CURRENT_TIMESTAMP,
-  lastReviewedAt    DATETIME,
-  nextReviewAt      DATETIME NOT NULL,
-  repetitions       INTEGER DEFAULT 0,
-  easeFactor        REAL DEFAULT 2.5,
-  intervalDays      INTEGER DEFAULT 0,
-  totalReviews      INTEGER DEFAULT 0,
-  streak            INTEGER DEFAULT 0,
+### Actual Database Schema
 
-  FOREIGN KEY (userId) REFERENCES User(id),
-  FOREIGN KEY (materialId) REFERENCES Material(id)
-);
+The CardReview model in Prisma (`server/prisma/schema.prisma`):
 
--- Review history for analytics
-CREATE TABLE ReviewHistory (
-  id                STRING PRIMARY KEY,
-  cardReviewId      STRING NOT NULL,
-  grade             INTEGER NOT NULL,
-  reviewedAt        DATETIME DEFAULT CURRENT_TIMESTAMP,
-  intervalBefore    INTEGER,
-  intervalAfter     INTEGER,
-  easeFactorBefore  REAL,
-  easeFactorAfter   REAL,
+```prisma
+model CardReview {
+  id             String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String
+  folderId       String
+  cardId         String    // Polymorphic: Flashcard.id or Material.id
+  resourceType   String    @default("flashcard")  // "material" | "flashcard"
+  
+  // SM-2 algorithm state
+  intervalDays   Int       @default(0)
+  easeFactor     Float     @default(2.5)
+  repetitions    Int       @default(0)
+  nextReviewAt   DateTime
+  lastReviewedAt DateTime?
+  
+  // Analytics
+  lastGrade      Int?      // 0-5
+  streak         Int       @default(0)
 
-  FOREIGN KEY (cardReviewId) REFERENCES CardReview(id)
-);
+  @@unique([userId, cardId])
+  @@index([userId, nextReviewAt])
+  @@index([folderId, nextReviewAt])
+}
+```
+
+**Key features**:
+- **Polymorphic design**: Supports both materials and flashcards via `cardId` + `resourceType`
+- **Indexed queries**: Optimized for fetching due cards
+- **Complete SM-2 state**: All algorithm parameters persisted
 ```
 
 ---
@@ -350,6 +499,20 @@ Manually set card review parameters for testing:
 }
 ```
 
+**What it does**:
+- ✅ Immediately updates the card's database record
+- ✅ Overwrites current spaced repetition state permanently  
+- ✅ Bypasses normal SM-2 algorithm calculations
+- ✅ Changes take effect instantly for scheduling
+
+**Database fields updated**:
+- `easeFactor` → Controls future difficulty adjustments
+- `intervalDays` → Used in next algorithm calculation
+- `repetitions` → Tracks successful review count
+- `streak` → Consecutive correct answers
+- `nextReviewAt` → When card becomes due (if set)
+- `lastGrade` → Previous performance score (if set)
+
 ##### **🔄 Reset**
 Reset card to initial state:
 ```typescript
@@ -361,6 +524,12 @@ Reset card to initial state:
 }
 ```
 
+**What it does**:
+- Reloads current card's values from database
+- Restores debug panel sliders to current card state
+- Does NOT change database - only updates UI
+- Useful for undoing unsaved changes
+
 ##### **🎯 Load Presets**
 Quick-load common testing scenarios:
 - **New Card**: Fresh enrollment state
@@ -368,6 +537,56 @@ Quick-load common testing scenarios:
 - **Review Card**: Established card (3+ repetitions)
 - **Difficult Card**: Low ease factor (hard to remember)
 - **Easy Card**: High ease factor (easy to remember)
+
+**What it does**:
+- Sets debug panel controls to predefined values
+- Does NOT change database until you click "Apply Values"
+- Provides quick scenarios for common testing
+
+#### **⏰ When to Apply Debug Values**
+
+##### **🎯 Apply BEFORE Grading** (Recommended)
+**Use case**: Testing how different card states affect the SM-2 algorithm
+
+**Workflow**:
+1. Load a card in review mode
+2. Set debug values (simulate card history)
+3. **Apply Values** → Card now has the state you want to test
+4. **Grade the card** → See how algorithm responds
+5. Observe new calculated values (interval, ease factor changes)
+
+**Example**: "What happens when a struggling card (EF: 1.7, streak: 0) gets grade 4?"
+
+##### **🔧 Apply AFTER Grading** (Edge Case Testing)
+**Use case**: Overriding algorithm results to test specific scenarios
+
+**Workflow**:
+1. Grade card normally (algorithm calculates new values)
+2. Override with debug values to test edge cases
+3. **Apply Values** → Manually set specific scheduling scenarios
+4. Move to next card or test further behavior
+
+**Example**: "Force a card to be due tomorrow regardless of grade"
+
+#### **⚠️ Important: Interval Days vs Next Review Date**
+
+**Understanding the relationship**:
+
+**Normal SM-2 Flow**:
+1. User grades a card
+2. Algorithm calculates new `intervalDays` based on performance  
+3. System sets `nextReviewAt = today + intervalDays`
+
+**Debug Controls Behavior**:
+- **Interval Days**: Sets interval used for *future* calculations
+- **Next Review Date**: Sets when card becomes due (immediate override)
+- **When both set**: Next Review Date takes precedence for scheduling, but Interval Days affects future calculations
+
+**Recommendations**:
+- **For testing scheduling**: Set Next Review Date to make cards due now/soon
+- **For testing algorithm**: Set Interval Days to test algorithm behavior
+- **For realistic testing**: Keep them consistent (Next Review Date ≈ today + Interval Days)
+- **For conflict testing**: Set differently to test edge cases
 
 #### **Testing Timing: Before vs After Grading**
 
@@ -465,6 +684,52 @@ Enroll a material for spaced repetition review.
 }
 ```
 
+**Note**: The system supports both materials and flashcards. Use `resourceType` and `resourceId` for new code:
+```typescript
+// Preferred format
+{
+  resourceType: 'material' | 'flashcard',
+  resourceId: string
+}
+
+// Legacy format (still supported)
+{
+  materialId: string
+}
+```
+
+### Enrollment Status API
+
+#### `GET /api/review/enrollment-status`
+Check enrollment status for multiple resources at once.
+
+```typescript
+// Request (query parameters)
+{
+  resourceIds: string,  // comma-separated IDs
+  resourceType?: 'material' | 'flashcard'
+}
+
+// Response
+{
+  enrollments: Record<string, boolean>  // resourceId -> isEnrolled
+}
+
+// Example usage
+GET /api/review/enrollment-status?resourceIds=abc123,def456,ghi789&resourceType=flashcard
+
+// Response
+{
+  enrollments: {
+    "abc123": true,
+    "def456": false,
+    "ghi789": true
+  }
+}
+```
+
+**Use case**: Bulk checking enrollment status for displaying enrollment buttons in lists.
+
 ### Grading API
 
 #### `POST /api/review/grade`
@@ -474,7 +739,7 @@ Submit a grade for a card and update SM-2 algorithm state.
 // Request
 {
   cardReviewId: string,
-  grade: number // 1-6
+  grade: number // 0-5
 }
 
 // Response

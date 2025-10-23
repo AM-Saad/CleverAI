@@ -57,13 +57,13 @@ The CleverAI notification system provides intelligent push notifications for car
 │   ├── app/composables/useNotifications.ts - Core notification logic
 │   ├── app/composables/useServiceWorkerBridge.ts - SW message handling
 │   ├── app/layouts/default.vue - Notification navigation handling
-│   └── app/components/NotificationPreferences.vue - User settings UI
+│   └── app/components/settings/NotificationPreferences.vue - User settings UI
 ├── 🌐 Server-side APIs
-│   ├── server/api/notifications/subscribe.post.ts - Subscription management
-│   ├── server/api/notifications/unsubscribe.post.ts - Unsubscription
-│   ├── server/api/notifications/send.post.ts - Send notifications
-│   ├── server/api/notifications/preferences.get.ts - User preferences
-│   └── server/api/notifications/subscriptions.get.ts - List subscriptions
+│   ├── server/api/notifications/subscribe.ts - Subscription management (POST)
+│   ├── server/api/notifications/unsubscribe.ts - Unsubscription (POST)
+│   ├── server/api/notifications/send.post.ts - Send notifications (POST)
+│   ├── server/api/notifications/preferences.ts - User preferences (GET/PUT)
+│   └── server/api/notifications/subscriptions.get.ts - List subscriptions (GET)
 ├── ⚙️ Service Worker
 │   ├── sw-src/index.ts - Push event handling (consolidated)
 │   └── public/sw.js - Compiled service worker
@@ -71,9 +71,9 @@ The CleverAI notification system provides intelligent push notifications for car
 │   ├── prisma/schema.prisma - MongoDB schema
 │   └── server/utils/cleanupSubscriptions.ts - Maintenance utilities
 ├── 🔧 Shared Infrastructure
-│   ├── shared/idb.ts - IndexedDB helper (non-destructive)
-│   ├── shared/constants/pwa.ts - Notification constants
-│   └── types/notifications.ts - TypeScript definitions
+│   ├── app/utils/idb.ts - IndexedDB helper (non-destructive)
+│   ├── app/utils/constants/pwa.ts - Centralized PWA/notification constants
+│   └── app/types/notifications.d.ts - Notification-related TypeScript definitions
 └── 🔧 Utilities
     └── server/services/NotificationService.ts - Core service
 ```
@@ -515,8 +515,8 @@ The service worker notification system now uses a consolidated architecture with
 
 ```typescript
 // sw-src/index.ts - Consolidated implementation
-import { openFormsDB, getAllRecords } from '../shared/idb'
-import { NOTIFICATION_ACTIONS, CACHE_NAMES } from '../shared/constants/pwa'
+import { openFormsDB, getAllRecords } from '../app/utils/idb'
+import { /* NOTIFICATION_ACTIONS, */ CACHE_NAMES } from '../app/utils/constants/pwa'
 
 self.addEventListener('push', async (event) => {
   try {
@@ -689,7 +689,7 @@ const cleanupExpiredSubscriptions = async () => {
 
 ### Testing Interface
 
-Use `/test-notifications` page for comprehensive testing:
+Use the `/debug` route in development for general diagnostics, and the debug-archive test pages for notification-specific flows (e.g., `debug-archive/test-notification.html`, `debug-archive/test-notification-modal.html`, `debug-archive/test-notifications.vue`):
 
 #### Manual Testing
 1. **Subscribe/Unsubscribe**: Test subscription lifecycle

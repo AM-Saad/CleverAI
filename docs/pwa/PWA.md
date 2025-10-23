@@ -54,7 +54,6 @@ yarn test:pwa-offline
 
 # Debug and development tools
 open http://localhost:3000/debug
-open http://localhost:3000/test-enhanced-sw
 ```
 
 ### Critical Files You Need to Know
@@ -62,7 +61,7 @@ open http://localhost:3000/test-enhanced-sw
 | File | Purpose | Edit? |
 |------|---------|-------|
 | `sw-src/index.ts` | **Main service worker source (TypeScript)** | ✅ YES |
-| `shared/idb.ts` | **Shared IndexedDB helper (non-destructive)** | ✅ YES |
+| `app/utils/idb.ts` | **Shared IndexedDB helper (non-destructive)** | ✅ YES |
 | `app/composables/useServiceWorkerBridge.ts` | **SW message handling (singleton)** | ✅ YES |
 | `app/composables/useOffline.ts` | **Background sync logic** | ✅ YES |
 | `app/plugins/sw-sync.client.ts` | **Sync registration** | ✅ YES |
@@ -70,7 +69,7 @@ open http://localhost:3000/test-enhanced-sw
 | `public/sw.js` | **Compiled service worker** | ❌ AUTO-GENERATED |
 | `public/manifest.webmanifest` | **PWA manifest** | ✅ YES |
 | `scripts/inject-sw.cjs` | **Workbox injection pipeline** | ⚠️ RARELY |
-| `shared/constants/pwa.ts` | **PWA constants & configuration** | ✅ YES |
+| `app/utils/constants/pwa.ts` | **PWA constants & configuration** | ✅ YES |
 
 ---
 
@@ -84,7 +83,7 @@ graph TD
     B -->|Workbox Injection| C[.output/public/sw.js]
     C -->|Runtime| D[Browser Service Worker]
 
-    E[shared/idb.ts] -->|IndexedDB Helper| F[Client & SW]
+    E[app/utils/idb.ts] -->|IndexedDB Helper| F[Client & SW]
     G[useServiceWorkerBridge] -->|Singleton Pattern| H[SW Messages]
     I[app/layouts/default.vue] -->|Update UI| J[User Notifications]
 
@@ -200,8 +199,8 @@ import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching'
 import { registerRoute } from 'workbox-routing'
 import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
-import { SW_CONFIG, CACHE_NAMES, AUTH_STUBS } from '../shared/constants'
-import { openFormsDB, getAllRecords, deleteRecord } from '../shared/idb'
+import { SW_CONFIG, CACHE_NAMES, AUTH_STUBS } from '../app/utils/constants/pwa'
+import { openFormsDB, getAllRecords, deleteRecord } from '../app/utils/idb'
 
 // Version and configuration from centralized constants
 const SW_VERSION = SW_CONFIG.VERSION
@@ -214,7 +213,7 @@ const SW_VERSION = SW_CONFIG.VERSION
 3. **Background Sync**: Form sync using shared IndexedDB helper
 4. **Push Notifications**: Complete notification system with click handling
 5. **Update Management**: Seamless update detection with user control
-6. **Shared IndexedDB**: Non-destructive schema management via `shared/idb.ts`
+6. **Shared IndexedDB**: Non-destructive schema management via `app/utils/idb.ts`
 7. **Message Bridge**: Centralized communication via `useServiceWorkerBridge`
 
 ### Recent Architectural Improvements ✅
@@ -325,7 +324,7 @@ const {
 
 ### Centralized Configuration
 
-All PWA constants are now centralized in `shared/constants/pwa.ts`:
+All PWA constants are now centralized in `app/utils/constants/pwa.ts`:
 
 #### **Before vs After Refactoring:**
 
@@ -338,7 +337,7 @@ const CACHE_NAMES = { pages: 'pages', assets: 'assets' }
 
 **✅ AFTER:**
 ```typescript
-import { SW_CONFIG, DB_CONFIG, CACHE_NAMES } from '../../shared/constants'
+import { SW_CONFIG, DB_CONFIG, CACHE_NAMES } from '../../app/utils/constants/pwa'
 
 const SW_VERSION = SW_CONFIG.VERSION
 const { NAME: DB_NAME } = DB_CONFIG
@@ -356,12 +355,12 @@ const { NAME: DB_NAME } = DB_CONFIG
 ### Files Refactored & Consolidated
 
 - ✅ `sw-src/index.ts` - **Consolidated SW with shared IDB helper**
-- ✅ `shared/idb.ts` - **Non-destructive IndexedDB operations**
+- ✅ `app/utils/idb.ts` - **Non-destructive IndexedDB operations**
 - ✅ `app/composables/useServiceWorkerBridge.ts` - **Singleton message handling**
 - ✅ `app/composables/useOffline.ts` - **Uses shared IDB helper**
 - ✅ `app/plugins/sw-sync.client.ts` - **Streamlined sync registration**
 - ✅ `app/layouts/default.vue` - **Integrated update notifications**
-- ✅ `shared/constants/pwa.ts` - **Centralized configuration**
+- ✅ `app/utils/constants/pwa.ts` - **Centralized configuration**
 
 #### Recent Consolidation Benefits
 

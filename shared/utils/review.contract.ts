@@ -51,8 +51,9 @@ export type EnrollCardResponse = z.infer<typeof EnrollCardResponseSchema>;
 
 // Card grading request
 export const GradeCardRequestSchema = z.object({
-  cardId: z.string().min(1, "Card ID is required"),
-  grade: ReviewGradeSchema,
+  cardId: z.string(),
+  grade: z.enum(["0", "1", "2", "3", "4", "5"]),
+  requestId: z.string().optional(), // For idempotency
 });
 export type GradeCardRequest = z.infer<typeof GradeCardRequestSchema>;
 

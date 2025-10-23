@@ -1,3 +1,15 @@
+# SM-2 Algorithm: Detailed Examples
+
+> 📚 **Educational Reference**: This document provides detailed step-by-step SM-2 algorithm examples with complete state tracking.
+> 
+> **Relationship to main docs**: While [../SPACED_REPETITION.md](../SPACED_REPETITION.md) includes inline algorithm examples, this document offers more detailed explanations with annotated reasoning and complete state history throughout the learning process.
+> 
+> **Use case**: Reference this when you need deep understanding of how the algorithm behaves with specific numbers and state transitions. Perfect for learning the algorithm or debugging unexpected behavior.
+> 
+> *Educational supplement - actively maintained*
+
+---
+
 Walk-through concrete examples with actual numbers to show how the SM-2 algorithm adapts to your performance.
 
 ## 🎯 **Default Starting State**

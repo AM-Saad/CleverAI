@@ -47,25 +47,45 @@ const lastFormSyncEventType = ref<
 const notificationUrl = ref<string | null>(null);
 
 let messageHandler: ((e: MessageEvent) => void) | null = null;
+let updateFoundListener: (() => void) | null = null;
+let controllerChangeListener: (() => void) | null = null;
 let wired = false;
 
 export function useServiceWorkerBridge() {
   function wireRegistrationListeners(reg: ServiceWorkerRegistration) {
+    // Clean up existing listeners first to prevent duplicates
+    if (updateFoundListener) {
+      reg.removeEventListener("updatefound", updateFoundListener);
+    }
+    if (controllerChangeListener) {
+      navigator.serviceWorker.removeEventListener("controllerchange", controllerChangeListener);
+    }
+
     // Detect when a new SW is installed and waiting
-    reg.addEventListener("updatefound", () => {
+    updateFoundListener = () => {
       const installing = reg.installing;
       if (!installing) return;
-      installing.addEventListener("statechange", () => {
+      
+      const stateChangeHandler = () => {
         if (installing.state === "installed" && reg.waiting) {
-          updateAvailable.value = true;
+          // Guard against duplicate updates
+          if (!updateAvailable.value) {
+            updateAvailable.value = true;
+          }
         }
-      });
-    });
+      };
+      
+      installing.addEventListener("statechange", stateChangeHandler);
+    };
 
     // Optional: observe controller changes (used for auto-reload elsewhere if desired)
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
+    controllerChangeListener = () => {
       // no-op here; UI component handles actual refresh
-    });
+    };
+
+    // Wire up listeners
+    reg.addEventListener("updatefound", updateFoundListener);
+    navigator.serviceWorker.addEventListener("controllerchange", controllerChangeListener);
   }
 
   function postMessage(msg: unknown) {
@@ -143,8 +163,15 @@ export function useServiceWorkerBridge() {
   });
 
   onBeforeUnmount(() => {
-    if (messageHandler)
+    if (messageHandler) {
       navigator.serviceWorker.removeEventListener("message", messageHandler);
+    }
+    if (registration.value && updateFoundListener) {
+      registration.value.removeEventListener("updatefound", updateFoundListener);
+    }
+    if (controllerChangeListener) {
+      navigator.serviceWorker.removeEventListener("controllerchange", controllerChangeListener);
+    }
   });
 
   async function activateUpdateAndReload() {

@@ -1,5 +1,23 @@
 # Debug Controls Implementation Summary
 
+> ⚠️ **PARTIALLY SUPERSEDED**: Core debug concepts have been merged into [../SPACED_REPETITION.md (Debug Controls section)](../SPACED_REPETITION.md#debug-controls--testing)
+> 
+> **What's been merged**:
+> - ✅ "What Each Action Does" - Detailed explanations of Apply/Reset/Load Presets
+> - ✅ "Apply BEFORE/AFTER Grading" - Timing guidance for testing
+> - ✅ "Interval Days vs Next Review Date" - Relationship and recommendations
+> 
+> **Still useful for**:
+> - 📝 Implementation details and file locations
+> - 🏗️ Technical architecture of debug system
+> - 📚 Historical context of development decisions
+> 
+> **Usage guidance**: Now in main documentation with enhanced explanations
+> 
+> *Implementation guide - conceptual content merged: October 2025*
+
+---
+
 ## Overview
 Successfully implemented comprehensive debug controls for testing spaced repetition scenarios in development environment only.
 

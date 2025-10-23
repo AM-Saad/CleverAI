@@ -34,20 +34,22 @@ export async function scheduleCardDueNotification(params: ScheduleNotificationPa
       return null
     }
 
-    // Check if there's already a notification scheduled for this card
-    const existingNotification = await prisma.scheduledNotification.findFirst({
-      where: {
-        userId: params.userId,
-        type: 'CARD_DUE',
-        sent: false
-      }
-    })
-
     const metadataValue = JSON.parse(JSON.stringify({
       ...params.metadata,
       content: params.content,
       cardId: params.cardId
     }))
+
+    // Find-or-create pattern with proper card filtering
+    // First, try to find existing unsent notification for THIS specific card
+    const existingNotification = await prisma.scheduledNotification.findFirst({
+      where: {
+        userId: params.userId,
+        type: 'CARD_DUE',
+        cardId: params.cardId,  // ✅ Filter by specific card
+        sent: false
+      }
+    })
 
     if (existingNotification) {
       // Update existing notification
@@ -61,7 +63,7 @@ export async function scheduleCardDueNotification(params: ScheduleNotificationPa
         }
       })
 
-      console.log(`Updated existing notification ${notification.id} for card ${params.cardId}`)
+      console.log(`Updated notification ${notification.id} for card ${params.cardId}`)
       return notification
     } else {
       // Create new notification
@@ -69,12 +71,13 @@ export async function scheduleCardDueNotification(params: ScheduleNotificationPa
         data: {
           userId: params.userId,
           type: 'CARD_DUE',
+          cardId: params.cardId,  // ✅ Store specific card ID
           scheduledFor: params.scheduledFor,
           metadata: metadataValue
         }
       })
 
-      console.log(`Scheduled new notification ${notification.id} for card ${params.cardId}`)
+      console.log(`Created notification ${notification.id} for card ${params.cardId}`)
       return notification
     }
   } catch (error) {
@@ -195,14 +198,18 @@ async function processNotification(notification: any) {
 
   let sentCount = 0
   let failureCount = 0
+  const errors: string[] = []
 
   for (const subscription of subscriptions) {
-    try {
-      await sendPushNotification(subscription, notification.metadata.content)
+    const result = await sendPushNotification(subscription, notification.metadata.content)
+    
+    if (result.success) {
       sentCount++
-    } catch (error) {
-      console.error(`Failed to send to subscription ${subscription.id}:`, error)
+    } else {
       failureCount++
+      if (result.error) {
+        errors.push(`${subscription.id}: ${result.error}`)
+      }
     }
   }
 
@@ -210,7 +217,8 @@ async function processNotification(notification: any) {
     const finalMetadata = JSON.parse(JSON.stringify({
       ...notification.metadata,
       sentToSubscriptions: sentCount,
-      failedSubscriptions: failureCount
+      failedSubscriptions: failureCount,
+      errors: errors.length > 0 ? errors : undefined
     }))
 
     await prisma.scheduledNotification.update({
@@ -221,22 +229,69 @@ async function processNotification(notification: any) {
         metadata: finalMetadata
       }
     })
-    console.log(`Notification ${notification.id} sent to ${sentCount} subscriptions`)
+    console.log(`✅ Notification ${notification.id} sent to ${sentCount}/${sentCount + failureCount} subscriptions`)
   } else {
-    throw new Error(`Failed to send to all ${failureCount} subscriptions`)
+    throw new Error(`Failed to send to all ${failureCount} subscriptions: ${errors.join('; ')}`)
   }
 }
 
 /**
  * Send push notification to a subscription
  */
-async function sendPushNotification(subscription: any, content: NotificationContent) {
-  // For now, just log the notification instead of actually sending
-  console.log(`Would send notification to ${subscription.endpoint}:`, content)
+async function sendPushNotification(
+  subscription: any,
+  content: NotificationContent
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const webPush = await import('web-push').then(m => m.default)
+    
+    // Configure VAPID if not already done
+    if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) {
+      throw new Error('VAPID keys not configured')
+    }
+    
+    webPush.setVapidDetails(
+      'mailto:abdelrhmanm525@gmail.com',
+      process.env.VAPID_PUBLIC_KEY,
+      process.env.VAPID_PRIVATE_KEY
+    )
 
-  // TODO: Implement actual web push when ready
-  // const webPush = await import('web-push').then(m => m.default)
-  // Configure and send...
+    const payload = JSON.stringify({
+      title: content.title,
+      message: content.body, // Map 'body' to 'message' for SW compatibility
+      body: content.body,
+      icon: content.icon || '/icons/icon-192x192.png',
+      badge: content.badge || '/icons/badge-72x72.png',
+      tag: content.tag,
+      data: content.data
+    })
+
+    await webPush.sendNotification(
+      {
+        endpoint: subscription.endpoint,
+        keys: subscription.keys
+      },
+      payload
+    )
+
+    console.log(`✅ Push notification sent successfully to ${subscription.endpoint.substring(0, 50)}...`)
+    return { success: true }
+  } catch (error) {
+    const err = error as { statusCode?: number; message?: string }
+    console.error('❌ Push send failed:', {
+      endpoint: subscription.endpoint?.substring(0, 50),
+      statusCode: err.statusCode,
+      message: err.message
+    })
+    
+    // Handle expired/invalid subscriptions
+    if (err.statusCode === 410 || err.statusCode === 404) {
+      console.log(`🗑️  Marking subscription as inactive due to ${err.statusCode} error`)
+      await markSubscriptionInactive(subscription.id, `Endpoint returned ${err.statusCode}`)
+    }
+    
+    return { success: false, error: err.message || 'Unknown error' }
+  }
 }
 
 /**
@@ -286,6 +341,24 @@ async function markNotificationAsSkipped(notificationId: string, reason: string)
 }
 
 /**
+ * Mark subscription as inactive
+ */
+async function markSubscriptionInactive(subscriptionId: string, reason: string) {
+  try {
+    await prisma.notificationSubscription.update({
+      where: { id: subscriptionId },
+      data: {
+        isActive: false,
+        failureCount: { increment: 1 }
+      }
+    })
+    console.log(`Marked subscription ${subscriptionId} as inactive: ${reason}`)
+  } catch (error) {
+    console.error(`Failed to mark subscription ${subscriptionId} as inactive:`, error)
+  }
+}
+
+/**
  * Handle notification failure
  */
 async function handleNotificationFailure(notification: any, error: Error) {
@@ -306,7 +379,7 @@ async function handleNotificationFailure(notification: any, error: Error) {
       }
     })
 
-    console.log(`Scheduled retry ${failureCount}/${maxRetries} for notification ${notification.id} at ${retryAt}`)
+    console.log(`📅 Scheduled retry ${failureCount}/${maxRetries} for notification ${notification.id} at ${retryAt}`)
   } else {
     // Mark as failed after max retries
     await prisma.scheduledNotification.update({
@@ -319,6 +392,6 @@ async function handleNotificationFailure(notification: any, error: Error) {
       }
     })
 
-    console.log(`Notification ${notification.id} failed after ${maxRetries} retries: ${error.message}`)
+    console.log(`❌ Notification ${notification.id} failed after ${maxRetries} retries: ${error.message}`)
   }
 }

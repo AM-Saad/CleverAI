@@ -1,5 +1,19 @@
 # Spaced Repetition System - End-to-End Test Workflow
 
+> ⚠️ **FULLY SUPERSEDED**: This workflow is now documented in [../SPACED_REPETITION.md - Testing Workflows](../SPACED_REPETITION.md#testing-workflows)
+> 
+> The main documentation includes:
+> - ✅ All test steps from this document
+> - ✅ Additional performance checks (5 metrics)
+> - ✅ Browser compatibility matrix (5 browsers)
+> - ✅ Error scenarios testing (4 scenarios)
+> - ✅ SM-2 algorithm validation procedures
+> - ✅ Integration with debug controls testing
+> 
+> *Archived: October 2025*
+
+---
+
 ## Test Scenario: Complete Review Session
 
 ### Prerequisites
