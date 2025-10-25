@@ -1,5 +1,5 @@
 <template>
-  <header :class="['border-b py-4 mb-4', borderClass]">
+  <header :class="['border-b py-2 mb-4', borderClass]">
     <nav class="flex gap-x-5">
       <button
         v-for="(tab, index) in items"
@@ -31,7 +31,7 @@ const props = defineProps({
   },
   borderClass: {
     type: String,
-    default: "border-gray-200 dark:border-gray-700",
+    default: "border-muted dark:border-gray-700",
   },
   activeClass: {
     type: String,
@@ -44,7 +44,7 @@ const props = defineProps({
   },
   buttonBaseClass: {
     type: String,
-    default: "flex items-center gap-2 font-medium text-sm transition-colors",
+    default: "flex items-center gap-2 font-medium text-xs transition-colors",
   },
 });
 

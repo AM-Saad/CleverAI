@@ -12,11 +12,11 @@ import {
   CACHE_CONFIG as _CACHE_CONFIG,
   AUTH_STUBS,
   SYNC_TAGS,
-  type FormSyncType
 } from '../app/utils/constants/pwa'
 
 // // Import shared IndexedDB helpers
 import { openFormsDB, getAllRecords, deleteRecord } from '../app/utils/idb'
+import { FormSyncType } from '../shared/types/offline'
 
 // Augment the global self type safely
 
@@ -334,199 +334,6 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
             }
         }
     )
-
-    // // 4. Folders API mutations (POST/PUT/PATCH/DELETE) — store for background sync when offline
-    // registerRoute(
-    //     ({ url, request }: { url: URL; request: Request }) => {
-    //         const shouldHandle = url.origin === self.location.origin &&
-    //             url.pathname.startsWith('/api/folders') &&
-    //             ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)
-
-    //         if (shouldHandle) {
-    //             log('🔄 Folders mutation route handler will handle:', request.method, url.pathname)
-    //         }
-
-    //         return shouldHandle
-    //     },
-    //     async ({ event }: { event: FetchEvent }) => {
-    //         const req = event.request as Request
-    //         log('🚀 Folders mutation handler executing:', req.method, req.url)
-
-    //         try {
-    //             // Try network first
-    //             log('🌐 Attempting network request...')
-    //             const resp = await fetch(req)
-    //             log('✅ Network request successful:', resp.status)
-
-    //             // Clear cache on successful mutations to force fresh data
-    //             if (resp.ok) {
-    //                 try {
-    //                     const cache = await caches.open('api-folders')
-    //                     const keys = await cache.keys()
-    //                     await Promise.all(keys.map(key => cache.delete(key)))
-    //                     log('🗑️ Cleared folders cache after successful mutation')
-    //                 } catch { /* ignore */ }
-    //             }
-    //             return resp
-    //         } catch (error) {
-    //             // Network failed - store in IndexedDB for background sync
-    //             log('❌ Folders mutation failed, storing for background sync:', req.method, req.url, error)
-
-    //             try {
-    //                 if (!db) throw new Error('IndexedDB not available')
-
-    //                 log('💾 Storing folder offline in IndexedDB...')
-    //                 const body = req.method !== 'DELETE' ? await req.clone().json() : null
-    //                 const folderData = {
-    //                     id: `folder_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    //                     method: req.method,
-    //                     url: req.url,
-    //                     body,
-    //                     createdAt: Date.now(),
-    //                     synced: false,
-    //                     pendingAction: req.method.toLowerCase()
-    //                 }
-
-    //                 log('📝 Folder data to store:', folderData)
-
-    //                 const tx = db.transaction(['folders'], 'readwrite')
-    //                 const store = tx.objectStore('folders')
-    //                 await new Promise<void>((resolve, reject) => {
-    //                     const request = store.add(folderData)
-    //                     request.onsuccess = () => {
-    //                         log('✅ Folder stored successfully in IndexedDB')
-    //                         resolve()
-    //                     }
-    //                     request.onerror = () => {
-    //                         error('❌ Failed to store folder in IndexedDB:', request.error)
-    //                         reject(request.error)
-    //                     }
-    //                 })
-
-    //                 // Schedule background sync
-    //                 log('🔄 Scheduling background sync for folders...')
-    //                 await swSelf.registration.sync.register('syncFolders')
-    //                 log('✅ Background sync scheduled')
-
-    //                 // Return optimistic response
-    //                 const response = new Response(JSON.stringify({
-    //                     success: true,
-    //                     data: folderData,
-    //                     offline: true,
-    //                     message: 'Saved offline - will sync when online'
-    //                 }), {
-    //                     status: 200,
-    //                     headers: { 'Content-Type': 'application/json' }
-    //                 })
-
-    //                 log('📤 Returning optimistic response')
-    //                 return response
-    //             } catch (dbError) {
-    //                 error('Failed to store folder mutation for sync:', dbError)
-    //                 throw new Response('Offline storage failed', { status: 503 })
-    //             }
-    //         }
-    //     }
-    // )
-
-    // // 5. Notes API mutations (POST/PUT/PATCH/DELETE) — store for background sync when offline
-    // registerRoute(
-    //     ({ url, request }: { url: URL; request: Request }) => {
-    //         const shouldHandle = url.origin === self.location.origin &&
-    //             url.pathname.startsWith('/api/notes') &&
-    //             ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)
-
-    //         if (shouldHandle) {
-    //             log('🔄 Notes mutation route handler will handle:', request.method, url.pathname)
-    //         }
-
-    //         return shouldHandle
-    //     },
-    //     async ({ event }: { event: FetchEvent }) => {
-    //         const req = event.request as Request
-    //         log('🚀 Notes mutation handler executing:', req.method, req.url)
-
-    //         try {
-    //             // Try network first
-    //             log('🌐 Attempting network request...')
-    //             const resp = await fetch(req)
-    //             log('✅ Network request successful:', resp.status)
-
-    //             // Clear cache on successful mutations to force fresh data
-    //             if (resp.ok) {
-    //                 try {
-    //                     const cache = await caches.open('api-notes')
-    //                     const keys = await cache.keys()
-    //                     await Promise.all(keys.map(key => cache.delete(key)))
-    //                     log('🗑️ Cleared notes cache after successful mutation')
-    //                 } catch { /* ignore */ }
-    //             }
-    //             return resp
-    //         } catch (error) {
-    //             // Network failed - store in IndexedDB for background sync
-    //             log('❌ Notes mutation failed, storing for background sync:', req.method, req.url, error)
-
-    //             try {
-    //                 if (!db) throw new Error('IndexedDB not available')
-
-    //                 log('💾 Storing note offline in IndexedDB...')
-    //                 const body = req.method !== 'DELETE' ? await req.clone().json() : null
-    //                 const noteData = {
-    //                     id: `note_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-    //                     method: req.method,
-    //                     url: req.url,
-    //                     body,
-    //                     createdAt: Date.now(),
-    //                     synced: false,
-    //                     pendingAction: req.method.toLowerCase()
-    //                 }
-
-    //                 log('📝 Note data to store:', noteData)
-
-    //                 const tx = db.transaction(['notes'], 'readwrite')
-    //                 const store = tx.objectStore('notes')
-    //                 await new Promise<void>((resolve, reject) => {
-    //                     const request = store.add(noteData)
-    //                     request.onsuccess = () => {
-    //                         log('✅ Note stored successfully in IndexedDB')
-    //                         resolve()
-    //                     }
-    //                     request.onerror = () => {
-    //                         error('❌ Failed to store note in IndexedDB:', request.error)
-    //                         reject(request.error)
-    //                     }
-    //                 })
-
-    //                 // Schedule background sync
-    //                 log('🔄 Scheduling background sync for notes...')
-    //                 await swSelf.registration.sync.register('syncNotes')
-    //                 log('✅ Background sync scheduled')
-
-    //                 // Return optimistic response
-    //                 const response = new Response(JSON.stringify({
-    //                     success: true,
-    //                     data: noteData,
-    //                     offline: true,
-    //                     message: 'Saved offline - will sync when online'
-    //                 }), {
-    //                     status: 200,
-    //                     headers: { 'Content-Type': 'application/json' }
-    //                 })
-
-    //                 log('📤 Returning optimistic response')
-    //                 return response
-    //             } catch (dbError) {
-    //                 error('Failed to store note mutation for sync:', dbError)
-    //                 throw new Response('Offline storage failed', { status: 503 })
-    //             }
-    //         }
-    //     }
-    // )
-
-
-
-
-
 
 
     // NOTE: Navigation requests are handled by our custom fetch listener below
@@ -921,6 +728,7 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
         }
     })
 
+
     // ------------------------ FETCH FALLBACK (Only for non-navigation requests) ------------------------
     swSelf.addEventListener('fetch', (event: FetchEvent) => {
         const req = event.request
@@ -1068,7 +876,6 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
             })())
         }
     });
-    // ------------------------ UPLOAD HANDLING ------------------------
 
 
     // ------------------------ INDEXEDDB HELPERS ------------------------

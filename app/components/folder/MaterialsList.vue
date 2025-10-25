@@ -1,177 +1,149 @@
 <template>
   <div class="materials-list">
-    <div v-if="loading" class="text-center py-6">Loading materials...</div>
+    <ui-loader :is-fetching="loading" label="Loading Materials..." />
+
     <shared-server-error :loading="loading" v-model:typedError="error" />
 
     <!-- Fullscreen backdrop with transition -->
     <Transition name="backdrop">
-      <div
-        v-if="fullscreenMaterial"
-        class="fullscreen-backdrop"
-        @click="closeFullscreen"
-      />
+      <div v-if="fullscreenMaterial" class="fullscreen-backdrop" @click="closeFullscreen" />
     </Transition>
 
-    <ul v-if="!loading && materialList.length > 0" class="space-y-3 mt-4">
-      <UiCard
-        v-for="m in materialList"
-        :key="m.id"
-        tag="article"
-        :variant="fullscreenMaterial === m.id ? 'default' : 'ghost'"
-        :class="{
+
+    <ul v-if="!loading && materialList.length > 0">
+
+
+      <ui-card v-for="m in materialList" :key="m.id" tag="article"
+        :variant="fullscreenMaterial === m.id ? 'default' : 'ghost'" size="xs" :class="{
           'fullscreen-card bg-light': fullscreenMaterial === m.id,
           'relative z-50': fullscreenMaterial === m.id,
-        }"
-      >
+        }">
+
+
         <!-- Sticky header for fullscreen -->
         <header v-if="fullscreenMaterial === m.id" class="fullscreen-header">
+
           <div class="flex w-full justify-between items-center gap-2 flex-wrap">
-            <UiSubtitle>{{ m.title }}</UiSubtitle>
+
+            <ui-subtitle>{{ m.title }}</ui-subtitle>
+
             <div class="flex flex-shrink-0 gap-2">
               <!-- Fullscreen/Expand button -->
-              <UButton variant="ghost" @click="() => toggleFullscreen(m.id)">
-                <Icon name="ic:round-fullscreen-exit" size="20" />
-              </UButton>
+              <u-button variant="ghost" @click="() => toggleFullscreen(m.id)">
+                <Icon name="ic:round-fullscreen-exit" size="16" />
+              </u-button>
               <!-- Enrollment button -->
-              <ReviewEnrollButton
-                :resource-type="'material'"
-                :resource-id="m.id"
-                :is-enrolled="enrolledMaterials.has(m.id)"
-                @enrolled="handleMaterialEnrolled"
-                @error="handleEnrollError"
-              />
-              <UButton
-                :disabled="removing"
-                color="error"
-                variant="outline"
-                size="xs"
-                @click="() => confirmRemoval(m.id)"
-              >
-                Remove</UButton
-              >
+              <ReviewEnrollButton :resource-type="'material'" :resource-id="m.id"
+                :is-enrolled="enrolledMaterials.has(m.id)" @enrolled="handleMaterialEnrolled"
+                @error="handleEnrollError" />
+              <u-button :disabled="removing" color="error" variant="outline" size="xs"
+                @click="() => confirmRemoval(m.id)">
+                Remove</u-button>
             </div>
+
           </div>
-          <span
-            v-if="enrolledMaterials.has(m.id)"
-            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 mt-2"
-          >
+
+          <span v-if="enrolledMaterials.has(m.id)"
+            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 mt-2">
             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fill-rule="evenodd"
+              <path fill-rule="evenodd"
                 d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                clip-rule="evenodd"
-              />
+                clip-rule="evenodd" />
             </svg>
             Enrolled
           </span>
+
         </header>
+
 
         <!-- Regular card layout (non-fullscreen) -->
         <div v-else class="flex-1">
-          <div class="flex items-center gap-2">
+
+          <div class="flex items-center">
+
             <header class="flex w-full justify-between items-center gap-2">
-              <UiSubtitle>{{ m.title }}</UiSubtitle>
+              <ui-subtitle weight="normal" size="xs">{{ m.title }}</ui-subtitle>
               <div class="ml-4 flex-shrink-0 flex gap-2">
                 <!-- Fullscreen/Expand button -->
-                <UButton variant="ghost" @click="() => toggleFullscreen(m.id)">
-                  <Icon name="ic:round-fullscreen" size="20" />
-                </UButton>
+                <u-button variant="ghost" @click="() => toggleFullscreen(m.id)">
+                  <Icon name="ic:round-fullscreen" size="16" />
+                </u-button>
               </div>
             </header>
-            <span
-              v-if="enrolledMaterials.has(m.id)"
-              class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
-            >
+
+            <span v-if="enrolledMaterials.has(m.id)"
+              class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
               <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fill-rule="evenodd"
+                <path fill-rule="evenodd"
                   d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clip-rule="evenodd"
-                />
+                  clip-rule="evenodd" />
               </svg>
               Enrolled
             </span>
+
           </div>
+
+
           <div>
+
             <!-- Regular content (non-fullscreen) -->
             <transition name="fade-slide">
-              <div
-                v-if="expandedMaterials.has(m.id)"
-                class="h-48 overflow-auto"
-              >
-                <UiCard tag="article" class="mt-4" variant="ghost">
-                  <UiParagraph class="whitespace-pre-wrap">{{
-                    m.content
-                  }}</UiParagraph>
-                </UiCard>
+              <div v-if="expandedMaterials.has(m.id)" class="h-48 overflow-auto">
+                <ui-card tag="article" class="mt-4" variant="ghost">
+                  <ui-paragraph class="whitespace-pre-wrap">{{ m.content }}</ui-paragraph>
+                </ui-card>
               </div>
             </transition>
+
           </div>
         </div>
 
         <!-- Fullscreen scrollable content -->
         <div v-if="fullscreenMaterial === m.id" class="fullscreen-content">
+
           <div class="fullscreen-content-inner">
-            <UiCard tag="article" variant="ghost">
-              <UiParagraph class="whitespace-pre-wrap">{{
-                m.content
-              }}</UiParagraph>
-            </UiCard>
+            <ui-card tag="article" variant="ghost">
+              <ui-paragraph class="whitespace-pre-wrap">{{ m.content }}</ui-paragraph>
+            </ui-card>
           </div>
+
         </div>
-      </UiCard>
+
+      </ui-card>
+
     </ul>
 
-    <UiParagraph v-if="!loading && materialList.length === 0 && !error">
+    <ui-paragraph v-if="!loading && materialList.length === 0 && !error" color="muted" size="xs">
       No materials in this folder.
-    </UiParagraph>
+    </ui-paragraph>
   </div>
 
   <!-- Confirmation Modal -->
-  <DialogModal
-    :show="showConfirm"
-    @close="
-      () => {
-        showConfirm = false;
-        confirmId = null;
-      }
-    "
-  >
+  <DialogModal :show="showConfirm" @close="
+    () => {
+      showConfirm = false;
+      confirmId = null;
+    }
+  ">
     <template #header>
-      <div class="flex flex-col gap-1">
-        <h3
-          class="flex items-center gap-2 text-lg font-semibold text-neutral-900 dark:text-neutral-100"
-        >
-          <icon name="ic:round-play-lesson" class="" />
-          Confirm Delete
-        </h3>
-        <p class="font-normal text-sm text-neutral-500">
-          Are you sure you want to delete this material? This action cannot be
-          undone.
-        </p>
-      </div>
+      <h3 class="flex items-center gap-1">
+        <icon name="ic:round-delete" class="text-primary" />
+        Confirm Delete
+      </h3>
     </template>
     <template #body>
-      <div />
+      <ui-paragraph size="sm" color="muted">
+        Are you sure you want to delete this material? This action cannot be
+        undone.
+      </ui-paragraph>
     </template>
     <template #footer>
       <div class="flex gap-3 pt-4">
-        <UButton type="submit" color="primary" @click="doConfirmRemove">
-          Delete
-        </UButton>
-        <UButton
-          type="button"
-          class="flex-1"
-          variant="ghost"
-          @click="
-            () => {
-              showConfirm = false;
-              confirmId = null;
-            }
-          "
-        >
-          Cancel
-        </UButton>
+        <u-button type="submit" color="primary" @click="doConfirmRemove"> Delete </u-button>
+        <u-button type="button" variant="subtle" @click="() => {
+          showConfirm = false;
+          confirmId = null;
+        }">Cancel</u-button>
       </div>
     </template>
   </DialogModal>
@@ -179,7 +151,6 @@
 
 <script setup lang="ts">
 import DialogModal from "~/components/shared/DialogModal.vue";
-import ReviewEnrollButton from "~/components/review/EnrollButton.vue";
 
 // Track expanded/collapsed state for each material
 const expandedMaterials = ref(new Set<string>());
@@ -445,7 +416,7 @@ const doConfirmRemove = async () => {
   width: 100% !important;
 }
 
-/* Ensure UiCard doesn't interfere with scrolling */
+/* Ensure ui-card doesn't interfere with scrolling */
 .fullscreen-content :deep(.ui-card) {
   height: auto !important;
   max-height: none !important;
@@ -563,6 +534,7 @@ const doConfirmRemove = async () => {
 
 /* Reduce motion for accessibility */
 @media (prefers-reduced-motion: reduce) {
+
   .fullscreen-card,
   .fullscreen-backdrop,
   .fade-slide-enter-active,

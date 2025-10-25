@@ -1,21 +1,14 @@
 <template>
   <div>
-    <div class="flex items-center justify-end">
+    <div class="flex items-center justify-end mb-2">
       <div class="flex items-center gap-3">
-        <span
-          v-if="rateLimitRemaining !== null"
-          class="inline-flex items-center text-xs px-2 py-1 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-700/50"
-        >
+        <span v-if="rateLimitRemaining !== null"
+          class="inline-flex items-center text-xs px-2 py-1 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-700/50">
           Remaining:
           <span class="ml-1 font-medium">{{ rateLimitRemaining }}</span>
         </span>
-        <UButton
-          class="flex items-center"
-          :loading="generating || loading"
-          :disabled="generating || loading"
-          size="sm"
-          @click="onGenerate"
-        >
+        <UButton class="flex items-center" :loading="generating || loading" :disabled="generating || loading" size="sm"
+          @click="onGenerate">
           <span v-if="!generating">Generate Flashcards</span>
           <span v-else>Generating…</span>
           <icons-stars-generative />
@@ -23,58 +16,35 @@
       </div>
     </div>
 
-    <UiParagraph
-      v-if="(!cardsToShow || cardsToShow.length === 0) && !generating"
-      size="xs"
-    >
+    <ui-paragraph v-if="(!cardsToShow || cardsToShow.length === 0) && !generating" size="xs" color="muted">
       No flash cards yet.<br />
       Click “Generate Flashcards” to create some from this folder's content.
-    </UiParagraph>
+    </ui-paragraph>
 
-    <UiParagraph v-if="genError" class="mt-2 text-error">
+    <ui-paragraph v-if="genError" class="mt-2 text-error">
       {{ genError }}
-    </UiParagraph>
+    </ui-paragraph>
 
     <div v-if="cardsToShow?.length" class="mt-4 select-none">
-      <UCarousel
-        v-slot="{ item: card }"
-        class-names
-        arrows
-        :items="cardsToShow"
-        :ui="{
-          item: 'select-none basis-[70%] transition-opacity [&:not(.is-snapped)]:opacity-10',
-        }"
-        class="mx-auto max-w-sm"
-      >
+      <UCarousel v-slot="{ item: card }" class-names dots :items="cardsToShow" :ui="{
+        item: 'select-none basis-[70%] transition-opacity [&:not(.is-snapped)]:opacity-10',
+      }" class="mx-auto max-w-sm">
         <ui-flip-card class="relative">
           <template #front>
-            <UiParagraph class="w-4/5">Q: {{ card.front }}</UiParagraph>
+            <ui-paragraph class="w-4/5" size="sm">Q: {{ card.front }}</ui-paragraph>
             <!-- Enrollment status indicator -->
-            <div
-              v-if="'id' in card && card.id && enrolledCards.has(card.id)"
-              class="absolute top-2 right-2"
-            >
-              <span
-                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-light border"
-              >
+            <div v-if="'id' in card && card.id && enrolledCards.has(card.id)" class="absolute top-2 right-2">
+              <span class="inline-flex items-center justify-center h-5 w-5 rounded-full text-xs font-medium bg-primary border border-muted">
                 ✓
               </span>
             </div>
           </template>
           <template #back>
-            <UiParagraph class="mb-4">{{ card.back }}</UiParagraph>
+            <ui-paragraph class="mb-4" size="sm">{{ card.back }}</ui-paragraph>
             <!-- Enroll Button -->
-            <div
-              class="mt-4 pt-3 border-t border-gray-200 dark:border-gray-600"
-            >
-              <ReviewEnrollButton
-                v-if="'id' in card && card.id"
-                :resource-type="'flashcard'"
-                :resource-id="card!.id"
-                :is-enrolled="enrolledCards.has(card.id)"
-                @enrolled="handleCardEnrolled"
-                @error="handleEnrollError"
-              />
+            <div class="mt-4 pt-3 border-t border-muted dark:border-muted">
+              <ReviewEnrollButton v-if="'id' in card && card.id" :resource-type="'flashcard'" :resource-id="card!.id"
+                :is-enrolled="enrolledCards.has(card.id)" @enrolled="handleCardEnrolled" @error="handleEnrollError" />
               <div v-else class="text-xs">Save card to enable review</div>
             </div>
           </template>
@@ -83,22 +53,12 @@
     </div>
 
     <!-- Review Navigation -->
-    <div v-if="cardsToShow?.length" class="mt-8 text-center">
-      <UButton to="/review">
-        <svg
-          class="mr-2 h-5 w-5"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M9 5l7 7-7 7"
-          />
+    <div v-if="cardsToShow?.length" class="mt-10 text-center">
+      <UButton to="/review" size="sm">
+        <svg class="mr-2 h-2 w-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
         </svg>
-        Start Review Session
+        Start Review
       </UButton>
     </div>
   </div>

@@ -155,7 +155,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import UiParagraph from "~/components/ui/UiParagraph.vue";
-import type { SubscriptionInfo } from "~/composables/shared/useSubscription";
 import { useSubscription } from "~/composables/shared/useSubscription";
 
 interface UserProfile {

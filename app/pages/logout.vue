@@ -1,14 +1,15 @@
 <template>
-  <div class="flex items-center justify-center min-h-screen">
+  <div class="flex items-center justify-center  gap-2">
     <div class="text-center">
-      <h1 class="text-2xl font-bold mb-4">Signing out...</h1>
-      <p class="text-gray-600">You have been signed out successfully.</p>
+      <ui-title class="mb-2">Logged Out</ui-title>
+      <ui-paragraph class="mb-4">
+        You have been successfully logged out.
+      </ui-paragraph>
       <div class="mt-4">
-        <router-link
-          to="/auth/signin"
-          class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
-        >
-          Sign In Again
+        <router-link to="/auth/signin">
+          <u-button>
+            Sign In Again
+          </u-button>
         </router-link>
       </div>
     </div>

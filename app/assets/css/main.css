@@ -15,13 +15,14 @@
 
   /* ==== Brand Colors ==== */
   /* Primary brand #ffa45c - main actions and highlights */
-  --color-primary: #ffa45c;
+  --color-primary: #30c3c6;
   --color-primary-light: #ffcdab;
 
   /* --color-light: #fffbf4; */
-  --color-light: #fff;
-  --color-muted: #5d5d5a;
-  --color-dark: #1a1a1a;
+  --color-light: #fffbf4;
+  --color-neutral: #f7f7f7;
+  --color-muted: #495362;
+  --color-dark: #111827;
 
   /* Semantic colors for feedback */
   --color-success: #10b981;
@@ -59,17 +60,14 @@
   --ui-dark: var(--color-dark);
   --ui-light: var(--color-light);
   --ui-muted: var(--color-muted);
-
-  --ui-bg: var(--color-light);
+  --ui-neutral: var(--color-neutral);
+  --ui-bg: #fff;
 }
 
 /* Dark mode overrides for Nuxt UI */
 .dark {
   --ui-primary: var(--color-primary);
   --ui-primary-light: var(--color-primary-light);
-  --ui-dark: var(--color-light);
-  --ui-light: var(--color-dark);
-  --ui-muted: var(--color-muted);
   --ui-bg: var(--color-dark);
 }
 
@@ -83,73 +81,12 @@ a {
 }
 
 a:not(.btn):focus-visible {
-  outline: 2px solid #fe9548;
+  outline: 2px solid #30c3c6;
   -moz-outline-radius: 8px;
   outline-style: ridge;
 }
 .blur {
   --tw-blur: blur(8px);
-}
-
-.effect {
-  -webkit-backdrop-filter: url(#filter);
-  backdrop-filter: url(#filter);
-  background: light-dark(
-    hsl(0 0% 100% / var(--frost, 0)),
-    hsl(0 0% 0% / var(--frost, 0))
-  );
-  box-shadow:
-    inset 0 0 0px 0px
-      light-dark(
-        color-mix(in oklch, canvasText, #00000000 5%),
-        color-mix(in oklch, canvasText, #ff0000 5%)
-      ),
-    inset 0 0 10px 1px
-      light-dark(
-        color-mix(in oklch, canvasText, #0000 90%),
-        color-mix(in oklch, canvasText, #0000 95%)
-      ),
-    0 4px 16px #11111a00,
-    0 0px 0px #11111a0d,
-    0 -1px 11px #0000ff00,
-    inset 0 0px 19px #ffffff00,
-    inset 0 0px 1px #11111a0d,
-    inset 0 2px 5px #eeeeee1a;
-}
-.btn {
-  @apply flex h-10 min-w-[8rem] cursor-pointer items-center justify-center rounded-full px-2 text-center text-sm font-medium shadow transition-all duration-300 ease-in-out hover:shadow-md focus-visible:ring-2 ring-offset-0 ring-[#fe9548] border;
-}
-
-.btn-big {
-  @apply h-10 min-w-[10rem];
-}
-
-.btn-small {
-  @apply h-8 min-w-[5rem] text-xs;
-}
-
-.btn:hover {
-  @apply shadow-lg;
-}
-
-.services-item {
-  @apply rounded-xl  shadow-md;
-}
-
-.services-item .head {
-  @apply mb-2 flex items-center gap-x-2;
-}
-
-.services-item h3 {
-  @apply text-left font-medium text-gray-700;
-}
-
-.services-item p {
-  @apply text-left text-sm leading-[1.4] text-gray-400;
-}
-
-.services-item .icon {
-  @apply flex h-7 w-7 items-center justify-center rounded-full;
 }
 
 .services-item:nth-child(1) .icon {
@@ -168,40 +105,8 @@ a:not(.btn):focus-visible {
   background: linear-gradient(135deg, #ffbbbb 0%, #fe6061 30%, #f53e6c 100%);
 }
 
-.mode {
-  @apply flex cursor-pointer items-center gap-2 rounded-lg p-2 text-left text-sm font-medium;
-}
-
-.mode:hover,
-.mode.active {
-  background-image: linear-gradient(152deg, #00000036, transparent) !important;
-}
-
-.step {
-  @apply gap-4 py-2;
-}
-
-.title {
-  @apply text-2xl font-medium text-gray-600 dark:text-gray-200;
-}
-
-.goBack {
-  @apply cursor-pointer text-sm text-gray-600 dark:text-gray-200;
-}
-
-.form {
-  @apply flex flex-col justify-center rounded;
-}
-
-.hint {
-  @apply text-sm text-gray-400;
-}
-
-.project-item {
-  @apply relative flex h-20 flex-col justify-between overflow-hidden rounded p-2 shadow;
-}
 .tiptap {
-  @apply p-2 dark:bg-light rounded;
+  @apply h-full;
   p {
     @apply my-4 first:mt-0 last:mb-0 text-base leading-relaxed dark:text-dark;
   }
@@ -218,6 +123,22 @@ a:not(.btn):focus-visible {
   .brands .filter {
     @apply grayscale-0;
   }
+}
+
+@keyframes border-spin {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-border-spin .absolute {
+  animation: border-spin 6s ease infinite;
 }
 
 .animate-gradient {
@@ -248,5 +169,18 @@ a:not(.btn):focus-visible {
 
   100% {
     background-position: right top;
+  }
+}
+
+@theme {
+  --animate-wiggle: wiggle 1s ease-in-out;
+  @keyframes wiggle {
+    0%,
+    100% {
+      height: 0;
+    }
+    100% {
+      height: 100%;
+    }
   }
 }

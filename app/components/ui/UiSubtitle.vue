@@ -1,14 +1,11 @@
 <template>
-  <component
-    :is="tag"
-    :class="[
-      'ui-subtitle',
-      sizeClasses[size],
-      weightClasses[weight],
-      colorClasses[color],
-      center ? 'text-center' : '',
-    ]"
-  >
+  <component :is="tag" :class="[
+    'ui-subtitle',
+    sizeClasses[size],
+    weightClasses[weight],
+    colorClasses[color],
+    center ? 'text-center' : '',
+  ]">
     <slot />
   </component>
 </template>
@@ -30,7 +27,7 @@ interface Props {
   /**
    * Text color variant
    */
-  color?: "primary" | "secondary" | "neutral" | "muted" | "inverse" | "white";
+  color?: "primary" | "neutral" | "muted" | "white";
   /**
    * Center alignment
    */
@@ -41,7 +38,7 @@ const {
   tag = "h3",
   size = "lg",
   weight = "medium",
-  color = "secondary",
+  color = "muted",
   center = false,
 } = defineProps<Props>();
 
@@ -63,11 +60,9 @@ const weightClasses = {
 };
 
 const colorClasses = {
-  primary: "text-[color:var(--color-text-primary)]",
-  secondary: "text-[color:var(--color-text-secondary)]",
-  neutral: "text-[color:var(--color-neutral)]",
-  muted: "text-[color:var(--color-text-muted)]",
-  inverse: "text-[color:var(--color-text-inverse)]",
+  primary: "text-[color:var(--color-primary)]",
+  neutral: "text-[color:var(--color-neutral)] dark:text-[color:var(--color-light)]",
+  muted: "text-[color:var(--color-muted)] dark:text-[color:var(--color-light)]",
   white: "text-white",
 };
 </script>

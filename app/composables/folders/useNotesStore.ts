@@ -188,15 +188,15 @@ export function useNotesStore(folderId: string): NotesStore {
       // Store original content in case we need to rollback
       originalContent: originalContent,
     });
-    handleOfflineSubmit({
-      payload: {
-        noteId: id,
-        content: content,
-      },
-      storeName: DB_CONFIG.STORES.FORMS,
-      type: FORM_SYNC_TYPES.UPDATE_NOTE,
-      formId: id,
-    });
+    // handleOfflineSubmit({
+    //   payload: {
+    //     noteId: id,
+    //     content: content,
+    //   },
+    //   storeName: DB_CONFIG.STORES.FORMS,
+    //   type: FORM_SYNC_TYPES.UPDATE_NOTE,
+    //   formId: id,
+    // });
 
     // Debounced save to server (will handle rollback if needed)
     debouncedSave(id, content);

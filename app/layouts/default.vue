@@ -4,15 +4,15 @@
   >
     <nav
       id="nav"
-      class="flex font-heading items-center justify-between z-50 py-2 px-1 rounded-full md:rounded container mx-auto left-[50%] top-4 border-b border-muted w-[calc(100%-1rem)]"
+      class="flex font-heading items-center justify-between px-4 lg:px-1 rounded-full md:rounded container mx-auto left-[50%] top-4 border-b border-muted w-[calc(100%-1rem)] h-12"
     >
       <div class="flex items-center justify-between w-full">
         <router-link
           to="/"
-          class="flex items-center gap-4 text-dark dark:text-light font-medium md:text-xl"
+          class="flex items-center gap-4 text-dark dark:text-light font-medium md:text-lg"
         >
           <img
-            class="h-6 dark:invert-[1] dark:filter"
+            class="h-5 dark:invert-[1] dark:filter"
             src="~/assets/images/CleverAI_icon.svg"
             alt=""
           />
@@ -124,12 +124,12 @@
       </div>
     </nav>
 
-    <div class="container mx-auto p-4 overflow-auto h-full w-full">
+    <div class="container mx-auto overflow-auto h-full w-full flex-1 p-1">
       <UToaster />
       <ServiceWorkerUpdateNotification mode="banner" />
       <slot />
     </div>
-    <footer class="rounded-sm p-2">
+    <footer class="container mx-auto rounded-sm p-2 h-16 dark:bg-transparent">
       <div class="footer-wrapper grid">
         <div class="footer-social">
           <ul>

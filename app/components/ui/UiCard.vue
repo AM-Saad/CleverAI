@@ -1,19 +1,14 @@
 <template>
-  <component
-    :is="tag"
-    :class="[
-      'ui-card',
-      className,
-      variantClasses[variant],
-      sizeClasses[size],
-      shadowClasses[shadow],
-      hoverClasses[hover],
-    ]"
-  >
-    <div
-      v-if="$slots.header"
-      class="flex items-center justify-between border-b border-primary-light py-3 mb-4"
-    >
+  <component :is="tag" :class="[
+    'ui-card',
+    className,
+    variantClasses[variant],
+    sizeClasses[size],
+    shadowClasses[shadow],
+    hoverClasses[hover],
+  ]">
+    <div v-if="$slots.header"
+      :class="['flex items-center justify-between', headerSizesClasses[size], headerStyle[variant]]">
       <slot name="header" />
     </div>
 
@@ -36,11 +31,11 @@ interface Props {
   /**
    * Card visual variant
    */
-  variant?: "default" | "outline" | "ghost" | "elevated";
+  variant?: "default" | "outline" | "ghost";
   /**
    * Card size (affects padding)
    */
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: 'xs' | "sm" | "md" | "lg" | "xl";
   /**
    * Shadow intensity
    */
@@ -53,6 +48,7 @@ interface Props {
    * Additional CSS classes
    */
   className?: string;
+  contentClasses?: string;
 }
 
 const {
@@ -62,17 +58,18 @@ const {
   shadow = "none",
   hover = "none",
   className = "",
+  contentClasses = "",
 } = defineProps<Props>();
 
 const variantClasses = {
   default:
-    "bg-[color:var(--color-surface)] border border-[color:var(--color-surface-alt)]",
-  outline: "bg-transparent border border-gray-300 dark:border-muted ",
+    "bg-[color:var(--color-white)] border border-[color:var(--color-white)] dark:bg-[color:var(--color-dark)] dark:border-[color:var(--color-dark)] ",
+  outline: "bg-transparent border border-muted ",
   ghost: "border-0",
-  elevated: "bg-[color:var(--color-surface-elevated)] border-0",
 };
 
 const sizeClasses = {
+  xs: "p-1",
   sm: "p-2",
   md: "p-3",
   lg: "p-5",
@@ -93,8 +90,21 @@ const hoverClasses = {
   glow: "hover:shadow-lg hover:shadow-[color:var(--color-primary)]/20",
   scale: "hover:scale-[1.02]",
 };
+const headerSizesClasses = {
+  xs: "py-1 mb-2",
+  sm: "py-2 mb-3",
+  md: "py-3 mb-4",
+  lg: "py-4 mb-5",
+  xl: "py-5 mb-6",
+};
+const headerStyle = {
+  default: "bg-white dark:bg-transparent",
+  outline: "border-b border-muted",
+  ghost: "border-0",
+  elevated: "border-b border-primary-light",
+}
 
-const combinedContentClasses = ["ui-card__content"];
+const combinedContentClasses = ["ui-card__content", contentClasses].join(" ");
 </script>
 
 <style scoped>

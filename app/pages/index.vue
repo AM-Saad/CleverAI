@@ -23,6 +23,7 @@
           class="text-4xl font-medium my-4"
           :words="'AI, Chatbot, Assistant, Helper, Support, Guide'"
         />
+        
         <router-link to="/auth/signup">
           <UButton>Start Now</UButton>
         </router-link>

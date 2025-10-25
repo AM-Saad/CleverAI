@@ -3,6 +3,7 @@
     :disabled="isSubmitting || isEnrolled"
     class="inline-flex items-center transition-colors"
     :variant="isEnrolled ? 'outline' : 'solid'"
+    size="sm"
     @click="handleEnroll"
   >
     <svg

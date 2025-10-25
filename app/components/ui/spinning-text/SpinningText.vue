@@ -30,7 +30,6 @@
 </template>
 
 <script lang="ts" setup>
-import { cn } from "~/lib/utils";
 import { Motion } from "motion-v";
 import type { Variant, Transition } from "motion-v";
 

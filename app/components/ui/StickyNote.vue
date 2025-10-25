@@ -3,56 +3,65 @@
     <div ref="noteRef" :class="noteContainerClasses">
         <!-- Child: handles animation and positioning -->
         <div :class="noteContentClasses" @click="startEditing" oncontextmenu.prevent="startEditing">
-            <!-- Paper-like background with shadow and texture -->
-            <div
-                class="absolute inset-0 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 rounded shadow-lg transform" />
+
 
             <!-- Content area -->
-            <div class="relative p-4 h-full flex flex-col transition-opacity duration-400" :class="{
+            <div class="relative h-full flex flex-col transition-opacity duration-400" :class="{
                 'opacity-0': isAnimating,
                 'opacity-100': !isAnimating,
             }">
-                <!-- Top right indicators -->
-                <div class="absolute top-2 right-2 flex items-center gap-1">
-                    <!-- Tiny saving indicator -->
-                    <div v-if="note.loading" class="flex items-center gap-1 text-amber-600">
-                        <svg class="animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
-                            <path class="opacity-75" fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
+                <!-- Top right actions -->
+                <div class="flex items-center justify-between mb-2 border-b border-muted p-1">
+
+                    <div class="flex items-center gap-4 border-b border-amber-200/40 animate-pulse repeat-infinite ease-in-out opacity-75">
+                        <p class="text-[10px] text-primary">Auto-saving...</p>
+                        <div v-if="note.loading" class="flex items-center gap-1 text-primary">
+                            <svg class="animate-spin h-2.5 w-2.5" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                    stroke-width="4" />
+                                <path class="opacity-75" fill="currentColor"
+                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                        </div>
+
                     </div>
+                    <div class="flex items-center gap-4">
+                        <!-- Fullscreen toggle button (show when not loading and has content) -->
+                        <u-button v-if="!isEditing && note.text.trim()"
+                            class=" group-hover:opacity-70 hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+                            :class="{ 'opacity-0': note.loading }" variant="subtle" color="primary" size="xs"
+                            :aria-label="isFullscreen ? 'Exit fullscreen' : 'View fullscreen'"
+                            @click="$emit('toggleFullscreen', note.id)">
+                            <svg v-if="isFullscreen" class="w-3 h-3" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            <svg v-else class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+                            </svg>
+                        </u-button>
+                        <u-button v-if="!note.loading"
+                            class=" group-hover:opacity-70 hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+                            :class="{ 'opacity-0': note.loading }" variant="subtle" color="error" size="xs"
+                            :disabled="false" @click="deleteNote(note.id)">
+                            <icon name="i-heroicons-trash" class="w-3 h-3" />
+                        </u-button>
 
-                    <!-- Fullscreen toggle button (show when not loading and has content) -->
-                    <button v-if="!isEditing && note.text.trim()"
-                        class="md:opacity-0 group-hover:opacity-70 hover:opacity-100 transition-opacity duration-200 text-amber-600 hover:text-amber-800 cursor-pointer"
-                        :aria-label="isFullscreen ? 'Exit fullscreen' : 'View fullscreen'"
-                        @click="$emit('toggleFullscreen', note.id)">
-                        <svg v-if="isFullscreen" class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        <svg v-else class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
-                        </svg>
-                    </button>
-                    <UButton v-if="!note.loading && !isFullscreen"
-                        class="md:opacity-0 group-hover:opacity-70 hover:opacity-100 transition-opacity duration-200 text-amber-600 hover:text-amber-800 cursor-pointer"
-                        :class="{ 'opacity-0': note.loading }" variant="soft" color="error" size="xs" :disabled="false"
-                        @click="deleteNote(note.id)">
-                        <icon name="i-heroicons-trash" class="w-3 h-3" />
-                    </UButton>
+                        <!-- Edit icon (only show when not editing and not loading) -->
+                        <!-- <u-button v-if="!isEditing"
+                            class="group-hover:opacity-70 hover:opacity-100 transition-opacity duration-200 cursor-pointer"
+                            variant="subtle" color="primary" size="xs" 
+                            :class="{ 'opacity-0': note.loading }"
+                            aria-label="Edit note" @click="startEditing">
+                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                        </u-button> -->
 
-                    <!-- Edit icon (only show when not editing and not loading) -->
-                    <button v-if="!isEditing"
-                        class="opacity-0 group-hover:opacity-70 hover:opacity-100 transition-opacity duration-200 text-amber-600 hover:text-amber-800 cursor-pointer"
-                        aria-label="Edit note" @click="startEditing">
-                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                        </svg>
-                    </button>
+                    </div>
                 </div>
 
                 <!-- Error state -->
@@ -68,10 +77,7 @@
                 </div>
 
                 <!-- Edit mode -->
-                <div
-                    class="mb-2 pb-2 border-b border-amber-200/40 animate-pulse repeat-infinite ease-in-out opacity-75">
-                    <p class="text-[10px] text-amber-600/70">Auto-saving...</p>
-                </div>
+
                 <client-only>
                     <div ref="editorContainerRef" class="w-full h-full">
                         <shared-tiptap-editor ref="tiptapRef" :id="note.id" v-model="contentHtml"
@@ -178,9 +184,9 @@ const noteContentClasses = computed(() => {
     ];
 
     const normalClasses = [
-        "hover:scale-105",
+        "",
         {
-            "scale-105 shadow-xl": isEditing.value,
+            "": isEditing.value,
             "pointer-events-none": props.note.loading,
             "opacity-0": isAnimating.value && !props.isFullscreen,
             invisible: isAnimating.value && !props.isFullscreen,
@@ -419,54 +425,8 @@ onBeforeUnmount(() => {
 
 /* Note content - handles animations and positioning */
 .note-content {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border: 1px solid #f59e0b20;
-    border-radius: 4px;
-    position: relative;
-    overflow: hidden;
+
     transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
-/* Custom paper texture effect */
-.note-content::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image:
-        radial-gradient(circle at 20% 80%,
-            rgba(255, 255, 255, 0.1) 1px,
-            transparent 1px),
-        radial-gradient(circle at 80% 20%,
-            rgba(255, 255, 255, 0.1) 1px,
-            transparent 1px),
-        radial-gradient(circle at 40% 40%,
-            rgba(255, 255, 255, 0.05) 1px,
-            transparent 1px);
-    background-size:
-        30px 30px,
-        25px 25px,
-        20px 20px;
-    pointer-events: none;
-    border-radius: 0.5rem;
-}
-
-/* Fullscreen animation styles handled by JavaScript */
-
-/* Add a subtle lined paper effect */
-.sticky-note::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: repeating-linear-gradient(transparent,
-            transparent 23px,
-            rgba(245, 158, 11, 0.2) 24px);
-    pointer-events: none;
-    border-radius: 0.5rem;
-}
 </style>

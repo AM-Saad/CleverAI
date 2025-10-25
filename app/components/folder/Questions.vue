@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div class="flex items-center justify-end">
+    <div class="flex items-center justify-end mb-2">
       <span
         v-if="rateLimitRemaining !== null"
         class="inline-flex items-center text-xs px-2 py-1 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-700/50"
@@ -22,6 +22,7 @@
     <UiParagraph
       v-if="(!questionsToShow || questionsToShow.length === 0) && !generating"
       size="xs"
+      color="muted"
     >
       No questions yet.<br />
       Click “Generate Questions” to create some from this folder's content.
@@ -31,7 +32,7 @@
 
     <div v-if="questionsToShow?.length" class="mt-4 space-y-4">
       <UiCard v-for="(q, idx) in questionsToShow" :key="idx">
-        <div class="font-medium mb-2">{{ idx + 1 }}. {{ q.question }}</div>
+        <ui-paragraph size="sm">{{ idx + 1 }}. {{ q.question }}</ui-paragraph>
         <ul class="list-disc ml-5">
           <!-- <li v-for="(choice, cIdx) in q.choices" :key="cIdx"
                         :class="{ 'font-semibold text-success': cIdx === q.answerIndex }">

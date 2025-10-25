@@ -14,7 +14,7 @@
         class="bg-light dark:bg-darks absolute right-0 z-10 w-56 origin-top-right overflow-hidden rounded-xl shadow-lg dark:ring-white ring-opacity-5 focus:outline-none">
         <div class="overflow-hidden">
           <MenuItem v-slot="{ active }">
-          <router-link to="/profile" tabindex="1" :class="[
+          <router-link to="/user/profile" tabindex="1" :class="[
             active ? 'bg-primary ' : '',
             'flex items-center gap-2 p-sm text-sm text-dark',
           ]">
@@ -34,7 +34,7 @@
           </router-link>
           </MenuItem>
           <MenuItem v-slot="{ active }">
-          <router-link to="/settings" tabindex="2" :class="[
+          <router-link to="/user/settings" tabindex="2" :class="[
             active ? 'bg-primary' : '',
             'flex items-center gap-2 p-sm text-sm text-dark',
           ]">

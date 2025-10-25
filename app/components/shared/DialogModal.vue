@@ -21,16 +21,11 @@ onUnmounted(() => {
   <Transition name="modal">
     <div v-if="show" class="modal-mask">
       <div
-        class="inner bg-background dark:bg-foreground absolute left-[50%] top-[50%] w-96 -translate-x-1/2 -translate-y-1/2 transform rounded-md p-3 shadow-lg"
-      >
-        <div
-          class="modal-header flex items-center justify-between text-xl font-bold"
-        >
+        class="inner bg-white dark:bg-dark absolute left-[50%] top-[50%] w-96 -translate-x-1/2 -translate-y-1/2 transform rounded-md p-3 shadow-lg">
+        <div class="modal-header flex items-center justify-between font-medium text-muted dark:text-light">
           <slot name="header"> default header </slot>
-          <button
-            class="modal-default-button place-self-start p-1 dark:text-gray-400 cursor-pointer"
-            @click="$emit('close')"
-          >
+          <button class="modal-default-button place-self-start p-1 dark:text-gray-400 cursor-pointer"
+            @click="$emit('close')">
             <icon name="mdi:close"></icon>
           </button>
         </div>

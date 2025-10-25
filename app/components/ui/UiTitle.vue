@@ -30,7 +30,7 @@ interface Props {
   /**
    * Text color variant
    */
-  color?: "primary" | "secondary" | "neutral" | "muted" | "inverse" | "white";
+  color?: "primary" | "neutral" | "dark" | "muted" | "white";
   /**
    * Center alignment
    */
@@ -41,7 +41,7 @@ const {
   tag = "h2",
   size = "2xl",
   weight = "semibold",
-  color = "neutral",
+  color = "dark",
   center = false,
 } = defineProps<Props>();
 
@@ -67,11 +67,10 @@ const weightClasses = {
 
 const colorClasses = {
   primary: "text-primary",
-  secondary: "text-secondary",
   neutral: "text-neutral",
+  dark: "text-dark dark:text-light",
   muted: "text-muted",
-  inverse: "text-inverse",
-  white: "text-white",
+  white: "text-white dark:text-dark",
 };
 </script>
 

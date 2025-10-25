@@ -1,17 +1,17 @@
 <template>
-    <UiCard variant="ghost" shadow="none">
+    <UiCard variant="ghost" size="xs" shadow="none" class="col-span-1 lg:col-span-4 flex-1">
         <!-- Header -->
         <template v-slot:header>
             <div class="flex items-center gap-2">
-                <UiSubtitle>Notes</UiSubtitle>
+                <ui-subtitle size="base">Notes</ui-subtitle>
                 <span v-if="notes?.length" class="text-sm text-gray-500 dark:text-gray-400">
                     ({{ notes.length }})
                 </span>
             </div>
-            <UButton size="sm" color="primary" variant="outline" @click="createNewNote">
-                <UIcon name="i-heroicons-plus" class="w-4 h-4" />
-                Add Note
-            </UButton>
+            <u-button size="sm" color="primary" variant="outline" @click="createNewNote">
+                <u-icon name="i-heroicons-plus" class="w-4 h-4" />
+                New Note
+            </u-button>
         </template>
 
         <ui-loader :is-fetching="isFetching" label="Loading notes..." />
@@ -19,44 +19,74 @@
         <shared-error-message v-if="error" :error="error" />
 
         <!-- Notes content -->
-        <div v-if="!isFetching && !error" class="flex-1 overflow-auto">
+        <div v-if="!isFetching && !error" class="h-full overflow-auto">
             <!-- Fullscreen backdrop with transition -->
             <!-- <Transition name="backdrop">
                 <div v-if="fullscreenNote" class="fullscreen-backdrop" @click="closeFullscreen" />
             </Transition> -->
 
             <!-- Empty state -->
-            <div v-if="!notes?.length" class="flex flex-col items-center justify-center py-12 text-center">
-                <UIcon name="i-heroicons-document-text" class="w-12 h-12 text-gray-300 dark:text-gray-600 mb-4" />
-                <h4 class="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
-                    No notes yet
-                </h4>
-                <p class="text-gray-500 dark:text-gray-400 mb-4">
+            <div v-if="!notes?.length" class="flex flex-col gap-2 items-center justify-center">
+                <div class="flex items-center gap-2 mb-4">
+                    <u-icon name="i-heroicons-document-text" class="w-12 h-12 text-muted dark:text-light" />
+                    <ui-subtitle>
+                        No Notes Yet
+                    </ui-subtitle>
+                </div>
+
+                <ui-paragraph size="sm" color="muted">
                     Create your first note to capture important thoughts and ideas for
                     this folder.
-                </p>
-                <UButton color="primary" @click="createNewNote">
-                    <UIcon name="i-heroicons-plus" class="w-4 h-4" />
+                </ui-paragraph>
+                <u-button color="primary" @click="createNewNote">
+                    <u-icon name="i-heroicons-plus" class="w-4 h-4" />
                     Create First Note
-                </UButton>
+                </u-button>
             </div>
 
             <!-- Notes grid -->
-            <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-4 relative p-2">
-                <div v-for="note in notes" :key="note.id" class="relative group w-full">
-                    <UiStickyNote :note="transformNoteForComponent(note)" :is-fullscreen="fullscreenNote === note.id"
-                        :delete-note="deleteNote" size="lg" placeholder="Double-click to add your note..."
-                        @update="handleUpdateNote" @retry="handleRetry" @toggle-fullscreen="toggleFullscreen" />
+            <ui-card v-else variant="outline" size="xs" class="h-full">
+                <div class="grid grid-cols-5 h-full">
+                    <ReorderGroup v-model:values="localNotes" axis="y"
+                        class="relative  overflow-auto space-y-4 col-span-1 border-r border-muted">
+                        <ReorderItem v-for="note in localNotes" :key="note.id" :value="note"
+                            class="relative group w-full p-1.5 mb-1 border-b border-muted"
+                            @click="currentNoteId = note.id;">
+                            <ui-paragraph size="xs" class="truncate">{{ note.content.slice(0, 40) }}...</ui-paragraph>
+                        </ReorderItem>
+                    </ReorderGroup>
+
+                    <ui-card class="col-span-4" variant="ghost" size="xs">
+                        <!-- <shared-tiptap-editor v-if="currentNoteId" ref="tiptapRef" :id="currentNoteId"
+                            v-model="contentHtml" /> -->
+                        <UiStickyNote v-if="currentNoteId"
+                            :note="transformNoteForComponent(notes.find(n => n.id === currentNoteId)!)"
+                            :is-fullscreen="fullscreenNote === currentNoteId" :delete-note="deleteNote" size="lg"
+                            placeholder="Double-click to add your note..." @update="handleUpdateNote"
+                            @retry="handleRetry" @toggle-fullscreen="toggleFullscreen" />
+                    </ui-card>
                 </div>
-            </div>
+            </ui-card>
+
         </div>
     </UiCard>
 </template>
 
 <script setup lang="ts">
 import type { NoteState } from "~/composables/folders/useNotesStore";
+import type { Editor as TiptapEditorType } from "@tiptap/core";
 import { useNotesStore } from "~/composables/folders/useNotesStore";
 import { APIError } from "~/services/FetchFactory";
+import { ReorderGroup, ReorderItem } from 'motion-v'
+
+
+
+interface Note {
+    id: string;
+    text: string;
+    loading?: boolean;
+    error?: string | null;
+}
 
 interface Props {
     folderId: string;
@@ -70,11 +100,20 @@ const notesStore = useNotesStore(props.folderId);
 // Computed properties for reactive data
 const notes = computed(() => Array.from(notesStore.notes.value.values()));
 
+const localNotes = ref<NoteState[]>([]);
 // Loading and error state for the initial fetch
 const isFetching = computed(
     () => notesStore.loadingStates.value.get(props.folderId) ?? false,
 );
 const error = ref<APIError | null>(null); // Main error state for critical failures
+
+const tiptapRef = ref<{ editor?: TiptapEditorType } | null>(null);
+
+// const isFullscreen = computed(() => {
+//     return tiptapRef.value?.editor?.isFocused || false;
+// });
+
+const currentNoteId = ref<string | null>(notes.value[0]?.id || null);
 
 // Fullscreen state management
 const fullscreenNote = ref<string | null>(null);
@@ -89,6 +128,13 @@ const transformNoteForComponent = (note: NoteState) => {
     };
 };
 
+
+watch(notes, (newNotes) => {
+    localNotes.value = newNotes;
+}, { immediate: true });
+function setItems(newItems: NoteState[]) {
+    localNotes.value = newItems
+}
 // Fullscreen functionality
 const toggleFullscreen = (noteId: string) => {
     if (fullscreenNote.value === noteId) {
@@ -159,6 +205,7 @@ const handleUpdateNote = async (id: string, text: string) => {
 
 // Delete a note (optimistic with rollback on failure)
 const deleteNote = async (id: string) => {
+    console.log("Deleting note:", id);
     const success = await notesStore.deleteNote(id);
 
     if (success) {

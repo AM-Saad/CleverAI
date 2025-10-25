@@ -2,7 +2,7 @@
   <div
     :class="
       cn(
-        'h-72 flex-1 w-full select-none [perspective:1000px] mb-4 md:mb-0',
+        'h-44 flex-1 w-full select-none [perspective:1000px] mb-4 md:mb-0',
         props.class,
       )
     "
@@ -18,7 +18,7 @@
     >
       <!-- Front -->
       <div
-        class="absolute size-full overflow-hidden rounded-2xl border border-dark dark:border-light [backface-visibility:hidden] bg-foreground p-4"
+        class="absolute size-full overflow-hidden rounded-2xl border border-muted dark:border-light [backface-visibility:hidden] bg-foreground p-4"
       >
         <slot name="front" />
       </div>
@@ -27,7 +27,7 @@
       <div
         :class="
           cn(
-            'absolute h-full w-full overflow-hidden rounded-2xl border bg-light dark:bg-dark p-4 text-dark [backface-visibility:hidden]',
+            'absolute h-full w-full overflow-hidden rounded-2xl border border-muted bg-light dark:bg-dark p-4 text-dark [backface-visibility:hidden]',
           )
         "
         :style="{ transform: backTransform }"
@@ -39,7 +39,6 @@
 </template>
 
 <script setup lang="ts">
-import { cn } from "~/lib/utils";
 import { computed, ref } from "vue";
 
 interface FlipCardProps {

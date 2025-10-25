@@ -1,10 +1,10 @@
 <template>
-  <div class="tiptap-editor bg-white h-full p-4" @click="{
+  <div class="tiptap-editor" @click="{
     if (isFullScreen) {
       $event.stopPropagation();
     }
   }">
-    <div v-if="editor && isFullScreen" class="flex gap-2 mb-2">
+    <div v-if="editor" class="flex gap-2 mb-2">
       <UButton variant="soft" size="xs" type="button" :class="buttonClass(editor.isActive('bold'))"
         @click.prevent="toggleBold">B</UButton>
       <UButton variant="soft" size="xs" type="button" :class="buttonClass(editor.isActive('italic'))"
