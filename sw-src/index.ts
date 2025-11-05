@@ -690,7 +690,7 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
 
     swSelf.addEventListener('sync', (event: Event) => {
         const syncEvt = event as unknown as { tag?: string; waitUntil: ExtendableEvent['waitUntil'] }
-
+        
         if (syncEvt.tag === SYNC_TAGS.FORM) {
             syncEvt.waitUntil((async () => {
                 try {
@@ -712,7 +712,7 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
                     }
                     
                     // Process sync with records
-                    // await syncForms(clients, records)  // TODO: implement actual sync logic
+                    await syncForms(clients, records)  // TODO: implement actual sync logic
 
                 } catch (err) {
                     error('Background sync failed:', err)

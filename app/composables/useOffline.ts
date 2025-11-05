@@ -14,7 +14,7 @@ type QueuedForm = {
   createdAt: number;
 };
 
-async function putForm(record: QueuedForm, storeName: string): Promise<void> {
+async function putForm(record: QueuedForm, storeName: STORES): Promise<void> {
   const db = await openFormsDB();
   await putRecord(db, storeName, record);
   db.close();
@@ -23,7 +23,7 @@ async function putForm(record: QueuedForm, storeName: string): Promise<void> {
 export function useOffline() {
   const handleOfflineSubmit = async (data: {
     payload: Record<string, unknown>;
-    storeName: string;
+    storeName: STORES;
     type: FormSyncType;
     formId?: string;
   }): Promise<void> => {

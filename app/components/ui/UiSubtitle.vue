@@ -27,7 +27,7 @@ interface Props {
   /**
    * Text color variant
    */
-  color?: "primary" | "neutral" | "muted" | "white";
+  color?: "primary" | "neutral" | "muted" | "white" | "danger";
   /**
    * Center alignment
    */
@@ -64,12 +64,12 @@ const colorClasses = {
   neutral: "text-[color:var(--color-neutral)] dark:text-[color:var(--color-light)]",
   muted: "text-[color:var(--color-muted)] dark:text-[color:var(--color-light)]",
   white: "text-white",
+  danger: "text-[color:var(--color-error)]",
 };
 </script>
 
 <style scoped>
 .ui-subtitle {
-  font-family: var(--font-sans);
   margin: 0;
   line-height: var(--line-height-normal);
 }

@@ -5,6 +5,7 @@ import { MaterialService } from "./Material"
 import { NoteService } from "./Note"
 import { ReviewService } from "./ReviewService"
 import AuthModule from "./AuthService"
+import { UserService } from "./UserService"
 
 export class ServiceFactory {
   private $fetch: $Fetch
@@ -18,6 +19,7 @@ export class ServiceFactory {
   create(service: 'notes'): NoteService
   create(service: 'review'): ReviewService
   create(service: 'auth'): AuthModule
+  create(service: 'user'): UserService
   create(service: string): FetchFactory
   create(service: string): FetchFactory {
     switch (service) {
@@ -31,6 +33,8 @@ export class ServiceFactory {
         return new ReviewService(this.$fetch)
        case 'auth':
         return new AuthModule(this.$fetch)
+      case 'user':
+        return new UserService(this.$fetch)
       default:
         throw new Error(`Unknown service: ${service}`)
     }

@@ -245,7 +245,7 @@ h1 {
   justify-content: center;
   margin-bottom: 2rem;
   background-color: #f1f5f9;
-  max-width: 300px;
+  max-width: 220px;
   margin-left: auto;
   margin-right: auto;
   border-radius: 9999px;
@@ -253,7 +253,8 @@ h1 {
 }
 
 .plan-toggle button {
-  padding: 0.75rem 1.5rem;
+  padding: 0.75rem 0rem;
+  width: 105px;
   border: none;
   background: transparent;
   border-radius: 9999px;

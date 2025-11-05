@@ -1,11 +1,12 @@
 <template>
-  <header :class="['border-b py-2 mb-4', borderClass]">
-    <nav class="flex gap-x-5">
+  <header :class="['max-w-full min-w-fit', borderClass]">
+    <nav :class="['py-2 mb-4 flex ', direction === 'row' ? 'flex-row border-b border-muted gap-5 text-sm' : 'flex-col gap-7']">
       <button
         v-for="(tab, index) in items"
         :key="index"
         type="button"
         :class="[
+          'cursor-pointer ',
           buttonBaseClass,
           activeIndexLocal === index ? activeClass : inactiveClass,
         ]"
@@ -40,11 +41,15 @@ const props = defineProps({
   inactiveClass: {
     type: String,
     default:
-      "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300",
+      "border-transparent text-muted dark:text-neutral hover:text-muted hover:border-gray-300",
   },
   buttonBaseClass: {
     type: String,
-    default: "flex items-center gap-2 font-medium text-xs transition-colors",
+    default: "flex items-center gap-2 font-medium  transition-colors",
+  },
+  direction: {
+    type: String,
+    default: "column",
   },
 });
 

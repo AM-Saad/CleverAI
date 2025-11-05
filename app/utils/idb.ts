@@ -7,7 +7,7 @@
 import { DB_CONFIG } from "./constants/pwa";
 
 export interface IDBHelperOptions {
-  storeName: string;
+  storeName: STORES;
   keyPath?: string;
   indexes?: Array<{
     name: string;
@@ -22,19 +22,26 @@ export interface IDBHelperOptions {
  */
 export function openIDB(options: IDBHelperOptions): Promise<IDBDatabase> {
   const { storeName, keyPath = "id", indexes = [] } = options;
+  console.log("[IDB] Opening DB:", DB_CONFIG.NAME, "Store:", storeName);
 
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION);
-
+    console.log("[IDB] Open request initiated.");
     req.onupgradeneeded = () => {
       const db = req.result;
-
+      console.log("[IDB] Upgrade needed for DB:", db);
       // Non-destructive: only create store if missing
       let store: IDBObjectStore;
       if (!db.objectStoreNames.contains(storeName)) {
+        console.log("[IDB] Creating object store:", storeName);
         store = db.createObjectStore(storeName, { keyPath });
       } else {
         // Access existing store via upgrade transaction
+        console.log(
+          "[IDB] Object store exists:",
+          storeName,
+          db.objectStoreNames
+        );
         try {
           const tx = req.transaction;
           if (tx) {
@@ -74,12 +81,69 @@ export function openIDB(options: IDBHelperOptions): Promise<IDBDatabase> {
  */
 export async function openFormsDB(): Promise<IDBDatabase> {
   return openIDB({
-    storeName: "forms",
+    storeName: DB_CONFIG.STORES.FORMS,
     keyPath: "id",
     // Future: add indexes when needed
-    // indexes: [{ name: 'email', keyPath: 'email', options: { unique: false } }]
+    indexes: [{ name: "email", keyPath: "email", options: { unique: false } }],
   });
 }
+
+// IndexedDB helpers for persistent local storage
+export const openNotesDB = async (): Promise<IDBDatabase> => {
+  return openIDB({
+    storeName: DB_CONFIG.STORES.NOTES,
+    keyPath: "id",
+    indexes: [
+      { name: "folderId", keyPath: "folderId", options: { unique: false } },
+      { name: "updatedAt", keyPath: "updatedAt", options: { unique: false } },
+    ],
+  });
+};
+
+
+export const saveNoteToIndexedDB = async (note: NoteState): Promise<void> => {
+  try {
+    const db = await openNotesDB();
+    const tx = db.transaction([DB_CONFIG.STORES.NOTES], "readwrite");
+    const store = tx.objectStore(DB_CONFIG.STORES.NOTES);
+    store.put(note);
+  } catch (error) {
+    console.error("Failed to save note to IndexedDB:", error);
+  }
+};
+
+export const loadNotesFromIndexedDB = async (
+  folderId: string
+): Promise<NoteState[]> => {
+  try {
+    const db = await openNotesDB();
+    const tx = db.transaction([DB_CONFIG.STORES.NOTES], "readonly");
+    const store = tx.objectStore(DB_CONFIG.STORES.NOTES);
+    const index = store.index("folderId");
+    const request = index.getAll(folderId);
+
+    return new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error("Failed to load notes from IndexedDB:", error);
+    return [];
+  }
+};
+
+export const deleteNoteFromIndexedDB = async (
+  noteId: string
+): Promise<void> => {
+  try {
+    const db = await openNotesDB();
+    const tx = db.transaction([DB_CONFIG.STORES.NOTES], "readwrite");
+    const store = tx.objectStore(DB_CONFIG.STORES.NOTES);
+    await store.delete(noteId);
+  } catch (error) {
+    console.error("Failed to delete note from IndexedDB:", error);
+  }
+};
 
 /**
  * Sanitizes an object for IndexedDB storage by removing non-cloneable properties.
@@ -133,7 +197,7 @@ export function sanitizeForIDB<T>(obj: T): T {
  */
 export async function putRecord<T>(
   db: IDBDatabase,
-  storeName: string,
+  storeName: STORES,
   record: T
 ): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -154,7 +218,7 @@ export async function putRecord<T>(
  */
 export async function getRecord<T>(
   db: IDBDatabase,
-  storeName: string,
+  storeName: STORES,
   key: IDBValidKey
 ): Promise<T | undefined> {
   return new Promise((resolve, reject) => {
@@ -171,7 +235,7 @@ export async function getRecord<T>(
  */
 export async function getAllRecords<T>(
   db: IDBDatabase,
-  storeName: string
+  storeName: STORES
 ): Promise<T[]> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction([storeName], "readonly");
@@ -187,7 +251,7 @@ export async function getAllRecords<T>(
  */
 export async function deleteRecord(
   db: IDBDatabase,
-  storeName: string,
+  storeName: STORES,
   key: IDBValidKey
 ): Promise<void> {
   return new Promise((resolve, reject) => {

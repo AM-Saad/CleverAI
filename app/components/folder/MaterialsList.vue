@@ -62,7 +62,7 @@
           <div class="flex items-center">
 
             <header class="flex w-full justify-between items-center gap-2">
-              <ui-subtitle weight="normal" size="xs">{{ m.title }}</ui-subtitle>
+              <ui-subtitle weight="normal" size="sm">{{ m.title }}</ui-subtitle>
               <div class="ml-4 flex-shrink-0 flex gap-2">
                 <!-- Fullscreen/Expand button -->
                 <u-button variant="ghost" @click="() => toggleFullscreen(m.id)">
@@ -113,7 +113,7 @@
 
     </ul>
 
-    <ui-paragraph v-if="!loading && materialList.length === 0 && !error" color="muted" size="xs">
+    <ui-paragraph v-if="!loading && materialList.length === 0 && !error" color="muted" >
       No materials in this folder.
     </ui-paragraph>
   </div>

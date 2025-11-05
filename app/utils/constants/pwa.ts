@@ -41,7 +41,7 @@ export const CACHE_CONFIG = {
 // ===== INDEXEDDB CONSTANTS =====
 export const DB_CONFIG = {
   NAME: "recwide_db",
-  VERSION: 2,
+  VERSION: 3,
   STORES: {
     PROJECTS: "projects",
     FORMS: "forms",

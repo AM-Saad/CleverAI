@@ -1,5 +1,6 @@
 import type { APIError } from "@/services/FetchFactory";
 import type Result from "@/types/Result";
+import { DB_CONFIG } from "~/utils/constants/pwa";
 
 export interface NoteState extends Note {
   // Local state tracking
@@ -7,7 +8,6 @@ export interface NoteState extends Note {
   isDirty?: boolean;
   lastSaved?: Date;
   error?: string | null;
-  originalContent?: string; // Store original content for rollback
 }
 
 interface NotesStore {
@@ -21,6 +21,7 @@ interface NotesStore {
   clearNoteError: (id: string) => void;
   isNoteLoading: (id: string) => boolean;
   isNoteDirty: (id: string) => boolean;
+  getNote: (id: string) => NoteState | null;
 }
 
 // Global store instance
@@ -45,89 +46,118 @@ export function useNotesStore(folderId: string): NotesStore {
   const loadingStates = ref<Map<string, boolean>>(new Map());
   const lastSync = ref<Date | null>(null);
 
-  // Debounced save function to reduce API calls
+  // Debounced server sync to reduce API calls during typing
   const saveToServer = async (id: string, content: string) => {
-    await saveNoteToServer(id, content);
+    await updateNoteToServer(id, content);
   };
 
   const { debouncedFunc: debouncedSave } = useDebounce(saveToServer, 300);
 
-  // Internal function to save note to server
-  const saveNoteToServer = async (
+  // Simple offline sync - only when actually offline
+  const queueForOfflineSync = (
+    type: FormSyncType,
+    payload: any,
+    formId: string
+  ) => {
+    if (!navigator.onLine) {
+      handleOfflineSubmit({
+        payload,
+        storeName: DB_CONFIG.STORES.FORMS,
+        type,
+        formId,
+      });
+    }
+  };
+
+  // Sync note changes to server (local-first approach)
+  const updateNoteToServer = async (
     id: string,
     content: string
   ): Promise<boolean> => {
     const note = notes.value.get(id);
     if (!note) return false;
 
-    // Store original state for rollback
-    const originalNote = { ...note };
-
     try {
       // Set loading state
       note.isLoading = true;
       note.error = null;
+      notes.value.set(id, note);
 
-      // Make API call
+      // Attempt to submit to server
       const result: Result<Note, APIError> = await $api.notes.update(id, {
         content,
       });
 
+
+      // Network error - keep local content, queue for offline sync
+      if (!navigator.onLine) {
+        queueForOfflineSync(FORM_SYNC_TYPES.UPDATE_NOTE, { noteId: id, content }, id);
+        note.isLoading = false;
+        notes.value.set(id, note);
+        return true;
+      }
+
       if (result.success) {
-        // Update local state with server response
-        notes.value.set(id, {
-          ...result.data,
-          isLoading: false,
-          isDirty: false,
-          lastSaved: new Date(),
-          error: null,
-        });
+        // Server success - mark as synced but keep local content
+        notes.value.set(id, { ...note, isLoading: false, isDirty: false, lastSaved: new Date(), error: null });
+        note.isLoading = false;
         return true;
       } else {
-        // API returned failure - rollback optimistic changes
+        // Server rejected - keep local content, show error
         console.error("Server rejected update:", result.error);
-
-        toast.add({
-          title: "Error",
-          description: result.error.message,
-          color: "error",
-        });
-        // Rollback to original state
-        notes.value.set(id, {
-          ...originalNote,
-          isLoading: false,
-          error: "Server rejected the changes",
-        });
 
         return false;
       }
     } catch (error) {
-      console.error("Failed to save note:", error);
-      toast.add({
-        title: "Error",
-        description: "Failed to save note - check your connection",
-        color: "error",
-      });
-      // Network or other error - rollback optimistic changes
-      notes.value.set(id, {
-        ...originalNote,
-        isLoading: false,
-        error: "Failed to save - check your connection",
-      });
+      console.error("Failed to sync note to server:", error);
+      if (!navigator.onLine) {
+        queueForOfflineSync(FORM_SYNC_TYPES.UPDATE_NOTE, { noteId: id, content }, id);
+        note.isLoading = false;
+        notes.value.set(id, note);
+        return true;
+      }
 
+      note.isLoading = false;
+      notes.value.set(id, note);
       return false;
     }
   };
 
-  // Create a new note
-  const createNote = async (
-    folderIdParam: string,
-    content: string
-  ): Promise<string | null> => {
-    try {
-      // Create temporary ID for optimistic update
-      const tempId = `temp-${Date.now()}`;
 
+
+
+  // Update note content - local-first approach with IndexedDB persistence
+  const updateNote = async (id: string, content: string): Promise<boolean> => {
+    const note = notes.value.get(id);
+    if (!note) return false;
+
+    // Step 1: Save to IndexedDB first (persistent local storage)
+    const updatedNote: NoteState = {
+      ...note,
+      content,
+      isDirty: true,
+      updatedAt: new Date(),
+    };
+
+    // Save to IndexedDB immediately for persistence
+    await saveNoteToIndexedDB(updatedNote);
+
+    // Step 2: Update reactive state (optimistic update)
+    notes.value.set(id, updatedNote);
+
+    // Step 3: Attempt to sync with server (debounced)
+    debouncedSave(id, content);
+    return true;
+  };
+
+
+
+
+  // Create a new note - simple optimistic approach
+  const createNote = async (folderIdParam: string, content: string): Promise<string | null> => {
+    const tempId = `temp-${Date.now()}`;
+
+    try {
       // Add optimistic note
       const optimisticNote: NoteState = {
         id: tempId,
@@ -140,16 +170,18 @@ export function useNotesStore(folderId: string): NotesStore {
         error: null,
       };
 
+      // Save to IndexedDB first for persistence
+      await saveNoteToIndexedDB(optimisticNote);
       notes.value.set(tempId, optimisticNote);
 
-      // Make API call
+      // Attempt to submit to server
       const result = await $api.notes.create({
         folderId: folderIdParam,
         content,
       });
 
       if (result.success) {
-        // Remove temporary note and add real note
+        // Server success - replace temp note with real note
         notes.value.delete(tempId);
         notes.value.set(result.data.id, {
           ...result.data,
@@ -158,112 +190,111 @@ export function useNotesStore(folderId: string): NotesStore {
           lastSaved: new Date(),
           error: null,
         });
-
         return result.data.id;
-      }
+      } else {
+        // Server rejected - keep local version
+        console.error("Server rejected note creation:", result.error);
+        const note = notes.value.get(tempId);
+        if (note) {
+          note.isLoading = false;
+          note.error = "Server rejected note creation";
+          notes.value.set(tempId, note);
+        }
 
-      // Remove failed optimistic note
-      notes.value.delete(tempId);
-      return null;
+        toast.add({ title: "Server Error", description: "Server rejected note creation. Note saved locally.", color: "error" });
+        return tempId;
+      }
     } catch (error) {
       console.error("Failed to create note:", error);
-      return null;
+
+      // Only show offline message if actually offline
+      if (!navigator.onLine) {
+        queueForOfflineSync(FORM_SYNC_TYPES.CREATE_NOTE, { folderId: folderIdParam, content }, tempId);
+
+        toast.add({ title: "Offline", description: "Note saved locally. Will sync when online.", color: "warning" });
+        return tempId;
+      } else {
+        // Other errors - remove the optimistic note
+        notes.value.delete(tempId);
+        toast.add({ title: "Error", description: "Failed to create note - check your connection", color: "error" });
+        return null;
+      }
     }
   };
-
-  // Update note content (optimistic with debounced save)
-  const updateNote = async (id: string, content: string): Promise<boolean> => {
-    const note = notes.value.get(id);
-    if (!note) return false;
-
-    // Store original content for potential rollback
-    const originalContent = note.content;
-
-    // Optimistic update
-    notes.value.set(id, {
-      ...note,
-      content,
-      isDirty: true,
-      updatedAt: new Date(),
-      // Store original content in case we need to rollback
-      originalContent: originalContent,
-    });
-    // handleOfflineSubmit({
-    //   payload: {
-    //     noteId: id,
-    //     content: content,
-    //   },
-    //   storeName: DB_CONFIG.STORES.FORMS,
-    //   type: FORM_SYNC_TYPES.UPDATE_NOTE,
-    //   formId: id,
-    // });
-
-    // Debounced save to server (will handle rollback if needed)
-    debouncedSave(id, content);
-
-    return true;
-  };
-
-  // Delete a note
+  // Delete a note - simple optimistic approach
   const deleteNote = async (id: string): Promise<boolean> => {
     try {
       const note = notes.value.get(id);
       if (!note) return false;
 
-      // Optimistic removal
+      // Optimistic removal from reactive state
       notes.value.delete(id);
 
-      // Make API call
+      // Remove from IndexedDB
+      await deleteNoteFromIndexedDB(id);
+
+      // Attempt to submit to server
       const result: Result<unknown, APIError> = await $api.notes.delete(id);
-      console.log("Delete note result:", result.success);
-      if (!result.success) {
-        // Rollback on failure
-        toast.add({
-          title: "Error",
-          description: result.error.message,
-          color: "error",
-        });
-        notes.value.set(id, note);
+
+      if (result.success) {
+        return true;
+      } else {
+        // Server rejected - restore note to both reactive state and IndexedDB
+        console.error("Server rejected note deletion:", result.error);
+        const restoredNote = { ...note, isLoading: false, error: "Server rejected deletion" };
+        notes.value.set(id, restoredNote);
+        await saveNoteToIndexedDB(restoredNote);
+
+        toast.add({ title: "Server Error", description: "Server rejected deletion. Note restored.", color: "error" });
         return false;
       }
-
-      return true;
     } catch (error) {
       console.error("Failed to delete note:", error);
-      // Rollback on error - find the note in the notes map before deletion
-      toast.add({
-        title: "Error",
-        description: "Failed to delete note - check your connection",
-        color: "error",
-      });
-      const allNotes = Array.from(notes.value.values());
-      const originalNote = allNotes.find((n) => n.id === id);
-      if (originalNote) {
-        notes.value.set(id, originalNote);
-      }
 
-      return false;
+      // Only show offline message if actually offline
+      if (!navigator.onLine) {
+        queueForOfflineSync(FORM_SYNC_TYPES.DELETE_NOTE, { noteId: id }, id);
+        toast.add({ title: "Offline", description: "Deletion queued. Will sync when online.", color: "warning" });
+        return true;
+      } else {
+        // Other errors - restore the note
+        const note = notes.value.get(id);
+        if (!note) {
+          // Try to restore from the notes map
+          const allNotes = Array.from(notes.value.values());
+          const originalNote = allNotes.find((n) => n.id === id);
+          if (originalNote) {
+            notes.value.set(id, originalNote);
+          }
+        }
+
+        toast.add({ title: "Error", description: "Failed to delete note - check your connection", color: "error" });
+        return false;
+      }
     }
   };
 
-  // Sync with server (initial load or refresh)
+  // Load notes from server with IndexedDB fallback
   const syncWithServer = async (folderIdParam: string): Promise<void> => {
     loadingStates.value.set(folderIdParam, true);
     try {
       const result = await $api.notes.getByFolder(folderIdParam);
 
       if (result.success) {
-        // Clear existing notes and load fresh data
+        // Clear existing notes and load fresh data from server
         notes.value.clear();
 
         result.data.forEach((note: Note) => {
-          notes.value.set(note.id, {
+          const noteState: NoteState = {
             ...note,
             isLoading: false,
             isDirty: false,
             lastSaved: new Date(),
             error: null,
-          });
+          };
+          notes.value.set(note.id, noteState);
+          // Also save to IndexedDB for offline access
+          saveNoteToIndexedDB(noteState);
         });
 
         lastSync.value = new Date();
@@ -271,25 +302,37 @@ export function useNotesStore(folderId: string): NotesStore {
         return;
       }
 
-      if (!result.success) {
-        toast.add({
-          title: "Error",
-          description: "Failed to sync notes: " + result.error.message,
-          color: "error",
-        });
-        loadingStates.value.set(folderIdParam, false);
-      }
-      // API returned failure
+      // Server failed - try to load from IndexedDB
       console.error(
         "Failed to sync notes: server returned failure",
         result.error
       );
-      loadingStates.value.set(folderIdParam, false);
-      return;
+      // await loadFromIndexedDBFallback(folderIdParam);
     } catch (error) {
       console.error("Failed to sync notes:", error);
-      loadingStates.value.set(folderIdParam, false);
-      return;
+      // Network error - try to load from IndexedDB
+      // await loadFromIndexedDBFallback(folderIdParam);
+    }
+  };
+
+  // Fallback to load notes from IndexedDB when server fails
+  const loadFromIndexedDBFallback = async (folderId: string): Promise<void> => {
+    try {
+      const localNotes = await loadNotesFromIndexedDB(folderId);
+
+      if (localNotes.length > 0) {
+        // Clear existing notes and load from IndexedDB
+        notes.value.clear();
+
+        localNotes.forEach((note: NoteState) => notes.value.set(note.id, note));
+
+        toast.add({ title: "Offline Mode", description: `Loaded ${localNotes.length} notes from local storage.`, color: "warning" });
+      }
+    } catch (error) {
+      console.error("Failed to load notes from IndexedDB:", error);
+      toast.add({ title: "Error", description: "Failed to load notes from server or local storage.", color: "error" });
+    } finally {
+      loadingStates.value.set(folderId, false);
     }
   };
 
@@ -312,8 +355,14 @@ export function useNotesStore(folderId: string): NotesStore {
 
     // Clear error state and retry with current content
     note.error = null;
-    return await saveNoteToServer(id, note.content);
+    note.isLoading = true;
+    notes.value.set(id, note);
+
+    // Retry the save operation
+    return await updateNoteToServer(id, note.content);
   };
+
+  // Note: Removed cleanup function as it's no longer needed with simplified approach
 
   // Clear error state for a note
   const clearNoteError = (id: string): void => {
@@ -323,6 +372,10 @@ export function useNotesStore(folderId: string): NotesStore {
     }
   };
 
+  const getNote = (id: string): NoteState | null => {
+    return notes.value.get(id) || null;
+  };
+
   // Create store instance
   const store: NotesStore = {
     notes,
@@ -330,6 +383,7 @@ export function useNotesStore(folderId: string): NotesStore {
     createNote,
     updateNote,
     deleteNote,
+    getNote,
     syncWithServer,
     retryFailedNote,
     clearNoteError,

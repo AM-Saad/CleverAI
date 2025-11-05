@@ -1,119 +1,82 @@
 <template>
   <!-- eslint-disable vue/max-attributes-per-line, vue/attributes-order -->
-  <UCard>
+  <ui-card size="lg" variant="default">
+
     <template #header>
       <div class="flex items-center gap-2">
         <UIcon name="i-heroicons-bell" class="w-5 h-5" />
-        <h3 class="text-lg font-semibold">Notification Preferences</h3>
+        Notification Preferences
       </div>
     </template>
 
     <div class="space-y-6">
+
       <!-- Card Due Notifications -->
-      <div class="border rounded-lg p-4 space-y-4">
-        <div class="flex items-center justify-between">
+      <ui-card class="space-y-4">
+        <template #header>
           <div>
-            <h4 class="text-base font-medium text-gray-900 dark:text-gray-100">
-              📚 Card Due Notifications
-            </h4>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              Get notified when you have cards ready for review
-            </p>
+            📚 Card Due Notifications
+            <ui-paragraph>Get notified when you have cards ready for review</ui-paragraph>
           </div>
-          <USwitch
-            v-model="preferences.cardDueEnabled"
-            :loading="loading"
-            @change="updatePreferences"
-          />
-        </div>
+          <USwitch v-model="preferences.cardDueEnabled" :loading="loading" @change="updatePreferences" />
+        </template>
 
         <!-- Card Due Settings -->
-        <div
-          v-if="preferences.cardDueEnabled"
-          class="space-y-3 pl-4 border-l-2 border-gray-200 dark:border-gray-700"
-        >
-          <UForm
-            label="Notification Time"
-            help="What time would you like to be notified?"
-          >
+        <div v-if="preferences.cardDueEnabled" class="space-y-3 pl-4">
+          <UForm label="Notification Time" help="What time would you like to be notified?">
             <div class="flex items-center gap-2">
               <UIcon name="i-heroicons-clock" class="w-4 h-4 text-gray-400" />
-              <input
-                v-model="preferences.cardDueTime"
-                type="time"
+              <input v-model="preferences.cardDueTime" type="time"
                 class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                :disabled="loading || preferences.sendAnytimeOutsideQuietHours"
-                @change="updatePreferences"
-              />
+                :disabled="loading || preferences.sendAnytimeOutsideQuietHours" @change="updatePreferences" />
             </div>
-            <div
-              v-if="preferences.sendAnytimeOutsideQuietHours"
-              class="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
-            >
+            <div v-if="preferences.sendAnytimeOutsideQuietHours"
+              class="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
               <UIcon name="i-heroicons-information-circle" class="w-3 h-3" />
-              <span
-                >Card Due Time is ignored when "Send Anytime" is enabled.</span
-              >
+              <span>Card Due Time is ignored when "Send Anytime" is enabled.</span>
             </div>
           </UForm>
 
-          <UFormField
-            label="How often would you like to be notified?"
-            help="Choose how often you'd like to be notified about due cards"
-          >
+          <UFormField label="How often would you like to be notified?"
+            help="Choose how often you'd like to be notified about due cards">
             <div class="space-y-3">
               <!-- Threshold Selection -->
               <div class="grid grid-cols-1 gap-3">
-                <div
-                  v-for="option in thresholdOptions"
-                  :key="option.value"
-                  :class="[
-                    'relative border rounded-lg p-4 cursor-pointer transition-all',
-                    preferences.cardDueThreshold === option.value
-                      ? 'border-primary bg-primary-50 dark:bg-primary-900/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
-                  ]"
-                  @click="selectThreshold(option.value)"
-                >
+                <ui-card v-for="option in thresholdOptions" :key="option.value" :class="[
+                  'relative border rounded-lg p-4 cursor-pointer transition-all',
+                  preferences.cardDueThreshold === option.value
+                    ? 'border-primary bg-primary-50 dark:bg-primary-900/20'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
+                ]" @click="selectThreshold(option.value)">
                   <div class="flex items-start gap-3">
-                    <div class="text-2xl">{{ option.emoji }}</div>
+                    <div class="text-xl">{{ option.emoji }}</div>
                     <div class="flex-1">
                       <div class="flex items-center gap-2">
-                        <h4
-                          class="font-medium text-gray-900 dark:text-gray-100"
-                        >
+                        <ui-label weight="medium">
                           {{ option.title }}
-                        </h4>
-                        <span
-                          class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded"
-                        >
+                        </ui-label>
+                        <span class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
                           {{ option.value }}+ cards
                         </span>
                       </div>
-                      <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                      <ui-paragraph class="mt-1">
                         {{ option.description }}
-                      </p>
+                      </ui-paragraph>
                     </div>
-                    <div
-                      v-if="preferences.cardDueThreshold === option.value"
-                      class="text-primary"
-                    >
+                    <div v-if="preferences.cardDueThreshold === option.value" class="text-primary">
                       <UIcon name="i-heroicons-check-circle" class="w-5 h-5" />
                     </div>
                   </div>
-                </div>
+                </ui-card>
               </div>
 
               <!-- Custom Threshold Option -->
-              <div
-                :class="[
-                  'relative border rounded-lg p-4 cursor-pointer transition-all',
-                  isCustomThreshold
-                    ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
-                ]"
-                @click="selectCustomThreshold"
-              >
+              <div :class="[
+                'relative border rounded-lg p-4 cursor-pointer transition-all',
+                isCustomThreshold
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
+              ]" @click="selectCustomThreshold">
                 <div class="flex items-start gap-3">
                   <div class="text-2xl">⚙️</div>
                   <div class="flex-1">
@@ -121,20 +84,9 @@
                       <h4 class="font-medium text-gray-900 dark:text-gray-100">
                         Custom
                       </h4>
-                      <div
-                        v-if="isCustomThreshold"
-                        class="flex items-center gap-2"
-                      >
-                        <UInput
-                          v-model.number="customThresholdValue"
-                          type="number"
-                          min="1"
-                          max="100"
-                          class="w-20"
-                          size="sm"
-                          :loading="loading"
-                          @input="updateCustomThreshold"
-                        />
+                      <div v-if="isCustomThreshold" class="flex items-center gap-2">
+                        <UInput v-model.number="customThresholdValue" type="number" min="1" max="100" class="w-20"
+                          size="sm" :loading="loading" @input="updateCustomThreshold" />
                         <span class="text-xs text-gray-500">cards</span>
                       </div>
                     </div>
@@ -150,256 +102,203 @@
             </div>
           </UFormField>
         </div>
-      </div>
+      </ui-card>
+
+
+
+
+
+
 
       <!-- Daily Study Reminders -->
-      <div class="border rounded-lg p-4 space-y-4">
-        <div class="flex items-center justify-between">
+      <ui-card>
+
+        <template #header>
           <div>
-            <h4 class="text-base font-medium text-gray-900 dark:text-gray-100">
-              📅 Daily Study Reminders
-            </h4>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
-              Get reminded to study at a specific time each day
-            </p>
+            📅 Daily Study Reminders
+            <ui-paragraph>Get reminded to study at a specific time each day</ui-paragraph>
           </div>
-          <USwitch
-            v-model="preferences.dailyReminderEnabled"
-            :loading="loading"
-            @change="updatePreferences"
-          />
-        </div>
+          <USwitch v-model="preferences.dailyReminderEnabled" :loading="loading" @change="updatePreferences" />
+        </template>
 
         <!-- Daily Reminder Settings -->
-        <div
-          v-if="preferences.dailyReminderEnabled"
-          class="space-y-3 pl-4 border-l-2 border-gray-200 dark:border-gray-700"
-        >
-          <UFormGroup
-            label="Reminder Time"
-            help="What time would you like your daily reminder?"
-          >
+        <div v-if="preferences.dailyReminderEnabled"
+          class="space-y-3 pl-4 border-l-2 border-gray-200 dark:border-gray-700">
+          <UFormGroup label="Reminder Time" help="What time would you like your daily reminder?">
             <div class="flex items-center gap-2">
               <UIcon name="i-heroicons-clock" class="w-4 h-4 text-gray-400" />
-              <input
-                v-model="preferences.dailyReminderTime"
-                type="time"
+              <input v-model="preferences.dailyReminderTime" type="time"
                 class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                :disabled="loading"
-                @change="updatePreferences"
-              />
+                :disabled="loading" @change="updatePreferences" />
             </div>
           </UFormGroup>
         </div>
-      </div>
+      </ui-card>
+
+
+
 
       <!-- Quiet Hours -->
-      <div class="border rounded-lg p-4 space-y-4">
-        <div class="flex items-center justify-between">
+      <ui-card class="space-y-4">
+        <template #header>
           <div>
-            <h4 class="text-base font-medium text-gray-900 dark:text-gray-100">
-              🤫 Quiet Hours
-            </h4>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            🤫 Quiet Hours
+            <ui-paragraph>
               No notifications during these hours
-            </p>
+            </ui-paragraph>
           </div>
-          <USwitch
-            v-model="preferences.quietHoursEnabled"
-            :loading="loading"
-            @change="updatePreferences"
-          />
-        </div>
+          <USwitch v-model="preferences.quietHoursEnabled" :loading="loading" @change="updatePreferences" />
+        </template>
 
         <!-- Quiet Hours Settings -->
-        <div
-          v-if="preferences.quietHoursEnabled"
-          class="space-y-3 pl-4 border-l-2 border-gray-200 dark:border-gray-700"
-        >
+        <div v-if="preferences.quietHoursEnabled"
+          class="space-y-3 pl-4 border-l-2 border-gray-200 dark:border-gray-700">
           <div class="grid grid-cols-2 gap-4">
             <UFormGroup label="Start Time">
               <div class="flex items-center gap-2">
                 <UIcon name="i-heroicons-moon" class="w-4 h-4 text-gray-400" />
-                <input
-                  v-model="preferences.quietHoursStart"
-                  type="time"
+                <input v-model="preferences.quietHoursStart" type="time"
                   class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  :disabled="loading"
-                  @change="updatePreferences"
-                />
+                  :disabled="loading" @change="updatePreferences" />
               </div>
             </UFormGroup>
 
             <UFormGroup label="End Time">
               <div class="flex items-center gap-2">
                 <UIcon name="i-heroicons-sun" class="w-4 h-4 text-gray-400" />
-                <input
-                  v-model="preferences.quietHoursEnd"
-                  type="time"
+                <input v-model="preferences.quietHoursEnd" type="time"
                   class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  :disabled="loading"
-                  @change="updatePreferences"
-                />
+                  :disabled="loading" @change="updatePreferences" />
               </div>
             </UFormGroup>
           </div>
 
-          <div
-            class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
-          >
+          <div class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
             <UIcon name="i-heroicons-information-circle" class="w-3 h-3" />
             <span>
               Notifications will be delayed until after quiet hours end.
             </span>
           </div>
         </div>
-      </div>
+      </ui-card>
+
+
+
+
 
       <!-- Send Anytime (outside quiet hours) -->
-      <div class="border rounded-lg p-4 space-y-4">
-        <div class="flex items-center justify-between">
+      <ui-card class="space-y-4">
+        <template #header>
           <div>
-            <h4 class="text-base font-medium text-gray-900 dark:text-gray-100">
-              🚀 Send Anytime (Outside Quiet Hours)
-            </h4>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            🚀 Send Anytime (Outside Quiet Hours)
+            <ui-paragraph>
               If enabled, notifications can send at any time outside quiet hours
               once your due-card threshold is met.
-            </p>
+            </ui-paragraph>
           </div>
-          <USwitch
-            v-model="preferences.sendAnytimeOutsideQuietHours"
-            :loading="loading"
-            @change="updatePreferences"
-          />
-        </div>
-        <div
-          class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
-        >
+          <USwitch v-model="preferences.sendAnytimeOutsideQuietHours" :loading="loading" @change="updatePreferences" />
+        </template>
+
+        <div class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
           <UIcon name="i-heroicons-information-circle" class="w-3 h-3" />
           <span>
             When disabled, notifications only send near your Card Due Time.
           </span>
         </div>
-      </div>
+      </ui-card>
+
+
+
+
 
       <!-- Active Hours -->
-      <div class="border rounded-lg p-4 space-y-4">
-        <div class="flex items-center justify-between">
+      <ui-card class="space-y-4">
+        <template #header>
           <div>
-            <h4 class="text-base font-medium text-gray-900 dark:text-gray-100">
-              🕘 Active Hours
-            </h4>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            🕘 Active Hours
+            <ui-paragraph>
               Only send notifications during these hours (in addition to quiet
               hours).
-            </p>
+            </ui-paragraph>
           </div>
-          <USwitch
-            v-model="preferences.activeHoursEnabled"
-            :loading="loading"
-            @change="updatePreferences"
-          />
-        </div>
+          <USwitch v-model="preferences.activeHoursEnabled" :loading="loading" @change="updatePreferences" />
+        </template>
 
-        <div
-          v-if="preferences.activeHoursEnabled"
-          class="space-y-3 pl-4 border-l-2 border-gray-200 dark:border-gray-700"
-        >
+        <div v-if="preferences.activeHoursEnabled"
+          class="space-y-3 pl-4 border-l-2 border-gray-200 dark:border-gray-700">
           <div class="grid grid-cols-2 gap-4">
             <UFormGroup label="Start">
               <div class="flex items-center gap-2">
                 <UIcon name="i-heroicons-play" class="w-4 h-4 text-gray-400" />
-                <input
-                  v-model="preferences.activeHoursStart"
-                  type="time"
+                <input v-model="preferences.activeHoursStart" type="time"
                   class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  :disabled="loading"
-                  @change="updatePreferences"
-                />
+                  :disabled="loading" @change="updatePreferences" />
               </div>
             </UFormGroup>
 
             <UFormGroup label="End">
               <div class="flex items-center gap-2">
                 <UIcon name="i-heroicons-stop" class="w-4 h-4 text-gray-400" />
-                <input
-                  v-model="preferences.activeHoursEnd"
-                  type="time"
+                <input v-model="preferences.activeHoursEnd" type="time"
                   class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                  :disabled="loading"
-                  @change="updatePreferences"
-                />
+                  :disabled="loading" @change="updatePreferences" />
               </div>
             </UFormGroup>
           </div>
-          <div
-            class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1"
-          >
+          <div class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
             <UIcon name="i-heroicons-information-circle" class="w-3 h-3" />
             <span> Midnight crossover is supported (e.g., 22:00–06:00). </span>
           </div>
         </div>
-      </div>
+      </ui-card>
+
+
+
 
       <!-- Timezone Settings -->
-      <div class="border rounded-lg p-4 space-y-4">
-        <div class="flex items-center justify-between">
+      <ui-card class="space-y-4">
+        <template #header>
           <div>
-            <h4 class="text-base font-medium text-gray-900 dark:text-gray-100">
-              🌍 Timezone
-            </h4>
-            <p class="text-sm text-gray-500 dark:text-gray-400">
+            🌍 Timezone
+            <ui-paragraph>
               Set your local timezone for accurate notification timing
-            </p>
+            </ui-paragraph>
           </div>
-        </div>
+        </template>
 
-        <UFormField
-          label="Your Timezone"
-          help="All notification times will be converted to your local timezone"
-        >
+        <UFormField label="Your Timezone" help="All notification times will be converted to your local timezone">
           <div class="relative inline-flex items-center gap-2">
             <UIcon name="i-heroicons-globe-alt" class="w-4 h-4 text-gray-400" />
-            <select
-              v-model="preferences.timezone"
-              :disabled="loading"
+            <select v-model="preferences.timezone" :disabled="loading"
               class="px-2.5 py-1.5 text-sm rounded-md bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-gray-100"
-              @change="updatePreferences"
-            >
+              @change="updatePreferences">
               <option disabled value="">Select your timezone</option>
-              <option
-                v-for="tz in timezoneOptions"
-                :key="tz.value"
-                :value="tz.value"
-              >
+              <option v-for="tz in timezoneOptions" :key="tz.value" :value="tz.value">
                 {{ tz.label }}
               </option>
             </select>
           </div>
         </UFormField>
 
-        <div
-          class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 my-1"
-        >
+        <div class="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 my-1">
           <UIcon name="i-heroicons-information-circle" class="w-3 h-3" />
           <span>
             Current time in your timezone: {{ getCurrentUserTime() }}
           </span>
         </div>
-      </div>
+      </ui-card>
+
+
     </div>
 
     <!-- Save Status -->
     <template v-if="lastSaved" #footer>
-      <div
-        class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400"
-      >
+      <div class="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
         <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-green-500" />
         <span>Settings saved {{ formatRelativeTime(lastSaved) }}</span>
       </div>
     </template>
-  </UCard>
+  </ui-card>
 </template>
 
 <script setup lang="ts">

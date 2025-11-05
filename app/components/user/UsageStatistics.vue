@@ -1,17 +1,9 @@
 <template>
   <div class="md:col-span-3 mt-6">
-    <UiCard class-name="flex flex-col gap-4">
-      <UiSubtitle>AI Usage Statistics (Last 30 Days)</UiSubtitle>
+    <ui-card class-name="flex flex-col" size="lg" variant="default">
+      <template #header>AI Usage Statistics (Last 30 Days)</template>
       <div class="flex flex-col gap-6">
-        <div
-          v-if="isLlmUsageLoading"
-          class="flex justify-center items-center py-12"
-        >
-          <div
-            class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"
-          />
-        </div>
-
+        <ui-loader v-if="isLlmUsageLoading" :is-fetching="isLlmUsageLoading" />
         <div v-else-if="llmUsageError" class="text-center py-8">
           <p class="text-red-500">{{ llmUsageError }}</p>
           <button class="mt-4 btn bg-primary text-white" @click="fetchLlmUsage">
@@ -20,173 +12,159 @@
         </div>
 
         <div v-else-if="llmUsage" class="flex flex-col gap-6">
-          <!-- Date range selector -->
-          <UiCard
-            size="sm"
-            class-name="flex items-end gap-4 text-sm"
-            variant="ghost"
-          >
-            <label>From</label>
-            <input type="date" v-model="startDate" class="input" />
-            <label>To</label>
-            <input type="date" v-model="endDate" class="input" />
-            <UButton
-              :disabled="isDateRangeInvalid"
-              @click="fetchLlmUsage"
-              size="xs"
-              variant="subtle"
-              >Apply</UButton
-            >
-            <p v-if="isDateRangeInvalid" class="text-sm text-red-500">
-              From date must be on or before To date
-            </p>
-          </UiCard>
+
           <!-- Usage Summary -->
-          <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <UiCard>
-              <UiSubtitle> Total AI Calls </UiSubtitle>
+          <!-- <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <ui-card shadow="sm" variant="default">
+              <ui-label> Total AI Calls </ui-label>
               <p>
                 {{ llmUsage.summary.totalCalls }}
               </p>
-            </UiCard>
-            <UiCard>
-              <UiSubtitle>Total Tokens</UiSubtitle>
+            </ui-card>
+            <ui-card shadow="sm" variant="default">
+              <ui-label>Total Tokens</ui-label>
               <p>{{ formatNumber(llmUsage.summary.totalTokens) }}</p>
-            </UiCard>
-            <UiCard>
-              <UiSubtitle>Input Tokens</UiSubtitle>
+            </ui-card>
+            <ui-card shadow="sm" variant="default">
+              <ui-label>Input Tokens</ui-label>
               <p>{{ formatNumber(llmUsage.summary.totalPromptTokens) }}</p>
-            </UiCard>
-            <UiCard>
-              <UiSubtitle>Output Tokens</UiSubtitle>
+            </ui-card>
+            <ui-card shadow="sm" variant="default">
+              <ui-label>Output Tokens</ui-label>
               <p>{{ formatNumber(llmUsage.summary.totalCompletionTokens) }}</p>
-            </UiCard>
-          </div>
+            </ui-card>
+          </div> -->
 
+          <!-- Date range selector -->
+          <ui-card size="xs" content-classes="flex items-end gap-2 text-sm" variant="ghost">
+            <fieldset class="flex flex-col">
+              <label class="mr-1 font-medium">From:</label>
+              <u-input type="date" v-model="startDate" />
+            </fieldset>
+
+            <fieldset class="flex flex-col">
+              <label class="mr-1 font-medium">To:</label>
+              <u-input type="date" v-model="endDate" />
+            </fieldset>
+            <u-button :disabled="isDateRangeInvalid" @click="fetchLlmUsage" size="md" variant="subtle">Apply</u-button>
+            <p v-if="isDateRangeInvalid" class="text-sm text-red-500">
+              From date must be on or before To date
+            </p>
+          </ui-card>
           <!-- Usage by Feature -->
-          <div>
-            <UiSubtitle>Usage by Feature</UiSubtitle>
-            <div
-              class="overflow-x-auto mt-4 p-sm bg-muted border border-muted rounded"
-            >
-              <table class="w-full text-left text-sm">
+          <div class="mb-4">
+            <ui-subtitle weight="semibold" size="sm">Usage by Feature</ui-subtitle>
+            <div class="overflow-x-auto mt-2 bg-light dark:bg-muted border border-muted rounded">
+              <table class="w-full text-left text-sm bg-muted">
+
                 <thead>
+
                   <tr class="border-b border-muted">
-                    <th class="pb-1">Feature</th>
-                    <th class="pb-1">Calls</th>
-                    <th class="pb-1">Tokens</th>
-                    <th class="pb-1 text-right">Cost (USD)</th>
+                    <th class="py-2 px-4">Feature</th>
+                    <th class="py-2 px-4">Calls</th>
+                    <th class="py-2 px-4">Tokens</th>
+                    <th class="py-2 px-4 text-right">Cost (USD)</th>
                   </tr>
+
                 </thead>
-                <tbody>
-                  <tr
-                    v-for="(feature, idx) in llmUsage.byFeature"
-                    :key="feature.name"
-                    :class="`${idx !== llmUsage.byFeature.length - 1 ? 'border-b dark:border-gray-700' : ''}`"
-                  >
-                    <td class="py-2">{{ feature.name }}</td>
-                    <td class="py-2">{{ feature.calls }}</td>
-                    <td class="py-2">{{ formatNumber(feature.tokens) }}</td>
-                    <td class="py-2 text-right">
-                      ${{ feature.usd.toFixed(4) }}
-                    </td>
+
+                <tbody class="bg-white dark:bg-muted">
+
+                  <tr v-for="(feature, idx) in llmUsage.byFeature" :key="feature.name"
+                    :class="`${idx !== llmUsage.byFeature.length - 1 ? 'border-b border-muted' : ''}`">
+                    <td class="py-2 px-4">{{ feature.name }}</td>
+                    <td class="py-2 px-4">{{ feature.calls }}</td>
+                    <td class="py-2 px-4">{{ formatNumber(feature.tokens) }}</td>
+                    <td class="py-2 px-4 text-right">${{ feature.usd.toFixed(4) }}</td>
                   </tr>
                   <tr class="">
-                    <td class="pt-2 font-medium">Total</td>
-                    <td class="pt-2 font-medium">
-                      {{ llmUsage.summary.totalCalls }}
-                    </td>
-                    <td class="pt-2 font-medium">
-                      {{ formatNumber(llmUsage.summary.totalTokens) }}
-                    </td>
-                    <td class="pt-2 font-medium text-right">
-                      ${{ llmUsage.summary.totalUsd.toFixed(4) }}
-                    </td>
+                    <td class="py-2 px-4 font-medium">Total</td>
+                    <td class="py-2 px-4 font-medium">{{ llmUsage.summary.totalCalls }}</td>
+                    <td class="py-2 px-4 font-medium">{{ formatNumber(llmUsage.summary.totalTokens) }}</td>
+                    <td class="py-2 px-4 font-medium text-right">${{ llmUsage.summary.totalUsd.toFixed(4) }}</td>
                   </tr>
+
                 </tbody>
+
               </table>
             </div>
           </div>
 
           <!-- Usage by Model -->
-          <div>
-            <UiSubtitle>Usage by Model</UiSubtitle>
-            <div
-              class="overflow-x-auto mt-4 p-sm bg-muted border border-muted rounded"
-            >
-              <table class="w-full text-left text-sm">
+          <div class="mb-4">
+            <ui-subtitle weight="semibold" size="sm">Usage by Model</ui-subtitle>
+            <div class="overflow-x-auto mt-2 bg-light dark:bg-muted border border-muted rounded">
+              <table class="w-full text-left text-sm bg-muted">
+
                 <thead>
+
                   <tr class="border-b border-muted">
-                    <th class="pb-2">Model</th>
-                    <th class="pb-2">Calls</th>
-                    <th class="pb-2">Tokens</th>
-                    <th class="pb-2 text-right">Cost (USD)</th>
+                    <th class="py-2 px-4">Model</th>
+                    <th class="py-2 px-4">Calls</th>
+                    <th class="py-2 px-4">Tokens</th>
+                    <th class="py-2 px-4 text-right">Cost (USD)</th>
                   </tr>
+
                 </thead>
-                <tbody>
-                  <tr
-                    v-for="(model, idx) in llmUsage.byModel"
-                    :key="model.name"
-                    :class="`${idx !== llmUsage.byModel.length - 1 ? 'border-b dark:border-gray-700' : ''}`"
-                  >
-                    <td class="py-2">{{ model.name }}</td>
-                    <td class="py-2">{{ model.calls }}</td>
-                    <td class="py-2">{{ formatNumber(model.tokens) }}</td>
-                    <td class="py-2 text-right">${{ model.usd.toFixed(4) }}</td>
+
+                <tbody class="bg-white dark:bg-muted">
+
+                  <tr v-for="(model, idx) in llmUsage.byModel" :key="model.name"
+                    :class="`${idx !== llmUsage.byModel.length - 1 ? 'border-b border-muted' : ''}`">
+                    <td class="py-2 px-4">{{ model.name }}</td>
+                    <td class="py-2 px-4">{{ model.calls }}</td>
+                    <td class="py-2 px-4">{{ formatNumber(model.tokens) }}</td>
+                    <td class="py-2 px-4 text-right">${{ model.usd.toFixed(4) }}</td>
                   </tr>
+
                   <tr>
-                    <td class="pt-2 font-medium">Total</td>
-                    <td class="pt-2 font-medium">
-                      {{ llmUsage.summary.totalCalls }}
-                    </td>
-                    <td class="pt-2 font-medium">
-                      {{ formatNumber(llmUsage.summary.totalTokens) }}
-                    </td>
-                    <td class="pt-2 font-medium text-right">
-                      ${{ llmUsage.summary.totalUsd.toFixed(4) }}
-                    </td>
+                    <td class="py-2 px-4 font-medium">Total</td>
+                    <td class="py-2 px-4 font-medium">{{ llmUsage.summary.totalCalls }}</td>
+                    <td class="py-2 px-4 font-medium">{{ formatNumber(llmUsage.summary.totalTokens) }}</td>
+                    <td class="py-2 px-4 font-medium text-right">${{ llmUsage.summary.totalUsd.toFixed(4) }}</td>
                   </tr>
+
                 </tbody>
+
               </table>
             </div>
           </div>
 
           <!-- Recent Usage -->
           <div>
-            <UiSubtitle>Recent Usage</UiSubtitle>
-            <div
-              class="overflow-x-auto mt-4 p-sm bg-muted border border-muted rounded"
-            >
-              <table class="w-full text-left text-sm">
+            <ui-subtitle weight="semibold" size="sm">Recent Usage</ui-subtitle>
+            <div class="overflow-x-auto mt-2 bg-light dark:bg-muted border border-muted rounded">
+              <table class="w-full text-left text-sm bg-muted">
+
                 <thead>
+
                   <tr class="border-b border-muted">
-                    <th class="pb-2">Date</th>
-                    <th class="pb-2">Feature</th>
-                    <th class="pb-2">Model</th>
-                    <th class="pb-2 text-right">Tokens</th>
-                    <th class="pb-2 text-right">Cost (USD)</th>
+                    <th class="py-2 px-4">Date</th>
+                    <th class="py-2 px-4">Feature</th>
+                    <th class="py-2 px-4">Model</th>
+                    <th class="py-2 px-4 text-right">Tokens</th>
+                    <th class="py-2 px-4 text-right">Cost (USD)</th>
                   </tr>
+
                 </thead>
-                <tbody>
-                  <tr
-                    v-for="(usage, idx) in llmUsage.recentUsage"
-                    :key="usage.id"
-                    :class="`${idx !== llmUsage.recentUsage.length - 1 ? 'border-b border-muted' : ''}`"
-                  >
-                    <td class="py-2">{{ formatDate(usage.date) }}</td>
-                    <td class="py-2">{{ usage.feature }}</td>
-                    <td class="py-2">{{ usage.model }}</td>
-                    <td class="py-2 text-right">
-                      {{ formatNumber(usage.tokens) }}
-                    </td>
-                    <td class="py-2 text-right">${{ usage.usd.toFixed(6) }}</td>
+
+                <tbody class="bg-white dark:bg-muted">
+
+                  <tr v-for="(usage, idx) in llmUsage.recentUsage" :key="usage.id"
+                    :class="`${idx !== llmUsage.recentUsage.length - 1 ? 'border-b border-muted' : ''}`">
+                    <td class="py-2 px-4">{{ formatDate(usage.date) }}</td>
+                    <td class="py-2 px-4">{{ usage.feature }}</td>
+                    <td class="py-2 px-4">{{ usage.model }}</td>
+                    <td class="py-2 px-4 text-right">{{ formatNumber(usage.tokens) }}</td>
+                    <td class="py-2 px-4 text-right">${{ usage.usd.toFixed(6) }}</td>
                   </tr>
+
                   <tr v-if="llmUsage.recentUsage.length === 0">
-                    <td colspan="5" class="py-2 text-center text-gray-500">
-                      No Recent Usage
-                    </td>
+                    <td colspan="5" class="py-2 px-4 text-center text-gray-500">No Recent Usage</td>
                   </tr>
+
                 </tbody>
+
               </table>
             </div>
           </div>
@@ -196,7 +174,7 @@
           <p>No AI usage data available.</p>
         </div>
       </div>
-    </UiCard>
+    </ui-card>
   </div>
 </template>
 

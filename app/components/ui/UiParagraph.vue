@@ -26,7 +26,7 @@ interface Props {
   /**
    * Text color variant
    */
-  color?: "primary" | "secondary" | "neutral" | "muted" | "inverse" | "white";
+  color?: "primary" | "neutral" | "muted" | "inverse" | "white";
   /**
    * Center alignment
    */
@@ -39,8 +39,8 @@ interface Props {
 
 const {
   tag = "p",
-  size = "base",
-  color = "neutral",
+  size = "sm",
+  color = "muted",
   center = false,
   className = "",
 } = defineProps<Props>();
@@ -54,7 +54,6 @@ const sizeClasses = {
 
 const colorClasses = {
   primary: "text-primary",
-  secondary: "text-secondary",
   neutral: "text-dark dark:text-light",
   muted: "text-muted",
   inverse: "text-inverse",
@@ -64,8 +63,6 @@ const colorClasses = {
 
 <style scoped>
 .ui-paragraph {
-  font-family: var(--font-sans);
-  margin: 0;
   line-height: var(--line-height-normal);
 }
 </style>

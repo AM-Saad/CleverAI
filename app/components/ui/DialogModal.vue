@@ -21,10 +21,10 @@ onUnmounted(() => {
   <Transition name="modal">
     <div v-if="show" class="modal-mask">
       <div
-        class="inner dark:bg-dark bg-light absolute left-[50%] top-[50%] w-96 -translate-x-1/2 -translate-y-1/2 transform rounded-lg p-3 shadow-lg"
+        class="inner dark:bg-dark bg-light absolute left-[50%] top-[50%] min-w-96 -translate-x-1/2 -translate-y-1/2 transform rounded-lg p-3 shadow-lg"
       >
         <div
-          class="modal-header flex items-center justify-between text-xl font-bold"
+          class="modal-header flex items-center justify-between "
         >
           <slot name="header"> default header </slot>
           <button

@@ -1,6 +1,5 @@
 <template>
-  <div>
-    <UiTitle tag="h1">Folders</UiTitle>
+  <shared-page-wrapper title="Folders" subtitle="Manage your folders and organization">
     <div v-if="loading" class="text-gray-500 my-xl">
       <div class="flex items-center gap-4">
         <USkeleton class="h-12 w-12 rounded-full" />
@@ -16,32 +15,27 @@
       <div v-if="!loading && !folders?.length" class="text-gray-500">
         No folders found.
       </div>
-      <ul v-if="folders && folders?.length > 0" class="space-y-4">
-        <li v-for="folder in folders" :key="folder.id">
-          <UiCard hover="glow" shadow="none">
-            <NuxtLink :to="`/folders/${folder.id}`">
-              <div class="mb-2 flex items-center">
-                <icon
-                  name="ic:round-folder-open"
-                  class="inline-block mr-2 text-primary"
-                />
+      <ul v-if="folders && folders?.length > 0" class="grid  gap-4">
+        <UiCard v-for="folder in folders" :key="folder.id" hover="glow" shadow="none" tag="li">
+          <NuxtLink :to="`/folders/${folder.id}`">
+            <div class="mb-2 flex items-center">
+              <icon name="ic:round-folder-open" class="inline-block mr-2 text-primary" />
 
-                <UiSubtitle>{{ folder.title }}</UiSubtitle>
-              </div>
-              <UiParagraph v-if="folder.description" class="">
-                {{ folder.description }}
-              </UiParagraph>
-              <div v-else class="">No description available.</div>
-            </NuxtLink>
-          </UiCard>
-        </li>
+              <UiSubtitle>{{ folder.title }}</UiSubtitle>
+            </div>
+            <UiParagraph v-if="folder.description" class="">
+              {{ folder.description }}
+            </UiParagraph>
+            <div v-else class="">No description available.</div>
+          </NuxtLink>
+        </UiCard>
       </ul>
     </div>
     <modals-create-folder-form :show="show" @cancel="show = false" />
     <div class="mt-4">
       <UButton @click="show = true">Create Folder</UButton>
     </div>
-  </div>
+  </shared-page-wrapper>
 </template>
 
 <script setup lang="ts">

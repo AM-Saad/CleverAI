@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="w-full h-full min-h-fit">
     <div class="flex items-center justify-end mb-2">
       <div class="flex items-center gap-3">
         <span v-if="rateLimitRemaining !== null"
@@ -7,25 +7,33 @@
           Remaining:
           <span class="ml-1 font-medium">{{ rateLimitRemaining }}</span>
         </span>
-        <UButton class="flex items-center" :loading="generating || loading" :disabled="generating || loading" size="sm"
-          @click="onGenerate">
+
+        <u-tooltip v-if="cardsToShow && cardsToShow?.length > 0 && materialsLength === 0"
+          :text="'Please add materials before generating flashcards.'" :popper="{ placement: 'top' }">
+          <u-button color="primary" size="sm" :loading="false" :disabled="true">
+            <icons-stars-generative />
+            Generate Flashcards
+          </u-button>
+        </u-tooltip>
+        <u-button v-if="cardsToShow && cardsToShow?.length > 0 && materialsLength && materialsLength > 0"
+          color="primary" size="sm" :loading="generating || loading" :disabled="generating" @click="onGenerate">
+          <icons-stars-generative />
           <span v-if="!generating">Generate Flashcards</span>
           <span v-else>Generating…</span>
-          <icons-stars-generative />
-        </UButton>
+        </u-button>
+
       </div>
     </div>
-
-    <ui-paragraph v-if="(!cardsToShow || cardsToShow.length === 0) && !generating" size="xs" color="muted">
-      No flash cards yet.<br />
-      Click “Generate Flashcards” to create some from this folder's content.
-    </ui-paragraph>
+    <shared-empty-state v-if="(!cardsToShow || cardsToShow.length === 0) && !generating" title="No Flashcards"
+      description="Click 'Generate Flashcards' to create some from this folder's content."
+      button-text="Generate Flashcards" @action="onGenerate" :is-blocked="materialsLength === 0"
+      :blocked-tooltip="materialsLength === 0 ? 'Please add materials before generating flashcards.' : ''" />
 
     <ui-paragraph v-if="genError" class="mt-2 text-error">
       {{ genError }}
     </ui-paragraph>
 
-    <div v-if="cardsToShow?.length" class="mt-4 select-none">
+    <div v-if="cardsToShow?.length" class="mt-4 select-none h-full min-h-fit">
       <UCarousel v-slot="{ item: card }" class-names dots :items="cardsToShow" :ui="{
         item: 'select-none basis-[70%] transition-opacity [&:not(.is-snapped)]:opacity-10',
       }" class="mx-auto max-w-sm">
@@ -34,9 +42,8 @@
             <ui-paragraph class="w-4/5" size="sm">Q: {{ card.front }}</ui-paragraph>
             <!-- Enrollment status indicator -->
             <div v-if="'id' in card && card.id && enrolledCards.has(card.id)" class="absolute top-2 right-2">
-              <span class="inline-flex items-center justify-center h-5 w-5 rounded-full text-xs font-medium bg-primary border border-muted">
-                ✓
-              </span>
+              <span
+                class="inline-flex items-center justify-center h-5 w-5 rounded-full text-xs font-medium bg-primary border border-muted">✓</span>
             </div>
           </template>
           <template #back>
@@ -51,22 +58,20 @@
         </ui-flip-card>
       </UCarousel>
     </div>
-
-    <!-- Review Navigation -->
-    <div v-if="cardsToShow?.length" class="mt-10 text-center">
-      <UButton to="/review" size="sm">
-        <svg class="mr-2 h-2 w-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
-        </svg>
-        Start Review
-      </UButton>
-    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useRoute } from "vue-router";
 import { computed } from "vue";
+
+// Note: Using NoteState from useNotesStore instead of local interface
+interface Props {
+  materialsLength?: number;
+}
+
+const props = defineProps<Props>();
+
 
 const route = useRoute();
 const id = route.params.id as string;
@@ -79,7 +84,6 @@ const model = computed(
 const text = computed(() =>
   extractContentFromFolder(folder.value as Folder | null | undefined),
 );
-console.log(text);
 
 const existingFlashcards = computed(
   () => (folder.value as Folder | null | undefined)?.flashcards || [],
@@ -157,6 +161,7 @@ function handleCardEnrolled(response: EnrollCardResponse) {
 }
 
 async function onGenerate() {
+  if (generating || loading) return;
   await generate();
 }
 

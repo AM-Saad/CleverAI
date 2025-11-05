@@ -2,19 +2,19 @@
     <!-- Parent container: reserves space in grid -->
     <div ref="noteRef" :class="noteContainerClasses">
         <!-- Child: handles animation and positioning -->
-        <div :class="noteContentClasses" @click="startEditing" oncontextmenu.prevent="startEditing">
-
+        <div :class="noteContentClasses">
 
             <!-- Content area -->
             <div class="relative h-full flex flex-col transition-opacity duration-400" :class="{
                 'opacity-0': isAnimating,
                 'opacity-100': !isAnimating,
             }">
-                <!-- Top right actions -->
-                <div class="flex items-center justify-between mb-2 border-b border-muted p-1">
 
-                    <div class="flex items-center gap-4 border-b border-amber-200/40 animate-pulse repeat-infinite ease-in-out opacity-75">
-                        <p class="text-[10px] text-primary">Auto-saving...</p>
+                <!-- Top right actions -->
+                <div class="flex items-center justify-between border-b light:border-muted h-8">
+
+                    <div class="flex items-center gap-4 animate-pulse repeat-infinite ease-in-out opacity-75">
+                        <p v-if="note.loading" class="text-[10px] text-primary">Auto-saving...</p>
                         <div v-if="note.loading" class="flex items-center gap-1 text-primary">
                             <svg class="animate-spin h-2.5 w-2.5" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
@@ -23,11 +23,11 @@
                                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                             </svg>
                         </div>
-
                     </div>
-                    <div class="flex items-center gap-4">
+
+                    <div class="flex items-center gap-2">
                         <!-- Fullscreen toggle button (show when not loading and has content) -->
-                        <u-button v-if="!isEditing && note.text.trim()"
+                        <u-button v-if="note.text.trim()"
                             class=" group-hover:opacity-70 hover:opacity-100 transition-opacity duration-200 cursor-pointer"
                             :class="{ 'opacity-0': note.loading }" variant="subtle" color="primary" size="xs"
                             :aria-label="isFullscreen ? 'Exit fullscreen' : 'View fullscreen'"
@@ -48,20 +48,8 @@
                             :disabled="false" @click="deleteNote(note.id)">
                             <icon name="i-heroicons-trash" class="w-3 h-3" />
                         </u-button>
-
-                        <!-- Edit icon (only show when not editing and not loading) -->
-                        <!-- <u-button v-if="!isEditing"
-                            class="group-hover:opacity-70 hover:opacity-100 transition-opacity duration-200 cursor-pointer"
-                            variant="subtle" color="primary" size="xs" 
-                            :class="{ 'opacity-0': note.loading }"
-                            aria-label="Edit note" @click="startEditing">
-                            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
-                        </u-button> -->
-
                     </div>
+
                 </div>
 
                 <!-- Error state -->
@@ -84,21 +72,9 @@
                             :isFullScreen="isFullscreen" />
                     </div>
                 </client-only>
-                <!-- Auto-save hint -->
 
-                <!-- Display mode -->
-                <!-- <div class="flex-1 overflow-hidden">
-                    <div v-if="note.text.trim()"
-                        class="text-amber-900 font-handwriting text-base leading-relaxed whitespace-pre-wrap break-words"
-                        v-html="note.text" />
-                    <p v-else class="text-amber-600/50 font-handwriting text-base italic">
-                        {{ placeholder }}
-                    </p>
-                </div> -->
             </div>
 
-            <!-- Paper corner fold effect -->
-            <!-- <div class="absolute top-0 right-0 w-4 h-4 bg-amber-200/40 transform  border-l border-b border-amber-300/30" /> -->
         </div>
     </div>
 </template>
@@ -137,7 +113,7 @@ const emit = defineEmits<{
 }>();
 
 // Reactive state
-const isEditing = ref(false);
+const isEditing = ref(true);
 const contentHtml = ref(props.note.text); // HTML content for tiptap v-model
 const originalText = ref(props.note.text); // To track changes for saving
 const tiptapRef = ref<{ editor?: TiptapEditorType } | null>(null);
@@ -158,7 +134,7 @@ const noteContainerClasses = computed(() => {
     const sizeClasses = {
         sm: "w-48 h-32",
         md: "w-64 h-40",
-        lg: "w-full h-48",
+        lg: "w-full h-full",
     };
 
     const baseClasses = [
@@ -176,7 +152,7 @@ const noteContainerClasses = computed(() => {
 // Computed classes for the note content
 const noteContentClasses = computed(() => {
     const baseClasses = [
-        "note-content",
+        "note-content bg-white p-1 rounded",
         "w-full h-full",
         "cursor-pointer select-none",
         "transition-all duration-100",
@@ -253,6 +229,15 @@ const animateFromFullscreen = (element: HTMLElement) => {
     }, 500); // Match the CSS transition duration
 };
 
+watch(
+    () => props.note,
+    (note) => {
+        console.log("Note prop changed:", note);
+        contentHtml.value = note.text;
+        originalText.value = note.text;
+    },
+);
+
 // Watch for fullscreen changes and animate
 watch(
     () => props.isFullscreen,
@@ -294,44 +279,21 @@ const sanitizeHtml = (html = "") => {
     return doc.body.innerHTML.trim();
 };
 
-const startEditing = () => {
-    if (props.note.loading || props.note.error || isEditing.value) return;
-    console.log("Starting to edit note:", props.note.id);
-    isEditing.value = true;
-    // note.text now contains HTML
-    originalText.value = props.note.text;
-    contentHtml.value = props.note.text || "";
 
-    // nextTick(() => {
-    //     // Focus tiptap editor if available
-    //     if (tiptapRef.value?.editor?.commands?.focus) {
-    //         tiptapRef.value.editor.commands.focus()
-    //     }
-    // })
-
-    setTimeout(() => {
-        // Focus tiptap editor if available
-        if (tiptapRef.value?.editor?.commands?.focus) {
-            console.log("Focusing tiptap editor for note:", props.note.id);
-            tiptapRef.value.editor.commands.focus();
-        }
-    }, 1000);
-};
-
-const cancelEdit = () => {
-    // revert to original HTML
-    contentHtml.value = originalText.value || "";
-    isEditing.value = false;
-    cancelSave();
-};
+// const cancelEdit = () => {
+//     // revert to original HTML
+//     contentHtml.value = originalText.value || "";
+//     // isEditing.value = false;
+//     cancelSave();
+// };
 
 const softFinishEditing = () => {
-    console.log("Soft-finishing edit for note:", props.note.id);
-    const sanitized = sanitizeHtml(contentHtml.value);
-    if (sanitized !== (originalText.value || "").trim()) {
-        cancelSave();
-        void saveNote(sanitized);
-    }
+    // console.log("Soft-finishing edit for note:", props.note.id);
+    // const sanitized = sanitizeHtml(contentHtml.value);
+    // if (sanitized !== (originalText.value || "").trim()) {
+    //     cancelSave();
+    //     void saveNote(sanitized);
+    // }
 };
 
 // Auto-finish editing when clicking outside or after a period of inactivity
@@ -342,7 +304,7 @@ const autoFinishEditing = () => {
         cancelSave();
         void saveNote(sanitized);
     }
-    isEditing.value = false;
+    // isEditing.value = false;
 };
 
 const saveNote = async (html: string) => {
@@ -362,9 +324,8 @@ const saveNote = async (html: string) => {
     }
 };
 
-const retry = () => {
-    emit("retry", props.note.id);
-};
+const retry = () => emit("retry", props.note.id);
+
 
 // Watch for tiptap content changes to auto-save (we persist plain text)
 watch(contentHtml, (newHtml) => {
@@ -388,15 +349,15 @@ const handleClickOutside = (event: MouseEvent) => {
 };
 
 const handleKeydown = (event: KeyboardEvent) => {
-    if (!isEditing.value) return;
-    if (event.key === "Escape") {
-        event.preventDefault();
-        cancelEdit();
-    }
-    if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-        event.preventDefault();
-        softFinishEditing();
-    }
+    // if (!isEditing.value) return;
+    // if (event.key === "Escape") {
+    //     event.preventDefault();
+    //     cancelEdit();
+    // }
+    // if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+    //     event.preventDefault();
+    //     softFinishEditing();
+    // }
 };
 
 // Add/remove click outside listener
@@ -428,5 +389,4 @@ onBeforeUnmount(() => {
 
     transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
-
 </style>

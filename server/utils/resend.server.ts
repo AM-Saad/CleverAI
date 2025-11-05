@@ -288,7 +288,7 @@ export const sendPasswordResetEmail = async (
     );
   }
 
-  const resetUrl = `${process.env.APP_BASE_URL || "http://localhost:3000"}/auth/reset-password?token=${resetToken}`;
+  const resetUrl = `${process.env.APP_BASE_URL || "http://localhost:3000"}/auth/editPassword?token=${resetToken}`;
   const template = generateEmailTemplate(
     "passwordReset",
     {
@@ -300,7 +300,7 @@ export const sendPasswordResetEmail = async (
   const finalRecipient = getRecipientEmail(recipientEmail);
 
   const emailData = {
-    from: "Ibrahim Learning <security@ibrahimlearning.com>",
+    from: 'CleverAI <onboarding@resend.dev>',
     to: [finalRecipient],
     subject: template.subject,
     html: template.html,

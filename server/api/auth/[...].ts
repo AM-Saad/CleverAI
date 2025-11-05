@@ -87,9 +87,24 @@ export default NuxtAuthHandler({
             folders: true,
           },
         });
-        console.log("authorize -> user exist", user?.email);
+
         if (!user) {
           throw new Error("Invalid credentials - user not found");
+        }
+
+        // Check if account is soft-deleted
+        if (user.deletedAt) {
+          const now = new Date();
+          
+          // Check if scheduled deletion date has passed
+          if (user.scheduledDeletionAt && user.scheduledDeletionAt <= now) {
+            throw new Error("Account has been permanently deleted");
+          }
+          
+          // Account is soft-deleted but can be reactivated
+          throw new Error(
+            `Your account is scheduled for deletion. <a class='font-bold' href='/auth/reactivate?email=${email}'>Click here</a> to reactivate your account`
+          );
         }
 
         if (!user.email_verified) {
@@ -114,7 +129,7 @@ export default NuxtAuthHandler({
 
         // Compare the provided password with the hashed password from the database
         const valid = await bcrypt.compare(password, user.password);
-        console.log("authorize -> valid", valid);
+        // console.log("authorize -> valid", valid);
         if (!valid) {
           throw new Error("Invalid credentials - incorrect password");
         }
@@ -133,7 +148,7 @@ export default NuxtAuthHandler({
   },
   events: {
     signIn: async (params) => {
-      console.log("Event -> signIn", params.user);
+      // console.log("Event -> signIn", params.user);
       const { email, name } = params.user;
       if (params.account && params.account.provider === "google" && email) {
         try {
@@ -163,12 +178,12 @@ export default NuxtAuthHandler({
       // console.log("Event -> signIn", params.user.email)
     },
     signOut: async (message): Promise<void> => {
-      console.log("signOut", message);
+      // console.log("signOut", message);
     },
   },
   callbacks: {
     async signIn({ user }) {
-      console.log("callbacks -> signIn -> user", user);
+      // console.log("callbacks -> signIn -> user", user);
       if (!user) {
         return "/auth/error?error=UserNotFound"; // Redirect to error page
       }

@@ -39,6 +39,7 @@ export default defineNuxtPlugin((_nuxtApp) => {
     notes: apiServiceFactory.create("notes"),
     auth: apiServiceFactory.create("auth"),
     review: apiServiceFactory.create("review"),
+    user: apiServiceFactory.create("user"),
   };
 
   console.log("🌐 [API PLUGIN] API services created:", Object.keys(services));

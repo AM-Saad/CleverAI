@@ -1,15 +1,15 @@
 <template>
-    <UiCard variant="ghost" size="xs" shadow="none" class="col-span-1 lg:col-span-4 flex-1">
+    <ui-card variant="ghost" size="lg" shadow="none" class="col-span-1 md:col-span-3 lg:col-span-4 flex-1">
         <!-- Header -->
         <template v-slot:header>
             <div class="flex items-center gap-2">
-                <ui-subtitle size="base">Notes</ui-subtitle>
-                <span v-if="notes?.length" class="text-sm text-gray-500 dark:text-gray-400">
-                    ({{ notes.length }})
-                </span>
+                Notes
+                <ui-label v-if="notes?.length">
+                    ( {{ notes.length }} )
+                </ui-label>
             </div>
             <u-button size="sm" color="primary" variant="outline" @click="createNewNote">
-                <u-icon name="i-heroicons-plus" class="w-4 h-4" />
+                <u-icon name="i-heroicons-plus" />
                 New Note
             </u-button>
         </template>
@@ -21,46 +21,38 @@
         <!-- Notes content -->
         <div v-if="!isFetching && !error" class="h-full overflow-auto">
             <!-- Fullscreen backdrop with transition -->
-            <!-- <Transition name="backdrop">
+            <Transition name="backdrop">
                 <div v-if="fullscreenNote" class="fullscreen-backdrop" @click="closeFullscreen" />
-            </Transition> -->
+            </Transition>
 
             <!-- Empty state -->
-            <div v-if="!notes?.length" class="flex flex-col gap-2 items-center justify-center">
-                <div class="flex items-center gap-2 mb-4">
-                    <u-icon name="i-heroicons-document-text" class="w-12 h-12 text-muted dark:text-light" />
-                    <ui-subtitle>
-                        No Notes Yet
-                    </ui-subtitle>
-                </div>
-
-                <ui-paragraph size="sm" color="muted">
-                    Create your first note to capture important thoughts and ideas for
+            <shared-empty-state
+                v-if="!notes?.length"
+                title="No Notes."
+                button-text="Create First Note"
+                :center-description="true"
+                @action="createNewNote"
+            >
+                <template #description>
+                    Create your first note to capture important <br/>thoughts and ideas for
                     this folder.
-                </ui-paragraph>
-                <u-button color="primary" @click="createNewNote">
-                    <u-icon name="i-heroicons-plus" class="w-4 h-4" />
-                    Create First Note
-                </u-button>
-            </div>
+                </template>
+            </shared-empty-state>
 
             <!-- Notes grid -->
             <ui-card v-else variant="outline" size="xs" class="h-full">
                 <div class="grid grid-cols-5 h-full">
-                    <ReorderGroup v-model:values="localNotes" axis="y"
-                        class="relative  overflow-auto space-y-4 col-span-1 border-r border-muted">
-                        <ReorderItem v-for="note in localNotes" :key="note.id" :value="note"
-                            class="relative group w-full p-1.5 mb-1 border-b border-muted"
-                            @click="currentNoteId = note.id;">
+                    <ReorderGroup v-model:values="notes" axis="y"
+                        class="relative  overflow-auto col-span-1 border-r pr-1 border-muted" @reorder="handleReorder">
+                        <ReorderItem v-for="(note, idx) in notes" :key="note.id" :value="note" :class="['relative group w-full p-2.5 border-b border-muted cursor-pointer hover:bg-muted',
+                            idx === 0 ? 'rounded-tl-xl' : ''
+                        ]" @click="currentNoteId = note.id;">
                             <ui-paragraph size="xs" class="truncate">{{ note.content.slice(0, 40) }}...</ui-paragraph>
                         </ReorderItem>
                     </ReorderGroup>
 
                     <ui-card class="col-span-4" variant="ghost" size="xs">
-                        <!-- <shared-tiptap-editor v-if="currentNoteId" ref="tiptapRef" :id="currentNoteId"
-                            v-model="contentHtml" /> -->
-                        <UiStickyNote v-if="currentNoteId"
-                            :note="transformNoteForComponent(notes.find(n => n.id === currentNoteId)!)"
+                        <UiStickyNote v-if="currentNote" :note="currentNote"
                             :is-fullscreen="fullscreenNote === currentNoteId" :delete-note="deleteNote" size="lg"
                             placeholder="Double-click to add your note..." @update="handleUpdateNote"
                             @retry="handleRetry" @toggle-fullscreen="toggleFullscreen" />
@@ -69,7 +61,7 @@
             </ui-card>
 
         </div>
-    </UiCard>
+    </ui-card>
 </template>
 
 <script setup lang="ts">
@@ -80,27 +72,34 @@ import { APIError } from "~/services/FetchFactory";
 import { ReorderGroup, ReorderItem } from 'motion-v'
 
 
-
-interface Note {
-    id: string;
-    text: string;
-    loading?: boolean;
-    error?: string | null;
-}
-
+// Note: Using NoteState from useNotesStore instead of local interface
 interface Props {
     folderId: string;
 }
 
 const props = defineProps<Props>();
 
+
 // Use the optimistic notes store
 const notesStore = useNotesStore(props.folderId);
+
 
 // Computed properties for reactive data
 const notes = computed(() => Array.from(notesStore.notes.value.values()));
 
-const localNotes = ref<NoteState[]>([]);
+const currentNote = computed(() => {
+    console.log("Current Note ID:", currentNoteId.value);
+    console.log("Notes in Store:", notesStore.notes.value);
+    console.log("Current Note Retrieved:", notesStore.notes.value.get(currentNoteId.value || ""));
+    const note = notesStore.notes.value.get(currentNoteId.value || "") || null;
+    return note ? {
+        id: note.id,
+        text: note.content, // Map 'content' to 'text' for StickyNote compatibility
+        loading: note.isLoading || false,
+        error: note.error || null,
+    } : null;
+});
+
 // Loading and error state for the initial fetch
 const isFetching = computed(
     () => notesStore.loadingStates.value.get(props.folderId) ?? false,
@@ -108,6 +107,7 @@ const isFetching = computed(
 const error = ref<APIError | null>(null); // Main error state for critical failures
 
 const tiptapRef = ref<{ editor?: TiptapEditorType } | null>(null);
+
 
 // const isFullscreen = computed(() => {
 //     return tiptapRef.value?.editor?.isFocused || false;
@@ -118,42 +118,6 @@ const currentNoteId = ref<string | null>(notes.value[0]?.id || null);
 // Fullscreen state management
 const fullscreenNote = ref<string | null>(null);
 
-// Transform note for StickyNote component
-const transformNoteForComponent = (note: NoteState) => {
-    return {
-        id: note.id,
-        text: note.content,
-        loading: note.isLoading || false,
-        error: note.error || null,
-    };
-};
-
-
-watch(notes, (newNotes) => {
-    localNotes.value = newNotes;
-}, { immediate: true });
-function setItems(newItems: NoteState[]) {
-    localNotes.value = newItems
-}
-// Fullscreen functionality
-const toggleFullscreen = (noteId: string) => {
-    if (fullscreenNote.value === noteId) {
-        // Close fullscreen
-        fullscreenNote.value = null;
-    } else {
-        // Open fullscreen
-        fullscreenNote.value = noteId;
-    }
-};
-
-const closeFullscreen = () => {
-    fullscreenNote.value = null;
-};
-
-// Check if a note is currently loading
-// const isNoteLoading = (noteId: string) => {
-//     return notesStore.isNoteLoading(noteId)
-// }
 
 // Create a new note (optimistic)
 const createNewNote = async () => {
@@ -161,35 +125,14 @@ const createNewNote = async () => {
 
     if (noteId) {
         console.log("Note created optimistically:", noteId);
+        // Set the new note as current to immediately show it
+        currentNoteId.value = noteId;
     } else {
         console.error("Failed to create note");
     }
 };
 
-// Auto-sync on mount and handle errors
-onMounted(async () => {
-    try {
-        error.value = null;
-        await notesStore.syncWithServer(props.folderId);
-    } catch (e: unknown) {
-        console.log("Error syncing notes:", e);
-        error.value =
-            e instanceof APIError ? e : new APIError("Failed to load notes");
-    }
 
-    // Add ESC key listener for fullscreen
-    const handleEscape = (e: KeyboardEvent) => {
-        if (e.key === "Escape" && fullscreenNote.value) {
-            closeFullscreen();
-        }
-    };
-    document.addEventListener("keydown", handleEscape);
-
-    // Cleanup on unmount
-    onUnmounted(() => {
-        document.removeEventListener("keydown", handleEscape);
-    });
-});
 
 // Update an existing note (optimistic with debounced save)
 const handleUpdateNote = async (id: string, text: string) => {
@@ -220,6 +163,63 @@ const handleRetry = (id: string) => {
     // Use the store's retry functionality for failed notes
     notesStore.retryFailedNote(id);
 };
+
+
+// Handle reordering of notes
+const handleReorder = (newOrder: NoteState[]) => {
+    // Update local state immediately for responsive UI
+    // localNotes.value = newOrder;
+
+    // TODO: If you want to persist order to server, add an 'order' field to the Note model
+    // and implement an API endpoint to update note order
+    // For now, order is maintained locally and will reset on page refresh
+    console.log("Notes reordered:", newOrder.map(n => n.id));
+};
+
+
+// Fullscreen functionality
+const toggleFullscreen = (noteId: string) => {
+    if (fullscreenNote.value === noteId) {
+        // Close fullscreen
+        fullscreenNote.value = null;
+    } else {
+        // Open fullscreen
+        fullscreenNote.value = noteId;
+    }
+};
+
+
+
+const closeFullscreen = () => {
+    fullscreenNote.value = null;
+};
+
+
+// Auto-sync on mount and handle errors
+onMounted(async () => {
+    try {
+        error.value = null;
+        await notesStore.syncWithServer(props.folderId);
+    } catch (e: unknown) {
+        console.log("Error syncing notes:", e);
+        error.value =
+            e instanceof APIError ? e : new APIError("Failed to load notes");
+    }
+
+    // Add ESC key listener for fullscreen
+    const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === "Escape" && fullscreenNote.value) {
+            closeFullscreen();
+        }
+    };
+    document.addEventListener("keydown", handleEscape);
+
+    // Cleanup on unmount
+    onUnmounted(() => {
+        document.removeEventListener("keydown", handleEscape);
+    });
+});
+
 </script>
 
 <style scoped>
@@ -254,9 +254,9 @@ const handleRetry = (id: string) => {
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
+    background-color: rgba(0, 0, 0, 0.8);
     z-index: 50;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(5px);
     will-change: opacity, backdrop-filter;
 }
 

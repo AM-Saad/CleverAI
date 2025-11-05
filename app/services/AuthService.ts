@@ -34,6 +34,7 @@ export interface IRegisterRequest {
   name: string
   email: string
   password: string
+  confirmPassword: string
   phone: string
   gender?: string
   role?: 'USER'
@@ -190,7 +191,7 @@ class AuthModule extends FetchFactory {
   async createPassword(token: string, password: string, confirmPassword: string): Promise<Result<AuthCreatePasswordResponse>> {
     return this.call<AuthCreatePasswordResponse>(
       'POST',
-      '/api/auth/password/create',
+      `${this.RESOURCE}/password/create`,
       { password, confirmPassword },
       { headers: { 'Authorization': `Bearer ${token}` } }
     )

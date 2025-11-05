@@ -1,10 +1,10 @@
 <template>
   <div
-    class="mx-auto max-w-full flex h-screen flex-col gap-y-4 justify-between"
+    class="mx-auto max-w-7xl flex h-screen flex-col gap-y-4 justify-between"
   >
     <nav
       id="nav"
-      class="flex font-heading items-center justify-between px-4 lg:px-1 rounded-full md:rounded container mx-auto left-[50%] top-4 border-b border-muted w-[calc(100%-1rem)] h-12"
+      class="flex font-heading items-center justify-between px-4 md:px-1 rounded-full md:rounded xl:container mx-auto left-[50%] top-4 border-b border-neutral dark:border-muted w-[calc(100%-1rem)] h-14"
     >
       <div class="flex items-center justify-between w-full">
         <router-link
@@ -124,12 +124,12 @@
       </div>
     </nav>
 
-    <div class="container mx-auto overflow-auto h-full w-full flex-1 p-1">
-      <UToaster />
+    <div class="xl:container mx-auto overflow-auto h-full w-full flex-1 p-4">
+      <!-- <UToaster /> -->
       <ServiceWorkerUpdateNotification mode="banner" />
       <slot />
     </div>
-    <footer class="container mx-auto rounded-sm p-2 h-16 dark:bg-transparent">
+    <footer class="xl:container mx-auto rounded-sm  h-10 dark:bg-transparent">
       <div class="footer-wrapper grid">
         <div class="footer-social">
           <ul>
@@ -146,7 +146,7 @@
               <a><i class="fab fa-google" /></a>
             </li>
           </ul>
-          <ul class="flex justify-center gap-5">
+          <!-- <ul class="flex justify-center gap-5">
             <li class="dark:text-gray-300">
               <a href="/">Support</a>
             </li>
@@ -156,7 +156,7 @@
             <li class="dark:text-gray-300">
               <a href="/">Contact </a>
             </li>
-          </ul>
+          </ul> -->
         </div>
       </div>
       <p class="my-2 text-center text-sm dark:text-gray-300">

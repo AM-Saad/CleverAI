@@ -2,6 +2,9 @@
 // Constants specific to offline functionality and page management
 
 import type { OfflinePage } from "../../types/offline";
+import { DB_CONFIG } from "../../app/utils";
+
+export type STORES = (typeof DB_CONFIG)["STORES"][keyof typeof DB_CONFIG.STORES];
 
 
 // ===== OFFLINE PAGE DEFINITIONS =====
@@ -121,3 +124,4 @@ export const FORM_SYNC_HANDLERS = {
   [FORM_SYNC_TYPES.UPDATE_PREFERENCES]: "user",
   [FORM_SYNC_TYPES.UPDATE_NOTIFICATION_SETTINGS]: "notification",
 } as const;
+

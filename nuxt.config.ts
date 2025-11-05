@@ -156,6 +156,14 @@ export default defineNuxtConfig({
       ],
     },
   },
+  appConfig: {
+    toaster: {
+      position: 'bottom-center' as const,
+      duration: 5000,
+      max: 5,
+      expand: true
+    },
+  },
   //   appConfig: {
   //     // you don't need to include this: only for testing purposes
   //     buildDate: new Date().toISOString(),

@@ -1,14 +1,14 @@
 <template>
   <component :is="tag" :class="[
     'ui-card',
-    className,
     variantClasses[variant],
     sizeClasses[size],
     shadowClasses[shadow],
     hoverClasses[hover],
+    className,
   ]">
     <div v-if="$slots.header"
-      :class="['flex items-center justify-between', headerSizesClasses[size], headerStyle[variant]]">
+      :class="['flex items-center justify-between text-dark dark:text-light', headerSizesClasses[size], headerStyle[variant]]">
       <slot name="header" />
     </div>
 
@@ -27,7 +27,7 @@ interface Props {
   /**
    * HTML tag to render
    */
-  tag?: "div" | "article" | "section";
+  tag?: "div" | "article" | "section" | 'li';
   /**
    * Card visual variant
    */
@@ -63,17 +63,17 @@ const {
 
 const variantClasses = {
   default:
-    "bg-[color:var(--color-white)] border border-[color:var(--color-white)] dark:bg-[color:var(--color-dark)] dark:border-[color:var(--color-dark)] ",
-  outline: "bg-transparent border border-muted ",
+    "bg-[color:var(--color-white)] border border-[color:var(--color-neutral)] dark:bg-[color:var(--color-muted)]/40 dark:border-[color:var(--color-dark)] ",
+  outline: "bg-transparent border border-neutral dark:border-muted",
   ghost: "border-0",
 };
 
 const sizeClasses = {
   xs: "p-1",
-  sm: "p-2",
-  md: "p-3",
-  lg: "p-5",
-  xl: "p-7",
+  sm: "p-3",
+  md: "p-4",
+  lg: "p-4",
+  xl: "p-5",
 };
 
 const shadowClasses = {
@@ -91,15 +91,15 @@ const hoverClasses = {
   scale: "hover:scale-[1.02]",
 };
 const headerSizesClasses = {
-  xs: "py-1 mb-2",
-  sm: "py-2 mb-3",
-  md: "py-3 mb-4",
-  lg: "py-4 mb-5",
-  xl: "py-5 mb-6",
+  xs: "pb-0.5 mb-1",
+  sm: "pb-1.5 mb-4 text-sm font-medium",
+  md: "pb-2.5 mb-5 text-base",
+  lg: "pb-3 mb-7 text-lg font-medium",
+  xl: "pb-3.5 mb-7 text-lg font-semibold",
 };
 const headerStyle = {
-  default: "bg-white dark:bg-transparent",
-  outline: "border-b border-muted",
+  default: "bg-white dark:bg-transparent border-b border-neutral dark:border-muted",
+  outline: "border-b border-neutral dark:border-muted",
   ghost: "border-0",
   elevated: "border-b border-primary-light",
 }
@@ -115,11 +115,6 @@ const combinedContentClasses = ["ui-card__content", contentClasses].join(" ");
   flex-direction: column;
 }
 
-.ui-card__header {
-  padding-bottom: var(--spacing-md);
-  border-bottom: 1px solid var(--color-surface-alt);
-  margin-bottom: var(--spacing-md);
-}
 
 .ui-card__content {
   flex: 1;

@@ -1,10 +1,7 @@
 import FetchFactory from "./FetchFactory";
-import type {
-  CreateNoteDTO,
-  UpdateNoteDTO,
-  Note,
-} from "~/shared/note.contract";
+
 import type { Result } from "@/types/Result";
+import type { Note, CreateNoteDTO, UpdateNoteDTO } from "@@/shared/utils/note.contract.ts";
 
 export class NoteService extends FetchFactory {
   private readonly RESOURCE = "/api/notes";

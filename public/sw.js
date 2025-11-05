@@ -39,7 +39,7 @@
   };
   var DB_CONFIG = {
     NAME: "recwide_db",
-    VERSION: 2,
+    VERSION: 3,
     STORES: {
       PROJECTS: "projects",
       FORMS: "forms",
@@ -154,14 +154,23 @@
   // app/utils/idb.ts
   function openIDB(options) {
     const { storeName, keyPath = "id", indexes = [] } = options;
+    console.log("[IDB] Opening DB:", DB_CONFIG.NAME, "Store:", storeName);
     return new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION);
+      console.log("[IDB] Open request initiated.");
       req.onupgradeneeded = () => {
         const db = req.result;
+        console.log("[IDB] Upgrade needed for DB:", db);
         let store;
         if (!db.objectStoreNames.contains(storeName)) {
+          console.log("[IDB] Creating object store:", storeName);
           store = db.createObjectStore(storeName, { keyPath });
         } else {
+          console.log(
+            "[IDB] Object store exists:",
+            storeName,
+            db.objectStoreNames
+          );
           try {
             const tx = req.transaction;
             if (tx) {
@@ -191,10 +200,10 @@
   }
   async function openFormsDB() {
     return openIDB({
-      storeName: "forms",
-      keyPath: "id"
+      storeName: DB_CONFIG.STORES.FORMS,
+      keyPath: "id",
       // Future: add indexes when needed
-      // indexes: [{ name: 'email', keyPath: 'email', options: { unique: false } }]
+      indexes: [{ name: "email", keyPath: "email", options: { unique: false } }]
     });
   }
   async function getAllRecords(db, storeName) {
@@ -3760,6 +3769,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
               log("No forms to sync");
               return;
             }
+            await syncForms(clients, records);
           } catch (err) {
             error("Background sync failed:", err);
             const clients = await swSelf.clients.matchAll({ type: "window" });

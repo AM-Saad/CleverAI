@@ -11,7 +11,7 @@
 
 /* One source of truth for tokens */
 @theme static {
-  --font-sans: "Helvetica Neue", sans-serif;
+  --font-sans: "";
 
   /* ==== Brand Colors ==== */
   /* Primary brand #ffa45c - main actions and highlights */
@@ -19,8 +19,8 @@
   --color-primary-light: #ffcdab;
 
   /* --color-light: #fffbf4; */
-  --color-light: #fffbf4;
-  --color-neutral: #f7f7f7;
+  --color-light: #fffcf9;
+  --color-neutral: #dad8d8;
   --color-muted: #495362;
   --color-dark: #111827;
 
@@ -61,7 +61,7 @@
   --ui-light: var(--color-light);
   --ui-muted: var(--color-muted);
   --ui-neutral: var(--color-neutral);
-  --ui-bg: #fff;
+  --ui-bg: #f9f9f9;
 }
 
 /* Dark mode overrides for Nuxt UI */
@@ -89,21 +89,7 @@ a:not(.btn):focus-visible {
   --tw-blur: blur(8px);
 }
 
-.services-item:nth-child(1) .icon {
-  background: linear-gradient(135deg, #d8ffa6 0%, #6cf08f 30%, #06d68f 100%);
-}
 
-.services-item:nth-child(2) .icon {
-  background: linear-gradient(135deg, #fff388 0%, #febc58 30%, #ffa234 100%);
-}
-
-.services-item:nth-child(3) .icon {
-  background: linear-gradient(135deg, #a3ebfa 0%, #6fa6fe 30%, #375aff 100%);
-}
-
-.services-item:nth-child(4) .icon {
-  background: linear-gradient(135deg, #ffbbbb 0%, #fe6061 30%, #f53e6c 100%);
-}
 
 .tiptap {
   @apply h-full;

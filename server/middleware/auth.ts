@@ -17,6 +17,12 @@ export default defineEventHandler(async (event) => {
   // Define public endpoints that should not require authentication
   const publicEndpoints = [
     '/api/auth/',
+    '/api/auth/login',
+    '/api/auth/register',
+    '/api/auth/password/forgot',
+    '/api/auth/password/create',
+    '/api/auth/password/verify',
+    
     '/api/test/',
     '/api/notifications/test',        // dev-only testing
     '/api/notifications/send',        // has its own auth logic (cron + session)

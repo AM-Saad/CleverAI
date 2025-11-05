@@ -38,6 +38,11 @@ model User {
     password_verification String?
     passkey_user_id       String? @db.ObjectId
     // --- End authentication fields ---
+
+    // --- Soft delete fields ---
+    deletedAt             DateTime?
+    scheduledDeletionAt   DateTime? // Permanent deletion scheduled for 30 days after soft delete
+    // --- End soft delete fields ---
 }
 
 enum UserRole {

@@ -76,7 +76,6 @@ const colorClasses = {
 
 <style scoped>
 .ui-title {
-  font-family: var(--font-sans);
   margin: 0;
   line-height: var(--line-height-tight);
 }
