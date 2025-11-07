@@ -89,11 +89,6 @@ import { useRoute } from "vue-router";
 import { defineAsyncComponent } from "vue";
 import { useFolder } from "~/composables/folders/useFolders";
 
-// Define page meta for authentication
-definePageMeta({
-  middleware: "role-auth", // Use the role-auth middleware
-});
-
 const FlashCards = defineAsyncComponent(
   () => import("~/components/folder/FlashCards.vue"),
 );

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Remember to disable the middleware protection from your page!
 definePageMeta({
-  auth: false,
+  auth: { unauthenticatedOnly: true, navigateAuthenticatedTo: "/" },
 });
 
 const route = useRoute();

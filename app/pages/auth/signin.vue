@@ -114,17 +114,19 @@ const isValidPassword = computed(() => {
       <p class="text-center text-gray-400 text-xs mt-4 mb-2">
         Or sign in with a social account below 👇
       </p>
-      <button
+      <u-button
         v-for="provider in mappedProviders"
         :key="provider?.id"
-        class="btn btn-small bg-white dark:bg-[#eb4034] disabled:opacity-50 dark:ring-white"
+        class="border border-[#eb4034] justify-center disabled:opacity-50 dark:ring-white "
         :disabled="loading"
+        variant="ghost"
+        color="error"
         type="button"
         tabindex="5"
         @click="signIn(provider?.id)"
       >
         Sign in with {{ provider?.name }}
-      </button>
+      </u-button>
     </div>
   </div>
 </template>

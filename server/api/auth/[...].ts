@@ -35,9 +35,8 @@ const registerUser = async (userData: {
         name: userData.name || userData.email,
         email: userData.email,
         password: "", // Google users don't have passwords
-        phone: "", // Will be updated later if needed
         auth_provider: "google",
-        email_verified: true,
+        email_verified: false,
         account_verified: true,
         role: "USER",
       },
@@ -49,7 +48,7 @@ const registerUser = async (userData: {
 
 export default NuxtAuthHandler({
   secret: config.AUTH_SECRET,
-  debug: true,
+  // debug: true,
   providers: [
     // @ts-expect-error Use .default here for it to work during SSR.
     GoogleProvider.default({
@@ -79,6 +78,7 @@ export default NuxtAuthHandler({
           return null;
         }
         const { email, password } = credentials;
+        console.log("authorize -> credentials", credentials);
         // Fetch user and password hash from your database
         const user = await prisma.user.findUnique({
           where: { email },
@@ -92,6 +92,7 @@ export default NuxtAuthHandler({
           throw new Error("Invalid credentials - user not found");
         }
 
+        console.log("authorize -> user", user);
         // Check if account is soft-deleted
         if (user.deletedAt) {
           const now = new Date();
@@ -108,6 +109,7 @@ export default NuxtAuthHandler({
         }
 
         if (!user.email_verified) {
+          console.log("authorize -> email not verified");
           throw new Error(
             `Account not verified, click <a class='font-bold' href='/auth/verifyAccount?email=${email}'>here</a> to verify your account`
           );
@@ -131,7 +133,7 @@ export default NuxtAuthHandler({
         const valid = await bcrypt.compare(password, user.password);
         // console.log("authorize -> valid", valid);
         if (!valid) {
-          throw new Error("Invalid credentials - incorrect password");
+          throw new Error("Invalid credentials, password mismatch");
         }
         // If the password is valid, return the user object
         // console.log("authorize -> user", user.email)
@@ -148,9 +150,10 @@ export default NuxtAuthHandler({
   },
   events: {
     signIn: async (params) => {
-      // console.log("Event -> signIn", params.user);
+      console.log("Event -> signIn", params);
       const { email, name } = params.user;
       if (params.account && params.account.provider === "google" && email) {
+        console.log("Event -> signIn with Google account");
         try {
           const user = await prisma.user.findFirst({
             where: {
@@ -158,6 +161,7 @@ export default NuxtAuthHandler({
             },
           });
           if (!user) {
+            console.log("Event -> signIn with Google account - user not found, registering...");
             await registerUser({
               name: name || email,
               email: email,
@@ -169,21 +173,21 @@ export default NuxtAuthHandler({
         }
       }
       if (params.profile && params.isNewUser && email) {
+        console.log("Event -> signIn new user profile registration");
         await registerUser({
           name: name || email,
           email: email,
           provider: "google",
         });
       }
-      // console.log("Event -> signIn", params.user.email)
     },
     signOut: async (message): Promise<void> => {
-      // console.log("signOut", message);
+      console.log("signOut", message);
     },
   },
   callbacks: {
     async signIn({ user }) {
-      // console.log("callbacks -> signIn -> user", user);
+      console.log("callbacks -> signIn -> user", user);
       if (!user) {
         return "/auth/error?error=UserNotFound"; // Redirect to error page
       }
@@ -191,9 +195,10 @@ export default NuxtAuthHandler({
     },
 
     async jwt({ token, user, account }) {
-      // console.log("callbacks -> jwt -> user", user)
+      console.log("callbacks -> jwt -> user", user)
       // Google OAuth: add Google-specific fields
       if (account && account.provider === "google") {
+        console.log("callbacks -> jwt -> google account", account);
         token.access_token = account.access_token;
         token.expires_at =
           Math.floor(Date.now() / 1000) + (account.expires_at || 0);
@@ -203,6 +208,7 @@ export default NuxtAuthHandler({
       }
       // Credentials login: add user fields
       if (user) {
+        console.log("callbacks -> jwt -> user", user);
         token.id = user.id;
         token.name = user.name;
         // token.subscription = user.subscription
@@ -212,10 +218,11 @@ export default NuxtAuthHandler({
       }
       // Fetch from DB if missing
       if (
-        (!token.role || !token.grade) &&
+        (!token.role) &&
         token.email &&
         typeof token.email === "string"
       ) {
+        console.log("callbacks -> jwt -> email", token.email);
         try {
           const dbUser = await prisma.user.findUnique({
             where: { email: token.email },
@@ -234,13 +241,13 @@ export default NuxtAuthHandler({
           console.error("JWT callback DB fetch error", e);
         }
       }
-      // console.log("callbacks -> jwt -> token", token)
+      console.log("callbacks -> jwt -> token", token)
       return token;
     },
 
     async session({ session, token }) {
-      // console.log("session callback - session:", session)
-      // console.log("session callback - token:", token)
+      console.log("session callback - session:", session)
+      console.log("session callback - token:", token)
       // Merge token fields into session
       return {
         ...session,

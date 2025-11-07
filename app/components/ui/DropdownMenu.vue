@@ -46,7 +46,7 @@
           <MenuItem v-slot="{ active }">
           <a tabindex="3" :class="[
             active ? 'bg-primary' : '',
-            'flex items-center gap-3 p-sm text-sm text-muted hover:text-dark',
+            'flex items-center gap-3 p-sm text-sm text-muted hover:text-dark cursor-pointer',
           ]" @click.prevent="logout">
             <UIcon :name="'i-heroicons-arrow-right-on-rectangle'" class="w-4 h-4" />
             Sign out

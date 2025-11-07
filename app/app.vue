@@ -17,7 +17,7 @@
                 </NuxtLayout>
 
                 <!-- Development Testing Dashboard -->
-                <LazyDebugTestingDashboard />
+                <!-- <LazyDebugTestingDashboard /> -->
 
                 <!-- Notification Subscription Modal -->
                 <ClientOnly>

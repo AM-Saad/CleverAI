@@ -270,6 +270,7 @@ export default defineNuxtConfig({
     databaseUrl: process.env.DATABASE_URL,
     AUTH_SECRET: process.env.AUTH_SECRET,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+    
     VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
 
     // Public (exposed to client)
@@ -279,6 +280,7 @@ export default defineNuxtConfig({
       SERVER_URL: process.env.SERVER_URL,
       VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+      GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     },
   },
 });

@@ -14,13 +14,6 @@
 </template>
 
 <script setup lang="ts">
-// Page meta
-definePageMeta({
-  title: "Settings",
-  middleware: "auth",
-});
-
-
 const SettingsAccountTab = defineAsyncComponent(
   () => import("~/components/settings/AccountTab.vue"),
 );

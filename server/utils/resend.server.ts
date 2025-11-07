@@ -238,7 +238,7 @@ export const sendEmail = async (
   const finalRecipient = getRecipientEmail(recipientEmail);
 
   const emailData = {
-    from: "Ibrahim Learning <onboarding@resend.dev>",
+    from: "IClever <onboarding@resend.dev>",
     to: [finalRecipient],
     subject: template.subject,
     html: template.html,

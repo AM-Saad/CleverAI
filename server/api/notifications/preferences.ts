@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { safeGetServerSession } from "@server/utils/safeGetServerSession";
+import { requireRole } from "~~/server/middleware/auth";
 
 const PreferencesSchema = z.object({
   cardDueEnabled: z.boolean(),
@@ -37,19 +38,10 @@ type SessionWithUser = {
 export default defineEventHandler(async (event) => {
   const method = getMethod(event);
 
-  // Get user ID from session
-  const session = (await safeGetServerSession(event)) as SessionWithUser;
-  if (!session?.user?.email) {
-    throw Errors.unauthorized();
-  }
+  const user = await requireRole(event, ["USER"]); // throws if unauthorized
 
   // Get user from database to get proper user ID
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-  });
-  if (!user) {
-    throw Errors.unauthorized("User not found");
-  }
+
   const userId = user.id;
 
   if (method === "GET") {
