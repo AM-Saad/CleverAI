@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
 
   const code = await verificationCode();
   try {
-    await sendEmail(parsed.email, code);
+    await sendPasswordResetEmail(parsed.email, code);
   } catch {
     throw Errors.server("Failed to send verification email");
   }

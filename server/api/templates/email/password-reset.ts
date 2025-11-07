@@ -9,38 +9,35 @@ export interface PasswordResetEmailData extends EmailTemplateData {
 /**
  * Generate password reset email template
  */
-export const generatePasswordResetEmail = (data: PasswordResetEmailData, customResetUrl?: string): EmailTemplate => {
+export const generatePasswordResetEmail = (data: PasswordResetEmailData): EmailTemplate => {
   const { resetToken } = data
-  const finalResetUrl = customResetUrl || `${brandInfo.websiteUrl}/auth/reset-password?token=${resetToken}`
-
+  console.log("resetToken in template:", resetToken);
   const content = `
     ${generateHeader('🔒 Password Reset Request')}
 
-    <div style="background-color: #fef2f2; ${baseStyles.contentBox}">
-      <h2 style="color: #1f2937; margin-bottom: 15px;">Reset Your Password</h2>
+    <div style="background-color: #f8fafc; ${baseStyles.contentBox}">
+      <h2 style="color: #1f2937; margin-bottom: 15px;">Verify Your Email Address</h2>
       <p style="${baseStyles.text}">
-        We received a request to reset your password for your Ibrahim Learning account. Click the button below to create a new password:
+        Welcome to IClever Platform! Please use the verification code below to complete your registration:
       </p>
 
-      ${generateButton('Reset Password', finalResetUrl, '#dc2626')}
+      <div style="text-align: center; margin: 30px 0;">
+        <div style="display: inline-block; background-color: #2563eb; color: white; font-size: 32px; font-weight: bold; padding: 15px 30px; border-radius: 8px; letter-spacing: 4px;">
+          ${resetToken}
+        </div>
+      </div>
 
       <p style="color: #6b7280; font-size: 14px; margin-bottom: 0;">
-        This password reset link will expire in 1 hour for security purposes.
-      </p>
-    </div>
-
-    <div style="background-color: #fffbeb; border: 1px solid #fbbf24; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
-      <p style="color: #92400e; font-size: 14px; margin: 0;">
-        <strong>Security Notice:</strong> If you didn't request a password reset, please ignore this email and your password will remain unchanged.
+        This verification code will expire in 10 minutes for security purposes.
       </p>
     </div>
 
     <div style="${baseStyles.footer}">
       <p style="${baseStyles.footerText}">
-        If the button doesn't work, copy and paste this link into your browser:
+        If you didn't create an account with IClever Platform, please ignore this email.
       </p>
-      <p style="color: #2563eb; font-size: 12px; word-break: break-all; margin: 5px 0;">
-        ${finalResetUrl}
+      <p style="${baseStyles.footerText} margin: 5px 0 0 0;">
+        This is an automated message, please do not reply to this email.
       </p>
     </div>
 
@@ -48,7 +45,7 @@ export const generatePasswordResetEmail = (data: PasswordResetEmailData, customR
   `
 
   return {
-    subject: 'Reset Your Password - Ibrahim Learning',
+    subject: 'Reset Your Password - IClever',
     html: wrapContent(content)
   }
 }

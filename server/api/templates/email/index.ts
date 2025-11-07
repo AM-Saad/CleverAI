@@ -40,19 +40,22 @@ export function generateEmailTemplate(
 export function generateEmailTemplate(
   type: 'passwordReset',
   data: PasswordResetEmailData,
-  customResetUrl?: string
 ): EmailTemplate
 export function generateEmailTemplate(
   type: 'notification',
   data: NotificationEmailData,
   options?: { actionText?: string; actionUrl?: string; priority?: 'low' | 'normal' | 'high' }
 ): EmailTemplate
+
+
 export function generateEmailTemplate(
   type: EmailTemplateType,
   data: EmailTemplateDataUnion,
   ...args: unknown[]
 ): EmailTemplate {
+
   switch (type) {
+
     case 'verification':
       return generateVerificationEmail(data as VerificationEmailData)
     case 'welcome':

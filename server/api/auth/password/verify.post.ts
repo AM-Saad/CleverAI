@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
     !user.password_verification ||
     user.password_verification !== parsed.verification
   ) {
-    throw Errors.badRequest("Verification code does not match");
+    throw Errors.badRequest("Verification code is incorrect");
   }
 
   const newCode = await verificationCode();

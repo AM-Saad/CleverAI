@@ -23,10 +23,10 @@
         </div>
         <div v-else-if="status === 'unauthenticated'" class="flex gap-5">
           <router-link to="/auth/signIn">
-            <UButton size="sm" variant="subtle"> Login </UButton>
+            <u-button size="md" variant="subtle"> Login </u-button>
           </router-link>
           <router-link to="/auth/signup">
-            <UButton size="sm"> Signup </UButton>
+            <u-button size="md"> Signup </u-button>
           </router-link>
         </div>
         <div v-else>

@@ -125,6 +125,7 @@ const sendEmailWithErrorHandling = async (
       emailData.to
     );
 
+
     // Send email
     const { data, error } = await resend.emails.send(emailData);
 
@@ -287,15 +288,13 @@ export const sendPasswordResetEmail = async (
       recipientEmail
     );
   }
-
-  const resetUrl = `${process.env.APP_BASE_URL || "http://localhost:3000"}/auth/editPassword?token=${resetToken}`;
+  console.log("resetToken:", resetToken);
   const template = generateEmailTemplate(
     "passwordReset",
     {
       userName: "User",
       resetToken,
     },
-    resetUrl
   );
   const finalRecipient = getRecipientEmail(recipientEmail);
 
