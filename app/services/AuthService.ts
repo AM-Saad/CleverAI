@@ -133,8 +133,8 @@ class AuthModule extends FetchFactory {
   /**
    * Request password reset
    */
-  async requestPasswordReset(email: string): Promise<Result<{ success: boolean; message: string }>> {
-    return this.call<{ success: boolean; message: string }>(
+  async requestPasswordReset(email: string): Promise<Result<{ success: boolean; message: string; remainingAttempts?: number; resetSeconds?: number; redirect?: string }>> {
+    return this.call<{ success: boolean; message: string; remainingAttempts?: number; resetSeconds?: number; redirect?: string }>(
       'POST',
       `${this.RESOURCE}/password/forgot`,
       { email }
@@ -155,8 +155,8 @@ class AuthModule extends FetchFactory {
   /**
    * Send verification email
    */
-  async sendVerificationEmail(email: string): Promise<Result<AuthVerificationResponse>> {
-    return this.call<AuthVerificationResponse>(
+  async sendVerificationEmail(email: string): Promise<Result<AuthVerificationResponse & { remainingAttempts?: number; resetSeconds?: number }>> {
+    return this.call<AuthVerificationResponse & { remainingAttempts?: number; resetSeconds?: number }>(
       'POST',
       `${this.RESOURCE}/verification`,
       { email }

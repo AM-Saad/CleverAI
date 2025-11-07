@@ -59,6 +59,7 @@ export function useRegister(): useRegister {
         name: credentials.value.name,
         email: credentials.value.email,
         password: credentials.value.password,
+        confirmPassword: credentials.value.confirmPassword,
         phone: credentials.value.phone,
         gender: credentials.value.gender,
         role: credentials.value.role as "USER",

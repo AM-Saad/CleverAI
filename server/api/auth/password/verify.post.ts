@@ -1,11 +1,9 @@
 // server/api/auth/password/verify.post.ts (migrated)
 import jwt from "jsonwebtoken";
 import { z } from "zod";
+import { verifyCodeSchema } from "../../../../shared/auth.schemas";
 
-const schema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  verification: z.string().min(1, "Verification code is required"),
-});
+const schema = verifyCodeSchema;
 
 export default defineEventHandler(async (event) => {
   const raw = await readBody(event);
@@ -34,10 +32,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const newCode = await verificationCode();
+  // Issue short-lived token (now 15m) used for password creation
   const token = jwt.sign(
-    { email: user.email, password_verification: newCode },
+    { email: user.email, password_verification: newCode, purpose: "password", flow: "reset" },
     process.env.AUTH_SECRET!,
-    { expiresIn: "1m" }
+    { expiresIn: "15m" }
   );
 
   await prisma.user.update({

@@ -3,46 +3,15 @@
 ## Overview
 Refactored password reset flow to use composables with the `useOperation` pattern for consistent error handling across the application.
 
-## Created Composables
+## Current Composables
 
-### 1. `usePasswordReset` ✅
-**Location**: `app/composables/auth/usePasswordReset.ts`
+### `useEmailVerification`
+Handles account email verification (send code + verify) via `createVerificationFlow` base + throttle persistence.
 
-**Purpose**: Handles the entire password reset flow (send email + verify code)
+### `usePasswordResetVerification`
+Handles password reset verification (send reset code + verify to obtain token) using the same base for consistent UX.
 
-**Features**:
-- Uses `useOperation` pattern for consistent error handling
-- Manages countdown timer for resend (fixed: 1 second intervals, not multiplied)
-- Pre-fills email and verification code from URL query params
-- Handles state for email sent, verified, and JWT token
-- Automatic redirect after verification
-
-**Exports**:
-```typescript
-{
-  credentials: Ref<{ email, verification }>
-  emailSent: Ref<boolean>
-  emailsCount: Ref<number>
-  countDown: Ref<number>
-  verified: Ref<boolean>
-  token: Ref<string | null>
-  loading: Ref<boolean>
-  error: Ref<APIError | null>
-  success: Ref<string>
-  sendResetEmail: () => Promise<void>
-  verifyResetCode: () => Promise<void>
-  reset: () => void
-}
-```
-
-**Fixes Applied**:
-- ✅ Countdown timer uses fixed 1000ms interval (was `emailsCount * 1000`)
-- ✅ Pre-fills verification code from URL `?verification=CODE`
-- ✅ Error handling through `useOperation` (returns `APIError` objects)
-
----
-
-### 2. `useCreatePassword` ✅
+### `useCreatePassword` ✅
 **Location**: `app/composables/auth/useCreatePassword.ts`
 
 **Purpose**: Handles password creation with JWT token
@@ -69,30 +38,15 @@ Refactored password reset flow to use composables with the `useOperation` patter
 
 ---
 
-### 3. `useVerifyPasswordCode` 📝
-**Location**: `app/composables/auth/useVerifyPasswordCode.ts`
-
-**Status**: Stub/placeholder
-
-**Reason**: Functionality is handled by `usePasswordReset.verifyResetCode()`
-
-**Action**: Created to prevent import errors from `auth/index.ts`
+### `useVerifyPasswordCode` (legacy stub)
+Superseded by `usePasswordResetVerification`; safe to remove if no imports remain.
 
 ---
 
 ## Updated Components
 
 ### 1. `app/pages/auth/editPassword.vue`
-**Before**: 100+ lines of manual state management, error handling, API calls
-
-**After**: 25 lines using `usePasswordReset` composable
-
-**Changes**:
-- Removed all manual state (`loading`, `error`, `success`, `credentials`, etc.)
-- Removed `handleSendEmail()` and `handleSubmit()` functions
-- Added `usePasswordReset()` composable
-- Simplified `submitForm()` to call composable methods
-- Updated template to use `error.message` (APIError object)
+Refactored to use `usePasswordResetVerification` (base + throttle) replacing the deprecated `usePasswordReset`.
 
 ---
 
@@ -168,17 +122,14 @@ operation.data.value     // Response data | null
 
 ## File Changes Summary
 
-### Created
-- ✅ `app/composables/auth/usePasswordReset.ts` (150 lines)
-- ✅ `app/composables/auth/useCreatePassword.ts` (110 lines)
-- ✅ `app/composables/auth/useVerifyPasswordCode.ts` (stub)
+### Modified (Current State)
+* `app/pages/auth/editPassword.vue` now uses `usePasswordResetVerification`.
+* `app/components/auth/createPassword.vue` uses `useCreatePassword`.
+* Base verification logic factored into `app/composables/auth/_verificationBase.ts`.
 
-### Modified
-- ✅ `app/pages/auth/editPassword.vue` (reduced from ~200 to ~120 lines)
-- ✅ `app/components/auth/createPassword.vue` (reduced from ~140 to ~90 lines)
-
-### Already Existed
-- `app/composables/auth/index.ts` (exports were already there)
+### Deprecated / Removed
+* `app/composables/auth/usePasswordReset.ts` (removed).
+* `useVerifyPasswordCode.ts` slated for removal if unused.
 
 ---
 

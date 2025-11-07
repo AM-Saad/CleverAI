@@ -41,6 +41,11 @@
   resolved "https://registry.npmjs.org/@alloc/quick-lru/-/quick-lru-5.2.0.tgz"
   integrity sha512-UrcABB+4bUrFABwbluTIBErXwvbsU/V7TZWfmbgJfbkwiBuziS9gxdODUyuiecfdGQ85jglMW6juS3+z5TsKLw==
 
+"@alttiri/base85@1.8.0":
+  version "1.8.0"
+  resolved "https://registry.yarnpkg.com/@alttiri/base85/-/base85-1.8.0.tgz#9a859a9b9bd1847173260e37b58d6fc6c8fd50ce"
+  integrity sha512-HrfdFtOPJ2dlZjHcCDgd9o4ph9+iQnZ+ayWNALImDm1VLv46aMriO13QZ0bpZuvDc8XbPcQK2rb4o38Xt+MMpA==
+
 "@antfu/install-pkg@^1.1.0":
   version "1.1.0"
   resolved "https://registry.npmjs.org/@antfu/install-pkg/-/install-pkg-1.1.0.tgz"
@@ -4728,6 +4733,35 @@
   resolved "https://registry.npmjs.org/@vueuse/shared/-/shared-13.9.0.tgz"
   integrity sha512-e89uuTLMh0U5cZ9iDpEI2senqPGfbPRTHM/0AaQkcxnpqjkZqDYP8rpfm7edOz8s+pOCOROEy1PIveSW8+fL5g==
 
+"@zxcvbn-ts/core@^3.1.0":
+  version "4.0.0-beta.2"
+  resolved "https://registry.yarnpkg.com/@zxcvbn-ts/core/-/core-4.0.0-beta.2.tgz#201f57e8fd949b5961862b251e9483af22683ee2"
+  integrity sha512-sG38FCt5+TYZ5qZ8Kl8lzX0bk2eq2yvLdfvFofY7MDDOesr1y0aR7OM2lU4kutJkZxWxV4/KXJSzinzpZv/Tbg==
+  dependencies:
+    fastest-levenshtein "1.0.16"
+
+"@zxcvbn-ts/dictionary-compression@^4.0.0-beta.2":
+  version "4.0.0-beta.2"
+  resolved "https://registry.yarnpkg.com/@zxcvbn-ts/dictionary-compression/-/dictionary-compression-4.0.0-beta.2.tgz#6b73fd858859375d4fc758ddd9a1433840cfa5da"
+  integrity sha512-PINt12IAyn7mklAP1lfZIv5QLu7XIuPLGto6bZHvXS8r2tLR6lbg08X966TGq4CVB6ATTOtqtvW0EvhmGRLZyw==
+  dependencies:
+    "@alttiri/base85" "1.8.0"
+    fflate "^0.8.2"
+
+"@zxcvbn-ts/language-common@^3.1.0":
+  version "4.0.0-beta.2"
+  resolved "https://registry.yarnpkg.com/@zxcvbn-ts/language-common/-/language-common-4.0.0-beta.2.tgz#afe3af99b463e5a56587e0f7985c21dc548f61a7"
+  integrity sha512-wabtAXre+wZw/ZGfMY0DuK4LrmLQT4mB8PHNgeiDeeXznPKYNlw+RtVAlvTUB0Ea031mkT3glmc+t5vZzYdxAw==
+  dependencies:
+    "@zxcvbn-ts/dictionary-compression" "^4.0.0-beta.2"
+
+"@zxcvbn-ts/language-en@^3.1.0":
+  version "4.0.0-beta.2"
+  resolved "https://registry.yarnpkg.com/@zxcvbn-ts/language-en/-/language-en-4.0.0-beta.2.tgz#caa739dfea92f8bca4c435ec8ac4c4eea7de1819"
+  integrity sha512-LcH9foiST0hFeda29SW9GCDk6LWiKkZurNo2s+wV3JvUAQbUZufyemuNA0NLlieR9wc6OFdRFN+P/XmTWJ7KoA==
+  dependencies:
+    "@zxcvbn-ts/dictionary-compression" "^4.0.0-beta.2"
+
 JSONStream@^1.3.5:
   version "1.3.5"
   resolved "https://registry.npmjs.org/JSONStream/-/JSONStream-1.3.5.tgz"
@@ -7349,6 +7383,11 @@ fast-uri@^3.0.1:
   resolved "https://registry.npmjs.org/fast-uri/-/fast-uri-3.1.0.tgz"
   integrity sha512-iPeeDKJSWf4IEOasVVrknXpaBV0IApz/gp7S2bb7Z4Lljbl2MGJRqInZiUrQwV16cpzw/D3S5j5Julj/gT52AA==
 
+fastest-levenshtein@1.0.16:
+  version "1.0.16"
+  resolved "https://registry.yarnpkg.com/fastest-levenshtein/-/fastest-levenshtein-1.0.16.tgz#210e61b6ff181de91ea9b3d1b84fdedd47e034e5"
+  integrity sha512-eRnCtTTtGZFpQCwhJiUOuxPQWRXVKYDn0b2PeHfXL6/Zi53SLAzAHfVhVWK2AryC/WH05kGfxhFIPvTF0SXQzg==
+
 fastq@^1.15.0, fastq@^1.6.0:
   version "1.19.1"
   resolved "https://registry.npmjs.org/fastq/-/fastq-1.19.1.tgz"
@@ -7360,6 +7399,11 @@ fdir@^6.2.0, fdir@^6.4.4, fdir@^6.5.0:
   version "6.5.0"
   resolved "https://registry.npmjs.org/fdir/-/fdir-6.5.0.tgz"
   integrity sha512-tIbYtZbucOs0BRGqPJkshJUYdL+SDH7dVM8gjy+ERp3WAUjLEFJE+02kanyHtwjWOnwrKYBiwAmM0p4kLJAnXg==
+
+fflate@^0.8.2:
+  version "0.8.2"
+  resolved "https://registry.yarnpkg.com/fflate/-/fflate-0.8.2.tgz#fc8631f5347812ad6028bbe4a2308b2792aa1dea"
+  integrity sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A==
 
 figures@^3.0.0:
   version "3.2.0"

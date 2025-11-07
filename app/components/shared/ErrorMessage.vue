@@ -20,7 +20,7 @@ const errorMessage = computed(() => {
     v-if="error"
     class="bg-error/20 border border-error/40 dark:border-error my-2 p-3 rounded dark:text-error text-error font-medium text-xs"
   >
-    <p v-handle-internal-links v-text="errorMessage"></p>
+    <p v-handle-internal-links v-html="errorMessage"></p>
 
     <UButton
       size="sm"

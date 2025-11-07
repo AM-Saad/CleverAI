@@ -1,11 +1,9 @@
 // server/api/auth/verification/verify.post.ts (migrated)
 import jwt from "jsonwebtoken";
 import { z } from "zod";
+import { verifyCodeSchema } from "../../../../shared/auth.schemas";
 
-const schema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  verification: z.string().min(1, "Verification code is required"),
-});
+const schema = verifyCodeSchema;
 
 export default defineEventHandler(async (event) => {
   const raw = await readBody(event);
@@ -42,10 +40,11 @@ export default defineEventHandler(async (event) => {
   // If user has no password yet -> issue password setup token
   if (!user.password) {
     const newCode = await verificationCode();
+    // Align token lifetime with password reset flow (15m)
     const token = jwt.sign(
-      { email: user.email, password_verification: newCode },
+      { email: user.email, password_verification: newCode, purpose: "password", flow: "first-set" },
       process.env.AUTH_SECRET!,
-      { expiresIn: "1h" }
+      { expiresIn: "15m" }
     );
     await prisma.user.update({
       where: { email: parsed.email },
@@ -53,7 +52,7 @@ export default defineEventHandler(async (event) => {
     });
     return success({
       message: "Verification successful - set password",
-      redirect: `/auth/createPassword?token=${token}`,
+      redirect: `/auth/editPassword?token=${token}&email=${encodeURIComponent(parsed.email)}`,
     });
   }
 

@@ -2,17 +2,10 @@
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import jwt from "jsonwebtoken";
+import { passwordCreateSchema } from "../../../../shared/auth.schemas";
 
-const schema = z.object({
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .max(30, "Password must be 30 or fewer characters"),
-  confirmPassword: z
-    .string()
-    .min(8, "Confirm Password must be at least 8 characters")
-    .max(30, "Confirm Password must be 30 or fewer characters"),
-});
+// Shared password creation schema
+const schema = passwordCreateSchema;
 
 export default defineEventHandler(async (event) => {
   const raw = await readBody(event);
@@ -41,6 +34,9 @@ export default defineEventHandler(async (event) => {
   }
   if (isTokenExpired(decoded)) {
     throw Errors.unauthorized("Token has expired");
+  }
+  if (decoded.purpose !== "password") {
+    throw Errors.unauthorized("Invalid token purpose");
   }
 
   const email = decoded.email as string | undefined;

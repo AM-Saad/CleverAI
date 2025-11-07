@@ -44,18 +44,10 @@ export default defineEventHandler(async (event) => {
 
   const existingUser = await prisma.user.findFirst({ where: { email } });
   if (existingUser) {
-    const p = existingUser.auth_provider;
-    if (
-      (p === "credentials" && existingUser.password) ||
-      (p === "google" && existingUser.email_verified)
-    ) {
-      throw Errors.badRequest("User already exists");
-    }
-    if (p !== "credentials" && !existingUser.email_verified) {
-      throw Errors.badRequest(
-        "User exists with another provider but not verified"
-      );
-    }
+    // Normalize messaging to avoid leaking provider/verif status
+    throw Errors.badRequest(
+      "An account with this email may already exist. Please sign in or verify your email."
+    );
   }
 
   if (provider === "credentials" && password !== confirmPassword) {
@@ -97,7 +89,7 @@ export default defineEventHandler(async (event) => {
     needsVerification: provider === "credentials",
     redirect:
       provider === "credentials"
-        ? `/auth/verifyAccount?email=${email}`
+        ? `/auth/verifyAccount?email=${encodeURIComponent(email)}&code=1`
         : "/auth/signIn",
   });
 });

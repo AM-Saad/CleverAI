@@ -36,8 +36,8 @@ const registerUser = async (userData: {
         email: userData.email,
         password: "", // Google users don't have passwords
         auth_provider: "google",
-        email_verified: false,
-        account_verified: true,
+        email_verified: true,
+        account_verified: false,
         role: "USER",
       },
     });
@@ -116,16 +116,8 @@ export default NuxtAuthHandler({
         }
 
         if (!user.password) {
-          const newVerificationCode = await verificationCode();
-
-          await prisma.user.update({
-            where: { email },
-            data: {
-              password_verification: newVerificationCode,
-            },
-          });
           throw new Error(
-            `Password not set up. Please use the provider to login or create a password from <a class='font-bold' href='/auth/editPassword?newPassword=true'>here</a>`
+            `Password not set up. Please use the provider to login or create a password from <a class='font-bold' href='/auth/editPassword?newPassword=true&email=${email}'>here</a>`
           );
         }
 

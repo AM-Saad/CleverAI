@@ -5,21 +5,28 @@ definePageMeta({
 });
 
 const route = useRoute();
+// Check if we are creating a new password or resetting an existing one
 const createNewPassword = ref(route.query.newPassword);
 
 // Use the composable for all password reset logic
+import { usePasswordResetVerification } from '@/composables/auth/usePasswordResetVerification'
 const {
   credentials,
   emailSent,
   countDown,
+  remainingAttempts,
   verified,
   token,
   loading,
   error,
   success,
+  canResend,
+  inlineHintVisible,
+  progressPercent,
+  showToast,
   sendResetEmail,
   verifyResetCode,
-} = usePasswordReset();
+} = usePasswordResetVerification('reset-throttle')
 
 /**
  * Handle form submission
@@ -68,14 +75,27 @@ const submitForm = async (): Promise<void> => {
 
         <UiParagraph v-if="emailSent" size="xs" color="muted" class="mt-2">
           A verification code has been sent to your email.
-          <span v-if="countDown > 0"> You can resend a new code in {{ countDown }} seconds.</span>
+          <span v-if="remainingAttempts !== null"> Attempts left: {{ remainingAttempts }}.</span>
+          <span v-if="countDown > 0"> Resend available in {{ countDown }} seconds.</span>
           <span v-else>
-            <button class="underline" @click.prevent="sendResetEmail">Resend Code</button>.
+            <button class="underline" :disabled="!canResend" @click.prevent="sendResetEmail">Resend Code</button>.
           </span>
+          <span v-if="inlineHintVisible" class="block mt-1 text-red-600">Resend limit reached. Please wait for cooldown.</span>
+          <div v-if="countDown > 0" class="mt-2 flex items-center gap-2">
+            <div class="relative h-6 w-6" aria-hidden="true">
+              <div class="absolute inset-0 rounded-full bg-gray-200"></div>
+              <div class="absolute inset-0 rounded-full" :style="{ background: `conic-gradient(#dc2626 ${progressPercent}%, #e5e7eb ${progressPercent}%)` }"></div>
+              <div class="absolute inset-1 rounded-full bg-white"></div>
+            </div>
+            <div class="h-1 flex-1 bg-gray-200 rounded">
+              <div class="h-1 bg-red-500 rounded transition-all" :style="{ width: progressPercent + '%' }" />
+            </div>
+          </div>
         </UiParagraph>
 
       </form>
     </div>
-    <auth-create-password v-else :token="token" />
+  <auth-create-password v-else :token="token" />
+  <auth-resend-blocked-toast :seconds="countDown" :attempts="remainingAttempts" />
   </div>
 </template>
