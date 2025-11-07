@@ -14,6 +14,12 @@ CleverAI is a fully functional Progressive Web App with robust offline capabilit
 
 **📖 For detailed PWA implementation, caching strategy, and best practices, see [docs/PWA.md](./docs/PWA.md)**
 
+### Offline Persistence & Reliability (Recent Improvements)
+- **Unified IndexedDB (v4)**: Single schema ensures `forms` (background sync queue) and `notes` (offline edits) stores + indexes created atomically.
+- **Bounded Retry Backoff**: Transient `InvalidStateError` / `TransactionInactiveError` during rapid reloads auto-retry with tiny exponential backoff (configurable in `IDB_RETRY_CONFIG`).
+- **Immediate Note Persistence**: Edits are saved locally first for resilient offline UX while server sync debounces.
+- **Tunable Constants**: Adjust retry parameters in `app/utils/constants/pwa.ts` without touching helper logic.
+
 ---
 
 ## Features
@@ -23,6 +29,7 @@ CleverAI is a fully functional Progressive Web App with robust offline capabilit
 - **Spaced Repetition System** – SM-2 algorithm for optimal memory retention.
 - **Push Notifications** – Intelligent card due reminders with user preferences.
 - **Progressive Web App** – Full offline functionality and installable experience.
+- **Offline-First Notes** – Local persistence with unified IndexedDB + conflict-friendly timestamps.
 - **Multiple LLM Backends** – Strategy Pattern for GPT-3.5, GPT-4o, Claude, etc.
 - **Clean Architecture** – Service layer, composables, and shared contracts for type safety.
 - **Rate Limiting** – Centralized Redis-backed limiter with in-memory fallback.

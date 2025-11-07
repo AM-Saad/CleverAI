@@ -133,14 +133,14 @@ export function useNotesStore(folderId: string): NotesStore {
 
   // Update note content - local-first approach with IndexedDB persistence
   const updateNote = async (id: string, updatedNote: NoteState): Promise<boolean> => {
-
-    // Step 1: Update reactive state (optimistic update)
+    // Step 1: Optimistic update
+    updatedNote.updatedAt = new Date();
+    updatedNote.isDirty = true;
     notes.value.set(id, updatedNote);
-
-    // Step 2: Attempt to sync with server (debounced)
+    // Persist locally immediately for offline continuity
+    try { await saveNoteToIndexedDB(updatedNote); } catch {}
+    // Step 2: Debounced server sync
     saveToServer(id, updatedNote.content);
-
-
     return true;
   };
 
@@ -301,11 +301,11 @@ export function useNotesStore(folderId: string): NotesStore {
         "Failed to sync notes: server returned failure",
         result.error
       );
-      // await loadFromIndexedDBFallback(folderIdParam);
+      await loadFromIndexedDBFallback(folderIdParam);
     } catch (error) {
       console.error("Failed to sync notes:", error);
       // Network error - try to load from IndexedDB
-      // await loadFromIndexedDBFallback(folderIdParam);
+      await loadFromIndexedDBFallback(folderIdParam);
     }
   };
 

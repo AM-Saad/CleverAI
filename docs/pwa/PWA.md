@@ -29,12 +29,12 @@ CleverAI uses a **comprehensive Progressive Web App (PWA) implementation** built
 
 - ✅ **Offline functionality** - Complete app functionality without internet
 - ✅ **Install to home screen** - Native app-like experience with proper manifest
-- ✅ **Background sync** - Form data and file uploads sync when connection returns
+- ✅ **Background sync** - Form data sync when connection returns
 - ✅ **Push notifications** - Real-time user engagement with click handling
 - ✅ **Smart caching** - Multi-layer caching with asset discovery and prewarming
 - ✅ **Auto-updates** - Seamless service worker updates with user control
 - ✅ **IndexedDB integration** - Offline data storage with schema migration
-- ✅ **Chunked file uploads** - Resilient upload system with retry logic
+<!-- Removed: Chunked file uploads (feature not active) -->
 - ✅ **Periodic sync** - Scheduled background content updates
 
 ### Key Commands
@@ -223,6 +223,7 @@ const SW_VERSION = SW_CONFIG.VERSION
 - **✅ Cache Strategy Unification**: All cache names use centralized constants
 - **✅ Duplicate Logic Removal**: Removed deprecated upload functionality
 - **✅ Bundle Size Optimization**: Reduced SW size by 1.8kb through cleanup
+- **✅ Resilient IDB Writes**: Added bounded exponential backoff for transient `InvalidStateError` / `TransactionInactiveError` during rapid tab reloads
 
 ---
 
@@ -348,9 +349,10 @@ const { NAME: DB_NAME } = DB_CONFIG
 1. **SW_CONFIG** - Service worker version, timeouts, intervals
 2. **CACHE_NAMES** - All cache names and strategies
 3. **DB_CONFIG** - IndexedDB configuration
-4. **UPLOAD_CONFIG** - Chunked upload settings
-5. **AUTH_STUBS** - Development authentication stubs
-6. **URL_PATTERNS** - Route matching patterns
+  - Version `4` performs unified creation of required stores (`forms`, `notes`) and adds `folderId` / `updatedAt` indexes for notes.
+  - Prior versions used lazy per-store creation; upgrading ensures atomic schema setup.
+4. **AUTH_STUBS** - Development authentication stubs
+5. **URL_PATTERNS** - Route matching patterns
 
 ### Files Refactored & Consolidated
 
@@ -370,6 +372,28 @@ const { NAME: DB_NAME } = DB_CONFIG
 4. **Configuration Consistency**: All cache names and constants centralized
 5. **Type Safety**: Full TypeScript coverage across SW and client
 6. **Error Prevention**: Eliminated race conditions in IndexedDB operations
+7. **Write Resilience**: Bounded backoff avoids user-visible failures on transient DB state changes
+
+### IndexedDB Retry Policy
+Generic helpers (`putRecord`, `deleteRecord` in `app/utils/idb.ts`) apply a tiny exponential backoff for transient errors using `IDB_RETRY_CONFIG`:
+
+```ts
+export const IDB_RETRY_CONFIG = {
+  MAX_ATTEMPTS: 3,
+  BASE_DELAY_MS: 40,
+  FACTOR: 2,
+  MAX_DELAY_MS: 400,
+  JITTER_PCT: 0.2,
+}
+```
+
+Characteristics:
+- **Scoped**: Only retries `InvalidStateError` / `TransactionInactiveError`.
+- **Bounded**: Worst-case added latency < ~1 second.
+- **Atomic**: Each attempt reopens unified DB if needed.
+- **Tunable**: Adjust constants in `pwa.ts` without code changes.
+
+To tune: increase `MAX_ATTEMPTS` (rare) or `BASE_DELAY_MS` if seeing frequent transient errors under heavy multi-tab use.
 
 ---
 

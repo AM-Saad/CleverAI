@@ -309,3 +309,65 @@ function selectStrategy(model: string): LLMStrategy {
 ---
 
 *End of document.*
+
+---
+
+## 20) Offline Persistence & IndexedDB Strategy
+
+### Unified Database (Version 4 Migration)
+The client and service worker share a single IndexedDB database defined by `DB_CONFIG`:
+
+```ts
+export const DB_CONFIG = {
+  NAME: 'recwide_db',
+  VERSION: 4,
+  STORES: { FORMS: 'forms', NOTES: 'notes' }
+}
+```
+
+Prior to version 4, stores were created lazily which risked partial schema creation if only one store was requested first. Version 4 performs a consolidated upgrade (`onupgradeneeded`) ensuring both stores and required indexes are present exactly once.
+
+### Stores
+- `forms` – Queues offline form submissions for Background Sync (`syncForm` tag).
+- `notes` – Local-first note content for folders, enabling offline editing and conflict mitigation.
+
+### Indexes (Notes)
+- `folderId` – Efficient folder-level retrieval.
+- `updatedAt` – Supports future conflict detection (compare client vs server timestamps).
+
+### Retry & Resilience
+Concurrent transactions during tab reloads or SW restarts can surface transient `InvalidStateError` / `TransactionInactiveError`. To smooth these, a tiny exponential backoff is applied inside generic helpers (`putRecord`, `deleteRecord`). Configuration lives in `IDB_RETRY_CONFIG`:
+
+```ts
+export const IDB_RETRY_CONFIG = {
+  MAX_ATTEMPTS: 3,
+  BASE_DELAY_MS: 40,
+  FACTOR: 2,
+  MAX_DELAY_MS: 400,
+  JITTER_PCT: 0.2
+}
+```
+
+Characteristics:
+1. **Bounded** – Never exceeds 400ms per attempt; worst-case total delay < ~1s.
+2. **Targeted** – Only retries transient state errors; other failures bubble immediately.
+3. **Non-blocking UX** – Keeps note edits & form queues snappy.
+
+### Helper Design (`app/utils/idb.ts`)
+- `openUnifiedDB()` – Singleton promise preventing race conditions.
+- `putRecord` / `deleteRecord` – Sanitization + bounded backoff + unified reopen on retry.
+- `sanitizeForIDB` – Strips non-cloneable values to prevent DataClone exceptions.
+
+### Future Enhancements (P3+)
+| Area | Improvement | Notes |
+|------|-------------|-------|
+| Conflict Detection | Use `updatedAt` to reject stale overwrites | Requires server compare API path |
+| Partial Sync | Per-record acknowledgements in form sync responses | Service endpoint change |
+| Storage Health | Early capability + quota check; surface banner if blocked | Detect Safari private mode / quota exceeded |
+| Metrics | Lightweight counters for retry occurrences | Feed debug panel / telemetry |
+
+### Operational Considerations
+- **Do not close the shared DB** arbitrarily; connections persist across helpers.
+- **Schema changes** require version bump + additive migration only (non-destructive).
+- **Backoff tuning**: Increase `MAX_ATTEMPTS` or `BASE_DELAY_MS` only if observing frequent transient failures.
+

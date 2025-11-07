@@ -41,31 +41,29 @@ export const CACHE_CONFIG = {
 // ===== INDEXEDDB CONSTANTS =====
 export const DB_CONFIG = {
   NAME: "recwide_db",
-  VERSION: 3,
+  // Bump to 4 to ensure unified store creation migration runs exactly once.
+  // Previous versions created stores lazily per open; version 4 performs consolidated creation.
+  VERSION: 4,
   STORES: {
-    PROJECTS: "projects",
     FORMS: "forms",
-    FOLDERS: "folders",
     NOTES: "notes",
   },
-  INDEXES: {
-    NAME: "name",
-    EMAIL: "email",
-  },
-  KEY_PATHS: {
-    NAME: "name",
-    ID: "id",
-  },
+} as const;
+
+// ===== IDB RETRY BACKOFF CONFIG =====
+// Small, bounded exponential backoff for transient IndexedDB transaction errors
+// (e.g., InvalidStateError while a previous connection is closing). Values kept
+// tiny so UI writes (notes, form queue) remain snappy while still spacing retries.
+export const IDB_RETRY_CONFIG = {
+  MAX_ATTEMPTS: 3, // initial try + 2 retries
+  BASE_DELAY_MS: 40, // starting delay
+  FACTOR: 2, // exponential growth factor
+  MAX_DELAY_MS: 400, // upper bound clamp
+  JITTER_PCT: 0.2, // +/-20% jitter
 } as const;
 
 // ===== MESSAGE TYPES =====
 export const SW_MESSAGE_TYPES = {
-  // Upload messages
-  UPLOAD_START: "UPLOAD_START",
-  PROGRESS: "PROGRESS",
-  FILE_COMPLETE: "FILE_COMPLETE",
-  ALL_FILES_COMPLETE: "ALL_FILES_COMPLETE",
-
   // Sync messages
   FORM_SYNC_ERROR: "FORM_SYNC_ERROR",
   FORM_SYNCED: "FORM_SYNCED",
@@ -84,9 +82,6 @@ export const SW_MESSAGE_TYPES = {
   // Notifications
   NOTIFICATION_CLICK_NAVIGATE: "NOTIFICATION_CLICK_NAVIGATE",
   TEST_NOTIFICATION_CLICK: "TEST_NOTIFICATION_CLICK",
-
-  // Upload files
-  UPLOAD_FILES: "uploadFiles",
 
   // Generic error
   ERROR: "error",
@@ -111,28 +106,8 @@ export const NOTIFICATION_CONFIG = {
 } as const;
 
 // ===== UPLOAD CONSTANTS =====
-export const UPLOAD_CONFIG = {
-  CHUNK_SIZE: {
-    MIN: 256 * 1024, // 256KB
-    MAX: 5 * 1024 * 1024, // 5MB
-    TARGET_CHUNKS: 100,
-  },
-  CONCURRENCY: {
-    CHUNKS: 3,
-    FILES: 4,
-  },
-  RETRY: {
-    BASE_BACKOFF: 1000, // 1 second
-    MAX_ATTEMPTS: 5,
-    JITTER_FACTOR: 0.4, // 40% jitter
-    SERVER_ERROR_CUSHION: 0.5, // 50% extra delay for server errors
-  },
-  HTTP_STATUS: {
-    PAYLOAD_TOO_LARGE: 413,
-    TOO_MANY_REQUESTS: 429,
-    SERVICE_UNAVAILABLE: 503,
-  },
-} as const;
+// (Upload constants removed) Previously defined upload-specific config has been
+// pruned as the upload feature is not active. Reintroduce alongside feature code if needed.
 
 // ===== URL PATTERNS =====
 export const URL_PATTERNS = {
@@ -167,11 +142,7 @@ export const URL_PATTERNS = {
 // ===== PREWARM PATHS =====
 export const PREWARM_PATHS = ["/", "/about", "/folders"] as const;
 
-// ===== STATIC WARM FILES =====
-export const STATIC_WARM_FILES = [
-  URL_PATTERNS.MANIFEST,
-  URL_PATTERNS.FAVICON,
-] as const;
+// (STATIC_WARM_FILES removed) Static warm list now lives inline in sw prewarm implementation.
 
 // ===== AUTH STUBS =====
 export const AUTH_STUBS = {
@@ -206,6 +177,7 @@ export const DOM_EVENTS = {
   OFFLINE_FORM_SYNC_ERROR: "offline-form-sync-error",
   VISIBILITY_CHANGE: "visibilitychange",
   ONLINE: "online",
+  STORAGE_RESTRICTED: "storage-restricted",
 } as const;
 
 // ===== HTTP CONSTANTS =====

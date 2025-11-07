@@ -39,21 +39,25 @@
   };
   var DB_CONFIG = {
     NAME: "recwide_db",
-    VERSION: 3,
+    // Bump to 4 to ensure unified store creation migration runs exactly once.
+    // Previous versions created stores lazily per open; version 4 performs consolidated creation.
+    VERSION: 4,
     STORES: {
-      PROJECTS: "projects",
       FORMS: "forms",
-      FOLDERS: "folders",
       NOTES: "notes"
-    },
-    INDEXES: {
-      NAME: "name",
-      EMAIL: "email"
-    },
-    KEY_PATHS: {
-      NAME: "name",
-      ID: "id"
     }
+  };
+  var IDB_RETRY_CONFIG = {
+    MAX_ATTEMPTS: 3,
+    // initial try + 2 retries
+    BASE_DELAY_MS: 40,
+    // starting delay
+    FACTOR: 2,
+    // exponential growth factor
+    MAX_DELAY_MS: 400,
+    // upper bound clamp
+    JITTER_PCT: 0.2
+    // +/-20% jitter
   };
   var SW_MESSAGE_TYPES = {
     // Upload messages
@@ -152,59 +156,45 @@
   };
 
   // app/utils/idb.ts
-  function openIDB(options) {
-    const { storeName, keyPath = "id", indexes = [] } = options;
-    console.log("[IDB] Opening DB:", DB_CONFIG.NAME, "Store:", storeName);
-    return new Promise((resolve, reject) => {
+  var unifiedDbPromise = null;
+  function openUnifiedDB() {
+    if (unifiedDbPromise) return unifiedDbPromise;
+    unifiedDbPromise = new Promise((resolve, reject) => {
       const req = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION);
-      console.log("[IDB] Open request initiated.");
       req.onupgradeneeded = () => {
         const db = req.result;
-        console.log("[IDB] Upgrade needed for DB:", db);
-        let store;
-        if (!db.objectStoreNames.contains(storeName)) {
-          console.log("[IDB] Creating object store:", storeName);
-          store = db.createObjectStore(storeName, { keyPath });
-        } else {
-          console.log(
-            "[IDB] Object store exists:",
-            storeName,
-            db.objectStoreNames
-          );
-          try {
+        const { STORES } = DB_CONFIG;
+        const ensureStore = (name) => {
+          if (!db.objectStoreNames.contains(name)) {
+            db.createObjectStore(name, { keyPath: "id" });
+          }
+        };
+        ensureStore(STORES.FORMS);
+        ensureStore(STORES.NOTES);
+        try {
+          if (db.objectStoreNames.contains(STORES.NOTES)) {
             const tx = req.transaction;
             if (tx) {
-              store = tx.objectStore(storeName);
-            } else {
-              return;
-            }
-          } catch {
-            return;
-          }
-        }
-        if (store && indexes.length > 0) {
-          try {
-            for (const { name, keyPath: indexKeyPath, options: options2 } of indexes) {
-              if (!store.indexNames.contains(name)) {
-                store.createIndex(name, indexKeyPath, options2);
+              const notesStore = tx.objectStore(STORES.NOTES);
+              if (!notesStore.indexNames.contains("folderId")) {
+                notesStore.createIndex("folderId", "folderId", { unique: false });
+              }
+              if (!notesStore.indexNames.contains("updatedAt")) {
+                notesStore.createIndex("updatedAt", "updatedAt", { unique: false });
               }
             }
-          } catch (error) {
-            console.warn("[IDB] Index creation failed:", error);
           }
+        } catch (e) {
+          console.warn("[IDB] Failed creating indexes during upgrade:", e);
         }
       };
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
+    return unifiedDbPromise;
   }
   async function openFormsDB() {
-    return openIDB({
-      storeName: DB_CONFIG.STORES.FORMS,
-      keyPath: "id",
-      // Future: add indexes when needed
-      indexes: [{ name: "email", keyPath: "email", options: { unique: false } }]
-    });
+    return openUnifiedDB();
   }
   async function getAllRecords(db, storeName) {
     return new Promise((resolve, reject) => {
@@ -216,13 +206,52 @@
     });
   }
   async function deleteRecord(db, storeName, key) {
-    return new Promise((resolve, reject) => {
-      const tx = db.transaction([storeName], "readwrite");
-      const store = tx.objectStore(storeName);
-      store.delete(key);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
-    });
+    const {
+      MAX_ATTEMPTS,
+      BASE_DELAY_MS,
+      FACTOR,
+      MAX_DELAY_MS,
+      JITTER_PCT
+    } = IDB_RETRY_CONFIG;
+    const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+    const calcDelay = (attempt) => {
+      const raw = Math.min(BASE_DELAY_MS * Math.pow(FACTOR, attempt), MAX_DELAY_MS);
+      const jitter = raw * JITTER_PCT * (Math.random() * 2 - 1);
+      return Math.max(0, Math.round(raw + jitter));
+    };
+    let lastErr;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      try {
+        const activeDb = attempt === 0 ? db : await openUnifiedDB();
+        await new Promise((resolve, reject) => {
+          let tx;
+          try {
+            tx = activeDb.transaction([storeName], "readwrite");
+          } catch (e) {
+            return reject(e);
+          }
+          try {
+            const store = tx.objectStore(storeName);
+            store.delete(key);
+          } catch (inner) {
+            return reject(inner);
+          }
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error || new Error("IDB transaction aborted"));
+        });
+        return;
+      } catch (err) {
+        lastErr = err;
+        const transient = err && (err.name === "InvalidStateError" || err.name === "TransactionInactiveError");
+        if (!transient) break;
+        if (attempt < MAX_ATTEMPTS - 1) {
+          await sleep(calcDelay(attempt));
+          continue;
+        }
+      }
+    }
+    throw lastErr;
   }
 
   // node_modules/workbox-core/_version.js
@@ -3762,13 +3791,13 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
               await notifyClientsOfDBFailure();
               return;
             }
-            const clients = await swSelf.clients.matchAll({ type: "window" });
-            clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.SYNC_FORM, data: { message: "Syncing data.." } }));
             const records = await getAllRecords(database, "forms");
             if (records.length === 0) {
               log("No forms to sync");
               return;
             }
+            const clients = await swSelf.clients.matchAll({ type: "window" });
+            clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.SYNC_FORM, data: { message: "Syncing data.." } }));
             await syncForms(clients, records);
           } catch (err) {
             error("Background sync failed:", err);
@@ -3901,7 +3930,6 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       try {
         const db2 = await openFormsDB();
         const records = await getAllRecords(db2, store);
-        db2.close();
         return records;
       } catch (err) {
         error("Failed to get form data:", err);
@@ -3913,19 +3941,29 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       try {
         const db2 = await openFormsDB();
         await Promise.all(ids.map((id) => deleteRecord(db2, store, id)));
-        db2.close();
       } catch (err) {
         error("Failed to delete form entries:", err);
       }
     }
-    async function syncForms(clients) {
+    async function syncForms(clients, preloaded) {
+      var _a;
       try {
-        const formData = await getFormDataAll("forms");
+        const formData = preloaded != null ? preloaded : await getFormDataAll("forms");
         if (!formData.length) return;
-        const response = await sendDataToServer(formData);
+        const expiryDays = ((_a = globalThis.OFFLINE_FORM_CONFIG) == null ? void 0 : _a.FORM_EXPIRY_DAYS) || 7;
+        const expiryMs = expiryDays * 24 * 60 * 60 * 1e3;
+        const now = Date.now();
+        const valid = formData.filter((r) => now - r.createdAt <= expiryMs);
+        const expired = formData.filter((r) => now - r.createdAt > expiryMs);
+        if (expired.length) {
+          await deleteFormEntries(expired.map((e) => e.id), DB_CONFIG.STORES.FORMS);
+          warn("Purged expired offline records:", expired.length);
+        }
+        if (!valid.length) return;
+        const response = await sendDataToServer(valid);
         if (!response.ok) throw new Error("Sync failed");
-        await deleteFormEntries(formData.map((f) => f.id), DB_CONFIG.STORES.FORMS);
-        clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNCED, data: { message: `Form data synced (${formData.length} records).` } }));
+        await deleteFormEntries(valid.map((f) => f.id), DB_CONFIG.STORES.FORMS);
+        clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNCED, data: { message: `Form data synced (${valid.length} records).` } }));
       } catch (err) {
         error("syncForms error", err);
         clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNC_ERROR, data: { message: "Form sync failed." } }));

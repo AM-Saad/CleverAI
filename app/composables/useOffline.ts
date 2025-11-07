@@ -16,8 +16,8 @@ type QueuedForm = {
 
 async function putForm(record: QueuedForm, storeName: STORES): Promise<void> {
   const db = await openFormsDB();
+  // Do NOT close the DB; unified DB instance is shared. Closing causes InvalidStateError on other in-flight transactions.
   await putRecord(db, storeName, record);
-  db.close();
 }
 
 export function useOffline() {
@@ -27,6 +27,33 @@ export function useOffline() {
     type: FormSyncType;
     formId?: string;
   }): Promise<void> => {
+    // Capacity guard: enforce MAX_PENDING_FORMS from config if available
+    try {
+      const db = await openFormsDB();
+      if (db.objectStoreNames.contains(DB_CONFIG.STORES.FORMS)) {
+        const tx = db.transaction([DB_CONFIG.STORES.FORMS], 'readonly');
+        const countReq = tx.objectStore(DB_CONFIG.STORES.FORMS).count();
+        const currentCount: number = await new Promise((resolve, reject) => {
+          countReq.onsuccess = () => resolve(countReq.result as number);
+          // Fallback to 0 on error (do not block submission)
+          countReq.onerror = () => resolve(0);
+        });
+        const MAX = OFFLINE_FORM_CONFIG?.MAX_PENDING_FORMS ?? 50;
+        if (currentCount >= MAX) {
+          try {
+            const toast = typeof useToast === 'function' ? useToast() : null;
+            toast?.add({
+              title: 'Offline queue is full',
+              description: `Maximum of ${MAX} pending items reached. Please reconnect to sync before adding more.`,
+              color: 'warning'
+            });
+          } catch {}
+          return; // refuse new queue items
+        }
+      }
+    } catch {
+      // If IDB is unavailable, continue to attempt queuing (putForm will handle errors)
+    }
     // 1) Queue a sanitized record locally
     const id =
       (data.formId || globalThis.crypto?.randomUUID?.()) ??

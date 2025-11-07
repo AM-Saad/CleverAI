@@ -702,14 +702,14 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
                         return
                     }
 
-                    const clients = await swSelf.clients.matchAll({ type: 'window' })
-                    clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.SYNC_FORM, data: { message: 'Syncing data..' } }))
-                    
                     const records = await getAllRecords<StoredFormRecord>(database, 'forms')
                     if (records.length === 0) {
                         log('No forms to sync')
                         return
                     }
+                    const clients = await swSelf.clients.matchAll({ type: 'window' })
+                    clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.SYNC_FORM, data: { message: 'Syncing data..' } }))
+                    
                     
                     // Process sync with records
                     await syncForms(clients, records)  // TODO: implement actual sync logic
@@ -885,7 +885,6 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
         try {
             const db = await openFormsDB()
             const records = await getAllRecords<StoredFormRecord>(db, store)
-            db.close()
             return records
         } catch (err) {
             error('Failed to get form data:', err)
@@ -898,21 +897,34 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
         try {
             const db = await openFormsDB()
             await Promise.all(ids.map(id => deleteRecord(db, store, id)))
-            db.close()
         } catch (err) {
             error('Failed to delete form entries:', err)
         }
     }
 
-    async function syncForms(clients: readonly Client[]) {
+    async function syncForms(clients: readonly Client[], preloaded?: StoredFormRecord[]) {
         try {
-            const formData = await getFormDataAll('forms')
+            const formData = preloaded ?? await getFormDataAll('forms')
             if (!formData.length) return
-            const response = await sendDataToServer(formData)
+
+            // Remove expired records before attempting sync
+            const expiryDays = (globalThis as unknown as { OFFLINE_FORM_CONFIG?: { FORM_EXPIRY_DAYS?: number } }).OFFLINE_FORM_CONFIG?.FORM_EXPIRY_DAYS || 7
+            const expiryMs = expiryDays * 24 * 60 * 60 * 1000
+            const now = Date.now()
+            const valid = formData.filter(r => (now - r.createdAt) <= expiryMs)
+            const expired = formData.filter(r => (now - r.createdAt) > expiryMs)
+            if (expired.length) {
+                await deleteFormEntries(expired.map(e => e.id), DB_CONFIG.STORES.FORMS)
+                warn('Purged expired offline records:', expired.length)
+            }
+            if (!valid.length) return
+
+            const response = await sendDataToServer(valid)
             if (!response.ok) throw new Error('Sync failed')
-            // Cleanup after confirmed success
-            await deleteFormEntries(formData.map(f => f.id), DB_CONFIG.STORES.FORMS)
-            clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNCED, data: { message: `Form data synced (${formData.length} records).` } }))
+
+            // Cleanup after confirmed success only for successfully processed records
+            await deleteFormEntries(valid.map(f => f.id), DB_CONFIG.STORES.FORMS)
+            clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNCED, data: { message: `Form data synced (${valid.length} records).` } }))
         } catch (err) {
             error('syncForms error', err)
             clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNC_ERROR, data: { message: 'Form sync failed.' } }))
