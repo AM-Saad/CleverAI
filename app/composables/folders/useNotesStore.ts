@@ -14,7 +14,7 @@ interface NotesStore {
   notes: Ref<Map<string, NoteState>>;
   loadingStates: Ref<Map<string, boolean>>;
   createNote: (folderId: string, content: string) => Promise<string | null>;
-  updateNote: (id: string, content: string) => Promise<boolean>;
+  updateNote: (id: string, updatedNote: NoteState) => Promise<boolean>;
   deleteNote: (id: string) => Promise<boolean>;
   syncWithServer: (folderId: string) => Promise<void>;
   retryFailedNote: (id: string) => Promise<boolean>;
@@ -41,17 +41,21 @@ export function useNotesStore(folderId: string): NotesStore {
   const toast = useToast();
   const { handleOfflineSubmit } = useOffline();
 
+  const { debouncedFunc: debouncedSave, cancel: cancelSave } = useDebounce((id: string, content: string) => {
+    updateNoteToServer(id, content);
+  }, 1000);
+
   // Local reactive state
   const notes = ref<Map<string, NoteState>>(new Map());
   const loadingStates = ref<Map<string, boolean>>(new Map());
   const lastSync = ref<Date | null>(null);
 
+
   // Debounced server sync to reduce API calls during typing
   const saveToServer = async (id: string, content: string) => {
-    await updateNoteToServer(id, content);
+    debouncedSave(id, content);
   };
 
-  const { debouncedFunc: debouncedSave } = useDebounce(saveToServer, 300);
 
   // Simple offline sync - only when actually offline
   const queueForOfflineSync = (
@@ -81,7 +85,13 @@ export function useNotesStore(folderId: string): NotesStore {
       // Set loading state
       note.isLoading = true;
       note.error = null;
-      notes.value.set(id, note);
+
+      // Network error - keep local content, queue for offline sync
+      if (!navigator.onLine) {
+        queueForOfflineSync(FORM_SYNC_TYPES.UPDATE_NOTE, { noteId: id, content }, id);
+        note.isLoading = false;
+        return true;
+      }
 
       // Attempt to submit to server
       const result: Result<Note, APIError> = await $api.notes.update(id, {
@@ -89,23 +99,18 @@ export function useNotesStore(folderId: string): NotesStore {
       });
 
 
-      // Network error - keep local content, queue for offline sync
-      if (!navigator.onLine) {
-        queueForOfflineSync(FORM_SYNC_TYPES.UPDATE_NOTE, { noteId: id, content }, id);
-        note.isLoading = false;
-        notes.value.set(id, note);
-        return true;
-      }
-
       if (result.success) {
         // Server success - mark as synced but keep local content
-        notes.value.set(id, { ...note, isLoading: false, isDirty: false, lastSaved: new Date(), error: null });
         note.isLoading = false;
+        note.isDirty = false;
+        note.lastSaved = new Date();
+
         return true;
       } else {
         // Server rejected - keep local content, show error
         console.error("Server rejected update:", result.error);
-
+        note.isLoading = false;
+        note.error = "Server rejected update";
         return false;
       }
     } catch (error) {
@@ -113,12 +118,12 @@ export function useNotesStore(folderId: string): NotesStore {
       if (!navigator.onLine) {
         queueForOfflineSync(FORM_SYNC_TYPES.UPDATE_NOTE, { noteId: id, content }, id);
         note.isLoading = false;
-        notes.value.set(id, note);
+        // notes.value.set(id, note);
         return true;
       }
 
       note.isLoading = false;
-      notes.value.set(id, note);
+      // notes.value.set(id, note);
       return false;
     }
   };
@@ -127,26 +132,15 @@ export function useNotesStore(folderId: string): NotesStore {
 
 
   // Update note content - local-first approach with IndexedDB persistence
-  const updateNote = async (id: string, content: string): Promise<boolean> => {
-    const note = notes.value.get(id);
-    if (!note) return false;
+  const updateNote = async (id: string, updatedNote: NoteState): Promise<boolean> => {
 
-    // Step 1: Save to IndexedDB first (persistent local storage)
-    const updatedNote: NoteState = {
-      ...note,
-      content,
-      isDirty: true,
-      updatedAt: new Date(),
-    };
-
-    // Save to IndexedDB immediately for persistence
-    await saveNoteToIndexedDB(updatedNote);
-
-    // Step 2: Update reactive state (optimistic update)
+    // Step 1: Update reactive state (optimistic update)
     notes.value.set(id, updatedNote);
 
-    // Step 3: Attempt to sync with server (debounced)
-    debouncedSave(id, content);
+    // Step 2: Attempt to sync with server (debounced)
+    saveToServer(id, updatedNote.content);
+
+
     return true;
   };
 
@@ -372,8 +366,8 @@ export function useNotesStore(folderId: string): NotesStore {
     }
   };
 
-  const getNote = (id: string): NoteState | null => {
-    return notes.value.get(id) || null;
+  const getNote = (id: string): NoteState => {
+    return notes.value.get(id)!
   };
 
   // Create store instance

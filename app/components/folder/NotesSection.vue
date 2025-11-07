@@ -26,33 +26,38 @@
             </Transition>
 
             <!-- Empty state -->
-            <shared-empty-state
-                v-if="!notes?.length"
-                title="No Notes."
-                button-text="Create First Note"
-                :center-description="true"
-                @action="createNewNote"
-            >
+            <shared-empty-state v-if="!notes?.length" title="No Notes." button-text="Create First Note"
+                :center-description="true" @action="createNewNote">
                 <template #description>
-                    Create your first note to capture important <br/>thoughts and ideas for
+                    Create your first note to capture important <br />thoughts and ideas for
                     this folder.
                 </template>
             </shared-empty-state>
 
             <!-- Notes grid -->
-            <ui-card v-else variant="outline" size="xs" class="h-full">
+            <ui-card v-else variant="default" size="xs" class="h-full">
                 <div class="grid grid-cols-5 h-full">
                     <ReorderGroup v-model:values="notes" axis="y"
                         class="relative  overflow-auto col-span-1 border-r pr-1 border-muted" @reorder="handleReorder">
-                        <ReorderItem v-for="(note, idx) in notes" :key="note.id" :value="note" :class="['relative group w-full p-2.5 border-b border-muted cursor-pointer hover:bg-muted',
+                        <ReorderItem v-for="(note, idx) in notes" :key="note.id" :value="note" :class="['relative flex items-center gap-2 group w-full p-2.5 border-b border-muted cursor-pointer hover:bg-muted',
                             idx === 0 ? 'rounded-tl-xl' : ''
                         ]" @click="currentNoteId = note.id;">
-                            <ui-paragraph size="xs" class="truncate">{{ note.content.slice(0, 40) }}...</ui-paragraph>
+                            <div v-if="note.isLoading" class="flex items-center gap-1 text-primary">
+                                <svg class="animate-spin h-2.5 w-2.5" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4" />
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                            </div>
+                            <ui-paragraph size="base" class="truncate">
+                                <span v-html="note.content"></span>
+                            </ui-paragraph>
                         </ReorderItem>
                     </ReorderGroup>
 
-                    <ui-card class="col-span-4" variant="ghost" size="xs">
-                        <UiStickyNote v-if="currentNote" :note="currentNote"
+                    <ui-card v-if="notesStore.getNote(currentNoteId!)" class="col-span-4" variant="ghost" size="xs">
+                        <UiStickyNote :note="notesStore.getNote(currentNoteId!)!"
                             :is-fullscreen="fullscreenNote === currentNoteId" :delete-note="deleteNote" size="lg"
                             placeholder="Double-click to add your note..." @update="handleUpdateNote"
                             @retry="handleRetry" @toggle-fullscreen="toggleFullscreen" />
@@ -87,18 +92,8 @@ const notesStore = useNotesStore(props.folderId);
 // Computed properties for reactive data
 const notes = computed(() => Array.from(notesStore.notes.value.values()));
 
-const currentNote = computed(() => {
-    console.log("Current Note ID:", currentNoteId.value);
-    console.log("Notes in Store:", notesStore.notes.value);
-    console.log("Current Note Retrieved:", notesStore.notes.value.get(currentNoteId.value || ""));
-    const note = notesStore.notes.value.get(currentNoteId.value || "") || null;
-    return note ? {
-        id: note.id,
-        text: note.content, // Map 'content' to 'text' for StickyNote compatibility
-        loading: note.isLoading || false,
-        error: note.error || null,
-    } : null;
-});
+const currentNoteId = ref<string | null>(notes.value[0]?.id || null);
+
 
 // Loading and error state for the initial fetch
 const isFetching = computed(
@@ -106,14 +101,6 @@ const isFetching = computed(
 );
 const error = ref<APIError | null>(null); // Main error state for critical failures
 
-const tiptapRef = ref<{ editor?: TiptapEditorType } | null>(null);
-
-
-// const isFullscreen = computed(() => {
-//     return tiptapRef.value?.editor?.isFocused || false;
-// });
-
-const currentNoteId = ref<string | null>(notes.value[0]?.id || null);
 
 // Fullscreen state management
 const fullscreenNote = ref<string | null>(null);
@@ -137,7 +124,21 @@ const createNewNote = async () => {
 // Update an existing note (optimistic with debounced save)
 const handleUpdateNote = async (id: string, text: string) => {
     // Optimistic update - user sees change immediately
-    const success = await notesStore.updateNote(id, text);
+    const note = notesStore.getNote(id);
+    if (!note) {
+        console.error("Note not found for update:", id);
+        return;
+    }
+    const updatedNote: NoteState = {
+        ...note,
+        content: text,
+        isDirty: true,
+        updatedAt: new Date(),
+    };
+
+        // Save to IndexedDB immediately for persistence
+    await saveNoteToIndexedDB(updatedNote);
+    const success = await notesStore.updateNote(id, updatedNote);
 
     if (success) {
         console.log("Note updated optimistically:", id);

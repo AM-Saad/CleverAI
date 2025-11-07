@@ -14,8 +14,8 @@
                 <div class="flex items-center justify-between border-b light:border-muted h-8">
 
                     <div class="flex items-center gap-4 animate-pulse repeat-infinite ease-in-out opacity-75">
-                        <p v-if="note.loading" class="text-[10px] text-primary">Auto-saving...</p>
-                        <div v-if="note.loading" class="flex items-center gap-1 text-primary">
+                        <p v-if="note.isLoading" class="text-[10px] text-primary">Auto-saving...</p>
+                        <div v-if="note.isLoading" class="flex items-center gap-1 text-primary">
                             <svg class="animate-spin h-2.5 w-2.5" fill="none" viewBox="0 0 24 24">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
                                     stroke-width="4" />
@@ -27,9 +27,9 @@
 
                     <div class="flex items-center gap-2">
                         <!-- Fullscreen toggle button (show when not loading and has content) -->
-                        <u-button v-if="note.text.trim()"
+                        <u-button v-if="note.content.trim()"
                             class=" group-hover:opacity-70 hover:opacity-100 transition-opacity duration-200 cursor-pointer"
-                            :class="{ 'opacity-0': note.loading }" variant="subtle" color="primary" size="xs"
+                            :class="{ 'opacity-75': note.isLoading }" variant="subtle" color="primary" size="xs"
                             :aria-label="isFullscreen ? 'Exit fullscreen' : 'View fullscreen'"
                             @click="$emit('toggleFullscreen', note.id)">
                             <svg v-if="isFullscreen" class="w-3 h-3" fill="none" stroke="currentColor"
@@ -42,10 +42,10 @@
                                     d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
                             </svg>
                         </u-button>
-                        <u-button v-if="!note.loading"
+                        <u-button
                             class=" group-hover:opacity-70 hover:opacity-100 transition-opacity duration-200 cursor-pointer"
-                            :class="{ 'opacity-0': note.loading }" variant="subtle" color="error" size="xs"
-                            :disabled="false" @click="deleteNote(note.id)">
+                            :class="{ 'opacity-75': note.isLoading }" variant="subtle" color="error" size="xs"
+                            :disabled="note.isLoading" aria-label="Delete note" @click="deleteNote(note.id)">
                             <icon name="i-heroicons-trash" class="w-3 h-3" />
                         </u-button>
                     </div>
@@ -91,19 +91,17 @@ interface Note {
 }
 
 interface Props {
-    note: Note;
+    note: NoteState;
     placeholder?: string;
     size?: "sm" | "md" | "lg";
     isFullscreen?: boolean;
     deleteNote: (id: string) => void;
-    onUpdate?: (id: string, text: string) => Promise<void> | void;
 }
 
 const props = withDefaults(defineProps<Props>(), {
     placeholder: "Double-click to add a note...",
     size: "md",
     isFullscreen: false,
-    onUpdate: undefined,
 });
 
 const emit = defineEmits<{
@@ -114,20 +112,12 @@ const emit = defineEmits<{
 
 // Reactive state
 const isEditing = ref(true);
-const contentHtml = ref(props.note.text); // HTML content for tiptap v-model
-const originalText = ref(props.note.text); // To track changes for saving
+const contentHtml = ref(props.note.content); // HTML content for tiptap v-model
+const originalText = ref(props.note.content); // To track changes for saving
 const tiptapRef = ref<{ editor?: TiptapEditorType } | null>(null);
 const editorContainerRef = ref<HTMLElement | null>(null);
 const noteRef = ref<HTMLElement>();
 const isAnimating = ref(false);
-
-// Debounced auto-save function
-const { debouncedFunc: debouncedSave, cancel: cancelSave } = useDebounce(
-    (text: string) => {
-        saveNote(text);
-    },
-    800, // 800ms delay
-);
 
 // Computed classes for parent container
 const noteContainerClasses = computed(() => {
@@ -145,7 +135,7 @@ const noteContainerClasses = computed(() => {
 
     return [
         ...baseClasses,
-        { "opacity-75": props.note.loading && !props.isFullscreen },
+        // { "opacity-75": props.note.loading && !props.isFullscreen },
     ];
 });
 
@@ -163,7 +153,7 @@ const noteContentClasses = computed(() => {
         "",
         {
             "": isEditing.value,
-            "pointer-events-none": props.note.loading,
+            "pointer-events-none": props.note.isLoading,
             "opacity-0": isAnimating.value && !props.isFullscreen,
             invisible: isAnimating.value && !props.isFullscreen,
         },
@@ -233,8 +223,8 @@ watch(
     () => props.note,
     (note) => {
         console.log("Note prop changed:", note);
-        contentHtml.value = note.text;
-        originalText.value = note.text;
+        contentHtml.value = note.content;
+        originalText.value = note.content;
     },
 );
 
@@ -257,71 +247,13 @@ watch(
     },
 );
 
-// Methods
-// Simple synchronous sanitizer using DOMParser (safe for basic XSS trimming)
-const sanitizeHtml = (html = "") => {
-    if (!html) return "";
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    doc.querySelectorAll("script,style").forEach((n) => n.remove());
-    doc.querySelectorAll("*").forEach((el) => {
-        for (const attr of Array.from(el.attributes)) {
-            if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
-            if (
-                attr.name === "href" &&
-                attr.value.trim().toLowerCase().startsWith("javascript:")
-            ) {
-                el.removeAttribute("href");
-            }
-        }
-    });
-    // Allow only a white-list set of tags/attrs by reconstructing innerHTML
-    // For now, return cleaned innerHTML
-    return doc.body.innerHTML.trim();
-};
-
-
-// const cancelEdit = () => {
-//     // revert to original HTML
-//     contentHtml.value = originalText.value || "";
-//     // isEditing.value = false;
-//     cancelSave();
-// };
-
-const softFinishEditing = () => {
-    // console.log("Soft-finishing edit for note:", props.note.id);
-    // const sanitized = sanitizeHtml(contentHtml.value);
-    // if (sanitized !== (originalText.value || "").trim()) {
-    //     cancelSave();
-    //     void saveNote(sanitized);
-    // }
-};
-
-// Auto-finish editing when clicking outside or after a period of inactivity
-const autoFinishEditing = () => {
-    console.log("Auto-finishing edit for note:", props.note.id);
-    const sanitized = sanitizeHtml(contentHtml.value);
-    if (sanitized !== (originalText.value || "").trim()) {
-        cancelSave();
-        void saveNote(sanitized);
-    }
-    // isEditing.value = false;
-};
-
 const saveNote = async (html: string) => {
-    console.log("Saving note:", props.note.id);
+    console.log("Saving note:", props.note.id, html);
     const sanitized = sanitizeHtml(html);
     if (sanitized === (originalText.value || "").trim()) return;
+    emit("update", props.note.id, sanitized);
+    originalText.value = sanitized;
 
-    try {
-        if (props.onUpdate) {
-            await props.onUpdate(props.note.id, sanitized);
-        }
-        emit("update", props.note.id, sanitized);
-        originalText.value = sanitized;
-    } catch {
-        console.error("Failed to save note:");
-        // Don't close editing mode on error so user can retry
-    }
 };
 
 const retry = () => emit("retry", props.note.id);
@@ -332,50 +264,10 @@ watch(contentHtml, (newHtml) => {
     if (!isEditing.value) return;
     const sanitized = sanitizeHtml(newHtml);
     if (sanitized !== (originalText.value || "").trim()) {
-        debouncedSave(sanitized);
+        saveNote(sanitized);
     }
 });
 
-// Handle click outside to finish editing
-const handleClickOutside = (event: MouseEvent) => {
-    event.stopPropagation();
-    if (!isEditing.value) return;
-    console.log("Handling click outside for note:", props.note.id);
-    const target = event.target as Node;
-    const container = editorContainerRef.value;
-    if (container && !container.contains(target)) {
-        autoFinishEditing();
-    }
-};
-
-const handleKeydown = (event: KeyboardEvent) => {
-    // if (!isEditing.value) return;
-    // if (event.key === "Escape") {
-    //     event.preventDefault();
-    //     cancelEdit();
-    // }
-    // if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-    //     event.preventDefault();
-    //     softFinishEditing();
-    // }
-};
-
-// Add/remove click outside listener
-watch(isEditing, (editing) => {
-    if (editing) {
-        document.addEventListener("click", handleClickOutside);
-        document.addEventListener("keydown", handleKeydown);
-    } else {
-        document.removeEventListener("click", handleClickOutside);
-        document.removeEventListener("keydown", handleKeydown);
-    }
-});
-
-// Clean up event listener on unmount
-onBeforeUnmount(() => {
-    document.removeEventListener("click", handleClickOutside);
-    document.removeEventListener("keydown", handleKeydown);
-});
 </script>
 
 <style scoped>
