@@ -1,6 +1,7 @@
 import type { APIError } from "@/services/FetchFactory";
 import type Result from "@/types/Result";
 import { DB_CONFIG } from "~/utils/constants/pwa";
+import { queueNoteChange, openUnifiedDB } from "~/utils/idb";
 
 export interface NoteState extends Note {
   // Local state tracking
@@ -26,6 +27,8 @@ interface NotesStore {
 
 // Global store instance
 const stores = new Map<string, NotesStore>();
+// Ensure we only wire one 'online' listener for notes sync across the app
+let notesOnlineListenerRegistered = false
 
 /**
  * Creates or returns a notes store for a specific folder
@@ -40,6 +43,44 @@ export function useNotesStore(folderId: string): NotesStore {
   const { $api } = useNuxtApp();
   const toast = useToast();
   const { handleOfflineSubmit } = useOffline();
+  // Proactively trigger notes sync on reconnect when pending changes exist (register once)
+  if (process.client && !notesOnlineListenerRegistered) {
+    try {
+      let onlineSyncScheduled = false
+      window.addEventListener('online', async () => {
+        if (onlineSyncScheduled) return
+        onlineSyncScheduled = true
+        try {
+          // slight delay to allow potential Background Sync event to fire first
+          setTimeout(async () => {
+            try {
+              const db = await openUnifiedDB()
+              if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) return
+              const pending = await getAllRecords<any>(db, DB_CONFIG.STORES.PENDING_NOTES as any)
+              if (!pending.length) return
+              if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({ type: 'SYNC_NOTES' })
+              }
+            } catch { /* ignore */ }
+            finally { onlineSyncScheduled = false }
+          }, 350)
+        } catch { onlineSyncScheduled = false }
+      })
+      notesOnlineListenerRegistered = true
+    } catch { /* ignore */ }
+  }
+  const registerNotesSync = async () => {
+    try {
+      if ('serviceWorker' in navigator) {
+        const reg = await navigator.serviceWorker.getRegistration()
+        // Background Sync may not be typed; cast defensively
+        const syncReg = (reg as unknown as { sync?: { register(tag: string): Promise<void> } })?.sync
+        if (syncReg) await syncReg.register('notes-sync')
+      }
+    } catch {
+      /* ignore */
+    }
+  }
 
   const { debouncedFunc: debouncedSave, cancel: cancelSave } = useDebounce((id: string, content: string) => {
     updateNoteToServer(id, content);
@@ -88,7 +129,10 @@ export function useNotesStore(folderId: string): NotesStore {
 
       // Network error - keep local content, queue for offline sync
       if (!navigator.onLine) {
-        queueForOfflineSync(FORM_SYNC_TYPES.UPDATE_NOTE, { noteId: id, content }, id);
+        // Queue to pending notes store
+        await queueNoteChange({ id, operation: 'upsert', updatedAt: Date.now(), localVersion: (note as any).localVersion ? (note as any).localVersion + 1 : 1, folderId: note.folderId, content })
+        await registerNotesSync()
+        toast.add({ title: 'Offline', description: 'Note change saved locally. Will sync when back online.', color: 'warning' })
         note.isLoading = false;
         return true;
       }
@@ -116,7 +160,9 @@ export function useNotesStore(folderId: string): NotesStore {
     } catch (error) {
       console.error("Failed to sync note to server:", error);
       if (!navigator.onLine) {
-        queueForOfflineSync(FORM_SYNC_TYPES.UPDATE_NOTE, { noteId: id, content }, id);
+        await queueNoteChange({ id, operation: 'upsert', updatedAt: Date.now(), localVersion: (note as any).localVersion ? (note as any).localVersion + 1 : 1, folderId: note.folderId, content })
+        await registerNotesSync()
+        toast.add({ title: 'Offline', description: 'Note update queued. Will sync when back online.', color: 'warning' })
         note.isLoading = false;
         // notes.value.set(id, note);
         return true;
@@ -203,7 +249,8 @@ export function useNotesStore(folderId: string): NotesStore {
 
       // Only show offline message if actually offline
       if (!navigator.onLine) {
-        queueForOfflineSync(FORM_SYNC_TYPES.CREATE_NOTE, { folderId: folderIdParam, content }, tempId);
+        await queueNoteChange({ id: tempId, operation: 'upsert', updatedAt: Date.now(), localVersion: 1, folderId: folderIdParam, content })
+        await registerNotesSync()
 
         toast.add({ title: "Offline", description: "Note saved locally. Will sync when online.", color: "warning" });
         return tempId;
@@ -227,7 +274,7 @@ export function useNotesStore(folderId: string): NotesStore {
       // Remove from IndexedDB
       await deleteNoteFromIndexedDB(id);
 
-      // Attempt to submit to server
+  // Attempt to submit to server
       const result: Result<unknown, APIError> = await $api.notes.delete(id);
 
       if (result.success) {
@@ -247,7 +294,8 @@ export function useNotesStore(folderId: string): NotesStore {
 
       // Only show offline message if actually offline
       if (!navigator.onLine) {
-        queueForOfflineSync(FORM_SYNC_TYPES.DELETE_NOTE, { noteId: id }, id);
+        await queueNoteChange({ id, operation: 'delete', updatedAt: Date.now(), localVersion: 1 })
+        await registerNotesSync()
         toast.add({ title: "Offline", description: "Deletion queued. Will sync when online.", color: "warning" });
         return true;
       } else {

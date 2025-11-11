@@ -15,7 +15,7 @@ type QueuedForm = {
 };
 
 async function putForm(record: QueuedForm, storeName: STORES): Promise<void> {
-  const db = await openFormsDB();
+  const db = await openUnifiedDB(); // consolidated: use unified opener
   // Do NOT close the DB; unified DB instance is shared. Closing causes InvalidStateError on other in-flight transactions.
   await putRecord(db, storeName, record);
 }
@@ -29,7 +29,7 @@ export function useOffline() {
   }): Promise<void> => {
     // Capacity guard: enforce MAX_PENDING_FORMS from config if available
     try {
-      const db = await openFormsDB();
+  const db = await openUnifiedDB();
       if (db.objectStoreNames.contains(DB_CONFIG.STORES.FORMS)) {
         const tx = db.transaction([DB_CONFIG.STORES.FORMS], 'readonly');
         const countReq = tx.objectStore(DB_CONFIG.STORES.FORMS).count();

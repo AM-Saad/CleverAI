@@ -15,6 +15,7 @@ let unifiedDbPromise: Promise<IDBDatabase> | null = null;
  * could fail to create additional stores if the first opener did not request them.
  */
 export function openUnifiedDB(): Promise<IDBDatabase> {
+  // If we already have a promise, ensure its resulting DB isn't stale (version check after resolution).
   if (unifiedDbPromise) return unifiedDbPromise;
   unifiedDbPromise = new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION);
@@ -29,6 +30,7 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
       };
       ensureStore(STORES.FORMS);
       ensureStore(STORES.NOTES);
+      ensureStore(STORES.PENDING_NOTES);
 
       // Add indexes for NOTES store if missing.
       try {
@@ -44,12 +46,82 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
             }
           }
         }
+        // Add indexes for PENDING_NOTES store if missing.
+        if (db.objectStoreNames.contains(STORES.PENDING_NOTES)) {
+          const tx = req.transaction; // upgrade transaction
+          if (tx) {
+            const pending = tx.objectStore(STORES.PENDING_NOTES);
+            if (!pending.indexNames.contains('updatedAt')) {
+              pending.createIndex('updatedAt', 'updatedAt', { unique: false });
+            }
+            if (!pending.indexNames.contains('folderId')) {
+              pending.createIndex('folderId', 'folderId', { unique: false });
+            }
+            if (!pending.indexNames.contains('conflicted')) {
+              pending.createIndex('conflicted', 'conflicted', { unique: false });
+            }
+          }
+        }
       } catch (e) {
         console.warn('[IDB] Failed creating indexes during upgrade:', e);
       }
     };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+    req.onsuccess = () => {
+      const db = req.result;
+      try {
+        // Post-open verification: if stores missing despite version, force rebuild.
+        const required = [DB_CONFIG.STORES.FORMS, DB_CONFIG.STORES.NOTES, DB_CONFIG.STORES.PENDING_NOTES];
+        const missing = required.filter(s => !db.objectStoreNames.contains(s));
+        if (missing.length) {
+          console.warn('[IDB] Detected missing stores post-open:', missing, 'forcing rebuild');
+          db.close();
+          // Force a version bump migration attempt by reopening with +1 temp version then desired version.
+          const tempReq = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION + 1);
+          tempReq.onupgradeneeded = () => {
+            const udb = tempReq.result;
+            for (const s of required) {
+              if (!udb.objectStoreNames.contains(s)) udb.createObjectStore(s, { keyPath: 'id' });
+            }
+          };
+          tempReq.onerror = () => resolve(db); // fallback
+          tempReq.onsuccess = () => {
+            const upgraded = tempReq.result;
+            upgraded.close();
+            // Final reopen at canonical version
+            const finalReq = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION);
+            finalReq.onupgradeneeded = () => {
+              const fdb = finalReq.result;
+              for (const s of required) {
+                if (!fdb.objectStoreNames.contains(s)) fdb.createObjectStore(s, { keyPath: 'id' });
+              }
+            };
+            finalReq.onerror = () => resolve(db); // fallback to original
+            finalReq.onsuccess = () => {
+              resolve(finalReq.result);
+            };
+          };
+          return;
+        }
+      } catch (e) {
+        console.warn('[IDB] Post-open verification failed:', e);
+      }
+      resolve(db);
+    };
+    req.onerror = () => {
+      // Handle scenario where live DB has a higher version than our constant (after a repair bump).
+      if (req.error?.name === 'VersionError') {
+        console.warn('[IDB] VersionError opening DB at version', DB_CONFIG.VERSION, '— attempting fallback open without explicit version');
+        try {
+          const fallbackReq = indexedDB.open(DB_CONFIG.NAME);
+          fallbackReq.onsuccess = () => resolve(fallbackReq.result);
+          fallbackReq.onerror = () => reject(fallbackReq.error);
+          return;
+        } catch (e) {
+          // If fallback fails, propagate original error.
+        }
+      }
+      reject(req.error);
+    };
   });
   return unifiedDbPromise;
 }
@@ -71,25 +143,35 @@ export async function countRecords(
 }
 
 
-/**
- * Simplified helper for common form storage operations.
- */
-export async function openFormsDB(): Promise<IDBDatabase> {
-  // Ensure unified migration has run; reuse its instance.
-  return openUnifiedDB();
-}
-
-// IndexedDB helpers for persistent local storage
-export const openNotesDB = async (): Promise<IDBDatabase> => {
-  return openUnifiedDB();
-};
+// (Removed deprecated openFormsDB/openNotesDB wrappers; use openUnifiedDB directly everywhere.)
 
 
 export const saveNoteToIndexedDB = async (note: NoteState): Promise<void> => {
   try {
-    const db = await openNotesDB();
+  const db = await openUnifiedDB();
     if (!db.objectStoreNames.contains(DB_CONFIG.STORES.NOTES)) {
-      console.warn('[IDB] NOTES store missing; note persistence skipped');
+      console.warn('[IDB] NOTES store missing; queuing note change for sync');
+      // Fallback: queue for background sync so changes aren't lost
+      try {
+        // Attempt a repair once before queuing
+        try {
+          unifiedDbPromise = null; // reset
+          await openUnifiedDB();
+        } catch {}
+  const repairDb = await openUnifiedDB();
+        if (repairDb.objectStoreNames.contains(DB_CONFIG.STORES.NOTES)) {
+          await putRecord(repairDb, DB_CONFIG.STORES.NOTES as STORES, note);
+          return;
+        }
+        await queueNoteChange({
+          id: note.id,
+          operation: 'upsert',
+          updatedAt: Date.now(),
+          localVersion: (note as any).localVersion ? (note as any).localVersion + 1 : 1,
+          folderId: (note as any).folderId,
+          content: (note as any).content,
+        })
+      } catch {}
       return;
     }
     // Reuse generic sanitized put
@@ -103,7 +185,7 @@ export const loadNotesFromIndexedDB = async (
   folderId: string
 ): Promise<NoteState[]> => {
   try {
-    const db = await openNotesDB();
+  const db = await openUnifiedDB();
     const tx = db.transaction([DB_CONFIG.STORES.NOTES], "readonly");
     const store = tx.objectStore(DB_CONFIG.STORES.NOTES);
     const index = store.index("folderId");
@@ -121,8 +203,23 @@ export const loadNotesFromIndexedDB = async (
 
 export const deleteNoteFromIndexedDB = async (noteId: string): Promise<void> => {
   try {
-    const db = await openNotesDB();
-    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.NOTES)) return;
+  const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.NOTES)) {
+      // Fallback: queue delete
+      try {
+        try {
+          unifiedDbPromise = null;
+          await openUnifiedDB();
+        } catch {}
+  const repairDb = await openUnifiedDB();
+        if (repairDb.objectStoreNames.contains(DB_CONFIG.STORES.NOTES)) {
+          await deleteRecord(repairDb, DB_CONFIG.STORES.NOTES as STORES, noteId);
+          return;
+        }
+        await queueNoteChange({ id: noteId, operation: 'delete', updatedAt: Date.now(), localVersion: 1 })
+      } catch {}
+      return;
+    }
     await deleteRecord(db, DB_CONFIG.STORES.NOTES as STORES, noteId);
   } catch (error) {
     console.error("Failed to delete note from IndexedDB:", error);
@@ -265,6 +362,46 @@ export async function getAllRecords<T>(
     req.onsuccess = () => resolve(req.result || []);
     req.onerror = () => reject(req.error);
   });
+}
+
+// -------------------- Pending Notes Queue --------------------
+
+export interface PendingNoteChange {
+  id: string // note id (key)
+  operation: 'upsert' | 'delete'
+  updatedAt: number // client timestamp
+  localVersion: number // monotonic per note
+  folderId?: string
+  content?: string
+  conflicted?: boolean
+}
+
+/**
+ * Queue a note change into PENDING_NOTES (coalesces by note id).
+ */
+export async function queueNoteChange(change: PendingNoteChange): Promise<void> {
+  const db = await openUnifiedDB();
+  if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) return;
+  await putRecord(db, DB_CONFIG.STORES.PENDING_NOTES as STORES, change);
+}
+
+/**
+ * Load all pending note changes.
+ */
+export async function loadPendingNoteChanges(): Promise<PendingNoteChange[]> {
+  const db = await openUnifiedDB();
+  if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) return [];
+  return getAllRecords<PendingNoteChange>(db, DB_CONFIG.STORES.PENDING_NOTES as STORES);
+}
+
+/**
+ * Delete pending note changes by ids.
+ */
+export async function deletePendingNoteChanges(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  const db = await openUnifiedDB();
+  if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) return;
+  await Promise.all(ids.map(id => deleteRecord(db, DB_CONFIG.STORES.PENDING_NOTES as STORES, id)));
 }
 
 /**

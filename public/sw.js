@@ -1,8 +1,7 @@
 (() => {
   // app/utils/constants/pwa.ts
   var SW_CONFIG = {
-    VERSION: "v2.0.0-enhanced",
-    DEBUG_QUERY_PARAM: "swDebug",
+    VERSION: "v2.0.3-enhanced",
     DEBUG_VALUE: "1",
     UPDATE_CHECK_INTERVAL: 3e4,
     // 30 seconds
@@ -39,12 +38,16 @@
   };
   var DB_CONFIG = {
     NAME: "recwide_db",
-    // Bump to 4 to ensure unified store creation migration runs exactly once.
-    // Previous versions created stores lazily per open; version 4 performs consolidated creation.
-    VERSION: 4,
+    // VERSION HISTORY
+    // 4: Unified creation of forms + notes stores
+    // 5: Added PENDING_NOTES store (offline notes sync queue)
+    // 6: Added post-open verification & auto-repair logic
+    // 7: Reconciliation bump after detecting live DB already at version 7 (prevent VersionError when client still used 6)
+    VERSION: 8,
     STORES: {
       FORMS: "forms",
-      NOTES: "notes"
+      NOTES: "notes",
+      PENDING_NOTES: "pendingNotes"
     }
   };
   var IDB_RETRY_CONFIG = {
@@ -60,15 +63,16 @@
     // +/-20% jitter
   };
   var SW_MESSAGE_TYPES = {
-    // Upload messages
-    UPLOAD_START: "UPLOAD_START",
-    PROGRESS: "PROGRESS",
-    FILE_COMPLETE: "FILE_COMPLETE",
-    ALL_FILES_COMPLETE: "ALL_FILES_COMPLETE",
     // Sync messages
     FORM_SYNC_ERROR: "FORM_SYNC_ERROR",
     FORM_SYNCED: "FORM_SYNCED",
-    SYNC_FORM: "SYNC_FORM",
+    FORM_SYNC_STARTED: "FORM_SYNC_STARTED",
+    // Notes sync specific
+    SYNC_NOTES: "SYNC_NOTES",
+    NOTES_SYNC_STARTED: "NOTES_SYNC_STARTED",
+    NOTES_SYNCED: "NOTES_SYNCED",
+    NOTES_SYNC_ERROR: "NOTES_SYNC_ERROR",
+    NOTES_SYNC_CONFLICTS: "NOTES_SYNC_CONFLICTS",
     // Service worker control
     SW_ACTIVATED: "SW_ACTIVATED",
     SW_CONTROL_CLAIMED: "SW_CONTROL_CLAIMED",
@@ -80,71 +84,15 @@
     // Notifications
     NOTIFICATION_CLICK_NAVIGATE: "NOTIFICATION_CLICK_NAVIGATE",
     TEST_NOTIFICATION_CLICK: "TEST_NOTIFICATION_CLICK",
-    // Upload files
-    UPLOAD_FILES: "uploadFiles",
     // Generic error
     ERROR: "error"
   };
   var SYNC_TAGS = {
     FORM: "syncForm",
-    CONTENT: "content-sync"
-  };
-  var UPLOAD_CONFIG = {
-    CHUNK_SIZE: {
-      MIN: 256 * 1024,
-      // 256KB
-      MAX: 5 * 1024 * 1024,
-      // 5MB
-      TARGET_CHUNKS: 100
-    },
-    CONCURRENCY: {
-      CHUNKS: 3,
-      FILES: 4
-    },
-    RETRY: {
-      BASE_BACKOFF: 1e3,
-      // 1 second
-      MAX_ATTEMPTS: 5,
-      JITTER_FACTOR: 0.4,
-      // 40% jitter
-      SERVER_ERROR_CUSHION: 0.5
-      // 50% extra delay for server errors
-    },
-    HTTP_STATUS: {
-      PAYLOAD_TOO_LARGE: 413,
-      TOO_MANY_REQUESTS: 429,
-      SERVICE_UNAVAILABLE: 503
-    }
-  };
-  var URL_PATTERNS = {
-    // Development files to skip
-    DEV_FILES: [
-      "/@fs/",
-      "/node_modules/",
-      "error-dev.vue",
-      "builds/meta/dev.json",
-      "/@vite/",
-      "/@id/",
-      "/__vite_ping",
-      "/nuxt/dist/app/",
-      "sw.js"
-    ],
-    // Asset patterns
-    IMAGES: /\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/,
-    NUXT_ASSETS: /\/(?:_nuxt|_assets)\/[A-Za-z0-9._\-/]+\.(?:js|css|png|jpg|jpeg|webp|svg|ico)/g,
-    // API patterns
-    AUTH_API: "/api/auth/",
-    FORM_SYNC_API: "/api/form-sync",
-    // Static files
-    MANIFEST: "/manifest.webmanifest",
-    FAVICON: "/favicon.ico",
-    NUXT_BUILD: "/_nuxt/"
+    CONTENT: "content-sync",
+    NOTES: "notes-sync"
   };
   var PREWARM_PATHS = ["/", "/about", "/folders"];
-  var STATIC_WARM_FILES = [
-    URL_PATTERNS.MANIFEST,
-    URL_PATTERNS.FAVICON
-  ];
   var AUTH_STUBS = {
     "/api/auth/session": { user: null, expires: null },
     "/api/auth/csrf": { csrfToken: null },
@@ -171,6 +119,7 @@
         };
         ensureStore(STORES.FORMS);
         ensureStore(STORES.NOTES);
+        ensureStore(STORES.PENDING_NOTES);
         try {
           if (db.objectStoreNames.contains(STORES.NOTES)) {
             const tx = req.transaction;
@@ -184,17 +133,79 @@
               }
             }
           }
+          if (db.objectStoreNames.contains(STORES.PENDING_NOTES)) {
+            const tx = req.transaction;
+            if (tx) {
+              const pending = tx.objectStore(STORES.PENDING_NOTES);
+              if (!pending.indexNames.contains("updatedAt")) {
+                pending.createIndex("updatedAt", "updatedAt", { unique: false });
+              }
+              if (!pending.indexNames.contains("folderId")) {
+                pending.createIndex("folderId", "folderId", { unique: false });
+              }
+              if (!pending.indexNames.contains("conflicted")) {
+                pending.createIndex("conflicted", "conflicted", { unique: false });
+              }
+            }
+          }
         } catch (e) {
           console.warn("[IDB] Failed creating indexes during upgrade:", e);
         }
       };
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const db = req.result;
+        try {
+          const required = [DB_CONFIG.STORES.FORMS, DB_CONFIG.STORES.NOTES, DB_CONFIG.STORES.PENDING_NOTES];
+          const missing = required.filter((s) => !db.objectStoreNames.contains(s));
+          if (missing.length) {
+            console.warn("[IDB] Detected missing stores post-open:", missing, "forcing rebuild");
+            db.close();
+            const tempReq = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION + 1);
+            tempReq.onupgradeneeded = () => {
+              const udb = tempReq.result;
+              for (const s of required) {
+                if (!udb.objectStoreNames.contains(s)) udb.createObjectStore(s, { keyPath: "id" });
+              }
+            };
+            tempReq.onerror = () => resolve(db);
+            tempReq.onsuccess = () => {
+              const upgraded = tempReq.result;
+              upgraded.close();
+              const finalReq = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION);
+              finalReq.onupgradeneeded = () => {
+                const fdb = finalReq.result;
+                for (const s of required) {
+                  if (!fdb.objectStoreNames.contains(s)) fdb.createObjectStore(s, { keyPath: "id" });
+                }
+              };
+              finalReq.onerror = () => resolve(db);
+              finalReq.onsuccess = () => {
+                resolve(finalReq.result);
+              };
+            };
+            return;
+          }
+        } catch (e) {
+          console.warn("[IDB] Post-open verification failed:", e);
+        }
+        resolve(db);
+      };
+      req.onerror = () => {
+        var _a;
+        if (((_a = req.error) == null ? void 0 : _a.name) === "VersionError") {
+          console.warn("[IDB] VersionError opening DB at version", DB_CONFIG.VERSION, "\u2014 attempting fallback open without explicit version");
+          try {
+            const fallbackReq = indexedDB.open(DB_CONFIG.NAME);
+            fallbackReq.onsuccess = () => resolve(fallbackReq.result);
+            fallbackReq.onerror = () => reject(fallbackReq.error);
+            return;
+          } catch (e) {
+          }
+        }
+        reject(req.error);
+      };
     });
     return unifiedDbPromise;
-  }
-  async function openFormsDB() {
-    return openUnifiedDB();
   }
   async function getAllRecords(db, storeName) {
     return new Promise((resolve, reject) => {
@@ -204,6 +215,17 @@
       req.onsuccess = () => resolve(req.result || []);
       req.onerror = () => reject(req.error);
     });
+  }
+  async function loadPendingNoteChanges() {
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) return [];
+    return getAllRecords(db, DB_CONFIG.STORES.PENDING_NOTES);
+  }
+  async function deletePendingNoteChanges(ids) {
+    if (!ids.length) return;
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) return;
+    await Promise.all(ids.map((id) => deleteRecord(db, DB_CONFIG.STORES.PENDING_NOTES, id)));
   }
   async function deleteRecord(db, storeName, key) {
     const {
@@ -3304,10 +3326,10 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       if (new URL(self.location.href).searchParams.get("swDebug") === "1") DEBUG = true;
     } catch {
     }
-    const SW_MESSAGE_TYPE = SW_MESSAGE_TYPES;
     let db = null;
     let dbInitAttempts = 0;
     const MAX_DB_INIT_ATTEMPTS = 3;
+    let notesSyncInProgress = false;
     async function ensureDB() {
       if (db) return db;
       if (dbInitAttempts >= MAX_DB_INIT_ATTEMPTS) {
@@ -3316,7 +3338,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       }
       try {
         dbInitAttempts++;
-        db = await openFormsDB();
+        db = await openUnifiedDB();
         log("IndexedDB initialized successfully");
         dbInitAttempts = 0;
         return db;
@@ -3593,19 +3615,19 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       var _a;
       const data = event.data || {};
       const type = data.type;
-      if (type === "SKIP_WAITING") {
+      if (type === SW_MESSAGE_TYPES.SKIP_WAITING) {
         log("Received SKIP_WAITING");
         swSelf.skipWaiting();
         return;
       }
-      if (type === "CLAIM_CONTROL") {
+      if (type === SW_MESSAGE_TYPES.CLAIM_CONTROL) {
         swSelf.clients.claim().then(async () => {
           const clients = await swSelf.clients.matchAll({ type: "window" });
           clients.forEach((c) => c.postMessage({ type: "SW_CONTROL_CLAIMED" }));
         });
         return;
       }
-      if (type === "TEST_NOTIFICATION_CLICK") {
+      if (type === SW_MESSAGE_TYPES.TEST_NOTIFICATION_CLICK) {
         const targetUrl = ((_a = data.data) == null ? void 0 : _a.url) || "/";
         const extendable = event;
         extendable.waitUntil((async () => {
@@ -3623,7 +3645,12 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         })());
         return;
       }
-      if (type === "SET_DEBUG") {
+      if (type === SW_MESSAGE_TYPES.SYNC_NOTES) {
+        const extendable = event;
+        extendable.waitUntil(syncPendingNotes("manual"));
+        return;
+      }
+      if (type === SW_MESSAGE_TYPES.SET_DEBUG) {
         DEBUG = !!data.value;
         log("Debug mode set to", DEBUG);
         return;
@@ -3782,6 +3809,9 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     });
     swSelf.addEventListener("sync", (event) => {
       const syncEvt = event;
+      if (syncEvt.tag === SYNC_TAGS.NOTES) {
+        syncEvt.waitUntil(syncPendingNotes("background"));
+      }
       if (syncEvt.tag === SYNC_TAGS.FORM) {
         syncEvt.waitUntil((async () => {
           try {
@@ -3792,19 +3822,20 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
               return;
             }
             const records = await getAllRecords(database, "forms");
-            if (records.length === 0) {
+            if (records.length === 0 || records.every((r) => !r.payload)) {
               log("No forms to sync");
               return;
             }
+            console.log("SW: Syncing forms records:", records);
             const clients = await swSelf.clients.matchAll({ type: "window" });
-            clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.SYNC_FORM, data: { message: "Syncing data.." } }));
+            clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPES.FORM_SYNC_STARTED, data: { message: "Syncing data..", mode: "background" } }));
             await syncForms(clients, records);
           } catch (err) {
             error("Background sync failed:", err);
             const clients = await swSelf.clients.matchAll({ type: "window" });
             clients.forEach((client) => {
               client.postMessage({
-                type: SW_MESSAGE_TYPE.FORM_SYNC_ERROR,
+                type: SW_MESSAGE_TYPES.FORM_SYNC_ERROR,
                 data: { message: "Failed to sync offline data" }
               });
             });
@@ -3926,29 +3957,18 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         })());
       }
     });
-    async function getFormDataAll(store) {
-      try {
-        const db2 = await openFormsDB();
-        const records = await getAllRecords(db2, store);
-        return records;
-      } catch (err) {
-        error("Failed to get form data:", err);
-        return [];
-      }
-    }
-    async function deleteFormEntries(ids, store) {
-      if (!ids.length) return;
-      try {
-        const db2 = await openFormsDB();
-        await Promise.all(ids.map((id) => deleteRecord(db2, store, id)));
-      } catch (err) {
-        error("Failed to delete form entries:", err);
-      }
-    }
     async function syncForms(clients, preloaded) {
       var _a;
       try {
-        const formData = preloaded != null ? preloaded : await getFormDataAll("forms");
+        const formData = preloaded != null ? preloaded : await (async () => {
+          try {
+            const db2 = await openUnifiedDB();
+            return await getAllRecords(db2, DB_CONFIG.STORES.FORMS);
+          } catch (e) {
+            error("Failed to load form data:", e);
+            return [];
+          }
+        })();
         if (!formData.length) return;
         const expiryDays = ((_a = globalThis.OFFLINE_FORM_CONFIG) == null ? void 0 : _a.FORM_EXPIRY_DAYS) || 7;
         const expiryMs = expiryDays * 24 * 60 * 60 * 1e3;
@@ -3956,17 +3976,27 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         const valid = formData.filter((r) => now - r.createdAt <= expiryMs);
         const expired = formData.filter((r) => now - r.createdAt > expiryMs);
         if (expired.length) {
-          await deleteFormEntries(expired.map((e) => e.id), DB_CONFIG.STORES.FORMS);
-          warn("Purged expired offline records:", expired.length);
+          try {
+            const db2 = await openUnifiedDB();
+            await Promise.all(expired.map((e) => deleteRecord(db2, DB_CONFIG.STORES.FORMS, e.id)));
+            warn("Purged expired offline records:", expired.length);
+          } catch (e) {
+            warn("Failed purging expired records:", e);
+          }
         }
         if (!valid.length) return;
         const response = await sendDataToServer(valid);
         if (!response.ok) throw new Error("Sync failed");
-        await deleteFormEntries(valid.map((f) => f.id), DB_CONFIG.STORES.FORMS);
-        clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNCED, data: { message: `Form data synced (${valid.length} records).` } }));
+        try {
+          const db2 = await openUnifiedDB();
+          await Promise.all(valid.map((f) => deleteRecord(db2, DB_CONFIG.STORES.FORMS, f.id)));
+        } catch (e) {
+          warn("Failed deleting processed form records:", e);
+        }
+        clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPES.FORM_SYNCED, data: { message: `Form data synced (${valid.length} records).`, appliedCount: valid.length, mode: "background" } }));
       } catch (err) {
         error("syncForms error", err);
-        clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNC_ERROR, data: { message: "Form sync failed." } }));
+        clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPES.FORM_SYNC_ERROR, data: { message: "Form sync failed.", mode: "background" } }));
       }
     }
     async function syncContent() {
@@ -3980,6 +4010,44 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         return resp;
       } finally {
         clearTimeout(timeout2);
+      }
+    }
+    async function syncPendingNotes(mode) {
+      var _a;
+      if (notesSyncInProgress) return;
+      notesSyncInProgress = true;
+      try {
+        const clients = await swSelf.clients.matchAll({ type: "window" });
+        const pending = await loadPendingNoteChanges();
+        clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNC_STARTED, data: { message: "Syncing notes\u2026", pendingCount: pending.length, mode } }));
+        if (!pending.length) {
+          clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNCED, data: { appliedCount: 0, conflictsCount: 0, mode } }));
+          return;
+        }
+        const resp = await fetch("/api/notes/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ changes: pending })
+        });
+        if (!resp.ok) throw new Error("Notes sync failed");
+        const result = await resp.json().catch(() => ({}));
+        const appliedIds = Array.from(new Set(result.applied || []));
+        const conflictsCount = ((_a = result.conflicts) == null ? void 0 : _a.length) || 0;
+        if (appliedIds.length) {
+          try {
+            await deletePendingNoteChanges(appliedIds);
+          } catch {
+          }
+        }
+        if (conflictsCount) {
+          clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNC_CONFLICTS, data: { conflictsCount, mode } }));
+        }
+        clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNCED, data: { appliedCount: appliedIds.length, conflictsCount, mode } }));
+      } catch (err) {
+        const clients = await swSelf.clients.matchAll({ type: "window" });
+        clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNC_ERROR }));
+      } finally {
+        notesSyncInProgress = false;
       }
     }
   })();

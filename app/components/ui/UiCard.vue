@@ -117,7 +117,9 @@ const combinedContentClasses = ["ui-card__content", contentClasses].join(" ");
 
 
 .ui-card__content {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .ui-card__footer {

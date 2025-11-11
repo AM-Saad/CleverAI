@@ -224,7 +224,7 @@ if (isDev && isClient) {
 4. **Debug SW** - Comprehensive service worker state logging
 5. **Test SW Message** - Tests message passing between page and SW
 
-#### **Enhanced Composable Features**
+#### **Enhanced Composable Features (Unified Bridge)**
 ```typescript
 const {
   // Production functions (always available)
@@ -238,7 +238,7 @@ const {
   forceServiceWorkerControl,
   manualRefresh,
   debugServiceWorker
-} = useServiceWorkerUpdates()
+} = useServiceWorkerBridge()
 ```
 
 ### Spaced Repetition Debug Controls

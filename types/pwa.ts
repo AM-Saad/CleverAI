@@ -7,21 +7,7 @@ export interface SwMessage {
   id?: string;
 }
 
-export interface UploadProgress {
-  fileId: string;
-  fileName: string;
-  progress: number;
-  status: "pending" | "uploading" | "complete" | "error";
-  error?: string;
-}
-
-export interface ChunkUploadData {
-  file: File;
-  chunkSize: number;
-  totalChunks: number;
-  fileName: string;
-  fileId: string;
-}
+// Note: Upload-related types removed (feature not active as of v2.0.3)
 
 export interface SyncFormData {
   id: string;

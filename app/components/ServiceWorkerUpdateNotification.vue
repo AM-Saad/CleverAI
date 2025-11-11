@@ -2,66 +2,34 @@
   <!-- Update Notification Banner/Modal -->
   <div v-if="updateAvailable || showDebugPanel" class="sw-update-system">
     <!-- Slide-down notification banner -->
-    <Transition
-      enter-active-class="transition-all duration-300 ease-out"
-      enter-from-class="transform -translate-y-full opacity-0"
-      enter-to-class="transform translate-y-0 opacity-100"
-      leave-active-class="transition-all duration-300 ease-in"
-      leave-from-class="transform translate-y-0 opacity-100"
-      leave-to-class="transform -translate-y-full opacity-0"
-    >
-      <div
-        v-if="showBanner && updateAvailable"
-        class="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg"
-      >
+    <Transition enter-active-class="transition-all duration-300 ease-out"
+      enter-from-class="transform -translate-y-full opacity-0" enter-to-class="transform translate-y-0 opacity-100"
+      leave-active-class="transition-all duration-300 ease-in" leave-from-class="transform translate-y-0 opacity-100"
+      leave-to-class="transform -translate-y-full opacity-0">
+      <div v-if="showBanner && updateAvailable"
+        class="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg">
         <div class="container mx-auto px-4 py-3">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-3">
               <!-- Update icon -->
               <div class="flex-shrink-0">
-                <Icon
-                  v-if="isUpdating"
-                  name="heroicons:arrow-path"
-                  class="w-6 h-6 animate-spin"
-                />
-                <Icon v-else name="heroicons:sparkles" class="w-6 h-6" />
+                <Icon :name="iconName" class="w-6 h-6" :class="isUpdating ? 'animate-spin' : ''" />
               </div>
 
               <!-- Message -->
               <div>
-                <h3 class="font-semibold text-sm">
-                  {{
-                    isUpdating ? "Updating App..." : "New Version Available!"
-                  }}
-                </h3>
-                <p class="text-xs opacity-90">
-                  {{
-                    isUpdating
-                      ? "Please wait while we update the app..."
-                      : `Get the latest features and improvements${version ? ` (v${version})` : ""}.`
-                  }}
-                </p>
+                <h3 class="font-semibold text-sm">{{ bannerTitle }}</h3>
+                <p class="text-xs opacity-90">{{ bannerSubtitle }}</p>
               </div>
             </div>
 
             <!-- Actions -->
             <div v-if="!isUpdating" class="flex items-center space-x-2">
-              <UButton
-                size="xs"
-                variant="solid"
-                color="primary"
-                :loading="isUpdating"
-                @click="handleUpdate"
-              >
+              <UButton size="xs" variant="solid" color="primary" :loading="isUpdating" @click="handleUpdate">
                 Update Now
               </UButton>
 
-              <UButton
-                size="xs"
-                variant="ghost"
-                color="neutral"
-                @click="handleDismiss"
-              >
+              <UButton size="xs" variant="ghost" color="neutral" @click="handleDismiss">
                 Later
               </UButton>
             </div>
@@ -69,282 +37,41 @@
             <!-- Loading indicator -->
             <div v-if="isUpdating" class="flex items-center space-x-2">
               <div class="animate-pulse text-xs">Updating...</div>
-              <div
-                class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"
-              />
+              <div class="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
             </div>
           </div>
 
           <!-- Progress bar -->
           <div v-if="isUpdating" class="mt-2">
             <div class="w-full bg-white/20 rounded-full h-1">
-              <div
-                class="bg-white h-1 rounded-full animate-pulse"
-                style="width: 60%"
-              />
+              <div class="bg-white h-1 rounded-full animate-pulse" :style="{ width: progressPercent + '%' }" />
             </div>
           </div>
         </div>
       </div>
     </Transition>
 
-    <!-- Modal for important updates -->
-    <UModal v-model="showModal" :prevent-close="isUpdating">
-      <div class="p-6">
-        <div class="flex items-center space-x-3 mb-4">
-          <div class="flex-shrink-0">
-            <Icon
-              v-if="isUpdating"
-              name="heroicons:arrow-path"
-              class="w-8 h-8 text-blue-500 animate-spin"
-            />
-            <Icon
-              v-else
-              name="heroicons:sparkles"
-              class="w-8 h-8 text-blue-500"
-            />
-          </div>
-          <div>
-            <h3 class="text-lg font-semibold">
-              {{ isUpdating ? "Updating CleverAI..." : "Update Available" }}
-            </h3>
-            <p class="text-sm text-gray-600">
-              {{
-                isUpdating
-                  ? "Please wait while we install the latest version."
-                  : `A new version of CleverAI is ready to install${version ? ` (v${version})` : ""}.`
-              }}
-            </p>
-          </div>
-        </div>
 
-        <!-- Service Worker Status (when in debug mode) -->
-        <div
-          v-if="showDebugPanel && !isUpdating"
-          class="mb-4 p-4 bg-gray-50 rounded-lg"
-        >
-          <h4 class="font-medium text-gray-900 mb-2 flex items-center gap-2">
-            <Icon name="heroicons:cog-6-tooth" class="w-4 h-4" />
-            Service Worker Status
-          </h4>
-          <div class="grid grid-cols-2 gap-4 text-sm">
-            <div class="space-y-1">
-              <div>
-                Controlling: <strong>{{ isControlling ? "Yes" : "No" }}</strong>
-              </div>
-              <div>
-                Version: <strong>{{ version || "Unknown" }}</strong>
-              </div>
-              <div>
-                Network: <strong>{{ isOnline ? "Online" : "Offline" }}</strong>
-              </div>
-            </div>
-            <div class="space-y-1">
-              <div>
-                Updates:
-                <strong>{{ updateAvailable ? "Available" : "None" }}</strong>
-              </div>
-              <!-- <div>Uploads: <strong>{{ Object.keys(uploads).length }}</strong></div> -->
-              <div>
-                Sync: <strong>{{ formSyncStatus || "Idle" }}</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- File Upload Progress -->
-        <!-- <div v-if="Object.keys(uploads).length && showDebugPanel" class="mb-4 p-4 bg-blue-50 rounded-lg">
-                    <h4 class="font-medium text-blue-900 mb-2 flex items-center gap-2">
-                        <Icon name="heroicons:arrow-up-tray" class="w-4 h-4" />
-                        File Uploads ({{ Object.keys(uploads).length }})
-                    </h4>
-                    <div class="space-y-2 max-h-32 overflow-auto">
-                        <div v-for="(upload, id) in uploads" :key="id" class="bg-white rounded p-2">
-                            <div class="flex justify-between items-center mb-1">
-                                <span class="text-xs font-mono truncate">{{ id }}</span>
-                                <span class="text-xs" :class="upload.done ? 'text-green-600' : 'text-blue-600'">
-                                    {{ upload.done ? 'Complete' : 'Uploading' }}
-                                </span>
-                            </div>
-                            <div class="w-full bg-gray-200 rounded-full h-1.5">
-                                <div class="bg-blue-500 h-1.5 rounded-full transition-all"
-                                    :style="{ width: ((upload.index + 1) / upload.totalChunks * 100) + '%' }" />
-                            </div>
-                            <div class="flex justify-between text-xs text-gray-500 mt-1">
-                                <span>{{ upload.index + 1 }} / {{ upload.totalChunks }}</span>
-                                <span>{{ Math.round((upload.index + 1) / upload.totalChunks * 100) }}%</span>
-                            </div>
-                        </div>
-                    </div>
-                </div> -->
-
-        <!-- Update details -->
-        <div
-          v-if="!isUpdating && updateAvailable"
-          class="mb-6 p-4 bg-blue-50 rounded-lg"
-        >
-          <h4 class="font-medium text-blue-900 mb-2">What's New:</h4>
-          <ul class="text-sm text-blue-800 space-y-1">
-            <li>• Fixed notification click navigation</li>
-            <li>• Improved service worker reliability</li>
-            <li>• Enhanced performance and stability</li>
-            <li>• Better offline functionality</li>
-            <li>• Optimized caching strategies</li>
-          </ul>
-        </div>
-
-        <!-- Progress -->
-        <div v-if="isUpdating" class="mb-6">
-          <div class="flex justify-between text-sm mb-2">
-            <span>Installing update...</span>
-            <span>{{ refreshing ? "100%" : "60%" }}</span>
-          </div>
-          <div class="w-full bg-gray-200 rounded-full h-2">
-            <div
-              class="bg-blue-500 h-2 rounded-full transition-all duration-500"
-              :style="{ width: refreshing ? '100%' : '60%' }"
-            />
-          </div>
-        </div>
-
-        <!-- Error message -->
-        <div
-          v-if="updateError || lastError"
-          class="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg"
-        >
-          <div class="flex items-center gap-2 mb-1">
-            <Icon
-              name="heroicons:exclamation-triangle"
-              class="w-4 h-4 text-red-500"
-            />
-            <span class="font-medium text-red-700">Error</span>
-          </div>
-          <p class="text-sm text-red-700">{{ updateError || lastError }}</p>
-        </div>
-
-        <!-- Debug Controls (Development Mode) -->
-        <div
-          v-if="showDebugPanel && isDev"
-          class="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg"
-        >
-          <h4 class="font-medium text-yellow-900 mb-2 flex items-center gap-2">
-            <Icon name="heroicons:wrench-screwdriver" class="w-4 h-4" />
-            Debug Controls
-          </h4>
-          <div class="flex flex-wrap gap-2">
-            <UButton
-              size="xs"
-              @click="forceServiceWorkerUpdate"
-              variant="outline"
-            >
-              Force SW Update
-            </UButton>
-            <UButton
-              size="xs"
-              @click="forceServiceWorkerControl"
-              variant="outline"
-            >
-              Claim Control
-            </UButton>
-            <UButton
-              size="xs"
-              @click="simulateUpdateAvailable"
-              variant="outline"
-            >
-              Simulate Update
-            </UButton>
-            <UButton size="xs" @click="debugServiceWorker" variant="outline">
-              Debug SW
-            </UButton>
-            <UButton size="xs" @click="manualRefresh" variant="outline">
-              Manual Refresh
-            </UButton>
-            <UButton
-              size="xs"
-              @click="resetUpdateState"
-              variant="outline"
-              color="error"
-            >
-              Reset State
-            </UButton>
-          </div>
-        </div>
-
-        <!-- Actions -->
-        <div v-if="!isUpdating" class="flex justify-between items-center">
-          <div class="flex items-center gap-2">
-            <UButton
-              v-if="isDev"
-              size="xs"
-              variant="ghost"
-              @click="toggleDebugPanel"
-            >
-              {{ showDebugPanel ? "Hide Debug" : "Show Debug" }}
-            </UButton>
-          </div>
-
-          <div class="flex space-x-3">
-            <UButton
-              variant="outline"
-              :disabled="isUpdating"
-              @click="handleDismiss"
-            >
-              {{ updateAvailable ? "Update Later" : "Close" }}
-            </UButton>
-            <UButton
-              v-if="updateAvailable"
-              :loading="isUpdating"
-              @click="handleUpdate"
-            >
-              Install Update
-            </UButton>
-          </div>
-        </div>
-
-        <div v-if="refreshing" class="text-center text-sm text-gray-600">
-          The app will refresh automatically...
-        </div>
-      </div>
-    </UModal>
   </div>
 
   <!-- Debug Panel (Fixed Position) -->
-  <Transition
-    enter-active-class="transition-all duration-300 ease-out"
-    enter-from-class="transform translate-y-full opacity-0"
-    enter-to-class="transform translate-y-0 opacity-100"
-    leave-active-class="transition-all duration-300 ease-in"
-    leave-from-class="transform translate-y-0 opacity-100"
-    leave-to-class="transform translate-y-full opacity-0"
-  >
+  <Transition enter-active-class="transition-all duration-300 ease-out"
+    enter-from-class="transform translate-y-full opacity-0" enter-to-class="transform translate-y-0 opacity-100"
+    leave-active-class="transition-all duration-300 ease-in" leave-from-class="transform translate-y-0 opacity-100"
+    leave-to-class="transform translate-y-full opacity-0">
     <div v-if="showDebugPanel && isDev" class="sw-debug-panel">
-      <div
-        class="bg-white/95 dark:bg-gray-900/95 backdrop-blur border rounded-lg p-4 text-sm space-y-3 shadow-lg"
-      >
+
+      class="sw-debug-panel">
+      <div class="bg-white/95 dark:bg-gray-900/95 backdrop-blur border rounded-lg p-4 text-sm space-y-3 shadow-lg">
         <header class="flex items-center justify-between">
           <h3 class="font-semibold flex items-center gap-2">
             <Icon name="heroicons:cloud" class="w-4 h-4 text-blue-500" />
             Service Worker
           </h3>
           <div class="flex items-center gap-2">
-            <UBadge
-              :color="
-                updateAvailable
-                  ? 'warning'
-                  : isControlling
-                    ? 'success'
-                    : 'neutral'
-              "
-              variant="subtle"
-              size="xs"
-            >
-              {{
-                updateAvailable
-                  ? "Update"
-                  : isControlling
-                    ? "Active"
-                    : "Inactive"
-              }}
+            <UBadge :color="updateAvailable ? 'warning' : (isControlling ? 'success' : 'neutral')" variant="subtle"
+              size="xs">
+              {{ swStateBadge }}
             </UBadge>
             <UBadge v-if="version" color="neutral" variant="outline" size="xs">
               v{{ version }}
@@ -384,32 +111,39 @@
             </ul>
           </div>
         </section>
-        <!-- 
-                <section v-if="Object.keys(uploads).length" class="space-y-2">
-                    <p class="font-medium text-xs">Active Uploads</p>
-                    <div class="space-y-1 max-h-24 overflow-auto">
-                        <div v-for="(upload, id) in uploads" :key="id" class="flex items-center justify-between">
-                            <span class="text-xs font-mono truncate flex-1">{{ String(id).slice(-8) }}</span>
-                            <span class="text-xs ml-2" :class="upload.done ? 'text-green-600' : 'text-blue-600'">
-                                {{ Math.round((upload.index + 1) / upload.totalChunks * 100) }}%
-                            </span>
-                        </div>
-                    </div>
-                </section> -->
+        <!-- Debug Controls (Development Mode) -->
+        <div class="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <h4 class="font-medium text-yellow-900 mb-2 flex items-center gap-2">
+            <Icon name="heroicons:wrench-screwdriver" class="w-4 h-4" />
+            Debug Controls
+          </h4>
+          <div class="flex flex-wrap gap-2">
+            <UButton size="xs" @click="forceServiceWorkerUpdate" variant="outline">
+              Force SW Update
+            </UButton>
+            <UButton size="xs" @click="forceServiceWorkerControl" variant="outline">
+              Claim Control
+            </UButton>
+            <UButton size="xs" @click="simulateUpdateAvailable" variant="outline">
+              Simulate Update
+            </UButton>
+            <UButton size="xs" @click="debugServiceWorker" variant="outline">
+              Debug SW
+            </UButton>
+            <UButton size="xs" @click="manualRefresh" variant="outline">
+              Manual Refresh
+            </UButton>
+            <UButton size="xs" @click="resetUpdateState" variant="outline" color="error">
+              Reset State
+            </UButton>
+          </div>
+        </div>
 
-        <footer
-          class="flex items-center justify-between pt-2 border-t text-xs text-gray-500"
-        >
-          <button
-            @click="showModal = true"
-            class="underline hover:text-gray-700"
-          >
+        <footer class="flex items-center justify-between pt-2 border-t text-xs text-gray-500">
+          <button @click="showModal = true" class="underline hover:text-gray-700">
             Open Panel
           </button>
-          <button
-            @click="toggleCollapsed"
-            class="underline hover:text-gray-700"
-          >
+          <button @click="toggleCollapsed" class="underline hover:text-gray-700">
             {{ collapsed ? "Expand" : "Collapse" }}
           </button>
         </footer>
@@ -431,7 +165,9 @@ const props = withDefaults(defineProps<Props>(), {
   enableDebugPanel: false,
 });
 
-// Combine both composables for comprehensive functionality
+// Composables consolidated
+const swUpdates = useServiceWorkerUpdates();
+const swBridge = useServiceWorkerBridge();
 const {
   updateAvailable,
   isUpdating,
@@ -439,22 +175,14 @@ const {
   refreshing,
   applyUpdate,
   dismissUpdate,
-  // Dev mode functions
   forceServiceWorkerUpdate,
   forceServiceWorkerControl,
   manualRefresh,
   debugServiceWorker,
   simulateUpdateAvailable,
-  resetUpdateState,
-} = useServiceWorkerUpdates();
-
-const {
-  version,
-  isControlling,
-  // uploads,
-  lastError,
-  formSyncStatus,
-} = useServiceWorkerBridge();
+  resetUpdateState
+} = swUpdates;
+const { version, isControlling, lastError, formSyncStatus } = swBridge;
 
 // Network status
 const { isOnline } = useNetworkStatus();
@@ -468,65 +196,21 @@ const collapsed = ref(false);
 // Development mode detection
 const isDev = import.meta.dev;
 
-// Show notification based on mode
-watch(
-  updateAvailable,
-  (available) => {
-    console.log(
-      "🔔 ServiceWorkerUpdateNotification: updateAvailable changed to:",
-      available,
-    );
-    console.log(
-      "🔔 ServiceWorkerUpdateNotification: props.autoShow:",
-      props.autoShow,
-    );
-    console.log("🔔 ServiceWorkerUpdateNotification: props.mode:", props.mode);
-
-    if (available && props.autoShow) {
-      if (props.mode === "banner" || props.mode === "auto") {
-        console.log("🔔 ServiceWorkerUpdateNotification: Showing banner");
-        showBanner.value = true;
-        // Auto-hide banner after 15 seconds if user doesn't interact
-        setTimeout(() => {
-          if (showBanner.value && !isUpdating.value) {
-            console.log(
-              "🔔 ServiceWorkerUpdateNotification: Auto-hiding banner",
-            );
-            showBanner.value = false;
-          }
-        }, SW_CONFIG.AUTO_HIDE_BANNER_DELAY);
-      }
-
-      if (props.mode === "modal") {
-        console.log("🔔 ServiceWorkerUpdateNotification: Showing modal");
-        showModal.value = true;
-      }
-    } else {
-      console.log(
-        "🔔 ServiceWorkerUpdateNotification: Not showing (available:",
-        available,
-        "autoShow:",
-        props.autoShow,
-        ")",
-      );
-    }
-  },
-  { immediate: true },
-);
-
-// Handle update button click
-const handleUpdate = async () => {
-  showBanner.value = false;
-  showModal.value = false;
-  await applyUpdate();
+// Centralized auto display logic
+const handleAutoDisplay = (available: boolean) => {
+  if (!props.autoShow || !available) return;
+  if (props.mode === 'modal') {
+    showModal.value = true;
+  } else { // banner or auto
+    showBanner.value = true;
+    setTimeout(() => { if (showBanner.value && !isUpdating.value) showBanner.value = false; }, SW_CONFIG.AUTO_HIDE_BANNER_DELAY);
+  }
 };
+watch(updateAvailable, (val) => handleAutoDisplay(val), { immediate: true });
 
-// Handle dismiss button click
-const handleDismiss = () => {
-  showBanner.value = false;
-  showModal.value = false;
-  dismissUpdate();
-};
+// Action wrappers
+const handleUpdate = async () => { showBanner.value = false; await applyUpdate(); };
+const handleDismiss = () => { showBanner.value = false; dismissUpdate(); };
 
 // Debug panel controls
 const toggleDebugPanel = () => {
@@ -537,10 +221,7 @@ const toggleCollapsed = () => {
   collapsed.value = !collapsed.value;
 };
 
-// Show modal for critical updates (could be triggered by server)
-const showCriticalUpdate = () => {
-  showModal.value = true;
-};
+const showCriticalUpdate = () => { showModal.value = true; };
 
 // Global keyboard shortcuts (development only)
 if (isDev) {
@@ -603,44 +284,22 @@ defineExpose({
   simulateUpdateAvailable,
 });
 
-// Watch for errors and show them in the debug panel
-watch([updateError, lastError], ([uErr, lErr]) => {
-  if ((uErr || lErr) && isDev) {
-    console.error("🔴 Service Worker Error:", uErr || lErr);
-    // Auto-show debug panel on errors in development
-    if (!showDebugPanel.value) {
-      showDebugPanel.value = true;
-    }
-  }
-});
+// Dev: auto-show debug panel on errors
+watch([updateError, lastError], ([uErr, lErr]) => { if ((uErr || lErr) && isDev && !showDebugPanel.value) showDebugPanel.value = true; });
 
-// Auto-collapse debug panel based on collapsed state
-watch(collapsed, (isCollapsed) => {
-  if (import.meta.client) {
-    nextTick(() => {
-      const panel = document.querySelector(".sw-debug-panel") as HTMLElement;
-      if (panel) {
-        panel.style.maxHeight = isCollapsed ? "3rem" : "400px";
-        panel.style.overflow = isCollapsed ? "hidden" : "auto";
-      }
-    });
-  }
-});
+watch(collapsed, (isCollapsed) => { if (import.meta.client) nextTick(() => { const panel = document.querySelector('.sw-debug-panel') as HTMLElement; if (panel) { panel.style.maxHeight = isCollapsed ? '3rem' : '400px'; panel.style.overflow = isCollapsed ? 'hidden' : 'auto'; } }); });
 
-// Log component lifecycle for debugging
-onMounted(() => {
-  console.log("🔄 ServiceWorkerUpdateNotification mounted");
-  if (isDev) {
-    console.log("🔍 Development shortcuts:");
-    console.log("  Ctrl/Cmd + Shift + D: Toggle debug panel");
-    console.log("  Ctrl/Cmd + Shift + U: Force update or simulate");
-    console.log("  Ctrl/Cmd + Shift + R: Force refresh");
-  }
-});
+// Computed helpers centralizing repeated expressions
+const bannerTitle = computed(() => isUpdating.value ? 'Updating App...' : 'New Version Available!');
+const bannerSubtitle = computed(() => isUpdating.value ? 'Please wait while we update the app...' : `Get the latest features and improvements${version.value ? ` (v${version.value})` : ''}.`);
+const progressPercent = computed(() => refreshing.value ? 100 : 60);
+const swStateBadge = computed(() => updateAvailable.value ? 'Update' : (isControlling.value ? 'Active' : 'Inactive'));
+const iconName = computed(() => isUpdating.value ? 'heroicons:arrow-path' : 'heroicons:sparkles');
 
-onUnmounted(() => {
-  console.log("🔄 ServiceWorkerUpdateNotification unmounted");
-});
+if (isDev) {
+  onMounted(() => console.debug('[SW Update] mounted'));
+  onUnmounted(() => console.debug('[SW Update] unmounted'));
+}
 </script>
 
 <style scoped>
@@ -701,6 +360,7 @@ onUnmounted(() => {
 }
 
 @keyframes progress-shimmer {
+
   0%,
   100% {
     opacity: 1;
@@ -739,7 +399,7 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-.sw-debug-panel.collapsed .space-y-3 > *:not(:first-child) {
+.sw-debug-panel.collapsed .space-y-3>*:not(:first-child) {
   display: none;
 }
 
@@ -749,6 +409,7 @@ onUnmounted(() => {
 }
 
 @keyframes pulse {
+
   0%,
   100% {
     opacity: 1;

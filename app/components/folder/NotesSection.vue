@@ -1,5 +1,5 @@
 <template>
-    <ui-card variant="ghost" size="lg" shadow="none" class="col-span-1 md:col-span-3 lg:col-span-4 flex-1">
+    <ui-card variant="outline" size="lg" shadow="none" class="col-span-1 sm:col-span-3 xl:col-span-4 flex flex-col flex-1 shrink-0 overflow-auto" content-classes="flex flex-col flex-1">
         <!-- Header -->
         <template v-slot:header>
             <div class="flex items-center gap-2">
@@ -19,7 +19,7 @@
         <shared-error-message v-if="error" :error="error" />
 
         <!-- Notes content -->
-        <div v-if="!isFetching && !error" class="h-full overflow-auto">
+        <div v-if="!isFetching && !error" class="flex flex-1 p-2">
             <!-- Fullscreen backdrop with transition -->
             <Transition name="backdrop">
                 <div v-if="fullscreenNote" class="fullscreen-backdrop" @click="closeFullscreen" />
@@ -35,8 +35,8 @@
             </shared-empty-state>
 
             <!-- Notes grid -->
-            <ui-card v-else variant="default" size="xs" class="h-full">
-                <div class="grid grid-cols-5 h-full">
+            <ui-card v-else variant="default" size="xs" class="">
+                <div class="grid grid-cols-5">
                     <ReorderGroup v-model:values="notes" axis="y"
                         class="relative  overflow-auto col-span-1 border-r pr-1 border-muted" @reorder="handleReorder">
                         <ReorderItem v-for="(note, idx) in notes" :key="note.id" :value="note" :class="['relative flex items-center gap-2 group w-full p-2.5 border-b border-muted cursor-pointer hover:bg-muted',
@@ -51,12 +51,12 @@
                                 </svg>
                             </div>
                             <ui-paragraph size="base" class="truncate">
-                                <span v-html="note.content"></span>
+                                <span v-html="note.content.slice(0,30)"></span>
                             </ui-paragraph>
                         </ReorderItem>
                     </ReorderGroup>
 
-                    <ui-card v-if="notesStore.getNote(currentNoteId!)" class="col-span-4" variant="ghost" size="xs">
+                    <ui-card v-if="notesStore.getNote(currentNoteId!)" class="col-span-4 h-full" variant="ghost" size="xs">
                         <UiStickyNote :note="notesStore.getNote(currentNoteId!)!"
                             :is-fullscreen="fullscreenNote === currentNoteId" :delete-note="deleteNote" size="lg"
                             placeholder="Double-click to add your note..." @update="handleUpdateNote"

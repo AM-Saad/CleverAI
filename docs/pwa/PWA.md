@@ -2,6 +2,8 @@
 
 > **Complete Progressive Web App Guide**
 > Everything you need to know about the PWA system, Service Worker, Caching, Notifications, Updates, and Build Pipeline
+>
+> ℹ️ Historical note: Earlier revisions referenced `shared/idb.ts`, `shared/constants/pwa.ts`, and a separate `useServiceWorkerUpdates` composable. These have been fully consolidated. The authoritative locations are `app/utils/idb.ts`, `app/utils/constants/pwa.ts`, and the unified bridge `useServiceWorkerBridge`. Message contracts now live in `shared/types/sw-messages.ts`. See `docs/pwa/SW_MESSAGE_LIFECYCLE.md` for the canonical message taxonomy and extension guidance.
 
 ---
 
@@ -60,16 +62,17 @@ open http://localhost:3000/debug
 
 | File | Purpose | Edit? |
 |------|---------|-------|
-| `sw-src/index.ts` | **Main service worker source (TypeScript)** | ✅ YES |
-| `app/utils/idb.ts` | **Shared IndexedDB helper (non-destructive)** | ✅ YES |
-| `app/composables/useServiceWorkerBridge.ts` | **SW message handling (singleton)** | ✅ YES |
-| `app/composables/useOffline.ts` | **Background sync logic** | ✅ YES |
-| `app/plugins/sw-sync.client.ts` | **Sync registration** | ✅ YES |
-| `app/layouts/default.vue` | **SW updates & navigation** | ✅ YES |
-| `public/sw.js` | **Compiled service worker** | ❌ AUTO-GENERATED |
-| `public/manifest.webmanifest` | **PWA manifest** | ✅ YES |
-| `scripts/inject-sw.cjs` | **Workbox injection pipeline** | ⚠️ RARELY |
-| `app/utils/constants/pwa.ts` | **PWA constants & configuration** | ✅ YES |
+| `sw-src/index.ts` | Main service worker source (TypeScript) | ✅ |
+| `app/utils/idb.ts` | Unified IndexedDB helper (non-destructive, versioned) | ✅ |
+| `app/composables/useServiceWorkerBridge.ts` | SW message + lifecycle singleton | ✅ |
+| `shared/types/sw-messages.ts` | Type-safe incoming/outgoing message contracts | ✅ |
+| `app/composables/useOffline.ts` | Background form & notes queue helpers | ✅ |
+| `app/plugins/sw-sync.client.ts` | Registers sync + bridge | ✅ |
+| `app/layouts/default.vue` | Hosts update banner & bridge wiring | ✅ |
+| `app/utils/constants/pwa.ts` | Centralized PWA + SW config & enums | ✅ |
+| `public/sw.js` | Compiled service worker output | ❌ (generated) |
+| `public/manifest.webmanifest` | PWA manifest | ✅ |
+| `scripts/inject-sw.cjs` | Workbox manifest injection step | ⚠️ Rare |
 
 ---
 
@@ -200,7 +203,7 @@ import { registerRoute } from 'workbox-routing'
 import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { SW_CONFIG, CACHE_NAMES, AUTH_STUBS } from '../app/utils/constants/pwa'
-import { openFormsDB, getAllRecords, deleteRecord } from '../app/utils/idb'
+import { openUnifiedDB, getAllRecords, deleteRecord } from '../app/utils/idb'
 
 // Version and configuration from centralized constants
 const SW_VERSION = SW_CONFIG.VERSION
@@ -228,6 +231,8 @@ const SW_VERSION = SW_CONFIG.VERSION
 ---
 
 ## 🔄 Update System
+
+The update & messaging layer is driven by a single enum-like object `SW_MESSAGE_TYPES` (defined in `app/utils/constants/pwa.ts`) and strongly typed via `shared/types/sw-messages.ts`. For a full lifecycle diagram, message direction (SW→Client vs Client→SW), payload schemas, and extension steps refer to `docs/pwa/SW_MESSAGE_LIFECYCLE.md` (authoritative source). Below is a concise operational view.
 
 ### Service Worker Update Flow
 
@@ -496,10 +501,11 @@ NOTIFICATION_EMAIL=your_email@domain.com
 - Check for TypeScript compilation errors
 
 #### **Update Notifications Not Showing**
-- Check `useServiceWorkerUpdates` composable is properly imported
-- Verify component is added to layout
-- Check browser console for JavaScript errors
-- Test in incognito/private mode
+- Confirm `useServiceWorkerBridge` initialized exactly once (singleton)
+- Verify build included SW changes (`yarn build:inject`) and page loaded new `sw.js`
+- Check Application → Service Workers: is there a waiting worker? If yes, calling `requestSkipWaiting()` should trigger activation notification
+- Open DevTools Console for any message type mismatches (refer to `SW_MESSAGE_LIFECYCLE.md`)
+- In stubborn cases: unregister all SWs, hard reload, then trigger an update commit again
 
 ### Debug Tools
 

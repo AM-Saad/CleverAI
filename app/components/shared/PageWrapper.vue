@@ -1,6 +1,6 @@
 <template>
-    <div v-if="!isPageLoading">
-        <div class="flex justify-between">
+    <div v-if="!isPageLoading" class="flex flex-col gap-y-6" style="flex: 1 1 auto; min-height: 0;">
+        <div class="flex justify-between" style="flex: 0 0 auto;">
             <div>
                 <UiTitle tag="h1">{{ title }}</UiTitle>
                 <UiParagraph v-if="subtitle" :class-name="'my-1'" variant="neutral">
@@ -9,8 +9,7 @@
             </div>
             <slot name="actions" />
         </div>
-        <div class="mt-8">
-
+        <div class="flex flex-col" style="flex: 1 1 auto; min-height: 0;">
             <slot name="default" />
         </div>
     </div>

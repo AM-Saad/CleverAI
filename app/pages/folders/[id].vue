@@ -1,6 +1,5 @@
 <template>
-  <Transition name="fade" mode="out-in" :duration="{ enter: 300, leave: 300 }">
-    <shared-page-wrapper id="folder-page" class="max-h-full" :title="`Folder: ${folder?.title || '....'}`"
+    <shared-page-wrapper id="folder-page" :title="`Folder: ${folder?.title || '....'}`"
       :subtitle="folder?.description || ''" :is-page-loading="loading">
       <template #actions>
         <div class="flex flex-col gap-2">
@@ -13,14 +12,14 @@
       </template>
       <shared-error-message v-if="error && !loading" :error="error" :refresh="refresh" />
 
-      <div v-if="folder" class="transition-all duration-1000 will-change-auto">
+      <template v-if="folder" #default>
 
 
-        <div class="grid grid-cols-1 md:grid-cols-6 gap-4  ">
+        <div class="flex gap-4" style="flex: 1 1 auto; min-height: 0;">
 
           <!-- LEARNING HUB Goes Here -->
           <!-- <div class="relative flex-1 col-span-1 lg:col-span-2"> -->
-          <div class="col-span-5 flex-1 md:col-span-3 lg:col-span-2 relative">
+          <div class="col-span-5 flex-1 sm:col-span-3 xl:col-span-2 relative" style="min-height: 0; display: flex; flex-direction: column;">
             <!-- <ui-gradient-bg /> -->
             <ui-gradient-bg />
 
@@ -75,13 +74,12 @@
           <FolderNotesSection :folder-id="`${id as string}`" />
         </div>
 
-      </div>
+      </template>
 
-      <FolderUploadMaterialForm :show="showUpload" :backdrop="false" @closed="showUpload = false"
-        @cancel="showUpload = false" />
+      <!-- <FolderUploadMaterialForm :show="showUpload" :backdrop="false" @closed="showUpload = false"
+        @cancel="showUpload = false" /> -->
 
     </shared-page-wrapper>
-  </Transition>
 </template>
 
 <script setup lang="ts">

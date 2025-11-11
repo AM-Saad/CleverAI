@@ -3,8 +3,7 @@
 
 // ===== SERVICE WORKER CONSTANTS =====
 export const SW_CONFIG = {
-  VERSION: "v2.0.0-enhanced",
-  DEBUG_QUERY_PARAM: "swDebug",
+  VERSION: "v2.0.3-enhanced",
   DEBUG_VALUE: "1",
   UPDATE_CHECK_INTERVAL: 30000, // 30 seconds
   UPDATE_SETTLE_DELAY: 1500, // 1.5 seconds
@@ -41,12 +40,16 @@ export const CACHE_CONFIG = {
 // ===== INDEXEDDB CONSTANTS =====
 export const DB_CONFIG = {
   NAME: "recwide_db",
-  // Bump to 4 to ensure unified store creation migration runs exactly once.
-  // Previous versions created stores lazily per open; version 4 performs consolidated creation.
-  VERSION: 4,
+  // VERSION HISTORY
+  // 4: Unified creation of forms + notes stores
+  // 5: Added PENDING_NOTES store (offline notes sync queue)
+  // 6: Added post-open verification & auto-repair logic
+  // 7: Reconciliation bump after detecting live DB already at version 7 (prevent VersionError when client still used 6)
+  VERSION: 8,
   STORES: {
     FORMS: "forms",
     NOTES: "notes",
+    PENDING_NOTES: "pendingNotes",
   },
 } as const;
 
@@ -67,7 +70,13 @@ export const SW_MESSAGE_TYPES = {
   // Sync messages
   FORM_SYNC_ERROR: "FORM_SYNC_ERROR",
   FORM_SYNCED: "FORM_SYNCED",
-  SYNC_FORM: "SYNC_FORM",
+  FORM_SYNC_STARTED: "FORM_SYNC_STARTED",
+  // Notes sync specific
+  SYNC_NOTES: "SYNC_NOTES",
+  NOTES_SYNC_STARTED: "NOTES_SYNC_STARTED",
+  NOTES_SYNCED: "NOTES_SYNCED",
+  NOTES_SYNC_ERROR: "NOTES_SYNC_ERROR",
+  NOTES_SYNC_CONFLICTS: "NOTES_SYNC_CONFLICTS",
 
   // Service worker control
   SW_ACTIVATED: "SW_ACTIVATED",
@@ -91,6 +100,7 @@ export const SW_MESSAGE_TYPES = {
 export const SYNC_TAGS = {
   FORM: "syncForm",
   CONTENT: "content-sync",
+  NOTES: "notes-sync",
 } as const;
 
 // ===== NOTIFICATION CONSTANTS =====

@@ -327,6 +327,28 @@ export const DB_CONFIG = {
 
 Prior to version 4, stores were created lazily which risked partial schema creation if only one store was requested first. Version 4 performs a consolidated upgrade (`onupgradeneeded`) ensuring both stores and required indexes are present exactly once.
 
+### Subsequent Versions (Current VERSION: 7)
+
+| Version | Change | Purpose |
+|---------|--------|---------|
+| 5 | Added `PENDING_NOTES` store | Queue offline note edits separately from form submissions for batched background sync |
+| 6 | Post-open schema verification + auto-repair (temp version bump if any required store missing) | Self-heal scenarios where a user skipped an earlier migration or a partial upgrade occurred |
+| 7 | Reconciliation bump + `VersionError` fallback logic | Ensure clients that previously opened a repair-bumped DB (now at 7) don't throw `VersionError` when still using constant 6; fallback reopens with existing DB version |
+
+Implementation notes:
+- Auto-repair logic: after a successful open, we verify all required stores (`forms`, `notes`, `pendingNotes`). If any are missing we perform a one-time temporary version increment and recreate them additively, then reopen at the canonical version.
+- `VersionError` handling: if the live database has a higher numeric version than our bundled constant, the open call may fail. We catch this and perform a second open without an explicit version to attach to the existing schema safely.
+- All migrations remain additive and non-destructive—no store deletions.
+
+Current `DB_CONFIG` excerpt:
+```ts
+export const DB_CONFIG = {
+  NAME: 'recwide_db',
+  VERSION: 7,
+  STORES: { FORMS: 'forms', NOTES: 'notes', PENDING_NOTES: 'pendingNotes' }
+}
+```
+
 ### Stores
 - `forms` – Queues offline form submissions for Background Sync (`syncForm` tag).
 - `notes` – Local-first note content for folders, enabling offline editing and conflict mitigation.

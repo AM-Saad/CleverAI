@@ -1,5 +1,6 @@
 import { useStorageHealth } from '../composables/useStorageHealth'
 import { DB_CONFIG } from '../utils/constants/pwa'
+import { openUnifiedDB } from '../utils/idb'
 
 /**
  * Early IndexedDB availability + basic write test.
@@ -21,21 +22,10 @@ export default defineNuxtPlugin(async () => {
 
   let opened: IDBDatabase | null = null
   try {
-    const openReq = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION)
-    const openPromise = new Promise<IDBDatabase>((resolve, reject) => {
-      openReq.onerror = () => reject(openReq.error)
-      openReq.onblocked = () => reject(new Error('blocked'))
-      openReq.onsuccess = () => resolve(openReq.result)
-      openReq.onupgradeneeded = () => {
-        // Minimal creation path; unified upgrade logic lives elsewhere
-        const db = openReq.result
-        if (!db.objectStoreNames.contains(DB_CONFIG.STORES.FORMS)) {
-          db.createObjectStore(DB_CONFIG.STORES.FORMS, { keyPath: 'id' })
-        }
-      }
-    })
-    opened = await openPromise
+    // Use unified opener to ensure all stores/indexes exist consistently
+    opened = await openUnifiedDB()
   } catch (e: any) {
+    console.error('Failed to open IndexedDB', e)
     setRestricted('Failed to open IndexedDB')
     toast?.add({ title: 'Offline storage blocked', description: 'Browser blocked database access.', color: 'error' })
     return

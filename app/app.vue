@@ -51,7 +51,6 @@ console.log('🚀 [APP.VUE] Router initialized:', router)
 // Notification modal state
 const showNotificationModal = ref(false)
 
-const toaster = { position: 'bottom-center', max:3 }
 
 const ErrorLogger = (): void => {
     console.error('🚨 [APP.VUE] Error logged, redirecting to error page')
