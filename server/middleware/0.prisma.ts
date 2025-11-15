@@ -11,7 +11,6 @@ declare module 'h3' {
 export default eventHandler((event) => {
   if (!prisma) {
     prisma = new PrismaClient()
-    console.log("Prisma:  ", prisma)
   }
   event.context.prisma = prisma
 })

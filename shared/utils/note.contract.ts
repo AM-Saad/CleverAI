@@ -7,6 +7,7 @@ export const NoteSchema = z.object({
   id: z.string(),
   folderId: z.string(),
   content: z.string(),
+  order: z.number().int().default(0),
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),
 });
@@ -22,3 +23,14 @@ export const UpdateNoteDTO = z.object({
   content: z.preprocess(trim, z.string().min(0)),
 });
 export type UpdateNoteDTO = z.infer<typeof UpdateNoteDTO>;
+
+export const ReorderNotesDTO = z.object({
+  folderId: z.string(),
+  noteOrders: z.array(
+    z.object({
+      id: z.string(),
+      order: z.number().int().min(0),
+    })
+  ),
+});
+export type ReorderNotesDTO = z.infer<typeof ReorderNotesDTO>;

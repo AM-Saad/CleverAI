@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
 
   const notes = await prisma.note.findMany({
     where: { folderId: query.folderId },
-    orderBy: { updatedAt: "desc" },
+    orderBy: { order: "asc" },
   });
 
   if (process.env.NODE_ENV === "development") {

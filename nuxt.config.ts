@@ -10,17 +10,8 @@ export default defineNuxtConfig({
   // Use the existing `app/` folder as Nuxt source directory
   srcDir: "app",
 
-  modules: [
-    "@sidebase/nuxt-auth",
-    "@pinia/nuxt",
-    // "@vite-pwa/nuxt",
-    "@nuxt/eslint",
-    "@nuxt/image",
-    "@nuxt/scripts",
-    "@nuxt/icon",
-    "@nuxt/ui",
-    "@nuxt/devtools",
-  ],
+  modules: ["@sidebase/nuxt-auth", "@pinia/nuxt", // "@vite-pwa/nuxt",
+  "@nuxt/eslint", "@nuxt/image", "@nuxt/scripts", "@nuxt/icon", "@nuxt/ui", "@nuxt/devtools", "@vueuse/nuxt"],
   future: {
     typescriptBundlerResolution: true,
     compatibilityVersion: 4,
@@ -28,6 +19,9 @@ export default defineNuxtConfig({
   alias: {
     string_decoder: "string_decoder/",
     "@server": resolve(__dirname, "./server"),
+    '~/shared': resolve(__dirname, './shared'),
+    '#shared': resolve(__dirname, './shared'),   // optional extra alias
+    '@shared': resolve(__dirname, './shared'),   // optional extra alias
   },
   hooks: {
     ready: async () => {
@@ -270,7 +264,7 @@ export default defineNuxtConfig({
     databaseUrl: process.env.DATABASE_URL,
     AUTH_SECRET: process.env.AUTH_SECRET,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
-    
+
     VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
 
     // Public (exposed to client)

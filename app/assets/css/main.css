@@ -1,7 +1,5 @@
 /* Font imports must come first */
-@import url("https://fonts.cdnfonts.com/css/helvetica-neue-55");
-@import url("https://fonts.googleapis.com/css2?family=Kalam:wght@300;400;700&display=swap");
-/* @import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap"); */
+@import url('https://fonts.googleapis.com/css2?family=Sen:wght@400..800&display=swap');
 
 @import "tailwindcss";
 @import "@nuxt/ui";
@@ -73,7 +71,8 @@
 
 body {
   /* font-family: "Source Sans 3", sans-serif; */
-  font-family: "Helvetica Neue", sans-serif;
+  font-family: "Sen", sans-serif;
+  font-optical-sizing: auto;
 }
 
 a {

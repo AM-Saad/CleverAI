@@ -3362,9 +3362,40 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         });
       });
     }
+    self.addEventListener("unhandledrejection", (event) => {
+      var _a, _b, _c, _d;
+      if (((_b = (_a = event.reason) == null ? void 0 : _a.message) == null ? void 0 : _b.includes("backing store")) || ((_d = (_c = event.reason) == null ? void 0 : _c.message) == null ? void 0 : _d.includes("indexedDB.open"))) {
+        error("Workbox IDB error (non-fatal):", event.reason.message);
+        event.preventDefault();
+        notifyClientsOfStorageIssue();
+        return;
+      }
+      error("Unhandled rejection in SW:", event.reason);
+    });
+    let storageIssueNotified = false;
+    async function notifyClientsOfStorageIssue() {
+      if (storageIssueNotified) return;
+      storageIssueNotified = true;
+      const swSelf2 = self;
+      const clients = await swSelf2.clients.matchAll({ type: "window" });
+      clients.forEach((client) => {
+        client.postMessage({
+          type: "warning",
+          data: {
+            message: "Browser storage is having issues. Try clearing cache or using a different browser.",
+            identifier: "storage-backing-store-error",
+            action: "/debug-clear"
+          }
+        });
+      });
+    }
     const manifest = self.__WB_MANIFEST || [];
-    precacheAndRoute(manifest, { ignoreURLParametersMatching: [/^utm_/, /^fbclid$/] });
-    cleanupOutdatedCaches();
+    try {
+      precacheAndRoute(manifest, { ignoreURLParametersMatching: [/^utm_/, /^fbclid$/] });
+      cleanupOutdatedCaches();
+    } catch (e) {
+      error("Workbox precache failed (continuing without precache):", e);
+    }
     registerRoute(
       ({ request: _request, url }) => url.origin === self.location.origin && (/\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/.test(url.pathname) || url.pathname.startsWith("/AppImages/")),
       new CacheFirst({

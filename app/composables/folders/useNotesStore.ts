@@ -9,20 +9,26 @@ export interface NoteState extends Note {
   isDirty?: boolean;
   lastSaved?: Date;
   error?: string | null;
+  isInFilteredList?: boolean;
 }
 
 interface NotesStore {
   notes: Ref<Map<string, NoteState>>;
   loadingStates: Ref<Map<string, boolean>>;
+  filteredNoteIds: Ref<Set<string> | null>;
   createNote: (folderId: string, content: string) => Promise<string | null>;
   updateNote: (id: string, updatedNote: NoteState) => Promise<boolean>;
   deleteNote: (id: string) => Promise<boolean>;
+  reorderNotes: (reorderedNotes: NoteState[]) => Promise<boolean>;
   syncWithServer: (folderId: string) => Promise<void>;
   retryFailedNote: (id: string) => Promise<boolean>;
   clearNoteError: (id: string) => void;
   isNoteLoading: (id: string) => boolean;
   isNoteDirty: (id: string) => boolean;
+  isNoteInFilter: (id: string) => boolean;
   getNote: (id: string) => NoteState | null;
+  setNotes?: (notes: NoteState[]) => void;
+  setFilteredNoteIds: (ids: Set<string> | null) => void;
 }
 
 // Global store instance
@@ -43,6 +49,7 @@ export function useNotesStore(folderId: string): NotesStore {
   const { $api } = useNuxtApp();
   const toast = useToast();
   const { handleOfflineSubmit } = useOffline();
+
   // Proactively trigger notes sync on reconnect when pending changes exist (register once)
   if (process.client && !notesOnlineListenerRegistered) {
     try {
@@ -90,6 +97,7 @@ export function useNotesStore(folderId: string): NotesStore {
   const notes = ref<Map<string, NoteState>>(new Map());
   const loadingStates = ref<Map<string, boolean>>(new Map());
   const lastSync = ref<Date | null>(null);
+  const filteredNoteIds = ref<Set<string> | null>(null);
 
 
   // Debounced server sync to reduce API calls during typing
@@ -113,6 +121,10 @@ export function useNotesStore(folderId: string): NotesStore {
       });
     }
   };
+
+
+
+
 
   // Sync note changes to server (local-first approach)
   const updateNoteToServer = async (
@@ -184,7 +196,7 @@ export function useNotesStore(folderId: string): NotesStore {
     updatedNote.isDirty = true;
     notes.value.set(id, updatedNote);
     // Persist locally immediately for offline continuity
-    try { await saveNoteToIndexedDB(updatedNote); } catch {}
+    try { await saveNoteToIndexedDB(updatedNote); } catch { }
     // Step 2: Debounced server sync
     saveToServer(id, updatedNote.content);
     return true;
@@ -203,6 +215,7 @@ export function useNotesStore(folderId: string): NotesStore {
         id: tempId,
         folderId: folderIdParam,
         content,
+        order: notes.value.size, // Add to end of list
         createdAt: new Date(),
         updatedAt: new Date(),
         isLoading: true,
@@ -274,7 +287,7 @@ export function useNotesStore(folderId: string): NotesStore {
       // Remove from IndexedDB
       await deleteNoteFromIndexedDB(id);
 
-  // Attempt to submit to server
+      // Attempt to submit to server
       const result: Result<unknown, APIError> = await $api.notes.delete(id);
 
       if (result.success) {
@@ -311,6 +324,105 @@ export function useNotesStore(folderId: string): NotesStore {
         }
 
         toast.add({ title: "Error", description: "Failed to delete note - check your connection", color: "error" });
+        return false;
+      }
+    }
+  };
+
+  // Reorder notes - optimistic approach with rollback on failure
+  const reorderNotes = async (reorderedNotes: NoteState[]): Promise<boolean> => {
+    console.log("🔄 [useNotesStore] reorderNotes called", {
+      folderId,
+      count: reorderedNotes.length,
+      notes: reorderedNotes.map((n, i) => ({ id: n.id, currentOrder: n.order, newOrder: i }))
+    });
+
+    try {
+      // Store original order for rollback
+      const originalNotes = new Map(notes.value);
+      console.log("📦 [useNotesStore] Stored original notes for rollback");
+
+      // Optimistic update - update order in reactive state immediately
+      reorderedNotes.forEach((note, index) => {
+        const existingNote = notes.value.get(note.id);
+        if (existingNote) {
+          existingNote.order = index;
+          notes.value.set(note.id, existingNote);
+        }
+      });
+      console.log("✅ [useNotesStore] Optimistic update applied to reactive state");
+
+      // Prepare payload for server
+      const noteOrders = reorderedNotes.map((note, index) => ({
+        id: note.id,
+        order: index,
+      }));
+      console.log("📝 [useNotesStore] Prepared payload for server:", { folderId, noteOrders });
+
+      // Save to IndexedDB for persistence
+      for (const note of Array.from(notes.value.values())) {
+        await saveNoteToIndexedDB(note);
+      }
+      console.log("💾 [useNotesStore] Saved to IndexedDB");
+
+      // Attempt to submit to server
+      console.log("🌐 [useNotesStore] Calling API reorder endpoint...");
+      const result = await $api.notes.reorder({
+        folderId,
+        noteOrders,
+      });
+      console.log("📡 [useNotesStore] API response:", result);
+
+      if (result.success) {
+        console.log("✅ [useNotesStore] Server confirmed reorder");
+        // Server success - update with confirmed data
+        notes.value.clear();
+        result.data.forEach((note: Note) => {
+          notes.value.set(note.id, {
+            ...note,
+            isLoading: false,
+            isDirty: false,
+            lastSaved: new Date(),
+            error: null,
+          });
+        });
+        return true;
+      } else {
+        // Server rejected - rollback to original order
+        console.error("❌ [useNotesStore] Server rejected note reordering:", result.error);
+        notes.value = originalNotes;
+
+        // Restore original order in IndexedDB
+        for (const note of Array.from(originalNotes.values())) {
+          await saveNoteToIndexedDB(note);
+        }
+
+        toast.add({
+          title: "Server Error",
+          description: "Server rejected reordering. Order restored.",
+          color: "error",
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error("❌ [useNotesStore] Failed to reorder notes:", error);
+
+      // Only show offline message if actually offline
+      if (!navigator.onLine) {
+        console.warn("📴 [useNotesStore] Offline - order saved locally");
+        toast.add({
+          title: "Offline",
+          description: "Note order saved locally. Will sync when online.",
+          color: "warning",
+        });
+        return true;
+      } else {
+        console.error("💥 [useNotesStore] Network error while online");
+        toast.add({
+          title: "Error",
+          description: "Failed to reorder notes - check your connection",
+          color: "error",
+        });
         return false;
       }
     }
@@ -417,20 +529,43 @@ export function useNotesStore(folderId: string): NotesStore {
   const getNote = (id: string): NoteState => {
     return notes.value.get(id)!
   };
+  const setNotes = (newNotes: NoteState[]) => {
+    notes.value.clear();
+    newNotes.forEach((note) => {
+      notes.value.set(note.id, note);
+    });
+  }
+
+  // Filter management
+  const setFilteredNoteIds = (ids: Set<string> | null) => {
+    filteredNoteIds.value = ids;
+  };
+
+  const isNoteInFilter = (id: string): boolean => {
+    // If no filter is active, all notes match
+    if (!filteredNoteIds.value) return true;
+    // Otherwise check if note ID is in the filtered set
+    return filteredNoteIds.value.has(id);
+  };
 
   // Create store instance
   const store: NotesStore = {
     notes,
     loadingStates,
+    filteredNoteIds,
     createNote,
     updateNote,
     deleteNote,
+    reorderNotes,
     getNote,
     syncWithServer,
     retryFailedNote,
     clearNoteError,
     isNoteLoading,
     isNoteDirty,
+    isNoteInFilter,
+    setNotes,
+    setFilteredNoteIds
   };
 
   // Cache the store

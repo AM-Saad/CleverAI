@@ -15,15 +15,19 @@
       <template v-if="folder" #default>
 
 
-        <div class="flex gap-4" style="flex: 1 1 auto; min-height: 0;">
+        <div class="md:flex gap-4" style="flex: 1 1 auto; min-height: 0;">
+
+
+                    <!-- NOTES Goes Here -->
+          <FolderNotesSection :folder-id="`${id as string}`" />
 
           <!-- LEARNING HUB Goes Here -->
           <!-- <div class="relative flex-1 col-span-1 lg:col-span-2"> -->
-          <div class="col-span-5 flex-1 sm:col-span-3 xl:col-span-2 relative" style="min-height: 0; display: flex; flex-direction: column;">
+          <div class="col-span-5 flex flex-col flex-1 relative overflow-hidden">
             <!-- <ui-gradient-bg /> -->
             <ui-gradient-bg />
 
-            <ui-card variant="ghost" size="lg" class="relative bg-white m-[1.5px] dark:m-[1px] dark:bg-dark"
+            <ui-card variant="ghost" size="lg" class="relative bg-white m-[1.5px] dark:m-px dark:bg-dark flex-1 shrink-0 overflow-scroll"
               content-classes="h-full">
 
               <template #header>
@@ -31,7 +35,7 @@
                 <!-- Review Navigation -->
                 <div v-if="cardsToShow?.length">
                   <u-button to="/user/review" size="sm">
-                    <svg class="h-2 w-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="h-2 w-2" fill="none" s  troke="currentColor" viewBox="0 0 24 24">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
                     Start Review
@@ -40,7 +44,7 @@
               </template>
 
               <template #default>
-                <ui-card class="h-[120px] overflow-auto mb-4" size="md" variant="outline">
+                <ui-card class="overflow-auto mb-4" size="md" variant="outline">
                   <template #header>
                     Materials
                     <u-button variant="subtle" size="xs" :aria-expanded="showUpload" aria-controls="upload-materials"
@@ -70,8 +74,7 @@
 
           </div>
 
-          <!-- NOTES Goes Here -->
-          <FolderNotesSection :folder-id="`${id as string}`" />
+
         </div>
 
       </template>

@@ -48,11 +48,16 @@ export async function checkDueCards() {
       },
     });
 
-    console.log(
-      `🔔 Found ${usersWithPref.length} users with card due notifications enabled`
+    // Filter out orphaned preferences (where user is null)
+    const validUsersWithPref = usersWithPref.filter(
+      (pref) => pref.user !== null
     );
 
-    for (const userPref of usersWithPref) {
+    console.log(
+      `🔔 Found ${validUsersWithPref.length} users with card due notifications enabled (${usersWithPref.length - validUsersWithPref.length} orphaned records skipped)`
+    );
+
+    for (const userPref of validUsersWithPref) {
       try {
         results.processed++;
 

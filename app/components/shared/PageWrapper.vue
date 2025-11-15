@@ -9,7 +9,7 @@
             </div>
             <slot name="actions" />
         </div>
-        <div class="flex flex-col" style="flex: 1 1 auto; min-height: 0;">
+        <div class="flex flex-col overflow-auto" style="flex: 1 1 auto; min-height: 0;">
             <slot name="default" />
         </div>
     </div>

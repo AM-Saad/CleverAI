@@ -20,7 +20,7 @@
       <!-- <UButton variant="soft"  size="xs" type="button" :class="buttonClass(editor.isActive('link'))" @click.prevent="setLinkPrompt">Link</UButton> -->
     </div>
 
-    <editor-content :id="id" :editor="editor" class="rounded-2xl bg-gray-50 p-3"/>
+    <editor-content :id="id" :editor="editor"/>
   </div>
 </template>
 

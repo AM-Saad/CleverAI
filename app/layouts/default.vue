@@ -1,10 +1,10 @@
 <template>
   <div
-    class="mx-auto max-w-7xl flex h-screen flex-col gap-y-4 justify-between"
+    class="mx-auto max-w-7xl flex h-screen flex-col gap-y-1 justify-between"
   >
     <nav
       id="nav"
-      class="flex basis-0 shrink-0 font-heading items-center justify-between px-4 md:px-1 rounded-full md:rounded xl:container mx-auto left-[50%] top-4 border-b border-neutral dark:border-muted w-[calc(100%-1rem)]"
+      class="flex basis-0 shrink-0 font-heading items-center justify-between p-4 md:px-1 rounded-full md:rounded-none xl:container mx-auto left-[50%] top-4 border-b border-neutral dark:border-muted w-[calc(100%-1rem)]"
     >
       <div class="flex items-center justify-between w-full">
         <router-link

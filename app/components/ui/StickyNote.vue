@@ -5,24 +5,27 @@
         <div :class="noteContentClasses">
 
             <!-- Content area -->
-            <div class="relative h-full flex flex-col transition-opacity duration-400" :class="{
+            <div class="relative h-full flex flex-col flex-1 min-h-0 overflow-auto transition-opacity duration-400" :class="{
                 'opacity-0': isAnimating,
                 'opacity-100': !isAnimating,
             }">
 
                 <!-- Top right actions -->
-                <div class="flex items-center justify-between border-b light:border-muted h-8">
+                <div class="flex items-center justify-between border-b light:border-muted h-8 sticky top-0 bg-white py-2 z-10">
 
-                    <div class="flex items-center gap-4 animate-pulse repeat-infinite ease-in-out opacity-75">
-                        <p v-if="note.isLoading" class="text-[10px] text-primary">Auto-saving...</p>
-                        <div v-if="note.isLoading" class="flex items-center gap-1 text-primary">
-                            <svg class="animate-spin h-2.5 w-2.5" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
-                                    stroke-width="4" />
-                                <path class="opacity-75" fill="currentColor"
-                                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                            </svg>
+                    <div class="flex items-center gap-4">
+                        <div v-if="note.isLoading" class="flex items-center gap-2 animate-pulse repeat-infinite ease-in-out opacity-75">
+                            <p class="text-[10px] text-primary">Auto-saving...</p>
+                            <div class="flex items-center gap-1 text-primary">
+                                <svg class="animate-spin h-2.5 w-2.5" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        stroke-width="4" />
+                                    <path class="opacity-75" fill="currentColor"
+                                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                            </div>
                         </div>
+                        <p class="text-[10px] text-muted-foreground">{{ characterCount }}</p>
                     </div>
 
                     <div class="flex items-center gap-2">
@@ -67,7 +70,7 @@
                 <!-- Edit mode -->
 
                 <client-only>
-                    <div ref="editorContainerRef" class="w-full h-full">
+                    <div ref="editorContainerRef" class="h-full flex-1 min-h-0" >
                         <shared-tiptap-editor ref="tiptapRef" :id="note.id" v-model="contentHtml"
                             :isFullScreen="isFullscreen" />
                     </div>
@@ -119,6 +122,12 @@ const editorContainerRef = ref<HTMLElement | null>(null);
 const noteRef = ref<HTMLElement>();
 const isAnimating = ref(false);
 
+// Computed character count
+const characterCount = computed(() => {
+    if (!tiptapRef.value?.editor) return 0;
+    return tiptapRef.value.editor.state.doc.textContent.length;
+});
+
 // Computed classes for parent container
 const noteContainerClasses = computed(() => {
     const sizeClasses = {
@@ -128,7 +137,7 @@ const noteContainerClasses = computed(() => {
     };
 
     const baseClasses = [
-        "note-container",
+        "note-container flex flex-1 min-h-0",
         sizeClasses[props.size],
         "transition-all duration-100",
     ];
@@ -144,7 +153,7 @@ const noteContentClasses = computed(() => {
     const baseClasses = [
         "note-content bg-white p-1 rounded",
         "w-full h-full",
-        "cursor-pointer select-none",
+        "select-none",
         "transition-all duration-100",
         "relative",
     ];

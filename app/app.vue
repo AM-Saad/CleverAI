@@ -46,7 +46,6 @@ const { isLoading: isIndicatorLoading } = useLoadingIndicator({
 // set the progress to 0, and show loading immediately
 // start({ force: true })
 const router = useRouter()
-console.log('🚀 [APP.VUE] Router initialized:', router)
 
 // Notification modal state
 const showNotificationModal = ref(false)

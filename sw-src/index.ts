@@ -120,12 +120,55 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
 
     // Workbox setup using bundled modules -------------------------------------------------
 
+    // Global error handler for unhandled promise rejections (e.g., Workbox IDB failures)
+    self.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+        // Suppress IndexedDB backing store errors from Workbox - they're logged but not fatal
+        if (event.reason?.message?.includes('backing store') || 
+            event.reason?.message?.includes('indexedDB.open')) {
+            error('Workbox IDB error (non-fatal):', event.reason.message)
+            event.preventDefault() // Prevent console spam
+            
+            // Notify user once about storage issues
+            notifyClientsOfStorageIssue()
+            return
+        }
+        
+        // Log other unhandled rejections
+        error('Unhandled rejection in SW:', event.reason)
+    })
+
+    let storageIssueNotified = false
+    async function notifyClientsOfStorageIssue() {
+        if (storageIssueNotified) return
+        storageIssueNotified = true
+        
+        const swSelf = self as unknown as ServiceWorkerGlobalScope
+        const clients = await swSelf.clients.matchAll({ type: 'window' })
+        clients.forEach(client => {
+            client.postMessage({
+                type: 'warning',
+                data: {
+                    message: 'Browser storage is having issues. Try clearing cache or using a different browser.',
+                    identifier: 'storage-backing-store-error',
+                    action: '/debug-clear'
+                }
+            })
+        })
+    }
+
     // Precache injection placeholder - CRITICAL: Must use exact format for Workbox injection
     // TypeScript safe access with fallback for development
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const manifest = (self as any).__WB_MANIFEST || []
-    precacheAndRoute(manifest, { ignoreURLParametersMatching: [/^utm_/, /^fbclid$/] })
-    cleanupOutdatedCaches()
+    
+    // Wrap Workbox precache in try-catch to handle IDB failures gracefully
+    try {
+        precacheAndRoute(manifest, { ignoreURLParametersMatching: [/^utm_/, /^fbclid$/] })
+        cleanupOutdatedCaches()
+    } catch (e) {
+        error('Workbox precache failed (continuing without precache):', e)
+        // Service worker continues to function without precaching
+    }
 
     // Navigation handling: For SSR/dev, skip createHandlerBoundToURL which expects a precached URL.
     // Our fetch handler below provides an offline fallback for navigations.
