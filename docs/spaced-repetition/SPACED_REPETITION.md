@@ -110,12 +110,14 @@ When you first enroll a card:
 
 | Grade | Meaning | Algorithm Effect |
 |-------|---------|------------------|
-| 0 | **Again** (complete blackout) | Reset to start, ease factor decreases heavily |
-| 1 | **Hard** (incorrect but familiar) | Reset to start, ease factor decreases |
-| 2 | **Hard** (correct with difficulty) | Reset to start, ease factor decreases slightly |
-| 3 | **Good** (correct with hesitation) | Normal progression, ease factor decreases slightly |
-| 4 | **Good** (correct with effort) | Normal progression, ease factor unchanged |
-| 5 | **Easy** (perfect recall) | Normal progression, ease factor increases |
+| 0 | **Again** (complete blackout) | Reset to start, ease factor decreases heavily (-0.8) |
+| 1 | **Hard** (incorrect but recognized) | Reset to start, ease factor decreases (-0.54) |
+| 2 | **Hard** (incorrect, needed help) | Reset to start, ease factor decreases (-0.32) |
+| 3 | **Good** (correct with hesitation) | Normal progression, ease factor decreases slightly (-0.14) |
+| 4 | **Good** (correct with effort) | Normal progression, ease factor unchanged (±0) |
+| 5 | **Easy** (perfect recall) | Normal progression, ease factor increases (+0.1) |
+
+**Important**: Grades 0, 1, and 2 all **reset progress** (repetitions back to 0, interval back to 1 day). Only grades 3+ advance your learning progress.
 
 ### Example 1: Hard → Easy Performance
 

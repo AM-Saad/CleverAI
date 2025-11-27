@@ -28,6 +28,7 @@ model User {
     notificationSubscriptions NotificationSubscription[]
     scheduledNotifications    ScheduledNotification[]
     notificationPreferences   UserNotificationPreferences?
+    llmGatewayLogs            LlmGatewayLog[]
 
     // --- Authentication fields ---
     credentials           Json?
@@ -50,21 +51,22 @@ enum UserRole {
 }
 
 model Folder {
-    id          String      @id @default(auto()) @map("_id") @db.ObjectId
-    title       String
-    description String?
-    metadata    Json?
-    order       Int
-    rawText     String?
-    questions   Question[]
-    flashcards  Flashcard[]
-    materials   Material[]
-    notes       Note[]
-    user        User        @relation("UserFolders", fields: [userId], references: [id], onDelete: Cascade)
-    userId      String      @db.ObjectId
-    createdAt   DateTime    @default(now())
-    updatedAt   DateTime    @updatedAt
-    llmModel    String      @default("gpt-3.5")
+    id             String          @id @default(auto()) @map("_id") @db.ObjectId
+    title          String
+    description    String?
+    metadata       Json?
+    order          Int
+    rawText        String?
+    questions      Question[]
+    flashcards     Flashcard[]
+    materials      Material[]
+    notes          Note[]
+    user           User            @relation("UserFolders", fields: [userId], references: [id], onDelete: Cascade)
+    userId         String          @db.ObjectId
+    createdAt      DateTime        @default(now())
+    updatedAt      DateTime        @updatedAt
+    llmModel       String          @default("gpt-3.5")
+    llmGatewayLogs LlmGatewayLog[]
 
     @@unique([userId, order])
 }
@@ -377,4 +379,62 @@ model UserNotificationPreferences {
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@map("userNotificationPreferences")
+}
+
+// =========================
+// LLM GATEWAY MODELS
+// =========================
+
+model LlmModelRegistry {
+    id              String   @id @default(auto()) @map("_id") @db.ObjectId
+    modelId         String   @unique // "openai-gpt4o-mini"
+    provider        String   // "openai", "google", "deepseek"
+    modelName       String   // "gpt-4o-mini"
+    inputCostPer1M  Float    // USD per 1M input tokens
+    outputCostPer1M Float    // USD per 1M output tokens
+    capabilities    String[] // ["text", "multimodal"]
+    maxTokens       Int?     // context window
+    latencyBudgetMs Int      @default(500)
+    avgLatencyMs    Int?     // rolling average
+    healthStatus    String   @default("healthy") // "healthy"|"degraded"|"down"
+    lastHealthCheck DateTime @default(now())
+    priority        Int      @default(5) // 1=highest, 10=lowest
+    enabled         Boolean  @default(true)
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+
+    @@index([provider, enabled])
+    @@index([priority, healthStatus])
+    @@map("llm_model_registry")
+}
+
+model LlmGatewayLog {
+    id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+    userId              String   @db.ObjectId
+    user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    folderId            String?  @db.ObjectId
+    folder              Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+    requestId           String   @unique // UUID for tracing
+    selectedModelId     String   // from LlmModelRegistry
+    provider            String
+    task                String   // "flashcards", "quiz", "chat"
+    inputTokens         Int
+    outputTokens        Int
+    totalTokens         Int
+    inputCostUsdMicros  BigInt
+    outputCostUsdMicros BigInt
+    totalCostUsdMicros  BigInt
+    latencyMs           Int
+    cached              Boolean  @default(false)
+    cacheHit            Boolean  @default(false)
+    status              String   // "success"|"error"|"quota_exceeded"|"rate_limited"
+    errorCode           String?
+    errorMessage        String?
+    routingScore        Float?   // Score used for model selection
+    createdAt           DateTime @default(now())
+
+    @@index([userId, createdAt])
+    @@index([selectedModelId, status])
+    @@index([task, status])
+    @@map("llm_gateway_logs")
 }

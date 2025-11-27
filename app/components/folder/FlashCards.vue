@@ -1,5 +1,5 @@
 <template>
-  <div class="w-full h-full min-h-fit">
+  <div class="w-full h-full min-h-fit grow">
     <div class="flex items-center justify-end mb-2">
       <div class="flex items-center gap-3">
         <span v-if="rateLimitRemaining !== null"
@@ -8,14 +8,14 @@
           <span class="ml-1 font-medium">{{ rateLimitRemaining }}</span>
         </span>
 
-        <u-tooltip v-if="cardsToShow && cardsToShow?.length > 0 && materialsLength === 0"
+        <u-tooltip v-if="cardsToShow && cardsToShow?.length > 0 && materials.size === 0"
           :text="'Please add materials before generating flashcards.'" :popper="{ placement: 'top' }">
           <u-button color="primary" size="sm" :loading="false" :disabled="true">
             <icons-stars-generative />
             Generate Flashcards
           </u-button>
         </u-tooltip>
-        <u-button v-if="cardsToShow && cardsToShow?.length > 0 && materialsLength && materialsLength > 0"
+        <u-button v-if="cardsToShow && cardsToShow?.length > 0 && materials.size > 0"
           color="primary" size="sm" :loading="generating || loading" :disabled="generating" @click="onGenerate">
           <icons-stars-generative />
           <span v-if="!generating">Generate Flashcards</span>
@@ -26,8 +26,8 @@
     </div>
     <shared-empty-state v-if="(!cardsToShow || cardsToShow.length === 0) && !generating" title="No Flashcards"
       description="Click 'Generate Flashcards' to create some from this folder's content."
-      button-text="Generate Flashcards" @action="onGenerate" :is-blocked="materialsLength === 0"
-      :blocked-tooltip="materialsLength === 0 ? 'Please add materials before generating flashcards.' : ''" />
+      button-text="Generate Flashcards" @action="onGenerate" :is-blocked="materials.size === 0"
+      :blocked-tooltip="materials.size === 0 ? 'Please add materials before generating flashcards.' : ''" />
 
     <ui-paragraph v-if="genError" class="mt-2 text-error">
       {{ genError }}
@@ -65,16 +65,13 @@
 import { useRoute } from "vue-router";
 import { computed } from "vue";
 
-// Note: Using NoteState from useNotesStore instead of local interface
-interface Props {
-  materialsLength?: number;
-}
 
-const props = defineProps<Props>();
+
 
 
 const route = useRoute();
 const id = route.params.id as string;
+const {materials} = useMaterialsStore(id);
 
 const { folder, loading } = useFolder(id);
 
@@ -161,7 +158,8 @@ function handleCardEnrolled(response: EnrollCardResponse) {
 }
 
 async function onGenerate() {
-  if (generating || loading) return;
+  console.log("Generate Flashcards clicked", { generating: generating.value, loading: loading.value });
+  if (generating.value || loading.value) return;
   await generate();
 }
 

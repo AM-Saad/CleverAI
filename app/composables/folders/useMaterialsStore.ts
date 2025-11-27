@@ -1,0 +1,270 @@
+import type { APIError } from "@/services/FetchFactory";
+import type Result from "@/types/Result";
+import { DB_CONFIG } from "~/utils/constants/pwa";
+import { queueNoteChange, openUnifiedDB } from "~/utils/idb";
+
+export interface MaterialState extends Material {
+  // Local state tracking
+  isLoading?: boolean;
+  error?: string | null;
+}
+
+interface MaterialStore {
+  materials: Ref<Map<string, MaterialState>>;
+  loadingStates: Ref<Map<string, boolean>>;
+  errorStates: Ref<Map<string, string | null>>;
+  fetching: Ref<boolean>;
+  fetchError: Ref<APIError | null>;
+  fetchTypedError: Ref<APIError | null>;
+
+
+  createMaterial: (
+    payload: { content: string, title: string, type: "text" | "video" | "audio" | "pdf" | "url" | "document" | undefined }
+  ) => Promise<boolean>;
+  deleteMaterial: (id: string) => Promise<boolean>;
+  isMaterialLoading: (id: string) => boolean;
+
+  fetchMaterials: () => Promise<void>;
+  getMaterial: (id: string) => Material | null;
+  setMaterials?: (materials: MaterialState[]) => void;
+}
+
+// Global store instance
+const stores = new Map<string, MaterialStore>();
+
+
+/**
+ * Creates or returns a notes store for a specific folder
+ * This provides local state management with optimistic updates
+ */
+export function useMaterialsStore(folderId: string): MaterialStore {
+  // Return existing store if available
+  if (stores.has(folderId)) {
+    return stores.get(folderId)!;
+  }
+
+  const { $api } = useNuxtApp();
+  const toast = useToast();
+  const { handleOfflineSubmit } = useOffline();
+  // Proactively trigger notes sync on reconnect when pending changes exist (register once)
+  // if (process.client && !notesOnlineListenerRegistered) {
+  //   try {
+  //     let onlineSyncScheduled = false
+  //     window.addEventListener('online', async () => {
+  //       if (onlineSyncScheduled) return
+  //       onlineSyncScheduled = true
+  //       try {
+  //         // slight delay to allow potential Background Sync event to fire first
+  //         setTimeout(async () => {
+  //           try {
+  //             const db = await openUnifiedDB()
+  //             if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_MATERIALS)) return
+  //             const pending = await getAllRecords<any>(db, DB_CONFIG.STORES.PENDING_MATERIALS as any)
+  //             if (!pending.length) return
+  //             if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+  //               navigator.serviceWorker.controller.postMessage({ type: 'SYNC_MATERIALS' })
+  //             }
+  //           } catch { /* ignore */ }
+  //           finally { onlineSyncScheduled = false }
+  //         }, 350)
+  //       } catch { onlineSyncScheduled = false }
+  //     })
+  //     notesOnlineListenerRegistered = true
+  //   } catch { /* ignore */ }
+  // }
+  // const registerMaterialsSync = async () => {
+  //   try {
+  //     if ('serviceWorker' in navigator) {
+  //       const reg = await navigator.serviceWorker.getRegistration()
+  //       // Background Sync may not be typed; cast defensively
+  //       const syncReg = (reg as unknown as { sync?: { register(tag: string): Promise<void> } })?.sync
+  //       if (syncReg) await syncReg.register('materials-sync')
+  //     }
+  //   } catch {
+  //     /* ignore */
+  //   }
+  // }
+
+
+  // Local reactive state
+  const materials = ref<Map<string, MaterialState>>(new Map());
+  const loadingStates = ref<Map<string, boolean>>(new Map());
+  const errorStates = ref<Map<string, string | null>>(new Map());
+  const lastSync = ref<Date | null>(null);
+  const { fetchMaterials: fetchMaterialsFromAPI, fetching, fetchError, fetchTypedError,
+  } = useMaterials(folderId);
+
+
+
+
+  // Fetch materials for the folder from server and populate local state
+  const fetchMaterials = async () => {
+    try {
+      const data = await fetchMaterialsFromAPI();
+      // Populate local state
+      materials.value.clear();
+      data?.forEach((material) => {
+        materials.value.set(material.id, { ...material, isLoading: false, error: null });
+      });
+      lastSync.value = new Date();
+
+    } catch (error) {
+      console.error("Error fetching materials:", error);
+      toast.add({ title: "Error", description: "An error occurred while fetching materials.", color: "error" });
+    }
+  };
+
+  // Initial fetch
+
+
+
+
+
+
+  // Create a new material - simple optimistic approach
+  const createMaterial = async (payload: { content: string, title: string, type: "text" | "video" | "audio" | "pdf" | "url" | "document" | undefined }): Promise<boolean> => {
+
+    // const tempId = `temp-${Date.now()}`;
+
+    // // Add optimistic material
+    // const optimisticMaterial: MaterialState = {
+    //   id: tempId,
+    //   folderId: folderId,
+    //   content: payload.content,
+    //   title: payload.title,
+    //   type: payload.type,
+    //   isLoading: true,
+    //   error: null,
+    //   createdAt: new Date().toISOString(),
+    //   updatedAt: new Date().toISOString(),
+    // };
+    // materials.value.set(tempId, optimisticMaterial);
+
+
+    try {
+      // Attempt to submit to server
+      const result: Result<Material, APIError> = await $api.materials.create({
+        folderId,
+        content: payload.content,
+        title: payload.title,
+        type: payload.type,
+      });
+
+      if (result.success) {
+        // Replace optimistic material with server material
+        materials.value.set(result.data.id, result.data);
+        // fetchMaterials(); // Refresh list to ensure consistency
+        return true;
+      } else {
+        // Server rejected - mark error on optimistic material
+        console.error("Server rejected material creation:", result.error);
+        toast.add({ title: "Server Error", description: result.error.message, color: "error" });
+        return false;
+      }
+
+    } catch (error) {
+      console.error("Failed to create material:", error);
+      toast.add({ title: "Error", description: "Failed to create material - check your connection", color: "error" });
+      return false;
+    }
+
+
+  };
+  // Delete a material - simple optimistic approach
+  const deleteMaterial = async (id: string): Promise<boolean> => {
+    try {
+      const material = materials.value.get(id);
+      if (!material) return false;
+
+      // Optimistic removal from reactive state
+      materials.value.delete(id);
+
+      // Attempt to submit to server
+      const result: Result<unknown, APIError> = await $api.materials.delete(id);
+
+      if (result.success) {
+        return true;
+      } else {
+
+        // Server rejected - restore material to both reactive state and IndexedDB
+        console.error("Server rejected material deletion:", result.error);
+        const restoredMaterial = { ...material, isLoading: false, error: "Server rejected deletion" };
+        materials.value.set(id, restoredMaterial);
+
+        toast.add({ title: "Server Error", description: "Server rejected deletion. Material restored.", color: "error" });
+        return false;
+      }
+    } catch (error) {
+      console.error("Failed to delete material:", error);
+
+      // Other errors - restore the material
+      const material = materials.value.get(id);
+      if (!material) {
+        // Try to restore from the materials map
+        const allMaterials = Array.from(materials.value.values());
+        const originalMaterial = allMaterials.find((m) => m.id === id);
+        if (originalMaterial) {
+          materials.value.set(id, originalMaterial);
+        }
+      }
+
+      toast.add({ title: "Error", description: "Failed to delete material - check your connection", color: "error" });
+      return false;
+    }
+  };
+
+
+
+  // Utility functions
+  const isMaterialLoading = (id: string): boolean => {
+    return materials.value.get(id)?.isLoading ?? false;
+  };
+
+
+
+
+
+
+  const getMaterial = (id: string): MaterialState => {
+    return materials.value.get(id)!
+  };
+  const setMaterials = (newMaterials: MaterialState[]) => {
+    materials.value.clear();
+    newMaterials.forEach((material) => {
+      materials.value.set(material.id, material);
+    });
+  }
+
+
+
+
+  // Create store instance
+  const store: MaterialStore = {
+    materials,
+    loadingStates,
+    errorStates,
+    createMaterial,
+    deleteMaterial,
+    getMaterial,
+    isMaterialLoading,
+    setMaterials,
+    fetchMaterials,
+    fetching,
+    fetchError,
+    fetchTypedError,
+  };
+
+  // Cache the store
+  stores.set(folderId, store);
+
+  // Auto-sync on creation
+  fetchMaterials();
+  return store;
+}
+
+/**
+ * Clean up store when folder is no longer needed
+ */
+export function cleanupMaterialStore(folderId: string): void {
+  stores.delete(folderId);
+}

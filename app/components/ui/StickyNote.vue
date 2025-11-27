@@ -5,16 +5,18 @@
         <div :class="noteContentClasses">
 
             <!-- Content area -->
-            <div class="relative h-full flex flex-col flex-1 min-h-0 overflow-auto transition-opacity duration-400" :class="{
-                'opacity-0': isAnimating,
-                'opacity-100': !isAnimating,
-            }">
+            <div class="relative h-full flex flex-col flex-1 min-h-0 overflow-auto transition-opacity duration-400"
+                :class="{
+                    'opacity-0': isAnimating,
+                    'opacity-100': !isAnimating,
+                }">
 
                 <!-- Top right actions -->
-                <div class="flex items-center justify-between border-b light:border-muted h-8 sticky top-0 bg-white py-2 z-10">
+                <div
+                    class="flex items-center justify-between border-b border-neutral h-8 sticky top-0 bg-white py-2 z-10">
 
                     <div class="flex items-center gap-4">
-                        <div v-if="note.isLoading" class="flex items-center gap-2 animate-pulse repeat-infinite ease-in-out opacity-75">
+                        <!-- <div v-if="note.isLoading" class="flex items-center gap-2 animate-pulse repeat-infinite ease-in-out opacity-75">
                             <p class="text-[10px] text-primary">Auto-saving...</p>
                             <div class="flex items-center gap-1 text-primary">
                                 <svg class="animate-spin h-2.5 w-2.5" fill="none" viewBox="0 0 24 24">
@@ -24,8 +26,8 @@
                                         d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                                 </svg>
                             </div>
-                        </div>
-                        <p class="text-[10px] text-muted-foreground">{{ characterCount }}</p>
+                        </div> -->
+                        <!-- <p class="text-[10px] text-muted-foreground">{{ characterCount }} characters</p> -->
                     </div>
 
                     <div class="flex items-center gap-2">
@@ -70,9 +72,12 @@
                 <!-- Edit mode -->
 
                 <client-only>
-                    <div ref="editorContainerRef" class="h-full flex-1 min-h-0" >
+                    <div ref="editorContainerRef" class="h-full flex-1 min-h-0 shrink-0">
+
                         <shared-tiptap-editor ref="tiptapRef" :id="note.id" v-model="contentHtml"
-                            :isFullScreen="isFullscreen" />
+                            :isFullScreen="isFullscreen" 
+                            @addToMaterial="handleAddToMaterial"
+                            />
                     </div>
                 </client-only>
 
@@ -111,6 +116,7 @@ const emit = defineEmits<{
     update: [id: string, text: string];
     retry: [id: string];
     toggleFullscreen: [id: string];
+    addToMaterial: [selectedText: string];
 }>();
 
 // Reactive state
@@ -133,11 +139,11 @@ const noteContainerClasses = computed(() => {
     const sizeClasses = {
         sm: "w-48 h-32",
         md: "w-64 h-40",
-        lg: "w-full h-full",
+        lg: "w-full ",
     };
 
     const baseClasses = [
-        "note-container flex flex-1 min-h-0",
+        "note-container flex flex-1 basis-4/5 shrink-0 overflow-auto",
         sizeClasses[props.size],
         "transition-all duration-100",
     ];
@@ -153,7 +159,6 @@ const noteContentClasses = computed(() => {
     const baseClasses = [
         "note-content bg-white p-1 rounded",
         "w-full h-full",
-        "select-none",
         "transition-all duration-100",
         "relative",
     ];
@@ -162,7 +167,7 @@ const noteContentClasses = computed(() => {
         "",
         {
             "": isEditing.value,
-            "pointer-events-none": props.note.isLoading,
+            // "pointer-events-none": props.note.isLoading,
             "opacity-0": isAnimating.value && !props.isFullscreen,
             invisible: isAnimating.value && !props.isFullscreen,
         },
@@ -180,8 +185,7 @@ const animateToFullscreen = (element: HTMLElement) => {
     element.style.position = "fixed";
     element.style.top = `${rect.top}px`;
     element.style.left = `${rect.left}px`;
-    element.style.width = "600px";
-    element.style.minWidth = "600px";
+    element.style.width = "1200px";
     element.style.height = "600px";
     element.style.maxWidth = "90vw";
     element.style.maxHeight = "90vh";
@@ -263,6 +267,10 @@ const saveNote = async (html: string) => {
     emit("update", props.note.id, sanitized);
     originalText.value = sanitized;
 
+};
+
+const handleAddToMaterial = (selectedText: string) => {
+    emit("addToMaterial", selectedText);
 };
 
 const retry = () => emit("retry", props.note.id);

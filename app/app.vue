@@ -51,8 +51,8 @@ const router = useRouter()
 const showNotificationModal = ref(false)
 
 
-const ErrorLogger = (): void => {
-    console.error('🚨 [APP.VUE] Error logged, redirecting to error page')
+const ErrorLogger = (error): void => {
+    console.error('🚨 [APP.VUE] Error logged, redirecting to error page', error)
     router.replace({
         name: 'error'
     })

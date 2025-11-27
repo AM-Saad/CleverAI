@@ -43,6 +43,7 @@ export default defineEventHandler(async (event) => {
   const whereClause = {
     userId: user.id,
     nextReviewAt: { lte: new Date() },
+    suspended: false,  // Exclude suspended cards
     ...(folderId ? { folderId } : {}),
   };
 
@@ -135,13 +136,14 @@ export default defineEventHandler(async (event) => {
     .filter(Boolean);
 
   // Stats (execute in parallel where possible)
-  const [totalCards, newCards, learningCards] = await Promise.all([
+  const [totalCards, newCards, learningCards, dueCards] = await Promise.all([
     prisma.cardReview.count({
-      where: { userId: user.id, ...(folderId ? { folderId } : {}) },
+      where: { userId: user.id, suspended: false, ...(folderId ? { folderId } : {}) },
     }),
     prisma.cardReview.count({
       where: {
         userId: user.id,
+        suspended: false,
         repetitions: 0,
         ...(folderId ? { folderId } : {}),
       },
@@ -149,12 +151,20 @@ export default defineEventHandler(async (event) => {
     prisma.cardReview.count({
       where: {
         userId: user.id,
+        suspended: false,
         repetitions: { gt: 0, lt: 3 },
         ...(folderId ? { folderId } : {}),
       },
     }),
+    prisma.cardReview.count({
+      where: {
+        userId: user.id,
+        suspended: false,
+        nextReviewAt: { lte: new Date() },
+        ...(folderId ? { folderId } : {}),
+      },
+    }),
   ]);
-  const dueCards = cardReviews.length;
 
   const payload = ReviewQueueResponseSchema.parse({
     cards,

@@ -1,5 +1,5 @@
 <template>
-    <div v-if="!isPageLoading" class="flex flex-col gap-y-6" style="flex: 1 1 auto; min-height: 0;">
+    <div v-if="!isPageLoading" class="flex flex-col gap-y-4" style="flex: 1 1 auto; min-height: 0;">
         <div class="flex justify-between" style="flex: 0 0 auto;">
             <div>
                 <UiTitle tag="h1">{{ title }}</UiTitle>

@@ -4,7 +4,7 @@
   >
     <nav
       id="nav"
-      class="flex basis-0 shrink-0 font-heading items-center justify-between p-4 md:px-1 rounded-full md:rounded-none xl:container mx-auto left-[50%] top-4 border-b border-neutral dark:border-muted w-[calc(100%-1rem)]"
+      class="flex basis-0 shrink-0 font-heading items-center justify-between p-2 md:px-1 rounded-xl md:rounded-none xl:container mx-auto left-[50%] top-4 border-b border-neutral dark:border-muted w-[calc(100%-1rem)]"
     >
       <div class="flex items-center justify-between w-full">
         <router-link

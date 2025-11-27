@@ -4,9 +4,10 @@ import type { FormSubmitEvent } from "@nuxt/ui";
 import { useRoute } from "vue-router";
 import { useUpdateFolder } from "~/composables/folders/useFolders";
 
-const emit = defineEmits<{ (e: "closed" | "cancel"): void }>();
 
 type MobileProp = boolean | "auto";
+
+const emit = defineEmits<{ (e: "close"): void }>();
 const props = withDefaults(
   defineProps<{
     show: boolean;
@@ -29,7 +30,7 @@ const props = withDefaults(
     breakpoint: "(max-width: 639px)",
     handleVisible: 28,
     sheetHeight: "75vh",
-    widthClasses: "w-1/3 min-w-60",
+    widthClasses: "w-1/4 min-w-60",
     teleportTo: "body",
     lockScroll: true,
     threshold: 20,
@@ -60,6 +61,7 @@ const { data } = useAuth();
 
 const id = route.params.id as string;
 const { updateFolder, updating, typedError } = useUpdateFolder(id);
+const { createMaterial, } = useMaterialsStore(id);
 const { handleOfflineSubmit } = useOffline();
 const items = ref(["text", "video", "audio", "pdf", "url", "document"]);
 
@@ -69,30 +71,27 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   event.preventDefault();
   const title = state.materialTitle.trim();
   const content = state.materialContent.trim();
-  if (!title || !content) {
-    toast.add({
-      title: "Validation",
-      description: "Content and title are required",
-      color: "warning",
-    });
-    return;
-  }
+  const type = state.materialType;
+  await saveMaterial(title, content, type);
+}
+
+const saveMaterial = async (title: string, content: string, type: "text" | "video" | "audio" | "pdf" | "url" | "document" | undefined) => {
   try {
     const payload = {
-      materialTitle: title,
-      materialContent: content,
-      materialType: state.materialType,
+      title: title,
+      content: content,
+      type: type,
     };
     // handle offline case
     if (!navigator.onLine) {
       // Sanitize user data for IndexedDB (only store cloneable properties)
       const userData = data.value?.user
         ? {
-            email: data.value.user.email,
-            name: data.value.user.name,
-            image: data.value.user.image,
-            // Only include primitive/serializable properties
-          }
+          email: data.value.user.email,
+          name: data.value.user.name,
+          image: data.value.user.image,
+          // Only include primitive/serializable properties
+        }
         : null;
 
       handleOfflineSubmit({
@@ -102,84 +101,55 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
       });
       return;
     }
-    await updateFolder(payload);
-    toast.add({
-      title: "Saved",
-      description: "Material uploaded to this folder.",
-      color: "success",
+    const success = await createMaterial({
+      title: title,
+      content: content,
+      type: type,
     });
-    // reset and close
-    state.materialTitle = "";
-    state.materialContent = "";
-    state.materialType = "text";
-    emit("cancel");
+    if (success) {
+      emit("close");
+
+      // reset and close
+      state.materialTitle = "";
+      state.materialContent = "";
+      state.materialType = "text";
+    }
+
   } catch (err: unknown) {
-    toast.add({
-      title: "Error",
-      description:
-        typedError.value?.message ||
-        (err as Error)?.message ||
-        "Failed to upload material.",
-      color: "error",
-    });
+    // {/* Show error toast */ }
   }
-}
+};
 </script>
 
 <template>
-  <ui-drawer
-    :show="props.show"
-    :side="props.side"
-    :mobile="props.mobile"
-    :breakpoint="props.breakpoint"
-    :handle-visible="props.handleVisible"
-    :sheet-height="props.sheetHeight"
-    :width-classes="props.widthClasses"
-    :teleport-to="props.teleportTo"
-    :lock-scroll="props.lockScroll"
-    :threshold="props.threshold"
-    :backdrop="props.backdrop"
-    :fast-velocity="props.fastVelocity"
-    title="Upload Material"
-    @closed="emit('closed')"
-  >
+  <ui-drawer :show="props.show" :side="props.side" :mobile="props.mobile" :breakpoint="props.breakpoint"
+    :sheet-height="props.sheetHeight" :width-classes="props.widthClasses" :teleport-to="props.teleportTo"
+    :lock-scroll="props.lockScroll" :threshold="props.threshold" :backdrop="props.backdrop"
+    :fast-velocity="props.fastVelocity" title="Upload Material" @close="emit('close')">
     <template #subtitle>
-      <p class="text-sm opacity-70">Upload your material files here.</p>
+      <ui-paragraph>Upload your material files here.</ui-paragraph>
     </template>
 
     <UForm :schema="schema" :state="state" class="space-y-2" @submit="onSubmit">
       <UFormField label="Material Title" name="materialTitle">
-        <UInput
-          v-model="state.materialTitle"
-          placeholder="Enter material title"
-          :ui="{
-            root: 'w-full',
-          }"
-        />
+        <UInput v-model="state.materialTitle" placeholder="Enter material title" :ui="{
+          root: 'w-full',
+        }" />
       </UFormField>
 
       <UFormField label="Material Type" name="materialType">
-        <USelectMenu
-          v-model="state.materialType"
-          :items="items"
-          :ui="{
-            base: 'w-full',
-          }"
-        />
+        <USelectMenu v-model="state.materialType" :items="items" :ui="{
+          base: 'w-full',
+        }" />
       </UFormField>
 
       <UFormField label="Material Content" name="materialContent">
-        <UiTextArea
-          v-model="state.materialContent"
-          placeholder="Enter your material content here..."
-        />
+        <UiTextArea v-model="state.materialContent" placeholder="Enter your material content here..." />
       </UFormField>
 
-      <div class="flex gap-2 mt-3">
-        <UButton type="submit" :loading="updating">Submit</UButton>
-        <UButton color="neutral" variant="soft" @click="emit('cancel')"
-          >Cancel</UButton
-        >
+      <div class="flex items-center gap-2 mt-3">
+        <UButton type="submit" size="sm" :loading="updating">Submit</UButton>
+        <UButton color="neutral" size="sm" variant="soft" @click="emit('close')">Cancel</UButton>
       </div>
     </UForm>
   </ui-drawer>

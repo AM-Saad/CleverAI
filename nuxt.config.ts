@@ -11,7 +11,7 @@ export default defineNuxtConfig({
   srcDir: "app",
 
   modules: ["@sidebase/nuxt-auth", "@pinia/nuxt", // "@vite-pwa/nuxt",
-  "@nuxt/eslint", "@nuxt/image", "@nuxt/scripts", "@nuxt/icon", "@nuxt/ui", "@nuxt/devtools", "@vueuse/nuxt"],
+    "@nuxt/eslint", "@nuxt/image", "@nuxt/scripts", "@nuxt/icon", "@nuxt/ui", "@nuxt/devtools", "@vueuse/nuxt"],
   future: {
     typescriptBundlerResolution: true,
     compatibilityVersion: 4,
@@ -244,6 +244,20 @@ export default defineNuxtConfig({
       // drop: ["console", "debugger"],
     },
     plugins: [tailwindcss()],
+    resolve: {
+      alias: {
+        '@tiptap/y-tiptap': 'y-prosemirror',
+
+      }
+    },
+    optimizeDeps: {
+      include: [
+        '@tiptap/extension-collaboration',
+        'y-prosemirror',
+        'yjs',
+        'y-websocket',
+      ],
+    }
   },
 
   build: {
@@ -267,6 +281,9 @@ export default defineNuxtConfig({
 
     VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
 
+    // Feature flags
+    enableLlmGateway: process.env.ENABLE_LLM_GATEWAY === 'true',
+
     // Public (exposed to client)
     public: {
       AUTH_ORIGIN: process.env.AUTH_ORIGIN,
@@ -275,6 +292,9 @@ export default defineNuxtConfig({
       VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
       GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+
+      // Feature flags (exposed to client)
+      enableLlmGateway: process.env.ENABLE_LLM_GATEWAY === 'true',
     },
   },
 });

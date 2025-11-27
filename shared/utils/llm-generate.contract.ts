@@ -57,3 +57,55 @@ export const LLMGenerateResponse = z.union([
   }),
 ]);
 export type LLMGenerateResponse = z.infer<typeof LLMGenerateResponse>;
+
+// ==========================================
+// Gateway Contracts
+// ==========================================
+
+/**
+ * Gateway request schema - extends base generation with routing options
+ */
+export const GatewayGenerateRequest = z.object({
+  task: TaskEnum,
+  text: z.string().min(1),
+  folderId: z.string().optional(),
+  save: z.boolean().optional(),
+  replace: z.boolean().optional(),
+  // Gateway-specific options:
+  preferredModelId: z.string().optional(), // e.g., 'gpt-4o-mini', 'gemini-flash-8b'
+  requiredCapability: z.enum(['text', 'multimodal', 'reasoning']).optional(),
+});
+export type GatewayGenerateRequest = z.infer<typeof GatewayGenerateRequest>;
+
+/**
+ * Gateway response schema - includes routing metadata
+ */
+export const GatewayGenerateResponse = z.union([
+  z.object({
+    task: z.literal("flashcards"),
+    flashcards: z.array(FlashcardSchema),
+    savedCount: z.number().optional(),
+    subscription: SubscriptionInfoSchema.optional(),
+    // Gateway metadata:
+    requestId: z.string(),
+    selectedModelId: z.string(),
+    provider: z.string(),
+    latencyMs: z.number(),
+    cached: z.boolean(),
+    routingScore: z.number().optional(),
+  }),
+  z.object({
+    task: z.literal("quiz"),
+    quiz: z.array(QuizQuestionSchema),
+    savedCount: z.number().optional(),
+    subscription: SubscriptionInfoSchema.optional(),
+    // Gateway metadata:
+    requestId: z.string(),
+    selectedModelId: z.string(),
+    provider: z.string(),
+    latencyMs: z.number(),
+    cached: z.boolean(),
+    routingScore: z.number().optional(),
+  }),
+]);
+export type GatewayGenerateResponse = z.infer<typeof GatewayGenerateResponse>;

@@ -9,7 +9,7 @@ export default defineAppConfig({
       neutral: 'slate'
     },
     toaster: {
-      slots:{
+      slots: {
         viewport: "fixed flex flex-col w-[calc(100%-2rem)] sm:w-96 z-[100] data-[expanded=true]:h-(--height) focus:outline-none",
         base: `pointer-events-auto bg-light dark:bg-muted border-0 ring-0 rounded-full p-3 px-8 absolute inset-x-0 z-(--index) transform-(--transform) 
         data-[expanded=false]:data-[front=false]:h-(--front-height) data-[expanded=false]:data-[front=false]:*:opacity-0 
@@ -17,7 +17,7 @@ export default defineAppConfig({
         data-[state=closed]:data-[expanded=false]:data-[front=false]:animate-[toast-collapsed-closed_200ms_ease-in-out] 
         data-[swipe=move]:transition-none transition-[transform,translate,height] duration-200 ease-out shadow-sm`
       },
-      compoundVariants:[
+      compoundVariants: [
         {
           position: [
             "top-left",
@@ -33,7 +33,7 @@ export default defineAppConfig({
           position: [
             "bottom-left",
             "bottom-center",
-            "bottom-right" 
+            "bottom-right"
           ],
           class: {
             viewport: "bottom-10 lg:bottom-8",
@@ -41,10 +41,15 @@ export default defineAppConfig({
           }
         }
       ],
-      defaultVariants:{
+      defaultVariants: {
         position: "bottom-center",
         swipeDirection: "bottom"
       }
     },
+    input: {
+      slots: {
+        base: "focus:border-primary focus:ring-1 focus:ring-primary/90 focus:outline-0 focus-visible:outline-0 focus-visible:ring-0",
+      }
+    }
   }
 })

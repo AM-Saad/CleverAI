@@ -1,5 +1,5 @@
 /* Font imports must come first */
-@import url('https://fonts.googleapis.com/css2?family=Sen:wght@400..800&display=swap');
+/* @import url("https://fonts.googleapis.com/css2?family=Sen:wght@400..800&display=swap"); */
 
 @import "tailwindcss";
 @import "@nuxt/ui";
@@ -70,9 +70,10 @@
 }
 
 body {
-  /* font-family: "Source Sans 3", sans-serif; */
-  font-family: "Sen", sans-serif;
+  font-family: "Source Sans 3", sans-serif;
+  /* font-family: "Sen", sans-serif; */
   font-optical-sizing: auto;
+  color: unset;
 }
 
 a {
@@ -88,9 +89,7 @@ a:not(.btn):focus-visible {
   --tw-blur: blur(8px);
 }
 
-
-
-.tiptap {
+/* .tiptap {
   @apply h-full;
   p {
     @apply my-4 first:mt-0 last:mb-0 text-base leading-relaxed dark:text-dark;
@@ -99,7 +98,7 @@ a:not(.btn):focus-visible {
   h1 {
     @apply text-3xl font-bold mt-8 mb-4 first:mt-0 last:mb-0;
   }
-}
+} */
 @media (prefers-color-scheme: dark) {
   .options-select {
     @apply text-white;

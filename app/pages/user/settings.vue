@@ -1,8 +1,8 @@
 <template>
   <shared-page-wrapper title="Settings" subtitle="Manage your account preferences and application settings">
-    <div class="flex gap-8 h-screen w-full mt-8">
+    <div class="flex flex-col md:flex-row gap-8 h-screen w-full mt-8">
       <ui-card className="min-w-fit h-full" variant="ghost" size="xs">
-        <ui-tabs v-model="activeIndex" :items="tabs" @select="select" />
+        <ui-tabs v-model="activeIndex" :items="tabs" @select="select" :direction="{ base: 'row', md: 'column' }" />
       </ui-card>
       <!-- Tab Content -->
       <div class="w-full min-h-full">

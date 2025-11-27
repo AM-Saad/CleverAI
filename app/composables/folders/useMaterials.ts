@@ -1,4 +1,5 @@
 import { useNuxtApp } from "#app";
+import type { CreateMaterialDTO } from "~/shared/utils/material.contract";
 
 export function useMaterials(folderId: string) {
   const { $api } = useNuxtApp();
@@ -12,6 +13,7 @@ export function useMaterials(folderId: string) {
   // Remove operation with centralized error handling
   const removeOperation = useOperation<{ success: boolean; message: string }>();
 
+
   // Centralized removeMaterial that lets FetchFactory handle all error construction
   const removeMaterial = async (id: string) => {
     const result = await removeOperation.execute(async () => {
@@ -21,6 +23,28 @@ export function useMaterials(folderId: string) {
     });
     return result;
   };
+
+
+  
+  const createOperation = useOperation<Material>();
+  const createMaterial = async (payload: CreateMaterialDTO) => {
+    const result = await createOperation.execute(async () => {
+      const createResult = await $api.materials.create(payload);
+      await refresh(); // Refresh the main materials list on successful creation
+      return createResult;
+    });
+    return result;
+  }
+
+
+  const fetchOperation = useOperation<Material[]>();
+  const fetchMaterials = async () => {
+    const result = await fetchOperation.execute(async () => {
+      const materials = await $api.materials.getByFolder(folderId);
+      return materials;
+    });
+    return result;
+  }
 
   return {
     // Main materials state
@@ -34,5 +58,17 @@ export function useMaterials(folderId: string) {
     removeError: removeOperation.error,
     removeTypedError: removeOperation.typedError,
     removeMaterial,
+
+    // Create operation state - all errors centralized via FetchFactory
+    creating: createOperation.pending,
+    createError: createOperation.error,
+    createTypedError: createOperation.typedError,
+    createMaterial,
+
+    // Fetch operation state - all errors centralized via FetchFactory
+    fetching: fetchOperation.pending,
+    fetchError: fetchOperation.error,
+    fetchTypedError: fetchOperation.typedError,
+    fetchMaterials,
   };
 }

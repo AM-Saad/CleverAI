@@ -20,7 +20,7 @@
           Shater AI
         </motion.h2>
         <UiTextGenerateEffect
-          class="text-4xl font-medium my-4"
+          class="text-4xl font-medium my-4 dark:text-light"
           :words="'AI, Chatbot, Assistant, Helper, Support, Guide'"
         />
         
@@ -32,7 +32,7 @@
     <div class="wrapper">
       <section class="brands my-xl flex flex-wrap justify-between gap-3">
         <div class="text-balance flex justify-center">
-          <h1 class="text-balance text-center text-2xl font-bold">
+          <h1 class="text-balance text-center text-2xl font-bold dark:text-light">
             Flashcards, Chatbot, and custom quizzes — all tailored to
             <UiTextHighlight
               class="rounded-lg bg-gradient-to-r from-purple-300 to-orange-300"

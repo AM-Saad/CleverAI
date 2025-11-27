@@ -135,20 +135,22 @@ export function useGenerateFlashcards(
     const m = model.value?.trim();
     const t = text.value?.trim();
     const fid = folderId.value;
-
+    console.log("Generating flashcards with model:", m, "text length:", t?.length, "folderId:", fid);
     if (!t) {
       genError.value =
         "This folder has no content yet. Add text or materials, then try again.";
+      console.log(genError.value);
       return;
     }
     if (!m) {
       genError.value = "No LLM model selected for this folder.";
+      console.log(genError.value);
       return;
     }
 
     generating.value = true;
     try {
-      const resp = await $fetch.raw("/api/llm.generate", {
+      const resp = await $fetch.raw("/api/llm.gateway", {
         method: "POST",
         body: {
           model: m,
@@ -159,6 +161,7 @@ export function useGenerateFlashcards(
           replace: true,
         },
       });
+      console.log("Flashcard generation response:", resp);
 
       // Handle rate limit headers
       const h = resp.headers;
