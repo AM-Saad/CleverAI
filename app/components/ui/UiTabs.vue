@@ -1,17 +1,12 @@
 <template>
   <header :class="['max-w-full min-w-fit', borderClass]">
-    <nav :class="['py-2 mb-4 flex ', direction === 'row' ? 'flex-row border-b border-muted gap-5 text-sm' : 'flex-col gap-7']">
-      <button
-        v-for="(tab, index) in items"
-        :key="index"
-        type="button"
-        :class="[
-          'cursor-pointer ',
-          buttonBaseClass,
-          activeIndexLocal === index ? activeClass : inactiveClass,
-        ]"
-        @click="onSelect(index)"
-      >
+    <nav
+      :class="['py-2 mb-4 flex', directionClass]">
+      <button v-for="(tab, index) in items" :key="index" type="button" :class="[
+        'cursor-pointer ',
+        buttonBaseClass,
+        activeIndexLocal === index ? activeClass : inactiveClass,
+      ]" @click="onSelect(index)">
         <UIcon v-if="tab.icon" :name="String(tab.icon)" class="w-4 h-4" />
         <span>{{ tab.name }}</span>
       </button>
@@ -20,7 +15,9 @@
 </template>
 
 <script setup lang="ts">
-import { toRef } from "vue";
+import { toRef, computed, type PropType } from "vue";
+// Tailwind safelist for dynamically generated responsive classes
+const _TW_SAFELIST = 'flex-row border-b border-muted gap-5 text-sm flex-col gap-7 sm:flex-row sm:flex-col md:flex-row md:flex-col lg:flex-row lg:flex-col xl:flex-row xl:flex-col sm:gap-5 sm:gap-7 md:gap-5 md:gap-7 lg:gap-5 lg:gap-7 xl:gap-5 xl:gap-7';
 const props = defineProps({
   items: {
     type: Array as () => Array<Record<string, unknown>>,
@@ -48,9 +45,40 @@ const props = defineProps({
     default: "flex items-center gap-2 font-medium  transition-colors",
   },
   direction: {
-    type: String,
+    type: [String, Object] as PropType<string | Record<string, string>>,
     default: "column",
   },
+});
+
+const breakpointOrder = ["base", "sm", "md", "lg", "xl", "2xl"] as const;
+
+const directionClass = computed(() => {
+  const dir = props.direction;
+  if (typeof dir === "string") {
+    return dir === "row"
+      ? "flex-row border-b border-muted gap-5 text-sm"
+      : "flex-col gap-7";
+  }
+
+  const classes: string[] = [];
+  for (const bp of breakpointOrder) {
+    const val = (dir as Record<string, string>)[bp];
+    if (!val) continue;
+
+    const tokenString =
+      val === "row"
+        ? "flex-row border-b border-muted gap-5 text-sm"
+        : "flex-col gap-7";
+
+    const tokens = tokenString.split(" ");
+    if (bp === "base") {
+      classes.push(...tokens);
+    } else {
+      classes.push(...tokens.map((t) => `${bp}:${t}`));
+    }
+  }
+
+  return classes.join(" ");
 });
 
 const emit = defineEmits(["update:modelValue", "select"]);

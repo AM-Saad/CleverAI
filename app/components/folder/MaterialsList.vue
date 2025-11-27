@@ -10,10 +10,10 @@
     </Transition>
 
 
-    <ul v-if="!loading && materialList.length > 0">
+    <ul v-if="!loading && materials.length > 0">
 
 
-      <ui-card v-for="m in materialList" :key="m.id" tag="article"
+      <ui-card v-for="m in materials" :key="m.id" tag="article"
         :variant="fullscreenMaterial === m.id ? 'default' : 'ghost'" size="xs" :class="{
           'fullscreen-card bg-light': fullscreenMaterial === m.id,
           'relative z-50': fullscreenMaterial === m.id,
@@ -25,9 +25,9 @@
 
           <div class="flex w-full justify-between items-center gap-2 flex-wrap">
 
-            <ui-subtitle>{{ m.title }}</ui-subtitle>
+            <ui-subtitle >{{ m.title }}</ui-subtitle>
 
-            <div class="flex flex-shrink-0 gap-2">
+            <div class="flex shrink-0 gap-2">
               <!-- Fullscreen/Expand button -->
               <u-button variant="ghost" @click="() => toggleFullscreen(m.id)">
                 <Icon name="ic:round-fullscreen-exit" size="16" />
@@ -36,8 +36,7 @@
               <ReviewEnrollButton :resource-type="'material'" :resource-id="m.id"
                 :is-enrolled="enrolledMaterials.has(m.id)" @enrolled="handleMaterialEnrolled"
                 @error="handleEnrollError" />
-              <u-button :disabled="removing" color="error" variant="outline" size="xs"
-                @click="() => confirmRemoval(m.id)">
+              <u-button color="error" variant="outline" size="xs" @click="() => confirmRemoval(m.id)">
                 Remove</u-button>
             </div>
 
@@ -113,7 +112,7 @@
 
     </ul>
 
-    <ui-paragraph v-if="!loading && materialList.length === 0 && !error" color="muted" >
+    <ui-paragraph v-if="!loading && materials.length === 0 && !error" color="muted">
       No materials in this folder.
     </ui-paragraph>
   </div>
@@ -126,10 +125,10 @@
     }
   ">
     <template #header>
-      <h3 class="flex items-center gap-1">
-        <icon name="ic:round-delete" class="text-primary" />
+      <div class="flex items-center gap-1">
+        <icon name="ic:round-delete" class="text-error" />
         Confirm Delete
-      </h3>
+      </div>
     </template>
     <template #body>
       <ui-paragraph size="sm" color="muted">
@@ -139,7 +138,14 @@
     </template>
     <template #footer>
       <div class="flex gap-3 pt-4">
-        <u-button type="submit" color="primary" @click="doConfirmRemove"> Delete </u-button>
+        <u-button type="submit" color="error" @click="doConfirmRemove">
+          Delete
+          <svg v-if="loading" class="animate-spin h-2.5 w-2.5" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+        </u-button>
         <u-button type="button" variant="subtle" @click="() => {
           showConfirm = false;
           confirmId = null;
@@ -209,25 +215,37 @@ const emit = defineEmits<{
   removed: [id: string];
   error: [err: string];
 }>();
+const route = useRoute();
+const id = route.params.id;
 
 // Centralized error handling - all errors come from FetchFactory
+// const {
+//   materials,
+//   loading,
+//   error,
+//   removing,
+//   removeTypedError,
+//   removeMaterial,
+// } = useMaterials(props.folderId);
+
+// const materialList = computed(() => materials.value ?? []);
+
 const {
-  materials,
-  loading,
-  error,
-  removing,
-  removeTypedError,
-  removeMaterial,
-} = useMaterials(props.folderId);
-
-const materialList = computed(() => materials.value ?? []);
-
+  materials: materialList,
+  fetching: loading,
+  fetchTypedError: error,
+  deleteMaterial
+} = useMaterialsStore(id as string);
 // Track enrolled materials
 const enrolledMaterials = ref(new Set<string>());
 
+const materials = computed(() => {
+  return Array.from(materialList.value.values());
+});
+
 // Check enrollment status when materials are available
 watch(
-  materialList,
+  materials,
   async (mats) => {
     if (mats && mats.length > 0) {
       await checkEnrollmentStatus();
@@ -237,7 +255,7 @@ watch(
 );
 
 async function checkEnrollmentStatus() {
-  const materialIds = materialList.value.map((m) => m.id);
+  const materialIds = materials.value.map((m) => m.id);
   if (materialIds.length === 0) return;
 
   try {
@@ -299,17 +317,20 @@ const confirmRemoval = (id: string) => {
 const doConfirmRemove = async () => {
   if (!confirmId.value) return;
 
-  const result = await removeMaterial(confirmId.value);
+  showConfirm.value = false;
+  closeFullscreen();
+  emit("removed", confirmId.value);
+  const result = await deleteMaterial(confirmId.value);
+  confirmId.value = null;
+
   if (result) {
     // Success - result is not null
-    emit("removed", confirmId.value);
-  } else if (removeTypedError.value) {
+  } else if (error.value) {
     // Error occurred - use centralized error details
-    emit("error", removeTypedError.value.message);
+    emit("error", error.value.message);
   }
 
-  showConfirm.value = false;
-  confirmId.value = null;
+
 };
 </script>
 

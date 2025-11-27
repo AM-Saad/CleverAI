@@ -175,9 +175,9 @@ activeHoursEnd               String  @default("21:00")
 ### ⚠️ Minor Discrepancies
 
 1. **IndexedDB reference in data flow diagram**
-   - Docs mention: `shared/idb.ts IndexedDB` in notification flow
-   - Reality: SW uses IndexedDB for form sync, not directly for notification storage
-   - **Impact:** Low - diagram could be clarified
+  - Clarification: IndexedDB is used for the offline form queue and notes persistence via `app/utils/idb.ts` (shared between client and SW).
+  - Reality: Notifications do not persist messages in IndexedDB; they rely on push payloads + click handling.
+  - **Impact:** Low - diagram adjusted in PWA docs; cross-reference added
    
 2. **ScheduledNotification model not documented**
    - Exists in schema and is actively used
@@ -201,7 +201,7 @@ The notification system implementation matches the documentation almost perfectl
 - ✅ Document `sendAnytimeOutsideQuietHours` feature in NOTIFICATIONS.md
 - ✅ Document Active Hours feature in NOTIFICATIONS.md
 - ✅ Add precedence rules and timing logic flow
-- ⚠️ Clarify IndexedDB usage in data flow (form sync vs notifications)
+- ✅ Clarify IndexedDB usage in data flow (form sync & notes vs notifications)
 - ⚠️ Document `ScheduledNotification` model in schema section
 
 **Code quality:** Excellent - implements exactly what docs promise with proper validation, error handling, and type safety.

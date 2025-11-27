@@ -9,15 +9,15 @@ export default defineAppConfig({
       neutral: 'slate'
     },
     toaster: {
-      slots:{
+      slots: {
         viewport: "fixed flex flex-col w-[calc(100%-2rem)] sm:w-96 z-[100] data-[expanded=true]:h-(--height) focus:outline-none",
-        base: `pointer-events-auto bg-light border-0 ring-0 rounded-full p-4 absolute inset-x-0 z-(--index) transform-(--transform) 
+        base: `pointer-events-auto bg-light dark:bg-muted border-0 ring-0 rounded-full p-3 px-8 absolute inset-x-0 z-(--index) transform-(--transform) 
         data-[expanded=false]:data-[front=false]:h-(--front-height) data-[expanded=false]:data-[front=false]:*:opacity-0 
         data-[front=false]:*:transition-opacity data-[front=false]:*:duration-100 data-[state=closed]:animate-[toast-closed_200ms_ease-in-out] 
         data-[state=closed]:data-[expanded=false]:data-[front=false]:animate-[toast-collapsed-closed_200ms_ease-in-out] 
-        data-[swipe=move]:transition-none transition-[transform,translate,height] duration-200 ease-out`
+        data-[swipe=move]:transition-none transition-[transform,translate,height] duration-200 ease-out shadow-sm`
       },
-      compoundVariants:[
+      compoundVariants: [
         {
           position: [
             "top-left",
@@ -36,15 +36,20 @@ export default defineAppConfig({
             "bottom-right"
           ],
           class: {
-            viewport: "bottom-4",
-            base: "bottom-0 data-[state=open]:animate-[slide-in-from-bottom_200ms_ease-in-out]"
+            viewport: "bottom-10 lg:bottom-8",
+            base: "bottom-0 data-[state=open]:animate-[slide-in-from-bottom_600ms_ease-in-out]"
           }
         }
       ],
-      defaultVariants:{
+      defaultVariants: {
         position: "bottom-center",
         swipeDirection: "bottom"
       }
     },
+    input: {
+      slots: {
+        base: "focus:border-primary focus:ring-1 focus:ring-primary/90 focus:outline-0 focus-visible:outline-0 focus-visible:ring-0",
+      }
+    }
   }
 })

@@ -4,19 +4,20 @@
 
 // // Import centralized constants
 import {
-  SW_MESSAGE_TYPES,
-  PREWARM_PATHS,
-  SW_CONFIG,
-  DB_CONFIG,
-  CACHE_NAMES,
-  CACHE_CONFIG as _CACHE_CONFIG,
-  AUTH_STUBS,
-  SYNC_TAGS,
+    SW_MESSAGE_TYPES,
+    PREWARM_PATHS,
+    SW_CONFIG,
+    DB_CONFIG,
+    CACHE_NAMES,
+    CACHE_CONFIG as _CACHE_CONFIG,
+    AUTH_STUBS,
+    SYNC_TAGS,
 } from '../app/utils/constants/pwa'
 
 // // Import shared IndexedDB helpers
-import { openFormsDB, getAllRecords, deleteRecord } from '../app/utils/idb'
+import { openUnifiedDB, getAllRecords, deleteRecord, loadPendingNoteChanges, deletePendingNoteChanges } from '../app/utils/idb'
 import { FormSyncType } from '../shared/types/offline'
+import type { IncomingSWMessage, OutgoingSWMessage } from '../shared/types/sw-messages'
 
 // Augment the global self type safely
 
@@ -58,24 +59,7 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
     // ---------------------------------------------------------------------------
 
     // -------------------------- TYPE DEFINITIONS --------------------------
-    interface FormSyncedMessage { type: typeof SW_MESSAGE_TYPE.FORM_SYNCED; data: { message: string } }
-    interface FormSyncErrorMessage { type: typeof SW_MESSAGE_TYPE.FORM_SYNC_ERROR; data: { message: string } }
-    interface SyncFormNoticeMessage { type: typeof SW_MESSAGE_TYPE.SYNC_FORM; data: { message: string } }
-    type FormSyncLifecycleMessage = FormSyncedMessage | FormSyncErrorMessage | SyncFormNoticeMessage
-
-    type _OutgoingSWMessage =
-        | FormSyncLifecycleMessage
-        | { type: 'SW_ACTIVATED'; version: string }
-        | { type: 'SW_UPDATE_AVAILABLE'; version: string }
-        | { type: 'SW_CONTROL_CLAIMED' }
-        | { type: 'NOTIFICATION_CLICK_NAVIGATE'; url: string }
-        | { type: 'error'; data: { message: string; identifier?: string } }
-
-    interface TestNotificationClickMessage { type: 'TEST_NOTIFICATION_CLICK'; data?: { url?: string } }
-    interface SkipWaitingMessage { type: 'SKIP_WAITING' }
-    interface ClaimControlMessage { type: 'CLAIM_CONTROL' }
-    interface ToggleDebugMessage { type: 'SET_DEBUG'; value: boolean }
-    type IncomingSWMessage = TestNotificationClickMessage | SkipWaitingMessage | ClaimControlMessage | ToggleDebugMessage
+    // Redundant inlined message interfaces removed in favor of shared/types/sw-messages
 
     // Data types stored in forms object store
     interface StoredFormRecord {
@@ -85,37 +69,38 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
         createdAt: number
     }
 
-    // Message types constant - use centralized constants
-    const SW_MESSAGE_TYPE = SW_MESSAGE_TYPES
+    // Message types constant - use centralized constants directly (alias removed)
 
     // IndexedDB handles - using shared helper for consistency
     // All IndexedDB operations now use shared/idb.ts for non-destructive schema management
     let db: IDBDatabase | null = null
     let dbInitAttempts = 0
     const MAX_DB_INIT_ATTEMPTS = 3
+    // Prevent concurrent notes sync runs (background sync + manual trigger race)
+    let notesSyncInProgress = false
 
     async function ensureDB(): Promise<IDBDatabase | null> {
         if (db) return db
-        
+
         if (dbInitAttempts >= MAX_DB_INIT_ATTEMPTS) {
             error('IndexedDB initialization failed after max attempts')
             return null
         }
-        
+
         try {
             dbInitAttempts++
-            db = await openFormsDB()
+            db = await openUnifiedDB()
             log('IndexedDB initialized successfully')
             dbInitAttempts = 0 // Reset on success
             return db
         } catch (e) {
             error(`Failed to initialize IndexedDB (attempt ${dbInitAttempts}/${MAX_DB_INIT_ATTEMPTS}):`, e)
-            
+
             // Notify user on final failure
             if (dbInitAttempts >= MAX_DB_INIT_ATTEMPTS) {
                 await notifyClientsOfDBFailure()
             }
-            
+
             return null
         }
     }
@@ -135,12 +120,55 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
 
     // Workbox setup using bundled modules -------------------------------------------------
 
+    // Global error handler for unhandled promise rejections (e.g., Workbox IDB failures)
+    self.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+        // Suppress IndexedDB backing store errors from Workbox - they're logged but not fatal
+        if (event.reason?.message?.includes('backing store') || 
+            event.reason?.message?.includes('indexedDB.open')) {
+            error('Workbox IDB error (non-fatal):', event.reason.message)
+            event.preventDefault() // Prevent console spam
+            
+            // Notify user once about storage issues
+            notifyClientsOfStorageIssue()
+            return
+        }
+        
+        // Log other unhandled rejections
+        error('Unhandled rejection in SW:', event.reason)
+    })
+
+    let storageIssueNotified = false
+    async function notifyClientsOfStorageIssue() {
+        if (storageIssueNotified) return
+        storageIssueNotified = true
+        
+        const swSelf = self as unknown as ServiceWorkerGlobalScope
+        const clients = await swSelf.clients.matchAll({ type: 'window' })
+        clients.forEach(client => {
+            client.postMessage({
+                type: 'warning',
+                data: {
+                    message: 'Browser storage is having issues. Try clearing cache or using a different browser.',
+                    identifier: 'storage-backing-store-error',
+                    action: '/debug-clear'
+                }
+            })
+        })
+    }
+
     // Precache injection placeholder - CRITICAL: Must use exact format for Workbox injection
     // TypeScript safe access with fallback for development
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const manifest = (self as any).__WB_MANIFEST || []
-    precacheAndRoute(manifest, { ignoreURLParametersMatching: [/^utm_/, /^fbclid$/] })
-    cleanupOutdatedCaches()
+    
+    // Wrap Workbox precache in try-catch to handle IDB failures gracefully
+    try {
+        precacheAndRoute(manifest, { ignoreURLParametersMatching: [/^utm_/, /^fbclid$/] })
+        cleanupOutdatedCaches()
+    } catch (e) {
+        error('Workbox precache failed (continuing without precache):', e)
+        // Service worker continues to function without precaching
+    }
 
     // Navigation handling: For SSR/dev, skip createHandlerBoundToURL which expects a precached URL.
     // Our fetch handler below provides an offline fallback for navigations.
@@ -151,12 +179,12 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
         ({ request: _request, url }: { request: Request; url: URL }) =>
             url.origin === self.location.origin &&
             (/\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/.test(url.pathname) ||
-             url.pathname.startsWith('/AppImages/')),
+                url.pathname.startsWith('/AppImages/')),
         new CacheFirst({
             cacheName: CACHE_NAMES.IMAGES,
-            plugins: [new ExpirationPlugin({ 
-                maxEntries: _CACHE_CONFIG.IMAGES.MAX_ENTRIES, 
-                maxAgeSeconds: _CACHE_CONFIG.IMAGES.MAX_AGE_SECONDS 
+            plugins: [new ExpirationPlugin({
+                maxEntries: _CACHE_CONFIG.IMAGES.MAX_ENTRIES,
+                maxAgeSeconds: _CACHE_CONFIG.IMAGES.MAX_AGE_SECONDS
             })]
         })
     )
@@ -164,9 +192,9 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
     // 2. Hashed build assets (JS/CSS) - CacheFirst with safe offline fallback for unknown chunks
     const assetsStrategy = new CacheFirst({
         cacheName: CACHE_NAMES.ASSETS,
-        plugins: [new ExpirationPlugin({ 
-            maxEntries: _CACHE_CONFIG.ASSETS.MAX_ENTRIES, 
-            maxAgeSeconds: _CACHE_CONFIG.ASSETS.MAX_AGE_SECONDS 
+        plugins: [new ExpirationPlugin({
+            maxEntries: _CACHE_CONFIG.ASSETS.MAX_ENTRIES,
+            maxAgeSeconds: _CACHE_CONFIG.ASSETS.MAX_AGE_SECONDS
         })]
     })
     registerRoute(
@@ -249,13 +277,13 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
 
 
 
-     // 2. Folders API GET — network-first with cache fallback
+    // 2. Folders API GET — network-first with cache fallback
     registerRoute(
         ({ url, request }: { url: URL; request: Request }) =>
             url.origin === self.location.origin &&
             url.pathname.startsWith('/api/folders') &&
             request.method === 'GET',
-       async ({ request }: RouteHandlerCallbackOptions) => {
+        async ({ request }: RouteHandlerCallbackOptions) => {
 
             const cacheName = CACHE_NAMES.API_FOLDERS
             const cache = await caches.open(cacheName)
@@ -278,7 +306,7 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
                     log('Serving cached folders:', request.url)
                     return cached
                 }
-                
+
                 // No cache available - provide graceful fallback based on endpoint
                 const url = new URL(request.url)
                 if (url.pathname === '/api/folders/count') {
@@ -456,20 +484,20 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
     swSelf.addEventListener('message', (event: ExtendableMessageEvent) => {
         const data = (event.data || {}) as IncomingSWMessage | { type?: string }
         const type = (data as { type?: IncomingSWMessage['type'] }).type
-        if (type === 'SKIP_WAITING') {
+        if (type === SW_MESSAGE_TYPES.SKIP_WAITING) {
             log('Received SKIP_WAITING')
             swSelf.skipWaiting()
             return
         }
-        if (type === 'CLAIM_CONTROL') {
+        if (type === SW_MESSAGE_TYPES.CLAIM_CONTROL) {
             swSelf.clients.claim().then(async () => {
                 const clients = await swSelf.clients.matchAll({ type: 'window' })
                 clients.forEach(c => c.postMessage({ type: 'SW_CONTROL_CLAIMED' }))
             })
             return
         }
-        if (type === 'TEST_NOTIFICATION_CLICK') {
-            const targetUrl = (data as TestNotificationClickMessage).data?.url || '/'
+        if (type === SW_MESSAGE_TYPES.TEST_NOTIFICATION_CLICK) {
+            const targetUrl = (data as Extract<IncomingSWMessage, { type: typeof SW_MESSAGE_TYPES.TEST_NOTIFICATION_CLICK }>).data?.url || '/'
             const extendable = event as ExtendableEvent
             extendable.waitUntil((async () => {
                 const clients = await swSelf.clients.matchAll({ type: 'window', includeUncontrolled: true })
@@ -486,23 +514,13 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
             })())
             return
         }
-        // if (type === 'uploadFiles') {
-        //     const payload = data as UploadFilesMessage
-        //     // broadcast start back to originating client (ExtendableMessageEvent.source is Client | ServiceWorker | MessagePort)
-        //     const source = event.source
-        //     if (source && 'id' in source) {
-        //         swSelf.clients.get((source as Client).id)
-        //             .then(client => {
-        //                 client?.postMessage({ type: SW_MESSAGE_TYPE.UPLOAD_START, data: { message: 'Upload started' } })
-        //             })
-        //     }
-        //     handleDatabaseOperation({ action: 'add', payload: { name: payload.name, files: payload.files } })
-        //     const ext = event as ExtendableEvent
-        //     ext.waitUntil(handleConcurrentUploads(payload.name, payload.files || [], payload.uploadUrl))
-        //     return
-        // }
-        if (type === 'SET_DEBUG') {
-            DEBUG = !!(data as ToggleDebugMessage).value
+        if (type === SW_MESSAGE_TYPES.SYNC_NOTES) {
+            const extendable = event as ExtendableEvent
+            extendable.waitUntil(syncPendingNotes('manual'))
+            return
+        }
+        if (type === SW_MESSAGE_TYPES.SET_DEBUG) {
+            DEBUG = !!(data as Extract<IncomingSWMessage, { type: typeof SW_MESSAGE_TYPES.SET_DEBUG }>).value
             log('Debug mode set to', DEBUG)
             return
         }
@@ -616,11 +634,11 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
     swSelf.addEventListener('notificationclick', (event: NotificationEvent) => {
         const action = event.action
         const ndata = event.notification.data as { url?: string } | undefined
-        
+
         console.log('[SW] 🖱️ Notification clicked:', { action, data: ndata })
-        
+
         event.notification.close()
-        
+
         event.waitUntil((async () => {
             // Handle snooze action
             if (action === 'snooze') {
@@ -630,7 +648,7 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
                     await fetch('/api/notifications/snooze', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ 
+                        body: JSON.stringify({
                             duration: 3600, // 1 hour in seconds
                             timestamp: Date.now()
                         })
@@ -641,18 +659,18 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
                 }
                 return
             }
-            
+
             // Handle dismiss action
             if (action === 'dismiss') {
                 console.log('[SW] ❌ Dismiss action triggered - notification closed')
                 // Just close, no further action
                 return
             }
-            
+
             // Handle review action or default click (no action specified)
             const targetUrl = (ndata?.url) || '/'
             console.log('[SW] 🔗 Navigating to:', targetUrl)
-            
+
             const clients = await swSelf.clients.matchAll({ type: 'window', includeUncontrolled: true })
             if (clients.length) {
                 // Focus existing window and navigate
@@ -667,7 +685,7 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
                 }
                 return
             }
-            
+
             // No existing window, open new one
             try {
                 await swSelf.clients.openWindow(targetUrl)
@@ -690,7 +708,9 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
 
     swSelf.addEventListener('sync', (event: Event) => {
         const syncEvt = event as unknown as { tag?: string; waitUntil: ExtendableEvent['waitUntil'] }
-        
+        if (syncEvt.tag === SYNC_TAGS.NOTES) {
+            syncEvt.waitUntil(syncPendingNotes('background'))
+        }
         if (syncEvt.tag === SYNC_TAGS.FORM) {
             syncEvt.waitUntil((async () => {
                 try {
@@ -702,15 +722,15 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
                         return
                     }
 
-                    const clients = await swSelf.clients.matchAll({ type: 'window' })
-                    clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.SYNC_FORM, data: { message: 'Syncing data..' } }))
-                    
                     const records = await getAllRecords<StoredFormRecord>(database, 'forms')
-                    if (records.length === 0) {
+                    if (records.length === 0 || records.every(r => !r.payload)) {
                         log('No forms to sync')
                         return
                     }
-                    
+                    console.log('SW: Syncing forms records:', records)
+                    const clients = await swSelf.clients.matchAll({ type: 'window' })
+                    clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPES.FORM_SYNC_STARTED, data: { message: 'Syncing data..', mode: 'background' } }))
+
                     // Process sync with records
                     await syncForms(clients, records)  // TODO: implement actual sync logic
 
@@ -719,13 +739,14 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
                     const clients = await swSelf.clients.matchAll({ type: 'window' })
                     clients.forEach(client => {
                         client.postMessage({
-                            type: SW_MESSAGE_TYPE.FORM_SYNC_ERROR,
+                            type: SW_MESSAGE_TYPES.FORM_SYNC_ERROR,
                             data: { message: 'Failed to sync offline data' }
                         })
                     })
                 }
             })())
         }
+
     })
 
 
@@ -878,44 +899,52 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
     });
 
 
-    // ------------------------ INDEXEDDB HELPERS ------------------------
-    // Using shared IDB helpers for consistency
-
-    async function getFormDataAll(store: string): Promise<StoredFormRecord[]> {
+    // ------------------------ FORM SYNC (IDB usage) ------------------------
+    // rely directly on shared generic helpers;
+    async function syncForms(clients: readonly Client[], preloaded?: StoredFormRecord[]) {
         try {
-            const db = await openFormsDB()
-            const records = await getAllRecords<StoredFormRecord>(db, store)
-            db.close()
-            return records
-        } catch (err) {
-            error('Failed to get form data:', err)
-            return []
-        }
-    }
-
-    async function deleteFormEntries(ids: string[], store: string) {
-        if (!ids.length) return
-        try {
-            const db = await openFormsDB()
-            await Promise.all(ids.map(id => deleteRecord(db, store, id)))
-            db.close()
-        } catch (err) {
-            error('Failed to delete form entries:', err)
-        }
-    }
-
-    async function syncForms(clients: readonly Client[]) {
-        try {
-            const formData = await getFormDataAll('forms')
+            const formData = preloaded ?? await (async () => {
+                try {
+                    const db = await openUnifiedDB()
+                    return await getAllRecords<StoredFormRecord>(db, DB_CONFIG.STORES.FORMS)
+                } catch (e) {
+                    error('Failed to load form data:', e)
+                    return []
+                }
+            })()
             if (!formData.length) return
-            const response = await sendDataToServer(formData)
+
+            // Remove expired records before attempting sync
+            const expiryDays = (globalThis as unknown as { OFFLINE_FORM_CONFIG?: { FORM_EXPIRY_DAYS?: number } }).OFFLINE_FORM_CONFIG?.FORM_EXPIRY_DAYS || 7
+            const expiryMs = expiryDays * 24 * 60 * 60 * 1000
+            const now = Date.now()
+            const valid = formData.filter(r => (now - r.createdAt) <= expiryMs)
+            const expired = formData.filter(r => (now - r.createdAt) > expiryMs)
+            if (expired.length) {
+                try {
+                    const db = await openUnifiedDB()
+                    await Promise.all(expired.map(e => deleteRecord(db, DB_CONFIG.STORES.FORMS, e.id)))
+                    warn('Purged expired offline records:', expired.length)
+                } catch (e) {
+                    warn('Failed purging expired records:', e)
+                }
+            }
+            if (!valid.length) return
+
+            const response = await sendDataToServer(valid)
             if (!response.ok) throw new Error('Sync failed')
-            // Cleanup after confirmed success
-            await deleteFormEntries(formData.map(f => f.id), DB_CONFIG.STORES.FORMS)
-            clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNCED, data: { message: `Form data synced (${formData.length} records).` } }))
+
+            // Cleanup after confirmed success only for successfully processed records
+            try {
+                const db = await openUnifiedDB()
+                await Promise.all(valid.map(f => deleteRecord(db, DB_CONFIG.STORES.FORMS, f.id)))
+            } catch (e) {
+                warn('Failed deleting processed form records:', e)
+            }
+            clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPES.FORM_SYNCED, data: { message: `Form data synced (${valid.length} records).`, appliedCount: valid.length, mode: 'background' } }))
         } catch (err) {
             error('syncForms error', err)
-            clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPE.FORM_SYNC_ERROR, data: { message: 'Form sync failed.' } }))
+            clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPES.FORM_SYNC_ERROR, data: { message: 'Form sync failed.', mode: 'background' } }))
         }
     }
 
@@ -934,6 +963,45 @@ import type { RouteHandlerCallbackOptions } from 'workbox-core/types'
             return resp
         } finally {
             clearTimeout(timeout)
+        }
+    }
+
+    // ------------------------ NOTES SYNC (shared) ------------------------
+    async function syncPendingNotes(mode: 'manual' | 'background'): Promise<void> {
+        // Coalesce concurrent triggers (e.g., Background Sync and 'online' message)
+        if (notesSyncInProgress) return
+        notesSyncInProgress = true
+        try {
+            const clients = await swSelf.clients.matchAll({ type: 'window' })
+            const pending = await loadPendingNoteChanges()
+            clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNC_STARTED, data: { message: 'Syncing notes…', pendingCount: pending.length, mode } }))
+            if (!pending.length) {
+                clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNCED, data: { appliedCount: 0, conflictsCount: 0, mode } }))
+                return
+            }
+            const resp = await fetch('/api/notes/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ changes: pending })
+            })
+            if (!resp.ok) throw new Error('Notes sync failed')
+            const result = await resp.json().catch(() => ({})) as { applied?: string[]; conflicts?: Array<{ id: string }> }
+            const appliedIds = Array.from(new Set(result.applied || []))
+            const conflictsCount = result.conflicts?.length || 0
+
+            if (appliedIds.length) {
+                try { await deletePendingNoteChanges(appliedIds) } catch { /* best effort */ }
+            }
+
+            if (conflictsCount) {
+                clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNC_CONFLICTS, data: { conflictsCount, mode } }))
+            }
+            clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNCED, data: { appliedCount: appliedIds.length, conflictsCount, mode } }))
+        } catch (err) {
+            const clients = await swSelf.clients.matchAll({ type: 'window' })
+            clients.forEach(c => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNC_ERROR }))
+        } finally {
+            notesSyncInProgress = false
         }
     }
 

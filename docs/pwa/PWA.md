@@ -2,6 +2,8 @@
 
 > **Complete Progressive Web App Guide**
 > Everything you need to know about the PWA system, Service Worker, Caching, Notifications, Updates, and Build Pipeline
+>
+> ℹ️ Historical note: Earlier revisions referenced `shared/idb.ts`, `shared/constants/pwa.ts`, and a separate `useServiceWorkerUpdates` composable. These have been fully consolidated. The authoritative locations are `app/utils/idb.ts`, `app/utils/constants/pwa.ts`, and the unified bridge `useServiceWorkerBridge`. Message contracts now live in `shared/types/sw-messages.ts`. See `docs/pwa/SW_MESSAGE_LIFECYCLE.md` for the canonical message taxonomy and extension guidance.
 
 ---
 
@@ -29,12 +31,12 @@ CleverAI uses a **comprehensive Progressive Web App (PWA) implementation** built
 
 - ✅ **Offline functionality** - Complete app functionality without internet
 - ✅ **Install to home screen** - Native app-like experience with proper manifest
-- ✅ **Background sync** - Form data and file uploads sync when connection returns
+- ✅ **Background sync** - Form data sync when connection returns
 - ✅ **Push notifications** - Real-time user engagement with click handling
 - ✅ **Smart caching** - Multi-layer caching with asset discovery and prewarming
 - ✅ **Auto-updates** - Seamless service worker updates with user control
 - ✅ **IndexedDB integration** - Offline data storage with schema migration
-- ✅ **Chunked file uploads** - Resilient upload system with retry logic
+<!-- Removed: Chunked file uploads (feature not active) -->
 - ✅ **Periodic sync** - Scheduled background content updates
 
 ### Key Commands
@@ -60,16 +62,17 @@ open http://localhost:3000/debug
 
 | File | Purpose | Edit? |
 |------|---------|-------|
-| `sw-src/index.ts` | **Main service worker source (TypeScript)** | ✅ YES |
-| `app/utils/idb.ts` | **Shared IndexedDB helper (non-destructive)** | ✅ YES |
-| `app/composables/useServiceWorkerBridge.ts` | **SW message handling (singleton)** | ✅ YES |
-| `app/composables/useOffline.ts` | **Background sync logic** | ✅ YES |
-| `app/plugins/sw-sync.client.ts` | **Sync registration** | ✅ YES |
-| `app/layouts/default.vue` | **SW updates & navigation** | ✅ YES |
-| `public/sw.js` | **Compiled service worker** | ❌ AUTO-GENERATED |
-| `public/manifest.webmanifest` | **PWA manifest** | ✅ YES |
-| `scripts/inject-sw.cjs` | **Workbox injection pipeline** | ⚠️ RARELY |
-| `app/utils/constants/pwa.ts` | **PWA constants & configuration** | ✅ YES |
+| `sw-src/index.ts` | Main service worker source (TypeScript) | ✅ |
+| `app/utils/idb.ts` | Unified IndexedDB helper (non-destructive, versioned) | ✅ |
+| `app/composables/useServiceWorkerBridge.ts` | SW message + lifecycle singleton | ✅ |
+| `shared/types/sw-messages.ts` | Type-safe incoming/outgoing message contracts | ✅ |
+| `app/composables/useOffline.ts` | Background form & notes queue helpers | ✅ |
+| `app/plugins/sw-sync.client.ts` | Registers sync + bridge | ✅ |
+| `app/layouts/default.vue` | Hosts update banner & bridge wiring | ✅ |
+| `app/utils/constants/pwa.ts` | Centralized PWA + SW config & enums | ✅ |
+| `public/sw.js` | Compiled service worker output | ❌ (generated) |
+| `public/manifest.webmanifest` | PWA manifest | ✅ |
+| `scripts/inject-sw.cjs` | Workbox manifest injection step | ⚠️ Rare |
 
 ---
 
@@ -200,7 +203,7 @@ import { registerRoute } from 'workbox-routing'
 import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies'
 import { ExpirationPlugin } from 'workbox-expiration'
 import { SW_CONFIG, CACHE_NAMES, AUTH_STUBS } from '../app/utils/constants/pwa'
-import { openFormsDB, getAllRecords, deleteRecord } from '../app/utils/idb'
+import { openUnifiedDB, getAllRecords, deleteRecord } from '../app/utils/idb'
 
 // Version and configuration from centralized constants
 const SW_VERSION = SW_CONFIG.VERSION
@@ -223,10 +226,13 @@ const SW_VERSION = SW_CONFIG.VERSION
 - **✅ Cache Strategy Unification**: All cache names use centralized constants
 - **✅ Duplicate Logic Removal**: Removed deprecated upload functionality
 - **✅ Bundle Size Optimization**: Reduced SW size by 1.8kb through cleanup
+- **✅ Resilient IDB Writes**: Added bounded exponential backoff for transient `InvalidStateError` / `TransactionInactiveError` during rapid tab reloads
 
 ---
 
 ## 🔄 Update System
+
+The update & messaging layer is driven by a single enum-like object `SW_MESSAGE_TYPES` (defined in `app/utils/constants/pwa.ts`) and strongly typed via `shared/types/sw-messages.ts`. For a full lifecycle diagram, message direction (SW→Client vs Client→SW), payload schemas, and extension steps refer to `docs/pwa/SW_MESSAGE_LIFECYCLE.md` (authoritative source). Below is a concise operational view.
 
 ### Service Worker Update Flow
 
@@ -348,9 +354,10 @@ const { NAME: DB_NAME } = DB_CONFIG
 1. **SW_CONFIG** - Service worker version, timeouts, intervals
 2. **CACHE_NAMES** - All cache names and strategies
 3. **DB_CONFIG** - IndexedDB configuration
-4. **UPLOAD_CONFIG** - Chunked upload settings
-5. **AUTH_STUBS** - Development authentication stubs
-6. **URL_PATTERNS** - Route matching patterns
+  - Version `4` performs unified creation of required stores (`forms`, `notes`) and adds `folderId` / `updatedAt` indexes for notes.
+  - Prior versions used lazy per-store creation; upgrading ensures atomic schema setup.
+4. **AUTH_STUBS** - Development authentication stubs
+5. **URL_PATTERNS** - Route matching patterns
 
 ### Files Refactored & Consolidated
 
@@ -370,6 +377,28 @@ const { NAME: DB_NAME } = DB_CONFIG
 4. **Configuration Consistency**: All cache names and constants centralized
 5. **Type Safety**: Full TypeScript coverage across SW and client
 6. **Error Prevention**: Eliminated race conditions in IndexedDB operations
+7. **Write Resilience**: Bounded backoff avoids user-visible failures on transient DB state changes
+
+### IndexedDB Retry Policy
+Generic helpers (`putRecord`, `deleteRecord` in `app/utils/idb.ts`) apply a tiny exponential backoff for transient errors using `IDB_RETRY_CONFIG`:
+
+```ts
+export const IDB_RETRY_CONFIG = {
+  MAX_ATTEMPTS: 3,
+  BASE_DELAY_MS: 40,
+  FACTOR: 2,
+  MAX_DELAY_MS: 400,
+  JITTER_PCT: 0.2,
+}
+```
+
+Characteristics:
+- **Scoped**: Only retries `InvalidStateError` / `TransactionInactiveError`.
+- **Bounded**: Worst-case added latency < ~1 second.
+- **Atomic**: Each attempt reopens unified DB if needed.
+- **Tunable**: Adjust constants in `pwa.ts` without code changes.
+
+To tune: increase `MAX_ATTEMPTS` (rare) or `BASE_DELAY_MS` if seeing frequent transient errors under heavy multi-tab use.
 
 ---
 
@@ -472,10 +501,11 @@ NOTIFICATION_EMAIL=your_email@domain.com
 - Check for TypeScript compilation errors
 
 #### **Update Notifications Not Showing**
-- Check `useServiceWorkerUpdates` composable is properly imported
-- Verify component is added to layout
-- Check browser console for JavaScript errors
-- Test in incognito/private mode
+- Confirm `useServiceWorkerBridge` initialized exactly once (singleton)
+- Verify build included SW changes (`yarn build:inject`) and page loaded new `sw.js`
+- Check Application → Service Workers: is there a waiting worker? If yes, calling `requestSkipWaiting()` should trigger activation notification
+- Open DevTools Console for any message type mismatches (refer to `SW_MESSAGE_LIFECYCLE.md`)
+- In stubborn cases: unregister all SWs, hard reload, then trigger an update commit again
 
 ### Debug Tools
 

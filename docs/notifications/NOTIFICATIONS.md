@@ -93,7 +93,7 @@ graph TD
     I --> J[Check Threshold]
     J --> K[Send Notification]
     K --> L[Service Worker Receives]
-    L --> M[shared/idb.ts IndexedDB]
+  L --> M[app/utils/idb.ts (openUnifiedDB) IndexedDB]
     M --> N[Display Notification]
     N --> O[Handle Click Events]
     O --> P[useServiceWorkerBridge Navigation]
@@ -507,7 +507,7 @@ const cleanupSubscriptions = async () => {
 The service worker notification system now uses a consolidated architecture with shared IndexedDB operations:
 
 - **📁 sw-src/index.ts**: Main service worker with push event handling
-- **📁 shared/idb.ts**: Shared IndexedDB helper for consistent data operations
+- **📁 app/utils/idb.ts**: Unified IndexedDB helper (openUnifiedDB)
 - **📁 useServiceWorkerBridge.ts**: Singleton pattern for SW communication
 - **📁 shared/constants/pwa.ts**: Centralized notification constants
 
@@ -515,7 +515,7 @@ The service worker notification system now uses a consolidated architecture with
 
 ```typescript
 // sw-src/index.ts - Consolidated implementation
-import { openFormsDB, getAllRecords } from '../app/utils/idb'
+import { openUnifiedDB, getAllRecords } from '../app/utils/idb'
 import { /* NOTIFICATION_ACTIONS, */ CACHE_NAMES } from '../app/utils/constants/pwa'
 
 self.addEventListener('push', async (event) => {
@@ -523,7 +523,7 @@ self.addEventListener('push', async (event) => {
     const data = event.data?.json() || {}
     
     // Store notification data in IndexedDB using shared helper
-    const db = await openFormsDB()
+  const db = await openUnifiedDB()
     // ... store notification data for offline access
     
     const options = {
@@ -847,15 +847,15 @@ if (!isSwRegistered.value) {
 ```
 
 #### **IndexedDB Shared Helper Issues**
-The shared/idb.ts helper uses non-destructive operations:
+The unified helper (`app/utils/idb.ts`) uses non-destructive operations:
 
 ```typescript
 // Debug IndexedDB operations
-import { openFormsDB, getAllRecords } from '~/shared/idb'
+import { openUnifiedDB, getAllRecords } from '~/app/utils/idb'
 
 const debugIndexedDB = async () => {
   try {
-    const db = await openFormsDB()
+  const db = await openUnifiedDB()
     const records = await getAllRecords('notifications')
     console.log('IndexedDB Records:', records)
   } catch (error) {

@@ -1,38 +1,12 @@
-// Types mirrored from service worker message contract (subset for UI consumption)
-interface BaseMsg {
-  type: string;
-}
-interface ActivatedMsg extends BaseMsg {
-  type: "SW_ACTIVATED";
-  version: string;
-}
-interface UpdateAvailableMsg extends BaseMsg {
-  type: "SW_UPDATE_AVAILABLE";
-  version: string;
-}
-interface ControlClaimedMsg extends BaseMsg {
-  type: "SW_CONTROL_CLAIMED";
-}
-interface FormSyncMsg extends BaseMsg {
-  type: "SYNC_FORM" | "FORM_SYNCED" | "FORM_SYNC_ERROR";
-  data: { message: string };
-}
-interface ErrorMsg extends BaseMsg {
-  type: "error";
-  data: { message: string; identifier?: string };
-}
-interface NotificationClickNavigateMsg extends BaseMsg {
-  type: "NOTIFICATION_CLICK_NAVIGATE";
-  url: string;
-}
+import { SW_MESSAGE_TYPES } from "../utils/constants/pwa";
+import type {
+  OutgoingSWMessage,
+  FormSyncStartedMessage,
+  FormSyncedMessage,
+  FormSyncErrorMessage,
+} from "../../shared/types/sw-messages";
 
-type Incoming =
-  | ActivatedMsg
-  | UpdateAvailableMsg
-  | ControlClaimedMsg
-  | FormSyncMsg
-  | ErrorMsg
-  | NotificationClickNavigateMsg;
+type Incoming = OutgoingSWMessage;
 
 // Singleton reactive state shared across all consumers
 const registration = shallowRef<ServiceWorkerRegistration | null>(null);
@@ -42,7 +16,13 @@ const isControlling = ref(false);
 const lastError = ref<string | null>(null);
 const formSyncStatus = ref<string | null>(null);
 const lastFormSyncEventType = ref<
-  "SYNC_FORM" | "FORM_SYNCED" | "FORM_SYNC_ERROR" | null
+  | typeof SW_MESSAGE_TYPES.FORM_SYNC_STARTED
+  | typeof SW_MESSAGE_TYPES.FORM_SYNCED
+  | typeof SW_MESSAGE_TYPES.FORM_SYNC_ERROR
+  | null
+>(null);
+const lastFormSyncData = ref<
+  FormSyncStartedMessage["data"] | FormSyncedMessage["data"] | FormSyncErrorMessage["data"] | null
 >(null);
 const notificationUrl = ref<string | null>(null);
 
@@ -117,29 +97,30 @@ export function useServiceWorkerBridge() {
     const data: Incoming | undefined = evt.data;
     if (!data || typeof data !== "object") return;
     switch (data.type) {
-      case "SW_ACTIVATED":
-        version.value = (data as ActivatedMsg).version;
+      case SW_MESSAGE_TYPES.SW_ACTIVATED:
+        version.value = (data as Extract<Incoming, { type: typeof SW_MESSAGE_TYPES.SW_ACTIVATED }>).version;
         isControlling.value = true;
         break;
-      case "SW_UPDATE_AVAILABLE":
+      case SW_MESSAGE_TYPES.SW_UPDATE_AVAILABLE:
         updateAvailable.value = true;
         break;
-      case "SW_CONTROL_CLAIMED":
+      case SW_MESSAGE_TYPES.SW_CONTROL_CLAIMED:
         isControlling.value = true;
         break;
-      case "SYNC_FORM":
-      case "FORM_SYNCED":
-      case "FORM_SYNC_ERROR": {
-        const msg = data as FormSyncMsg;
+      case SW_MESSAGE_TYPES.FORM_SYNC_STARTED:
+      case SW_MESSAGE_TYPES.FORM_SYNCED:
+      case SW_MESSAGE_TYPES.FORM_SYNC_ERROR: {
+        const msg = data as FormSyncStartedMessage | FormSyncedMessage | FormSyncErrorMessage;
         lastFormSyncEventType.value = msg.type;
         formSyncStatus.value = msg.data.message;
+        lastFormSyncData.value = msg.data;
         break;
       }
-      case "error":
-        lastError.value = (data as ErrorMsg).data.message;
+      case SW_MESSAGE_TYPES.ERROR:
+        lastError.value = (data as Extract<Incoming, { type: typeof SW_MESSAGE_TYPES.ERROR }>).data.message;
         break;
-      case "NOTIFICATION_CLICK_NAVIGATE":
-        notificationUrl.value = (data as NotificationClickNavigateMsg).url;
+      case SW_MESSAGE_TYPES.NOTIFICATION_CLICK_NAVIGATE:
+        notificationUrl.value = (data as Extract<Incoming, { type: typeof SW_MESSAGE_TYPES.NOTIFICATION_CLICK_NAVIGATE }>).url;
         break;
     }
   }
@@ -188,6 +169,7 @@ export function useServiceWorkerBridge() {
     lastError,
     formSyncStatus,
     lastFormSyncEventType,
+  lastFormSyncData,
     notificationUrl,
     ensureRegistration,
     requestSkipWaiting,

@@ -224,7 +224,7 @@ if (isDev && isClient) {
 4. **Debug SW** - Comprehensive service worker state logging
 5. **Test SW Message** - Tests message passing between page and SW
 
-#### **Enhanced Composable Features**
+#### **Enhanced Composable Features (Unified Bridge)**
 ```typescript
 const {
   // Production functions (always available)
@@ -238,7 +238,7 @@ const {
   forceServiceWorkerControl,
   manualRefresh,
   debugServiceWorker
-} = useServiceWorkerUpdates()
+} = useServiceWorkerBridge()
 ```
 
 ### Spaced Repetition Debug Controls
@@ -349,6 +349,7 @@ const testPushMessage = async () => {
 4. **Submit forms** - should queue for background sync
 5. **Test service worker** - verify offline pages load
 6. **Re-enable network** - verify sync occurs
+7. **Rapid edits stress test** - Perform fast note edits during a page reload to confirm bounded IndexedDB retries handle transient states
 
 #### **Offline Test Scenarios**
 ```typescript
@@ -388,6 +389,7 @@ yarn test:pwa-basic
 - ✅ Cache functionality
 - ✅ Background sync
 - ✅ Offline fallback pages
+- ✅ Resilient IndexedDB writes (transient InvalidStateError retry)
 
 ---
 
@@ -559,6 +561,16 @@ open chrome://inspect/#service-workers
 # Test PWA installation
 # Application tab → Manifest
 ```
+
+##### **IndexedDB Transient Errors**
+If you see `InvalidStateError` or `TransactionInactiveError` in rapid succession during reloads or multi-tab usage, the system will auto-retry with a tiny exponential backoff (configured in `IDB_RETRY_CONFIG`). To observe:
+```javascript
+// Simulate stress: rapid writes
+for (let i = 0; i < 50; i++) {
+  window.saveTestNote?.(`note-${i}`, { id: `note-${i}`, folderId: 'test', content: 'x', updatedAt: Date.now() })
+}
+```
+If persistent (non-transient) errors occur, inspect quota or private browsing restrictions. Consider adding a capability banner (future enhancement) when `indexedDB.open` fails immediately.
 
 ##### **Notification Issues**
 ```javascript

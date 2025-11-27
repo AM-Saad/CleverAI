@@ -46,15 +46,13 @@ const { isLoading: isIndicatorLoading } = useLoadingIndicator({
 // set the progress to 0, and show loading immediately
 // start({ force: true })
 const router = useRouter()
-console.log('🚀 [APP.VUE] Router initialized:', router)
 
 // Notification modal state
 const showNotificationModal = ref(false)
 
-const toaster = { position: 'bottom-center', max:3 }
 
-const ErrorLogger = (): void => {
-    console.error('🚨 [APP.VUE] Error logged, redirecting to error page')
+const ErrorLogger = (error): void => {
+    console.error('🚨 [APP.VUE] Error logged, redirecting to error page', error)
     router.replace({
         name: 'error'
     })

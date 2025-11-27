@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Motion } from "motion-v";
 
-const emit = defineEmits<{ (e: "closed" | "cancel"): void }>();
+const emit = defineEmits<{ (e: "closed"): void }>();
 
 type MobileProp = boolean | "auto";
 const props = withDefaults(
@@ -128,7 +128,7 @@ function onPointerCancelCapture() {
 
 const showOverlay = computed(() => {
   // Show when explicitly open or not snapped to the closed position
-  return props.show || Math.abs(targetPos.value - mode.value.closed) > 1;
+  return  Math.abs(targetPos.value - mode.value.closed) > 1;
 });
 let alive = true;
 onBeforeUnmount(() => {
@@ -244,7 +244,7 @@ function handleDragEnd(_: Event, info: DragInfo) {
         :on-drag-start="handleDragStart"
         :on-drag-end="handleDragEnd"
         :class="[
-          'fixed cursor-grab active:cursor-grabbing overflow-hidden bg-gray-100/30 backdrop-blur-md shadow-lg',
+          'fixed cursor-grab active:cursor-grabbing overflow-hidden bg-gray-100/30 backdrop-blur-md shadow-lg focus-visible:outline-none z-50 focus-visible:border border-primary',
           mode.containerClass,
         ]"
         :style="mode.style"
@@ -255,8 +255,8 @@ function handleDragEnd(_: Event, info: DragInfo) {
         <div
           ref="panelEl"
           tabindex="-1"
-          :class="['relative h-full', mode.isMobile ? 'p-3 pt-6' : 'p-3 pl-10']"
-          @keydown.capture="onKeydown"
+          :class="['relative h-full focus-visible:outline-none', mode.isMobile ? 'p-3 pt-6' : 'p-3 pl-7']"
+          @keydown="onKeydown"
           @pointerdown.capture="onPointerDownCapture"
           @pointerup.capture="onPointerUpCapture"
           @pointercancel.capture="onPointerCancelCapture"
@@ -295,6 +295,19 @@ function handleDragEnd(_: Event, info: DragInfo) {
           <div class="mt-2">
             <slot />
           </div>
+          <u-button
+            variant="subtle"
+            size="sm"
+            class="absolute top-3 right-3"
+            @click="
+              () => {
+                snapTo(mode.closed);
+                emit('closed');
+              }
+            "
+          >
+          <u-icon name="i-lucide-x" class="w-4 h-4" />
+        </u-button>
         </div>
       </Motion>
     </div>

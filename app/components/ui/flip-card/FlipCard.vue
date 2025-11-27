@@ -2,7 +2,7 @@
   <div
     :class="
       cn(
-        'h-44 flex-1 w-full select-none [perspective:1000px] mb-4 md:mb-0',
+        'h-52 flex-1 w-full select-none [perspective:1000px] mb-4 md:mb-0',
         props.class,
       )
     "
@@ -18,7 +18,7 @@
     >
       <!-- Front -->
       <div
-        class="absolute size-full overflow-hidden rounded-2xl border border-muted dark:border-light [backface-visibility:hidden] bg-foreground p-4"
+        class="absolute size-full overflow-hidden rounded-2xl border bg-light border-muted dark:border-light [backface-visibility:hidden] bg-foreground p-4"
       >
         <slot name="front" />
       </div>

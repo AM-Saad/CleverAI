@@ -26,25 +26,30 @@ export default defineNuxtPlugin(() => {
 
   watch(sw.lastFormSyncEventType, (t) => {
     if (!t) return;
-    const msg = sw.formSyncStatus.value || undefined;
-    if (t === "SYNC_FORM") {
-      console.log("[Offline]", "Sync started", msg);
+  const status = sw.formSyncStatus.value || undefined;
+  const data = (sw.lastFormSyncData?.value ?? {}) as { appliedCount?: number };
+    if (t === "FORM_SYNC_STARTED") {
+      console.log("[Offline]", "Form sync started", status, data);
       toast?.add({
         title: "Syncing…",
-        description: msg || "Trying to send your queued form now.",
+        description: status || "Sending queued form now.",
       });
     } else if (t === "FORM_SYNCED") {
-      console.log("[Offline]", "Sync complete", msg);
+      console.log("[Offline]", "Form sync complete", status, data);
+      const count = data.appliedCount;
       toast?.add({
         title: "Sent!",
-        description: msg || "Your queued form was delivered.",
+        description:
+          count != null
+            ? `${count} record${count === 1 ? "" : "s"} delivered.`
+            : status || "Your queued form was delivered.",
         type: "background",
       });
     } else if (t === "FORM_SYNC_ERROR") {
-      console.warn("[Offline]", "Sync failed", msg);
+      console.warn("[Offline]", "Form sync failed", status, data);
       toast?.add({
         title: "Sync failed",
-        description: msg || "We’ll retry when you’re back online.",
+        description: status || "We’ll retry when you’re back online.",
         type: "background",
       });
     }

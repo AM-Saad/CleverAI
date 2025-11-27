@@ -26,10 +26,20 @@ export default defineEventHandler(async (event) => {
     throw Errors.notFound("Folder");
   }
 
+  // Get the current max order value for this folder
+  const maxOrderNote = await prisma.note.findFirst({
+    where: { folderId: data.folderId },
+    orderBy: { order: "desc" },
+    select: { order: true },
+  });
+
+  const nextOrder = maxOrderNote ? maxOrderNote.order + 1 : 0;
+
   const note = await prisma.note.create({
     data: {
       folderId: data.folderId,
       content: data.content,
+      order: nextOrder,
     },
   });
 

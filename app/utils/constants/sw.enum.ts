@@ -1,10 +1,6 @@
-export enum SW_MESSAGE_TYPE {
-  UPLOAD_START = "uploadStart",
-  PROGRESS = "progress",
-  FILE_COMPLETE = "fileComplete",
-  ALL_FILES_COMPLETE = "allComplete",
-  SYNC_FORM = "syncForm",
-  FORM_SYNCED = "formSynced",
-  FORM_SYNC_ERROR = "formSyncError",
-  ERROR = "error",
-}
+/**
+ * @deprecated Use SW_MESSAGE_TYPES from './pwa' instead.
+ * This file remains only to prevent accidental imports from breaking.
+ * It re-exports a constant alias with the legacy name.
+ */
+export { SW_MESSAGE_TYPES as SW_MESSAGE_TYPE } from './pwa'

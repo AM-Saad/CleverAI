@@ -512,7 +512,7 @@ model ScheduledNotification {
 // Storage quota / private mode can cause openIDB to fail
 let db: IDBDatabase | null = null
 try {
-  db = await openFormsDB()
+  db = await openUnifiedDB()
   log('IndexedDB initialized')
 } catch (e) {
   error('Failed to initialize IndexedDB:', e)
@@ -574,7 +574,7 @@ async function ensureDB(): Promise<IDBDatabase | null> {
   
   try {
     dbInitAttempts++;
-    db = await openFormsDB();
+    db = await openUnifiedDB();
     log('IndexedDB initialized successfully');
     dbInitAttempts = 0; // Reset on success
     return db;

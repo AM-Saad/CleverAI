@@ -12,22 +12,23 @@ generator client {
 // =========================
 
 model User {
-    id                        String                     @id @default(auto()) @map("_id") @db.ObjectId
+    id                        String                       @id @default(auto()) @map("_id") @db.ObjectId
     name                      String
-    email                     String?                    @unique
+    email                     String?                      @unique
     password                  String
-    phone                     String?                     @unique
+    phone                     String?                      @unique
     gender                    String?
     role                      UserRole
-    createdAt                 DateTime                   @default(now())
-    updatedAt                 DateTime                   @updatedAt
+    createdAt                 DateTime                     @default(now())
+    updatedAt                 DateTime                     @updatedAt
     notifications             Notification[]
     payments                  Payment[]
-    folders                   Folder[]                   @relation("UserFolders")
+    folders                   Folder[]                     @relation("UserFolders")
     subscription              UserSubscription?
     notificationSubscriptions NotificationSubscription[]
     scheduledNotifications    ScheduledNotification[]
     notificationPreferences   UserNotificationPreferences?
+    llmGatewayLogs            LlmGatewayLog[]
 
     // --- Authentication fields ---
     credentials           Json?
@@ -40,8 +41,8 @@ model User {
     // --- End authentication fields ---
 
     // --- Soft delete fields ---
-    deletedAt             DateTime?
-    scheduledDeletionAt   DateTime? // Permanent deletion scheduled for 30 days after soft delete
+    deletedAt           DateTime?
+    scheduledDeletionAt DateTime? // Permanent deletion scheduled for 30 days after soft delete
     // --- End soft delete fields ---
 }
 
@@ -50,28 +51,29 @@ enum UserRole {
 }
 
 model Folder {
-    id          String      @id @default(auto()) @map("_id") @db.ObjectId
-    title       String
-    description String?
-    metadata    Json?
-    order       Int
-    rawText     String?
-    questions   Question[]
-    flashcards  Flashcard[]
-    materials   Material[]
-    notes       Note[]
-    user        User        @relation("UserFolders", fields: [userId], references: [id])
-    userId      String      @db.ObjectId
-    createdAt   DateTime    @default(now())
-    updatedAt   DateTime    @updatedAt
-    llmModel    String      @default("gpt-3.5")
+    id             String          @id @default(auto()) @map("_id") @db.ObjectId
+    title          String
+    description    String?
+    metadata       Json?
+    order          Int
+    rawText        String?
+    questions      Question[]
+    flashcards     Flashcard[]
+    materials      Material[]
+    notes          Note[]
+    user           User            @relation("UserFolders", fields: [userId], references: [id], onDelete: Cascade)
+    userId         String          @db.ObjectId
+    createdAt      DateTime        @default(now())
+    updatedAt      DateTime        @updatedAt
+    llmModel       String          @default("gpt-3.5")
+    llmGatewayLogs LlmGatewayLog[]
 
     @@unique([userId, order])
 }
 
 model Material {
     id        String   @id @default(auto()) @map("_id") @db.ObjectId
-    folder    Folder   @relation(fields: [folderId], references: [id])
+    folder    Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
     folderId  String   @db.ObjectId
     title     String
     content   String
@@ -85,9 +87,10 @@ model Material {
 
 model Note {
     id        String   @id @default(auto()) @map("_id") @db.ObjectId
-    folder    Folder   @relation(fields: [folderId], references: [id])
+    folder    Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
     folderId  String   @db.ObjectId
     content   String
+    order     Int      @default(0)
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 }
@@ -123,7 +126,7 @@ model Note {
 
 model Question {
     id          String       @id @default(auto()) @map("_id") @db.ObjectId
-    folder      Folder       @relation(fields: [folderId], references: [id])
+    folder      Folder       @relation(fields: [folderId], references: [id], onDelete: Cascade)
     folderId    String       @db.ObjectId
     type        QuestionType @default(MULTIPLE_CHOICE)
     question    String
@@ -135,7 +138,7 @@ model Question {
 
 model Flashcard {
     id        String   @id @default(auto()) @map("_id") @db.ObjectId
-    folder    Folder   @relation(fields: [folderId], references: [id])
+    folder    Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
     folderId  String   @db.ObjectId
     front     String
     back      String
@@ -146,24 +149,26 @@ model Flashcard {
 enum QuestionType {
     MULTIPLE_CHOICE
     // Extendable for other types
-}model CardReview {
-    id             String       @id @default(auto()) @map("_id") @db.ObjectId
+}
+
+model CardReview {
+    id             String    @id @default(auto()) @map("_id") @db.ObjectId
     userId         String // null if anonymous; better when auth lands
     folderId       String
     cardId         String // polymorphic: references Flashcard.id or Material.id
-    resourceType   String       @default("flashcard") // will store "material" or "flashcard"
+    resourceType   String    @default("flashcard") // will store "material" or "flashcard"
     // Legacy fields for backward compatibility
-    flashcardId    String?      @db.ObjectId
-    materialId     String?      @db.ObjectId
+    flashcardId    String?   @db.ObjectId
+    materialId     String?   @db.ObjectId
     // SM-2 lite state:
-    intervalDays   Int          @default(0) // I (days)
-    easeFactor     Float        @default(2.5) // EF
-    repetitions    Int          @default(0) // n
+    intervalDays   Int       @default(0) // I (days)
+    easeFactor     Float     @default(2.5) // EF
+    repetitions    Int       @default(0) // n
     nextReviewAt   DateTime // scheduled review date
     lastReviewedAt DateTime?
     // analytics
     lastGrade      Int? // 0..5
-    streak         Int          @default(0)
+    streak         Int       @default(0)
 
     @@unique([userId, cardId], name: "userId_cardId")
     @@index([userId, nextReviewAt])
@@ -178,7 +183,7 @@ model GradeRequest {
     cardId      String
     grade       Int
     processedAt DateTime @default(now())
-    
+
     @@index([userId, cardId])
     @@index([processedAt])
 }
@@ -234,7 +239,7 @@ model LlmUsage {
 
 model Notification {
     id      String   @id @default(auto()) @map("_id") @db.ObjectId
-    user    User     @relation(fields: [userId], references: [id])
+    user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     userId  String   @db.ObjectId
     type    String
     content String
@@ -243,7 +248,7 @@ model Notification {
 
 model Payment {
     id        String   @id @default(auto()) @map("_id") @db.ObjectId
-    user      User     @relation(fields: [userId], references: [id])
+    user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     userId    String   @db.ObjectId
     amount    Float
     provider  String
@@ -277,7 +282,7 @@ enum SubscriptionTier {
 
 model UserSubscription {
     id                   String           @id @default(auto()) @map("_id") @db.ObjectId
-    user                 User             @relation(fields: [userId], references: [id])
+    user                 User             @relation(fields: [userId], references: [id], onDelete: Cascade)
     userId               String           @unique @db.ObjectId
     tier                 SubscriptionTier @default(FREE)
     periodStart          DateTime         @default(now())
@@ -301,7 +306,7 @@ model NotificationSubscription {
     endpoint     String
     keys         SubscriptionKeys
     userId       String?          @db.ObjectId
-    user         User?            @relation(fields: [userId], references: [id])
+    user         User?            @relation(fields: [userId], references: [id], onDelete: Cascade)
     createdAt    DateTime         @default(now())
     expiresAt    DateTime?
     isActive     Boolean          @default(true)
@@ -318,20 +323,20 @@ model NotificationSubscription {
 }
 
 model ScheduledNotification {
-    id          String   @id @default(auto()) @map("_id") @db.ObjectId
-    userId      String   @db.ObjectId
-    type        String   // 'CARD_DUE', 'STUDY_REMINDER', 'DAILY_REVIEW'
-    cardId      String?  // For card-specific notifications
+    id           String    @id @default(auto()) @map("_id") @db.ObjectId
+    userId       String    @db.ObjectId
+    type         String // 'CARD_DUE', 'STUDY_REMINDER', 'DAILY_REVIEW'
+    cardId       String? // For card-specific notifications
     scheduledFor DateTime
-    sent        Boolean  @default(false)
-    sentAt      DateTime?
-    metadata    Json?    // Store card count, folder info, etc.
-    failureCount Int     @default(0)
-    lastError   String?
-    createdAt   DateTime @default(now())
-    updatedAt   DateTime @updatedAt
+    sent         Boolean   @default(false)
+    sentAt       DateTime?
+    metadata     Json? // Store card count, folder info, etc.
+    failureCount Int       @default(0)
+    lastError    String?
+    createdAt    DateTime  @default(now())
+    updatedAt    DateTime  @updatedAt
 
-    user User @relation(fields: [userId], references: [id])
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
     @@index([scheduledFor, sent])
     @@index([userId, type])
@@ -341,23 +346,23 @@ model ScheduledNotification {
 }
 
 model UserNotificationPreferences {
-    id                String   @id @default(auto()) @map("_id") @db.ObjectId
-    userId            String   @unique @db.ObjectId
+    id     String @id @default(auto()) @map("_id") @db.ObjectId
+    userId String @unique @db.ObjectId
 
     // Card due notifications
-    cardDueEnabled    Boolean  @default(true)
-    cardDueTime       String   @default("09:00") // "HH:mm" format
-    cardDueThreshold  Int      @default(5) // Notify when >= 5 cards due
+    cardDueEnabled   Boolean @default(true)
+    cardDueTime      String  @default("09:00") // "HH:mm" format
+    cardDueThreshold Int     @default(5) // Notify when >= 5 cards due
 
     // Daily study reminders
     dailyReminderEnabled Boolean @default(false)
     dailyReminderTime    String  @default("19:00")
 
     // General settings
-    timezone          String   @default("UTC")
-    quietHoursEnabled Boolean  @default(false)
-    quietHoursStart   String   @default("22:00")
-    quietHoursEnd     String   @default("08:00")
+    timezone          String  @default("UTC")
+    quietHoursEnabled Boolean @default(false)
+    quietHoursStart   String  @default("22:00")
+    quietHoursEnd     String  @default("08:00")
 
     // Advanced timing
     sendAnytimeOutsideQuietHours Boolean @default(false)
@@ -366,11 +371,70 @@ model UserNotificationPreferences {
     activeHoursEnd               String  @default("21:00")
 
     // Snooze functionality
-    snoozedUntil      DateTime?
+    snoozedUntil DateTime?
 
-    createdAt         DateTime @default(now())
-    updatedAt         DateTime @updatedAt
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
-    user User @relation(fields: [userId], references: [id])
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
     @@map("userNotificationPreferences")
+}
+
+// =========================
+// LLM GATEWAY MODELS
+// =========================
+
+model LlmModelRegistry {
+    id              String   @id @default(auto()) @map("_id") @db.ObjectId
+    modelId         String   @unique // "openai-gpt4o-mini"
+    provider        String   // "openai", "google", "deepseek"
+    modelName       String   // "gpt-4o-mini"
+    inputCostPer1M  Float    // USD per 1M input tokens
+    outputCostPer1M Float    // USD per 1M output tokens
+    capabilities    String[] // ["text", "multimodal"]
+    maxTokens       Int?     // context window
+    latencyBudgetMs Int      @default(500)
+    avgLatencyMs    Int?     // rolling average
+    healthStatus    String   @default("healthy") // "healthy"|"degraded"|"down"
+    lastHealthCheck DateTime @default(now())
+    priority        Int      @default(5) // 1=highest, 10=lowest
+    enabled         Boolean  @default(true)
+    createdAt       DateTime @default(now())
+    updatedAt       DateTime @updatedAt
+
+    @@index([provider, enabled])
+    @@index([priority, healthStatus])
+    @@map("llm_model_registry")
+}
+
+model LlmGatewayLog {
+    id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+    userId              String   @db.ObjectId
+    user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    folderId            String?  @db.ObjectId
+    folder              Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+    requestId           String   @unique // UUID for tracing
+    selectedModelId     String   // from LlmModelRegistry
+    provider            String
+    task                String   // "flashcards", "quiz", "chat"
+    inputTokens         Int
+    outputTokens        Int
+    totalTokens         Int
+    inputCostUsdMicros  BigInt
+    outputCostUsdMicros BigInt
+    totalCostUsdMicros  BigInt
+    latencyMs           Int
+    cached              Boolean  @default(false)
+    cacheHit            Boolean  @default(false)
+    status              String   // "success"|"error"|"quota_exceeded"|"rate_limited"
+    errorCode           String?
+    errorMessage        String?
+    routingScore        Float?   // Score used for model selection
+    createdAt           DateTime @default(now())
+
+    @@index([userId, createdAt])
+    @@index([selectedModelId, status])
+    @@index([task, status])
+    @@map("llm_gateway_logs")
 }

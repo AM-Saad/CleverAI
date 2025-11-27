@@ -1,421 +1,311 @@
 <template>
-  <div
-    class="max-w-4xl mx-auto p-6 space-y-6"
-    tabindex="0"
-    role="application"
-    aria-label="Spaced repetition card review interface"
-    @keydown="handleKeydown"
-  >
+  <div class="p-6 space-y-6" tabindex="0" role="application" aria-label="Spaced repetition card review interface"
+    @keydown="handleKeydown">
     <!-- Analytics Summary Card -->
-    <ReviewAnalyticsSummary
-      v-if="showAnalytics && analytics"
-      :analytics="analytics"
-      @close="showAnalytics = false"
-    />
+    <ReviewAnalyticsSummary v-if="showAnalytics && analytics" :analytics="analytics" @close="showAnalytics = false" />
 
     <!-- Debug Panel (Development Only) -->
-    <div
-      v-if="isDev && showDebugPanel && currentCard"
-      class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-6 mb-6"
-    >
-      <div class="flex justify-between items-start mb-4">
-        <h2
-          class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 flex items-center"
-        >
-          <Icon name="heroicons:cog-6-tooth" class="w-5 h-5 mr-2" />
-          🔧 Debug Controls
-        </h2>
-        <button
-          @click="showDebugPanel = false"
-          class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-200"
-        >
-          <Icon name="heroicons:x-mark" class="w-5 h-5" />
-        </button>
-      </div>
+    <DevOnly>
+      <ui-card v-if="isDev && showDebugPanel && currentCard">
 
-      <!-- Current Values Display -->
-      <div class="bg-white dark:bg-gray-800 rounded-md p-4 mb-4">
-        <h3 class="font-medium text-gray-900 dark:text-gray-100 mb-3">
-          Current Values
-        </h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-          <div>
-            <span class="text-gray-500 dark:text-gray-400">Ease Factor:</span>
-            <div class="font-mono font-semibold">
-              {{ currentCard.reviewState.easeFactor }}
+        <template #header>
+
+          <div class="flex justify-between items-start">
+            <h2 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200 flex items-center">
+              <Icon name="heroicons:cog-6-tooth" class="w-5 h-5 mr-2" />
+              Debug Controls
+            </h2>
+          </div>
+          <button @click="showDebugPanel = false"
+            class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-200">
+            <Icon name="heroicons:x-mark" class="w-5 h-5" />
+          </button>
+        </template>
+
+
+        <!-- Current Values Display -->
+        <ui-card variant="default" class="mb-4">
+          <template #header>
+            Current Values
+          </template>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div>
+              <ui-label>Ease Factor:</ui-label>
+              <div class="font-mono font-semibold text-dark dark:text-light">
+                {{ currentCard.reviewState.easeFactor }}
+              </div>
+            </div>
+            <div>
+              <ui-label>Interval Days:</ui-label>
+              <div class="font-mono font-semibold text-dark dark:text-light">
+                {{ currentCard.reviewState.intervalDays }}
+              </div>
+            </div>
+            <div>
+              <ui-label>Repetitions:</ui-label>
+              <div class="font-mono font-semibold text-dark dark:text-light">
+                {{ currentCard.reviewState.repetitions }}
+              </div>
+            </div>
+            <div>
+              <ui-label>Streak:</ui-label>
+              <div class="font-mono font-semibold text-dark dark:text-light">
+                {{ getStreak(currentCard.reviewState) }}
+              </div>
             </div>
           </div>
-          <div>
-            <span class="text-gray-500 dark:text-gray-400">Interval Days:</span>
-            <div class="font-mono font-semibold">
-              {{ currentCard.reviewState.intervalDays }}
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 text-sm">
+            <div>
+              <ui-label>Next Review:</ui-label>
+              <div class="font-mono text-xs text-dark dark:text-light">
+                {{ formatDateTime(currentCard.reviewState.nextReviewAt) }}
+              </div>
+            </div>
+            <div>
+              <ui-label>Last Reviewed:</ui-label>
+              <div class="font-mono text-xs text-dark dark:text-light">
+                {{
+                  currentCard.reviewState.lastReviewedAt
+                    ? formatDateTime(currentCard.reviewState.lastReviewedAt)
+                    : "Never"
+                }}
+              </div>
             </div>
           </div>
+        </ui-card>
+
+        <!-- Debug Controls -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-4">
+          <!-- Ease Factor -->
           <div>
-            <span class="text-gray-500 dark:text-gray-400">Repetitions:</span>
-            <div class="font-mono font-semibold">
-              {{ currentCard.reviewState.repetitions }}
+            <ui-label>
+              Ease Factor
+            </ui-label>
+            <u-input class="w-full" v-model.number="debugValues.easeFactor" type="range" min="1.3" max="5.0" step="0.1" />
+            <div class="flex justify-between text-xs text-gray-500 mt-1">
+              <span>1.3</span>
+              <span class="font-mono font-semibold">{{
+                debugValues.easeFactor
+                }}</span>
+              <span>5.0</span>
             </div>
           </div>
+
+          <!-- Interval Days -->
           <div>
-            <span class="text-gray-500 dark:text-gray-400">Streak:</span>
-            <div class="font-mono font-semibold">
-              {{ getStreak(currentCard.reviewState) }}
+            <ui-label>
+              Interval Days
+            </ui-label>
+            <u-input class="w-full" v-model.number="debugValues.intervalDays" type="range" min="0" max="180" step="1" />
+            <div class="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0</span>
+              <span class="font-mono font-semibold">{{
+                debugValues.intervalDays
+                }}</span>
+              <span>180</span>
+            </div>
+          </div>
+
+          <!-- Repetitions -->
+          <div>
+            <ui-label>
+              Repetitions
+            </ui-label>
+            <u-input class="w-full" v-model.number="debugValues.repetitions" type="range" min="0" max="20" step="1" />
+            <div class="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0</span>
+              <span class="font-mono font-semibold">{{
+                debugValues.repetitions
+                }}</span>
+              <span>20</span>
+            </div>
+          </div>
+
+          <!-- Streak -->
+          <div>
+            <ui-label>
+              Streak
+            </ui-label>
+            <u-input class="w-full" v-model.number="debugValues.streak" type="range" min="0" max="100" step="1" />
+            <div class="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0</span>
+              <span class="font-mono font-semibold">{{
+                debugValues.streak
+                }}</span>
+              <span>100</span>
             </div>
           </div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 text-sm">
+
+        <!-- Date Controls -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <span class="text-gray-500 dark:text-gray-400">Next Review:</span>
-            <div class="font-mono text-xs">
-              {{ formatDateTime(currentCard.reviewState.nextReviewAt) }}
-            </div>
+            <ui-label>
+              Next Review Date
+            </ui-label>
+            <u-input v-model="debugValues.nextReviewAt" type="datetime-local" />
           </div>
           <div>
-            <span class="text-gray-500 dark:text-gray-400">Last Reviewed:</span>
-            <div class="font-mono text-xs">
-              {{
-                currentCard.reviewState.lastReviewedAt
-                  ? formatDateTime(currentCard.reviewState.lastReviewedAt)
-                  : "Never"
-              }}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Debug Controls -->
-      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-        <!-- Ease Factor -->
-        <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Ease Factor
-          </label>
-          <input
-            v-model.number="debugValues.easeFactor"
-            type="range"
-            min="1.3"
-            max="5.0"
-            step="0.1"
-            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-          />
-          <div class="flex justify-between text-xs text-gray-500 mt-1">
-            <span>1.3</span>
-            <span class="font-mono font-semibold">{{
-              debugValues.easeFactor
-            }}</span>
-            <span>5.0</span>
+            <ui-label>
+              Last Grade (0-5)
+            </ui-label>
+            <select v-model.number="debugValues.lastGrade"
+              class="w-full px-3 py-0.5 border border-gray-300 rounded-md dark:border-gray-600 dark:bg-gray-700 dark:text-white">
+              <option :value="undefined">No grade</option>
+              <option :value="0">0 - Again</option>
+              <option :value="1">1 - Hard</option>
+              <option :value="2">2 - Hard</option>
+              <option :value="3">3 - Good</option>
+              <option :value="4">4 - Good</option>
+              <option :value="5">5 - Easy</option>
+            </select>
           </div>
         </div>
 
-        <!-- Interval Days -->
-        <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Interval Days
-          </label>
-          <input
-            v-model.number="debugValues.intervalDays"
-            type="range"
-            min="0"
-            max="180"
-            step="1"
-            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-          />
-          <div class="flex justify-between text-xs text-gray-500 mt-1">
-            <span>0</span>
-            <span class="font-mono font-semibold">{{
-              debugValues.intervalDays
-            }}</span>
-            <span>180</span>
-          </div>
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap gap-2">
+          <u-button @click="applyDebugValues" :disabled="isApplyingDebug" color="info" size="sm">
+            <Icon v-if="isApplyingDebug" name="heroicons:arrow-path" class="w-4 h-4 mr-2 animate-spin" />
+            {{ isApplyingDebug ? "Applying..." : "Apply Changes" }}
+          </u-button>
+
+          <u-button @click="resetToCurrentValues" color="neutral" size="sm">
+            Reset to Current
+          </u-button>
+
+          <u-button @click="loadPreset('new')" color="success" size="sm">
+            📝 New Card
+          </u-button>
+
+          <u-button @click="loadPreset('learning')" color="warning" size="sm">
+            📚 Learning
+          </u-button>
+
+          <u-button @click="loadPreset('mastered')" color="primary" size="sm">
+            🎓 Mastered
+          </u-button>
+
+          <u-button @click="loadPreset('struggling')" color="error" size="sm">
+            😓 Struggling
+          </u-button>
         </div>
+      </ui-card>
 
-        <!-- Repetitions -->
-        <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Repetitions
-          </label>
-          <input
-            v-model.number="debugValues.repetitions"
-            type="range"
-            min="0"
-            max="20"
-            step="1"
-            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-          />
-          <div class="flex justify-between text-xs text-gray-500 mt-1">
-            <span>0</span>
-            <span class="font-mono font-semibold">{{
-              debugValues.repetitions
-            }}</span>
-            <span>20</span>
-          </div>
-        </div>
 
-        <!-- Streak -->
-        <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Streak
-          </label>
-          <input
-            v-model.number="debugValues.streak"
-            type="range"
-            min="0"
-            max="100"
-            step="1"
-            class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
-          />
-          <div class="flex justify-between text-xs text-gray-500 mt-1">
-            <span>0</span>
-            <span class="font-mono font-semibold">{{
-              debugValues.streak
-            }}</span>
-            <span>100</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Date Controls -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-        <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Next Review Date
-          </label>
-          <input
-            v-model="debugValues.nextReviewAt"
-            type="datetime-local"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-          />
-        </div>
-        <div>
-          <label
-            class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            Last Grade (0-5)
-          </label>
-          <select
-            v-model.number="debugValues.lastGrade"
-            class="w-full px-3 py-2 border border-gray-300 rounded-md dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-          >
-            <option :value="undefined">No grade</option>
-            <option :value="0">0 - Again</option>
-            <option :value="1">1 - Hard</option>
-            <option :value="2">2 - Hard</option>
-            <option :value="3">3 - Good</option>
-            <option :value="4">4 - Good</option>
-            <option :value="5">5 - Easy</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Action Buttons -->
-      <div class="flex flex-wrap gap-2">
-        <button
-          @click="applyDebugValues"
-          :disabled="isApplyingDebug"
-          class="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md font-medium transition-colors"
-        >
-          <Icon
-            v-if="isApplyingDebug"
-            name="heroicons:arrow-path"
-            class="w-4 h-4 mr-2 animate-spin"
-          />
-          {{ isApplyingDebug ? "Applying..." : "Apply Changes" }}
-        </button>
-
-        <button
-          @click="resetToCurrentValues"
-          class="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-md font-medium transition-colors"
-        >
-          Reset to Current
-        </button>
-
-        <button
-          @click="loadPreset('new')"
-          class="px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md text-sm transition-colors"
-        >
-          📝 New Card
-        </button>
-
-        <button
-          @click="loadPreset('learning')"
-          class="px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-md text-sm transition-colors"
-        >
-          📚 Learning
-        </button>
-
-        <button
-          @click="loadPreset('mastered')"
-          class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md text-sm transition-colors"
-        >
-          🎓 Mastered
-        </button>
-
-        <button
-          @click="loadPreset('struggling')"
-          class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm transition-colors"
-        >
-          😓 Struggling
-        </button>
-      </div>
-    </div>
-
+    </DevOnly>
     <!-- Header with stats and progress -->
-    <div class="flex justify-between items-center">
-      <div class="flex items-center space-x-4">
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+    <div class="flex justify-between items-center flex-wrap gap-2">
+      <div class="flex items-center gap-2">
+        <ui-subtitle size="xl">
           Card Review
-        </h1>
-        <div class="text-sm text-gray-600 dark:text-gray-400">
+        </ui-subtitle>
+        <ui-label>
           {{ currentCardIndex + 1 }} of {{ reviewQueue.length }}
-        </div>
+        </ui-label>
         <!-- Study Session Timer -->
-        <div
-          class="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400"
-        >
+        <ui-label class="flex items-center space-x-1">
           <Icon name="heroicons:clock" class="w-4 h-4" />
           <span>{{ formatStudyTime(studySessionTime) }}</span>
-        </div>
+        </ui-label>
       </div>
 
-      <div class="flex items-center space-x-4">
+      <div class="flex items-center space-x-4 flex-wrap">
         <!-- Debug Toggle (Development Only) -->
-        <button
-          v-if="isDev"
-          @click="showDebugPanel = !showDebugPanel"
-          class="p-2 text-yellow-500 hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-200 rounded-lg transition-colors"
-          :aria-label="showDebugPanel ? 'Hide debug panel' : 'Show debug panel'"
-          title="Debug Controls"
-        >
-          <Icon name="heroicons:cog-6-tooth" class="w-5 h-5" />
-        </button>
+        <DevOnly>
+          <u-button v-if="isDev" @click="showDebugPanel = !showDebugPanel" color="neutral" variant="subtle"
+            :aria-label="showDebugPanel ? 'Hide debug panel' : 'Show debug panel'" title="Debug Controls">
+            <Icon name="heroicons:cog-6-tooth" class="w-5 h-5" />
+          </u-button>
+        </DevOnly>
 
         <!-- Analytics Toggle -->
-        <button
-          @click="showAnalytics = !showAnalytics"
-          class="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-lg transition-colors"
-          :aria-label="showAnalytics ? 'Hide analytics' : 'Show analytics'"
-        >
+        <u-button @click="showAnalytics = !showAnalytics" color="neutral" variant="subtle"
+          :aria-label="showAnalytics ? 'Hide analytics' : 'Show analytics'">
           <Icon name="heroicons:chart-bar" class="w-5 h-5" />
-        </button>
+        </u-button>
 
         <!-- Stats -->
         <div class="flex space-x-4 text-sm">
           <div class="text-center" aria-label="New cards">
             <div class="font-semibold text-blue-600">{{ queueStats.new }}</div>
-            <div class="text-gray-500">New</div>
+            <div class="text-muted">New</div>
           </div>
           <div class="text-center" aria-label="Learning cards">
             <div class="font-semibold text-orange-600">
               {{ queueStats.learning }}
             </div>
-            <div class="text-gray-500">Learning</div>
+            <div class="text-muted">Learning</div>
           </div>
           <div class="text-center" aria-label="Due cards">
             <div class="font-semibold text-red-600">{{ queueStats.due }}</div>
-            <div class="text-gray-500">Due</div>
+            <div class="text-muted">Due</div>
           </div>
         </div>
 
         <!-- Progress bar -->
-        <div
-          class="w-32 bg-gray-200 rounded-full h-2 dark:bg-gray-700"
-          role="progressbar"
-          :aria-valuenow="progress"
-          aria-valuemin="0"
-          aria-valuemax="100"
-          :aria-label="`Review progress: ${progress}% complete`"
-        >
-          <div
-            class="bg-blue-600 h-2 rounded-full transition-all duration-300"
-            :style="{ width: `${progress}%` }"
-          />
+        <div class="w-32 bg-gray-200 rounded-full h-2 dark:bg-gray-700" role="progressbar" :aria-valuenow="progress"
+          aria-valuemin="0" aria-valuemax="100" :aria-label="`Review progress: ${progress}% complete`">
+          <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" :style="{ width: `${progress}%` }" />
         </div>
       </div>
     </div>
 
     <!-- Keyboard Shortcuts Help -->
-    <div
-      v-if="showShortcuts"
-      class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4"
-    >
+    <ui-card v-if="showShortcuts">
+      <template #header>
+        <div class="flex items-center gap-2">
+          <Icon name="lucide-keyboard" class="w-5 h-5 text-yellow-600" />
+          <h2 class="text-lg font-semibold text-yellow-800 dark:text-yellow-200">
+            Keyboard Shortcuts
+          </h2>
+        </div>
+        <button @click="showShortcuts = false"
+          class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-200">
+          <Icon name="heroicons:x-mark" class="w-5 h-5" />
+        </button>
+      </template>
       <div class="flex justify-between items-start">
         <div>
-          <h3 class="font-medium text-yellow-800 dark:text-yellow-200 mb-2">
-            Keyboard Shortcuts
-          </h3>
-          <div
-            class="grid grid-cols-2 gap-4 text-sm text-yellow-700 dark:text-yellow-300"
-          >
+
+          <div class="grid grid-cols-2 gap-4 text-sm text-yellow-700 dark:text-yellow-300">
             <div>
-              <kbd class="px-2 py-1 bg-yellow-200 dark:bg-yellow-800 rounded"
-                >Space</kbd
-              >
+              <kbd class="px-2 py-1 bg-yellow-200 dark:bg-yellow-800 rounded">Space</kbd>
               Show Answer
             </div>
             <div>
-              <kbd class="px-2 py-1 bg-yellow-200 dark:bg-yellow-800 rounded"
-                >1-6</kbd
-              >
+              <kbd class="px-2 py-1 bg-yellow-200 dark:bg-yellow-800 rounded">1-6</kbd>
               Grade Card
             </div>
             <div>
-              <kbd class="px-2 py-1 bg-yellow-200 dark:bg-yellow-800 rounded"
-                >←/→</kbd
-              >
+              <kbd class="px-2 py-1 bg-yellow-200 dark:bg-yellow-800 rounded">←/→</kbd>
               Navigate
             </div>
             <div>
-              <kbd class="px-2 py-1 bg-yellow-200 dark:bg-yellow-800 rounded"
-                >S</kbd
-              >
+              <kbd class="px-2 py-1 bg-yellow-200 dark:bg-yellow-800 rounded">S</kbd>
               Skip
             </div>
             <div>
-              <kbd class="px-2 py-1 bg-yellow-200 dark:bg-yellow-800 rounded"
-                >?</kbd
-              >
+              <kbd class="px-2 py-1 bg-yellow-200 dark:bg-yellow-800 rounded">?</kbd>
               Toggle Help
             </div>
             <div>
-              <kbd class="px-2 py-1 bg-yellow-200 dark:bg-yellow-800 rounded"
-                >A</kbd
-              >
+              <kbd class="px-2 py-1 bg-yellow-200 dark:bg-yellow-800 rounded">A</kbd>
               Analytics
             </div>
           </div>
         </div>
-        <button
-          @click="showShortcuts = false"
-          class="text-yellow-600 hover:text-yellow-800 dark:text-yellow-400 dark:hover:text-yellow-200"
-        >
-          <Icon name="heroicons:x-mark" class="w-5 h-5" />
-        </button>
+
       </div>
-    </div>
+    </ui-card>
 
     <!-- Card Display -->
-    <div
-      v-if="currentCard"
+    <div v-if="currentCard"
       class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden transition-all duration-300"
-      :class="{ 'animate-pulse': isSubmitting }"
-    >
+      :class="{ 'animate-pulse': isSubmitting }">
       <!-- Resource Type Badge -->
       <div class="px-6 pt-4">
-        <span
-          class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
-          :class="resourceTypeBadgeClass"
-        >
+        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium"
+          :class="resourceTypeBadgeClass">
           <Icon :name="resourceTypeIcon" class="w-3 h-3 mr-1" />
           {{
             currentCard.resourceType === "flashcard" ? "Flashcard" : "Material"
@@ -430,11 +320,8 @@
           <h2 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">
             Question
           </h2>
-          <div
-            class="text-xl font-medium text-gray-900 dark:text-gray-100 leading-relaxed"
-            role="heading"
-            aria-level="3"
-          >
+          <div class="text-xl font-medium text-gray-900 dark:text-gray-100 leading-relaxed" role="heading"
+            aria-level="3">
             {{ resourceFront }}
           </div>
         </div>
@@ -444,27 +331,15 @@
           <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">
             Answer
           </h3>
-          <div
-            class="text-gray-800 dark:text-gray-200 leading-relaxed prose prose-sm max-w-none"
-            role="region"
-            aria-label="Card answer"
-          >
-            <div
-              class="whitespace-pre-wrap"
-              v-text="formatContent(resourceBack)"
-            />
+          <div class="text-gray-800 dark:text-gray-200 leading-relaxed prose prose-sm max-w-none" role="region"
+            aria-label="Card answer">
+            <div class="whitespace-pre-wrap" v-text="formatContent(resourceBack)" />
           </div>
 
           <!-- Hint if available -->
-          <div
-            v-if="resourceHint"
-            class="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg"
-            role="complementary"
-            aria-label="Hint"
-          >
-            <div
-              class="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1"
-            >
+          <div v-if="resourceHint" class="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg" role="complementary"
+            aria-label="Hint">
+            <div class="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1">
               <Icon name="heroicons:light-bulb" class="w-4 h-4 inline mr-1" />
               Hint:
             </div>
@@ -474,9 +349,7 @@
           </div>
 
           <!-- Review State Info -->
-          <div
-            class="mt-6 grid grid-cols-3 gap-4 text-center text-sm text-gray-500 dark:text-gray-400"
-          >
+          <div class="mt-6 grid grid-cols-3 gap-4 text-center text-sm text-gray-500 dark:text-gray-400">
             <div>
               <div class="font-medium">
                 {{ currentCard.reviewState.repetitions }}
@@ -502,12 +375,9 @@
       <!-- Action Buttons -->
       <div class="border-t bg-gray-50 dark:bg-gray-700 p-6">
         <div v-if="!showAnswer" class="flex justify-center">
-          <button
-            @click="revealAnswer"
+          <button @click="revealAnswer"
             class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-all duration-200 transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            :disabled="isSubmitting"
-            aria-label="Reveal the answer to this card"
-          >
+            :disabled="isSubmitting" aria-label="Reveal the answer to this card">
             <Icon name="heroicons:eye" class="w-5 h-5 inline mr-2" />
             Show Answer <span class="text-sm opacity-75">(Space)</span>
           </button>
@@ -520,23 +390,14 @@
           </div>
 
           <!-- Grade Buttons -->
-          <div
-            class="grid grid-cols-2 md:grid-cols-6 gap-2"
-            role="group"
-            aria-label="Grade card options"
-          >
-            <button
-              v-for="(gradeOption, index) in gradeOptions"
-              :key="index"
-              @click="gradeCard(gradeOption.value)"
+          <div class="grid grid-cols-2 md:grid-cols-6 gap-2" role="group" aria-label="Grade card options">
+            <button v-for="(gradeOption, index) in gradeOptions" :key="index" @click="gradeCard(gradeOption.value)"
               :disabled="isSubmitting"
               class="relative p-3 text-center border rounded-lg transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2"
               :class="[
                 gradeOption.colorClass,
                 { 'animate-pulse': isSubmitting },
-              ]"
-              :aria-label="`Grade ${gradeOption.value}: ${gradeOption.label} - ${gradeOption.description}`"
-            >
+              ]" :aria-label="`Grade ${gradeOption.value}: ${gradeOption.label} - ${gradeOption.description}`">
               <div class="font-semibold">{{ gradeOption.label }}</div>
               <div class="text-xs mt-1">{{ gradeOption.description }}</div>
               <div class="absolute top-1 right-1 text-xs opacity-50">
@@ -547,32 +408,23 @@
 
           <!-- Navigation Buttons -->
           <div class="flex justify-between pt-4">
-            <button
-              @click="previousCard"
-              :disabled="isFirstCard || isSubmitting"
+            <button @click="previousCard" :disabled="isFirstCard || isSubmitting"
               class="px-4 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-              aria-label="Go to previous card"
-            >
+              aria-label="Go to previous card">
               <Icon name="heroicons:arrow-left" class="w-4 h-4 inline mr-1" />
               Previous
             </button>
 
-            <button
-              @click="skipCard"
-              :disabled="isSubmitting"
+            <button @click="skipCard" :disabled="isSubmitting"
               class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
-              aria-label="Skip this card without grading"
-            >
+              aria-label="Skip this card without grading">
               <Icon name="heroicons:forward" class="w-4 h-4 inline mr-1" />
               Skip <span class="text-sm opacity-75">(S)</span>
             </button>
 
-            <button
-              @click="nextCard"
-              :disabled="isLastCard || isSubmitting"
+            <button @click="nextCard" :disabled="isLastCard || isSubmitting"
               class="px-4 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-              aria-label="Go to next card"
-            >
+              aria-label="Go to next card">
               Next
               <Icon name="heroicons:arrow-right" class="w-4 h-4 inline ml-1" />
             </button>
@@ -594,17 +446,13 @@
         </span>
       </p>
       <div class="flex justify-center space-x-4">
-        <button
-          @click="$emit('refresh')"
-          class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        >
+        <button @click="$emit('refresh')"
+          class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
           <Icon name="heroicons:arrow-path" class="w-5 h-5 inline mr-2" />
           Check Again
         </button>
-        <button
-          @click="showAnalytics = true"
-          class="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-        >
+        <button @click="showAnalytics = true"
+          class="px-6 py-3 bg-gray-600 hover:bg-gray-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
           <Icon name="heroicons:chart-bar" class="w-5 h-5 inline mr-2" />
           View Analytics
         </button>
@@ -622,16 +470,11 @@
     <!-- Error State -->
     <div v-if="error" class="text-center py-12">
       <div class="text-red-600 mb-4">
-        <Icon
-          name="heroicons:exclamation-triangle"
-          class="w-8 h-8 mx-auto mb-2"
-        />
+        <Icon name="heroicons:exclamation-triangle" class="w-8 h-8 mx-auto mb-2" />
         {{ error }}
       </div>
-      <button
-        @click="clearError"
-        class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-      >
+      <button @click="clearError"
+        class="px-6 py-3 bg-red-600 hover:bg-red-700 text-white font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
         Clear Error
       </button>
     </div>

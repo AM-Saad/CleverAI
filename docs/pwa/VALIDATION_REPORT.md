@@ -50,7 +50,7 @@
 **Actual implementation:**
 ```typescript
 // sw-src/index.ts - EXISTS ✅
-import { openFormsDB, getAllRecords, deleteRecord } from '../app/utils/idb'
+import { openUnifiedDB, getAllRecords, deleteRecord } from '../app/utils/idb'
 import { SW_MESSAGE_TYPES, SW_CONFIG, DB_CONFIG, CACHE_NAMES } from '../app/utils/constants/pwa'
 
 // app/composables/useServiceWorkerBridge.ts - EXISTS ✅
@@ -60,7 +60,8 @@ export function useServiceWorkerBridge() {
 
 // app/utils/idb.ts - EXISTS ✅
 export function openIDB(options: IDBHelperOptions): Promise<IDBDatabase>
-export function openFormsDB(): Promise<IDBDatabase>
+// (Removed) deprecated wrapper: openFormsDB(): Promise<IDBDatabase> — use openUnifiedDB()
+// Recommended: use openUnifiedDB(): Promise<IDBDatabase>
 ```
 
 **Status:** Perfect architectural match, just wrong paths documented
@@ -108,7 +109,7 @@ export function openFormsDB(): Promise<IDBDatabase>
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching' ✅
 import { registerRoute } from 'workbox-routing' ✅
 import { CacheFirst, StaleWhileRevalidate } from 'workbox-strategies' ✅
-import { openFormsDB, getAllRecords, deleteRecord } from '../app/utils/idb' ✅
+import { openUnifiedDB, getAllRecords, deleteRecord } from '../app/utils/idb' ✅
 import { SW_MESSAGE_TYPES, SW_CONFIG, CACHE_NAMES } from '../app/utils/constants/pwa' ✅
 
 const SW_VERSION = SW_CONFIG.VERSION // "v2.0.0-enhanced" ✅
@@ -123,7 +124,7 @@ const SW_VERSION = SW_CONFIG.VERSION // "v2.0.0-enhanced" ✅
 **What the docs claim:**
 - `useServiceWorkerBridge` - Main SW communication
 - `useOffline` - Background sync logic
-- ~~`useServiceWorkerUpdates`~~ - **REMOVED** (consolidated into bridge)
+- ~~`useServiceWorkerUpdates`~~ - **REMOVED** (consolidated into bridge; see `useServiceWorkerBridge` & lifecycle doc `docs/pwa/SW_MESSAGE_LIFECYCLE.md`)
 
 **Actual implementation:**
 ```typescript
@@ -227,8 +228,8 @@ Debug pages:
 ## ⚠️ Issues Found
 
 ### 1. **Incorrect File Paths (High Priority)**
-- **Issue**: Documentation references `shared/idb.ts` and `shared/constants/pwa.ts`
-- **Reality**: Files are in `app/utils/idb.ts` and `app/utils/constants/pwa.ts`
+- **Issue**: Documentation previously referenced `shared/idb.ts` and `shared/constants/pwa.ts`
+- **Reality**: Files now live in `app/utils/idb.ts` and `app/utils/constants/pwa.ts` (consolidated; historical references retained only where annotated)
 - **Impact**: Developers will look in wrong directory
 - **Fix Required**: Global find/replace in PWA.md
 
@@ -274,8 +275,9 @@ The PWA implementation is **solid and matches documented features**, but has pat
 **Required Corrections:**
 
 ### High Priority
-- [ ] Fix all references to `shared/idb.ts` → `app/utils/idb.ts`
-- [ ] Fix all references to `shared/constants/pwa.ts` → `app/utils/constants/pwa.ts`
+- [x] Fix references to `shared/idb.ts` → `app/utils/idb.ts` (PWA.md updated)
+- [x] Fix references to `shared/constants/pwa.ts` → `app/utils/constants/pwa.ts` (PWA.md updated)
+- [x] Clarify consolidation + lifecycle doc link
 - [ ] Clarify `useServiceWorkerUpdates` consolidation into `useServiceWorkerBridge`
 
 ### Medium Priority

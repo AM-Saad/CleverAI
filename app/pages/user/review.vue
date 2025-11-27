@@ -1,44 +1,28 @@
 <template>
-  <div class="container mx-auto px-4 py-8">
-    <div class="max-w-4xl mx-auto">
-      <!-- Header -->
-      <div class="flex justify-between items-center mb-8">
-        <div>
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">
-            Spaced Repetition Review
-          </h1>
-          <p class="text-gray-600 dark:text-gray-400 mt-2">
-            Review your cards using the spaced repetition algorithm
-          </p>
-        </div>
+  <shared-page-wrapper title="Spaced Repetition Review"
+    subtitle="Review your cards using the spaced repetition algorithm">
+    <template #actions>
+      <div class="flex items-center space-x-4">
+        <u-button @click="refreshQueue">
+          Refresh Queue
+        </u-button>
 
-        <div class="flex space-x-4">
-          <button
-            class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-            @click="refreshQueue"
-          >
-            Refresh Queue
-          </button>
-
-          <NuxtLink
-            to="/folders"
-            class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg transition-colors"
-          >
-            Back to Folders
-          </NuxtLink>
-        </div>
+        <NuxtLink to="/folders">
+          Back to Folders
+        </NuxtLink>
       </div>
+    </template>
 
-      <!-- Enhanced Review Interface -->
-      <ReviewCardReviewInterface
-        @refresh="refreshQueue"
-        @complete="handleReviewComplete"
-      />
-    </div>
-  </div>
+
+    <!-- Enhanced Review Interface -->
+    <ReviewCardReviewInterface @refresh="refreshQueue" @complete="handleReviewComplete" />
+  </shared-page-wrapper>
 </template>
 
 <script setup lang="ts">
+const ReviewCardReviewInterface = defineAsyncComponent(
+  () => import("~/components/review/CardReviewInterface.refactored.vue"),
+);
 // SEO
 useHead({
   title: "Review Cards - CleverAI",

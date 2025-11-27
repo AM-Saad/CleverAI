@@ -1,0 +1,265 @@
+<template>
+  <div
+    class="max-w-4xl mx-auto p-6 space-y-6"
+    tabindex="0"
+    role="application"
+    aria-label="Spaced repetition card review interface"
+    @keydown="handleKeydown"
+  >
+    <!-- Analytics Summary -->
+    <ReviewAnalytics
+      :show="showAnalytics"
+      :folder-id="folderId"
+      @close="showAnalytics = false"
+    />
+
+    <!-- Keyboard Shortcuts Help -->
+    <review-keyboard-shortcuts :show="showShortcuts" @close="showShortcuts = false" />
+
+    <!-- Debug Panel (Dev Only) -->
+    <dev-only>
+      <div v-if="showDebugPanel" class="bg-yellow-50 dark:bg-yellow-900 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-semibold text-yellow-900 dark:text-yellow-100">Debug Panel</h3>
+          <button @click="showDebugPanel = false" class="text-yellow-600 hover:text-yellow-800">
+            ✕
+          </button>
+        </div>
+        <div class="space-y-2 text-sm text-yellow-800 dark:text-yellow-200">
+          <div><strong>Queue Length:</strong> {{ reviewQueue.length }}</div>
+          <div><strong>Current Index:</strong> {{ currentCardIndex }}</div>
+          <div><strong>Is Loading:</strong> {{ isLoading }}</div>
+          <div><strong>Has Error:</strong> {{ error ? 'Yes' : 'No' }}</div>
+          <template v-if="currentCard">
+            <div class="border-t border-yellow-300 dark:border-yellow-700 pt-2 mt-2">
+              <div><strong>Card ID:</strong> {{ currentCard.cardId }}</div>
+              <div><strong>Resource Type:</strong> {{ currentCard.resourceType }}</div>
+              <div><strong>Review State:</strong></div>
+              <ul class="ml-4 space-y-1">
+                <li>Repetitions: {{ currentCard.reviewState.repetitions }}</li>
+                <li>Ease Factor: {{ currentCard.reviewState.easeFactor }}</li>
+                <li>Interval: {{ currentCard.reviewState.intervalDays }} days</li>
+                <li>Next Review: {{ new Date(currentCard.reviewState.nextReviewAt).toLocaleString() }}</li>
+              </ul>
+            </div>
+          </template>
+          <div v-else class="text-yellow-600 dark:text-yellow-300 italic">
+            No current card (queue is empty)
+          </div>
+        </div>
+      </div>
+    </dev-only>
+
+    <!-- Header with Progress -->
+    <div class="flex justify-between items-center">
+      <review-header
+        :current-index="currentCardIndex"
+        :total-cards="reviewQueue.length"
+        :progress="progress"
+      />
+      
+      <review-stats
+        :queue-stats="queueStats"
+        @toggle-analytics="showAnalytics = !showAnalytics"
+        @toggle-debug="() => { console.log('Debug toggle clicked, current:', showDebugPanel); showDebugPanel = !showDebugPanel; console.log('Debug after toggle:', showDebugPanel); }"
+      />
+    </div>
+
+    <!-- Card Display -->
+    <review-card-display
+      v-if="currentCard"
+      :card="currentCard as any"
+      :show-answer="showAnswer"
+    />
+
+    <!-- Action Buttons -->
+    <div
+      v-if="currentCard"
+      class="border-t bg-gray-50 dark:bg-gray-700 p-6 rounded-lg"
+    >
+      <!-- Show Answer Button -->
+      <review-answer-reveal-button
+        v-if="!showAnswer"
+        :is-submitting="isSubmitting"
+        @reveal="revealAnswer"
+      />
+
+      <!-- Grade & Navigation -->
+      <div v-else class="space-y-4">
+        <review-grade-buttons :is-submitting="isSubmitting" @grade="gradeCard" />
+        <review-navigation-controls
+          :is-first-card="isFirstCard"
+          :is-last-card="isLastCard"
+          :is-submitting="isSubmitting"
+          @previous="previousCard"
+          @next="nextCard"
+          @skip="skipCard"
+        />
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <review-states-empty-state
+      v-else-if="!isLoading"
+      :study-session-reviews="reviewCount"
+      @refresh="$emit('refresh')"
+      @show-analytics="showAnalytics = true"
+    />
+
+    <!-- Loading State -->
+    <review-states-loading-state v-if="isLoading" />
+
+    <!-- Error State -->
+    <review-states-error-state v-if="error" :error="error" @clear-error="clearError" />
+  </div>
+</template>
+
+<script setup lang="ts">
+import type { ReviewGrade } from '~/shared/utils/review.contract'
+
+interface Props {
+  folderId?: string
+}
+
+const props = defineProps<Props>()
+
+const emit = defineEmits<{
+  refresh: []
+  cardGraded: [cardId: string, grade: ReviewGrade]
+}>()
+
+// Core review composable
+const {
+  reviewQueue,
+  currentCard,
+  currentCardIndex,
+  queueStats,
+  isLoading,
+  isSubmitting,
+  error,
+  isFirstCard,
+  isLastCard,
+  progress,
+  grade,
+  fetchQueue,
+  nextCard: goToNextCardInQueue,
+  previousCard: goToPreviousCardInQueue,
+  clearError,
+} = useCardReview()
+
+// Debug logging
+watch([currentCardIndex, reviewQueue], ([index, queue]) => {
+  console.log('Current card index:', index, 'Queue length:', queue.length)
+})
+
+// Session timer composable
+const { reviewCount, incrementReviews, reset: resetSession } = useSessionTimer()
+
+// Local UI state
+const showAnswer = ref(false)
+const showAnalytics = ref(false)
+const showShortcuts = ref(false)
+const showDebugPanel = ref(false)
+
+// Keyboard shortcuts composable
+const { handleKeydown: handleKey } = useKeyboardShortcuts({
+  onRevealAnswer: () => {
+    if (!showAnswer.value && currentCard.value) {
+      revealAnswer()
+    }
+  },
+  onGrade: (gradeValue: string) => {
+    if (showAnswer.value && currentCard.value) {
+      gradeCard(gradeValue as ReviewGrade)
+    }
+  },
+  onNavigatePrevious: () => previousCard(),
+  onNavigateNext: () => nextCard(),
+  onSkip: () => skipCard(),
+  onToggleShortcuts: () => {
+    showShortcuts.value = !showShortcuts.value
+  },
+  onToggleAnalytics: () => {
+    showAnalytics.value = !showAnalytics.value
+  },
+  onCloseAll: () => {
+    showShortcuts.value = false
+    showAnalytics.value = false
+    showDebugPanel.value = false
+  },
+})
+
+// Methods
+const revealAnswer = () => {
+  showAnswer.value = true
+}
+
+const gradeCard = async (gradeValue: ReviewGrade) => {
+  if (!currentCard.value) return
+
+  try {
+    await grade(currentCard.value.cardId, gradeValue)
+    emit('cardGraded', currentCard.value.cardId, gradeValue)
+
+    // Track session stats
+    incrementReviews()
+
+    // Reset for next card
+    showAnswer.value = false
+
+    // If no more cards, emit refresh
+    if (reviewQueue.value.length === 0) {
+      emit('refresh')
+    }
+  } catch (err) {
+    console.error('Failed to grade card:', err)
+  }
+}
+
+const nextCard = () => {
+  console.log('Next card clicked, current index:', currentCardIndex.value)
+  showAnswer.value = false
+  goToNextCardInQueue()
+  console.log('After next, index:', currentCardIndex.value)
+}
+
+const previousCard = () => {
+  console.log('Previous card clicked, current index:', currentCardIndex.value)
+  showAnswer.value = false
+  goToPreviousCardInQueue()
+  console.log('After previous, index:', currentCardIndex.value)
+}
+
+const skipCard = () => {
+  console.log('Skip card clicked')
+  showAnswer.value = false
+  nextCard()
+}
+
+const handleKeydown = (event: KeyboardEvent) => {
+  handleKey(event)
+}
+
+// Watch for prop changes
+watch(
+  () => props.folderId,
+  () => {
+    fetchQueue(props.folderId)
+    resetSession()
+  },
+  { immediate: true }
+)
+
+// Reset answer visibility when card changes
+watch(currentCard, () => {
+  showAnswer.value = false
+})
+
+// Focus management for accessibility
+onMounted(() => {
+  nextTick(() => {
+    const container = document.querySelector('[role="application"]') as HTMLElement
+    container?.focus()
+  })
+})
+</script>
