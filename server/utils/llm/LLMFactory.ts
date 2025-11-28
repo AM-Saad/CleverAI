@@ -3,6 +3,7 @@
 // import { ClaudeStrategy } from './ClaudeStrategy'
 // import { MixtralStrategy } from './MixtralStrategy'
 
+import { Errors } from '../error'
 import type { LLMModel } from "#shared/utils/llm";
 import type { LlmModelRegistry } from '@prisma/client'
 import { prisma } from '../prisma'
@@ -37,7 +38,7 @@ export const getLLMStrategy = (
     default: {
       // Exhaustive check for future model additions
       const _exhaustive: never = model as never;
-      throw new Error(`Unsupported model: ${_exhaustive}`);
+      throw Errors.badRequest(`Unsupported model: ${_exhaustive}`);
     }
   }
 };
@@ -61,15 +62,15 @@ export async function getLLMStrategyFromRegistry(
   })
   
   if (!model) {
-    throw new Error(`Model not found in registry: ${modelId}`)
+    throw Errors.notFound(`Model ${modelId}`)
   }
   
   if (!model.enabled) {
-    throw new Error(`Model is disabled: ${modelId}`)
+    throw Errors.badRequest(`Model is disabled: ${modelId}`)
   }
   
   if (model.healthStatus === 'down') {
-    throw new Error(`Model is marked as down: ${modelId}`)
+    throw Errors.server(`Model is currently down: ${modelId}`)
   }
   
   // Map provider to strategy class
@@ -116,6 +117,6 @@ export async function getLLMStrategyFromRegistry(
     //   });
       
     default:
-      throw new Error(`Unsupported provider: ${provider} for model ${modelId}`)
+      throw Errors.badRequest(`Unsupported provider: ${provider} for model ${modelId}`)
   }
 }

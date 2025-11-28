@@ -21,7 +21,7 @@
 
 <script setup lang="ts">
 const ReviewCardReviewInterface = defineAsyncComponent(
-  () => import("~/components/review/CardReviewInterface.refactored.vue"),
+  () => import("~/components/review/CardReviewInterface.vue"),
 );
 // SEO
 useHead({

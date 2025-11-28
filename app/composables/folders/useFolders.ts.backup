@@ -307,3 +307,50 @@ export function useGenerateQuiz(
     isQuotaExceeded,
   };
 }
+            title: "Heads up",
+            description:
+              "You’re about to hit the rate limit. Try again in a minute.",
+          });
+        } catch {
+          // Ignore toast errors
+        }
+      }
+      const data = resp._data ?? resp;
+      const parsed = LLMGenerateResponse.parse(data);
+      if (parsed.task === "quiz") {
+        try {
+          if (typeof parsed.savedCount === "number") {
+            toast.add({
+              title: "Saved",
+              description: `Saved ${parsed.savedCount} questions to this folder.`,
+            });
+          }
+        } catch {
+          // Ignore toast errors
+        }
+        questions.value = parsed.quiz;
+      } else {
+        genError.value = new APIError(
+          "Server returned a flashcards payload when quiz was requested.",
+        );
+      }
+    } catch (err) {
+      genError.value = new APIError(
+        err instanceof Error ? err.message : "Generation failed.",
+      );
+      questions.value = [];
+    } finally {
+      generating.value = false;
+    }
+  }
+
+  return {
+    questions,
+    generating,
+    genError,
+    generate,
+    rateLimitRemaining,
+    rateLimitRemainingUser,
+    rateLimitRemainingIP,
+  };
+}

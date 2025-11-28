@@ -1,4 +1,5 @@
 // server/utils/llm/routing.ts
+import { Errors } from '../error'
 import type { LlmModelRegistry } from '@prisma/client'
 import { prisma } from '../prisma'
 

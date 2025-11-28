@@ -1,6 +1,7 @@
 // server/utils/llm/GPT35Strategy.ts
 import { OpenAI } from "openai";
 import { encoding_for_model } from "tiktoken";
+import { Errors } from '../error';
 
 // Small helper to avoid hard crashes on imperfect LLM JSON
 function safeParseJSON<T>(text: string, fallback: T): T {

@@ -1,5 +1,6 @@
 // server/utils/llm/GeminiStrategy.ts
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Errors } from '../error';
 
 // Small helper to avoid crashes on imperfect JSON
 function safeParseJSON<T>(text: string, fallback: T): T {
@@ -166,10 +167,7 @@ export class GeminiStrategy implements LLMStrategy {
       return typeof txt === "string" ? txt.trim() : firstText(resp.response);
     } catch (e: any) {
       console.error("Gemini error", e.status, e.message);
-      throw createError({
-        statusCode: 502,
-        statusMessage: `Gemini error: ${e.status} ${e.message}`,
-      });
+      throw Errors.server(`Gemini error: ${e.status} ${e.message}`);
     }
   }
 

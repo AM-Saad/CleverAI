@@ -1,6 +1,7 @@
 // server/api/notifications/send.post.ts
 import { z } from "zod";
 import webPush from "web-push";
+import { Errors, success } from "@server/utils/error";
 
 const NotificationSchema = z.object({
   title: z.string().min(1).max(100),

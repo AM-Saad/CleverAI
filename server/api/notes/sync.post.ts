@@ -1,5 +1,6 @@
 import { ZodError } from 'zod'
 import { requireRole } from '@server/middleware/auth'
+import { Errors, success } from '@server/utils/error'
 import { NotesSyncRequestSchema, NotesSyncResponseSchema } from '@@/shared/utils/note-sync.contract'
 
 export default defineEventHandler(async (event) => {

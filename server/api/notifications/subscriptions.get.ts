@@ -1,3 +1,5 @@
+import { Errors, success } from "@server/utils/error";
+
 export default defineEventHandler(async (_event) => {
   const subscriptions = await prisma.notificationSubscription.findMany({
     select: {

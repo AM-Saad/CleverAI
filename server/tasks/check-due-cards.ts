@@ -30,34 +30,41 @@ export async function checkDueCards() {
     };
 
     // Get all users with notification preferences enabled
-    const usersWithPref = await prisma.userNotificationPreferences.findMany({
+    // Use a different approach: fetch users first, then their preferences
+    const users = await prisma.user.findMany({
       where: {
-        cardDueEnabled: true,
+        notificationPreferences: {
+          cardDueEnabled: true,
+        },
       },
       include: {
-        user: {
-          include: {
-            notificationSubscriptions: {
-              where: {
-                isActive: true,
-                failureCount: { lt: 5 }, // Skip users with too many failures
-              },
-            },
+        notificationPreferences: true,
+        notificationSubscriptions: {
+          where: {
+            isActive: true,
+            failureCount: { lt: 5 }, // Skip users with too many failures
           },
         },
       },
     });
-
-    // Filter out orphaned preferences (where user is null)
-    const validUsersWithPref = usersWithPref.filter(
-      (pref) => pref.user !== null
-    );
+    console.log(`🔍 Found ${users.length} users with card due notifications enabled`);
+    
+    // Map to the same structure as before for compatibility
+    const usersWithPref = users
+      .filter(user => user.notificationPreferences !== null)
+      .map(user => ({
+        ...user.notificationPreferences!,
+        user: {
+          ...user,
+          notificationPreferences: undefined, // Remove circular reference
+        },
+      }));
 
     console.log(
-      `🔔 Found ${validUsersWithPref.length} users with card due notifications enabled (${usersWithPref.length - validUsersWithPref.length} orphaned records skipped)`
+      `🔔 Found ${usersWithPref.length} users with card due notifications enabled`
     );
 
-    for (const userPref of validUsersWithPref) {
+    for (const userPref of usersWithPref) {
       try {
         results.processed++;
 

@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { requireRole } from "@server/middleware/auth";
+import { Errors, success } from "@server/utils/error";
+import { ReviewQueueResponseSchema } from "@shared/utils/review.contract";
 
 // Query validation
 const querySchema = z.object({
@@ -59,6 +61,7 @@ export default defineEventHandler(async (event) => {
     throw Errors.server("Failed to load review queue");
   }
 
+  console.log(`[review/queue] Fetched ${cardReviews.length} due cards for user ${user.id}${folderId ? ` in folder ${folderId}` : ''}`);
   const cardIds = cardReviews.map((c) => c.cardId);
   const folderIds = [...new Set(cardReviews.map((c) => c.folderId))];
 

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { safeGetServerSession } from "@server/utils/safeGetServerSession";
 import { requireRole } from "~~/server/middleware/auth";
+import { Errors, success } from "@server/utils/error";
 
 const PreferencesSchema = z.object({
   cardDueEnabled: z.boolean(),

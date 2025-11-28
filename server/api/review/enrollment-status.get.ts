@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { requireRole } from "@server/middleware/auth";
+import { Errors, success } from "@server/utils/error";
 
 const EnrollmentStatusRequestSchema = z.object({
   resourceIds: z.array(z.string()),

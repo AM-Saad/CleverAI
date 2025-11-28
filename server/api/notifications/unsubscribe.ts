@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { safeGetServerSession } from "@server/utils/safeGetServerSession";
+import { Errors, success } from "@server/utils/error";
 
 const UnsubscribeSchema = z.object({
   endpoint: z.string().url(),

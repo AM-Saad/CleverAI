@@ -1,6 +1,7 @@
 // server/api/llm.gateway.post.ts
 import { defineEventHandler, readBody } from "h3";
 import { requireRole } from "@server/middleware/auth";
+import { Errors, success } from "@server/utils/error";
 import { GatewayGenerateRequest } from "~/shared/utils/llm-generate.contract";
 import { selectBestModel } from "@server/utils/llm/routing";
 import { getLLMStrategyFromRegistry } from "@server/utils/llm/LLMFactory";
@@ -281,43 +282,50 @@ export default defineEventHandler(async (event) => {
 
   // ==========================================
   // Save to Database (if requested)
+  // Use transaction for atomicity - prevents partial saves
   // ==========================================
   let savedCount: number | undefined;
   if (canSave && folderId) {
     try {
       if (task === "flashcards") {
-        if (replace) {
-          await prisma.flashcard.deleteMany({ where: { folderId } });
-        }
-        if (result.length) {
-          const res = await prisma.flashcard.createMany({
-            data: (result as Flashcard[]).map((fc) => ({
-              folderId,
-              front: fc.front,
-              back: fc.back,
-            })),
-          });
-          savedCount = res.count;
-        } else {
-          savedCount = 0;
-        }
+        // Use transaction to ensure atomic delete + create
+        await prisma.$transaction(async (tx) => {
+          if (replace) {
+            await tx.flashcard.deleteMany({ where: { folderId } });
+          }
+          if (result.length) {
+            const res = await tx.flashcard.createMany({
+              data: (result as Flashcard[]).map((fc) => ({
+                folderId,
+                front: fc.front,
+                back: fc.back,
+              })),
+            });
+            savedCount = res.count;
+          } else {
+            savedCount = 0;
+          }
+        });
       } else {
-        if (replace) {
-          await prisma.question.deleteMany({ where: { folderId } });
-        }
-        if (result.length) {
-          const res = await prisma.question.createMany({
-            data: (result as QuizQuestion[]).map((q) => ({
-              folderId,
-              question: q.question,
-              choices: q.choices,
-              answerIndex: q.answerIndex,
-            })),
-          });
-          savedCount = res.count;
-        } else {
-          savedCount = 0;
-        }
+        // Use transaction to ensure atomic delete + create
+        await prisma.$transaction(async (tx) => {
+          if (replace) {
+            await tx.question.deleteMany({ where: { folderId } });
+          }
+          if (result.length) {
+            const res = await tx.question.createMany({
+              data: (result as QuizQuestion[]).map((q) => ({
+                folderId,
+                question: q.question,
+                choices: q.choices,
+                answerIndex: q.answerIndex,
+              })),
+            });
+            savedCount = res.count;
+          } else {
+            savedCount = 0;
+          }
+        });
       }
     } catch (err) {
       console.error('[llm.gateway] Failed to save to database:', {
