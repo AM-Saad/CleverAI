@@ -61,23 +61,6 @@ export default defineEventHandler(async (event) => {
     throw Errors.server("Failed to load review queue");
   }
 
-  console.log(
-    `[review/queue] Fetched ${cardReviews.length} due cards for user ${user.id}${folderId ? ` in folder ${folderId}` : ""}`
-  );
-
-  // Debug: log card IDs and their resource types
-  if (cardReviews.length > 0) {
-    console.log(
-      `[review/queue] CardReview records:`,
-      cardReviews.map((cr) => ({
-        id: cr.id,
-        cardId: cr.cardId,
-        resourceType: cr.resourceType,
-        nextReviewAt: cr.nextReviewAt,
-      }))
-    );
-  }
-
   const cardIds = cardReviews.map((c) => c.cardId);
   const folderIds = [...new Set(cardReviews.map((c) => c.folderId))];
 
@@ -107,12 +90,7 @@ export default defineEventHandler(async (event) => {
   const questionMap = new Map(questions.map((q) => [q.id, q]));
   const folderMap = new Map(folders.map((f) => [f.id, f]));
 
-  // Debug: log how many resources were found
-  console.log(
-    `[review/queue] Found ${materials.length} materials, ${flashcards.length} flashcards, ${questions.length} questions for ${cardIds.length} cardIds`
-  );
-
-  // Debug: check for orphaned cards
+  // Check for orphaned cards
   const orphanedCards = cardReviews.filter((cr) => {
     const type = cr.resourceType.toLowerCase();
     if (type === "material") return !materialMap.has(cr.cardId);

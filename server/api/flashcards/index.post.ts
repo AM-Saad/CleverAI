@@ -5,22 +5,15 @@
  * Body: { folderId: string, front: string, back: string }
  */
 
-import { z } from "zod";
+import { CreateFlashcardDTO } from "@@/shared/utils/flashcard.contract";
 import { requireRole } from "~~/server/middleware/auth";
-
-const CreateFlashcardSchema = z.object({
-  folderId: z.string().min(1, "Folder ID is required"),
-  front: z.string().min(1, "Front content is required").max(2000),
-  back: z.string().min(1, "Back content is required").max(5000),
-  materialId: z.string().optional(), // Optional: link to a material
-});
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
   const prisma = event.context.prisma;
 
   const body = await readBody(event);
-  const parsed = CreateFlashcardSchema.safeParse(body);
+  const parsed = CreateFlashcardDTO.safeParse(body);
 
   if (!parsed.success) {
     throw Errors.badRequest("Invalid request data", parsed.error.issues);

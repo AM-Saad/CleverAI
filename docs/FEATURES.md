@@ -184,6 +184,109 @@ function calculateNext(prev: ReviewState, grade: 0|1|2|3|4|5): ReviewState {
 }
 ```
 
+### Ease Factor (EF) - Deep Dive
+
+#### What is Ease Factor?
+
+**Ease Factor** is a multiplier (typically 1.3 to 3.0+) that represents **how easy a card is for you personally**. It's used to calculate how long to wait before showing the card again:
+
+```
+Next Interval = Previous Interval × Ease Factor
+```
+
+#### The SM-2 Ease Factor Formula
+
+The formula adjusts EF based on your grade:
+
+```
+EF' = EF + (0.1 - (5 - grade) × (0.08 + (5 - grade) × 0.02))
+```
+
+**Calculated changes for each grade:**
+
+| Grade | Change to EF | Meaning |
+|-------|--------------|---------|
+| 0 | **-0.80** | Complete blackout |
+| 1 | **-0.54** | Incorrect, remembered after seeing answer |
+| 2 | **-0.32** | Incorrect, difficult to recall |
+| 3 | **-0.14** | Correct, with difficulty |
+| 4 | **±0.00** | Correct, some hesitation |
+| 5 | **+0.10** | Perfect response |
+
+#### Why Asymmetric Penalties?
+
+Notice penalties are **much harsher** than rewards:
+- Worst case (grade 0): **-0.80**
+- Best case (grade 5): **+0.10**
+
+**Rationale**: Forgetting is more costly than remembering. If you forget once, you likely need more practice. The algorithm is "pessimistic" - it's better to review too often than too little.
+
+#### Floor Protection (Minimum EF = 1.3)
+
+EF can never go below 1.3, preventing "death spiral" where a card becomes impossibly frequent:
+
+```typescript
+if (easeFactor < 1.3) {
+  easeFactor = 1.3;
+}
+```
+
+A card with EF = 1.3 needs **many perfect reviews** to recover:
+- 1.3 → 1.4 → 1.5 → 1.6 → ... (only +0.1 per perfect grade 5)
+
+This ensures you really know the material before intervals get long again.
+
+#### How EF Affects Review Intervals
+
+**Example: Two Cards with Different EFs**
+
+**Card A** (Easy, EF = 2.8):
+```
+Review 3: interval = 6 × 2.8 = 17 days
+Review 4: interval = 17 × 2.8 = 48 days
+Review 5: interval = 48 × 2.8 = 134 days
+```
+
+**Card B** (Hard, EF = 1.4):
+```
+Review 3: interval = 6 × 1.4 = 8 days
+Review 4: interval = 8 × 1.4 = 11 days
+Review 5: interval = 11 × 1.4 = 15 days
+```
+
+**Visual Comparison:**
+```
+Days from enrollment:
+
+Card A (EF=2.8): |1|---6---|--------17--------|----------------48----------------|
+Card B (EF=1.4): |1|---6---|--8--|---11---|----15----|---21---|----29----|
+
+Card A: Reviewed 4 times in ~70 days
+Card B: Reviewed 7 times in ~70 days
+```
+
+#### Card Categories by Repetition Count
+
+| Category | Definition | Query in Code |
+|----------|------------|---------------|
+| **New** | Never reviewed (repetitions = 0) | `repetitions: 0` |
+| **Learning** | Reviewed 1-2 times | `repetitions: { gt: 0, lt: 3 }` |
+| **Due** | Review time has passed | `nextReviewAt: { lte: new Date() }` |
+| **Mature** | 3+ successful reviews | `repetitions: { gte: 3 }` |
+
+#### Summary Table
+
+| Aspect | Value/Purpose |
+|--------|---------------|
+| **What** | Multiplier for calculating next review interval |
+| **Range** | 1.3 (hardest) to ~3.0+ (easiest) |
+| **Initial Value** | 2.5 (neutral starting point) |
+| **Adjusts Based On** | Your grade (0-5) each review |
+| **Key Insight** | Penalties are much larger than rewards (asymmetric) |
+| **Protection** | Minimum 1.3 prevents infinite loops |
+| **Effect** | Low EF = frequent reviews, High EF = infrequent reviews |
+```
+
 ### Architecture (DDD)
 
 ```

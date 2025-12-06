@@ -8,7 +8,7 @@
         {{ currentIndex + 1 }} of {{ totalCards }}
       </div>
       <!-- Study Session Timer -->
-      <SessionTimer />
+      <SessionTimer :session-time="sessionTime" />
     </div>
 
     <ReviewProgressBar :progress="progress" />
@@ -20,6 +20,8 @@ interface Props {
   currentIndex: number
   totalCards: number
   progress: number
+  /** Session time in seconds - passed from parent to ensure single timer source */
+  sessionTime: number
 }
 
 defineProps<Props>()

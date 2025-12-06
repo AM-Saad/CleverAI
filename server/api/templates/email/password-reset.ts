@@ -1,19 +1,27 @@
 // server/templates/email/password-reset.ts
-import type { EmailTemplate, EmailTemplateData } from './base'
-import { generateHeader, generateButton, generateFooter, wrapContent, baseStyles, brandInfo } from './base'
+import type { EmailTemplate, EmailTemplateData } from "./base";
+import {
+  generateHeader,
+  generateButton,
+  generateFooter,
+  wrapContent,
+  baseStyles,
+  brandInfo,
+} from "./base";
 
 export interface PasswordResetEmailData extends EmailTemplateData {
-  resetToken: string
+  resetToken: string;
 }
 
 /**
  * Generate password reset email template
  */
-export const generatePasswordResetEmail = (data: PasswordResetEmailData): EmailTemplate => {
-  const { resetToken } = data
-  console.log("resetToken in template:", resetToken);
+export const generatePasswordResetEmail = (
+  data: PasswordResetEmailData
+): EmailTemplate => {
+  const { resetToken } = data;
   const content = `
-    ${generateHeader('🔒 Password Reset Request')}
+    ${generateHeader("🔒 Password Reset Request")}
 
     <div style="background-color: #f8fafc; ${baseStyles.contentBox}">
       <h2 style="color: #1f2937; margin-bottom: 15px;">Verify Your Email Address</h2>
@@ -42,10 +50,10 @@ export const generatePasswordResetEmail = (data: PasswordResetEmailData): EmailT
     </div>
 
     ${generateFooter()}
-  `
+  `;
 
   return {
-    subject: 'Reset Your Password - IClever',
-    html: wrapContent(content)
-  }
-}
+    subject: "Reset Your Password - IClever",
+    html: wrapContent(content),
+  };
+};

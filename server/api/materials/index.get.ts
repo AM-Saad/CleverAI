@@ -15,9 +15,7 @@ export default defineEventHandler(async (event) => {
   let query;
   try {
     query = QuerySchema.parse(rawQuery);
-    console.log("Parsed query:", query);
   } catch (err) {
-    console.log("Query parsing error:", err);
     if (err instanceof z.ZodError) {
       throw Errors.badRequest("Invalid query parameters..", err.issues);
     }

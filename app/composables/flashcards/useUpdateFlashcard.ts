@@ -1,58 +1,42 @@
 // app/composables/flashcards/useUpdateFlashcard.ts
-
-export interface UpdateFlashcardPayload {
-  front?: string;
-  back?: string;
-}
+import type {
+  Flashcard,
+  UpdateFlashcardDTO,
+} from "@@/shared/utils/flashcard.contract";
+import { useOperation } from "../shared/useOperation";
 
 export function useUpdateFlashcard() {
   const { $api } = useNuxtApp();
   const toast = useToast();
 
-  const isUpdating = ref(false);
-  const error = ref<string | null>(null);
+  const operation = useOperation<Flashcard>();
 
-  async function updateFlashcard(id: string, payload: UpdateFlashcardPayload) {
-    isUpdating.value = true;
-    error.value = null;
+  async function updateFlashcard(id: string, payload: UpdateFlashcardDTO) {
+    const result = await operation.execute(() =>
+      $api.folders.updateFlashcard(id, payload)
+    );
 
-    try {
-      const response = await $api.folders.updateFlashcard(id, payload);
-
-      if (response.success && response.data) {
-        toast.add({
-          title: "Flashcard Updated",
-          description: "Your flashcard has been updated successfully.",
-          color: "success",
-        });
-        return response.data;
-      }
-
-      // Handle error case
-      const errorMsg = !response.success
-        ? response.error?.message
-        : "Failed to update flashcard";
-      throw new Error(errorMsg || "Failed to update flashcard");
-    } catch (err: any) {
-      const errorMessage =
-        err?.data?.message || err?.message || "Failed to update flashcard";
-      error.value = errorMessage;
-
+    if (result) {
+      toast.add({
+        title: "Flashcard Updated",
+        description: "Your flashcard has been updated successfully.",
+        color: "success",
+      });
+    } else if (operation.error.value) {
       toast.add({
         title: "Error",
-        description: errorMessage,
+        description:
+          operation.error.value.message || "Failed to update flashcard",
         color: "error",
       });
-
-      return null;
-    } finally {
-      isUpdating.value = false;
     }
+
+    return result;
   }
 
   return {
     updateFlashcard,
-    isUpdating,
-    error,
+    isUpdating: operation.pending,
+    error: operation.error,
   };
 }

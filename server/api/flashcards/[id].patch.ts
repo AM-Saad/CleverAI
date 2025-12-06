@@ -5,13 +5,8 @@
  * Body: { front?: string, back?: string }
  */
 
-import { z } from "zod";
+import { UpdateFlashcardDTO } from "@@/shared/utils/flashcard.contract";
 import { requireRole } from "~~/server/middleware/auth";
-
-const UpdateFlashcardSchema = z.object({
-  front: z.string().min(1, "Front content is required").max(2000).optional(),
-  back: z.string().min(1, "Back content is required").max(5000).optional(),
-});
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -23,7 +18,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const body = await readBody(event);
-  const parsed = UpdateFlashcardSchema.safeParse(body);
+  const parsed = UpdateFlashcardDTO.safeParse(body);
 
   if (!parsed.success) {
     throw Errors.badRequest("Invalid request data", parsed.error.issues);

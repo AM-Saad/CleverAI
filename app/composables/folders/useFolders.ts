@@ -34,7 +34,7 @@ export function useCreateFolder() {
 
   const createFolder = async (payload: typeof CreateFolderDTO) => {
     return await createOperation.execute(async () => {
-      return await $api.folders.postFolder(payload);
+      return await $api.folders.create(payload);
     });
   };
 
@@ -70,7 +70,7 @@ export function useDeleteFolder(id: string) {
 
   const deleteFolder = async () => {
     return await deleteOperation.execute(async () => {
-      return await $api.folders.deleteFolder(id);
+      return await $api.folders.delete(id);
     });
   };
 
@@ -93,7 +93,7 @@ export function useUpdateFolder(id: string) {
     payload: typeof UpdateFolderDTO | Record<string, unknown>
   ) => {
     return await updateOperation.execute(async () => {
-      return await $api.folders.updateFolder(id, payload);
+      return await $api.folders.update(id, payload);
     });
   };
 

@@ -174,7 +174,7 @@ function closeCreateModal() {
         </template>
         <template #back>
           <ui-paragraph class="basis-3/4 overflow-auto" size="xs">{{ card.back
-          }}</ui-paragraph>
+            }}</ui-paragraph>
           <ReviewEnrollButton v-if="'id' in card && card.id" :resource-type="'flashcard'" :resource-id="card!.id"
             :is-enrolled="enrolledCards.has(card.id)" @enrolled="handleCardEnrolled" @error="handleEnrollError" />
           <div v-else class="text-xs">Save card to enable review</div>

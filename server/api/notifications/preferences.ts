@@ -1,31 +1,8 @@
 import { z } from "zod";
+import { NotificationPreferencesDTO } from "@@/shared/utils/notification.contract";
 import { safeGetServerSession } from "@server/utils/safeGetServerSession";
 import { requireRole } from "~~/server/middleware/auth";
 import { Errors, success } from "@server/utils/error";
-
-const PreferencesSchema = z.object({
-  cardDueEnabled: z.boolean(),
-  cardDueTime: z.string().regex(/^\d{2}:\d{2}$/), // HH:MM format
-  cardDueThreshold: z.number().min(1).max(100),
-
-  dailyReminderEnabled: z.boolean(),
-  dailyReminderTime: z.string().regex(/^\d{2}:\d{2}$/),
-
-  timezone: z.string(),
-  quietHoursEnabled: z.boolean(),
-  quietHoursStart: z.string().regex(/^\d{2}:\d{2}$/),
-  quietHoursEnd: z.string().regex(/^\d{2}:\d{2}$/),
-  sendAnytimeOutsideQuietHours: z.boolean().default(false),
-  activeHoursEnabled: z.boolean().default(false),
-  activeHoursStart: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/)
-    .default("09:00"),
-  activeHoursEnd: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/)
-    .default("21:00"),
-});
 
 type SessionWithUser = {
   user?: {
@@ -92,7 +69,7 @@ export default defineEventHandler(async (event) => {
     const body = await readBody(event);
     let validatedPrefs;
     try {
-      validatedPrefs = PreferencesSchema.parse(body);
+      validatedPrefs = NotificationPreferencesDTO.parse(body);
     } catch (err) {
       if (err instanceof z.ZodError) {
         throw Errors.badRequest("Invalid preferences data", err.issues);

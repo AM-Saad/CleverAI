@@ -1,12 +1,6 @@
-import { z } from "zod";
+import { PushSubscriptionDTO } from "@@/shared/utils/notification.contract";
 import { safeGetServerSession } from "@server/utils/safeGetServerSession";
 import { Errors, success } from "@server/utils/error";
-
-const SubscriptionSchema = z.object({
-  endpoint: z.string().url(),
-  keys: z.object({ auth: z.string(), p256dh: z.string() }),
-  userId: z.string().optional(),
-});
 
 interface SessionWithUser {
   user?: { email?: string; id?: string };
@@ -16,9 +10,8 @@ export default defineEventHandler(async (event) => {
   let body: unknown;
   try {
     body = await readBody(event);
-    console.log("📥 Received subscription data:", body);
 
-    const subscription = SubscriptionSchema.parse(body);
+    const subscription = PushSubscriptionDTO.parse(body);
 
     const session = (await safeGetServerSession(
       event
