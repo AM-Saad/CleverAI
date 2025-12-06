@@ -1,52 +1,57 @@
 <script setup lang="ts">
 import { Motion } from "motion-v";
 
+interface DragInfo {
+  offset: { x: number; y: number };
+  velocity: { x: number; y: number };
+}
+
+interface DrawerProps {
+  show: boolean;
+  side?: "right" | "left";
+  mobile?: MobileProp;
+  breakpoint?: string;
+  handleVisible?: number;
+  sheetHeight?: string;
+  widthClasses?: string;
+  teleportTo?: string;
+  lockScroll?: boolean;
+  threshold?: number;
+  fastVelocity?: number;
+  /** Accessible title used if no header slot is provided */
+  title?: string;
+  backdrop?: boolean;
+  backdropClass?: string;
+  closeOnBackdrop?: boolean;
+}
+
 const emit = defineEmits<{ (e: "closed"): void }>();
 
 type MobileProp = boolean | "auto";
-const props = withDefaults(
-  defineProps<{
-    show: boolean;
-    side?: "right" | "left";
-    mobile?: MobileProp;
-    breakpoint?: string;
-    handleVisible?: number;
-    sheetHeight?: string;
-    widthClasses?: string;
-    teleportTo?: string;
-    lockScroll?: boolean;
-    threshold?: number;
-    fastVelocity?: number;
-    /** Accessible title used if no header slot is provided */
-    title?: string;
-    backdrop?: boolean;
-    backdropClass?: string;
-    closeOnBackdrop?: boolean;
-  }>(),
-  {
-    side: "right",
-    mobile: "auto",
-    breakpoint: "(max-width: 639px)",
-    handleVisible: 32,
-    sheetHeight: "80vh",
-    widthClasses: "w-full sm:w-[22rem] lg:w-[28rem] max-w-[90vw]",
-    teleportTo: "body",
-    lockScroll: true,
-    threshold: 20,
-    fastVelocity: 450,
-    title: "Panel",
-    backdrop: true,
-    backdropClass: "bg-black/40",
-    closeOnBackdrop: true,
-  },
-);
+
+const props = withDefaults(defineProps<DrawerProps>(), {
+  side: "right",
+  mobile: "auto",
+  breakpoint: "(max-width: 639px)",
+  handleVisible: 32,
+  sheetHeight: "80vh",
+  widthClasses: "w-full sm:w-[22rem] lg:w-[28rem] max-w-[90vw]",
+  teleportTo: "body",
+  lockScroll: true,
+  threshold: 20,
+  fastVelocity: 450,
+  title: "Panel",
+  backdrop: true,
+  backdropClass: "bg-black/40",
+  closeOnBackdrop: true,
+});
 
 const formRef = ref<HTMLElement>();
 const panelEl = ref<HTMLElement | null>(null);
 
 const mq = useMediaQuery(props.breakpoint);
 const isMobile = computed(() =>
-  props.mobile === "auto" ? mq.value : !!props.mobile,
+  props.mobile === "auto" ? mq.value : !!props.mobile
 );
 
 const drawer = useDrawerMotion(panelEl, {
@@ -112,7 +117,7 @@ function isInteractive(el: EventTarget | null): boolean {
     return true;
   // If inside an interactive ancestor
   return !!node.closest(
-    'input, textarea, select, [contenteditable="true"], button, a, [role="textbox"], [role="combobox"], [role="button"], [role="link"], [role="switch"], [role="slider"]',
+    'input, textarea, select, [contenteditable="true"], button, a, [role="textbox"], [role="combobox"], [role="button"], [role="link"], [role="switch"], [role="slider"]'
   );
 }
 
@@ -128,7 +133,7 @@ function onPointerCancelCapture() {
 
 const showOverlay = computed(() => {
   // Show when explicitly open or not snapped to the closed position
-  return  Math.abs(targetPos.value - mode.value.closed) > 1;
+  return Math.abs(targetPos.value - mode.value.closed) > 1;
 });
 let alive = true;
 onBeforeUnmount(() => {
@@ -154,7 +159,7 @@ watch(
   () => props.show,
   (v) => {
     snapTo(v ? mode.value.open : mode.value.closed);
-  },
+  }
 );
 
 watch(
@@ -171,7 +176,7 @@ watch(
       body.style.overflow = "";
     }
   },
-  { immediate: true },
+  { immediate: true }
 );
 
 const { onKeydown } = useFocusTrap(
@@ -182,7 +187,7 @@ const { onKeydown } = useFocusTrap(
       snapTo(mode.value.closed);
       emit("closed");
     },
-  },
+  }
 );
 
 const transitionProps = {
@@ -191,13 +196,10 @@ const transitionProps = {
   damping: 70,
 };
 
-interface DragInfo {
-  offset: { x: number; y: number };
-  velocity: { x: number; y: number };
-}
 function handleDragStart() {
   startPos.value = targetPos.value;
 }
+
 function handleDragEnd(_: Event, info: DragInfo) {
   const axis = mode.value.axis;
   const offset = axis === "y" ? info.offset.y : info.offset.x;
@@ -214,7 +216,7 @@ function handleDragEnd(_: Event, info: DragInfo) {
 </script>
 
 <template>
-  <Teleport :to="props.teleportTo">
+  <Teleport :to="props.teleportTo" defer>
     <div>
       <div
         v-if="props.backdrop && showOverlay"
@@ -229,7 +231,7 @@ function handleDragEnd(_: Event, info: DragInfo) {
             }
           }
         "
-      />
+      ></div>
       <Motion
         ref="formRef"
         as="div"
@@ -244,7 +246,7 @@ function handleDragEnd(_: Event, info: DragInfo) {
         :on-drag-start="handleDragStart"
         :on-drag-end="handleDragEnd"
         :class="[
-          'fixed cursor-grab active:cursor-grabbing overflow-hidden bg-gray-100/30 backdrop-blur-md shadow-lg focus-visible:outline-none z-50 focus-visible:border border-primary',
+          'absolute cursor-grab active:cursor-grabbing overflow-hidden bg-muted backdrop-blur shadow-lg focus-visible:outline-none z-50 focus-visible:border border-primary',
           mode.containerClass,
         ]"
         :style="mode.style"
@@ -255,7 +257,10 @@ function handleDragEnd(_: Event, info: DragInfo) {
         <div
           ref="panelEl"
           tabindex="-1"
-          :class="['relative h-full focus-visible:outline-none', mode.isMobile ? 'p-3 pt-6' : 'p-3 pl-7']"
+          :class="[
+            'relative h-full focus-visible:outline-none',
+            mode.isMobile ? 'p-3 pt-6' : 'p-3 pl-7',
+          ]"
           @keydown="onKeydown"
           @pointerdown.capture="onPointerDownCapture"
           @pointerup.capture="onPointerUpCapture"
@@ -292,12 +297,12 @@ function handleDragEnd(_: Event, info: DragInfo) {
           </div>
 
           <!-- Content -->
-          <div class="mt-2">
+          <div class="mt-2 flex flex-col h-[calc(100%-4.5rem)] overflow-auto">
             <slot />
           </div>
           <u-button
             variant="subtle"
-            size="sm"
+            size="xs"
             class="absolute top-3 right-3"
             @click="
               () => {
@@ -306,8 +311,8 @@ function handleDragEnd(_: Event, info: DragInfo) {
               }
             "
           >
-          <u-icon name="i-lucide-x" class="w-4 h-4" />
-        </u-button>
+            <u-icon name="i-lucide-x" class="w-4 h-4" />
+          </u-button>
         </div>
       </Motion>
     </div>

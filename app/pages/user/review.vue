@@ -7,7 +7,7 @@
           Refresh Queue
         </u-button>
 
-        <NuxtLink to="/folders">
+        <NuxtLink to="/folders" class="text-dark dark:text-light">
           Back to Folders
         </NuxtLink>
       </div>

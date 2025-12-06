@@ -1,6 +1,51 @@
 {
-    "cSpell.words": [
-        "Shater",
-        "tiptap"
-    ]
+    "workbench.statusBar.visible": true, // Hide the status bar
+    "workbench.sideBar.location": "right", // Move sidebar to the right to prevent editor shifting
+    "editor.minimap.enabled": false, // Disable the minimap
+    "editor.lineNumbers": "on", // Hide line numbers (can be toggled on demand)
+    "editor.wordWrap": "on", // Enable word wrap for readability
+    "editor.renderLineHighlight": "none", // Hide indentation guides
+    "editor.renderWhitespace": "none", // Hide whitespace characters
+    "editor.guides.bracketPairs": "false", // Disable bracket pair guides
+    "breadcrumbs.enabled": false, // Hide breadcrumbs navigation
+    "explorer.compactFolders": false, // Prevent compact folder display in explorer
+    // Editor behavior
+    "editor.formatOnSave": true, // Automatically format code on save
+    "editor.defaultFormatter": "vue",
+    "editor.tabSize": 2, // Set tab size to 2 spaces
+    "editor.snippetSuggestions": "top", // Show snippet suggestions at the top
+    "editor.suggest.showIcons": false, // Hide icons in suggestions
+    "editor.hover.enabled": true, // Disable editor hover
+    "editor.lightbulb.enabled": "on", // Disable the lightbulb indicator
+    "editor.codeLens": false, // Disable CodeLens
+    "editor.colorDecorators": false, // Hide color decorators
+
+    // Terminal and search
+    "terminal.integrated.fontSize": 14, // Set terminal font size
+    "search.exclude": { // Exclude common directories from search
+        "**/node_modules": true,
+        "**/tmp": true,
+        "package-lock.json": true
+    },
+
+    // Optional: Font and theme choices
+    "editor.fontFamily": "Hack, Fira Code, 'Droid Sans Mono', 'monospace', monospace", // Example of a preferred font
+    "editor.fontSize": 17, // Adjust font size as desired
+    "workbench.colorTheme": "One Dark Pro", // Example of a minimalist theme
+    "editor.tokenColorCustomizations": { // Example for further theme customization
+        "textMateRules": [
+            {
+                "scope": "comment",
+                "settings": {
+                    "fontStyle": "italic"
+                }
+            }
+        ]
+    },
+    "workbench.activityBar.location": "top",
+    "editor.guides.indentation": false,
+    "[vue]": {
+        "editor.defaultFormatter": "Vue.volar"
+    }
 }
+

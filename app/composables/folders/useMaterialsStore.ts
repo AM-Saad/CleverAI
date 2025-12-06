@@ -11,16 +11,18 @@ export interface MaterialState extends Material {
 
 interface MaterialStore {
   materials: Ref<Map<string, MaterialState>>;
+  materialsList: ComputedRef<MaterialState[]>;
   loadingStates: Ref<Map<string, boolean>>;
   errorStates: Ref<Map<string, string | null>>;
   fetching: Ref<boolean>;
   fetchError: Ref<APIError | null>;
   fetchTypedError: Ref<APIError | null>;
 
-
-  createMaterial: (
-    payload: { content: string, title: string, type: "text" | "video" | "audio" | "pdf" | "url" | "document" | undefined }
-  ) => Promise<boolean>;
+  createMaterial: (payload: {
+    content: string;
+    title: string;
+    type: "text" | "video" | "audio" | "pdf" | "url" | "document" | undefined;
+  }) => Promise<boolean>;
   deleteMaterial: (id: string) => Promise<boolean>;
   isMaterialLoading: (id: string) => boolean;
 
@@ -31,7 +33,6 @@ interface MaterialStore {
 
 // Global store instance
 const stores = new Map<string, MaterialStore>();
-
 
 /**
  * Creates or returns a notes store for a specific folder
@@ -85,17 +86,17 @@ export function useMaterialsStore(folderId: string): MaterialStore {
   //   }
   // }
 
-
   // Local reactive state
   const materials = ref<Map<string, MaterialState>>(new Map());
   const loadingStates = ref<Map<string, boolean>>(new Map());
   const errorStates = ref<Map<string, string | null>>(new Map());
   const lastSync = ref<Date | null>(null);
-  const { fetchMaterials: fetchMaterialsFromAPI, fetching, fetchError, fetchTypedError,
+  const {
+    fetchMaterials: fetchMaterialsFromAPI,
+    fetching,
+    fetchError,
+    fetchTypedError,
   } = useMaterials(folderId);
-
-
-
 
   // Fetch materials for the folder from server and populate local state
   const fetchMaterials = async () => {
@@ -104,26 +105,31 @@ export function useMaterialsStore(folderId: string): MaterialStore {
       // Populate local state
       materials.value.clear();
       data?.forEach((material) => {
-        materials.value.set(material.id, { ...material, isLoading: false, error: null });
+        materials.value.set(material.id, {
+          ...material,
+          isLoading: false,
+          error: null,
+        });
       });
       lastSync.value = new Date();
-
     } catch (error) {
       console.error("Error fetching materials:", error);
-      toast.add({ title: "Error", description: "An error occurred while fetching materials.", color: "error" });
+      toast.add({
+        title: "Error",
+        description: "An error occurred while fetching materials.",
+        color: "error",
+      });
     }
   };
 
   // Initial fetch
 
-
-
-
-
-
   // Create a new material - simple optimistic approach
-  const createMaterial = async (payload: { content: string, title: string, type: "text" | "video" | "audio" | "pdf" | "url" | "document" | undefined }): Promise<boolean> => {
-
+  const createMaterial = async (payload: {
+    content: string;
+    title: string;
+    type: "text" | "video" | "audio" | "pdf" | "url" | "document" | undefined;
+  }): Promise<boolean> => {
     // const tempId = `temp-${Date.now()}`;
 
     // // Add optimistic material
@@ -139,7 +145,6 @@ export function useMaterialsStore(folderId: string): MaterialStore {
     //   updatedAt: new Date().toISOString(),
     // };
     // materials.value.set(tempId, optimisticMaterial);
-
 
     try {
       // Attempt to submit to server
@@ -158,17 +163,22 @@ export function useMaterialsStore(folderId: string): MaterialStore {
       } else {
         // Server rejected - mark error on optimistic material
         console.error("Server rejected material creation:", result.error);
-        toast.add({ title: "Server Error", description: result.error.message, color: "error" });
+        toast.add({
+          title: "Server Error",
+          description: result.error.message,
+          color: "error",
+        });
         return false;
       }
-
     } catch (error) {
       console.error("Failed to create material:", error);
-      toast.add({ title: "Error", description: "Failed to create material - check your connection", color: "error" });
+      toast.add({
+        title: "Error",
+        description: "Failed to create material - check your connection",
+        color: "error",
+      });
       return false;
     }
-
-
   };
   // Delete a material - simple optimistic approach
   const deleteMaterial = async (id: string): Promise<boolean> => {
@@ -185,13 +195,20 @@ export function useMaterialsStore(folderId: string): MaterialStore {
       if (result.success) {
         return true;
       } else {
-
         // Server rejected - restore material to both reactive state and IndexedDB
         console.error("Server rejected material deletion:", result.error);
-        const restoredMaterial = { ...material, isLoading: false, error: "Server rejected deletion" };
+        const restoredMaterial = {
+          ...material,
+          isLoading: false,
+          error: "Server rejected deletion",
+        };
         materials.value.set(id, restoredMaterial);
 
-        toast.add({ title: "Server Error", description: "Server rejected deletion. Material restored.", color: "error" });
+        toast.add({
+          title: "Server Error",
+          description: "Server rejected deletion. Material restored.",
+          color: "error",
+        });
         return false;
       }
     } catch (error) {
@@ -208,39 +225,38 @@ export function useMaterialsStore(folderId: string): MaterialStore {
         }
       }
 
-      toast.add({ title: "Error", description: "Failed to delete material - check your connection", color: "error" });
+      toast.add({
+        title: "Error",
+        description: "Failed to delete material - check your connection",
+        color: "error",
+      });
       return false;
     }
   };
-
-
 
   // Utility functions
   const isMaterialLoading = (id: string): boolean => {
     return materials.value.get(id)?.isLoading ?? false;
   };
 
-
-
-
-
-
-  const getMaterial = (id: string): MaterialState => {
-    return materials.value.get(id)!
+  const getMaterial = (id: string): MaterialState | null => {
+    return materials.value.get(id) ?? null;
   };
+
   const setMaterials = (newMaterials: MaterialState[]) => {
     materials.value.clear();
     newMaterials.forEach((material) => {
       materials.value.set(material.id, material);
     });
-  }
+  };
 
-
-
+  // Computed array for easier template iteration
+  const materialsList = computed(() => Array.from(materials.value.values()));
 
   // Create store instance
   const store: MaterialStore = {
     materials,
+    materialsList,
     loadingStates,
     errorStates,
     createMaterial,

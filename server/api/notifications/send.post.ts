@@ -119,7 +119,7 @@ export default defineEventHandler(async (event) => {
           icon: message.icon || "/icons/192x192.png",
           tag: message.tag,
           requireInteraction: message.requireInteraction || false,
-          url: message.url || "/", // Include URL for navigation
+          url: message.url || "/folders", // Include URL for navigation
         })
       );
       console.log("Notification sent to:", subscription.endpoint);

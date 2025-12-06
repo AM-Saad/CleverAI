@@ -48,6 +48,7 @@ export default class GatewayService extends FetchFactory {
     text: string,
     options?: {
       folderId?: string;
+      materialId?: string;
       save?: boolean;
       replace?: boolean;
       preferredModelId?: string;
@@ -68,6 +69,7 @@ export default class GatewayService extends FetchFactory {
     text: string,
     options?: {
       folderId?: string;
+      materialId?: string;
       save?: boolean;
       replace?: boolean;
       preferredModelId?: string;

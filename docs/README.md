@@ -1,53 +1,73 @@
 # CleverAI Documentation
 
-This directory contains all project documentation organized by category.
+Comprehensive documentation for the CleverAI learning platform.
 
-## Structure
+---
 
-### 📂 [notifications/](./notifications/)
-Notification system, push notifications, cron jobs, and timing logic.
-- `NOTIFICATIONS.md` - Main notification system documentation
-- `CRON_TIMING.md` - Cron job timing and scheduling
-- `VALIDATION_REPORT.md` - Validation findings and undocumented features
-- `REDUNDANCY_ANALYSIS.md` - Archive consolidation analysis
-- `archive/` - Historical notification documentation
-  - `CRON_IMPLEMENTATION.md` - Complete cron implementation guide (consolidated)
-  - `NOTIFICATION_THRESHOLD_GUIDE.md` - User-facing threshold UX guide
-  - `COMPREHENSIVE_TIMING_TEST_SCENARIOS.md` - Detailed testing workflows
+## 📚 Core Documentation
 
-### 📂 [pwa/](./pwa/)
-Progressive Web App (PWA) implementation, service workers, and offline functionality.
-- `PWA.md` - Main PWA documentation (paths corrected)
-- `VALIDATION_REPORT.md` - Validation findings and path discrepancies
-- `REDUNDANCY_ANALYSIS.md` - Archive consolidation analysis
-- `CONSOLIDATION_SUMMARY.md` - Cleanup summary and metrics
-- `archive/` - Historical PWA documentation
-  - `PWA_COMPLETE_GUIDE.md` - Historical comprehensive guide (superseded by PWA.md)
-  - `PWA_REFACTORING_HISTORY.md` - Constants refactoring history (consolidated)
-  - `CI-SW-VALIDATION.md` - CI validation procedures
-  - `test-offline-functionality.md` - Offline testing guide
-  - `test-sw-updates.md` - Update system testing guide
+| Document | Description |
+|----------|-------------|
+| **[ARCHITECTURE.md](./ARCHITECTURE.md)** | System design, data model, module architecture, design patterns |
+| **[DEVELOPMENT.md](./DEVELOPMENT.md)** | Setup, commands, debugging, testing, contribution guide |
+| **[FEATURES.md](./FEATURES.md)** | Detailed feature documentation (Notes, SR, LLM, PWA, Auth) |
+| **[MAINTENANCE.md](./MAINTENANCE.md)** | Known issues, tech debt, security, operations, roadmap |
 
-### 📂 [spaced-repetition/](./spaced-repetition/)
-Spaced repetition algorithm (SM-2), card review system, and scheduling.
-- `SPACED_REPETITION.md` - Main comprehensive documentation (grade scale 0-5, domain architecture, complete API reference)
-- `VALIDATION_REPORT.md` - Codebase validation results (92% accuracy)
-- `REDUNDANCY_ANALYSIS.md` - Archive content analysis and consolidation strategy
-- `archive/` - Historical spaced-repetition documentation
-  - `SPACED_REPETITION_README.md` - Original comprehensive guide (superseded)
-  - `SM2_ALGORITHM_EXAMPLES.md` - Detailed algorithm examples (educational reference - kept)
-  - `SPACED_REPETITION_DEBUG_CONTROLS.md` - Debug implementation details (partially superseded)
-  - `test-review-workflow.md` - E2E test workflow (fully superseded)
+---
 
-### 📂 [error-handling/](./error-handling/)
-Centralized error handling, migration guides, and error management patterns.
-- `CENTRALIZED_ERROR_HANDLING.md` - Main error handling documentation
-- `CENTRALIZED_ERROR_HANDLING_MIGRATION.md` - Migration guide
-- `ERROR_HANDLING_MIGRATION.md` - Additional migration notes
-- `archive/` - Historical error handling documentation
+## 🚀 Quick Start
 
-### 📂 [architecture/](./architecture/)
-System architecture, API design, and high-level technical decisions.
+1. **New Developers**: Start with [DEVELOPMENT.md](./DEVELOPMENT.md)
+2. **System Overview**: Read [ARCHITECTURE.md](./ARCHITECTURE.md)
+3. **Feature Details**: Consult [FEATURES.md](./FEATURES.md)
+4. **Known Issues**: Check [MAINTENANCE.md](./MAINTENANCE.md)
+
+---
+
+## 📂 Legacy Documentation (Archive)
+
+Previous documentation has been consolidated. Historical docs are preserved in subdirectories:
+
+### [notifications/](./notifications/)
+Push notifications, cron jobs, timing logic.
+- Main content → [FEATURES.md#push-notifications](./FEATURES.md#push-notifications)
+
+### [pwa/](./pwa/)
+Progressive Web App, service workers, offline support.
+- Main content → [FEATURES.md#pwa--offline-support](./FEATURES.md#pwa--offline-support)
+
+### [spaced-repetition/](./spaced-repetition/)
+SM-2 algorithm, card review system.
+- Main content → [FEATURES.md#spaced-repetition-sm-2](./FEATURES.md#spaced-repetition-sm-2)
+
+### [error-handling/](./error-handling/)
+Centralized error handling patterns.
+- Main content → [ARCHITECTURE.md#service-architecture](./ARCHITECTURE.md#service-architecture)
+
+### [development/](./development/)
+Developer workflows, debugging.
+- Main content → [DEVELOPMENT.md](./DEVELOPMENT.md)
+
+### [architecture/](./architecture/)
+System design details.
+- Main content → [ARCHITECTURE.md](./ARCHITECTURE.md)
+
+---
+
+## 📋 Document Changelog
+
+| Date | Change |
+|------|--------|
+| Current | Consolidated all docs into 4 main files |
+| Previous | Separate docs per feature area |
+
+---
+
+## 🔗 Related Files
+
+- **[../README.md](../README.md)** - Project overview
+- **[../ARCHITECTURE.md](../ARCHITECTURE.md)** - Redirect to docs/ARCHITECTURE.md
+- **[../.github/copilot-instructions.md](../.github/copilot-instructions.md)** - AI assistant guidelines
 - `ARCHITECTURE-API-REFactor.md` - API refactoring documentation
 - `archive/` - Historical architecture documentation
 

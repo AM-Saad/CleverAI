@@ -18,7 +18,7 @@ interface Props {
   /**
    * HTML tag to render
    */
-  tag?: "p" | "span" | "div";
+  tag?: "p" | "span" | "div" | "li";
   /**
    * Text size variant
    */
@@ -26,7 +26,7 @@ interface Props {
   /**
    * Text color variant
    */
-  color?: "primary" | "neutral" | "muted" | "inverse" | "white";
+  color?: "primary" | "neutral" | "muted" | "inverse" | "white" | "success";
   /**
    * Center alignment
    */
@@ -58,6 +58,7 @@ const colorClasses = {
   muted: "text-muted",
   inverse: "text-inverse",
   white: "text-white",
+  success: "text-success",
 };
 </script>
 

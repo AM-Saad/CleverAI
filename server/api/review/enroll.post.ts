@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
     throw Errors.badRequest("Invalid request data");
   }
 
-  let resourceType: "material" | "flashcard";
+  let resourceType: "material" | "flashcard" | "question";
   let resourceId: string;
   if ("materialId" in validatedBody) {
     resourceType = "material";
@@ -34,15 +34,20 @@ export default defineEventHandler(async (event) => {
       include: { folder: true },
     });
     if (material) resolvedFolderId = material.folderId;
-  } else {
+  } else if (resourceType === "flashcard") {
     const flashcard = await prisma.flashcard.findFirst({
       where: { id: resourceId, folder: { userId: user.id } },
     });
     if (flashcard) resolvedFolderId = flashcard.folderId;
+  } else if (resourceType === "question") {
+    const question = await prisma.question.findFirst({
+      where: { id: resourceId, folder: { userId: user.id } },
+    });
+    if (question) resolvedFolderId = question.folderId;
   }
 
   if (!resolvedFolderId) {
-    throw Errors.notFound("Material");
+    throw Errors.notFound("Resource");
   }
 
   // Use upsert to handle concurrent enrollment requests safely
@@ -61,6 +66,7 @@ export default defineEventHandler(async (event) => {
       userId: user.id,
       cardId: resourceId,
       folderId: resolvedFolderId,
+      resourceType: resourceType,
       repetitions: 0,
       easeFactor: 2.5,
       intervalDays: 0,
@@ -76,7 +82,9 @@ export default defineEventHandler(async (event) => {
     EnrollCardResponseSchema.parse({
       success: true,
       cardId: card.id,
-      message: isNewEnrollment ? "Card enrolled successfully" : "Card already enrolled",
+      message: isNewEnrollment
+        ? "Card enrolled successfully"
+        : "Card already enrolled",
     })
   );
 });

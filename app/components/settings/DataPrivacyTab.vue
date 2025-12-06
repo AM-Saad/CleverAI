@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <ui-card size="lg" variant="default">
+    <ui-card size="md" variant="default">
       <template #header>
         Data Management
       </template>
@@ -13,7 +13,7 @@
             Download all your data in JSON format
           </p>
         </div>
-        
+
         <div>
           <UButton color="primary" variant="outline" @click="importData">
             Import Data
@@ -25,7 +25,7 @@
       </div>
     </ui-card>
 
-    <ui-card size="lg" variant="default">
+    <ui-card size="md" variant="default">
       <template #header>
         Privacy Settings
       </template>
@@ -38,7 +38,7 @@
           <UToggle v-model="privacySettings.errorReporting" />
         </UFormGroup>
       </div>
-      
+
       <template #footer>
         <div class="flex justify-end">
           <UButton @click="savePrivacySettings">

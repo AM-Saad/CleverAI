@@ -1,56 +1,32 @@
 <template>
-  <div>
-    <div class="flex items-center justify-end mb-2">
-      <span v-if="rateLimitRemaining !== null"
-        class="inline-flex items-center text-xs px-2 py-1 rounded bg-neutral-50 dark:bg-neutral-900 border border-neutral-200/50 dark:border-neutral-700/50">
-        Remaining:
-        <span class="ml-1 font-medium">{{ rateLimitRemaining }}</span>
-      </span>
-      <!-- <UButton v-if="questionsToShow && questionsToShow?.length > 0" :loading="generating || loading"
-        :disabled="generating || loading" @click="onGenerate" size="sm">
-        <span v-if="!generating">Generate Questions</span>
-        <span v-else>Generating…</span>
-      </UButton> -->
-      <u-tooltip v-if="questionsToShow && questionsToShow?.length > 0 && materialsLength === 0"
-        :text="'Please add materials before generating flashcards.'" :popper="{ placement: 'top' }">
-        <u-button color="primary" size="sm" :loading="false" :disabled="true">
-          <icons-stars-generative />
-          Generate Questions
-        </u-button>
-      </u-tooltip>
-      <u-button v-if="questionsToShow && questionsToShow?.length > 0 && materialsLength && materialsLength > 0"
-        color="primary" size="sm" :loading="generating || loading" :disabled="generating" @click="onGenerate">
-        <icons-stars-generative />
-        <span v-if="!generating">Generate Questions</span>
-        <span v-else>Generating…</span>
-      </u-button>
-    </div>
-
-    <!-- <UiParagraph
-      v-if="(!questionsToShow || questionsToShow.length === 0) && !generating"
-      size="xs"
-      color="muted"
-    >
-      No questions yet.<br />
-      Click “Generate Questions” to create some from this folder's content.
-    </UiParagraph> -->
-
-    <shared-empty-state v-if="(!questionsToShow || questionsToShow.length === 0) && !generating" title="No Questions"
-      description="Click 'Generate Questions' to create some from this folder's content."
-      button-text="Generate Questions" @action="onGenerate" :is-blocked="materialsLength === 0"
-      :blocked-tooltip="materialsLength === 0 ? 'Please add materials before generating questions.' : ''" />
-
-    <shared-error-message v-if="genError" :error="genError" class="mt-2" />
+  <div class="w-full h-full min-h-fit grow">
+    <shared-empty-state v-if="(!questionsToShow || questionsToShow.length === 0)" title="No Questions"
+      description="Generate questions from your materials using the Generate button on each material card." />
 
     <div v-if="questionsToShow?.length" class="mt-4 space-y-4">
-      <UiCard v-for="(q, idx) in questionsToShow" :key="idx">
-        <ui-paragraph size="sm">{{ idx + 1 }}. {{ q.question }}</ui-paragraph>
-        <ul class="list-disc ml-5">
-          <!-- <li v-for="(choice, cIdx) in q.choices" :key="cIdx"
-                        :class="{ 'font-semibold text-success': cIdx === q.answerIndex }">
-                        {{ choice }}
-                    </li> -->
+      <UiCard v-for="(q, idx) in questionsToShow" :key="'id' in q ? q.id : idx" class="relative">
+        <!-- Enrollment status indicator -->
+        <div v-if="'id' in q && q.id && enrolledQuestions.has(q.id)" class="absolute top-2 right-2">
+          <span
+            class="inline-flex items-center justify-center h-5 w-5 rounded-full text-xs font-medium bg-primary border border-muted">✓</span>
+        </div>
+
+        <ui-paragraph size="sm" class="font-medium mb-2">{{ idx + 1 }}. {{ q.question }}</ui-paragraph>
+        <ul class="list-disc ml-5 mb-4">
+          <ui-paragraph v-for="(choice, cIdx) in q.choices" :key="cIdx"
+            :color="cIdx === q.answerIndex ? 'success' : 'neutral'">
+            {{ choice }}
+          </ui-paragraph>
         </ul>
+
+        <!-- Enroll Button -->
+        <div class="mt-4 pt-3 border-t border-muted dark:border-muted">
+          <ReviewEnrollButton v-if="'id' in q && q.id" :resource-type="'question'" :resource-id="q.id"
+            :is-enrolled="enrolledQuestions.has(q.id)" @enrolled="handleQuestionEnrolled" @error="handleEnrollError" />
+          <div v-else class="text-xs text-muted">
+            Save question to enable review
+          </div>
+        </div>
       </UiCard>
     </div>
   </div>
@@ -58,46 +34,78 @@
 
 <script setup lang="ts">
 import { useRoute } from "vue-router";
-import { computed } from "vue";
-
-
-// Note: Using NoteState from useNotesStore instead of local interface
-interface Props {
-  materialsLength?: number;
-}
-
-const props = defineProps<Props>();
-
-
+import { computed, ref, watch } from "vue";
+import type { EnrollCardResponse } from "~/shared/utils/review.contract";
 
 const route = useRoute();
 const id = route.params.id as string;
 
-const { folder, loading } = useFolder(id);
+const { folder } = useFolder(id);
 
 const existingQuestions = computed(
-  () => (folder.value as Folder | null | undefined)?.questions || [],
-);
-const questionsToShow = computed(() =>
-  questions.value?.length ? questions.value : existingQuestions.value,
+  () => (folder.value as Folder | null | undefined)?.questions || []
 );
 
-const model = computed(
-  () => (folder.value as Folder | null | undefined)?.llmModel,
-);
-const text = computed(() =>
-  extractContentFromFolder(folder.value as Folder | null | undefined),
+const questionsToShow = computed(() => existingQuestions.value);
+
+// Track enrolled questions
+const enrolledQuestions = ref(new Set<string>());
+
+// Check enrollment status when questions are available
+watch(
+  questionsToShow,
+  async (items) => {
+    if (items && items.length > 0) {
+      await checkEnrollmentStatus();
+    }
+  },
+  { immediate: true }
 );
 
-const { questions, generating, genError, generate, rateLimitRemaining } =
-  useGenerateQuiz(
-    model,
-    text,
-    computed(() => id),
-  );
+async function checkEnrollmentStatus() {
+  const questionIds =
+    questionsToShow.value
+      ?.filter((q) => q && typeof q === "object" && "id" in q && q.id)
+      .map((q) => (q as { id: string }).id) || [];
+  if (questionIds.length === 0) return;
 
-async function onGenerate() {
-  if (generating || loading) return;
-  await generate();
+  try {
+    const { $api } = useNuxtApp();
+    const response = await $api.review.getEnrollmentStatus(
+      questionIds,
+      "question"
+    );
+
+    // Update enrolled questions Set
+    enrolledQuestions.value.clear();
+    if (
+      response &&
+      response.success &&
+      response.data &&
+      response.data.enrollments &&
+      typeof response.data.enrollments === "object"
+    ) {
+      Object.entries(response.data.enrollments).forEach(
+        ([questionId, isEnrolled]) => {
+          if (isEnrolled) {
+            enrolledQuestions.value.add(questionId);
+          }
+        }
+      );
+    }
+  } catch (error) {
+    console.error("Failed to check enrollment status:", error);
+  }
+}
+
+function handleQuestionEnrolled(response: EnrollCardResponse) {
+  if (response.success && response.cardId) {
+    checkEnrollmentStatus();
+    console.log("Question enrolled successfully:", response.cardId);
+  }
+}
+
+function handleEnrollError(error: string) {
+  console.error("Failed to enroll question:", error);
 }
 </script>

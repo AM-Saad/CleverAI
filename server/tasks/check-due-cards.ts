@@ -1,4 +1,10 @@
-import { isInQuietHours as isInQuietHoursTimezone } from "../utils/timezone";
+import {
+  isInQuietHours as isInQuietHoursTimezone,
+  isWithinTimeWindow,
+  getUserLocalTimeString,
+  getUserLocalTime,
+  isWithinHoursRange,
+} from "../utils/timezone";
 
 interface NotificationData {
   cardCount: number;
@@ -48,7 +54,7 @@ export async function checkDueCards() {
       },
     });
     console.log(`🔍 Found ${users.length} users with card due notifications enabled`);
-    
+
     // Map to the same structure as before for compatibility
     const usersWithPref = users
       .filter(user => user.notificationPreferences !== null)
@@ -60,9 +66,7 @@ export async function checkDueCards() {
         },
       }));
 
-    console.log(
-      `🔔 Found ${usersWithPref.length} users with card due notifications enabled`
-    );
+    console.log(`🔔 Found ${usersWithPref.length} users with card due notifications enabled`);
 
     for (const userPref of usersWithPref) {
       try {
@@ -70,18 +74,14 @@ export async function checkDueCards() {
 
         // Skip if user has no active push subscriptions
         if (userPref.user.notificationSubscriptions.length === 0) {
-          console.log(
-            `⚠️ Skipping user ${userPref.userId} - no active push subscriptions`
-          );
+          console.log(`⚠️ Skipping user ${userPref.userId} - no active push subscriptions`);
           results.skipped++;
           continue;
         }
 
         // Check if user has snoozed notifications
         if (userPref.snoozedUntil && userPref.snoozedUntil > now) {
-          console.log(
-            `💤 Skipping user ${userPref.userId} - snoozed until ${userPref.snoozedUntil.toISOString()}`
-          );
+          console.log(`💤 Skipping user ${userPref.userId} - snoozed until ${userPref.snoozedUntil.toISOString()}`);
           results.skipped++;
           continue;
         }
@@ -151,9 +151,7 @@ export async function checkDueCards() {
           },
         });
 
-        console.log(
-          `📚 User ${userPref.userId} has ${dueCards.length} due cards`
-        );
+        console.log(`📚 User ${userPref.userId} has ${dueCards.length} due cards`);
 
         // Check if we should send a daily study reminder
         if (
@@ -325,7 +323,7 @@ async function sendCardDueNotification(
         title,
         message: body, // API expects 'message' not 'body'
         targetUsers: [userId],
-        url: "/review",
+        url: "/user/review",
         tag: "card-due",
         requireInteraction: true,
         icon: "/icons/192x192.png",
@@ -373,7 +371,7 @@ async function sendDailyReminder(
         title,
         message: body,
         targetUsers: [userId],
-        url: "/review",
+        url: "/user/review",
         tag: "daily-reminder",
         requireInteraction: false,
         icon: "/icons/192x192.png",

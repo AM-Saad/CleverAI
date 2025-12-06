@@ -1,6 +1,6 @@
 // server/utils/llm/GeminiStrategy.ts
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Errors } from '../error';
+import { Errors } from "../error";
 
 // Small helper to avoid crashes on imperfect JSON
 function safeParseJSON<T>(text: string, fallback: T): T {
@@ -119,6 +119,7 @@ export class GeminiStrategy implements LLMStrategy {
       const model = this.client.getGenerativeModel({
         model: GeminiStrategy.MODEL,
       });
+
       let inputTokensEstimate = 0;
       try {
         const preCount = await (model as any).countTokens({
@@ -126,6 +127,7 @@ export class GeminiStrategy implements LLMStrategy {
         });
         inputTokensEstimate = Number((preCount as any)?.totalTokens ?? 0);
       } catch {}
+
       const resp = await model.generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
@@ -138,6 +140,7 @@ export class GeminiStrategy implements LLMStrategy {
       const txt = resp?.response?.text?.();
       const outputChars = typeof txt === "string" ? txt.length : 0;
       let outputTokensEstimate = 0;
+
       try {
         const postCount = await (model as any).countTokens({
           contents: [
@@ -149,6 +152,7 @@ export class GeminiStrategy implements LLMStrategy {
         });
         outputTokensEstimate = Number((postCount as any)?.totalTokens ?? 0);
       } catch {}
+
       this.onMeasure?.({
         provider: "google",
         model: GeminiStrategy.MODEL,
@@ -164,6 +168,7 @@ export class GeminiStrategy implements LLMStrategy {
           outputTokensEstimate,
         },
       });
+
       return typeof txt === "string" ? txt.trim() : firstText(resp.response);
     } catch (e: any) {
       console.error("Gemini error", e.status, e.message);

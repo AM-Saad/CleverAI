@@ -5,10 +5,17 @@ import { Errors, success } from "@server/utils/error";
 import { GatewayGenerateRequest } from "~/shared/utils/llm-generate.contract";
 import { selectBestModel } from "@server/utils/llm/routing";
 import { getLLMStrategyFromRegistry } from "@server/utils/llm/LLMFactory";
-import { checkSemanticCache, setSemanticCache, generateCacheKey } from "@server/utils/llm/cache";
-import { logGatewayRequest, logGatewayFailure } from "@server/utils/llm/gatewayLogger";
+import {
+  checkSemanticCache,
+  setSemanticCache,
+  generateCacheKey,
+} from "@server/utils/llm/cache";
+import {
+  logGatewayRequest,
+  logGatewayFailure,
+} from "@server/utils/llm/gatewayLogger";
 import { updateModelLatency } from "@server/utils/llm/modelRegistry";
-import { randomUUID } from 'crypto';
+import { randomUUID } from "crypto";
 
 type GenerationTask = "flashcards" | "quiz";
 
@@ -29,7 +36,7 @@ const ipRateLimitMap: MemCounter = new Map();
 export default defineEventHandler(async (event) => {
   const requestId = randomUUID();
   const requestStartTime = Date.now();
-  
+
   const user = await requireRole(event, ["USER"]);
   const prisma = event.context.prisma;
 
@@ -113,7 +120,16 @@ export default defineEventHandler(async (event) => {
     );
   }
   const parsed = parseResult.data;
-  const { task, folderId, save, replace, preferredModelId, requiredCapability, text: originalText } = parsed;
+  const {
+    task,
+    folderId,
+    materialId,
+    save,
+    replace,
+    preferredModelId,
+    requiredCapability,
+    text: originalText,
+  } = parsed;
   const text = originalText.trim();
 
   const MAX_CHARS = 10_000;
@@ -121,10 +137,26 @@ export default defineEventHandler(async (event) => {
   if (text.length > MAX_CHARS) throw Errors.badRequest("Text too large");
 
   // ==========================================
-  // Folder Permission Check
+  // Folder/Material Permission Check
   // ==========================================
   let canSave = false;
-  if (save && folderId) {
+  let materialFolderId: string | undefined;
+
+  // If materialId is provided, verify ownership and get folderId from material
+  if (save && materialId) {
+    const material = await prisma.material.findFirst({
+      where: { id: materialId },
+      include: { folder: { select: { userId: true, id: true } } },
+    });
+    if (!material) {
+      throw Errors.notFound("Material not found.");
+    }
+    if (material.folder.userId !== user.id) {
+      throw Errors.forbidden("You do not have access to this material.");
+    }
+    canSave = true;
+    materialFolderId = material.folder.id;
+  } else if (save && folderId) {
     const ownerFolder = await prisma.folder.findFirst({
       where: { id: folderId, userId: user.id },
     });
@@ -134,15 +166,13 @@ export default defineEventHandler(async (event) => {
     canSave = true;
   }
 
-  
-
   // ==========================================
   // Semantic Cache Check
   // ==========================================
   const cacheCheck = await checkSemanticCache(text, task);
 
   if (cacheCheck.hit && cacheCheck.value) {
-    console.info('[llm.gateway] Cache hit:', {
+    console.info("[llm.gateway] Cache hit:", {
       requestId,
       task,
       textLength: text.length,
@@ -189,16 +219,16 @@ export default defineEventHandler(async (event) => {
       userId: user.id,
       task,
       inputText: text,
-      estimatedOutputTokens: task === 'flashcards' ? 500 : 800, // Rough estimates
-      userTier: quotaCheck.subscription.tier as 'FREE' | 'PRO' | 'ENTERPRISE',
-      preferredModelId,
+      estimatedOutputTokens: task === "flashcards" ? 500 : 800, // Rough estimates
+      userTier: quotaCheck.subscription.tier as "FREE" | "PRO" | "ENTERPRISE",
+      preferredModelId: undefined,
       requiredCapability,
     };
 
     const selected = await selectBestModel(routingContext);
     selectedModel = selected.model;
 
-    console.info('[llm.gateway] Model selected:', {
+    console.info("[llm.gateway] Model selected:", {
       requestId,
       modelId: selectedModel.modelId,
       provider: selectedModel.provider,
@@ -208,9 +238,9 @@ export default defineEventHandler(async (event) => {
       task,
     });
   } catch (err) {
-    console.error('[llm.gateway] Model selection failed:', err);
+    console.error("[llm.gateway] Model selection failed:", err);
     await logGatewayFailure(requestId, user.id, task, err, undefined, folderId);
-    throw Errors.server('Failed to select model. Please try again.');
+    throw Errors.server("Failed to select model. Please try again.");
   }
 
   // ==========================================
@@ -238,17 +268,16 @@ export default defineEventHandler(async (event) => {
     // Update model latency in registry (rolling average)
     await updateModelLatency(selectedModel.modelId, latencyMs);
 
-    console.info('[llm.gateway] Generation successful:', {
+    console.info("[llm.gateway] Generation successful:", {
       requestId,
       modelId: selectedModel.modelId,
       task,
       count: result.length,
       latencyMs,
     });
-
   } catch (err) {
     const latencyMs = Date.now() - generationStartTime;
-    console.error('[llm.gateway] Generation failed:', {
+    console.error("[llm.gateway] Generation failed:", {
       requestId,
       modelId: selectedModel.modelId,
       task,
@@ -273,7 +302,7 @@ export default defineEventHandler(async (event) => {
       err instanceof Error && /quota/i.test(err.message)
         ? "Quota exceeded. Please check your API plan/billing or try again later."
         : "Generation failed. Please try again.";
-    
+
     if (/quota exceeded|rate limit|429/i.test(message)) {
       throw Errors.rateLimit(message);
     }
@@ -283,20 +312,52 @@ export default defineEventHandler(async (event) => {
   // ==========================================
   // Save to Database (if requested)
   // Use transaction for atomicity - prevents partial saves
+  // For material-based generation with replace=true, delete old items + CardReviews
   // ==========================================
   let savedCount: number | undefined;
-  if (canSave && folderId) {
+  let deletedCount: number | undefined;
+  let deletedReviewsCount: number | undefined;
+
+  const effectiveFolderId = materialFolderId || folderId;
+
+  if (canSave && effectiveFolderId) {
     try {
       if (task === "flashcards") {
         // Use transaction to ensure atomic delete + create
         await prisma.$transaction(async (tx) => {
-          if (replace) {
-            await tx.flashcard.deleteMany({ where: { folderId } });
+          // If replacing for a specific material, delete old flashcards and their CardReviews
+          if (replace && materialId) {
+            // Get IDs of flashcards to be deleted for CardReview cleanup
+            const oldFlashcards = await tx.flashcard.findMany({
+              where: { materialId },
+              select: { id: true },
+            });
+            const oldFlashcardIds = oldFlashcards.map((f) => f.id);
+
+            // Delete CardReviews for these flashcards
+            if (oldFlashcardIds.length > 0) {
+              const reviewsDeleted = await tx.cardReview.deleteMany({
+                where: {
+                  cardId: { in: oldFlashcardIds },
+                  resourceType: "flashcard",
+                },
+              });
+              deletedReviewsCount = reviewsDeleted.count;
+            }
+
+            // Delete old flashcards
+            const deleted = await tx.flashcard.deleteMany({
+              where: { materialId },
+            });
+            deletedCount = deleted.count;
           }
+
+          // Create new flashcards
           if (result.length) {
             const res = await tx.flashcard.createMany({
               data: (result as Flashcard[]).map((fc) => ({
-                folderId,
+                folderId: effectiveFolderId,
+                materialId: materialId || null,
                 front: fc.front,
                 back: fc.back,
               })),
@@ -307,15 +368,41 @@ export default defineEventHandler(async (event) => {
           }
         });
       } else {
-        // Use transaction to ensure atomic delete + create
+        // Quiz/Questions
         await prisma.$transaction(async (tx) => {
-          if (replace) {
-            await tx.question.deleteMany({ where: { folderId } });
+          // If replacing for a specific material, delete old questions and their CardReviews
+          if (replace && materialId) {
+            // Get IDs of questions to be deleted for CardReview cleanup
+            const oldQuestions = await tx.question.findMany({
+              where: { materialId },
+              select: { id: true },
+            });
+            const oldQuestionIds = oldQuestions.map((q) => q.id);
+
+            // Delete CardReviews for these questions
+            if (oldQuestionIds.length > 0) {
+              const reviewsDeleted = await tx.cardReview.deleteMany({
+                where: {
+                  cardId: { in: oldQuestionIds },
+                  resourceType: "question",
+                },
+              });
+              deletedReviewsCount = reviewsDeleted.count;
+            }
+
+            // Delete old questions
+            const deleted = await tx.question.deleteMany({
+              where: { materialId },
+            });
+            deletedCount = deleted.count;
           }
+
+          // Create new questions
           if (result.length) {
             const res = await tx.question.createMany({
               data: (result as QuizQuestion[]).map((q) => ({
-                folderId,
+                folderId: effectiveFolderId,
+                materialId: materialId || null,
                 question: q.question,
                 choices: q.choices,
                 answerIndex: q.answerIndex,
@@ -328,9 +415,10 @@ export default defineEventHandler(async (event) => {
         });
       }
     } catch (err) {
-      console.error('[llm.gateway] Failed to save to database:', {
+      console.error("[llm.gateway] Failed to save to database:", {
         requestId,
-        folderId,
+        folderId: effectiveFolderId,
+        materialId,
         task,
         error: err,
       });
@@ -342,17 +430,17 @@ export default defineEventHandler(async (event) => {
   // Update User Quota
   // ==========================================
   const updatedQuota = await incrementGenerationCount(user.id);
-  
+
   // ==========================================
   // Cache Response
   // ==========================================
   const cacheableData = {
     task,
-    ...(task === 'flashcards' ? { flashcards: result } : { quiz: result }),
+    ...(task === "flashcards" ? { flashcards: result } : { quiz: result }),
     modelId: selectedModel.modelId,
     provider: selectedModel.provider,
   };
-  
+
   await setSemanticCache(
     text,
     task,
@@ -364,12 +452,19 @@ export default defineEventHandler(async (event) => {
   // Log Gateway Request
   // ==========================================
   const totalLatencyMs = Date.now() - requestStartTime;
-  
+
   // Estimate token counts (strategy might have actual counts via onMeasure callback)
   const estimatedInputTokens = Math.ceil(text.length / 3.5);
-  const estimatedOutputTokens = task === 'flashcards' 
-    ? (result as Flashcard[]).reduce((sum, fc) => sum + fc.front.length + fc.back.length, 0) / 3.5
-    : (result as QuizQuestion[]).reduce((sum, q) => sum + q.question.length + q.choices.join('').length, 0) / 3.5;
+  const estimatedOutputTokens =
+    task === "flashcards"
+      ? (result as Flashcard[]).reduce(
+          (sum, fc) => sum + fc.front.length + fc.back.length,
+          0
+        ) / 3.5
+      : (result as QuizQuestion[]).reduce(
+          (sum, q) => sum + q.question.length + q.choices.join("").length,
+          0
+        ) / 3.5;
 
   await logGatewayRequest({
     requestId,
@@ -383,7 +478,7 @@ export default defineEventHandler(async (event) => {
     latencyMs: totalLatencyMs,
     cached: false,
     cacheHit: false,
-    status: 'success',
+    status: "success",
   });
 
   // ==========================================
@@ -417,8 +512,10 @@ export default defineEventHandler(async (event) => {
   // ==========================================
   const response = {
     task,
-    ...(task === 'flashcards' ? { flashcards: result } : { quiz: result }),
+    ...(task === "flashcards" ? { flashcards: result } : { quiz: result }),
     savedCount,
+    deletedCount,
+    deletedReviewsCount,
     subscription: {
       tier: updatedQuota.tier,
       generationsUsed: updatedQuota.generationsUsed,
@@ -438,6 +535,9 @@ export default defineEventHandler(async (event) => {
     task,
     generatedCount: result.length,
     savedCount,
+    deletedCount,
+    deletedReviewsCount,
+    materialId,
     latencyMs: totalLatencyMs,
     subscription: updatedQuota,
   });

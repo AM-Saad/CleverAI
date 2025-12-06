@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { APIError } from "~/services/FetchFactory";
 
 const FolderResponse = z
   .union([FolderSchema, z.object({ data: FolderSchema })])
@@ -17,7 +16,7 @@ export function useFolders() {
 
   const { data, pending, error, refresh } = useDataFetch<Folder[]>(
     "folders",
-    () => $api.folders.getFolders(FoldersResponseSchema),
+    () => $api.folders.getFolders(FoldersResponseSchema)
   );
   return {
     folders: data,
@@ -52,7 +51,7 @@ export const useFolder = (id: string) => {
 
   const { data, pending, error, refresh } = useDataFetch<Folder>(
     `folder-${id}`,
-    () => $api.folders.getFolder(id, FolderResponseSchema),
+    () => $api.folders.getFolder(id, FolderResponseSchema)
   );
 
   return {
@@ -91,7 +90,7 @@ export function useUpdateFolder(id: string) {
   const updateOperation = useOperation<Folder>();
 
   const updateFolder = async (
-    payload: typeof UpdateFolderDTO | Record<string, unknown>,
+    payload: typeof UpdateFolderDTO | Record<string, unknown>
   ) => {
     return await updateOperation.execute(async () => {
       return await $api.folders.updateFolder(id, payload);
@@ -103,207 +102,5 @@ export function useUpdateFolder(id: string) {
     updating: updateOperation.pending,
     error: updateOperation.error,
     typedError: updateOperation.typedError,
-  };
-}
-
-export function useGenerateFlashcards(
-  model: Ref<string | undefined>,
-  text: Ref<string | undefined>,
-  folderId: Ref<string | undefined>,
-) {
-  const { $api } = useNuxtApp();
-  const flashcards = ref<Array<{ front: string; back: string }>>([]);
-  const generating = ref(false);
-  const genError = ref<string | null>(null);
-  const toast = useToast();
-
-  // Add subscription info
-  const {
-    subscriptionInfo,
-    isQuotaExceeded,
-    updateFromData,
-    handleApiError,
-  } = useSubscription();
-
-  async function generate() {
-    genError.value = null;
-    flashcards.value = [];
-
-    const t = text.value?.trim();
-    const fid = folderId.value;
-    console.log("Generating flashcards, text length:", t?.length, "folderId:", fid);
-    if (!t) {
-      genError.value =
-        "This folder has no content yet. Add text or materials, then try again.";
-      console.log(genError.value);
-      return;
-    }
-
-    generating.value = true;
-    try {
-      // Use GatewayService for proper error handling
-      const result = await $api.gateway.generateFlashcards(t, {
-        folderId: fid,
-        save: !!fid,
-        replace: true,
-      });
-      
-      console.log("Flashcard generation response:", result);
-      if (result.subscription) {
-        updateFromData({ subscription: result.subscription });
-      }
-
-      // Show remaining quota toast if low
-      if (
-        subscriptionInfo.value.tier === "FREE" &&
-        subscriptionInfo.value.remaining <= 3
-      ) {
-        try {
-          toast.add({
-            title: "Free Tier Limit",
-            description: `You have ${subscriptionInfo.value.remaining} generations left in your free quota.`,
-          });
-        } catch {
-          // Ignore toast errors
-        }
-      }
-
-      // Handle flashcards response
-      if (result.task === "flashcards" && result.flashcards) {
-        try {
-          if (typeof result.savedCount === "number") {
-            toast.add({
-              title: "Saved",
-              description: `Saved ${result.savedCount} flashcards to this folder.`,
-            });
-          }
-        } catch {
-          // Ignore toast errors
-        }
-        flashcards.value = result.flashcards;
-      } else {
-        genError.value =
-          "Server returned unexpected response format.";
-      }
-    } catch (err) {
-      handleApiError(err);
-      genError.value = err instanceof APIError ? err.message : "Generation failed. Please try again.";
-      flashcards.value = [];
-    } finally {
-      generating.value = false;
-    }
-  }
-
-  return {
-    flashcards,
-    generating,
-    genError,
-    generate,
-    // New subscription-related properties
-    subscriptionInfo,
-    isQuotaExceeded,
-  };
-}
-
-export function useGenerateQuiz(
-  model: Ref<string | undefined>,
-  text: Ref<string | undefined>,
-  folderId: Ref<string | undefined>,
-) {
-  const { $api } = useNuxtApp();
-  type Question = { question: string; choices: string[]; answerIndex: number };
-  const questions = ref<Question[]>([]);
-  const generating = ref(false);
-  const genError = ref<APIError | null>(null);
-  const toast = useToast();
-
-  // Add subscription info
-  const {
-    subscriptionInfo,
-    isQuotaExceeded,
-    updateFromData,
-    handleApiError
-  } = useSubscription();
-
-  async function generate() {
-    genError.value = null;
-    questions.value = [];
-
-    const t = text.value?.trim();
-    const fid = folderId.value;
-
-    if (!t) {
-      genError.value = new APIError(
-        "This folder has no content yet. Add text or materials, then try again.",
-      );
-      return;
-    }
-
-    generating.value = true;
-    try {
-      // Use GatewayService for proper error handling
-      const result = await $api.gateway.generateQuiz(t, {
-        folderId: fid,
-        save: !!fid,
-        replace: true,
-      });
-      
-      // Update subscription from response data
-      if (result.subscription) {
-        updateFromData({ subscription: result.subscription });
-      }
-
-      // Show remaining quota toast if low
-      if (
-        subscriptionInfo.value.tier === "FREE" &&
-        subscriptionInfo.value.remaining <= 3
-      ) {
-        try {
-          toast.add({
-            title: "Free Tier Limit",
-            description: `You have ${subscriptionInfo.value.remaining} generations left in your free quota.`,
-          });
-        } catch {
-          // Ignore toast errors
-        }
-      }
-
-      // Handle quiz response
-      if (result.task === "quiz" && result.quiz) {
-        try {
-          if (typeof result.savedCount === "number") {
-            toast.add({
-              title: "Saved",
-              description: `Saved ${result.savedCount} questions to this folder.`,
-            });
-          }
-        } catch {
-          // Ignore toast errors
-        }
-        questions.value = result.quiz;
-      } else {
-        genError.value = new APIError(
-          "Server returned unexpected response format.",
-        );
-      }
-    } catch (err) {
-      handleApiError(err);
-      genError.value = new APIError(
-        err instanceof Error ? err.message : "Generation failed.",
-      );
-      questions.value = [];
-    } finally {
-      generating.value = false;
-    }
-  }
-
-  return {
-    questions,
-    generating,
-    genError,
-    generate,
-    // Subscription-related properties
-    subscriptionInfo,
-    isQuotaExceeded,
   };
 }
