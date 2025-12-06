@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { requireRole } from "@server/middleware/auth";
+import { Errors, success } from "@server/utils/error";
 
 const EnrollmentStatusRequestSchema = z.object({
   resourceIds: z.array(z.string()),
-  resourceType: z.enum(["material", "flashcard"]).optional(),
+  resourceType: z.enum(["material", "flashcard", "question"]).optional(),
 });
 
 const EnrollmentStatusResponseSchema = z.object({

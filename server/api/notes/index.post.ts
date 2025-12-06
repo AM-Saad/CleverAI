@@ -1,5 +1,6 @@
 import { ZodError } from "zod";
 import { requireRole } from "@server/middleware/auth";
+import { Errors, success } from "@server/utils/error";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);

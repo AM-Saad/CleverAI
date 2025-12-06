@@ -42,22 +42,29 @@ class FetchFactory {
   private $fetch: $Fetch;
   private baseUrl: string;
   private retries: number;
+  private timeout: number;
   private onErrorHook?: OnErrorHook;
 
   constructor(
     fetcher: $Fetch,
     baseUrl = "",
     retries = 0,
-    onErrorHook?: OnErrorHook
+    onErrorHook?: OnErrorHook,
+    timeout = 30000 // 30 second default timeout
   ) {
     this.$fetch = fetcher;
     this.baseUrl = baseUrl;
     this.retries = retries;
+    this.timeout = timeout;
     this.onErrorHook = onErrorHook;
   }
 
   setOnError(h: OnErrorHook) {
     this.onErrorHook = h;
+  }
+
+  setTimeout(ms: number) {
+    this.timeout = ms;
   }
 
   // Convenience helper for consumers wanting cancellation support
@@ -89,19 +96,26 @@ class FetchFactory {
     validator?: TSchema
   ): Promise<Result<TSchema extends z.ZodTypeAny ? z.infer<TSchema> : T>> {
     const attemptLimit = this.retries + 1;
-    const attempt = 0;
+    let attempt = 0;
     let lastError: APIError | null = null;
 
     while (attempt < attemptLimit) {
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
       try {
         const rawResp: MaybeEnvelope<unknown> = await this.$fetch(
           `${this.baseUrl}${url}`,
           {
             method,
             body: data,
+            signal: controller.signal,
             ...fetchOptions,
           }
         );
+
+        clearTimeout(timeoutId);
 
         // Unified envelope path
         if (rawResp && typeof rawResp === "object" && "success" in rawResp) {
@@ -164,15 +178,42 @@ class FetchFactory {
           legacyPayload as TSchema extends z.ZodTypeAny ? z.infer<TSchema> : T
         );
       } catch (err) {
-        lastError = this.normalizeError(err);
-        console.log("🔄 FetchFactory - caught error:", lastError);
+        clearTimeout(timeoutId);
+
+        // Handle timeout/abort specifically
+        if (err instanceof Error && err.name === "AbortError") {
+          lastError = new APIError("Request timeout", {
+            message: `Request timed out after ${this.timeout}ms`,
+            status: 408,
+            code: "TIMEOUT",
+          });
+        } else {
+          lastError = this.normalizeError(err);
+        }
+
+        attempt++;
+
+        // Only retry on transient errors (429, 503, network errors, timeouts)
+        const isRetryable =
+          lastError.status === 429 ||
+          lastError.status === 503 ||
+          lastError.status === 408 ||
+          lastError.code === "FETCH_ERROR" ||
+          lastError.code === "TIMEOUT";
+
+        if (isRetryable && attempt < attemptLimit) {
+          // Exponential backoff: 1s, 2s, 4s...
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+          await new Promise((resolve) => setTimeout(resolve, delay));
+          continue;
+        }
 
         // Call error hook if provided
         if (this.onErrorHook) {
           await this.onErrorHook(lastError);
         }
 
-        // Don't throw - we'll return the error as a Result
+        // Non-retryable or max attempts reached
         break;
       }
     }

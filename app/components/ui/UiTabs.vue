@@ -1,7 +1,6 @@
 <template>
   <header :class="['max-w-full min-w-fit', borderClass]">
-    <nav
-      :class="['py-2 mb-4 flex', directionClass]">
+    <nav :class="['mb-4 flex', directionClass]">
       <button v-for="(tab, index) in items" :key="index" type="button" :class="[
         'cursor-pointer ',
         buttonBaseClass,
@@ -56,7 +55,7 @@ const directionClass = computed(() => {
   const dir = props.direction;
   if (typeof dir === "string") {
     return dir === "row"
-      ? "flex-row border-b border-muted gap-5 text-sm"
+      ? "flex-row  border-muted gap-5 text-sm"
       : "flex-col gap-7";
   }
 

@@ -1,100 +1,65 @@
-# CleverAI – Architecture & Implementation Notes
+# CleverAI Architecture
 
-This document is the deep-dive for engineers and reviewers. The main `README.md` is kept concise for recruiters; this file explains the **how** and **why**.
-
----
-
-## 1) System Overview
-
-CleverAI is a Nuxt 3 + TypeScript app that generates **flashcards** and **quizzes** from user-provided content (text, docs, YouTube transcripts). It uses a **pluggable LLM Strategy** to route generation requests to different model providers while enforcing **rate limits**, **budget guardrails**, and **usage tracking**.
-
-**Key goals**
-- Deterministic, testable architecture (clear boundaries, typed contracts).
-- Cost-aware LLM usage (rate limits, token/cost estimates, logging).
-- Easy to extend (new LLMs, new generators).
+> **This file has been consolidated. See the comprehensive documentation in `docs/`.**
 
 ---
 
-## 2) High-Level Architecture
+## Documentation Structure
 
+All technical documentation has been consolidated into 4 comprehensive documents:
+
+| Document | Purpose |
+|----------|---------|
+| **[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md)** | System design, data model, module architecture |
+| **[docs/DEVELOPMENT.md](./docs/DEVELOPMENT.md)** | Setup, commands, debugging, contribution guide |
+| **[docs/FEATURES.md](./docs/FEATURES.md)** | Detailed feature documentation (Notes, SR, LLM, PWA) |
+| **[docs/MAINTENANCE.md](./docs/MAINTENANCE.md)** | Known issues, tech debt, security, roadmap |
+
+---
+
+## Quick Links
+
+### For New Developers
+1. Start with [DEVELOPMENT.md](./docs/DEVELOPMENT.md) for setup
+2. Read [ARCHITECTURE.md](./docs/ARCHITECTURE.md) for system overview
+3. Consult [FEATURES.md](./docs/FEATURES.md) for specific features
+
+### For Code Review
+1. Check [MAINTENANCE.md](./docs/MAINTENANCE.md) for known issues
+2. Review [ARCHITECTURE.md](./docs/ARCHITECTURE.md) for design patterns
+
+### For Operations
+1. See [MAINTENANCE.md](./docs/MAINTENANCE.md) for operations guide
+2. Check [DEVELOPMENT.md](./docs/DEVELOPMENT.md) for commands
+
+---
+
+## High-Level Overview
+
+CleverAI is a **Nuxt 3** application providing AI-powered flashcard generation and spaced repetition learning.
+
+### Tech Stack
+- **Frontend**: Nuxt 3, Vue 3, TypeScript, TailwindCSS, Pinia
+- **Backend**: Nitro, Prisma, MongoDB, Redis (optional)
+- **AI**: OpenAI GPT-3.5, Google Gemini
+- **PWA**: Workbox, IndexedDB, Web Push
+
+### Key Architecture Patterns
+- **Strategy Pattern**: Pluggable LLM providers
+- **Local-First**: IndexedDB + background sync for notes
+- **Domain-Driven Design**: SR business logic isolation
+- **Result Pattern**: FetchFactory error handling
+
+### Project Structure
 ```
-[UI (Nuxt Pages & Components)]
-        │
-        ▼
-[Composables (use* resources)]
-        │
-        ▼
-[Service Layer (FetchFactory, ServiceFactory, ErrorFactory)]
-        │
-        ▼
-[API Routes (/api/*)]
-        │
-        ▼
-[Business Logic (LLM Strategies, Prompts, Validation)]
-        │
-        ├── Rate Limiter (Redis → in-memory fallback)
-        ├── Pricing/Usage Logger
-        └── Prisma (MongoDB)
+app/           # Nuxt frontend (srcDir)
+server/        # Nitro API server
+shared/        # Contracts (Zod schemas)
+sw-src/        # Service worker source
+docs/          # Consolidated documentation
 ```
 
-- **Nuxt Pages/Components**: Presentational, lean.
-- **Composables**: Resource-specific hooks that own local state, request lifecycles, and error display.
-- **Service Layer**: Consumes contracts, encapsulates HTTP transport, consistent error handling.
-- **API Routes**: Nuxt server routes that validate inputs, enforce limits, call strategies, persist results.
-- **Business Logic**: Strategy Pattern for model selection, prompt builders, pricing, and token estimation.
-- **Data**: Prisma (MongoDB) for persistence; Redis for rate limiting.
-
----
-
-## 3) Tech Stack Choices
-
-- **Nuxt 3, Vue 3, TypeScript** – SSR-capable, DX-friendly, type safety.
-- **TailwindCSS** – Fast, consistent UI.
-- **Prisma + MongoDB** – Schemas with application-level types, simple onboarding.
-- **Redis (Upstash-ready)** – Global rate limiting + headers.
-- **Zod** – Runtime validation for all external boundaries.
-- **Strategy & Factory patterns** – Pluggable LLMs, minimal surface for change.
-- **Tokenization utilities** – Estimated cost awareness before/after inference.
-
----
-
-## 4) Data Model (Prisma / MongoDB)
-
-> Note: Using MongoDB `_id` mapping with Prisma.
-
-- **Folder**
-  - `id`, `name`, `model` (e.g., `gpt-4o-mini`), `createdAt`, `updatedAt`
-  - Metadata: description, source type(s)
-- **Flashcard**
-  - `id`, `folderId`, `front`, `back`, `tags[]`
-- **Quiz**
-  - `id`, `folderId`, `questions[]` (MCQ / short answer), `difficulty`
-- **LLMUsage**
-  - `id`, `userId`, `provider`, `model`, `inputTokens`, `outputTokens`, `inputCostMicroUsd`, `outputCostMicroUsd`, `timestamp`
-- **ErrorLog**
-  - `id`, `context`, `message`, `stack?`, `requestId`, `meta`
-
-**Implementation Notes**
-- Mongo `_id` → Prisma: `@map("_id")`.
-- Use `Decimal` (or numeric micro-units) for cost to avoid floating errors.
-- Seed table for **pricing snapshots** per provider/model to ensure **historical cost correctness**.
-
----
-
-## 5) Contracts & Validation (Zod)
-
-All external boundaries validated with Zod:
-
-- **Request DTOs**:
-  - `GenerateInput` (`folderId`, `content`, `target: "flashcards" | "quiz"`, `model`)
-- **Response DTOs**:
-  - `Flashcards[]` with `front`, `back`, `tags?`
-  - `Quiz` with `questions[]` each `{ prompt, choices?, answer, explanation? }`
-
-Validation flow:
-1. Client validates before submit (optional).
-2. API validates body (mandatory).
-3. Strategy validates provider-specific options (e.g., max tokens).
+For detailed information, see the documentation files linked above.
 
 ---
 

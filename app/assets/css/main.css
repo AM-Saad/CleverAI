@@ -126,33 +126,44 @@ a:not(.btn):focus-visible {
 }
 
 .animate-gradient {
-  background: linear-gradient(
-    18deg,
-    #f5ded7,
-    #f5ded7,
-    #fff,
-    #fff,
-    #fff,
-    #f5ded7,
-    #f5ded7
+background-image: linear-gradient(
+    210deg,
+    hsl(239deg 72% 52%) 0%,
+    hsl(223deg 69% 51%) 7%,
+    hsl(211deg 66% 50%) 13%,
+    hsl(202deg 64% 50%) 18%,
+    hsl(193deg 63% 49%) 23%,
+    hsl(184deg 61% 48%) 28%,
+    hsl(174deg 47% 59%) 32%,
+    hsl(150deg 37% 69%) 36%,
+    hsl(96deg 36% 74%) 40%,
+    hsl(64deg 49% 72%) 44%,
+    hsl(52deg 77% 73%) 50%,
+    hsl(46deg 96% 72%) 57%,
+    hsl(40deg 85% 68%) 64%,
+    hsl(34deg 77% 64%) 72%,
+    hsl(26deg 70% 59%) 81%,
+    hsl(17deg 65% 53%) 90%,
+    hsl(0deg 76% 45%) 100%
   );
-  background-size: 190% 190% !important;
+  background-size: 90% 90% !important;
+  background-repeat: no-repeat;
   animation: gradient-animation 8s ease-in-out infinite alternate both;
-  font-weight: bold;
-  color: #333;
 }
 
 @keyframes gradient-animation {
   0% {
-    background-position: right top;
+    background-position: left bottom;
+
   }
 
   50% {
-    background-position: left bottom;
+    background-position: right bottom;
   }
 
   100% {
-    background-position: right top;
+    background-position: left bottom;
+
   }
 }
 

@@ -16,7 +16,7 @@ export type ReviewGrade = z.infer<typeof ReviewGradeSchema>;
 export const EnrollCardRequestSchema = z
   .union([
     z.object({
-      resourceType: z.enum(["material", "flashcard"] as const),
+      resourceType: z.enum(["material", "flashcard", "question"] as const),
       resourceId: z.string().min(1),
     }),
     // backward-compatible shape
@@ -39,7 +39,7 @@ export const EnrollCardRequestSchema = z
   );
 
 export type EnrollCardRequest =
-  | { resourceType: "material" | "flashcard"; resourceId: string }
+  | { resourceType: "material" | "flashcard" | "question"; resourceId: string }
   | { materialId: string };
 
 export const EnrollCardResponseSchema = z.object({
@@ -69,7 +69,7 @@ export type GradeCardResponse = z.infer<typeof GradeCardResponseSchema>;
 // Review queue response
 export const ReviewCardSchema = z.object({
   cardId: z.string(),
-  resourceType: z.enum(["material", "flashcard"] as const),
+  resourceType: z.enum(["material", "flashcard", "question"] as const),
   resourceId: z.string(),
   // resource payload: for 'flashcard' we include front/back; for 'material' include a canonical material shape
   resource: z.union([
@@ -86,6 +86,13 @@ export const ReviewCardSchema = z.object({
       title: z.string(),
       content: z.string(),
       tags: z.array(z.string()).optional(),
+      folderId: z.string(),
+    }),
+    z.object({
+      // question
+      question: z.string(),
+      choices: z.array(z.string()),
+      answerIndex: z.number(),
       folderId: z.string(),
     }),
   ]),

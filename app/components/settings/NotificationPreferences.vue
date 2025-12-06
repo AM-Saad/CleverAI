@@ -1,6 +1,6 @@
 <template>
   <!-- eslint-disable vue/max-attributes-per-line, vue/attributes-order -->
-  <ui-card size="lg" variant="default">
+  <ui-card size="md" variant="default">
 
     <template #header>
       <div class="flex items-center gap-2">

@@ -69,11 +69,12 @@ export const GatewayGenerateRequest = z.object({
   task: TaskEnum,
   text: z.string().min(1),
   folderId: z.string().optional(),
+  materialId: z.string().optional(), // Generate from specific material
   save: z.boolean().optional(),
   replace: z.boolean().optional(),
   // Gateway-specific options:
   preferredModelId: z.string().optional(), // e.g., 'gpt-4o-mini', 'gemini-flash-8b'
-  requiredCapability: z.enum(['text', 'multimodal', 'reasoning']).optional(),
+  requiredCapability: z.enum(["text", "multimodal", "reasoning"]).optional(),
 });
 export type GatewayGenerateRequest = z.infer<typeof GatewayGenerateRequest>;
 
@@ -85,6 +86,8 @@ export const GatewayGenerateResponse = z.union([
     task: z.literal("flashcards"),
     flashcards: z.array(FlashcardSchema),
     savedCount: z.number().optional(),
+    deletedCount: z.number().optional(), // For regeneration: how many old items were deleted
+    deletedReviewsCount: z.number().optional(), // For regeneration: how many CardReviews were deleted
     subscription: SubscriptionInfoSchema.optional(),
     // Gateway metadata:
     requestId: z.string(),
@@ -98,6 +101,8 @@ export const GatewayGenerateResponse = z.union([
     task: z.literal("quiz"),
     quiz: z.array(QuizQuestionSchema),
     savedCount: z.number().optional(),
+    deletedCount: z.number().optional(), // For regeneration: how many old items were deleted
+    deletedReviewsCount: z.number().optional(), // For regeneration: how many CardReviews were deleted
     subscription: SubscriptionInfoSchema.optional(),
     // Gateway metadata:
     requestId: z.string(),

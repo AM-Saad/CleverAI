@@ -1,6 +1,7 @@
 // server/utils/llm/GPT35Strategy.ts
 import { OpenAI } from "openai";
 import { encoding_for_model } from "tiktoken";
+import { Errors } from "../error";
 
 // Small helper to avoid hard crashes on imperfect LLM JSON
 function safeParseJSON<T>(text: string, fallback: T): T {
@@ -27,6 +28,18 @@ export class GPT35Strategy implements LLMStrategy {
   }
 
   async generateFlashcards(input: string): Promise<FlashcardDTO[]> {
+    // Dev mock mode: skip API and return deterministic JSON (no credits used)
+    if (process.env.OPENAI_MOCK === "1") {
+      console.log("OpenAI mock mode active");
+      return [
+        {
+          front: "What is gravity?",
+          back: "A force that pulls objects together.",
+        },
+        { front: "Who discovered gravity?", back: "Sir Isaac Newton." },
+      ];
+    }
+
     const prompt = flashcardPrompt(input);
     const inputChars = input.length;
     let inputTokensEstimate = 0;
@@ -91,6 +104,23 @@ export class GPT35Strategy implements LLMStrategy {
   }
 
   async generateQuiz(input: string): Promise<QuizQuestionDTO[]> {
+    // Dev mock mode: skip API and return deterministic JSON (no credits used)
+    if (process.env.OPENAI_MOCK === "1") {
+      console.log("OpenAI mock mode active");
+      return [
+        {
+          question: "What is gravity?",
+          choices: ["A force", "A color", "A sound", "A smell"],
+          answerIndex: 0,
+        },
+        {
+          question: "Who formulated gravity laws?",
+          choices: ["Einstein", "Newton", "Galileo", "Darwin"],
+          answerIndex: 1,
+        },
+      ];
+    }
+
     const prompt = quizPrompt(input);
     const inputChars = input.length;
     let inputTokensEstimate = 0;

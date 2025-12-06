@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { requireRole } from "@server/middleware/auth";
+import { Errors, success } from "@server/utils/error";
 
 const QuerySchema = z.object({
   folderId: z
@@ -14,9 +15,7 @@ export default defineEventHandler(async (event) => {
   let query;
   try {
     query = QuerySchema.parse(rawQuery);
-    console.log("Parsed query:", query);
   } catch (err) {
-    console.log("Query parsing error:", err);
     if (err instanceof z.ZodError) {
       throw Errors.badRequest("Invalid query parameters..", err.issues);
     }

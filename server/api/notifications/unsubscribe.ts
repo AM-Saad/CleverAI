@@ -1,9 +1,7 @@
 import { z } from "zod";
+import { UnsubscribeDTO } from "@@/shared/utils/notification.contract";
 import { safeGetServerSession } from "@server/utils/safeGetServerSession";
-
-const UnsubscribeSchema = z.object({
-  endpoint: z.string().url(),
-});
+import { Errors, success } from "@server/utils/error";
 
 type SessionWithUser = {
   user?: {
@@ -18,7 +16,7 @@ export default defineEventHandler(async (event) => {
   const raw = await readBody(event);
   let parsed;
   try {
-    parsed = UnsubscribeSchema.parse(raw);
+    parsed = UnsubscribeDTO.parse(raw);
   } catch (e) {
     if (e instanceof z.ZodError) {
       throw Errors.badRequest(

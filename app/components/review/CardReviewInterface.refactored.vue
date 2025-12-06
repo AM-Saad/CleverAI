@@ -1,24 +1,16 @@
 <template>
-  <div
-    class="max-w-4xl mx-auto p-6 space-y-6"
-    tabindex="0"
-    role="application"
-    aria-label="Spaced repetition card review interface"
-    @keydown="handleKeydown"
-  >
+  <div class="max-w-4xl mx-auto p-6 space-y-6" tabindex="0" role="application"
+    aria-label="Spaced repetition card review interface" @keydown="handleKeydown">
     <!-- Analytics Summary -->
-    <ReviewAnalytics
-      :show="showAnalytics"
-      :folder-id="folderId"
-      @close="showAnalytics = false"
-    />
+    <ReviewAnalytics :show="showAnalytics" :folder-id="folderId" @close="showAnalytics = false" />
 
     <!-- Keyboard Shortcuts Help -->
     <review-keyboard-shortcuts :show="showShortcuts" @close="showShortcuts = false" />
 
     <!-- Debug Panel (Dev Only) -->
     <dev-only>
-      <div v-if="showDebugPanel" class="bg-yellow-50 dark:bg-yellow-900 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700">
+      <div v-if="showDebugPanel"
+        class="bg-yellow-50 dark:bg-yellow-900 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700">
         <div class="flex justify-between items-center mb-4">
           <h3 class="font-semibold text-yellow-900 dark:text-yellow-100">Debug Panel</h3>
           <button @click="showDebugPanel = false" class="text-yellow-600 hover:text-yellow-800">
@@ -52,65 +44,38 @@
 
     <!-- Header with Progress -->
     <div class="flex justify-between items-center">
-      <review-header
-        :current-index="currentCardIndex"
-        :total-cards="reviewQueue.length"
-        :progress="progress"
-      />
-      
-      <review-stats
-        :queue-stats="queueStats"
-        @toggle-analytics="showAnalytics = !showAnalytics"
-        @toggle-debug="() => { console.log('Debug toggle clicked, current:', showDebugPanel); showDebugPanel = !showDebugPanel; console.log('Debug after toggle:', showDebugPanel); }"
-      />
+      <review-header :current-index="currentCardIndex" :total-cards="reviewQueue.length" :progress="progress"
+        :session-time="sessionTime" />
+
+      <review-stats :queue-stats="queueStats" @toggle-analytics="showAnalytics = !showAnalytics"
+        @toggle-debug="showDebugPanel = !showDebugPanel" />
     </div>
 
     <!-- Card Display -->
-    <review-card-display
-      v-if="currentCard"
-      :card="currentCard as any"
-      :show-answer="showAnswer"
-    />
+    <review-card-display v-if="currentCard && !isLoading && !error" :card="currentCard" :show-answer="showAnswer" />
 
     <!-- Action Buttons -->
-    <div
-      v-if="currentCard"
-      class="border-t bg-gray-50 dark:bg-gray-700 p-6 rounded-lg"
-    >
+    <div v-if="currentCard && !isLoading && !error" class="border-t bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
       <!-- Show Answer Button -->
-      <review-answer-reveal-button
-        v-if="!showAnswer"
-        :is-submitting="isSubmitting"
-        @reveal="revealAnswer"
-      />
+      <review-answer-reveal-button v-if="!showAnswer" :is-submitting="isSubmitting" @reveal="revealAnswer" />
 
       <!-- Grade & Navigation -->
       <div v-else class="space-y-4">
         <review-grade-buttons :is-submitting="isSubmitting" @grade="gradeCard" />
-        <review-navigation-controls
-          :is-first-card="isFirstCard"
-          :is-last-card="isLastCard"
-          :is-submitting="isSubmitting"
-          @previous="previousCard"
-          @next="nextCard"
-          @skip="skipCard"
-        />
+        <review-navigation-controls :is-first-card="isFirstCard" :is-last-card="isLastCard"
+          :is-submitting="isSubmitting" @previous="previousCard" @next="nextCard" @skip="skipCard" />
       </div>
     </div>
 
-    <!-- Empty State -->
-    <review-states-empty-state
-      v-else-if="!isLoading"
-      :study-session-reviews="reviewCount"
-      @refresh="$emit('refresh')"
-      @show-analytics="showAnalytics = true"
-    />
+    <!-- Empty State - only show when not loading, no error, and no cards -->
+    <review-states-empty-state v-else-if="!isLoading && !error && !currentCard" :study-session-reviews="reviewCount"
+      @refresh="$emit('refresh')" @show-analytics="showAnalytics = true" />
 
     <!-- Loading State -->
     <review-states-loading-state v-if="isLoading" />
 
     <!-- Error State -->
-    <review-states-error-state v-if="error" :error="error" @clear-error="clearError" />
+    <review-states-error-state v-if="error && !isLoading" :error="error" @clear-error="clearError" />
   </div>
 </template>
 
@@ -147,13 +112,8 @@ const {
   clearError,
 } = useCardReview()
 
-// Debug logging
-watch([currentCardIndex, reviewQueue], ([index, queue]) => {
-  console.log('Current card index:', index, 'Queue length:', queue.length)
-})
-
 // Session timer composable
-const { reviewCount, incrementReviews, reset: resetSession } = useSessionTimer()
+const { sessionTime, reviewCount, incrementReviews, reset: resetSession } = useSessionTimer()
 
 // Local UI state
 const showAnswer = ref(false)
@@ -217,21 +177,16 @@ const gradeCard = async (gradeValue: ReviewGrade) => {
 }
 
 const nextCard = () => {
-  console.log('Next card clicked, current index:', currentCardIndex.value)
   showAnswer.value = false
   goToNextCardInQueue()
-  console.log('After next, index:', currentCardIndex.value)
 }
 
 const previousCard = () => {
-  console.log('Previous card clicked, current index:', currentCardIndex.value)
   showAnswer.value = false
   goToPreviousCardInQueue()
-  console.log('After previous, index:', currentCardIndex.value)
 }
 
 const skipCard = () => {
-  console.log('Skip card clicked')
   showAnswer.value = false
   nextCard()
 }

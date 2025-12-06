@@ -1,16 +1,8 @@
 // server/api/notifications/send.post.ts
 import { z } from "zod";
 import webPush from "web-push";
-
-const NotificationSchema = z.object({
-  title: z.string().min(1).max(100),
-  message: z.string().min(1).max(500),
-  icon: z.string().optional(), // Allow any string (relative paths, URLs, etc.)
-  tag: z.string().optional(),
-  requireInteraction: z.boolean().optional(),
-  targetUsers: z.array(z.string()).optional(),
-  url: z.string().optional(), // URL to navigate to when clicked
-});
+import { SendNotificationDTO } from "@@/shared/utils/notification.contract";
+import { Errors, success } from "@server/utils/error";
 
 export default defineEventHandler(async (event) => {
   // Rate limiting check (simple in-memory implementation)
@@ -20,8 +12,6 @@ export default defineEventHandler(async (event) => {
     "unknown";
 
   // TODO: Implement proper rate limiting with Redis or similar
-  // For now, just log the IP for monitoring
-  console.log(`Notification send request from IP: ${clientIP}`);
 
   webPush.setVapidDetails(
     "mailto:abdelrhmanm525@gmail.com",
@@ -32,7 +22,7 @@ export default defineEventHandler(async (event) => {
   const body = await readBody(event);
   let message;
   try {
-    message = NotificationSchema.parse(body);
+    message = SendNotificationDTO.parse(body);
   } catch (err) {
     if (err instanceof z.ZodError) {
       throw Errors.badRequest("Invalid request data", err.issues);
@@ -62,9 +52,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // In development, allow all requests
-  if (process.env.NODE_ENV !== "production") {
-    console.log("🔧 Development mode: allowing all notification requests");
-  }
+  // (no additional check needed, development requests are allowed through)
 
   // TODO: Replace with actual session check when auth is implemented
   // const session = await getServerSession(event)
@@ -90,18 +78,6 @@ export default defineEventHandler(async (event) => {
     },
   });
 
-  console.log("🔍 Debug Info:");
-  console.log("- Target Users:", message.targetUsers);
-  console.log("- Found subscriptions:", subscriptions.length);
-  console.log(
-    "- Subscription details:",
-    subscriptions.map((s) => ({
-      id: s.id,
-      userId: s.userId,
-      endpoint: s.endpoint.substring(0, 50) + "...",
-    }))
-  );
-
   let notificationsSent = 0;
   let notificationsFailed = 0;
 
@@ -118,10 +94,9 @@ export default defineEventHandler(async (event) => {
           icon: message.icon || "/icons/192x192.png",
           tag: message.tag,
           requireInteraction: message.requireInteraction || false,
-          url: message.url || "/", // Include URL for navigation
+          url: message.url || "/folders", // Include URL for navigation
         })
       );
-      console.log("Notification sent to:", subscription.endpoint);
       notificationsSent++;
     } catch (error: unknown) {
       console.error("Error sending notification:", error);
@@ -133,7 +108,6 @@ export default defineEventHandler(async (event) => {
         await prisma.notificationSubscription.delete({
           where: { id: subscription.id },
         });
-        console.log("Deleted invalid subscription:", subscription.id);
       }
     }
   }

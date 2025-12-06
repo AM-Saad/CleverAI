@@ -1,4 +1,5 @@
 // server/utils/llm/modelRegistry.ts
+import { Errors } from '../error'
 import type { Prisma, LlmModelRegistry } from '@prisma/client'
 import { prisma } from '../prisma'
 
@@ -225,7 +226,7 @@ export async function updateModelPriority(
   
   
   if (priority < 1 || priority > 10) {
-    throw new Error('Priority must be between 1 and 10')
+    throw Errors.badRequest('Priority must be between 1 and 10')
   }
   
   return await prisma.llmModelRegistry.update({

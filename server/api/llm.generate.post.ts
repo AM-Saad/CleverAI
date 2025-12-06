@@ -1,6 +1,7 @@
 // server/api/llm.generate.post.ts
 import { defineEventHandler, readBody } from "h3";
 import { requireRole } from "@server/middleware/auth";
+import { success } from "@server/utils/error";
 
 
 // Explicit domain unions (mirror zod schema values)
@@ -139,7 +140,6 @@ export default defineEventHandler(async (event) => {
       const flashcards: Flashcard[] = await strategy.generateFlashcards(text);
       let savedCount: number | undefined;
       if (canSave && folderId) {
-        if (replace) await prisma.flashcard.deleteMany({ where: { folderId } });
         if (flashcards.length) {
           const res = await prisma.flashcard.createMany({
             data: flashcards.map((fc: Flashcard) => ({

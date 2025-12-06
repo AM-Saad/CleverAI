@@ -5,3 +5,6 @@ export * from "./shared";
 export * from "./user";
 export * from "./useOffline";
 export * from "./review/";
+export * from "./flashcards/useCreateFlashcard";
+export * from "./flashcards/useUpdateFlashcard";
+export * from "./flashcards/useDeleteFlashcard";

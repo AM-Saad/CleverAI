@@ -72,17 +72,20 @@ model Folder {
 }
 
 model Material {
-    id        String   @id @default(auto()) @map("_id") @db.ObjectId
-    folder    Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
-    folderId  String   @db.ObjectId
-    title     String
-    content   String
-    type      String? // "video" | "audio" | "text" | "pdf" | etc.
-    metadata  Json?
-    llmModel  String?  @default("gpt-3.5")
-    llmPrompt String?
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    id         String      @id @default(auto()) @map("_id") @db.ObjectId
+    folder     Folder      @relation(fields: [folderId], references: [id], onDelete: Cascade)
+    folderId   String      @db.ObjectId
+    title      String
+    content    String
+    type       String? // "video" | "audio" | "text" | "pdf" | etc.
+    metadata   Json?
+    llmModel   String?     @default("gpt-3.5")
+    llmPrompt  String?
+    createdAt  DateTime    @default(now())
+    updatedAt  DateTime    @updatedAt
+    // Relations to generated content
+    flashcards Flashcard[]
+    questions  Question[]
 }
 
 model Note {
@@ -128,22 +131,32 @@ model Question {
     id          String       @id @default(auto()) @map("_id") @db.ObjectId
     folder      Folder       @relation(fields: [folderId], references: [id], onDelete: Cascade)
     folderId    String       @db.ObjectId
+    // Optional material relation - questions can be generated from specific material
+    material    Material?    @relation(fields: [materialId], references: [id], onDelete: Cascade)
+    materialId  String?      @db.ObjectId
     type        QuestionType @default(MULTIPLE_CHOICE)
     question    String
     choices     String[] // For MCQ
     answerIndex Int
     createdAt   DateTime     @default(now())
     updatedAt   DateTime     @updatedAt
+
+    @@index([materialId])
 }
 
 model Flashcard {
-    id        String   @id @default(auto()) @map("_id") @db.ObjectId
-    folder    Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
-    folderId  String   @db.ObjectId
-    front     String
-    back      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    id         String    @id @default(auto()) @map("_id") @db.ObjectId
+    folder     Folder    @relation(fields: [folderId], references: [id], onDelete: Cascade)
+    folderId   String    @db.ObjectId
+    // Optional material relation - flashcards can be generated from specific material
+    material   Material? @relation(fields: [materialId], references: [id], onDelete: Cascade)
+    materialId String?   @db.ObjectId
+    front      String
+    back       String
+    createdAt  DateTime  @default(now())
+    updatedAt  DateTime  @updatedAt
+
+    @@index([materialId])
 }
 
 enum QuestionType {
@@ -169,6 +182,7 @@ model CardReview {
     // analytics
     lastGrade      Int? // 0..5
     streak         Int       @default(0)
+    suspended      Boolean   @default(false) // Allow users to pause card reviews
 
     @@unique([userId, cardId], name: "userId_cardId")
     @@index([userId, nextReviewAt])

@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { requireRole } from "@server/middleware/auth";
+import { Errors, success } from "@server/utils/error";
+import { ReviewQueueResponseSchema } from "@shared/utils/review.contract";
 
 // Query validation
 const querySchema = z.object({
@@ -31,9 +33,9 @@ export default defineEventHandler(async (event) => {
   if (folderId) {
     const folderExists = await prisma.folder.findFirst({
       where: { id: folderId, userId: user.id },
-      select: { id: true }  // Minimal selection for performance
+      select: { id: true }, // Minimal selection for performance
     });
-    
+
     if (!folderExists) {
       throw Errors.forbidden("Folder not found or access denied");
     }
@@ -43,7 +45,7 @@ export default defineEventHandler(async (event) => {
   const whereClause = {
     userId: user.id,
     nextReviewAt: { lte: new Date() },
-    suspended: false,  // Exclude suspended cards
+    suspended: false, // Exclude suspended cards
     ...(folderId ? { folderId } : {}),
   };
 
@@ -62,9 +64,9 @@ export default defineEventHandler(async (event) => {
   const cardIds = cardReviews.map((c) => c.cardId);
   const folderIds = [...new Set(cardReviews.map((c) => c.folderId))];
 
-  // Fetch all data in parallel - materials, flashcards, AND folders separately
+  // Fetch all data in parallel - materials, flashcards, questions, AND folders separately
   // This avoids N+1 query by fetching folders in one query
-  const [materials, flashcards, folders] = await Promise.all([
+  const [materials, flashcards, questions, folders] = await Promise.all([
     prisma.material.findMany({
       where: { id: { in: cardIds } },
       // Don't include folder - we'll fetch separately
@@ -73,21 +75,45 @@ export default defineEventHandler(async (event) => {
       where: { id: { in: cardIds } },
       // Don't include folder - we'll fetch separately
     }),
+    prisma.question.findMany({
+      where: { id: { in: cardIds } },
+      // Don't include folder - we'll fetch separately
+    }),
     prisma.folder.findMany({
       where: { id: { in: folderIds } },
-      select: { id: true, title: true, userId: true }
+      select: { id: true, title: true, userId: true },
     }),
   ]);
 
   const materialMap = new Map(materials.map((m) => [m.id, m]));
   const flashcardMap = new Map(flashcards.map((f) => [f.id, f]));
+  const questionMap = new Map(questions.map((q) => [q.id, q]));
   const folderMap = new Map(folders.map((f) => [f.id, f]));
+
+  // Check for orphaned cards
+  const orphanedCards = cardReviews.filter((cr) => {
+    const type = cr.resourceType.toLowerCase();
+    if (type === "material") return !materialMap.has(cr.cardId);
+    if (type === "question") return !questionMap.has(cr.cardId);
+    return !flashcardMap.has(cr.cardId);
+  });
+  if (orphanedCards.length > 0) {
+    console.warn(
+      `[review/queue] WARNING: ${orphanedCards.length} orphaned CardReview records found (resources deleted):`,
+      orphanedCards.map((c) => ({
+        id: c.id,
+        cardId: c.cardId,
+        resourceType: c.resourceType,
+      }))
+    );
+  }
 
   const cards = cardReviews
     .map((cardReview) => {
       const resourceType = cardReview.resourceType.toLowerCase() as
         | "material"
-        | "flashcard";
+        | "flashcard"
+        | "question";
       if (resourceType === "material") {
         const material = materialMap.get(cardReview.cardId);
         if (!material) return null;
@@ -109,7 +135,7 @@ export default defineEventHandler(async (event) => {
             lastReviewedAt: cardReview.lastReviewedAt?.toISOString(),
           },
         };
-      } else {
+      } else if (resourceType === "flashcard") {
         const flashcard = flashcardMap.get(cardReview.cardId);
         if (!flashcard) return null;
         return {
@@ -131,6 +157,29 @@ export default defineEventHandler(async (event) => {
             lastReviewedAt: cardReview.lastReviewedAt?.toISOString(),
           },
         };
+      } else if (resourceType === "question") {
+        const question = questionMap.get(cardReview.cardId);
+        if (!question) return null;
+        return {
+          cardId: cardReview.id,
+          resourceType: "question" as const,
+          resourceId: cardReview.cardId,
+          resource: {
+            question: question.question,
+            choices: question.choices,
+            answerIndex: question.answerIndex,
+            folderId: question.folderId,
+          },
+          reviewState: {
+            repetitions: cardReview.repetitions,
+            easeFactor: cardReview.easeFactor,
+            intervalDays: cardReview.intervalDays,
+            nextReviewAt: cardReview.nextReviewAt.toISOString(),
+            lastReviewedAt: cardReview.lastReviewedAt?.toISOString(),
+          },
+        };
+      } else {
+        return null;
       }
     })
     .filter(Boolean);
@@ -138,7 +187,11 @@ export default defineEventHandler(async (event) => {
   // Stats (execute in parallel where possible)
   const [totalCards, newCards, learningCards, dueCards] = await Promise.all([
     prisma.cardReview.count({
-      where: { userId: user.id, suspended: false, ...(folderId ? { folderId } : {}) },
+      where: {
+        userId: user.id,
+        suspended: false,
+        ...(folderId ? { folderId } : {}),
+      },
     }),
     prisma.cardReview.count({
       where: {

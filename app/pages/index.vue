@@ -1,29 +1,22 @@
 <template>
   <div>
-    <Title>Shater AI | Your AI Companion</Title>
+    <Title>Clever AI | Your AI Companion</Title>
 
     <section class="my-xl flex w-full">
       <div class="flex flex-col gap-2">
-        <motion.h2
-          :initial="{ opacity: 0, scale: 0.9 }"
-          :animate="{ opacity: 1, scale: 1 }"
-          :transition="{
-            duration: 1.9,
-            scale: {
-              type: 'spring',
-              visualDuration: 0.9,
-              bounce: 0.1,
-            },
-          }"
-          class="text-9xl font-light tracking-tighter text-primary"
-        >
-          Shater AI
+        <motion.h2 :initial="{ opacity: 0, scale: 0.9 }" :animate="{ opacity: 1, scale: 1 }" :transition="{
+          duration: 1.9,
+          scale: {
+            type: 'spring',
+            visualDuration: 0.9,
+            bounce: 0.1,
+          },
+        }" class="text-9xl font-light tracking-tighter text-primary">
+          Clever AI
         </motion.h2>
-        <UiTextGenerateEffect
-          class="text-4xl font-medium my-4 dark:text-light"
-          :words="'AI, Chatbot, Assistant, Helper, Support, Guide'"
-        />
-        
+        <UiTextGenerateEffect class="text-4xl font-medium my-4 dark:text-light"
+          :words="'AI, Chatbot, Assistant, Helper, Support, Guide'" />
+
         <router-link to="/auth/signup">
           <UButton>Start Now</UButton>
         </router-link>
@@ -34,9 +27,7 @@
         <div class="text-balance flex justify-center">
           <h1 class="text-balance text-center text-2xl font-bold dark:text-light">
             Flashcards, Chatbot, and custom quizzes — all tailored to
-            <UiTextHighlight
-              class="rounded-lg bg-gradient-to-r from-purple-300 to-orange-300"
-            >
+            <UiTextHighlight class="rounded-lg bg-gradient-to-r from-purple-300 to-orange-300">
               make learning fun and effective
             </UiTextHighlight>
           </h1>

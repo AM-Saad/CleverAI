@@ -1,41 +1,31 @@
 <template>
-  <div
-    :class="
-      cn(
-        'h-52 flex-1 w-full select-none [perspective:1000px] mb-4 md:mb-0',
-        props.class,
-      )
-    "
-  >
-    <div
-      :class="
-        cn(
-          'block relative min-w-full h-full rounded-2xl transition-transform duration-500 will-change-transform cursor-pointer text-dark [transform-style:preserve-3d]',
-        )
-      "
-      :style="{ transform: wrapperTransform }"
-      @click="flipped = !flipped"
-    >
-      <!-- Front -->
-      <div
-        class="absolute size-full overflow-hidden rounded-2xl border bg-light border-muted dark:border-light [backface-visibility:hidden] bg-foreground p-4"
-      >
-        <slot name="front" />
-      </div>
+  <!-- <div :class="cn(
+    'w-full select-none [perspective:1000px] mb-4 md:mb-0 bg-green-400 flex',
+    props.class,
+  )
+    "> -->
+  <div :class="cn(
+    ' relative min-w-full h-full rounded-2xl transition-transform duration-500 will-change-transform cursor-pointer text-dark [transform-style:preserve-3d] flex',
+  )
+    " :style="{ transform: wrapperTransform }" @click="flipped = !flipped">
 
-      <!-- Back -->
-      <div
-        :class="
-          cn(
-            'absolute h-full w-full overflow-hidden rounded-2xl border border-muted bg-light dark:bg-dark p-4 text-dark [backface-visibility:hidden]',
-          )
-        "
-        :style="{ transform: backTransform }"
-      >
-        <slot name="back" />
-      </div>
+    <!-- Front -->
+    <div
+      class="absolute top-0 size-full overflow-hidden rounded-2xl border bg-light dark:bg-muted border-muted dark:border-muted [backface-visibility:hidden] p-4">
+      <slot name="front" />
     </div>
+
+    <!-- Back -->
+    <div :class="cn(
+      'absolute top-0 h-full w-full overflow-hidden flex flex-col justify-between rounded-2xl border border-muted bg-light dark:bg-dark p-4 text-dark [backface-visibility:hidden]',
+    )
+      " :style="{ transform: backTransform }">
+      <slot name="back" />
+    </div>
+
+
   </div>
+  <!-- </div> -->
 </template>
 
 <script setup lang="ts">

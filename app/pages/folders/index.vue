@@ -46,20 +46,20 @@
       </ui-card>
       <ul v-if="folders && folders?.length > 0"
         :class="listView === 'grid' ? 'grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'space-y-4'">
-        <UiCard v-for="folder in folders" :key="folder.id" hover="lift" shadow="none" tag="li">
-          <NuxtLink :to="`/folders/${folder.id}`">
+        <ui-card v-for="folder in folders" :key="folder.id" hover="lift" shadow="none" tag="li" variant="default">
+        <NuxtLink :to="`/folders/${folder.id}`">
             <div class="mb-2 flex items-center">
               <icon name="ic:round-folder-open" class="inline-block mr-2 text-primary" />
 
-              <UiSubtitle>{{ folder.title }}</UiSubtitle>
+              <ui-subtitle>{{ folder.title }}</ui-subtitle>
             </div>
-            <UiParagraph v-if="folder.description">
+            <ui-paragraph v-if="folder.description">
               {{ folder.description }}
-            </UiParagraph>
-            <UiParagraph v-else>No description available.</UiParagraph>
+            </ui-paragraph>
+            <ui-paragraph v-else>No description available.</ui-paragraph>
           </NuxtLink>
-        </UiCard>
-      </ul>
+        </ui-card>
+        </ul>
     </div>
     <modals-create-folder-form :show="show" @cancel="show = false" />
     <div class="mt-4">

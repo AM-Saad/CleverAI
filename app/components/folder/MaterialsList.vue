@@ -9,107 +9,71 @@
       <div v-if="fullscreenMaterial" class="fullscreen-backdrop" @click="closeFullscreen" />
     </Transition>
 
-
     <ul v-if="!loading && materials.length > 0">
-
-
       <ui-card v-for="m in materials" :key="m.id" tag="article"
         :variant="fullscreenMaterial === m.id ? 'default' : 'ghost'" size="xs" :class="{
           'fullscreen-card bg-light': fullscreenMaterial === m.id,
           'relative z-50': fullscreenMaterial === m.id,
         }">
-
-
         <!-- Sticky header for fullscreen -->
         <header v-if="fullscreenMaterial === m.id" class="fullscreen-header">
-
           <div class="flex w-full justify-between items-center gap-2 flex-wrap">
+            <ui-subtitle>{{ m.title }}</ui-subtitle>
 
-            <ui-subtitle >{{ m.title }}</ui-subtitle>
-
-            <div class="flex shrink-0 gap-2">
+            <div class="flex shrink-0 gap-2 items-center">
+              <!-- Generate button -->
+              <materials-generate-button :material-id="m.id" :material-content="m.content" @generated="handleGenerated"
+                @error="handleGenerateError" />
               <!-- Fullscreen/Expand button -->
               <u-button variant="ghost" @click="() => toggleFullscreen(m.id)">
                 <Icon name="ic:round-fullscreen-exit" size="16" />
               </u-button>
-              <!-- Enrollment button -->
-              <ReviewEnrollButton :resource-type="'material'" :resource-id="m.id"
-                :is-enrolled="enrolledMaterials.has(m.id)" @enrolled="handleMaterialEnrolled"
-                @error="handleEnrollError" />
-              <u-button color="error" variant="outline" size="xs" @click="() => confirmRemoval(m.id)">
-                Remove</u-button>
-            </div>
 
+              <u-button color="error" variant="outline" size="xs" @click="() => confirmRemoval(m.id)">
+                Remove
+              </u-button>
+            </div>
           </div>
 
           <span v-if="enrolledMaterials.has(m.id)"
             class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 mt-2">
-            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd"
-                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                clip-rule="evenodd" />
-            </svg>
+            <icon name="i-lucide-check-circle" class="w-3 h-3 mr-1" />
             Enrolled
           </span>
-
         </header>
-
 
         <!-- Regular card layout (non-fullscreen) -->
         <div v-else class="flex-1">
-
-          <div class="flex items-center">
-
-            <header class="flex w-full justify-between items-center gap-2">
-              <ui-subtitle weight="normal" size="sm">{{ m.title }}</ui-subtitle>
-              <div class="ml-4 flex-shrink-0 flex gap-2">
-                <!-- Fullscreen/Expand button -->
-                <u-button variant="ghost" @click="() => toggleFullscreen(m.id)">
-                  <Icon name="ic:round-fullscreen" size="16" />
-                </u-button>
-              </div>
-            </header>
-
-            <span v-if="enrolledMaterials.has(m.id)"
-              class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
-              <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clip-rule="evenodd" />
-              </svg>
-              Enrolled
-            </span>
-
-          </div>
-
-
-          <div>
-
-            <!-- Regular content (non-fullscreen) -->
-            <transition name="fade-slide">
-              <div v-if="expandedMaterials.has(m.id)" class="h-48 overflow-auto">
-                <ui-card tag="article" class="mt-4" variant="ghost">
-                  <ui-paragraph class="whitespace-pre-wrap">{{ m.content }}</ui-paragraph>
-                </ui-card>
-              </div>
-            </transition>
-
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 flex-1 min-w-0">
+              <ui-subtitle weight="normal" size="xs" class="truncate">{{ m.title }}</ui-subtitle>
+              <span v-if="enrolledMaterials.has(m.id)"
+                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 shrink-0">
+                <icon name="i-lucide-check-circle" class="w-3 h-3 mr-1" />
+                Enrolled
+              </span>
+            </div>
+            <div class="shrink-0 flex items-center gap-2">
+              <!-- Generate button -->
+              <materials-generate-button :material-id="m.id" :material-content="m.content" @generated="handleGenerated"
+                @error="handleGenerateError" />
+              <!-- Fullscreen/Expand button -->
+              <u-button variant="ghost" size="xs" @click="() => toggleFullscreen(m.id)">
+                <Icon name="ic:round-fullscreen" size="16" />
+              </u-button>
+            </div>
           </div>
         </div>
 
         <!-- Fullscreen scrollable content -->
         <div v-if="fullscreenMaterial === m.id" class="fullscreen-content">
-
           <div class="fullscreen-content-inner">
             <ui-card tag="article" variant="ghost">
               <ui-paragraph class="whitespace-pre-wrap">{{ m.content }}</ui-paragraph>
             </ui-card>
           </div>
-
         </div>
-
       </ui-card>
-
     </ul>
 
     <ui-paragraph v-if="!loading && materials.length === 0 && !error" color="muted">
@@ -146,10 +110,12 @@
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
         </u-button>
-        <u-button type="button" variant="subtle" @click="() => {
-          showConfirm = false;
-          confirmId = null;
-        }">Cancel</u-button>
+        <u-button type="button" variant="subtle" @click="
+          () => {
+            showConfirm = false;
+            confirmId = null;
+          }
+        ">Cancel</u-button>
       </div>
     </template>
   </DialogModal>
@@ -157,9 +123,33 @@
 
 <script setup lang="ts">
 import DialogModal from "~/components/shared/DialogModal.vue";
+import type { GenerationType } from "~/composables/materials/useGenerateFromMaterial";
+
+const emit = defineEmits<{
+  removed: [id: string];
+  error: [err: string];
+  generated: [result: { type: GenerationType; savedCount?: number }];
+}>();
+const route = useRoute();
+const id = route.params.id;
+const toast = useToast();
+
+const showConfirm = ref(false);
+const confirmId = ref<string | null>(null);
+
+const {
+  materialsList: materials,
+  fetching: loading,
+  fetchTypedError: error,
+  deleteMaterial,
+} = useMaterialsStore(id as string);
+// Track enrolled materials
+const enrolledMaterials = ref(new Set<string>());
+
 
 // Track expanded/collapsed state for each material
 const expandedMaterials = ref(new Set<string>());
+
 // Track fullscreen state with transition control
 const fullscreenMaterial = ref<string | null>(null);
 const isTransitioning = ref(false);
@@ -188,7 +178,6 @@ async function toggleFullscreen(id: string) {
 
 function closeFullscreen() {
   if (isTransitioning.value) return;
-
   isTransitioning.value = true;
   fullscreenMaterial.value = null;
   setTimeout(() => {
@@ -210,38 +199,7 @@ onMounted(() => {
   });
 });
 
-const props = defineProps<{ folderId: string }>();
-const emit = defineEmits<{
-  removed: [id: string];
-  error: [err: string];
-}>();
-const route = useRoute();
-const id = route.params.id;
 
-// Centralized error handling - all errors come from FetchFactory
-// const {
-//   materials,
-//   loading,
-//   error,
-//   removing,
-//   removeTypedError,
-//   removeMaterial,
-// } = useMaterials(props.folderId);
-
-// const materialList = computed(() => materials.value ?? []);
-
-const {
-  materials: materialList,
-  fetching: loading,
-  fetchTypedError: error,
-  deleteMaterial
-} = useMaterialsStore(id as string);
-// Track enrolled materials
-const enrolledMaterials = ref(new Set<string>());
-
-const materials = computed(() => {
-  return Array.from(materialList.value.values());
-});
 
 // Check enrollment status when materials are available
 watch(
@@ -251,7 +209,7 @@ watch(
       await checkEnrollmentStatus();
     }
   },
-  { immediate: true },
+  { immediate: true }
 );
 
 async function checkEnrollmentStatus() {
@@ -262,7 +220,7 @@ async function checkEnrollmentStatus() {
     const { $api } = useNuxtApp();
     const result = await $api.review.getEnrollmentStatus(
       materialIds,
-      "material",
+      "material"
     );
 
     if (
@@ -279,7 +237,7 @@ async function checkEnrollmentStatus() {
           if (isEnrolled) {
             enrolledMaterials.value.add(materialId);
           }
-        },
+        }
       );
     } else {
       const errorMessage =
@@ -297,17 +255,33 @@ function handleMaterialEnrolled(response: EnrollCardResponse) {
   if (response.success) {
     // Refresh enrollment status to be sure
     checkEnrollmentStatus();
-    console.log("Material enrolled successfully:", response.cardId);
   }
 }
 
 function handleEnrollError(error: string) {
-  console.error("Failed to enroll material:", error);
   emit("error", error);
 }
 
-const showConfirm = ref(false);
-const confirmId = ref<string | null>(null);
+// Handle generation events
+function handleGenerated(result: { type: GenerationType; savedCount?: number }) {
+  emit("generated", result);
+  // Optionally show a toast or trigger a refresh
+  const itemType = result.type === "flashcards" ? "flashcards" : "questions";
+  toast.add({
+    title: "Content Generated",
+    description: `Successfully generated ${result.savedCount || 0} ${itemType}`,
+    color: "success",
+  });
+}
+
+function handleGenerateError(error: string) {
+  emit("error", error);
+  toast.add({
+    title: "Generation Failed",
+    description: error,
+    color: "error",
+  });
+}
 
 const confirmRemoval = (id: string) => {
   confirmId.value = id;
@@ -329,8 +303,6 @@ const doConfirmRemove = async () => {
     // Error occurred - use centralized error details
     emit("error", error.value.message);
   }
-
-
 };
 </script>
 

@@ -1,6 +1,7 @@
 // server/api/admin/llm-models/index.get.ts
 import { defineEventHandler } from "h3";
 import { requireRole } from "@server/middleware/auth";
+import { Errors, success } from "@server/utils/error";
 import { getAvailableModels } from "@server/utils/llm/modelRegistry";
 
 /**

@@ -2,6 +2,7 @@
 import FetchFactory from "./FetchFactory";
 import type { Result } from "@/types/Result";
 import type {
+  UserProfile,
   UpdateProfileDTO,
   UpdateProfileResponse,
   DeleteAccountDTO,
@@ -10,18 +11,6 @@ import type {
   ChangePasswordDTO,
   ChangePasswordResponse,
 } from "@@/shared/utils/user.contract";
-
-// User profile interface
-export interface UserProfile {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  gender?: string;
-  role: string;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export class UserService extends FetchFactory {
   private readonly RESOURCE = "/api/user";

@@ -1,6 +1,6 @@
 <template>
     <div class="space-y-6 block min-h-full">
-        <ui-card size="lg" variant="default">
+        <ui-card size="md" variant="default">
 
             <template #header>
                 <div class="flex items-center gap-2">

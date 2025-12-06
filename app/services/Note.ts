@@ -1,7 +1,12 @@
 import FetchFactory from "./FetchFactory";
 
 import type { Result } from "@/types/Result";
-import type { Note, CreateNoteDTO, UpdateNoteDTO, ReorderNotesDTO } from "@@/shared/utils/note.contract.ts";
+import type {
+  Note,
+  CreateNoteDTO,
+  UpdateNoteDTO,
+  ReorderNotesDTO,
+} from "@@/shared/utils/note.contract.ts";
 
 export class NoteService extends FetchFactory {
   private readonly RESOURCE = "/api/notes";
@@ -41,9 +46,6 @@ export class NoteService extends FetchFactory {
    * Reorder notes in a folder
    */
   async reorder(payload: ReorderNotesDTO): Promise<Result<Note[]>> {
-    console.log("🌐 [NoteService] reorder called with payload:", payload);
-    const result = await this.call<Note[]>("PATCH", `${this.RESOURCE}/reorder`, payload);
-    console.log("📡 [NoteService] reorder response:", result);
-    return result;
+    return this.call<Note[]>("PATCH", `${this.RESOURCE}/reorder`, payload);
   }
 }
