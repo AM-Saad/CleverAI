@@ -1,6 +1,20 @@
 import FetchFactory from "./FetchFactory";
 import { z } from "zod";
 import type { Result } from "~/types/Result";
+import {
+  ReviewSummaryStatsSchema,
+  EnrollCardResponseSchema,
+  GradeCardResponseSchema,
+  ReviewQueueResponseSchema,
+} from "@shared/utils/review.contract";
+import type {
+  ReviewSummaryStats,
+  EnrollCardRequest,
+  EnrollCardResponse,
+  GradeCardRequest,
+  GradeCardResponse,
+  ReviewQueueResponse,
+} from "@shared/utils/review.contract";
 
 const EnrollmentStatusResponseSchema = z.object({
   enrollments: z.record(z.string(), z.boolean()),
@@ -72,5 +86,21 @@ export class ReviewService extends FetchFactory {
     const url = `${this.RESOURCE}/enrollment-status?${queryString}`;
 
     return this.call("GET", url, undefined, {}, EnrollmentStatusResponseSchema);
+  }
+
+  /**
+   * Get review stats summary (lightweight - no cards)
+   * @param folderId Optional folder ID for folder-specific stats
+   */
+  async getStats(folderId?: string): Promise<Result<ReviewSummaryStats>> {
+    const params = new URLSearchParams();
+    if (folderId) params.append("folderId", folderId);
+
+    const queryString = params.toString();
+    const url = queryString
+      ? `${this.RESOURCE}/stats?${queryString}`
+      : `${this.RESOURCE}/stats`;
+
+    return this.call("GET", url, undefined, {}, ReviewSummaryStatsSchema);
   }
 }

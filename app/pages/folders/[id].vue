@@ -150,6 +150,9 @@ const saveMaterial = async (title: string, content: string, type: string) => {
     <shared-error-message v-if="error && !loading" :error="error" :refresh="refresh" />
 
     <template v-if="folder" #default>
+      <!-- Folder-specific Review Status - Minimal & Clean -->
+      <review-status-card :folder-id="`${id as string}`" :show-context="false" :show-refresh="false" variant="ghost"
+        :empty-message="'You have no cards to review, enroll some or just chill.'" />
       <div class="flex flex-col md:flex-row gap-2 min-h-0 w-full grow">
 
 
@@ -168,13 +171,11 @@ const saveMaterial = async (title: string, content: string, type: string) => {
                 <icons-stars-generative />
                 Learning Hub
               </div>
-              <!-- Review Navigation -->
-              <div v-if="cardsToShow?.length">
-                <u-button to="/user/review" size="sm">Start Review</u-button>
-              </div>
             </template>
 
             <template #default>
+
+
               <ui-card class="overflow-auto mb-4 grow-0 basis-1/4" size="sm" variant="outline">
                 <template #header>
                   <div class="flex items-center gap-1">

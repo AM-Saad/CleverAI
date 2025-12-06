@@ -36,7 +36,7 @@
       <!-- Notes grid -->
       <div v-if="!error && !isFetching && notes?.length" class="flex flex-1 min-h-0 overflow-hidden relative"
         id="notes-section">
-        <ui-drawer :show="true" :mobile="false" teleport-to="#notes-section" :backdrop="false" :handle-visible="20">
+        <ui-drawer :show="false" :mobile="false" teleport-to="#notes-section" :backdrop="false" :handle-visible="20">
           <div class="relative shrink-0 overflow-auto bg-light dark:bg-muted rounded border border-muted">
             <folder-notes-search :folder-id="folderId" />
             <ReorderGroup v-model:values="localNotes" axis="y" class="relative flex-1 shrink-0 overflow-auto"

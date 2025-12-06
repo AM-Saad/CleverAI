@@ -1,5 +1,9 @@
 <template>
   <shared-page-wrapper title="Folders" subtitle="Manage your folders and organization">
+    <!-- Review Status Card (Global) -->
+    <review-status-card class="mb-6" :show-context="false"
+      empty-message="Enroll flashcards or materials to start reviewing" />
+
     <div v-if="loading" class="text-gray-500 my-xl">
       <div class="flex items-center gap-4">
         <USkeleton class="h-12 w-12 rounded-full" />
@@ -36,8 +40,7 @@
                 { label: 'Date Created (Newest)', value: 'date_desc' },
                 { label: 'Date Created (Oldest)', value: 'date_asc' },
               ]" class="w-full" /> -->
-            <u-button variant="subtle" @click="listView = listView === 'grid' ? 'list' : 'grid'"
-              class="place-self-end">
+            <u-button variant="subtle" @click="listView = listView === 'grid' ? 'list' : 'grid'" class="place-self-end">
               <icon v-if="listView === 'grid'" name="i-lucide-list" class="inline-block" />
               <icon v-else name="i-lucide-grid" class="inline-block" />
             </u-button>
@@ -47,7 +50,7 @@
       <ul v-if="folders && folders?.length > 0"
         :class="listView === 'grid' ? 'grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'space-y-4'">
         <ui-card v-for="folder in folders" :key="folder.id" hover="lift" shadow="none" tag="li" variant="default">
-        <NuxtLink :to="`/folders/${folder.id}`">
+          <NuxtLink :to="`/folders/${folder.id}`">
             <div class="mb-2 flex items-center">
               <icon name="ic:round-folder-open" class="inline-block mr-2 text-primary" />
 
@@ -59,7 +62,7 @@
             <ui-paragraph v-else>No description available.</ui-paragraph>
           </NuxtLink>
         </ui-card>
-        </ul>
+      </ul>
     </div>
     <modals-create-folder-form :show="show" @cancel="show = false" />
     <div class="mt-4">
