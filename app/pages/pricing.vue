@@ -1,6 +1,58 @@
-<!-- app/pages/upgrade.vue -->
 <script setup>
 import { ref } from "vue";
+
+definePageMeta({
+  auth: false,
+  title: "Upgrade to CleverAI Pro | AI-Powered Spaced Repetition Learning Platform",
+});
+
+useHead({
+  meta: [
+    {
+      name: "description",
+      content:
+        "Upgrade to CleverAI Pro and unlock unlimited AI-powered spaced repetition learning, adaptive flashcards, priority support, and advanced study tools.",
+    },
+    {
+      property: "og:title",
+      content: "Upgrade to CleverAI Pro | CleverAI",
+    },
+    {
+      property: "og:description",
+      content:
+        "Unlock unlimited AI-powered learning with CleverAI Pro. Access adaptive flashcards, priority support, and advanced study workflows.",
+    },
+    {
+      property: "og:type",
+      content: "website",
+    },
+    {
+      property: "og:url",
+      content: "https://cleverai.app/pricing",
+    },
+    {
+      property: "og:image",
+      content: "https://cleverai.app/images/og/pricing.png",
+    },
+    {
+      name: "twitter:card",
+      content: "summary_large_image",
+    },
+    {
+      name: "twitter:title",
+      content: "CleverAI Pro Pricing | CleverAI",
+    },
+    {
+      name: "twitter:description",
+      content:
+        "Go Pro with CleverAI and get unlimited AI-powered spaced repetition, flashcards, and study tools.",
+    },
+    {
+      name: "twitter:image",
+      content: "https://cleverai.app/images/og/pricing.png",
+    },
+  ],
+});
 
 const upgrading = ref(false);
 const selectedPlan = ref("monthly");
@@ -57,34 +109,25 @@ const handleSubscribe = async () => {
 </script>
 
 <template>
-  <div class="upgrade-page">
+  <main class="upgrade-page">
     <div class="container">
-      <h1>Upgrade to CleverAI Pro</h1>
-      <p class="subtitle">Get unlimited access to AI-powered study tools</p>
+      <header>
+        <h1 id="pricing-title">Upgrade to CleverAI Pro</h1>
+        <p class="subtitle">Get unlimited access to AI-powered study tools</p>
+      </header>
 
-      <div class="plans-container">
+      <section class="plans-container" aria-labelledby="pricing-title">
         <div class="plan-toggle">
-          <button
-            :class="{ active: selectedPlan === 'monthly' }"
-            @click="selectedPlan = 'monthly'"
-          >
+          <button :class="{ active: selectedPlan === 'monthly' }" @click="selectedPlan = 'monthly'">
             Monthly
           </button>
-          <button
-            :class="{ active: selectedPlan === 'yearly' }"
-            @click="selectedPlan = 'yearly'"
-          >
+          <button :class="{ active: selectedPlan === 'yearly' }" @click="selectedPlan = 'yearly'">
             Yearly <span class="save-badge">Save 16%</span>
           </button>
         </div>
 
         <div class="plan-cards">
-          <div
-            v-for="plan in plans"
-            :key="plan.id"
-            class="plan-card"
-            :class="{ active: selectedPlan === plan.id }"
-          >
+          <div v-for="plan in plans" :key="plan.id" class="plan-card" :class="{ active: selectedPlan === plan.id }">
             <div class="plan-header">
               <h3>{{ plan.name }}</h3>
               <div class="plan-price">
@@ -95,42 +138,19 @@ const handleSubscribe = async () => {
             <div class="plan-features">
               <ul>
                 <li v-for="(feature, index) in plan.features" :key="index">
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <polyline points="20 6 9 17 4 12" />
                   </svg>
                   {{ feature }}
                 </li>
               </ul>
             </div>
-            <button
-              v-if="selectedPlan === plan.id"
-              :disabled="upgrading"
-              class="subscribe-button"
-              @click="handleSubscribe"
-            >
+            <button v-if="selectedPlan === plan.id" :disabled="upgrading" class="subscribe-button"
+              @click="handleSubscribe">
               <span v-if="upgrading">
-                <svg
-                  class="animate-spin"
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
+                <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21 12a9 9 0 1 1-6.219-8.56" />
                 </svg>
                 Processing...
@@ -139,21 +159,12 @@ const handleSubscribe = async () => {
             </button>
           </div>
         </div>
-      </div>
+      </section>
 
       <div class="guarantees">
         <div class="guarantee-item">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           </svg>
           <div>
@@ -162,20 +173,9 @@ const handleSubscribe = async () => {
           </div>
         </div>
         <div class="guarantee-item">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path
-              d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
-            />
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
             <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
           </svg>
           <div>
@@ -184,17 +184,8 @@ const handleSubscribe = async () => {
           </div>
         </div>
         <div class="guarantee-item">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10" />
             <path d="M8 14s1.5 2 4 2 4-2 4-2" />
             <line x1="9" y1="9" x2="9.01" y2="9" />
@@ -207,7 +198,7 @@ const handleSubscribe = async () => {
         </div>
       </div>
     </div>
-  </div>
+  </main>
 </template>
 
 <style scoped>

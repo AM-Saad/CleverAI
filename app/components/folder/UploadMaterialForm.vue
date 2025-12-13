@@ -4,40 +4,10 @@ import type { FormSubmitEvent } from "@nuxt/ui";
 import { useRoute } from "vue-router";
 import { useUpdateFolder } from "~/composables/folders/useFolders";
 
-
-type MobileProp = boolean | "auto";
-
 const emit = defineEmits<{ (e: "close"): void }>();
-const props = withDefaults(
-  defineProps<{
-    show: boolean;
-    // pass‑through Drawer options (all optional)
-    side?: "right" | "left";
-    mobile?: MobileProp;
-    breakpoint?: string;
-    handleVisible?: number;
-    sheetHeight?: string;
-    widthClasses?: string;
-    teleportTo?: string;
-    lockScroll?: boolean;
-    threshold?: number;
-    fastVelocity?: number;
-    backdrop?: boolean;
-  }>(),
-  {
-    side: "right",
-    mobile: "auto",
-    breakpoint: "(max-width: 639px)",
-    handleVisible: 28,
-    sheetHeight: "75vh",
-    widthClasses: "w-1/4 min-w-60",
-    teleportTo: "body",
-    lockScroll: true,
-    threshold: 20,
-    fastVelocity: 450,
-    backdrop: true,
-  },
-);
+const props = defineProps<{
+  show: boolean;
+}>();
 
 // ----- Form schema & state -----
 const schema = z.object({
@@ -122,35 +92,44 @@ const saveMaterial = async (title: string, content: string, type: "text" | "vide
 </script>
 
 <template>
-  <ui-drawer :show="props.show" :side="props.side" :mobile="props.mobile" :breakpoint="props.breakpoint"
-    :sheet-height="props.sheetHeight" :width-classes="props.widthClasses" :teleport-to="props.teleportTo"
-    :lock-scroll="props.lockScroll" :threshold="props.threshold" :backdrop="props.backdrop"
-    :fast-velocity="props.fastVelocity" title="Upload Material" @close="emit('close')">
-    <template #subtitle>
-      <ui-paragraph>Upload your material files here.</ui-paragraph>
-    </template>
+  <Teleport to="body">
+    <UiDialogModal :show="props.show" @close="emit('close')">
+      <template #header>
+        <div class="flex flex-col gap-1">
+          <UiSubtitle class="flex items-center gap-2">
+            <icon name="i-heroicons-document-plus" class="" />
+            Upload Material
+          </UiSubtitle>
+          <UiParagraph size="sm" color="muted">
+            Upload your material files here.
+          </UiParagraph>
+        </div>
+      </template>
 
-    <UForm :schema="schema" :state="state" class="space-y-2" @submit="onSubmit">
-      <UFormField label="Material Title" name="materialTitle">
-        <UInput v-model="state.materialTitle" placeholder="Enter material title" :ui="{
-          root: 'w-full',
-        }" />
-      </UFormField>
+      <template #body>
+        <UForm :schema="schema" :state="state" class="space-y-2" @submit="onSubmit">
+          <UFormField label="Material Title" name="materialTitle">
+            <UInput v-model="state.materialTitle" placeholder="Enter material title" :ui="{
+              root: 'w-full',
+            }" />
+          </UFormField>
 
-      <UFormField label="Material Type" name="materialType">
-        <USelectMenu v-model="state.materialType" :items="items" :ui="{
-          base: 'w-full',
-        }" />
-      </UFormField>
+          <UFormField label="Material Type" name="materialType">
+            <USelectMenu v-model="state.materialType" :items="items" :ui="{
+              base: 'w-full',
+            }" />
+          </UFormField>
 
-      <UFormField label="Material Content" name="materialContent">
-        <UiTextArea v-model="state.materialContent" placeholder="Enter your material content here..." />
-      </UFormField>
+          <UFormField label="Material Content" name="materialContent">
+            <UiTextArea v-model="state.materialContent" placeholder="Enter your material content here..." />
+          </UFormField>
 
-      <div class="flex items-center gap-2 mt-3">
-        <UButton type="submit" size="sm" :loading="updating">Submit</UButton>
-        <UButton color="neutral" size="sm" variant="soft" @click="emit('close')">Cancel</UButton>
-      </div>
-    </UForm>
-  </ui-drawer>
+          <div class="flex items-center gap-2 mt-3">
+            <UButton type="submit" size="sm" :loading="updating">Submit</UButton>
+            <UButton color="neutral" size="sm" variant="soft" @click="emit('close')">Cancel</UButton>
+          </div>
+        </UForm>
+      </template>
+    </UiDialogModal>
+  </Teleport>
 </template>

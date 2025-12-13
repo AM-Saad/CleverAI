@@ -22,7 +22,10 @@ const lastFormSyncEventType = ref<
   | null
 >(null);
 const lastFormSyncData = ref<
-  FormSyncStartedMessage["data"] | FormSyncedMessage["data"] | FormSyncErrorMessage["data"] | null
+  | FormSyncStartedMessage["data"]
+  | FormSyncedMessage["data"]
+  | FormSyncErrorMessage["data"]
+  | null
 >(null);
 const notificationUrl = ref<string | null>(null);
 
@@ -38,14 +41,17 @@ export function useServiceWorkerBridge() {
       reg.removeEventListener("updatefound", updateFoundListener);
     }
     if (controllerChangeListener) {
-      navigator.serviceWorker.removeEventListener("controllerchange", controllerChangeListener);
+      navigator.serviceWorker.removeEventListener(
+        "controllerchange",
+        controllerChangeListener
+      );
     }
 
     // Detect when a new SW is installed and waiting
     updateFoundListener = () => {
       const installing = reg.installing;
       if (!installing) return;
-      
+
       const stateChangeHandler = () => {
         if (installing.state === "installed" && reg.waiting) {
           // Guard against duplicate updates
@@ -54,7 +60,7 @@ export function useServiceWorkerBridge() {
           }
         }
       };
-      
+
       installing.addEventListener("statechange", stateChangeHandler);
     };
 
@@ -65,7 +71,10 @@ export function useServiceWorkerBridge() {
 
     // Wire up listeners
     reg.addEventListener("updatefound", updateFoundListener);
-    navigator.serviceWorker.addEventListener("controllerchange", controllerChangeListener);
+    navigator.serviceWorker.addEventListener(
+      "controllerchange",
+      controllerChangeListener
+    );
   }
 
   function postMessage(msg: unknown) {
@@ -98,7 +107,12 @@ export function useServiceWorkerBridge() {
     if (!data || typeof data !== "object") return;
     switch (data.type) {
       case SW_MESSAGE_TYPES.SW_ACTIVATED:
-        version.value = (data as Extract<Incoming, { type: typeof SW_MESSAGE_TYPES.SW_ACTIVATED }>).version;
+        version.value = (
+          data as Extract<
+            Incoming,
+            { type: typeof SW_MESSAGE_TYPES.SW_ACTIVATED }
+          >
+        ).version;
         isControlling.value = true;
         break;
       case SW_MESSAGE_TYPES.SW_UPDATE_AVAILABLE:
@@ -110,17 +124,27 @@ export function useServiceWorkerBridge() {
       case SW_MESSAGE_TYPES.FORM_SYNC_STARTED:
       case SW_MESSAGE_TYPES.FORM_SYNCED:
       case SW_MESSAGE_TYPES.FORM_SYNC_ERROR: {
-        const msg = data as FormSyncStartedMessage | FormSyncedMessage | FormSyncErrorMessage;
+        const msg = data as
+          | FormSyncStartedMessage
+          | FormSyncedMessage
+          | FormSyncErrorMessage;
         lastFormSyncEventType.value = msg.type;
         formSyncStatus.value = msg.data.message;
         lastFormSyncData.value = msg.data;
         break;
       }
       case SW_MESSAGE_TYPES.ERROR:
-        lastError.value = (data as Extract<Incoming, { type: typeof SW_MESSAGE_TYPES.ERROR }>).data.message;
+        lastError.value = (
+          data as Extract<Incoming, { type: typeof SW_MESSAGE_TYPES.ERROR }>
+        ).data.message;
         break;
       case SW_MESSAGE_TYPES.NOTIFICATION_CLICK_NAVIGATE:
-        notificationUrl.value = (data as Extract<Incoming, { type: typeof SW_MESSAGE_TYPES.NOTIFICATION_CLICK_NAVIGATE }>).url;
+        notificationUrl.value = (
+          data as Extract<
+            Incoming,
+            { type: typeof SW_MESSAGE_TYPES.NOTIFICATION_CLICK_NAVIGATE }
+          >
+        ).url;
         break;
     }
   }
@@ -148,10 +172,16 @@ export function useServiceWorkerBridge() {
       navigator.serviceWorker.removeEventListener("message", messageHandler);
     }
     if (registration.value && updateFoundListener) {
-      registration.value.removeEventListener("updatefound", updateFoundListener);
+      registration.value.removeEventListener(
+        "updatefound",
+        updateFoundListener
+      );
     }
     if (controllerChangeListener) {
-      navigator.serviceWorker.removeEventListener("controllerchange", controllerChangeListener);
+      navigator.serviceWorker.removeEventListener(
+        "controllerchange",
+        controllerChangeListener
+      );
     }
   });
 
@@ -169,7 +199,7 @@ export function useServiceWorkerBridge() {
     lastError,
     formSyncStatus,
     lastFormSyncEventType,
-  lastFormSyncData,
+    lastFormSyncData,
     notificationUrl,
     ensureRegistration,
     requestSkipWaiting,

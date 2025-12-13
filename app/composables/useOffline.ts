@@ -29,9 +29,9 @@ export function useOffline() {
   }): Promise<void> => {
     // Capacity guard: enforce MAX_PENDING_FORMS from config if available
     try {
-  const db = await openUnifiedDB();
+      const db = await openUnifiedDB();
       if (db.objectStoreNames.contains(DB_CONFIG.STORES.FORMS)) {
-        const tx = db.transaction([DB_CONFIG.STORES.FORMS], 'readonly');
+        const tx = db.transaction([DB_CONFIG.STORES.FORMS], "readonly");
         const countReq = tx.objectStore(DB_CONFIG.STORES.FORMS).count();
         const currentCount: number = await new Promise((resolve, reject) => {
           countReq.onsuccess = () => resolve(countReq.result as number);
@@ -41,11 +41,11 @@ export function useOffline() {
         const MAX = OFFLINE_FORM_CONFIG?.MAX_PENDING_FORMS ?? 50;
         if (currentCount >= MAX) {
           try {
-            const toast = typeof useToast === 'function' ? useToast() : null;
+            const toast = typeof useToast === "function" ? useToast() : null;
             toast?.add({
-              title: 'Offline queue is full',
+              title: "Offline queue is full",
               description: `Maximum of ${MAX} pending items reached. Please reconnect to sync before adding more.`,
-              color: 'warning'
+              color: "warning",
             });
           } catch {}
           return; // refuse new queue items

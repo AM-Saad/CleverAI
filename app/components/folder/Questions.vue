@@ -1,9 +1,9 @@
 <template>
-  <div class="w-full h-full min-h-fit grow">
-    <shared-empty-state v-if="(!questionsToShow || questionsToShow.length === 0)" title="No Questions"
+  <div class="w-full h-full overflow-auto grow">
+    <shared-empty-state v-if="(!questionsToShow || questionsToShow.length === 0)"
       description="Generate questions from your materials using the Generate button on each material card." />
 
-    <div v-if="questionsToShow?.length" class="mt-4 space-y-4">
+    <div v-if="questionsToShow?.length" class="space-y-4 overflow-auto">
       <UiCard v-for="(q, idx) in questionsToShow" :key="'id' in q ? q.id : idx" class="relative">
         <!-- Enrollment status indicator -->
         <div v-if="'id' in q && q.id && enrolledQuestions.has(q.id)" class="absolute top-2 right-2">
@@ -14,7 +14,7 @@
         <ui-paragraph size="sm" class="font-medium mb-2">{{ idx + 1 }}. {{ q.question }}</ui-paragraph>
         <ul class="list-disc ml-5 mb-4">
           <ui-paragraph v-for="(choice, cIdx) in q.choices" :key="cIdx"
-            :color="cIdx === q.answerIndex ? 'success' : 'neutral'">
+            :color="cIdx === q.answerIndex ? 'success' : 'neutral'" tag="li">
             {{ choice }}
           </ui-paragraph>
         </ul>

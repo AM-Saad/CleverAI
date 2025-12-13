@@ -6,7 +6,7 @@
         buttonBaseClass,
         activeIndexLocal === index ? activeClass : inactiveClass,
       ]" @click="onSelect(index)">
-        <UIcon v-if="tab.icon" :name="String(tab.icon)" class="w-4 h-4" />
+        <UIcon v-if="tab.icon" :name="String(tab.icon)" :size="UI_CONFIG.ICON_SIZE" />
         <span>{{ tab.name }}</span>
       </button>
     </nav>

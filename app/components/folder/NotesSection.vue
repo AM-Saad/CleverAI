@@ -19,10 +19,6 @@
       <shared-error-message v-if="error" :error="error" />
 
       <!-- Notes content -->
-      <!-- Fullscreen backdrop with transition -->
-      <Transition name="backdrop">
-        <div v-if="fullscreenNote" class="fullscreen-backdrop" @click="closeFullscreen" />
-      </Transition>
 
       <!-- Empty state -->
       <shared-empty-state v-if="!error && !isFetching && !notes?.length" title="No Notes."
@@ -72,12 +68,37 @@
         </ui-drawer>
 
         <UiStickyNote v-if="notesStore.getNote(currentNoteId!)" :note="notesStore.getNote(currentNoteId!)!"
-          :is-fullscreen="fullscreenNote === currentNoteId" :delete-note="deleteNote" size="lg"
-          @update="handleUpdateNote" @retry="handleRetry" @toggle-fullscreen="toggleFullscreen"
-          placeholder="Double-click to add your note..." @add-to-material="emit('add-to-material', $event)" />
+          :delete-note="deleteNote" size="lg" @update="handleUpdateNote" @retry="handleRetry"
+          @toggle-fullscreen="fullscreen.toggle" placeholder="Double-click to add your note..."
+          @add-to-material="emit('add-to-material', $event)" />
       </div>
     </template>
   </ui-card>
+
+  <!-- Fullscreen Note View -->
+  <shared-fullscreen-wrapper :is-open="fullscreen.isOpen.value" aria-label="Note fullscreen view" max-width="900px"
+    max-height="80vh" @close="fullscreen.close">
+    <template #header>
+      <div class="flex items-center justify-between w-full">
+        <span class="font-medium text-gray-900 dark:text-gray-100">Note</span>
+        <u-button variant="ghost" color="neutral" size="xs" aria-label="Close fullscreen" @click="fullscreen.close">
+          <icon name="i-heroicons-x-mark" class="w-5 h-5" />
+        </u-button>
+      </div>
+    </template>
+
+    <!-- Note content in fullscreen -->
+    <div v-if="currentFullscreenNote" class="h-full">
+      <UiStickyNote :note="currentFullscreenNote" :delete-note="deleteNote" :is-fullscreen="true" size="lg"
+        @update="handleUpdateNote" @retry="handleRetry" @toggle-fullscreen="fullscreen.close"
+        placeholder="Double-click to add your note..." @add-to-material="emit('add-to-material', $event)" />
+    </div>
+  </shared-fullscreen-wrapper>
+
+  <shared-delete-confirmation-modal :show="showDeleteConfirm" title="Delete Note" @close="showDeleteConfirm = false"
+    @confirm="confirmDeleteNote">
+    Are you sure you want to delete this note? This action cannot be undone.
+  </shared-delete-confirmation-modal>
 </template>
 
 <script setup lang="ts">
@@ -103,7 +124,73 @@ const notes = computed(() => {
 // Local writable ref for ReorderGroup v-model
 const localNotes = ref<NoteState[]>([]);
 const isReordering = ref(false);
-const currentNoteId = ref<string | null>(notes.value[0]?.id || null);
+const showDeleteConfirm = ref(false);
+const noteToDelete = ref<string | null>(null);
+
+// Initialize currentNoteId - will be set when notes load
+const currentNoteId = ref<string | null>(null);
+
+// Restore last selected note for this folder from localStorage
+const getStoredNoteId = (availableNotes: NoteState[]): string | null => {
+  if (typeof window === 'undefined') return null;
+
+  // No notes available - clean up localStorage for this folder
+  if (availableNotes.length === 0) {
+    try {
+      localStorage.removeItem(`selectedNote_${folderId}`);
+    } catch {
+      // localStorage not available
+    }
+    return null;
+  }
+
+  try {
+    const stored = localStorage.getItem(`selectedNote_${folderId}`);
+    // Verify the note still exists and belongs to this folder
+    if (stored && availableNotes.some(n => n.id === stored && n.folderId === folderId)) {
+      return stored;
+    }
+
+    // Stored note doesn't exist anymore - fallback to first note and update storage
+    const firstNoteId = availableNotes[0]?.id || null;
+    if (firstNoteId) {
+      localStorage.setItem(`selectedNote_${folderId}`, firstNoteId);
+      console.log(`🔄 Stored note not found, falling back to first note: ${firstNoteId}`);
+    }
+    return firstNoteId;
+  } catch {
+    // localStorage not available - just return first note
+    return availableNotes[0]?.id || null;
+  }
+};
+
+// Initialize selection when notes are first loaded
+watch(notes, (newNotes) => {
+  // Only set initial selection if not already set and notes are available
+  if (!currentNoteId.value && newNotes.length > 0) {
+    currentNoteId.value = getStoredNoteId(newNotes);
+  }
+
+  // Handle case where currently selected note was deleted
+  if (currentNoteId.value && newNotes.length > 0) {
+    const noteExists = newNotes.some(n => n.id === currentNoteId.value);
+    if (!noteExists) {
+      console.log(`⚠️ Selected note ${currentNoteId.value} was deleted, selecting new note`);
+      currentNoteId.value = getStoredNoteId(newNotes);
+    }
+  }
+
+  // Handle case where all notes were deleted
+  if (currentNoteId.value && newNotes.length === 0) {
+    console.log('🗑️ All notes deleted, clearing selection');
+    currentNoteId.value = null;
+    try {
+      localStorage.removeItem(`selectedNote_${folderId}`);
+    } catch {
+      // localStorage not available
+    }
+  }
+}, { immediate: true });
 
 // Loading and error state for the initial fetch
 const isFetching = computed(
@@ -111,8 +198,29 @@ const isFetching = computed(
 );
 const error = ref<APIError | null>(null); // Main error state for critical failures
 
-// Fullscreen state management
-const fullscreenNote = ref<string | null>(null);
+// Use shared fullscreen composable
+const fullscreen = useFullscreenModal<string>();
+
+// Computed property for the fullscreen note
+const currentFullscreenNote = computed(() => {
+  if (!fullscreen.fullscreenId.value) return null;
+  return notesStore.getNote(fullscreen.fullscreenId.value) ?? null;
+});
+
+// Persist selected note to localStorage when it changes
+watch(currentNoteId, (noteId) => {
+  if (typeof window === 'undefined' || !noteId) return;
+  try {
+    // Verify note belongs to this folder before saving
+    const note = notesStore.getNote(noteId);
+    if (note && note.folderId === folderId) {
+      localStorage.setItem(`selectedNote_${folderId}`, noteId);
+      console.log(`💾 Saved selected note: ${noteId} for folder: ${folderId}`);
+    }
+  } catch (err) {
+    console.error('Failed to save selected note:', err);
+  }
+});
 
 // Debounced reorder handler to prevent rapid-fire requests
 let reorderTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -195,8 +303,17 @@ const handleUpdateNote = async (id: string, text: string) => {
 };
 
 // Delete a note (optimistic with rollback on failure)
-const deleteNote = async (id: string) => {
-  await notesStore.deleteNote(id);
+const deleteNote = (id: string) => {
+  noteToDelete.value = id;
+  showDeleteConfirm.value = true;
+};
+
+const confirmDeleteNote = async () => {
+  if (noteToDelete.value) {
+    await notesStore.deleteNote(noteToDelete.value);
+    noteToDelete.value = null;
+  }
+  showDeleteConfirm.value = false;
 };
 
 // Handle retry for failed operations
@@ -216,25 +333,7 @@ const handleReorder = async (newOrder: NoteState[]) => {
   isReordering.value = false;
 };
 
-// Fullscreen functionality
-const toggleFullscreen = (noteId: string) => {
-  if (fullscreenNote.value === noteId) {
-    // Close fullscreen
-    fullscreenNote.value = null;
-  } else {
-    // Open fullscreen
-    fullscreenNote.value = noteId;
-  }
-};
-
-const closeFullscreen = () => (fullscreenNote.value = null);
-
-// Add ESC key listener for fullscreen
-const handleEscape = (e: KeyboardEvent) => {
-  if (e.key === "Escape" && fullscreenNote.value) {
-    closeFullscreen();
-  }
-};
+// Fullscreen functionality is now handled by useFullscreen composable
 
 // Auto-sync on mount and handle errors
 onMounted(async () => {
@@ -246,12 +345,6 @@ onMounted(async () => {
       e instanceof APIError ? e : new APIError("Failed to load notes");
   }
 
-  document.addEventListener("keydown", handleEscape);
-});
-
-// Cleanup on unmount
-onUnmounted(() => {
-  document.removeEventListener("keydown", handleEscape);
 });
 </script>
 
@@ -260,55 +353,5 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   min-height: 0;
-}
-
-/* Backdrop transitions */
-.backdrop-enter-active,
-.backdrop-leave-active {
-  transition: all 0.3s ease-out;
-}
-
-.backdrop-enter-from,
-.backdrop-leave-to {
-  opacity: 0;
-  backdrop-filter: blur(0px);
-}
-
-.backdrop-enter-to,
-.backdrop-leave-from {
-  opacity: 1;
-  backdrop-filter: blur(4px);
-}
-
-/* Fullscreen backdrop */
-.fullscreen-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.8);
-  z-index: 50;
-  backdrop-filter: blur(5px);
-  will-change: opacity, backdrop-filter;
-}
-
-/* Performance optimizations */
-.fullscreen-backdrop {
-  backface-visibility: hidden;
-  perspective: 1000px;
-}
-
-/* Accessibility - reduced motion */
-@media (prefers-reduced-motion: reduce) {
-
-  .backdrop-enter-active,
-  .backdrop-leave-active {
-    transition: none !important;
-  }
-
-  .fullscreen-backdrop {
-    backdrop-filter: none !important;
-  }
 }
 </style>

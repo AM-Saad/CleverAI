@@ -67,7 +67,7 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
   if (!canSubmit.value) return;
 
   const updates: UpdateProfileDTO = {};
-  
+
   if (state.name !== props.currentProfile.name) {
     updates.name = state.name;
   }
@@ -102,18 +102,13 @@ const closeModal = (): void => {
       </template>
 
       <template #body>
-        <UForm
-          :schema="schema"
-          :state="state"
-          class="space-y-4"
-          @submit="onSubmit"
-        >
+        <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
           <UFormField label="Name" name="name" required>
-            <UInput v-model="state.name" placeholder="Your name" autofocus />
+            <UInput v-model="state.name" placeholder="Your name" autofocus class="w-full" />
           </UFormField>
 
           <UFormField label="Phone" name="phone" required>
-            <UInput v-model="state.phone" type="tel" placeholder="Your phone number" />
+            <UInput v-model="state.phone" type="tel" placeholder="Your phone number" class="w-full" />
             <template #hint>
               <p class="text-xs text-gray-500 dark:text-gray-400">
                 Minimum 10 characters
@@ -122,15 +117,8 @@ const closeModal = (): void => {
           </UFormField>
 
           <UFormField label="Gender" name="gender">
-            <USelectMenu
-              v-model="state.gender"
-              :options="genderOptions"
-              option-attribute="label"
-              value-attribute="value"
-              color="neutral"
-              variant="subtle"
-              class="w-full"
-            />
+            <USelectMenu v-model="state.gender" :options="genderOptions" option-attribute="label"
+              value-attribute="value" color="neutral" variant="subtle" class="w-full" />
           </UFormField>
 
           <div class="flex justify-end gap-3 pt-2">

@@ -10,8 +10,17 @@ export default defineNuxtConfig({
   // Use the existing `app/` folder as Nuxt source directory
   srcDir: "app",
 
-  modules: ["@sidebase/nuxt-auth", "@pinia/nuxt", // "@vite-pwa/nuxt",
-    "@nuxt/eslint", "@nuxt/image", "@nuxt/scripts", "@nuxt/icon", "@nuxt/ui", "@nuxt/devtools", "@vueuse/nuxt"],
+  modules: [
+    "@sidebase/nuxt-auth",
+    "@pinia/nuxt", // "@vite-pwa/nuxt",
+    "@nuxt/eslint",
+    "@nuxt/image",
+    "@nuxt/scripts",
+    "@nuxt/icon",
+    "@nuxt/ui",
+    "@nuxt/devtools",
+    "@vueuse/nuxt",
+  ],
   future: {
     typescriptBundlerResolution: true,
     compatibilityVersion: 4,
@@ -19,9 +28,9 @@ export default defineNuxtConfig({
   alias: {
     string_decoder: "string_decoder/",
     "@server": resolve(__dirname, "./server"),
-    '~/shared': resolve(__dirname, './shared'),
-    '#shared': resolve(__dirname, './shared'),   // optional extra alias
-    '@shared': resolve(__dirname, './shared'),   // optional extra alias
+    "~/shared": resolve(__dirname, "./shared"),
+    "#shared": resolve(__dirname, "./shared"), // optional extra alias
+    "@shared": resolve(__dirname, "./shared"), // optional extra alias
   },
   hooks: {
     ready: async () => {
@@ -76,9 +85,32 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
+      title: "CleverAI | Your AI-powered Learning Assistant",
+      meta: [
+        {
+          name: "description",
+          content:
+            "CleverAI is your AI-powered learning assistant, designed to help you learn more effectively and efficiently.",
+        },
+        { name: "theme-color", content: "#f3f4f6" },
+        {
+          name: "viewport",
+          content: "width=device-width, initial-scale=1, viewport-fit=cover",
+        },
+        { name: "apple-mobile-web-app-capable", content: "yes" },
+        { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+        { name: "apple-mobile-web-app-title", content: "CleverAI" },
+        { name: "msapplication-TileColor", content: "#f3f4f6" },
+        {
+          name: "msapplication-TileImage",
+          content: "/AppImages/windows11/Square150x150Logo.scale-200.png",
+        },
+        { name: "msapplication-config", content: "/browserconfig.xml" },
+        { name: "mobile-web-app-capable", content: "yes" },
+        { name: "application-name", content: "CleverAI" },
+      ],
       link: [
         { rel: "manifest", href: "/manifest.webmanifest" },
-        // Favicon hierarchy - ICO files for browser tabs and bookmarks
         {
           rel: "icon",
           type: "image/x-icon",
@@ -91,8 +123,7 @@ export default defineNuxtConfig({
           href: "/App_icon_32x32.ico",
           sizes: "32x32",
         },
-        { rel: "shortcut icon", href: "/App_icon_16x16.ico" }, // Fallback for older browsers
-        // PNG alternatives for modern browsers
+        { rel: "shortcut icon", href: "/App_icon_16x16.ico" },
         {
           rel: "icon",
           type: "image/png",
@@ -105,7 +136,6 @@ export default defineNuxtConfig({
           href: "/AppImages/ios/32.png",
           sizes: "32x32",
         },
-        // iOS specific icons
         {
           rel: "apple-touch-icon",
           href: "/AppImages/ios/180.png",
@@ -127,75 +157,30 @@ export default defineNuxtConfig({
           sizes: "76x76",
         },
       ],
-      meta: [
-        { name: "theme-color", content: "#f3f4f6" },
+      script: [
         {
-          name: "viewport",
-          content: "width=device-width, initial-scale=1, viewport-fit=cover",
+          type: "application/ld+json",
+          innerHTML: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: "CleverAI",
+            url: "https://cleverai.app",
+            logo: "https://cleverai.app/logo.png",
+            description:
+              "CleverAI is an AI-powered spaced repetition learning platform offering adaptive flashcards, offline learning, and personalized study schedules.",
+          }),
         },
-        // iOS specific meta tags
-        { name: "apple-mobile-web-app-capable", content: "yes" },
-        { name: "apple-mobile-web-app-status-bar-style", content: "default" },
-        { name: "apple-mobile-web-app-title", content: "CleverAI" },
-        // Microsoft specific meta tags
-        { name: "msapplication-TileColor", content: "#f3f4f6" },
-        {
-          name: "msapplication-TileImage",
-          content: "/AppImages/windows11/Square150x150Logo.scale-200.png",
-        },
-        { name: "msapplication-config", content: "/browserconfig.xml" },
-        // Android/Chrome specific
-        { name: "mobile-web-app-capable", content: "yes" },
-        { name: "application-name", content: "CleverAI" },
       ],
     },
   },
   appConfig: {
     toaster: {
-      position: 'bottom-center' as const,
+      position: "bottom-center" as const,
       duration: 5000,
       max: 5,
-      expand: true
+      expand: true,
     },
   },
-  //   appConfig: {
-  //     // you don't need to include this: only for testing purposes
-  //     buildDate: new Date().toISOString(),
-  //     ui: {
-  //       colors: {
-  //         primary: 'primary',
-  //         dark: 'dark',
-  //         light: 'light',
-  //         muted: 'muted',
-  //       },
-  //     button: {
-  //     slots: {
-  //     base: ['rounded-md font-medium inline-flex items-center disabled:cursor-not-allowed aria-disabled:cursor-not-allowed disabled:opacity-75 aria-disabled:opacity-75'],
-  //     label: 'truncate',
-  //     leadingIcon: 'shrink-0',
-  //     leadingAvatar: 'shrink-0',
-  //     leadingAvatarSize: '',
-  //     trailingIcon: 'shrink-0'
-  //   },
-
-  //     },
-  //         input: {
-  //       slots: {
-  //         base: 'rounded-sm py-sm px-sm', // use --radius-md
-  //       }
-  //     },
-  //     },
-  //   },
-  //     colorMode: {
-  //     preference: 'light',
-  //     fallback: 'light',
-  //     hid: 'nuxt-color-mode-script',
-  //     globalName: '__NUXT_COLOR_MODE__',
-  //     componentName: 'ColorScheme',
-  //     classPrefix: '',
-  //     classSuffix: '',
-  //     storageKey: 'nuxt-color-mode'
-  //   },
   auth: {
     isEnabled: true,
     originEnvKey: "AUTH_ORIGIN",
@@ -246,25 +231,41 @@ export default defineNuxtConfig({
     plugins: [tailwindcss()],
     resolve: {
       alias: {
-        '@tiptap/y-tiptap': 'y-prosemirror',
-
-      }
+        "@tiptap/y-tiptap": "y-prosemirror",
+      },
     },
     optimizeDeps: {
       include: [
-        '@tiptap/extension-collaboration',
-        'y-prosemirror',
-        'yjs',
-        'y-websocket',
+        "@tiptap/extension-collaboration",
+        "y-prosemirror",
+        "yjs",
+        "y-websocket",
       ],
-    }
+      exclude: ["@xenova/transformers"], // Exclude transformers from optimization to avoid issues
+    },
+    worker: {
+      format: "es", // Use ES modules for workers to preserve module dependencies
+    },
   },
 
   build: {
     // transpile: ['trpc-nuxt']
+    rollupOptions: {
+      external: ["@xenova/transformers", "onnxruntime-web"], // Don't bundle transformers - causes ONNX Runtime webpack errors
+    },
   },
 
-  ssr: false,
+  ssr: true,
+  routeRules: {
+    "/about": { prerender: true },
+    "/": { prerender: true },
+    "/pricing": { prerender: true },
+
+    "/auth/**": { ssr: false },
+    "/settings/**": { ssr: false },
+    "/review/**": { ssr: false },
+    "/folders/**": { ssr: false },
+  },
   css: ["~/assets/css/main.css"],
 
   typescript: {
@@ -282,7 +283,7 @@ export default defineNuxtConfig({
     VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
 
     // Feature flags
-    enableLlmGateway: process.env.ENABLE_LLM_GATEWAY === 'true',
+    enableLlmGateway: process.env.ENABLE_LLM_GATEWAY === "true",
 
     // Public (exposed to client)
     public: {
@@ -294,7 +295,7 @@ export default defineNuxtConfig({
       GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
 
       // Feature flags (exposed to client)
-      enableLlmGateway: process.env.ENABLE_LLM_GATEWAY === 'true',
+      enableLlmGateway: process.env.ENABLE_LLM_GATEWAY === "true",
     },
   },
 });

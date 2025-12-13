@@ -1,4 +1,5 @@
 import type { ReviewSummaryStats } from "~/shared/utils/review.contract";
+import { useOperation } from "../shared/useOperation";
 
 export interface UseReviewStatsOptions {
   /** Folder ID to filter stats (omit for global stats) */
@@ -35,10 +36,13 @@ export const useReviewStats = (options: UseReviewStatsOptions = {}) => {
     return isRef(id) ? id.value : id;
   });
 
-  // State
-  const stats = ref<ReviewSummaryStats | null>(null);
-  const isLoading = ref(false);
-  const error = ref<Error | null>(null);
+  // Use operation pattern for consistent error handling
+  const operation = useOperation<ReviewSummaryStats>();
+
+  // Alias for backward compatibility
+  const stats = computed(() => operation.data.value);
+  const isLoading = computed(() => operation.pending.value);
+  const error = computed(() => operation.error.value);
 
   // Computed helpers for common checks
   const hasDueCards = computed(() => (stats.value?.due ?? 0) > 0);
@@ -74,26 +78,7 @@ export const useReviewStats = (options: UseReviewStatsOptions = {}) => {
    * Fetch stats from API
    */
   const fetchStats = async () => {
-    isLoading.value = true;
-    error.value = null;
-
-    try {
-      const result = await $api.review.getStats(folderIdRef.value);
-
-      if (result.success) {
-        stats.value = result.data;
-      } else {
-        error.value = new Error(
-          result.error?.message ?? "Failed to fetch stats"
-        );
-        stats.value = null;
-      }
-    } catch (err) {
-      error.value = err instanceof Error ? err : new Error("Unknown error");
-      stats.value = null;
-    } finally {
-      isLoading.value = false;
-    }
+    await operation.execute(() => $api.review.getStats(folderIdRef.value));
   };
 
   /**
@@ -129,6 +114,7 @@ export const useReviewStats = (options: UseReviewStatsOptions = {}) => {
     stats: readonly(stats),
     isLoading: readonly(isLoading),
     error: readonly(error),
+    typedError: operation.typedError,
 
     // Computed helpers
     hasDueCards,
@@ -142,5 +128,6 @@ export const useReviewStats = (options: UseReviewStatsOptions = {}) => {
     // Actions
     refresh,
     fetchStats,
+    reset: operation.reset,
   };
 };

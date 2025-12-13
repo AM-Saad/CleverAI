@@ -7,9 +7,9 @@
                     <UIcon name="i-heroicons-user" class="w-5 h-5" />
                     Account Information
                 </div>
-                <!-- <u-button size="md" variant="outline" color="primary" @click="showUpdateModal = true">
+                <u-button size="sm" variant="outline" color="primary" @click="showUpdateModal = true">
                     Update Profile
-                </u-button> -->
+                </u-button>
             </template>
 
             <template #default>

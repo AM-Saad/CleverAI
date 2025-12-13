@@ -45,20 +45,10 @@
           :disabled="!editor!.can().chain().focus().redo().run()" icon="i-lucide-redo"></u-button>
       </div>
     </div>
+    <p>{{ isSummarizing ? "Summarizing..." : "N/A" }}</p>
 
     <div class="flex flex-col w-full">
-      <UContextMenu :items="[
-        // { label: 'Edit', onSelect: () => editNote(note) },
-        {
-          label: 'Add To Material',
-          onSelect: () => {
-            const selectedText = getSelectedText();
-            if (selectedText) {
-              emit('addToMaterial', selectedText);
-            }
-          },
-        },
-      ]">
+      <UContextMenu :items="contextMenuItems">
         <editor-content :editor="editor" class="flex-1 pt-6" />
       </UContextMenu>
     </div>
@@ -66,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onBeforeUnmount, onMounted, watch } from "vue";
+import { ref, nextTick, onBeforeUnmount, onMounted, watch, computed } from "vue";
 import type { NavigationMenuItem } from "@nuxt/ui";
 import type { Editor as TipTapEditor } from "@tiptap/core";
 import type {
@@ -78,9 +68,10 @@ import { ListItem, TaskItem, TaskList } from "@tiptap/extension-list";
 import { Color, TextStyle } from "@tiptap/extension-text-style";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
-// note: explicit Dropcursor intentionally omitted to avoid duplicate warnings
+// note: explicit Drop cursor intentionally omitted to avoid duplicate warnings
 import { Editor, EditorContent } from "@tiptap/vue-3";
 import { initCollaboration } from "@/utils/";
+import { useTextSummarization } from '~/composables/ai/useTextSummarization';
 
 // ---------- Types ----------
 type CollaborationHandle = {
@@ -116,6 +107,170 @@ const props = defineProps<{
 const savedSelectionText = ref<string | null>(null);
 // bookmark to track selection across local transactions
 let savedBookmark: SelectionBookmark | null = null;
+
+// ---------- Text-to-Speech Integration ----------
+const isSpeaking = ref(false);
+const ttsAvailable = ref(false);
+const ttsError = ref<Error | null>(null);
+
+// Check if browser supports Web Speech API
+onMounted(() => {
+  ttsAvailable.value = 'speechSynthesis' in window;
+  if (!ttsAvailable.value) {
+    ttsError.value = new Error('Text-to-speech not supported in this browser');
+  }
+});
+
+async function handleReadAloud() {
+  const selectedText = getSelectedText();
+  if (!selectedText || !selectedText.trim()) {
+    console.warn('No text selected to read aloud');
+    return;
+  }
+
+  if (!ttsAvailable.value) {
+    console.error('Text-to-speech not available');
+    return;
+  }
+
+  // Stop any ongoing speech
+  window.speechSynthesis.cancel();
+
+  isSpeaking.value = true;
+  ttsError.value = null;
+
+  try {
+    const utterance = new SpeechSynthesisUtterance(selectedText);
+
+    // Configure voice (use default or find English voice)
+    const voices = window.speechSynthesis.getVoices();
+    const englishVoice = voices.find(voice => voice.lang.startsWith('en'));
+    if (englishVoice) {
+      utterance.voice = englishVoice;
+    }
+
+    // Configure speech parameters
+    utterance.rate = 1.0;  // Speed (0.1 to 10)
+    utterance.pitch = 1.0; // Pitch (0 to 2)
+    utterance.volume = 1.0; // Volume (0 to 1)
+
+    utterance.onend = () => {
+      isSpeaking.value = false;
+    };
+
+    utterance.onerror = (event) => {
+      console.error('Speech synthesis error:', event);
+      ttsError.value = new Error('Failed to synthesize speech');
+      isSpeaking.value = false;
+    };
+
+    window.speechSynthesis.speak(utterance);
+  } catch (error) {
+    console.error('Text-to-speech error:', error);
+    ttsError.value = error as Error;
+    isSpeaking.value = false;
+  }
+}
+
+function stopSpeaking() {
+  window.speechSynthesis.cancel();
+  isSpeaking.value = false;
+}
+
+// ---------- AI Summarization Integration ----------
+const {
+  startSummarization,
+  currentSummary,
+  isSummarizing,
+  isDownloading,
+  progress: summaryProgress,
+  summaryError
+} = useTextSummarization({
+  immediate: false,
+});
+
+// Track the position where summary should be inserted
+const summaryInsertPosition = ref<number | null>(null);
+
+// Watch for summary completion and insert it
+watch(currentSummary, (summary) => {
+  if (summary && summaryInsertPosition.value !== null && editor.value) {
+    console.log('Summary ready, inserting into editor:', summary);
+
+    editor.value
+      .chain()
+      .focus()
+      .setTextSelection(summaryInsertPosition.value)
+      .insertContent(`\n\n**Summary:** ${summary}\n\n`)
+      .run();
+
+    console.log('Summary inserted at position:', summaryInsertPosition.value);
+    summaryInsertPosition.value = null; // Reset
+  }
+});
+
+function handleSummarize() {
+  const selectedText = getSelectedText();
+  if (!selectedText || !selectedText.trim()) {
+    console.warn('No text selected to summarize');
+    return;
+  }
+
+  if (editor.value) {
+    // Store the position where we want to insert the summary
+    const { to } = editor.value.state.selection;
+    summaryInsertPosition.value = to;
+
+    console.log('Starting non-blocking summarization for text:', selectedText.substring(0, 100) + '...');
+    console.log('Will insert at position:', to);
+
+    // Start summarization in background (non-blocking)
+    startSummarization(selectedText, {
+      maxLength: 130,
+      minLength: 30,
+    });
+  }
+}
+
+
+// Context menu items
+const contextMenuItems = computed(() => {
+  const selectedText = getSelectedText();
+  const hasSelection = selectedText && selectedText.trim().length > 0;
+
+  return [
+    {
+      label: 'Add To Material',
+      icon: 'i-lucide-folder-plus',
+      disabled: !hasSelection,
+      onSelect: () => {
+        if (selectedText) {
+          emit('addToMaterial', selectedText);
+        }
+      },
+    },
+    {
+      label: isSpeaking.value ? 'Stop Reading' : ttsError.value ? 'TTS Unavailable' : 'Read Aloud',
+      icon: isSpeaking.value ? 'i-lucide-volume-x' : ttsError.value ? 'i-lucide-alert-circle' : 'i-lucide-volume-2',
+      disabled: !hasSelection || !ttsAvailable.value,
+      onSelect: isSpeaking.value ? stopSpeaking : handleReadAloud,
+    },
+    {
+      label: isSummarizing.value
+        ? 'Summarizing...'
+        : isDownloading.value
+          ? 'Downloading Model...'
+          : 'Summarize Text',
+      icon: isSummarizing.value
+        ? 'i-lucide-loader'
+        : isDownloading.value
+          ? 'i-lucide-download'
+          : 'i-lucide-sparkles',
+      disabled: !hasSelection || isSummarizing.value || isDownloading.value,
+      onSelect: handleSummarize,
+    },
+  ];
+});
 
 // helper: map savedBookmark on each transaction so it stays valid across edits
 function attachBookmarkTracker() {
@@ -392,6 +547,11 @@ const colorsItems = ref<NavigationMenuItem[]>([
 
 // ---------- lifecycle cleanup ----------
 onBeforeUnmount(async () => {
+  // Stop any ongoing speech
+  if (window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+
   if (collaborationHandle.value?.cleanup) {
     try {
       await collaborationHandle.value.cleanup();
@@ -421,7 +581,7 @@ onMounted(async () => {
       Color.configure({ types: [TextStyle.name, ListItem.name] }),
       TextStyle.configure({ types: [ListItem.name] }),
       Image,
-      // dropcursor intentionally omitted
+      // drop cursor intentionally omitted
       TaskList,
       CustomTaskItem,
     ],

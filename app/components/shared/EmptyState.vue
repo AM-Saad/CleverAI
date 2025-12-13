@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col gap-2 items-center justify-center flex-1" :class="containerClass">
-    <div class="flex items-center gap-2 mb-0">
+    <div v-if="title" class="flex items-center gap-2 mb-0">
       <u-icon :name="icon" class="w-12 h-12 text-muted dark:text-light" />
       <ui-subtitle size="sm">
         {{ title }}
@@ -36,7 +36,7 @@ interface Props {
   /** The icon to display (heroicons name) */
   icon?: string;
   /** The main title text */
-  title: string;
+  title?: string;
   /** The description text (can also use description slot) */
   description?: string;
   /** Whether to center the description text */

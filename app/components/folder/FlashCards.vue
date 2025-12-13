@@ -153,23 +153,26 @@ function closeCreateModal() {
     }">
       <ui-flip-card>
         <template #front>
-          <ui-paragraph size="base"><strong>Q:</strong> {{ card.front }}</ui-paragraph>
+          <ui-paragraph size="base" class="mt-4">{{ card.front }}</ui-paragraph>
           <!-- Top-right badges and actions -->
-          <div class="absolute top-2 right-2 flex items-center gap-1">
+          <div class="absolute top-2 right-2 flex items-center gap-2 ">
             <!-- Enrolled badge -->
             <span v-if="'id' in card && card.id && enrolledCards.has(card.id)"
-              class="inline-flex items-center justify-center h-5 w-5 rounded-full text-xs font-medium bg-primary border border-muted"
+              class="inline-flex items-center justify-center h-6 w-8 rounded-full text-xs font-medium bg-primary border border-muted text-light"
               title="Enrolled in Review">✓</span>
-            <!-- Edit button -->
-            <UButton v-if="'id' in card && card.id" size="sm" variant="ghost" color="neutral"
-              @click.stop="openEditModal(card)" title="Edit flashcard">
-              <Icon name="i-lucide-pencil" class="w-3 h-3" />
-            </UButton>
-            <!-- Delete button -->
-            <UButton v-if="'id' in card && card.id" size="sm" variant="ghost" color="error"
-              @click.stop="openDeleteModal(card)" title="Delete flashcard">
-              <Icon name="i-lucide-trash-2" class="w-3 h-3" />
-            </UButton>
+            <div class="justify-between gap-1 bg-primary/10 rounded-full overflow-hidden">
+
+              <!-- Edit button -->
+              <UButton v-if="'id' in card && card.id" size="sm" variant="ghost" @click.stop="openEditModal(card)"
+                title="Edit flashcard">
+                <Icon name="i-lucide-pencil" class="w-3 h-3" />
+              </UButton>
+              <!-- Delete button -->
+              <UButton v-if="'id' in card && card.id" size="sm" variant="ghost" color="error"
+                @click.stop="openDeleteModal(card)" title="Delete flashcard">
+                <Icon name="i-lucide-trash-2" class="w-3 h-3" />
+              </UButton>
+            </div>
           </div>
         </template>
         <template #back>

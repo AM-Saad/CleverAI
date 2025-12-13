@@ -61,7 +61,7 @@ const weightClasses = {
 
 const colorClasses = {
   primary: "text-[color:var(--color-primary)]",
-  neutral: "text-[color:var(--color-neutral)] dark:text-[color:var(--color-light)]",
+  neutral: "text-dark dark:text-light",
   muted: "text-[color:var(--color-muted)] dark:text-[color:var(--color-light)]",
   white: "text-white",
   danger: "text-[color:var(--color-error)]",

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cross-Origin Isolation Test</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 4px;
+    }
+    .pass {
+      background: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+    }
+    .fail {
+      background: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+  </style>
+</head>
+<body>
+  <h1>Cross-Origin Isolation Status</h1>
+  
+  <div id="results"></div>
+
+  <script>
+    const results = document.getElementById('results');
+    
+    function addResult(label, value, isGood) {
+      const div = document.createElement('div');
+      div.className = `status ${isGood ? 'pass' : 'fail'}`;
+      div.innerHTML = `<strong>${label}:</strong> ${value}`;
+      results.appendChild(div);
+    }
+
+    // Check crossOriginIsolated
+    const isolated = self.crossOriginIsolated;
+    addResult('crossOriginIsolated', isolated, isolated);
+
+    // Check SharedArrayBuffer
+    const hasSharedArrayBuffer = typeof SharedArrayBuffer !== 'undefined';
+    addResult('SharedArrayBuffer available', hasSharedArrayBuffer, hasSharedArrayBuffer);
+
+    // Test minimal worker first
+    console.log('Testing minimal worker...');
+    try {
+      const minimalWorker = new Worker('/test-minimal-worker.js');
+      addResult('Minimal worker creation', 'Success', true);
+      
+      minimalWorker.addEventListener('message', (e) => {
+        console.log('Minimal worker message:', e.data);
+        addResult('Minimal worker response', JSON.stringify(e.data), true);
+      });
+      
+      minimalWorker.addEventListener('error', (e) => {
+        console.error('Minimal worker error:', e);
+        addResult('Minimal worker error', e.message || 'Unknown', false);
+      });
+      
+      minimalWorker.postMessage({ test: 'ping' });
+    } catch (err) {
+      addResult('Minimal worker creation failed', err.message, false);
+    }
+
+    // Check headers from a fetch
+    fetch(window.location.href)
+      .then(response => {
+        const coep = response.headers.get('Cross-Origin-Embedder-Policy');
+        const coop = response.headers.get('Cross-Origin-Opener-Policy');
+        
+        addResult('COEP Header', coep || 'Not set', coep === 'require-corp');
+        addResult('COOP Header', coop || 'Not set', coop === 'same-origin');
+      })
+      .catch(err => {
+        addResult('Header fetch failed', err.message, false);
+      });
+
+    // Try to create worker
+    try {
+      const worker = new Worker('/ai-worker.js');
+      addResult('Worker creation', 'Success', true);
+      
+      worker.addEventListener('message', (e) => {
+        console.log('Worker message:', e.data);
+        if (e.data.type === 'WORKER_READY') {
+          addResult('Worker initialization', 'READY', true);
+        } else if (e.data.type === 'WORKER_ERROR') {
+          addResult('Worker error', JSON.stringify(e.data.data, null, 2), false);
+        }
+      });
+      
+      worker.addEventListener('error', (e) => {
+        console.error('Worker error event:', e);
+        addResult('Worker error', e.message || 'Unknown', false);
+      });
+    } catch (err) {
+      addResult('Worker creation failed', err.message, false);
+    }
+  </script>
+</body>
+</html>

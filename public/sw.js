@@ -3323,7 +3323,8 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     const error = (...args) => console.error("[SW]", ...args);
     log("Loading TS source", SW_VERSION, self.location.href);
     try {
-      if (new URL(self.location.href).searchParams.get("swDebug") === "1") DEBUG = true;
+      if (new URL(self.location.href).searchParams.get("swDebug") === "1")
+        DEBUG = true;
     } catch {
     }
     let db = null;
@@ -3343,7 +3344,10 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         dbInitAttempts = 0;
         return db;
       } catch (e) {
-        error(`Failed to initialize IndexedDB (attempt ${dbInitAttempts}/${MAX_DB_INIT_ATTEMPTS}):`, e);
+        error(
+          `Failed to initialize IndexedDB (attempt ${dbInitAttempts}/${MAX_DB_INIT_ATTEMPTS}):`,
+          e
+        );
         if (dbInitAttempts >= MAX_DB_INIT_ATTEMPTS) {
           await notifyClientsOfDBFailure();
         }
@@ -3362,16 +3366,19 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         });
       });
     }
-    self.addEventListener("unhandledrejection", (event) => {
-      var _a, _b, _c, _d;
-      if (((_b = (_a = event.reason) == null ? void 0 : _a.message) == null ? void 0 : _b.includes("backing store")) || ((_d = (_c = event.reason) == null ? void 0 : _c.message) == null ? void 0 : _d.includes("indexedDB.open"))) {
-        error("Workbox IDB error (non-fatal):", event.reason.message);
-        event.preventDefault();
-        notifyClientsOfStorageIssue();
-        return;
+    self.addEventListener(
+      "unhandledrejection",
+      (event) => {
+        var _a, _b, _c, _d;
+        if (((_b = (_a = event.reason) == null ? void 0 : _a.message) == null ? void 0 : _b.includes("backing store")) || ((_d = (_c = event.reason) == null ? void 0 : _c.message) == null ? void 0 : _d.includes("indexedDB.open"))) {
+          error("Workbox IDB error (non-fatal):", event.reason.message);
+          event.preventDefault();
+          notifyClientsOfStorageIssue();
+          return;
+        }
+        error("Unhandled rejection in SW:", event.reason);
       }
-      error("Unhandled rejection in SW:", event.reason);
-    });
+    );
     let storageIssueNotified = false;
     async function notifyClientsOfStorageIssue() {
       if (storageIssueNotified) return;
@@ -3391,7 +3398,9 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
     const manifest = self.__WB_MANIFEST || [];
     try {
-      precacheAndRoute(manifest, { ignoreURLParametersMatching: [/^utm_/, /^fbclid$/] });
+      precacheAndRoute(manifest, {
+        ignoreURLParametersMatching: [/^utm_/, /^fbclid$/]
+      });
       cleanupOutdatedCaches();
     } catch (e) {
       error("Workbox precache failed (continuing without precache):", e);
@@ -3400,18 +3409,22 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       ({ request: _request, url }) => url.origin === self.location.origin && (/\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/.test(url.pathname) || url.pathname.startsWith("/AppImages/")),
       new CacheFirst({
         cacheName: CACHE_NAMES.IMAGES,
-        plugins: [new ExpirationPlugin({
-          maxEntries: CACHE_CONFIG.IMAGES.MAX_ENTRIES,
-          maxAgeSeconds: CACHE_CONFIG.IMAGES.MAX_AGE_SECONDS
-        })]
+        plugins: [
+          new ExpirationPlugin({
+            maxEntries: CACHE_CONFIG.IMAGES.MAX_ENTRIES,
+            maxAgeSeconds: CACHE_CONFIG.IMAGES.MAX_AGE_SECONDS
+          })
+        ]
       })
     );
     const assetsStrategy = new CacheFirst({
       cacheName: CACHE_NAMES.ASSETS,
-      plugins: [new ExpirationPlugin({
-        maxEntries: CACHE_CONFIG.ASSETS.MAX_ENTRIES,
-        maxAgeSeconds: CACHE_CONFIG.ASSETS.MAX_AGE_SECONDS
-      })]
+      plugins: [
+        new ExpirationPlugin({
+          maxEntries: CACHE_CONFIG.ASSETS.MAX_ENTRIES,
+          maxAgeSeconds: CACHE_CONFIG.ASSETS.MAX_AGE_SECONDS
+        })
+      ]
     });
     registerRoute(
       ({ url, request }) => url.origin === self.location.origin && (url.pathname.startsWith("/_nuxt/") || request.destination === "script" || request.destination === "style"),
@@ -3424,7 +3437,13 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           if (isJsChunk) {
             return new Response(
               "/* offline stub chunk */\nexport default {};\nexport const __offline__ = true;\n",
-              { headers: { "Content-Type": "application/javascript", "Cache-Control": "no-store" }, status: 200 }
+              {
+                headers: {
+                  "Content-Type": "application/javascript",
+                  "Cache-Control": "no-store"
+                },
+                status: 200
+              }
             );
           }
           throw err;
@@ -3456,12 +3475,21 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           const cached = await cache.match(request);
           if (cached) return cached;
           if (url.pathname in AUTH_STUBS) {
-            return new Response(JSON.stringify(AUTH_STUBS[url.pathname]), {
-              status: 200,
-              headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
-            });
+            return new Response(
+              JSON.stringify(AUTH_STUBS[url.pathname]),
+              {
+                status: 200,
+                headers: {
+                  "Content-Type": "application/json",
+                  "Cache-Control": "no-store"
+                }
+              }
+            );
           }
-          return new Response("", { status: 503, headers: { "Cache-Control": "no-store" } });
+          return new Response("", {
+            status: 503,
+            headers: { "Cache-Control": "no-store" }
+          });
         }
       }
     );
@@ -3491,14 +3519,23 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           }
           const url = new URL(request.url);
           if (url.pathname === "/api/folders/count") {
-            return new Response(JSON.stringify({ success: true, data: { count: 0 } }), {
-              status: 200,
-              headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
-            });
+            return new Response(
+              JSON.stringify({ success: true, data: { count: 0 } }),
+              {
+                status: 200,
+                headers: {
+                  "Content-Type": "application/json",
+                  "Cache-Control": "no-store"
+                }
+              }
+            );
           } else {
             return new Response(JSON.stringify({ success: true, data: [] }), {
               status: 200,
-              headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
+              headers: {
+                "Content-Type": "application/json",
+                "Cache-Control": "no-store"
+              }
             });
           }
         }
@@ -3529,7 +3566,10 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           }
           return new Response(JSON.stringify({ success: true, data: [] }), {
             status: 200,
-            headers: { "Content-Type": "application/json", "Cache-Control": "no-store" }
+            headers: {
+              "Content-Type": "application/json",
+              "Cache-Control": "no-store"
+            }
           });
         }
       }
@@ -3583,11 +3623,13 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
                 for (const u of assetUrls) {
                   try {
                     const r = await fetch(u, { cache: "no-store" });
-                    if (r && r.ok) await assetCache.put(new Request(u), r.clone());
+                    if (r && r.ok)
+                      await assetCache.put(new Request(u), r.clone());
                   } catch {
                   }
                 }
-                if (assetUrls.length) log("Prewarmed assets for", path, assetUrls.length);
+                if (assetUrls.length)
+                  log("Prewarmed assets for", path, assetUrls.length);
               }
             } else {
               warn("Prewarm skipped (non-200):", path, resp == null ? void 0 : resp.status);
@@ -3606,20 +3648,29 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     });
     swSelf.addEventListener("activate", (event) => {
       log("activate event");
-      event.waitUntil((async () => {
-        try {
-          await swSelf.clients.claim();
-        } catch (e) {
-          warn("clients.claim failed", e);
-        }
-        log("claimed clients");
-        const clients = await swSelf.clients.matchAll({ includeUncontrolled: true, type: "window" });
-        for (const c of clients) c.postMessage({ type: "SW_ACTIVATED", version: SW_VERSION });
-        try {
-          await prewarmPages([...PREWARM_PATHS]);
-        } catch {
-        }
-      })());
+      event.waitUntil(
+        (async () => {
+          try {
+            await swSelf.clients.claim();
+          } catch (e) {
+            warn("clients.claim failed", e);
+          }
+          log("claimed clients");
+          const clients = await swSelf.clients.matchAll({
+            includeUncontrolled: true,
+            type: "window"
+          });
+          for (const c of clients)
+            c.postMessage({
+              type: SW_MESSAGE_TYPES.SW_ACTIVATED,
+              version: SW_VERSION
+            });
+          try {
+            await prewarmPages([...PREWARM_PATHS]);
+          } catch {
+          }
+        })()
+      );
     });
     try {
       self.addEventListener("statechange", () => {
@@ -3628,8 +3679,16 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         const reg = self.registration;
         const waiting = reg == null ? void 0 : reg.waiting;
         if (waiting) {
-          const clients = await swSelf.clients.matchAll({ includeUncontrolled: true, type: "window" });
-          clients.forEach((c) => c.postMessage({ type: "SW_UPDATE_AVAILABLE", version: SW_VERSION }));
+          const clients = await swSelf.clients.matchAll({
+            includeUncontrolled: true,
+            type: "window"
+          });
+          clients.forEach(
+            (c) => c.postMessage({
+              type: SW_MESSAGE_TYPES.SW_UPDATE_AVAILABLE,
+              version: SW_VERSION
+            })
+          );
         }
       };
       setTimeout(() => {
@@ -3654,26 +3713,36 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       if (type === SW_MESSAGE_TYPES.CLAIM_CONTROL) {
         swSelf.clients.claim().then(async () => {
           const clients = await swSelf.clients.matchAll({ type: "window" });
-          clients.forEach((c) => c.postMessage({ type: "SW_CONTROL_CLAIMED" }));
+          clients.forEach(
+            (c) => c.postMessage({ type: SW_MESSAGE_TYPES.SW_CONTROL_CLAIMED })
+          );
         });
         return;
       }
       if (type === SW_MESSAGE_TYPES.TEST_NOTIFICATION_CLICK) {
         const targetUrl = ((_a = data.data) == null ? void 0 : _a.url) || "/";
         const extendable = event;
-        extendable.waitUntil((async () => {
-          const clients = await swSelf.clients.matchAll({ type: "window", includeUncontrolled: true });
-          if (clients.length) {
-            clients[0].postMessage({ type: "NOTIFICATION_CLICK_NAVIGATE", url: targetUrl });
-            try {
-              await clients[0].focus();
-            } catch (e) {
-              warn("focus failed", e);
+        extendable.waitUntil(
+          (async () => {
+            const clients = await swSelf.clients.matchAll({
+              type: "window",
+              includeUncontrolled: true
+            });
+            if (clients.length) {
+              clients[0].postMessage({
+                type: SW_MESSAGE_TYPES.NOTIFICATION_CLICK_NAVIGATE,
+                url: targetUrl
+              });
+              try {
+                await clients[0].focus();
+              } catch (e) {
+                warn("focus failed", e);
+              }
+            } else {
+              await swSelf.clients.openWindow(targetUrl);
             }
-          } else {
-            await swSelf.clients.openWindow(targetUrl);
-          }
-        })());
+          })()
+        );
         return;
       }
       if (type === SW_MESSAGE_TYPES.SYNC_NOTES) {
@@ -3691,146 +3760,176 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       console.log("[SW] \u{1F514} Push event received:", event);
       console.log("[SW] Push event data exists:", !!event.data);
       console.log("[SW] Notification permission:", Notification.permission);
-      event.waitUntil((async () => {
-        var _a, _b, _c;
-        try {
-          if (!event.data) {
-            console.log("[SW] \u26A0\uFE0F No data in push event - showing fallback notification");
-            await swSelf.registration.showNotification("Card Review", {
-              body: "You have cards to review!",
-              icon: "/icons/192x192.png",
-              badge: "/icons/96x96.png",
-              tag: "card-review-fallback",
-              requireInteraction: true,
-              data: { url: "/review", timestamp: Date.now() }
-            });
-            console.log("[SW] \u2705 Fallback notification shown");
-            return;
-          }
-          let data;
+      event.waitUntil(
+        (async () => {
+          var _a, _b, _c;
           try {
-            const rawData = event.data.text();
-            console.log("[SW] Raw push data (text):", rawData);
-            data = JSON.parse(rawData);
-            console.log("[SW] Parsed push data:", data);
-          } catch (parseError) {
-            console.error("[SW] \u274C Failed to parse push data:", parseError);
+            if (!event.data) {
+              console.log(
+                "[SW] \u26A0\uFE0F No data in push event - showing fallback notification"
+              );
+              await swSelf.registration.showNotification("Card Review", {
+                body: "You have cards to review!",
+                icon: "/icons/192x192.png",
+                badge: "/icons/96x96.png",
+                tag: "card-review-fallback",
+                requireInteraction: true,
+                data: { url: "/review", timestamp: Date.now() }
+              });
+              console.log("[SW] \u2705 Fallback notification shown");
+              return;
+            }
+            let data;
             try {
-              data = event.data.json();
-              console.log("[SW] Parsed as JSON directly:", data);
-            } catch {
-              console.log("[SW] Using fallback data structure");
-              data = { title: "Card Review", message: "You have cards to review!" };
+              const rawData = event.data.text();
+              console.log("[SW] Raw push data (text):", rawData);
+              data = JSON.parse(rawData);
+              console.log("[SW] Parsed push data:", data);
+            } catch (parseError) {
+              console.error("[SW] \u274C Failed to parse push data:", parseError);
+              try {
+                data = event.data.json();
+                console.log("[SW] Parsed as JSON directly:", data);
+              } catch {
+                console.log("[SW] Using fallback data structure");
+                data = {
+                  title: "Card Review",
+                  message: "You have cards to review!"
+                };
+              }
+            }
+            const title = data.title || "Card Review";
+            const options = {
+              body: data.message || "You have cards to review!",
+              icon: data.icon || "/icons/192x192.png",
+              badge: "/icons/96x96.png",
+              tag: data.tag || "card-review",
+              requireInteraction: false,
+              // Changed: macOS might not show persistent notifications in notification center
+              silent: false,
+              // Never silent for debugging
+              data: {
+                url: data.url || "/review",
+                timestamp: Date.now(),
+                originalData: data,
+                ...data.data || {}
+              },
+              // Add interactive actions (not in base NotificationOptions type but supported by browsers)
+              actions: [
+                {
+                  action: "review",
+                  title: "\u{1F4DA} Review Now"
+                },
+                {
+                  action: "snooze",
+                  title: "\u23F0 Snooze 1hr"
+                },
+                {
+                  action: "dismiss",
+                  title: "\u274C Dismiss"
+                }
+              ]
+            };
+            console.log("[SW] \u{1F4E2} Showing notification:", title);
+            console.log("[SW] Notification options:", options);
+            await swSelf.registration.showNotification(title, options);
+            console.log("[SW] \u2705 Notification shown successfully!");
+            const notifications = await swSelf.registration.getNotifications();
+            console.log(
+              "[SW] Current notifications count:",
+              notifications.length
+            );
+            console.log(
+              "[SW] Current notifications:",
+              notifications.map((n) => ({ title: n.title, tag: n.tag }))
+            );
+          } catch (err) {
+            console.error("[SW] \u274C Push handler error:", err);
+            console.log(
+              "[SW] Registration state:",
+              (_b = (_a = swSelf.registration) == null ? void 0 : _a.active) == null ? void 0 : _b.state
+            );
+            console.log("[SW] Registration scope:", (_c = swSelf.registration) == null ? void 0 : _c.scope);
+            try {
+              await swSelf.registration.showNotification(
+                "CleverAI - Error Fallback",
+                {
+                  body: "Notification received but failed to process properly",
+                  icon: "/icons/192x192.png",
+                  tag: "error-fallback",
+                  requireInteraction: true,
+                  data: { url: "/review", timestamp: Date.now() }
+                }
+              );
+              console.log("[SW] \u2705 Emergency fallback notification shown");
+            } catch (fallbackError) {
+              console.error(
+                "[SW] \u274C Emergency fallback also failed:",
+                fallbackError
+              );
             }
           }
-          const title = data.title || "Card Review";
-          const options = {
-            body: data.message || "You have cards to review!",
-            icon: data.icon || "/icons/192x192.png",
-            badge: "/icons/96x96.png",
-            tag: data.tag || "card-review",
-            requireInteraction: false,
-            // Changed: macOS might not show persistent notifications in notification center
-            silent: false,
-            // Never silent for debugging
-            data: {
-              url: data.url || "/review",
-              timestamp: Date.now(),
-              originalData: data,
-              ...data.data || {}
-            },
-            // Add interactive actions (not in base NotificationOptions type but supported by browsers)
-            actions: [
-              {
-                action: "review",
-                title: "\u{1F4DA} Review Now"
-              },
-              {
-                action: "snooze",
-                title: "\u23F0 Snooze 1hr"
-              },
-              {
-                action: "dismiss",
-                title: "\u274C Dismiss"
-              }
-            ]
-          };
-          console.log("[SW] \u{1F4E2} Showing notification:", title);
-          console.log("[SW] Notification options:", options);
-          await swSelf.registration.showNotification(title, options);
-          console.log("[SW] \u2705 Notification shown successfully!");
-          const notifications = await swSelf.registration.getNotifications();
-          console.log("[SW] Current notifications count:", notifications.length);
-          console.log("[SW] Current notifications:", notifications.map((n) => ({ title: n.title, tag: n.tag })));
-        } catch (err) {
-          console.error("[SW] \u274C Push handler error:", err);
-          console.log("[SW] Registration state:", (_b = (_a = swSelf.registration) == null ? void 0 : _a.active) == null ? void 0 : _b.state);
-          console.log("[SW] Registration scope:", (_c = swSelf.registration) == null ? void 0 : _c.scope);
-          try {
-            await swSelf.registration.showNotification("CleverAI - Error Fallback", {
-              body: "Notification received but failed to process properly",
-              icon: "/icons/192x192.png",
-              tag: "error-fallback",
-              requireInteraction: true,
-              data: { url: "/review", timestamp: Date.now() }
-            });
-            console.log("[SW] \u2705 Emergency fallback notification shown");
-          } catch (fallbackError) {
-            console.error("[SW] \u274C Emergency fallback also failed:", fallbackError);
-          }
-        }
-      })());
+        })()
+      );
     });
     swSelf.addEventListener("notificationclick", (event) => {
       const action = event.action;
       const ndata = event.notification.data;
       console.log("[SW] \u{1F5B1}\uFE0F Notification clicked:", { action, data: ndata });
       event.notification.close();
-      event.waitUntil((async () => {
-        if (action === "snooze") {
-          console.log("[SW] \u23F0 Snooze action triggered");
+      event.waitUntil(
+        (async () => {
+          if (action === "snooze") {
+            console.log("[SW] \u23F0 Snooze action triggered");
+            try {
+              await fetch("/api/notifications/snooze", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  duration: 3600,
+                  // 1 hour in seconds
+                  timestamp: Date.now()
+                })
+              });
+              console.log("[SW] \u2705 Snoozed for 1 hour");
+            } catch (error2) {
+              console.error("[SW] \u274C Snooze failed:", error2);
+            }
+            return;
+          }
+          if (action === "dismiss") {
+            console.log("[SW] \u274C Dismiss action triggered - notification closed");
+            return;
+          }
+          const targetUrl = (ndata == null ? void 0 : ndata.url) || "/";
+          console.log("[SW] \u{1F517} Navigating to:", targetUrl);
+          const clients = await swSelf.clients.matchAll({
+            type: "window",
+            includeUncontrolled: true
+          });
+          if (clients.length) {
+            for (const c of clients) {
+              c.postMessage({
+                type: "NOTIFICATION_CLICK_NAVIGATE",
+                url: targetUrl
+              });
+            }
+            try {
+              await clients[0].focus();
+              console.log("[SW] \u2705 Focused existing window");
+            } catch (focusError) {
+              console.warn("[SW] \u26A0\uFE0F Could not focus window:", focusError);
+            }
+            return;
+          }
           try {
-            await fetch("/api/notifications/snooze", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                duration: 3600,
-                // 1 hour in seconds
-                timestamp: Date.now()
-              })
-            });
-            console.log("[SW] \u2705 Snoozed for 1 hour");
-          } catch (error2) {
-            console.error("[SW] \u274C Snooze failed:", error2);
+            await swSelf.clients.openWindow(targetUrl);
+            console.log("[SW] \u2705 Opened new window");
+          } catch (openError) {
+            console.error("[SW] \u274C Could not open window:", openError);
           }
-          return;
-        }
-        if (action === "dismiss") {
-          console.log("[SW] \u274C Dismiss action triggered - notification closed");
-          return;
-        }
-        const targetUrl = (ndata == null ? void 0 : ndata.url) || "/";
-        console.log("[SW] \u{1F517} Navigating to:", targetUrl);
-        const clients = await swSelf.clients.matchAll({ type: "window", includeUncontrolled: true });
-        if (clients.length) {
-          for (const c of clients) {
-            c.postMessage({ type: "NOTIFICATION_CLICK_NAVIGATE", url: targetUrl });
-          }
-          try {
-            await clients[0].focus();
-            console.log("[SW] \u2705 Focused existing window");
-          } catch (focusError) {
-            console.warn("[SW] \u26A0\uFE0F Could not focus window:", focusError);
-          }
-          return;
-        }
-        try {
-          await swSelf.clients.openWindow(targetUrl);
-          console.log("[SW] \u2705 Opened new window");
-        } catch (openError) {
-          console.error("[SW] \u274C Could not open window:", openError);
-        }
-      })());
+        })()
+      );
     });
     swSelf.addEventListener("periodicsync", (event) => {
       const psEvent = event;
@@ -3844,34 +3943,44 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         syncEvt.waitUntil(syncPendingNotes("background"));
       }
       if (syncEvt.tag === SYNC_TAGS.FORM) {
-        syncEvt.waitUntil((async () => {
-          try {
-            const database = await ensureDB();
-            if (!database) {
-              warn("IndexedDB unavailable, cannot sync forms");
-              await notifyClientsOfDBFailure();
-              return;
-            }
-            const records = await getAllRecords(database, "forms");
-            if (records.length === 0 || records.every((r) => !r.payload)) {
-              log("No forms to sync");
-              return;
-            }
-            console.log("SW: Syncing forms records:", records);
-            const clients = await swSelf.clients.matchAll({ type: "window" });
-            clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPES.FORM_SYNC_STARTED, data: { message: "Syncing data..", mode: "background" } }));
-            await syncForms(clients, records);
-          } catch (err) {
-            error("Background sync failed:", err);
-            const clients = await swSelf.clients.matchAll({ type: "window" });
-            clients.forEach((client) => {
-              client.postMessage({
-                type: SW_MESSAGE_TYPES.FORM_SYNC_ERROR,
-                data: { message: "Failed to sync offline data" }
+        syncEvt.waitUntil(
+          (async () => {
+            try {
+              const database = await ensureDB();
+              if (!database) {
+                warn("IndexedDB unavailable, cannot sync forms");
+                await notifyClientsOfDBFailure();
+                return;
+              }
+              const records = await getAllRecords(
+                database,
+                "forms"
+              );
+              if (records.length === 0 || records.every((r) => !r.payload)) {
+                log("No forms to sync");
+                return;
+              }
+              console.log("SW: Syncing forms records:", records);
+              const clients = await swSelf.clients.matchAll({ type: "window" });
+              clients.forEach(
+                (c) => c.postMessage({
+                  type: SW_MESSAGE_TYPES.FORM_SYNC_STARTED,
+                  data: { message: "Syncing data..", mode: "background" }
+                })
+              );
+              await syncForms(clients, records);
+            } catch (err) {
+              error("Background sync failed:", err);
+              const clients = await swSelf.clients.matchAll({ type: "window" });
+              clients.forEach((client) => {
+                client.postMessage({
+                  type: SW_MESSAGE_TYPES.FORM_SYNC_ERROR,
+                  data: { message: "Failed to sync offline data" }
+                });
               });
-            });
-          }
-        })());
+            }
+          })()
+        );
       }
     });
     swSelf.addEventListener("fetch", (event) => {
@@ -3882,83 +3991,101 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         return;
       }
       if (req.mode === "navigate") {
-        event.respondWith((async () => {
-          try {
-            log("Fetching navigation request:", req.url);
-            const response = await fetch(req);
-            if (response.ok && response.status === 200) {
-              try {
-                const cache = await caches.open(CACHE_NAMES.PAGES);
-                await cache.put(req, response.clone());
-                log("Cached page successfully:", req.url);
-                try {
-                  const html = await response.clone().text();
-                  const assetUrls = extractAssetUrls(html);
-                  if (assetUrls.length) {
-                    const assetCache = await caches.open(CACHE_NAMES.ASSETS);
-                    await Promise.all(assetUrls.map(async (u) => {
-                      try {
-                        const r = await fetch(u, { cache: "no-store" });
-                        if (r && r.ok) await assetCache.put(new Request(u), r.clone());
-                      } catch {
-                      }
-                    }));
-                    log("Opportunistically cached assets from navigation:", assetUrls.length);
-                  }
-                } catch {
-                }
-                try {
-                  const keys = await cache.keys();
-                  const MAX_ENTRIES = CACHE_CONFIG.PAGES.MAX_ENTRIES;
-                  if (keys.length > MAX_ENTRIES) {
-                    const toDelete = keys.length - MAX_ENTRIES;
-                    for (let i = 0; i < toDelete; i++) {
-                      await cache.delete(keys[i]);
-                    }
-                  }
-                } catch (e) {
-                  warn("Pages cache cleanup failed", e);
-                }
-              } catch (cacheError) {
-                warn("Failed to cache page:", cacheError);
-              }
-            }
-            return response;
-          } catch {
-            log("Network failed for:", req.url);
-            if (DEBUG) {
-              const cache2 = await caches.open(CACHE_NAMES.PAGES);
-              const cacheKeys = await cache2.keys();
-              log("Pages cache contains:", cacheKeys.map((r) => r.url));
-            }
-            const cache = await caches.open(CACHE_NAMES.PAGES);
-            let cachedResponse = await cache.match(req, { ignoreSearch: true });
-            if (!cachedResponse) {
-              const cleanUrl = new URL(req.url);
-              cleanUrl.search = "";
-              cachedResponse = await cache.match(cleanUrl.toString(), { ignoreSearch: true });
-              log("Tried clean URL:", cleanUrl.toString());
-            }
-            if (cachedResponse) {
-              log("Serving cached page:", req.url);
-              return cachedResponse;
-            }
+        event.respondWith(
+          (async () => {
             try {
-              const shell = await cache.match("/", { ignoreSearch: true });
-              if (shell) {
-                log("Serving app shell (/) as offline fallback for:", req.url);
-                return shell;
+              log("Fetching navigation request:", req.url);
+              const response = await fetch(req);
+              if (response.ok && response.status === 200) {
+                try {
+                  const cache = await caches.open(CACHE_NAMES.PAGES);
+                  await cache.put(req, response.clone());
+                  log("Cached page successfully:", req.url);
+                  try {
+                    const html = await response.clone().text();
+                    const assetUrls = extractAssetUrls(html);
+                    if (assetUrls.length) {
+                      const assetCache = await caches.open(CACHE_NAMES.ASSETS);
+                      await Promise.all(
+                        assetUrls.map(async (u) => {
+                          try {
+                            const r = await fetch(u, { cache: "no-store" });
+                            if (r && r.ok)
+                              await assetCache.put(new Request(u), r.clone());
+                          } catch {
+                          }
+                        })
+                      );
+                      log(
+                        "Opportunistically cached assets from navigation:",
+                        assetUrls.length
+                      );
+                    }
+                  } catch {
+                  }
+                  try {
+                    const keys = await cache.keys();
+                    const MAX_ENTRIES = CACHE_CONFIG.PAGES.MAX_ENTRIES;
+                    if (keys.length > MAX_ENTRIES) {
+                      const toDelete = keys.length - MAX_ENTRIES;
+                      for (let i = 0; i < toDelete; i++) {
+                        await cache.delete(keys[i]);
+                      }
+                    }
+                  } catch (e) {
+                    warn("Pages cache cleanup failed", e);
+                  }
+                } catch (cacheError) {
+                  warn("Failed to cache page:", cacheError);
+                }
               }
-              const shellHtml = await cache.match("/index.html", { ignoreSearch: true });
-              if (shellHtml) {
-                log("Serving /index.html as offline fallback for:", req.url);
-                return shellHtml;
+              return response;
+            } catch {
+              log("Network failed for:", req.url);
+              if (DEBUG) {
+                const cache2 = await caches.open(CACHE_NAMES.PAGES);
+                const cacheKeys = await cache2.keys();
+                log(
+                  "Pages cache contains:",
+                  cacheKeys.map((r) => r.url)
+                );
               }
-            } catch (e) {
-              warn("Shell fallback lookup failed", e);
-            }
-            log("No cached page or shell found, serving offline HTML for:", req.url);
-            return new Response(`
+              const cache = await caches.open(CACHE_NAMES.PAGES);
+              let cachedResponse = await cache.match(req, { ignoreSearch: true });
+              if (!cachedResponse) {
+                const cleanUrl = new URL(req.url);
+                cleanUrl.search = "";
+                cachedResponse = await cache.match(cleanUrl.toString(), {
+                  ignoreSearch: true
+                });
+                log("Tried clean URL:", cleanUrl.toString());
+              }
+              if (cachedResponse) {
+                log("Serving cached page:", req.url);
+                return cachedResponse;
+              }
+              try {
+                const shell = await cache.match("/", { ignoreSearch: true });
+                if (shell) {
+                  log("Serving app shell (/) as offline fallback for:", req.url);
+                  return shell;
+                }
+                const shellHtml = await cache.match("/index.html", {
+                  ignoreSearch: true
+                });
+                if (shellHtml) {
+                  log("Serving /index.html as offline fallback for:", req.url);
+                  return shellHtml;
+                }
+              } catch (e) {
+                warn("Shell fallback lookup failed", e);
+              }
+              log(
+                "No cached page or shell found, serving offline HTML for:",
+                req.url
+              );
+              return new Response(
+                `
                                 <!DOCTYPE html>
                                 <html>
                                     <head>
@@ -3980,12 +4107,18 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
                                             </div>
                                     </body>
                                 </html>
-                        `, {
-              headers: { "Content-Type": "text/html", "Cache-Control": "no-store" },
-              status: 503
-            });
-          }
-        })());
+                        `,
+                {
+                  headers: {
+                    "Content-Type": "text/html",
+                    "Cache-Control": "no-store"
+                  },
+                  status: 503
+                }
+              );
+            }
+          })()
+        );
       }
     });
     async function syncForms(clients, preloaded) {
@@ -3994,7 +4127,10 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         const formData = preloaded != null ? preloaded : await (async () => {
           try {
             const db2 = await openUnifiedDB();
-            return await getAllRecords(db2, DB_CONFIG.STORES.FORMS);
+            return await getAllRecords(
+              db2,
+              DB_CONFIG.STORES.FORMS
+            );
           } catch (e) {
             error("Failed to load form data:", e);
             return [];
@@ -4009,7 +4145,9 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         if (expired.length) {
           try {
             const db2 = await openUnifiedDB();
-            await Promise.all(expired.map((e) => deleteRecord(db2, DB_CONFIG.STORES.FORMS, e.id)));
+            await Promise.all(
+              expired.map((e) => deleteRecord(db2, DB_CONFIG.STORES.FORMS, e.id))
+            );
             warn("Purged expired offline records:", expired.length);
           } catch (e) {
             warn("Failed purging expired records:", e);
@@ -4020,14 +4158,30 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         if (!response.ok) throw new Error("Sync failed");
         try {
           const db2 = await openUnifiedDB();
-          await Promise.all(valid.map((f) => deleteRecord(db2, DB_CONFIG.STORES.FORMS, f.id)));
+          await Promise.all(
+            valid.map((f) => deleteRecord(db2, DB_CONFIG.STORES.FORMS, f.id))
+          );
         } catch (e) {
           warn("Failed deleting processed form records:", e);
         }
-        clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPES.FORM_SYNCED, data: { message: `Form data synced (${valid.length} records).`, appliedCount: valid.length, mode: "background" } }));
+        clients.forEach(
+          (c) => c.postMessage({
+            type: SW_MESSAGE_TYPES.FORM_SYNCED,
+            data: {
+              message: `Form data synced (${valid.length} records).`,
+              appliedCount: valid.length,
+              mode: "background"
+            }
+          })
+        );
       } catch (err) {
         error("syncForms error", err);
-        clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPES.FORM_SYNC_ERROR, data: { message: "Form sync failed.", mode: "background" } }));
+        clients.forEach(
+          (c) => c.postMessage({
+            type: SW_MESSAGE_TYPES.FORM_SYNC_ERROR,
+            data: { message: "Form sync failed.", mode: "background" }
+          })
+        );
       }
     }
     async function syncContent() {
@@ -4037,22 +4191,40 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       const controller = new AbortController();
       const timeout2 = setTimeout(() => controller.abort(), 2e4);
       try {
-        const resp = await fetch("/api/form-sync", { method: "POST", body: JSON.stringify(data), signal: controller.signal });
+        const resp = await fetch("/api/form-sync", {
+          method: "POST",
+          body: JSON.stringify(data),
+          signal: controller.signal
+        });
         return resp;
       } finally {
         clearTimeout(timeout2);
       }
     }
     async function syncPendingNotes(mode) {
-      var _a;
+      var _a, _b, _c;
       if (notesSyncInProgress) return;
       notesSyncInProgress = true;
       try {
         const clients = await swSelf.clients.matchAll({ type: "window" });
         const pending = await loadPendingNoteChanges();
-        clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNC_STARTED, data: { message: "Syncing notes\u2026", pendingCount: pending.length, mode } }));
+        clients.forEach(
+          (c) => c.postMessage({
+            type: SW_MESSAGE_TYPES.NOTES_SYNC_STARTED,
+            data: {
+              message: "Syncing notes\u2026",
+              pendingCount: pending.length,
+              mode
+            }
+          })
+        );
         if (!pending.length) {
-          clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNCED, data: { appliedCount: 0, conflictsCount: 0, mode } }));
+          clients.forEach(
+            (c) => c.postMessage({
+              type: SW_MESSAGE_TYPES.NOTES_SYNCED,
+              data: { appliedCount: 0, conflictsCount: 0, mode }
+            })
+          );
           return;
         }
         const resp = await fetch("/api/notes/sync", {
@@ -4062,8 +4234,8 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         });
         if (!resp.ok) throw new Error("Notes sync failed");
         const result = await resp.json().catch(() => ({}));
-        const appliedIds = Array.from(new Set(result.applied || []));
-        const conflictsCount = ((_a = result.conflicts) == null ? void 0 : _a.length) || 0;
+        const appliedIds = Array.from(new Set(((_a = result.data) == null ? void 0 : _a.applied) || []));
+        const conflictsCount = ((_c = (_b = result.data) == null ? void 0 : _b.conflicts) == null ? void 0 : _c.length) || 0;
         if (appliedIds.length) {
           try {
             await deletePendingNoteChanges(appliedIds);
@@ -4071,12 +4243,24 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           }
         }
         if (conflictsCount) {
-          clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNC_CONFLICTS, data: { conflictsCount, mode } }));
+          clients.forEach(
+            (c) => c.postMessage({
+              type: SW_MESSAGE_TYPES.NOTES_SYNC_CONFLICTS,
+              data: { conflictsCount, mode }
+            })
+          );
         }
-        clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNCED, data: { appliedCount: appliedIds.length, conflictsCount, mode } }));
+        clients.forEach(
+          (c) => c.postMessage({
+            type: SW_MESSAGE_TYPES.NOTES_SYNCED,
+            data: { appliedCount: appliedIds.length, conflictsCount, mode }
+          })
+        );
       } catch (err) {
         const clients = await swSelf.clients.matchAll({ type: "window" });
-        clients.forEach((c) => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNC_ERROR }));
+        clients.forEach(
+          (c) => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNC_ERROR })
+        );
       } finally {
         notesSyncInProgress = false;
       }

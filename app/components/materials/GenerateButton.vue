@@ -103,14 +103,19 @@ watch(genError, (error) => {
     <!-- Generate dropdown button -->
     <UDropdownMenu :items="dropdownItems" :content="{ align: 'end', side: 'bottom', sideOffset: 4 }"
       :ui="{ content: 'w-40' }">
-      <u-button color="primary" size="xs" :loading="generating" :disabled="disabled || isQuotaExceeded || !hasContent"
-        aria-label="Generate Study Tools" variant="soft">
-        <span v-if="!generating">Generate</span>
-        <span v-else>Generating…</span>
-        <template #trailing>
-          <icon name="i-lucide-chevron-down" size="14" />
-        </template>
-      </u-button>
+      <u-tooltip
+        :text="isQuotaExceeded ? 'Quota Exceeded, Upgrade your plan or create manual question/cards' : !hasContent ? 'Material has no content, add content then try again' : 'Generate Question or Flashcards'">
+
+        <u-button color="primary" size="xs" :loading="generating" :disabled="disabled || isQuotaExceeded || !hasContent"
+          aria-label="Generate Study Tools" variant="soft">
+          <span v-if="!generating">Generate</span>
+          <span v-else>Generating…</span>
+          <template #trailing>
+            <icon name="i-lucide-chevron-down" size="14" />
+          </template>
+        </u-button>
+      </u-tooltip>
+
     </UDropdownMenu>
 
     <!-- Tooltip for disabled state -->
@@ -119,7 +124,21 @@ watch(genError, (error) => {
     </u-tooltip>
 
     <!-- Regenerate Confirmation Dialog -->
-    <materials-regenerate-confirm-dialog :show="showConfirmDialog" :generation-type="pendingGenerationType"
-      :existing-counts="existingCounts" :loading="generating" @confirm="confirmRegenerate" @cancel="cancelRegenerate" />
+    <shared-delete-confirmation-modal :show="showConfirmDialog" title="Regenerate Content" confirm-text="Regenerate"
+      :is-destructive="true" @close="cancelRegenerate" @confirm="confirmRegenerate" :loading="generating">
+      <div class="space-y-4">
+        <p class="text-sm text-muted">
+          This will permanently delete <strong>{{ pendingGenerationType === 'flashcards' ?
+            existingCounts.flashcardsCount :
+            existingCounts.questionsCount }}</strong> existing {{ pendingGenerationType === 'flashcards' ? 'flashcards'
+              :
+              'questions' }} and all their review progress.
+        </p>
+        <p class="text-sm text-muted">
+          New {{ pendingGenerationType === 'flashcards' ? 'flashcards' : 'questions' }} will be generated from the
+          material's content. This action cannot be undone.
+        </p>
+      </div>
+    </shared-delete-confirmation-modal>
   </div>
 </template>

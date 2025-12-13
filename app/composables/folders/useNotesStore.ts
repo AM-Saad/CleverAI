@@ -34,7 +34,9 @@ interface NotesStore {
 // Global store instance
 const stores = new Map<string, NotesStore>();
 // Ensure we only wire one 'online' listener for notes sync across the app
-let notesOnlineListenerRegistered = false
+let notesOnlineListenerRegistered = false;
+// Track if we've shown offline toast to avoid spamming during multiple updates
+let offlineToastShown = false;
 
 /**
  * Creates or returns a notes store for a specific folder
@@ -53,45 +55,74 @@ export function useNotesStore(folderId: string): NotesStore {
   // Proactively trigger notes sync on reconnect when pending changes exist (register once)
   if (process.client && !notesOnlineListenerRegistered) {
     try {
-      let onlineSyncScheduled = false
-      window.addEventListener('online', async () => {
-        if (onlineSyncScheduled) return
-        onlineSyncScheduled = true
+      let onlineSyncScheduled = false;
+      window.addEventListener("online", async () => {
+        // Reset the offline toast flag when coming back online
+        offlineToastShown = false;
+        if (onlineSyncScheduled) return;
+        onlineSyncScheduled = true;
         try {
           // slight delay to allow potential Background Sync event to fire first
           setTimeout(async () => {
             try {
-              const db = await openUnifiedDB()
-              if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) return
-              const pending = await getAllRecords<any>(db, DB_CONFIG.STORES.PENDING_NOTES as any)
-              if (!pending.length) return
-              if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({ type: 'SYNC_NOTES' })
+              const db = await openUnifiedDB();
+              if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES))
+                return;
+              const pending = await getAllRecords<any>(
+                db,
+                DB_CONFIG.STORES.PENDING_NOTES as any
+              );
+              if (!pending.length) return;
+              if (
+                "serviceWorker" in navigator &&
+                navigator.serviceWorker.controller
+              ) {
+                navigator.serviceWorker.controller.postMessage({
+                  type: "SYNC_NOTES",
+                });
               }
-            } catch { /* ignore */ }
-            finally { onlineSyncScheduled = false }
-          }, 350)
-        } catch { onlineSyncScheduled = false }
-      })
-      notesOnlineListenerRegistered = true
-    } catch { /* ignore */ }
-  }
-  const registerNotesSync = async () => {
-    try {
-      if ('serviceWorker' in navigator) {
-        const reg = await navigator.serviceWorker.getRegistration()
-        // Background Sync may not be typed; cast defensively
-        const syncReg = (reg as unknown as { sync?: { register(tag: string): Promise<void> } })?.sync
-        if (syncReg) await syncReg.register('notes-sync')
-      }
+            } catch {
+              /* ignore */
+            } finally {
+              onlineSyncScheduled = false;
+            }
+          }, 350);
+        } catch {
+          onlineSyncScheduled = false;
+        }
+      });
+      notesOnlineListenerRegistered = true;
     } catch {
       /* ignore */
     }
   }
 
-  const { debouncedFunc: debouncedSave, cancel: cancelSave } = useDebounce((id: string, content: string) => {
-    updateNoteToServer(id, content);
-  }, 1000);
+  // Note: Background Sync for notes is registered on-demand when there are pending changes.
+  // This ensures we don't trigger unnecessary sync events on every app load.
+  // The window 'online' listener above handles immediate postMessage-based sync.
+
+  /**
+   * Register Background Sync for notes (only when there are pending changes)
+   */
+  const registerNotesSync = async () => {
+    if (!("serviceWorker" in navigator)) return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      if ("sync" in reg) {
+        // @ts-expect-error Background Sync is not in some TS lib DOM versions
+        await reg.sync.register(SYNC_TAGS.NOTES);
+      }
+    } catch {
+      /* not supported or permission denied */
+    }
+  };
+
+  const { debouncedFunc: debouncedSave, cancel: cancelSave } = useDebounce(
+    (id: string, content: string) => {
+      updateNoteToServer(id, content);
+    },
+    1000
+  );
 
   // Local reactive state
   const notes = ref<Map<string, NoteState>>(new Map());
@@ -99,12 +130,10 @@ export function useNotesStore(folderId: string): NotesStore {
   const lastSync = ref<Date | null>(null);
   const filteredNoteIds = ref<Set<string> | null>(null);
 
-
   // Debounced server sync to reduce API calls during typing
   const saveToServer = async (id: string, content: string) => {
     debouncedSave(id, content);
   };
-
 
   // Simple offline sync - only when actually offline
   const queueForOfflineSync = (
@@ -122,10 +151,6 @@ export function useNotesStore(folderId: string): NotesStore {
     }
   };
 
-
-
-
-
   // Sync note changes to server (local-first approach)
   const updateNoteToServer = async (
     id: string,
@@ -142,9 +167,28 @@ export function useNotesStore(folderId: string): NotesStore {
       // Network error - keep local content, queue for offline sync
       if (!navigator.onLine) {
         // Queue to pending notes store
-        await queueNoteChange({ id, operation: 'upsert', updatedAt: Date.now(), localVersion: (note as any).localVersion ? (note as any).localVersion + 1 : 1, folderId: note.folderId, content })
-        await registerNotesSync()
-        toast.add({ title: 'Offline', description: 'Note change saved locally. Will sync when back online.', color: 'warning' })
+        await queueNoteChange({
+          id,
+          operation: "upsert",
+          updatedAt: Date.now(),
+          localVersion: (note as any).localVersion
+            ? (note as any).localVersion + 1
+            : 1,
+          folderId: note.folderId,
+          content,
+        });
+        // Register Background Sync to attempt sync when back online
+        await registerNotesSync();
+        // Only show toast once per offline session
+        if (!offlineToastShown) {
+          toast.add({
+            title: "Offline",
+            description:
+              "Note changes saved locally. Will sync when back online.",
+            color: "warning",
+          });
+          offlineToastShown = true;
+        }
         note.isLoading = false;
         return true;
       }
@@ -153,7 +197,6 @@ export function useNotesStore(folderId: string): NotesStore {
       const result: Result<Note, APIError> = await $api.notes.update(id, {
         content,
       });
-
 
       if (result.success) {
         // Server success - mark as synced but keep local content
@@ -172,9 +215,27 @@ export function useNotesStore(folderId: string): NotesStore {
     } catch (error) {
       console.error("Failed to sync note to server:", error);
       if (!navigator.onLine) {
-        await queueNoteChange({ id, operation: 'upsert', updatedAt: Date.now(), localVersion: (note as any).localVersion ? (note as any).localVersion + 1 : 1, folderId: note.folderId, content })
-        await registerNotesSync()
-        toast.add({ title: 'Offline', description: 'Note update queued. Will sync when back online.', color: 'warning' })
+        await queueNoteChange({
+          id,
+          operation: "upsert",
+          updatedAt: Date.now(),
+          localVersion: (note as any).localVersion
+            ? (note as any).localVersion + 1
+            : 1,
+          folderId: note.folderId,
+          content,
+        });
+        // Register Background Sync to attempt sync when back online
+        await registerNotesSync();
+        // Only show toast once per offline session
+        if (!offlineToastShown) {
+          toast.add({
+            title: "Offline",
+            description: "Note update queued. Will sync when back online.",
+            color: "warning",
+          });
+          offlineToastShown = true;
+        }
         note.isLoading = false;
         // notes.value.set(id, note);
         return true;
@@ -186,27 +247,29 @@ export function useNotesStore(folderId: string): NotesStore {
     }
   };
 
-
-
-
   // Update note content - local-first approach with IndexedDB persistence
-  const updateNote = async (id: string, updatedNote: NoteState): Promise<boolean> => {
+  const updateNote = async (
+    id: string,
+    updatedNote: NoteState
+  ): Promise<boolean> => {
     // Step 1: Optimistic update
     updatedNote.updatedAt = new Date();
     updatedNote.isDirty = true;
     notes.value.set(id, updatedNote);
     // Persist locally immediately for offline continuity
-    try { await saveNoteToIndexedDB(updatedNote); } catch { }
+    try {
+      await saveNoteToIndexedDB(updatedNote);
+    } catch {}
     // Step 2: Debounced server sync
     saveToServer(id, updatedNote.content);
     return true;
   };
 
-
-
-
   // Create a new note - simple optimistic approach
-  const createNote = async (folderIdParam: string, content: string): Promise<string | null> => {
+  const createNote = async (
+    folderIdParam: string,
+    content: string
+  ): Promise<string | null> => {
     const tempId = `temp-${Date.now()}`;
 
     try {
@@ -254,7 +317,11 @@ export function useNotesStore(folderId: string): NotesStore {
           notes.value.set(tempId, note);
         }
 
-        toast.add({ title: "Server Error", description: "Server rejected note creation. Note saved locally.", color: "error" });
+        toast.add({
+          title: "Server Error",
+          description: "Server rejected note creation. Note saved locally.",
+          color: "error",
+        });
         return tempId;
       }
     } catch (error) {
@@ -262,15 +329,30 @@ export function useNotesStore(folderId: string): NotesStore {
 
       // Only show offline message if actually offline
       if (!navigator.onLine) {
-        await queueNoteChange({ id: tempId, operation: 'upsert', updatedAt: Date.now(), localVersion: 1, folderId: folderIdParam, content })
-        await registerNotesSync()
-
-        toast.add({ title: "Offline", description: "Note saved locally. Will sync when online.", color: "warning" });
+        await queueNoteChange({
+          id: tempId,
+          operation: "upsert",
+          updatedAt: Date.now(),
+          localVersion: 1,
+          folderId: folderIdParam,
+          content,
+        });
+        // Register Background Sync to attempt sync when back online
+        await registerNotesSync();
+        toast.add({
+          title: "Offline",
+          description: "Note saved locally. Will sync when online.",
+          color: "warning",
+        });
         return tempId;
       } else {
         // Other errors - remove the optimistic note
         notes.value.delete(tempId);
-        toast.add({ title: "Error", description: "Failed to create note - check your connection", color: "error" });
+        toast.add({
+          title: "Error",
+          description: "Failed to create note - check your connection",
+          color: "error",
+        });
         return null;
       }
     }
@@ -295,11 +377,19 @@ export function useNotesStore(folderId: string): NotesStore {
       } else {
         // Server rejected - restore note to both reactive state and IndexedDB
         console.error("Server rejected note deletion:", result.error);
-        const restoredNote = { ...note, isLoading: false, error: "Server rejected deletion" };
+        const restoredNote = {
+          ...note,
+          isLoading: false,
+          error: "Server rejected deletion",
+        };
         notes.value.set(id, restoredNote);
         await saveNoteToIndexedDB(restoredNote);
 
-        toast.add({ title: "Server Error", description: "Server rejected deletion. Note restored.", color: "error" });
+        toast.add({
+          title: "Server Error",
+          description: "Server rejected deletion. Note restored.",
+          color: "error",
+        });
         return false;
       }
     } catch (error) {
@@ -307,9 +397,19 @@ export function useNotesStore(folderId: string): NotesStore {
 
       // Only show offline message if actually offline
       if (!navigator.onLine) {
-        await queueNoteChange({ id, operation: 'delete', updatedAt: Date.now(), localVersion: 1 })
-        await registerNotesSync()
-        toast.add({ title: "Offline", description: "Deletion queued. Will sync when online.", color: "warning" });
+        await queueNoteChange({
+          id,
+          operation: "delete",
+          updatedAt: Date.now(),
+          localVersion: 1,
+        });
+        // Register Background Sync to attempt sync when back online
+        await registerNotesSync();
+        toast.add({
+          title: "Offline",
+          description: "Deletion queued. Will sync when online.",
+          color: "warning",
+        });
         return true;
       } else {
         // Other errors - restore the note
@@ -323,18 +423,28 @@ export function useNotesStore(folderId: string): NotesStore {
           }
         }
 
-        toast.add({ title: "Error", description: "Failed to delete note - check your connection", color: "error" });
+        toast.add({
+          title: "Error",
+          description: "Failed to delete note - check your connection",
+          color: "error",
+        });
         return false;
       }
     }
   };
 
   // Reorder notes - optimistic approach with rollback on failure
-  const reorderNotes = async (reorderedNotes: NoteState[]): Promise<boolean> => {
+  const reorderNotes = async (
+    reorderedNotes: NoteState[]
+  ): Promise<boolean> => {
     console.log("🔄 [useNotesStore] reorderNotes called", {
       folderId,
       count: reorderedNotes.length,
-      notes: reorderedNotes.map((n, i) => ({ id: n.id, currentOrder: n.order, newOrder: i }))
+      notes: reorderedNotes.map((n, i) => ({
+        id: n.id,
+        currentOrder: n.order,
+        newOrder: i,
+      })),
     });
 
     try {
@@ -350,14 +460,19 @@ export function useNotesStore(folderId: string): NotesStore {
           notes.value.set(note.id, existingNote);
         }
       });
-      console.log("✅ [useNotesStore] Optimistic update applied to reactive state");
+      console.log(
+        "✅ [useNotesStore] Optimistic update applied to reactive state"
+      );
 
       // Prepare payload for server
       const noteOrders = reorderedNotes.map((note, index) => ({
         id: note.id,
         order: index,
       }));
-      console.log("📝 [useNotesStore] Prepared payload for server:", { folderId, noteOrders });
+      console.log("📝 [useNotesStore] Prepared payload for server:", {
+        folderId,
+        noteOrders,
+      });
 
       // Save to IndexedDB for persistence
       for (const note of Array.from(notes.value.values())) {
@@ -389,7 +504,10 @@ export function useNotesStore(folderId: string): NotesStore {
         return true;
       } else {
         // Server rejected - rollback to original order
-        console.error("❌ [useNotesStore] Server rejected note reordering:", result.error);
+        console.error(
+          "❌ [useNotesStore] Server rejected note reordering:",
+          result.error
+        );
         notes.value = originalNotes;
 
         // Restore original order in IndexedDB
@@ -480,11 +598,19 @@ export function useNotesStore(folderId: string): NotesStore {
 
         localNotes.forEach((note: NoteState) => notes.value.set(note.id, note));
 
-        toast.add({ title: "Offline Mode", description: `Loaded ${localNotes.length} notes from local storage.`, color: "warning" });
+        toast.add({
+          title: "Offline Mode",
+          description: `Loaded ${localNotes.length} notes from local storage.`,
+          color: "warning",
+        });
       }
     } catch (error) {
       console.error("Failed to load notes from IndexedDB:", error);
-      toast.add({ title: "Error", description: "Failed to load notes from server or local storage.", color: "error" });
+      toast.add({
+        title: "Error",
+        description: "Failed to load notes from server or local storage.",
+        color: "error",
+      });
     } finally {
       loadingStates.value.set(folderId, false);
     }
@@ -527,14 +653,14 @@ export function useNotesStore(folderId: string): NotesStore {
   };
 
   const getNote = (id: string): NoteState => {
-    return notes.value.get(id)!
+    return notes.value.get(id)!;
   };
   const setNotes = (newNotes: NoteState[]) => {
     notes.value.clear();
     newNotes.forEach((note) => {
       notes.value.set(note.id, note);
     });
-  }
+  };
 
   // Filter management
   const setFilteredNoteIds = (ids: Set<string> | null) => {
@@ -565,7 +691,7 @@ export function useNotesStore(folderId: string): NotesStore {
     isNoteDirty,
     isNoteInFilter,
     setNotes,
-    setFilteredNoteIds
+    setFilteredNoteIds,
   };
 
   // Cache the store

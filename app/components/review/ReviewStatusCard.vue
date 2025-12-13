@@ -2,24 +2,24 @@
   <ui-card :class="[
     'transition-all duration-200',
     cardClasses,
-  ]" :variant="variant">
+  ]" :variant="minimal ? 'ghost' : 'default'" :size="minimal ? 'xs' : 'sm'">
     <!-- Loading State -->
-    <div v-if="isLoading" class="flex items-center justify-center py-4">
-      <!-- <Loading size="sm" /> -->
-      <span class="ml-2 text-gray-500">Loading review stats...</span>
-    </div>
+    <template #header v-if="!minimal">
+      <div class="flex items-center justify-between w-full">
+        Review Status
+        <u-button v-if="showRefresh" size="xs" variant="ghost" :is-loading="isLoading" @click="refresh">
+          <Icon name="heroicons:arrow-path" :class="['w-4 h-4', isLoading ? 'animate-spin' : '']" />
+        </u-button>
+      </div>
+    </template>
+    <ui-loader v-if="isLoading" :is-fetching="isLoading" />
 
     <!-- Error State -->
-    <div v-else-if="error" class="text-center py-4">
-      <Icon name="heroicons:exclamation-triangle" class="w-8 h-8 text-red-500 mx-auto mb-2" />
-      <p class="text-red-600 text-sm">{{ error.message }}</p>
-      <u-button size="xs" variant="ghost" class="mt-2" @click="refresh">
-        Retry
-      </u-button>
-    </div>
+    <shared-error-message v-if="error && !isLoading" :error="error" :refresh="refresh" />
+
 
     <!-- Empty State (no cards enrolled) -->
-    <div v-else-if="isEmpty" :class="`text-center py-4 ${variant === 'ghost' ? 'flex items-center gap-2' : ''}`">
+    <div v-if="isEmpty && !isLoading && !error" :class="`text-center ${minimal ? 'flex items-center gap-2' : ''}`">
       <Icon name="heroicons:academic-cap" class="w-10 h-10 text-gray-400 " />
       <p class="text-gray-600 dark:text-gray-400">
         {{ emptyMessage }}
@@ -28,77 +28,60 @@
     </div>
 
     <!-- Stats Display -->
-    <div v-else :class="`text-center py-4 ${variant === 'ghost' ? 'flex items-center gap-2' : ''}`">
+    <div v-if="!isLoading && !error && !isEmpty"
+      :class="`text-center flex flex-col items-center md:flex-row gap-6 md:gap-0 ${minimal ? '' : ''}`">
       <!-- Header with status message -->
-      <div class="flex items-center justify-between" :class="[variant === 'ghost' ? '' : 'mb-4']">
+      <div class="flex items-center justify-between md:justify-start gap-2 w-full">
         <div class="flex items-center gap-2">
-          <div :class="[variant === 'ghost' ? 'w-2 h-2' : 'w-3 h-3', 'rounded-full', urgencyIndicatorClass]" />
-          <span
-            :class="[variant === 'ghost' ? ' text-gray-600 dark:text-gray-400' : 'font-medium text-gray-900 dark:text-gray-100']">
+          <div :class="[minimal ? 'w-2 h-2' : 'w-3 h-3', 'rounded-full', urgencyIndicatorClass]" />
+          <ui-paragraph size="base" color="neutral">
             {{ statusMessage }}
-          </span>
+          </ui-paragraph>
         </div>
-        <u-button v-if="showRefresh" size="xs" variant="ghost" @click="refresh" :disabled="isLoading">
-          <Icon name="heroicons:arrow-path" class="w-4 h-4" />
-        </u-button>
-      </div>
 
-      <!-- Stats Grid - Minimal variant for ghost -->
-      <!-- <div  class="flex items-center gap-3 text-xs text-gray-600 dark:text-gray-400">
-        <div v-if="stats?.due" class="flex items-center gap-1">
-          <span class="font-semibold text-red-600 dark:text-red-400">{{ stats.due }}</span>
-          <span>due</span>
+        <!-- Action Button -->
+        <div v-if="showAction && hasDueCards">
+          <u-button :to="reviewLink" color="primary" :size="minimal ? 'xs' : 'sm'">
+            <Icon name="heroicons:play" class="w-4 h-4" />
+            Start Review
+            <span v-if="stats?.due" class=" opacity-75">({{ stats.due }})</span>
+          </u-button>
         </div>
-        <div v-if="stats?.new" class="flex items-center gap-1">
-          <span class="font-semibold text-blue-600 dark:text-blue-400">{{ stats.new }}</span>
-          <span>new</span>
-        </div>
-        <div v-if="stats?.learning" class="flex items-center gap-1">
-          <span class="font-semibold text-orange-600 dark:text-orange-400">{{ stats.learning }}</span>
-          <span>learning</span>
-        </div>
-        <div v-if="stats?.mature" class="flex items-center gap-1">
-          <span class="font-semibold text-green-600 dark:text-green-400">{{ stats.mature }}</span>
-          <span>mature</span>
-        </div>
-      </div> -->
+
+      </div>
 
       <!-- Stats Grid - Full variant for default/outline -->
-      <div v-if="variant !== 'ghost'" class="grid grid-cols-4 gap-2 text-center">
-        <div class="p-1 rounded bg-red-50 dark:bg-red-900/20">
-          <div class="text-lg font-bold text-red-600 dark:text-red-400">
+      <div v-if="!minimal" class="flex md:justify-end justify-evenly gap-2 text-center w-full overflow-auto">
+        <u-badge class="flex grid-1" variant="soft" color="error">
+          <div class="text-red-700 dark:text-red-300">Due</div>
+
+          <div class="text-red-600 dark:text-red-400">
             {{ stats?.due ?? 0 }}
           </div>
-          <div class="text-xs text-red-700 dark:text-red-300">Due</div>
-        </div>
-        <div class="p-1 rounded bg-blue-50 dark:bg-blue-900/20">
-          <div class="text-lg font-bold text-blue-600 dark:text-blue-400">
+        </u-badge>
+        <u-badge class="flex grid-1" variant="soft" color="primary">
+          <div class="text-blue-700 dark:text-blue-300">New</div>
+
+          <div class="text-blue-600 dark:text-blue-400">
             {{ stats?.new ?? 0 }}
           </div>
-          <div class="text-xs text-blue-700 dark:text-blue-300">New</div>
-        </div>
-        <div class="p-1 rounded bg-orange-50 dark:bg-orange-900/20">
-          <div class="text-lg font-bold text-orange-600 dark:text-orange-400">
+        </u-badge>
+        <u-badge class="flex grid-1" variant="soft" color="warning">
+          <div class="text-orange-700 dark:text-orange-300">Learning</div>
+
+          <div class="text-orange-600 dark:text-orange-400">
             {{ stats?.learning ?? 0 }}
           </div>
-          <div class="text-xs text-orange-700 dark:text-orange-300">Learning</div>
-        </div>
-        <div class="p-1 rounded bg-green-50 dark:bg-green-900/20">
-          <div class="text-lg font-bold text-green-600 dark:text-green-400">
+        </u-badge>
+        <u-badge class="flex grid-1" variant="soft" color="success">
+          <div class="text-green-700 dark:text-green-300">Mature</div>
+
+          <div class="text-green-600 dark:text-green-400">
             {{ stats?.mature ?? 0 }}
           </div>
-          <div class="text-xs text-green-700 dark:text-green-300">Mature</div>
-        </div>
+        </u-badge>
       </div>
 
-      <!-- Action Button -->
-      <div v-if="showAction && hasDueCards" :class="[variant === 'ghost' ? '' : 'mt-4']">
-        <u-button :to="reviewLink" color="primary" :size="compact || variant === 'ghost' ? 'xs' : 'md'">
-          <Icon name="heroicons:play" class="w-4 h-4" />
-          Start Review
-          <span v-if="stats?.due" class=" opacity-75">({{ stats.due }})</span>
-        </u-button>
-      </div>
 
       <!-- Context info (folder name) if available -->
       <div v-if="stats?.context?.folderTitle && showContext"
@@ -132,6 +115,8 @@ interface Props {
   variant?: "default" | "ghost" | "outline";
   /** Custom empty message */
   emptyMessage?: string;
+
+  minimal?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -143,6 +128,7 @@ const props = withDefaults(defineProps<Props>(), {
   compact: false,
   variant: "default",
   emptyMessage: "No cards enrolled for review yet",
+  minimal: false,
 });
 
 // Use composable for data fetching
@@ -188,9 +174,9 @@ const urgencyIndicatorClass = computed(() => {
 
 // Computed: Card styling based on urgency
 const cardClasses = computed(() => {
-  if (urgencyLevel.value === "high") {
-    return "border-red-200 dark:border-red-800";
-  }
+  // if (urgencyLevel.value === "high") {
+  //   return "border-red-200 dark:border-red-600";
+  // }
   return "";
 });
 </script>

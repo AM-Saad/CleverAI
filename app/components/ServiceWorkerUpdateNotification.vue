@@ -61,7 +61,6 @@
     leave-to-class="transform translate-y-full opacity-0">
     <div v-if="showDebugPanel && isDev" class="sw-debug-panel">
 
-      class="sw-debug-panel">
       <div class="bg-white/95 dark:bg-gray-900/95 backdrop-blur border rounded-lg p-4 text-sm space-y-3 shadow-lg">
         <header class="flex items-center justify-between">
           <h3 class="font-semibold flex items-center gap-2">

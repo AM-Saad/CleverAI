@@ -33,7 +33,7 @@
               <span>Gender:</span>
               <span class="capitalize">{{
                 profileData?.gender || "Not specified"
-                }}</span>
+              }}</span>
             </ui-label>
           </div>
 
@@ -210,7 +210,7 @@ const navigateToLogin = () => {
 };
 
 const navigateToUpgrade = () => {
-  router.push("/upgrade");
+  router.push("/pricing");
 };
 
 const navigateToSettings = () => {

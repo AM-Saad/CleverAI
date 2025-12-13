@@ -1,7 +1,5 @@
 <template>
   <div>
-    <Title>Clever AI | Your AI Companion</Title>
-
     <section class="my-xl flex w-full">
       <div class="flex flex-col gap-2">
         <motion.h2 :initial="{ opacity: 0, scale: 0.9 }" :animate="{ opacity: 1, scale: 1 }" :transition="{
@@ -42,12 +40,78 @@ import { motion } from "motion-v";
 
 console.log("🏠 [INDEX.VUE] Page script setup initializing...");
 
+const baseUrl = useRuntimeConfig().public.APP_BASE_URL as string;
+console.log("🏠 [INDEX.VUE] Base URL:", baseUrl);
 definePageMeta({
-  title: "Recwide - Free Screen Recorder",
-  description:
-    "Screen recorder has never been this easy, free and timeless before",
-  image: "/images/og/recwide.png",
   auth: false,
+  title: "AI-Powered Spaced Repetition Learning Platform | CleverAI",
+});
+
+useHead({
+  meta: [
+    {
+      name: "description",
+      content:
+        "CleverAI is an AI-powered spaced repetition learning platform offering adaptive flashcards, AI chat, and personalized study workflows to improve long-term memory retention.",
+    },
+    {
+      property: "og:title",
+      content: "AI-Powered Spaced Repetition Learning Platform | CleverAI",
+    },
+    {
+      property: "og:description",
+      content:
+        "Learn smarter with CleverAI — an AI-powered spaced repetition platform for flashcards, quizzes, and adaptive study workflows.",
+    },
+    {
+      property: "og:type",
+      content: "website",
+    },
+    {
+      property: "og:url",
+      content: baseUrl,
+    },
+    {
+      property: "og:image",
+      content: `${baseUrl}/images/og/recwide.png`,
+    },
+    {
+      name: "twitter:card",
+      content: "summary_large_image",
+    },
+    {
+      name: "twitter:title",
+      content: "AI-Powered Spaced Repetition Learning Platform | CleverAI",
+    },
+    {
+      name: "twitter:description",
+      content:
+        "CleverAI helps you retain knowledge faster using AI-powered spaced repetition, flashcards, and adaptive learning.",
+    },
+    {
+      name: "twitter:image",
+      content: `${baseUrl}/images/og/recwide.png`,
+    },
+  ],
+  script: [
+    {
+      type: "application/ld+json",
+      innerHTML: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        name: "CleverAI",
+        applicationCategory: "EducationalApplication",
+        operatingSystem: "Web",
+        description:
+          "AI-powered spaced repetition learning platform with adaptive flashcards, quizzes, and AI-assisted study workflows.",
+        offers: {
+          "@type": "Offer",
+          price: "0",
+          priceCurrency: "USD",
+        },
+      }),
+    },
+  ],
 });
 
 console.log("🏠 [INDEX.VUE] Page meta defined");

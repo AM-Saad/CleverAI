@@ -52,14 +52,14 @@ const cardsToShow = computed(() =>
 
 const items = [
   {
-    name: "Flash Cards",
-    icon: "bi:card-text",
-    component: FlashCards,
-  },
-  {
     name: "Questions",
     icon: "bi:question-circle",
     component: Questions,
+  },
+  {
+    name: "Flash Cards",
+    icon: "bi:card-text",
+    component: FlashCards,
   },
 ];
 
@@ -142,17 +142,24 @@ const saveMaterial = async (title: string, content: string, type: string) => {
 
 
 <template>
-  <shared-page-wrapper id="folder-page" :title="`Folder: ${folder?.title || '....'}`"
-    :subtitle="folder?.description || ''" :is-page-loading="loading">
+  <shared-page-wrapper id="folder-page" :title="`${folder?.title || '....'}`" :subtitle="folder?.description || ''"
+    :is-page-loading="loading">
+    <template #header-info>
+      <ui-label class="mt-2" variant="muted">Created: {{ createdAt }}</ui-label>
+
+    </template>
     <template #actions>
-      <ui-label class="mt-2" variant="muted">{{ createdAt }}</ui-label>
+      <div class="flex flex-col items-end gap-2">
+        <!-- Folder-specific Review Status - Minimal & Clean -->
+        <review-status-card :folder-id="`${id as string}`" :show-context="false" :show-refresh="false" :minimal="true"
+          variant="ghost" :empty-message="'You have no cards to review, enroll some or just chill.'" />
+      </div>
+
     </template>
     <shared-error-message v-if="error && !loading" :error="error" :refresh="refresh" />
 
     <template v-if="folder" #default>
-      <!-- Folder-specific Review Status - Minimal & Clean -->
-      <review-status-card :folder-id="`${id as string}`" :show-context="false" :show-refresh="false" variant="ghost"
-        :empty-message="'You have no cards to review, enroll some or just chill.'" />
+
       <div class="flex flex-col md:flex-row gap-2 min-h-0 w-full grow">
 
 
@@ -161,7 +168,7 @@ const saveMaterial = async (title: string, content: string, type: string) => {
 
 
         <!-- LEARNING HUB Goes Here -->
-        <div class="flex flex-col relative overflow-hidden shrink-0 md:basis-1/4 grow">
+        <div class="flex flex-col relative overflow-hidden shrink-0 md:basis-1/4 grow" id="learning-hub">
           <ui-gradient-bg />
           <ui-card variant="ghost" size="lg"
             class="relative bg-white m-[1.5px] dark:m-px dark:bg-dark flex-1 shrink-0 overflow-scroll"
@@ -170,34 +177,41 @@ const saveMaterial = async (title: string, content: string, type: string) => {
               <div class="flex items-center gap-1">
                 <icons-stars-generative />
                 Learning Hub
+                <u-tooltip
+                  text="Upload New Material, or select part of the text from your note to create a study material that you can generate flashcard, and question from it to feed the Spaced Repetition Engine">
+                  <icon name="i-lucide-info" :size="UI_CONFIG.ICON_SIZE" class=" text-muted dark:text-neutral" />
+                </u-tooltip>
               </div>
+              <u-button variant="subtle" size="xs" :aria-expanded="showUpload" aria-controls="upload-materials"
+                @click="toggleUploadForm" title="Create New Study Material">
+                New Study Material
+              </u-button>
             </template>
 
             <template #default>
 
 
-              <ui-card class="overflow-auto mb-4 grow-0 basis-1/4" size="sm" variant="outline">
-                <template #header>
-                  <div class="flex items-center gap-1">
+              <ui-card class="overflow-auto grow-0 mb-4" size="sm" variant="outline">
+                <u-collapsible>
+
+                  <div class="flex items-center gap-1 select-none cursor-pointer text-sm font-medium dark:text-light">
                     <div v-if="updating" class="flex items-center gap-1 text-primary">
                       <icon name="i-lucide-loader" class="w-4 h-4 animate-spin" />
                     </div>
                     Materials
                   </div>
-                  <!-- <u-button variant="subtle" size="xs" :aria-expanded="showUpload" aria-controls="upload-materials"
-                    @click="toggleUploadForm">
-                    Add New
-                  </u-button> -->
-                </template>
-
-                <MaterialsList :folder-id="`${id as string}`" @removed="() => { }" @error="(e) => console.error(e)" />
+                  <template #content>
+                    <MaterialsList :folder-id="`${id as string}`" @removed="() => { }"
+                      @error="(e) => console.error(e)" />
+                  </template>
+                </u-collapsible>
               </ui-card>
 
               <ui-card class="flex grow-0 shrink-0 basis-3/4 min-h-0"
-                content-classes="p-1 basis-full overflow-y-hidden! flex flex-col" size="sm">
-                <template #header>
+                content-classes=" basis-full overflow-y-hidden! flex flex-col" variant="ghost" size="xs">
+                <!-- <template #header>
                   Study Tools
-                </template>
+                </template> -->
                 <template #default>
                   <ui-tabs v-model="activeIndex" :items="items" @select="select" direction="row" />
                   <component :is="items[activeIndex]!.component" :materialsLength="folder.materials?.length" />
@@ -208,8 +222,8 @@ const saveMaterial = async (title: string, content: string, type: string) => {
         </div>
       </div>
 
-      <!-- Upload Materials -->
-      <!-- <FolderUploadMaterialForm :show="showUpload" :backdrop="false" @close="toggleUploadForm" /> -->
+      <!-- Upload Materials Dialog -->
+      <FolderUploadMaterialForm :show="showUpload" @close="toggleUploadForm" />
     </template>
   </shared-page-wrapper>
 </template>

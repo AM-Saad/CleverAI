@@ -1,11 +1,13 @@
 <template>
     <div v-if="!isPageLoading" class="flex flex-col gap-y-4" style="flex: 1 1 auto; min-height: 0;">
-        <div class="flex justify-between" style="flex: 0 0 auto;">
+        <div class="flex justify-between flex-col md:flex-row items-start gap-2 md:items-center"
+            style="flex: 0 0 auto;">
             <div>
                 <UiTitle tag="h1">{{ title }}</UiTitle>
                 <UiParagraph v-if="subtitle" :class-name="'my-1'" variant="neutral">
                     {{ subtitle }}
                 </UiParagraph>
+                <slot name="header-info" />
             </div>
             <slot name="actions" />
         </div>

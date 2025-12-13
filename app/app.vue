@@ -1,10 +1,6 @@
 <template>
     <div>
         <Html lang="en" />
-        <Title>CleverAI | Your AI-powered Learning Assistant</Title>
-        <Meta lang="en" name="description"
-            content="CleverAI is your AI-powered learning assistant, designed to help you learn more effectively and efficiently."
-            theme-color="#f3f4f6" />
         <Link rel="manifest" href="/manifest.webmanifest" />
         <NuxtErrorBoundary @error="ErrorLogger">
 
@@ -26,6 +22,11 @@
                             @close="handleNotificationModalClose" @subscribed="handleNotificationSubscribed"
                             @dismissed="handleNotificationDismissed" />
                     </Teleport>
+                </ClientOnly>
+
+                <!-- AI Model Download Toast -->
+                <ClientOnly>
+                    <ai-model-download-toast />
                 </ClientOnly>
 
             </UApp>

@@ -15,7 +15,7 @@
     "editor.tabSize": 2, // Set tab size to 2 spaces
     "editor.snippetSuggestions": "top", // Show snippet suggestions at the top
     "editor.suggest.showIcons": false, // Hide icons in suggestions
-    "editor.hover.enabled": true, // Disable editor hover
+    "editor.hover.enabled": "on", // Disable editor hover
     "editor.lightbulb.enabled": "on", // Disable the lightbulb indicator
     "editor.codeLens": false, // Disable CodeLens
     "editor.colorDecorators": false, // Hide color decorators
@@ -30,7 +30,7 @@
 
     // Optional: Font and theme choices
     "editor.fontFamily": "Hack, Fira Code, 'Droid Sans Mono', 'monospace', monospace", // Example of a preferred font
-    "editor.fontSize": 17, // Adjust font size as desired
+    "editor.fontSize": 14, // Adjust font size as desired
     "workbench.colorTheme": "One Dark Pro", // Example of a minimalist theme
     "editor.tokenColorCustomizations": { // Example for further theme customization
         "textMateRules": [

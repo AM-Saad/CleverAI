@@ -10,6 +10,9 @@
           <ui-dropdown-menu />
         </div>
         <div v-else-if="status === 'unauthenticated'" class="flex gap-5">
+          <router-link to="/about">
+            <u-button size="md" variant="ghost">About</u-button>
+          </router-link>
           <router-link to="/auth/signIn">
             <u-button size="md" variant="subtle">Login</u-button>
           </router-link>
@@ -47,9 +50,10 @@
       </div>
     </nav>
 
-    <div class=" mx-auto h-full w-full flex-1 flex flex-col p-4 overflow-hidden" style=" flex: 1 1 auto;">
+    <div class=" mx-auto h-full w-full flex-1 flex flex-col px-4 overflow-hidden" style=" flex: 1 1 auto;">
       <!-- <UToaster /> -->
       <ServiceWorkerUpdateNotification mode="banner" />
+      <SharedAIModalStatus />
       <slot />
     </div>
     <footer class="xl:container mx-auto rounded-sm  h-10 dark:bg-transparent" style="flex: 0 0 auto;">

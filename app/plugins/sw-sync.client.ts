@@ -13,7 +13,9 @@ export default defineNuxtPlugin(() => {
 
       if (!reg) return; // no controlling SW (likely dev) – skip silently
 
-      // One-off Background Sync: let the SW run 'syncForm' when online
+      // One-off Background Sync: let the SW run syncs when online
+      // Note: FORM sync is registered here because it's always available
+      // Note: NOTES sync is registered on-demand in useNotesStore when there are pending changes
       if ("sync" in reg) {
         try {
           // @ts-expect-error Background Sync is not in some TS lib DOM versions
