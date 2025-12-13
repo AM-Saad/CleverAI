@@ -3,6 +3,7 @@ import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { NuxtAuthHandler } from "#auth";
 import bcrypt from "bcryptjs";
+import { prisma } from "~~/server/utils/prisma";
 
 const config = useRuntimeConfig();
 

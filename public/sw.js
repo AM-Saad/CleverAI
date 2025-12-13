@@ -278,7 +278,7 @@
 
   // node_modules/workbox-core/_version.js
   try {
-    self["workbox:core:7.2.0"] && _();
+    self["workbox:core:7.3.0"] && _();
   } catch (e) {
   }
 
@@ -627,7 +627,7 @@
 
   // node_modules/workbox-precaching/_version.js
   try {
-    self["workbox:precaching:7.2.0"] && _();
+    self["workbox:precaching:7.3.0"] && _();
   } catch (e) {
   }
 
@@ -852,7 +852,7 @@
 
   // node_modules/workbox-strategies/_version.js
   try {
-    self["workbox:strategies:7.2.0"] && _();
+    self["workbox:strategies:7.3.0"] && _();
   } catch (e) {
   }
 
@@ -1190,7 +1190,7 @@
     /**
      * Adds a promise to the
      * [extend lifetime promises]{@link https://w3c.github.io/ServiceWorker/#extendableevent-extend-lifetime-promises}
-     * of the event event associated with the request being handled (usually a
+     * of the event associated with the request being handled (usually a
      * `FetchEvent`).
      *
      * Note: you can await
@@ -1211,13 +1211,17 @@
      *
      * Note: any work done after `doneWaiting()` settles should be manually
      * passed to an event's `waitUntil()` method (not this handler's
-     * `waitUntil()` method), otherwise the service worker thread my be killed
+     * `waitUntil()` method), otherwise the service worker thread may be killed
      * prior to your work completing.
      */
     async doneWaiting() {
-      let promise;
-      while (promise = this._extendLifetimePromises.shift()) {
-        await promise;
+      while (this._extendLifetimePromises.length) {
+        const promises = this._extendLifetimePromises.splice(0);
+        const result = await Promise.allSettled(promises);
+        const firstRejection = result.find((i) => i.status === "rejected");
+        if (firstRejection) {
+          throw firstRejection.reason;
+        }
       }
     }
     /**
@@ -1844,7 +1848,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
 
   // node_modules/workbox-routing/_version.js
   try {
-    self["workbox:routing:7.2.0"] && _();
+    self["workbox:routing:7.3.0"] && _();
   } catch (e) {
   }
 
@@ -2841,7 +2845,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
 
   // node_modules/workbox-expiration/_version.js
   try {
-    self["workbox:expiration:7.2.0"] && _();
+    self["workbox:expiration:7.3.0"] && _();
   } catch (e) {
   }
 

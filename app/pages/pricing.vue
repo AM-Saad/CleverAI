@@ -95,7 +95,7 @@ const handleSubscribe = async () => {
     // Redirect to success page or show a success message
     const toast = useToast();
     toast.add({
-      title: "Subscription in development",
+      title: "Subscription in development.",
       description: "This feature is not yet implemented. Check back soon!",
       color: "info",
       timeout: 5000,
