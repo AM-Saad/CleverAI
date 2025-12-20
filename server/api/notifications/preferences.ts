@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { NotificationPreferencesDTO } from "@@/shared/utils/notification.contract";
 import { safeGetServerSession } from "@server/utils/safeGetServerSession";
-import { requireRole } from "~~/server/middleware/auth";
+import { requireRole } from "~~/server/middleware/_auth";
 import { Errors, success } from "@server/utils/error";
 
 type SessionWithUser = {

@@ -1,5 +1,5 @@
 import { ZodError, type z } from "zod";
-import { requireRole } from "@server/middleware/auth";
+import { requireRole } from "~~/server/middleware/_auth";
 import { Errors, success } from "@server/utils/error";
 import { scheduleCardDueNotification } from "@server/services/NotificationScheduler";
 import { calculateSM2, calculateNextReviewDate } from "@server/utils/sm2";
@@ -52,7 +52,7 @@ export default defineEventHandler(async (event) => {
     const cardReview = await tx.cardReview.findFirst({
       where: { id: validatedBody.cardId, userId: user.id },
     });
-    
+
     if (!cardReview) {
       throw Errors.notFound("card");
     }
@@ -86,16 +86,18 @@ export default defineEventHandler(async (event) => {
 
     // Record grade request for idempotency (if requestId provided)
     if (validatedBody.requestId) {
-      await tx.gradeRequest.create({
-        data: {
-          requestId: validatedBody.requestId,
-          userId: user.id,
-          cardId: validatedBody.cardId,
-          grade: grade,
-        },
-      }).catch(() => {
-        // Ignore duplicate key errors from concurrent requests
-      });
+      await tx.gradeRequest
+        .create({
+          data: {
+            requestId: validatedBody.requestId,
+            userId: user.id,
+            cardId: validatedBody.cardId,
+            grade: grade,
+          },
+        })
+        .catch(() => {
+          // Ignore duplicate key errors from concurrent requests
+        });
     }
 
     return updated;

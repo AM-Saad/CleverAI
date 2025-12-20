@@ -1,6 +1,6 @@
 // server/api/materials/[id].get.ts
 import { z } from "zod";
-import { requireRole } from "@server/middleware/auth";
+import { requireRole } from "~~/server/middleware/_auth";
 import { Errors, success } from "@server/utils/error";
 
 const ParamSchema = z.object({

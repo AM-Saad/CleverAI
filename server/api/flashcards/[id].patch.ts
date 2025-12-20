@@ -6,7 +6,7 @@
  */
 
 import { UpdateFlashcardDTO } from "@@/shared/utils/flashcard.contract";
-import { requireRole } from "~~/server/middleware/auth";
+import { requireRole } from "~~/server/middleware/_auth";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);

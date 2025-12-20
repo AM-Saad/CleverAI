@@ -1,6 +1,6 @@
 // server/api/admin/llm-models/[modelId]/toggle.post.ts
 import { defineEventHandler, getRouterParam, readBody } from "h3";
-import { requireRole } from "@server/middleware/auth";
+import { requireRole } from "~~/server/middleware/_auth";
 import { Errors, success } from "@server/utils/error";
 import { toggleModelEnabled } from "@server/utils/llm/modelRegistry";
 import { z } from "zod";
@@ -23,9 +23,12 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event);
   const parseResult = ToggleSchema.safeParse(body);
-  
+
   if (!parseResult.success) {
-    throw Errors.badRequest("Invalid request body", parseResult.error.flatten());
+    throw Errors.badRequest(
+      "Invalid request body",
+      parseResult.error.flatten()
+    );
   }
 
   const { enabled } = parseResult.data;
@@ -33,20 +36,20 @@ export default defineEventHandler(async (event) => {
   try {
     const updated = await toggleModelEnabled(modelId, enabled);
 
-    console.info('[admin/llm-models] Toggled model:', {
+    console.info("[admin/llm-models] Toggled model:", {
       modelId,
       enabled: updated.enabled,
     });
 
     return success({
       model: updated,
-      message: `Model ${updated.enabled ? 'enabled' : 'disabled'} successfully`,
+      message: `Model ${updated.enabled ? "enabled" : "disabled"} successfully`,
     });
   } catch (err) {
-    console.error('[admin/llm-models] Failed to toggle model:', {
+    console.error("[admin/llm-models] Failed to toggle model:", {
       modelId,
       error: err,
     });
-    throw Errors.server('Failed to toggle model');
+    throw Errors.server("Failed to toggle model");
   }
 });

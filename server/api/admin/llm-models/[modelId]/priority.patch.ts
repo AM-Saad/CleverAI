@@ -1,6 +1,6 @@
 // server/api/admin/llm-models/[modelId]/priority.patch.ts
 import { defineEventHandler, getRouterParam, readBody } from "h3";
-import { requireRole } from "@server/middleware/auth";
+import { requireRole } from "~~/server/middleware/_auth";
 import { Errors, success } from "@server/utils/error";
 import { prisma } from "@server/utils/prisma";
 import { z } from "zod";
@@ -23,9 +23,12 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event);
   const parseResult = PrioritySchema.safeParse(body);
-  
+
   if (!parseResult.success) {
-    throw Errors.badRequest("Invalid request body", parseResult.error.flatten());
+    throw Errors.badRequest(
+      "Invalid request body",
+      parseResult.error.flatten()
+    );
   }
 
   const { priority } = parseResult.data;
@@ -36,7 +39,7 @@ export default defineEventHandler(async (event) => {
       data: { priority },
     });
 
-    console.info('[admin/llm-models] Updated priority:', {
+    console.info("[admin/llm-models] Updated priority:", {
       modelId,
       priority: updated.priority,
     });
@@ -46,10 +49,10 @@ export default defineEventHandler(async (event) => {
       message: `Model priority updated to ${priority}`,
     });
   } catch (err) {
-    console.error('[admin/llm-models] Failed to update priority:', {
+    console.error("[admin/llm-models] Failed to update priority:", {
       modelId,
       error: err,
     });
-    throw Errors.server('Failed to update priority');
+    throw Errors.server("Failed to update priority");
   }
 });

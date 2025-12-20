@@ -6,7 +6,7 @@
 //     return { ok: false, error: m };
 //   };
 
-import { requireRole } from "../middleware/auth";
+import { requireRole } from "../middleware/_auth";
 import { Errors, success } from "@server/utils/error";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

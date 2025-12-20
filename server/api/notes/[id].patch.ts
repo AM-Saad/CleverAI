@@ -1,11 +1,14 @@
 import { ZodError } from "zod";
-import { requireRole } from "@server/middleware/auth";
+import { requireRole } from "~~/server/middleware/_auth";
 import { Errors, success } from "@server/utils/error";
 
 // Simple retry helper for transient Prisma write conflicts / deadlocks.
 // Uses exponential backoff with jitter. Keep local to this route for now; can be
 // promoted to a shared util if needed elsewhere.
-async function retryPrismaUpdate<T>(fn: () => Promise<T>, attempts = 4): Promise<T> {
+async function retryPrismaUpdate<T>(
+  fn: () => Promise<T>,
+  attempts = 4
+): Promise<T> {
   let lastErr: any;
   for (let i = 0; i < attempts; i++) {
     try {
@@ -49,35 +52,35 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-  // Find the note and verify ownership through folder
-  const note = await prisma.note.findFirst({
-    where: {
-      id,
-      folder: { userId: user.id },
-    },
-  });
-
-  if (!note) {
-    throw Errors.notFound("Note");
-  }
-
-  const updatedNote = await retryPrismaUpdate(() =>
-    prisma.note.update({
-      where: { id },
-      data: {
-        content: data.content,
+    // Find the note and verify ownership through folder
+    const note = await prisma.note.findFirst({
+      where: {
+        id,
+        folder: { userId: user.id },
       },
-    })
-  );
+    });
 
-  if (process.env.NODE_ENV === "development") {
-    NoteSchema.parse(updatedNote);
-  }
+    if (!note) {
+      throw Errors.notFound("Note");
+    }
 
-  return success(updatedNote, {
-    message: "Note updated successfully",
-    noteId: updatedNote.id,
-  });
+    const updatedNote = await retryPrismaUpdate(() =>
+      prisma.note.update({
+        where: { id },
+        data: {
+          content: data.content,
+        },
+      })
+    );
+
+    if (process.env.NODE_ENV === "development") {
+      NoteSchema.parse(updatedNote);
+    }
+
+    return success(updatedNote, {
+      message: "Note updated successfully",
+      noteId: updatedNote.id,
+    });
   } catch (error: any) {
     // Provide slightly more actionable messaging for conflict scenario (frontend can optionally surface a soft warning)
     const msg = String(error?.message || "");

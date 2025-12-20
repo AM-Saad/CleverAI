@@ -1,5 +1,5 @@
 import { ZodError } from "zod";
-import { requireRole } from "@server/middleware/auth";
+import { requireRole } from "~~/server/middleware/_auth";
 import { Errors, success } from "@server/utils/error";
 import { ReorderNotesDTO } from "@@/shared/utils/note.contract";
 

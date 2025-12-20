@@ -1,6 +1,6 @@
 // server/api/admin/llm-models/index.get.ts
 import { defineEventHandler } from "h3";
-import { requireRole } from "@server/middleware/auth";
+import { requireRole } from "~~/server/middleware/_auth";
 import { Errors, success } from "@server/utils/error";
 import { getAvailableModels } from "@server/utils/llm/modelRegistry";
 
@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
       count: models.length,
     });
   } catch (err) {
-    console.error('[admin/llm-models] Failed to fetch models:', err);
-    throw Errors.server('Failed to fetch models');
+    console.error("[admin/llm-models] Failed to fetch models:", err);
+    throw Errors.server("Failed to fetch models");
   }
 });
