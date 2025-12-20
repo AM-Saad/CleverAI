@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 
 const outputDir = path.resolve('.vercel/output');
-const functionsDir = path.join(outputDir, 'functions/__nitro.func');
+const functionsDir = path.join(outputDir, 'functions/__fallback.func');
 
 // Create output directory if it doesn't exist
 if (!fs.existsSync(outputDir)) {
@@ -19,14 +19,15 @@ if (!fs.existsSync(outputDir)) {
   fs.mkdirSync(outputDir, { recursive: true });
 }
 
-// Routing configuration - simple fallback routing
-// 1. Try to serve from static files first
-// 2. Everything else goes to the Nitro serverless function
+// Routing configuration - SIMPLE IS KEY!
+// 1. Try to serve from static files first (handle: filesystem)
+// 2. Everything else goes to the __fallback serverless function
+// The __fallback function handles BOTH API routes AND SPA fallback
 const config = {
   "version": 3,
   "routes": [
     { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/__nitro" }
+    { "src": "/(.*)", "dest": "/__fallback" }
   ]
 };
 
@@ -53,21 +54,7 @@ if (fs.existsSync(functionsDir)) {
     console.log('ℹ️  .vc-config.json already exists, skipping');
   }
 } else {
-  // Try alternative function directory name
-  const altFunctionsDir = path.join(outputDir, 'functions/__fallback.func');
-  if (fs.existsSync(altFunctionsDir)) {
-    const vcConfigPath = path.join(altFunctionsDir, '.vc-config.json');
-    if (!fs.existsSync(vcConfigPath)) {
-      const vcConfig = {
-        "runtime": "nodejs20.x",
-        "handler": "index.mjs",
-        "launcherType": "Nodejs",
-        "shouldAddHelpers": true
-      };
-      fs.writeFileSync(vcConfigPath, JSON.stringify(vcConfig, null, 2));
-      console.log('✅ Created:', vcConfigPath);
-    }
-  }
+  console.warn('⚠️  Functions directory not found:', functionsDir);
 }
 
 console.log('✅ Vercel config generation complete!');

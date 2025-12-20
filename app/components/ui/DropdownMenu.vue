@@ -3,7 +3,7 @@
     <div>
       <MenuButton role="button"
         class="inline-flex w-full border border-transparent justify-center gap-x-1.5 rounded-xl text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50 dark:hover:bg-transparent dark:hover:border-white transition-all duration-300 ease-in-out focus-visible:ring-1 ring-black dark:ring-white cursor-pointer">
-        <img class="h-8 dark:invert-[1] dark:filter p-xs" src="~/assets/images/logo-geek.png" alt="" />
+        <img class="h-8 dark:invert-[1] dark:filter p-xs" :src="logoGeek" alt="" />
       </MenuButton>
     </div>
 
@@ -60,11 +60,22 @@
 
 <script setup lang="ts">
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/vue";
+import logoGeek from "~/assets/images/logo-geek.png";
 
 const { signOut, data } = useAuth();
 
 const logout = async (): Promise<void> => {
-  await signOut({ callbackUrl: "/logout" });
+  try {
+    // Sign out without callback URL to prevent module loading issues
+    await signOut({ redirect: false });
+
+    // Use external redirect to fully reset the app state
+    window.location.href = "/logout";
+  } catch (error) {
+    console.error("Logout error:", error);
+    // Force redirect even on error
+    window.location.href = "/logout";
+  }
 };
 
 onMounted(() => {

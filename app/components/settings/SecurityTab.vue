@@ -75,12 +75,12 @@ const handleDeleteAccount = async (data: DeleteAccountDTO) => {
 
         if (data.permanent) {
             // Immediate deletion - sign out
-            await signOut({ callbackUrl: "/auth/signIn" });
+            await signOut({ redirect: false });
+            window.location.href = "/auth/signin";
         } else {
             // Soft delete - inform user and sign out
-            await signOut({
-                callbackUrl: "/auth/signIn?message=account_scheduled_deletion"
-            });
+            await signOut({ redirect: false });
+            window.location.href = "/auth/signin?message=account_scheduled_deletion";
         }
     }
 };

@@ -403,14 +403,14 @@ model UserNotificationPreferences {
 model LlmModelRegistry {
     id              String   @id @default(auto()) @map("_id") @db.ObjectId
     modelId         String   @unique // "openai-gpt4o-mini"
-    provider        String   // "openai", "google", "deepseek"
-    modelName       String   // "gpt-4o-mini"
-    inputCostPer1M  Float    // USD per 1M input tokens
-    outputCostPer1M Float    // USD per 1M output tokens
+    provider        String // "openai", "google", "deepseek"
+    modelName       String // "gpt-4o-mini"
+    inputCostPer1M  Float // USD per 1M input tokens
+    outputCostPer1M Float // USD per 1M output tokens
     capabilities    String[] // ["text", "multimodal"]
-    maxTokens       Int?     // context window
+    maxTokens       Int? // context window
     latencyBudgetMs Int      @default(500)
-    avgLatencyMs    Int?     // rolling average
+    avgLatencyMs    Int? // rolling average
     healthStatus    String   @default("healthy") // "healthy"|"degraded"|"down"
     lastHealthCheck DateTime @default(now())
     priority        Int      @default(5) // 1=highest, 10=lowest
@@ -430,9 +430,9 @@ model LlmGatewayLog {
     folderId            String?  @db.ObjectId
     folder              Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
     requestId           String   @unique // UUID for tracing
-    selectedModelId     String   // from LlmModelRegistry
+    selectedModelId     String // from LlmModelRegistry
     provider            String
-    task                String   // "flashcards", "quiz", "chat"
+    task                String // "flashcards", "quiz", "chat"
     inputTokens         Int
     outputTokens        Int
     totalTokens         Int
@@ -442,10 +442,10 @@ model LlmGatewayLog {
     latencyMs           Int
     cached              Boolean  @default(false)
     cacheHit            Boolean  @default(false)
-    status              String   // "success"|"error"|"quota_exceeded"|"rate_limited"
+    status              String // "success"|"error"|"quota_exceeded"|"rate_limited"
     errorCode           String?
     errorMessage        String?
-    routingScore        Float?   // Score used for model selection
+    routingScore        Float? // Score used for model selection
     createdAt           DateTime @default(now())
 
     @@index([userId, createdAt])

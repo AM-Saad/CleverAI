@@ -1,6 +1,6 @@
 <template>
   <header :class="['max-w-full min-w-fit', borderClass]">
-    <nav :class="['mb-4 flex', directionClass]">
+    <nav :class="['flex', directionClass]">
       <button v-for="(tab, index) in items" :key="index" type="button" :class="[
         'cursor-pointer ',
         buttonBaseClass,
@@ -41,7 +41,7 @@ const props = defineProps({
   },
   buttonBaseClass: {
     type: String,
-    default: "flex items-center gap-2 font-medium  transition-colors",
+    default: "flex items-center gap-2 font-medium  transition-colors text-nowrap",
   },
   direction: {
     type: [String, Object] as PropType<string | Record<string, string>>,
@@ -55,7 +55,7 @@ const directionClass = computed(() => {
   const dir = props.direction;
   if (typeof dir === "string") {
     return dir === "row"
-      ? "flex-row  border-muted gap-5 text-sm"
+      ? "flex-row  border-muted gap-5 text-sm mb-1.5"
       : "flex-col gap-7";
   }
 

@@ -1,4 +1,3 @@
-// file: ~/../server/api/auth/[...].ts
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { NuxtAuthHandler } from "#auth";
@@ -6,6 +5,12 @@ import bcrypt from "bcryptjs";
 import { prisma } from "~~/server/utils/prisma";
 
 const config = useRuntimeConfig();
+
+const log = (...args: any[]) => {
+  try {
+    console.log("[AUTH]", ...args);
+  } catch {}
+};
 
 // Helper function to register user (replacement for AuthService)
 const registerUser = async (userData: {
@@ -50,6 +55,10 @@ const registerUser = async (userData: {
 export default NuxtAuthHandler({
   secret: config.AUTH_SECRET,
   // debug: true,
+  adapter: undefined,
+  session: {
+    strategy: "jwt",
+  },
   providers: [
     // @ts-expect-error Use .default here for it to work during SSR.
     GoogleProvider.default({
@@ -73,6 +82,7 @@ export default NuxtAuthHandler({
         email: string;
         password: string;
       }): Promise<unknown> {
+        log("authorize:start", credentials);
         // Add logic to verify credentials here
         if (!credentials) {
           //  throw new Error("Invalid Credentials - Email Not Provided")
@@ -89,11 +99,17 @@ export default NuxtAuthHandler({
         });
 
         if (!user) {
+          log("authorize:user_not_found", email);
           throw new Error("Invalid credentials - user not found");
         }
 
         // Check if account is soft-deleted
         if (user.deletedAt) {
+          log("authorize:blocked_user", {
+            email,
+            deletedAt: user.deletedAt,
+            verified: user.email_verified,
+          });
           const now = new Date();
 
           // Check if scheduled deletion date has passed
@@ -108,12 +124,22 @@ export default NuxtAuthHandler({
         }
 
         if (!user.email_verified) {
+          log("authorize:blocked_user", {
+            email,
+            deletedAt: user.deletedAt,
+            verified: user.email_verified,
+          });
           throw new Error(
             `Account not verified, click <a class='font-bold' href='/auth/verifyAccount?email=${email}'>here</a> to verify your account`
           );
         }
 
         if (!user.password) {
+          log("authorize:blocked_user", {
+            email,
+            deletedAt: user.deletedAt,
+            verified: user.email_verified,
+          });
           throw new Error(
             `Password not set up. Please use the provider to login or create a password from <a class='font-bold' href='/auth/editPassword?newPassword=true&email=${email}'>here</a>`
           );
@@ -127,6 +153,7 @@ export default NuxtAuthHandler({
         }
         // If the password is valid, return the user object
         // console.log("authorize -> user", user.email)
+        log("authorize:success", user.email);
         return user;
       },
     }),
@@ -180,6 +207,7 @@ export default NuxtAuthHandler({
     },
 
     async jwt({ token, user, account }) {
+      log("jwt:start", { hasUser: !!user, provider: account?.provider });
       // Google OAuth: add Google-specific fields
       if (account && account.provider === "google") {
         token.access_token = account.access_token;
@@ -218,18 +246,20 @@ export default NuxtAuthHandler({
           console.error("JWT callback DB fetch error", e);
         }
       }
+      log("jwt:result", token);
       return token;
     },
 
     async session({ session, token }) {
-      // Merge token fields into session
-      return {
-        ...session,
-        provider: token.provider,
-        user: {
-          ...token,
-        },
-      };
+      log("session:start", { hasToken: !!token });
+
+      (session.user as any).id = token.id;
+      (session.user as any).name = token.name;
+      (session.user as any).email = token.email;
+      (session.user as any).role = token.role;
+
+      log("session:result", session);
+      return session;
     },
   },
 });

@@ -94,7 +94,7 @@ const headerSizesClasses = {
   xs: "pb-0.5 mb-1",
   sm: "pb-1.5 mb-3 text-sm font-medium",
   md: "pb-2 mb-4 text-base font-medium",
-  lg: "pb-1.5 mb-3 lg:pb-2 text-lg font-semibold",
+  lg: "pb-1.5 mb-3 lg:pb-2 text-lg font-semibold text-nowrap",
   xl: "pb-3.5 mb-5 text-lg font-semibold",
 };
 const headerStyle = {

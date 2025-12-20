@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import shareSoundVideo from "~/assets/videos/share-sound.mp4";
+
 defineProps({
   show: {
     type: Boolean,
@@ -33,7 +35,7 @@ const gotit = (): void => {
         </div>
       </template>
       <template #body>
-        <video src="@/assets/videos/share-sound.mp4" muted autoplay loop />
+        <video :src="shareSoundVideo" muted autoplay loop />
         <div class="my-2 flex justify-between gap-3">
           <div class="flex items-center gap-2">
             <input

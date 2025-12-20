@@ -20,28 +20,28 @@
 
     <!-- Empty State (no cards enrolled) -->
     <div v-if="isEmpty && !isLoading && !error" :class="`text-center ${minimal ? 'flex items-center gap-2' : ''}`">
-      <Icon name="heroicons:academic-cap" class="w-10 h-10 text-gray-400 " />
-      <p class="text-gray-600 dark:text-gray-400">
+      <Icon name="heroicons:academic-cap" class="text-gray-400" :size="UI_CONFIG.ICON_SIZE" />
+      <ui-paragraph>
         {{ emptyMessage }}
-      </p>
+      </ui-paragraph>
       <slot name="empty-action" />
     </div>
 
     <!-- Stats Display -->
     <div v-if="!isLoading && !error && !isEmpty"
-      :class="`text-center flex flex-col items-center md:flex-row gap-6 md:gap-0 ${minimal ? '' : ''}`">
+      :class="`text-center flex flex-col items-center md:flex-row gap-3 md:gap-0 ${minimal ? '' : ''}`">
       <!-- Header with status message -->
       <div class="flex items-center justify-between md:justify-start gap-2 w-full">
         <div class="flex items-center gap-2">
           <div :class="[minimal ? 'w-2 h-2' : 'w-3 h-3', 'rounded-full', urgencyIndicatorClass]" />
-          <ui-paragraph size="base" color="neutral">
+          <ui-paragraph size="xs" color="neutral">
             {{ statusMessage }}
           </ui-paragraph>
         </div>
 
         <!-- Action Button -->
         <div v-if="showAction && hasDueCards">
-          <u-button :to="reviewLink" color="primary" :size="minimal ? 'xs' : 'sm'">
+          <u-button :to="reviewLink" color="primary" size="xs">
             <Icon name="heroicons:play" class="w-4 h-4" />
             Start Review
             <span v-if="stats?.due" class=" opacity-75">({{ stats.due }})</span>
@@ -51,7 +51,7 @@
       </div>
 
       <!-- Stats Grid - Full variant for default/outline -->
-      <div v-if="!minimal" class="flex md:justify-end justify-evenly gap-2 text-center w-full overflow-auto">
+      <div v-if="!minimal" class="flex md:justify-end justify-start gap-1 text-center w-full overflow-auto">
         <u-badge class="flex grid-1" variant="soft" color="error">
           <div class="text-red-700 dark:text-red-300">Due</div>
 

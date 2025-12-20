@@ -46,6 +46,9 @@
     "editor.guides.indentation": false,
     "[vue]": {
         "editor.defaultFormatter": "Vue.volar"
+    },
+    "[prisma]": {
+        "editor.defaultFormatter": "Prisma.prisma"
     }
 }
 

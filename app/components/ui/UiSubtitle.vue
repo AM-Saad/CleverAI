@@ -46,7 +46,7 @@ const sizeClasses = {
   xs: "text-xs",
   sm: "text-sm",
   base: "text-base",
-  lg: "text-lg",
+  lg: "text-base md:text-lg text-nowrap",
   xl: "text-xl",
   "2xl": "text-2xl",
 };

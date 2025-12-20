@@ -3,21 +3,21 @@
     <nav id="nav"
       class="flex basis-0 shrink-0 font-heading items-center justify-between p-2 md:px-1 rounded-xl md:rounded-none  mx-auto left-[50%] top-4 border-b border-neutral dark:border-muted w-[calc(100%-1rem)]">
       <div class="flex items-center justify-between w-full">
-        <router-link to="/" class="flex items-center gap-2 text-dark dark:text-light font-medium ">
-          <img class="h-5 dark:invert-[1] dark:filter" src="~/assets/images/CleverAI_icon.svg" alt="" />Clever
+        <router-link to="/" class="flex items-center gap-2 text-dark dark:text-light font-medium text-sm md:text-base">
+          <img class="h-5 dark:invert-[1] dark:filter" :src="cleverAIIcon" alt="" />Clever
           AI</router-link>
         <div v-if="status === 'authenticated'" class="flex gap-5">
           <ui-dropdown-menu />
         </div>
         <div v-else-if="status === 'unauthenticated'" class="flex gap-5">
           <router-link to="/about">
-            <u-button size="md" variant="ghost">About</u-button>
+            <u-button size="sm" variant="ghost">About</u-button>
           </router-link>
           <router-link to="/auth/signIn">
-            <u-button size="md" variant="subtle">Login</u-button>
+            <u-button size="sm" variant="subtle">Login</u-button>
           </router-link>
           <router-link to="/auth/signup">
-            <u-button size="md">Signup</u-button>
+            <u-button size="sm">Signup</u-button>
           </router-link>
         </div>
         <div v-else>
@@ -85,6 +85,7 @@
 
 <script setup lang="ts">
 import { watch } from "vue";
+import cleverAIIcon from "~/assets/images/CleverAI_icon.svg";
 
 console.log("🏗️ [LAYOUT] Default layout script setup initializing...");
 

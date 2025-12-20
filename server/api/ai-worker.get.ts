@@ -1,10 +1,38 @@
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { existsSync } from "fs";
 
 export default defineEventHandler(async (event) => {
   try {
-    // Read the worker file from public directory
-    const workerPath = join(process.cwd(), "public", "ai-worker.js");
+    // Try multiple paths - Vercel serverless has different structure than local dev
+    const possiblePaths = [
+      join(process.cwd(), "public", "ai-worker.js"), // Local dev
+      join(process.cwd(), ".output", "public", "ai-worker.js"), // Nitro build
+      join(process.cwd(), ".vercel", "output", "static", "ai-worker.js"), // Vercel
+      "/var/task/public/ai-worker.js", // Vercel serverless absolute
+      "/var/task/.output/public/ai-worker.js", // Vercel serverless nitro output
+    ];
+
+    let workerPath: string | null = null;
+    for (const path of possiblePaths) {
+      if (existsSync(path)) {
+        workerPath = path;
+        break;
+      }
+    }
+
+    if (!workerPath) {
+      console.error(
+        "[AI Worker API] Worker file not found in any path:",
+        possiblePaths
+      );
+      throw createError({
+        statusCode: 404,
+        statusMessage: "AI worker file not found",
+        message: `Worker file not found. Checked paths: ${possiblePaths.join(", ")}`,
+      });
+    }
+
     const workerContent = await readFile(workerPath, "utf-8");
 
     // Set appropriate headers for the worker

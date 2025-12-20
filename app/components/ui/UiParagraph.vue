@@ -1,14 +1,11 @@
 <template>
-  <component
-    :is="tag"
-    :class="[
-      'ui-paragraph',
-      sizeClasses[size],
-      colorClasses[color],
-      center ? 'text-center' : '',
-      className,
-    ]"
-  >
+  <component :is="tag" :class="[
+    'ui-paragraph',
+    sizeClasses[size],
+    colorClasses[color],
+    center ? 'text-center' : '',
+    className,
+  ]">
     <slot />
   </component>
 </template>
@@ -47,7 +44,7 @@ const {
 
 const sizeClasses = {
   xs: "text-xs",
-  sm: "text-sm",
+  sm: "text-xs md:text-sm text-nowrap",
   base: "text-base",
   lg: "text-lg",
 };

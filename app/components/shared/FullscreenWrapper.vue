@@ -98,9 +98,9 @@ defineExpose({
   left: 50%;
   transform: translate(-50%, -50%);
   width: 90vw;
-  height: 85vh;
+  height: 100vh;
   max-width: var(--fs-max-width, 1200px);
-  max-height: var(--fs-max-height, 800px);
+  max-height: var(--fs-max-height, 95vh);
   z-index: 50;
 
   display: flex;
@@ -197,14 +197,14 @@ defineExpose({
 /* ===== Mobile ===== */
 @media (max-width: 768px) {
   .fullscreen-container {
-    width: 95vw;
-    height: 90vh;
+    width: 99vw;
+    height: 95vh;
     border-radius: 8px;
   }
 
   .fullscreen-header,
   .fullscreen-footer {
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 1rem;
   }
 
   .fullscreen-content {

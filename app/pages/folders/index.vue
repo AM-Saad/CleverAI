@@ -27,9 +27,9 @@
             Filters
           </UiLabel> -->
 
-          <div class="grid gap-4 grid-cols-2 justify-between items-end">
+          <div class="flex gap-3 justify-between items-end">
             <!-- Future filter options can go here -->
-            <div>
+            <div class="basis-3/4">
               <UiLabel for="search">Search</UiLabel>
               <u-input id="search" type="text" placeholder="Search folders..." class="mt-1 w-full" />
             </div>
@@ -40,7 +40,7 @@
                 { label: 'Date Created (Newest)', value: 'date_desc' },
                 { label: 'Date Created (Oldest)', value: 'date_asc' },
               ]" class="w-full" /> -->
-            <u-button variant="subtle" @click="listView = listView === 'grid' ? 'list' : 'grid'" class="place-self-end">
+            <u-button variant="subtle" @click="toggleView" class="place-self-end">
               <icon v-if="listView === 'grid'" name="i-lucide-list" class="inline-block" />
               <icon v-else name="i-lucide-grid" class="inline-block" />
             </u-button>
@@ -51,7 +51,7 @@
         :class="listView === 'grid' ? 'grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'space-y-4'">
         <ui-card v-for="folder in folders" :key="folder.id" hover="lift" shadow="none" tag="li" variant="default">
           <NuxtLink :to="`/folders/${folder.id}`">
-            <div class="mb-2 flex items-center">
+            <div class="mb-1 flex items-center">
               <icon name="ic:round-folder-open" class="inline-block mr-2 text-primary" />
 
               <ui-subtitle>{{ folder.title }}</ui-subtitle>
@@ -86,6 +86,18 @@ watch(error, (newError) => {
     });
   }
 });
+
+// Load saved view preference from localStorage
+onMounted(() => {
+  const savedView = localStorage.getItem('folderListView') as 'grid' | 'list' || 'grid';
+  listView.value = savedView;
+});
+
+const toggleView = () => {
+  listView.value = listView.value === 'grid' ? 'list' : 'grid';
+  localStorage.setItem('folderListView', listView.value);
+};
+
 // Remove automatic notification registration - let users choose
 // const { registerNotification } = useNotifications()
 

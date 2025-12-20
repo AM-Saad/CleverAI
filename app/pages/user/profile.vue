@@ -1,7 +1,7 @@
 <template>
   <shared-page-wrapper title="My Profile" subtitle="View and manage your profile information">
 
-    <div v-if="status === 'authenticated'" class="grid md:grid-cols-3 gap-8 mt-4">
+    <div v-if="status === 'authenticated'" class="grid md:grid-cols-3 gap-8 mt-4 max-w-full overflow-x-hidden">
       <!-- User Profile Card -->
       <div class="md:col-span-1">
         <ui-card variant="default">
@@ -33,7 +33,7 @@
               <span>Gender:</span>
               <span class="capitalize">{{
                 profileData?.gender || "Not specified"
-              }}</span>
+                }}</span>
             </ui-label>
           </div>
 

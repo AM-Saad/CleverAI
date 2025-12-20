@@ -1,5 +1,5 @@
 <template>
-  <div class="md:col-span-3 mt-6">
+  <div class="md:col-span-3 mt-6 overflow-y-hidden h-fit  ">
     <ui-card class-name="flex flex-col" size="lg" variant="default">
       <template #header>AI Usage Statistics (Last 30 Days)</template>
       <div class="flex flex-col gap-6">
@@ -11,7 +11,7 @@
           </button>
         </div>
 
-        <div v-else-if="llmUsage" class="flex flex-col gap-6">
+        <div v-else-if="llmUsage" class="flex flex-col gap-6 ">
 
           <!-- Usage Summary -->
           <!-- <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -54,34 +54,34 @@
           <!-- Usage by Feature -->
           <div class="mb-4">
             <ui-subtitle weight="semibold" size="sm">Usage by Feature</ui-subtitle>
-            <div class="overflow-x-auto mt-2 bg-light dark:bg-muted border border-muted rounded">
+            <div class="max-w-full overflow-x-auto mt-2 bg-light dark:bg-muted border border-muted rounded">
               <table class="w-full text-left text-sm bg-muted">
 
-                <thead>
+                <thead class="dark:text-light">
 
                   <tr class="border-b border-muted">
-                    <th class="py-2 px-4">Feature</th>
-                    <th class="py-2 px-4">Calls</th>
-                    <th class="py-2 px-4">Tokens</th>
-                    <th class="py-2 px-4 text-right">Cost (USD)</th>
+                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Feature</th>
+                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Calls</th>
+                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Tokens</th>
+                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark text-right">Cost (USD)</th>
                   </tr>
 
                 </thead>
 
-                <tbody class="bg-white dark:bg-muted">
+                <tbody class="bg-white dark:bg-muted dark:text-muted">
 
                   <tr v-for="(feature, idx) in llmUsage.byFeature" :key="feature.name"
                     :class="`${idx !== llmUsage.byFeature.length - 1 ? 'border-b border-muted' : ''}`">
-                    <td class="py-2 px-4">{{ feature.name }}</td>
-                    <td class="py-2 px-4">{{ feature.calls }}</td>
-                    <td class="py-2 px-4">{{ formatNumber(feature.tokens) }}</td>
-                    <td class="py-2 px-4 text-right">${{ feature.usd.toFixed(4) }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap">{{ feature.name }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap">{{ feature.calls }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap">{{ formatNumber(feature.tokens) }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap text-right">${{ feature.usd.toFixed(4) }}</td>
                   </tr>
-                  <tr class="">
-                    <td class="py-2 px-4 font-medium">Total</td>
-                    <td class="py-2 px-4 font-medium">{{ llmUsage.summary.totalCalls }}</td>
-                    <td class="py-2 px-4 font-medium">{{ formatNumber(llmUsage.summary.totalTokens) }}</td>
-                    <td class="py-2 px-4 font-medium text-right">${{ llmUsage.summary.totalUsd.toFixed(4) }}</td>
+                  <tr class="font-bold">
+                    <td class="py-2 px-4 w-40 text-nowrap">Total</td>
+                    <td class="py-2 px-4 w-40 text-nowrap">{{ llmUsage.summary.totalCalls }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap">{{ formatNumber(llmUsage.summary.totalTokens) }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap text-right">${{ llmUsage.summary.totalUsd.toFixed(4) }}</td>
                   </tr>
 
                 </tbody>
@@ -96,32 +96,31 @@
             <div class="overflow-x-auto mt-2 bg-light dark:bg-muted border border-muted rounded">
               <table class="w-full text-left text-sm bg-muted">
 
-                <thead>
-
+                <thead class="dark:text-light">
                   <tr class="border-b border-muted">
-                    <th class="py-2 px-4">Model</th>
-                    <th class="py-2 px-4">Calls</th>
-                    <th class="py-2 px-4">Tokens</th>
-                    <th class="py-2 px-4 text-right">Cost (USD)</th>
+                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Model</th>
+                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Calls</th>
+                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Tokens</th>
+                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark text-right">Cost (USD)</th>
                   </tr>
 
                 </thead>
 
-                <tbody class="bg-white dark:bg-muted">
+                <tbody class="bg-white dark:bg-muted dark:text-muted">
 
                   <tr v-for="(model, idx) in llmUsage.byModel" :key="model.name"
                     :class="`${idx !== llmUsage.byModel.length - 1 ? 'border-b border-muted' : ''}`">
-                    <td class="py-2 px-4">{{ model.name }}</td>
-                    <td class="py-2 px-4">{{ model.calls }}</td>
-                    <td class="py-2 px-4">{{ formatNumber(model.tokens) }}</td>
-                    <td class="py-2 px-4 text-right">${{ model.usd.toFixed(4) }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap">{{ model.name }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap">{{ model.calls }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap">{{ formatNumber(model.tokens) }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap text-right">${{ model.usd.toFixed(4) }}</td>
                   </tr>
 
-                  <tr>
-                    <td class="py-2 px-4 font-medium">Total</td>
-                    <td class="py-2 px-4 font-medium">{{ llmUsage.summary.totalCalls }}</td>
-                    <td class="py-2 px-4 font-medium">{{ formatNumber(llmUsage.summary.totalTokens) }}</td>
-                    <td class="py-2 px-4 font-medium text-right">${{ llmUsage.summary.totalUsd.toFixed(4) }}</td>
+                  <tr class="font-bold">
+                    <td class="py-2 px-4 w-40 text-nowrap">Total</td>
+                    <td class="py-2 px-4 w-40 text-nowrap">{{ llmUsage.summary.totalCalls }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap">{{ formatNumber(llmUsage.summary.totalTokens) }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap text-right">${{ llmUsage.summary.totalUsd.toFixed(4) }}</td>
                   </tr>
 
                 </tbody>
@@ -136,27 +135,27 @@
             <div class="overflow-x-auto mt-2 bg-light dark:bg-muted border border-muted rounded">
               <table class="w-full text-left text-sm bg-muted">
 
-                <thead>
+                <thead class="dark:text-light">
 
                   <tr class="border-b border-muted">
-                    <th class="py-2 px-4">Date</th>
-                    <th class="py-2 px-4">Feature</th>
-                    <th class="py-2 px-4">Model</th>
-                    <th class="py-2 px-4 text-right">Tokens</th>
-                    <th class="py-2 px-4 text-right">Cost (USD)</th>
+                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Date</th>
+                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Feature</th>
+                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Model</th>
+                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Tokens</th>
+                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark text-right">Cost (USD)</th>
                   </tr>
 
                 </thead>
 
-                <tbody class="bg-white dark:bg-muted">
+                <tbody class="bg-white dark:bg-muted dark:text-muted">
 
                   <tr v-for="(usage, idx) in llmUsage.recentUsage" :key="usage.id"
                     :class="`${idx !== llmUsage.recentUsage.length - 1 ? 'border-b border-muted' : ''}`">
-                    <td class="py-2 px-4">{{ formatDate(usage.date) }}</td>
-                    <td class="py-2 px-4">{{ usage.feature }}</td>
-                    <td class="py-2 px-4">{{ usage.model }}</td>
-                    <td class="py-2 px-4 text-right">{{ formatNumber(usage.tokens) }}</td>
-                    <td class="py-2 px-4 text-right">${{ usage.usd.toFixed(6) }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap">{{ formatDate(usage.date) }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap">{{ usage.feature }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap">{{ usage.model }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap">{{ formatNumber(usage.tokens) }}</td>
+                    <td class="py-2 px-4 w-40 text-nowrap text-right">${{ usage.usd.toFixed(6) }}</td>
                   </tr>
 
                   <tr v-if="llmUsage.recentUsage.length === 0">

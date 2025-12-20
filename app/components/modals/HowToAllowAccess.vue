@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import allowMicVideo from "~/assets/videos/allow-mic.mp4";
+import allowCamVideo from "~/assets/videos/allow-cam.mp4";
+
 const props = defineProps({
   show: {
     type: Boolean,
@@ -38,7 +41,7 @@ const gotit = (): void => {
         <video
           v-if="needGuide === 'Microphone'"
           class="m-auto block w-11/12 rounded shadow"
-          src="@/assets/videos/allow-mic.mp4"
+          :src="allowMicVideo"
           muted
           autoplay
           loop
@@ -46,7 +49,7 @@ const gotit = (): void => {
         <video
           v-if="needGuide === 'Webcam'"
           class="m-auto block w-11/12 rounded shadow"
-          src="@/assets/videos/allow-cam.mp4"
+          :src="allowCamVideo"
           muted
           autoplay
           loop

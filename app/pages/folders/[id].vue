@@ -142,12 +142,11 @@ const saveMaterial = async (title: string, content: string, type: string) => {
 
 
 <template>
-  <shared-page-wrapper id="folder-page" :title="`${folder?.title || '....'}`" :subtitle="folder?.description || ''"
-    :is-page-loading="loading">
-    <template #header-info>
+  <shared-page-wrapper id="folder-page" :title="`${folder?.title || '....'}`" :is-page-loading="loading">
+    <!-- <template #header-info>
       <ui-label class="mt-2" variant="muted">Created: {{ createdAt }}</ui-label>
 
-    </template>
+    </template> -->
     <template #actions>
       <div class="flex flex-col items-end gap-2">
         <!-- Folder-specific Review Status - Minimal & Clean -->
@@ -168,7 +167,7 @@ const saveMaterial = async (title: string, content: string, type: string) => {
 
 
         <!-- LEARNING HUB Goes Here -->
-        <div class="flex flex-col relative overflow-hidden shrink-0 md:basis-1/4 grow" id="learning-hub">
+        <div class="flex flex-col relative overflow-hidden shrink-0 basis-full md:basis-1/4 grow" id="learning-hub">
           <ui-gradient-bg />
           <ui-card variant="ghost" size="lg"
             class="relative bg-white m-[1.5px] dark:m-px dark:bg-dark flex-1 shrink-0 overflow-scroll"

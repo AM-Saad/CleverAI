@@ -43,9 +43,11 @@ console.log("🏠 [INDEX.VUE] Page script setup initializing...");
 const baseUrl = useRuntimeConfig().public.APP_BASE_URL as string;
 console.log("🏠 [INDEX.VUE] Base URL:", baseUrl);
 definePageMeta({
-  auth: false,
+  auth: { unauthenticatedOnly: true, navigateAuthenticatedTo: "/folders" },
+
   title: "AI-Powered Spaced Repetition Learning Platform | CleverAI",
 });
+
 
 useHead({
   meta: [

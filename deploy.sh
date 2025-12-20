@@ -21,9 +21,9 @@ npx nuxi prepare
 echo "🔧 Generating Prisma client..."
 npx prisma generate --schema=server/prisma/schema.prisma
 
-# Build the application with Vercel preset
+# Build the application with Vercel preset (includes SW and AI worker builds)
 echo "📦 Building application with Vercel preset..."
-NITRO_PRESET=vercel yarn build
+yarn build
 
 # Verify Vercel output exists
 if [ ! -d ".vercel/output" ]; then
