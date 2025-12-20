@@ -25,11 +25,11 @@ RUN apt-get update -qq && \
 
 # Install node modules (Prisma schema must exist before install)
 COPY package.json yarn.lock ./
-COPY server/prisma ./server/prisma
+COPY prisma ./prisma
 RUN yarn install --frozen-lockfile --production=false
 
 # Generate Prisma Client
-RUN npx prisma generate --schema=server/prisma/schema.prisma
+RUN npx prisma generate --schema=prisma/schema.prisma
 
 # Copy application code
 COPY . .
