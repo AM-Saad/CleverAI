@@ -24,6 +24,7 @@ export default defineEventHandler(async (event) => {
     "/api/auth/password/verify",
 
     "/api/test/",
+    "/api/debug",
     "/api/notifications/test", // dev-only testing
     "/api/notifications/send", // has its own auth logic (cron + session)
     "/api/notifications/debug-cron", // debug endpoint
