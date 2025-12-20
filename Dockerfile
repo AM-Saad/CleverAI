@@ -23,13 +23,13 @@ FROM base AS build
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential node-gyp openssl pkg-config python-is-python3
 
-# Install node modules
+# Install node modules (Prisma schema must exist before install)
 COPY package.json yarn.lock ./
+COPY server/prisma ./server/prisma
 RUN yarn install --frozen-lockfile --production=false
 
 # Generate Prisma Client
-COPY server/prisma ./prisma
-RUN npx prisma generate --schema=prisma/schema.prisma
+RUN npx prisma generate --schema=server/prisma/schema.prisma
 
 # Copy application code
 COPY . .
