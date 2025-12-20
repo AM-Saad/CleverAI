@@ -251,7 +251,11 @@ export default NuxtAuthHandler({
     },
 
     async session({ session, token }) {
-      log("session:start", { hasToken: !!token });
+      log("session:start", { hasToken: !!token, hasSession: !!session });
+
+      if (!session || !session.user) {
+        return session;
+      }
 
       (session.user as any).id = token.id;
       (session.user as any).name = token.name;
