@@ -53,7 +53,7 @@ const registerUser = async (userData: {
 };
 
 export default NuxtAuthHandler({
-  secret: useRuntimeConfig().auth.secret,
+  secret: useRuntimeConfig().nuxtAuthSecret,
   // debug: true,
   adapter: undefined,
   session: {
