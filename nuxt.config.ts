@@ -183,8 +183,8 @@ export default defineNuxtConfig({
   },
   auth: {
     isEnabled: true,
-    originEnvKey: "AUTH_ORIGIN", // ENV key name to read origin from
-    baseURL: "/api/auth", // just path – sidebase will prefix correctly
+    originEnvKey: "AUTH_ORIGIN",
+    baseURL: "/api/auth",
     provider: {
       type: "authjs",
       trustHost: true,
@@ -192,7 +192,6 @@ export default defineNuxtConfig({
     sessionRefresh: {
       enablePeriodically: false,
       enableOnWindowFocus: true,
-      // handler: "./config/AuthRefreshHandler.ts",
     },
     globalAppMiddleware: {
       isEnabled: false,
@@ -270,17 +269,18 @@ export default defineNuxtConfig({
     shim: true,
   },
   runtimeConfig: {
-    // Private (server only)
+    // Server-only
     redisUrl: process.env.REDIS_URL,
     openaiKey: process.env.OPENAI_API_KEY,
-    geminiKey: process.env.GEMINI_API_KEY, // ← add this
+    geminiKey: process.env.GEMINI_API_KEY,
     databaseUrl: process.env.DATABASE_URL,
-    AUTH_SECRET: process.env.AUTH_SECRET,
-    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
+
+    // Auth / secrets (server only)
+    nuxtAuthSecret: process.env.NUXT_AUTH_SECRET,
+    googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
 
     VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
 
-    // Feature flags
     enableLlmGateway: process.env.ENABLE_LLM_GATEWAY === "true",
 
     // Public (exposed to client)
@@ -290,9 +290,7 @@ export default defineNuxtConfig({
       SERVER_URL: process.env.SERVER_URL,
       VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-      GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
 
-      // Feature flags (exposed to client)
       enableLlmGateway: process.env.ENABLE_LLM_GATEWAY === "true",
     },
   },

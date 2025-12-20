@@ -53,7 +53,7 @@ const registerUser = async (userData: {
 };
 
 export default NuxtAuthHandler({
-  secret: config.AUTH_SECRET,
+  secret: useRuntimeConfig().auth.secret,
   // debug: true,
   adapter: undefined,
   session: {
@@ -62,8 +62,8 @@ export default NuxtAuthHandler({
   providers: [
     // @ts-expect-error Use .default here for it to work during SSR.
     GoogleProvider.default({
-      clientId: config.public.GOOGLE_CLIENT_ID,
-      clientSecret: config.public.GOOGLE_CLIENT_SECRET,
+      clientId: useRuntimeConfig().public.GOOGLE_CLIENT_ID,
+      clientSecret: useRuntimeConfig().googleClientSecret,
       authorization: {
         params: {
           access_type: "offline", // Needed to get `refresh_token`
