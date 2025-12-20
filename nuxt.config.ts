@@ -199,6 +199,7 @@ export default defineNuxtConfig({
   },
 
   nitro: {
+    preset: process.env.NODE_ENV === "production" ? "node-server" : undefined,
     esbuild: {
       options: {
         target: "es2022", // Support BigInt on server side
