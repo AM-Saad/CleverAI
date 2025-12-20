@@ -183,13 +183,11 @@ export default defineNuxtConfig({
   },
   auth: {
     isEnabled: true,
-    originEnvKey: "AUTH_ORIGIN",
-    baseURL: process.env.AUTH_ORIGIN + "/api/auth",
+    originEnvKey: "AUTH_ORIGIN", // ENV key name to read origin from
+    baseURL: "/api/auth", // just path – sidebase will prefix correctly
     provider: {
       type: "authjs",
       trustHost: true,
-      // defaultProvider: "google",
-      // addDefaultCallbackUrl: true,
     },
     sessionRefresh: {
       enablePeriodically: false,
