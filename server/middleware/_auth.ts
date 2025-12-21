@@ -56,24 +56,30 @@ export default defineEventHandler(async (event) => {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function requireAuth(event: any): Promise<any> {
-  const session = (await safeGetServerSession(event)) as SessionWithUser;
-  if (!session || !session.user || !session.user.email) {
-    console.error("Unauthorized access attempt:", event.path);
-    throw Errors.unauthorized("Authentication required");
-  }
+  try {
+    const session = (await safeGetServerSession(event)) as SessionWithUser;
+    if (!session || !session.user || !session.user.email) {
+      console.error("Unauthorized access attempt:", event.path);
+      throw Errors.unauthorized("Authentication required");
+    }
 
-  // Now TypeScript knows session is valid
-  const email = session.user.email;
+    // Now TypeScript knows session is valid
+    const email = session.user.email;
 
-  const prisma = event.context.prisma;
-  const user = await prisma.user.findUnique({
-    where: { email },
-  });
-  if (!user) {
-    throw Errors.unauthorized("User account not found");
+    const prisma = event.context.prisma;
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+    if (!user) {
+      console.log();
+      throw Errors.unauthorized("User account not found");
+    }
+    event.context.user = user;
+    return user;
+  } catch (error) {
+    console.error("Error in requireAuth:", error);
+    throw error;
   }
-  event.context.user = user;
-  return user;
 }
 
 type UserRole = "USER" | "ADMIN";
