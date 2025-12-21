@@ -1,6 +1,6 @@
 // server/api/llm.gateway.post.ts
 import { defineEventHandler, readBody } from "h3";
-import { requireRole } from "~~/server/middleware/_auth";
+import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { GatewayGenerateRequest } from "~/shared/utils/llm-generate.contract";
 import { selectBestModel } from "@server/utils/llm/routing";

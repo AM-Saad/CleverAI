@@ -1,9 +1,9 @@
 // server/api/admin/llm-models/[modelId]/toggle.post.ts
 import { defineEventHandler, getRouterParam, readBody } from "h3";
-import { requireRole } from "~~/server/middleware/_auth";
 import { Errors, success } from "@server/utils/error";
 import { toggleModelEnabled } from "@server/utils/llm/modelRegistry";
 import { z } from "zod";
+import { requireRole } from "~~/server/utils/auth";
 
 const ToggleSchema = z.object({
   enabled: z.boolean(),

@@ -1,6 +1,6 @@
 // server/api/llm.generate.post.ts
 import { defineEventHandler, readBody } from "h3";
-import { requireRole } from "~~/server/middleware/_auth";
+import { requireRole } from "~~/server/utils/auth";
 import { success } from "@server/utils/error";
 
 // Explicit domain unions (mirror zod schema values)

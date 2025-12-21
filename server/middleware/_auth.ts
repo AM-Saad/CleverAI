@@ -1,4 +1,4 @@
-// server/middleware/auth.ts
+// ~~/server/utils/auth.ts
 
 type SessionWithUser = {
   user?: {

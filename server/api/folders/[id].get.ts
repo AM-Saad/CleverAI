@@ -1,5 +1,5 @@
-import { requireRole } from "~~/server/middleware/_auth";
 import { Errors, success } from "@server/utils/error";
+import { requireRole } from "~~/server/utils/auth";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]); // throws if unauthorized

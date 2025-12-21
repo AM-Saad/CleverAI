@@ -18,7 +18,7 @@ App: Nuxt 4 + @sidebase/nuxt-auth + Prisma (MongoDB) + Nitro
   - Fixed by moving `requireAuth` and `requireRole` to `server/utils/auth.ts` and removing session calls from middleware.
   - `safeGetServerSession` is used inside individual API handlers (good pattern), e.g. `server/api/user/profile.get.ts`.
 
-- **Middleware exclusions**: server/middleware/_auth.ts
+- **Middleware exclusions**: ~~/server/utils/auth.ts
   - Originally missing base `/api/auth` and `/api/auth/session` in exclusions.
   - Patched to include: `/api/auth`, `/api/auth/`, `/api/auth/session` and other public utilities.
 
@@ -47,7 +47,7 @@ App: Nuxt 4 + @sidebase/nuxt-auth + Prisma (MongoDB) + Nitro
 1. **Created** `server/utils/auth.ts`
    - Exports `requireAuth(event)` and `requireRole(event, roles)`.
    - Uses `safeGetServerSession` and Prisma from `event.context`.
-2. **Refactored** `server/middleware/_auth.ts`
+2. **Refactored** `~~/server/utils/auth.ts`
    - Removed session calls and helper exports from middleware.
    - Expanded `publicEndpoints` to include `/api/auth`, `/api/auth/`, `/api/auth/session`.
    - Middleware now only logs and lets route handlers manage auth.

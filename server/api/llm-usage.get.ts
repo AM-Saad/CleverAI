@@ -1,7 +1,6 @@
 // server/api/llm-usage.get.ts
 import { defineEventHandler, getQuery } from "h3";
-
-import { requireRole } from "../middleware/_auth";
+import { requireRole } from "../utils/auth";
 
 // Helpers
 const usdFromMicros = (micros: bigint | number | null | undefined) => {

@@ -1,6 +1,6 @@
 // server/api/subscription/status.get.ts
 
-import { requireRole } from "~~/server/middleware/_auth";
+import { requireRole } from "~~/server/utils/auth";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);

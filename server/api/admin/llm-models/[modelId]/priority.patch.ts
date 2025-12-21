@@ -1,9 +1,9 @@
 // server/api/admin/llm-models/[modelId]/priority.patch.ts
 import { defineEventHandler, getRouterParam, readBody } from "h3";
-import { requireRole } from "~~/server/middleware/_auth";
 import { Errors, success } from "@server/utils/error";
 import { prisma } from "@server/utils/prisma";
 import { z } from "zod";
+import { requireRole } from "~~/server/utils/auth";
 
 const PrioritySchema = z.object({
   priority: z.number().int().min(1).max(100),
