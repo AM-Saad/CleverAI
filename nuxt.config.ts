@@ -277,7 +277,12 @@ export default defineNuxtConfig({
     databaseUrl: process.env.DATABASE_URL,
 
     // Auth / secrets (server only)
-    nuxtAuthSecret: process.env.NUXT_AUTH_SECRET,
+    auth: {
+      secret:
+        process.env.NUXT_AUTH_SECRET ||
+        process.env.AUTH_SECRET ||
+        process.env.NEXTAUTH_SECRET,
+    },
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
 
     VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,

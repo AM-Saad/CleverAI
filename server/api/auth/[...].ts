@@ -53,7 +53,6 @@ const registerUser = async (userData: {
 };
 
 export default NuxtAuthHandler({
-  secret: useRuntimeConfig().nuxtAuthSecret,
   // debug: true,
   providers: [
     // @ts-expect-error Use .default here for it to work during SSR.
