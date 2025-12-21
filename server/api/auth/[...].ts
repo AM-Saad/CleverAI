@@ -56,6 +56,7 @@ const registerUser = async (userData: {
 
 export default NuxtAuthHandler({
   // debug: true,
+  secret: runtimeConfig.auth?.secret,
   providers: [
     // @ts-expect-error Use .default here for it to work during SSR.
     GoogleProvider.default({
