@@ -4,8 +4,10 @@ import { NuxtAuthHandler } from "#auth";
 import bcrypt from "bcryptjs";
 import { prisma } from "~~/server/utils/prisma";
 
-const config = useRuntimeConfig();
+const runtimeConfig = useRuntimeConfig();
 
+console.log("[AUTH DEBUG] auth.secret exists:", !!runtimeConfig.auth?.secret);
+console.log("[AUTH DEBUG] secret length:", runtimeConfig.auth?.secret?.length);
 const log = (...args: any[]) => {
   try {
     console.log("[AUTH]", ...args);

@@ -3,6 +3,9 @@ import process from "node:process";
 import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "node:path";
 
+if (process.env.NODE_ENV === "production" && !process.env.NUXT_AUTH_SECRET) {
+  throw new Error("NUXT_AUTH_SECRET is missing in production environment");
+}
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
