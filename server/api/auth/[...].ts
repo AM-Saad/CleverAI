@@ -55,10 +55,6 @@ const registerUser = async (userData: {
 export default NuxtAuthHandler({
   secret: useRuntimeConfig().nuxtAuthSecret,
   // debug: true,
-  adapter: undefined,
-  session: {
-    strategy: "jwt",
-  },
   providers: [
     // @ts-expect-error Use .default here for it to work during SSR.
     GoogleProvider.default({
@@ -251,19 +247,16 @@ export default NuxtAuthHandler({
     },
 
     async session({ session, token }) {
-      log("session:start", { hasToken: !!token, hasSession: !!session });
-
-      if (!session || !session.user) {
-        return session;
-      }
-
-      (session.user as any).id = token.id;
-      (session.user as any).name = token.name;
-      (session.user as any).email = token.email;
-      (session.user as any).role = token.role;
-
-      log("session:result", session);
-      return session;
+      console.log("session callback - session:", session);
+      console.log("session callback - token:", token);
+      // Merge token fields into session
+      return {
+        ...session,
+        provider: token.provider,
+        user: {
+          ...token,
+        },
+      };
     },
   },
 });
