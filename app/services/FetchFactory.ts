@@ -85,7 +85,7 @@ class FetchFactory {
     url: string,
     data: object | undefined,
     fetchOptions: FetchOptions<"json"> | undefined,
-    validator: TSchema
+    validator: z.ZodSchema
   ): Promise<Result<z.infer<TSchema>>>;
 
   async call<T, TSchema extends z.ZodTypeAny>(
@@ -105,6 +105,9 @@ class FetchFactory {
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
       try {
+        console.log(
+          `FetchFactory: Attempt ${attempt + 1} for ${method} ${url}`
+        );
         const rawResp: MaybeEnvelope<unknown> = await this.$fetch(
           `${this.baseUrl}${url}`,
           {

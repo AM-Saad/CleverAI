@@ -77,6 +77,7 @@ const listView = ref<'grid' | 'list'>('grid');
 
 
 const { folders, loading, error, refresh } = useFolders();
+console.log("Folders data:", folders);
 watch(error, (newError) => {
   if (newError) {
     console.log(newError);
@@ -91,6 +92,10 @@ watch(error, (newError) => {
 onMounted(() => {
   const savedView = localStorage.getItem('folderListView') as 'grid' | 'list' || 'grid';
   listView.value = savedView;
+  if (import.meta.dev) {
+    console.log("[folders/index] forcing refresh() onMounted", { timestamp: Date.now() });
+    refresh();
+  }
 });
 
 const toggleView = () => {
