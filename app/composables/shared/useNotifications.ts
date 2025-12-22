@@ -77,11 +77,32 @@ export function useNotifications() {
       isLoading.value = true;
       console.log("Notification permission granted");
 
+      // Try to get VAPID key from API (runtime) first, fallback to config (build-time)
+      let vapidKey = config.public.VAPID_PUBLIC_KEY as string;
+      
+      if (!vapidKey || vapidKey.length < 50) {
+        console.log("🔑 VAPID key not in config, fetching from API...");
+        try {
+          const response = await $fetch<{ success: boolean; data: { vapidPublicKey: string | null } }>("/api/notifications/vapid-key");
+          if (response.success && response.data.vapidPublicKey) {
+            vapidKey = response.data.vapidPublicKey;
+            console.log("🔑 VAPID key fetched from API successfully");
+          }
+        } catch (fetchError) {
+          console.error("Failed to fetch VAPID key from API:", fetchError);
+        }
+      }
+
+      console.log("🔑 VAPID Key being used:", vapidKey ? `${vapidKey.substring(0, 20)}...` : "UNDEFINED/EMPTY");
+      console.log("🔑 VAPID Key length:", vapidKey?.length);
+
+      if (!vapidKey || vapidKey.length < 50) {
+        throw new Error(`Invalid VAPID key. Check your VAPID_PUBLIC_KEY environment variable on the server.`);
+      }
+
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(
-          config.public.VAPID_PUBLIC_KEY as string,
-        ) as BufferSource,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
       });
 
       // Get current user from auth session
