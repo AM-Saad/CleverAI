@@ -23,12 +23,13 @@ export function useNotificationPrompt() {
    */
   const shouldPromptUser = async (): Promise<boolean> => {
     // Client-side only
-    // if (!import.meta.client) return false;
+    if (!import.meta.client) return false;
 
     try {
       // Check if already subscribed
       await checkSubscriptionStatus();
       if (isSubscribed.value) {
+        console.log("User subscribed");
         return false;
       }
 
@@ -39,16 +40,19 @@ export function useNotificationPrompt() {
 
         // If user said "don't ask again", respect that
         if (preference.dontAskAgain) {
+          console.log("User said don't ask again");
           return false;
         }
 
         // If user subscribed, don't prompt again
         if (preference.action === "subscribed") {
+          console.log("User subscribed");
           return false;
         }
 
         // If user dismissed, check if enough time has passed
         if (preference.action === "dismissed") {
+          console.log("User dismissed");
           const timeSinceDismissal = Date.now() - preference.timestamp;
           if (timeSinceDismissal < PROMPT_DELAY_AFTER_DISMISSAL) {
             return false;
@@ -99,6 +103,7 @@ export function useNotificationPrompt() {
       // This is a simplified check - you might want to call a specific API
       // For now, check if user has any folders (indicates they're actively using the app)
       const response = await $fetch("/api/folders/count");
+      console.log("has cards due", response.data.count);
       return response.data.count > 0;
     } catch (error) {
       console.error("Error checking cards due:", error);

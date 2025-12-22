@@ -9,63 +9,22 @@ export default defineNuxtPlugin({
     // Only run on client side
     if (!import.meta.client) return;
 
-    // Set up the prompt logic after the app is mounted
-    const setupNotificationPrompt = () => {
-      const triggerPromptAfterInteraction = async () => {
-        // Remove event listeners once triggered
-        document.removeEventListener("click", triggerPromptAfterInteraction);
-        document.removeEventListener("scroll", triggerPromptAfterInteraction);
-        document.removeEventListener("keydown", triggerPromptAfterInteraction);
+    // Flag to prevent duplicate triggers
+    let hasTriggered = false;
 
-        // Wait a bit after user interaction to let them settle
-        setTimeout(async () => {
-          try {
-            // Use the sophisticated logic from the composable
-            const { useNotificationPrompt } = await import(
-              "@/composables/shared/useNotificationPrompt"
-            );
-            const { shouldPromptUser } = useNotificationPrompt();
-            const shouldShow = await shouldPromptUser();
+    const triggerPromptCheck = async (source: string) => {
+      // Prevent duplicate triggers
+      if (hasTriggered) return;
+      hasTriggered = true;
 
-            if (shouldShow) {
-              console.log(
-                "🔔 Triggering notification modal based on user interaction and engagement",
-              );
-              window.dispatchEvent(new CustomEvent("showNotificationModal"));
-            } else {
-              console.log(
-                "📋 Notification prompt skipped - conditions not met",
-              );
-            }
-          } catch (error) {
-            console.error("Error checking notification prompt status:", error);
+      // Clean up all listeners
+      document.removeEventListener("click", onInteraction);
+      document.removeEventListener("scroll", onInteraction);
+      document.removeEventListener("keydown", onInteraction);
+      if (fallbackTimerId) clearTimeout(fallbackTimerId);
 
-            // Fallback to simple logic if composable fails
-            const lastPrompted = localStorage.getItem("notificationPrompted");
-            if (!lastPrompted) {
-              window.dispatchEvent(new CustomEvent("showNotificationModal"));
-            }
-          }
-        }, 2000); // 2 seconds after first interaction
-      };
-
-      // Add event listeners for user interaction
-      document.addEventListener("click", triggerPromptAfterInteraction, {
-        once: true,
-      });
-      document.addEventListener("scroll", triggerPromptAfterInteraction, {
-        once: true,
-      });
-      document.addEventListener("keydown", triggerPromptAfterInteraction, {
-        once: true,
-      });
-
-      // Fallback: trigger after 30 seconds even without interaction (for very engaged users)
+      // Wait a bit after user interaction to let them settle
       setTimeout(async () => {
-        document.removeEventListener("click", triggerPromptAfterInteraction);
-        document.removeEventListener("scroll", triggerPromptAfterInteraction);
-        document.removeEventListener("keydown", triggerPromptAfterInteraction);
-
         try {
           const { useNotificationPrompt } = await import(
             "@/composables/shared/useNotificationPrompt"
@@ -74,12 +33,36 @@ export default defineNuxtPlugin({
           const shouldShow = await shouldPromptUser();
 
           if (shouldShow) {
-            console.log("🔔 Triggering notification modal via fallback timer");
+            console.log(`🔔 Triggering notification modal (${source})`);
             window.dispatchEvent(new CustomEvent("showNotificationModal"));
+          } else {
+            console.log("📋 Notification prompt skipped - conditions not met");
           }
         } catch (error) {
-          console.error("Error in fallback notification prompt:", error);
+          console.error("Error checking notification prompt status:", error);
+
+          // Fallback to simple logic if composable fails
+          const lastPrompted = localStorage.getItem("notificationPrompted");
+          if (!lastPrompted) {
+            window.dispatchEvent(new CustomEvent("showNotificationModal"));
+          }
         }
+      }, source === "interaction" ? 2000 : 0);
+    };
+
+    const onInteraction = () => triggerPromptCheck("interaction");
+
+    let fallbackTimerId: ReturnType<typeof setTimeout> | null = null;
+
+    const setupNotificationPrompt = () => {
+      // Add event listeners for user interaction
+      document.addEventListener("click", onInteraction);
+      document.addEventListener("scroll", onInteraction);
+      document.addEventListener("keydown", onInteraction);
+
+      // Fallback: trigger after 30 seconds even without interaction
+      fallbackTimerId = setTimeout(() => {
+        triggerPromptCheck("fallback-timer");
       }, 30000);
     };
 
