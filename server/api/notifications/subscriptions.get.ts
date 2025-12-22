@@ -1,6 +1,10 @@
 import { Errors, success } from "@server/utils/error";
+import { requireRole } from "~~/server/utils/auth";
 
-export default defineEventHandler(async (_event) => {
+export default defineEventHandler(async (event) => {
+  // Require USER role - in production, consider restricting to ADMIN
+  await requireRole(event, ["USER"]);
+
   const subscriptions = await prisma.notificationSubscription.findMany({
     select: {
       id: true,

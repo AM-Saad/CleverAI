@@ -162,6 +162,17 @@ export default defineNuxtPlugin(() => {
       });
       return;
     }
+
+    // ===== Navigation Events from SW =====
+
+    if (type === "NOTIFICATION_CLICK_NAVIGATE") {
+      const url = data?.url || message?.url;
+      if (url) {
+        console.log("🔗 [sw-notifications] Navigating to:", url);
+        router.push(url);
+      }
+      return;
+    }
   });
 
   // Listen for storage restriction events (was in sw-idb-toasts.client.ts)

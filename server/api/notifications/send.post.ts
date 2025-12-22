@@ -14,13 +14,13 @@ export default defineEventHandler(async (event) => {
   // TODO: Implement proper rate limiting with Redis or similar
 
   webPush.setVapidDetails(
-    "mailto:abdelrhmanm525@gmail.com",
+    process.env.VAPID_CONTACT_EMAIL || "mailto:abdelrhmanm525@gmail.com",
     process.env.VAPID_PUBLIC_KEY!,
     process.env.VAPID_PRIVATE_KEY!
   );
 
   const body = await readBody(event);
-  let message;
+  let message: any;
   try {
     message = SendNotificationDTO.parse(body);
   } catch (err) {
@@ -51,64 +51,71 @@ export default defineEventHandler(async (event) => {
     throw Errors.unauthorized("Authorization required");
   }
 
-  // In development, allow all requests
-  // (no additional check needed, development requests are allowed through)
-
-  // TODO: Replace with actual session check when auth is implemented
-  // const session = await getServerSession(event)
-  // if (!session?.user || !session.user.role === 'ADMIN') {
-  //   throw createError({
-  //     statusCode: 401,
-  //     statusMessage: 'Unauthorized - Admin access required'
-  //   })
-  // }
-
-  // Get active subscriptions
+  // Get active subscriptions only
   const subscriptions = await prisma.notificationSubscription.findMany({
     where: {
+      isActive: true,
+      failureCount: { lt: 5 },
       // If targetUsers specified, filter by userId
       ...(message.targetUsers && {
         userId: { in: message.targetUsers },
       }),
-      // Include anonymous subscriptions when no target users specified
-      ...(!message.targetUsers &&
-        {
-          // Get all subscriptions (including ones without userId)
-        }),
     },
   });
+
+  const results = await Promise.allSettled(
+    subscriptions.map(async (subscription) => {
+      try {
+        await webPush.sendNotification(
+          {
+            endpoint: subscription.endpoint,
+            keys: subscription.keys,
+          },
+          JSON.stringify({
+            title: message.title,
+            message: message.message,
+            icon: message.icon || "/icons/192x192.png",
+            tag: message.tag,
+            requireInteraction: message.requireInteraction || false,
+            url: message.url || "/folders",
+          })
+        );
+
+        // Update lastSeen on successful delivery
+        await prisma.notificationSubscription.update({
+          where: { id: subscription.id },
+          data: { lastSeen: new Date(), failureCount: 0 },
+        });
+
+        return { success: true };
+      } catch (error: any) {
+        console.error("Error sending notification:", error);
+
+        // Handle expired/invalid subscriptions (delete immediately)
+        if (error.statusCode === 410 || error.statusCode === 404) {
+          await prisma.notificationSubscription.delete({
+            where: { id: subscription.id },
+          });
+        } else {
+          // For other errors, increment failure count
+          await prisma.notificationSubscription.update({
+            where: { id: subscription.id },
+            data: { failureCount: { increment: 1 } },
+          });
+        }
+        return { success: false, statusCode: error.statusCode };
+      }
+    })
+  );
 
   let notificationsSent = 0;
   let notificationsFailed = 0;
 
-  for (const subscription of subscriptions) {
-    try {
-      await webPush.sendNotification(
-        {
-          endpoint: subscription.endpoint,
-          keys: subscription.keys,
-        },
-        JSON.stringify({
-          title: message.title,
-          message: message.message,
-          icon: message.icon || "/icons/192x192.png",
-          tag: message.tag,
-          requireInteraction: message.requireInteraction || false,
-          url: message.url || "/folders", // Include URL for navigation
-        })
-      );
+  for (const result of results) {
+    if (result.status === "fulfilled" && result.value.success) {
       notificationsSent++;
-    } catch (error: unknown) {
-      console.error("Error sending notification:", error);
+    } else {
       notificationsFailed++;
-
-      // Handle expired/invalid subscriptions
-      const webPushError = error as { statusCode?: number };
-      if (webPushError.statusCode === 410 || webPushError.statusCode === 404) {
-        await prisma.notificationSubscription.delete({
-          where: { id: subscription.id },
-        });
-      }
     }
   }
 

@@ -200,7 +200,7 @@ export async function checkDueCards() {
               userId: userPref.userId,
               type: "CARD_DUE",
               scheduledFor: {
-                gte: new Date(now.getTime() - 1 * 60 * 1000), // 1 minute ago (was 6 hours)
+                gte: new Date(now.getTime() - 6 * 60 * 60 * 1000), // 6 hours ago
               },
               sent: true,
             },

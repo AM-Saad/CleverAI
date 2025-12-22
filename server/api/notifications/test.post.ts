@@ -18,7 +18,7 @@ export default defineEventHandler(async (event) => {
   }
 
   webPush.setVapidDetails(
-    "mailto:abdelrhmanm525@gmail.com",
+    process.env.VAPID_CONTACT_EMAIL || "mailto:abdelrhmanm525@gmail.com",
     process.env.VAPID_PUBLIC_KEY!,
     process.env.VAPID_PRIVATE_KEY!
   );
@@ -60,7 +60,7 @@ export default defineEventHandler(async (event) => {
     // Prepare notification payload
     const payload = JSON.stringify({
       title: validatedNotification.title,
-      body: validatedNotification.message,
+      message: validatedNotification.message,
       icon: validatedNotification.icon || "/icons/icon-192x192.png",
       badge: "/icons/badge-72x72.png",
       tag: validatedNotification.tag || `test-${Date.now()}`,

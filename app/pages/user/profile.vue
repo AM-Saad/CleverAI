@@ -38,7 +38,6 @@
           </div>
 
         </ui-card>
-        <!-- Account Settings -->
         <ui-card variant="default" class-name="mt-1.5">
           <ui-subtitle>Account Settings</ui-subtitle>
 
@@ -50,12 +49,29 @@
             <u-button size="sm" variant="subtle" color="primary" @click="navigateToSettings">
               Update Profile
             </u-button>
+          </div>
+        </ui-card>
 
-            <u-button size="sm" variant="subtle" color="secondary">
-              Notification Settings
-            </u-button>
-
-
+        <!-- Push Notification Settings -->
+        <ui-card variant="default" class-name="mt-1.5">
+          <ui-subtitle>Push Notifications</ui-subtitle>
+          <div class="mt-4">
+            <div v-if="notificationsLoading" class="text-sm text-gray-500">
+              Checking status...
+            </div>
+            <div v-else-if="isNotificationSubscribed" class="flex items-center justify-between">
+              <span class="text-sm text-green-600 dark:text-green-400">✓ Notifications enabled</span>
+              <u-button size="sm" variant="subtle" color="error" @click="handleUnsubscribe" :loading="notificationsLoading">
+                Disable
+              </u-button>
+            </div>
+            <div v-else class="flex items-center justify-between">
+              <span class="text-sm text-gray-500">Notifications are disabled</span>
+              <u-button size="sm" variant="subtle" color="primary" @click="handleResubscribe" :loading="notificationsLoading">
+                Enable Notifications
+              </u-button>
+            </div>
+            <p v-if="notificationError" class="text-sm text-red-500 mt-2">{{ notificationError }}</p>
           </div>
         </ui-card>
       </div>
@@ -138,6 +154,7 @@ import { computed, onMounted, ref } from "vue";
 import UiParagraph from "~/components/ui/UiParagraph.vue";
 import { useSubscription } from "~/composables/shared/useSubscription";
 import { useProfileManagement } from "~/composables/user/useProfileManagement";
+import { useNotifications } from "~/composables/shared/useNotifications";
 import type { DeleteAccountDTO, ChangePasswordDTO } from "@@/shared/utils/user.contract";
 
 interface UserProfile {
@@ -168,6 +185,18 @@ const {
   changePasswordPending,
   changePasswordError,
 } = useProfileManagement();
+
+// Push Notifications
+const {
+  isSubscribed: isNotificationSubscribed,
+  isLoading: notificationsLoading,
+  error: notificationError,
+  registerNotification,
+  unsubscribe,
+  checkSubscriptionStatus,
+  refreshSubscription,
+} = useNotifications();
+const toast = useToast();
 
 // Create profile data ref
 const profileData = ref<UserProfile | null>(null);
@@ -266,5 +295,25 @@ const fetchProfile = async () => {
 // Fetch user profile and LLM usage data on component mount
 onMounted(async () => {
   await fetchProfile();
+  await checkSubscriptionStatus();
 });
+
+// Notification handlers
+const handleUnsubscribe = async () => {
+  await unsubscribe();
+  if (!notificationError.value) {
+    toast.add({ title: "Notifications disabled", color: "success" });
+  } else {
+    toast.add({ title: "Failed to disable notifications", description: notificationError.value, color: "error" });
+  }
+};
+
+const handleResubscribe = async () => {
+  await refreshSubscription();
+  if (!notificationError.value) {
+    toast.add({ title: "Notifications enabled!", color: "success" });
+  } else {
+    toast.add({ title: "Failed to enable notifications", description: notificationError.value, color: "error" });
+  }
+};
 </script>
