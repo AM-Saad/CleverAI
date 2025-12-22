@@ -23,7 +23,7 @@ export function useNotificationPrompt() {
    */
   const shouldPromptUser = async (): Promise<boolean> => {
     // Client-side only
-    if (!import.meta.client) return false;
+    // if (!import.meta.client) return false;
 
     try {
       // Check if already subscribed
