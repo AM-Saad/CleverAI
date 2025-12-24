@@ -209,7 +209,7 @@ export async function checkDueCards() {
             },
           }
         );
-
+        console.log("Recent notification:", recentNotification);
         if (recentNotification) {
           console.log(
             `⏰ Skipping user ${userPref.userId} - already notified recently`
