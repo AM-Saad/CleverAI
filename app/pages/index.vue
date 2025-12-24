@@ -41,7 +41,6 @@ import { motion } from "motion-v";
 console.log("🏠 [INDEX.VUE] Page script setup initializing...");
 
 const baseUrl = useRuntimeConfig().public.APP_BASE_URL as string;
-console.log("🏠 [INDEX.VUE] Base URL:", baseUrl);
 definePageMeta({
   auth: { unauthenticatedOnly: true, navigateAuthenticatedTo: "/folders" },
 
@@ -149,7 +148,6 @@ onMounted(() => {
   //   else console.log("App is not offline ready")
   //   registerPeriodicSync()
   console.log("🏠 [INDEX.VUE] onMounted triggered - Page mounted successfully");
-  console.log("🏠 [INDEX.VUE] Document body:", document.body);
 });
 
 console.log("🏠 [INDEX.VUE] Page script setup completed");

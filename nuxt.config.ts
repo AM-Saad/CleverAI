@@ -2,6 +2,7 @@
 import process from "node:process";
 import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "node:path";
+import vueDevTools from 'vite-plugin-vue-devtools'
 
 if (
   process.env.NODE_ENV === "production" &&
@@ -222,6 +223,10 @@ export default defineNuxtConfig({
       hmr: {
         port: 3030, // Match the dev server port
       },
+      watch: {
+        usePolling: true,
+        interval: 150
+      }
     },
     define: {
       __APP_VERSION__: JSON.stringify("v1.0.0"),
@@ -235,7 +240,7 @@ export default defineNuxtConfig({
       target: "es2022", // Support BigInt and modern JS features
       // drop: ["console", "debugger"],
     },
-    plugins: [tailwindcss()],
+    plugins: [tailwindcss(), vueDevTools()],
     resolve: {
       alias: {
         "@tiptap/y-tiptap": "y-prosemirror",
@@ -253,6 +258,7 @@ export default defineNuxtConfig({
     worker: {
       format: "es", // Use ES modules for workers to preserve module dependencies
     },
+
   },
 
   build: {

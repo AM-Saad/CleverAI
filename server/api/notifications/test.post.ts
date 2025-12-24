@@ -121,7 +121,6 @@ export default defineEventHandler(async (event) => {
       ),
     });
   } catch (error: unknown) {
-    console.error("Test notification error:", error);
     if (error instanceof z.ZodError) {
       throw Errors.badRequest(
         "Invalid notification data",

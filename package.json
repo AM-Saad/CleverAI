@@ -15,7 +15,6 @@
     "test:pwa-offline": "playwright test tests/pwa-offline-basic.spec.ts --project=chromium",
     "build:inject": "yarn sw:build && yarn sw:check && yarn ai-worker:build && yarn ai-worker:check && nuxt build",
     "postinstall": "prisma generate && nuxt prepare",
-
     "start": "nuxt start",
     "sitemap": "vue-cli-service sitemap",
     "db:generate": "prisma generate",
@@ -85,7 +84,7 @@
     "mongodb": "5.3.0",
     "motion-v": "^1.6.1",
     "nanoid": "4.0.2",
-      "next-auth": "~4.21.1",
+    "next-auth": "~4.21.1",
     "nuxt": "^4.0.1",
     "openai": "^5.12.2",
     "pinia": "^2.1.7",
@@ -136,6 +135,7 @@
     "tsx": "^4.20.3",
     "typescript": "^5.9.2",
     "vite-plugin-cross-origin-isolation": "^0.1.6",
+    "vite-plugin-vue-devtools": "^8.0.5",
     "vue-tsc": "^2.1.6"
   },
   "config": {

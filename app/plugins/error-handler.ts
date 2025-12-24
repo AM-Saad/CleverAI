@@ -86,6 +86,10 @@ export default defineNuxtPlugin((nuxtApp) => {
     console.error("Stack:", error.stack);
     console.groupEnd();
   });
+  nuxtApp.hook('app:chunkError', () => {
+    console.log("Chunk error detected, reloading page...")
+    window.location.reload()
+  })
 
   // Add unhandled promise rejection handler
   if (import.meta.client) {

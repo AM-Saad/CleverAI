@@ -84,6 +84,7 @@ export function normalizeError(err: unknown): AppFailure {
           },
         };
       }
+      console.log(e)
       return {
         success: false,
         error: {
