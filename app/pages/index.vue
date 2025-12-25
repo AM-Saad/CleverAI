@@ -74,7 +74,7 @@ useHead({
     },
     {
       property: "og:image",
-      content: `${baseUrl}/images/og/recwide.png`,
+      content: `${baseUrl}/images/og/main.png`,
     },
     {
       name: "twitter:card",
@@ -91,7 +91,7 @@ useHead({
     },
     {
       name: "twitter:image",
-      content: `${baseUrl}/images/og/recwide.png`,
+      content: `${baseUrl}/images/og/main.png`,
     },
   ],
   script: [
