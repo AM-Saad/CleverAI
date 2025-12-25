@@ -89,6 +89,15 @@ onMounted(() => {
             showNotificationModal.value = true
         })
     }
+    if ("windowControlsOverlay" in navigator) {
+        navigator.windowControlsOverlay.addEventListener('geometrychange', () => {
+            const { width } = navigator.windowControlsOverlay.getTitlebarAreaRect();
+
+            // Yes, we could do this with a media-query, but we only care
+            // if the window-controls-overlay feature is being used.
+            document.body.classList.toggle('narrow', width < 250);
+        });
+    }
 })
 
 onBeforeUnmount(() => {

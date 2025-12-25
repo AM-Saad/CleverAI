@@ -9,10 +9,14 @@
   "lang": "en",
   "scope": "/",
   "id": "/",
+  "note_taking": {
+    "new_note_url": "/folders/"
+  },
   "display_override": [
     "standalone",
     "minimal-ui",
-    "fullscreen"
+    "fullscreen",
+    "window-controls-overlay"
   ],
   "dir": "ltr",
   "orientation": "portrait-primary",
