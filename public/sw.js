@@ -3778,7 +3778,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
                 badge: "/icons/96x96.png",
                 tag: "card-review-fallback",
                 requireInteraction: true,
-                data: { url: "/review", timestamp: Date.now() }
+                data: { url: "/user/review", timestamp: Date.now() }
               });
               console.log("[SW] \u2705 Fallback notification shown");
               return;
@@ -3806,12 +3806,13 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
             const options = {
               body: data.message || "You have cards to review!",
               icon: data.icon || "/icons/192x192.png",
-              badge: "/icons/96x96.png",
+              badge: "/icons/72x72.png",
               tag: data.tag || "card-review",
               requireInteraction: false,
               // Changed: macOS might not show persistent notifications in notification center
               silent: false,
               // Never silent for debugging
+              renotify: true,
               data: {
                 url: data.url || "/review",
                 timestamp: Date.now(),
@@ -3862,7 +3863,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
                   icon: "/icons/192x192.png",
                   tag: "error-fallback",
                   requireInteraction: true,
-                  data: { url: "/review", timestamp: Date.now() }
+                  data: { url: "/user/review", timestamp: Date.now() }
                 }
               );
               console.log("[SW] \u2705 Emergency fallback notification shown");
