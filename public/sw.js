@@ -1,7 +1,7 @@
 (() => {
   // app/utils/constants/pwa.ts
   var SW_CONFIG = {
-    VERSION: "v2.0.3-enhanced",
+    VERSION: "v2.0.4-enhanced",
     DEBUG_VALUE: "1",
     UPDATE_CHECK_INTERVAL: 3e4,
     // 30 seconds
