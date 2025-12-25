@@ -1,6 +1,6 @@
 <template>
   <!-- eslint-disable vue/max-attributes-per-line, vue/attributes-order -->
-  <ui-card size="md" variant="default">
+  <ui-card size="md" variant="ghost">
 
     <template #header>
       <div class="flex items-center gap-2">
@@ -12,7 +12,7 @@
     <div class="space-y-6">
 
       <!-- Card Due Notifications -->
-      <ui-card class="space-y-4">
+      <ui-card class="space-y-4" variant="default">
         <template #header>
           <div>
             📚 Card Due Notifications
@@ -22,20 +22,21 @@
         </template>
 
         <!-- Card Due Settings -->
-        <div v-if="preferences.cardDueEnabled" class="space-y-3 pl-4">
-          <UForm label="Notification Time" help="What time would you like to be notified?">
+        <div v-if="preferences.cardDueEnabled" class="space-y-3">
+          <!-- <UForm label="Notification Time" help="What time would you like to be notified?">
             <div class="flex items-center gap-2">
-              <UIcon name="i-heroicons-clock" class="w-4 h-4 text-gray-400" />
-              <input v-model="preferences.cardDueTime" type="time"
-                class="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
-                :disabled="loading || preferences.sendAnytimeOutsideQuietHours" @change="updatePreferences" />
+              <u-icon name="i-heroicons-clock" :size="UI_CONFIG.ICON_SIZE" class="text-gray-500" />
+              <u-input v-model="preferences.cardDueTime" type="time"
+                :disabled="loading || preferences.sendAnytimeOutsideQuietHours" @change="updatePreferences" :ui="{
+                  base: 'w-full',
+                }" />
             </div>
             <div v-if="preferences.sendAnytimeOutsideQuietHours"
               class="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
               <UIcon name="i-heroicons-information-circle" class="w-3 h-3" />
               <span>Card Due Time is ignored when "Send Anytime" is enabled.</span>
             </div>
-          </UForm>
+          </UForm> -->
 
           <UFormField label="How often would you like to be notified?"
             help="Choose how often you'd like to be notified about due cards">
@@ -55,11 +56,11 @@
                         <ui-label weight="medium">
                           {{ option.title }}
                         </ui-label>
-                        <span class="text-xs text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">
+                        <span class="text-xs text-gray-500 bg-gray-100 dark:bg-muted px-2 py-1 rounded">
                           {{ option.value }}+ cards
                         </span>
                       </div>
-                      <ui-paragraph class="mt-1">
+                      <ui-paragraph class="mt-1 text-wrap">
                         {{ option.description }}
                       </ui-paragraph>
                     </div>
@@ -111,7 +112,7 @@
 
 
       <!-- Daily Study Reminders -->
-      <ui-card>
+      <ui-card variant="default">
 
         <template #header>
           <div>
@@ -139,7 +140,7 @@
 
 
       <!-- Quiet Hours -->
-      <ui-card class="space-y-4">
+      <ui-card variant="default" class="space-y-4">
         <template #header>
           <div>
             🤫 Quiet Hours
@@ -187,11 +188,11 @@
 
 
       <!-- Send Anytime (outside quiet hours) -->
-      <ui-card class="space-y-4">
+      <ui-card variant="default" class="space-y-4">
         <template #header>
           <div>
             🚀 Send Anytime (Outside Quiet Hours)
-            <ui-paragraph>
+            <ui-paragraph class="text-wrap">
               If enabled, notifications can send at any time outside quiet hours
               once your due-card threshold is met.
             </ui-paragraph>
@@ -212,7 +213,7 @@
 
 
       <!-- Active Hours -->
-      <ui-card class="space-y-4">
+      <ui-card variant="default" class="space-y-4">
         <template #header>
           <div>
             🕘 Active Hours

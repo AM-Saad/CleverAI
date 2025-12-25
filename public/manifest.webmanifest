@@ -11,7 +11,7 @@
   "id": "/",
   "display_override": ["standalone", "minimal-ui", "fullscreen"],
   "dir": "ltr",
-  "orientation": "any",
+  "orientation": "portrait-primary",
   "categories": ["productivity", "ai", "assistant"],
   "screenshots": [
     { "src": "screenshots/desktop.png", "sizes": "1280x720", "type": "image/png", "form_factor": "wide" },
