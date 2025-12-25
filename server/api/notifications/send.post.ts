@@ -20,9 +20,6 @@ export default defineEventHandler(async (event) => {
   );
 
   try {
-
-
-
     const body = await readBody(event);
     let message: any;
     try {
@@ -79,7 +76,7 @@ export default defineEventHandler(async (event) => {
               title: message.title,
               message: message.message,
               icon: message.icon || "/icons/192x192.png",
-              badge: "/icons/72x72.png",
+              badge: message.badge || "/icons/72x72.png",
               tag: message.tag,
               requireInteraction: message.requireInteraction || false,
               url: message.url || "/folders",

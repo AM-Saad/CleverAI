@@ -71,6 +71,7 @@ export const SendNotificationDTO = z.object({
   title: z.string().min(1).max(100),
   message: z.string().min(1).max(500),
   icon: z.string().optional(),
+  badge: z.string().optional(),
   tag: z.string().optional(),
   requireInteraction: z.boolean().optional(),
   targetUsers: z.array(z.string()).optional(),
