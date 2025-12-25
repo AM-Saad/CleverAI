@@ -1,5 +1,7 @@
 <template>
-  <div class="min-h-screen bg-gray-50 dark:bg-gray-900">
+  <shared-page-wrapper title="Debug Dashboard"
+    subtitle="Comprehensive debugging tools for notifications, service workers, and system testing">
+
     <div class="max-w-7xl mx-auto px-4 py-8">
       <!-- Header -->
       <div class="mb-8">
@@ -24,23 +26,16 @@
           <div class="space-y-2">
             <div class="flex justify-between">
               <span>Permission:</span>
-              <UBadge
-                :color="
-                  notificationStatus.permission === 'granted'
-                    ? 'success'
-                    : 'error'
-                "
-                variant="subtle"
-              >
+              <UBadge :color="notificationStatus.permission === 'granted'
+                ? 'success'
+                : 'error'
+                " variant="subtle">
                 {{ notificationStatus.permission }}
               </UBadge>
             </div>
             <div class="flex justify-between">
               <span>Subscribed:</span>
-              <UBadge
-                :color="notificationStatus.subscribed ? 'success' : 'error'"
-                variant="subtle"
-              >
+              <UBadge :color="notificationStatus.subscribed ? 'success' : 'error'" variant="subtle">
                 {{ notificationStatus.subscribed ? "Yes" : "No" }}
               </UBadge>
             </div>
@@ -57,19 +52,13 @@
           <div class="space-y-2">
             <div class="flex justify-between">
               <span>Status:</span>
-              <UBadge
-                :color="swStatus.registered ? 'success' : 'error'"
-                variant="subtle"
-              >
+              <UBadge :color="swStatus.registered ? 'success' : 'error'" variant="subtle">
                 {{ swStatus.state || "Not Registered" }}
               </UBadge>
             </div>
             <div class="flex justify-between">
               <span>Debug Mode:</span>
-              <UBadge
-                :color="swStatus.debugEnabled ? 'success' : 'neutral'"
-                variant="subtle"
-              >
+              <UBadge :color="swStatus.debugEnabled ? 'success' : 'neutral'" variant="subtle">
                 {{ swStatus.debugEnabled ? "Enabled" : "Disabled" }}
               </UBadge>
             </div>
@@ -86,10 +75,7 @@
           <div class="space-y-2">
             <div class="flex justify-between">
               <span>Status:</span>
-              <UBadge
-                :color="cronStatus.running ? 'success' : 'neutral'"
-                variant="subtle"
-              >
+              <UBadge :color="cronStatus.running ? 'success' : 'neutral'" variant="subtle">
                 {{ cronStatus.running ? "Running" : "Stopped" }}
               </UBadge>
             </div>
@@ -102,81 +88,51 @@
           </div>
         </UCard>
       </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Permission Management -->
+        <UCard>
+          <template #header>
+            <h3 class="text-lg font-semibold">🔔 Permission Management</h3>
+          </template>
+          <div class="space-y-4">
+            <UButton color="primary" :loading="loading.permission" @click="checkPermission">
+              Check Permission
+            </UButton>
+            <UButton color="success" :loading="loading.request" @click="requestPermission">
+              Request Permission
+            </UButton>
+            <UButton color="success" :loading="loading.direct" @click="testDirectNotification">
+              Test Direct Notification
+            </UButton>
+            <UButton color="primary" :loading="loading.test" @click="sendTestNotification">
+              Send API Test Notification
+            </UButton>
+          </div>
+        </UCard>
 
+        <!-- Test Notification Form -->
+        <UCard>
+          <template #header>
+            <h3 class="text-lg font-semibold">✉️ Test Notification</h3>
+          </template>
+          <div class="space-y-4">
+            <UFormGroup label="Title">
+              <UInput v-model="testNotification.title" placeholder="Notification title" />
+            </UFormGroup>
+            <UFormGroup label="Message">
+              <UTextarea v-model="testNotification.message" placeholder="Notification message" />
+            </UFormGroup>
+            <UFormGroup label="URL">
+              <UInput v-model="testNotification.url" placeholder="/review" />
+            </UFormGroup>
+            <UCheckbox v-model="testNotification.requireInteraction" label="Require Interaction" />
+          </div>
+        </UCard>
+      </div>
       <!-- Main Content Tabs -->
       <UTabs v-model="selectedTab" :items="tabs" class="w-full">
         <!-- Notifications Tab -->
-        <template #notifications="{ item }">
-          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <!-- Permission Management -->
-            <UCard>
-              <template #header>
-                <h3 class="text-lg font-semibold">🔔 Permission Management</h3>
-              </template>
-              <div class="space-y-4">
-                <UButton
-                  color="primary"
-                  :loading="loading.permission"
-                  @click="checkPermission"
-                >
-                  Check Permission
-                </UButton>
-                <UButton
-                  color="success"
-                  :loading="loading.request"
-                  @click="requestPermission"
-                >
-                  Request Permission
-                </UButton>
-                <UButton
-                  color="success"
-                  :loading="loading.direct"
-                  @click="testDirectNotification"
-                >
-                  Test Direct Notification
-                </UButton>
-                <UButton
-                  color="primary"
-                  :loading="loading.test"
-                  @click="sendTestNotification"
-                >
-                  Send API Test Notification
-                </UButton>
-              </div>
-            </UCard>
 
-            <!-- Test Notification Form -->
-            <UCard>
-              <template #header>
-                <h3 class="text-lg font-semibold">✉️ Test Notification</h3>
-              </template>
-              <div class="space-y-4">
-                <UFormGroup label="Title">
-                  <UInput
-                    v-model="testNotification.title"
-                    placeholder="Notification title"
-                  />
-                </UFormGroup>
-                <UFormGroup label="Message">
-                  <UTextarea
-                    v-model="testNotification.message"
-                    placeholder="Notification message"
-                  />
-                </UFormGroup>
-                <UFormGroup label="URL">
-                  <UInput
-                    v-model="testNotification.url"
-                    placeholder="/review"
-                  />
-                </UFormGroup>
-                <UCheckbox
-                  v-model="testNotification.requireInteraction"
-                  label="Require Interaction"
-                />
-              </div>
-            </UCard>
-          </div>
-        </template>
 
         <!-- Service Worker Tab -->
         <template #service-worker="{ item }">
@@ -189,32 +145,16 @@
                 </h3>
               </template>
               <div class="space-y-4">
-                <UButton
-                  color="primary"
-                  :loading="loading.swCheck"
-                  @click="checkServiceWorker"
-                >
+                <UButton color="primary" :loading="loading.swCheck" @click="checkServiceWorker">
                   Check Service Worker
                 </UButton>
-                <UButton
-                  color="primary"
-                  :loading="loading.swDebug"
-                  @click="enableSWDebugMode"
-                >
+                <UButton color="primary" :loading="loading.swDebug" @click="enableSWDebugMode">
                   Enable Debug Mode
                 </UButton>
-                <UButton
-                  color="warning"
-                  :loading="loading.swUpdate"
-                  @click="forceServiceWorkerUpdate"
-                >
+                <UButton color="warning" :loading="loading.swUpdate" @click="forceServiceWorkerUpdate">
                   Force Update
                 </UButton>
-                <UButton
-                  color="success"
-                  :loading="loading.swMessage"
-                  @click="testServiceWorkerMessage"
-                >
+                <UButton color="success" :loading="loading.swMessage" @click="testServiceWorkerMessage">
                   Test SW Message
                 </UButton>
               </div>
@@ -226,32 +166,17 @@
                 <h3 class="text-lg font-semibold">📡 Push Subscription</h3>
               </template>
               <div class="space-y-4">
-                <UButton
-                  color="primary"
-                  :loading="loading.subscription"
-                  @click="checkSubscription"
-                >
+                <UButton color="primary" :loading="loading.subscription" @click="checkSubscription">
                   Check Subscription
                 </UButton>
-                <UButton
-                  color="warning"
-                  :loading="loading.refresh"
-                  @click="refreshSubscription"
-                >
+                <UButton color="warning" :loading="loading.refresh" @click="refreshSubscription">
                   Refresh Subscription
                 </UButton>
-                <UButton
-                  color="error"
-                  :loading="loading.unsubscribe"
-                  @click="unsubscribe"
-                >
+                <UButton color="error" :loading="loading.unsubscribe" @click="unsubscribe">
                   Unsubscribe
                 </UButton>
 
-                <div
-                  v-if="subscriptionInfo"
-                  class="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded"
-                >
+                <div v-if="subscriptionInfo" class="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded">
                   <p class="text-sm font-mono break-all">
                     {{ subscriptionInfo.endpoint }}
                   </p>
@@ -270,32 +195,16 @@
                 <h3 class="text-lg font-semibold">🕒 Cron Testing</h3>
               </template>
               <div class="space-y-4">
-                <UButton
-                  color="primary"
-                  :loading="loading.cron"
-                  @click="triggerCronCheck"
-                >
+                <UButton color="primary" :loading="loading.cron" @click="triggerCronCheck">
                   Trigger Cron Check
                 </UButton>
-                <UButton
-                  color="error"
-                  :loading="loading.cooldown"
-                  @click="clearCooldown"
-                >
+                <UButton color="error" :loading="loading.cooldown" @click="clearCooldown">
                   Clear Cooldown
                 </UButton>
-                <UButton
-                  color="primary"
-                  :loading="loading.timing"
-                  @click="checkTimingGates"
-                >
+                <UButton color="primary" :loading="loading.timing" @click="checkTimingGates">
                   Check Timing Gates
                 </UButton>
-                <UButton
-                  color="warning"
-                  :loading="loading.bypass"
-                  @click="bypassAllGates"
-                >
+                <UButton color="warning" :loading="loading.bypass" @click="bypassAllGates">
                   Bypass All Gates
                 </UButton>
               </div>
@@ -309,28 +218,19 @@
               <div class="space-y-3">
                 <div class="flex justify-between items-center">
                   <span>Active Hours:</span>
-                  <UBadge
-                    :color="timingGates.inActiveHours ? 'success' : 'error'"
-                    variant="subtle"
-                  >
+                  <UBadge :color="timingGates.inActiveHours ? 'success' : 'error'" variant="subtle">
                     {{ timingGates.inActiveHours ? "Inside" : "Outside" }}
                   </UBadge>
                 </div>
                 <div class="flex justify-between items-center">
                   <span>Quiet Hours:</span>
-                  <UBadge
-                    :color="timingGates.inQuietHours ? 'error' : 'success'"
-                    variant="subtle"
-                  >
+                  <UBadge :color="timingGates.inQuietHours ? 'error' : 'success'" variant="subtle">
                     {{ timingGates.inQuietHours ? "In Quiet" : "Not Quiet" }}
                   </UBadge>
                 </div>
                 <div class="flex justify-between items-center">
                   <span>Send Anytime:</span>
-                  <UBadge
-                    :color="timingGates.sendAnytime ? 'success' : 'neutral'"
-                    variant="subtle"
-                  >
+                  <UBadge :color="timingGates.sendAnytime ? 'success' : 'neutral'" variant="subtle">
                     {{ timingGates.sendAnytime ? "Enabled" : "Disabled" }}
                   </UBadge>
                 </div>
@@ -355,31 +255,21 @@
               <template #header>
                 <div class="flex items-center justify-between">
                   <h3 class="text-lg font-semibold">📝 Action Logs</h3>
-                  <UButton
-                    color="success"
-                    size="xs"
-                    :disabled="logMonitoring"
-                    @click="startLogMonitoring"
-                  >
+                  <UButton color="success" size="xs" :disabled="logMonitoring" @click="startLogMonitoring">
                     {{ logMonitoring ? "Monitoring..." : "Start Monitoring" }}
                   </UButton>
                 </div>
               </template>
-              <div
-                ref="logsContainer"
-                class="h-96 overflow-y-auto bg-gray-50 dark:bg-gray-800 p-3 rounded font-mono text-xs"
-              >
+              <div ref="logsContainer"
+                class="h-96 overflow-y-auto bg-gray-50 dark:bg-gray-800 p-3 rounded font-mono text-xs">
                 <div v-for="(log, index) in logs" :key="index" class="mb-1">
                   <span class="text-gray-500">{{ log.timestamp }}</span>
-                  <span
-                    :class="{
-                      'text-green-600': log.level === 'success',
-                      'text-red-600': log.level === 'error',
-                      'text-blue-600': log.level === 'info',
-                      'text-yellow-600': log.level === 'warning',
-                    }"
-                    >[{{ log.level.toUpperCase() }}]</span
-                  >
+                  <span :class="{
+                    'text-green-600': log.level === 'success',
+                    'text-red-600': log.level === 'error',
+                    'text-blue-600': log.level === 'info',
+                    'text-yellow-600': log.level === 'warning',
+                  }">[{{ log.level.toUpperCase() }}]</span>
                   <span>{{ log.message }}</span>
                 </div>
               </div>
@@ -390,14 +280,10 @@
               <template #header>
                 <h3 class="text-lg font-semibold">🛠️ Service Worker Logs</h3>
               </template>
-              <div
-                class="h-96 overflow-y-auto bg-gray-50 dark:bg-gray-800 p-3 rounded font-mono text-xs"
-              >
+              <div class="h-96 overflow-y-auto bg-gray-50 dark:bg-gray-800 p-3 rounded font-mono text-xs">
                 <div v-for="(log, index) in swLogs" :key="index" class="mb-1">
                   <span class="text-gray-500">{{ log.timestamp }}</span>
-                  <span class="text-purple-600"
-                    >[{{ log.type.toUpperCase() }}]</span
-                  >
+                  <span class="text-purple-600">[{{ log.type.toUpperCase() }}]</span>
                   <span>{{ log.message }}</span>
                 </div>
               </div>
@@ -418,10 +304,7 @@
           </div>
           <div class="flex justify-between">
             <span class="font-medium">Success:</span>
-            <UBadge
-              :color="lastResult.success ? 'success' : 'error'"
-              variant="subtle"
-            >
+            <UBadge :color="lastResult.success ? 'success' : 'error'" variant="subtle">
               {{ lastResult.success ? "Success" : "Failed" }}
             </UBadge>
           </div>
@@ -435,15 +318,13 @@
           </div>
           <div v-if="lastResult.data" class="mt-3">
             <span class="font-medium">Data:</span>
-            <pre
-              class="mt-1 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-x-auto"
-              >{{ JSON.stringify(lastResult.data, null, 2) }}</pre
-            >
+            <pre class="mt-1 p-2 bg-gray-100 dark:bg-gray-800 rounded text-xs overflow-x-auto">{{
+              JSON.stringify(lastResult.data, null, 2) }}</pre>
           </div>
         </div>
       </UCard>
     </div>
-  </div>
+  </shared-page-wrapper>
 </template>
 
 <script setup lang="ts">
@@ -510,6 +391,7 @@ const testNotification = reactive({
   tag: "debug-test",
   url: "/review",
   requireInteraction: false,
+  renotify: true,
 });
 
 // Data stores
@@ -588,13 +470,14 @@ const requestPermission = async () => {
 const testDirectNotification = async () => {
   loading.direct = true;
   try {
-    const notification = new Notification(testNotification.title, {
+    const notification = new Notification(testNotification.title + " (Direct)", {
       body: testNotification.message,
       icon: testNotification.icon,
       tag: testNotification.tag,
       requireInteraction: testNotification.requireInteraction,
       silent: false,
-      actions: [],
+      badge: "/icons/72x72.png",
+      image: "/icons/192x192.png",
     });
 
     notification.onclick = () => {
@@ -777,9 +660,9 @@ const checkSubscription = async () => {
 
         subscriptionInfo.value = subscription
           ? {
-              endpoint: subscription.endpoint,
-              keys: JSON.stringify(subscription.toJSON().keys, null, 2),
-            }
+            endpoint: subscription.endpoint,
+            keys: JSON.stringify(subscription.toJSON().keys, null, 2),
+          }
           : null;
 
         addLog(

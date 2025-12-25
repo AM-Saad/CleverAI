@@ -61,7 +61,7 @@ export default defineEventHandler(async (event) => {
     const payload = JSON.stringify({
       title: validatedNotification.title,
       message: validatedNotification.message,
-      icon: validatedNotification.icon || "/icons/icon-192x192.png",
+      icon: validatedNotification.icon || "/icons/192x192.png",
       badge: "/icons/badge-72x72.png",
       tag: validatedNotification.tag || `test-${Date.now()}`,
       requireInteraction: validatedNotification.requireInteraction || false,

@@ -251,8 +251,8 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         if (isJsChunk) {
           return new Response(
             "/* offline stub chunk */\n" +
-              "export default {};\n" +
-              "export const __offline__ = true;\n",
+            "export default {};\n" +
+            "export const __offline__ = true;\n",
             {
               headers: {
                 "Content-Type": "application/javascript",
@@ -584,11 +584,11 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
     };
     // Initial slight delay to allow potential update flow to settle.
     setTimeout(() => {
-      notifyIfWaiting().catch(() => {});
+      notifyIfWaiting().catch(() => { });
     }, 1500);
     // Periodic lightweight check (every 30s) – can be disabled if noisy.
     setInterval(() => {
-      notifyIfWaiting().catch(() => {});
+      notifyIfWaiting().catch(() => { });
     }, 30000);
   } catch {
     /* ignore */
@@ -680,7 +680,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
               badge: "/icons/96x96.png",
               tag: "card-review-fallback",
               requireInteraction: true,
-              data: { url: "/review", timestamp: Date.now() },
+              data: { url: "/user/review", timestamp: Date.now() },
             });
             console.log("[SW] ✅ Fallback notification shown");
             return;
@@ -721,10 +721,11 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
           const options = {
             body: data.message || "You have cards to review!",
             icon: data.icon || "/icons/192x192.png",
-            badge: "/icons/96x96.png",
+            badge: "/icons/72x72.png",
             tag: data.tag || "card-review",
             requireInteraction: false, // Changed: macOS might not show persistent notifications in notification center
             silent: false, // Never silent for debugging
+            renotify: true,
             data: {
               url: data.url || "/review",
               timestamp: Date.now(),
@@ -783,7 +784,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
                 icon: "/icons/192x192.png",
                 tag: "error-fallback",
                 requireInteraction: true,
-                data: { url: "/review", timestamp: Date.now() },
+                data: { url: "/user/review", timestamp: Date.now() },
               }
             );
             console.log("[SW] ✅ Emergency fallback notification shown");

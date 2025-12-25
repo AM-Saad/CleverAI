@@ -48,7 +48,6 @@ export default defineNuxtConfig({
         const required = [
           "SERVER_URL",
           "APP_BASE_URL",
-          "APP_PORT",
           "AUTH_ORIGIN",
           "VAPID_PUBLIC_KEY",
           "VAPID_PRIVATE_KEY",
@@ -221,12 +220,9 @@ export default defineNuxtConfig({
     logLevel: "info",
     server: {
       hmr: {
-        port: 3030, // Match the dev server port
+        port: 3000, // Match the dev server port
       },
-      watch: {
-        usePolling: true,
-        interval: 150
-      }
+
     },
     define: {
       __APP_VERSION__: JSON.stringify("v1.0.0"),
