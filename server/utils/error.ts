@@ -14,11 +14,13 @@ export function apiError(
   statusCode = 400,
   details?: unknown
 ) {
-  return createError<APIErrorPayload>({
+  const error = createError<APIErrorPayload>({
     statusCode,
     statusMessage: message,
     data: { code, message, details, statusCode },
   });
+  console.log("API Error Created:", error);
+  return error;
 }
 
 export const Errors = {

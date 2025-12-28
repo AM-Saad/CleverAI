@@ -122,6 +122,7 @@ class FetchFactory {
 
         // Unified envelope path
         if (rawResp && typeof rawResp === "object" && "success" in rawResp) {
+          console.log("FetchFactory: Received envelope response", rawResp);
           const env = rawResp as SuccessEnvelope<unknown> | FailureEnvelope;
           if ((env as SuccessEnvelope).success === true) {
             let payload: unknown = (env as SuccessEnvelope).data;
@@ -158,6 +159,7 @@ class FetchFactory {
           }
         }
 
+        console.log("FetchFactory: Received legacy response", rawResp);
         // Legacy path
         let legacyPayload: unknown = rawResp;
         if (validator) {
@@ -181,8 +183,8 @@ class FetchFactory {
           legacyPayload as TSchema extends z.ZodTypeAny ? z.infer<TSchema> : T
         );
       } catch (err) {
+        console.log(`FetchFactory: Error on attempt ${attempt + 1} for ${method} ${url}`, err);
         clearTimeout(timeoutId);
-
         // Handle timeout/abort specifically
         if (err instanceof Error && err.name === "AbortError") {
           lastError = new APIError("Request timeout", {
@@ -224,7 +226,7 @@ class FetchFactory {
     // Return the last error as a failed Result
     return R.error(
       lastError ||
-        new APIError("Unknown error", { code: "UNKNOWN_ERROR", status: 500 })
+      new APIError("Unknown error", { code: "UNKNOWN_ERROR", status: 500 })
     );
   }
 

@@ -6,7 +6,7 @@ import { Errors } from "../utils/error";
 export async function requireAuth(event: any): Promise<any> {
   try {
     const session = (await safeGetServerSession(event)) as {
-      user?: { email?: string; [key: string]: unknown };
+      user?: { email?: string;[key: string]: unknown };
       [key: string]: unknown;
     } | null;
 
@@ -34,6 +34,7 @@ export type UserRole = "USER" | "ADMIN";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function requireRole(event: any, roles: UserRole[]): Promise<any> {
   const user = event.context.user || (await requireAuth(event));
+  console.log("User role:", user.role);
   if (!roles.includes(user.role)) {
     throw Errors.forbidden("User does not have the required role");
   }

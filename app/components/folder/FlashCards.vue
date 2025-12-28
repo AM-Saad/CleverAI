@@ -12,10 +12,22 @@ const existingFlashcards = computed(
   () => (folder.value as Folder | null | undefined)?.flashcards || [],
 );
 
+
 const cardsToShow = computed(() => existingFlashcards.value);
 
-// Track enrolled cards
-const enrolledCards = ref(new Set<string>());
+// Props from parent
+interface Props {
+  enrolledIds?: Set<string>;
+  isEnrollingLoading?: boolean;
+}
+const props = withDefaults(defineProps<Props>(), {
+  enrolledIds: () => new Set(),
+  isEnrollingLoading: false,
+});
+
+const emit = defineEmits<{
+  (e: "enrolled", response: EnrollCardResponse): void;
+}>();
 
 // Modal states
 const showCreateModal = ref(false);
@@ -23,58 +35,10 @@ const showDeleteModal = ref(false);
 const editingFlashcard = ref<{ id: string; front: string; back: string } | undefined>(undefined);
 const deletingFlashcard = ref<{ id: string; isEnrolled: boolean } | null>(null);
 
-// Check enrollment status when cards are available
-watch(
-  cardsToShow,
-  async (cards) => {
-    if (cards && cards.length > 0) {
-      await checkEnrollmentStatus();
-    }
-  },
-  { immediate: true },
-);
-
-async function checkEnrollmentStatus() {
-  const cardIds =
-    cardsToShow.value
-      ?.filter(
-        (card) => card && typeof card === "object" && "id" in card && card.id,
-      )
-      .map((card) => (card as { id: string }).id) || [];
-  if (cardIds.length === 0) return;
-
-  try {
-    const { $api } = useNuxtApp();
-    const response = await $api.review.getEnrollmentStatus(
-      cardIds,
-      "flashcard",
-    );
-
-    // Update enrolled cards Set - safely check if enrollments exists
-    enrolledCards.value.clear();
-    if (
-      response &&
-      response.success &&
-      response.data &&
-      response.data.enrollments &&
-      typeof response.data.enrollments === "object"
-    ) {
-      Object.entries(response.data.enrollments).forEach(
-        ([cardId, isEnrolled]) => {
-          if (isEnrolled) {
-            enrolledCards.value.add(cardId);
-          }
-        },
-      );
-    }
-  } catch (error) {
-    console.error("Failed to check enrollment status:", error);
-  }
-}
 
 function handleCardEnrolled(response: EnrollCardResponse) {
   if (response.success && response.cardId) {
-    checkEnrollmentStatus();
+    emit("enrolled", response);
     console.log("Card enrolled successfully:", response.cardId);
   }
 }
@@ -110,7 +74,7 @@ function openEditModal(card: Flashcard) {
 function openDeleteModal(card: Flashcard) {
   deletingFlashcard.value = {
     id: card.id,
-    isEnrolled: enrolledCards.value.has(card.id),
+    isEnrolled: props.enrolledIds.has(card.id),
   };
   showDeleteModal.value = true;
 }
@@ -119,6 +83,10 @@ function closeCreateModal() {
   showCreateModal.value = false;
   editingFlashcard.value = undefined;
 }
+
+onMounted(() => {
+  console.log("isEnrollingLoading", props.isEnrollingLoading);
+});
 </script>
 
 
@@ -157,20 +125,20 @@ function closeCreateModal() {
           <!-- Top-right badges and actions -->
           <div class="absolute top-2 right-2 flex items-center gap-2 ">
             <!-- Enrolled badge -->
-            <span v-if="'id' in card && card.id && enrolledCards.has(card.id)"
+            <span v-if="'id' in card && card.id && props.enrolledIds.has(card.id)"
               class="inline-flex items-center justify-center h-6 w-8 rounded-full text-xs font-medium bg-primary border border-muted text-light"
               title="Enrolled in Review">✓</span>
             <div class="justify-between gap-1 bg-primary/10 rounded-full overflow-hidden">
 
               <!-- Edit button -->
               <UButton v-if="'id' in card && card.id" size="sm" variant="ghost" @click.stop="openEditModal(card)"
-                title="Edit flashcard">
-                <Icon name="i-lucide-pencil" class="w-3 h-3" />
+                title="Edit flashcard" :disabled="props.isEnrollingLoading">
+                <Icon name="i-lucide-pencil" class="w-3 h-3 disabled:opacity-50 disabled:cursor-not-allowed" />
               </UButton>
               <!-- Delete button -->
               <UButton v-if="'id' in card && card.id" size="sm" variant="ghost" color="error"
-                @click.stop="openDeleteModal(card)" title="Delete flashcard">
-                <Icon name="i-lucide-trash-2" class="w-3 h-3" />
+                @click.stop="openDeleteModal(card)" title="Delete flashcard" :disabled="props.isEnrollingLoading">
+                <Icon name="i-lucide-trash-2" class="w-3 h-3 disabled:opacity-50 disabled:cursor-not-allowed" />
               </UButton>
             </div>
           </div>
@@ -179,7 +147,7 @@ function closeCreateModal() {
           <ui-paragraph class="basis-3/4 overflow-auto" size="xs">{{ card.back
             }}</ui-paragraph>
           <ReviewEnrollButton v-if="'id' in card && card.id" :resource-type="'flashcard'" :resource-id="card!.id"
-            :is-enrolled="enrolledCards.has(card.id)" @enrolled="handleCardEnrolled" @error="handleEnrollError" />
+            :is-enrolled="props.enrolledIds.has(card.id)" @enrolled="handleCardEnrolled" @error="handleEnrollError" />
           <div v-else class="text-xs">Save card to enable review</div>
         </template>
       </ui-flip-card>

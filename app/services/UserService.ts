@@ -10,6 +10,9 @@ import type {
   ReactivateAccountResponse,
   ChangePasswordDTO,
   ChangePasswordResponse,
+  ChangePasswordResponse,
+  UserProgress,
+  UserProgressSchema,
 } from "@@/shared/utils/user.contract";
 
 export class UserService extends FetchFactory {
@@ -20,6 +23,19 @@ export class UserService extends FetchFactory {
    */
   async fetchProfile(): Promise<Result<UserProfile>> {
     return this.call<UserProfile>("GET", `${this.RESOURCE}/profile`);
+  }
+
+  /**
+   * Fetch user progress (level, XP)
+   */
+  async getProgress(): Promise<Result<UserProgress>> {
+    return this.call<UserProgress>(
+      "GET",
+      `${this.RESOURCE}/progress`,
+      undefined,
+      {},
+      UserProgressSchema
+    );
   }
 
   /**

@@ -13,8 +13,7 @@ export async function safeGetServerSession(
     const session = await getServerSession(event);
     return session;
   } catch (error) {
-    console.warn("Session retrieval failed:", error);
-    // Log the error but don't throw it
+    console.error("Session retrieval failed:", error);
     return null;
   }
 }

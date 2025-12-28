@@ -1,6 +1,8 @@
 import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
+import { calculateEnrollXP } from "@server/utils/xp";
+import { startOfDay, endOfDay } from "date-fns";
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
@@ -78,13 +80,55 @@ export default defineEventHandler(async (event) => {
   // Determine if this was a new enrollment or existing
   const isNewEnrollment = !card.lastReviewedAt;
 
+  let xpEarned = 0;
+
+  if (isNewEnrollment) {
+    // Check if we already awarded enroll XP for this card to be safe (idempotency)
+    const existingXp = await prisma.xpEvent.findFirst({
+      where: {
+        userId: user.id,
+        cardId: card.cardId, // CORRECT: Use polymorphic resource ID
+        source: "enroll"
+      }
+    });
+
+    if (!existingXp) {
+      const now = new Date();
+      const dayStart = startOfDay(now);
+      const dayEnd = endOfDay(now);
+
+      // Query today's accumulated XP
+      const DailyXpAggregate = await prisma.xpEvent.aggregate({
+        where: {
+          userId: user.id,
+          createdAt: { gte: dayStart, lte: dayEnd },
+        },
+        _sum: { xp: true },
+      });
+      const currentDailyXP = DailyXpAggregate._sum.xp || 0;
+
+      const xp = calculateEnrollXP(currentDailyXP);
+
+      await prisma.xpEvent.create({
+        data: {
+          userId: user.id,
+          cardId: card.cardId, // CORRECT: Use polymorphic resource ID
+          source: "enroll",
+          xp: xp,
+          createdAt: now
+        }
+      });
+      xpEarned = xp;
+    }
+  }
+
   return success(
     EnrollCardResponseSchema.parse({
       success: true,
       cardId: card.id,
-      message: isNewEnrollment
-        ? "Card enrolled successfully"
-        : "Card already enrolled",
+      message: xpEarned > 0
+        ? `Card enrolled successfully (+${xpEarned} XP)`
+        : (isNewEnrollment ? "Card enrolled successfully" : "Card already enrolled"),
     })
   );
 });

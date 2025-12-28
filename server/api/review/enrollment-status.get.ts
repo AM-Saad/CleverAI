@@ -3,8 +3,9 @@ import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 
 const EnrollmentStatusRequestSchema = z.object({
-  resourceIds: z.array(z.string()),
+  resourceIds: z.union([z.string(), z.array(z.string())]).optional(),
   resourceType: z.enum(["material", "flashcard", "question"]).optional(),
+  folderId: z.string().optional(),
 });
 
 const EnrollmentStatusResponseSchema = z.object({
@@ -14,17 +15,21 @@ const EnrollmentStatusResponseSchema = z.object({
 export default defineEventHandler(async (event) => {
   // Parse query
   const rawQuery = getQuery(event);
-  const resourceIds =
-    typeof rawQuery.resourceIds === "string"
+
+  // Normalize resourceIds to array if string
+  let resourceIds: string[] = [];
+  if (rawQuery.resourceIds) {
+    resourceIds = typeof rawQuery.resourceIds === "string"
       ? rawQuery.resourceIds.split(",")
-      : Array.isArray(rawQuery.resourceIds)
-        ? rawQuery.resourceIds
-        : [];
+      : (Array.isArray(rawQuery.resourceIds) ? rawQuery.resourceIds as string[] : []);
+  }
+
   let validatedQuery;
   try {
     validatedQuery = EnrollmentStatusRequestSchema.parse({
       resourceIds,
       resourceType: rawQuery.resourceType,
+      folderId: rawQuery.folderId,
     });
   } catch (e) {
     if (e instanceof z.ZodError) {
@@ -41,17 +46,44 @@ export default defineEventHandler(async (event) => {
 
   const enrollments: Record<string, boolean> = {};
 
-  for (const resourceId of validatedQuery.resourceIds) {
-    try {
-      const existingCard = await prisma.cardReview.findFirst({
-        where: { userId: user.id, cardId: resourceId },
+  try {
+    if (validatedQuery.folderId) {
+      // OPTIMIZED: Fetch all for folder
+      const cards = await prisma.cardReview.findMany({
+        where: {
+          userId: user.id,
+          folderId: validatedQuery.folderId
+        },
+        select: { cardId: true }
       });
-      enrollments[resourceId] = !!existingCard;
-    } catch {
-      throw Errors.server("Failed to check enrollment status");
+
+      cards.forEach(c => {
+        enrollments[c.cardId] = true;
+      });
+
+    } else if (validatedQuery.resourceIds && validatedQuery.resourceIds.length > 0) {
+      // OPTIMIZED: Fetch all by IDs (batch)
+      const cards = await prisma.cardReview.findMany({
+        where: {
+          userId: user.id,
+          cardId: { in: validatedQuery.resourceIds }
+        },
+        select: { cardId: true }
+      });
+
+      // Default all queried IDs to false first (unless we just want to return found ones?)
+      // The contract usually suggests returning status for requested IDs.
+      // But for simplicity, we can just return the ones found as true.
+      // Frontend usually assumes missing = false.
+
+      cards.forEach(c => {
+        enrollments[c.cardId] = true;
+      });
     }
+  } catch (error) {
+    console.error("Failed to fetch enrollment status:", error);
+    throw Errors.server("Failed to check enrollment status");
   }
 
-  const payload = EnrollmentStatusResponseSchema.parse({ enrollments });
-  return success(payload);
+  return success({ enrollments });
 });

@@ -22,7 +22,6 @@ model User {
     role                      UserRole
     createdAt                 DateTime                     @default(now())
     updatedAt                 DateTime                     @updatedAt
-    notifications             Notification[]
     payments                  Payment[]
     folders                   Folder[]                     @relation("UserFolders")
     subscription              UserSubscription?
@@ -99,35 +98,6 @@ model Note {
     updatedAt DateTime @updatedAt
 }
 
-// model Lesson {
-//   id                  String   @id @default(auto()) @map("_id") @db.ObjectId
-//   title               String
-//   folder             Folder  @relation(fields: [folderId], references: [id])
-//   folderId           String   @db.ObjectId
-//   explanationVideoUrl String
-//   solutionVideoUrl    String?
-//   unlockWindowDays    Int      @default(7)
-//   order               Int      @unique
-//   chapterOrder        Int?
-//   exam                Exam?
-//   user             User     @relation("UserLessons", fields: [userId], references: [id])
-//   userId           String   @db.ObjectId
-//   createdAt           DateTime @default(now())
-//   updatedAt           DateTime @updatedAt
-// }
-
-// model Exam {
-//   id        String    @id @default(auto()) @map("_id") @db.ObjectId
-//   lesson    Lesson    @relation(fields: [lessonId], references: [id])
-//   lessonId  String    @unique @db.ObjectId
-//   timed     Boolean   @default(false)
-//   duration  Int?      // in minutes, if timed
-//   questions Question[]
-//   examAttempts ExamAttempt[]
-//   createdAt DateTime  @default(now())
-//   updatedAt DateTime  @updatedAt
-// }
-
 model Question {
     id          String       @id @default(auto()) @map("_id") @db.ObjectId
     folder      Folder       @relation(fields: [folderId], references: [id], onDelete: Cascade)
@@ -190,6 +160,35 @@ model CardReview {
     @@index([folderId, nextReviewAt])
 }
 
+enum AchievementType {
+    DAILY_STREAK
+    WEEKLY_STREAK
+
+    CARD_MASTERED
+    CARD_REVIEWED
+    CARD_REVIEWED_100
+}
+
+model XpEvent {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    userId    String
+    cardId    String?
+    source    String // "review" | "enroll"
+    xp        Int
+    createdAt DateTime @default(now())
+
+    @@index([userId, createdAt])
+}
+
+model Achievement {
+    id        String          @id @default(auto()) @map("_id") @db.ObjectId
+    userId    String
+    type      AchievementType
+    streak    Int
+    createdAt DateTime        @default(now())
+    updatedAt DateTime        @updatedAt
+}
+
 // Idempotency tracking for grade operations
 model GradeRequest {
     id          String   @id @default(auto()) @map("_id") @db.ObjectId
@@ -245,20 +244,10 @@ model LlmUsage {
     createdAt    DateTime @default(now())
     rawUsageJson Json?
     meta         Json?
-    materialId   String?  @db.ObjectId
 
     @@index([provider, model, createdAt])
     @@index([userId, createdAt])
     @@index([folderId, createdAt])
-}
-
-model Notification {
-    id      String   @id @default(auto()) @map("_id") @db.ObjectId
-    user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-    userId  String   @db.ObjectId
-    type    String
-    content String
-    sentAt  DateTime @default(now())
 }
 
 model Payment {

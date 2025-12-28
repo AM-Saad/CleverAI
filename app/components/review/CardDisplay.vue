@@ -43,7 +43,7 @@
         </div>
 
         <!-- Review State Info -->
-        <CardReviewState :review-state="card.reviewState" />
+        <ReviewCardReviewState :review-state="card.reviewState" />
       </div>
     </div>
   </div>

@@ -3,6 +3,8 @@ import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { scheduleCardDueNotification } from "@server/services/NotificationScheduler";
 import { calculateSM2, calculateNextReviewDate } from "@server/utils/sm2";
+import { calculateReviewXP } from "@server/utils/xp";
+import { startOfDay, endOfDay } from "date-fns";
 
 export default defineEventHandler(async (event) => {
   // Parse & validate body
@@ -47,7 +49,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Wrap in transaction to prevent race conditions and ensure atomicity
-  const updatedCard = await prisma.$transaction(async (tx) => {
+  const { updatedCard, xpEarned } = await prisma.$transaction(async (tx) => {
     // Fetch card review ensuring ownership (locks row for update)
     const cardReview = await tx.cardReview.findFirst({
       where: { id: validatedBody.cardId, userId: user.id },
@@ -70,6 +72,59 @@ export default defineEventHandler(async (event) => {
     const nextReviewAt = calculateNextReviewDate(intervalDays);
     const newStreak = grade >= 3 ? cardReview.streak + 1 : 0;
 
+    // --- XP Calculation Start ---
+    const now = new Date();
+    const dayStart = startOfDay(now);
+    const dayEnd = endOfDay(now);
+
+    // Query today's accumulated XP
+    const DailyXpAggregate = await tx.xpEvent.aggregate({
+      where: {
+        userId: user.id,
+        createdAt: { gte: dayStart, lte: dayEnd },
+      },
+      _sum: { xp: true },
+    });
+    const currentDailyXP = DailyXpAggregate._sum.xp || 0;
+
+    // Check for existing XP event for this card today (Idempotency Guard)
+    // This prevents duplicate XP if the request is retried or races
+    const existingXp = await tx.xpEvent.findFirst({
+      where: {
+        userId: user.id,
+        cardId: cardReview.cardId, // Use the actual resource ID
+        source: "review",
+        createdAt: { gte: dayStart, lte: dayEnd }
+      }
+    });
+
+    let effectiveXP = 0;
+
+    if (!existingXp) {
+      // Calculate XP
+      const calcResult = calculateReviewXP({
+        easeFactor: cardReview.easeFactor,
+        intervalDays: cardReview.intervalDays,
+        grade: grade,
+        now: now,
+        nextReviewAt: cardReview.nextReviewAt,
+        dailyXP: currentDailyXP,
+      });
+      effectiveXP = calcResult.effectiveXP;
+
+      // Insert XP Event
+      await tx.xpEvent.create({
+        data: {
+          userId: user.id,
+          cardId: cardReview.cardId, // CORRECT: Use polymorphic resource ID
+          source: "review",
+          xp: effectiveXP,
+          createdAt: now,
+        },
+      });
+    }
+    // --- XP Calculation End ---
+
     // Update card review with new values
     const updated = await tx.cardReview.update({
       where: { id: validatedBody.cardId },
@@ -78,7 +133,7 @@ export default defineEventHandler(async (event) => {
         intervalDays,
         repetitions,
         nextReviewAt,
-        lastReviewedAt: new Date(),
+        lastReviewedAt: now,
         lastGrade: grade,
         streak: newStreak,
       },
@@ -100,7 +155,7 @@ export default defineEventHandler(async (event) => {
         });
     }
 
-    return updated;
+    return { updatedCard: updated, xpEarned: effectiveXP };
   });
 
   // Fire-and-forget notification scheduling (outside transaction)
@@ -124,7 +179,7 @@ export default defineEventHandler(async (event) => {
     nextReviewAt: updatedCard.nextReviewAt.toISOString(),
     intervalDays: updatedCard.intervalDays,
     easeFactor: updatedCard.easeFactor,
-    message: "Card graded successfully",
+    message: `Card graded successfully (+${xpEarned} XP)`,
   });
 
   return success(payload);

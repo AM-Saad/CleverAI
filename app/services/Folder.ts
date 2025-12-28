@@ -9,6 +9,11 @@ import type {
   UpdateFlashcardDTO,
   DeleteFlashcardResponse,
 } from "@@/shared/utils/flashcard.contract";
+import type {
+  Folder,
+  CreateFolderDTO,
+  UpdateFolderDTO,
+} from "@@/shared/utils/folder.contract";
 
 class FoldersModule extends FetchFactory {
   private RESOURCE = RESOURCES.FOLDERS;
@@ -49,7 +54,7 @@ class FoldersModule extends FetchFactory {
   }
 
   async create(
-    payload: Partial<typeof CreateFolderDTO>
+    payload: CreateFolderDTO
   ): Promise<Result<Folder>> {
     const fetchOptions = {
       headers: {
@@ -76,13 +81,13 @@ class FoldersModule extends FetchFactory {
     );
   }
 
-  async delete(id: string): Promise<Result<{ success: boolean }>> {
+  async delete(id: string): Promise<Result<{ deleted: boolean }>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",
       },
     };
-    return this.call("DELETE", `${this.RESOURCE}`, { id }, fetchOptions);
+    return this.call("DELETE", `${this.RESOURCE}/${id}`, undefined, fetchOptions);
   }
 
   // ==========================================

@@ -33,12 +33,7 @@ export default defineEventHandler(async (event) => {
   ) {
     folderData.metadata = body.metadata;
   }
-  if (typeof body.llmModel === "string") {
-    if (!LLM_MODELS.includes(body.llmModel as (typeof LLM_MODELS)[number])) {
-      throw Errors.badRequest(`Invalid llmModel: ${body.llmModel}`);
-    }
-    folderData.llmModel = body.llmModel;
-  }
+
   if (typeof body.rawText === "string" || body.rawText === null) {
     folderData.rawText = body.rawText ?? null;
   }
@@ -50,7 +45,6 @@ export default defineEventHandler(async (event) => {
       title: body.materialTitle || "Folder Content",
       content: body.materialContent,
       type: body.materialType || "text",
-      llmModel: body.llmModel || existing.llmModel,
     };
     const existingMaterial = await prisma.material.findFirst({
       where: { folderId: id, title: materialData.title },
@@ -61,7 +55,6 @@ export default defineEventHandler(async (event) => {
         data: {
           content: materialData.content,
           type: materialData.type,
-          llmModel: materialData.llmModel,
         },
       });
     } else {

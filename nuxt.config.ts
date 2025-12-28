@@ -264,17 +264,17 @@ export default defineNuxtConfig({
     },
   },
 
-  ssr: true,
-  routeRules: {
-    "/about": { prerender: true },
-    "/": { prerender: true },
-    "/pricing": { prerender: true },
+  ssr: false,
+  // routeRules: {
+  //   "/about": { prerender: true },
+  //   "/": { prerender: true },
+  //   "/pricing": { prerender: true },
 
-    "/auth/**": { ssr: false },
-    "/settings/**": { ssr: false },
-    "/review/**": { ssr: false },
-    "/folders/**": { ssr: false },
-  },
+  //   "/auth/**": { ssr: false },
+  //   "/settings/**": { ssr: false },
+  //   "/review/**": { ssr: false },
+  //   "/folders/**": { ssr: false },
+  // },
   css: ["~/assets/css/main.css"],
 
   typescript: {

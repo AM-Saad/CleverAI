@@ -8,7 +8,7 @@
         {{ currentIndex + 1 }} of {{ totalCards }}
       </div>
       <!-- Study Session Timer -->
-      <SessionTimer :session-time="sessionTime" />
+      <ReviewSessionTimer :session-time="sessionTime" />
     </div>
 
     <ReviewProgressBar :progress="progress" />

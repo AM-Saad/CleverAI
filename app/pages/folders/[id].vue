@@ -2,6 +2,8 @@
 import { useRoute } from "vue-router";
 import { defineAsyncComponent } from "vue";
 import { useFolder } from "~/composables/folders/useFolders";
+import type { EnrollCardResponse } from "~/shared/utils/review.contract";
+
 
 const FlashCards = defineAsyncComponent(
   () => import("~/components/folder/FlashCards.vue")
@@ -27,28 +29,21 @@ const { data: authData } = useAuth();
 const showUpload = ref(false);
 const activeIndex = ref(0);
 const carousel = useTemplateRef("carousel");
-
 const { folder, loading, error, refresh } = useFolder(id! as string);
 
-const { updateFolder, updating, typedError } = useUpdateFolder(id as string);
+const { updateFolder, updating, typedError } = useUpdateFolder();
 const { fetchMaterials: refreshMaterials } = useMaterialsStore(id as string);
+
+const {
+  enrolledFlashcardIds,
+  enrolledQuestionIds,
+  onEnrolled,
+  loading: enrollmentLoading,
+  fetchEnrollments
+} = useFolderEnrollment(id as string, folder);
+
 const { handleOfflineSubmit } = useOffline();
 
-const createdAt = computed(() =>
-  useNuxtLocaleDate(
-    new Date(folder.value?.createdAt || new Date().toISOString())
-  )
-);
-
-const existingFlashcards = computed(
-  () => (folder.value as Folder | null | undefined)?.flashcards || []
-);
-
-const cardsToShow = computed(() =>
-  folder.value?.flashcards?.length
-    ? folder.value.flashcards
-    : existingFlashcards.value
-);
 
 const items = [
   {
@@ -63,15 +58,6 @@ const items = [
   },
 ];
 
-function onClickPrev() {
-  activeIndex.value = Math.max(activeIndex.value - 1, 0);
-}
-function onClickNext() {
-  activeIndex.value = Math.min(activeIndex.value + 1, items.length - 1);
-}
-function onSelect(index: number) {
-  activeIndex.value = index;
-}
 
 function select(index: number) {
   activeIndex.value = index;
@@ -96,6 +82,7 @@ const handleAddToMaterial = async (selectedText: string) => {
 const saveMaterial = async (title: string, content: string, type: string) => {
   try {
     const payload = {
+      id: id as string,
       materialTitle: title,
       materialContent: content,
       materialType: type,
@@ -137,6 +124,27 @@ const saveMaterial = async (title: string, content: string, type: string) => {
     });
   }
 };
+// --- Enrollment Logic ---
+
+const currentEnrolledIds = computed(() => {
+  // Assuming index 0 is Questions, 1 is Flashcards based on `items` array
+  if (activeIndex.value === 0) return enrolledQuestionIds.value;
+  return enrolledFlashcardIds.value;
+});
+
+
+
+
+function handleEnrolled(response: EnrollCardResponse) {
+  console.log("Enrollment response:", response);
+  if (response.success && response.cardId) {
+    window.dispatchEvent(new CustomEvent("refresh-review-stats"));
+    fetchEnrollments();
+    // Determine type based on active tab
+    const type = activeIndex.value === 0 ? 'question' : 'flashcard';
+    onEnrolled(response, type);
+  }
+}
 </script>
 
 
@@ -198,6 +206,9 @@ const saveMaterial = async (title: string, content: string, type: string) => {
                       <icon name="i-lucide-loader" class="w-4 h-4 animate-spin" />
                     </div>
                     Materials
+                    <icon name="i-lucide-chevrons-up-down" :size="UI_CONFIG.ICON_SIZE"
+                      class=" text-muted dark:text-neutral" />
+
                   </div>
                   <template #content>
                     <MaterialsList :folder-id="`${id as string}`" @removed="() => { }"
@@ -208,12 +219,11 @@ const saveMaterial = async (title: string, content: string, type: string) => {
 
               <ui-card class="flex grow-0 shrink-0 basis-3/4 min-h-0"
                 content-classes=" basis-full overflow-y-hidden! flex flex-col" variant="ghost" size="xs">
-                <!-- <template #header>
-                  Study Tools
-                </template> -->
                 <template #default>
                   <ui-tabs v-model="activeIndex" :items="items" @select="select" direction="row" />
-                  <component :is="items[activeIndex]!.component" :materialsLength="folder.materials?.length" />
+                  <component :is="items[activeIndex]!.component" :materialsLength="folder.materials?.length"
+                    :isEnrollingLoading="enrollmentLoading" :enrolled-ids="currentEnrolledIds"
+                    @enrolled="handleEnrolled" />
                 </template>
               </ui-card>
             </template>

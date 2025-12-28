@@ -11,11 +11,14 @@ export default defineNitroPlugin((app) => {
 
     // Always normalize to consistent format
     const normalized = normalizeError(err);
+    console.log("Normalized Error:", normalized);
 
     try {
       event.node.res.statusCode = normalized.error.statusCode;
       event.node.res.setHeader("Content-Type", "application/json");
       event.node.res.end(JSON.stringify(normalized));
+
+
     } catch {
       // swallow
     }

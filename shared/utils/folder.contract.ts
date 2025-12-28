@@ -62,15 +62,14 @@ export type Folder = z.infer<typeof FolderSchema>;
 export const CreateFolderDTO = z.object({
   title: z.preprocess(trim, z.string().min(1)),
   description: z.preprocess(trim, z.string()).optional(),
-  llmModel: LLMEnum.optional(), // server defaults to 'gpt-3.5'
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 export type CreateFolderDTO = z.infer<typeof CreateFolderDTO>;
 
 export const UpdateFolderDTO = z.object({
+  id: z.string(),
   title: z.preprocess(trim, z.string()).optional(),
   description: z.preprocess(trim, z.string()).optional(),
-  llmModel: LLMEnum.optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   rawText: z.preprocess(trim, z.string()).optional(), // Deprecated, use materials instead
   order: z.number().optional(),

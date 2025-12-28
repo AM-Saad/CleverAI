@@ -101,66 +101,6 @@ const currentMaterial = computed(() => {
   return materials.value.find((m) => m.id === fullscreen.fullscreenId.value) ?? null;
 });
 
-// Check enrollment status when materials are available
-watch(
-  materials,
-  async (mats) => {
-    if (mats && mats.length > 0) {
-      await checkEnrollmentStatus();
-    }
-  },
-  { immediate: true }
-);
-
-async function checkEnrollmentStatus() {
-  const materialIds = materials.value.map((m) => m.id);
-  if (materialIds.length === 0) return;
-
-  try {
-    const { $api } = useNuxtApp();
-    const result = await $api.review.getEnrollmentStatus(
-      materialIds,
-      "material"
-    );
-
-    if (
-      result &&
-      result.success &&
-      result.data &&
-      result.data.enrollments &&
-      typeof result.data.enrollments === "object"
-    ) {
-      // Update enrolled materials Set
-      enrolledMaterials.value.clear();
-      Object.entries(result.data.enrollments).forEach(
-        ([materialId, isEnrolled]) => {
-          if (isEnrolled) {
-            enrolledMaterials.value.add(materialId);
-          }
-        }
-      );
-    } else {
-      const errorMessage =
-        result && !result.success && "error" in result
-          ? result.error?.message
-          : "Unknown error";
-      console.error("Failed to check enrollment status:", errorMessage);
-    }
-  } catch (error) {
-    console.error("Failed to check enrollment status:", error);
-  }
-}
-
-function handleMaterialEnrolled(response: EnrollCardResponse) {
-  if (response.success) {
-    // Refresh enrollment status to be sure
-    checkEnrollmentStatus();
-  }
-}
-
-function handleEnrollError(error: string) {
-  emit("error", error);
-}
 
 // Handle generation events
 function handleGenerated(result: { type: GenerationType; savedCount?: number }) {

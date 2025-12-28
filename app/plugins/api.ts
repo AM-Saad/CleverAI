@@ -43,31 +43,26 @@ export default defineNuxtPlugin((_nuxtApp) => {
   console.log("🌐 [API PLUGIN] Initializing API plugin");
 
   const baseURL = useRuntimeConfig().public.APP_BASE_URL;
-  console.log("🌐 [API PLUGIN] Base URL:", baseURL);
+
+  const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined;
 
   const apiFetcher = $fetch.create({
     baseURL: baseURL,
+    credentials: "include",
+    headers: headers as HeadersInit,
     onRequest({ options }) {
-      console.log("🌐 [API PLUGIN] Making request:", options);
-      const token = useCookie("auth_token").value;
-      if (token) {
-        if (!options.headers) options.headers = new Headers();
-        (options.headers as Headers).set("Authorization", `Bearer ${token}`);
-        console.log("🌐 [API PLUGIN] Added auth token to request");
-      } else {
-        console.log("🌐 [API PLUGIN] No auth token found");
-      }
+      // console.log("🌐 [API PLUGIN] Making request:", options.method);
+      // We rely on httpOnly cookies. Removing useAuth() call here to prevent potential reactivity/context loops.
     },
     onRequestError({ error }) {
       console.error("🌐 [API PLUGIN] Request error:", error);
     },
     onResponseError({ response }) {
-      console.error("🌐 [API PLUGIN] Response error:", response);
+      // console.error("🌐 [API PLUGIN] Response error:", response);
     },
   });
 
   const apiServiceFactory = new ServiceFactory(apiFetcher as $Fetch);
-  console.log("🌐 [API PLUGIN] Service factory created");
 
   const services = {
     folders: apiServiceFactory.create("folders"),

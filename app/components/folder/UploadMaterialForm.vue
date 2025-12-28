@@ -30,12 +30,10 @@ const route = useRoute();
 const { data } = useAuth();
 
 const id = route.params.id as string;
-const { updateFolder, updating, typedError } = useUpdateFolder(id);
 const { createMaterial, } = useMaterialsStore(id);
 const { handleOfflineSubmit } = useOffline();
 const items = ref(["text", "video", "audio", "pdf", "url", "document"]);
 
-const toast = useToast();
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   event.preventDefault();
@@ -125,7 +123,7 @@ const saveMaterial = async (title: string, content: string, type: "text" | "vide
           </UFormField>
 
           <div class="flex items-center gap-2 mt-3">
-            <UButton type="submit" size="sm" :loading="updating">Submit</UButton>
+            <UButton type="submit" size="sm">Submit</UButton>
             <UButton color="neutral" size="sm" variant="soft" @click="emit('close')">Cancel</UButton>
           </div>
         </UForm>

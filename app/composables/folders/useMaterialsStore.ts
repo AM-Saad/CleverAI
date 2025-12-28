@@ -1,7 +1,5 @@
 import type { APIError } from "@/services/FetchFactory";
 import type Result from "@/types/Result";
-import { DB_CONFIG } from "~/utils/constants/pwa";
-import { queueNoteChange, openUnifiedDB } from "~/utils/idb";
 
 export interface MaterialState extends Material {
   // Local state tracking
@@ -47,44 +45,7 @@ export function useMaterialsStore(folderId: string): MaterialStore {
   const { $api } = useNuxtApp();
   const toast = useToast();
   const { handleOfflineSubmit } = useOffline();
-  // Proactively trigger notes sync on reconnect when pending changes exist (register once)
-  // if (process.client && !notesOnlineListenerRegistered) {
-  //   try {
-  //     let onlineSyncScheduled = false
-  //     window.addEventListener('online', async () => {
-  //       if (onlineSyncScheduled) return
-  //       onlineSyncScheduled = true
-  //       try {
-  //         // slight delay to allow potential Background Sync event to fire first
-  //         setTimeout(async () => {
-  //           try {
-  //             const db = await openUnifiedDB()
-  //             if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_MATERIALS)) return
-  //             const pending = await getAllRecords<any>(db, DB_CONFIG.STORES.PENDING_MATERIALS as any)
-  //             if (!pending.length) return
-  //             if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-  //               navigator.serviceWorker.controller.postMessage({ type: 'SYNC_MATERIALS' })
-  //             }
-  //           } catch { /* ignore */ }
-  //           finally { onlineSyncScheduled = false }
-  //         }, 350)
-  //       } catch { onlineSyncScheduled = false }
-  //     })
-  //     notesOnlineListenerRegistered = true
-  //   } catch { /* ignore */ }
-  // }
-  // const registerMaterialsSync = async () => {
-  //   try {
-  //     if ('serviceWorker' in navigator) {
-  //       const reg = await navigator.serviceWorker.getRegistration()
-  //       // Background Sync may not be typed; cast defensively
-  //       const syncReg = (reg as unknown as { sync?: { register(tag: string): Promise<void> } })?.sync
-  //       if (syncReg) await syncReg.register('materials-sync')
-  //     }
-  //   } catch {
-  //     /* ignore */
-  //   }
-  // }
+
 
   // Local reactive state
   const materials = ref<Map<string, MaterialState>>(new Map());

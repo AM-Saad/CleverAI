@@ -80,3 +80,13 @@ export const ChangePasswordResponseSchema = z.object({
   message: z.string(),
 });
 export type ChangePasswordResponse = z.infer<typeof ChangePasswordResponseSchema>;
+
+// User progress schema
+export const UserProgressSchema = z.object({
+  level: z.number(),
+  stage: z.string(),
+  xpIntoLevel: z.number(),
+  xpForNextLevel: z.number(),
+  progressPercent: z.number(),
+});
+export type UserProgress = z.infer<typeof UserProgressSchema>;

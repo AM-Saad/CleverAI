@@ -179,4 +179,13 @@ const cardClasses = computed(() => {
   // }
   return "";
 });
+
+onMounted(() => {
+  window.addEventListener("refresh-review-stats", refresh);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("refresh-review-stats", refresh);
+});
+
 </script>

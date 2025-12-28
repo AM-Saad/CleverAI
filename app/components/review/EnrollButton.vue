@@ -23,7 +23,6 @@
 </template>
 
 <script setup lang="ts">
-import type { EnrollCardResponse } from "~/shared/review.contract";
 
 interface Props {
   materialId?: string;

@@ -53,6 +53,8 @@ export async function scheduleCardDueNotification(
       },
     });
 
+    console.log(`[PID:${process.pid}] [Scheduler] Notification created:`, notification.id);
+
     return notification;
   } catch (error) {
     console.error(

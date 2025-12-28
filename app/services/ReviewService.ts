@@ -75,11 +75,17 @@ export class ReviewService extends FetchFactory {
    * Check enrollment status for multiple resources
    */
   async getEnrollmentStatus(
-    resourceIds: string[],
-    resourceType?: "material" | "flashcard" | "question"
+    resourceIds?: string[],
+    resourceType?: "material" | "flashcard" | "question",
+    folderId?: string
   ): Promise<Result<EnrollmentStatusResponse>> {
     const params = new URLSearchParams();
-    params.append("resourceIds", resourceIds.join(","));
+    if (resourceIds && resourceIds.length > 0) {
+      params.append("resourceIds", resourceIds.join(","));
+    }
+    if (folderId) {
+      params.append("folderId", folderId);
+    }
     if (resourceType) params.append("resourceType", resourceType);
 
     const queryString = params.toString();

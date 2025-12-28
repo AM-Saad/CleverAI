@@ -10,20 +10,10 @@ export default defineEventHandler(async (event) => {
   if (!parsed.success) {
     throw Errors.badRequest("Invalid request body", parsed.error.issues);
   }
-  const { llmModel, metadata } = parsed.data;
+  const { metadata } = parsed.data;
   const title = parsed.data.title.trim();
   const description = parsed.data.description?.trim() ?? null;
 
-  if (
-    llmModel &&
-    !LLM_MODELS.includes(llmModel as (typeof LLM_MODELS)[number])
-  ) {
-    throw Errors.badRequest("Invalid LLM model");
-  }
-  const resolvedModel: (typeof LLM_MODELS)[number] | "gpt-3.5" =
-    llmModel && LLM_MODELS.includes(llmModel as (typeof LLM_MODELS)[number])
-      ? (llmModel as (typeof LLM_MODELS)[number])
-      : "gpt-3.5";
 
   const maxOrder = await prisma.folder.aggregate({
     _max: { order: true },
@@ -35,7 +25,6 @@ export default defineEventHandler(async (event) => {
     data: {
       title,
       description: description ?? null,
-      llmModel: resolvedModel,
       metadata: metadata ? JSON.parse(JSON.stringify(metadata)) : null,
       order: nextOrder,
       user: { connect: { id: user.id } },

@@ -1,5 +1,5 @@
 import { z } from "zod";
-
+import type { Folder, CreateFolderDTO, UpdateFolderDTO } from "@@/shared/utils/folder.contract";
 const FolderResponse = z
   .union([FolderSchema, z.object({ data: FolderSchema })])
   .transform((x) => ("id" in x ? x : x.data));
@@ -26,16 +26,18 @@ export function useFolders() {
   };
 }
 
-export function useCreateFolder() {
+export function useCreateFolder(refreshFolders?: () => void) {
   const { $api } = useNuxtApp();
-
   // Use centralized operation handling - all errors constructed by FetchFactory
   const createOperation = useOperation<Folder>();
 
-  const createFolder = async (payload: typeof CreateFolderDTO) => {
-    return await createOperation.execute(async () => {
+  const createFolder = async (payload: CreateFolderDTO) => {
+    const result = await createOperation.execute(async () => {
       return await $api.folders.create(payload);
     });
+    console.log("createFolder", result);
+    if (refreshFolders) refreshFolders();
+    return result;
   };
 
   return {
@@ -43,12 +45,12 @@ export function useCreateFolder() {
     creating: createOperation.pending,
     error: createOperation.error,
     typedError: createOperation.typedError,
+    reset: createOperation.reset,
   };
 }
 
 export const useFolder = (id: string) => {
   const { $api } = useNuxtApp();
-
   const { data, pending, error, refresh } = useDataFetch<Folder>(
     `folder-${id}`,
     () => $api.folders.getFolder(id, FolderResponseSchema)
@@ -62,16 +64,18 @@ export const useFolder = (id: string) => {
   };
 };
 
-export function useDeleteFolder(id: string) {
+export function useDeleteFolder(refreshFolders: () => void) {
   const { $api } = useNuxtApp();
-
   // Use centralized operation handling - all errors constructed by FetchFactory
-  const deleteOperation = useOperation<{ success: boolean }>();
+  const deleteOperation = useOperation();
 
-  const deleteFolder = async () => {
-    return await deleteOperation.execute(async () => {
+  const deleteFolder = async (id: string) => {
+    const result = await deleteOperation.execute(async () => {
       return await $api.folders.delete(id);
     });
+    console.log("deleteFolder", result);
+    refreshFolders();
+    return result;
   };
 
   return {
@@ -83,17 +87,16 @@ export function useDeleteFolder(id: string) {
   };
 }
 
-export function useUpdateFolder(id: string) {
+export function useUpdateFolder() {
   const { $api } = useNuxtApp();
-
   // Use centralized operation handling - all errors constructed by FetchFactory
   const updateOperation = useOperation<Folder>();
 
   const updateFolder = async (
-    payload: typeof UpdateFolderDTO | Record<string, unknown>
+    payload: UpdateFolderDTO
   ) => {
     return await updateOperation.execute(async () => {
-      return await $api.folders.update(id, payload);
+      return await $api.folders.update(payload.id, payload);
     });
   };
 
@@ -102,5 +105,6 @@ export function useUpdateFolder(id: string) {
     updating: updateOperation.pending,
     error: updateOperation.error,
     typedError: updateOperation.typedError,
+    reset: updateOperation.reset,
   };
 }

@@ -238,8 +238,26 @@ export async function checkDueCards() {
           })),
         };
 
+
+        // Supersede pending individual notifications
+        // If we represent the "aggregated" state, individual reminders are redundant.
+        const superseded = await prisma.scheduledNotification.deleteMany({
+          where: {
+            userId: userPref.userId,
+            type: "CARD_DUE",
+            sent: false,
+            cardId: { not: null }, // Only target individual card notifications
+          },
+        });
+
+        if (superseded.count > 0) {
+          console.log(
+            `🧹 Superseding ${superseded.count} pending individual notifications for user ${userPref.userId}`
+          );
+        }
+
         // Create scheduled notification record
-        await prisma.scheduledNotification.create({
+        const created = await prisma.scheduledNotification.create({
           data: {
             userId: userPref.userId,
             type: "CARD_DUE",
@@ -248,6 +266,7 @@ export async function checkDueCards() {
             metadata: notificationData as object,
           },
         });
+        console.log(`[PID:${process.pid}] Notification created:`, created.id, notificationData);
 
         // Send the actual push notification
         const notificationSent = await sendCardDueNotification(
