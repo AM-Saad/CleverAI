@@ -6,13 +6,6 @@ import { useResponsive } from "~/composables/ui/useResponsive";
 import type { EnrollCardResponse } from "~/shared/utils/review.contract";
 
 
-const FlashCards = defineAsyncComponent(
-  () => import("~/components/folder/FlashCards.vue")
-);
-const Questions = defineAsyncComponent(
-  () => import("~/components/folder/Questions.vue")
-);
-
 
 const LearningHubModal = defineAsyncComponent(
   () => import("~/components/folder/LearningHubModal.vue")
@@ -28,7 +21,7 @@ const LearningHubContent = defineAsyncComponent(
 //   () => import("~/components/folder/NotesSection.vue"),
 // );
 const FolderUploadMaterialForm = defineAsyncComponent(
-  () => import("~/components/folder/UploadMaterialForm.vue")
+  () => import("~/components/materials/UploadMaterialForm.vue")
 );
 
 const route = useRoute();
@@ -55,6 +48,7 @@ const {
 const { handleOfflineSubmit } = useOffline();
 
 function toggleUploadForm() {
+  console.log("toggleUploadForm");
   showUpload.value = !showUpload.value;
 }
 
@@ -194,7 +188,7 @@ onBeforeUnmount(() => {
       <FloatingLearningHubButton :visible="isMobile" @click="handleOpenLearningHub" />
 
       <!-- Upload Materials Dialog -->
-      <FolderUploadMaterialForm :show="showUpload" @close="toggleUploadForm" />
+      <FolderUploadMaterialForm :show="showUpload" @close="showUpload = false" />
     </template>
   </shared-page-wrapper>
 </template>

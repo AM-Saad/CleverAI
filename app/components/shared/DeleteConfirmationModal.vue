@@ -57,14 +57,14 @@ function handleClose() {
 
     <template #footer>
       <div class="flex gap-3 justify-end pt-2">
-        <UButton variant="ghost" color="neutral" @click="handleClose" :disabled="loading">
+        <u-button variant="soft" color="neutral" @click="handleClose" :disabled="loading">
           Cancel
-        </UButton>
-        <UButton :color="isDestructive ? 'error' : 'primary'" @click="$emit('confirm')" :loading="loading"
+        </u-button>
+        <u-button :color="isDestructive ? 'error' : 'primary'" @click="$emit('confirm')" :loading="loading"
           :disabled="loading">
-          <Icon v-if="isDestructive" name="i-lucide-trash-2" class="w-4 h-4 mr-1" />
+          <icon v-if="isDestructive" name="i-lucide-trash-2" class="w-4 h-4 mr-1" />
           {{ confirmText }}
-        </UButton>
+        </u-button>
       </div>
     </template>
   </shared-dialog-modal>

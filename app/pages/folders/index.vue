@@ -75,9 +75,9 @@
         </u-context-menu>
       </ul>
     </div>
-    <modals-upsert-folder-form :show="show" @cancel="cancelUpsertModal" @created="refresh()" :folder="editFolder" />
+    <folder-upsert-folder-form :show="show" @cancel="cancelUpsertModal" @created="refresh()" :folder="editFolder" />
     <div class="mt-4">
-      <UButton @click="show = true">Create Folder</UButton>
+      <u-button @click="show = true">Create Folder</u-button>
     </div>
     <shared-delete-confirmation-modal :show="showDeleteConfirm" title="Delete Folder" @close="showDeleteConfirm = false"
       :loading="deletingFolder" @confirm="confirmDeleteFolder">

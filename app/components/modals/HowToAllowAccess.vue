@@ -26,7 +26,7 @@ const gotit = (): void => {
 
 <template>
   <Teleport to="body">
-    <UiDialogModal :show="show" @close="gotit">
+    <shared-dialog-modal :show="show" @close="gotit">
       <template #header>
         <div class="title text-xl font-bold">
           Get {{ needGuide }} Permission
@@ -38,23 +38,11 @@ const gotit = (): void => {
       </template>
 
       <template #body>
-        <video
-          v-if="needGuide === 'Microphone'"
-          class="m-auto block w-11/12 rounded shadow"
-          :src="allowMicVideo"
-          muted
-          autoplay
-          loop
-        />
-        <video
-          v-if="needGuide === 'Webcam'"
-          class="m-auto block w-11/12 rounded shadow"
-          :src="allowCamVideo"
-          muted
-          autoplay
-          loop
-        />
+        <video v-if="needGuide === 'Microphone'" class="m-auto block w-11/12 rounded shadow" :src="allowMicVideo" muted
+          autoplay loop />
+        <video v-if="needGuide === 'Webcam'" class="m-auto block w-11/12 rounded shadow" :src="allowCamVideo" muted
+          autoplay loop />
       </template>
-    </UiDialogModal>
+    </shared-dialog-modal>
   </Teleport>
 </template>

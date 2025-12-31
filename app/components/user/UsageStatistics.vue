@@ -46,7 +46,7 @@
               <label class="mr-1 font-medium">To:</label>
               <u-input type="date" v-model="endDate" />
             </fieldset>
-            <u-button :disabled="isDateRangeInvalid" @click="fetchLlmUsage" size="md" variant="subtle">Apply</u-button>
+            <u-button :disabled="isDateRangeInvalid" @click="fetchLlmUsage" variant="subtle">Apply</u-button>
             <p v-if="isDateRangeInvalid" class="text-sm text-red-500">
               From date must be on or before To date
             </p>

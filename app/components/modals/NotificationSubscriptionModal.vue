@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <!-- use the modal component, pass in the prop -->
-    <UiDialogModal :show="showModal">
+    <shared-dialog-modal :show="showModal">
       <template #header>
         <div>
           <div
@@ -120,7 +120,7 @@
           </div>
         </div>
       </template>
-    </UiDialogModal>
+    </shared-dialog-modal>
   </Teleport>
 </template>
 

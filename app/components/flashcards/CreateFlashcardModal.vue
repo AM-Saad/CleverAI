@@ -118,31 +118,31 @@ function handleClose() {
     </template>
 
     <template #body>
-      <UForm :schema="schema" :state="state" class="space-y-2" @submit="handleSubmit">
+      <u-form :schema="schema" :state="state" class="space-y-2" @submit="handleSubmit">
         <!-- Front (Question) -->
-        <UFormField label="" name="front">
-          <UTextarea v-model="state.front" placeholder="Enter the question or prompt..." :rows="4" autoresize
+        <u-form-field label="" name="front">
+          <u-textarea v-model="state.front" placeholder="Enter the question or prompt..." :rows="4" autoresize
             :disabled="isLoading" class="w-full" />
-        </UFormField>
+        </u-form-field>
 
         <!-- Back (Answer) -->
-        <UFormField label="" name="back">
-          <UTextarea v-model="state.back" placeholder="Enter the answer or explanation..." :rows="4" autoresize
+        <u-form-field label="" name="back">
+          <u-textarea v-model="state.back" placeholder="Enter the answer or explanation..." :rows="4" autoresize
             :disabled="isLoading" class="w-full" />
-        </UFormField>
-      </UForm>
+        </u-form-field>
+      </u-form>
     </template>
 
     <template #footer>
       <div class="flex gap-3 justify-end pt-2">
-        <UButton variant="ghost" color="neutral" @click="handleClose" :disabled="isLoading">
+        <u-button variant="soft" color="neutral" @click="handleClose" :disabled="isLoading">
           Cancel
-        </UButton>
-        <UButton color="primary" @click="handleSubmit" :loading="isLoading"
+        </u-button>
+        <u-button color="primary" @click="handleSubmit" :loading="isLoading"
           :disabled="!isValid || isLoading || (isEditMode && !hasChanges)">
           <Icon :name="isEditMode ? 'i-lucide-check' : 'i-lucide-plus'" class="w-4 h-4 mr-1" />
           {{ isEditMode ? 'Save Changes' : 'Create Flashcard' }}
-        </UButton>
+        </u-button>
       </div>
     </template>
   </shared-dialog-modal>

@@ -33,7 +33,7 @@
               <span>Gender:</span>
               <span class="capitalize">{{
                 profileData?.gender || "Not specified"
-              }}</span>
+                }}</span>
             </ui-label>
           </div>
 

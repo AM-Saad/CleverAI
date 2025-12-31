@@ -94,20 +94,21 @@ onMounted(() => {
   <div class="flex flex-col h-full">
     <!-- Header with Add button -->
     <div class="flex justify-end mb-2">
-      <UButton size="xs" variant="soft" color="primary" @click="showCreateModal = true">
+      <u-button v-if="cardsToShow && cardsToShow.length > 0" size="sm" variant="subtle" color="primary"
+        @click="showCreateModal = true">
         <Icon name="i-lucide-plus" class="w-4 h-4 mr-1" />
         Add Card
-      </UButton>
+      </u-button>
     </div>
 
     <!-- Empty state -->
     <shared-empty-state v-if="!cardsToShow || cardsToShow.length === 0" title="No Flashcards"
       description="Create flashcards manually or generate them from your materials." container-class="text-xs grow">
-      <template #action>
-        <UButton size="sm" color="primary" @click="showCreateModal = true">
+      <template #actions>
+        <u-button size="sm" color="primary" @click="showCreateModal = true">
           <Icon name="i-lucide-plus" class="w-4 h-4 mr-1" />
           Create Flashcard
-        </UButton>
+        </u-button>
       </template>
     </shared-empty-state>
 
@@ -131,22 +132,22 @@ onMounted(() => {
             <div class="justify-between gap-1 bg-primary/10 rounded-full overflow-hidden">
 
               <!-- Edit button -->
-              <UButton v-if="'id' in card && card.id" size="sm" variant="ghost" @click.stop="openEditModal(card)"
+              <u-button v-if="'id' in card && card.id" size="sm" variant="ghost" @click.stop="openEditModal(card)"
                 title="Edit flashcard" :disabled="props.isEnrollingLoading">
                 <Icon name="i-lucide-pencil" class="w-3 h-3 disabled:opacity-50 disabled:cursor-not-allowed" />
-              </UButton>
+              </u-button>
               <!-- Delete button -->
-              <UButton v-if="'id' in card && card.id" size="sm" variant="ghost" color="error"
+              <u-button v-if="'id' in card && card.id" size="sm" variant="ghost" color="error"
                 @click.stop="openDeleteModal(card)" title="Delete flashcard" :disabled="props.isEnrollingLoading">
                 <Icon name="i-lucide-trash-2" class="w-3 h-3 disabled:opacity-50 disabled:cursor-not-allowed" />
-              </UButton>
+              </u-button>
             </div>
           </div>
         </template>
         <template #back>
           <ui-paragraph class="basis-3/4 overflow-auto" size="xs">{{ card.back
             }}</ui-paragraph>
-          <ReviewEnrollButton v-if="'id' in card && card.id" :resource-type="'flashcard'" :resource-id="card!.id"
+          <review-enroll-button v-if="'id' in card && card.id" :resource-type="'flashcard'" :resource-id="card!.id"
             :is-enrolled="props.enrolledIds.has(card.id)" @enrolled="handleCardEnrolled" @error="handleEnrollError" />
           <div v-else class="text-xs">Save card to enable review</div>
         </template>

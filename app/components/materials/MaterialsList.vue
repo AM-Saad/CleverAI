@@ -5,8 +5,10 @@
     <shared-server-error :loading="loading" v-model:typedError="error" />
 
     <ul v-if="!loading && materials.length > 0" class="">
-      <ui-card v-for="m in materials" :key="m.id" tag="li" variant="ghost" size="sm" shadow="none" :hover="'lift'"
-        class="cursor-pointer group my-2 border-b border-muted rounded-none!" @click="() => fullscreen.open(m.id)">
+      <ui-card v-for="(m, idx) in materials" :key="m.id" tag="li" variant="ghost" size="sm" shadow="none"
+        :hover="'scale'" :class="['cursor-pointer group my-1 rounded-none!',
+          (idx !== materials.length - 1 ? 'border-b border-muted' : ''),
+        ]" @click="() => fullscreen.open(m.id)">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2 flex-1 min-w-0">
             <ui-subtitle weight="normal" size="xs" class="truncate">{{ m.title }}</ui-subtitle>
@@ -25,7 +27,7 @@
       </ui-card>
     </ul>
 
-    <ui-paragraph v-if="!loading && materials.length === 0 && !error" color="muted">
+    <ui-paragraph class="mt-2" v-if="!loading && materials.length === 0 && !error" color="muted">
       No materials in this folder.
     </ui-paragraph>
 

@@ -2,7 +2,7 @@
   <ui-card :class="[
     'transition-all duration-200',
     cardClasses,
-  ]" :variant="minimal ? 'ghost' : 'default'" :size="minimal ? 'xs' : 'sm'">
+  ]" :variant="minimal ? 'ghost' : 'default'" :size="minimal ? 'sm' : 'md'">
     <!-- Loading State -->
     <template #header v-if="!minimal">
       <div class="flex items-center justify-between w-full">
@@ -31,17 +31,17 @@
     <div v-if="!isLoading && !error && !isEmpty"
       :class="`text-center flex flex-col items-center md:flex-row gap-3 md:gap-0 ${minimal ? '' : ''}`">
       <!-- Header with status message -->
-      <div class="flex items-center justify-between md:justify-start gap-2 w-full">
+      <div class="flex items-center justify-between md:justify-start gap-2 w-full flex-wrap">
         <div class="flex items-center gap-2">
           <div :class="[minimal ? 'w-2 h-2' : 'w-3 h-3', 'rounded-full', urgencyIndicatorClass]" />
-          <ui-paragraph size="xs" color="neutral">
+          <ui-paragraph size="base" color="neutral">
             {{ statusMessage }}
           </ui-paragraph>
         </div>
 
         <!-- Action Button -->
         <div v-if="showAction && hasDueCards">
-          <u-button :to="reviewLink" color="primary" size="xs">
+          <u-button :to="reviewLink" color="primary" size="sm">
             <Icon name="heroicons:play" class="w-4 h-4" />
             Start Review
             <span v-if="stats?.due" class=" opacity-75">({{ stats.due }})</span>

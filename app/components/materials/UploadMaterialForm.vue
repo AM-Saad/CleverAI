@@ -91,43 +91,45 @@ const saveMaterial = async (title: string, content: string, type: "text" | "vide
 
 <template>
   <Teleport to="body">
-    <UiDialogModal :show="props.show" @close="emit('close')">
+    <shared-dialog-modal :show="props.show" @close="emit('close')">
       <template #header>
         <div class="flex flex-col gap-1">
-          <UiSubtitle class="flex items-center gap-2">
+          <ui-subtitle class="flex items-center gap-2">
             <icon name="i-heroicons-document-plus" class="" />
             Upload Material
-          </UiSubtitle>
-          <UiParagraph size="sm" color="muted">
+          </ui-subtitle>
+          <ui-paragraph size="sm" color="muted">
             Upload your material files here.
-          </UiParagraph>
+          </ui-paragraph>
         </div>
       </template>
 
       <template #body>
-        <UForm :schema="schema" :state="state" class="space-y-2" @submit="onSubmit">
-          <UFormField label="Material Title" name="materialTitle">
-            <UInput v-model="state.materialTitle" placeholder="Enter material title" :ui="{
+        <u-form :schema="schema" :state="state" class="space-y-2" @submit="onSubmit">
+          <u-form-field label="Material Title" name="materialTitle">
+            <u-input v-model="state.materialTitle" placeholder="Enter material title" :ui="{
               root: 'w-full',
             }" />
-          </UFormField>
+          </u-form-field>
 
-          <UFormField label="Material Type" name="materialType">
-            <USelectMenu v-model="state.materialType" :items="items" :ui="{
+          <u-form-field label="Material Type" name="materialType">
+            <u-select-menu v-model="state.materialType" :items="items" :ui="{
               base: 'w-full',
             }" />
-          </UFormField>
+          </u-form-field>
 
-          <UFormField label="Material Content" name="materialContent">
-            <UiTextArea v-model="state.materialContent" placeholder="Enter your material content here..." />
-          </UFormField>
+          <u-form-field label="Material Content" name="materialContent">
+            <u-textarea v-model="state.materialContent" placeholder="Enter your material content here..." :ui="{
+              root: 'w-full',
+            }" />
+          </u-form-field>
 
-          <div class="flex items-center gap-2 mt-3">
-            <UButton type="submit" size="sm">Submit</UButton>
-            <UButton color="neutral" size="sm" variant="soft" @click="emit('close')">Cancel</UButton>
+          <div class="flex gap-3 justify-end pt-2">
+            <u-button color="neutral" variant="soft" @click="emit('close')">Cancel</u-button>
+            <u-button type="submit">Submit</u-button>
           </div>
-        </UForm>
+        </u-form>
       </template>
-    </UiDialogModal>
+    </shared-dialog-modal>
   </Teleport>
 </template>

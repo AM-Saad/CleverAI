@@ -90,33 +90,38 @@ watch(
 <template>
   <Teleport to="body">
     <!-- use the modal component, pass in the prop -->
-    <UiDialogModal :show="props.show" @close="closeModel">
+    <shared-dialog-modal :show="props.show" @close="closeModel">
       <template #header>
         <div class="flex flex-col gap-1">
-          <UiSubtitle class="flex items-center gap-2">
+          <ui-subtitle class="flex items-center gap-2">
             <icon name="uil:folder-network" class="" />
             {{ props.folder ? "Edit" : "Create" }} Folder
-          </UiSubtitle>
-          <UiParagraph v-if="!props.folder" size="sm" color="muted">Folder is a container for organizing your content.
-          </UiParagraph>
+          </ui-subtitle>
+          <ui-paragraph v-if="!props.folder" size="sm" color="muted">Folder is a container for organizing your content.
+          </ui-paragraph>
         </div>
       </template>
       <template #body>
         <shared-error-message :error="typedError || updateTypedError" />
-        <UForm :schema="CreateFolderDTO" :state="state" class="space-y-2" @submit="onSubmit">
-          <UFormField label="Title" name="title" required>
-            <UInput v-model="state.title" autofocus class="w-full" />
-          </UFormField>
+        <u-form :schema="CreateFolderDTO" :state="state" class="space-y-2" @submit="onSubmit">
+          <u-form-field label="Title" name="title" required>
+            <u-input v-model="state.title" autofocus class="w-full" />
+          </u-form-field>
 
-          <UFormField label="Description" name="description">
-            <UInput v-model="state.description" class="w-full" />
-          </UFormField>
+          <u-form-field label="Description" name="description">
+            <u-input v-model="state.description" class="w-full" />
+          </u-form-field>
+          <div class="flex gap-3 justify-end pt-2">
+            <u-button variant="soft" color="neutral" @click="closeModel" :disabled="creating || updating">
+              Cancel
+            </u-button>
+            <u-button type="submit" :loading="creating || updating" :disabled="!canSubmit">
+              {{ props.folder ? "Update" : "Create" }}
+            </u-button>
 
-          <UButton type="submit" :loading="creating || updating" :disabled="!canSubmit">
-            {{ props.folder ? "Update" : "Create" }}
-          </UButton>
-        </UForm>
+          </div>
+        </u-form>
       </template>
-    </UiDialogModal>
+    </shared-dialog-modal>
   </Teleport>
 </template>

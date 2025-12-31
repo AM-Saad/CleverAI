@@ -88,49 +88,49 @@ const closeModal = (): void => {
 
 <template>
   <Teleport to="body">
-    <UiDialogModal :show="props.show" @close="closeModal">
+    <shared-dialog-modal :show="props.show" @close="closeModal">
       <template #header>
         <div class="flex flex-col gap-1">
-          <UiSubtitle class="flex items-center gap-2">
+          <ui-subtitle class="flex items-center gap-2">
             <icon name="mdi:account-edit" />
             Update Profile
-          </UiSubtitle>
-          <UiParagraph size="sm" color="muted">
+          </ui-subtitle>
+          <ui-paragraph size="sm" color="muted">
             Update your profile information
-          </UiParagraph>
+          </ui-paragraph>
         </div>
       </template>
 
       <template #body>
-        <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
-          <UFormField label="Name" name="name" required>
-            <UInput v-model="state.name" placeholder="Your name" autofocus class="w-full" />
-          </UFormField>
+        <u-form :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+          <u-form-field label="Name" name="name" required>
+            <u-input v-model="state.name" placeholder="Your name" autofocus class="w-full" />
+          </u-form-field>
 
-          <UFormField label="Phone" name="phone" required>
-            <UInput v-model="state.phone" type="tel" placeholder="Your phone number" class="w-full" />
+          <u-form-field label="Phone" name="phone" required>
+            <u-input v-model="state.phone" type="tel" placeholder="Your phone number" class="w-full" />
             <template #hint>
               <p class="text-xs text-gray-500 dark:text-gray-400">
                 Minimum 10 characters
               </p>
             </template>
-          </UFormField>
+          </u-form-field>
 
-          <UFormField label="Gender" name="gender">
-            <USelectMenu v-model="state.gender" :options="genderOptions" option-attribute="label"
+          <u-form-field label="Gender" name="gender">
+            <u-select-menu v-model="state.gender" :options="genderOptions" option-attribute="label"
               value-attribute="value" color="neutral" variant="subtle" class="w-full" />
-          </UFormField>
+          </u-form-field>
 
           <div class="flex justify-end gap-3 pt-2">
-            <UButton variant="outline" @click="closeModal" type="button">
+            <u-button variant="soft" color="neutral" @click="closeModal" type="button">
               Cancel
-            </UButton>
-            <UButton type="submit" :disabled="!canSubmit">
+            </u-button>
+            <u-button type="submit" :disabled="!canSubmit">
               Update Profile
-            </UButton>
+            </u-button>
           </div>
-        </UForm>
+        </u-form>
       </template>
-    </UiDialogModal>
+    </shared-dialog-modal>
   </Teleport>
 </template>

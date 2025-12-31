@@ -11,7 +11,7 @@
       enter-to-class="transform opacity-100 scale-100" leave-active-class="transition ease-in duration-75"
       leave-from-class="transform opacity-100 scale-100" leave-to-class="transform opacity-0 scale-95">
       <MenuItems
-        class="bg-light dark:bg-dark dark:border border-muted absolute right-0 z-10 w-48 origin-top-right overflow-hidden rounded-xl shadow-lg dark:ring-white ring-opacity-5 focus:outline-none">
+        class="bg-light dark:bg-dark dark:border border-muted absolute right-0 z-20 w-48 origin-top-right overflow-hidden rounded-xl shadow-lg dark:ring-white ring-opacity-5 focus:outline-none">
         <div class="overflow-hidden">
           <MenuItem v-slot="{ active }">
           <router-link to="/user/profile" tabindex="1" :class="[

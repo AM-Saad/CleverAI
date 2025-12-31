@@ -44,21 +44,21 @@ const closeModal = (): void => {
 
 <template>
   <Teleport to="body">
-    <UiDialogModal :show="props.show" @close="closeModal">
+    <shared-dialog-modal :show="props.show" @close="closeModal">
       <template #header>
         <div class="flex flex-col gap-1">
-          <UiSubtitle class="flex items-center gap-2">
+          <ui-subtitle class="flex items-center gap-2">
             <icon name="mdi:account-remove" />
             Delete Account
-          </UiSubtitle>
-          <UiParagraph size="sm" color="muted">
+          </ui-subtitle>
+          <ui-paragraph size="sm" color="muted">
             This action will remove all your data
-          </UiParagraph>
+          </ui-paragraph>
         </div>
       </template>
 
       <template #body>
-        <UForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+        <u-form :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
           <!-- Warning Banner -->
           <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4">
             <div class="flex">
@@ -75,16 +75,16 @@ const closeModal = (): void => {
             </div>
           </div>
 
-          <UFormField name="confirmationText" required>
+          <u-form-field name="confirmationText" required>
             <template #label>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Type <span class="font-bold text-red-600 dark:text-red-400">DELETE</span> to confirm
               </label>
             </template>
-            <UInput v-model="state.confirmationText" placeholder="DELETE" :ui="{
+            <u-input v-model="state.confirmationText" placeholder="DELETE" :ui="{
               root: 'w-full',
             }" autofocus />
-          </UFormField>
+          </u-form-field>
 
           <div class="flex items-start space-x-3">
             <input v-model="state.permanentDelete" type="checkbox" id="permanent-delete"
@@ -107,15 +107,15 @@ const closeModal = (): void => {
           </div>
 
           <div class="flex justify-end gap-3 pt-2">
-            <UButton variant="outline" @click="closeModal" type="button">
+            <u-button variant="soft" color="neutral" @click="closeModal" type="button">
               Cancel
-            </UButton>
-            <UButton color="error" type="submit" :disabled="!canSubmit">
+            </u-button>
+            <u-button color="error" type="submit" :disabled="!canSubmit">
               {{ state.permanentDelete ? "Delete Permanently" : "Schedule Deletion" }}
-            </UButton>
+            </u-button>
           </div>
-        </UForm>
+        </u-form>
       </template>
-    </UiDialogModal>
+    </shared-dialog-modal>
   </Teleport>
 </template>

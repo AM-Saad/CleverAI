@@ -25,7 +25,7 @@ const gotit = (): void => {
 <template>
   <Teleport to="body">
     <!-- use the modal component, pass in the prop -->
-    <UiDialogModal :show="show" @close="gotit">
+    <shared-dialog-modal :show="show" @close="gotit">
       <template #header>
         <div class="flex flex-col">
           <div class="title text-xl font-bold">Check "Share Audio" Box</div>
@@ -38,22 +38,15 @@ const gotit = (): void => {
         <video :src="shareSoundVideo" muted autoplay loop />
         <div class="my-2 flex justify-between gap-3">
           <div class="flex items-center gap-2">
-            <input
-              id="dontShow"
-              type="checkbox"
-              name="dontshow"
-              @click="dontShow = !dontShow"
-            />
-            <label for="dontShow" class="dark:text-gray-400"
-              >Don't Show Again</label
-            >
+            <input id="dontShow" type="checkbox" name="dontshow" @click="dontShow = !dontShow" />
+            <label for="dontShow" class="dark:text-gray-400">Don't Show Again</label>
           </div>
         </div>
       </template>
       <template #footer>
         <button class="btn btn-small bg-theme" @click="gotit">Got it</button>
       </template>
-    </UiDialogModal>
+    </shared-dialog-modal>
   </Teleport>
 </template>
 

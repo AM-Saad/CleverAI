@@ -55,7 +55,7 @@ onUnmounted(() => {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.7);
+  background-color: rgb(2 6 23 / 80%);
   display: flex;
   transition: opacity 0.3s ease;
 }

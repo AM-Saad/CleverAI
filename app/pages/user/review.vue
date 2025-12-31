@@ -47,7 +47,7 @@ const fetchFolderInfo = async () => {
 
   try {
     const { $api } = useNuxtApp()
-    const folder = await $api.folders.getById(folderId.value)
+    const folder = await $api.folders.getFolder(folderId.value)
     currentFolder.value = folder ? { id: folder.id, title: folder.title } : null
   } catch {
     currentFolder.value = null
