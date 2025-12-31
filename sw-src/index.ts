@@ -778,7 +778,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
           // Emergency fallback
           try {
             await swSelf.registration.showNotification(
-              "CleverAI - Error Fallback",
+              "Cognilo - Error Fallback",
               {
                 body: "Notification received but failed to process properly",
                 icon: "/icons/192x192.png",

@@ -1,8 +1,8 @@
 
 
-# Deployment Bugs & Fixes – cleverAI (Nuxt + Railway + sidebase-auth)
+# Deployment Bugs & Fixes – Cognilo (Nuxt + Railway + sidebase-auth)
 
-This document records all major deployment and authentication issues encountered while deploying cleverAI to Railway, including their real root causes and the exact fixes applied.
+This document records all major deployment and authentication issues encountered while deploying Cognilo to Railway, including their real root causes and the exact fixes applied.
 
 The goal is to prevent regressions and make future debugging significantly faster.
 

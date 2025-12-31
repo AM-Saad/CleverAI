@@ -1,12 +1,12 @@
-# CleverAI
+# Cognilo
 
-CleverAI is a Nuxt 3 + TypeScript application providing AI-powered study tools like flashcards and quizzes, with support for multiple LLM backends. It includes a modular architecture, centralized rate limiting, and a service layer for maintainability.
+Cognilo is a Nuxt 3 + TypeScript application providing AI-powered study tools like flashcards and quizzes, with support for multiple LLM backends. It includes a modular architecture, centralized rate limiting, and a service layer for maintainability.
 
 ---
 
 ## 📱 Progressive Web App (PWA)
 
-CleverAI is a fully functional Progressive Web App with robust offline capabilities. Users can:
+Cognilo is a fully functional Progressive Web App with robust offline capabilities. Users can:
 - Install the app on any device
 - Access content completely offline
 - Navigate between pages without internet connection
@@ -39,7 +39,7 @@ CleverAI is a fully functional Progressive Web App with robust offline capabilit
 
 ## 📚 Documentation
 
-CleverAI features comprehensive documentation organized by domain:
+Cognilo features comprehensive documentation organized by domain:
 
 ### 🎯 **Core Documentation**
 - **[📖 Main README](./README.md)** - This file, project overview and setup
@@ -160,7 +160,7 @@ The `/api/llm.generate` endpoint is protected by a **minimal rate limiter** to c
 
 ## Composable Architecture
 
-CleverAI uses Vue 3 composables as reactive interfaces to services, creating a clean separation between UI components and business logic:
+Cognilo uses Vue 3 composables as reactive interfaces to services, creating a clean separation between UI components and business logic:
 
 ### Core Composable Patterns
 
@@ -199,7 +199,7 @@ Each composable:
 
 ## Service Layer Architecture
 
-CleverAI implements a robust service layer that mediates between UI composables and backend APIs:
+Cognilo implements a robust service layer that mediates between UI composables and backend APIs:
 
 ### Frontend Service Structure
 
@@ -239,7 +239,7 @@ CleverAI implements a robust service layer that mediates between UI composables 
 
 ## Type Safety & Validation
 
-CleverAI implements end-to-end type safety with multiple validation layers:
+Cognilo implements end-to-end type safety with multiple validation layers:
 
 1. **Shared Contracts**:
    - Located in `~/shared/*.contract.ts`
@@ -266,7 +266,7 @@ This multi-layered approach ensures data integrity throughout the application li
 
 ## Architecture & Implementation Details
 
-This section documents **every moving part** you need to understand, extend, and operate CleverAI in production: strategies, factory, endpoints, rate limiting, **usage logging**, and **exact pricing math**.
+This section documents **every moving part** you need to understand, extend, and operate Cognilo in production: strategies, factory, endpoints, rate limiting, **usage logging**, and **exact pricing math**.
 
 ---
 

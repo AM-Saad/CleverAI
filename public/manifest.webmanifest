@@ -1,7 +1,7 @@
 {
-  "name": "CleverAI",
-  "short_name": "CleverAI",
-  "description": " CleverAI is a powerful AI assistant that helps you with your daily tasks and provides intelligent solutions.",
+  "name": "Cognilo",
+  "short_name": "Cognilo",
+  "description": " Cognilo is a powerful AI assistant that helps you with your daily tasks and provides intelligent solutions.",
   "start_url": "/folders",
   "display": "standalone",
   "background_color": "#f3f4f6",

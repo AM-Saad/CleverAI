@@ -1,4 +1,4 @@
-# Copilot instructions for CleverAI
+# Copilot instructions for Cognilo
 
 Be concise. When coding, prefer small, incremental changes with tests or smoke checks. Always reference the files mentioned below.
 

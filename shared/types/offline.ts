@@ -26,7 +26,7 @@ export const OFFLINE_PAGES: OfflinePage[] = [
   {
     title: "About",
     path: "/about",
-    description: "About CleverAI",
+    description: "About Cognilo",
     icon: "info",
     priority: 3,
   },
@@ -87,7 +87,7 @@ export const FORM_SYNC_TYPES = {
   CREATE_NOTE: "create-note",
   UPDATE_NOTE: "update-note",
   DELETE_NOTE: "delete-note",
-  
+
 
   // Review system
   ENROLL_CARD: "enroll-card",

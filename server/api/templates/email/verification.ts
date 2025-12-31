@@ -13,12 +13,12 @@ export const generateVerificationEmail = (data: VerificationEmailData): EmailTem
   const { verificationCode } = data
 
   const content = `
-    ${generateHeader('IClever', 'Email Verification Required')}
+    ${generateHeader('Cognilo', 'Email Verification Required')}
 
     <div style="background-color: #f8fafc; ${baseStyles.contentBox}">
       <h2 style="color: #1f2937; margin-bottom: 15px;">Verify Your Email Address</h2>
       <p style="${baseStyles.text}">
-        Welcome to IClever! Please use the verification code below to complete your registration:
+        Welcome to Cognilo! Please use the verification code below to complete your registration:
       </p>
 
       <div style="text-align: center; margin: 30px 0;">
@@ -34,7 +34,7 @@ export const generateVerificationEmail = (data: VerificationEmailData): EmailTem
 
     <div style="${baseStyles.footer}">
       <p style="${baseStyles.footerText}">
-        If you didn't create an account with IClever, please ignore this email.
+        If you didn't create an account with Cognilo, please ignore this email.
       </p>
       <p style="${baseStyles.footerText} margin: 5px 0 0 0;">
         This is an automated message, please do not reply to this email.
@@ -43,7 +43,7 @@ export const generateVerificationEmail = (data: VerificationEmailData): EmailTem
   `
 
   return {
-    subject: 'Email Verification - IClever',
+    subject: 'Email Verification - Cognilo',
     html: wrapContent(content)
   }
 }

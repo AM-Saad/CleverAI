@@ -137,7 +137,7 @@ export async function sendEmail(
 
   return sendEmailInternal(
     {
-      from: "IClever <onboarding@resend.dev>",
+      from: "Cognilo <onboarding@resend.dev>",
       to: [getRecipientEmail(recipientEmail)],
       subject: template.subject,
       html: template.html,
@@ -177,7 +177,7 @@ export async function sendPasswordResetEmail(
 
   return sendEmailInternal(
     {
-      from: "CleverAI <onboarding@resend.dev>",
+      from: "Cognilo <onboarding@resend.dev>",
       to: [getRecipientEmail(recipientEmail)],
       subject: template.subject,
       html: template.html,

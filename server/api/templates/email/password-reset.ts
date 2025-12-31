@@ -26,7 +26,7 @@ export const generatePasswordResetEmail = (
     <div style="background-color: #f8fafc; ${baseStyles.contentBox}">
       <h2 style="color: #1f2937; margin-bottom: 15px;">Verify Your Email Address</h2>
       <p style="${baseStyles.text}">
-        Welcome to IClever Platform! Please use the verification code below to complete your registration:
+        Welcome to Cognilo Platform! Please use the verification code below to complete your registration:
       </p>
 
       <div style="text-align: center; margin: 30px 0;">
@@ -42,7 +42,7 @@ export const generatePasswordResetEmail = (
 
     <div style="${baseStyles.footer}">
       <p style="${baseStyles.footerText}">
-        If you didn't create an account with IClever Platform, please ignore this email.
+        If you didn't create an account with Cognilo Platform, please ignore this email.
       </p>
       <p style="${baseStyles.footerText} margin: 5px 0 0 0;">
         This is an automated message, please do not reply to this email.
@@ -53,7 +53,7 @@ export const generatePasswordResetEmail = (
   `;
 
   return {
-    subject: "Reset Your Password - IClever",
+    subject: "Reset Your Password - Cognilo",
     html: wrapContent(content),
   };
 };

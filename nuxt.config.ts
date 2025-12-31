@@ -94,12 +94,12 @@ export default defineNuxtConfig({
   },
   app: {
     head: {
-      title: "CleverAI | Your AI-powered Learning Assistant",
+      title: "Cognilo | Your AI-powered Learning Assistant",
       meta: [
         {
           name: "description",
           content:
-            "CleverAI is your AI-powered learning assistant, designed to help you learn more effectively and efficiently.",
+            "Cognilo is your AI-powered learning assistant, designed to help you learn more effectively and efficiently.",
         },
         { name: "theme-color", content: "#f3f4f6" },
         {
@@ -108,7 +108,7 @@ export default defineNuxtConfig({
         },
         { name: "apple-mobile-web-app-capable", content: "yes" },
         { name: "apple-mobile-web-app-status-bar-style", content: "default" },
-        { name: "apple-mobile-web-app-title", content: "CleverAI" },
+        { name: "apple-mobile-web-app-title", content: "Cognilo" },
         { name: "msapplication-TileColor", content: "#f3f4f6" },
         {
           name: "msapplication-TileImage",
@@ -116,7 +116,7 @@ export default defineNuxtConfig({
         },
         { name: "msapplication-config", content: "/browserconfig.xml" },
         { name: "mobile-web-app-capable", content: "yes" },
-        { name: "application-name", content: "CleverAI" },
+        { name: "application-name", content: "Cognilo" },
       ],
       link: [
         { rel: "manifest", href: "/manifest.webmanifest" },
@@ -172,11 +172,11 @@ export default defineNuxtConfig({
           innerHTML: JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Organization",
-            name: "CleverAI",
-            url: "https://cleverai.app",
-            logo: "https://cleverai.app/logo.png",
+            name: "Cognilo",
+            url: "https://cognilo.app",
+            logo: "https://cognilo.app/logo.png",
             description:
-              "CleverAI is an AI-powered spaced repetition learning platform offering adaptive flashcards, offline learning, and personalized study schedules.",
+              "Cognilo is an AI-powered spaced repetition learning platform offering adaptive flashcards, offline learning, and personalized study schedules.",
           }),
         },
       ],

@@ -10,7 +10,7 @@
             bounce: 0.1,
           },
         }" class="text-9xl font-light tracking-tighter text-primary">
-          Clever AI
+          Cognilo
         </motion.h2>
         <UiTextGenerateEffect class="text-4xl font-medium my-4 dark:text-light"
           :words="'AI, Chatbot, Assistant, Helper, Support, Guide'" />
@@ -44,7 +44,7 @@ const baseUrl = useRuntimeConfig().public.APP_BASE_URL as string;
 definePageMeta({
   auth: { unauthenticatedOnly: true, navigateAuthenticatedTo: "/folders" },
 
-  title: "AI-Powered Spaced Repetition Learning Platform | CleverAI",
+  title: "AI-Powered Spaced Repetition Learning Platform | Cognilo",
 });
 
 
@@ -53,16 +53,16 @@ useHead({
     {
       name: "description",
       content:
-        "CleverAI is an AI-powered spaced repetition learning platform offering adaptive flashcards, AI chat, and personalized study workflows to improve long-term memory retention.",
+        "Cognilo is an AI-powered spaced repetition learning platform offering adaptive flashcards, AI chat, and personalized study workflows to improve long-term memory retention.",
     },
     {
       property: "og:title",
-      content: "AI-Powered Spaced Repetition Learning Platform | CleverAI",
+      content: "AI-Powered Spaced Repetition Learning Platform | Cognilo",
     },
     {
       property: "og:description",
       content:
-        "Learn smarter with CleverAI — an AI-powered spaced repetition platform for flashcards, quizzes, and adaptive study workflows.",
+        "Learn smarter with Cognilo — an AI-powered spaced repetition platform for flashcards, quizzes, and adaptive study workflows.",
     },
     {
       property: "og:type",
@@ -82,12 +82,12 @@ useHead({
     },
     {
       name: "twitter:title",
-      content: "AI-Powered Spaced Repetition Learning Platform | CleverAI",
+      content: "AI-Powered Spaced Repetition Learning Platform | Cognilo",
     },
     {
       name: "twitter:description",
       content:
-        "CleverAI helps you retain knowledge faster using AI-powered spaced repetition, flashcards, and adaptive learning.",
+        "Cognilo helps you retain knowledge faster using AI-powered spaced repetition, flashcards, and adaptive learning.",
     },
     {
       name: "twitter:image",
@@ -100,7 +100,7 @@ useHead({
       innerHTML: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
-        name: "CleverAI",
+        name: "Cognilo",
         applicationCategory: "EducationalApplication",
         operatingSystem: "Web",
         description:

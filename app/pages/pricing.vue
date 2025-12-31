@@ -3,7 +3,7 @@ import { ref } from "vue";
 
 definePageMeta({
   auth: false,
-  title: "Upgrade to CleverAI Pro | AI-Powered Spaced Repetition Learning Platform",
+  title: "Upgrade to Cognilo Pro | AI-Powered Spaced Repetition Learning Platform",
 });
 
 useHead({
@@ -11,16 +11,16 @@ useHead({
     {
       name: "description",
       content:
-        "Upgrade to CleverAI Pro and unlock unlimited AI-powered spaced repetition learning, adaptive flashcards, priority support, and advanced study tools.",
+        "Upgrade to Cognilo Pro and unlock unlimited AI-powered spaced repetition learning, adaptive flashcards, priority support, and advanced study tools.",
     },
     {
       property: "og:title",
-      content: "Upgrade to CleverAI Pro | CleverAI",
+      content: "Upgrade to Cognilo Pro | Cognilo",
     },
     {
       property: "og:description",
       content:
-        "Unlock unlimited AI-powered learning with CleverAI Pro. Access adaptive flashcards, priority support, and advanced study workflows.",
+        "Unlock unlimited AI-powered learning with Cognilo Pro. Access adaptive flashcards, priority support, and advanced study workflows.",
     },
     {
       property: "og:type",
@@ -28,11 +28,11 @@ useHead({
     },
     {
       property: "og:url",
-      content: "https://cleverai.app/pricing",
+      content: "https://cognilo.app/pricing",
     },
     {
       property: "og:image",
-      content: "https://cleverai.app/images/og/pricing.png",
+      content: "https://cognilo.app/images/og/pricing.png",
     },
     {
       name: "twitter:card",
@@ -40,16 +40,16 @@ useHead({
     },
     {
       name: "twitter:title",
-      content: "CleverAI Pro Pricing | CleverAI",
+      content: "Cognilo Pro Pricing | Cognilo",
     },
     {
       name: "twitter:description",
       content:
-        "Go Pro with CleverAI and get unlimited AI-powered spaced repetition, flashcards, and study tools.",
+        "Go Pro with Cognilo and get unlimited AI-powered spaced repetition, flashcards, and study tools.",
     },
     {
       name: "twitter:image",
-      content: "https://cleverai.app/images/og/pricing.png",
+      content: "https://cognilo.app/images/og/pricing.png",
     },
   ],
 });
@@ -109,10 +109,10 @@ const handleSubscribe = async () => {
 </script>
 
 <template>
-  <main class="upgrade-page">
+  <main class="upgrade-page overflow-auto">
     <div class="container">
       <header>
-        <h1 id="pricing-title">Upgrade to CleverAI Pro</h1>
+        <h1 id="pricing-title">Upgrade to Cognilo Pro</h1>
         <p class="subtitle">Get unlimited access to AI-powered study tools</p>
       </header>
 

@@ -1,4 +1,4 @@
-# CleverAI Development Guide
+# Cognilo Development Guide
 
 > Developer setup, commands, debugging, and contribution guidelines.  
 > **Last Updated**: Based on source code analysis
@@ -24,7 +24,7 @@
 ```bash
 # 1. Clone and install
 git clone <repo-url>
-cd cleverAI
+cd cognilo-ai
 yarn install
 
 # 2. Setup environment
@@ -340,7 +340,7 @@ Access via gear icon during card review:
 ```bash
 # Enable MongoDB query profiling
 mongosh
-> use cleverai
+> use cognilo-ai
 > db.setProfilingLevel(2)
 > db.system.profile.find().sort({ts: -1}).limit(10)
 ```
@@ -349,7 +349,7 @@ mongosh
 
 ```javascript
 // Check IndexedDB stores
-const db = await indexedDB.open('clever-ai-db', 8)
+const db = await indexedDB.open('cognilo-ai-db', 8)
 db.onsuccess = (e) => {
   const stores = e.target.result.objectStoreNames
   console.log('Stores:', Array.from(stores))
@@ -471,7 +471,7 @@ self.addEventListener('sync', (event) => {
 
 ```typescript
 // SW IndexedDB stores
-const DB_NAME = 'clever-ai-db'
+const DB_NAME = 'cognilo-ai-db'
 const DB_VERSION = 8
 
 const stores = {
@@ -707,7 +707,7 @@ npx prisma generate
 **IndexedDB errors**:
 ```javascript
 // Delete database
-indexedDB.deleteDatabase('clever-ai-db')
+indexedDB.deleteDatabase('cognilo-ai-db')
 // Refresh page
 ```
 

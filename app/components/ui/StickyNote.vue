@@ -8,6 +8,11 @@
         <!-- Top right actions -->
         <div class="flex items-center h-fit mb-1 pb-0.5 bg-white z-10">
           <div class="flex items-center gap-2">
+            <!-- Learning Hub Toggle Button -->
+            <!-- <u-button variant="subtle" color="primary" aria-label="Open Learning Hub" @click="openHub"
+              title="Open Learning Hub"> <icons-stars-generative class="w-3.5 h-3.5" />
+            </u-button> -->
+
             <!-- Fullscreen toggle button (show when not loading and has content) -->
             <u-button v-if="note.content.trim()" :class="{ 'opacity-75': note.isLoading }" variant="subtle"
               color="primary" size="xs" :aria-label="isFullscreen ? 'Exit fullscreen' : 'View fullscreen'"
@@ -128,6 +133,8 @@ const saveNote = async (html: string) => {
 const handleAddToMaterial = (selectedText: string) => {
   emit("addToMaterial", selectedText);
 };
+
+
 
 const retry = () => emit("retry", props.note.id);
 

@@ -1,4 +1,4 @@
-# CleverAI Architecture
+# Cognilo Architecture
 
 > **This file has been consolidated. See the comprehensive documentation in `docs/`.**
 
@@ -36,7 +36,7 @@ All technical documentation has been consolidated into 4 comprehensive documents
 
 ## High-Level Overview
 
-CleverAI is a **Nuxt 3** application providing AI-powered flashcard generation and spaced repetition learning.
+Cognilo is a **Nuxt 3** application providing AI-powered flashcard generation and spaced repetition learning.
 
 ### Tech Stack
 - **Frontend**: Nuxt 3, Vue 3, TypeScript, TailwindCSS, Pinia

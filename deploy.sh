@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Starting CleverAI deployment process..."
+echo "🚀 Starting Cognilo deployment process..."
 
 # Check if vercel CLI is available
 if ! command -v vercel &> /dev/null; then

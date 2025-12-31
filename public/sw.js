@@ -3857,7 +3857,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
             console.log("[SW] Registration scope:", (_c = swSelf.registration) == null ? void 0 : _c.scope);
             try {
               await swSelf.registration.showNotification(
-                "CleverAI - Error Fallback",
+                "Cognilo - Error Fallback",
                 {
                   body: "Notification received but failed to process properly",
                   icon: "/icons/192x192.png",

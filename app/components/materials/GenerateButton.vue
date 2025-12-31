@@ -102,7 +102,7 @@ watch(genError, (error) => {
 
     <!-- Generate dropdown button -->
     <UDropdownMenu :items="dropdownItems" :content="{ align: 'end', side: 'bottom', sideOffset: 4 }"
-      :ui="{ content: 'w-40' }">
+      :ui="{ content: 'w-40 z-50' }">
       <u-tooltip
         :text="isQuotaExceeded ? 'Quota Exceeded, Upgrade your plan or create manual question/cards' : !hasContent ? 'Material has no content, add content then try again' : 'Generate Question or Flashcards'">
 

@@ -217,7 +217,7 @@
         <template #header>
           <div>
             🕘 Active Hours
-            <ui-paragraph>
+            <ui-paragraph class="text-wrap">
               Only send notifications during these hours (in addition to quiet
               hours).
             </ui-paragraph>

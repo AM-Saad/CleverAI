@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for cleverai on 2025-12-19T15:02:22+02:00
+# fly.toml app configuration file generated for Cognilo on 2025-12-19T15:02:22+02:00
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'cleverai'
+app = 'cognilo'
 primary_region = 'cdg'
 
 [build]

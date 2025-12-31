@@ -1,6 +1,6 @@
-# CleverAI Architecture
+# Cognilo Architecture
 
-> System design reference for CleverAI - an AI-powered learning platform.  
+> System design reference for Cognilo - an AI-powered learning platform.  
 > **Last Updated**: Based on source code analysis
 
 ---
@@ -20,7 +20,7 @@
 
 ## System Overview
 
-CleverAI is a **Nuxt 3** application providing AI-powered flashcard generation and spaced repetition learning. Key architectural characteristics:
+Cognilo is a **Nuxt 3** application providing AI-powered flashcard generation and spaced repetition learning. Key architectural characteristics:
 
 - **Hybrid SSR/SPA**: Server-side rendering with client-side hydration
 - **Local-First Notes**: IndexedDB persistence with background sync
@@ -107,7 +107,7 @@ CleverAI is a **Nuxt 3** application providing AI-powered flashcard generation a
 ## Directory Structure
 
 ```
-cleverAI/
+cognilo/
 ├── app/                        # Nuxt app source (srcDir)
 │   ├── components/             # Vue components
 │   │   ├── folder/             # Folder-specific (NotesSection, etc.)

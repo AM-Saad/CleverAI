@@ -1,6 +1,13 @@
 // app/composables/ui/useSheetMotion.ts
 import { ref, computed, type Ref } from "vue";
-import { useElementResize } from "./useMotionCommon";
+import {
+  useElementResize,
+  isFlingToOpen,
+  isFlingToClose,
+  startedClosed,
+  startedOpen,
+  nearerEnd
+} from "./useMotionCommon";
 
 export interface SheetOptions {
   sheetHeight: string;
@@ -13,11 +20,21 @@ export interface SheetAPI {
   axis: "y";
   open: number;
   closed: Ref<number>;
-  constraints: { top: number; bottom: number };
+  constraints: ComputedRef<{ top: number; bottom: number }>;
   containerClass: string;
   style: Record<string, any>;
   recompute(): void;
   decide(offset: number, velocity: number, startPos: number): "open" | "close";
+}
+
+export function getInitialSheetClosed(handleVisible: number) {
+  if (typeof window === "undefined") return 500;
+  const guess =
+    Math.max(
+      Math.min(window.innerHeight * 0.75, window.innerHeight - 80),
+      240,
+    ) - handleVisible;
+  return guess;
 }
 
 export function useSheetMotion(
@@ -25,7 +42,7 @@ export function useSheetMotion(
   opts: SheetOptions,
 ): SheetAPI {
   const OPEN = 0;
-  const closed = ref(500);
+  const closed = ref(getInitialSheetClosed(opts.handleVisible));
 
   const recompute = () => {
     const el = panelEl.value;
@@ -35,15 +52,6 @@ export function useSheetMotion(
   };
 
   useElementResize(panelEl, recompute);
-  // Initial guess
-  if (typeof window !== "undefined") {
-    const guess =
-      Math.max(
-        Math.min(window.innerHeight * 0.75, window.innerHeight - 80),
-        240,
-      ) - opts.handleVisible;
-    closed.value = guess;
-  }
 
   const constraints = computed(() => ({ top: OPEN, bottom: closed.value }));
   const containerClass = computed(
@@ -55,30 +63,26 @@ export function useSheetMotion(
     velocity: number,
     startPos: number,
   ): "open" | "close" {
-    // fling
-    if (velocity <= -opts.fastVelocity) return "open"; // up-fast
-    if (velocity >= opts.fastVelocity) return "close"; // down-fast
+    if (isFlingToOpen(velocity, opts.fastVelocity)) return "open"; // up-fast
+    if (isFlingToClose(velocity, opts.fastVelocity)) return "close"; // down-fast
 
-    if (Math.abs(startPos - closed.value) <= 2) {
+    if (startedClosed(startPos, closed.value)) {
       // started closed → need upward drag (offset <= -threshold)
       return offset <= -opts.threshold ? "open" : "close";
     }
-    if (Math.abs(startPos - OPEN) <= 2) {
+    if (startedOpen(startPos, OPEN)) {
       // started open → need downward drag (offset >= threshold)
       return offset >= opts.threshold ? "close" : "open";
     }
-    // nearest end
-    const finalPos = startPos + offset;
-    const toOpen = Math.abs(finalPos - OPEN);
-    const toClose = Math.abs(finalPos - closed.value);
-    return toClose < toOpen ? "close" : "open";
+
+    return nearerEnd(startPos + offset, OPEN, closed.value);
   }
 
   return {
     axis: "y",
     open: OPEN,
     closed,
-    constraints: constraints.value,
+    constraints,
     containerClass: containerClass.value,
     style: { touchAction: "pan-y", height: opts.sheetHeight },
     recompute,

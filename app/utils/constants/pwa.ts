@@ -132,7 +132,7 @@ export const NOTIFICATION_CONFIG = {
   DEFAULT_TITLE: "Notification",
   DEFAULT_TAG: "default",
   FALLBACK_TAG: "fallback",
-  FALLBACK_TITLE: "CleverAI Notification",
+  FALLBACK_TITLE: "Cognilo Notification",
   FALLBACK_BODY: "You have a new notification",
   DEFAULT_ICON: "/icons/192x192.png",
   BADGE_ICON: "/icons/96x96.png",

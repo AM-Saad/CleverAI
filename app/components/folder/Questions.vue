@@ -11,7 +11,7 @@
             class="inline-flex items-center justify-center h-5 w-5 rounded-full text-xs font-medium bg-primary border border-muted">✓</span>
         </div>
 
-        <ui-paragraph size="sm" class="font-medium mb-2">{{ idx + 1 }}. {{ q.question }}</ui-paragraph>
+        <ui-paragraph size="sm" class="font-medium mb-2 text-wrap pr-4">{{ idx + 1 }}. {{ q.question }}</ui-paragraph>
         <ul class="list-disc ml-5 mb-4">
           <ui-paragraph v-for="(choice, cIdx) in q.choices" :key="cIdx"
             :color="cIdx === q.answerIndex ? 'success' : 'neutral'" tag="li">

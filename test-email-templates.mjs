@@ -3,7 +3,7 @@
 // Test the email template system
 import { readFileSync } from 'fs';
 
-console.log('🧪 Testing CleverAI Email Template System\n');
+console.log('🧪 Testing Cognilo Email Template System\n');
 
 // Load template files to verify they exist
 const templatePaths = [

@@ -1,4 +1,4 @@
-# CleverAI Maintenance & Operations
+# Cognilo Maintenance & Operations
 
 > Known issues, technical debt, security considerations, and roadmap.  
 > **Last Updated**: Based on source code analysis
@@ -569,7 +569,7 @@ model GradeRequest {
 mongosh "$DATABASE_URL" --eval "db.serverStatus()"
 
 # 2. Restart application
-pm2 restart clever-ai
+pm2 restart cognilo-ai
 
 # 3. Check connection pool
 # In application logs, look for connection errors
@@ -591,7 +591,7 @@ caches.keys().then(keys => {
 })
 
 // 3. Clear IndexedDB
-indexedDB.deleteDatabase('clever-ai-db')
+indexedDB.deleteDatabase('cognilo-ai-db')
 
 // 4. Hard refresh
 location.reload(true)

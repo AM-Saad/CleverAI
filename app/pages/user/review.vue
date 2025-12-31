@@ -70,8 +70,8 @@ const pageSubtitle = computed(() =>
 // SEO
 useHead({
   title: computed(() => currentFolder.value
-    ? `Review ${currentFolder.value.title} - CleverAI`
-    : "Review Cards - CleverAI"
+    ? `Review ${currentFolder.value.title} - Cognilo`
+    : "Review Cards - Cognilo"
   ),
   meta: [
     {

@@ -1,6 +1,6 @@
 <template>
   <ui-card variant="default" size="lg" shadow="none"
-    class="flex flex-col md:basis-2/3 shrink-0 md:shrink min-h-0 overflow-hidden basis-3/3"
+    class="flex flex-col md:basis-2/3 shrink-0 md:shrink min-h-0 overflow-hidden basis-3/3 z-10"
     contentClasses="flex flex-col">
     <!-- Header -->
     <template v-slot:header>
@@ -279,6 +279,7 @@ const createNewNote = async () => {
 
   if (noteId) {
     currentNoteId.value = noteId;
+
   }
 };
 

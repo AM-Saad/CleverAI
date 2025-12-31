@@ -3,10 +3,10 @@
     <div class="wrapper">
       <section id="about">
         <ui-title class="mb-5" size="3xl" tag="h1">
-          CleverAI — AI‑Powered Spaced Repetition Learning Platform
+          Cognilo — AI‑Powered Spaced Repetition Learning Platform
         </ui-title>
         <ui-paragraph size="base" color="neutral">
-          CleverAI is a cutting-edge AI-powered spaced repetition learning platform designed to dramatically improve
+          Cognilo is a cutting-edge AI-powered spaced repetition learning platform designed to dramatically improve
           long-term retention and make learning fast, smart, and intuitive.
 
           We’re building more than just another flashcard app — we’re building an intelligent learning ecosystem that
@@ -17,10 +17,10 @@
 
       <section id="why-choose-us" class="mt-10">
         <ui-subtitle tag="h2" size="2xl" weight="bold">
-          Why Choose CleverAI for Spaced Repetition Learning
+          Why Choose Cognilo for Spaced Repetition Learning
         </ui-subtitle>
         <ui-paragraph class="mb-5" size="base" color="neutral">
-          At CleverAI, we help learners retain more in less time by blending proven cognitive science with the latest
+          At Cognilo, we help learners retain more in less time by blending proven cognitive science with the latest
           web technologies:
         </ui-paragraph>
         <ul class="list-disc list-inside mb-5 space-y-2">
@@ -50,7 +50,7 @@
           How Our Spaced Repetition Algorithm Improves Memory Retention
         </ui-subtitle>
         <ui-paragraph class="mb-5" size="base" color="neutral">
-          Unlike traditional study tools that rely on random repetition, CleverAI uses data-driven spaced repetition
+          Unlike traditional study tools that rely on random repetition, Cognilo uses data-driven spaced repetition
           algorithms — the same principles behind top spaced repetition tools — to help users:
         </ui-paragraph>
         <ul class="list-disc list-inside mb-5 space-y-2">
@@ -92,7 +92,7 @@
           </ui-paragraph>
         </ul>
         <ui-paragraph class="mb-5" size="base" color="neutral">
-          CleverAI adapts to how you learn — not the other way around. Our platform supports fast flashcards,
+          Cognilo adapts to how you learn — not the other way around. Our platform supports fast flashcards,
           intelligent review scheduling, and deep insights into your progress so you can focus on learning, not
           memorization.
         </ui-paragraph>
@@ -135,7 +135,7 @@ useHead({
     {
       name: "description",
       content:
-        "Discover CleverAI — the AI-powered spaced repetition learning platform for adaptive study, smart flashcards, offline learning, and better long-term retention. Learn smarter, anywhere.",
+        "Discover Cognilo — the AI-powered spaced repetition learning platform for adaptive study, smart flashcards, offline learning, and better long-term retention. Learn smarter, anywhere.",
     },
   ],
   script: [
@@ -144,7 +144,7 @@ useHead({
       innerHTML: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "SoftwareApplication",
-        name: "CleverAI",
+        name: "Cognilo",
         applicationCategory: "EducationalApplication",
         operatingSystem: "Web",
         description:

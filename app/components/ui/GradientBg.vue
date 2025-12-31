@@ -22,8 +22,7 @@
       type: 'spring',
       bounce: 0.1,
     },
-  }"
-    class="absolute bg-[length:100%] animate-rotate-180
+  }" class="absolute bg-[length:100%] animate-rotate-180
     bg-gradient-to-l bottom-0 from-[#00e2ff]/70 h-full left-0 rounded-[0.55rem] to-error/50 w-full">
   </motion.div>
 </template>

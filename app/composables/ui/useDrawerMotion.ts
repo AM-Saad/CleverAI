@@ -1,4 +1,14 @@
 // app/composables/ui/useDrawerMotion.ts
+import { ref, computed, type Ref } from "vue";
+import {
+  useElementResize,
+  isFlingToOpen,
+  isFlingToClose,
+  startedClosed,
+  startedOpen,
+  nearerEnd
+} from "./useMotionCommon";
+
 export interface DrawerOptions {
   side: "right" | "left";
   handleVisible: number;
@@ -11,7 +21,7 @@ export interface DrawerAPI {
   axis: "x";
   open: number;
   closed: Ref<number>;
-  constraints: { left: number; right: number };
+  constraints: ComputedRef<{ left: number; right: number }>;
   containerClass: string;
   handleClass: string;
   style: Record<string, string>;
@@ -19,12 +29,18 @@ export interface DrawerAPI {
   decide(offset: number, velocity: number, startPos: number): "open" | "close";
 }
 
+export function getInitialDrawerClosed(side: "right" | "left", handleVisible: number) {
+  if (typeof window === "undefined") return side === "right" ? 300 : -300;
+  const guess = Math.max(window.innerWidth / 3, 240) - handleVisible;
+  return side === "right" ? guess : -guess;
+}
+
 export function useDrawerMotion(
   panelEl: Ref<HTMLElement | null | undefined>,
   opts: DrawerOptions,
 ): DrawerAPI {
   const OPEN = 0;
-  const closed = ref(300);
+  const closed = ref(getInitialDrawerClosed(opts.side, opts.handleVisible));
 
   const recompute = () => {
     const el = panelEl.value;
@@ -35,11 +51,6 @@ export function useDrawerMotion(
   };
 
   useElementResize(panelEl, recompute);
-  // Initial guess (works before measurement lands)
-  if (typeof window !== "undefined") {
-    const guess = Math.max(window.innerWidth / 3, 240) - opts.handleVisible;
-    closed.value = opts.side === "right" ? guess : -guess;
-  }
 
   const constraints = computed(() =>
     opts.side === "right"
@@ -49,7 +60,7 @@ export function useDrawerMotion(
 
   const containerClass = computed(
     () =>
-      `${opts.side === "right" ? "top-0 right-0 rounded-l-lg  " : "top-0 left-0 rounded-r-lg    "} h-full ${opts.widthClasses}`,
+      `${opts.side === "right" ? "top-0 right-0 rounded-l-lg" : "top-0 left-0 rounded-r-lg"} h-full ${opts.widthClasses}`,
   );
 
   const handleClass = computed(() =>
@@ -61,30 +72,26 @@ export function useDrawerMotion(
     velocity: number,
     startPos: number,
   ): "open" | "close" {
-    // fling
-    if (velocity <= -opts.fastVelocity) return "open";
-    if (velocity >= opts.fastVelocity) return "close";
+    if (isFlingToOpen(velocity, opts.fastVelocity)) return "open";
+    if (isFlingToClose(velocity, opts.fastVelocity)) return "close";
 
-    if (Math.abs(startPos - closed.value) <= 2) {
-      // started closed → need left drag to open (offset <= -threshold)
-      return offset <= -opts.threshold ? "open" : "close";
+    if (startedClosed(startPos, closed.value)) {
+      const isOpening = opts.side === "right" ? offset <= -opts.threshold : offset >= opts.threshold;
+      return isOpening ? "open" : "close";
     }
-    if (Math.abs(startPos - OPEN) <= 2) {
-      // started open → need right drag to close (offset >= threshold)
-      return offset >= opts.threshold ? "close" : "open";
+    if (startedOpen(startPos, OPEN)) {
+      const isClosing = opts.side === "right" ? offset >= opts.threshold : offset <= -opts.threshold;
+      return isClosing ? "close" : "open";
     }
-    // nearest end
-    const finalPos = startPos + offset;
-    const toOpen = Math.abs(finalPos - OPEN);
-    const toClose = Math.abs(finalPos - closed.value);
-    return toClose < toOpen ? "close" : "open";
+
+    return nearerEnd(startPos + offset, OPEN, closed.value);
   }
 
   return {
     axis: "x",
     open: OPEN,
     closed,
-    constraints: constraints.value,
+    constraints,
     containerClass: containerClass.value,
     handleClass: handleClass.value,
     style: { touchAction: "pan-x" },

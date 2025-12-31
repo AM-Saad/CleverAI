@@ -1,6 +1,6 @@
 # 🛠️ Development Tools
 
-This folder contains development and debugging utilities for the CleverAI PWA system.
+This folder contains development and debugging utilities for the Cognilo PWA system.
 
 ## 📁 Files
 

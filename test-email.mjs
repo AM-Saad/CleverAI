@@ -12,7 +12,7 @@ envContent.split('\n').forEach(line => {
   }
 });
 
-console.log('🧪 Testing CleverAI Email System\n');
+console.log('🧪 Testing Cognilo Email System\n');
 
 // Test configuration
 console.log('📧 Email Configuration:');
@@ -31,11 +31,11 @@ async function testResendAPI() {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'CleverAI <onboarding@resend.dev>',
+        from: 'Cognilo <onboarding@resend.dev>',
         to: [envVars.RESEND_TEST_EMAIL],
-        subject: 'CleverAI Email Test - Direct API',
+        subject: 'Cognilo Email Test - Direct API',
         html: `
-          <h2>🧪 CleverAI Email System Test</h2>
+          <h2>🧪 Cognilo Email System Test</h2>
           <p>This is a direct API test to verify email functionality.</p>
           <p><strong>Status:</strong> ✅ Email system is working correctly!</p>
           <p><em>Timestamp: ${new Date().toISOString()}</em></p>

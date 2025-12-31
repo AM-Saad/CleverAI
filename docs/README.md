@@ -1,6 +1,6 @@
-# CleverAI Documentation
+# Cognilo Documentation
 
-Comprehensive documentation for the CleverAI learning platform.
+Comprehensive documentation for the Cognilo learning platform.
 
 ---
 

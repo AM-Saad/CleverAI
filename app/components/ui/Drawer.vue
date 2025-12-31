@@ -101,6 +101,7 @@ const mode = computed(() => {
 const targetPos = ref(0);
 const startPos = ref(0);
 
+
 const suspendDrag = ref(false);
 
 function isInteractive(el: EventTarget | null): boolean {
@@ -218,78 +219,43 @@ function handleDragEnd(_: Event, info: DragInfo) {
 <template>
   <Teleport :to="props.teleportTo" defer>
     <div>
-      <div
-        v-if="props.backdrop && showOverlay"
-        class="fixed inset-0 z-40"
-        :class="props.backdropClass"
-        aria-hidden="true"
-        @click="
+      <div v-if="props.backdrop && showOverlay" class="fixed inset-0 z-40" :class="props.backdropClass"
+        aria-hidden="true" @click="
           () => {
             if (props.closeOnBackdrop) {
               snapTo(mode.closed);
               emit('closed');
             }
           }
-        "
-      ></div>
-      <Motion
-        ref="formRef"
-        as="div"
-        :initial="mode.axis === 'y' ? { y: 0 } : { x: 0 }"
-        :animate="mode.axis === 'y' ? { y: targetPos } : { x: targetPos }"
-        :transition="transitionProps"
-        :drag="suspendDrag ? false : mode.axis"
-        :drag-constraints="mode.constraints"
-        :drag-elastic="0"
-        :drag-snap-to-origin="false"
-        :drag-momentum="false"
-        :on-drag-start="handleDragStart"
-        :on-drag-end="handleDragEnd"
-        :class="[
+        "></div>
+      <Motion ref="formRef" as="div" :initial="mode.axis === 'y' ? { y: 0 } : { x: 0 }"
+        :animate="mode.axis === 'y' ? { y: targetPos } : { x: targetPos }" :transition="transitionProps"
+        :drag="suspendDrag ? false : mode.axis" :drag-constraints="mode.constraints" :drag-elastic="0"
+        :drag-snap-to-origin="false" :drag-momentum="false" :on-drag-start="handleDragStart"
+        :on-drag-end="handleDragEnd" :class="[
           'absolute cursor-grab active:cursor-grabbing overflow-hidden bg-muted backdrop-blur shadow-lg focus-visible:outline-none z-50 focus-visible:border border-primary',
           mode.containerClass,
-        ]"
-        :style="mode.style"
-        role="dialog"
-        aria-modal="true"
-        :aria-labelledby="'drawer-title'"
-      >
-        <div
-          ref="panelEl"
-          tabindex="-1"
-          :class="[
-            'relative h-full focus-visible:outline-none',
-            mode.isMobile ? 'p-3 pt-6' : 'p-3 pl-7',
-          ]"
-          @keydown="onKeydown"
-          @pointerdown.capture="onPointerDownCapture"
-          @pointerup.capture="onPointerUpCapture"
-          @pointercancel.capture="onPointerCancelCapture"
-        >
+        ]" :style="mode.style" role="dialog" aria-modal="true" :aria-labelledby="'drawer-title'">
+        <div ref="panelEl" tabindex="-1" :class="[
+          'relative h-full focus-visible:outline-none',
+          mode.isMobile ? 'p-3 pt-6' : 'p-3 pl-7',
+        ]" @keydown="onKeydown" @pointerdown.capture="onPointerDownCapture" @pointerup.capture="onPointerUpCapture"
+          @pointercancel.capture="onPointerCancelCapture">
           <!-- Drag handle -->
-          <div
-            v-if="mode.isMobile"
-            class="absolute top-2 left-1/2 -translate-x-1/2 flex justify-center"
-          >
+          <div v-if="mode.isMobile" class="absolute top-2 left-1/2 -translate-x-1/2 flex justify-center">
             <div class="w-10 h-1 rounded-full bg-primary" />
           </div>
-          <div
-            v-else
-            :class="[
-              'flex justify-center mb-2 absolute top-1/2 -translate-y-1/2',
-              mode.handleClass,
-            ]"
-          >
+          <div v-else :class="[
+            'flex justify-center mb-2 absolute top-1/2 -translate-y-1/2',
+            mode.handleClass,
+          ]">
             <div class="w-1 h-8 bg-primary rounded-full" />
           </div>
 
           <!-- Header: slot or fallback title -->
           <div class="flex flex-col gap-1">
             <slot name="header">
-              <h4
-                id="drawer-title"
-                class="flex items-center gap-2 text-lg font-semibold dark:text-foreground"
-              >
+              <h4 id="drawer-title" class="flex items-center gap-2 text-lg font-semibold dark:text-foreground">
                 {{ props.title }}
               </h4>
             </slot>
@@ -300,17 +266,12 @@ function handleDragEnd(_: Event, info: DragInfo) {
           <div class="mt-2 flex flex-col h-[calc(100%-4.5rem)] overflow-auto">
             <slot />
           </div>
-          <u-button
-            variant="subtle"
-            size="xs"
-            class="absolute top-3 right-3"
-            @click="
-              () => {
-                snapTo(mode.closed);
-                emit('closed');
-              }
-            "
-          >
+          <u-button variant="subtle" size="xs" class="absolute top-3 right-3" @click="
+            () => {
+              snapTo(mode.closed);
+              emit('closed');
+            }
+          ">
             <u-icon name="i-lucide-x" class="w-4 h-4" />
           </u-button>
         </div>

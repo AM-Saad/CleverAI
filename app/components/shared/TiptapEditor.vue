@@ -45,7 +45,6 @@
           :disabled="!editor!.can().chain().focus().redo().run()" icon="i-lucide-redo"></u-button>
       </div>
     </div>
-    <p>{{ isSummarizing ? "Summarizing..." : "N/A" }}</p>
 
     <div class="flex flex-col w-full">
       <UContextMenu :items="contextMenuItems">

@@ -1,4 +1,4 @@
-# CleverAI Features Documentation
+# Cognilo Features Documentation
 
 > Detailed documentation of all major features and their implementations.  
 > **Last Updated**: Based on source code analysis
@@ -835,7 +835,7 @@ Full progressive web app with offline support via Workbox service worker.
 
 ```typescript
 const DB_CONFIG = {
-  name: 'clever-ai-db',
+  name: 'cognilo-ai-db',
   version: 8,
   stores: {
     forms: 'forms',           // Queued form submissions
