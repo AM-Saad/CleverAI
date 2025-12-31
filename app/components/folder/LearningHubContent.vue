@@ -42,10 +42,13 @@
           </ui-card>
 
           <!-- Tabs and Interactive Content -->
-          <ui-card class="flex-1 min-h-0" content-classes="h-full flex flex-col overflow-hidden" variant="ghost"
-            size="xs">
+          <ui-card class="flex-1 min-h-0" content-classes="h-full flex flex-col overflow-hidden" variant="outline"
+            size="lg">
+            <template #header>
+              <ui-tabs v-model="activeIndex" :items="items" @select="select" direction="row" class="shrink-0" />
+            </template>
             <template #default>
-              <ui-tabs v-model="activeIndex" :items="items" @select="select" direction="row" class="shrink-0 mb-2" />
+
               <div class="flex-1 overflow-y-auto overflow-x-hidden min-h-0 custom-scrollbar pb-4">
                 <component :is="items[activeIndex]!.component" :materialsLength="materialsLength"
                   :isEnrollingLoading="isEnrollingLoading" :enrolled-ids="currentEnrolledIds"

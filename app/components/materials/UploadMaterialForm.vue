@@ -91,18 +91,9 @@ const saveMaterial = async (title: string, content: string, type: "text" | "vide
 
 <template>
   <Teleport to="body">
-    <shared-dialog-modal :show="props.show" @close="emit('close')">
-      <template #header>
-        <div class="flex flex-col gap-1">
-          <ui-subtitle class="flex items-center gap-2">
-            <icon name="i-heroicons-document-plus" class="" />
-            Upload Material
-          </ui-subtitle>
-          <ui-paragraph size="sm" color="muted">
-            Upload your material files here.
-          </ui-paragraph>
-        </div>
-      </template>
+    <shared-dialog-modal :show="props.show" @close="emit('close')" title="Upload Material"
+      icon="i-heroicons-document-plus" description="Upload your material files here.">
+
 
       <template #body>
         <u-form :schema="schema" :state="state" class="space-y-2" @submit="onSubmit">

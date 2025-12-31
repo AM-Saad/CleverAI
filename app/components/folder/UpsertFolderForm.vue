@@ -90,17 +90,9 @@ watch(
 <template>
   <Teleport to="body">
     <!-- use the modal component, pass in the prop -->
-    <shared-dialog-modal :show="props.show" @close="closeModel">
-      <template #header>
-        <div class="flex flex-col gap-1">
-          <ui-subtitle class="flex items-center gap-2">
-            <icon name="uil:folder-network" class="" />
-            {{ props.folder ? "Edit" : "Create" }} Folder
-          </ui-subtitle>
-          <ui-paragraph v-if="!props.folder" size="sm" color="muted">Folder is a container for organizing your content.
-          </ui-paragraph>
-        </div>
-      </template>
+    <shared-dialog-modal :show="props.show" @close="closeModel" :title="props.folder ? 'Edit Folder' : 'Create Folder'"
+      :icon="props.folder ? 'uil:folder-network' : 'uil:folder-network'"
+      :description="props.folder ? '' : 'Folder is a container for organizing your content.'">
       <template #body>
         <shared-error-message :error="typedError || updateTypedError" />
         <u-form :schema="CreateFolderDTO" :state="state" class="space-y-2" @submit="onSubmit">

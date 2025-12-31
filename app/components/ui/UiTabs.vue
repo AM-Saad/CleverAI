@@ -55,7 +55,7 @@ const directionClass = computed(() => {
   const dir = props.direction;
   if (typeof dir === "string") {
     return dir === "row"
-      ? "flex-row  border-muted gap-5 text-sm mb-1.5"
+      ? "flex-row  border-muted gap-5 text-sm "
       : "flex-col gap-7";
   }
 

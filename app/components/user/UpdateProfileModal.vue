@@ -88,18 +88,8 @@ const closeModal = (): void => {
 
 <template>
   <Teleport to="body">
-    <shared-dialog-modal :show="props.show" @close="closeModal">
-      <template #header>
-        <div class="flex flex-col gap-1">
-          <ui-subtitle class="flex items-center gap-2">
-            <icon name="mdi:account-edit" />
-            Update Profile
-          </ui-subtitle>
-          <ui-paragraph size="sm" color="muted">
-            Update your profile information
-          </ui-paragraph>
-        </div>
-      </template>
+    <shared-dialog-modal :show="props.show" @close="closeModal" title="Update Profile" icon="mdi:account-edit"
+      description="Update your profile information">
 
       <template #body>
         <u-form :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">

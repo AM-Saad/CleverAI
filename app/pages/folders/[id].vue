@@ -144,10 +144,12 @@ onBeforeUnmount(() => {
 
 <template>
   <shared-page-wrapper id="folder-page" :title="`${folder?.title || '....'}`" :is-page-loading="loading">
-    <!-- <template #header-info>
-      <ui-label class="mt-2" variant="muted">Created: {{ createdAt }}</ui-label>
-
-    </template> -->
+    <template #header-info-leading>
+      <NuxtLink to="/folders" class="text-xs text-dark dark:text-light flex items-center gap-1">
+        <u-icon name="i-heroicons-chevron-left" class="-ml-1" />
+        Back to Folders
+      </NuxtLink>
+    </template>
     <template #actions>
       <div class="flex flex-col items-end gap-2">
         <!-- Folder-specific Review Status - Minimal & Clean -->

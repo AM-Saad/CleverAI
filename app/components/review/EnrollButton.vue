@@ -1,6 +1,6 @@
 <template>
   <u-button :disabled="isSubmitting || isEnrolled" class="inline-flex items-center justify-center transition-colors"
-    :variant="isEnrolled ? 'outline' : 'solid'" size="sm" @click="handleEnroll">
+    :variant="isEnrolled ? 'outline' : 'solid'" size="xs" @click="handleEnroll">
     <svg v-if="isSubmitting" class="animate-spin -ml-1 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg"
       fill="none" viewBox="0 0 24 24">
       <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
@@ -45,7 +45,7 @@ const isSubmitting = ref(false);
 const buttonText = computed(() => {
   if (isSubmitting.value) return "Enrolling...";
   if (props.isEnrolled) return "Enrolled";
-  return "Add to Review";
+  return "Enroll";
 });
 
 // Determine actual resource type and ID

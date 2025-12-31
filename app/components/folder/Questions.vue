@@ -4,30 +4,31 @@
       description="Generate questions from your materials using the Generate button on each material card." />
 
     <div v-if="questionsToShow?.length" class="space-y-4 overflow-auto">
-      <UiCard v-for="(q, idx) in questionsToShow" :key="'id' in q ? q.id : idx" class="relative">
+      <ui-card variant="ghost" v-for="(q, idx) in questionsToShow" :key="'id' in q ? q.id : idx"
+        class="relative pb-3 border-b border-muted dark:border-muted rounded-none!" size="xs">
         <!-- Enrollment status indicator -->
-        <div v-if="'id' in q && q.id && props.enrolledIds.has(q.id)" class="absolute top-2 right-2">
+        <div v-if="'id' in q && q.id && props.enrolledIds.has(q.id)" class="absolute top-0 right-2"
+          title="Enrolled in Review">
           <span
             class="inline-flex items-center justify-center h-5 w-5 rounded-full text-xs font-medium bg-primary border border-muted">✓</span>
         </div>
 
-        <ui-paragraph size="sm" class="font-medium mb-2 text-wrap pr-4">{{ idx + 1 }}. {{ q.question }}</ui-paragraph>
-        <ul class="list-disc ml-5 mb-4">
-          <ui-paragraph v-for="(choice, cIdx) in q.choices" :key="cIdx"
-            :color="cIdx === q.answerIndex ? 'success' : 'neutral'" tag="li">
+        <ui-paragraph size="xs" class="font-medium mb-2 text-wrap mr-8" color="neutral">
+          {{ idx + 1 }}. {{ q.question }}</ui-paragraph>
+        <ul class="list-disc ml-3 space-y-2">
+          <ui-paragraph size="xs" class="text-wrap" v-for="(choice, cIdx) in q.choices" :key="cIdx"
+            :color="cIdx === q.answerIndex ? 'success' : 'muted'" tag="li">
             {{ choice }}
           </ui-paragraph>
         </ul>
 
         <!-- Enroll Button -->
-        <div class="mt-4 pt-3 border-t border-muted dark:border-muted">
-          <ReviewEnrollButton v-if="'id' in q && q.id" :resource-type="'question'" :resource-id="q.id"
-            :is-enrolled="props.enrolledIds.has(q.id)" @enrolled="handleQuestionEnrolled" @error="handleEnrollError" />
-          <div v-else class="text-xs text-muted">
-            Save question to enable review
-          </div>
+        <div class="mt-2 pt-3" v-if="'id' in q && q.id && !props.enrolledIds.has(q.id)">
+          <ReviewEnrollButton :resource-type="'question'" :resource-id="q.id" :is-enrolled="props.enrolledIds.has(q.id)"
+            @enrolled="handleQuestionEnrolled" @error="handleEnrollError" />
+
         </div>
-      </UiCard>
+      </ui-card>
     </div>
   </div>
 </template>

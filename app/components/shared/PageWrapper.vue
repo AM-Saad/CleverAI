@@ -3,6 +3,8 @@
         <div class="flex justify-between flex-col md:flex-row items-start gap-2 md:items-center"
             style="flex: 0 0 auto;">
             <div>
+                <slot name="header-info-leading" />
+
                 <UiTitle tag="h1">{{ title }}</UiTitle>
                 <UiParagraph v-if="subtitle" :class-name="'my-1'" variant="neutral">
                     {{ subtitle }}

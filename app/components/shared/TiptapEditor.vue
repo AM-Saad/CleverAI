@@ -1,43 +1,79 @@
 <template>
   <div v-if="editor" class="container flex flex-col p-0.5">
     <div
-      class="toolbar-groups flex justify-around rounded bg-light shadow-md z-10 text-light h-fit sticky top-0 w-2/3 m-auto">
+      class="toolbar-groups flex justify-around rounded bg-light shadow-md z-10 text-light h-fit sticky top-5 w-[calc(100%-3rem)] md:w-2/3 m-auto p-0.5">
       <!-- Group: Headings -->
-      <div class="group headings my-1 md:mb-2">
-        <UNavigationMenu trailing-icon="i-lucide-chevron-down" :items="headingsItems" collapsed :popover="true"
-          orientation="vertical" class="w-full text-sm" tabindex="0" role="button" aria-haspopup="menu" />
+      <div class="group headings">
+        <UNavigationMenu class="z-50" trailing-icon="i-lucide-chevron-down" :items="headingsItems" collapsed
+          :popover="false" orientation="vertical" :ui="{
+            linkLeadingIcon: 'text-lg',
+            root: 'z-50',
+            childList: 'bg-light',
+            childLabel: 'font-semibold border-b border-muted text-base text-dark',
+            childLink: 'items-center gap-2 my-1'
+          }" tabindex="0" role="button" aria-haspopup="menu" />
       </div>
 
       <!-- Group: Blocks -->
-      <div class="group blocks my-1 md:mb-2">
-        <UNavigationMenu trailing-icon="i-lucide-chevron-down" :items="blocksItems" collapsed :popover="true"
-          orientation="vertical" class="w-full text-sm" tabindex="0" role="button" aria-haspopup="menu" />
+      <div class="group blocks">
+        <UNavigationMenu class="z-50" trailing-icon="i-lucide-chevron-down" :items="blocksItems" collapsed
+          :popover="false" orientation="vertical" :ui="{
+            linkLeadingIcon: 'text-lg',
+            root: 'z-50',
+            childList: 'bg-light',
+            childLabel: 'font-semibold border-b border-muted text-base text-dark',
+            childLink: 'items-center gap-2 my-1'
+          }" tabindex="0" role="button" aria-haspopup="menu" />
       </div>
 
       <!-- Group: Lists -->
-      <div class="group lists my-1 md:mb-2">
-        <UNavigationMenu trailing-icon="i-lucide-chevron-down" :items="listsItems" collapsed :popover="true"
-          orientation="vertical" class="w-full text-sm" tabindex="0" role="button" aria-haspopup="menu" />
+      <div class="group lists">
+        <UNavigationMenu class="z-50" trailing-icon="i-lucide-chevron-down" :items="listsItems" collapsed
+          :popover="false" orientation="vertical" :ui="{
+            linkLeadingIcon: 'text-lg',
+            root: 'z-50',
+            childList: 'bg-light',
+            childLabel: 'font-semibold border-b border-muted text-base text-dark',
+            childLink: 'items-center gap-2 my-1'
+          }" tabindex="0" role="button" aria-haspopup="menu" />
       </div>
 
       <!-- Group: Tasks -->
-      <div class="group tasks my-1 md:mb-2">
-        <UNavigationMenu trailing-icon="i-lucide-chevron-down" :items="tasksItems" collapsed :popover="true"
-          orientation="vertical" class="w-full text-sm" tabindex="0" role="button" aria-haspopup="menu" />
+      <div class="group tasks">
+        <UNavigationMenu class="z-50" trailing-icon="i-lucide-chevron-down" :items="tasksItems" collapsed
+          :popover="false" orientation="vertical" :ui="{
+            linkLeadingIcon: 'text-lg',
+            root: 'z-50',
+            childList: 'bg-light',
+            childLabel: 'font-semibold border-b border-muted text-base text-dark',
+            childLink: 'items-center gap-2 my-1'
+          }" tabindex="0" role="button" aria-haspopup="menu" />
       </div>
 
       <!-- Group: Insert -->
-      <div class="group insert my-1 md:mb-2">
-        <UNavigationMenu trailing-icon="i-lucide-chevron-down" :items="insertItems" collapsed :popover="true"
-          orientation="vertical" class="w-full text-sm" tabindex="0" role="button" aria-haspopup="menu" />
+      <div class="group insert">
+        <UNavigationMenu class="z-50" trailing-icon="i-lucide-chevron-down" :items="insertItems" collapsed
+          :popover="false" orientation="vertical" :ui="{
+            linkLeadingIcon: 'text-lg',
+            root: 'z-50',
+            childList: 'bg-light',
+            childLabel: 'font-semibold border-b border-muted text-base text-dark',
+            childLink: 'items-center gap-2 my-1'
+          }" tabindex="0" role="button" aria-haspopup="menu" />
       </div>
 
       <!-- Group: Colors -->
-      <div class="group colors my-1 md:mb-2">
-        <UNavigationMenu trailing-icon="i-lucide-chevron-down" :items="colorsItems" collapsed :popover="true"
-          orientation="vertical" class="w-full text-sm" tabindex="0" role="button" aria-haspopup="menu" />
+      <div class="group colors">
+        <UNavigationMenu class="z-50" trailing-icon="i-lucide-chevron-down" :items="colorsItems" collapsed
+          :popover="false" orientation="vertical" :ui="{
+            linkLeadingIcon: 'text-lg',
+            root: 'z-50',
+            childList: 'bg-light',
+            childLabel: 'font-semibold border-b border-muted text-base text-dark',
+            childLink: 'items-center gap-2 my-1'
+          }" tabindex="0" role="button" aria-haspopup="menu" />
       </div>
-      <div class="button-group flex gap-2 self-end my-1 md:mb-2">
+      <div class="button-group flex gap-2 self-center">
         <u-button class="shrink-0" variant="subtle" size="sm" @click="editor!.chain().focus().undo().run()"
           :disabled="!editor!.can().chain().focus().undo().run()" icon="i-lucide-undo"></u-button>
 
@@ -306,6 +342,9 @@ const headingsItems = ref<NavigationMenuItem[]>([
   {
     label: "Headings",
     icon: "i-lucide-type",
+    popover: {
+      mode: 'click'
+    },
     children: [
       {
         label: "Paragraph",
@@ -381,6 +420,9 @@ const tasksItems = ref<NavigationMenuItem[]>([
   {
     label: "Tasks",
     icon: "i-lucide-list-check",
+    popover: {
+      mode: 'click'
+    },
     children: [
       {
         label: "Toggle Todo List",
@@ -422,6 +464,9 @@ const blocksItems = ref<NavigationMenuItem[]>([
   {
     label: "Blocks",
     icon: "i-lucide-layout",
+    popover: {
+      mode: 'click'
+    },
     children: [
       {
         label: "Code block",
@@ -455,6 +500,9 @@ const listsItems = ref<NavigationMenuItem[]>([
   {
     label: "Lists",
     icon: "i-lucide-list",
+    popover: {
+      mode: 'click'
+    },
     children: [
       {
         label: "Bullet list",
@@ -476,6 +524,9 @@ const insertItems = ref<NavigationMenuItem[]>([
   {
     label: "Insert",
     icon: "i-lucide-plus-square",
+    popover: {
+      mode: 'click'
+    },
     children: [
       {
         label: "Add image from URL",
@@ -491,6 +542,9 @@ const colorsItems = ref<NavigationMenuItem[]>([
   {
     label: "Colors",
     icon: "i-lucide-palette",
+    popover: {
+      mode: 'click'
+    },
     children: [
       {
         label: "Primary",

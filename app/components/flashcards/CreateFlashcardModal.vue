@@ -109,24 +109,19 @@ function handleClose() {
 </script>
 
 <template>
-  <shared-dialog-modal :show="show" @close="handleClose">
-    <template #header>
-      <div class="flex items-center gap-2">
-        <Icon :name="isEditMode ? 'i-lucide-pencil' : 'i-lucide-plus'" class="w-5 h-5 text-primary" />
-        <span class="font-semibold">{{ isEditMode ? 'Edit Flashcard' : 'Create Flashcard' }}</span>
-      </div>
-    </template>
+  <shared-dialog-modal :show="show" @close="handleClose" :title="isEditMode ? 'Edit Flashcard' : 'Create Flashcard'"
+    :icon="isEditMode ? 'i-lucide-pencil' : 'i-lucide-plus-square'">
 
     <template #body>
       <u-form :schema="schema" :state="state" class="space-y-2" @submit="handleSubmit">
         <!-- Front (Question) -->
-        <u-form-field label="" name="front">
+        <u-form-field label="Front" name="front">
           <u-textarea v-model="state.front" placeholder="Enter the question or prompt..." :rows="4" autoresize
             :disabled="isLoading" class="w-full" />
         </u-form-field>
 
         <!-- Back (Answer) -->
-        <u-form-field label="" name="back">
+        <u-form-field label="Back" name="back">
           <u-textarea v-model="state.back" placeholder="Enter the answer or explanation..." :rows="4" autoresize
             :disabled="isLoading" class="w-full" />
         </u-form-field>

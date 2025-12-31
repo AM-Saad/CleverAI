@@ -96,6 +96,10 @@ a:not(.btn):focus-visible {
     @apply text-3xl font-bold mt-8 mb-4 first:mt-0 last:mb-0;
   }
 } */
+
+div[data-reka-popper-content-wrapper] {
+  @apply z-50!
+}
 @media (prefers-color-scheme: dark) {
   .options-select {
     @apply text-white;

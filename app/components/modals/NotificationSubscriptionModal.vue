@@ -1,21 +1,9 @@
 <template>
   <Teleport to="body">
     <!-- use the modal component, pass in the prop -->
-    <shared-dialog-modal :show="showModal">
-      <template #header>
-        <div>
-          <div
-            class="w-16 h-16 mx-auto mb-4 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-            <UIcon name="i-heroicons-bell" class="w-8 h-8 text-blue-600 dark:text-blue-400" />
-          </div>
-          <h2 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
-            Stay on Track with Your Learning
-          </h2>
-          <p class="text-sm text-gray-600 dark:text-gray-400 mt-2">
-            Get timely reminders when your flashcards are ready for review
-          </p>
-        </div>
-      </template>
+    <shared-dialog-modal :show="showModal" title="Stay on Track with Your Learning" icon="i-heroicons-bell"
+      description="Get timely reminders when your flashcards are ready for review">
+
       <template #body>
         <!-- Benefits -->
         <div class="space-y-3 mb-6">

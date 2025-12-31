@@ -27,13 +27,9 @@ function handleClose() {
 </script>
 
 <template>
-  <shared-dialog-modal :show="show" @close="handleClose">
-    <template #header>
-      <div class="flex items-center gap-2">
-        <Icon v-if="isDestructive" name="i-lucide-trash-2" class="w-5 h-5 text-error" />
-        <span class="font-semibold">{{ title }}</span>
-      </div>
-    </template>
+  <shared-dialog-modal :show="show" @close="handleClose" :title="title"
+    :icon="isDestructive ? 'i-lucide-trash-2' : 'i-lucide-info-circle'">
+
 
     <template #body>
       <div class="space-y-4">

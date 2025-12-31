@@ -1,106 +1,3 @@
-<template>
-  <ui-card variant="default" size="lg" shadow="none"
-    class="flex flex-col md:basis-2/3 shrink-0 md:shrink min-h-0 overflow-hidden basis-3/3 z-10"
-    contentClasses="flex flex-col">
-    <!-- Header -->
-    <template v-slot:header>
-      <div class="flex items-center gap-2">
-        Notes
-        <ui-label v-if="notes?.length"> ( {{ notes.length }} ) </ui-label>
-      </div>
-      <u-button size="sm" color="primary" variant="outline" @click="createNewNote">
-        <u-icon name="i-heroicons-plus" />
-        New Note
-      </u-button>
-    </template>
-    <template #default>
-      <ui-loader :is-fetching="isFetching" v-if="isFetching" label="Loading notes..." />
-      <!-- Error state for initial fetch -->
-      <shared-error-message v-if="error" :error="error" />
-
-      <!-- Notes content -->
-
-      <!-- Empty state -->
-      <shared-empty-state v-if="!error && !isFetching && !notes?.length" title="No Notes."
-        button-text="Create First Note" :center-description="true" @action="createNewNote">
-        <template #description>
-          Create your first note to capture important <br />thoughts and ideas
-          for this folder.
-        </template>
-      </shared-empty-state>
-
-      <!-- Notes grid -->
-      <div v-if="!error && !isFetching && notes?.length" class="flex flex-1 min-h-0 overflow-hidden relative"
-        id="notes-section">
-        <ui-drawer :show="false" :mobile="false" teleport-to="#notes-section" :backdrop="false" :handle-visible="20">
-          <div class="relative shrink-0 overflow-auto bg-light dark:bg-muted rounded border border-muted">
-            <folder-notes-search :folder-id="folderId" />
-            <ReorderGroup v-model:values="localNotes" axis="y" class="relative flex-1 shrink-0 overflow-auto"
-              @reorder="handleReorder">
-              <UContextMenu v-for="(note, idx) in localNotes" :key="note.id" :items="[
-                // { label: 'Edit', onSelect: () => editNote(note) },
-                { label: 'Delete', onSelect: () => deleteNote(note.id) },
-              ]" :context="note">
-                <ReorderItem :value="note" :class="[
-                  'relative flex items-center gap-2 group w-full p-2.5 border-b border-muted cursor-pointer hover:bg-muted',
-                  idx === 0 ? 'rounded-tl-xl' : '',
-                  notesStore.filteredNoteIds.value
-                    ? notesStore.isNoteInFilter(note.id)
-                      ? 'font-bold'
-                      : 'opacity-50'
-                    : '',
-                ]" @click="currentNoteId = note.id">
-                  <div v-if="note.isLoading" class="flex items-center gap-1 text-primary">
-                    <icon name="i-lucide-loader" class="w-4 h-4 animate-spin" />
-                  </div>
-                  <ui-paragraph size="xs" class="truncate">
-                    {{
-                      note.content
-                        .replace(/<[^>]*>/g, "")
-                        .trim()
-                        .slice(0, 30) || "Empty note"
-                    }}
-                  </ui-paragraph>
-                </ReorderItem>
-              </UContextMenu>
-            </ReorderGroup>
-          </div>
-        </ui-drawer>
-
-        <UiStickyNote v-if="notesStore.getNote(currentNoteId!)" :note="notesStore.getNote(currentNoteId!)!"
-          :delete-note="deleteNote" size="lg" @update="handleUpdateNote" @retry="handleRetry"
-          @toggle-fullscreen="fullscreen.toggle" placeholder="Double-click to add your note..."
-          @add-to-material="emit('add-to-material', $event)" />
-      </div>
-    </template>
-  </ui-card>
-
-  <!-- Fullscreen Note View -->
-  <shared-fullscreen-wrapper :is-open="fullscreen.isOpen.value" aria-label="Note fullscreen view" max-width="900px"
-    max-height="80vh" @close="fullscreen.close">
-    <template #header>
-      <div class="flex items-center justify-between w-full">
-        <span class="font-medium text-gray-900 dark:text-gray-100">Note</span>
-        <u-button variant="ghost" color="neutral" size="xs" aria-label="Close fullscreen" @click="fullscreen.close">
-          <icon name="i-heroicons-x-mark" class="w-5 h-5" />
-        </u-button>
-      </div>
-    </template>
-
-    <!-- Note content in fullscreen -->
-    <div v-if="currentFullscreenNote" class="h-full">
-      <UiStickyNote :note="currentFullscreenNote" :delete-note="deleteNote" :is-fullscreen="true" size="lg"
-        @update="handleUpdateNote" @retry="handleRetry" @toggle-fullscreen="fullscreen.close"
-        placeholder="Double-click to add your note..." @add-to-material="emit('add-to-material', $event)" />
-    </div>
-  </shared-fullscreen-wrapper>
-
-  <shared-delete-confirmation-modal :show="showDeleteConfirm" title="Delete Note" @close="showDeleteConfirm = false"
-    @confirm="confirmDeleteNote">
-    Are you sure you want to delete this note? This action cannot be undone.
-  </shared-delete-confirmation-modal>
-</template>
-
 <script setup lang="ts">
 import type { NoteState } from "~/composables/folders/useNotesStore";
 import { useNotesStore } from "~/composables/folders/useNotesStore";
@@ -348,6 +245,111 @@ onMounted(async () => {
 
 });
 </script>
+
+
+<template>
+  <ui-card variant="default" size="lg" shadow="none"
+    class="flex flex-col md:basis-2/3 shrink-0 md:shrink min-h-0 overflow-hidden basis-3/3 z-10"
+    contentClasses="flex flex-col">
+    <!-- Header -->
+    <template v-slot:header>
+      <div class="flex items-center gap-2">
+        Notes
+        <ui-label v-if="notes?.length"> ( {{ notes.length }} ) </ui-label>
+      </div>
+      <u-button size="sm" color="primary" variant="outline" @click="createNewNote">
+        <u-icon name="i-heroicons-plus" />
+        New Note
+      </u-button>
+    </template>
+    <template #default>
+      <ui-loader :is-fetching="isFetching" v-if="isFetching" label="Loading notes..." />
+      <!-- Error state for initial fetch -->
+      <shared-error-message v-if="error" :error="error" />
+
+      <!-- Notes content -->
+
+      <!-- Empty state -->
+      <shared-empty-state v-if="!error && !isFetching && !notes?.length" title="No Notes."
+        button-text="Create First Note" :center-description="true" @action="createNewNote">
+        <template #description>
+          Create your first note to capture important <br />thoughts and ideas
+          for this folder.
+        </template>
+      </shared-empty-state>
+
+      <!-- Notes grid -->
+      <div v-if="!error && !isFetching && notes?.length" class="flex flex-1 min-h-0 overflow-hidden relative"
+        id="notes-section">
+        <ui-drawer :show="false" :mobile="false" teleport-to="#notes-section" :backdrop="false" :handle-visible="20">
+          <div class="relative shrink-0 overflow-auto bg-light dark:bg-muted rounded border border-muted">
+            <folder-notes-search :folder-id="folderId" />
+            <ReorderGroup v-model:values="localNotes" axis="y" class="relative flex-1 shrink-0 overflow-auto"
+              @reorder="handleReorder">
+              <UContextMenu v-for="(note, idx) in localNotes" :key="note.id" :items="[
+                // { label: 'Edit', onSelect: () => editNote(note) },
+                { label: 'Delete', onSelect: () => deleteNote(note.id) },
+              ]" :context="note">
+                <ReorderItem :value="note" :class="[
+                  'relative flex items-center gap-2 group w-full p-2.5 border-b border-muted cursor-pointer hover:bg-muted',
+                  idx === 0 ? 'rounded-tl-xl' : '',
+                  notesStore.filteredNoteIds.value
+                    ? notesStore.isNoteInFilter(note.id)
+                      ? 'font-bold'
+                      : 'opacity-50'
+                    : '',
+                ]" @click="currentNoteId = note.id">
+                  <div v-if="note.isLoading" class="flex items-center gap-1 text-primary">
+                    <icon name="i-lucide-loader" class="w-4 h-4 animate-spin" />
+                  </div>
+                  <ui-paragraph size="xs" class="truncate">
+                    {{
+                      note.content
+                        .replace(/<[^>]*>/g, "")
+                        .trim()
+                        .slice(0, 30) || "Empty note"
+                    }}
+                  </ui-paragraph>
+                </ReorderItem>
+              </UContextMenu>
+            </ReorderGroup>
+          </div>
+        </ui-drawer>
+
+        <UiStickyNote v-if="notesStore.getNote(currentNoteId!)" :note="notesStore.getNote(currentNoteId!)!"
+          :delete-note="deleteNote" size="lg" @update="handleUpdateNote" @retry="handleRetry"
+          @toggle-fullscreen="fullscreen.toggle" placeholder="Double-click to add your note..."
+          @add-to-material="emit('add-to-material', $event)" />
+      </div>
+    </template>
+  </ui-card>
+
+  <!-- Fullscreen Note View -->
+  <shared-fullscreen-wrapper :is-open="fullscreen.isOpen.value" aria-label="Note fullscreen view" max-width="900px"
+    max-height="80vh" @close="fullscreen.close">
+    <template #header>
+      <div class="flex items-center justify-between w-full">
+        <span class="font-medium text-gray-900 dark:text-gray-100"></span>
+        <u-button variant="outline" color="neutral" size="xs" aria-label="Close fullscreen" @click="fullscreen.close">
+          <icon name="i-heroicons-x-mark" :size="UI_CONFIG.ICON_SIZE" />
+        </u-button>
+      </div>
+    </template>
+
+    <!-- Note content in fullscreen -->
+    <div v-if="currentFullscreenNote" class="h-full">
+      <UiStickyNote :note="currentFullscreenNote" :delete-note="deleteNote" :is-fullscreen="true" size="lg"
+        @update="handleUpdateNote" @retry="handleRetry" @toggle-fullscreen="fullscreen.close"
+        placeholder="Double-click to add your note..." @add-to-material="emit('add-to-material', $event)" />
+    </div>
+  </shared-fullscreen-wrapper>
+
+  <shared-delete-confirmation-modal :show="showDeleteConfirm" title="Delete Note" @close="showDeleteConfirm = false"
+    @confirm="confirmDeleteNote">
+    Are you sure you want to delete this note? This action cannot be undone.
+  </shared-delete-confirmation-modal>
+</template>
+
 
 <style scoped>
 .notes-section {

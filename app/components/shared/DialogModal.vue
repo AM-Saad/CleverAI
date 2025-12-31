@@ -1,5 +1,5 @@
 <script setup lang="ts">
-defineProps<{ show: boolean }>();
+defineProps<{ show: boolean, title: string, description?: string, icon: string }>();
 const emit = defineEmits<{
   (event: "close"): void;
 }>();
@@ -24,12 +24,20 @@ onUnmounted(() => {
       <div v-if="show" class="modal-mask">
         <div
           class="inner bg-white dark:bg-dark absolute left-[50%] top-[50%] w-96 -translate-x-1/2 -translate-y-1/2 transform rounded-md p-3 shadow-lg z-50">
-          <div class="modal-header flex items-center justify-between font-medium text-muted dark:text-light">
-            <slot name="header"> default header </slot>
-            <button class="modal-default-button place-self-start p-1 dark:text-gray-400 cursor-pointer"
-              @click="$emit('close')">
-              <icon name="mdi:close"></icon>
-            </button>
+          <div
+            class="modal-header flex items-center justify-between font-medium text-muted dark:text-light border-b border-muted pb-1">
+            <div class="flex flex-col gap-1">
+              <ui-subtitle class="flex items-center gap-1" size="base" weight="semibold">
+                <u-icon :name="icon" :size="UI_CONFIG.ICON_SIZE" />
+                {{ title }}
+              </ui-subtitle>
+              <ui-paragraph v-if="description" size="xs" color="muted">{{ description }}
+              </ui-paragraph>
+            </div>
+            <u-button variant="soft" size="xs" color="neutral"
+              class="modal-default-button place-self-start cursor-pointer" @click="$emit('close')">
+              <u-icon name="mdi:close"></u-icon>
+            </u-button>
           </div>
 
           <div class="modal-body">
@@ -61,7 +69,7 @@ onUnmounted(() => {
 }
 
 .modal-body {
-  margin: 20px 0;
+  margin: 10px 0;
 }
 
 .modal-default-button {

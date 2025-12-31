@@ -44,18 +44,8 @@ const closeModal = (): void => {
 
 <template>
   <Teleport to="body">
-    <shared-dialog-modal :show="props.show" @close="closeModal">
-      <template #header>
-        <div class="flex flex-col gap-1">
-          <ui-subtitle class="flex items-center gap-2">
-            <icon name="mdi:account-remove" />
-            Delete Account
-          </ui-subtitle>
-          <ui-paragraph size="sm" color="muted">
-            This action will remove all your data
-          </ui-paragraph>
-        </div>
-      </template>
+    <shared-dialog-modal :show="props.show" @close="closeModal" title="Delete Account" icon="mdi:account-remove"
+      description="This action will remove all your data">
 
       <template #body>
         <u-form :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">

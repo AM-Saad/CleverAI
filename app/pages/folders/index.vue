@@ -1,3 +1,70 @@
+<script setup lang="ts">
+const toast = useToast();
+const show = ref(false);
+const listView = ref<'grid' | 'list'>('grid');
+
+const showDeleteConfirm = ref(false);
+const folderToDelete = ref<string | null>(null);
+const editFolder = ref<Folder | null>(null);
+const { folders, loading, error, refresh } = useFolders();
+const { deleteFolder, deleting: deletingFolder } = useDeleteFolder(refresh);
+
+watch(error, (newError) => {
+  if (newError) {
+    toast.add({
+      title: "Error",
+      description: newError.message,
+    });
+  }
+});
+
+
+
+const cancelUpsertModal = () => {
+  show.value = false;
+  editFolder.value = null;
+};
+const confirmDeleteFolder = async () => {
+  if (!folderToDelete.value) return;
+  try {
+    await deleteFolder(folderToDelete.value);
+    toast.add({
+      title: "Folder Deleted",
+      description: "The folder has been successfully deleted.",
+      color: "success",
+    });
+    window.dispatchEvent(new CustomEvent("refresh-review-stats"));
+
+  } catch (err) {
+    toast.add({
+      title: "Error",
+      description: "An error occurred while deleting the folder.",
+    });
+  } finally {
+    showDeleteConfirm.value = false;
+    folderToDelete.value = null;
+  }
+};
+
+const toggleView = () => {
+  listView.value = listView.value === 'grid' ? 'list' : 'grid';
+  localStorage.setItem('folderListView', listView.value);
+};
+
+
+
+// Load saved view preference from localStorage
+onMounted(() => {
+  const savedView = localStorage.getItem('folderListView') as 'grid' | 'list' || 'grid';
+  listView.value = savedView;
+  if (import.meta.dev) {
+    console.log("[folders/index] forcing refresh() onMounted", { timestamp: Date.now() });
+    refresh();
+  }
+});
+</script>
+
+
 <template>
   <shared-page-wrapper title="Folders" subtitle="Manage your folders and organization">
     <!-- Review Status Card (Global) -->
@@ -85,69 +152,3 @@
     </shared-delete-confirmation-modal>
   </shared-page-wrapper>
 </template>
-
-<script setup lang="ts">
-const toast = useToast();
-const show = ref(false);
-const listView = ref<'grid' | 'list'>('grid');
-
-const showDeleteConfirm = ref(false);
-const folderToDelete = ref<string | null>(null);
-const editFolder = ref<Folder | null>(null);
-const { folders, loading, error, refresh } = useFolders();
-const { deleteFolder, deleting: deletingFolder } = useDeleteFolder(refresh);
-
-watch(error, (newError) => {
-  if (newError) {
-    toast.add({
-      title: "Error",
-      description: newError.message,
-    });
-  }
-});
-
-
-
-const cancelUpsertModal = () => {
-  show.value = false;
-  editFolder.value = null;
-};
-const confirmDeleteFolder = async () => {
-  if (!folderToDelete.value) return;
-  try {
-    await deleteFolder(folderToDelete.value);
-    toast.add({
-      title: "Folder Deleted",
-      description: "The folder has been successfully deleted.",
-      color: "success",
-    });
-    window.dispatchEvent(new CustomEvent("refresh-review-stats"));
-
-  } catch (err) {
-    toast.add({
-      title: "Error",
-      description: "An error occurred while deleting the folder.",
-    });
-  } finally {
-    showDeleteConfirm.value = false;
-    folderToDelete.value = null;
-  }
-};
-
-const toggleView = () => {
-  listView.value = listView.value === 'grid' ? 'list' : 'grid';
-  localStorage.setItem('folderListView', listView.value);
-};
-
-
-
-// Load saved view preference from localStorage
-onMounted(() => {
-  const savedView = localStorage.getItem('folderListView') as 'grid' | 'list' || 'grid';
-  listView.value = savedView;
-  if (import.meta.dev) {
-    console.log("[folders/index] forcing refresh() onMounted", { timestamp: Date.now() });
-    refresh();
-  }
-});
-</script>
