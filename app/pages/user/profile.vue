@@ -33,7 +33,7 @@
               <span>Gender:</span>
               <span class="capitalize">{{
                 profileData?.gender || "Not specified"
-                }}</span>
+              }}</span>
             </ui-label>
           </div>
 
@@ -61,13 +61,15 @@
             </div>
             <div v-else-if="isNotificationSubscribed" class="flex items-center justify-between">
               <span class="text-sm text-green-600 dark:text-green-400">✓ Notifications enabled</span>
-              <u-button size="sm" variant="subtle" color="error" @click="handleUnsubscribe" :loading="notificationsLoading">
+              <u-button size="sm" variant="subtle" color="error" @click="handleUnsubscribe"
+                :loading="notificationsLoading">
                 Disable
               </u-button>
             </div>
             <div v-else class="flex items-center justify-between">
               <span class="text-sm text-gray-500">Notifications are disabled</span>
-              <u-button size="sm" variant="subtle" color="primary" @click="handleResubscribe" :loading="notificationsLoading">
+              <u-button size="sm" variant="subtle" color="primary" @click="handleResubscribe"
+                :loading="notificationsLoading">
                 Enable Notifications
               </u-button>
             </div>
@@ -152,7 +154,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import UiParagraph from "~/components/ui/UiParagraph.vue";
-import { useSubscription } from "~/composables/shared/useSubscription";
+import { useSubscriptionStore } from "~/composables/shared/useSubscription";
 import { useProfileManagement } from "~/composables/user/useProfileManagement";
 import { useNotifications } from "~/composables/shared/useNotifications";
 import type { DeleteAccountDTO, ChangePasswordDTO } from "@@/shared/utils/user.contract";
@@ -174,7 +176,7 @@ const { status, data, signOut } = useAuth();
 const router = useRouter();
 
 // Get subscription info
-const { subscriptionInfo } = useSubscription();
+const { subscriptionInfo, updateFromData } = useSubscriptionStore();
 
 // Profile management composable
 const {
@@ -269,7 +271,7 @@ const fetchProfile = async () => {
 
       // Update subscription info
       if (response.subscription) {
-        subscriptionInfo.value = response.subscription;
+        updateFromData({ subscription: response.subscription });
       }
     } catch (err: unknown) {
       console.error("Error fetching user profile:", err);

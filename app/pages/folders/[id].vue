@@ -13,9 +13,7 @@ const Questions = defineAsyncComponent(
   () => import("~/components/folder/Questions.vue")
 );
 
-const MaterialsList = defineAsyncComponent(
-  () => import("~/components/folder/MaterialsList.vue")
-);
+
 const LearningHubModal = defineAsyncComponent(
   () => import("~/components/folder/LearningHubModal.vue")
 );

@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <div v-if="show" class="fixed inset-0 z-50 flex items-center p-4 justify-center overflow-hidden" role="dialog"
+    <div v-if="show" class="fixed inset-0 z-20 flex items-center p-4 justify-center overflow-hidden" role="dialog"
       aria-modal="true" aria-labelledby="learning-hub-modal-title">
 
       <!-- Backdrop with independent opacity transition -->
@@ -22,7 +22,7 @@
         leave-active-class="transition-transform duration-300 ease-in" leave-from-class="translate-y-0"
         leave-to-class="translate-y-full" appear>
         <div v-if="show"
-          class="relative w-full h-[80dvh]  flex flex-col  border-white/20 dark:border-white/5 will-change-transform"
+          class="relative w-full h-[85dvh]  flex flex-col  border-white/20 dark:border-white/5 will-change-transform"
           @click.stop>
 
           <!-- Drag Handle / Indicator -->

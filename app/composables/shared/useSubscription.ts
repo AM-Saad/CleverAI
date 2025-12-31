@@ -1,4 +1,17 @@
-// app/composables/shared/useSubscription.ts
+import type { SubscriptionInfo } from "~/shared/utils/llm-generate.contract";
+
+export interface SubscriptionStore {
+  subscriptionInfo: Ref<SubscriptionInfo>;
+  isQuotaExceeded: Ref<boolean>;
+  isLoading: Ref<boolean>;
+  error: Ref<string | null>;
+  hasFetched: Ref<boolean>;
+  updateFromHeaders: (headers: Headers) => void;
+  updateFromData: (data: { subscription?: SubscriptionInfo }) => void;
+  handleApiError: (err: any) => void;
+  resetQuotaError: () => void;
+  fetchSubscriptionStatus: () => Promise<void>;
+}
 
 // Global state - shared across all components
 const subscriptionInfo = ref<SubscriptionInfo>({
@@ -12,7 +25,13 @@ const isLoading = ref(false);
 const error = ref<string | null>(null);
 const hasFetched = ref(false);
 
-export function useSubscription() {
+let storeInstance: SubscriptionStore | null = null;
+
+export function useSubscriptionStore(): SubscriptionStore {
+  if (storeInstance) {
+    return storeInstance;
+  }
+
   // Update subscription info from API response headers
   const updateFromHeaders = (headers: Headers) => {
     const tier = headers.get("x-subscription-tier") || "FREE";
@@ -93,7 +112,7 @@ export function useSubscription() {
     }
   };
 
-  return {
+  storeInstance = {
     subscriptionInfo,
     isQuotaExceeded,
     isLoading,
@@ -105,4 +124,14 @@ export function useSubscription() {
     resetQuotaError,
     fetchSubscriptionStatus,
   };
+
+  // Auto-fetch subscription status if not already fetched
+  if (!hasFetched.value) {
+    fetchSubscriptionStatus();
+  }
+
+  return storeInstance;
 }
+
+// Backward compatibility or for cases where you just want the composable name
+export const useSubscription = useSubscriptionStore;

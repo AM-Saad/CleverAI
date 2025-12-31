@@ -49,7 +49,7 @@ export function useGenerateFromMaterial(
 
   // Subscription info
   const { subscriptionInfo, isQuotaExceeded, updateFromData, handleApiError } =
-    useSubscription();
+    useSubscriptionStore();
 
   /**
    * Check if material already has generated content

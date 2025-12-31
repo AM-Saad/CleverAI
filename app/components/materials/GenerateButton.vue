@@ -18,14 +18,8 @@ const emit = defineEmits<{
 // Create a computed ref for the materialId
 const materialIdRef = computed(() => props.materialId);
 
-// Get shared subscription state and fetch on mount if not already fetched
-const { hasFetched, fetchSubscriptionStatus } = useSubscription();
-
-onMounted(async () => {
-  if (!hasFetched.value) {
-    await fetchSubscriptionStatus();
-  }
-});
+// Get shared subscription state
+const { subscriptionInfo, isQuotaExceeded } = useSubscriptionStore();
 
 // Use the composable
 const {
@@ -39,8 +33,7 @@ const {
   confirmRegenerate,
   cancelRegenerate,
   rateLimitRemaining,
-  subscriptionInfo,
-  isQuotaExceeded,
+
 } = useGenerateFromMaterial(materialIdRef);
 
 // Dropdown items - using onSelect for Nuxt UI v4 UDropdownMenu
@@ -107,7 +100,7 @@ watch(genError, (error) => {
         :text="isQuotaExceeded ? 'Quota Exceeded, Upgrade your plan or create manual question/cards' : !hasContent ? 'Material has no content, add content then try again' : 'Generate Question or Flashcards'">
 
         <u-button color="primary" size="xs" :loading="generating" :disabled="disabled || isQuotaExceeded || !hasContent"
-          aria-label="Generate Study Tools" variant="soft">
+          aria-label="Generate Study Tools" variant='subtle'>
           <span v-if="!generating">Generate</span>
           <span v-else>Generating…</span>
           <template #trailing>

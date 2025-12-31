@@ -77,7 +77,7 @@ const sizeClasses = {
 };
 
 const shadowClasses = {
-  none: "shadow-none",
+  none: "shadow-none!",
   sm: "shadow-sm",
   md: "shadow-md",
   lg: "shadow-lg",

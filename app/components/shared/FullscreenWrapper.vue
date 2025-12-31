@@ -75,7 +75,7 @@ defineExpose({
   inset: 0;
   background-color: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(4px);
-  z-index: 40;
+  z-index: 10;
   will-change: opacity, backdrop-filter;
 }
 
@@ -101,7 +101,7 @@ defineExpose({
   height: 100vh;
   max-width: var(--fs-max-width, 1200px);
   max-height: var(--fs-max-height, 95vh);
-  z-index: 50;
+  z-index: 20;
 
   display: flex;
   flex-direction: column;

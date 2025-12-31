@@ -13,19 +13,19 @@
             <icon name="i-lucide-info" :size="UI_CONFIG.ICON_SIZE" class="text-muted dark:text-neutral" />
           </u-tooltip>
         </div>
-        <u-button variant="subtle" size="xs" :aria-expanded="showUpload" aria-controls="upload-materials"
+        <u-button variant="subtle" size="sm" :aria-expanded="showUpload" aria-controls="upload-materials"
           @click="$emit('toggle-upload')" title="Create New Study Material">
-          New Study Material
+          New Material
         </u-button>
       </template>
 
       <template #default>
-        <div class="flex-1 flex flex-col min-h-0 overflow-hidden p-4 gap-4">
+        <div class="flex-1 flex flex-col min-h-0 overflow-hidden gap-4">
           <!-- Materials List Section -->
           <ui-card class="shrink-0 max-h-[30%]" size="sm" variant="outline"
             content-classes="flex flex-col min-h-0 overflow-hidden">
             <u-collapsible class="flex flex-col min-h-0">
-              <div class="flex items-center gap-1 select-none cursor-pointer text-sm font-medium dark:text-light p-2">
+              <div class="flex items-center gap-1 select-none cursor-pointer text-sm font-medium dark:text-light ">
                 <div v-if="updating" class="flex items-center gap-1 text-primary">
                   <icon name="i-lucide-loader" class="w-4 h-4 animate-spin" />
                 </div>
@@ -34,7 +34,7 @@
                   class="text-muted dark:text-neutral" />
               </div>
               <template #content>
-                <div class="overflow-auto max-h-48 border-t border-muted">
+                <div class="overflow-auto max-h-48 h-full my-1 border-t border-muted">
                   <MaterialsList :folder-id="folderId" @removed="() => { }" @error="(e) => console.error(e)" />
                 </div>
               </template>
@@ -92,6 +92,8 @@ defineEmits<{
 
 const activeIndex = ref(0);
 const carousel = useTemplateRef("carousel");
+// Subscription info
+const { fetchSubscriptionStatus } = useSubscriptionStore();
 
 const items = [
   {
@@ -115,4 +117,8 @@ function select(index: number) {
   activeIndex.value = index;
   carousel.value?.emblaApi?.scrollTo(index);
 }
+
+watch(() => props.folderId, () => {
+  fetchSubscriptionStatus();
+});
 </script>

@@ -1,9 +1,9 @@
 <template>
-  <div class="mx-auto  flex h-screen flex-col gap-y-1 justify-between">
+  <div class="mx-auto  flex h-screen flex-col gap-y-3 justify-between">
     <nav id="nav"
-      class="flex basis-0 shrink-0 font-heading items-center justify-between p-2 md:px-1 rounded-xl md:rounded-none  mx-auto left-[50%] top-4 border-b border-neutral dark:border-muted w-[calc(100%-1rem)]">
+      class="flex basis-0 shrink-0 font-heading items-center justify-between py-2 rounded-xl md:rounded-none  mx-auto left-[50%] top-4 border-b border-neutral dark:border-muted w-[calc(100%-2rem)]">
       <div class="flex items-center justify-between w-full">
-        <router-link to="/" class="flex items-center gap-2 text-dark dark:text-light font-medium text-sm md:text-base">
+        <router-link to="/" class="flex items-center gap-2 text-dark dark:text-light font-medium text-lg ">
           <img class="h-5 dark:invert-[1] dark:filter" :src="'/images/CleverAI_icon.svg'" alt="" />
           Cognilo</router-link>
         <div v-if="status === 'authenticated'" class="flex gap-5">
