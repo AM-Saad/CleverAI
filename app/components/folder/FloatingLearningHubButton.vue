@@ -4,11 +4,11 @@
     leave-active-class="transition-all duration-300 ease-in" leave-from-class="opacity-100 scale-100 translate-y-0"
     leave-to-class="opacity-0 scale-50 translate-y-10">
     <button v-if="visible" @click="handleClick"
-      class="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-3 py-2 rounded-lg shadow-[0_20px_50px_rgba(var(--color-primary-rgb),0.3)] transition-all duration-300 active:scale-95 group overflow-hidden outline-0 select-none"
+      class="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-3 py-2 rounded-lg shadow-[2px_20px_50px_rgba(var(--color-primary-rgb),0.8)] transition-all duration-300 active:scale-95 group overflow-hidden outline-0 select-none"
       aria-label="Open Learning Hub" title="Open Learning Hub">
       <!-- Premium Gradient Background -->
       <div
-        class="absolute inset-0 bg-gradient-to-br from-primary via-primary to-accent transition-all duration-500 group-hover:scale-110 outline-0">
+        class="absolute inset-0 bg-gradient-to-br from-primary  to-primary transition-all duration-500 group-hover:scale-110 outline-0">
       </div>
 
       <!-- Glassmorphism overlay -->
@@ -21,10 +21,10 @@
 
       <!-- Content -->
       <div class="relative flex items-center gap-2.5">
-        <div class="p-0.5 rounded-lg bg-white/70 backdrop-blur-md">
+        <div class=" rounded-lg bg-white/90 backdrop-blur-md">
           <icons-stars-generative class="w-4 h-4 text-white" />
         </div>
-        <span class="text-white font-bold tracking-tight">Learning Hub</span>
+        <span class="text-light font-bold tracking-tight">Learning Hub</span>
       </div>
 
       <!-- Shine animation -->

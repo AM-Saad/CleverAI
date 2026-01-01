@@ -150,13 +150,13 @@ onBeforeUnmount(() => {
         Back to Folders
       </NuxtLink>
     </template>
+
     <template #actions>
       <div class="flex flex-col items-end gap-2">
         <!-- Folder-specific Review Status - Minimal & Clean -->
         <review-status-card :folder-id="`${id as string}`" :show-context="false" :show-refresh="false" :minimal="true"
           variant="ghost" :empty-message="'You have no cards to review, enroll some or just chill.'" />
       </div>
-
     </template>
     <shared-error-message v-if="error && !loading" :error="error" :refresh="refresh" />
 

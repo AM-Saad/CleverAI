@@ -15,7 +15,8 @@
     <ui-loader v-if="isLoading" :is-fetching="isLoading" />
 
     <!-- Error State -->
-    <shared-error-message v-if="error && !isLoading" :error="error" :refresh="refresh" />
+    <shared-error-message v-if="error && !isLoading" :error="isOnline ? error : 'No internet connection'"
+      :refresh="isOnline ? refresh : undefined" />
 
 
     <!-- Empty State (no cards enrolled) -->
@@ -157,6 +158,8 @@ const reviewLink = computed(() => {
   const base = "/user/review";
   return props.folderId ? `${base}?folderId=${props.folderId}` : base;
 });
+
+const isOnline = computed(() => navigator.onLine);
 
 // Computed: Urgency indicator class
 const urgencyIndicatorClass = computed(() => {
