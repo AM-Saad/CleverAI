@@ -75,10 +75,10 @@ const handleSubmit = async (): Promise<void> => {
 <template>
   <div class="flex items-center justify-center flex-col w-full max-w-xl mx-auto">
     <form ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test" @submit="handleSubmit">
-      <UiTitle>Create Password</UiTitle>
-      <UiParagraph size="sm" color="muted" class="mb-4">
+      <ui-title>Create Password</ui-title>
+      <ui-paragraph size="sm" color="muted" class="mb-4">
         This page will expire in 15 minutes
-      </UiParagraph>
+      </ui-paragraph>
       <shared-error-message v-if="error" :error="error.message" />
       <shared-success-message v-if="success" :message="success" />
       <div class="mb-2 mt-2 rounded-md relative transition duration-10 00 text-xs">
@@ -89,23 +89,30 @@ const handleSubmit = async (): Promise<void> => {
             tabindex="1" label="Password" />
           <div v-if="strengthScore !== null" class="mt-1">
             <div class="h-1 w-full bg-gray-200 rounded">
-              <div
-                class="h-1 rounded transition-all"
-                :style="{
-                  width: `${((strengthScore ?? 0) + 1) * 20}%`,
-                  backgroundColor: strengthScore! >= 3 ? '#16a34a' : strengthScore! >= 2 ? '#f59e0b' : '#ef4444'
-                }"
-              />
+              <div class="h-1 rounded transition-all" :style="{
+                width: `${((strengthScore ?? 0) + 1) * 20}%`,
+                backgroundColor: strengthScore! >= 3 ? '#16a34a' : strengthScore! >= 2 ? '#f59e0b' : '#ef4444'
+              }" />
             </div>
-            <UiParagraph size="xs" color="muted" class="mt-1">Strength: {{ strengthLabel }}</UiParagraph>
+            <ui-paragraph size="xs" color="muted" class="mt-1">Strength: {{ strengthLabel }}</ui-paragraph>
           </div>
-                  <div class="mt-2 space-y-1 text-xs">
-                    <div :class="{'text-green-600': /[A-Z]/.test(credentials.password||''), 'text-gray-500': !/[A-Z]/.test(credentials.password||'') }">• Uppercase letter</div>
-                    <div :class="{'text-green-600': /[a-z]/.test(credentials.password||''), 'text-gray-500': !/[a-z]/.test(credentials.password||'') }">• Lowercase letter</div>
-                    <div :class="{'text-green-600': /\d/.test(credentials.password||''), 'text-gray-500': !/\d/.test(credentials.password||'') }">• Number</div>
-                    <div :class="{'text-green-600': /[^A-Za-z0-9]/.test(credentials.password||''), 'text-gray-500': !/[^A-Za-z0-9]/.test(credentials.password||'') }">• Symbol</div>
-                    <div :class="{'text-green-600': (credentials.password||'').length >= 8, 'text-gray-500': (credentials.password||'').length < 8 }">• At least 8 characters</div>
-                  </div>
+          <div class="mt-2 space-y-1 text-xs">
+            <div
+              :class="{ 'text-green-600': /[A-Z]/.test(credentials.password || ''), 'text-gray-500': !/[A-Z]/.test(credentials.password || '') }">
+              • Uppercase letter</div>
+            <div
+              :class="{ 'text-green-600': /[a-z]/.test(credentials.password || ''), 'text-gray-500': !/[a-z]/.test(credentials.password || '') }">
+              • Lowercase letter</div>
+            <div
+              :class="{ 'text-green-600': /\d/.test(credentials.password || ''), 'text-gray-500': !/\d/.test(credentials.password || '') }">
+              • Number</div>
+            <div
+              :class="{ 'text-green-600': /[^A-Za-z0-9]/.test(credentials.password || ''), 'text-gray-500': !/[^A-Za-z0-9]/.test(credentials.password || '') }">
+              • Symbol</div>
+            <div
+              :class="{ 'text-green-600': (credentials.password || '').length >= 8, 'text-gray-500': (credentials.password || '').length < 8 }">
+              • At least 8 characters</div>
+          </div>
         </div>
         <div class="form-group">
           <ui-input-field id="login-email-client" v-model="credentials.confirmPassword!" type="password"
@@ -114,7 +121,7 @@ const handleSubmit = async (): Promise<void> => {
         </div>
       </div>
       <div>
-        <u-button type="submit"  :disabled="loading || (strengthScore !== null && strengthScore < 3)" tabindex="3"
+        <u-button type="submit" :disabled="loading || (strengthScore !== null && strengthScore < 3)" tabindex="3"
           @click.prevent="handleSubmit">
           Create
         </u-button>

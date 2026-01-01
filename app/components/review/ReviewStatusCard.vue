@@ -2,7 +2,7 @@
   <ui-card :class="[
     'transition-all duration-200',
     cardClasses,
-  ]" :variant="minimal ? 'ghost' : 'default'" :size="minimal ? 'sm' : 'md'">
+  ]" :variant="minimal ? 'ghost' : 'default'" :size="minimal ? 'xs' : 'md'">
     <!-- Loading State -->
     <template #header v-if="!minimal">
       <div class="flex items-center justify-between w-full">
@@ -15,14 +15,14 @@
     <ui-loader v-if="isLoading" :is-fetching="isLoading" />
 
     <!-- Error State -->
-    <shared-error-message v-if="error && !isLoading" :error="isOnline ? error : 'No internet connection'"
-      :refresh="isOnline ? refresh : undefined" />
+    <shared-server-error v-if="typedError && !isLoading" :typedError="typedError" :loading="isLoading"
+      :refresh="refresh" />
 
 
     <!-- Empty State (no cards enrolled) -->
     <div v-if="isEmpty && !isLoading && !error" :class="`text-center ${minimal ? 'flex items-center gap-2' : ''}`">
       <Icon name="heroicons:academic-cap" class="text-gray-400" :size="UI_CONFIG.ICON_SIZE" />
-      <ui-paragraph>
+      <ui-paragraph size="xs">
         {{ emptyMessage }}
       </ui-paragraph>
       <slot name="empty-action" />
@@ -137,6 +137,7 @@ const {
   stats,
   isLoading,
   error,
+  typedError,
   hasDueCards,
   isEmpty,
   statusMessage,
@@ -147,6 +148,9 @@ const {
   immediate: !props.initialStats,
 });
 
+watch(() => typedError, (newStats) => {
+  console.log("newStats", newStats);
+});
 // If initial stats provided, use them
 if (props.initialStats) {
   // @ts-expect-error - we're intentionally setting ref value

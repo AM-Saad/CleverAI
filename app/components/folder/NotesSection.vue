@@ -281,7 +281,8 @@ onMounted(async () => {
       <!-- Notes grid -->
       <div v-if="!error && !isFetching && notes?.length" class="flex flex-1 min-h-0 overflow-hidden relative"
         id="notes-section">
-        <ui-drawer :show="false" :mobile="false" teleport-to="#notes-section" :backdrop="false" :handle-visible="20">
+        <ui-drawer :show="false" :mobile="false" teleport-to="#notes-section" :backdrop="false" :handle-visible="20"
+          title="Notes">
           <div class="relative shrink-0 overflow-auto bg-light dark:bg-muted rounded border border-muted">
             <folder-notes-search :folder-id="folderId" />
             <ReorderGroup v-model:values="localNotes" axis="y" class="relative flex-1 shrink-0 overflow-auto"
@@ -291,8 +292,9 @@ onMounted(async () => {
                 { label: 'Delete', onSelect: () => deleteNote(note.id) },
               ]" :context="note">
                 <ReorderItem :value="note" :class="[
-                  'relative flex items-center gap-2 group w-full p-2.5 border-b border-muted cursor-pointer hover:bg-muted',
+                  'relative flex items-center gap-2 group w-full p-2.5  cursor-pointer hover:bg-muted',
                   idx === 0 ? 'rounded-tl-xl' : '',
+                  idx === localNotes.length - 1 ? 'rounded-bl-xl' : 'border-b border-muted',
                   notesStore.filteredNoteIds.value
                     ? notesStore.isNoteInFilter(note.id)
                       ? 'font-bold'

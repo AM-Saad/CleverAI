@@ -255,7 +255,7 @@ function handleDragEnd(_: Event, info: DragInfo) {
           <!-- Header: slot or fallback title -->
           <div class="flex flex-col gap-1">
             <slot name="header">
-              <h4 id="drawer-title" class="flex items-center gap-2 text-lg font-semibold dark:text-foreground">
+              <h4 id="drawer-title" class="flex items-center gap-2 text-lg font-semibold dark:text-light">
                 {{ props.title }}
               </h4>
             </slot>
