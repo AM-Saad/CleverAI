@@ -10,9 +10,9 @@ export default defineEventHandler(async (event) => {
   const now = Date.now()
   const windowMs = 60 * 1000
   const emailMap: MemCounter = (globalThis as any).__rl_email_verify__ || new Map()
-  ;(globalThis as any).__rl_email_verify__ = emailMap
+    ; (globalThis as any).__rl_email_verify__ = emailMap
   const ipMap: MemCounter = (globalThis as any).__rl_ip_verify__ || new Map()
-  ;(globalThis as any).__rl_ip_verify__ = ipMap
+    ; (globalThis as any).__rl_ip_verify__ = ipMap
 
   const raw = await readBody(event)
   let parsed: z.infer<typeof schema>

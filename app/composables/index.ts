@@ -8,3 +8,4 @@ export * from "./review/";
 export * from "./flashcards/useCreateFlashcard";
 export * from "./flashcards/useUpdateFlashcard";
 export * from "./flashcards/useDeleteFlashcard";
+export * from "./materials/useGenerateFromMaterial";

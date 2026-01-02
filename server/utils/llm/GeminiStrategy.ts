@@ -126,7 +126,7 @@ export class GeminiStrategy implements LLMStrategy {
           contents: [{ role: "user", parts: [{ text: prompt }] }],
         });
         inputTokensEstimate = Number((preCount as any)?.totalTokens ?? 0);
-      } catch {}
+      } catch { }
 
       const resp = await model.generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
@@ -151,7 +151,7 @@ export class GeminiStrategy implements LLMStrategy {
           ],
         });
         outputTokensEstimate = Number((postCount as any)?.totalTokens ?? 0);
-      } catch {}
+      } catch { }
 
       this.onMeasure?.({
         provider: "google",
@@ -176,7 +176,9 @@ export class GeminiStrategy implements LLMStrategy {
     }
   }
 
-  async generateFlashcards(input: string): Promise<FlashcardDTO[]> {
+  async generateFlashcards(input: string, options?: LLMGenerationOptions): Promise<FlashcardDTO[]> {
+    const itemCount = options?.itemCount ?? 5;
+
     if (process.env.GEMINI_MOCK === "1") {
       return [
         {
@@ -186,7 +188,7 @@ export class GeminiStrategy implements LLMStrategy {
         { front: "Who discovered gravity?", back: "Sir Isaac Newton." },
       ];
     }
-    const prompt = flashcardPrompt(input); // expects JSON array [{ front, back }]
+    const prompt = flashcardPrompt(input, itemCount); // expects JSON array [{ front, back }]
     const text = await this.chatOnce(prompt);
     const candidate = extractJsonArrayOrObject(text);
     const raw = safeParseJSON<any[]>(candidate, []);
@@ -206,7 +208,9 @@ export class GeminiStrategy implements LLMStrategy {
     return cards;
   }
 
-  async generateQuiz(input: string): Promise<QuizQuestionDTO[]> {
+  async generateQuiz(input: string, options?: LLMGenerationOptions): Promise<QuizQuestionDTO[]> {
+    const itemCount = options?.itemCount ?? 3;
+
     if (process.env.GEMINI_MOCK === "1") {
       return [
         {
@@ -221,7 +225,7 @@ export class GeminiStrategy implements LLMStrategy {
         },
       ];
     }
-    const prompt = quizPrompt(input); // expects JSON array [{ question, choices[], answerIndex }]
+    const prompt = quizPrompt(input, itemCount); // expects JSON array [{ question, choices[], answerIndex }]
     const text = await this.chatOnce(prompt);
     const candidate = extractJsonArrayOrObject(text);
     const raw = safeParseJSON<any[]>(candidate, []);

@@ -1,4 +1,3 @@
-// server/api/llm.gateway.post.ts
 import { defineEventHandler, readBody } from "h3";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
@@ -16,6 +15,9 @@ import {
 } from "@server/utils/llm/gatewayLogger";
 import { updateModelLatency } from "@server/utils/llm/modelRegistry";
 import { randomUUID } from "crypto";
+import {
+  computeAdaptiveItemCount,
+} from "@server/utils/llm/adaptiveCount";
 
 type GenerationTask = "flashcards" | "quiz";
 
@@ -129,10 +131,30 @@ export default defineEventHandler(async (event) => {
     preferredModelId,
     requiredCapability,
     text: originalText,
+    generationConfig,
   } = parsed;
-  const text = originalText.trim();
 
-  const MAX_CHARS = 10_000;
+  // Load material content if materialId provided
+  let text = originalText?.trim() || "";
+  let loadedMaterial: any = null;
+
+  if (materialId) {
+    loadedMaterial = await prisma.material.findUnique({
+      where: { id: materialId },
+      include: { folder: { select: { userId: true, id: true } } },
+    });
+
+    if (!loadedMaterial) {
+      throw Errors.notFound("Material not found.");
+    }
+    if (loadedMaterial.folder.userId !== user.id) {
+      throw Errors.forbidden("You do not have access to this material.");
+    }
+
+    text = loadedMaterial.content || "";
+  }
+
+  const MAX_CHARS = 100_000;
   if (text.length === 0) throw Errors.badRequest("Text is required");
   if (text.length > MAX_CHARS) throw Errors.badRequest("Text too large");
 
@@ -142,8 +164,11 @@ export default defineEventHandler(async (event) => {
   let canSave = false;
   let materialFolderId: string | undefined;
 
-  // If materialId is provided, verify ownership and get folderId from material
-  if (save && materialId) {
+  // If materialId is provided, verify ownership (already done above)
+  if (save && loadedMaterial) {
+    canSave = true;
+    materialFolderId = loadedMaterial.folder.id;
+  } else if (save && materialId) {
     const material = await prisma.material.findFirst({
       where: { id: materialId },
       include: { folder: { select: { userId: true, id: true } } },
@@ -167,9 +192,25 @@ export default defineEventHandler(async (event) => {
   }
 
   // ==========================================
-  // Semantic Cache Check
+  // Adaptive Item Count Computation
   // ==========================================
-  const cacheCheck = await checkSemanticCache(text, task);
+  const tokenEstimate = estimateTokensFromText(text);
+  const depth = generationConfig?.depth ?? "balanced";
+  const maxItems = generationConfig?.maxItems;
+  const itemCount = computeAdaptiveItemCount(tokenEstimate, depth, maxItems);
+
+  console.info("[llm.gateway] Adaptive generation:", {
+    requestId,
+    tokenEstimate,
+    depth,
+    itemCount,
+    textLength: text.length,
+  });
+
+  // ==========================================
+  // Semantic Cache Check (include itemCount in key)
+  // ==========================================
+  const cacheCheck = await checkSemanticCache(text, task, itemCount);
 
   if (cacheCheck.hit && cacheCheck.value) {
     console.info("[llm.gateway] Cache hit:", {
@@ -205,6 +246,8 @@ export default defineEventHandler(async (event) => {
       provider: cached.provider,
       latencyMs: Date.now() - requestStartTime,
       cached: true,
+      itemCount, // Include computed itemCount
+      tokenEstimate, // Include token estimate
     };
 
     return success(response);
@@ -258,9 +301,9 @@ export default defineEventHandler(async (event) => {
     });
 
     if (task === "flashcards") {
-      result = await strategy.generateFlashcards(text);
+      result = await strategy.generateFlashcards(text, { itemCount });
     } else {
-      result = await strategy.generateQuiz(text);
+      result = await strategy.generateQuiz(text, { itemCount });
     }
 
     const latencyMs = Date.now() - generationStartTime;
@@ -445,7 +488,8 @@ export default defineEventHandler(async (event) => {
     text,
     task,
     cacheableData,
-    7 * 24 * 60 * 60 // 7 days TTL
+    7 * 24 * 60 * 60, // 7 days TTL
+    itemCount // Include itemCount in cache key
   );
 
   // ==========================================
@@ -454,17 +498,18 @@ export default defineEventHandler(async (event) => {
   const totalLatencyMs = Date.now() - requestStartTime;
 
   // Estimate token counts (strategy might have actual counts via onMeasure callback)
+  // Note: These are heuristic estimates; actual counts come from LLM strategy callbacks
   const estimatedInputTokens = Math.ceil(text.length / 3.5);
   const estimatedOutputTokens =
     task === "flashcards"
       ? (result as Flashcard[]).reduce(
-          (sum, fc) => sum + fc.front.length + fc.back.length,
-          0
-        ) / 3.5
+        (sum, fc) => sum + fc.front.length + fc.back.length,
+        0
+      ) / 3.5
       : (result as QuizQuestion[]).reduce(
-          (sum, q) => sum + q.question.length + q.choices.join("").length,
-          0
-        ) / 3.5;
+        (sum, q) => sum + q.question.length + q.choices.join("").length,
+        0
+      ) / 3.5;
 
   await logGatewayRequest({
     requestId,
@@ -479,6 +524,10 @@ export default defineEventHandler(async (event) => {
     cached: false,
     cacheHit: false,
     status: "success",
+    // Adaptive generation fields for cost analysis by depth tier
+    itemCount,
+    tokenEstimate,
+    depth,
   });
 
   // ==========================================
@@ -527,6 +576,8 @@ export default defineEventHandler(async (event) => {
     provider: selectedModel.provider,
     latencyMs: totalLatencyMs,
     cached: false,
+    itemCount, // Adaptive item count
+    tokenEstimate, // Estimated tokens
   };
 
   console.info("[llm.gateway] Request completed", {

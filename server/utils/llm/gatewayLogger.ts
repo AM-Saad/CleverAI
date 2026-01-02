@@ -18,6 +18,10 @@ export interface GatewayLogData {
   errorCode?: string
   errorMessage?: string
   routingScore?: number
+  // Adaptive generation fields
+  itemCount?: number
+  tokenEstimate?: number
+  depth?: 'quick' | 'balanced' | 'deep'
 }
 
 /**
@@ -33,7 +37,7 @@ export async function logGatewayRequest(data: GatewayLogData): Promise<void> {
     const outputCostUsdMicros = BigInt(
       Math.round((data.outputTokens / 1_000_000) * data.selectedModel.outputCostPer1M * 1_000_000)
     )
-    
+
     await prisma.llmGatewayLog.create({
       data: {
         requestId: data.requestId,
@@ -55,9 +59,13 @@ export async function logGatewayRequest(data: GatewayLogData): Promise<void> {
         errorCode: data.errorCode,
         errorMessage: data.errorMessage,
         routingScore: data.routingScore,
+        // Adaptive generation fields for analytics
+        itemCount: data.itemCount,
+        tokenEstimate: data.tokenEstimate,
+        depth: data.depth,
       },
     })
-    
+
     console.info('[gatewayLogger] Logged request:', {
       requestId: data.requestId,
       model: data.selectedModel.modelId,
@@ -110,7 +118,7 @@ export async function logGatewayFailure(
         errorMessage: error.message || 'Unknown error',
       },
     })
-    
+
     console.info('[gatewayLogger] Logged failure:', {
       requestId,
       task,
@@ -130,7 +138,7 @@ export async function logGatewayFailure(
 export async function getUserGatewayStats(userId: string, days = 30) {
   const since = new Date()
   since.setDate(since.getDate() - days)
-  
+
   const stats = await prisma.llmGatewayLog.aggregate({
     where: {
       userId,
@@ -142,7 +150,7 @@ export async function getUserGatewayStats(userId: string, days = 30) {
       totalCostUsdMicros: true,
     },
   })
-  
+
   const byModel = await prisma.llmGatewayLog.groupBy({
     by: ['selectedModelId', 'provider'],
     where: {
@@ -155,7 +163,7 @@ export async function getUserGatewayStats(userId: string, days = 30) {
       totalCostUsdMicros: true,
     },
   })
-  
+
   return {
     totalRequests: stats._count.id,
     totalTokens: stats._sum.totalTokens || 0,
@@ -176,20 +184,20 @@ export async function getUserGatewayStats(userId: string, days = 30) {
 export async function getCacheHitStats(days = 30) {
   const since = new Date()
   since.setDate(since.getDate() - days)
-  
+
   const total = await prisma.llmGatewayLog.count({
     where: { createdAt: { gte: since } },
   })
-  
+
   const cacheHits = await prisma.llmGatewayLog.count({
     where: {
       createdAt: { gte: since },
       cacheHit: true,
     },
   })
-  
+
   const hitRate = total > 0 ? (cacheHits / total) * 100 : 0
-  
+
   return {
     total,
     cacheHits,

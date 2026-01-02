@@ -5,7 +5,6 @@ import { useEmailVerification } from '@/composables/auth/useEmailVerification'
 definePageMeta({
   auth: false,
 });
-const router = useRouter();
 const route = useRoute();
 // Managed by useEmailVerification composable
 
@@ -42,7 +41,8 @@ const {
 </script>
 
 <template>
-  <div class="flex items-center justify-center flex-col w-full max-w-xl mx-auto">
+  <div class="flex items-center justify-center flex-col w-full max-w-xl mx-auto mt-8 ">
+
     <form ref="forgetpassword" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
       @submit.prevent="submitForm">
       <UiTitle> Verify Your Account</UiTitle>
@@ -57,8 +57,8 @@ const {
           label="Email Address" title="Please enter your email address" tabindex="2" :styles="{
             inputField: `${emailSent ? ' rounded-b-none border-b' : ''}`,
           }" />
-        <ui-input-field id="verify-code-client" ref="codeInputRef" v-model="credentials.verification!" type="text" name="verification"
-          label="Verification Code" title="Please enter the verification code" tabindex="2" :styles="{
+        <ui-input-field id="verify-code-client" ref="codeInputRef" v-model="credentials.verification!" type="text"
+          name="verification" label="Verification Code" title="Please enter the verification code" tabindex="2" :styles="{
             inputField: `rounded-t-none  ${!emailSent ? ' -translate-y-full -z-10 hidden' : ''}`,
           }" />
         <button
@@ -69,24 +69,27 @@ const {
         </button>
       </div>
 
-      <UiParagraph v-if="emailSent" size="xs" color="muted" class="mt-2">
-        A verification code has been sent to your email.
+      <UiParagraph size="sm" color="muted" class="mt-2 flex justify-end items-center gap-2">
+
         <span v-if="remainingAttempts !== null"> Attempts left: {{ remainingAttempts }}.</span>
-        <span v-if="resendCountDown > 0"> Resend available in {{ resendCountDown }}s.</span>
-        <div v-if="resendCountDown > 0" class="mt-2 flex items-center gap-2">
-          <div class="relative h-6 w-6" aria-hidden="true">
+        <span v-if="resendCountDown > 0">Resend in: {{ resendCountDown }}s.</span>
+        <div v-if="resendCountDown > 0" class="flex items-center gap-2">
+          <div class="relative h-5 w-5" aria-hidden="true">
             <div class="absolute inset-0 rounded-full bg-gray-200"></div>
-            <div class="absolute inset-0 rounded-full" :style="{ background: `conic-gradient(#dc2626 ${progressPercent}%, #e5e7eb ${progressPercent}%)` }"></div>
-            <div class="absolute inset-1 rounded-full bg-white"></div>
+            <div class="absolute inset-0 rounded-full"
+              :style="{ background: `conic-gradient(#30c3c6 ${progressPercent}%, #e5e7eb ${progressPercent}%)` }"></div>
+            <div class="absolute inset-0.5 rounded-full bg-white"></div>
           </div>
           <div class="h-1 flex-1 bg-gray-200 rounded">
-            <div class="h-1 bg-red-500 rounded transition-all" :style="{ width: progressPercent + '%' }" />
+            <div class="h-1 bg-primary rounded transition-all" :style="{ width: progressPercent + '%' }" />
           </div>
         </div>
         <span v-else>
-          <button class="underline" :disabled="!canResend" @click.prevent="handleSendEmail">Resend Code</button>
+          <button class="underline cursor-pointer" :disabled="!canResend" @click.prevent="handleSendEmail">Resend
+            Code</button>
         </span>
-        <span v-if="inlineHintVisible" class="block mt-1 text-red-600">Resend limit reached. Please wait for cooldown.</span>
+        <span v-if="inlineHintVisible" class="block mt-1 text-red-600">Resend limit reached. Please wait for
+          cooldown.</span>
       </UiParagraph>
 
     </form>

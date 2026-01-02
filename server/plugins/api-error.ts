@@ -11,7 +11,7 @@ export default defineNitroPlugin((app) => {
 
     // Always normalize to consistent format
     const normalized = normalizeError(err);
-    console.log("Normalized Error:", normalized);
+    // console.log("Normalized Error:", normalized);
 
     try {
       event.node.res.statusCode = normalized.error.statusCode;

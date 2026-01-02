@@ -25,23 +25,21 @@ const { handleSubmit, credentials, fieldTypes, error, success, loading } =
         <strong class="font-semibold">access all the features</strong> of the
         application!
       </UiParagraph>
-      <shared-error-message :error="error" />
+      <shared-server-error v-if="error" :typed-error="error" :loading="loading" />
       <shared-success-message :message="success ? `${success}` : undefined" />
       <div class="flex flex-col gap-2  mb-2 mt-2 rounded-md relative transition duration-10 00 text-xs">
         <ui-input-field id="register-name-client" v-model="credentials.name!" :type="fieldTypes.name" name="name"
           label="Name" title="Please enter your name" tabindex="1" />
         <ui-input-field id="register-email-client" v-model="credentials.email!" :type="fieldTypes.email" name="email"
           label="Email Address" title="Please enter a valid email address" tabindex="2" />
-        <ui-input-field id="register-phone-client" v-model="credentials.phone!" :type="fieldTypes.phone" name="phone"
-          label="Phone" title="Please enter your phone number" tabindex="3" />
         <ui-input-field id="register-gender-client" v-model="credentials.gender!" :type="fieldTypes.gender"
-          name="gender" label="Gender" title="Please enter your gender" tabindex="4" />
+          name="gender" label="Gender" title="Please enter your gender" tabindex="3" />
 
         <ui-input-field id="login-password-client" v-model="credentials.password!" :type="fieldTypes.password"
-          name="password" label="Password" title="Please enter a valid password" tabindex="5" />
+          name="password" label="Password" title="Please enter a valid password" tabindex="4" />
         <ui-input-field id="login-confirm-password-client" v-model="credentials.confirmPassword!"
           :type="fieldTypes.confirmPassword" name="confirmPassword" label="Confirm Password"
-          title="Please enter a valid and matching password" tabindex="6" />
+          title="Please enter a valid and matching password" tabindex="5" />
       </div>
 
       <div class="flex flex-col gap-2 items-start">

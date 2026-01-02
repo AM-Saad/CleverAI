@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
   // Issue short-lived token (now 15m) used for password creation
   const token = jwt.sign(
     { email: user.email, password_verification: newCode, purpose: "password", flow: "reset" },
-    process.env.AUTH_SECRET!,
+    process.env.NUXT_AUTH_SECRET!,
     { expiresIn: "15m" }
   );
 

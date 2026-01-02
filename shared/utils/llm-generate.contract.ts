@@ -63,19 +63,33 @@ export type LLMGenerateResponse = z.infer<typeof LLMGenerateResponse>;
 // ==========================================
 
 /**
+ * Generation configuration for adaptive flashcard/quiz creation
+ */
+export const GenerationConfigSchema = z.object({
+  depth: z.enum(["quick", "balanced", "deep"]).default("balanced"),
+  maxItems: z.number().int().positive().optional(), // Override computed item count
+});
+export type GenerationConfig = z.infer<typeof GenerationConfigSchema>;
+
+/**
  * Gateway request schema - extends base generation with routing options
  */
-export const GatewayGenerateRequest = z.object({
-  task: TaskEnum,
-  text: z.string().min(1),
-  folderId: z.string().optional(),
-  materialId: z.string().optional(), // Generate from specific material
-  save: z.boolean().optional(),
-  replace: z.boolean().optional(),
-  // Gateway-specific options:
-  preferredModelId: z.string().optional(), // e.g., 'gpt-4o-mini', 'gemini-flash-8b'
-  requiredCapability: z.enum(["text", "multimodal", "reasoning"]).optional(),
-});
+export const GatewayGenerateRequest = z
+  .object({
+    task: TaskEnum,
+    text: z.string().min(10).max(100000).optional(), // Optional if materialId provided
+    folderId: z.string().optional(),
+    materialId: z.string().optional(), // Generate from specific material
+    save: z.boolean().optional(),
+    replace: z.boolean().optional(),
+    // Gateway-specific options:
+    preferredModelId: z.string().optional(), // e.g., 'gpt-4o-mini', 'gemini-flash-8b'
+    requiredCapability: z.enum(["text", "multimodal", "reasoning"]).optional(),
+    generationConfig: GenerationConfigSchema.optional(), // Adaptive generation config
+  })
+  .refine((data) => data.text || data.materialId, {
+    message: "Either text or materialId must be provided",
+  });
 export type GatewayGenerateRequest = z.infer<typeof GatewayGenerateRequest>;
 
 /**
@@ -96,6 +110,8 @@ export const GatewayGenerateResponse = z.union([
     latencyMs: z.number(),
     cached: z.boolean(),
     routingScore: z.number().optional(),
+    itemCount: z.number().optional(), // Number of items generated (adaptive)
+    tokenEstimate: z.number().optional(), // Estimated tokens for input
   }),
   z.object({
     task: z.literal("quiz"),
@@ -111,6 +127,8 @@ export const GatewayGenerateResponse = z.union([
     latencyMs: z.number(),
     cached: z.boolean(),
     routingScore: z.number().optional(),
+    itemCount: z.number().optional(), // Number of items generated (adaptive)
+    tokenEstimate: z.number().optional(), // Estimated tokens for input
   }),
 ]);
 export type GatewayGenerateResponse = z.infer<typeof GatewayGenerateResponse>;

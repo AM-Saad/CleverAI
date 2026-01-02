@@ -46,7 +46,6 @@ export const RegisterDTO = z.object({
       "Password must include uppercase, lowercase, number, and symbol"
     ),
   confirmPassword: z.string(),
-  phone: z.preprocess(trim, z.string().min(1, "Phone is required")),
   gender: z.preprocess(trim, z.string()).optional(),
   role: z.enum(["USER"]).default("USER"),
   provider: z.string().default("credentials"),

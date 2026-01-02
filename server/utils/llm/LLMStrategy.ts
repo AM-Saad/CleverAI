@@ -12,7 +12,11 @@
 //   answerIndex: number;
 // }
 
+export interface LLMGenerationOptions {
+  itemCount?: number; // Adaptive item count
+}
+
 export interface LLMStrategy {
-  generateFlashcards(input: string): Promise<FlashcardDTO[]>;
-  generateQuiz(input: string): Promise<QuizQuestionDTO[]>;
+  generateFlashcards(input: string, options?: LLMGenerationOptions): Promise<FlashcardDTO[]>;
+  generateQuiz(input: string, options?: LLMGenerationOptions): Promise<QuizQuestionDTO[]>;
 }

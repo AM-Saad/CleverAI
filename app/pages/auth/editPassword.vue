@@ -44,7 +44,7 @@ const submitForm = async (): Promise<void> => {
 
 <template>
   <div>
-    <div v-if="!verified" class="flex items-center justify-center flex-col w-full max-w-xl mx-auto">
+    <div v-if="!verified" class="flex items-center justify-center flex-col w-full max-w-xl mx-auto mt-8 ">
 
       <form ref="forgetpassword" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
         @submit.prevent="submitForm">
@@ -66,36 +66,37 @@ const submitForm = async (): Promise<void> => {
               inputField: `rounded-t-none  ${!emailSent ? ' -translate-y-full -z-10 hidden' : ''}`,
             }" />
           <button
-            :class="`w-8 h-8 absolute right-2 bottom-2 border rounded-full text-center grid place-items-center cursor-pointer hover:opacity-90 bg-primary hover:shadow`"
+            :class="`w-8 h-8 absolute right-2 bottom-2 border border-gray-500 rounded-full text-center grid place-items-center cursor-pointer hover:opacity-90 bg-primary hover:shadow`"
             type="submit" :disabled="loading" @click.prevent="submitForm">
             <icon v-if="!loading" name="i-heroicons-arrow-right" class="w-4 h-4 text-white" />
             <icon v-else name="uil:redo" class="w-4 h-4 animate-spin text-white" />
           </button>
         </div>
 
-        <UiParagraph v-if="emailSent" size="xs" color="muted" class="mt-2">
-          A verification code has been sent to your email.
-          <span v-if="remainingAttempts !== null"> Attempts left: {{ remainingAttempts }}.</span>
-          <span v-if="countDown > 0"> Resend available in {{ countDown }} seconds.</span>
-          <span v-else>
-            <button class="underline" :disabled="!canResend" @click.prevent="sendResetEmail">Resend Code</button>.
-          </span>
-          <span v-if="inlineHintVisible" class="block mt-1 text-red-600">Resend limit reached. Please wait for cooldown.</span>
-          <div v-if="countDown > 0" class="mt-2 flex items-center gap-2">
-            <div class="relative h-6 w-6" aria-hidden="true">
-              <div class="absolute inset-0 rounded-full bg-gray-200"></div>
-              <div class="absolute inset-0 rounded-full" :style="{ background: `conic-gradient(#dc2626 ${progressPercent}%, #e5e7eb ${progressPercent}%)` }"></div>
-              <div class="absolute inset-1 rounded-full bg-white"></div>
+        <UiParagraph v-if="emailSent" size="sm" color="muted" class="mt-2 flex justify-end items-center">
+          <div class="flex items-center gap-2">
+            <span v-if="remainingAttempts !== null"> Attempts left: {{ remainingAttempts }}.</span>
+            <span v-if="countDown > 0"> Resend in: {{ countDown }}s</span>
+            <div v-if="countDown > 0" class="mt-2 flex items-center gap-2">
+              <div class="relative h-5 w-5" aria-hidden="true">
+                <div class="absolute inset-0 rounded-full bg-gray-200"></div>
+                <div class="absolute inset-0 rounded-full"
+                  :style="{ background: `conic-gradient(#30c3c6 ${progressPercent}%, #e5e7eb ${progressPercent}%)` }">
+                </div>
+                <div class="absolute inset-0.5 rounded-full bg-white"></div>
+              </div>
             </div>
-            <div class="h-1 flex-1 bg-gray-200 rounded">
-              <div class="h-1 bg-red-500 rounded transition-all" :style="{ width: progressPercent + '%' }" />
-            </div>
+            <span v-else>
+              <button class="underline cursor-pointer" :disabled="!canResend" @click.prevent="sendResetEmail">Resend
+                Code</button>.
+            </span>
           </div>
+          <span v-if="inlineHintVisible" class="block mt-1 text-red-600">Resend limit reached. Please wait for
+            cooldown.</span>
         </UiParagraph>
-
       </form>
     </div>
-  <auth-create-password v-else :token="token" />
-  <auth-resend-blocked-toast :seconds="countDown" :attempts="remainingAttempts" />
+    <auth-create-password v-else :token="token" />
+    <auth-resend-blocked-toast :seconds="countDown" :attempts="remainingAttempts" />
   </div>
 </template>

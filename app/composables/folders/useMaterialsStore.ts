@@ -1,5 +1,6 @@
-import type { APIError } from "@/services/FetchFactory";
+import { APIError } from "@/services/FetchFactory";
 import type Result from "@/types/Result";
+import type { UploadMaterialResponse } from "@/services/Material";
 
 export interface MaterialState extends Material {
   // Local state tracking
@@ -21,8 +22,13 @@ interface MaterialStore {
     title: string;
     type: "text" | "video" | "audio" | "pdf" | "url" | "document" | undefined;
   }) => Promise<boolean>;
+  uploadMaterial: (file: File, title?: string) => Promise<UploadMaterialResponse | null>;
   deleteMaterial: (id: string) => Promise<boolean>;
   isMaterialLoading: (id: string) => boolean;
+
+  // Upload state
+  uploading: Ref<boolean>;
+  uploadError: Ref<APIError | null>;
 
   fetchMaterials: () => Promise<void>;
   getMaterial: (id: string) => Material | null;
@@ -52,6 +58,11 @@ export function useMaterialsStore(folderId: string): MaterialStore {
   const loadingStates = ref<Map<string, boolean>>(new Map());
   const errorStates = ref<Map<string, string | null>>(new Map());
   const lastSync = ref<Date | null>(null);
+
+  // Upload state
+  const uploading = ref(false);
+  const uploadError = ref<APIError | null>(null);
+
   const {
     fetchMaterials: fetchMaterialsFromAPI,
     fetching,
@@ -141,6 +152,54 @@ export function useMaterialsStore(folderId: string): MaterialStore {
       return false;
     }
   };
+
+  // Upload a file and create material from extracted text
+  const uploadMaterial = async (
+    file: File,
+    title?: string
+  ): Promise<UploadMaterialResponse | null> => {
+    uploading.value = true;
+    uploadError.value = null;
+
+    try {
+      const result = await $api.materials.uploadFile(file, folderId, title);
+
+      if (result.success) {
+        // Refresh materials list to include new material
+        await fetchMaterials();
+        toast.add({
+          title: "File Uploaded",
+          description: `"${result.data.title}" processed successfully`,
+          color: "success",
+        });
+        return result.data;
+      } else {
+        console.error("Server rejected file upload:", result.error);
+        uploadError.value = result.error;
+        toast.add({
+          title: "Upload Failed",
+          description: result.error.message,
+          color: "error",
+        });
+        return null;
+      }
+    } catch (error) {
+      console.error("Failed to upload file:", error);
+      uploadError.value = new APIError(
+        error instanceof Error ? error.message : "Failed to upload file",
+        { status: 500, code: "UPLOAD_ERROR" }
+      );
+      toast.add({
+        title: "Error",
+        description: "Failed to upload file - check your connection",
+        color: "error",
+      });
+      return null;
+    } finally {
+      uploading.value = false;
+    }
+  };
+
   // Delete a material - simple optimistic approach
   const deleteMaterial = async (id: string): Promise<boolean> => {
     try {
@@ -221,6 +280,7 @@ export function useMaterialsStore(folderId: string): MaterialStore {
     loadingStates,
     errorStates,
     createMaterial,
+    uploadMaterial,
     deleteMaterial,
     getMaterial,
     isMaterialLoading,
@@ -229,6 +289,8 @@ export function useMaterialsStore(folderId: string): MaterialStore {
     fetching,
     fetchError,
     fetchTypedError,
+    uploading,
+    uploadError,
   };
 
   // Cache the store

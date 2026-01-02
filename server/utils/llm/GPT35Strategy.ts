@@ -27,7 +27,9 @@ export class GPT35Strategy implements LLMStrategy {
     this.onMeasure = onMeasure;
   }
 
-  async generateFlashcards(input: string): Promise<FlashcardDTO[]> {
+  async generateFlashcards(input: string, options?: LLMGenerationOptions): Promise<FlashcardDTO[]> {
+    const itemCount = options?.itemCount ?? 5;
+
     // Dev mock mode: skip API and return deterministic JSON (no credits used)
     if (process.env.OPENAI_MOCK === "1") {
       console.log("OpenAI mock mode active");
@@ -40,14 +42,14 @@ export class GPT35Strategy implements LLMStrategy {
       ];
     }
 
-    const prompt = flashcardPrompt(input);
+    const prompt = flashcardPrompt(input, itemCount);
     const inputChars = input.length;
     let inputTokensEstimate = 0;
     try {
       const enc = encoding_for_model(GPT35Strategy.CHAT_MODEL);
       inputTokensEstimate = enc.encode(prompt).length;
       enc.free();
-    } catch {}
+    } catch { }
 
     let content = "[]";
     try {
@@ -66,7 +68,7 @@ export class GPT35Strategy implements LLMStrategy {
           typeof content === "string" ? content : ""
         ).length;
         enc.free();
-      } catch {}
+      } catch { }
       const outputChars = typeof content === "string" ? content.length : 0;
       this.onMeasure?.({
         provider: "openai",
@@ -103,7 +105,9 @@ export class GPT35Strategy implements LLMStrategy {
     return cards;
   }
 
-  async generateQuiz(input: string): Promise<QuizQuestionDTO[]> {
+  async generateQuiz(input: string, options?: LLMGenerationOptions): Promise<QuizQuestionDTO[]> {
+    const itemCount = options?.itemCount ?? 3;
+
     // Dev mock mode: skip API and return deterministic JSON (no credits used)
     if (process.env.OPENAI_MOCK === "1") {
       console.log("OpenAI mock mode active");
@@ -121,14 +125,14 @@ export class GPT35Strategy implements LLMStrategy {
       ];
     }
 
-    const prompt = quizPrompt(input);
+    const prompt = quizPrompt(input, itemCount);
     const inputChars = input.length;
     let inputTokensEstimate = 0;
     try {
       const enc = encoding_for_model(GPT35Strategy.CHAT_MODEL);
       inputTokensEstimate = enc.encode(prompt).length;
       enc.free();
-    } catch {}
+    } catch { }
 
     let content = "[]";
     try {
@@ -147,7 +151,7 @@ export class GPT35Strategy implements LLMStrategy {
           typeof content === "string" ? content : ""
         ).length;
         enc.free();
-      } catch {}
+      } catch { }
       const outputChars = typeof content === "string" ? content.length : 0;
       this.onMeasure?.({
         provider: "openai",

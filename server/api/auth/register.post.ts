@@ -12,7 +12,6 @@ const schema = z.object({
   confirmPassword: z.string().min(8).max(30),
   provider: z.string().optional().default("credentials"),
   gender: z.string().optional(),
-  phone: z.string().min(1, "Phone is required"),
   role: z.enum(["USER"]).default("USER"),
 });
 
@@ -35,7 +34,6 @@ export default defineEventHandler(async (event) => {
     email,
     password,
     confirmPassword,
-    phone,
     gender,
     role,
     provider,
@@ -60,36 +58,47 @@ export default defineEventHandler(async (event) => {
     provider === "credentials" ? bcrypt.hashSync(password, 10) : "";
   const code = provider === "credentials" ? await verificationCode() : null;
 
-  await prisma.user.create({
-    data: {
-      name,
-      email,
-      password: hashedPassword,
-      phone: phone || "",
-      passkey_user_id: null,
-      auth_provider: provider,
-      register_verification: code,
-      account_verified: provider === "credentials" ? false : true,
-      email_verified: provider !== "credentials",
-      gender,
-      role,
-    },
-  });
-
-  if (provider === "credentials" && code) {
-    try {
-      await sendEmail(email, code);
-    } catch {
-      throw Errors.server("Failed to send verification email");
+  try {
+    if (provider === "credentials" && code) {
+      try {
+        await sendEmail(email, code);
+      } catch {
+        throw Errors.methodNotAllowed("Failed to send verification email");
+      }
     }
+    await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        passkey_user_id: null,
+        auth_provider: provider,
+        register_verification: code,
+        account_verified: provider === "credentials" ? false : true,
+        email_verified: provider !== "credentials",
+        gender,
+        role,
+      },
+    });
+
+    // if (provider === "credentials" && code) {
+    //   try {
+    //     await sendEmail(email, code);
+    //   } catch {
+    //     throw Errors.server("Failed to send verification email");
+    //   }
+    // }
+
+    return success({
+      message: "Account created successfully",
+      needsVerification: provider === "credentials",
+      redirect:
+        provider === "credentials"
+          ? `/auth/verifyAccount?email=${encodeURIComponent(email)}&code=1`
+          : "/auth/signIn",
+    });
+  } catch (err) {
+    throw Errors.server("Failed to register user", err);
   }
 
-  return success({
-    message: "Account created successfully",
-    needsVerification: provider === "credentials",
-    redirect:
-      provider === "credentials"
-        ? `/auth/verifyAccount?email=${encodeURIComponent(email)}&code=1`
-        : "/auth/signIn",
-  });
 });

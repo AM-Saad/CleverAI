@@ -286,6 +286,7 @@ export default defineNuxtConfig({
     openaiKey: process.env.OPENAI_API_KEY,
     geminiKey: process.env.GEMINI_API_KEY,
     databaseUrl: process.env.DATABASE_URL,
+    RESEND_API_KEY: process.env.RESEND_API_KEY,
 
     // Auth / secrets (server only)
     auth: {

@@ -156,13 +156,13 @@ export function useGenerateFromMaterial(
         result = await $api.gateway.generateFlashcards(text, {
           materialId: materialId.value,
           save: true,
-          replace: true,
+          replace: false,
         });
       } else {
         result = await $api.gateway.generateQuiz(text, {
           materialId: materialId.value,
           save: true,
-          replace: true,
+          replace: false,
         });
       }
 

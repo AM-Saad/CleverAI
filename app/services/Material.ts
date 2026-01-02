@@ -11,8 +11,20 @@ export interface MaterialGeneratedContent {
   questionsCount: number;
 }
 
+/**
+ * Response from file upload endpoint
+ */
+export interface UploadMaterialResponse {
+  materialId: string;
+  tokenEstimate: number;
+  charCount: number;
+  pageCount?: number;
+  title: string;
+}
+
 export class MaterialService extends FetchFactory {
   private readonly RESOURCE = "/api/materials";
+  private readonly UPLOAD_RESOURCE = "/api/materials/upload";
 
   /**
    * Get all materials for a folder
@@ -70,6 +82,29 @@ export class MaterialService extends FetchFactory {
       "DELETE",
       this.RESOURCE,
       { id }
+    );
+  }
+
+  /**
+   * Upload a file and create a material with extracted text
+   */
+  async uploadFile(
+    file: File,
+    folderId: string,
+    title?: string
+  ): Promise<Result<UploadMaterialResponse>> {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("folderId", folderId);
+    if (title) formData.append("title", title);
+
+    return this.call<UploadMaterialResponse>(
+      "POST",
+      this.UPLOAD_RESOURCE,
+      formData,
+      {
+        timeout: 120000, // 2 minutes for large files
+      }
     );
   }
 }

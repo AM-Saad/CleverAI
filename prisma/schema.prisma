@@ -418,6 +418,7 @@ model LlmGatewayLog {
     user                User     @relation(fields: [userId], references: [id], onDelete: Cascade)
     folderId            String?  @db.ObjectId
     folder              Folder?  @relation(fields: [folderId], references: [id], onDelete: SetNull)
+    materialId          String?  @db.ObjectId // Material used for generation
     requestId           String   @unique // UUID for tracing
     selectedModelId     String // from LlmModelRegistry
     provider            String
@@ -435,6 +436,9 @@ model LlmGatewayLog {
     errorCode           String?
     errorMessage        String?
     routingScore        Float? // Score used for model selection
+    itemCount           Int? // Adaptive item count for generation
+    tokenEstimate       Int? // Estimated tokens for input text
+    depth               String? // Generation depth: "quick", "balanced", "deep"
     createdAt           DateTime @default(now())
 
     @@index([userId, createdAt])

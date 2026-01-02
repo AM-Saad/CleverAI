@@ -70,30 +70,18 @@ onMounted(() => {
     <!-- Review Status Card (Global) -->
     <review-status-card class="mb-6" :show-context="false"
       empty-message="Enroll flashcards or materials to start reviewing" />
-
-    <div v-if="loading" class="text-gray-500 my-xl">
-      <div class="flex items-center gap-4">
-        <USkeleton class="h-12 w-12 rounded-full" />
-
-        <div class="grid gap-2">
-          <USkeleton class="h-4 w-[250px]" />
-          <USkeleton class="h-4 w-[200px]" />
-        </div>
-      </div>
-    </div>
     <shared-error-message v-if="error" :error="error" :refresh="refresh" />
-    <div class="mt-4">
-      <div v-if="!loading && !folders?.length" class="text-gray-500">
-        No folders found.
-      </div>
-      <ui-card v-if="folders && folders.length > 0 && !loading" class="mb-4 p-0!" size="md" variant="ghost">
+
+    <div>
+      <ui-card class="mb-4 p-0!" size="md" variant="ghost">
         <template #default>
 
           <div class="flex gap-3 justify-between items-end">
             <!-- Future filter options can go here -->
             <div class="basis-3/4">
               <UiLabel for="search">Search</UiLabel>
-              <u-input id="search" type="text" placeholder="Search folders..." class="mt-1 w-full" />
+              <u-input id="search" type="text" placeholder="Search folders..." class="mt-1 w-full"
+                :ui="{ base: 'bg-white dark:bg-muted' }" />
             </div>
 
             <u-button variant="subtle" @click="toggleView" class="place-self-end">
@@ -103,6 +91,19 @@ onMounted(() => {
           </div>
         </template>
       </ui-card>
+      <div v-if="loading">
+        <div :class="listView === 'grid' ? 'grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'space-y-4'">
+          <ui-card shadow="none" tag="li" variant="default" v-for="n in 3" :key="n">
+            <div class="grid gap-2">
+              <USkeleton class="h-4 w-[250px] bg-neutral/50 dark:bg-neutral/10" />
+              <USkeleton class="h-4 w-[200px] bg-neutral/50 dark:bg-neutral/10" />
+            </div>
+          </ui-card>
+        </div>
+      </div>
+      <div v-if="!loading && !folders?.length" class="text-gray-500">
+        No folders found.
+      </div>
       <ul v-if="folders && folders?.length > 0 && !loading"
         :class="listView === 'grid' ? 'grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'space-y-4'">
         <u-context-menu :items="[
@@ -129,7 +130,7 @@ onMounted(() => {
           <ui-card hover="lift" shadow="none" tag="li" variant="default">
             <NuxtLink :to="`/folders/${folder.id}`">
               <div class="mb-1 flex items-center">
-                <icon name="ic:round-folder-open" class="inline-block mr-2 text-primary" />
+                <icon name="ic:round-folder-open" class="inline-block mr-1 text-primary" size="22" />
 
                 <ui-subtitle>{{ folder.title }}</ui-subtitle>
               </div>

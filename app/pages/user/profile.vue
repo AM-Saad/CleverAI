@@ -1,22 +1,18 @@
 <template>
   <shared-page-wrapper title="My Profile" subtitle="View and manage your profile information">
 
-    <div v-if="status === 'authenticated'" class="grid md:grid-cols-3 gap-8 mt-4 max-w-full overflow-x-hidden">
+    <div v-if="status === 'authenticated'" class="grid md:grid-cols-3 gap-4 mt-4 max-w-full overflow-x-hidden">
       <!-- User Profile Card -->
       <div class="md:col-span-1">
-        <ui-card variant="default">
+
+        <ui-card variant="default" v-if="!isProfileLoading && profileData">
           <div class="flex items-start gap-4">
             <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white text-xl mb-2">
               {{ userInitials }}
             </div>
             <div>
-
-              <ui-subtitle>
-                {{ profileData?.name || "User" }}
-              </ui-subtitle>
-              <ui-paragraph>
-                {{ profileData?.email || "...." }}
-              </ui-paragraph>
+              <ui-subtitle> {{ profileData?.name || "User" }} </ui-subtitle>
+              <ui-paragraph>{{ profileData?.email || "...." }}</ui-paragraph>
             </div>
           </div>
 
@@ -36,9 +32,9 @@
                 }}</span>
             </ui-label>
           </div>
-
         </ui-card>
-        <ui-card variant="default" class-name="mt-1.5">
+
+        <ui-card variant="default" class-name="mt-1.5" v-if="!isProfileLoading && profileData">
           <ui-subtitle>Account Settings</ui-subtitle>
 
           <div class="flex flex-wrap gap-4 mt-4">
@@ -52,8 +48,18 @@
           </div>
         </ui-card>
 
+        <ui-card variant="default" v-if="isProfileLoading">
+          <USkeleton class="h-4 bg-neutral/50 dark:bg-neutral/10 my-0.5" />
+          <USkeleton class="h-4 bg-neutral/50 dark:bg-neutral/10 my-0.5" />
+        </ui-card>
+        <ui-card variant="default" class-name="mt-1.5" v-if="isProfileLoading">
+          <USkeleton class="h-4 bg-neutral/50 dark:bg-neutral/10 my-0.5" />
+          <USkeleton class="h-4 bg-neutral/50 dark:bg-neutral/10 my-0.5" />
+        </ui-card>
+
+
         <!-- Push Notification Settings -->
-        <ui-card variant="default" class-name="mt-1.5">
+        <ui-card variant="default" class-name="mt-1.5" v-if="!notificationsLoading">
           <ui-subtitle>Push Notifications</ui-subtitle>
           <div class="mt-4">
             <div v-if="notificationsLoading" class="text-sm text-gray-500">
@@ -75,6 +81,10 @@
             </div>
             <p v-if="notificationError" class="text-sm text-red-500 mt-2">{{ notificationError }}</p>
           </div>
+        </ui-card>
+        <ui-card variant="default" class-name="mt-1.5" v-if="notificationsLoading || isProfileLoading">
+          <USkeleton class="h-4 bg-neutral/50 dark:bg-neutral/10 my-0.5" />
+          <USkeleton class="h-4 bg-neutral/50 dark:bg-neutral/10 my-0.5" />
         </ui-card>
       </div>
 
@@ -123,7 +133,7 @@
               <span v-if="subscriptionInfo.remaining > 0">
                 {{ subscriptionInfo.remaining }} generations remaining
               </span>
-              <span v-else class="text-red-500"> Quota exceeded </span>
+              <span v-else class="text-red-500">Quota exceeded</span>
             </p>
           </div>
         </ui-card>

@@ -1,10 +1,11 @@
 import { ref } from "vue";
+import type { APIError } from "~/services/FetchFactory";
 
 //
 interface useRegister {
   credentials: Ref<{ [key: string]: string }>;
   fieldTypes: { [key: string]: string };
-  error: Ref<string>;
+  error: Ref<APIError | null>;
   success: Ref<string>;
   loading: Ref<boolean>;
   handleSubmit: () => Promise<void>;
@@ -19,7 +20,6 @@ export function useRegister(): useRegister {
     password: "",
     confirmPassword: "",
     gender: "",
-    phone: "",
     role: "USER",
   });
   const fieldTypes = reactive({
@@ -28,28 +28,28 @@ export function useRegister(): useRegister {
     password: "password",
     confirmPassword: "password",
     gender: "text",
-    phone: "text",
   }) as { [key: string]: string };
 
-  const error = ref("");
+  const error = ref<APIError | null>(null);
+
   const success = ref("");
   const loading = ref(false);
 
   const handleSubmit = async (): Promise<void> => {
-    error.value = "";
+    // error.value = "";
+    error.value = null;
     if (
       !credentials.value.name ||
       !credentials.value.email ||
       !credentials.value.password ||
-      !credentials.value.gender ||
-      !credentials.value.phone
+      !credentials.value.gender
     ) {
-      error.value = "Please add all required information";
+      error.value = { message: "Please add all required information", status: 400, code: "validation_error", cause: undefined, name: "", details: undefined };
       return;
     }
 
     if (credentials.value.password !== credentials.value.confirmPassword) {
-      error.value = "Passwords do not match";
+      error.value = { message: "Passwords do not match", status: 400, code: "validation_error", cause: undefined, name: "", details: undefined };
       return;
     }
     loading.value = true;
@@ -60,12 +60,11 @@ export function useRegister(): useRegister {
         email: credentials.value.email,
         password: credentials.value.password,
         confirmPassword: credentials.value.confirmPassword,
-        phone: credentials.value.phone,
         gender: credentials.value.gender,
         role: credentials.value.role as "USER",
         provider: "credentials",
       });
-
+      console.log("Registration result:", result);
       if (result.success) {
         const data = result.data;
         success.value = data.message;
@@ -74,12 +73,13 @@ export function useRegister(): useRegister {
           router.push(maybeRedirect);
         }
       } else {
-        error.value = result.error.message;
+        error.value = result.error;
       }
     } catch (err) {
       // Fallback error handling
-      const serverError = err as Error;
-      error.value = serverError.message || "Registration failed";
+      console.log("Registration error:", err);
+      const serverError = err as APIError;
+      error.value = serverError || { message: "Registration failed" };
     } finally {
       loading.value = false;
     }
@@ -90,5 +90,5 @@ export function useRegister(): useRegister {
 
   // Legacy validation error extraction removed (server now returns normalized errors)
 
-  return { credentials, fieldTypes, error, success, loading, handleSubmit };
+  return { credentials, fieldTypes, error: readonly(error), success, loading, handleSubmit };
 }

@@ -81,9 +81,9 @@ const handleSubmit = async (): Promise<void> => {
       </ui-paragraph>
       <shared-error-message v-if="error" :error="error.message" />
       <shared-success-message v-if="success" :message="success" />
-      <div class="mb-2 mt-2 rounded-md relative transition duration-10 00 text-xs">
+      <div class="my-2 rounded-md relative transition duration-10 00 text-xs">
 
-        <div class="form-group">
+        <div class="form-group mb-2">
           <ui-input-field id="login-email-client" v-model="credentials.password!" type="password" name="password"
             class="input" placeholder="Add your password..." autocomplete="false | unknown-autocomplete-value"
             tabindex="1" label="Password" />
@@ -96,33 +96,34 @@ const handleSubmit = async (): Promise<void> => {
             </div>
             <ui-paragraph size="xs" color="muted" class="mt-1">Strength: {{ strengthLabel }}</ui-paragraph>
           </div>
-          <div class="mt-2 space-y-1 text-xs">
-            <div
-              :class="{ 'text-green-600': /[A-Z]/.test(credentials.password || ''), 'text-gray-500': !/[A-Z]/.test(credentials.password || '') }">
-              • Uppercase letter</div>
-            <div
-              :class="{ 'text-green-600': /[a-z]/.test(credentials.password || ''), 'text-gray-500': !/[a-z]/.test(credentials.password || '') }">
-              • Lowercase letter</div>
-            <div
-              :class="{ 'text-green-600': /\d/.test(credentials.password || ''), 'text-gray-500': !/\d/.test(credentials.password || '') }">
-              • Number</div>
-            <div
-              :class="{ 'text-green-600': /[^A-Za-z0-9]/.test(credentials.password || ''), 'text-gray-500': !/[^A-Za-z0-9]/.test(credentials.password || '') }">
-              • Symbol</div>
-            <div
-              :class="{ 'text-green-600': (credentials.password || '').length >= 8, 'text-gray-500': (credentials.password || '').length < 8 }">
-              • At least 8 characters</div>
-          </div>
+
         </div>
         <div class="form-group">
           <ui-input-field id="login-email-client" v-model="credentials.confirmPassword!" type="password"
             name="confirmPassword" class="input" placeholder="Confirm your password..."
             autocomplete="false | unknown-autocomplete-value" tabindex="2" label="Confirm Password" />
         </div>
+        <div class="mt-2 space-y-1 text-xs">
+          <div
+            :class="{ 'text-green-600': /[A-Z]/.test(credentials.password || ''), 'text-gray-500': !/[A-Z]/.test(credentials.password || '') }">
+            • Uppercase letter</div>
+          <div
+            :class="{ 'text-green-600': /[a-z]/.test(credentials.password || ''), 'text-gray-500': !/[a-z]/.test(credentials.password || '') }">
+            • Lowercase letter</div>
+          <div
+            :class="{ 'text-green-600': /\d/.test(credentials.password || ''), 'text-gray-500': !/\d/.test(credentials.password || '') }">
+            • Number</div>
+          <div
+            :class="{ 'text-green-600': /[^A-Za-z0-9]/.test(credentials.password || ''), 'text-gray-500': !/[^A-Za-z0-9]/.test(credentials.password || '') }">
+            • Symbol</div>
+          <div
+            :class="{ 'text-green-600': (credentials.password || '').length >= 8, 'text-gray-500': (credentials.password || '').length < 8 }">
+            • At least 8 characters</div>
+        </div>
       </div>
       <div>
         <u-button type="submit" :disabled="loading || (strengthScore !== null && strengthScore < 3)" tabindex="3"
-          @click.prevent="handleSubmit">
+          @click.prevent="handleSubmit" :loading="loading">
           Create
         </u-button>
       </div>
