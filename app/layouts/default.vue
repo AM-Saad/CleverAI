@@ -1,23 +1,23 @@
 <template>
   <div class="mx-auto  flex h-screen flex-col gap-y-3 justify-between">
     <nav id="nav"
-      class="flex basis-0 shrink-0 font-heading items-center justify-between py-2 rounded-xl md:rounded-none  mx-auto left-[50%] top-4 border-b border-neutral dark:border-muted w-[calc(100%-2rem)]">
+      class="flex basis-0 shrink-0 font-heading items-center justify-between py-4 md:rounded-none  mx-auto left-[50%] top-4 border-b border-neutral dark:border-muted w-[calc(100%-2rem)]">
       <div class="flex items-center justify-between w-full">
-        <router-link to="/" class="flex items-center gap-2 text-dark dark:text-light font-medium text-lg ">
-          <img class="h-5 dark:invert-[1] dark:filter" :src="'/images/CleverAI_icon.svg'" alt="" />
+        <router-link to="/" class="flex items-center gap-2 text-dark dark:text-light font-medium text-xl ">
+          <img class="h-7 dark:invert-[1] dark:filter" :src="'/images/CleverAI_icon.svg'" alt="" />
           Cognilo</router-link>
         <div v-if="status === 'authenticated'" class="flex gap-5">
           <ui-dropdown-menu />
         </div>
         <div v-else-if="status === 'unauthenticated'" class="flex gap-5">
           <router-link to="/about">
-            <u-button size="sm" variant="ghost">About</u-button>
+            <u-button variant="ghost">About</u-button>
           </router-link>
           <router-link to="/auth/signIn">
-            <u-button size="sm" variant="subtle">Login</u-button>
+            <u-button variant="subtle">Login</u-button>
           </router-link>
           <router-link to="/auth/signup">
-            <u-button size="sm">Signup</u-button>
+            <u-button>Signup</u-button>
           </router-link>
         </div>
         <div v-else>

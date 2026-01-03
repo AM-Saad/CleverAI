@@ -3,14 +3,14 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
-
+@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap');
 /* One source of truth for tokens */
 @theme static {
   --font-sans: "";
 
   /* ==== Brand Colors ==== */
   /* Primary brand #ffa45c - main actions and highlights */
-  --color-primary: #30c3c6;
+  --color-primary: #222;
   --color-primary-light: #ffcdab;
 
   /* --color-light: #fffbf4; */
@@ -60,19 +60,28 @@
 }
 
 /* Dark mode overrides for Nuxt UI */
-.dark {
-  --ui-primary: var(--color-primary);
+html.dark,
+:is(.dark) {
+  --color-primary: var(--color-light);
+  --ui-primary: var(--color-light);
   --ui-primary-light: var(--color-primary-light);
   --ui-bg: var(--color-dark);
 }
 
 body {
-  font-family: "Source Sans 3", sans-serif;
+  /* font-family: "Source Sans 3", sans-serif; */
   /* font-family: "Sen", sans-serif; */
+  font-family:"Nunito Sans","Nunito Sans Fallback";
   font-optical-sizing: auto;
   color: unset;
 }
 
+.header-brand-name-gradient{
+      background-image: linear-gradient(90deg, rgb(49, 165, 217) 0%, rgb(248, 54, 145) 46%, rgb(255, 184, 0) 100%);
+    color: transparent;
+    background-clip: text;
+    text-decoration: none !important;
+}
 a {
   outline: none;
 }
@@ -127,56 +136,73 @@ div[data-reka-popper-content-wrapper] {
 }
 
 .animate-gradient {
-background-image: linear-gradient(
-    210deg,
-    hsl(239deg 72% 52%) 0%,
-    hsl(223deg 69% 51%) 7%,
-    hsl(211deg 66% 50%) 13%,
-    hsl(202deg 64% 50%) 18%,
-    hsl(193deg 63% 49%) 23%,
-    hsl(184deg 61% 48%) 28%,
-    hsl(174deg 47% 59%) 32%,
-    hsl(150deg 37% 69%) 36%,
-    hsl(96deg 36% 74%) 40%,
-    hsl(64deg 49% 72%) 44%,
-    hsl(52deg 77% 73%) 50%,
-    hsl(46deg 96% 72%) 57%,
-    hsl(40deg 85% 68%) 64%,
-    hsl(34deg 77% 64%) 72%,
-    hsl(26deg 70% 59%) 81%,
-    hsl(17deg 65% 53%) 90%,
-    hsl(0deg 76% 45%) 100%
+  background-image: linear-gradient(
+    -45deg, 
+    #30c3c6,
+    #2c7a7b,
+    #ffa45c,
+    #ffcdab
   );
-  background-size: 90% 90% !important;
-  background-repeat: no-repeat;
-  animation: gradient-animation 8s ease-in-out infinite alternate both;
+  background-size: 400% 400%;
+  animation: gradient-animation 15s ease infinite;
 }
 
 @keyframes gradient-animation {
   0% {
-    background-position: left bottom;
-
+    background-position: 0% 50%;
   }
-
   50% {
-    background-position: right bottom;
+    background-position: 100% 50%;
   }
-
   100% {
-    background-position: left bottom;
-
+    background-position: 0% 50%;
   }
 }
 
 @theme {
-  --animate-wiggle: wiggle 1s ease-in-out;
-  @keyframes wiggle {
-    0%,
-    100% {
+  --animate-reveal-height: reveal-height 0.5s ease-out;
+  @keyframes reveal-height {
+    from {
       height: 0;
     }
-    100% {
+    to {
       height: 100%;
+    }
+  }
+
+  --animate-wiggle: wiggle 0.3s ease-in-out infinite;
+  @keyframes wiggle {
+    0%, 100% { transform: rotate(-3deg); }
+    50% { transform: rotate(3deg); }
+  }
+
+  --animate-typing: typing 3.5s steps(40, end), blink-caret .75s step-end infinite;
+  @keyframes typing {
+    from { width: 0 }
+    to { width: 100% }
+  }
+  @keyframes blink-caret {
+    from, to { border-color: transparent }
+    50% { border-color: var(--color-primary) }
+  }
+
+  --animate-pulse-soft: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  @keyframes pulse-soft {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: .5; transform: scale(1.05); }
+  }
+
+
+    --animate-glow: glow 6s infinite linear;
+  @keyframes glow {
+    0% {
+      background-position: 0% 0%;
+    }
+    50% {
+      background-position: 100% 100%;
+    }
+    to {
+      background-position: 0% 0%;
     }
   }
 }
