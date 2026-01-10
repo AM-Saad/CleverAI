@@ -4237,14 +4237,18 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ changes: pending })
         });
-        if (!resp.ok) throw new Error("Notes sync failed");
+        if (!resp.ok) {
+          error("[Notes Sync] Server error:", resp.status);
+          throw new Error("Notes sync failed");
+        }
         const result = await resp.json().catch(() => ({}));
         const appliedIds = Array.from(new Set(((_a = result.data) == null ? void 0 : _a.applied) || []));
         const conflictsCount = ((_c = (_b = result.data) == null ? void 0 : _b.conflicts) == null ? void 0 : _c.length) || 0;
         if (appliedIds.length) {
           try {
             await deletePendingNoteChanges(appliedIds);
-          } catch {
+          } catch (e) {
+            error("[Notes Sync] Failed to clear synced changes:", e);
           }
         }
         if (conflictsCount) {
@@ -4255,6 +4259,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
             })
           );
         }
+        log("[Notes Sync] Complete:", { applied: appliedIds.length, conflicts: conflictsCount });
         clients.forEach(
           (c) => c.postMessage({
             type: SW_MESSAGE_TYPES.NOTES_SYNCED,
@@ -4262,6 +4267,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           })
         );
       } catch (err) {
+        error("[Notes Sync] Error:", err);
         const clients = await swSelf.clients.matchAll({ type: "window" });
         clients.forEach(
           (c) => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNC_ERROR })

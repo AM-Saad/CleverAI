@@ -1230,6 +1230,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
     try {
       const clients = await swSelf.clients.matchAll({ type: "window" });
       const pending = await loadPendingNoteChanges();
+
       clients.forEach((c) =>
         c.postMessage({
           type: SW_MESSAGE_TYPES.NOTES_SYNC_STARTED,
@@ -1240,6 +1241,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
           },
         })
       );
+
       if (!pending.length) {
         clients.forEach((c) =>
           c.postMessage({
@@ -1249,12 +1251,18 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         );
         return;
       }
+
       const resp = await fetch("/api/notes/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ changes: pending }),
       });
-      if (!resp.ok) throw new Error("Notes sync failed");
+
+      if (!resp.ok) {
+        error("[Notes Sync] Server error:", resp.status);
+        throw new Error("Notes sync failed");
+      }
+
       const result = (await resp.json().catch(() => ({}))) as {
         success?: boolean;
         data?: {
@@ -1262,14 +1270,15 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
           conflicts?: Array<{ id: string }>;
         };
       };
+
       const appliedIds = Array.from(new Set(result.data?.applied || []));
       const conflictsCount = result.data?.conflicts?.length || 0;
 
       if (appliedIds.length) {
         try {
           await deletePendingNoteChanges(appliedIds);
-        } catch {
-          /* best effort */
+        } catch (e) {
+          error("[Notes Sync] Failed to clear synced changes:", e);
         }
       }
 
@@ -1281,6 +1290,8 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
           })
         );
       }
+
+      log("[Notes Sync] Complete:", { applied: appliedIds.length, conflicts: conflictsCount });
       clients.forEach((c) =>
         c.postMessage({
           type: SW_MESSAGE_TYPES.NOTES_SYNCED,
@@ -1288,6 +1299,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         })
       );
     } catch (err) {
+      error("[Notes Sync] Error:", err);
       const clients = await swSelf.clients.matchAll({ type: "window" });
       clients.forEach((c) =>
         c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNC_ERROR })

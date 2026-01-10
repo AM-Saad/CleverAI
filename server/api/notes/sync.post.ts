@@ -50,10 +50,13 @@ export default defineEventHandler(async (event) => {
       }
 
       // upsert
+      // Check if this is a temporary ID (created offline) BEFORE any DB queries
+      const isTempId = change.id.startsWith("temp-");
+
       const folder = change.folderId
         ? await prisma.folder.findFirst({
-            where: { id: change.folderId, userId: user.id },
-          })
+          where: { id: change.folderId, userId: user.id },
+        })
         : null;
       if (change.folderId && !folder) {
         // Cannot apply without valid/owned folder
@@ -61,24 +64,37 @@ export default defineEventHandler(async (event) => {
         continue;
       }
 
-      const existing = await prisma.note.findFirst({
+      // Skip database lookup for temp IDs since they can't exist and aren't valid ObjectIds
+      const existing = isTempId ? null : await prisma.note.findFirst({
         where: { id: change.id, folder: { userId: user.id } },
       });
 
       if (!existing) {
-        // Create new note with provided content/folder
         if (!change.folderId) {
           conflicts.push({ id: change.id });
           continue;
         }
-        await prisma.note.create({
-          data: {
-            id: change.id,
-            folderId: change.folderId,
-            content: change.content || "",
-          },
-        });
-        applied.push(change.id);
+
+        if (isTempId) {
+          // Create new note with server-generated ID for offline-created notes
+          await prisma.note.create({
+            data: {
+              folderId: change.folderId,
+              content: change.content || "",
+            },
+          });
+          applied.push(change.id);
+        } else {
+          // Create note with provided ID (for regular sync)
+          await prisma.note.create({
+            data: {
+              id: change.id,
+              folderId: change.folderId,
+              content: change.content || "",
+            },
+          });
+          applied.push(change.id);
+        }
       } else {
         // Conflict if server newer than client
         if (
@@ -96,6 +112,13 @@ export default defineEventHandler(async (event) => {
       }
     } catch (e) {
       // On unexpected errors per change, mark as conflict to retain client copy
+      console.error("[Notes Sync API] Error processing change:", {
+        changeId: change.id,
+        operation: change.operation,
+        error: e,
+        errorMessage: e instanceof Error ? e.message : String(e),
+        errorStack: e instanceof Error ? e.stack : undefined,
+      });
       conflicts.push({ id: change.id });
     }
   }

@@ -57,12 +57,12 @@ export function useNotesStore(folderId: string): NotesStore {
     try {
       let onlineSyncScheduled = false;
       window.addEventListener("online", async () => {
-        // Reset the offline toast flag when coming back online
+        // Reset offline toast flag when back online
         offlineToastShown = false;
         if (onlineSyncScheduled) return;
         onlineSyncScheduled = true;
         try {
-          // slight delay to allow potential Background Sync event to fire first
+          // Brief delay to allow Background Sync event to fire first
           setTimeout(async () => {
             try {
               const db = await openUnifiedDB();
@@ -91,6 +91,26 @@ export function useNotesStore(folderId: string): NotesStore {
           onlineSyncScheduled = false;
         }
       });
+
+      // Listen for sync completion to refresh folders with offline-created notes
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.addEventListener("message", async (event) => {
+          const msg = event.data;
+
+          // After successful sync, refresh folders to replace temp IDs with real server IDs
+          if (msg.type === "NOTES_SYNCED" && msg.data?.appliedCount > 0) {
+            for (const [storeFolderId, store] of stores.entries()) {
+              const storeNotes = Array.from(store.notes.value.values());
+              const hasTempNotes = storeNotes.some(n => n.id.startsWith("temp-"));
+
+              if (hasTempNotes) {
+                await store.syncWithServer(storeFolderId);
+              }
+            }
+          }
+        });
+      }
+
       notesOnlineListenerRegistered = true;
     } catch {
       /* ignore */
@@ -259,7 +279,7 @@ export function useNotesStore(folderId: string): NotesStore {
     // Persist locally immediately for offline continuity
     try {
       await saveNoteToIndexedDB(updatedNote);
-    } catch {}
+    } catch { }
     // Step 2: Debounced server sync
     saveToServer(id, updatedNote.content);
     return true;
@@ -272,24 +292,53 @@ export function useNotesStore(folderId: string): NotesStore {
   ): Promise<string | null> => {
     const tempId = `temp-${Date.now()}`;
 
-    try {
-      // Add optimistic note
-      const optimisticNote: NoteState = {
+    // Add optimistic note
+    const optimisticNote: NoteState = {
+      id: tempId,
+      folderId: folderIdParam,
+      content,
+      order: notes.value.size, // Add to end of list
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isLoading: true,
+      isDirty: false,
+      error: null,
+    };
+
+    // Save to IndexedDB first for persistence
+    await saveNoteToIndexedDB(optimisticNote);
+    notes.value.set(tempId, optimisticNote);
+
+    // Check if offline BEFORE attempting API call
+    if (!navigator.onLine) {
+      await queueNoteChange({
         id: tempId,
+        operation: "upsert",
+        updatedAt: Date.now(),
+        localVersion: 1,
         folderId: folderIdParam,
         content,
-        order: notes.value.size, // Add to end of list
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        isLoading: true,
-        isDirty: false,
-        error: null,
-      };
+      });
+      await registerNotesSync();
 
-      // Save to IndexedDB first for persistence
-      await saveNoteToIndexedDB(optimisticNote);
+      // Update optimistic note state
+      optimisticNote.isLoading = false;
+      optimisticNote.isDirty = true;
       notes.value.set(tempId, optimisticNote);
 
+      // Show offline toast once per session
+      if (!offlineToastShown) {
+        toast.add({
+          title: "Offline",
+          description: "Note saved locally. Will sync when online.",
+          color: "warning",
+        });
+        offlineToastShown = true;
+      }
+      return tempId;
+    }
+
+    try {
       // Attempt to submit to server
       const result = await $api.notes.create({
         folderId: folderIdParam,
@@ -299,13 +348,19 @@ export function useNotesStore(folderId: string): NotesStore {
       if (result.success) {
         // Server success - replace temp note with real note
         notes.value.delete(tempId);
-        notes.value.set(result.data.id, {
+        // Also delete temp note from IndexedDB
+        await deleteNoteFromIndexedDB(tempId);
+
+        const serverNote: NoteState = {
           ...result.data,
           isLoading: false,
           isDirty: false,
           lastSaved: new Date(),
           error: null,
-        });
+        };
+        notes.value.set(result.data.id, serverNote);
+        // Save server note to IndexedDB
+        await saveNoteToIndexedDB(serverNote);
         return result.data.id;
       } else {
         // Server rejected - keep local version
@@ -327,7 +382,7 @@ export function useNotesStore(folderId: string): NotesStore {
     } catch (error) {
       console.error("Failed to create note:", error);
 
-      // Only show offline message if actually offline
+      // Check if we went offline during the attempt
       if (!navigator.onLine) {
         await queueNoteChange({
           id: tempId,
@@ -337,17 +392,27 @@ export function useNotesStore(folderId: string): NotesStore {
           folderId: folderIdParam,
           content,
         });
-        // Register Background Sync to attempt sync when back online
         await registerNotesSync();
-        toast.add({
-          title: "Offline",
-          description: "Note saved locally. Will sync when online.",
-          color: "warning",
-        });
+
+        // Update optimistic note state
+        optimisticNote.isLoading = false;
+        optimisticNote.isDirty = true;
+        notes.value.set(tempId, optimisticNote);
+
+        // Show offline toast once per session
+        if (!offlineToastShown) {
+          toast.add({
+            title: "Offline",
+            description: "Note saved locally. Will sync when online.",
+            color: "warning",
+          });
+          offlineToastShown = true;
+        }
         return tempId;
       } else {
         // Other errors - remove the optimistic note
         notes.value.delete(tempId);
+        await deleteNoteFromIndexedDB(tempId);
         toast.add({
           title: "Error",
           description: "Failed to create note - check your connection",
@@ -553,6 +618,11 @@ export function useNotesStore(folderId: string): NotesStore {
       const result = await $api.notes.getByFolder(folderIdParam);
 
       if (result.success) {
+        // Store temp notes before clearing
+        const tempNotes = Array.from(notes.value.values()).filter(n =>
+          n.id.startsWith("temp-")
+        );
+
         // Clear existing notes and load fresh data from server
         notes.value.clear();
 
@@ -568,6 +638,15 @@ export function useNotesStore(folderId: string): NotesStore {
           // Also save to IndexedDB for offline access
           saveNoteToIndexedDB(noteState);
         });
+
+        // Clean up temp notes from IndexedDB
+        for (const tempNote of tempNotes) {
+          try {
+            await deleteNoteFromIndexedDB(tempNote.id);
+          } catch {
+            /* best effort cleanup */
+          }
+        }
 
         lastSync.value = new Date();
         loadingStates.value.set(folderIdParam, false);
