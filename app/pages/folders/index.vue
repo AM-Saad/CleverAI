@@ -80,14 +80,16 @@ onMounted(() => {
             <!-- Future filter options can go here -->
             <div class="basis-3/4">
               <UiLabel for="search">Search</UiLabel>
-              <u-input id="search" type="text" placeholder="Search folders..." class="mt-1 w-full"
-                :ui="{ base: 'bg-white dark:bg-muted' }" />
+              <u-input id="search" type="text" placeholder="Search folders..." class="mt-1 w-full" />
+            </div>
+            <div class="flex gap-2 items-center place-self-end">
+              <u-button @click="show = true" size="sm">Create Folder</u-button>
+              <u-button variant="subtle" @click="toggleView">
+                <icon v-if="listView === 'grid'" name="i-lucide-list" class="inline-block" />
+                <icon v-else name="i-lucide-grid" class="inline-block" />
+              </u-button>
             </div>
 
-            <u-button variant="subtle" @click="toggleView" class="place-self-end">
-              <icon v-if="listView === 'grid'" name="i-lucide-list" class="inline-block" />
-              <icon v-else name="i-lucide-grid" class="inline-block" />
-            </u-button>
           </div>
         </template>
       </ui-card>
@@ -95,8 +97,8 @@ onMounted(() => {
         <div :class="listView === 'grid' ? 'grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'space-y-4'">
           <ui-card shadow="none" tag="li" variant="default" v-for="n in 3" :key="n">
             <div class="grid gap-2">
-              <USkeleton class="h-4 w-[250px] bg-neutral/50 dark:bg-neutral/10" />
-              <USkeleton class="h-4 w-[200px] bg-neutral/50 dark:bg-neutral/10" />
+              <USkeleton class="h-4 w-[250px] bg-muted/50 dark:bg-muted/30" />
+              <USkeleton class="h-4 w-[200px] bg-muted/50 dark:bg-muted/30" />
             </div>
           </ui-card>
         </div>
@@ -144,9 +146,7 @@ onMounted(() => {
       </ul>
     </div>
     <folder-upsert-folder-form :show="show" @cancel="cancelUpsertModal" @created="refresh()" :folder="editFolder" />
-    <div class="mt-4">
-      <u-button @click="show = true">Create Folder</u-button>
-    </div>
+
     <shared-delete-confirmation-modal :show="showDeleteConfirm" title="Delete Folder" @close="showDeleteConfirm = false"
       :loading="deletingFolder" @confirm="confirmDeleteFolder">
       Are you sure you want to delete this folder? This action cannot be undone.

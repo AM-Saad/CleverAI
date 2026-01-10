@@ -63,7 +63,7 @@ const {
 
 const variantClasses = {
   default:
-    "bg-[color:var(--color-white)] border border-[color:var(--color-neutral)] dark:bg-[color:var(--color-muted)]/40 dark:border-[color:var(--color-dark)] ",
+    "bg-[color:var(--color-white)] border border-[color:var(--color-neutral)] dark:bg-[color:var(--color-muted)]/10 dark:border-[color:var(--color-dark)] ",
   outline: "bg-transparent border border-neutral dark:border-muted",
   ghost: "border-0",
 };

@@ -44,8 +44,8 @@ const isValidPassword = computed(() => {
           hover:shadow ${isValidEmail && isValidPassword ? ' ' : 'opacity-45'}`" type="submit"
           :disabled="!isValidEmail || !isValidPassword || loading" @click.prevent="handleSubmit"
           title="Submit Login Form" tabindex="3">
-          <icon v-if="!loading" name="i-heroicons-arrow-right" class="w-4 h-4 text-white" />
-          <icon v-else name="uil:redo" class="w-4 h-4 animate-spin text-white" />
+          <icon v-if="!loading" name="i-heroicons-arrow-right" class="w-4 h-4 text-white dark:text-dark" />
+          <icon v-else name="uil:redo" class="w-4 h-4 animate-spin text-white dark:text-dark" />
         </button>
       </div>
       <div class="toggle-forms flex flex-col gap-2 justify-between  dark:text-gray-200">

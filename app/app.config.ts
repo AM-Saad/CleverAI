@@ -50,6 +50,11 @@ export default defineAppConfig({
       slots: {
         base: "focus:border-primary focus:ring-1 focus:ring-primary/90 focus:outline-0 focus-visible:outline-0 focus-visible:ring-0",
       }
+    },
+    formField: {
+      slots: {
+        label: 'text-base font-semibold'
+      }
     }
   }
 })

@@ -32,16 +32,16 @@ const props = defineProps({
   },
   activeClass: {
     type: String,
-    default: "border-primary text-primary dark:text-primary",
+    default: "border-primary text-primary dark:text-primary font-bold!",
   },
   inactiveClass: {
     type: String,
     default:
-      "border-transparent text-muted dark:text-neutral hover:text-muted hover:border-gray-300",
+      "border-transparent text-muted dark:text-neutral hover:text-muted hover:border-gray-300 font-light!",
   },
   buttonBaseClass: {
     type: String,
-    default: "flex items-center gap-2 font-medium  transition-colors text-nowrap",
+    default: "flex items-center gap-2 font-medium text-base transition-colors text-nowrap",
   },
   direction: {
     type: [String, Object] as PropType<string | Record<string, string>>,

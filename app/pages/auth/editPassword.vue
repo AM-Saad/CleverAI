@@ -68,8 +68,8 @@ const submitForm = async (): Promise<void> => {
           <button
             :class="`w-8 h-8 absolute right-2 bottom-2 border border-gray-500 rounded-full text-center grid place-items-center cursor-pointer hover:opacity-90 bg-primary hover:shadow`"
             type="submit" :disabled="loading" @click.prevent="submitForm">
-            <icon v-if="!loading" name="i-heroicons-arrow-right" class="w-4 h-4 text-white" />
-            <icon v-else name="uil:redo" class="w-4 h-4 animate-spin text-white" />
+            <icon v-if="!loading" name="i-heroicons-arrow-right" class="w-4 h-4 text-white dark:text-dark" />
+            <icon v-else name="uil:redo" class="w-4 h-4 animate-spin text-white dark:text-dark" />
           </button>
         </div>
 

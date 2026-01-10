@@ -27,7 +27,16 @@ const { createMaterial, uploadMaterial, uploading } = useMaterialsStore(id);
 const { handleOfflineSubmit } = useOffline();
 
 // ----- Source toggle -----
-const sourceType = ref<SourceType>("text");
+const sourceTabItems = [
+  { icon: 'mdi:text-box', name: 'Text', value: 'text' as const },
+  { icon: 'mdi:file-document', name: 'File', value: 'file' as const },
+];
+const sourceTabIndex = ref(0);
+const sourceType = computed<SourceType>(() => sourceTabItems[sourceTabIndex.value]?.value ?? 'text');
+
+function onSourceTabSelect(index: number) {
+  sourceTabIndex.value = index;
+}
 
 // ----- Text form schema & state -----
 const schema = z.object({
@@ -242,7 +251,7 @@ function resetState() {
   generating.value = false;
   genError.value = null;
   // Source
-  sourceType.value = "text";
+  sourceTabIndex.value = 0;
 }
 
 function closeAndReset() {
@@ -269,16 +278,7 @@ watch(
       <template #body>
         <!-- Source Toggle -->
         <div class="flex gap-2 mb-4">
-          <UButton :color="sourceType === 'text' ? 'primary' : 'neutral'"
-            :variant="sourceType === 'text' ? 'solid' : 'ghost'" icon="i-heroicons-pencil-square"
-            @click="sourceType = 'text'">
-            Enter Text
-          </UButton>
-          <UButton :color="sourceType === 'file' ? 'primary' : 'neutral'"
-            :variant="sourceType === 'file' ? 'solid' : 'ghost'" icon="i-heroicons-arrow-up-tray"
-            @click="sourceType = 'file'">
-            Upload File
-          </UButton>
+          <ui-tabs v-model="sourceTabIndex" :items="sourceTabItems" @select="onSourceTabSelect" direction="row" />
         </div>
 
         <!-- TEXT FORM -->
@@ -289,11 +289,6 @@ watch(
             }" />
           </u-form-field>
 
-          <u-form-field label="Material Type" name="materialType">
-            <u-select-menu v-model="state.materialType" :items="items" :ui="{
-              base: 'w-full',
-            }" />
-          </u-form-field>
 
           <u-form-field label="Material Content" name="materialContent">
             <u-textarea v-model="state.materialContent" placeholder="Enter your material content here..." :ui="{

@@ -1,11 +1,11 @@
 <template>
   <div class="inline-flex m-auto w-full justify-center items-center gap-6 p-4">
-    <motion.article class=" rounded-xl w-full max-w-md h-64 overflow-hidden bg-white shadow-sm relative"
+    <motion.article class=" rounded-xl w-full max-w-md h-64 overflow-hidden  shadow-sm relative bg-white dark:bg-dark"
       :animate="step === 'converted' ? { borderColor: 'var(--color-primary)', scale: 1.02 } : { borderColor: 'var(--color-muted)', scale: 1 }"
       :transition="{ duration: 0.5, ease: 'easeInOut' }">
-      <ui-glow-border :color="['#A07CFE', '#FE8FB5', '#FFBE7B']" :border-radius="10" />
+      <landing-glow-border :color="['#A07CFE', '#FE8FB5', '#FFBE7B']" :border-radius="8" />
 
-      <header class="flex items-center justify-between h-10 px-4 border-b border-muted bg-light/50">
+      <header class="flex items-center justify-between h-10 px-4 border-b border-muted ">
         <motion.span class="text-sm font-medium text-muted" :animate="{ opacity: 1 }" :key="headerText">
           {{ headerText }}
         </motion.span>
@@ -22,7 +22,7 @@
         <Transition mode="out-in" :css="false" @leave="onNoteViewLeave">
           <motion.div v-if="['typing', 'highlighting', 'menu', 'clicking'].includes(step)" :key="'note'"
             class="relative inline-block w-full will-change-transform">
-            <div class="overflow-hidden whitespace-nowrap pr-1 font-mono text-lg relative z-10 w-fit"
+            <div class="overflow-hidden whitespace-nowrap pr-1 font-mono text-lg dark:text-light relative z-10 w-fit"
               :class="step === 'typing' ? 'border-r-2 border-primary animate-typing' : ''">
               Writing notes helps reinforce learning.
             </div>
@@ -52,7 +52,7 @@
                   delay: 0.2
                 }"
                 class="p-3 bg-primary/5 border border-primary/20 rounded-lg mb-4 relative shadow-sm will-change-transform">
-                <p class="text-xs text-dark font-medium leading-relaxed italic">
+                <p class="text-xs text-dark font-medium leading-relaxed italic dark:text-light">
                   "Writing notes helps reinforce learning."
                 </p>
                 <div class="absolute right-1 top-1">
@@ -66,9 +66,9 @@
             </div>
 
             <motion.div :initial="{ opacity: 0, y: 10 }" :animate="{ opacity: 1, y: 0 }"
-              :transition="{ delay: 0.6, duration: 0.4 }" class="pb-4">
+              :transition="{ delay: 0.6, duration: 0.4 }" class="pb-4 mb-2">
               <motion.button
-                class="w-full py-2.5 bg-primary text-white text-xs font-bold rounded-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-2 relative overflow-hidden will-change-transform"
+                class="w-full py-2.5 bg-primary text-white dark:text-dark text-xs font-bold rounded-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-2 relative overflow-hidden will-change-transform"
                 :animate="step === 'clicking-generate' ? { scale: 0.95 } : { scale: 1 }"
                 :transition="{ duration: 0.15 }">
                 <u-icon name="i-heroicons-sparkles-solid" class="w-4 h-4" />
@@ -77,7 +77,7 @@
                 <!-- Click Pulse Indicator -->
                 <motion.div v-if="step === 'clicking-generate'" :initial="{ scale: 0, opacity: 0.6 }"
                   :animate="{ scale: 8, opacity: 0 }" :transition="{ duration: 0.6, ease: 'easeOut' }"
-                  class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/50 pointer-events-none" />
+                  class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-white/50 dark:bg-black/50 pointer-events-none" />
               </motion.button>
             </motion.div>
           </motion.div>
@@ -104,7 +104,7 @@
             </motion.div>
             <motion.div :initial="{ opacity: 0, y: 10 }" :animate="{ opacity: 1, y: 0 }"
               :transition="{ delay: 0.4, duration: 0.5 }" class="text-center">
-              <h3 class="font-bold text-dark text-lg">Flashcard Created!</h3>
+              <h3 class="font-bold text-primary text-lg">Flashcard Created!</h3>
               <p class="text-sm text-muted px-4 italic">AI processed your material into active recall cards.</p>
             </motion.div>
           </motion.div>

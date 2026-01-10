@@ -10,7 +10,7 @@
 
   /* ==== Brand Colors ==== */
   /* Primary brand #ffa45c - main actions and highlights */
-  --color-primary: #222;
+  --color-primary: #30c3c6;
   --color-primary-light: #ffcdab;
 
   /* --color-light: #fffbf4; */
@@ -62,7 +62,7 @@
 /* Dark mode overrides for Nuxt UI */
 html.dark,
 :is(.dark) {
-  --color-primary: var(--color-light);
+  /* --color-primary: var(--color-light); */
   --ui-primary: var(--color-light);
   --ui-primary-light: var(--color-primary-light);
   --ui-bg: var(--color-dark);
