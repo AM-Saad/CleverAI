@@ -1,5 +1,5 @@
 <template>
-  <div class="max-w-4xl mx-auto p-6 space-y-6" tabindex="0" role="application"
+  <div class="w-4xl max-w-full mx-auto  space-y-6 p-2 rounded outline-primary" tabindex="0" role="application"
     aria-label="Spaced repetition card review interface" @keydown="handleKeydown">
     <!-- Analytics Summary -->
     <ReviewAnalytics :show="showAnalytics" :folder-id="folderId" @close="showAnalytics = false" />
@@ -43,7 +43,7 @@
     </dev-only>
 
     <!-- Header with Progress -->
-    <div class="flex justify-between items-center">
+    <div class="flex flex-wrap justify-between items-center gap-4">
       <review-header :current-index="currentCardIndex" :total-cards="reviewQueue.length" :progress="progress"
         :session-time="sessionTime" />
 
@@ -55,7 +55,7 @@
     <review-card-display v-if="currentCard && !isLoading && !error" :card="currentCard" :show-answer="showAnswer" />
 
     <!-- Action Buttons -->
-    <div v-if="currentCard && !isLoading && !error" class="border-t bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
+    <div v-if="currentCard && !isLoading && !error">
       <!-- Show Answer Button -->
       <review-answer-reveal-button v-if="!showAnswer" :is-submitting="isSubmitting" @reveal="revealAnswer" />
 
@@ -78,8 +78,9 @@
     <review-states-error-state v-if="error && !isLoading" :error="error" @clear-error="clearError" />
 
     <!-- Session Summary Modal/Overlay (Minimal Implementation) -->
-    <div v-if="showSummaryModal && sessionSummary"
-      class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      v-if="showSummaryModal && sessionSummary" role="dialog" aria-modal="true" aria-labelledby="session-summary-title">
+      >
       <div
         class="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full space-y-6 text-center border dark:border-gray-700">
         <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Session Complete!</h2>
@@ -97,7 +98,11 @@
               Level {{ sessionSummary.levelBefore }} → <span class="font-meduim">{{ sessionSummary.levelAfter }}</span>
             </div>
           </div>
+          <div v-if="sessionSummary.leveledUp" class="fixed top-0 left-0">
 
+            <landing-lottie-animation :animation-data="confettiAnimation" :loop="false" :autoplay="true"
+              class="mb-4 z-10 " />
+          </div>
           <div v-if="sessionSummary.stageUnlocked"
             class="p-4 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700 rounded-lg">
             <div class="text-lg font-bold text-purple-700 dark:text-purple-400">🌟 New Stage Unlocked!</div>
@@ -121,6 +126,10 @@
 <script setup lang="ts">
 import type { ReviewGrade } from '~/shared/utils/review.contract'
 
+import confettiData from '~/assets/confetti-background.json';
+
+
+const confettiAnimation = confettiData;
 interface Props {
   folderId?: string
 }

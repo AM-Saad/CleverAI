@@ -257,33 +257,62 @@ export default defineEventHandler(async (event) => {
   // Model Selection (Gateway Routing)
   // ==========================================
   let selectedModel;
-  try {
-    const routingContext = {
-      userId: user.id,
-      task,
-      inputText: text,
-      estimatedOutputTokens: task === "flashcards" ? 500 : 800, // Rough estimates
-      userTier: quotaCheck.subscription.tier as "FREE" | "PRO" | "ENTERPRISE",
-      preferredModelId: undefined,
-      requiredCapability,
-    };
 
-    const selected = await selectBestModel(routingContext);
-    selectedModel = selected.model;
+  // Dev override: force a specific model for testing
+  const config = useRuntimeConfig();
+  const devModelOverride = process.env.NODE_ENV === 'development'
+    ? config.devLlmModelOverride
+    : undefined;
 
-    console.info("[llm.gateway] Model selected:", {
-      requestId,
-      modelId: selectedModel.modelId,
-      provider: selectedModel.provider,
-      score: selected.score,
-      avgLatency: selectedModel.avgLatencyMs,
-      priority: selectedModel.priority,
-      task,
+  if (devModelOverride) {
+    // Fetch the override model directly from registry
+    const overrideModel = await prisma.llmModelRegistry.findUnique({
+      where: { modelId: devModelOverride }
     });
-  } catch (err) {
-    console.error("[llm.gateway] Model selection failed:", err);
-    await logGatewayFailure(requestId, user.id, task, err, undefined, folderId);
-    throw Errors.server("Failed to select model. Please try again.");
+
+    if (!overrideModel) {
+      console.warn(`[llm.gateway] DEV_LLM_MODEL_OVERRIDE model "${devModelOverride}" not found in registry`);
+    } else {
+      selectedModel = overrideModel;
+      console.info("[llm.gateway] 🔧 DEV MODE: Using override model:", {
+        requestId,
+        modelId: selectedModel.modelId,
+        provider: selectedModel.provider,
+        task,
+      });
+    }
+  }
+
+  // Normal model selection if no override or override not found
+  if (!selectedModel) {
+    try {
+      const routingContext = {
+        userId: user.id,
+        task,
+        inputText: text,
+        estimatedOutputTokens: task === "flashcards" ? 500 : 800, // Rough estimates
+        userTier: quotaCheck.subscription.tier as "FREE" | "PRO" | "ENTERPRISE",
+        preferredModelId: undefined,
+        requiredCapability,
+      };
+
+      const selected = await selectBestModel(routingContext);
+      selectedModel = selected.model;
+
+      console.info("[llm.gateway] Model selected:", {
+        requestId,
+        modelId: selectedModel.modelId,
+        provider: selectedModel.provider,
+        score: selected.score,
+        avgLatency: selectedModel.avgLatencyMs,
+        priority: selectedModel.priority,
+        task,
+      });
+    } catch (err) {
+      console.error("[llm.gateway] Model selection failed:", err);
+      await logGatewayFailure(requestId, user.id, task, err, undefined, folderId);
+      throw Errors.server("Failed to select model. Please try again.");
+    }
   }
 
   // ==========================================

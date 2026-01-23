@@ -13,6 +13,8 @@ async function main() {
         { provider: "google", model: "gemini-1.5-pro" },
         { provider: "google", model: "gemini-1.5-flash" },
         { provider: "google", model: "gemini-2.0-flash-lite" },
+        { provider: "deepseek", model: "deepseek-chat" },
+        { provider: "deepseek", model: "deepseek-reasoner" },
       ],
     },
   });
@@ -65,6 +67,148 @@ async function main() {
       inputPer1kMicros: 75n,
       outputPer1kMicros: 300n,
       isActive: true,
+    },
+  });
+
+  // DeepSeek Chat pricing (per 1k tokens in micros)
+  // Input: $0.28/1M = 280 micros/1k, Output: $0.42/1M = 420 micros/1k (cache-miss pricing)
+  console.log("Seeding DeepSeek prices...");
+  await prisma.llmPrice.upsert({
+    where: {
+      provider_model: { provider: "deepseek", model: "deepseek-chat" },
+    },
+    update: { inputPer1kMicros: 280n, outputPer1kMicros: 420n, isActive: true },
+    create: {
+      provider: "deepseek",
+      model: "deepseek-chat",
+      inputPer1kMicros: 280n,
+      outputPer1kMicros: 420n,
+      isActive: true,
+    },
+  });
+
+  // DeepSeek Reasoner pricing (per 1k tokens in micros)
+  // Input: $0.55/1M = 550 micros/1k, Output: $2.19/1M = 2190 micros/1k (cache-miss pricing)
+  await prisma.llmPrice.upsert({
+    where: {
+      provider_model: { provider: "deepseek", model: "deepseek-reasoner" },
+    },
+    update: { inputPer1kMicros: 550n, outputPer1kMicros: 2190n, isActive: true },
+    create: {
+      provider: "deepseek",
+      model: "deepseek-reasoner",
+      inputPer1kMicros: 550n,
+      outputPer1kMicros: 2190n,
+      isActive: true,
+    },
+  });
+
+  // ==========================================
+  // Seed LlmModelRegistry for gateway routing
+  // ==========================================
+  console.log("Seeding LLM Model Registry...");
+
+  // DeepSeek Chat - fast, cost-effective
+  await prisma.llmModelRegistry.upsert({
+    where: { modelId: "deepseek-chat" },
+    update: {
+      inputCostPer1M: 0.28,
+      outputCostPer1M: 0.42,
+      avgLatencyMs: 800,
+      healthStatus: "healthy",
+      enabled: true,
+    },
+    create: {
+      modelId: "deepseek-chat",
+      provider: "deepseek",
+      modelName: "deepseek-chat",
+      inputCostPer1M: 0.28,
+      outputCostPer1M: 0.42,
+      capabilities: ["text"],
+      maxTokens: 64000,
+      latencyBudgetMs: 2000,
+      avgLatencyMs: 800,
+      healthStatus: "healthy",
+      priority: 3,
+      enabled: true,
+    },
+  });
+
+  // DeepSeek Reasoner - advanced reasoning
+  await prisma.llmModelRegistry.upsert({
+    where: { modelId: "deepseek-reasoner" },
+    update: {
+      inputCostPer1M: 0.55,
+      outputCostPer1M: 2.19,
+      avgLatencyMs: 2000,
+      healthStatus: "healthy",
+      enabled: true,
+    },
+    create: {
+      modelId: "deepseek-reasoner",
+      provider: "deepseek",
+      modelName: "deepseek-reasoner",
+      inputCostPer1M: 0.55,
+      outputCostPer1M: 2.19,
+      capabilities: ["text", "reasoning"],
+      maxTokens: 64000,
+      latencyBudgetMs: 5000,
+      avgLatencyMs: 2000,
+      healthStatus: "healthy",
+      priority: 4,
+      enabled: true,
+    },
+  });
+
+  // GPT-4o-mini for comparison
+  await prisma.llmModelRegistry.upsert({
+    where: { modelId: "gpt-4o-mini" },
+    update: {
+      inputCostPer1M: 0.15,
+      outputCostPer1M: 0.60,
+      avgLatencyMs: 500,
+      healthStatus: "healthy",
+      enabled: true,
+    },
+    create: {
+      modelId: "gpt-4o-mini",
+      provider: "openai",
+      modelName: "gpt-4o-mini",
+      inputCostPer1M: 0.15,
+      outputCostPer1M: 0.60,
+      capabilities: ["text", "multimodal"],
+      maxTokens: 128000,
+      latencyBudgetMs: 1000,
+      avgLatencyMs: 500,
+      healthStatus: "healthy",
+      priority: 2,
+      enabled: true,
+    },
+  });
+
+  // Gemini 2.0 Flash
+  await prisma.llmModelRegistry.upsert({
+    where: { modelId: "gemini-2.0-flash" },
+    update: {
+      inputCostPer1M: 0.10,
+      outputCostPer1M: 0.40,
+      avgLatencyMs: 400,
+      healthStatus: "healthy",
+      enabled: true,
+    },
+    create: {
+      modelId: "gemini-2.0-flash",
+      provider: "google",
+      modelName: "gemini-2.0-flash",
+      inputCostPer1M: 0.10,
+      outputCostPer1M: 0.40,
+      capabilities: ["text", "multimodal"],
+      maxTokens: 1000000,
+      latencyBudgetMs: 800,
+      avgLatencyMs: 400,
+      healthStatus: "healthy",
+      priority: 1,
+      enabled: true,
     },
   });
 

@@ -183,6 +183,13 @@ cognilo/
                             │            │ - answer     │
                             │            └──────────────┘
                             │                    │
+                            ├───────────<│   Question   │
+                            │            │              │
+                            │            │ - question   │
+                            │            │ - choices    │
+                            │            │ - answerIndex│
+                            │            └──────────────┘
+                            │                    │
                             ▼                    │
                      ┌──────────────┐            │
                      │     Note     │            │
@@ -198,6 +205,7 @@ cognilo/
                                           │ - easeFactor │
                                           │ - interval   │
                                           │ - nextReview │
+                                          │ - resourceType│
                                           └──────────────┘
 ```
 
@@ -209,12 +217,19 @@ cognilo/
 | `Folder` | Learning units | name, parentId (nested), userId |
 | `Material` | Learning content | title, type (pdf/url), content |
 | `Flashcard` | Q&A pairs | question, answer, folderId, materialId? |
+| `Question` | Quiz questions | question, choices, answerIndex, folderId, materialId? |
 | `Note` | User notes | content (rich text), order, folderId |
-| `CardReview` | SM-2 state | easeFactor, intervalDays, nextReviewAt |
+| `CardReview` | SM-2 state | easeFactor, intervalDays, nextReviewAt, resourceType |
+| `XpEvent` | XP tracking | userId, cardId, source, xp, createdAt |
+| `Achievement` | User achievements | userId, type, unlockedAt |
+| `GradeRequest` | Idempotency | requestId, cardId, grade, result |
 | `LlmUsage` | Cost tracking | tokens, cost, model, userId |
-| `LlmModelRegistry` | Model config | name, costPer1kTokens, rateLimit |
-| `UserSubscription` | Push subscriptions | endpoint, keys, userId |
+| `LlmModelRegistry` | Model config | modelId, provider, costPer1kTokens, isActive |
+| `LlmGatewayLog` | Gateway analytics | requestId, userId, modelId, latencyMs, cached |
+| `UserSubscription` | Quota management | tier, generationsUsed, generationsQuota |
+| `NotificationSubscription` | Push subscriptions | endpoint, keys, userId |
 | `ScheduledNotification` | Due reminders | scheduledFor, sent, cardId |
+| `UserNotificationPreferences` | Notification settings | enabled, quietHoursStart, quietHoursEnd |
 
 ### Constraints & Indexes
 

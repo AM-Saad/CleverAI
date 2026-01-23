@@ -8,10 +8,25 @@ import type { LLMModel } from "#shared/utils/llm";
 import type { LlmModelRegistry } from '@prisma/client'
 import { prisma } from '../prisma'
 
+/**
+ * @deprecated Use `getLLMStrategyFromRegistry()` instead.
+ * This legacy factory uses hardcoded shorthand model names and will be removed in a future release.
+ * The registry-based factory supports dynamic model routing, health checks, and proper model IDs.
+ * 
+ * Migration: Update callers to use `getLLMStrategyFromRegistry(modelId, ctx)` with full model IDs
+ * (e.g., 'gpt-4o-mini', 'gemini-1.5-flash-8b', 'deepseek-chat') from LlmModelRegistry.
+ * 
+ * @see getLLMStrategyFromRegistry
+ */
 export const getLLMStrategy = (
   model: LLMModel,
   ctx?: { userId?: string; folderId?: string; feature?: string }
 ): LLMStrategy => {
+  console.warn(
+    `[DEPRECATION] getLLMStrategy("${model}") is deprecated. ` +
+    `Use getLLMStrategyFromRegistry() with full model IDs instead.`
+  );
+
   switch (model) {
     case "gpt-3.5":
       return new GPT35Strategy((m: LlmMeasured) => {
@@ -21,7 +36,7 @@ export const getLLMStrategy = (
           feature: ctx?.feature,
         });
       });
-    case "gemini": // ← new
+    case "gemini":
       return new GeminiStrategy((m: LlmMeasured) => {
         logLlmUsage(m, {
           userId: ctx?.userId,
@@ -29,12 +44,14 @@ export const getLLMStrategy = (
           feature: ctx?.feature,
         });
       });
-    // case 'gpt-4o':
-    //   return new GPT4oStrategy()
-    // case 'claude':
-    //   return new ClaudeStrategy()
-    // case 'mixtral':
-    //   return new MixtralStrategy()
+    case "deepseek":
+      return new DeepSeekStrategy((m: LlmMeasured) => {
+        logLlmUsage(m, {
+          userId: ctx?.userId,
+          folderId: ctx?.folderId,
+          feature: ctx?.feature,
+        });
+      });
     default: {
       // Exhaustive check for future model additions
       const _exhaustive: never = model as never;
@@ -60,23 +77,23 @@ export async function getLLMStrategyFromRegistry(
   const model = await prisma.llmModelRegistry.findUnique({
     where: { modelId }
   })
-  
+
   if (!model) {
     throw Errors.notFound(`Model ${modelId}`)
   }
-  
+
   if (!model.enabled) {
     throw Errors.badRequest(`Model is disabled: ${modelId}`)
   }
-  
+
   if (model.healthStatus === 'down') {
     throw Errors.server(`Model is currently down: ${modelId}`)
   }
-  
+
   // Map provider to strategy class
   // Provider is normalized to lowercase in registry (e.g., 'openai', 'google')
   const provider = model.provider.toLowerCase()
-  
+
   switch (provider) {
     case 'openai':
       // All OpenAI models use GPT35Strategy (gpt-3.5-turbo, gpt-4o-mini, gpt-4o)
@@ -87,7 +104,7 @@ export async function getLLMStrategyFromRegistry(
           feature: ctx?.feature,
         });
       });
-      
+
     case 'google':
       // All Google models use GeminiStrategy (gemini-1.5-flash-8b, gemini-2.0-flash-exp)
       return new GeminiStrategy((m: LlmMeasured) => {
@@ -97,7 +114,17 @@ export async function getLLMStrategyFromRegistry(
           feature: ctx?.feature,
         });
       });
-      
+
+    case 'deepseek':
+      // DeepSeek models (deepseek-chat, deepseek-reasoner)
+      return new DeepSeekStrategy((m: LlmMeasured) => {
+        logLlmUsage(m, {
+          userId: ctx?.userId,
+          folderId: ctx?.folderId,
+          feature: ctx?.feature,
+        });
+      });
+
     // case 'anthropic':
     //   return new ClaudeStrategy((m: LlmMeasured) => {
     //     logLlmUsage(m, {
@@ -106,7 +133,7 @@ export async function getLLMStrategyFromRegistry(
     //       feature: ctx?.feature,
     //     });
     //   });
-      
+
     // case 'mistral':
     //   return new MixtralStrategy((m: LlmMeasured) => {
     //     logLlmUsage(m, {
@@ -115,7 +142,7 @@ export async function getLLMStrategyFromRegistry(
     //       feature: ctx?.feature,
     //     });
     //   });
-      
+
     default:
       throw Errors.badRequest(`Unsupported provider: ${provider} for model ${modelId}`)
   }

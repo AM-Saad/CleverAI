@@ -20,7 +20,7 @@
     "db:generate": "prisma generate",
     "db:sync": "prisma generate && prisma db push",
     "db:studio": "prisma studio",
-    "db:seed": "tsx server/prisma/seed.ts",
+    "db:seed": "tsx prisma/seed.ts",
     "notifications:cleanup": "tsx server/utils/cleanupSubscriptions.ts",
     "prepare": "husky install",
     "lint": "yarn lint:eslint && yarn lint:prettier",

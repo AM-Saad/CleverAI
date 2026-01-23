@@ -1,18 +1,21 @@
 <template>
   <component :is="tag" :class="[
-    'ui-card',
+    'ui-card overflow-auto',
     variantClasses[variant],
-    sizeClasses[size],
     shadowClasses[shadow],
     hoverClasses[hover],
     className,
   ]">
-    <div v-if="$slots.header"
-      :class="['flex items-center justify-between text-dark dark:text-light', headerSizesClasses[size], headerStyle[variant]]">
+    <div v-if="$slots.header" :class="['flex items-center justify-between text-dark dark:text-light ', headerSizesClasses[size], headerStyle[variant],
+      sizeClasses[size],
+    ]">
       <slot name="header" />
     </div>
 
-    <div v-if="$slots.default" :class="combinedContentClasses">
+    <div v-if="$slots.default" :class="[combinedContentClasses,
+      sizeClasses[size],
+
+    ]">
       <slot />
     </div>
 
@@ -94,8 +97,8 @@ const headerSizesClasses = {
   xs: "pb-0.5 mb-1",
   sm: "pb-1.5 mb-3 text-sm font-medium",
   md: "pb-2 mb-4 text-base font-medium",
-  lg: "pb-1.5 mb-3 lg:pb-2 text-lg font-semibold text-nowrap",
-  xl: "pb-3.5 mb-5 text-lg font-semibold",
+  lg: "pb-1.5 mb-3 lg:pb-2 text-lg font-medium text-nowrap",
+  xl: "pb-3.5 mb-5 text-lg font-medium",
 };
 const headerStyle = {
   default: "bg-white dark:bg-transparent border-b border-neutral dark:border-muted",

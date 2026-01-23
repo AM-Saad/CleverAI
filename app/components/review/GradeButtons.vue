@@ -6,20 +6,12 @@
     </div>
 
     <!-- Grade Buttons -->
-    <div
-      class="grid grid-cols-2 md:grid-cols-6 gap-2"
-      role="group"
-      aria-label="Grade card options"
-    >
-      <button
-        v-for="(gradeOption, index) in gradeOptions"
-        :key="index"
-        @click="$emit('grade', gradeOption.value)"
+    <div class="grid grid-cols-2 md:grid-cols-6 gap-2" role="group" aria-label="Grade card options">
+      <button v-for="(gradeOption, index) in gradeOptions" :key="index" @click="$emit('grade', gradeOption.value)"
         :disabled="isSubmitting"
-        class="relative p-3 text-center border rounded-lg transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2"
+        class="relative p-1 text-center border rounded-lg transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer"
         :class="[gradeOption.colorClass, { 'animate-pulse': isSubmitting }]"
-        :aria-label="`Grade ${gradeOption.value}: ${gradeOption.label} - ${gradeOption.description}`"
-      >
+        :aria-label="`Grade ${gradeOption.value}: ${gradeOption.label} - ${gradeOption.description}`">
         <div class="font-semibold">{{ gradeOption.label }}</div>
         <div class="text-xs mt-1">{{ gradeOption.description }}</div>
         <div class="absolute top-1 right-1 text-xs opacity-50">

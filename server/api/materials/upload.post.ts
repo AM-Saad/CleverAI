@@ -2,7 +2,6 @@ import { createError } from "h3";
 import formidable, { type Fields, type Files, type Part } from "formidable";
 import fs from "fs/promises";
 import path from "path";
-import * as pdfParse from "pdf-parse";
 import mammoth from "mammoth";
 import { requireRole } from "~~/server/utils/auth";
 import { z } from "zod";
@@ -37,15 +36,17 @@ async function extractPdfText(
   buffer: Buffer
 ): Promise<{ text: string; pageCount?: number }> {
   try {
-    // Handle both default and named exports
-    const parsePdf =
-      typeof pdfParse === "function"
-        ? pdfParse
-        : (pdfParse as any).default || pdfParse;
-    const data = await parsePdf(buffer);
+    // pdf-parse v2+ uses PDFParse class, not a function
+    const { PDFParse } = await import("pdf-parse");
+
+    const parser = new PDFParse({ data: buffer });
+    const textResult = await parser.getText();
+    const infoResult = await parser.getInfo();
+    await parser.destroy();
+
     return {
-      text: sanitizeText(data.text),
-      pageCount: data.numpages,
+      text: sanitizeText(textResult.text),
+      pageCount: infoResult.total,
     };
   } catch (error) {
     console.error("PDF extraction error:", error);

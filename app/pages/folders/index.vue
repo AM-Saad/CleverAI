@@ -77,26 +77,26 @@ onMounted(() => {
     <shared-error-message v-if="error" :error="error" :refresh="refresh" />
 
     <div>
-      <ui-card class="mb-4 p-0!" size="md" variant="ghost">
-        <template #default>
+      <!-- <ui-card class="mb-4 p-0!" size="md" variant="ghost" content-classes="p-0! p-0.5!">
+        <template #default> -->
 
-          <div class="flex gap-3 justify-between items-end">
-            <!-- Future filter options can go here -->
-            <div class="basis-3/4">
-              <UiLabel for="search">Search</UiLabel>
-              <u-input id="search" type="text" placeholder="Search folders..." class="mt-1 w-full" />
-            </div>
-            <div class="flex gap-2 items-center place-self-end">
-              <u-button @click="show = true" size="sm">Create Folder</u-button>
-              <u-button variant="subtle" @click="toggleView">
-                <icon v-if="listView === 'grid'" name="i-lucide-list" class="inline-block" />
-                <icon v-else name="i-lucide-grid" class="inline-block" />
-              </u-button>
-            </div>
+      <div class="flex gap-3 justify-between items-end mb-4">
+        <!-- Future filter options can go here -->
+        <div class="basis-3/4">
+          <UiLabel for="search">Search</UiLabel>
+          <u-input id="search" type="text" placeholder="Search folders..." class="mt-1 w-full" />
+        </div>
+        <div class="flex gap-2 items-center place-self-end">
+          <u-button @click="show = true" size="sm">Create Folder</u-button>
+          <u-button variant="subtle" @click="toggleView">
+            <icon v-if="listView === 'grid'" name="i-lucide-list" class="inline-block" />
+            <icon v-else name="i-lucide-grid" class="inline-block" />
+          </u-button>
+        </div>
 
-          </div>
-        </template>
-      </ui-card>
+      </div>
+      <!-- </template>
+</ui-card> -->
       <div v-if="loading">
         <div :class="listView === 'grid' ? 'grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'space-y-4'">
           <ui-card shadow="none" tag="li" variant="default" v-for="n in 3" :key="n">

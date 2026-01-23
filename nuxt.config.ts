@@ -285,6 +285,9 @@ export default defineNuxtConfig({
     redisUrl: process.env.REDIS_URL,
     openaiKey: process.env.OPENAI_API_KEY,
     geminiKey: process.env.GEMINI_API_KEY,
+    deepseekKey: process.env.DEEPSEEK_API_KEY,
+    // Dev-only: Force a specific model for testing (e.g., 'deepseek-chat', 'gpt-4o-mini')
+    devLlmModelOverride: process.env.DEV_LLM_MODEL_OVERRIDE,
     databaseUrl: process.env.DATABASE_URL,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
 

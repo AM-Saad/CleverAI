@@ -1,13 +1,13 @@
 // server/utils/llmCost.ts
 export type CostInput = {
-  provider: "openai" | "google";
+  provider: "openai" | "google" | "deepseek";
   model: string;
   promptTokens: number;
   completionTokens: number;
 };
 
 export type LlmMeasured = {
-  provider: "openai" | "google";
+  provider: "openai" | "google" | "deepseek";
   model: string;
   promptTokens: number;
   completionTokens: number;

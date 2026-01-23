@@ -32,7 +32,7 @@ const props = defineProps({
   },
   activeClass: {
     type: String,
-    default: "border-primary text-primary dark:text-primary font-bold!",
+    default: "border-primary text-primary dark:text-primary font-medium!",
   },
   inactiveClass: {
     type: String,
@@ -41,7 +41,7 @@ const props = defineProps({
   },
   buttonBaseClass: {
     type: String,
-    default: "flex items-center gap-2 font-medium text-base transition-colors text-nowrap",
+    default: "flex items-center gap-2 font-medium text-sm transition-colors text-nowrap",
   },
   direction: {
     type: [String, Object] as PropType<string | Record<string, string>>,

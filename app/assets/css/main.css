@@ -3,7 +3,7 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
-@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Saira:ital,wght@0,100..900;1,100..900&display=swap');
 /* One source of truth for tokens */
 @theme static {
   --font-sans: "";
@@ -57,7 +57,7 @@
   --ui-light: var(--color-light);
   --ui-muted: var(--color-muted);
   --ui-neutral: var(--color-neutral);
-  --ui-bg: #eef0f4;
+  --ui-bg: #f7faff;
 }
 
 /* Dark mode overrides for Nuxt UI */
@@ -72,7 +72,7 @@ html.dark,
 body {
   /* font-family: "Source Sans 3", sans-serif; */
   /* font-family: "Sen", sans-serif; */
-  font-family:"Nunito Sans","Nunito Sans Fallback";
+  font-family: "Saira", sans-serif;
   font-optical-sizing: auto;
   color: unset;
 }
