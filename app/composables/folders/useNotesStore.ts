@@ -1,7 +1,7 @@
 import type { APIError } from "@/services/FetchFactory";
 import type Result from "@/types/Result";
 import { DB_CONFIG } from "~/utils/constants/pwa";
-import { queueNoteChange, openUnifiedDB } from "~/utils/idb";
+import { queueNoteChange, openUnifiedDB, loadBoardNotesFromIndexedDB } from "~/utils/idb";
 
 export interface NoteState extends Note {
   // Local state tracking
@@ -16,11 +16,11 @@ interface NotesStore {
   notes: Ref<Map<string, NoteState>>;
   loadingStates: Ref<Map<string, boolean>>;
   filteredNoteIds: Ref<Set<string> | null>;
-  createNote: (folderId: string, content: string) => Promise<string | null>;
+  createNote: (content: string, tags?: string[]) => Promise<string | null>;
   updateNote: (id: string, updatedNote: NoteState) => Promise<boolean>;
   deleteNote: (id: string) => Promise<boolean>;
   reorderNotes: (reorderedNotes: NoteState[]) => Promise<boolean>;
-  syncWithServer: (folderId: string) => Promise<void>;
+  syncWithServer: () => Promise<void>;
   retryFailedNote: (id: string) => Promise<boolean>;
   clearNoteError: (id: string) => void;
   isNoteLoading: (id: string) => boolean;
@@ -31,7 +31,7 @@ interface NotesStore {
   setFilteredNoteIds: (ids: Set<string> | null) => void;
 }
 
-// Global store instance
+// Global store instance - keyed by folderId
 const stores = new Map<string, NotesStore>();
 // Ensure we only wire one 'online' listener for notes sync across the app
 let notesOnlineListenerRegistered = false;
@@ -92,19 +92,19 @@ export function useNotesStore(folderId: string): NotesStore {
         }
       });
 
-      // Listen for sync completion to refresh folders with offline-created notes
+      // Listen for sync completion to refresh contexts with offline-created notes
       if ("serviceWorker" in navigator) {
         navigator.serviceWorker.addEventListener("message", async (event) => {
           const msg = event.data;
 
-          // After successful sync, refresh folders to replace temp IDs with real server IDs
+          // After successful sync, refresh contexts to replace temp IDs with real server IDs
           if (msg.type === "NOTES_SYNCED" && msg.data?.appliedCount > 0) {
-            for (const [storeFolderId, store] of stores.entries()) {
+            for (const [contextKey, store] of stores.entries()) {
               const storeNotes = Array.from(store.notes.value.values());
               const hasTempNotes = storeNotes.some(n => n.id.startsWith("temp-"));
 
               if (hasTempNotes) {
-                await store.syncWithServer(storeFolderId);
+                await store.syncWithServer();
               }
             }
           }
@@ -196,6 +196,7 @@ export function useNotesStore(folderId: string): NotesStore {
             : 1,
           folderId: note.folderId,
           content,
+          tags: note.tags,
         });
         // Register Background Sync to attempt sync when back online
         await registerNotesSync();
@@ -216,6 +217,7 @@ export function useNotesStore(folderId: string): NotesStore {
       // Attempt to submit to server
       const result: Result<Note, APIError> = await $api.notes.update(id, {
         content,
+        tags: note.tags,
       });
 
       if (result.success) {
@@ -244,6 +246,7 @@ export function useNotesStore(folderId: string): NotesStore {
             : 1,
           folderId: note.folderId,
           content,
+          tags: note.tags,
         });
         // Register Background Sync to attempt sync when back online
         await registerNotesSync();
@@ -287,16 +290,17 @@ export function useNotesStore(folderId: string): NotesStore {
 
   // Create a new note - simple optimistic approach
   const createNote = async (
-    folderIdParam: string,
-    content: string
+    content: string,
+    tags: string[] = []
   ): Promise<string | null> => {
     const tempId = `temp-${Date.now()}`;
 
     // Add optimistic note
     const optimisticNote: NoteState = {
       id: tempId,
-      folderId: folderIdParam,
+      folderId,
       content,
+      tags,
       order: notes.value.size, // Add to end of list
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -316,8 +320,9 @@ export function useNotesStore(folderId: string): NotesStore {
         operation: "upsert",
         updatedAt: Date.now(),
         localVersion: 1,
-        folderId: folderIdParam,
+        folderId,
         content,
+        tags,
       });
       await registerNotesSync();
 
@@ -341,8 +346,9 @@ export function useNotesStore(folderId: string): NotesStore {
     try {
       // Attempt to submit to server
       const result = await $api.notes.create({
-        folderId: folderIdParam,
+        folderId,
         content,
+        tags,
       });
 
       if (result.success) {
@@ -389,8 +395,10 @@ export function useNotesStore(folderId: string): NotesStore {
           operation: "upsert",
           updatedAt: Date.now(),
           localVersion: 1,
-          folderId: folderIdParam,
+          type: optimisticNote.type,
+          folderId: optimisticNote.folderId || undefined,
           content,
+          tags,
         });
         await registerNotesSync();
 
@@ -503,8 +511,7 @@ export function useNotesStore(folderId: string): NotesStore {
     reorderedNotes: NoteState[]
   ): Promise<boolean> => {
     console.log("🔄 [useNotesStore] reorderNotes called", {
-      folderId,
-      count: reorderedNotes.length,
+      contextKey,
       notes: reorderedNotes.map((n, i) => ({
         id: n.id,
         currentOrder: n.order,
@@ -530,13 +537,16 @@ export function useNotesStore(folderId: string): NotesStore {
       );
 
       // Prepare payload for server
-      const noteOrders = reorderedNotes.map((note, index) => ({
-        id: note.id,
-        order: index,
-      }));
+      const payload = {
+        folderId,
+        noteOrders: reorderedNotes.map((note, index) => ({
+          id: note.id,
+          order: index,
+        })),
+      };
       console.log("📝 [useNotesStore] Prepared payload for server:", {
         folderId,
-        noteOrders,
+        payload,
       });
 
       // Save to IndexedDB for persistence
@@ -547,10 +557,7 @@ export function useNotesStore(folderId: string): NotesStore {
 
       // Attempt to submit to server
       console.log("🌐 [useNotesStore] Calling API reorder endpoint...");
-      const result = await $api.notes.reorder({
-        folderId,
-        noteOrders,
-      });
+      const result = await $api.notes.reorder(payload);
       console.log("📡 [useNotesStore] API response:", result);
 
       if (result.success) {
@@ -612,10 +619,12 @@ export function useNotesStore(folderId: string): NotesStore {
   };
 
   // Load notes from server with IndexedDB fallback
-  const syncWithServer = async (folderIdParam: string): Promise<void> => {
-    loadingStates.value.set(folderIdParam, true);
+  const syncWithServer = async (): Promise<void> => {
+    loadingStates.value.set(folderId, true);
     try {
-      const result = await $api.notes.getByFolder(folderIdParam);
+      const result = await $api.notes.getByFolder(folderId);
+
+      console.log(`[useNotesStore] syncWithServer result for ${folderId}:`, result);
 
       if (result.success) {
         // Store temp notes before clearing
@@ -625,6 +634,8 @@ export function useNotesStore(folderId: string): NotesStore {
 
         // Clear existing notes and load fresh data from server
         notes.value.clear();
+
+        console.log(`[useNotesStore] Loading ${result.data.length} notes into ${folderId}`);
 
         result.data.forEach((note: Note) => {
           const noteState: NoteState = {
@@ -649,7 +660,7 @@ export function useNotesStore(folderId: string): NotesStore {
         }
 
         lastSync.value = new Date();
-        loadingStates.value.set(folderIdParam, false);
+        loadingStates.value.set(folderId, false);
         return;
       }
 
@@ -658,16 +669,16 @@ export function useNotesStore(folderId: string): NotesStore {
         "Failed to sync notes: server returned failure",
         result.error
       );
-      await loadFromIndexedDBFallback(folderIdParam);
+      await loadFromIndexedDBFallback();
     } catch (error) {
       console.error("Failed to sync notes:", error);
       // Network error - try to load from IndexedDB
-      await loadFromIndexedDBFallback(folderIdParam);
+      await loadFromIndexedDBFallback();
     }
   };
 
   // Fallback to load notes from IndexedDB when server fails
-  const loadFromIndexedDBFallback = async (folderId: string): Promise<void> => {
+  const loadFromIndexedDBFallback = async (): Promise<void> => {
     try {
       const localNotes = await loadNotesFromIndexedDB(folderId);
 
@@ -777,7 +788,7 @@ export function useNotesStore(folderId: string): NotesStore {
   stores.set(folderId, store);
 
   // Auto-sync on creation
-  syncWithServer(folderId);
+  syncWithServer();
 
   return store;
 }

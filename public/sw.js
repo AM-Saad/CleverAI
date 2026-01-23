@@ -43,11 +43,18 @@
     // 5: Added PENDING_NOTES store (offline notes sync queue)
     // 6: Added post-open verification & auto-repair logic
     // 7: Reconciliation bump after detecting live DB already at version 7 (prevent VersionError when client still used 6)
-    VERSION: 8,
+    // 8: Added type, userId indexes for board notes support
+    // 9: Board notes feature - added type/userId indexes to notes store
+    // 10: BoardItem separation - added BOARD_ITEMS and PENDING_BOARD_ITEMS stores
+    // 11: Added BOARD_COLUMNS store for board column offline support
+    VERSION: 11,
     STORES: {
       FORMS: "forms",
       NOTES: "notes",
-      PENDING_NOTES: "pendingNotes"
+      PENDING_NOTES: "pendingNotes",
+      BOARD_ITEMS: "boardItems",
+      PENDING_BOARD_ITEMS: "pendingBoardItems",
+      BOARD_COLUMNS: "boardColumns"
     }
   };
   var IDB_RETRY_CONFIG = {
@@ -73,6 +80,11 @@
     NOTES_SYNCED: "NOTES_SYNCED",
     NOTES_SYNC_ERROR: "NOTES_SYNC_ERROR",
     NOTES_SYNC_CONFLICTS: "NOTES_SYNC_CONFLICTS",
+    // Board items sync specific
+    SYNC_BOARD_ITEMS: "SYNC_BOARD_ITEMS",
+    BOARD_ITEMS_SYNC_STARTED: "BOARD_ITEMS_SYNC_STARTED",
+    BOARD_ITEMS_SYNCED: "BOARD_ITEMS_SYNCED",
+    BOARD_ITEMS_SYNC_ERROR: "BOARD_ITEMS_SYNC_ERROR",
     // Service worker control
     SW_ACTIVATED: "SW_ACTIVATED",
     SW_CONTROL_CLAIMED: "SW_CONTROL_CLAIMED",
@@ -90,7 +102,8 @@
   var SYNC_TAGS = {
     FORM: "syncForm",
     CONTENT: "content-sync",
-    NOTES: "notes-sync"
+    NOTES: "notes-sync",
+    BOARD_ITEMS: "board-items-sync"
   };
   var PREWARM_PATHS = ["/", "/about", "/folders"];
   var AUTH_STUBS = {
@@ -120,6 +133,9 @@
         ensureStore(STORES.FORMS);
         ensureStore(STORES.NOTES);
         ensureStore(STORES.PENDING_NOTES);
+        ensureStore(STORES.BOARD_ITEMS);
+        ensureStore(STORES.PENDING_BOARD_ITEMS);
+        ensureStore(STORES.BOARD_COLUMNS);
         try {
           if (db.objectStoreNames.contains(STORES.NOTES)) {
             const tx = req.transaction;
@@ -130,6 +146,18 @@
               }
               if (!notesStore.indexNames.contains("updatedAt")) {
                 notesStore.createIndex("updatedAt", "updatedAt", { unique: false });
+              }
+            }
+          }
+          if (db.objectStoreNames.contains(STORES.BOARD_ITEMS)) {
+            const tx = req.transaction;
+            if (tx) {
+              const boardItemsStore = tx.objectStore(STORES.BOARD_ITEMS);
+              if (!boardItemsStore.indexNames.contains("userId")) {
+                boardItemsStore.createIndex("userId", "userId", { unique: false });
+              }
+              if (!boardItemsStore.indexNames.contains("updatedAt")) {
+                boardItemsStore.createIndex("updatedAt", "updatedAt", { unique: false });
               }
             }
           }
@@ -155,7 +183,14 @@
       req.onsuccess = () => {
         const db = req.result;
         try {
-          const required = [DB_CONFIG.STORES.FORMS, DB_CONFIG.STORES.NOTES, DB_CONFIG.STORES.PENDING_NOTES];
+          const required = [
+            DB_CONFIG.STORES.FORMS,
+            DB_CONFIG.STORES.NOTES,
+            DB_CONFIG.STORES.PENDING_NOTES,
+            DB_CONFIG.STORES.BOARD_ITEMS,
+            DB_CONFIG.STORES.PENDING_BOARD_ITEMS,
+            DB_CONFIG.STORES.BOARD_COLUMNS
+          ];
           const missing = required.filter((s) => !db.objectStoreNames.contains(s));
           if (missing.length) {
             console.warn("[IDB] Detected missing stores post-open:", missing, "forcing rebuild");
@@ -226,6 +261,17 @@
     const db = await openUnifiedDB();
     if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) return;
     await Promise.all(ids.map((id) => deleteRecord(db, DB_CONFIG.STORES.PENDING_NOTES, id)));
+  }
+  async function loadPendingBoardItemChanges() {
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_BOARD_ITEMS)) return [];
+    return getAllRecords(db, DB_CONFIG.STORES.PENDING_BOARD_ITEMS);
+  }
+  async function deletePendingBoardItemChanges(ids) {
+    if (!ids.length) return;
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_BOARD_ITEMS)) return;
+    await Promise.all(ids.map((id) => deleteRecord(db, DB_CONFIG.STORES.PENDING_BOARD_ITEMS, id)));
   }
   async function deleteRecord(db, storeName, key) {
     const {
@@ -3335,6 +3381,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     let dbInitAttempts = 0;
     const MAX_DB_INIT_ATTEMPTS = 3;
     let notesSyncInProgress = false;
+    let boardItemsSyncInProgress = false;
     async function ensureDB() {
       if (db) return db;
       if (dbInitAttempts >= MAX_DB_INIT_ATTEMPTS) {
@@ -3754,6 +3801,11 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         extendable.waitUntil(syncPendingNotes("manual"));
         return;
       }
+      if (type === SW_MESSAGE_TYPES.SYNC_BOARD_ITEMS) {
+        const extendable = event;
+        extendable.waitUntil(syncPendingBoardItems("manual"));
+        return;
+      }
       if (type === SW_MESSAGE_TYPES.SET_DEBUG) {
         DEBUG = !!data.value;
         log("Debug mode set to", DEBUG);
@@ -3946,6 +3998,9 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       const syncEvt = event;
       if (syncEvt.tag === SYNC_TAGS.NOTES) {
         syncEvt.waitUntil(syncPendingNotes("background"));
+      }
+      if (syncEvt.tag === SYNC_TAGS.BOARD_ITEMS) {
+        syncEvt.waitUntil(syncPendingBoardItems("background"));
       }
       if (syncEvt.tag === SYNC_TAGS.FORM) {
         syncEvt.waitUntil(
@@ -4274,6 +4329,67 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         );
       } finally {
         notesSyncInProgress = false;
+      }
+    }
+    async function syncPendingBoardItems(mode) {
+      var _a;
+      if (boardItemsSyncInProgress) return;
+      boardItemsSyncInProgress = true;
+      try {
+        const clients = await swSelf.clients.matchAll({ type: "window" });
+        const pending = await loadPendingBoardItemChanges();
+        clients.forEach(
+          (c) => c.postMessage({
+            type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNC_STARTED,
+            data: {
+              message: "Syncing board items\u2026",
+              pendingCount: pending.length,
+              mode
+            }
+          })
+        );
+        if (!pending.length) {
+          clients.forEach(
+            (c) => c.postMessage({
+              type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNCED,
+              data: { appliedCount: 0, mode }
+            })
+          );
+          return;
+        }
+        const resp = await fetch("/api/board-items/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ changes: pending })
+        });
+        if (!resp.ok) {
+          error("[Board Items Sync] Server error:", resp.status);
+          throw new Error("Board items sync failed");
+        }
+        const result = await resp.json().catch(() => ({}));
+        const appliedIds = Array.from(new Set(((_a = result.data) == null ? void 0 : _a.applied) || []));
+        if (appliedIds.length) {
+          try {
+            await deletePendingBoardItemChanges(appliedIds);
+          } catch (e) {
+            error("[Board Items Sync] Failed to clear synced changes:", e);
+          }
+        }
+        log("[Board Items Sync] Complete:", { applied: appliedIds.length });
+        clients.forEach(
+          (c) => c.postMessage({
+            type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNCED,
+            data: { appliedCount: appliedIds.length, mode }
+          })
+        );
+      } catch (err) {
+        error("[Board Items Sync] Error:", err);
+        const clients = await swSelf.clients.matchAll({ type: "window" });
+        clients.forEach(
+          (c) => c.postMessage({ type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNC_ERROR })
+        );
+      } finally {
+        boardItemsSyncInProgress = false;
       }
     }
   })();

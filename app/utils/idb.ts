@@ -31,11 +31,14 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
       ensureStore(STORES.FORMS);
       ensureStore(STORES.NOTES);
       ensureStore(STORES.PENDING_NOTES);
+      ensureStore(STORES.BOARD_ITEMS);
+      ensureStore(STORES.PENDING_BOARD_ITEMS);
+      ensureStore(STORES.BOARD_COLUMNS);
 
       // Add indexes for NOTES store if missing.
       try {
         if (db.objectStoreNames.contains(STORES.NOTES)) {
-          const tx = req.transaction; // upgrade transaction
+          const tx = req.transaction;
           if (tx) {
             const notesStore = tx.objectStore(STORES.NOTES);
             if (!notesStore.indexNames.contains('folderId')) {
@@ -43,6 +46,19 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
             }
             if (!notesStore.indexNames.contains('updatedAt')) {
               notesStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+            }
+          }
+        }
+        // Add indexes for BOARD_ITEMS store if missing.
+        if (db.objectStoreNames.contains(STORES.BOARD_ITEMS)) {
+          const tx = req.transaction;
+          if (tx) {
+            const boardItemsStore = tx.objectStore(STORES.BOARD_ITEMS);
+            if (!boardItemsStore.indexNames.contains('userId')) {
+              boardItemsStore.createIndex('userId', 'userId', { unique: false });
+            }
+            if (!boardItemsStore.indexNames.contains('updatedAt')) {
+              boardItemsStore.createIndex('updatedAt', 'updatedAt', { unique: false });
             }
           }
         }
@@ -70,7 +86,14 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
       const db = req.result;
       try {
         // Post-open verification: if stores missing despite version, force rebuild.
-        const required = [DB_CONFIG.STORES.FORMS, DB_CONFIG.STORES.NOTES, DB_CONFIG.STORES.PENDING_NOTES];
+        const required = [
+          DB_CONFIG.STORES.FORMS,
+          DB_CONFIG.STORES.NOTES,
+          DB_CONFIG.STORES.PENDING_NOTES,
+          DB_CONFIG.STORES.BOARD_ITEMS,
+          DB_CONFIG.STORES.PENDING_BOARD_ITEMS,
+          DB_CONFIG.STORES.BOARD_COLUMNS,
+        ];
         const missing = required.filter(s => !db.objectStoreNames.contains(s));
         if (missing.length) {
           console.warn('[IDB] Detected missing stores post-open:', missing, 'forcing rebuild');
@@ -148,7 +171,7 @@ export async function countRecords(
 
 export const saveNoteToIndexedDB = async (note: NoteState): Promise<void> => {
   try {
-  const db = await openUnifiedDB();
+    const db = await openUnifiedDB();
     if (!db.objectStoreNames.contains(DB_CONFIG.STORES.NOTES)) {
       console.warn('[IDB] NOTES store missing; queuing note change for sync');
       // Fallback: queue for background sync so changes aren't lost
@@ -157,8 +180,8 @@ export const saveNoteToIndexedDB = async (note: NoteState): Promise<void> => {
         try {
           unifiedDbPromise = null; // reset
           await openUnifiedDB();
-        } catch {}
-  const repairDb = await openUnifiedDB();
+        } catch { }
+        const repairDb = await openUnifiedDB();
         if (repairDb.objectStoreNames.contains(DB_CONFIG.STORES.NOTES)) {
           await putRecord(repairDb, DB_CONFIG.STORES.NOTES as STORES, note);
           return;
@@ -168,10 +191,12 @@ export const saveNoteToIndexedDB = async (note: NoteState): Promise<void> => {
           operation: 'upsert',
           updatedAt: Date.now(),
           localVersion: (note as any).localVersion ? (note as any).localVersion + 1 : 1,
+          type: (note as any).type,
           folderId: (note as any).folderId,
           content: (note as any).content,
+          tags: (note as any).tags || [],
         })
-      } catch {}
+      } catch { }
       return;
     }
     // Reuse generic sanitized put
@@ -185,7 +210,7 @@ export const loadNotesFromIndexedDB = async (
   folderId: string
 ): Promise<NoteState[]> => {
   try {
-  const db = await openUnifiedDB();
+    const db = await openUnifiedDB();
     const tx = db.transaction([DB_CONFIG.STORES.NOTES], "readonly");
     const store = tx.objectStore(DB_CONFIG.STORES.NOTES);
     const index = store.index("folderId");
@@ -201,23 +226,62 @@ export const loadNotesFromIndexedDB = async (
   }
 };
 
+export const loadBoardNotesFromIndexedDB = async (
+  userId: string
+): Promise<NoteState[]> => {
+  try {
+    const db = await openUnifiedDB();
+    const tx = db.transaction([DB_CONFIG.STORES.NOTES], "readonly");
+    const store = tx.objectStore(DB_CONFIG.STORES.NOTES);
+
+    // Try to use type index if available, otherwise fall back to full scan
+    try {
+      const typeIndex = store.index("type");
+      const request = typeIndex.getAll("BOARD");
+
+      return new Promise((resolve, reject) => {
+        request.onsuccess = () => {
+          // Filter by userId client-side as we don't have a compound index
+          const boardNotes = (request.result || []).filter((note: any) => note.userId === userId);
+          resolve(boardNotes);
+        };
+        request.onerror = () => reject(request.error);
+      });
+    } catch (indexError) {
+      // Fallback to full scan if index doesn't exist
+      const request = store.getAll();
+      return new Promise((resolve, reject) => {
+        request.onsuccess = () => {
+          const allNotes = request.result || [];
+          const boardNotes = allNotes.filter((note: any) => note.type === "BOARD" && note.userId === userId);
+          resolve(boardNotes);
+        };
+        request.onerror = () => reject(request.error);
+      });
+    }
+  } catch (error) {
+    console.error("Failed to load board notes from IndexedDB:", error);
+    return [];
+  }
+};
+
 export const deleteNoteFromIndexedDB = async (noteId: string): Promise<void> => {
   try {
-  const db = await openUnifiedDB();
+    const db = await openUnifiedDB();
     if (!db.objectStoreNames.contains(DB_CONFIG.STORES.NOTES)) {
       // Fallback: queue delete
       try {
         try {
           unifiedDbPromise = null;
           await openUnifiedDB();
-        } catch {}
-  const repairDb = await openUnifiedDB();
+        } catch { }
+        const repairDb = await openUnifiedDB();
         if (repairDb.objectStoreNames.contains(DB_CONFIG.STORES.NOTES)) {
           await deleteRecord(repairDb, DB_CONFIG.STORES.NOTES as STORES, noteId);
           return;
         }
         await queueNoteChange({ id: noteId, operation: 'delete', updatedAt: Date.now(), localVersion: 1 })
-      } catch {}
+      } catch { }
       return;
     }
     await deleteRecord(db, DB_CONFIG.STORES.NOTES as STORES, noteId);
@@ -402,6 +466,46 @@ export async function deletePendingNoteChanges(ids: string[]): Promise<void> {
   const db = await openUnifiedDB();
   if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) return;
   await Promise.all(ids.map(id => deleteRecord(db, DB_CONFIG.STORES.PENDING_NOTES as STORES, id)));
+}
+
+// -------------------- Pending Board Items Queue --------------------
+
+export interface PendingBoardItemChange {
+  id: string // board item id (key)
+  operation: 'upsert' | 'delete'
+  updatedAt: number // client timestamp
+  localVersion: number // monotonic per item
+  content?: string
+  tags?: string[]
+  conflicted?: boolean
+}
+
+/**
+ * Queue a board item change into PENDING_BOARD_ITEMS (coalesces by item id).
+ */
+export async function queueBoardItemChange(change: PendingBoardItemChange): Promise<void> {
+  const db = await openUnifiedDB();
+  if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_BOARD_ITEMS)) return;
+  await putRecord(db, DB_CONFIG.STORES.PENDING_BOARD_ITEMS as STORES, change);
+}
+
+/**
+ * Load all pending board item changes.
+ */
+export async function loadPendingBoardItemChanges(): Promise<PendingBoardItemChange[]> {
+  const db = await openUnifiedDB();
+  if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_BOARD_ITEMS)) return [];
+  return getAllRecords<PendingBoardItemChange>(db, DB_CONFIG.STORES.PENDING_BOARD_ITEMS as STORES);
+}
+
+/**
+ * Delete pending board item changes by ids.
+ */
+export async function deletePendingBoardItemChanges(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  const db = await openUnifiedDB();
+  if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_BOARD_ITEMS)) return;
+  await Promise.all(ids.map(id => deleteRecord(db, DB_CONFIG.STORES.PENDING_BOARD_ITEMS as STORES, id)));
 }
 
 /**

@@ -1,6 +1,7 @@
 import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
+import { CreateNoteDTO, NoteSchema } from "~/shared/utils/note.contract";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -27,7 +28,6 @@ export default defineEventHandler(async (event) => {
     throw Errors.notFound("Folder");
   }
 
-  // Get the current max order value for this folder
   const maxOrderNote = await prisma.note.findFirst({
     where: { folderId: data.folderId },
     orderBy: { order: "desc" },
@@ -40,6 +40,7 @@ export default defineEventHandler(async (event) => {
     data: {
       folderId: data.folderId,
       content: data.content,
+      tags: data.tags || [],
       order: nextOrder,
     },
   });

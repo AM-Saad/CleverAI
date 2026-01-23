@@ -21,6 +21,8 @@ import {
   deleteRecord,
   loadPendingNoteChanges,
   deletePendingNoteChanges,
+  loadPendingBoardItemChanges,
+  deletePendingBoardItemChanges,
 } from "../app/utils/idb";
 import { FormSyncType } from "../shared/types/offline";
 import type {
@@ -94,8 +96,9 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
   let db: IDBDatabase | null = null;
   let dbInitAttempts = 0;
   const MAX_DB_INIT_ATTEMPTS = 3;
-  // Prevent concurrent notes sync runs (background sync + manual trigger race)
+  // Prevent concurrent sync runs
   let notesSyncInProgress = false;
+  let boardItemsSyncInProgress = false;
 
   async function ensureDB(): Promise<IDBDatabase | null> {
     if (db) return db;
@@ -649,6 +652,11 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       extendable.waitUntil(syncPendingNotes("manual"));
       return;
     }
+    if (type === SW_MESSAGE_TYPES.SYNC_BOARD_ITEMS) {
+      const extendable = event as ExtendableEvent;
+      extendable.waitUntil(syncPendingBoardItems("manual"));
+      return;
+    }
     if (type === SW_MESSAGE_TYPES.SET_DEBUG) {
       DEBUG = !!(
         data as Extract<
@@ -891,6 +899,9 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
     };
     if (syncEvt.tag === SYNC_TAGS.NOTES) {
       syncEvt.waitUntil(syncPendingNotes("background"));
+    }
+    if (syncEvt.tag === SYNC_TAGS.BOARD_ITEMS) {
+      syncEvt.waitUntil(syncPendingBoardItems("background"));
     }
     if (syncEvt.tag === SYNC_TAGS.FORM) {
       syncEvt.waitUntil(
@@ -1306,6 +1317,84 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       );
     } finally {
       notesSyncInProgress = false;
+    }
+  }
+
+  // ------------------------ BOARD ITEMS SYNC (shared) ------------------------
+  async function syncPendingBoardItems(
+    mode: "manual" | "background"
+  ): Promise<void> {
+    // Coalesce concurrent triggers
+    if (boardItemsSyncInProgress) return;
+    boardItemsSyncInProgress = true;
+    try {
+      const clients = await swSelf.clients.matchAll({ type: "window" });
+      const pending = await loadPendingBoardItemChanges();
+
+      clients.forEach((c) =>
+        c.postMessage({
+          type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNC_STARTED,
+          data: {
+            message: "Syncing board items…",
+            pendingCount: pending.length,
+            mode,
+          },
+        })
+      );
+
+      if (!pending.length) {
+        clients.forEach((c) =>
+          c.postMessage({
+            type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNCED,
+            data: { appliedCount: 0, mode },
+          })
+        );
+        return;
+      }
+
+      const resp = await fetch("/api/board-items/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ changes: pending }),
+      });
+
+      if (!resp.ok) {
+        error("[Board Items Sync] Server error:", resp.status);
+        throw new Error("Board items sync failed");
+      }
+
+      const result = (await resp.json().catch(() => ({}))) as {
+        success?: boolean;
+        data?: {
+          applied?: string[];
+        };
+      };
+
+      const appliedIds = Array.from(new Set(result.data?.applied || []));
+
+      if (appliedIds.length) {
+        try {
+          await deletePendingBoardItemChanges(appliedIds);
+        } catch (e) {
+          error("[Board Items Sync] Failed to clear synced changes:", e);
+        }
+      }
+
+      log("[Board Items Sync] Complete:", { applied: appliedIds.length });
+      clients.forEach((c) =>
+        c.postMessage({
+          type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNCED,
+          data: { appliedCount: appliedIds.length, mode },
+        })
+      );
+    } catch (err) {
+      error("[Board Items Sync] Error:", err);
+      const clients = await swSelf.clients.matchAll({ type: "window" });
+      clients.forEach((c) =>
+        c.postMessage({ type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNC_ERROR })
+      );
+    } finally {
+      boardItemsSyncInProgress = false;
     }
   }
 

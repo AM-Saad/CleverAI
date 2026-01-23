@@ -1,6 +1,7 @@
 import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
+import { UpdateNoteDTO, NoteSchema } from "~/shared/utils/note.contract";
 
 // Simple retry helper for transient Prisma write conflicts / deadlocks.
 // Uses exponential backoff with jitter. Keep local to this route for now; can be
@@ -52,15 +53,20 @@ export default defineEventHandler(async (event) => {
   }
 
   try {
-    // Find the note and verify ownership through folder
+    // Find the note and verify ownership
     const note = await prisma.note.findFirst({
-      where: {
-        id,
-        folder: { userId: user.id },
-      },
+      where: { id },
     });
 
     if (!note) {
+      throw Errors.notFound("Note");
+    }
+
+    // Verify folder ownership
+    const folder = await prisma.folder.findFirst({
+      where: { id: note.folderId, userId: user.id },
+    });
+    if (!folder) {
       throw Errors.notFound("Note");
     }
 
@@ -69,6 +75,7 @@ export default defineEventHandler(async (event) => {
         where: { id },
         data: {
           content: data.content,
+          tags: data.tags,
         },
       })
     );

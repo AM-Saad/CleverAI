@@ -24,6 +24,9 @@ model User {
     updatedAt                 DateTime                     @updatedAt
     payments                  Payment[]
     folders                   Folder[]                     @relation("UserFolders")
+    userTags                  UserTag[]                    @relation("UserTags")
+    boardItems                BoardItem[]                  @relation("UserBoardItems")
+    boardColumns              BoardColumn[]                @relation("UserBoardColumns")
     subscription              UserSubscription?
     notificationSubscriptions NotificationSubscription[]
     scheduledNotifications    ScheduledNotification[]
@@ -93,9 +96,55 @@ model Note {
     folder    Folder   @relation(fields: [folderId], references: [id], onDelete: Cascade)
     folderId  String   @db.ObjectId
     content   String
+    tags      String[] @default([])
     order     Int      @default(0)
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
+
+    @@index([folderId])
+}
+
+model BoardItem {
+    id        String       @id @default(auto()) @map("_id") @db.ObjectId
+    user      User         @relation("UserBoardItems", fields: [userId], references: [id], onDelete: Cascade)
+    userId    String       @db.ObjectId
+    column    BoardColumn? @relation("ColumnItems", fields: [columnId], references: [id], onDelete: SetNull)
+    columnId  String?      @db.ObjectId
+    content   String
+    tags      String[]     @default([])
+    order     Int          @default(0)
+    createdAt DateTime     @default(now())
+    updatedAt DateTime     @updatedAt
+
+    @@index([userId, order])
+    @@index([columnId, order])
+}
+
+model BoardColumn {
+    id        String      @id @default(auto()) @map("_id") @db.ObjectId
+    user      User        @relation("UserBoardColumns", fields: [userId], references: [id], onDelete: Cascade)
+    userId    String      @db.ObjectId
+    name      String
+    order     Int         @default(0)
+    createdAt DateTime    @default(now())
+    updatedAt DateTime    @updatedAt
+    items     BoardItem[] @relation("ColumnItems")
+
+    @@index([userId, order])
+}
+
+model UserTag {
+    id        String   @id @default(auto()) @map("_id") @db.ObjectId
+    user      User     @relation("UserTags", fields: [userId], references: [id], onDelete: Cascade)
+    userId    String   @db.ObjectId
+    name      String
+    color     String   @default("#3b82f6")
+    order     Int      @default(0)
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([userId, name])
+    @@index([userId, order])
 }
 
 model Question {

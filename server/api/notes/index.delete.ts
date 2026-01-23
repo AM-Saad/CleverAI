@@ -12,16 +12,28 @@ export default defineEventHandler(async (event) => {
     throw Errors.badRequest("Note ID is required");
   }
 
-  // Find the note and verify ownership through folder
+  // Find the note and verify ownership
   const note = await prisma.note.findFirst({
-    where: {
-      id,
-      folder: { userId: user.id },
-    },
+    where: { id },
   });
 
   if (!note) {
     throw Errors.notFound("Note");
+  }
+
+  // Verify ownership based on note type
+  if (note.type === "BOARD") {
+    if (note.userId !== user.id) {
+      throw Errors.notFound("Note");
+    }
+  } else {
+    // Folder note - verify folder ownership
+    const folder = await prisma.folder.findFirst({
+      where: { id: note.folderId!, userId: user.id },
+    });
+    if (!folder) {
+      throw Errors.notFound("Note");
+    }
   }
 
   await prisma.note.delete({

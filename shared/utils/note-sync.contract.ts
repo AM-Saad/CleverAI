@@ -7,6 +7,7 @@ export const PendingNoteChangeSchema = z.object({
   localVersion: z.number().int().nonnegative(),
   folderId: z.string().optional(),
   content: z.string().optional(),
+  tags: z.array(z.string()).optional(),
   conflicted: z.boolean().optional()
 });
 export type PendingNoteChange = z.infer<typeof PendingNoteChangeSchema>;

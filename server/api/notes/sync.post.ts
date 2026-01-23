@@ -30,15 +30,32 @@ export default defineEventHandler(async (event) => {
   for (const change of parsed.changes) {
     try {
       if (change.operation === "delete") {
-        // Verify ownership through folder
+        // Verify ownership
         const note = await prisma.note.findFirst({
-          where: { id: change.id, folder: { userId: user.id } },
+          where: { id: change.id },
         });
         if (!note) {
           // Nothing to delete or not owned—treat as applied to unblock client
           applied.push(change.id);
           continue;
         }
+
+        // Verify ownership based on type
+        if (note.type === "BOARD") {
+          if (note.userId !== user.id) {
+            applied.push(change.id);
+            continue;
+          }
+        } else {
+          const folder = await prisma.folder.findFirst({
+            where: { id: note.folderId!, userId: user.id },
+          });
+          if (!folder) {
+            applied.push(change.id);
+            continue;
+          }
+        }
+
         // Conflict if server updatedAt is newer than client timestamp
         if (note.updatedAt && note.updatedAt.getTime() > change.updatedAt) {
           conflicts.push({ id: change.id });
@@ -52,50 +69,93 @@ export default defineEventHandler(async (event) => {
       // upsert
       // Check if this is a temporary ID (created offline) BEFORE any DB queries
       const isTempId = change.id.startsWith("temp-");
+      const noteType = change.type || "FOLDER";
 
-      const folder = change.folderId
-        ? await prisma.folder.findFirst({
-          where: { id: change.folderId, userId: user.id },
-        })
-        : null;
-      if (change.folderId && !folder) {
-        // Cannot apply without valid/owned folder
+      // Validate based on note type
+      if (noteType === "FOLDER" && !change.folderId) {
         conflicts.push({ id: change.id });
         continue;
       }
 
-      // Skip database lookup for temp IDs since they can't exist and aren't valid ObjectIds
-      const existing = isTempId ? null : await prisma.note.findFirst({
-        where: { id: change.id, folder: { userId: user.id } },
-      });
-
-      if (!existing) {
-        if (!change.folderId) {
+      if (noteType === "FOLDER" && change.folderId) {
+        const folder = await prisma.folder.findFirst({
+          where: { id: change.folderId, userId: user.id },
+        });
+        if (!folder) {
+          // Cannot apply without valid/owned folder
           conflicts.push({ id: change.id });
           continue;
         }
+      }
 
+      // Skip database lookup for temp IDs since they can't exist and aren't valid ObjectIds
+      const existing = isTempId ? null : await prisma.note.findFirst({
+        where: { id: change.id },
+      });
+
+      if (!existing) {
         if (isTempId) {
           // Create new note with server-generated ID for offline-created notes
-          await prisma.note.create({
-            data: {
-              folderId: change.folderId,
-              content: change.content || "",
-            },
-          });
+          if (noteType === "BOARD") {
+            await prisma.note.create({
+              data: {
+                userId: user.id,
+                type: "BOARD",
+                content: change.content || "",
+                tags: change.tags || [],
+              },
+            });
+          } else {
+            await prisma.note.create({
+              data: {
+                folderId: change.folderId!,
+                type: "FOLDER",
+                content: change.content || "",
+              },
+            });
+          }
           applied.push(change.id);
         } else {
           // Create note with provided ID (for regular sync)
-          await prisma.note.create({
-            data: {
-              id: change.id,
-              folderId: change.folderId,
-              content: change.content || "",
-            },
-          });
+          if (noteType === "BOARD") {
+            await prisma.note.create({
+              data: {
+                id: change.id,
+                userId: user.id,
+                type: "BOARD",
+                content: change.content || "",
+                tags: change.tags || [],
+              },
+            });
+          } else {
+            await prisma.note.create({
+              data: {
+                id: change.id,
+                folderId: change.folderId!,
+                type: "FOLDER",
+                content: change.content || "",
+              },
+            });
+          }
           applied.push(change.id);
         }
       } else {
+        // Verify ownership
+        if (existing.type === "BOARD") {
+          if (existing.userId !== user.id) {
+            conflicts.push({ id: change.id });
+            continue;
+          }
+        } else {
+          const folder = await prisma.folder.findFirst({
+            where: { id: existing.folderId!, userId: user.id },
+          });
+          if (!folder) {
+            conflicts.push({ id: change.id });
+            continue;
+          }
+        }
+
         // Conflict if server newer than client
         if (
           existing.updatedAt &&
@@ -106,7 +166,10 @@ export default defineEventHandler(async (event) => {
         }
         await prisma.note.update({
           where: { id: change.id },
-          data: { content: change.content ?? existing.content },
+          data: {
+            content: change.content ?? existing.content,
+            tags: change.tags ?? existing.tags,
+          },
         });
         applied.push(change.id);
       }

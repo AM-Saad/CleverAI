@@ -1,7 +1,7 @@
 import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
-import { ReorderNotesDTO } from "@@/shared/utils/note.contract";
+import { ReorderNotesDTO, NoteSchema } from "@@/shared/utils/note.contract";
 
 export default defineEventHandler(async (event) => {
   try {

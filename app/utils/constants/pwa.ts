@@ -45,11 +45,18 @@ export const DB_CONFIG = {
   // 5: Added PENDING_NOTES store (offline notes sync queue)
   // 6: Added post-open verification & auto-repair logic
   // 7: Reconciliation bump after detecting live DB already at version 7 (prevent VersionError when client still used 6)
-  VERSION: 8,
+  // 8: Added type, userId indexes for board notes support
+  // 9: Board notes feature - added type/userId indexes to notes store
+  // 10: BoardItem separation - added BOARD_ITEMS and PENDING_BOARD_ITEMS stores
+  // 11: Added BOARD_COLUMNS store for board column offline support
+  VERSION: 11,
   STORES: {
     FORMS: "forms",
     NOTES: "notes",
     PENDING_NOTES: "pendingNotes",
+    BOARD_ITEMS: "boardItems",
+    PENDING_BOARD_ITEMS: "pendingBoardItems",
+    BOARD_COLUMNS: "boardColumns",
   },
 } as const;
 
@@ -77,6 +84,11 @@ export const SW_MESSAGE_TYPES = {
   NOTES_SYNCED: "NOTES_SYNCED",
   NOTES_SYNC_ERROR: "NOTES_SYNC_ERROR",
   NOTES_SYNC_CONFLICTS: "NOTES_SYNC_CONFLICTS",
+  // Board items sync specific
+  SYNC_BOARD_ITEMS: "SYNC_BOARD_ITEMS",
+  BOARD_ITEMS_SYNC_STARTED: "BOARD_ITEMS_SYNC_STARTED",
+  BOARD_ITEMS_SYNCED: "BOARD_ITEMS_SYNCED",
+  BOARD_ITEMS_SYNC_ERROR: "BOARD_ITEMS_SYNC_ERROR",
 
   // Service worker control
   SW_ACTIVATED: "SW_ACTIVATED",
@@ -125,6 +137,7 @@ export const SYNC_TAGS = {
   FORM: "syncForm",
   CONTENT: "content-sync",
   NOTES: "notes-sync",
+  BOARD_ITEMS: "board-items-sync",
 } as const;
 
 // ===== NOTIFICATION CONSTANTS =====

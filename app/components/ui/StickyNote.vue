@@ -7,11 +7,7 @@
       <div class="relative h-full flex flex-col flex-1 min-h-0 overflow-auto">
         <!-- Top right actions -->
         <div class="flex items-center h-fit mb-1 pb-0.5 bg-white z-10">
-          <div class="flex items-center gap-2">
-            <!-- Learning Hub Toggle Button -->
-            <!-- <u-button variant="subtle" color="primary" aria-label="Open Learning Hub" @click="openHub"
-              title="Open Learning Hub"> <icons-stars-generative class="w-3.5 h-3.5" />
-            </u-button> -->
+          <div class="flex items-center gap-2" v-if="!isBoardItem">
 
             <!-- Fullscreen toggle button (show when not loading and has content) -->
             <u-button v-if="note.content.trim()" :class="{ 'opacity-75': note.isLoading }" variant="subtle"
@@ -55,20 +51,25 @@
 
 <script setup lang="ts">
 import { watch } from "vue";
-import type { Editor as TiptapEditorType } from "@tiptap/core";
+import type { BoardItemState } from "~/composables/useBoardItemsStore";
+
+// Common properties between NoteState and BoardItemState
+type NoteOrBoardItem = NoteState | BoardItemState;
 
 interface Props {
-  note: NoteState;
+  note: NoteOrBoardItem;
   placeholder?: string;
   size?: "sm" | "md" | "lg";
   isFullscreen?: boolean;
   deleteNote: (id: string) => void;
+  isBoardItem?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   placeholder: "Double-click to add a note...",
   size: "md",
   isFullscreen: false,
+  isBoardItem: false,
 });
 
 const emit = defineEmits<{
@@ -82,21 +83,11 @@ const emit = defineEmits<{
 const isEditing = ref(true);
 const contentHtml = ref(props.note.content); // HTML content for tiptap v-model
 const originalText = ref(props.note.content); // To track changes for saving
-const tiptapRef = ref<{ editor?: TiptapEditorType } | null>(null);
-const editorContainerRef = ref<HTMLElement | null>(null);
-const noteRef = ref<HTMLElement>();
 
 // Computed classes for parent container
 const noteContainerClasses = computed(() => {
-  const sizeClasses = {
-    sm: "w-48 h-32",
-    md: "w-64 h-40",
-    lg: "w-full",
-  };
-
   const baseClasses = [
     "note-container flex flex-1 basis-4/5 shrink-0 overflow-auto",
-    sizeClasses[props.size],
     "transition-all duration-100",
   ];
 

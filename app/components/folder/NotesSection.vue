@@ -91,7 +91,7 @@ watch(notes, (newNotes) => {
 
 // Loading and error state for the initial fetch
 const isFetching = computed(
-  () => notesStore.loadingStates.value.get(folderId) ?? false
+  () => notesStore.loadingStates.value.get(`folder-${folderId}`) ?? false
 );
 const error = ref<APIError | null>(null); // Main error state for critical failures
 
@@ -172,11 +172,10 @@ watch(
 
 // Create a new note (optimistic)
 const createNewNote = async () => {
-  const noteId = await notesStore.createNote(folderId, "New note...");
+  const noteId = await notesStore.createNote("");
 
   if (noteId) {
     currentNoteId.value = noteId;
-
   }
 };
 
@@ -237,12 +236,11 @@ const handleReorder = async (newOrder: NoteState[]) => {
 onMounted(async () => {
   try {
     error.value = null;
-    await notesStore.syncWithServer(folderId);
+    await notesStore.syncWithServer();
   } catch (e: unknown) {
     error.value =
       e instanceof APIError ? e : new APIError("Failed to load notes");
   }
-
 });
 </script>
 

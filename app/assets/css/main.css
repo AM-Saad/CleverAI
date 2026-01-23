@@ -15,7 +15,8 @@
 
   /* --color-light: #fffbf4; */
   --color-light: #fffcf9;
-  --color-neutral: #dad8d8;
+  --color-neutral: #e3e6eb;
+  /* --color-neutral: #dad8d8; */
   --color-muted: #495362;
   --color-dark: #111827;
 
@@ -56,7 +57,7 @@
   --ui-light: var(--color-light);
   --ui-muted: var(--color-muted);
   --ui-neutral: var(--color-neutral);
-  --ui-bg: #f9f9f9;
+  --ui-bg: #eef0f4;
 }
 
 /* Dark mode overrides for Nuxt UI */

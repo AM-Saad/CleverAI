@@ -66,10 +66,14 @@ onMounted(() => {
 
 
 <template>
-  <shared-page-wrapper title="Folders" subtitle="Manage your folders and organization">
+  <shared-page-wrapper>
     <!-- Review Status Card (Global) -->
     <review-status-card class="mb-6" :show-context="false"
       empty-message="Enroll flashcards or materials to start reviewing" />
+
+    <!-- Board Notes Section -->
+    <!-- <shared-board-notes-section /> -->
+
     <shared-error-message v-if="error" :error="error" :refresh="refresh" />
 
     <div>
@@ -134,7 +138,7 @@ onMounted(() => {
               <div class="mb-1 flex items-center">
                 <icon name="ic:round-folder-open" class="inline-block mr-1 text-primary" size="22" />
 
-                <ui-subtitle>{{ folder.title }}</ui-subtitle>
+                <ui-subtitle size="sm">{{ folder.title }}</ui-subtitle>
               </div>
               <ui-paragraph v-if="folder.description">
                 {{ folder.description }}
