@@ -19,7 +19,7 @@ interface Props {
   /**
    * Subtitle size variant
    */
-  size?:  "sm" | "base" | "lg";
+  size?: "sm" | "base" | "lg";
   /**
    * Font weight
    */
@@ -27,7 +27,8 @@ interface Props {
   /**
    * Text color variant
    */
-  color?: "muted" | "neutral";
+  color?: "primary" | "onsurface" | "onbackground" | "white" | "danger" | "success";
+
   /**
    * Center alignment
    */
@@ -38,7 +39,7 @@ const {
   tag = "p",
   size = "base",
   weight = "medium",
-  color = "muted",
+  color = "onsurface",
   center = false,
 } = defineProps<Props>();
 
@@ -58,8 +59,12 @@ const weightClasses = {
 };
 
 const colorClasses = {
-  neutral: "text-[color:var(--color-neutral)]",
-  muted: "text-[color:var(--color-muted)] dark:text-[color:var(--color-neutral)]",
+  primary: "text-[color:var(--color-primary)]",
+  onsurface: "text-on-surface",
+  onbackground: 'text-on-background',
+  white: "text-white",
+  danger: "text-[color:var(--color-error)]",
+  success: "text-success",
 };
 </script>
 

@@ -1,6 +1,6 @@
 <template>
   <div class="md:col-span-3 mt-6 overflow-y-hidden h-fit  ">
-    <ui-card class-name="flex flex-col" size="lg" variant="default">
+    <ui-card class-name="flex flex-col" size="md" variant="default">
       <template #header>AI Usage Statistics (Last 30 Days)</template>
       <div class="flex flex-col gap-6">
         <ui-loader v-if="isLlmUsageLoading" :is-fetching="isLlmUsageLoading" />
@@ -54,24 +54,24 @@
           <!-- Usage by Feature -->
           <div class="mb-4">
             <ui-subtitle weight="semibold" size="sm">Usage by Feature</ui-subtitle>
-            <div class="max-w-full overflow-x-auto mt-2 bg-light dark:bg-muted border border-muted rounded">
-              <table class="w-full text-left text-sm bg-muted">
+            <div class="max-w-full overflow-x-auto mt-2  border border-secondary rounded">
+              <table class="w-full text-left text-sm bg-surface">
 
                 <thead class="dark:text-light">
 
-                  <tr class="border-b border-muted">
-                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Feature</th>
-                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Calls</th>
-                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Tokens</th>
-                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark text-right">Cost (USD)</th>
+                  <tr class="border-b border-secondary">
+                    <th class="py-2 px-4 w-40 text-nowrap ">Feature</th>
+                    <th class="py-2 px-4 w-40 text-nowrap ">Calls</th>
+                    <th class="py-2 px-4 w-40 text-nowrap ">Tokens</th>
+                    <th class="py-2 px-4 w-40 text-nowrap  text-right">Cost (USD)</th>
                   </tr>
 
                 </thead>
 
-                <tbody class="bg-white dark:bg-muted dark:text-muted">
+                <tbody class=" dark:text-on-surface">
 
                   <tr v-for="(feature, idx) in llmUsage.byFeature" :key="feature.name"
-                    :class="`${idx !== llmUsage.byFeature.length - 1 ? 'border-b border-muted' : ''}`">
+                    :class="`${idx !== llmUsage.byFeature.length - 1 ? 'border-b border-secondary' : ''}`">
                     <td class="py-2 px-4 w-40 text-nowrap">{{ feature.name }}</td>
                     <td class="py-2 px-4 w-40 text-nowrap">{{ feature.calls }}</td>
                     <td class="py-2 px-4 w-40 text-nowrap">{{ formatNumber(feature.tokens) }}</td>
@@ -93,23 +93,23 @@
           <!-- Usage by Model -->
           <div class="mb-4">
             <ui-subtitle weight="semibold" size="sm">Usage by Model</ui-subtitle>
-            <div class="overflow-x-auto mt-2 bg-light dark:bg-muted border border-muted rounded">
-              <table class="w-full text-left text-sm bg-muted">
+            <div class="overflow-x-auto mt-2  border border-secondary rounded">
+              <table class="w-full text-left text-sm bg-surface">
 
                 <thead class="dark:text-light">
-                  <tr class="border-b border-muted">
-                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Model</th>
-                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Calls</th>
-                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Tokens</th>
-                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark text-right">Cost (USD)</th>
+                  <tr class="border-b border-secondary">
+                    <th class="py-2 px-4 w-40 text-nowrap ">Model</th>
+                    <th class="py-2 px-4 w-40 text-nowrap ">Calls</th>
+                    <th class="py-2 px-4 w-40 text-nowrap ">Tokens</th>
+                    <th class="py-2 px-4 w-40 text-nowrap  text-right">Cost (USD)</th>
                   </tr>
 
                 </thead>
 
-                <tbody class="bg-white dark:bg-muted dark:text-muted">
+                <tbody class=" dark:text-on-surface">
 
                   <tr v-for="(model, idx) in llmUsage.byModel" :key="model.name"
-                    :class="`${idx !== llmUsage.byModel.length - 1 ? 'border-b border-muted' : ''}`">
+                    :class="`${idx !== llmUsage.byModel.length - 1 ? 'border-b border-secondary' : ''}`">
                     <td class="py-2 px-4 w-40 text-nowrap">{{ model.name }}</td>
                     <td class="py-2 px-4 w-40 text-nowrap">{{ model.calls }}</td>
                     <td class="py-2 px-4 w-40 text-nowrap">{{ formatNumber(model.tokens) }}</td>
@@ -132,25 +132,25 @@
           <!-- Recent Usage -->
           <div>
             <ui-subtitle weight="semibold" size="sm">Recent Usage</ui-subtitle>
-            <div class="overflow-x-auto mt-2 bg-light dark:bg-muted border border-muted rounded">
-              <table class="w-full text-left text-sm bg-muted">
+            <div class="overflow-x-auto mt-2  border border-secondary rounded">
+              <table class="w-full text-left text-sm bg-surface">
 
                 <thead class="dark:text-light">
 
-                  <tr class="border-b border-muted">
-                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Date</th>
-                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Feature</th>
-                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Model</th>
-                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark">Tokens</th>
-                    <th class="py-2 px-4 w-40 text-nowrap dark:bg-dark text-right">Cost (USD)</th>
+                  <tr class="border-b border-secondary">
+                    <th class="py-2 px-4 w-40 text-nowrap ">Date</th>
+                    <th class="py-2 px-4 w-40 text-nowrap ">Feature</th>
+                    <th class="py-2 px-4 w-40 text-nowrap ">Model</th>
+                    <th class="py-2 px-4 w-40 text-nowrap ">Tokens</th>
+                    <th class="py-2 px-4 w-40 text-nowrap  text-right">Cost (USD)</th>
                   </tr>
 
                 </thead>
 
-                <tbody class="bg-white dark:bg-muted dark:text-muted">
+                <tbody class=" dark:text-on-surface">
 
                   <tr v-for="(usage, idx) in llmUsage.recentUsage" :key="usage.id"
-                    :class="`${idx !== llmUsage.recentUsage.length - 1 ? 'border-b border-muted' : ''}`">
+                    :class="`${idx !== llmUsage.recentUsage.length - 1 ? 'border-b border-secondary' : ''}`">
                     <td class="py-2 px-4 w-40 text-nowrap">{{ formatDate(usage.date) }}</td>
                     <td class="py-2 px-4 w-40 text-nowrap">{{ usage.feature }}</td>
                     <td class="py-2 px-4 w-40 text-nowrap">{{ usage.model }}</td>

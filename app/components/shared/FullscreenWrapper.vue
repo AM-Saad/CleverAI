@@ -181,7 +181,7 @@ defineExpose({
 
 /* ===== Dark Mode ===== */
 .dark .fullscreen-container {
-  background: rgb(17, 24, 39);
+  background: var(--color-surface);
   border-color: rgba(75, 85, 99, 0.3);
 }
 

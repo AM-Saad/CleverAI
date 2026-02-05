@@ -1,12 +1,12 @@
 <template>
   <div class="mx-auto  flex h-screen flex-col gap-y-3 justify-between">
     <nav id="nav"
-      class="flex basis-0 shrink-0 font-heading items-center justify-between py-4 md:rounded-none  mx-auto left-[50%] top-4 border-b border-neutral dark:border-muted w-[calc(100%-2rem)]">
+      class="flex basis-0 shrink-0 font-heading items-center justify-between py-1.5 md:rounded-none  mx-auto left-[50%] top-4 border-b border-secondary  w-[calc(100%-2rem)]">
       <div class="flex items-center justify-between w-full">
         <div class="flex items-center gap-2">
 
-          <router-link to="/" class="flex items-center gap-2 text-dark dark:text-light font-medium text-xl ">
-            <img class="h-7 dark:invert-[1] dark:filter" :src="'/images/CleverAI_icon.svg'" alt="" />
+          <router-link to="/" class="flex items-center gap-2 text-on-surface font-medium text-xl ">
+            <img class="h-6 dark:invert-[1] dark:filter" :src="'/images/CleverAI_icon.svg'" alt="" />
             Cognilo</router-link>
           <div class=" flex items-center justify-center" :title="online ? 'You are online' : 'You are offline'"
             v-if="route.fullPath.startsWith('/folders') || route.fullPath.startsWith('/user')">
@@ -25,7 +25,7 @@
             <u-button variant="ghost">About</u-button>
           </router-link>
           <router-link to="/auth/signIn">
-            <u-button variant="subtle">Login</u-button>
+            <u-button variant="ghost">Login</u-button>
           </router-link>
           <router-link to="/auth/signup">
             <u-button>Signup</u-button>

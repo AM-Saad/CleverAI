@@ -10,14 +10,13 @@
     " :style="{ transform: wrapperTransform }" @click="flipped = !flipped">
 
     <!-- Front -->
-    <div
-      class="absolute top-0 size-full overflow-hidden rounded-2xl border bg-light dark:bg-muted border-muted dark:border-muted [backface-visibility:hidden] p-4">
+    <div class="absolute top-0 size-full overflow-hidden rounded-2xl  bg-surface  [backface-visibility:hidden] p-4">
       <slot name="front" />
     </div>
 
     <!-- Back -->
     <div :class="cn(
-      'absolute top-0 h-full w-full overflow-hidden flex flex-col justify-between rounded-2xl border border-muted bg-light dark:bg-dark p-4 text-dark [backface-visibility:hidden]',
+      'absolute top-0 h-full w-full overflow-hidden flex flex-col justify-between rounded-2xl border border-secondary bg-background p-4 text-on-background [backface-visibility:hidden]',
     )
       " :style="{ transform: backTransform }">
       <slot name="back" />

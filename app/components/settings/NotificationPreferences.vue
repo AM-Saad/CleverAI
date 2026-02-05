@@ -12,7 +12,7 @@
     <div class="space-y-6">
 
       <!-- Card Due Notifications -->
-      <ui-card class="space-y-4" variant="default">
+      <ui-card class="" variant="default" size="sm">
         <template #header>
           <div>
             📚 Card Due Notifications
@@ -44,10 +44,10 @@
               <!-- Threshold Selection -->
               <div class="grid grid-cols-1 gap-3">
                 <ui-card v-for="option in thresholdOptions" :key="option.value" :class="[
-                  'relative border rounded-lg p-4 cursor-pointer transition-all',
+                  'relative border rounded-lg  cursor-pointer transition-all',
                   preferences.cardDueThreshold === option.value
-                    ? 'border-primary bg-primary-50 dark:bg-primary-900/20'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
+                    ? 'border-primary bg-background!'
+                    : 'border-gray-200 hover:bg-background!',
                 ]" @click="selectThreshold(option.value)">
                   <div class="flex items-start gap-3">
                     <div class="text-xl">{{ option.emoji }}</div>
@@ -75,8 +75,8 @@
               <div :class="[
                 'relative border rounded-lg p-4 cursor-pointer transition-all',
                 isCustomThreshold
-                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
+                  ? 'border-primary bg-background!'
+                  : 'border-gray-200 hover:bg-background!',
               ]" @click="selectCustomThreshold">
                 <div class="flex items-start gap-3">
                   <div class="text-2xl">⚙️</div>
@@ -123,8 +123,7 @@
         </template>
 
         <!-- Daily Reminder Settings -->
-        <div v-if="preferences.dailyReminderEnabled"
-          class="space-y-3 pl-4 border-l-2 border-gray-200 dark:border-gray-700">
+        <div v-if="preferences.dailyReminderEnabled" class=" pl-4 border-l-2 border-gray-200 dark:border-gray-700">
           <UFormGroup label="Reminder Time" help="What time would you like your daily reminder?">
             <div class="flex items-center gap-2">
               <UIcon name="i-heroicons-clock" class="w-4 h-4 text-gray-400" />
@@ -140,7 +139,7 @@
 
 
       <!-- Quiet Hours -->
-      <ui-card variant="default" class="space-y-4">
+      <ui-card variant="default" class="">
         <template #header>
           <div>
             🤫 Quiet Hours
@@ -188,7 +187,7 @@
 
 
       <!-- Send Anytime (outside quiet hours) -->
-      <ui-card variant="default" class="space-y-4">
+      <ui-card variant="default" class="">
         <template #header>
           <div>
             🚀 Send Anytime (Outside Quiet Hours)
@@ -213,7 +212,7 @@
 
 
       <!-- Active Hours -->
-      <ui-card variant="default" class="space-y-4">
+      <ui-card variant="default" class="">
         <template #header>
           <div>
             🕘 Active Hours
@@ -257,7 +256,7 @@
 
 
       <!-- Timezone Settings -->
-      <ui-card class="space-y-4">
+      <ui-card class="">
         <template #header>
           <div>
             🌍 Timezone

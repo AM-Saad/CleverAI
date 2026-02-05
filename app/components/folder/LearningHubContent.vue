@@ -1,19 +1,19 @@
 <template>
   <div class="flex flex-col relative overflow-hidden h-full">
     <ui-gradient-bg />
-    <ui-card variant="ghost" size="lg"
-      class="relative bg-white m-[2px] dark:m-px dark:bg-dark flex-1 shrink min-h-0 overflow-hidden"
+    <ui-card variant="default" size="sm"
+      class="relative  m-[2px] dark:m-px  flex-1 shrink min-h-0 overflow-hidden w-[97%] mx-auto"
       content-classes="h-full flex flex-col p-0">
       <template #header>
         <div class="flex items-center gap-1">
-          <icons-stars-generative />
-          <span class="font-semibold">Learning Hub</span>
+          <!-- <icons-stars-generative /> -->
+          Learning Hub
           <u-tooltip
             text="Upload New Material, or select part of the text from your note to create a study material that you can generate flashcard, and question from it to feed the Spaced Repetition Engine">
-            <icon name="i-lucide-info" :size="UI_CONFIG.ICON_SIZE" class="text-muted dark:text-neutral" />
+            <icon name="i-lucide-info" :size="UI_CONFIG.ICON_SIZE" class="text-on-background" />
           </u-tooltip>
         </div>
-        <u-button variant="subtle" size="sm" :aria-expanded="showUpload" aria-controls="upload-materials"
+        <u-button variant="outline" size="sm" :aria-expanded="showUpload" aria-controls="upload-materials"
           @click="$emit('toggle-upload')" title="Create New Study Material">
           New Material
         </u-button>
@@ -25,14 +25,13 @@
           <ui-card class="shrink-0 max-h-[30%]" size="sm" variant="outline"
             content-classes="flex flex-col min-h-0 overflow-hidden">
             <u-collapsible class="flex flex-col min-h-0">
-              <div class="flex items-center gap-1 select-none cursor-pointer text-sm font-medium dark:text-light ">
+              <ui-subtitle class="flex items-center gap-1 select-none cursor-pointer " size="sm" color="onbackground">
                 <div v-if="updating" class="flex items-center gap-1 text-primary">
                   <icon name="i-lucide-loader" class="w-4 h-4 animate-spin" />
                 </div>
                 Materials
-                <icon name="i-lucide-chevrons-up-down" :size="UI_CONFIG.ICON_SIZE"
-                  class="text-muted dark:text-neutral" />
-              </div>
+                <icon name="i-lucide-chevrons-up-down" :size="UI_CONFIG.ICON_SIZE" class="" />
+              </ui-subtitle>
               <template #content>
                 <div class="overflow-auto max-h-48 h-full my-1 border-t border-muted">
                   <MaterialsList :folder-id="folderId" @removed="() => { }" @error="(e) => console.error(e)" />
@@ -43,7 +42,7 @@
 
           <!-- Tabs and Interactive Content -->
           <ui-card class="flex-1 min-h-0" content-classes="h-full flex flex-col overflow-hidden" variant="outline"
-            size="lg">
+            size="md">
             <template #header>
               <ui-tabs v-model="activeIndex" :items="items" @select="select" direction="row" class="shrink-0" />
             </template>

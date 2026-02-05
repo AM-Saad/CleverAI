@@ -4,6 +4,17 @@ import { z } from "zod";
 const trim = (v: unknown) => (typeof v === "string" ? v.trim() : v);
 
 // ==========================================
+// Source Reference Schema
+// ==========================================
+
+export const SourceRefSchema = z.object({
+  type: z.enum(["NOTE", "PDF"]),
+  materialId: z.string().optional(),
+  anchor: z.string(), // blockId or page number
+});
+export type SourceRef = z.infer<typeof SourceRefSchema>;
+
+// ==========================================
 // Flashcard Schema (DB model)
 // ==========================================
 
@@ -13,6 +24,8 @@ export const FlashcardSchema = z.object({
   materialId: z.string().nullable(),
   front: z.string(),
   back: z.string(),
+  sourceRef: SourceRefSchema.nullable().optional(),
+  status: z.enum(["DRAFT", "ENROLLED"]).default("DRAFT"),
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),
 });

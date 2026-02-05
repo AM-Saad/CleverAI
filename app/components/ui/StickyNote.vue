@@ -100,7 +100,7 @@ const noteContainerClasses = computed(() => {
 // Computed classes for the note content
 const noteContentClasses = computed(() => {
   return [
-    "note-content bg-white p-1 rounded",
+    "note-content bg-white p-2 rounded",
     "w-full h-full",
     "relative",
   ];

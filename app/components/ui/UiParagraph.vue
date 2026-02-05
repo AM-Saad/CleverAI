@@ -2,6 +2,8 @@
   <component :is="tag" :class="[
     'ui-paragraph',
     sizeClasses[size],
+    weightClasses[weight],
+
     colorClasses[color],
     center ? 'text-center' : '',
     className,
@@ -23,7 +25,11 @@ interface Props {
   /**
    * Text color variant
    */
-  color?: "primary" | "neutral" | "muted" | "inverse" | "white" | "success";
+  color?: "primary" | "onsurface" | "onbackground" | "white" | "danger" | "success";
+  /**
+  * Font weight
+  */
+  weight?: "light" | "normal" | "medium" | "semibold" | "bold";
   /**
    * Center alignment
    */
@@ -37,7 +43,8 @@ interface Props {
 const {
   tag = "p",
   size = "sm",
-  color = "muted",
+  color = "onsurface",
+  weight = "normal",
   center = false,
   className = "",
 } = defineProps<Props>();
@@ -48,14 +55,23 @@ const sizeClasses = {
   base: "text-base",
   lg: "text-lg",
 };
+const weightClasses = {
+  light: "font-light",
+  normal: "font-normal",
+  medium: "font-medium",
+  semibold: "font-semibold",
+  bold: "font-bold",
+};
+
 
 const colorClasses = {
-  primary: "text-primary",
-  neutral: "text-dark dark:text-light",
-  muted: "text-muted",
-  inverse: "text-inverse",
+  primary: "text-[color:var(--color-primary)]",
+  onsurface: "text-on-surface",
+  onbackground: 'text-on-background',
   white: "text-white",
+  danger: "text-[color:var(--color-error)]",
   success: "text-success",
+
 };
 </script>
 

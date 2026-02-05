@@ -18,17 +18,30 @@ import { randomUUID } from "crypto";
 import {
   computeAdaptiveItemCount,
 } from "@server/utils/llm/adaptiveCount";
+import {
+  injectNoteBlockMarkers,
+  injectPdfPageMarkers,
+  extractSourceRef,
+} from "@server/utils/contextBridge";
 
 type GenerationTask = "flashcards" | "quiz";
 
 interface Flashcard {
   front: string;
   back: string;
+  sourceMetadata?: {
+    anchor: string;
+    contextSnippet?: string;
+  };
 }
 interface QuizQuestion {
   question: string;
   choices: string[];
   answerIndex: number;
+  sourceMetadata?: {
+    anchor: string;
+    contextSnippet?: string;
+  };
 }
 
 // Minimal in-memory rate limiting: 5 requests per minute per user
@@ -152,6 +165,15 @@ export default defineEventHandler(async (event) => {
     }
 
     text = loadedMaterial.content || "";
+
+    // Inject markers for Context Bridge based on material type
+    if (loadedMaterial.type === "pdf" && loadedMaterial.metadata) {
+      const pageCount = (loadedMaterial.metadata as any)?.pageCount;
+      text = injectPdfPageMarkers(text, pageCount);
+    } else if (loadedMaterial.type === "txt" || !loadedMaterial.type) {
+      // Treat as note-like content
+      text = injectNoteBlockMarkers(text);
+    }
   }
 
   const MAX_CHARS = 100_000;
@@ -264,6 +286,8 @@ export default defineEventHandler(async (event) => {
     ? config.devLlmModelOverride
     : undefined;
 
+  console.log("[llm.gateway] Dev model override:", { devModelOverride });
+
   if (devModelOverride) {
     // Fetch the override model directly from registry
     const overrideModel = await prisma.llmModelRegistry.findUnique({
@@ -322,12 +346,26 @@ export default defineEventHandler(async (event) => {
   let result: Flashcard[] | QuizQuestion[];
   const generationStartTime = Date.now();
 
+  // Capture actual token values from strategy callback (using object holder for TS closure compatibility)
+  const measuredTokens: { value: { promptTokens: number; completionTokens: number; totalTokens: number } | null } = { value: null };
+
   try {
-    strategy = await getLLMStrategyFromRegistry(selectedModel.modelId, {
-      userId: user.id,
-      folderId,
-      feature: task,
-    });
+    strategy = await getLLMStrategyFromRegistry(
+      selectedModel.modelId,
+      {
+        userId: user.id,
+        folderId,
+        feature: task,
+      },
+      (m) => {
+        // Capture actual API token values for gateway logging
+        measuredTokens.value = {
+          promptTokens: m.promptTokens,
+          completionTokens: m.completionTokens,
+          totalTokens: m.totalTokens,
+        };
+      }
+    );
 
     if (task === "flashcards") {
       result = await strategy.generateFlashcards(text, { itemCount });
@@ -427,12 +465,25 @@ export default defineEventHandler(async (event) => {
           // Create new flashcards
           if (result.length) {
             const res = await tx.flashcard.createMany({
-              data: (result as Flashcard[]).map((fc) => ({
-                folderId: effectiveFolderId,
-                materialId: materialId || null,
-                front: fc.front,
-                back: fc.back,
-              })),
+              data: (result as Flashcard[]).map((fc) => {
+                // Extract sourceRef from sourceMetadata if available
+                const sourceRef = materialId && fc.sourceMetadata
+                  ? extractSourceRef(
+                    fc.sourceMetadata,
+                    loadedMaterial?.type === "pdf" ? "PDF" : "NOTE",
+                    materialId
+                  )
+                  : null;
+
+                return {
+                  folderId: effectiveFolderId,
+                  materialId: materialId || null,
+                  front: fc.front,
+                  back: fc.back,
+                  sourceRef: sourceRef as any, // JSON field
+                  status: "DRAFT", // New items start as DRAFT
+                };
+              }),
             });
             savedCount = res.count;
           } else {
@@ -472,13 +523,26 @@ export default defineEventHandler(async (event) => {
           // Create new questions
           if (result.length) {
             const res = await tx.question.createMany({
-              data: (result as QuizQuestion[]).map((q) => ({
-                folderId: effectiveFolderId,
-                materialId: materialId || null,
-                question: q.question,
-                choices: q.choices,
-                answerIndex: q.answerIndex,
-              })),
+              data: (result as QuizQuestion[]).map((q) => {
+                // Extract sourceRef from sourceMetadata if available
+                const sourceRef = materialId && q.sourceMetadata
+                  ? extractSourceRef(
+                    q.sourceMetadata,
+                    loadedMaterial?.type === "pdf" ? "PDF" : "NOTE",
+                    materialId
+                  )
+                  : null;
+
+                return {
+                  folderId: effectiveFolderId,
+                  materialId: materialId || null,
+                  question: q.question,
+                  choices: q.choices,
+                  answerIndex: q.answerIndex,
+                  sourceRef: sourceRef as any, // JSON field
+                  status: "DRAFT", // New items start as DRAFT
+                };
+              }),
             });
             savedCount = res.count;
           } else {
@@ -526,19 +590,32 @@ export default defineEventHandler(async (event) => {
   // ==========================================
   const totalLatencyMs = Date.now() - requestStartTime;
 
-  // Estimate token counts (strategy might have actual counts via onMeasure callback)
-  // Note: These are heuristic estimates; actual counts come from LLM strategy callbacks
-  const estimatedInputTokens = Math.ceil(text.length / 3.5);
-  const estimatedOutputTokens =
-    task === "flashcards"
-      ? (result as Flashcard[]).reduce(
-        (sum, fc) => sum + fc.front.length + fc.back.length,
-        0
-      ) / 3.5
-      : (result as QuizQuestion[]).reduce(
-        (sum, q) => sum + q.question.length + q.choices.join("").length,
-        0
-      ) / 3.5;
+  // Use actual token counts from strategy callback if available, otherwise fall back to estimates
+  let inputTokens: number;
+  let outputTokens: number;
+  let totalTokens: number;
+
+  if (measuredTokens.value) {
+    // Use actual API values
+    inputTokens = measuredTokens.value.promptTokens;
+    outputTokens = measuredTokens.value.completionTokens;
+    totalTokens = measuredTokens.value.totalTokens;
+  } else {
+    // Fall back to heuristic estimates (legacy behavior)
+    inputTokens = Math.ceil(text.length / 3.5);
+    outputTokens = Math.ceil(
+      task === "flashcards"
+        ? (result as Flashcard[]).reduce(
+          (sum, fc) => sum + fc.front.length + fc.back.length,
+          0
+        ) / 3.5
+        : (result as QuizQuestion[]).reduce(
+          (sum, q) => sum + q.question.length + q.choices.join("").length,
+          0
+        ) / 3.5
+    );
+    totalTokens = inputTokens + outputTokens;
+  }
 
   await logGatewayRequest({
     requestId,
@@ -546,9 +623,9 @@ export default defineEventHandler(async (event) => {
     folderId,
     selectedModel,
     task,
-    inputTokens: Math.ceil(estimatedInputTokens),
-    outputTokens: Math.ceil(estimatedOutputTokens),
-    totalTokens: Math.ceil(estimatedInputTokens + estimatedOutputTokens),
+    inputTokens,
+    outputTokens,
+    totalTokens,
     latencyMs: totalLatencyMs,
     cached: false,
     cacheHit: false,

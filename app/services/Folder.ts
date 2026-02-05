@@ -110,6 +110,22 @@ class FoldersModule extends FetchFactory {
   async deleteFlashcard(id: string): Promise<Result<DeleteFlashcardResponse>> {
     return this.call("DELETE", `/api/flashcards/${id}`);
   }
+
+  async bulkEnrollFlashcards(
+    itemIds: string[]
+  ): Promise<Result<{ success: boolean; enrolledCount: number }>> {
+    return this.call("POST", "/api/flashcards/bulk-enroll", { itemIds });
+  }
+
+  // ==========================================
+  // Question Methods
+  // ==========================================
+
+  async bulkEnrollQuestions(
+    itemIds: string[]
+  ): Promise<Result<{ success: boolean; enrolledCount: number }>> {
+    return this.call("POST", "/api/questions/bulk-enroll", { itemIds });
+  }
 }
 
 export default FoldersModule;

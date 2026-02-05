@@ -1,9 +1,9 @@
 <template>
   <div class="flex flex-col ">
-    <div class="flex flex-wrap items-center space-x-4">
-      <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
-        Card Review
-      </h1>
+    <div class="flex flex-wrap items-center space-x-4 gap-2">
+      <ui-subtitle>
+        Review Session
+      </ui-subtitle>
       <div class="text-sm text-gray-600 dark:text-gray-400">
         {{ currentIndex + 1 }} of {{ totalCards }}
       </div>

@@ -28,16 +28,16 @@ const props = defineProps({
   },
   borderClass: {
     type: String,
-    default: "border-muted dark:border-gray-700",
+    default: "border-secondary",
   },
   activeClass: {
     type: String,
-    default: "border-primary text-primary dark:text-primary font-medium!",
+    default: "border-primary text-primary font-medium!",
   },
   inactiveClass: {
     type: String,
     default:
-      "border-transparent text-muted dark:text-neutral hover:text-muted hover:border-gray-300 font-light!",
+      "border-transparent text-on-surface  hover:border-gray-300 font-light!",
   },
   buttonBaseClass: {
     type: String,

@@ -12,11 +12,11 @@
           </NuxtLink>
         </div>
 
-        <u-button @click="refreshQueue">
+        <u-button @click="refreshQueue" variant="outline" size="sm" class="whitespace-nowrap">
           Refresh Queue
         </u-button>
 
-        <NuxtLink to="/folders" class="text-dark dark:text-light">
+        <NuxtLink to="/folders" class="text-on-background text-sm">
           Back to Folders
         </NuxtLink>
       </div>

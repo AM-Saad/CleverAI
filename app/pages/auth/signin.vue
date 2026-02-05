@@ -26,7 +26,7 @@ const isValidPassword = computed(() => {
     <form ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
       @submit.prevent="handleSubmit">
       <UiTitle>Login</UiTitle>
-      <UiParagraph size="sm" color="muted"> Login to your account</UiParagraph>
+      <UiParagraph size="sm" color="onbackground"> Login to your account</UiParagraph>
       <shared-error-message v-if="error" :error="error" />
       <div class="mb-2 mt-2 rounded-md relative transition duration-10 00 text-xs">
         <ui-input-field id="login-email-client" v-model="credentials.email" type="email" name="email"
@@ -41,7 +41,7 @@ const isValidPassword = computed(() => {
           }" />
         <button :class="`w-8 h-8 absolute right-2 bottom-2 border border-gray-500 rounded-full text-center grid place-items-center cursor-pointer hover:opacity-90 bg-primary 
           focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary
-          hover:shadow ${isValidEmail && isValidPassword ? ' ' : 'opacity-45'}`" type="submit"
+          hover:shadow ${isValidEmail && isValidPassword ? ' ' : 'opacity-75'}`" type="submit"
           :disabled="!isValidEmail || !isValidPassword || loading" @click.prevent="handleSubmit"
           title="Submit Login Form" tabindex="3">
           <icon v-if="!loading" name="i-heroicons-arrow-right" class="w-4 h-4 text-white dark:text-dark" />
@@ -49,13 +49,13 @@ const isValidPassword = computed(() => {
         </button>
       </div>
       <div class="toggle-forms flex flex-col gap-2 justify-between  dark:text-gray-200">
-        <UiParagraph size="xs" color="muted">
+        <UiParagraph size="xs" color="onbackground">
           You don't have an account
           <router-link tabindex="4" class="font-semibold underline" to="/auth/signup">
             Signup
           </router-link>
         </UiParagraph>
-        <UiParagraph size="xs" color="muted">
+        <UiParagraph size="xs" color="onbackground">
           Forgot your password
           <router-link tabindex="4" class="font-semibold underline" to="/auth/editPassword">
             Reset Password
@@ -65,7 +65,7 @@ const isValidPassword = computed(() => {
       </div>
     </form>
     <div v-if="mappedProviders.length" class="flex flex-col justify-center mt-4">
-      <p class="text-center text-gray-400 text-xs mt-4 mb-2">
+      <p class="text-center text-on-background text-xs mt-4 mb-2">
         Or sign in with a social account below 👇
       </p>
       <u-button v-for="provider in mappedProviders" :key="provider?.id"

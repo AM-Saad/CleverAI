@@ -158,6 +158,9 @@ model Question {
     question    String
     choices     String[] // For MCQ
     answerIndex Int
+    // Context Bridge fields
+    sourceRef   Json? // { type: 'NOTE'|'PDF', materialId: string, anchor: string }
+    status      String       @default("DRAFT") // 'DRAFT' | 'ENROLLED'
     createdAt   DateTime     @default(now())
     updatedAt   DateTime     @updatedAt
 
@@ -173,6 +176,9 @@ model Flashcard {
     materialId String?   @db.ObjectId
     front      String
     back       String
+    // Context Bridge fields
+    sourceRef  Json? // { type: 'NOTE'|'PDF', materialId: string, anchor: string }
+    status     String    @default("DRAFT") // 'DRAFT' | 'ENROLLED'
     createdAt  DateTime  @default(now())
     updatedAt  DateTime  @updatedAt
 

@@ -10,15 +10,22 @@
 
   /* ==== Brand Colors ==== */
   /* Primary brand #ffa45c - main actions and highlights */
-  --color-primary: #30c3c6;
+  --color-primary: #384998;
   --color-primary-light: #ffcdab;
 
   /* --color-light: #fffbf4; */
-  --color-light: #fffcf9;
+  /* --color-light: #fffcf9;
   --color-neutral: #e3e6eb;
-  /* --color-neutral: #dad8d8; */
-  --color-muted: #495362;
-  --color-dark: #111827;
+  --color-muted: #4a4b4d;
+  --color-dark: #3e3e3f; */
+
+  --color-on-primary: #ffffff;
+  --color-surface:#f2f2f2 ;
+  /* --color-surface:#f3f3f2 ; */
+  --color-on-surface:#575252;
+  --color-secondary:#e7e9ec;
+  --color-background:#fafafa;
+  --color-on-background: #333;
 
   /* Semantic colors for feedback */
   --color-success: #10b981;
@@ -47,28 +54,48 @@
   --padding-2xl: 2.5rem;
 }
 
+@layer theme {
+  .dark {
+  --color-light: #3e3e3f;
+    
+  }
+}
+
+
 /* Optional: global component shape/layout tokens */
 :root {
   --ui-container: var(--container-8xl);
   /* Centralized light-mode primary color for Nuxt UI components */
-  --ui-primary: var(--color-primary);
-  --ui-primary-light: var(--color-primary-light);
-  --ui-dark: var(--color-dark);
-  --ui-light: var(--color-light);
-  --ui-muted: var(--color-muted);
-  --ui-neutral: var(--color-neutral);
-  --ui-bg: #f7faff;
+
+  --ui-bg: #fafafa;
 }
 
 /* Dark mode overrides for Nuxt UI */
 html.dark,
 :is(.dark) {
-  /* --color-primary: var(--color-light); */
-  --ui-primary: var(--color-light);
-  --ui-primary-light: var(--color-primary-light);
-  --ui-bg: var(--color-dark);
+  /* --ui-bg: var(--color-dark); */
+  
+
+}
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus {
+  /* 1. Explicitly set the cursor color (change #333 to your text color) */
+  caret-color: #333 !important; 
+
+  /* 2. Overlap fix: Add a tiny padding if the cursor is hidden behind the border */
+  padding-left: 5px !important;
+
+  /* Your existing shadow and transition */
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #333 !important;
+  transition: background-color 5000s ease-in-out 0s;
 }
 
+/* Ensure the cursor is visible for non-autofilled prefilled fields as well */
+input:not(:placeholder-shown) {
+  caret-color: #333;
+}
 body {
   /* font-family: "Source Sans 3", sans-serif; */
   /* font-family: "Sen", sans-serif; */

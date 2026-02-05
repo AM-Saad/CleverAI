@@ -26,10 +26,10 @@ function safeParseJSON<T>(text: string, fallback: T): T {
  */
 export class DeepSeekStrategy implements LLMStrategy {
   private client: OpenAI;
-  private static readonly CHAT_MODEL = "deepseek-chat";
+  private modelId: string;
   private onMeasure?: (m: LlmMeasured) => void;
 
-  constructor(onMeasure?: (m: LlmMeasured) => void) {
+  constructor(modelId: string, onMeasure?: (m: LlmMeasured) => void) {
     const { deepseekKey } = useRuntimeConfig();
     if (!deepseekKey) {
       throw new Error("Missing DEEPSEEK_API_KEY in runtimeConfig");
@@ -39,6 +39,7 @@ export class DeepSeekStrategy implements LLMStrategy {
       apiKey: deepseekKey,
       baseURL: "https://api.deepseek.com",
     });
+    this.modelId = modelId;
     this.onMeasure = onMeasure;
   }
 
@@ -70,7 +71,7 @@ export class DeepSeekStrategy implements LLMStrategy {
     let content = "[]";
     try {
       const res = await this.client.chat.completions.create({
-        model: DeepSeekStrategy.CHAT_MODEL,
+        model: this.modelId,
         messages: [{ role: "user", content: prompt }],
       });
       const promptTokens = Number(res.usage?.prompt_tokens ?? 0);
@@ -88,7 +89,7 @@ export class DeepSeekStrategy implements LLMStrategy {
       const outputChars = typeof content === "string" ? content.length : 0;
       this.onMeasure?.({
         provider: "deepseek",
-        model: DeepSeekStrategy.CHAT_MODEL,
+        model: this.modelId,
         promptTokens,
         completionTokens,
         totalTokens,
@@ -116,7 +117,13 @@ export class DeepSeekStrategy implements LLMStrategy {
     for (const item of raw) {
       const front = typeof item?.front === "string" ? item.front.trim() : "";
       const back = typeof item?.back === "string" ? item.back.trim() : "";
-      if (front && back) cards.push({ front, back });
+      if (front && back) {
+        cards.push({
+          front,
+          back,
+          sourceMetadata: item?.sourceMetadata || item?.source_metadata
+        });
+      }
     }
     return cards;
   }
@@ -153,7 +160,7 @@ export class DeepSeekStrategy implements LLMStrategy {
     let content = "[]";
     try {
       const res = await this.client.chat.completions.create({
-        model: DeepSeekStrategy.CHAT_MODEL,
+        model: this.modelId,
         messages: [{ role: "user", content: prompt }],
       });
       const promptTokens = Number(res.usage?.prompt_tokens ?? 0);
@@ -171,7 +178,7 @@ export class DeepSeekStrategy implements LLMStrategy {
       const outputChars = typeof content === "string" ? content.length : 0;
       this.onMeasure?.({
         provider: "deepseek",
-        model: DeepSeekStrategy.CHAT_MODEL,
+        model: this.modelId,
         promptTokens,
         completionTokens,
         totalTokens,
@@ -207,7 +214,12 @@ export class DeepSeekStrategy implements LLMStrategy {
         typeof item?.answerIndex === "number" ? item.answerIndex : -1;
       const withinBounds = answerIndex >= 0 && answerIndex < choices.length;
       if (question && choices.length === 4 && withinBounds) {
-        questions.push({ question, choices, answerIndex });
+        questions.push({
+          question,
+          choices,
+          answerIndex,
+          sourceMetadata: item?.sourceMetadata || item?.source_metadata
+        });
       }
     }
     return questions;

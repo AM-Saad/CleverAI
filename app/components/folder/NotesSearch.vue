@@ -1,7 +1,7 @@
 <template>
   <div class="sticky top-0 z-10 flex items-center gap-4">
     <u-input v-model="search" placeholder="Search in notes" type="text" class="w-full" :ui="{
-      base: 'border-0 ring-0 h-10 bg-white dark:bg-dark border-b border-neutral dark:border-muted focus-within:border-0',
+      base: 'border-0 ring-0 h-10 bg-white dark:bg-dark border-b border-neutral dark:border-secondary rounded-none focus-within:border-0',
     }" @focus="onFocus && onFocus()" @blur="onBlur && onBlur()" />
   </div>
 </template>

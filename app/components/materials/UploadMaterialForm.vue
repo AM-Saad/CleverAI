@@ -297,7 +297,7 @@ watch(
           </u-form-field>
 
           <div class="flex gap-3 justify-end pt-2">
-            <u-button color="neutral" variant="soft" @click="emit('close')">Cancel</u-button>
+            <u-button variant="ghost" @click="emit('close')">Cancel</u-button>
             <u-button type="submit">Submit</u-button>
           </div>
         </u-form>
@@ -305,12 +305,10 @@ watch(
         <!-- FILE UPLOAD -->
         <div v-else class="space-y-4">
           <!-- File Input (before upload) -->
-          <div v-if="!uploadedMaterial">
-            <label class="block text-sm font-medium mb-2">
-              Choose a document (PDF, DOCX, or TXT)
-            </label>
+          <div v-if="!uploadedMaterial" class="py-3">
+
             <input type="file" accept=".pdf,.docx,.txt" @change="onFileChange"
-              class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-300" />
+              class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold  file:text-blue-700 hover:file:bg-blue-100  dark:file:text-blue-300" />
             <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
               Supported formats: PDF, DOCX, TXT (max 50MB)
             </p>
@@ -405,7 +403,7 @@ watch(
 
           <!-- Footer buttons for file upload -->
           <div class="flex gap-3 justify-end pt-2">
-            <UButton color="neutral" variant="soft" @click="emit('close')">Cancel</UButton>
+            <UButton variant="ghost" @click="emit('close')">Cancel</UButton>
             <UButton v-if="!uploadedMaterial" :loading="uploading" :disabled="!selectedFile || uploading"
               @click="handleUpload">
               {{ generateAfterUpload ? 'Upload & Continue' : 'Upload' }}

@@ -29,7 +29,7 @@ export const getLLMStrategy = (
 
   switch (model) {
     case "gpt-3.5":
-      return new GPT35Strategy((m: LlmMeasured) => {
+      return new GPT35Strategy("gpt-3.5-turbo", (m: LlmMeasured) => {
         logLlmUsage(m, {
           userId: ctx?.userId,
           folderId: ctx?.folderId,
@@ -37,7 +37,7 @@ export const getLLMStrategy = (
         });
       });
     case "gemini":
-      return new GeminiStrategy((m: LlmMeasured) => {
+      return new GeminiStrategy("gemini-2.0-flash-lite", (m: LlmMeasured) => {
         logLlmUsage(m, {
           userId: ctx?.userId,
           folderId: ctx?.folderId,
@@ -45,7 +45,7 @@ export const getLLMStrategy = (
         });
       });
     case "deepseek":
-      return new DeepSeekStrategy((m: LlmMeasured) => {
+      return new DeepSeekStrategy("deepseek-chat", (m: LlmMeasured) => {
         logLlmUsage(m, {
           userId: ctx?.userId,
           folderId: ctx?.folderId,
@@ -66,12 +66,14 @@ export const getLLMStrategy = (
  * 
  * @param modelId - The model ID from LlmModelRegistry (e.g., 'gpt-4o-mini', 'gemini-flash-8b')
  * @param ctx - Context for usage logging (userId, folderId, feature)
+ * @param onMeasureCapture - Optional callback to capture measured values for gateway logging
  * @returns LLM strategy instance with measurement callback
  * @throws Error if model not found or provider unsupported
  */
 export async function getLLMStrategyFromRegistry(
   modelId: string,
-  ctx?: { userId?: string; folderId?: string; feature?: string }
+  ctx?: { userId?: string; folderId?: string; feature?: string },
+  onMeasureCapture?: (m: LlmMeasured) => void
 ): Promise<LLMStrategy> {
   // Fetch model from registry
   const model = await prisma.llmModelRegistry.findUnique({
@@ -97,32 +99,46 @@ export async function getLLMStrategyFromRegistry(
   switch (provider) {
     case 'openai':
       // All OpenAI models use GPT35Strategy (gpt-3.5-turbo, gpt-4o-mini, gpt-4o)
-      return new GPT35Strategy((m: LlmMeasured) => {
+      return new GPT35Strategy(model.modelId, (m: LlmMeasured) => {
         logLlmUsage(m, {
           userId: ctx?.userId,
           folderId: ctx?.folderId,
           feature: ctx?.feature,
         });
+        onMeasureCapture?.(m);
       });
 
     case 'google':
       // All Google models use GeminiStrategy (gemini-1.5-flash-8b, gemini-2.0-flash-exp)
-      return new GeminiStrategy((m: LlmMeasured) => {
+      return new GeminiStrategy(model.modelId, (m: LlmMeasured) => {
         logLlmUsage(m, {
           userId: ctx?.userId,
           folderId: ctx?.folderId,
           feature: ctx?.feature,
         });
+        onMeasureCapture?.(m);
       });
 
     case 'deepseek':
       // DeepSeek models (deepseek-chat, deepseek-reasoner)
-      return new DeepSeekStrategy((m: LlmMeasured) => {
+      return new DeepSeekStrategy(model.modelId, (m: LlmMeasured) => {
         logLlmUsage(m, {
           userId: ctx?.userId,
           folderId: ctx?.folderId,
           feature: ctx?.feature,
         });
+        onMeasureCapture?.(m);
+      });
+
+    case 'groq':
+      // Groq models (llama-3.1-8b-instant, qwen-qwq-32b, llama-4-scout-17b, llama-4-maverick-17b)
+      return new GroqStrategy(model.modelId, (m: LlmMeasured) => {
+        logLlmUsage(m, {
+          userId: ctx?.userId,
+          folderId: ctx?.folderId,
+          feature: ctx?.feature,
+        });
+        onMeasureCapture?.(m);
       });
 
     // case 'anthropic':

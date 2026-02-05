@@ -6,16 +6,16 @@
       <section id="about" class="min-h-[40vh] flex flex-col justify-center">
         <blur-reveal :delay="0.2" class="space-y-8">
           <ui-title size="5xl" tag="h1"
-            class="leading-tight bg-clip-text text-transparent bg-gradient-to-r from-dark to-slate-600 dark:from-white dark:to-slate-400">
+            class="leading-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-slate-600 ">
             Cognilo — AI‑Powered Spaced Repetition Learning Platform
           </ui-title>
 
-          <ui-paragraph size="lg" color="neutral" class="leading-relaxed max-w-3xl">
+          <ui-paragraph size="lg" color="onsurface" class="leading-relaxed max-w-3xl">
             Cognilo is a cutting-edge AI-powered spaced repetition learning platform designed to dramatically improve
             long-term retention and make learning fast, smart, and intuitive.
           </ui-paragraph>
 
-          <ui-paragraph size="base" color="neutral" class="max-w-3xl">
+          <ui-paragraph size="base" color="onsurface" class="max-w-3xl">
             We’re building more than just another flashcard app — we’re building an intelligent learning ecosystem that
             combines spaced repetition algorithms, adaptive learning, mobile-friendly progressive web app (PWA)
             technology, and a scalable offline-first study experience that works anywhere.
@@ -26,21 +26,20 @@
       <!-- Why Choose Us -->
       <section id="why-choose-us">
         <div class="mb-10 text-center md:text-left">
-          <ui-subtitle tag="h2" size="3xl" weight="bold" class="mb-4">
+          <ui-subtitle tag="h2" size="2xl" weight="bold" class="mb-4">
             Why Choose Cognilo
           </ui-subtitle>
-          <ui-paragraph size="lg" color="neutral" class="max-w-2xl">
+          <ui-paragraph size="lg" color="onbackground" class="max-w-2xl">
             At Cognilo, we help learners retain more in less time by blending proven cognitive science with the latest
             web technologies.
           </ui-paragraph>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <ui-card v-for="(item, idx) in whyChooseItems" :key="idx" hover="lift" shadow="sm"
-            class="h-full border border-neutral-200 dark:border-neutral-800 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm">
+          <ui-card v-for="(item, idx) in whyChooseItems" :key="idx" hover="lift" shadow="sm" variant="default">
             <div class="p-6 space-y-3">
-              <h3 class="font-bold text-lg text-dark dark:text-white">{{ item.title }}</h3>
-              <ui-paragraph size="sm" color="muted" class="text-wrap">
+              <ui-subtitle>{{ item.title }}</ui-subtitle>
+              <ui-paragraph size="sm" color="onsurface" class="text-wrap">
                 {{ item.description }}
               </ui-paragraph>
             </div>
@@ -54,7 +53,7 @@
           <ui-subtitle tag="h2" size="2xl" weight="bold" class="mb-6">
             Scientific Retention
           </ui-subtitle>
-          <ui-paragraph class="mb-8" size="base" color="neutral">
+          <ui-paragraph class="mb-8" size="base" color="onsurface">
             Unlike traditional study tools that rely on random repetition, Cognilo uses data-driven algorithms to boost
             memory retention by intelligently spacing study sessions.
           </ui-paragraph>
@@ -65,8 +64,8 @@
                 <div class="w-2 h-2 rounded-full bg-primary"></div>
               </div>
               <div>
-                <strong class="block text-dark dark:text-light">{{ item.title }}</strong>
-                <p class="text-sm text-neutral-500 dark:text-neutral-400">{{ item.description }}</p>
+                <ui-subtitle>{{ item.title }}</ui-subtitle>
+                <ui-paragraph size="sm" color="onsurface">{{ item.description }}</ui-paragraph>
               </div>
             </div>
           </div>
@@ -76,16 +75,15 @@
           <ui-subtitle tag="h2" size="2xl" weight="bold" class="mb-6">
             Core Features
           </ui-subtitle>
-          <ui-paragraph class="mb-8" size="base" color="neutral">
+          <ui-paragraph class="mb-8" size="base" color="onsurface">
             Everything you need for an efficient study workflow, from content creation to review.
           </ui-paragraph>
 
           <div class="space-y-6">
-            <ui-card v-for="(item, idx) in coreFeatures" :key="idx" variant="ghost"
-              class="bg-neutral-50 dark:bg-neutral-800/50">
+            <ui-card v-for="(item, idx) in coreFeatures" :key="idx" variant="default">
               <div class="p-4">
-                <h3 class="font-bold text-dark dark:text-light mb-1">{{ item.title }}</h3>
-                <p class="text-sm text-neutral-500 dark:text-neutral-400">{{ item.description }}</p>
+                <ui-subtitle>{{ item.title }}</ui-subtitle>
+                <ui-paragraph size="sm" color="onsurface" class="text-wrap">{{ item.description }}</ui-paragraph>
               </div>
             </ui-card>
           </div>
@@ -107,7 +105,7 @@
             </div>
           </div>
 
-          <ui-paragraph class="mt-10 text-center max-w-2xl mx-auto" size="base" color="neutral">
+          <ui-paragraph class="mt-10 text-center max-w-2xl mx-auto" size="base" color="onsurface">
             Cognilo adapts to how you learn — not the other way around. Focus on learning, not memorization.
           </ui-paragraph>
         </div>

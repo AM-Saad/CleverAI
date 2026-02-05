@@ -11,7 +11,7 @@ export default defineAppConfig({
     toaster: {
       slots: {
         viewport: "fixed flex flex-col w-[calc(100%-2rem)] sm:w-96 z-[100] data-[expanded=true]:h-(--height) focus:outline-none",
-        base: `pointer-events-auto bg-light dark:bg-muted border-0 ring-0 rounded-full p-3 px-8 absolute inset-x-0 z-(--index) transform-(--transform) 
+        base: `pointer-events-auto bg-surface border-0 ring-0 rounded-full p-3 px-8 absolute inset-x-0 z-(--index) transform-(--transform) 
         data-[expanded=false]:data-[front=false]:h-(--front-height) data-[expanded=false]:data-[front=false]:*:opacity-0 
         data-[front=false]:*:transition-opacity data-[front=false]:*:duration-100 data-[state=closed]:animate-[toast-closed_200ms_ease-in-out] 
         data-[state=closed]:data-[expanded=false]:data-[front=false]:animate-[toast-collapsed-closed_200ms_ease-in-out] 
@@ -48,12 +48,51 @@ export default defineAppConfig({
     },
     input: {
       slots: {
-        base: "focus:border-primary focus:ring-1 focus:ring-primary/90 focus:outline-0 focus-visible:outline-0 focus-visible:ring-0",
+        base: "focus:border-primary focus:ring-1 focus:ring-primary/90! focus:outline-0 focus-visible:outline-0 focus-visible:ring-0 ring-secondary!  rounded-full",
       }
     },
     formField: {
       slots: {
-        label: 'text-base font-semibold'
+        label: 'text-sm text-on-surface'
+      }
+    },
+    button: {
+      slots: {
+        base: ' rounded-full'
+      },
+      compoundVariants: [{
+        color: 'primary',
+        variant: 'solid',
+        class: 'text-on-primary'
+      }],
+    },
+    contextMenu: {
+      slots: {
+        content: 'bg-surface ring-0 border border-secondary',
+        item: 'items-center',
+
+      },
+      compoundVariants: [
+        {
+          color: 'primary',
+          active: false,
+          class: {
+            item: 'text-primary data-highlighted:text-primary data-highlighted:before:bg-primary data-[state=open]:before:bg-primary',
+            itemLeadingIcon: 'text-primary group-data-highlighted:text-primary group-data-[state=open]:text-primary'
+          }
+        },
+        {
+          color: 'primary',
+          active: true,
+          class: {
+            item: 'text-primary before:bg-primary',
+            itemLeadingIcon: 'text-primary'
+          }
+        }
+      ],
+      defaultVariants: {
+        size: 'md',
+        color: 'primary'
       }
     }
   }

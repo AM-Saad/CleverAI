@@ -82,7 +82,7 @@ onMounted(() => {
 
       <div class="flex gap-3 justify-between items-end mb-4">
         <!-- Future filter options can go here -->
-        <div class="basis-3/4">
+        <div class="basis-2/4 md:basis-3/4">
           <UiLabel for="search">Search</UiLabel>
           <u-input id="search" type="text" placeholder="Search folders..." class="mt-1 w-full" />
         </div>
@@ -116,6 +116,7 @@ onMounted(() => {
           {
             label: 'Edit Folder',
             icon: 'i-lucide-edit',
+
             onSelect: () => {
               console.log('Edit folder');
               editFolder = folder;
@@ -138,7 +139,7 @@ onMounted(() => {
               <div class="mb-1 flex items-center">
                 <icon name="ic:round-folder-open" class="inline-block mr-1 text-primary" size="22" />
 
-                <ui-subtitle size="sm">{{ folder.title }}</ui-subtitle>
+                <ui-subtitle size="sm" color="onsurface">{{ folder.title }}</ui-subtitle>
               </div>
               <ui-paragraph v-if="folder.description">
                 {{ folder.description }}

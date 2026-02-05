@@ -1,5 +1,6 @@
 <template>
-  <div v-if="card" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden transition-all duration-300">
+  <div v-if="card"
+    class="bg-surface rounded-lg shadow-lg overflow-hidden transition-all duration-300  w-4xl max-w-full mx-auto">
     <!-- Resource Type Badge -->
     <div class="p-4">
       <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium" :class="resourceTypeBadgeClass">
@@ -12,18 +13,15 @@
     <div class="p-4">
       <!-- Question/Front -->
       <div class="mb-8">
-        <div class="text-xl font-medium text-gray-900 dark:text-gray-100 leading-relaxed" role="heading" aria-level="3">
+        <div class=" font-medium text-on-surface leading-relaxed" role="heading" aria-level="3">
           {{ resourceFront }}
         </div>
       </div>
 
       <!-- Answer/Back (shown when revealed) -->
-      <div v-if="showAnswer" class="border-t pt-8 animate-fade-in">
-        <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">
-          Answer
-        </h3>
-        <div class="text-gray-800 dark:text-gray-200 leading-relaxed prose prose-sm max-w-none" role="region"
-          aria-label="Card answer">
+      <div v-if="showAnswer" class="border-t border-secondary pt-8 animate-fade-in">
+
+        <div class="text-on-surface leading-relaxed prose prose-sm max-w-none" role="region" aria-label="Card answer">
           <div class="whitespace-pre-wrap" v-html="formattedContent" />
         </div>
 

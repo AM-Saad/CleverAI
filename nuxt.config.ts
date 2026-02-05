@@ -286,6 +286,7 @@ export default defineNuxtConfig({
     openaiKey: process.env.OPENAI_API_KEY,
     geminiKey: process.env.GEMINI_API_KEY,
     deepseekKey: process.env.DEEPSEEK_API_KEY,
+    groqKey: process.env.GROQ_API_KEY,
     // Dev-only: Force a specific model for testing (e.g., 'deepseek-chat', 'gpt-4o-mini')
     devLlmModelOverride: process.env.DEV_LLM_MODEL_OVERRIDE,
     databaseUrl: process.env.DATABASE_URL,

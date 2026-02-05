@@ -1,5 +1,5 @@
 <template>
-  <div class="w-4xl max-w-full mx-auto  space-y-6 p-2 rounded outline-primary" tabindex="0" role="application"
+  <div class="  space-y-6 p-2 rounded outline-primary" tabindex="0" role="application"
     aria-label="Spaced repetition card review interface" @keydown="handleKeydown">
     <!-- Analytics Summary -->
     <ReviewAnalytics :show="showAnalytics" :folder-id="folderId" @close="showAnalytics = false" />
@@ -60,7 +60,7 @@
       <review-answer-reveal-button v-if="!showAnswer" :is-submitting="isSubmitting" @reveal="revealAnswer" />
 
       <!-- Grade & Navigation -->
-      <div v-else class="space-y-4">
+      <div v-else class="space-y-4  w-4xl max-w-full mx-auto">
         <review-grade-buttons :is-submitting="isSubmitting" @grade="gradeCard" />
         <review-navigation-controls :is-first-card="isFirstCard" :is-last-card="isLastCard"
           :is-submitting="isSubmitting" @previous="previousCard" @next="nextCard" @skip="skipCard" />

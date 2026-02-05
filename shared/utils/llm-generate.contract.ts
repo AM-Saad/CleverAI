@@ -2,9 +2,16 @@
 import { z } from "zod";
 import { LLMEnum } from "./llm";
 
+// Source metadata for Context Bridge feature
+export const SourceMetadataSchema = z.object({
+  anchor: z.string(), // blockId for notes, page number for PDFs
+  contextSnippet: z.string().optional(), // For fuzzy matching
+}).optional();
+
 export const FlashcardSchema = z.object({
   front: z.string(),
   back: z.string(),
+  sourceMetadata: SourceMetadataSchema,
 });
 export type FlashcardDTO = z.infer<typeof FlashcardSchema>;
 
@@ -13,6 +20,7 @@ export const QuizQuestionSchema = z
     question: z.string(),
     choices: z.array(z.string()).length(4),
     answerIndex: z.number().int().nonnegative(),
+    sourceMetadata: SourceMetadataSchema,
   })
   .refine((q) => q.answerIndex < q.choices.length, {
     message: "answerIndex out of bounds",

@@ -212,6 +212,181 @@ async function main() {
     },
   });
 
+  // ==========================================
+  // Seed Groq Models
+  // ==========================================
+  console.log("Seeding Groq prices...");
+
+  // Groq llama-3.1-8b-instant pricing (per 1k tokens in micros)
+  // Input: $0.05/1M = 50 micros/1k, Output: $0.08/1M = 80 micros/1k
+  await prisma.llmPrice.upsert({
+    where: {
+      provider_model: { provider: "groq", model: "llama-3.1-8b-instant" },
+    },
+    update: { inputPer1kMicros: 50n, outputPer1kMicros: 80n, isActive: true },
+    create: {
+      provider: "groq",
+      model: "llama-3.1-8b-instant",
+      inputPer1kMicros: 50n,
+      outputPer1kMicros: 80n,
+      isActive: true,
+    },
+  });
+
+  // Groq qwen-qwq-32b pricing
+  // Input: $0.075/1M = 75 micros/1k, Output: $0.30/1M = 300 micros/1k
+  await prisma.llmPrice.upsert({
+    where: {
+      provider_model: { provider: "groq", model: "qwen-qwq-32b" },
+    },
+    update: { inputPer1kMicros: 75n, outputPer1kMicros: 300n, isActive: true },
+    create: {
+      provider: "groq",
+      model: "qwen-qwq-32b",
+      inputPer1kMicros: 75n,
+      outputPer1kMicros: 300n,
+      isActive: true,
+    },
+  });
+
+  // Groq llama-4-scout-17b pricing
+  // Input: $0.11/1M = 110 micros/1k, Output: $0.34/1M = 340 micros/1k
+  await prisma.llmPrice.upsert({
+    where: {
+      provider_model: { provider: "groq", model: "llama-4-scout-17b" },
+    },
+    update: { inputPer1kMicros: 110n, outputPer1kMicros: 340n, isActive: true },
+    create: {
+      provider: "groq",
+      model: "llama-4-scout-17b",
+      inputPer1kMicros: 110n,
+      outputPer1kMicros: 340n,
+      isActive: true,
+    },
+  });
+
+  // Groq llama-4-maverick-17b pricing
+  // Input: $0.20/1M = 200 micros/1k, Output: $0.60/1M = 600 micros/1k
+  await prisma.llmPrice.upsert({
+    where: {
+      provider_model: { provider: "groq", model: "llama-4-maverick-17b" },
+    },
+    update: { inputPer1kMicros: 200n, outputPer1kMicros: 600n, isActive: true },
+    create: {
+      provider: "groq",
+      model: "llama-4-maverick-17b",
+      inputPer1kMicros: 200n,
+      outputPer1kMicros: 600n,
+      isActive: true,
+    },
+  });
+
+  console.log("Seeding Groq Model Registry...");
+
+  // Groq llama-3.1-8b-instant - fastest, most cost-effective
+  await prisma.llmModelRegistry.upsert({
+    where: { modelId: "groq-llama-3.1-8b-instant" },
+    update: {
+      inputCostPer1M: 0.05,
+      outputCostPer1M: 0.08,
+      avgLatencyMs: 400,
+      healthStatus: "healthy",
+      enabled: true,
+    },
+    create: {
+      modelId: "groq-llama-3.1-8b-instant",
+      provider: "groq",
+      modelName: "llama-3.1-8b-instant",
+      inputCostPer1M: 0.05,
+      outputCostPer1M: 0.08,
+      capabilities: ["text", "chat"],
+      maxTokens: 131072,
+      latencyBudgetMs: 400,
+      avgLatencyMs: 400,
+      healthStatus: "healthy",
+      priority: 1,
+      enabled: true,
+    },
+  });
+
+  // Groq qwen-qwq-32b
+  await prisma.llmModelRegistry.upsert({
+    where: { modelId: "groq-qwen-qwq-32b" },
+    update: {
+      inputCostPer1M: 0.075,
+      outputCostPer1M: 0.3,
+      avgLatencyMs: 600,
+      healthStatus: "healthy",
+      enabled: true,
+    },
+    create: {
+      modelId: "groq-qwen-qwq-32b",
+      provider: "groq",
+      modelName: "qwen-qwq-32b",
+      inputCostPer1M: 0.075,
+      outputCostPer1M: 0.3,
+      capabilities: ["text", "chat"],
+      maxTokens: 131072,
+      latencyBudgetMs: 600,
+      avgLatencyMs: 600,
+      healthStatus: "healthy",
+      priority: 2,
+      enabled: true,
+    },
+  });
+
+  // Groq llama-4-scout-17b
+  await prisma.llmModelRegistry.upsert({
+    where: { modelId: "groq-llama-4-scout-17b" },
+    update: {
+      inputCostPer1M: 0.11,
+      outputCostPer1M: 0.34,
+      avgLatencyMs: 600,
+      healthStatus: "healthy",
+      enabled: true,
+    },
+    create: {
+      modelId: "groq-llama-4-scout-17b",
+      provider: "groq",
+      modelName: "llama-4-scout-17b",
+      inputCostPer1M: 0.11,
+      outputCostPer1M: 0.34,
+      capabilities: ["text", "chat"],
+      maxTokens: 131072,
+      latencyBudgetMs: 600,
+      avgLatencyMs: 600,
+      healthStatus: "healthy",
+      priority: 3,
+      enabled: true,
+    },
+  });
+
+  // Groq llama-4-maverick-17b
+  await prisma.llmModelRegistry.upsert({
+    where: { modelId: "groq-llama-4-maverick-17b" },
+    update: {
+      inputCostPer1M: 0.2,
+      outputCostPer1M: 0.6,
+      avgLatencyMs: 600,
+      healthStatus: "healthy",
+      enabled: true,
+    },
+    create: {
+      modelId: "groq-llama-4-maverick-17b",
+      provider: "groq",
+      modelName: "llama-4-maverick-17b",
+      inputCostPer1M: 0.2,
+      outputCostPer1M: 0.6,
+      capabilities: ["text", "chat"],
+      maxTokens: 131072,
+      latencyBudgetMs: 600,
+      avgLatencyMs: 600,
+      healthStatus: "healthy",
+      priority: 4,
+      enabled: true,
+    },
+  });
+
   console.log("✅ Development seeding completed successfully!");
 
   console.log(
@@ -227,3 +402,4 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
+

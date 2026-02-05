@@ -8,6 +8,7 @@ export const LLM_MODELS = [
   "mixtral",
   "gemini",
   "deepseek",
+  "groq",
 ] as const;
 export type LLMModel = (typeof LLM_MODELS)[number];
 export const LLMEnum = z.enum(LLM_MODELS);

@@ -5,7 +5,9 @@ import { useFolder } from "~/composables/folders/useFolders";
 import { useResponsive } from "~/composables/ui/useResponsive";
 import type { EnrollCardResponse } from "~/shared/utils/review.contract";
 
-
+const ContextSlideOver = defineAsyncComponent(
+  () => import("~/components/hub/ContextSlideOver.vue")
+);
 
 const LearningHubModal = defineAsyncComponent(
   () => import("~/components/folder/LearningHubModal.vue")
@@ -30,6 +32,9 @@ const toast = useToast();
 const { data: authData } = useAuth();
 const showUpload = ref(false);
 const { folder, loading, error, refresh } = useFolder(id! as string);
+
+// Context Bridge integration
+const contextBridge = useContextBridge();
 
 // Responsive behavior
 const { isMobile } = useResponsive();
@@ -145,7 +150,7 @@ onBeforeUnmount(() => {
 <template>
   <shared-page-wrapper id="folder-page" :title="`${folder?.title || '....'}`" :is-page-loading="loading">
     <template #header-info-leading>
-      <NuxtLink to="/folders" class="text-xs text-dark dark:text-light flex items-center gap-1">
+      <NuxtLink to="/folders" class="text-xs text-onbackground flex items-center gap-1">
         <u-icon name="i-heroicons-chevron-left" class="-ml-1" />
         Back to Folders
       </NuxtLink>
@@ -191,6 +196,10 @@ onBeforeUnmount(() => {
 
       <!-- Upload Materials Dialog -->
       <FolderUploadMaterialForm :show="showUpload" @close="showUpload = false" />
+
+      <!-- Context Bridge Slide-Over -->
+      <ContextSlideOver :is-open="contextBridge.isSlideOverOpen.value" :preview="contextBridge.activePreview.value"
+        :is-loading="contextBridge.isLoading.value" @close="contextBridge.closePreview()" />
     </template>
   </shared-page-wrapper>
 </template>

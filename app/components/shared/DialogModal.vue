@@ -23,28 +23,28 @@ onUnmounted(() => {
     <Transition name="modal">
       <div v-if="show" class="modal-mask">
         <div
-          class="inner bg-white dark:bg-dark absolute left-[50%] top-[50%] w-96 -translate-x-1/2 -translate-y-1/2 transform rounded-md p-3 shadow-lg z-50">
+          class="inner bg-white dark:bg-dark absolute left-[50%] top-[50%] w-96 -translate-x-1/2 -translate-y-1/2 transform rounded-md  shadow-lg z-50 overflow-auto">
           <div
-            class="modal-header flex items-center justify-between font-medium text-muted dark:text-light border-b border-muted pb-1">
+            class="modal-header flex items-center justify-between font-medium text-on-surface border-b border-secondary bg-surface p-3 pb-1">
             <div class="flex flex-col gap-1">
               <ui-subtitle class="flex items-center gap-1" size="base" weight="semibold">
                 <u-icon :name="icon" :size="UI_CONFIG.ICON_SIZE" />
                 {{ title }}
               </ui-subtitle>
-              <ui-paragraph v-if="description" size="xs" color="muted">{{ description }}
+              <ui-paragraph v-if="description" size="xs">{{ description }}
               </ui-paragraph>
             </div>
-            <u-button variant="soft" size="xs" color="neutral"
+            <u-button variant="ghost" size="xs" color="neutral"
               class="modal-default-button place-self-start cursor-pointer" @click="$emit('close')">
               <u-icon name="mdi:close"></u-icon>
             </u-button>
           </div>
 
-          <div class="modal-body">
+          <div class="modal-body p-3">
             <slot name="body" class="z-[9999]"> default body </slot>
           </div>
 
-          <div class="modal-footer">
+          <div class="modal-footer p-3">
             <slot name="footer">
               <!-- <button class="btn btn-small" @click="$emit('close')">Close</button> -->
             </slot>

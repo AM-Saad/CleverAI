@@ -5,7 +5,7 @@
             <div>
                 <slot name="header-info-leading" />
 
-                <UiTitle tag="h1">{{ title }}</UiTitle>
+                <UiTitle tag="h1" color="onbackground">{{ title }}</UiTitle>
                 <UiParagraph v-if="subtitle" :class-name="'my-1'" variant="neutral">
                     {{ subtitle }}
                 </UiParagraph>

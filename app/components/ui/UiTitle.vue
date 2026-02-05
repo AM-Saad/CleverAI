@@ -1,14 +1,11 @@
 <template>
-  <component
-    :is="tag"
-    :class="[
-      'ui-title',
-      sizeClasses[size],
-      weightClasses[weight],
-      colorClasses[color],
-      center ? 'text-center' : '',
-    ]"
-  >
+  <component :is="tag" :class="[
+    'ui-title',
+    sizeClasses[size],
+    weightClasses[weight],
+    colorClasses[color],
+    center ? 'text-center' : '',
+  ]">
     <slot />
   </component>
 </template>
@@ -30,7 +27,8 @@ interface Props {
   /**
    * Text color variant
    */
-  color?: "primary" | "neutral" | "dark" | "muted" | "white";
+  color?: "primary" | "onsurface" | "onbackground" | "white" | "danger" | "success";
+
   /**
    * Center alignment
    */
@@ -41,7 +39,7 @@ const {
   tag = "h2",
   size = "2xl",
   weight = "semibold",
-  color = "dark",
+  color = "onbackground",
   center = false,
 } = defineProps<Props>();
 
@@ -66,11 +64,13 @@ const weightClasses = {
 };
 
 const colorClasses = {
-  primary: "text-primary",
-  neutral: "text-neutral",
-  dark: "text-dark dark:text-light",
-  muted: "text-muted",
-  white: "text-white dark:text-dark",
+  primary: "text-[color:var(--color-primary)]",
+  onsurface: "text-on-surface",
+  onbackground: 'text-on-background',
+  white: "text-white",
+  danger: "text-[color:var(--color-error)]",
+  success: "text-success",
+
 };
 </script>
 

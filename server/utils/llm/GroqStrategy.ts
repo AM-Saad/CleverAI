@@ -1,4 +1,4 @@
-// server/utils/llm/GPT35Strategy.ts
+// server/utils/llm/GroqStrategy.ts
 import { OpenAI } from "openai";
 import { encoding_for_model } from "tiktoken";
 import { Errors } from "../error";
@@ -12,18 +12,87 @@ function safeParseJSON<T>(text: string, fallback: T): T {
   }
 }
 
-export class GPT35Strategy implements LLMStrategy {
+// --- Robust JSON extraction helpers (handle markdown code fences) ---
+function stripCodeFences(s: string): string {
+  if (!s) return "";
+  // Unwrap ```json ... ``` or generic ``` ... ``` blocks
+  return s.replace(/```[a-zA-Z]*\n([\s\S]*?)```/g, (_m, p1) =>
+    String(p1).trim()
+  );
+}
+
+function findBalancedSlice(
+  text: string,
+  open: string,
+  close: string
+): string | null {
+  const start = text.indexOf(open);
+  if (start === -1) return null;
+  let depth = 0;
+  let inStr: string | null = null;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    const prev = i > 0 ? text[i - 1] : "";
+    // track string literals to avoid counting brackets inside strings
+    if ((ch === '"' || ch === "'") && prev !== "\\") {
+      if (inStr === ch) inStr = null;
+      else if (!inStr) inStr = ch;
+    }
+    if (inStr) continue;
+    if (ch === open) depth++;
+    else if (ch === close) {
+      depth--;
+      if (depth === 0) {
+        return text.slice(start, i + 1);
+      }
+    }
+  }
+  return null;
+}
+
+function extractJsonArrayOrObject(s: string): string {
+  const cleaned = stripCodeFences(s);
+  // Prefer array first
+  const arr = findBalancedSlice(cleaned, "[", "]");
+  if (arr) return arr;
+  // Fallback to object, wrap in array
+  const obj = findBalancedSlice(cleaned, "{", "}");
+  if (obj) return `[${obj}]`;
+  // Last resort: return the cleaned text (let safeParseJSON handle failure)
+  return cleaned;
+}
+
+/**
+ * Groq LLM Strategy
+ * 
+ * Uses OpenAI-compatible API with Groq's baseURL.
+ * Groq provides fast inference for open-source models like LLaMA.
+ * 
+ * Default model: llama-3.1-8b-instant (fast, cost-effective)
+ * 
+ * Pricing (per 1M tokens):
+ * - llama-3.1-8b-instant: Input $0.05, Output $0.08
+ * - qwen-qwq-32b: Input $0.075, Output $0.30
+ * - llama-4-scout-17b: Input $0.11, Output $0.34
+ * - llama-4-maverick-17b: Input $0.20, Output $0.60
+ * 
+ * @see https://console.groq.com/docs/api-reference
+ */
+export class GroqStrategy implements LLMStrategy {
   private client: OpenAI;
   private modelId: string;
   private onMeasure?: (m: LlmMeasured) => void;
 
   constructor(modelId: string, onMeasure?: (m: LlmMeasured) => void) {
-    // Use **private** server runtime config
-    const { openaiKey } = useRuntimeConfig();
-    if (!openaiKey) {
-      throw new Error("Missing OPENAI_API_KEY in runtimeConfig");
+    const { groqKey } = useRuntimeConfig();
+    if (!groqKey) {
+      throw new Error("Missing GROQ_API_KEY in runtimeConfig");
     }
-    this.client = new OpenAI({ apiKey: openaiKey });
+    // Groq uses OpenAI-compatible API with custom baseURL
+    this.client = new OpenAI({
+      apiKey: groqKey,
+      baseURL: "https://api.groq.com/openai/v1",
+    });
     this.modelId = modelId;
     this.onMeasure = onMeasure;
   }
@@ -32,8 +101,8 @@ export class GPT35Strategy implements LLMStrategy {
     const itemCount = options?.itemCount ?? 5;
 
     // Dev mock mode: skip API and return deterministic JSON (no credits used)
-    if (process.env.OPENAI_MOCK === "1") {
-      console.log("OpenAI mock mode active");
+    if (process.env.GROQ_MOCK === "1") {
+      console.log("Groq mock mode active");
       return [
         {
           front: "What is gravity?",
@@ -47,7 +116,8 @@ export class GPT35Strategy implements LLMStrategy {
     const inputChars = input.length;
     let inputTokensEstimate = 0;
     try {
-      const enc = encoding_for_model(this.modelId as any);
+      // Use cl100k_base encoding (closest to LLaMA tokenizer)
+      const enc = encoding_for_model("gpt-4");
       inputTokensEstimate = enc.encode(prompt).length;
       enc.free();
     } catch { }
@@ -64,7 +134,7 @@ export class GPT35Strategy implements LLMStrategy {
       content = res.choices?.[0]?.message?.content?.trim() ?? "[]";
       let outputTokensEstimate = 0;
       try {
-        const enc = encoding_for_model(this.modelId as any);
+        const enc = encoding_for_model("gpt-4");
         outputTokensEstimate = enc.encode(
           typeof content === "string" ? content : ""
         ).length;
@@ -72,7 +142,7 @@ export class GPT35Strategy implements LLMStrategy {
       } catch { }
       const outputChars = typeof content === "string" ? content.length : 0;
       this.onMeasure?.({
-        provider: "openai",
+        provider: "groq",
         model: this.modelId,
         promptTokens,
         completionTokens,
@@ -87,14 +157,21 @@ export class GPT35Strategy implements LLMStrategy {
         },
       });
     } catch (error: any) {
-      console.error("OpenAI error", error.status, error.message);
+      console.error("Groq error", error.status, error.message);
       throw createError({
         statusCode: 502,
-        statusMessage: `OpenAI error: ${error.status} ${error.message}`,
+        statusMessage: `Groq error: ${error.status} ${error.message}`,
       });
     }
 
-    const raw = safeParseJSON<any[]>(content, []);
+    // Extract JSON from potential markdown/code fences
+    const candidate = extractJsonArrayOrObject(content);
+    const raw = safeParseJSON<any[]>(candidate, []);
+
+    if (process.env.NODE_ENV === "development" && (!raw || raw.length === 0)) {
+      console.info("[Groq debug] rawText(200)=", String(content).slice(0, 200));
+      console.info("[Groq debug] candidate(200)=", String(candidate).slice(0, 200));
+    }
 
     // Minimal validation/sanitization to keep structure predictable
     const cards: FlashcardDTO[] = [];
@@ -116,8 +193,8 @@ export class GPT35Strategy implements LLMStrategy {
     const itemCount = options?.itemCount ?? 3;
 
     // Dev mock mode: skip API and return deterministic JSON (no credits used)
-    if (process.env.OPENAI_MOCK === "1") {
-      console.log("OpenAI mock mode active");
+    if (process.env.GROQ_MOCK === "1") {
+      console.log("Groq mock mode active");
       return [
         {
           question: "What is gravity?",
@@ -136,7 +213,7 @@ export class GPT35Strategy implements LLMStrategy {
     const inputChars = input.length;
     let inputTokensEstimate = 0;
     try {
-      const enc = encoding_for_model(this.modelId as any);
+      const enc = encoding_for_model("gpt-4");
       inputTokensEstimate = enc.encode(prompt).length;
       enc.free();
     } catch { }
@@ -153,7 +230,7 @@ export class GPT35Strategy implements LLMStrategy {
       content = res.choices?.[0]?.message?.content?.trim() ?? "[]";
       let outputTokensEstimate = 0;
       try {
-        const enc = encoding_for_model(this.modelId as any);
+        const enc = encoding_for_model("gpt-4");
         outputTokensEstimate = enc.encode(
           typeof content === "string" ? content : ""
         ).length;
@@ -161,7 +238,7 @@ export class GPT35Strategy implements LLMStrategy {
       } catch { }
       const outputChars = typeof content === "string" ? content.length : 0;
       this.onMeasure?.({
-        provider: "openai",
+        provider: "groq",
         model: this.modelId,
         promptTokens,
         completionTokens,
@@ -176,14 +253,21 @@ export class GPT35Strategy implements LLMStrategy {
         },
       });
     } catch (error: any) {
-      console.error("OpenAI error", error.status, error.message);
+      console.error("Groq error", error.status, error.message);
       throw createError({
         statusCode: 502,
-        statusMessage: `OpenAI error: ${error.status} ${error.message}`,
+        statusMessage: `Groq error: ${error.status} ${error.message}`,
       });
     }
 
-    const raw = safeParseJSON<any[]>(content, []);
+    // Extract JSON from potential markdown/code fences
+    const candidate = extractJsonArrayOrObject(content);
+    const raw = safeParseJSON<any[]>(candidate, []);
+
+    if (process.env.NODE_ENV === "development" && (!raw || raw.length === 0)) {
+      console.info("[Groq debug] rawText(200)=", String(content).slice(0, 200));
+      console.info("[Groq debug] candidate(200)=", String(candidate).slice(0, 200));
+    }
 
     // Minimal validation/sanitization
     const questions: QuizQuestionDTO[] = [];
