@@ -139,12 +139,12 @@ onMounted(() => {
               <div class="mb-1 flex items-center">
                 <icon name="ic:round-folder-open" class="inline-block mr-1 text-primary" size="22" />
 
-                <ui-subtitle size="sm" color="onsurface">{{ folder.title }}</ui-subtitle>
+                <ui-subtitle size="sm" color="content-on-surface">{{ folder.title }}</ui-subtitle>
               </div>
-              <ui-paragraph v-if="folder.description">
+              <ui-paragraph v-if="folder.description" color="disabled">
                 {{ folder.description }}
               </ui-paragraph>
-              <ui-paragraph v-else>No description available.</ui-paragraph>
+              <ui-paragraph v-else color="disabled">No description available.</ui-paragraph>
             </NuxtLink>
           </ui-card>
         </u-context-menu>

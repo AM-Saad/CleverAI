@@ -53,7 +53,7 @@ export default defineAppConfig({
     },
     formField: {
       slots: {
-        label: 'text-sm text-on-surface'
+        label: 'text-sm text-content-on-surface'
       }
     },
     button: {

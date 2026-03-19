@@ -105,13 +105,18 @@ export function useAIStore(storeId: string): AIModelStore {
 
       window.addEventListener("ai-worker-message", handler);
 
+      // VisionEncoderDecoder models (latex OCR) need full-precision fp32
+      // to avoid misreading small strokes (e.g. "1" → "13").
+      const isLatexModel = modelId.includes('latex') || modelId.includes('TexTeller');
+
       $aiWorker.postMessage({
         type: AI_WORKER_MESSAGE_TYPES.LOAD_MODEL,
         data: {
           task,
           modelId,
           options: {
-            quantized: true,
+            quantized: isLatexModel ? false : true,
+            dtype: isLatexModel ? 'fp32' : undefined,
             device: "wasm",
           },
         },

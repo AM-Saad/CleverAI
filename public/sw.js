@@ -3478,7 +3478,9 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       ]
     });
     registerRoute(
-      ({ url, request }) => url.origin === self.location.origin && (url.pathname.startsWith("/_nuxt/") || request.destination === "script" || request.destination === "style"),
+      ({ url, request }) => url.origin === self.location.origin && // Exclude the AI worker script — it's loaded via Blob URL in the plugin,
+      // but direct loads must not get the CacheFirst/offline-stub treatment either.
+      !url.pathname.endsWith("/ai-worker.js") && (url.pathname.startsWith("/_nuxt/") || request.destination === "script" || request.destination === "style"),
       async ({ event, request }) => {
         try {
           return await assetsStrategy.handle({ event, request });

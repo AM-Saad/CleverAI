@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col ">
     <div class="flex flex-wrap items-center space-x-4 gap-2">
-      <ui-subtitle>
+      <ui-subtitle color="content-on-background">
         Review Session
       </ui-subtitle>
       <div class="text-sm text-gray-600 dark:text-gray-400">

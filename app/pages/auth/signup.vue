@@ -20,7 +20,7 @@ const { handleSubmit, credentials, fieldTypes, error, success, loading } =
     <form ref="signup" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
       @submit.prevent="handleSubmit()">
       <UiTitle>Sign up</UiTitle>
-      <UiParagraph size="sm" color="muted">
+      <UiParagraph size="sm" color="disabled">
         By register you will be able to
         <strong class="font-semibold">access all the features</strong> of the
         application!

@@ -9,7 +9,8 @@ export type AITask =
   | "summarization"
   | "question-answering"
   | "text-generation"
-  | "text-to-speech";
+  | "text-to-speech"
+  | "image-to-text";
 
 // Model configuration
 export interface ModelConfig {
@@ -108,7 +109,8 @@ export type OutgoingAIMessage =
   | InferenceStartedMessage
   | InferenceCompleteMessage
   | InferenceErrorMessage
-  | WorkerReadyMessage;
+  | WorkerReadyMessage
+  | RunInferenceMessage;
 
 // ---------------- Incoming (Window -> Worker) ----------------
 

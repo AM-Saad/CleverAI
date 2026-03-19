@@ -437,6 +437,9 @@ export interface PendingNoteChange {
   localVersion: number // monotonic per note
   folderId?: string
   content?: string
+  tags?: string[]
+  noteType?: string
+  metadata?: Record<string, unknown>
   conflicted?: boolean
 }
 

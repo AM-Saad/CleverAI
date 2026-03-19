@@ -1,386 +1,421 @@
 /// <reference lib="WebWorker" />
-// TypeScript source of the AI worker. Built to public/ai-worker.js via esbuild.
-// AI Worker for Transformers.js model inference
-// Runs heavy ML computations off the main thread to keep UI responsive
-// Based on Transformers.js React tutorial pattern
-//
-// ARCHITECTURE NOTE: This worker handles ONLY text summarization tasks
-// that are too heavy for the main thread (5-30 second ONNX inference).
-// For other AI tasks (text-to-speech, etc.), see app/stores/modelDownload.ts
-// which provides main-thread AI capabilities via the useAIModel composable.
+/**
+ * AI Worker for Transformers.js model inference.
+ * Built to public/ai-worker.js via esbuild as IIFE (classic worker).
+ *
+ * Runs heavy ML computations off the main thread to keep UI responsive.
+ * Loads Transformers.js lazily from CDN on first model request.
+ *
+ * IMPORTANT: This file is self-contained — NO imports from app/ or shared/.
+ * Message type strings are inlined to avoid cross-boundary imports that
+ * break the IIFE build. Keep them in sync with app/utils/constants/pwa.ts.
+ *
+ * @see docs/AI_WORKER_ARCHITECTURE.md
+ */
 
-// IMMEDIATE DEBUG LOG - This should appear first if the worker loads at all
-console.log(
-  "🚀 [AI Worker] TOP OF FILE - Worker script loading... VERSION 2.0 - FIXED DIVISION"
-);
+// ── Inlined message types (must match AI_WORKER_MESSAGE_TYPES in pwa.ts) ──
+const MSG = {
+  LOAD_MODEL: "LOAD_MODEL",
+  MODEL_LOAD_INITIATE: "MODEL_LOAD_INITIATE",
+  MODEL_LOAD_PROGRESS: "MODEL_LOAD_PROGRESS",
+  MODEL_LOAD_DONE: "MODEL_LOAD_DONE",
+  MODEL_LOAD_COMPLETE: "MODEL_LOAD_COMPLETE",
+  MODEL_LOAD_ERROR: "MODEL_LOAD_ERROR",
+  RUN_INFERENCE: "RUN_INFERENCE",
+  INFERENCE_STARTED: "INFERENCE_STARTED",
+  INFERENCE_COMPLETE: "INFERENCE_COMPLETE",
+  INFERENCE_ERROR: "INFERENCE_ERROR",
+  UNLOAD_MODEL: "UNLOAD_MODEL",
+  WORKER_READY: "WORKER_READY",
+  SET_DEBUG: "SET_DEBUG",
+} as const;
 
-import { AI_WORKER_MESSAGE_TYPES } from "../app/utils/constants/pwa";
-import type {
-  OutgoingAIMessage,
-  IncomingAIMessage,
-  ModelConfig,
-} from "../shared/types/ai-messages";
+console.log("🚀 [AI Worker] Script loaded — VERSION 4.0 CLASSIC");
 
-// Dynamically import transformers from CDN to avoid bundling ONNX Runtime
-// We wrap this in a try-catch and notify the main thread if it fails
-let pipeline: any;
-let env: any;
+// ── Transformers.js loaded lazily on first model request ──
+let _pipeline: any = null;
+let _env: any = null;
+let _RawImage: any = null;
+let _transformersLoaded = false;
+let _transformersLoading: Promise<void> | null = null;
 
-try {
-  console.log("📦 [AI Worker] Loading Transformers.js from CDN...");
-  // @ts-expect-error - CDN import doesn't have type declarations
-  const transformers = await import(
-    "https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2"
-  );
-  pipeline = transformers.pipeline;
-  env = transformers.env;
-  console.log("✅ [AI Worker] Transformers.js loaded successfully");
-} catch (error: any) {
-  console.error("❌ [AI Worker] Failed to load Transformers.js:", error);
-  self.postMessage({
-    type: "WORKER_ERROR",
-    data: {
-      message: "Failed to load Transformers.js from CDN: " + error.message,
-      stack: error.stack,
-    },
-  });
-  throw error;
-}
-
-// Wrap the worker initialization in a try-catch
-try {
-  // Log immediately to verify worker script starts executing
-  console.log("⚙️ [AI Worker] Starting configuration...");
-
-  // Configure Transformers.js to use CDN for ONNX Runtime
-  // This avoids bundling issues with ONNX Runtime's WASM files
-  env.allowLocalModels = false;
-  env.useBrowserCache = true;
-  env.allowRemoteModels = true;
-  env.cacheDir = ".transformers-cache";
-
-  // Use CDN for ONNX Runtime to avoid bundling WASM files
-  env.backends.onnx.wasm.wasmPaths =
-    "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.14.0/dist/";
-  env.backends.onnx.wasm.numThreads = 1;
-
-  console.log("[AI Worker] Transformers.js configured");
-
-  // Debug flag
-  let DEBUG = false;
-
-  const log = (...args: any[]) => {
-    if (DEBUG) console.log("[AI Worker]", ...args);
-  };
-
-  const error = (...args: any[]) => {
-    console.error("[AI Worker]", ...args);
-  };
-
-  // Singleton pattern for model management
-  class ModelPipeline {
-    static instances = new Map<string, any>();
-
-    static async getInstance(
-      task: string,
-      modelId: string,
-      options: Record<string, any> = {},
-      progressCallback: ((progress: any) => void) | null = null
-    ) {
-      const key = `${task}:${modelId}`;
-
-      if (this.instances.has(key)) {
-        log(`Reusing cached model: ${key}`);
-        return this.instances.get(key);
-      }
-
-      log(`Loading new model: ${key}`);
-
-      try {
-        const model = await pipeline(task, modelId, {
-          ...options,
-          progress_callback: progressCallback,
-        });
-
-        this.instances.set(key, model);
-        return model;
-      } catch (err) {
-        error(`Failed to load model ${key}:`, err);
-        throw err;
-      }
-    }
-
-    static unload(task: string, modelId: string) {
-      const key = `${task}:${modelId}`;
-      if (this.instances.has(key)) {
-        const model = this.instances.get(key);
-        if (typeof model.dispose === "function") {
-          model.dispose();
-        }
-        this.instances.delete(key);
-        log(`Unloaded model: ${key}`);
-      }
-    }
-
-    static clear() {
-      this.instances.forEach((model, key) => {
-        if (typeof model.dispose === "function") {
-          model.dispose();
-        }
-        log(`Disposed model: ${key}`);
-      });
-      this.instances.clear();
-    }
+/**
+ * Lazily load Transformers.js from CDN.
+ * Only called when the first LOAD_MODEL message arrives.
+ *
+ * Uses dynamic import() which works in modern classic workers (Chrome 80+,
+ * Firefox 114+, Safari 15+) and handles the ESM build of Transformers.js.
+ * Blob URL workers can't use importScripts() cross-origin, and eval() can't
+ * handle ESM (`export` keyword), so dynamic import() is the correct approach.
+ */
+async function ensureTransformers(): Promise<void> {
+  if (_transformersLoaded) return;
+  if (_transformersLoading) {
+    await _transformersLoading;
+    return;
   }
 
-  // Track file download progress
-  const fileProgress = new Map<string, number>();
-  let totalFiles = 0;
-  let completedFiles = 0;
+  const CDN_URL =
+    "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1";
 
-  // Message handler
-  self.addEventListener(
-    "message",
-    async (event: MessageEvent<IncomingAIMessage>) => {
-      const message = event.data;
-      try {
-        switch (message.type) {
-          case AI_WORKER_MESSAGE_TYPES.SET_DEBUG:
-            DEBUG = message.value;
-            log("Debug mode:", DEBUG);
-            break;
-          case AI_WORKER_MESSAGE_TYPES.LOAD_MODEL:
-            await handleLoadModel(message.data);
-            break;
-          case AI_WORKER_MESSAGE_TYPES.RUN_INFERENCE:
-            await handleInference(message.data);
-            break;
-          case AI_WORKER_MESSAGE_TYPES.UNLOAD_MODEL:
-            handleUnloadModel(message.data);
-            break;
-          default:
-            error("Unknown message type:", message.type);
-        }
-      } catch (err) {
-        error("Message handler error:", err);
-      }
-    }
-  );
-
-  // Handle model loading
-  async function handleLoadModel(config: ModelConfig) {
-    const { task, modelId, options = {} } = config;
-
-    // Reset progress tracking
-    fileProgress.clear();
-    totalFiles = 0;
-    completedFiles = 0;
-
+  _transformersLoading = (async () => {
+    console.log("📦 [AI Worker] Loading Transformers.js from CDN via dynamic import...");
     try {
-      const progressCallback = (progress: any) => {
-        // console.log("Progress callback:", progress);
-        if (progress.status === "initiate") {
-          totalFiles++;
-          fileProgress.set(progress.file, 0);
+      // Dynamic import() works in classic workers in modern browsers and
+      // correctly handles ESM modules (which transformers.js is).
+      // @ts-expect-error — CDN import has no type declarations
+      const transformers = await import(/* webpackIgnore: true */ CDN_URL);
+      _pipeline = transformers.pipeline;
+      _env = transformers.env;
+      _RawImage = transformers.RawImage;
 
-          postMessage({
-            type: AI_WORKER_MESSAGE_TYPES.MODEL_LOAD_INITIATE,
-            data: {
-              modelId,
-              file: progress.file,
-              task,
-            },
-          });
-        } else if (progress.status === "progress") {
-          // Transformers.js sends progress as 0-100, not 0-1!
-          const percent = progress.progress ? Math.round(progress.progress) : 0;
-          fileProgress.set(progress.file, Math.min(percent, 100)); // Cap at 100%
+      if (!_pipeline) {
+        throw new Error(
+          "Transformers.js loaded but `pipeline` not found. " +
+          "Available exports: " + Object.keys(transformers).slice(0, 20).join(", ")
+        );
+      }
 
-          // Calculate average: sum of all file percentages divided by number of files we've seen
-          const sum = Array.from(fileProgress.values()).reduce(
-            (a, b) => a + b,
-            0
-          );
-          const numFiles = fileProgress.size; // Use actual files in Map, not totalFiles
-          const avgProgress =
-            numFiles > 0 ? Math.min(Math.round(sum / numFiles), 100) : 0;
+      console.log("📦 [AI Worker] Loaded via dynamic import()");
 
-          postMessage({
-            type: AI_WORKER_MESSAGE_TYPES.MODEL_LOAD_PROGRESS,
-            data: {
-              modelId,
-              file: progress.file,
-              progress: avgProgress,
-              loaded: progress.loaded,
-              total: progress.total,
-            },
-          });
-        } else if (progress.status === "done") {
-          fileProgress.set(progress.file, 100);
-          completedFiles++;
+      // Configure Transformers.js v3
+      _env.allowLocalModels = false;
+      _env.useBrowserCache = true;
+      _env.allowRemoteModels = true;
+      _env.cacheDir = ".transformers-cache";
 
-          postMessage({
-            type: AI_WORKER_MESSAGE_TYPES.MODEL_LOAD_DONE,
-            data: {
-              modelId,
-              file: progress.file,
-            },
-          });
-        }
-      };
+      // Transformers.js v3 bundles its own ONNX Runtime Web — no manual WASM paths needed.
 
-      await ModelPipeline.getInstance(task, modelId, options, progressCallback);
-
-      postMessage({
-        type: AI_WORKER_MESSAGE_TYPES.MODEL_LOAD_COMPLETE,
-        data: {
-          modelId,
-          task,
-        },
-      });
+      _transformersLoaded = true;
+      console.log("✅ [AI Worker] Transformers.js loaded & configured");
     } catch (err: any) {
-      postMessage({
-        type: AI_WORKER_MESSAGE_TYPES.MODEL_LOAD_ERROR,
-        data: {
-          modelId,
-          error: err.message || "Unknown error",
-        },
-      });
-    }
-  }
-
-  // Handle inference
-  async function handleInference(data: any) {
-    const { requestId, modelId, task, input, options = {} } = data;
-
-    try {
-      postMessage({
-        type: AI_WORKER_MESSAGE_TYPES.INFERENCE_STARTED,
-        data: {
-          requestId,
-          task,
-        },
-      });
-
-      // Get the model (will load if not cached)
-      const model = await ModelPipeline.getInstance(task, modelId, {
-        quantized: true,
-        device: "wasm",
-      });
-
-      // Run inference
-      const result = await model(input, options);
-
-      // For TTS, convert the audio output to transferable format
-      let processedResult = result;
-      if (task === "text-to-speech" && result?.audio) {
-        // The audio is a Float32Array - convert to regular array for postMessage
-        processedResult = {
-          audio: Array.from(result.audio),
-          sampling_rate: result.sampling_rate,
-        };
-      }
-      postMessage({
-        type: AI_WORKER_MESSAGE_TYPES.INFERENCE_COMPLETE,
-        data: {
-          requestId,
-          result: processedResult,
-        },
-      });
-    } catch (err: any) {
-      error("Inference error:", err);
-      postMessage({
-        type: AI_WORKER_MESSAGE_TYPES.INFERENCE_ERROR,
-        data: {
-          requestId,
-          error: err.message || "Inference failed",
-        },
-      });
-    }
-  }
-
-  // Handle model unloading
-  function handleUnloadModel(data: any) {
-    const { modelId } = data;
-    // Extract task from modelId if needed, or unload all variants
-    // For simplicity, we'll clear all instances with this modelId
-    ModelPipeline.instances.forEach((_, key) => {
-      if (key.includes(modelId)) {
-        const [task] = key.split(":");
-        ModelPipeline.unload(task, modelId);
-      }
-    });
-  }
-
-  // Global error handler for unhandled errors in worker
-  self.addEventListener("error", (event: ErrorEvent) => {
-    error("Unhandled error in worker:", event.error || event.message);
-
-    // Try to notify the main thread about the error
-    try {
-      postMessage({
+      console.error("❌ [AI Worker] Failed to load Transformers.js:", err);
+      self.postMessage({
         type: "WORKER_ERROR",
         data: {
-          message: event.message || "Unknown error",
-          stack: event.error?.stack,
+          message: "Failed to load Transformers.js: " + (err.message || err),
+          stack: err.stack,
         },
       });
-    } catch (e) {
-      console.error("Failed to send error message to main thread:", e);
+      _transformersLoading = null; // allow retry
+      throw err;
     }
+  })();
 
-    event.preventDefault(); // Prevent the error from bubbling to the browser
+  await _transformersLoading;
+}
+
+// ── Debug ──
+let DEBUG = false;
+const log = (...args: any[]) => {
+  if (DEBUG) console.log("[AI Worker]", ...args);
+};
+const logError = (...args: any[]) => {
+  console.error("[AI Worker]", ...args);
+};
+
+// ── Model singleton cache ──
+const modelInstances = new Map<string, any>();
+
+async function getModel(
+  task: string,
+  modelId: string,
+  options: Record<string, any> = {},
+  progressCb: ((p: any) => void) | null = null
+): Promise<any> {
+  const key = `${task}:${modelId}`;
+  if (modelInstances.has(key)) {
+    log("Reusing cached model:", key);
+    return modelInstances.get(key);
+  }
+  log("Loading new model:", key);
+
+  await ensureTransformers();
+
+  const model = await _pipeline(task, modelId, {
+    ...options,
+    progress_callback: progressCb,
   });
+  modelInstances.set(key, model);
+  return model;
+}
 
-  // Global handler for unhandled promise rejections
-  self.addEventListener(
-    "unhandledrejection",
-    (event: PromiseRejectionEvent) => {
-      error("Unhandled promise rejection in worker:", event.reason);
+function unloadModel(modelId: string): void {
+  modelInstances.forEach((model, key) => {
+    if (key.includes(modelId)) {
+      if (typeof model.dispose === "function") model.dispose();
+      modelInstances.delete(key);
+      log("Unloaded:", key);
+    }
+  });
+}
 
-      // Try to notify the main thread
-      try {
-        postMessage({
-          type: "WORKER_ERROR",
+// ── Progress tracking ──
+const fileProgress = new Map<string, number>();
+let completedFiles = 0;
+
+// ── Message handler ──
+self.addEventListener("message", async (event: MessageEvent) => {
+  const message = event.data;
+  try {
+    switch (message.type) {
+      case MSG.SET_DEBUG:
+        DEBUG = message.value;
+        log("Debug mode:", DEBUG);
+        break;
+      case MSG.LOAD_MODEL:
+        await handleLoadModel(message.data);
+        break;
+      case MSG.RUN_INFERENCE:
+        await handleInference(message.data);
+        break;
+      case MSG.UNLOAD_MODEL:
+        unloadModel(message.data.modelId);
+        break;
+      default:
+        logError("Unknown message type:", message.type);
+    }
+  } catch (err) {
+    logError("Message handler error:", err);
+  }
+});
+
+async function handleLoadModel(config: any): Promise<void> {
+  const { task, modelId, options = {} } = config;
+  fileProgress.clear();
+  completedFiles = 0;
+
+  try {
+    const progressCallback = (progress: any) => {
+      if (progress.status === "initiate") {
+        fileProgress.set(progress.file, 0);
+        self.postMessage({
+          type: MSG.MODEL_LOAD_INITIATE,
+          data: { modelId, file: progress.file, task },
+        });
+      } else if (progress.status === "progress") {
+        const percent = progress.progress ? Math.round(progress.progress) : 0;
+        fileProgress.set(progress.file, Math.min(percent, 100));
+
+        const sum = Array.from(fileProgress.values()).reduce((a, b) => a + b, 0);
+        const avg =
+          fileProgress.size > 0
+            ? Math.min(Math.round(sum / fileProgress.size), 100)
+            : 0;
+
+        self.postMessage({
+          type: MSG.MODEL_LOAD_PROGRESS,
           data: {
-            message:
-              "Promise rejection: " + (event.reason?.message || event.reason),
-            stack: event.reason?.stack,
+            modelId,
+            file: progress.file,
+            progress: avg,
+            loaded: progress.loaded,
+            total: progress.total,
           },
         });
-      } catch (e) {
-        console.error("Failed to send rejection message to main thread:", e);
+      } else if (progress.status === "done") {
+        fileProgress.set(progress.file, 100);
+        completedFiles++;
+        self.postMessage({
+          type: MSG.MODEL_LOAD_DONE,
+          data: { modelId, file: progress.file },
+        });
       }
+    };
 
-      event.preventDefault();
-    }
-  );
+    // VisionEncoderDecoder models (latex OCR) need full-precision fp32
+    const isLatexModel = modelId.includes('latex') || modelId.includes('nougat') || modelId.includes('TexTeller') || modelId.includes('chandra');
+    const modelOptions = {
+      ...options,
+      quantized: isLatexModel ? false : (options.quantized ?? true),
+      dtype: isLatexModel ? 'fp32' : (options.dtype ?? undefined),
+      device: options.device ?? "wasm",
+    };
+    await getModel(task, modelId, modelOptions, progressCallback);
 
-  // Notify that worker is ready
-  try {
-    postMessage({
-      type: AI_WORKER_MESSAGE_TYPES.WORKER_READY,
+    self.postMessage({
+      type: MSG.MODEL_LOAD_COMPLETE,
+      data: { modelId, task },
     });
-    log("AI Worker initialized and ready");
   } catch (err: any) {
-    error("Failed to send WORKER_READY message:", err);
-    throw err;
-  }
-} catch (initError: any) {
-  // Catch any top-level initialization errors
-  console.error("[AI Worker] Initialization failed:", initError);
-
-  // Try to send error to main thread
-  try {
-    postMessage({
-      type: "WORKER_ERROR",
-      data: {
-        message:
-          "Worker initialization failed: " + (initError?.message || initError),
-        stack: initError?.stack,
-      },
+    self.postMessage({
+      type: MSG.MODEL_LOAD_ERROR,
+      data: { modelId, error: err.message || "Unknown error" },
     });
-  } catch (e) {
-    console.error("[AI Worker] Could not send init error to main thread:", e);
   }
 }
+
+async function handleInference(data: any): Promise<void> {
+  const { requestId, modelId, task, input, options = {} } = data;
+
+  try {
+    self.postMessage({
+      type: MSG.INFERENCE_STARTED,
+      data: { requestId, task },
+    });
+
+    // VisionEncoderDecoder models (latex OCR) need full-precision fp32
+    const isLatexModel = modelId.includes('latex') || modelId.includes('nougat') || modelId.includes('TexTeller') || modelId.includes('chandra');
+    const model = await getModel(task, modelId, {
+      quantized: isLatexModel ? false : true,
+      dtype: isLatexModel ? 'fp32' : undefined,
+    });
+
+    // Pre-process input based on task
+    let processedInput = input;
+    if (task === "image-to-text") {
+      // Input arrives as a Uint8Array via structured clone from postMessage.
+      // Cross-realm instanceof checks (e.g. `input instanceof Uint8Array`,
+      // `input instanceof Blob`) FAIL in Blob URL workers because each
+      // realm has its own constructor identity.
+      //
+      // Transformers.js RawImage.read() only accepts:
+      //   string | URL | Blob | HTMLCanvasElement | OffscreenCanvas | RawImage
+      // and its own `instanceof Blob` check also fails cross-realm.
+      //
+      // SOLUTION: Convert raw bytes → Blob → Object URL (a plain string).
+      // Transformers.js reliably handles strings via fromURL → fetch → blob,
+      // all within its own realm, so no cross-realm instanceof issues.
+      if (typeof input === "string") {
+        // Already a URL string — pass through
+        processedInput = input;
+      } else {
+        // Convert whatever byte-like input we received into a Uint8Array
+        let bytes: Uint8Array;
+        if (ArrayBuffer.isView(input)) {
+          bytes = new Uint8Array(input.buffer, input.byteOffset, input.byteLength);
+        } else if (input instanceof ArrayBuffer) {
+          bytes = new Uint8Array(input);
+        } else if (input?.buffer || input?.byteLength !== undefined) {
+          // Duck-typed cross-realm typed array
+          bytes = new Uint8Array(input.buffer || input);
+        } else if (input && typeof input === "object") {
+          // Last resort: plain object with numeric indices (structured clone artefact)
+          const values = Object.values(input) as number[];
+          bytes = new Uint8Array(values);
+        } else {
+          throw new Error(
+            `Cannot convert input to image. Type: ${typeof input}, ` +
+            `constructor: ${input?.constructor?.name}, ` +
+            `keys: ${Object.keys(input || {}).slice(0, 5).join(",")}`
+          );
+        }
+        // Create an Object URL — a plain string that Transformers.js can fetch
+        const blob = new Blob([bytes], { type: "image/png" });
+        const objectUrl = URL.createObjectURL(blob);
+        log("Created Object URL for image input:", objectUrl, "from", bytes.length, "bytes");
+
+        // TexTeller3 expects grayscale (1 channel) but canvas exports RGBA (4 channels).
+        // Use RawImage to load, convert to grayscale, and boost contrast so thin
+        // handwriting strokes are high-contrast against the white background.
+        if (_RawImage) {
+          const rawImg = await _RawImage.fromURL(objectUrl);
+          URL.revokeObjectURL(objectUrl);
+          const grayImg = rawImg.grayscale();
+
+          // ── Contrast normalization (min-max stretch to 0-255) ──
+          // This ensures thin pen strokes (faint gray) are pushed to solid
+          // black, while the white background stays white.
+          const pixelData = grayImg.data; // Uint8Array of pixel values
+          let pMin = 255;
+          let pMax = 0;
+          for (let i = 0; i < pixelData.length; i++) {
+            if (pixelData[i] < pMin) pMin = pixelData[i];
+            if (pixelData[i] > pMax) pMax = pixelData[i];
+          }
+          const range = pMax - pMin || 1; // avoid division by zero
+          for (let i = 0; i < pixelData.length; i++) {
+            pixelData[i] = Math.round(((pixelData[i] - pMin) / range) * 255);
+          }
+          log("Contrast normalized: min=", pMin, "max=", pMax, "range=", range);
+
+          processedInput = grayImg;
+          log("Converted image to grayscale:", processedInput.width, "x", processedInput.height, "channels:", processedInput.channels);
+        } else {
+          processedInput = objectUrl;
+        }
+      }
+    }
+
+    // Run inference
+    const result = await model(processedInput, options);
+    log("Raw inference result:", JSON.stringify(result, null, 2).slice(0, 500));
+
+    // Clean up Object URL to prevent memory leaks
+    if (typeof processedInput === "string" && processedInput.startsWith("blob:")) {
+      URL.revokeObjectURL(processedInput);
+    }
+
+    // Post-process output based on task
+    let processedResult = result;
+    if (task === "text-to-speech" && result?.audio) {
+      processedResult = {
+        audio: Array.from(result.audio),
+        sampling_rate: result.sampling_rate,
+      };
+    } else if (task === "image-to-text") {
+      // Handle various output formats from different models
+      let text: string = "";
+      if (Array.isArray(result) && result.length > 0) {
+        const first = result[0];
+        text = typeof first === "string" ? first : (first?.generated_text ?? "");
+      } else if (typeof result === "string") {
+        text = result;
+      } else if (result?.generated_text) {
+        text = typeof result.generated_text === "string"
+          ? result.generated_text
+          : JSON.stringify(result.generated_text);
+      }
+      log("Extracted text:", text.slice(0, 200));
+      processedResult = { generated_text: text };
+    }
+
+    self.postMessage({
+      type: MSG.INFERENCE_COMPLETE,
+      data: { requestId, result: processedResult },
+    });
+  } catch (err: any) {
+    logError("Inference error:", err);
+    self.postMessage({
+      type: MSG.INFERENCE_ERROR,
+      data: { requestId, error: err.message || "Inference failed" },
+    });
+  }
+}
+
+// ── Global error handlers ──
+self.addEventListener("error", (event: ErrorEvent) => {
+  logError("Unhandled error:", event.error || event.message);
+  try {
+    self.postMessage({
+      type: "WORKER_ERROR",
+      data: {
+        message: event.message || "Unknown error",
+        stack: event.error?.stack,
+      },
+    });
+  } catch (_) {
+    // Swallow — can't communicate with main thread
+  }
+  event.preventDefault();
+});
+
+self.addEventListener("unhandledrejection", (event: PromiseRejectionEvent) => {
+  logError("Unhandled rejection:", event.reason);
+  try {
+    self.postMessage({
+      type: "WORKER_ERROR",
+      data: {
+        message: "Promise rejection: " + (event.reason?.message || event.reason),
+        stack: event.reason?.stack,
+      },
+    });
+  } catch (_) {
+    // Swallow
+  }
+  event.preventDefault();
+});
+
+// ── Signal ready immediately — Transformers.js loads lazily on first use ──
+self.postMessage({ type: MSG.WORKER_READY });
+console.log("✅ [AI Worker] Ready (Transformers.js will load on first model request)");

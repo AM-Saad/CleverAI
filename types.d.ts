@@ -1,8 +1,11 @@
+import type { OutgoingAIMessage } from "@@/shared/types/ai-messages";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare module "web-push"
 declare module "nuxt-auth"
 declare module "socket.io-client"
 declare module "bcryptjs"
+
 // Workbox ESM shims for SW bundling
 declare module 'workbox-core'
 // Minimal shims for Workbox packages to satisfy TS when bundling in SW
@@ -37,3 +40,26 @@ declare interface Blob {
   chunks: BlobPart[]
   name: string
 }
+
+// Nuxt plugin injections
+declare module '#app' {
+  interface NuxtApp {
+    $aiWorker: {
+      postMessage: (message: OutgoingAIMessage) => void;
+      terminate: () => void;
+      ready: boolean;
+    };
+  }
+}
+
+declare module 'vue' {
+  interface ComponentCustomProperties {
+    $aiWorker: {
+      postMessage: (message: OutgoingAIMessage) => void;
+      terminate: () => void;
+      ready: boolean;
+    };
+  }
+}
+
+export { };

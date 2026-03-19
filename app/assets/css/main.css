@@ -8,30 +8,35 @@
 @theme static {
   --font-sans: "";
 
-  /* ==== Brand Colors ==== */
-  /* Primary brand #ffa45c - main actions and highlights */
+
+  /* ==== Brand (Primary) Colors ==== */
   --color-primary: #384998;
-  --color-primary-light: #ffcdab;
-
-  /* --color-light: #fffbf4; */
-  /* --color-light: #fffcf9;
-  --color-neutral: #e3e6eb;
-  --color-muted: #4a4b4d;
-  --color-dark: #3e3e3f; */
-
   --color-on-primary: #ffffff;
-  --color-surface:#f2f2f2 ;
-  /* --color-surface:#f3f3f2 ; */
-  --color-on-surface:#575252;
   --color-secondary:#e7e9ec;
-  --color-background:#fafafa;
-  --color-on-background: #333;
+
 
   /* Semantic colors for feedback */
   --color-success: #10b981;
   --color-warning: #f59e0b;
   --color-error: #ef4444;
-  --color-info: #00c7f4;
+  --color-info: #00c7e4;
+
+
+  /* Surface colors */
+  --color-surface:#f2f2f2 ;
+  --color-background:#fafafa;
+  --color-surface-subtle: #F1F3F5;
+  --color-surface-strong: #e0e0e0;
+
+
+  /* Content colors */
+  --color-content-secondary: #6B7280;
+  --color-content-disabled: #9CA3AF;
+  --color-content-on-surface:#575252;  
+  --color-content-on-surface-strong: #333;
+  --color-content-on-background: #333;
+
+
 
   --radius-sm: 0.125rem;
   --radius-md: 0.25rem;

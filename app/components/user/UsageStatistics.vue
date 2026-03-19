@@ -68,7 +68,7 @@
 
                 </thead>
 
-                <tbody class=" dark:text-on-surface">
+                <tbody class=" dark:text-content-on-surface">
 
                   <tr v-for="(feature, idx) in llmUsage.byFeature" :key="feature.name"
                     :class="`${idx !== llmUsage.byFeature.length - 1 ? 'border-b border-secondary' : ''}`">
@@ -106,7 +106,7 @@
 
                 </thead>
 
-                <tbody class=" dark:text-on-surface">
+                <tbody class=" dark:text-content-on-surface">
 
                   <tr v-for="(model, idx) in llmUsage.byModel" :key="model.name"
                     :class="`${idx !== llmUsage.byModel.length - 1 ? 'border-b border-secondary' : ''}`">
@@ -147,7 +147,7 @@
 
                 </thead>
 
-                <tbody class=" dark:text-on-surface">
+                <tbody class=" dark:text-content-on-surface">
 
                   <tr v-for="(usage, idx) in llmUsage.recentUsage" :key="usage.id"
                     :class="`${idx !== llmUsage.recentUsage.length - 1 ? 'border-b border-secondary' : ''}`">

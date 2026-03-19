@@ -16,7 +16,7 @@ interface NotesStore {
   notes: Ref<Map<string, NoteState>>;
   loadingStates: Ref<Map<string, boolean>>;
   filteredNoteIds: Ref<Set<string> | null>;
-  createNote: (content: string, tags?: string[]) => Promise<string | null>;
+  createNote: (content: string, tags?: string[], noteType?: string, metadata?: Record<string, unknown>) => Promise<string | null>;
   updateNote: (id: string, updatedNote: NoteState) => Promise<boolean>;
   deleteNote: (id: string) => Promise<boolean>;
   reorderNotes: (reorderedNotes: NoteState[]) => Promise<boolean>;
@@ -197,6 +197,8 @@ export function useNotesStore(folderId: string): NotesStore {
           folderId: note.folderId,
           content,
           tags: note.tags,
+          noteType: (note as any).noteType,
+          metadata: (note as any).metadata,
         });
         // Register Background Sync to attempt sync when back online
         await registerNotesSync();
@@ -214,10 +216,45 @@ export function useNotesStore(folderId: string): NotesStore {
         return true;
       }
 
-      // Attempt to submit to server
+      // If this is a temp note (created offline or not yet synced), create it on server instead
+      if (id.startsWith("temp-")) {
+        const createResult: Result<Note, APIError> = await $api.notes.create({
+          folderId: note.folderId,
+          content,
+          tags: note.tags || [],
+          noteType: (note as any).noteType || "TEXT",
+          metadata: (note as any).metadata,
+        });
+
+        if (createResult.success) {
+          // Remove temp note and add server note
+          notes.value.delete(id);
+          await deleteNoteFromIndexedDB(id);
+
+          const serverNote: NoteState = {
+            ...createResult.data,
+            isLoading: false,
+            isDirty: false,
+            lastSaved: new Date(),
+            error: null,
+          };
+          notes.value.set(createResult.data.id, serverNote);
+          await saveNoteToIndexedDB(serverNote);
+          return true;
+        } else {
+          console.error("Server rejected temp note creation:", createResult.error);
+          note.isLoading = false;
+          note.error = "Failed to sync note to server";
+          return false;
+        }
+      }
+
+      // Attempt to submit to server (normal update for real IDs)
       const result: Result<Note, APIError> = await $api.notes.update(id, {
         content,
         tags: note.tags,
+        ...((note as any).noteType && { noteType: (note as any).noteType }),
+        ...((note as any).metadata && { metadata: (note as any).metadata }),
       });
 
       if (result.success) {
@@ -247,6 +284,8 @@ export function useNotesStore(folderId: string): NotesStore {
           folderId: note.folderId,
           content,
           tags: note.tags,
+          noteType: (note as any).noteType,
+          metadata: (note as any).metadata,
         });
         // Register Background Sync to attempt sync when back online
         await registerNotesSync();
@@ -291,7 +330,9 @@ export function useNotesStore(folderId: string): NotesStore {
   // Create a new note - simple optimistic approach
   const createNote = async (
     content: string,
-    tags: string[] = []
+    tags: string[] = [],
+    noteType: string = "TEXT",
+    metadata?: Record<string, unknown>
   ): Promise<string | null> => {
     const tempId = `temp-${Date.now()}`;
 
@@ -302,6 +343,8 @@ export function useNotesStore(folderId: string): NotesStore {
       content,
       tags,
       order: notes.value.size, // Add to end of list
+      noteType,
+      metadata,
       createdAt: new Date(),
       updatedAt: new Date(),
       isLoading: true,
@@ -323,6 +366,8 @@ export function useNotesStore(folderId: string): NotesStore {
         folderId,
         content,
         tags,
+        noteType,
+        metadata,
       });
       await registerNotesSync();
 
@@ -349,6 +394,8 @@ export function useNotesStore(folderId: string): NotesStore {
         folderId,
         content,
         tags,
+        noteType,
+        metadata,
       });
 
       if (result.success) {
@@ -399,6 +446,8 @@ export function useNotesStore(folderId: string): NotesStore {
           folderId: optimisticNote.folderId || undefined,
           content,
           tags,
+          noteType,
+          metadata,
         });
         await registerNotesSync();
 

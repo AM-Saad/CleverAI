@@ -18,7 +18,7 @@
         <!-- Draft/Enrollment status indicators -->
         <div class="absolute top-1 right-2 flex items-center gap-2">
           <!-- Draft badge -->
-          <u-badge v-if="q.status === 'DRAFT'" color="orange" variant="subtle" size="xs">
+          <u-badge v-if="q.status === 'DRAFT'" color="secondary" variant="subtle" size="xs">
             Draft
           </u-badge>
           <!-- Enrolled badge -->
@@ -36,13 +36,13 @@
 
         <u-collapsible class="flex flex-col min-h-0">
 
-          <ui-paragraph size="xs" class="font-medium mb-2 text-wrap mr-12 cursor-pointer">
+          <ui-paragraph size="xs" color="disabled" class="font-medium mb-2 text-wrap mr-12 cursor-pointer">
             {{ idx + 1 }}. {{ q.question }}</ui-paragraph>
           <template #content>
 
             <ul class="list-disc ml-3 space-y-2">
               <ui-paragraph size="xs" class="text-wrap" v-for="(choice, cIdx) in q.choices" :key="cIdx"
-                :color="cIdx === q.answerIndex ? 'success' : 'onsurface'" tag="li">
+                :color="cIdx === q.answerIndex ? 'success' : 'content-on-surface'" tag="li">
                 {{ choice }}
               </ui-paragraph>
             </ul>

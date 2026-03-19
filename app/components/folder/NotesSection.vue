@@ -3,6 +3,7 @@ import type { NoteState } from "~/composables/folders/useNotesStore";
 import { useNotesStore } from "~/composables/folders/useNotesStore";
 import { APIError } from "~/services/FetchFactory";
 import { ReorderGroup, ReorderItem } from "motion-v";
+import type { MathNoteMetadata } from "@@/shared/utils/note.contract";
 
 const route = useRoute();
 const folderId = route.params.id as string;
@@ -171,8 +172,8 @@ watch(
 );
 
 // Create a new note (optimistic)
-const createNewNote = async () => {
-  const noteId = await notesStore.createNote("");
+const createNewNote = async (noteType: string = "TEXT") => {
+  const noteId = await notesStore.createNote("", [], noteType);
 
   if (noteId) {
     currentNoteId.value = noteId;
@@ -195,6 +196,21 @@ const handleUpdateNote = async (id: string, text: string) => {
   };
 
   // Save to IndexedDB immediately for persistence
+  await saveNoteToIndexedDB(updatedNote);
+  await notesStore.updateNote(id, updatedNote);
+};
+
+// Update math note metadata
+const handleMathUpdate = async (id: string, metadata: MathNoteMetadata) => {
+  const note = notesStore.getNote(id);
+  if (!note) return;
+  const updatedNote: NoteState = {
+    ...note,
+    metadata: metadata as unknown as Record<string, unknown>,
+    content: metadata.lines.map((l) => `${l.latex} = ${l.result ?? "?"}`).join("\n"),
+    isDirty: true,
+    updatedAt: new Date(),
+  };
   await saveNoteToIndexedDB(updatedNote);
   await notesStore.updateNote(id, updatedNote);
 };
@@ -255,9 +271,13 @@ onMounted(async () => {
         Notes
         <ui-label v-if="notes?.length"> ( {{ notes.length }} ) </ui-label>
       </div>
-      <u-button size="sm" color="primary" variant="ghost" @click="createNewNote">
+      <u-button size="sm" color="primary" variant="ghost" @click="createNewNote('TEXT')">
         <u-icon name="i-heroicons-plus" />
         New Note
+      </u-button>
+      <u-button size="sm" color="primary" variant="ghost" @click="createNewNote('MATH')">
+        <u-icon name="i-heroicons-calculator" />
+        Math Note
       </u-button>
     </template>
     <template #default>
@@ -269,7 +289,7 @@ onMounted(async () => {
 
       <!-- Empty state -->
       <shared-empty-state v-if="!error && !isFetching && !notes?.length" title="No Notes."
-        button-text="Create First Note" :center-description="true" @action="createNewNote">
+        button-text="Create First Note" :center-description="true" @action="createNewNote('TEXT')">
         <template #description>
           Create your first note to capture important <br />thoughts and ideas
           for this folder.
@@ -303,11 +323,12 @@ onMounted(async () => {
                     <icon name="i-lucide-loader" class="w-4 h-4 animate-spin" />
                   </div>
                   <ui-paragraph size="xs" class="truncate">
+                    <span v-if="note.noteType === 'MATH'" class="mr-1 text-indigo-500">∑</span>
                     {{
                       note.content
                         .replace(/<[^>]*>/g, "")
                         .trim()
-                        .slice(0, 30) || "Empty note"
+                        .slice(0, 30) || (note.noteType === 'MATH' ? 'Math note' : 'Empty note')
                     }}
                   </ui-paragraph>
                 </ReorderItem>
@@ -316,7 +337,11 @@ onMounted(async () => {
           </div>
         </ui-drawer>
 
-        <UiStickyNote v-if="notesStore.getNote(currentNoteId!)" :note="notesStore.getNote(currentNoteId!)!"
+        <folder-math-note-editor v-if="notesStore.getNote(currentNoteId!)?.noteType === 'MATH'"
+          :note-id="currentNoteId!"
+          :initial-metadata="(notesStore.getNote(currentNoteId!)?.metadata as MathNoteMetadata | undefined)"
+          @update="(meta: MathNoteMetadata) => handleMathUpdate(currentNoteId!, meta)" />
+        <UiStickyNote v-else-if="notesStore.getNote(currentNoteId!)" :note="notesStore.getNote(currentNoteId!)!"
           :delete-note="deleteNote" size="lg" @update="handleUpdateNote" @retry="handleRetry"
           @toggle-fullscreen="fullscreen.toggle" placeholder="Double-click to add your note..."
           @add-to-material="emit('add-to-material', $event)" />

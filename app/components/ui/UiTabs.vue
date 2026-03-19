@@ -37,7 +37,7 @@ const props = defineProps({
   inactiveClass: {
     type: String,
     default:
-      "border-transparent text-on-surface  hover:border-gray-300 font-light!",
+      "border-transparent text-content-on-surface  hover:border-gray-300 font-light!",
   },
   buttonBaseClass: {
     type: String,

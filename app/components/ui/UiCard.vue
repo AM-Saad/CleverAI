@@ -6,7 +6,7 @@
     hoverClasses[hover],
     className,
   ]">
-    <div v-if="$slots.header" :class="['flex items-center justify-between text-on-surface', headerSizesClasses[size], headerStyle[variant],
+    <div v-if="$slots.header" :class="['flex items-center justify-between text-content-on-surface', headerSizesClasses[size], headerStyle[variant],
       sizeClasses[size],
     ]">
       <slot name="header" />

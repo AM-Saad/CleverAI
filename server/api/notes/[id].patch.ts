@@ -76,6 +76,8 @@ export default defineEventHandler(async (event) => {
         data: {
           content: data.content,
           tags: data.tags,
+          ...(data.noteType !== undefined && { noteType: data.noteType }),
+          ...(data.metadata !== undefined && { metadata: data.metadata }),
         },
       })
     );

@@ -42,6 +42,8 @@ export default defineEventHandler(async (event) => {
       content: data.content,
       tags: data.tags || [],
       order: nextOrder,
+      noteType: data.noteType ?? "TEXT",
+      // metadata: data.metadata ?? undefined,
     },
   });
 

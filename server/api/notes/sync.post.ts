@@ -103,6 +103,8 @@ export default defineEventHandler(async (event) => {
                 type: "BOARD",
                 content: change.content || "",
                 tags: change.tags || [],
+                noteType: change.noteType ?? "TEXT",
+                metadata: change.metadata ?? undefined,
               },
             });
           } else {
@@ -111,6 +113,8 @@ export default defineEventHandler(async (event) => {
                 folderId: change.folderId!,
                 type: "FOLDER",
                 content: change.content || "",
+                noteType: change.noteType ?? "TEXT",
+                metadata: change.metadata ?? undefined,
               },
             });
           }
@@ -125,6 +129,8 @@ export default defineEventHandler(async (event) => {
                 type: "BOARD",
                 content: change.content || "",
                 tags: change.tags || [],
+                noteType: change.noteType ?? "TEXT",
+                metadata: change.metadata ?? undefined,
               },
             });
           } else {
@@ -134,6 +140,8 @@ export default defineEventHandler(async (event) => {
                 folderId: change.folderId!,
                 type: "FOLDER",
                 content: change.content || "",
+                noteType: change.noteType ?? "TEXT",
+                metadata: change.metadata ?? undefined,
               },
             });
           }
@@ -169,6 +177,8 @@ export default defineEventHandler(async (event) => {
           data: {
             content: change.content ?? existing.content,
             tags: change.tags ?? existing.tags,
+            ...(change.noteType !== undefined && { noteType: change.noteType }),
+            ...(change.metadata !== undefined && { metadata: change.metadata }),
           },
         });
         applied.push(change.id);

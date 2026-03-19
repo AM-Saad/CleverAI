@@ -150,7 +150,7 @@ onBeforeUnmount(() => {
 <template>
   <shared-page-wrapper id="folder-page" :title="`${folder?.title || '....'}`" :is-page-loading="loading">
     <template #header-info-leading>
-      <NuxtLink to="/folders" class="text-xs text-onbackground flex items-center gap-1">
+      <NuxtLink to="/folders" class="text-xs text-content-on-background flex items-center gap-1">
         <u-icon name="i-heroicons-chevron-left" class="-ml-1" />
         Back to Folders
       </NuxtLink>

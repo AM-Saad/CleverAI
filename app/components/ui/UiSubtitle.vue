@@ -27,7 +27,7 @@ interface Props {
   /**
    * Text color variant
    */
-  color?: "primary" | "onsurface" | "onbackground" | "white" | "danger" | 'success';
+  color?: "primary" | "content-on-surface" | "content-on-surface-strong" | "content-on-background" | "white" | "danger" | 'success' | 'disabled';
   /**
    * Center alignment
    */
@@ -38,7 +38,7 @@ const {
   tag = "h3",
   size = "lg",
   weight = "medium",
-  color = "onsurface",
+  color = "content-on-surface",
   center = false,
 } = defineProps<Props>();
 
@@ -61,12 +61,13 @@ const weightClasses = {
 
 const colorClasses = {
   primary: "text-[color:var(--color-primary)]",
-  onsurface: "text-on-surface",
-  onbackground: 'text-on-background',
+  "content-on-surface": "text-content-on-surface",
+  "content-on-surface-strong": "text-content-on-surface-strong",
+  "content-on-background": "text-content-on-background",
   white: "text-white",
   danger: "text-[color:var(--color-error)]",
   success: "text-success",
-
+  disabled: "text-[color:var(--color-content-disabled)]",
 };
 </script>
 

@@ -212,6 +212,8 @@ function stopSpeaking() {
   isSpeaking.value = false;
 }
 
+
+
 // ---------- AI Summarization Integration ----------
 const {
   startSummarization,
@@ -289,6 +291,20 @@ const contextMenuItems = computed(() => {
       icon: isSpeaking.value ? 'i-lucide-volume-x' : ttsError.value ? 'i-lucide-alert-circle' : 'i-lucide-volume-2',
       disabled: !hasSelection || !ttsAvailable.value,
       onSelect: isSpeaking.value ? stopSpeaking : handleReadAloud,
+    },
+    {
+      label: isSummarizing.value
+        ? 'Summarizing...'
+        : isDownloading.value
+          ? 'Downloading Model...'
+          : 'Summarize Text',
+      icon: isSummarizing.value
+        ? 'i-lucide-loader'
+        : isDownloading.value
+          ? 'i-lucide-download'
+          : 'i-lucide-sparkles',
+      disabled: !hasSelection || isSummarizing.value || isDownloading.value,
+      onSelect: handleSummarize,
     },
     {
       label: isSummarizing.value

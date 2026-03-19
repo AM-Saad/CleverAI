@@ -10,7 +10,7 @@
           Learning Hub
           <u-tooltip
             text="Upload New Material, or select part of the text from your note to create a study material that you can generate flashcard, and question from it to feed the Spaced Repetition Engine">
-            <icon name="i-lucide-info" :size="UI_CONFIG.ICON_SIZE" class="text-on-background" />
+            <icon name="i-lucide-info" :size="UI_CONFIG.ICON_SIZE" class="text-content-on-background" />
           </u-tooltip>
         </div>
         <u-button variant="outline" size="sm" :aria-expanded="showUpload" aria-controls="upload-materials"
@@ -25,7 +25,8 @@
           <ui-card class="shrink-0 max-h-[30%]" size="sm" variant="outline"
             content-classes="flex flex-col min-h-0 overflow-hidden">
             <u-collapsible class="flex flex-col min-h-0">
-              <ui-subtitle class="flex items-center gap-1 select-none cursor-pointer " size="sm" color="onbackground">
+              <ui-subtitle class="flex items-center gap-1 select-none cursor-pointer " size="sm"
+                color="content-on-background">
                 <div v-if="updating" class="flex items-center gap-1 text-primary">
                   <icon name="i-lucide-loader" class="w-4 h-4 animate-spin" />
                 </div>

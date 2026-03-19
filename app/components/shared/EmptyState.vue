@@ -7,7 +7,7 @@
       </ui-subtitle>
     </div>
 
-    <ui-paragraph color="muted" size="xs" :center="centerDescription">
+    <ui-paragraph color="disabled" size="xs" :center="centerDescription">
       <slot name="description">
         {{ description }}
       </slot>

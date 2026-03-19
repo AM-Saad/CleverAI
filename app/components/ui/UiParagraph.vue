@@ -25,7 +25,7 @@ interface Props {
   /**
    * Text color variant
    */
-  color?: "primary" | "onsurface" | "onbackground" | "white" | "danger" | "success";
+  color?: "primary" | "content-on-surface" | 'content-on-surface-strong' | "content-on-background" | 'disabled' | "white" | "danger" | "success";
   /**
   * Font weight
   */
@@ -43,7 +43,7 @@ interface Props {
 const {
   tag = "p",
   size = "sm",
-  color = "onsurface",
+  color = "content-on-surface",
   weight = "normal",
   center = false,
   className = "",
@@ -66,12 +66,13 @@ const weightClasses = {
 
 const colorClasses = {
   primary: "text-[color:var(--color-primary)]",
-  onsurface: "text-on-surface",
-  onbackground: 'text-on-background',
+  "content-on-surface": "text-content-on-surface",
+  "content-on-surface-strong": "text-content-on-surface-strong",
+  "content-on-background": "text-content-on-background",
   white: "text-white",
   danger: "text-[color:var(--color-error)]",
   success: "text-success",
-
+  disabled: "text-[color:var(--color-content-disabled)]",
 };
 </script>
 

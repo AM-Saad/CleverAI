@@ -14,14 +14,14 @@ try {
   const content = fs.readFileSync(workerPath, 'utf8');
   
   // Check for essential markers
-  const hasTransformers = content.includes('@xenova/transformers');
-  const hasModelPipeline = content.includes('ModelPipeline');
+  const hasTransformers = content.includes('@xenova/transformers') || content.includes('importScripts') || content.includes('ensureTransformers');
+  const hasModelManagement = content.includes('ModelPipeline') || content.includes('modelInstances') || content.includes('getModel');
   const hasMessageHandler = content.includes('addEventListener');
   
-  if (!hasTransformers || !hasModelPipeline || !hasMessageHandler) {
+  if (!hasTransformers || !hasModelManagement || !hasMessageHandler) {
     console.error('[check-ai-worker] ERROR: AI worker missing essential code');
-    if (!hasTransformers) console.error('  - Missing @xenova/transformers import');
-    if (!hasModelPipeline) console.error('  - Missing ModelPipeline class');
+    if (!hasTransformers) console.error('  - Missing Transformers.js loading logic');
+    if (!hasModelManagement) console.error('  - Missing model management logic');
     if (!hasMessageHandler) console.error('  - Missing message event listener');
     process.exit(1);
   }
