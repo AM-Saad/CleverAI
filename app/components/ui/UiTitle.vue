@@ -1,14 +1,11 @@
 <template>
-  <component
-    :is="tag"
-    :class="[
-      'ui-title',
-      sizeClasses[size],
-      weightClasses[weight],
-      colorClasses[color],
-      center ? 'text-center' : '',
-    ]"
-  >
+  <component :is="tag" :class="[
+    'ui-title',
+    sizeClasses[size],
+    weightClasses[weight],
+    colorClasses[color],
+    center ? 'text-center' : '',
+  ]">
     <slot />
   </component>
 </template>
@@ -30,7 +27,8 @@ interface Props {
   /**
    * Text color variant
    */
-  color?: "primary" | "neutral" | "dark" | "muted" | "white";
+  color?: "primary" | "content-on-surface" | "content-on-surface-strong" | "content-on-background" | "white" | "danger" | "success" | "disabled";
+
   /**
    * Center alignment
    */
@@ -41,7 +39,7 @@ const {
   tag = "h2",
   size = "2xl",
   weight = "semibold",
-  color = "dark",
+  color = "content-on-background",
   center = false,
 } = defineProps<Props>();
 
@@ -64,13 +62,15 @@ const weightClasses = {
   semibold: "font-semibold",
   bold: "font-bold",
 };
-
 const colorClasses = {
-  primary: "text-primary",
-  neutral: "text-neutral",
-  dark: "text-dark dark:text-light",
-  muted: "text-muted",
-  white: "text-white dark:text-dark",
+  primary: "text-[color:var(--color-primary)]",
+  "content-on-surface": "text-content-on-surface",
+  "content-on-surface-strong": "text-content-on-surface-strong",
+  "content-on-background": "text-content-on-background",
+  white: "text-white",
+  danger: "text-[color:var(--color-error)]",
+  success: "text-success",
+  disabled: "text-[color:var(--color-content-disabled)]",
 };
 </script>
 

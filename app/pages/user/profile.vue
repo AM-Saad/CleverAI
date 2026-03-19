@@ -5,7 +5,7 @@
       <!-- User Profile Card -->
       <div class="md:col-span-1">
 
-        <ui-card variant="default" v-if="!isProfileLoading && profileData">
+        <ui-card variant="default" v-if="!isProfileLoading && profileData" size="sm">
           <div class="flex items-start gap-4">
             <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white text-xl mb-2">
               {{ userInitials }}
@@ -29,12 +29,12 @@
               <span>Gender:</span>
               <span class="capitalize">{{
                 profileData?.gender || "Not specified"
-                }}</span>
+              }}</span>
             </ui-label>
           </div>
         </ui-card>
 
-        <ui-card variant="default" class-name="mt-1.5" v-if="!isProfileLoading && profileData">
+        <!-- <ui-card variant="default" class-name="mt-1.5" size="sm" v-if="!isProfileLoading && profileData">
           <ui-subtitle>Account Settings</ui-subtitle>
 
           <div class="flex flex-wrap gap-4 mt-4">
@@ -46,7 +46,7 @@
               Update Profile
             </u-button>
           </div>
-        </ui-card>
+        </ui-card> -->
 
         <ui-card variant="default" v-if="isProfileLoading">
           <USkeleton class="h-4 bg-neutral/50 dark:bg-neutral/10 my-0.5" />
@@ -59,7 +59,7 @@
 
 
         <!-- Push Notification Settings -->
-        <ui-card variant="default" class-name="mt-1.5" v-if="!notificationsLoading">
+        <ui-card variant="default" class-name="mt-1.5" size="sm" v-if="!notificationsLoading">
           <ui-subtitle>Push Notifications</ui-subtitle>
           <div class="mt-4">
             <div v-if="notificationsLoading" class="text-sm text-gray-500">
@@ -82,7 +82,7 @@
             <p v-if="notificationError" class="text-sm text-red-500 mt-2">{{ notificationError }}</p>
           </div>
         </ui-card>
-        <ui-card variant="default" class-name="mt-1.5" v-if="notificationsLoading || isProfileLoading">
+        <ui-card variant="default" class-name="mt-1.5" size="sm" v-if="notificationsLoading || isProfileLoading">
           <USkeleton class="h-4 bg-neutral/50 dark:bg-neutral/10 my-0.5" />
           <USkeleton class="h-4 bg-neutral/50 dark:bg-neutral/10 my-0.5" />
         </ui-card>
@@ -90,7 +90,7 @@
 
       <!-- Subscription Information -->
       <div class="md:col-span-2 space-y-4">
-        <ui-card variant="default" size="lg">
+        <ui-card variant="default" size="sm">
           <template #header>Subscription</template>
 
           <div class="mb-6">

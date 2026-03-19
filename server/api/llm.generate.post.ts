@@ -1,4 +1,9 @@
 // server/api/llm.generate.post.ts
+/**
+ * @deprecated This endpoint uses the legacy getLLMStrategy factory.
+ * TODO: Migrate to llm.gateway.post.ts which uses getLLMStrategyFromRegistry()
+ * for dynamic model routing, health checks, and proper model selection scoring.
+ */
 import { defineEventHandler, readBody } from "h3";
 import { requireRole } from "~~/server/utils/auth";
 import { success } from "@server/utils/error";

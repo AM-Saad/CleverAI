@@ -130,7 +130,7 @@ function handleClose() {
 
     <template #footer>
       <div class="flex gap-3 justify-end pt-2">
-        <u-button variant="soft" color="neutral" @click="handleClose" :disabled="isLoading">
+        <u-button variant="ghost" @click="handleClose" :disabled="isLoading">
           Cancel
         </u-button>
         <u-button color="primary" @click="handleSubmit" :loading="isLoading"

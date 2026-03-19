@@ -7,7 +7,19 @@ export const PendingNoteChangeSchema = z.object({
   localVersion: z.number().int().nonnegative(),
   folderId: z.string().optional(),
   content: z.string().optional(),
-  conflicted: z.boolean().optional()
+  tags: z.array(z.string()).optional(),
+  // Handle null and empty string by normalizing to undefined
+  noteType: z.preprocess(
+    (val) => (val === "" || val === null || val === undefined ? undefined : val),
+    z.string().optional()
+  ),
+  // Accept null and transform to undefined
+  metadata: z.preprocess(
+    (val) => (val === null ? undefined : val),
+    z.record(z.string(), z.unknown()).optional()
+  ),
+  conflicted: z.boolean().optional(),
+  type: z.string().optional(), // "FOLDER" or "BOARD"
 });
 export type PendingNoteChange = z.infer<typeof PendingNoteChangeSchema>;
 

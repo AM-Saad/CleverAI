@@ -1,7 +1,8 @@
 <template>
-  <div v-if="card" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden transition-all duration-300">
+  <div v-if="card"
+    class="bg-surface-subtle rounded-lg shadow overflow-hidden transition-all duration-300  w-4xl max-w-full mx-auto">
     <!-- Resource Type Badge -->
-    <div class="px-6 pt-4">
+    <div class="p-4">
       <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium" :class="resourceTypeBadgeClass">
         <Icon :name="resourceTypeIcon" class="w-3 h-3 mr-1" />
         {{ resourceTypeLabel }}
@@ -9,23 +10,18 @@
     </div>
 
     <!-- Card Content -->
-    <div class="p-8">
+    <div class="p-4">
       <!-- Question/Front -->
       <div class="mb-8">
-        <h2 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">
-          Question
-        </h2>
-        <div class="text-xl font-medium text-gray-900 dark:text-gray-100 leading-relaxed" role="heading" aria-level="3">
+        <div class=" font-medium text-content-on-surface leading-relaxed" role="heading" aria-level="3">
           {{ resourceFront }}
         </div>
       </div>
 
       <!-- Answer/Back (shown when revealed) -->
-      <div v-if="showAnswer" class="border-t pt-8 animate-fade-in">
-        <h3 class="text-lg font-medium text-gray-700 dark:text-gray-300 mb-4">
-          Answer
-        </h3>
-        <div class="text-gray-800 dark:text-gray-200 leading-relaxed prose prose-sm max-w-none" role="region"
+      <div v-if="showAnswer" class="border-t border-surface-strong pt-8 animate-fade-in">
+
+        <div class="text-content-on-surface leading-relaxed prose prose-sm max-w-none" role="region"
           aria-label="Card answer">
           <div class="whitespace-pre-wrap" v-html="formattedContent" />
         </div>

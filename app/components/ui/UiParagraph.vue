@@ -2,6 +2,8 @@
   <component :is="tag" :class="[
     'ui-paragraph',
     sizeClasses[size],
+    weightClasses[weight],
+
     colorClasses[color],
     center ? 'text-center' : '',
     className,
@@ -23,7 +25,11 @@ interface Props {
   /**
    * Text color variant
    */
-  color?: "primary" | "neutral" | "muted" | "inverse" | "white" | "success";
+  color?: "primary" | "content-on-surface" | 'content-on-surface-strong' | "content-on-background" | 'disabled' | "white" | "danger" | "success";
+  /**
+  * Font weight
+  */
+  weight?: "light" | "normal" | "medium" | "semibold" | "bold";
   /**
    * Center alignment
    */
@@ -37,7 +43,8 @@ interface Props {
 const {
   tag = "p",
   size = "sm",
-  color = "muted",
+  color = "content-on-surface",
+  weight = "normal",
   center = false,
   className = "",
 } = defineProps<Props>();
@@ -48,14 +55,24 @@ const sizeClasses = {
   base: "text-base",
   lg: "text-lg",
 };
+const weightClasses = {
+  light: "font-light",
+  normal: "font-normal",
+  medium: "font-medium",
+  semibold: "font-semibold",
+  bold: "font-bold",
+};
+
 
 const colorClasses = {
-  primary: "text-primary",
-  neutral: "text-dark dark:text-light",
-  muted: "text-muted",
-  inverse: "text-inverse",
+  primary: "text-[color:var(--color-primary)]",
+  "content-on-surface": "text-content-on-surface",
+  "content-on-surface-strong": "text-content-on-surface-strong",
+  "content-on-background": "text-content-on-background",
   white: "text-white",
+  danger: "text-[color:var(--color-error)]",
   success: "text-success",
+  disabled: "text-[color:var(--color-content-disabled)]",
 };
 </script>
 

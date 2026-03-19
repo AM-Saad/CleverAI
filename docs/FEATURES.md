@@ -8,12 +8,13 @@
 ## Table of Contents
 1. [Notes System](#notes-system)
 2. [Spaced Repetition (SM-2)](#spaced-repetition-sm-2)
-3. [LLM Content Generation](#llm-content-generation)
-4. [Materials Management](#materials-management)
-5. [Folders & Organization](#folders--organization)
-6. [Push Notifications](#push-notifications)
-7. [PWA & Offline Support](#pwa--offline-support)
-8. [Authentication](#authentication)
+3. [XP & Gamification](#xp--gamification)
+4. [LLM Content Generation](#llm-content-generation)
+5. [Materials Management](#materials-management)
+6. [Folders & Organization](#folders--organization)
+7. [Push Notifications](#push-notifications)
+8. [PWA & Offline Support](#pwa--offline-support)
+9. [Authentication](#authentication)
 
 ---
 
@@ -313,8 +314,8 @@ interface CardReview {
   id: string
   userId: string
   folderId: string
-  cardId: string           // Flashcard.id or Material.id
-  resourceType: 'flashcard' | 'material'
+  cardId: string           // Polymorphic: Flashcard.id, Material.id, or Question.id
+  resourceType: 'flashcard' | 'material' | 'question'
   
   // SM-2 state
   repetitions: number      // Times correctly recalled
@@ -324,8 +325,10 @@ interface CardReview {
   lastReviewedAt?: Date
   lastGrade?: number       // Last grade (0-5)
   
-  // Lifecycle
-  status: 'active' | 'suspended'
+  // Analytics
+  streak: number           // Consecutive correct reviews
+  suspended: boolean       // Allow users to pause reviews
+  
   createdAt: Date
   updatedAt: Date
 }
@@ -397,10 +400,201 @@ const {
 
 ### UI Components
 
-- `EnrollButton.vue` - One-click enrollment
+- `EnrollButton.vue` - One-click enrollment (supports material, flashcard, and question)
 - `CardReviewInterface.vue` - Full review UI with flip animation
 - `ReviewAnalyticsSummary.vue` - Statistics dashboard
 - `ReviewDebugPanel.vue` - Dev-only algorithm testing
+
+### Question Enrollment Support
+
+**Overview**: Questions generated from materials can be enrolled in spaced repetition, providing the same review workflow as flashcards.
+
+**Supported Resource Types**:
+- `material` - Direct material content review
+- `flashcard` - Traditional Q&A card review
+- `question` - Multiple-choice questions with validation
+
+**Question Review Data Model**:
+```typescript
+interface QuestionResource {
+  question: string         // Question text
+  choices: string[]        // Array of answer choices
+  answerIndex: number      // Index of correct answer (0-based)
+  folderId: string         // Parent folder
+}
+```
+
+**Queue Integration**:
+Questions are fetched alongside flashcards and materials in the review queue:
+```typescript
+// Parallel fetching for optimal performance
+const [materials, flashcards, questions, folders] = await Promise.all([
+  prisma.material.findMany({ where: { id: { in: cardIds } } }),
+  prisma.flashcard.findMany({ where: { id: { in: cardIds } } }),
+  prisma.question.findMany({ where: { id: { in: cardIds } } }),
+  prisma.folder.findMany({ where: { id: { in: folderIds } } }),
+]);
+```
+
+**UI Implementation** (`Questions.vue`):
+- Enrollment status tracking via `enrolledQuestions` Set
+- `checkEnrollmentStatus()` - Bulk status check on mount/watch
+- `ReviewEnrollButton` component with `resource-type="question"`
+- Visual indicators (checkmark badge) for enrolled questions
+- Event handlers for enrollment success/error
+
+---
+
+## XP & Gamification
+
+### Overview
+
+Experience points (XP) system to encourage consistent learning through spaced repetition reviews and card enrollment.
+
+### XP Calculation
+
+**Review XP Formula**:
+```typescript
+// 1. Difficulty Multiplier (based on ease factor)
+difficultyMultiplier = clamp(3.0 - easeFactor, 0.5, 2.0)
+
+// 2. Spacing Multiplier (based on interval)
+spacingMultiplier = clamp(log2(intervalDays + 1), 0.5, 3.0)
+
+// 3. Grade Multiplier
+gradeMultiplier = {
+  5: 1.4,  // Perfect recall
+  4: 1.2,  // Correct with hesitation
+  3: 1.0,  // Correct with difficulty
+  2: 0.6,  // Incorrect, recalled easily
+  1: 0.4,  // Incorrect, correct shown
+  0: 0.2,  // Complete blackout
+}
+
+// 4. Late Bonus (reviewing overdue cards)
+daysLate = max(0, daysBetween(now, nextReviewAt))
+lateBonus = clamp(1 + daysLate * 0.1, 1.0, 1.5)
+
+// 5. Raw XP
+rawXP = BASE_XP * difficultyMultiplier * spacingMultiplier * gradeMultiplier * lateBonus
+
+// 6. Daily Diminishing Returns (progressive tax after target)
+if (dailyXP < DAILY_XP_TARGET) {
+  effectiveXP = rawXP
+} else {
+  surplus = dailyXP - DAILY_XP_TARGET
+  taxRate = clamp(surplus / 100, 0.0, 0.9)
+  effectiveXP = rawXP * (1 - taxRate)
+}
+```
+
+**Enrollment XP Formula**:
+```typescript
+// Base XP for enrolling a card
+baseEnrollXP = 3
+
+// Daily diminishing returns (same as review XP)
+if (dailyXP < DAILY_XP_TARGET) {
+  effectiveXP = baseEnrollXP
+} else {
+  surplus = dailyXP - DAILY_XP_TARGET
+  taxRate = clamp(surplus / 100, 0.0, 0.9)
+  effectiveXP = baseEnrollXP * (1 - taxRate)
+}
+```
+
+**Constants**:
+- `BASE_XP = 5`
+- `DAILY_XP_TARGET = 300`
+
+### Data Models
+
+**XpEvent**:
+```typescript
+interface XpEvent {
+  id: string
+  userId: string
+  cardId?: string        // Card that triggered XP (null for non-card events)
+  source: string         // "review" | "enroll" | "achievement"
+  xp: number             // Effective XP earned (after diminishing returns)
+  createdAt: Date
+}
+```
+
+**Achievement**:
+```typescript
+interface Achievement {
+  id: string
+  userId: string
+  type: AchievementType  // DAILY_STREAK | WEEKLY_STREAK | CARD_MASTERED | CARD_REVIEWED | CARD_REVIEWED_100
+  unlockedAt: Date
+}
+
+enum AchievementType {
+  DAILY_STREAK
+  WEEKLY_STREAK
+  CARD_MASTERED
+  CARD_REVIEWED
+  CARD_REVIEWED_100
+}
+```
+
+### Key Features
+
+**Idempotent XP Awards**:
+```typescript
+// Check if XP already awarded for this event
+const existingXp = await prisma.xpEvent.findFirst({
+  where: {
+    userId: user.id,
+    cardId: card.cardId,
+    source: "enroll" // or "review"
+  }
+});
+
+if (!existingXp) {
+  // Award XP only if not already awarded
+  await prisma.xpEvent.create({
+    data: { userId, cardId, source, xp: effectiveXP }
+  });
+}
+```
+
+**Daily XP Tracking**:
+```typescript
+// Get today's accumulated XP
+const dayStart = startOfDay(now);
+const dayEnd = endOfDay(now);
+
+const DailyXpAggregate = await prisma.xpEvent.aggregate({
+  where: {
+    userId: user.id,
+    createdAt: { gte: dayStart, lte: dayEnd }
+  },
+  _sum: { xp: true }
+});
+
+const currentDailyXP = DailyXpAggregate._sum.xp ?? 0;
+```
+
+**Progressive Tax System**:
+- Prevents XP grinding beyond daily target
+- First 300 XP: Full value
+- 301-400 XP: 90% value
+- 401-500 XP: 80% value
+- Beyond 1000 XP: 10% value (90% tax rate)
+
+### Integration Points
+
+**Review Grade Endpoint**:
+- Calculates XP based on grade, difficulty, spacing, and lateness
+- Applies daily diminishing returns
+- Stores XpEvent record
+
+**Card Enrollment Endpoint**:
+- Awards 3 base XP for first enrollment
+- Applies daily diminishing returns
+- Checks for duplicate XP events
 
 ---
 

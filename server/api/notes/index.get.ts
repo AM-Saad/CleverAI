@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
+import { NoteSchema } from "~/shared/utils/note.contract";
 
 const QuerySchema = z.object({
   folderId: z

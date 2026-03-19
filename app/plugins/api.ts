@@ -68,9 +68,12 @@ export default defineNuxtPlugin((_nuxtApp) => {
     folders: apiServiceFactory.create("folders"),
     materials: apiServiceFactory.create("materials"),
     notes: apiServiceFactory.create("notes"),
+    boardItems: apiServiceFactory.create("boardItems"),
+    boardColumns: apiServiceFactory.create("boardColumns"),
     auth: apiServiceFactory.create("auth"),
     review: apiServiceFactory.create("review"),
     user: apiServiceFactory.create("user"),
+    userTags: apiServiceFactory.create("userTags"),
     gateway: apiServiceFactory.create("gateway"),
   };
 

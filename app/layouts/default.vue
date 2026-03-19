@@ -1,11 +1,48 @@
 <template>
   <div class="mx-auto  flex h-screen flex-col gap-y-3 justify-between">
     <nav id="nav"
-      class="flex basis-0 shrink-0 font-heading items-center justify-between py-4 md:rounded-none  mx-auto left-[50%] top-4 border-b border-neutral dark:border-muted w-[calc(100%-2rem)]">
-      <div class="flex items-center justify-between w-full">
-        <router-link to="/" class="flex items-center gap-2 text-dark dark:text-light font-medium text-xl ">
-          <img class="h-7 dark:invert-[1] dark:filter" :src="'/images/CleverAI_icon.svg'" alt="" />
-          Cognilo</router-link>
+      class="flex basis-0 shrink-0 font-heading items-center justify-between py-1.5 md:rounded-none  mx-auto left-[50%] top-4 border-b border-secondary  w-[calc(100%-2rem)] h-16">
+      <div class="flex items-center justify-between w-full h-full">
+        <div class="flex items-center gap-2 h-full">
+
+          <router-link to="/" class="flex items-center gap-2 text-content-on-surface font-medium text-xl h-full">
+            <!-- <img class="h-6 dark:invert-[1] dark:filter" :src="'/images/CleverAI_icon.svg'" alt="" /> -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="75" height="35" viewBox="0 0 75 55" fill="none">
+              <g id="CleverLogo">
+                <path id="Holder"
+                  d="M15.8359 9.34961H57.6641C62.7666 9.34984 66.9871 13.3228 67.2959 18.416L68.5078 38.416C68.8441 43.9648 64.4349 48.6502 58.876 48.6504H14.624C9.06508 48.6502 4.65592 43.9648 4.99219 38.416L6.2041 18.416C6.51289 13.3228 10.7334 9.34984 15.8359 9.34961Z"
+                  fill="#F1F1F1" stroke="#333333" stroke-width="0.7" />
+                <g id="Folders">
+                  <path id="Folder3"
+                    d="M15.9053 6.34961H57.8867C63.1118 6.34975 67.3881 10.5093 67.5332 15.7324L68.0439 34.1211C68.1946 39.5532 63.8317 44.039 58.3975 44.0391H15.3945C9.96035 44.0388 5.59838 39.5532 5.74902 34.1211L6.25977 15.7324C6.40485 10.5094 10.6803 6.34986 15.9053 6.34961Z"
+                    fill="white" stroke="#333333" stroke-width="0.7" />
+                  <path id="Folder2"
+                    d="M15.8967 6.35608H52.9368C58.1824 6.35615 62.4672 10.5473 62.5842 15.7916L62.9944 34.1735C63.1151 39.5858 58.7606 44.0386 53.3469 44.0387H15.4866C10.0728 44.0387 5.71843 39.5859 5.83911 34.1735L6.24927 15.7916C6.36626 10.5472 10.651 6.35608 15.8967 6.35608Z"
+                    fill="white" stroke="#333333" stroke-width="0.7" />
+                  <path id="Folder1"
+                    d="M15.6985 6.35608H46.4915C51.7631 6.35613 56.0588 10.587 56.1399 15.858L56.4231 34.2399C56.506 39.6267 52.162 44.0384 46.7747 44.0387H15.4163C10.0286 44.0387 5.68397 39.6268 5.76685 34.2399L6.05005 15.858C6.13114 10.5871 10.427 6.35626 15.6985 6.35608Z"
+                    fill="white" fill-opacity="0.1" stroke="#333333" stroke-width="0.7" />
+                </g>
+                <g id="Confirm">
+                  <path id="circle"
+                    d="M14 33.2998C15.4912 33.2998 16.7002 34.5088 16.7002 36C16.7002 37.4912 15.4912 38.7002 14 38.7002C12.5088 38.7002 11.2998 37.4912 11.2998 36C11.2998 34.5088 12.5088 33.2998 14 33.2998Z"
+                    stroke="#333333" stroke-width="0.6" />
+                  <path id="correct" d="M13 36.1546L13.5942 37L15 35" stroke="#333333" stroke-width="0.6"
+                    stroke-linecap="round" stroke-linejoin="round" />
+                </g>
+              </g>
+            </svg>
+            Cognilo
+          </router-link>
+          <div class=" flex items-center justify-center" :title="online ? 'You are online' : 'You are offline'"
+            v-if="route.fullPath.startsWith('/folders') || route.fullPath.startsWith('/user')">
+            <span v-if="online" class="bg-green-300 rounded-full border border-muted w-3 h-3 animate-pulse"
+              title="Online"></span>
+            <span v-if="!online" class="bg-gray-300 rounded-full border border-muted w-3 h-3" title="Offline"></span>
+          </div>
+        </div>
+
+
         <div v-if="status === 'authenticated'" class="flex gap-5">
           <ui-dropdown-menu />
         </div>
@@ -14,7 +51,7 @@
             <u-button variant="ghost">About</u-button>
           </router-link>
           <router-link to="/auth/signIn">
-            <u-button variant="subtle">Login</u-button>
+            <u-button variant="ghost">Login</u-button>
           </router-link>
           <router-link to="/auth/signup">
             <u-button>Signup</u-button>
@@ -23,30 +60,8 @@
         <div v-else>
           <span>Loading...</span>
         </div>
-        <svg data-v-7c76a2b5="" class="hidden" xmlns="http://www.w3.org/2000/svg">
-          <defs data-v-7c76a2b5="">
-            <filter id="filter" data-v-7c76a2b5="" color-interpolation-filters="sRGB">
-              <feImage data-v-7c76a2b5="" x="0" y="0" width="100%" height="100%"
-                href="data:image/svg+xml,%0A%20%20%20%20%3Csvg%20viewBox%3D%220%200%20672%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%0A%20%20%20%20%20%20%3Cdefs%3E%0A%20%20%20%20%20%20%20%20%3ClinearGradient%20id%3D%22red%22%20x1%3D%22100%25%22%20y1%3D%220%25%22%20x2%3D%220%25%22%20y2%3D%220%25%22%3E%0A%20%20%20%20%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%230000%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22red%22%2F%3E%0A%20%20%20%20%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%20%20%20%20%20%20%3ClinearGradient%20id%3D%22blue%22%20x1%3D%220%25%22%20y1%3D%220%25%22%20x2%3D%220%25%22%20y2%3D%22100%25%22%3E%0A%20%20%20%20%20%20%20%20%20%20%3Cstop%20offset%3D%220%25%22%20stop-color%3D%22%230000%22%2F%3E%0A%20%20%20%20%20%20%20%20%20%20%3Cstop%20offset%3D%22100%25%22%20stop-color%3D%22blue%22%2F%3E%0A%20%20%20%20%20%20%20%20%3C%2FlinearGradient%3E%0A%20%20%20%20%20%20%3C%2Fdefs%3E%0A%20%20%20%20%20%20%3Crect%20x%3D%220%22%20y%3D%220%22%20width%3D%22672%22%20height%3D%2260%22%20fill%3D%22black%22%3E%3C%2Frect%3E%0A%20%20%20%20%20%20%3Crect%20x%3D%220%22%20y%3D%220%22%20width%3D%22672%22%20height%3D%2260%22%20rx%3D%2216%22%20fill%3D%22url(%23red)%22%20%2F%3E%0A%20%20%20%20%20%20%3Crect%20x%3D%220%22%20y%3D%220%22%20width%3D%22672%22%20height%3D%2260%22%20rx%3D%2216%22%20fill%3D%22url(%23blue)%22%20style%3D%22mix-blend-mode%3A%20difference%22%20%2F%3E%0A%20%20%20%20%20%20%3Crect%20%0A%20%20%20%20%20%20%20%20x%3D%222.1%22%20%0A%20%20%20%20%20%20%20%20y%3D%222.1%22%20%0A%20%20%20%20%20%20%20%20width%3D%22667.8%22%20%0A%20%20%20%20%20%20%20%20height%3D%2255.8%22%20%0A%20%20%20%20%20%20%20%20rx%3D%2216%22%20%0A%20%20%20%20%20%20%20%20fill%3D%22hsl(0%200%25%2050%25%20%2F%200.93)%22%20%0A%20%20%20%20%20%20%20%20style%3D%22filter%3Ablur(11px)%22%20%0A%20%20%20%20%20%20%2F%3E%0A%20%20%20%20%3C%2Fsvg%3E%0A%20%20"
-                result="map" />
-              <feDisplacementMap id="redchannel" data-v-7c76a2b5="" in="SourceGraphic" in2="map" xChannelSelector="R"
-                yChannelSelector="B" scale="-180" result="dispRed" />
-              <feColorMatrix data-v-7c76a2b5="" in="dispRed" type="matrix"
-                values="1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0" result="red" />
-              <feDisplacementMap id="greenchannel" data-v-7c76a2b5="" in="SourceGraphic" in2="map" xChannelSelector="R"
-                yChannelSelector="B" scale="-170" result="dispGreen" />
-              <feColorMatrix data-v-7c76a2b5="" in="dispGreen" type="matrix"
-                values="0 0 0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 1 0" result="green" />
-              <feDisplacementMap id="bluechannel" data-v-7c76a2b5="" in="SourceGraphic" in2="map" xChannelSelector="R"
-                yChannelSelector="B" scale="-160" result="dispBlue" />
-              <feColorMatrix data-v-7c76a2b5="" in="dispBlue" type="matrix"
-                values="0 0 0 0 0 0 0 0 0 0 0 0 1 0 0 0 0 0 1 0" result="blue" />
-              <feBlend data-v-7c76a2b5="" in="red" in2="green" mode="screen" result="rg" />
-              <feBlend data-v-7c76a2b5="" in="rg" in2="blue" mode="screen" result="output" />
-              <feGaussianBlur data-v-7c76a2b5="" stdDeviation="0.2" />
-            </filter>
-          </defs>
-        </svg>
+
+
       </div>
     </nav>
 
@@ -84,6 +99,7 @@
 <!-- eslint-disable no-console -->
 
 <script setup lang="ts">
+
 import { watch } from "vue";
 // import cleverAIIcon from "~/assets/images/CleverAI_icon.svg";
 
@@ -94,7 +110,10 @@ console.log("🏗️ [LAYOUT] Auth status:", status.value);
 
 // Use the centralized SW bridge
 const sw = useServiceWorkerBridge();
+const online = useOnline()
 
+const route = useRoute();
+console.log("🏗️ [LAYOUT] Current route:", route.fullPath.startsWith('/folders'), route.fullPath.startsWith('/user'));
 // Debounced navigation to avoid rapid duplicates from notification clicks
 const pending = new Set<string>();
 
@@ -134,3 +153,82 @@ onMounted(() => {
 
 console.log("🏗️ [LAYOUT] Default layout script setup completed");
 </script>
+
+
+<style scoped>
+#Folder1,
+#Folder2,
+#Folder3 {
+  opacity: 0;
+  animation: folderLoop 11s infinite;
+}
+
+#Folder1 {
+  animation-delay: 1s;
+}
+
+#Folder2 {
+  animation-delay: 0.6s;
+}
+
+#Folder3 {
+  animation-delay: 0.2s;
+}
+
+#Confirm {
+  opacity: 0;
+  animation: confirmLoop 11s infinite;
+}
+
+@keyframes folderLoop {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  /* 1. Drop & Stay Still (approx 0.5s - 5s) */
+  5%,
+  45% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* 2. Slide Right (at 5s mark) */
+  50%,
+  90% {
+    opacity: 1;
+    transform: translateX(100px);
+  }
+
+  /* 3. Disappear (at 10s mark) to prep for next drop */
+  95%,
+  100% {
+    opacity: 0;
+    transform: translateX(100px);
+  }
+}
+
+@keyframes confirmLoop {
+
+  /* 0% to 50%: Folders are dropping/sitting. Confirm is HIDDEN. */
+  0%,
+  50% {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  /* 55%: Fade in after folders have moved right. */
+  55%,
+  85% {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  /* 90%: Fade out BEFORE the folders reset to the top. */
+  90%,
+  100% {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+</style>

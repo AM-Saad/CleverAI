@@ -249,7 +249,7 @@ export default defineNuxtConfig({
         "yjs",
         "y-websocket",
       ],
-      exclude: ["@xenova/transformers"], // Exclude transformers from optimization to avoid issues
+      exclude: ["@huggingface/transformers"], // Exclude transformers from optimization to avoid issues
     },
     worker: {
       format: "es", // Use ES modules for workers to preserve module dependencies
@@ -260,7 +260,7 @@ export default defineNuxtConfig({
   build: {
     // transpile: ['trpc-nuxt']
     rollupOptions: {
-      external: ["@xenova/transformers", "onnxruntime-web"], // Don't bundle transformers - causes ONNX Runtime webpack errors
+      external: ["@huggingface/transformers", "onnxruntime-web"], // Don't bundle transformers - causes ONNX Runtime webpack errors
     },
   },
 
@@ -285,8 +285,14 @@ export default defineNuxtConfig({
     redisUrl: process.env.REDIS_URL,
     openaiKey: process.env.OPENAI_API_KEY,
     geminiKey: process.env.GEMINI_API_KEY,
+    deepseekKey: process.env.DEEPSEEK_API_KEY,
+    groqKey: process.env.GROQ_API_KEY,
+    // Dev-only: Force a specific model for testing (e.g., 'deepseek-chat', 'gpt-4o-mini')
+    devLlmModelOverride: process.env.DEV_LLM_MODEL_OVERRIDE,
     databaseUrl: process.env.DATABASE_URL,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
+    myscriptApplicationKey: process.env.MYSCRIPT_APPLICATION_KEY,
+    myscriptHmacKey: process.env.MYSCRIPT_HMAC_KEY,
 
     // Auth / secrets (server only)
     auth: {

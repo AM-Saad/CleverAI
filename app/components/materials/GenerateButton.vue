@@ -36,6 +36,14 @@ const {
 
 } = useGenerateFromMaterial(materialIdRef);
 
+const replaceExisting = ref(true);
+
+watch(showConfirmDialog, (open) => {
+  if (open) {
+    replaceExisting.value = true;
+  }
+});
+
 // Dropdown items - using onSelect for Nuxt UI v4 UDropdownMenu
 const dropdownItems = computed(() => [
   [
@@ -118,7 +126,8 @@ watch(genError, (error) => {
 
     <!-- Regenerate Confirmation Dialog -->
     <shared-delete-confirmation-modal :show="showConfirmDialog" title="Regenerate Content" confirm-text="Regenerate"
-      :is-destructive="true" @close="cancelRegenerate" @confirm="confirmRegenerate" :loading="generating">
+      :is-destructive="true" @close="cancelRegenerate" @confirm="() => confirmRegenerate(replaceExisting)"
+      :loading="generating">
       <div class="space-y-4">
         <p class="text-sm text-muted">
           This will permanently delete <strong>{{ pendingGenerationType === 'flashcards' ?
@@ -131,6 +140,10 @@ watch(genError, (error) => {
           New {{ pendingGenerationType === 'flashcards' ? 'flashcards' : 'questions' }} will be generated from the
           material's content. This action cannot be undone.
         </p>
+        <div class="flex items-center gap-2">
+          <UCheckbox v-model="replaceExisting" />
+          <span class="text-sm text-muted">Replace existing items (delete old items + reviews)</span>
+        </div>
       </div>
     </shared-delete-confirmation-modal>
   </div>

@@ -112,7 +112,7 @@ const closeModal = (): void => {
           </u-form-field>
 
           <div class="flex justify-end gap-3 pt-2">
-            <u-button variant="soft" color="neutral" @click="closeModal" type="button">
+            <u-button variant="ghost" @click="closeModal" type="button">
               Cancel
             </u-button>
             <u-button type="submit" :disabled="!canSubmit">

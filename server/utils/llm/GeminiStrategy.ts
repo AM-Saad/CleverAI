@@ -70,13 +70,14 @@ function extractJsonArrayOrObject(s: string): string {
 
 export class GeminiStrategy implements LLMStrategy {
   private client: GoogleGenerativeAI;
-  private static readonly MODEL = "gemini-2.0-flash-lite"; // adjust if you prefer 1.5-flash for speed/cost
+  private modelId: string;
   private onMeasure?: (m: LlmMeasured) => void;
 
-  constructor(onMeasure?: (m: LlmMeasured) => void) {
+  constructor(modelId: string, onMeasure?: (m: LlmMeasured) => void) {
     const { geminiKey } = useRuntimeConfig();
     if (!geminiKey) throw new Error("Missing GEMINI_API_KEY in runtimeConfig");
     this.client = new GoogleGenerativeAI(geminiKey);
+    this.modelId = modelId;
     this.onMeasure = onMeasure;
   }
 
@@ -117,7 +118,7 @@ export class GeminiStrategy implements LLMStrategy {
     try {
       const inputChars = prompt.length;
       const model = this.client.getGenerativeModel({
-        model: GeminiStrategy.MODEL,
+        model: this.modelId,
       });
 
       let inputTokensEstimate = 0;
@@ -155,7 +156,7 @@ export class GeminiStrategy implements LLMStrategy {
 
       this.onMeasure?.({
         provider: "google",
-        model: GeminiStrategy.MODEL,
+        model: this.modelId,
         promptTokens,
         completionTokens,
         totalTokens,
@@ -203,7 +204,13 @@ export class GeminiStrategy implements LLMStrategy {
     for (const item of raw) {
       const front = typeof item?.front === "string" ? item.front.trim() : "";
       const back = typeof item?.back === "string" ? item.back.trim() : "";
-      if (front && back) cards.push({ front, back });
+      if (front && back) {
+        cards.push({
+          front,
+          back,
+          sourceMetadata: item?.sourceMetadata || item?.source_metadata
+        });
+      }
     }
     return cards;
   }
@@ -247,7 +254,12 @@ export class GeminiStrategy implements LLMStrategy {
         typeof item?.answerIndex === "number" ? item.answerIndex : -1;
       const withinBounds = answerIndex >= 0 && answerIndex < choices.length;
       if (question && choices.length >= 2 && withinBounds) {
-        questions.push({ question, choices, answerIndex });
+        questions.push({
+          question,
+          choices,
+          answerIndex,
+          sourceMetadata: item?.sourceMetadata || item?.source_metadata
+        });
       }
     }
     return questions;

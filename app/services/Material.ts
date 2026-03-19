@@ -44,6 +44,13 @@ export class MaterialService extends FetchFactory {
   }
 
   /**
+   * Get a single material by ID (alias for Context Bridge)
+   */
+  async getById(id: string): Promise<Result<Material>> {
+    return this.getMaterial(id);
+  }
+
+  /**
    * Get generated content counts for a material
    */
   async getGeneratedContent(

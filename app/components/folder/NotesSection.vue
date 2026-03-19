@@ -3,6 +3,7 @@ import type { NoteState } from "~/composables/folders/useNotesStore";
 import { useNotesStore } from "~/composables/folders/useNotesStore";
 import { APIError } from "~/services/FetchFactory";
 import { ReorderGroup, ReorderItem } from "motion-v";
+import type { MathNoteMetadata } from "@@/shared/utils/note.contract";
 
 const route = useRoute();
 const folderId = route.params.id as string;
@@ -91,7 +92,7 @@ watch(notes, (newNotes) => {
 
 // Loading and error state for the initial fetch
 const isFetching = computed(
-  () => notesStore.loadingStates.value.get(folderId) ?? false
+  () => notesStore.loadingStates.value.get(`folder-${folderId}`) ?? false
 );
 const error = ref<APIError | null>(null); // Main error state for critical failures
 
@@ -171,12 +172,11 @@ watch(
 );
 
 // Create a new note (optimistic)
-const createNewNote = async () => {
-  const noteId = await notesStore.createNote(folderId, "New note...");
+const createNewNote = async (noteType: string = "TEXT") => {
+  const noteId = await notesStore.createNote("", [], noteType);
 
   if (noteId) {
     currentNoteId.value = noteId;
-
   }
 };
 
@@ -196,6 +196,21 @@ const handleUpdateNote = async (id: string, text: string) => {
   };
 
   // Save to IndexedDB immediately for persistence
+  await saveNoteToIndexedDB(updatedNote);
+  await notesStore.updateNote(id, updatedNote);
+};
+
+// Update math note metadata
+const handleMathUpdate = async (id: string, metadata: MathNoteMetadata) => {
+  const note = notesStore.getNote(id);
+  if (!note) return;
+  const updatedNote: NoteState = {
+    ...note,
+    metadata: metadata as unknown as Record<string, unknown>,
+    content: metadata.lines.map((l) => `${l.latex} = ${l.result ?? "?"}`).join("\n"),
+    isDirty: true,
+    updatedAt: new Date(),
+  };
   await saveNoteToIndexedDB(updatedNote);
   await notesStore.updateNote(id, updatedNote);
 };
@@ -237,18 +252,17 @@ const handleReorder = async (newOrder: NoteState[]) => {
 onMounted(async () => {
   try {
     error.value = null;
-    await notesStore.syncWithServer(folderId);
+    await notesStore.syncWithServer();
   } catch (e: unknown) {
     error.value =
       e instanceof APIError ? e : new APIError("Failed to load notes");
   }
-
 });
 </script>
 
 
 <template>
-  <ui-card variant="default" size="lg" shadow="none"
+  <ui-card variant="default" size="sm" shadow="none"
     class="flex flex-col md:basis-2/3 shrink-0 md:shrink min-h-0 overflow-hidden basis-3/3 z-10"
     contentClasses="flex flex-col">
     <!-- Header -->
@@ -257,9 +271,13 @@ onMounted(async () => {
         Notes
         <ui-label v-if="notes?.length"> ( {{ notes.length }} ) </ui-label>
       </div>
-      <u-button size="sm" color="primary" variant="outline" @click="createNewNote">
+      <u-button size="sm" color="primary" variant="ghost" @click="createNewNote('TEXT')">
         <u-icon name="i-heroicons-plus" />
         New Note
+      </u-button>
+      <u-button size="sm" color="primary" variant="ghost" @click="createNewNote('MATH')">
+        <u-icon name="i-heroicons-calculator" />
+        Math Note
       </u-button>
     </template>
     <template #default>
@@ -271,7 +289,7 @@ onMounted(async () => {
 
       <!-- Empty state -->
       <shared-empty-state v-if="!error && !isFetching && !notes?.length" title="No Notes."
-        button-text="Create First Note" :center-description="true" @action="createNewNote">
+        button-text="Create First Note" :center-description="true" @action="createNewNote('TEXT')">
         <template #description>
           Create your first note to capture important <br />thoughts and ideas
           for this folder.
@@ -283,7 +301,7 @@ onMounted(async () => {
         id="notes-section">
         <ui-drawer :show="false" :mobile="false" teleport-to="#notes-section" :backdrop="false" :handle-visible="20"
           title="Notes">
-          <div class="relative shrink-0 overflow-auto bg-light dark:bg-muted rounded border border-muted">
+          <div class="relative shrink-0 overflow-auto bg-light  rounded border border-secondary">
             <folder-notes-search :folder-id="folderId" />
             <ReorderGroup v-model:values="localNotes" axis="y" class="relative flex-1 shrink-0 overflow-auto"
               @reorder="handleReorder">
@@ -292,9 +310,9 @@ onMounted(async () => {
                 { label: 'Delete', onSelect: () => deleteNote(note.id) },
               ]" :context="note">
                 <ReorderItem :value="note" :class="[
-                  'relative flex items-center gap-2 group w-full p-2.5  cursor-pointer hover:bg-muted',
+                  'relative flex items-center gap-2 group w-full p-2.5  cursor-pointer hover:bg-secondary',
                   idx === 0 ? 'rounded-tl-xl' : '',
-                  idx === localNotes.length - 1 ? 'rounded-bl-xl' : 'border-b border-muted',
+                  idx === localNotes.length - 1 ? 'rounded-bl-xl' : 'border-b border-secondary',
                   notesStore.filteredNoteIds.value
                     ? notesStore.isNoteInFilter(note.id)
                       ? 'font-bold'
@@ -305,11 +323,12 @@ onMounted(async () => {
                     <icon name="i-lucide-loader" class="w-4 h-4 animate-spin" />
                   </div>
                   <ui-paragraph size="xs" class="truncate">
+                    <span v-if="note.noteType === 'MATH'" class="mr-1 text-indigo-500">∑</span>
                     {{
                       note.content
                         .replace(/<[^>]*>/g, "")
                         .trim()
-                        .slice(0, 30) || "Empty note"
+                        .slice(0, 30) || (note.noteType === 'MATH' ? 'Math note' : 'Empty note')
                     }}
                   </ui-paragraph>
                 </ReorderItem>
@@ -318,7 +337,11 @@ onMounted(async () => {
           </div>
         </ui-drawer>
 
-        <UiStickyNote v-if="notesStore.getNote(currentNoteId!)" :note="notesStore.getNote(currentNoteId!)!"
+        <folder-math-note-editor v-if="notesStore.getNote(currentNoteId!)?.noteType === 'MATH'"
+          :note-id="currentNoteId!"
+          :initial-metadata="(notesStore.getNote(currentNoteId!)?.metadata as MathNoteMetadata | undefined)"
+          @update="(meta: MathNoteMetadata) => handleMathUpdate(currentNoteId!, meta)" />
+        <UiStickyNote v-else-if="notesStore.getNote(currentNoteId!)" :note="notesStore.getNote(currentNoteId!)!"
           :delete-note="deleteNote" size="lg" @update="handleUpdateNote" @retry="handleRetry"
           @toggle-fullscreen="fullscreen.toggle" placeholder="Double-click to add your note..."
           @add-to-material="emit('add-to-material', $event)" />
@@ -332,7 +355,7 @@ onMounted(async () => {
     <template #header>
       <div class="flex items-center justify-between w-full">
         <span class="font-medium text-gray-900 dark:text-gray-100"></span>
-        <u-button variant="outline" color="neutral" size="xs" aria-label="Close fullscreen" @click="fullscreen.close">
+        <u-button variant="ghost" size="xs" aria-label="Close fullscreen" @click="fullscreen.close">
           <icon name="i-heroicons-x-mark" :size="UI_CONFIG.ICON_SIZE" />
         </u-button>
       </div>

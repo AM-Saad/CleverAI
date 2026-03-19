@@ -8,6 +8,9 @@ const id = route.params.id as string;
 
 const { folder, refresh: refreshFolder } = useFolder(id);
 
+// Context Bridge integration
+const contextBridge = useContextBridge();
+
 const existingFlashcards = computed(
   () => (folder.value as Folder | null | undefined)?.flashcards || [],
 );
@@ -87,14 +90,42 @@ function closeCreateModal() {
 onMounted(() => {
   console.log("isEnrollingLoading", props.isEnrollingLoading);
 });
+
+// Filter draft cards for bulk enrollment
+const draftCards = computed(() =>
+  cardsToShow.value.filter((card: any) => card.status === 'DRAFT')
+);
+
+const bulkEnrolling = ref(false);
+
+async function bulkEnrollDrafts() {
+  if (draftCards.value.length === 0) return;
+
+  bulkEnrolling.value = true;
+  const draftIds = draftCards.value.map((card: any) => card.id);
+  const success = await contextBridge.bulkEnroll(draftIds, 'flashcard');
+
+  if (success) {
+    await refreshFolder();
+  }
+  bulkEnrolling.value = false;
+}
 </script>
 
 
 <template>
   <div class="flex flex-col h-full">
     <!-- Header with Add button -->
-    <div class="flex justify-end mb-2">
-      <u-button v-if="cardsToShow && cardsToShow.length > 0" size="sm" variant="subtle" color="primary"
+    <div class="flex justify-between items-center mb-2">
+      <!-- Bulk Enroll Button -->
+      <u-button v-if="draftCards.length > 0" size="sm" variant="soft" color="primary" @click="bulkEnrollDrafts"
+        :loading="bulkEnrolling">
+        <Icon name="i-lucide-check-circle" class="w-4 h-4 mr-1" />
+        Enroll {{ draftCards.length }} Draft{{ draftCards.length > 1 ? 's' : '' }}
+      </u-button>
+      <div v-else></div>
+
+      <u-button v-if="cardsToShow && cardsToShow.length > 0" size="sm" variant="ghost" color="primary"
         @click="showCreateModal = true">
         <Icon name="i-lucide-plus" class="w-4 h-4 mr-1" />
         Add Card
@@ -120,16 +151,26 @@ onMounted(() => {
       item: 'select-none transition-opacity flex grow basis-full  min-h-full h-full ps-0 overflow-hidden',
       dots: 'bottom-0 relative mt-2 flex justify-center gap-2',
     }">
-      <ui-flip-card>
+      <ui-flip-card :class="card.status === 'DRAFT' ? 'draft-card' : ''">
         <template #front>
           <ui-paragraph size="base" class="mt-4">{{ card.front }}</ui-paragraph>
           <!-- Top-right badges and actions -->
           <div class="absolute top-2 right-2 flex items-center gap-2 ">
+            <!-- Draft badge -->
+            <u-badge v-if="card.status === 'DRAFT'" color="secondary" size="xs" class="text-xs">
+              Draft
+            </u-badge>
             <!-- Enrolled badge -->
-            <span v-if="'id' in card && card.id && props.enrolledIds.has(card.id)"
-              class="inline-flex items-center justify-center h-6 w-8 rounded-full text-xs font-medium bg-primary border border-muted text-light"
+            <span v-else-if="'id' in card && card.id && props.enrolledIds.has(card.id)"
+              class="inline-flex items-center justify-center h-6 w-8 rounded-full text-xs font-medium bg-primary border border-muted text-on-primary"
               title="Enrolled in Review">✓</span>
             <div class="justify-between gap-1 bg-primary/10 rounded-full overflow-hidden">
+              <!-- Context button -->
+              <u-button v-if="card.sourceRef" size="sm" variant="ghost"
+                @click.stop="contextBridge.locateSource(card, id)" title="View source context"
+                :disabled="props.isEnrollingLoading">
+                <Icon name="i-lucide-external-link" class="w-3 h-3" />
+              </u-button>
 
               <!-- Edit button -->
               <u-button v-if="'id' in card && card.id" size="sm" variant="ghost" @click.stop="openEditModal(card)"
@@ -164,3 +205,16 @@ onMounted(() => {
       @close="showDeleteModal = false; deletingFlashcard = null" @deleted="handleFlashcardDeleted" />
   </div>
 </template>
+
+<style scoped>
+/* Draft card styling */
+:deep(.draft-card) {
+  border: 2px dashed rgb(251 146 60 / 0.5);
+  background: linear-gradient(135deg, rgb(255 247 237 / 0.3) 0%, transparent 100%);
+}
+
+.dark :deep(.draft-card) {
+  border-color: rgb(251 146 60 / 0.3);
+  background: linear-gradient(135deg, rgb(124 45 18 / 0.2) 0%, transparent 100%);
+}
+</style>

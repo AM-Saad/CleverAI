@@ -233,7 +233,7 @@ function handleDragEnd(_: Event, info: DragInfo) {
         :drag="suspendDrag ? false : mode.axis" :drag-constraints="mode.constraints" :drag-elastic="0"
         :drag-snap-to-origin="false" :drag-momentum="false" :on-drag-start="handleDragStart"
         :on-drag-end="handleDragEnd" :class="[
-          'absolute cursor-grab active:cursor-grabbing overflow-hidden bg-muted backdrop-blur shadow-lg focus-visible:outline-none z-50 focus-visible:border border-primary',
+          'absolute cursor-grab active:cursor-grabbing overflow-hidden bg-surface backdrop-blur shadow-lg focus-visible:outline-none z-50 focus-visible:border border-primary',
           mode.containerClass,
         ]" :style="mode.style" role="dialog" aria-modal="true" :aria-labelledby="'drawer-title'">
         <div ref="panelEl" tabindex="-1" :class="[
@@ -255,7 +255,7 @@ function handleDragEnd(_: Event, info: DragInfo) {
           <!-- Header: slot or fallback title -->
           <div class="flex flex-col gap-1">
             <slot name="header">
-              <h4 id="drawer-title" class="flex items-center gap-2 text-lg font-semibold dark:text-light">
+              <h4 id="drawer-title" class="flex items-center gap-2 text-lg font-semibold ">
                 {{ props.title }}
               </h4>
             </slot>
@@ -266,7 +266,7 @@ function handleDragEnd(_: Event, info: DragInfo) {
           <div class="mt-2 flex flex-col h-[calc(100%-4.5rem)] overflow-auto">
             <slot />
           </div>
-          <u-button variant="subtle" size="xs" class="absolute top-3 right-3" @click="
+          <u-button variant="ghost" size="xs" class="absolute top-3 right-3" @click="
             () => {
               snapTo(mode.closed);
               emit('closed');

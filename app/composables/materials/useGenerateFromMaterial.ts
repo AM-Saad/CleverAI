@@ -107,10 +107,10 @@ export function useGenerateFromMaterial(
   /**
    * Confirm regeneration from dialog
    */
-  async function confirmRegenerate() {
+  async function confirmRegenerate(replace: boolean) {
     showConfirmDialog.value = false;
     if (pendingGenerationType.value) {
-      await executeGeneration(pendingGenerationType.value);
+      await executeGeneration(pendingGenerationType.value, replace);
     }
   }
 
@@ -125,7 +125,7 @@ export function useGenerateFromMaterial(
   /**
    * Execute the actual generation
    */
-  async function executeGeneration(type: GenerationType) {
+  async function executeGeneration(type: GenerationType, replace = false) {
     genError.value = null;
     generating.value = true;
     generationType.value = type;
@@ -156,13 +156,13 @@ export function useGenerateFromMaterial(
         result = await $api.gateway.generateFlashcards(text, {
           materialId: materialId.value,
           save: true,
-          replace: false,
+          replace,
         });
       } else {
         result = await $api.gateway.generateQuiz(text, {
           materialId: materialId.value,
           save: true,
-          replace: false,
+          replace,
         });
       }
 

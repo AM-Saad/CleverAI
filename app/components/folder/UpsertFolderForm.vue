@@ -104,7 +104,7 @@ watch(
             <u-input v-model="state.description" class="w-full" />
           </u-form-field>
           <div class="flex gap-3 justify-end pt-2">
-            <u-button variant="soft" color="neutral" @click="closeModel" :disabled="creating || updating">
+            <u-button variant="ghost" @click="closeModel" :disabled="creating || updating">
               Cancel
             </u-button>
             <u-button type="submit" :loading="creating || updating" :disabled="!canSubmit">

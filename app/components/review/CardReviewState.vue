@@ -1,23 +1,20 @@
 <template>
-  <div
-    class="mt-6 grid grid-cols-3 gap-4 text-center text-sm text-gray-500 dark:text-gray-400"
-    role="region"
-    aria-label="Card review state metrics"
-  >
+  <div class="mt-6 grid grid-cols-3 gap-4 text-center text-sm text-gray-500 dark:text-gray-400" role="region"
+    aria-label="Card review state metrics">
     <div>
-      <div class="font-medium text-gray-900 dark:text-gray-100">
+      <div class="font-medium">
         {{ reviewState.repetitions }}
       </div>
       <div>Reviews</div>
     </div>
     <div>
-      <div class="font-medium text-gray-900 dark:text-gray-100">
+      <div class="font-medium">
         {{ reviewState.easeFactor.toFixed(1) }}
       </div>
       <div>Ease</div>
     </div>
     <div>
-      <div class="font-medium text-gray-900 dark:text-gray-100">
+      <div class="font-medium">
         {{ reviewState.intervalDays }}d
       </div>
       <div>Interval</div>

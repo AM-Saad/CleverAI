@@ -28,7 +28,7 @@
 │       ├─→ [5] Semantic Cache Lookup                                         │
 │       ├─→ [6] Model Selection (selectBestModel)                             │
 │       ├─→ [7] Strategy Instantiation (LLMFactory)                           │
-│       ├─→ [8] LLM API Call (OpenAI / Gemini)                                │
+│       ├─→ [8] LLM API Call (OpenAI / Gemini / DeepSeek)                    │
 │       ├─→ [9] Database Transaction (save/replace)                           │
 │       ├─→ [10] Quota Increment                                              │
 │       ├─→ [11] Cache Set                                                    │
@@ -39,7 +39,8 @@
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                         EXTERNAL SERVICES                                   │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  OpenAI API (GPT-3.5/4o)  │  Google AI (Gemini 2.0)  │  Redis (Rate Limit) │
+│  OpenAI API (GPT-3.5/4o)  │  Google AI (Gemini)  │  DeepSeek API           │
+│                           │                      │  Redis (Rate Limit)     │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -70,14 +71,14 @@
 #### [useGenerateFromMaterial.ts](app/composables/materials/useGenerateFromMaterial.ts)
 
 ```typescript
-export function useGenerateFromMaterial(material: Ref<Material | null>) {
+export function useGenerateFromMaterial(materialId: Ref<string>) {
   const state = ref<GenerationState>('idle');
   const existingContent = ref<ExistingContent | null>(null);
   
   // Step 1: Check for existing content
   async function checkExistingContent(): Promise<ExistingContent | null> {
-    const response = await $fetch(`/api/materials/${materialId}/content-check`);
-    return response.existing || null;
+    const response = await $api.materials.getGeneratedContent(materialId.value);
+    return response.success ? response.data : null;
   }
   
   // Step 2: Start generation (shows confirmation if content exists)
@@ -85,7 +86,7 @@ export function useGenerateFromMaterial(material: Ref<Material | null>) {
     existingContent.value = await checkExistingContent();
     
     if (existingContent.value?.hasContent) {
-      // Show RegenerateConfirmDialog
+      // Show RegenerateConfirmDialog (user chooses replace or not)
       state.value = 'confirm-regenerate';
       return;
     }
@@ -94,17 +95,14 @@ export function useGenerateFromMaterial(material: Ref<Material | null>) {
   }
   
   // Step 3: Execute the actual generation
-  async function executeGeneration(type: GenerationType) {
+  async function executeGeneration(type: GenerationType, replace = false) {
     state.value = 'generating';
     
-    const result = await gatewayService.generateFlashcards(
-      material.value.content,
-      {
-        materialId: material.value.id,
-        save: true,
-        replace: true  // Cascade delete existing content + CardReviews
-      }
-    );
+    const result = await gatewayService.generateFlashcards(text, {
+      materialId: materialId.value,
+      save: true,
+      replace, // User-controlled replace behavior
+    });
     
     state.value = 'complete';
   }
@@ -116,8 +114,13 @@ export function useGenerateFromMaterial(material: Ref<Material | null>) {
 |-----------|--------|
 | No existing content | Proceed directly to generation |
 | Has existing flashcards/questions | Show `RegenerateConfirmDialog` |
-| User confirms regeneration | Execute with `replace: true` |
+| User confirms regeneration | Execute with `replace` checkbox value (user controls whether to delete old content) |
 | User cancels | Return to idle state |
+
+**Regeneration Behavior:**
+- **`replace=false` (default)**: Append new items to existing collection (no deletion)
+- **`replace=true`**: Delete old items + CardReviews, create new items (user explicitly confirmed)
+- RegenerateConfirmDialog shows checkbox allowing user to choose deletion behavior
 
 ---
 
@@ -132,19 +135,19 @@ export class GatewayService {
   async generateFlashcards(
     text: string,
     options?: {
+      folderId?: string;
       materialId?: string;
-      preferredModelId?: string;
       save?: boolean;
       replace?: boolean;
+      preferredModelId?: string;
+      requiredCapability?: 'text' | 'multimodal' | 'reasoning';
+      generationConfig?: GenerationConfig;
     }
-  ): Promise<Result<GatewayGenerateResponse, string>> {
+  ): Promise<GatewayGenerateResponse> {
     return this.generate({
-      action: 'flashcards',
+      task: 'flashcards',
       text,
-      materialId: options?.materialId,
-      preferredModelId: options?.preferredModelId,
-      save: options?.save ?? false,
-      replace: options?.replace ?? false,
+      ...options,
     });
   }
   
@@ -171,8 +174,8 @@ This is the **core orchestration endpoint**. Here's the complete flow:
 
 ```typescript
 // Must be authenticated user
-const user = await requireRole(event, "user");
-const userId = user.user.id;
+const user = await requireRole(event, ["USER"]);
+const userId = user.id;
 ```
 
 ---
@@ -183,11 +186,11 @@ const userId = user.user.id;
 const quotaResult = await checkUserQuota(userId);
 
 if (!quotaResult.canGenerate) {
-  throw createError({
-    statusCode: 403,
-    statusMessage: quotaResult.error || "Generation quota exceeded",
-    data: { subscription: quotaResult.subscription }
-  });
+  // Returns 400 (bad request) with quota headers and subscription payload
+  throw Errors.badRequest(
+    "Free tier quota exceeded. Please upgrade to continue generating content.",
+    { subscription: quotaResult.subscription, type: "QUOTA_EXCEEDED" }
+  );
 }
 ```
 
@@ -239,43 +242,61 @@ setRateLimitHeaders(event, Math.min(userRemaining, ipRemaining), userRemaining, 
 import { GatewayGenerateRequest } from '~/shared/utils/llm-generate.contract';
 
 const body = await readBody(event);
-const parsed = GatewayGenerateRequest.parse(body);
+const parsed = GatewayGenerateRequest.safeParse(body);
 ```
 
 **Request Schema:**
 ```typescript
 const GatewayGenerateRequest = z.object({
-  action: z.enum(['flashcards', 'quiz']),
-  text: z.string().min(10).max(100000),
+  task: z.enum(['flashcards', 'quiz']),
+  text: z.string().min(1).max(100000).optional(),
+  folderId: z.string().optional(),
   materialId: z.string().optional(),
   preferredModelId: z.string().optional(),
-  requiredCapability: z.enum(['flashcard', 'quiz']).optional(),
+  requiredCapability: z.enum(['text', 'multimodal', 'reasoning']).optional(),
+  generationConfig: z.object({
+    depth: z.enum(['quick', 'balanced', 'deep']).optional(),
+    maxItems: z.number().int().positive().optional(),
+  }).optional(),
   save: z.boolean().default(false),
   replace: z.boolean().default(false),
 });
 ```
 
+**Material/Folder Permissions:**
+- If `materialId` is provided, the gateway loads the material and replaces `text` with `material.content`.
+- Ownership is enforced via `material.folder.userId === user.id`.
+- If `save` is true, folder/material ownership is required before saving.
+- If no `materialId` is provided, `text` is required and must be non-empty.
+
 ---
 
-#### **Step 4.5: Semantic Cache Lookup**
+#### **Step 4.5: Adaptive Item Count + Semantic Cache Lookup**
 
 ```typescript
-const cacheKey = computeCacheKey(parsed.text, parsed.action);
-const cached = await checkSemanticCache(cacheKey);
+const tokenEstimate = estimateTokensFromText(text);
+const depth = generationConfig?.depth ?? 'balanced';
+const itemCount = computeAdaptiveItemCount(tokenEstimate, depth, generationConfig?.maxItems);
 
-if (cached) {
+const cacheCheck = await checkSemanticCache(text, task, itemCount);
+
+if (cacheCheck.hit && cacheCheck.value) {
   // Return cached response immediately (skip LLM call)
   return {
     success: true,
-    ...cached,
-    metadata: { cached: true }
+    ...cacheCheck.value,
+    cached: true,
+    itemCount,
+    tokenEstimate
   };
 }
 ```
 
+**Important:** Cached responses still increment quota usage and are logged for cost accounting.
+
 **Cache Implementation:**
 - TTL: 7 days
-- Key: SHA-256 hash of `text + action`
+- Key: derived from `text + task + itemCount` (prompt versioned in tokenEstimate util)
 - Storage: Redis or in-memory fallback
 
 ---
@@ -284,75 +305,49 @@ if (cached) {
 
 ```typescript
 const selectedModel = await selectBestModel({
-  requiredCapability: parsed.action === 'flashcards' ? 'flashcard' : 'quiz',
-  preferredModelId: parsed.preferredModelId,
-  estimatedTokens: estimateTokens(parsed.text),
-  userTier: quotaResult.subscription.tier,
+  userId: user.id,
+  task,
+  inputText: text,
+  estimatedOutputTokens: task === 'flashcards' ? 500 : 800,
+  userTier: quotaCheck.subscription.tier,
+  preferredModelId,
+  requiredCapability,
 });
 ```
 
 **Routing Algorithm ([routing.ts](server/utils/llm/routing.ts)):**
 
 ```typescript
-function computeModelScore(model: LlmModelRegistry, params: SelectionParams): number {
-  // Lower score = better choice
-  
-  // 1. Base cost (costPer1kTokens)
-  let score = model.costPer1kTokens;
-  
-  // 2. Latency penalty
-  score += model.avgLatencyMs * 0.001;  // 1 point per second
-  
-  // 3. Priority bonus (higher priority = lower score)
-  score -= model.priority * 2;
-  
-  // 4. Capability match bonus
-  if (model.capabilities.includes(params.requiredCapability)) {
-    score -= 10;
-  }
-  
-  // 5. Health penalty (only for PRO+ users)
-  if (params.userTier !== 'FREE' && model.healthScore < 1.0) {
-    score += (1 - model.healthScore) * 50;
-  }
-  
-  return score;
-}
+function computeModelScore(model: LlmModelRegistry, inputTokens: number, outputTokens: number, ctx: RoutingContext) {
+  const inputCost = (inputTokens / 1_000_000) * model.inputCostPer1M
+  const outputCost = (outputTokens / 1_000_000) * model.outputCostPer1M
+  const baseCost = inputCost + outputCost
 
-async function selectBestModel(params: SelectionParams): Promise<LlmModelRegistry> {
-  // Fetch active models with required capability
-  const candidates = await prisma.llmModelRegistry.findMany({
-    where: {
-      isActive: true,
-      capabilities: { has: params.requiredCapability }
-    }
-  });
-  
-  // Score and sort
-  const scored = candidates.map(m => ({
-    model: m,
-    score: computeModelScore(m, params)
-  }));
-  
-  scored.sort((a, b) => a.score - b.score);
-  
-  // Prefer user's choice if valid
-  if (params.preferredModelId) {
-    const preferred = scored.find(s => s.model.id === params.preferredModelId);
-    if (preferred) return preferred.model;
-  }
-  
-  return scored[0].model;  // Best scoring model
+  const latencyMs = model.avgLatencyMs ?? model.latencyBudgetMs
+  const latencyOverage = Math.max(0, latencyMs - model.latencyBudgetMs)
+  const latencyPenalty = (latencyOverage / 1000) * 0.001
+
+  const priorityPenalty = model.priority * 0.001
+  const capabilityBonus = ctx.requiredCapability && model.capabilities.includes(ctx.requiredCapability)
+    ? -0.005 : 0
+  const healthPenalty = model.healthStatus === 'degraded' ? 0.01 : 0
+
+  return baseCost + latencyPenalty + priorityPenalty + capabilityBonus + healthPenalty
 }
 ```
+
+**Selection Logic:**
+- If `preferredModelId` is provided and enabled/healthy → use it.
+- Otherwise score all enabled, healthy candidates and choose lowest score.
+- For PRO+ users, prefer healthy over degraded if top two are close.
 
 **Scoring Formula:**
 ```
-score = costPer1kTokens 
-      + (avgLatencyMs × 0.001) 
-      - (priority × 2) 
-      - (capabilityMatch ? 10 : 0) 
-      + (userTier !== 'FREE' && healthScore < 1 ? (1 - healthScore) × 50 : 0)
+score = baseCost (input+output USD)
+  + latencyPenalty (over budget)
+  + priorityPenalty (higher = worse)
+  + healthPenalty (degraded = worse)
+  + capabilityBonus (match = better)
 ```
 
 ---
@@ -360,7 +355,7 @@ score = costPer1kTokens
 #### **Step 4.7: Strategy Instantiation**
 
 ```typescript
-const strategy = await getLLMStrategyFromRegistry(selectedModel.id);
+const strategy = await getLLMStrategyFromRegistry(selectedModel.modelId);
 ```
 
 **Factory Logic ([LLMFactory.ts](server/utils/llm/LLMFactory.ts)):**
@@ -368,7 +363,7 @@ const strategy = await getLLMStrategyFromRegistry(selectedModel.id);
 ```typescript
 export async function getLLMStrategyFromRegistry(modelId: string): Promise<LLMStrategy> {
   const model = await prisma.llmModelRegistry.findUnique({
-    where: { id: modelId }
+    where: { modelId }
   });
   
   if (!model) throw new Error(`Model ${modelId} not found`);
@@ -389,11 +384,8 @@ export async function getLLMStrategyFromRegistry(modelId: string): Promise<LLMSt
 #### **Step 4.8: LLM API Call**
 
 ```typescript
-const generationResult = await strategy.generateFlashcards(parsed.text, {
-  onMeasure: (usage) => {
-    // Token usage callback for logging
-    measuredUsage = usage;
-  }
+const generationResult = await strategy.generateFlashcards(text, {
+  itemCount
 });
 ```
 
@@ -448,51 +440,118 @@ export class GPT35Strategy implements LLMStrategy {
 #### **Step 4.9: Database Transaction (Save/Replace)**
 
 ```typescript
-if (parsed.save && parsed.materialId) {
-  const saveResult = await prisma.$transaction(async (tx) => {
-    let deletedCount = 0;
-    let deletedReviewsCount = 0;
-    
-    // Replace mode: delete existing + cascade CardReviews
-    if (parsed.replace) {
-      const existingFlashcards = await tx.flashCard.findMany({
-        where: { materialId: parsed.materialId },
-        select: { id: true }
+if (canSave && effectiveFolderId) {
+  try {
+    if (task === "flashcards") {
+      // Use transaction to ensure atomic delete + create
+      await prisma.$transaction(async (tx) => {
+        // If replacing for a specific material, delete old flashcards and their CardReviews
+        if (replace && materialId) {
+          // Get IDs of flashcards to be deleted for CardReview cleanup
+          const oldFlashcards = await tx.flashcard.findMany({
+            where: { materialId },
+            select: { id: true },
+          });
+          const oldFlashcardIds = oldFlashcards.map((f) => f.id);
+
+          // Delete CardReviews for these flashcards
+          if (oldFlashcardIds.length > 0) {
+            const reviewsDeleted = await tx.cardReview.deleteMany({
+              where: {
+                cardId: { in: oldFlashcardIds },
+                resourceType: "flashcard",
+              },
+            });
+            deletedReviewsCount = reviewsDeleted.count;
+          }
+
+          // Delete old flashcards
+          const deleted = await tx.flashcard.deleteMany({
+            where: { materialId },
+          });
+          deletedCount = deleted.count;
+        }
+
+        // Create new flashcards
+        if (result.length) {
+          const res = await tx.flashcard.createMany({
+            data: (result as Flashcard[]).map((fc) => ({
+              folderId: effectiveFolderId,
+              materialId: materialId || null,
+              front: fc.front,
+              back: fc.back,
+            })),
+          });
+          savedCount = res.count;
+        } else {
+          savedCount = 0;
+        }
       });
-      
-      const flashcardIds = existingFlashcards.map(f => f.id);
-      
-      // Delete associated CardReviews first
-      const reviewsDeleted = await tx.cardReview.deleteMany({
-        where: { flashcardId: { in: flashcardIds } }
+    } else {
+      // Quiz/Questions
+      await prisma.$transaction(async (tx) => {
+        // If replacing for a specific material, delete old questions and their CardReviews
+        if (replace && materialId) {
+          // Get IDs of questions to be deleted for CardReview cleanup
+          const oldQuestions = await tx.question.findMany({
+            where: { materialId },
+            select: { id: true },
+          });
+          const oldQuestionIds = oldQuestions.map((q) => q.id);
+
+          // Delete CardReviews for these questions
+          if (oldQuestionIds.length > 0) {
+            const reviewsDeleted = await tx.cardReview.deleteMany({
+              where: {
+                cardId: { in: oldQuestionIds },
+                resourceType: "question",
+              },
+            });
+            deletedReviewsCount = reviewsDeleted.count;
+          }
+
+          // Delete old questions
+          const deleted = await tx.question.deleteMany({
+            where: { materialId },
+          });
+          deletedCount = deleted.count;
+        }
+
+        // Create new questions
+        if (result.length) {
+          const res = await tx.question.createMany({
+            data: (result as QuizQuestion[]).map((q) => ({
+              folderId: effectiveFolderId,
+              materialId: materialId || null,
+              question: q.question,
+              choices: q.choices,
+              answerIndex: q.answerIndex,
+            })),
+          });
+          savedCount = res.count;
+        } else {
+          savedCount = 0;
+        }
       });
-      deletedReviewsCount = reviewsDeleted.count;
-      
-      // Then delete flashcards
-      const cardsDeleted = await tx.flashCard.deleteMany({
-        where: { materialId: parsed.materialId }
-      });
-      deletedCount = cardsDeleted.count;
     }
-    
-    // Create new flashcards
-    const created = await tx.flashCard.createMany({
-      data: generationResult.map(fc => ({
-        front: fc.front,
-        back: fc.back,
-        materialId: parsed.materialId,
-        userId: userId,
-      }))
+  } catch (err) {
+    console.error("[llm.gateway] Failed to save to database:", {
+      requestId,
+      folderId: effectiveFolderId,
+      materialId,
+      task,
+      error: err,
     });
-    
-    return {
-      savedCount: created.count,
-      deletedCount,
-      deletedReviewsCount
-    };
-  });
+    // Don't throw - generation succeeded even if save failed
+  }
 }
 ```
+
+**Key Changes from Previous Implementation:**
+1. **Append-Only by Default**: `replace` parameter controls whether to delete existing content
+2. **CardReview Cascade Cleanup**: When `replace=true`, CardReviews are deleted alongside flashcards/questions
+3. **Questions Support**: Full transaction support for quiz questions with same pattern as flashcards
+4. **User-Controlled**: Frontend shows `RegenerateConfirmDialog` allowing users to choose replace behavior
 
 ---
 
@@ -511,10 +570,11 @@ const updatedSubscription = await incrementGenerationCount(userId);
 #### **Step 4.11: Cache Set**
 
 ```typescript
-await setSemanticCache(cacheKey, {
-  flashcards: generationResult,
-  action: parsed.action
-}, CACHE_TTL_SECONDS);  // 7 days
+await setSemanticCache(text, task, {
+  ...(task === 'flashcards' ? { flashcards: generationResult } : { quiz: generationResult }),
+  modelId: selectedModel.modelId,
+  provider: selectedModel.provider,
+}, CACHE_TTL_SECONDS, itemCount);  // 7 days
 ```
 
 ---
@@ -523,14 +583,21 @@ await setSemanticCache(cacheKey, {
 
 ```typescript
 await logGatewayRequest({
+  requestId,
   userId,
-  action: parsed.action,
-  modelId: selectedModel.id,
-  promptTokens: measuredUsage?.promptTokens || 0,
-  completionTokens: measuredUsage?.completionTokens || 0,
-  latencyMs: Date.now() - startTime,
+  folderId,
+  selectedModel,
+  task,
+  inputTokens: estimatedInputTokens,
+  outputTokens: estimatedOutputTokens,
+  totalTokens: estimatedInputTokens + estimatedOutputTokens,
+  latencyMs,
   cached: false,
-  success: true
+  cacheHit: false,
+  status: 'success',
+  itemCount,
+  tokenEstimate,
+  depth,
 });
 ```
 
@@ -540,20 +607,19 @@ await logGatewayRequest({
 
 ```typescript
 return {
-  success: true,
-  flashcards: generationResult,
-  savedCount: saveResult?.savedCount || 0,
-  deletedCount: saveResult?.deletedCount || 0,
-  deletedReviewsCount: saveResult?.deletedReviewsCount || 0,
-  subscription: updatedSubscription,
-  metadata: {
-    requestId: generateRequestId(),
-    selectedModelId: selectedModel.id,
-    selectedModelName: selectedModel.displayName,
-    latencyMs: Date.now() - startTime,
-    cached: false,
-    tokenUsage: measuredUsage
-  }
+  task,
+  flashcards | quiz,
+  savedCount,
+  deletedCount,
+  deletedReviewsCount,
+  subscription,
+  requestId,
+  selectedModelId,
+  provider,
+  latencyMs,
+  cached,
+  itemCount,
+  tokenEstimate,
 };
 ```
 
@@ -603,17 +669,19 @@ GEMINI_MOCK=1
 |----------|---------|----------|
 | `OPENAI_API_KEY` | OpenAI API access | Yes (prod) |
 | `GOOGLE_AI_API_KEY` | Gemini API access | Yes (prod) |
+| `DEEPSEEK_API_KEY` | DeepSeek API access | No (optional provider) |
 | `REDIS_URL` | Rate limiting & caching | No (fallback: memory) |
 | `OPENAI_MOCK` | Skip real API calls | No (dev only) |
 | `GEMINI_MOCK` | Skip real API calls | No (dev only) |
+| `DEEPSEEK_MOCK` | Skip real API calls | No (dev only) |
 
 ### Model Registry (Prisma)
 
 ```prisma
 model LlmModelRegistry {
   id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  provider       String   // "openai" | "google"
-  modelId        String   // "gpt-3.5-turbo" | "gpt-4o" | "gemini-2.0-flash"
+  provider       String   // "openai" | "google" | "deepseek"
+  modelId        String   // "gpt-3.5-turbo" | "gemini-2.0-flash" | "deepseek-chat"
   displayName    String
   capabilities   String[] // ["flashcard", "quiz"]
   costPer1kTokens Float
@@ -642,7 +710,7 @@ X-RateLimit-Reset: 45
 ```typescript
 {
   userId: "user_123",
-  action: "flashcards",
+  task: "flashcards",
   modelId: "model_abc",
   promptTokens: 1500,
   completionTokens: 500,
@@ -659,11 +727,11 @@ X-RateLimit-Reset: 45
 | Error | HTTP Code | Trigger |
 |-------|-----------|---------|
 | Not authenticated | 401 | Missing/invalid session |
-| Quota exceeded | 403 | FREE tier, 0 remaining |
+| Quota exceeded | 400 | FREE tier, 0 remaining |
 | Rate limited | 429 | >5/min user or >20/min IP |
 | Validation failed | 400 | Invalid request body |
-| Model not found | 500 | Invalid preferredModelId |
-| LLM API error | 502 | OpenAI/Gemini failure |
+| Model not found | 404 | Invalid preferredModelId or registry entry missing |
+| LLM API error | 500 | Provider failure or generation error |
 
 ---
 
@@ -708,8 +776,8 @@ User                UI                  Composable           Service            
 
 ### 2. **Smart Routing with Scoring Algorithm**
 - **Goal:** Optimize cost/performance trade-off
-- **Factors:** Cost per 1k tokens, latency, priority, capability match, health score
-- **User Tier Awareness:** PRO users get health-aware fallback, FREE users get cheapest option
+- **Factors:** Cost per 1M tokens (input/output), latency budget overage, priority penalty, capability bonus, health penalty
+- **User Tier Awareness:** PRO users get health-aware fallback, FREE users get lowest score
 
 ### 3. **Dual Rate Limiting (Redis + Memory)**
 - **Primary:** Redis for distributed rate limiting (production)
@@ -717,14 +785,22 @@ User                UI                  Composable           Service            
 - **Limits:** 5 req/min per user, 20 req/min per IP
 
 ### 4. **Semantic Caching**
-- **Key:** SHA-256 hash of `text + action`
+- **Key:** Derived from `text + task + itemCount` (prompt versioned)
 - **TTL:** 7 days
-- **Benefit:** Reduces API costs for repeated content
+- **Benefit:** Skips LLM call but **does not** bypass quota/cost accounting
 
-### 5. **Transactional Saves with Cascade Delete**
-- **Transaction:** Ensures atomicity (delete old + create new)
-- **Cascade:** CardReview records deleted when flashcards replaced
-- **Warning:** User notified before deletion via `RegenerateConfirmDialog`
+### 5. **User-Controlled Replace with CardReview Cascade**
+- **Default Behavior:** Append-only (no deletion) to preserve user progress
+- **Replace Option:** User can explicitly choose to delete old items via checkbox in RegenerateConfirmDialog
+- **Cascade Delete:** When `replace=true`, CardReview records are deleted alongside flashcards/questions
+- **Transaction:** Ensures atomicity (delete old + create new happens together or not at all)
+- **Supported Types:** Both flashcards and questions support replace with CardReview cleanup
+
+### 6. **Question Enrollment Integration**
+- **Polymorphic CardReview:** `resourceType` field supports "material", "flashcard", and "question"
+- **Queue Fetching:** Questions fetched in parallel with materials and flashcards for optimal performance
+- **UI Parity:** Questions.vue matches FlashCards.vue pattern with enrollment tracking and status indicators
+- **Same SM-2 Algorithm:** Questions use identical spaced repetition logic as flashcards
 
 ---
 

@@ -18,24 +18,24 @@
                     label="Loading Account Information..." />
 
                 <div v-else-if="profile" class="flex flex-col gap-4">
-                    <UiLabel>
+                    <UiLabel size="lg">
                         Name: {{ profile.name }}
                     </UiLabel>
 
-                    <UiLabel>
+                    <UiLabel size="lg">
                         Email: {{ profile.email }}
                     </UiLabel>
 
-                    <UiLabel>
+                    <UiLabel size="lg">
                         Phone: {{ profile.phone || 'Not provided' }}
                     </UiLabel>
 
-                    <UiLabel>
+                    <UiLabel size="lg">
                         Gender: {{ profile.gender ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1) :
                             'Not specified' }}
                     </UiLabel>
 
-                    <UiLabel>
+                    <UiLabel size="lg">
                         {{ formatDate(new Date(profile.createdAt)) }}
                     </UiLabel>
                 </div>

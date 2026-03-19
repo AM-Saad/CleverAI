@@ -9,7 +9,8 @@
         {{ typedError.details.data?.message }}.
       </ui-subtitle>
       <ui-subtitle size="sm" v-else>
-        {{ typedError.message || 'An unexpected error occurred. Please try again later.' }}
+        {{ online ? typedError.message || 'An unexpected error occurred. Please try again later.' :
+          'You are currently offline. Please check your internet connection and try again.' }}
       </ui-subtitle>
     </div>
     <DevOnly>
@@ -21,6 +22,7 @@
 </template>
 
 <script setup lang="ts">
+import { useOnline } from '@vueuse/core'
 
 defineProps<{
   loading: boolean;
@@ -28,4 +30,6 @@ defineProps<{
 const typedError = defineModel<
   import("/Users/Bodda/cleverAI/app/services/FetchFactory").APIError | null
 >("typedError", { required: true });
+const online = useOnline()
+
 </script>

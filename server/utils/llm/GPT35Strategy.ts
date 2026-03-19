@@ -14,16 +14,17 @@ function safeParseJSON<T>(text: string, fallback: T): T {
 
 export class GPT35Strategy implements LLMStrategy {
   private client: OpenAI;
-  private static readonly CHAT_MODEL = "gpt-3.5-turbo";
+  private modelId: string;
   private onMeasure?: (m: LlmMeasured) => void;
 
-  constructor(onMeasure?: (m: LlmMeasured) => void) {
+  constructor(modelId: string, onMeasure?: (m: LlmMeasured) => void) {
     // Use **private** server runtime config
     const { openaiKey } = useRuntimeConfig();
     if (!openaiKey) {
       throw new Error("Missing OPENAI_API_KEY in runtimeConfig");
     }
     this.client = new OpenAI({ apiKey: openaiKey });
+    this.modelId = modelId;
     this.onMeasure = onMeasure;
   }
 
@@ -46,7 +47,7 @@ export class GPT35Strategy implements LLMStrategy {
     const inputChars = input.length;
     let inputTokensEstimate = 0;
     try {
-      const enc = encoding_for_model(GPT35Strategy.CHAT_MODEL);
+      const enc = encoding_for_model(this.modelId as any);
       inputTokensEstimate = enc.encode(prompt).length;
       enc.free();
     } catch { }
@@ -54,7 +55,7 @@ export class GPT35Strategy implements LLMStrategy {
     let content = "[]";
     try {
       const res = await this.client.chat.completions.create({
-        model: GPT35Strategy.CHAT_MODEL,
+        model: this.modelId,
         messages: [{ role: "user", content: prompt }],
       });
       const promptTokens = Number(res.usage?.prompt_tokens ?? 0);
@@ -63,7 +64,7 @@ export class GPT35Strategy implements LLMStrategy {
       content = res.choices?.[0]?.message?.content?.trim() ?? "[]";
       let outputTokensEstimate = 0;
       try {
-        const enc = encoding_for_model(GPT35Strategy.CHAT_MODEL);
+        const enc = encoding_for_model(this.modelId as any);
         outputTokensEstimate = enc.encode(
           typeof content === "string" ? content : ""
         ).length;
@@ -72,7 +73,7 @@ export class GPT35Strategy implements LLMStrategy {
       const outputChars = typeof content === "string" ? content.length : 0;
       this.onMeasure?.({
         provider: "openai",
-        model: GPT35Strategy.CHAT_MODEL,
+        model: this.modelId,
         promptTokens,
         completionTokens,
         totalTokens,
@@ -100,7 +101,13 @@ export class GPT35Strategy implements LLMStrategy {
     for (const item of raw) {
       const front = typeof item?.front === "string" ? item.front.trim() : "";
       const back = typeof item?.back === "string" ? item.back.trim() : "";
-      if (front && back) cards.push({ front, back });
+      if (front && back) {
+        cards.push({
+          front,
+          back,
+          sourceMetadata: item?.sourceMetadata || item?.source_metadata
+        });
+      }
     }
     return cards;
   }
@@ -129,7 +136,7 @@ export class GPT35Strategy implements LLMStrategy {
     const inputChars = input.length;
     let inputTokensEstimate = 0;
     try {
-      const enc = encoding_for_model(GPT35Strategy.CHAT_MODEL);
+      const enc = encoding_for_model(this.modelId as any);
       inputTokensEstimate = enc.encode(prompt).length;
       enc.free();
     } catch { }
@@ -137,7 +144,7 @@ export class GPT35Strategy implements LLMStrategy {
     let content = "[]";
     try {
       const res = await this.client.chat.completions.create({
-        model: GPT35Strategy.CHAT_MODEL,
+        model: this.modelId,
         messages: [{ role: "user", content: prompt }],
       });
       const promptTokens = Number(res.usage?.prompt_tokens ?? 0);
@@ -146,7 +153,7 @@ export class GPT35Strategy implements LLMStrategy {
       content = res.choices?.[0]?.message?.content?.trim() ?? "[]";
       let outputTokensEstimate = 0;
       try {
-        const enc = encoding_for_model(GPT35Strategy.CHAT_MODEL);
+        const enc = encoding_for_model(this.modelId as any);
         outputTokensEstimate = enc.encode(
           typeof content === "string" ? content : ""
         ).length;
@@ -155,7 +162,7 @@ export class GPT35Strategy implements LLMStrategy {
       const outputChars = typeof content === "string" ? content.length : 0;
       this.onMeasure?.({
         provider: "openai",
-        model: GPT35Strategy.CHAT_MODEL,
+        model: this.modelId,
         promptTokens,
         completionTokens,
         totalTokens,
@@ -191,7 +198,12 @@ export class GPT35Strategy implements LLMStrategy {
         typeof item?.answerIndex === "number" ? item.answerIndex : -1;
       const withinBounds = answerIndex >= 0 && answerIndex < choices.length;
       if (question && choices.length === 4 && withinBounds) {
-        questions.push({ question, choices, answerIndex });
+        questions.push({
+          question,
+          choices,
+          answerIndex,
+          sourceMetadata: item?.sourceMetadata || item?.source_metadata
+        });
       }
     }
     return questions;

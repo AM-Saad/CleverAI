@@ -28,20 +28,20 @@ const props = defineProps({
   },
   borderClass: {
     type: String,
-    default: "border-muted dark:border-gray-700",
+    default: "border-secondary",
   },
   activeClass: {
     type: String,
-    default: "border-primary text-primary dark:text-primary font-bold!",
+    default: "border-primary text-primary font-medium!",
   },
   inactiveClass: {
     type: String,
     default:
-      "border-transparent text-muted dark:text-neutral hover:text-muted hover:border-gray-300 font-light!",
+      "border-transparent text-content-on-surface  hover:border-gray-300 font-light!",
   },
   buttonBaseClass: {
     type: String,
-    default: "flex items-center gap-2 font-medium text-base transition-colors text-nowrap",
+    default: "flex items-center gap-2 font-medium text-sm transition-colors text-nowrap",
   },
   direction: {
     type: [String, Object] as PropType<string | Record<string, string>>,

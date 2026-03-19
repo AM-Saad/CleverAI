@@ -1,0 +1,292 @@
+[{
+  "_id": {
+    "$oid": "69225019f544dac04129c543"
+  },
+  "modelId": "gemini-2.0-flash-lite",
+  "provider": "google",
+  "modelName": "gemini-2.0-flash-lite",
+  "inputCostPer1M": 0.075,
+  "outputCostPer1M": 0.3,
+  "capabilities": [
+    "text",
+    "chat"
+  ],
+  "maxTokens": {
+    "$numberLong": "32000"
+  },
+  "latencyBudgetMs": {
+    "$numberLong": "400"
+  },
+  "healthStatus": "healthy",
+  "lastHealthCheck": {
+    "$date": "2025-11-23T00:06:48.974Z"
+  },
+  "priority": {
+    "$numberLong": "1"
+  },
+  "enabled": true,
+  "createdAt": {
+    "$date": "2025-11-23T00:06:48.974Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-25T19:34:50.108Z"
+  },
+  "avgLatencyMs": {
+    "$numberLong": "883"
+  }
+},
+{
+  "_id": {
+    "$oid": "6922501af544dac04129c544"
+  },
+  "modelId": "openai-gpt4o-mini",
+  "provider": "openai",
+  "modelName": "gpt-4o-mini",
+  "inputCostPer1M": 0.15,
+  "outputCostPer1M": 0.6,
+  "capabilities": [
+    "text",
+    "chat"
+  ],
+  "maxTokens": {
+    "$numberLong": "128000"
+  },
+  "latencyBudgetMs": {
+    "$numberLong": "500"
+  },
+  "healthStatus": "healthy",
+  "lastHealthCheck": {
+    "$date": "2025-11-23T00:06:50.433Z"
+  },
+  "priority": {
+    "$numberLong": "2"
+  },
+  "enabled": true,
+  "createdAt": {
+    "$date": "2025-11-23T00:06:50.433Z"
+  },
+  "updatedAt": {
+    "$date": "2025-11-28T14:08:18.673Z"
+  },
+  "avgLatencyMs": {
+    "$numberLong": "3773"
+  }
+},
+{
+  "_id": {
+    "$oid": "6922501bf544dac04129c545"
+  },
+  "modelId": "gemini-2.0-flash",
+  "provider": "google",
+  "modelName": "gemini-2.0-flash",
+  "inputCostPer1M": 0.1,
+  "outputCostPer1M": 0.4,
+  "capabilities": [
+    "text",
+    "multimodal",
+    "chat"
+  ],
+  "maxTokens": {
+    "$numberLong": "1000000"
+  },
+  "latencyBudgetMs": {
+    "$numberLong": "600"
+  },
+  "healthStatus": "healthy",
+  "lastHealthCheck": {
+    "$date": "2025-11-23T00:06:51.028Z"
+  },
+  "priority": {
+    "$numberLong": "3"
+  },
+  "enabled": true,
+  "createdAt": {
+    "$date": "2025-11-23T00:06:51.028Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-25T18:49:57.306Z"
+  },
+  "avgLatencyMs": {
+    "$numberLong": "432"
+  }
+},
+{
+  "_id": {
+    "$oid": "6922501bf544dac04129c546"
+  },
+  "modelId": "openai-gpt35-turbo",
+  "provider": "openai",
+  "modelName": "gpt-3.5-turbo",
+  "inputCostPer1M": 0.5,
+  "outputCostPer1M": 1.5,
+  "capabilities": [
+    "text",
+    "chat"
+  ],
+  "maxTokens": {
+    "$numberLong": "16385"
+  },
+  "latencyBudgetMs": {
+    "$numberLong": "450"
+  },
+  "healthStatus": "healthy",
+  "lastHealthCheck": {
+    "$date": "2025-11-23T00:06:51.636Z"
+  },
+  "priority": {
+    "$numberLong": "4"
+  },
+  "enabled": true,
+  "createdAt": {
+    "$date": "2025-11-23T00:06:51.636Z"
+  },
+  "updatedAt": {
+    "$date": "2025-11-23T00:06:51.636Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "6922501cf544dac04129c547"
+  },
+  "modelId": "openai-gpt4o",
+  "provider": "openai",
+  "modelName": "gpt-4o",
+  "inputCostPer1M": 2.5,
+  "outputCostPer1M": 10,
+  "capabilities": [
+    "text",
+    "multimodal",
+    "realtime",
+    "chat"
+  ],
+  "maxTokens": {
+    "$numberLong": "128000"
+  },
+  "latencyBudgetMs": {
+    "$numberLong": "800"
+  },
+  "healthStatus": "healthy",
+  "lastHealthCheck": {
+    "$date": "2025-11-23T00:06:52.226Z"
+  },
+  "priority": {
+    "$numberLong": "8"
+  },
+  "enabled": true,
+  "createdAt": {
+    "$date": "2025-11-23T00:06:52.226Z"
+  },
+  "updatedAt": {
+    "$date": "2025-11-23T00:06:52.226Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "697382b1cb7fe5cedf9db452"
+  },
+  "modelId": "deepseek-chat",
+  "provider": "deepseek",
+  "modelName": "deepseek-chat",
+  "inputCostPer1M": 0.28,
+  "outputCostPer1M": 0.42,
+  "capabilities": [
+    "text"
+  ],
+  "maxTokens": {
+    "$numberLong": "64000"
+  },
+  "latencyBudgetMs": {
+    "$numberLong": "2000"
+  },
+  "avgLatencyMs": {
+    "$numberLong": "886"
+  },
+  "healthStatus": "healthy",
+  "lastHealthCheck": {
+    "$date": "2026-01-23T14:16:17.759Z"
+  },
+  "priority": {
+    "$numberLong": "3"
+  },
+  "enabled": true,
+  "createdAt": {
+    "$date": "2026-01-23T14:16:17.759Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-23T14:20:38.144Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "697382b2cb7fe5cedf9db453"
+  },
+  "modelId": "deepseek-reasoner",
+  "provider": "deepseek",
+  "modelName": "deepseek-reasoner",
+  "inputCostPer1M": 0.55,
+  "outputCostPer1M": 2.19,
+  "capabilities": [
+    "text",
+    "reasoning"
+  ],
+  "maxTokens": {
+    "$numberLong": "64000"
+  },
+  "latencyBudgetMs": {
+    "$numberLong": "5000"
+  },
+  "avgLatencyMs": {
+    "$numberLong": "2000"
+  },
+  "healthStatus": "healthy",
+  "lastHealthCheck": {
+    "$date": "2026-01-23T14:16:18.609Z"
+  },
+  "priority": {
+    "$numberLong": "4"
+  },
+  "enabled": true,
+  "createdAt": {
+    "$date": "2026-01-23T14:16:18.609Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-23T14:16:18.609Z"
+  }
+},
+{
+  "_id": {
+    "$oid": "697382b4cb7fe5cedf9db454"
+  },
+  "modelId": "gpt-4o-mini",
+  "provider": "openai",
+  "modelName": "gpt-4o-mini",
+  "inputCostPer1M": 0.15,
+  "outputCostPer1M": 0.6,
+  "capabilities": [
+    "text",
+    "multimodal"
+  ],
+  "maxTokens": {
+    "$numberLong": "128000"
+  },
+  "latencyBudgetMs": {
+    "$numberLong": "1000"
+  },
+  "avgLatencyMs": {
+    "$numberLong": "2547"
+  },
+  "healthStatus": "healthy",
+  "lastHealthCheck": {
+    "$date": "2026-01-23T14:16:20.659Z"
+  },
+  "priority": {
+    "$numberLong": "2"
+  },
+  "enabled": true,
+  "createdAt": {
+    "$date": "2026-01-23T14:16:20.659Z"
+  },
+  "updatedAt": {
+    "$date": "2026-01-25T19:36:06.585Z"
+  }
+}]
