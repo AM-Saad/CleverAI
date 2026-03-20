@@ -10,14 +10,14 @@ const ContextSlideOver = defineAsyncComponent(
 );
 
 const LearningHubModal = defineAsyncComponent(
-  () => import("~/components/folder/LearningHubModal.vue")
+  () => import("~/components/hub/LearningHubModal.vue")
 );
 const FloatingLearningHubButton = defineAsyncComponent(
-  () => import("~/components/folder/FloatingLearningHubButton.vue")
+  () => import("~/components/hub/FloatingLearningHubButton.vue")
 );
 
 const LearningHubContent = defineAsyncComponent(
-  () => import("~/components/folder/LearningHubContent.vue")
+  () => import("~/components/hub/LearningHubContent.vue")
 );
 // const FolderNotesSection = defineAsyncComponent(
 //   () => import("~/components/folder/NotesSection.vue"),

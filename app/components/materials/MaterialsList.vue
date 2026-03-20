@@ -11,7 +11,8 @@
         ]" @click="() => fullscreen.open(m.id)">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2 flex-1 min-w-0">
-            <ui-subtitle weight="normal" size="xs" class="truncate" color="disabled">{{ m.title }}</ui-subtitle>
+            <ui-subtitle weight="normal" size="xs" class="truncate" color="content-on-surface">{{ m.title
+              }}</ui-subtitle>
             <span v-if="enrolledMaterials.has(m.id)"
               class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 shrink-0">
               <icon name="i-lucide-check-circle" class="w-3 h-3 mr-1" />

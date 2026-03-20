@@ -300,14 +300,12 @@ watch([localColumns, uncategorizedItems], () => {
 </script>
 
 <template>
-  <div
-    class="flex flex-col h-full min-h-0 bg-gray-50/50 dark:bg-gray-900/50 rounded-xl  dark:border-gray-800 shadow-inner overflow-hidden">
+  <div class="flex flex-col h-full min-h-0 bg-gray-50/50 rounded-xl shadow-inner overflow-hidden">
 
     <!-- Mobile Header with Column Navigation -->
     <div class="lg:hidden shrink-0">
       <!-- Column Pills Navigation -->
-      <div
-        class="flex items-center gap-2 p-2 overflow-x-auto border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 scrollbar-hide">
+      <div class="flex items-center gap-2 p-2 overflow-x-auto border-b border-gray-200 bg-white scrollbar-hide">
 
         <!-- Loading indicator for columns -->
         <Icon v-if="isReorderingColumns" name="svg-spinners:ring-resize" class="w-4 h-4 text-primary-500 shrink-0" />
@@ -317,7 +315,7 @@ watch([localColumns, uncategorizedItems], () => {
             'px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap border min-h-[36px]',
             activeColumnId === null
               ? 'bg-primary-500 text-white border-primary-500 shadow-sm'
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent hover:bg-gray-200 dark:hover:bg-gray-600'
+              : 'bg-gray-100 text-gray-600 border-transparent hover:bg-gray-200'
           ]">
           <span class="flex items-center gap-1.5">
             <Icon name="heroicons:inbox" class="w-4 h-4" />
@@ -330,7 +328,7 @@ watch([localColumns, uncategorizedItems], () => {
           'px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap border flex items-center gap-1.5 min-h-[36px]',
           activeColumnId === column.id
             ? 'bg-primary-500 text-white border-primary-500 shadow-sm'
-            : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 border-transparent hover:bg-gray-200 dark:hover:bg-gray-600'
+            : 'bg-gray-100 text-gray-600 border-transparent hover:bg-gray-200'
         ]">
           <Icon v-if="getColumnIcon" :name="getColumnIcon(column.name)" class="w-4 h-4" />
           {{ column.name }}
@@ -339,26 +337,26 @@ watch([localColumns, uncategorizedItems], () => {
 
         <!-- Navigation arrows integrated into pills bar -->
         <button @click="navigateColumn('prev')"
-          class="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-30 shrink-0"
+          class="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-30 shrink-0"
           :disabled="activeColumnId === null && uncategorizedItems.length > 0">
           <Icon name="heroicons:chevron-left" class="w-4 h-4" />
         </button>
 
         <button @click="navigateColumn('next')"
-          class="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-30 shrink-0"
+          class="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-30 shrink-0"
           :disabled="activeColumnId === localColumns[localColumns.length - 1]?.id">
           <Icon name="heroicons:chevron-right" class="w-4 h-4" />
         </button>
 
         <!-- Reorder columns button (mobile) -->
         <button v-if="localColumns.length > 1" @click="openColumnReorderModal"
-          class="p-2 rounded-full text-gray-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all shrink-0"
+          class="p-2 rounded-full text-gray-400 hover:text-primary-500 hover:bg-primary-50 transition-all shrink-0"
           title="Reorder columns">
           <Icon name="heroicons:arrows-up-down" class="w-5 h-5" />
         </button>
 
         <button @click="showNewColumnInput = true"
-          class="p-2 rounded-full text-gray-400 hover:text-primary-500 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-all shrink-0">
+          class="p-2 rounded-full text-gray-400 hover:text-primary-500 hover:bg-primary-50 transition-all shrink-0">
           <Icon name="heroicons:plus" class="w-5 h-5" />
         </button>
       </div>
@@ -372,7 +370,7 @@ watch([localColumns, uncategorizedItems], () => {
       class="flex items-stretch gap-4 p-4 overflow-x-auto overflow-y-hidden pb-6 flex-1 min-h-0 h-full scroll-smooth snap-x snap-mandatory lg:snap-none kanban-scroll-container">
 
       <!-- Uncategorized column (always first) -->
-      <SharedBoardColumn v-if="uncategorizedItems.length > 0 || orderedColumns.length === 0" id="column-uncategorized"
+      <BoardColumn v-if="uncategorizedItems.length > 0 || orderedColumns.length === 0" id="column-uncategorized"
         :column-id="null" column-name="Uncategorized" :items="uncategorizedItems"
         :all-column-items="allUncategorizedItems" :is-default="true" icon="heroicons:inbox" color="#94a3b8"
         class="snap-center lg:snap-align-none shadow-sm w-[85vw] lg:w-80 shrink-0 h-full"
@@ -388,7 +386,7 @@ watch([localColumns, uncategorizedItems], () => {
               <div class="relative column-drag-wrapper group/column h-full min-h-0">
                 <DragTracker :column-id="column.id" :is-dragging="isDragging" />
 
-                <SharedBoardColumn :id="`column-${column.id}`" :column-id="column.id" :column-name="column.name"
+                <BoardColumn :id="`column-${column.id}`" :column-id="column.id" :column-name="column.name"
                   :items="getColumnItems(column.id)" :all-column-items="getAllColumnItems(column.id)" :column="column"
                   :color="getColumnColor ? getColumnColor(index) : undefined"
                   :icon="getColumnIcon ? getColumnIcon(column.name) : undefined" :is-dragging="isDragging"
@@ -407,16 +405,15 @@ watch([localColumns, uncategorizedItems], () => {
       <!-- Add column button -->
       <div class="shrink-0 w-[85vw] lg:w-80 snap-center lg:snap-align-none h-full" style="height: 100%;">
         <div v-if="!showNewColumnInput"
-          class="h-full min-h-[200px] border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-xl flex items-center justify-center cursor-pointer hover:border-primary-400 hover:bg-white dark:hover:bg-gray-800 transition-all group"
+          class="h-full min-h-[200px] border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center cursor-pointer hover:border-primary-400 hover:bg-white transition-all group"
           @click="showNewColumnInput = true">
-          <div class="flex flex-col items-center gap-2 text-gray-400 dark:text-gray-500 group-hover:text-primary-500">
+          <div class="flex flex-col items-center gap-2 text-gray-400 group-hover:text-primary-500">
             <Icon name="heroicons:plus" class="w-8 h-8" />
             <span class="text-sm font-semibold uppercase tracking-wider">Add Column</span>
           </div>
         </div>
 
-        <div v-else
-          class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 shadow-lg ring-1 ring-black/5">
+        <div v-else class="bg-white rounded-xl border border-gray-200 p-4 shadow-lg ring-1 ring-black/5">
           <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">New Column</h4>
           <UInput v-model="newColumnName" placeholder="Enter title..." size="md" class="mb-3" autofocus
             @keyup.enter="createColumn" @keyup.escape="cancelNewColumn" />
@@ -438,28 +435,28 @@ watch([localColumns, uncategorizedItems], () => {
       <template #content>
         <div class="p-4">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Reorder Columns</h3>
+            <h3 class="text-lg font-semibold text-gray-900">Reorder Columns</h3>
             <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
               @click="showColumnReorderModal = false" />
           </div>
 
           <div class="space-y-2 max-h-[60vh] overflow-y-auto">
             <div v-for="(column, index) in reorderingColumns" :key="column.id"
-              class="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+              class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
               <div class="flex flex-col gap-1">
                 <button @click="moveColumnInModal(index, 'up')" :disabled="index === 0"
-                  class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                  class="p-1 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed">
                   <Icon name="heroicons:chevron-up" class="w-4 h-4" />
                 </button>
                 <button @click="moveColumnInModal(index, 'down')" :disabled="index === reorderingColumns.length - 1"
-                  class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                  class="p-1 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed">
                   <Icon name="heroicons:chevron-down" class="w-4 h-4" />
                 </button>
               </div>
 
               <div class="flex items-center gap-2 flex-1">
                 <Icon v-if="getColumnIcon" :name="getColumnIcon(column.name)" class="w-5 h-5 text-gray-500" />
-                <span class="font-medium text-gray-900 dark:text-white">{{ column.name }}</span>
+                <span class="font-medium text-gray-900">{{ column.name }}</span>
               </div>
 
               <span class="text-xs text-gray-400 font-medium">{{ index + 1 }}</span>

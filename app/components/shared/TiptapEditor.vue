@@ -1,7 +1,7 @@
 <template>
   <div v-if="editor" class="container flex flex-col p-0.5">
     <div
-      class="toolbar-groups flex justify-around rounded bg-light shadow-md z-10 text-light h-fit sticky top-5 w-[calc(100%-3rem)] md:w-2/3 m-auto p-0.5">
+      class="toolbar-groups flex justify-around rounded bg-surface-subtle shadow-md z-10 text-light h-fit sticky top-5 w-[calc(100%-3rem)] md:w-2/3 m-auto p-0.5">
       <!-- Group: Headings -->
       <div class="group headings">
         <UNavigationMenu class="z-50" trailing-icon="i-lucide-chevron-down" :items="headingsItems" collapsed

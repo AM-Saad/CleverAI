@@ -17,14 +17,14 @@
       </div>
 
       <!-- Animated Border / Pulse -->
-      <div class="absolute inset-0 border border-white/40 rounded-lg outline-0"></div>
+      <!-- <div class="absolute inset-0 border border-white/40 rounded-lg outline-0"></div> -->
 
       <!-- Content -->
       <div class="relative flex items-center gap-2.5">
         <div class=" rounded-lg bg-white/90 backdrop-blur-md">
           <icons-stars-generative class="w-4 h-4 text-white" />
         </div>
-        <span class="text-light font-bold tracking-tight">Learning Hub</span>
+        <span class="text-light tracking-tight text-white">Learning Hub</span>
       </div>
 
       <!-- Shine animation -->

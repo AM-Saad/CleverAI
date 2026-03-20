@@ -187,7 +187,7 @@ async function bulkEnrollDrafts() {
         </template>
         <template #back>
           <ui-paragraph class="basis-3/4 overflow-auto" size="xs">{{ card.back
-            }}</ui-paragraph>
+          }}</ui-paragraph>
           <review-enroll-button v-if="'id' in card && card.id" :resource-type="'flashcard'" :resource-id="card!.id"
             :is-enrolled="props.enrolledIds.has(card.id)" @enrolled="handleCardEnrolled" @error="handleEnrollError" />
           <div v-else class="text-xs">Save card to enable review</div>
@@ -196,11 +196,11 @@ async function bulkEnrollDrafts() {
     </UCarousel>
 
     <!-- Create/Edit Flashcard Modal -->
-    <flashcards-create-flashcard-modal :show="showCreateModal" :folder-id="id" :flashcard="editingFlashcard"
+    <hub-flashcards-create-flashcard-modal :show="showCreateModal" :folder-id="id" :flashcard="editingFlashcard"
       @close="closeCreateModal" @created="handleFlashcardCreated" @updated="handleFlashcardUpdated" />
 
     <!-- Delete Flashcard Modal -->
-    <flashcards-delete-flashcard-modal v-if="deletingFlashcard" :show="showDeleteModal"
+    <hub-flashcards-delete-flashcard-modal v-if="deletingFlashcard" :show="showDeleteModal"
       :flashcard-id="deletingFlashcard.id" :is-enrolled="deletingFlashcard.isEnrolled"
       @close="showDeleteModal = false; deletingFlashcard = null" @deleted="handleFlashcardDeleted" />
   </div>

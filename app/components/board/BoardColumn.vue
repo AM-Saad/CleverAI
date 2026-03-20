@@ -175,10 +175,10 @@ const createItem = async () => {
 
 <template>
   <div
-    class="shrink-0 w-72 lg:w-80 flex flex-col h-full min-h-0 bg-gradient-to-b from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/50 rounded-xl border  border-t-0 border-muted shadow-xs transition-shadow">
+    class="shrink-0 w-72 lg:w-80 flex flex-col h-full min-h-0 bg-gradient-to-b from-white to-gray-50/80 rounded-xl border border-t-0 border-surface-subtle shadow-xs transition-shadow">
     <!-- Column Header - This is the drag handle on desktop -->
     <div
-      class="flex items-center justify-between p-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-800 rounded-t-xl group/header shrink-0 column-drag-handle"
+      class="flex items-center justify-between p-3 border-b border-gray-200 bg-white rounded-t-xl group/header shrink-0 column-drag-handle"
       @pointerdown="handleHeaderPointerDown" :class="{
         'lg:cursor-grab lg:active:cursor-grabbing': !isDefault && !isEditing,
         'lg:cursor-grabbing': isDragging
@@ -186,11 +186,11 @@ const createItem = async () => {
       <div v-if="!isEditing" class="flex items-center gap-2.5 flex-1 min-w-0">
         <!-- Drag handle icon (desktop only) -->
         <div v-if="!isDefault"
-          class="hidden lg:flex items-center text-gray-300 dark:text-gray-600 opacity-0 group-hover/header:opacity-100 transition-opacity">
+          class="hidden lg:flex items-center text-gray-300 opacity-0 group-hover/header:opacity-100 transition-opacity">
           <Icon name="heroicons:bars-2" class="w-4 h-4" />
         </div>
 
-        <div v-if="icon" class="flex items-center justify-center w-6 h-6 rounded bg-gray-50 dark:bg-gray-700/50"
+        <div v-if="icon" class="flex items-center justify-center w-6 h-6 rounded bg-gray-50"
           :style="{ color: color || 'currentColor' }">
           <Icon :name="icon" class="w-4 h-4" />
         </div>
@@ -198,8 +198,7 @@ const createItem = async () => {
         <ui-subtitle size="sm" @dblclick.stop="startEditing" class="select-none">
           {{ columnName }}
         </ui-subtitle>
-        <span
-          class="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400">
+        <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
           {{ items.length }}
         </span>
 
@@ -210,11 +209,9 @@ const createItem = async () => {
       <div v-else class="flex items-center gap-2 flex-1 pointer-events-auto" @click.stop @mousedown.stop
         @pointerdown.stop>
         <UInput v-model="editName" size="xs" class="flex-1" data-no-drag
-          :ref="(el) => setEditInputRef((el as any)?.$el || (el as any) || null)"
-          @keyup.enter="saveName" @keyup.escape="cancelEditing" @blur="handleEditBlur" @click.stop @mousedown.stop
-          @pointerdown.stop />
-        <UButton size="xs" color="primary" variant="solid" icon="heroicons:check" data-no-drag
-          @click.stop="saveName" />
+          :ref="(el) => setEditInputRef((el as any)?.$el || (el as any) || null)" @keyup.enter="saveName"
+          @keyup.escape="cancelEditing" @blur="handleEditBlur" @click.stop @mousedown.stop @pointerdown.stop />
+        <UButton size="xs" color="primary" variant="solid" icon="heroicons:check" data-no-drag @click.stop="saveName" />
       </div>
 
       <div
@@ -222,21 +219,21 @@ const createItem = async () => {
         @pointerdown.stop>
         <UDropdownMenu v-if="!isDefault && columnActions.length > 0" :items="columnActions"
           :content="{ align: 'end', side: 'bottom', sideOffset: 4 }">
-          <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:ellipsis-vertical" data-no-drag @click.stop
-            @pointerdown.stop />
+          <UButton size="xs" color="neutral" variant="subtle" icon="heroicons:ellipsis-vertical" data-no-drag
+            @click.stop @pointerdown.stop />
         </UDropdownMenu>
       </div>
     </div>
 
     <!-- Items list - pointer-events enabled for item interactions -->
-    <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-3 bg-gray-100/30 dark:bg-gray-900/10 pointer-events-auto"
+    <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-3 bg-gray-100/30 pointer-events-auto"
       :class="{ 'opacity-60': isDragDisabled }">
       <div :class="{ 'pointer-events-none': isDragDisabled }">
         <ReorderGroup v-model:values="localItems" class="flex flex-col gap-3">
           <ReorderItem v-for="item in localItems" :key="item.id" :value="item" v-slot="{ isDragging: itemDragging }">
             <div>
               <DragTracker :item-id="item.id" :is-dragging="itemDragging" />
-              <SharedBoardItemCard :item="item" :is-selected="false" @select="emit('select-item', item.id)"
+              <BoardItemCard :item="item" :is-selected="false" @select="emit('select-item', item.id)"
                 @delete="emit('delete-item', item.id)"
                 @move="(targetId) => itemsStore.moveItemToColumn(item.id, targetId, 0)" />
             </div>
@@ -256,12 +253,11 @@ const createItem = async () => {
     </div>
 
     <!-- Add item button -->
-    <div
-      class="shrink-0 p-2.5 bg-white dark:bg-gray-800 rounded-b-xl border-t border-gray-100 dark:border-gray-800 pointer-events-auto">
+    <div class="shrink-0 p-2.5 bg-white rounded-b-xl border-t border-gray-100 pointer-events-auto">
       <UButton size="sm" color="neutral" variant="ghost"
-        class="w-full justify-start font-semibold text-xs tracking-wide hover:bg-gray-50 dark:hover:bg-gray-700/50"
-        icon="heroicons:plus-circle" @click="createItem">
-        New Card
+        class="w-full justify-start text-xs tracking-wide hover:bg-gray-50" icon="heroicons:plus-circle"
+        @click="createItem">
+        New Item
       </UButton>
     </div>
 

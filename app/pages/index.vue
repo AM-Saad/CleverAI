@@ -76,8 +76,7 @@
         :animate="hasScrolledHalfViewport ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0 }" :transition="{
           duration: .7,
           delay: 0.1,
-        }"
-        class="absolute top-0 left-1/2 transform -translate-x-1/2 w-[150%] h-[150%] z-0 bg-gray-200  dark:bg-muted rounded-full">
+        }" class="absolute top-0 left-1/2 transform -translate-x-1/2 w-[150%] h-[150%] z-0 bg-gray-200  rounded-full">
 
       </motion.div>
     </div>
@@ -106,7 +105,7 @@
       <div class="container relative z-10 mx-auto px-4 md:px-6">
         <blur-reveal :delay="0.2" class="mx-auto max-w-4xl space-y-8 text-center">
           <h2
-            class="font-headline text-5xl font-black tracking-tighter sm:text-6xl md:text-7xl bg-clip-text text-transparent bg-gradient-to-br from-dark via-slate-700 to-slate-500 dark:from-white dark:via-gray-200 dark:to-gray-500 pb-2">
+            class="font-headline text-5xl font-black tracking-tighter sm:text-6xl md:text-7xl bg-clip-text text-transparent bg-gradient-to-br from-dark via-slate-700 to-slate-500 pb-2">
             Ready to close the loop?
           </h2>
           <p class="text-xl text-muted-foreground md:text-2xl font-light max-w-2xl mx-auto leading-relaxed">

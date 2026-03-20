@@ -7,21 +7,21 @@ import { motion } from "motion-v";
     <div className="container mx-auto px-4 md:px-6">
       <div className="mx-auto max-w-4xl space-y-8 text-center">
         <div className="space-y-4">
-          <h2 className="font-headline text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl dark:text-white">
+          <h2 className="font-headline text-4xl font-bold tracking-tighter sm:text-5xl md:text-6xl">
             You take notes.
           </h2>
           <h2
-            className="font-headline text-4xl font-bold tracking-tighter text-muted-foreground sm:text-5xl md:text-6xl dark:text-white">
+            className="font-headline text-4xl font-bold tracking-tighter text-muted-foreground sm:text-5xl md:text-6xl">
             You mean to review them.
           </h2>
           <h2
-            className="font-headline text-4xl font-bold tracking-tighter text-muted-foreground/50 sm:text-5xl md:text-6xl dark:text-white">
+            className="font-headline text-4xl font-bold tracking-tighter text-muted-foreground/50 sm:text-5xl md:text-6xl">
             You don’t.
           </h2>
         </div>
 
         <div className="relative mx-auto h-64 w-full max-w-2xl">
-          <div className="absolute inset-0 z-10 bg-linear-to-t from-background via-background/30 to-background" />
+          <!-- <div className="absolute inset-0 z-10 bg-linear-to-t from-background via-background/30 to-background" /> -->
           <motion.div :initial="{ opacity: 0, y: 50, rotate: -3 }" :while-in-view="{ opacity: 0.7, y: 0, rotate: -3 }"
             :viewport="{ once: true }" :transition="{ duration: 0.5, delay: 0.1 }"
             class="absolute left-1/4 top-0 w-1/2 bg-secondary/30 p-4 shadow-md rounded">

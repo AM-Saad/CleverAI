@@ -67,10 +67,10 @@ import { defineAsyncComponent, ref, computed } from "vue";
 import type { EnrollCardResponse } from "~/shared/utils/review.contract";
 
 const FlashCards = defineAsyncComponent(
-  () => import("~/components/flashcards/index.vue")
+  () => import("~/components/hub/flashcards/index.vue")
 );
 const Questions = defineAsyncComponent(
-  () => import("~/components/folder/Questions.vue")
+  () => import("~/components/hub/Questions.vue")
 );
 const MaterialsList = defineAsyncComponent(
   () => import("~/components/materials/MaterialsList.vue")

@@ -311,8 +311,7 @@ onMounted(async () => {
               ]" :context="note">
                 <ReorderItem :value="note" :class="[
                   'relative flex items-center gap-2 group w-full p-2.5  cursor-pointer hover:bg-secondary',
-                  idx === 0 ? 'rounded-tl-xl' : '',
-                  idx === localNotes.length - 1 ? 'rounded-bl-xl' : 'border-b border-secondary',
+                  idx === localNotes.length - 1 ? '' : 'border-b border-secondary',
                   notesStore.filteredNoteIds.value
                     ? notesStore.isNoteInFilter(note.id)
                       ? 'font-bold'

@@ -383,12 +383,12 @@ const clearFilters = () => {
         <!-- Items grid with editor -->
         <div v-if="!error && !isFetching && items.length > 0" class="flex flex-1 min-h-0 overflow-hidden">
           <!-- Kanban View -->
-          <SharedBoardKanbanView v-if="viewMode === 'board'" class="flex-1 h-full min-h-0" :items="filteredItems"
+          <BoardKanbanView v-if="viewMode === 'board'" class="flex-1 h-full min-h-0" :items="filteredItems"
             :all-items="items" :get-column-color="getColumnColor" :get-column-icon="getColumnIcon"
             @select-item="(id) => currentItemId = id" @delete-item="deleteItem" />
 
           <!-- List View -->
-          <SharedBoardListView v-else class="flex-1 min-h-0 overflow-y-auto" :items="filteredItems" :all-items="items"
+          <BoardListView v-else class="flex-1 min-h-0 overflow-y-auto" :items="filteredItems" :all-items="items"
             @select-item="(id) => currentItemId = id" @delete-item="deleteItem" />
 
           <!-- Item editor (right side on desktop, slide-over on mobile) -->

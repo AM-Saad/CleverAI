@@ -1,6 +1,6 @@
 <template>
   <ui-card :class="[
-    'transition-all duration-200',
+    'transition-all duration-200 shrink-0',
     cardClasses,
   ]" :variant="minimal ? 'ghost' : 'default'" :size="minimal ? 'xs' : 'sm'">
     <!-- Loading State -->

@@ -12,9 +12,9 @@
       description="Generate questions from your materials using the Generate button on each material card." />
 
     <div v-if="questionsToShow?.length" class="space-y-4 overflow-auto">
-      <ui-card variant="ghost" v-for="(q, idx) in questionsToShow" :key="'id' in q ? q.id : idx"
-        :class="['relative pb-3 border-b border-secondary  rounded-none!', { 'draft-question': q.status === 'DRAFT' }]"
-        size="xs">
+      <ui-card variant="ghost" v-for="(q, idx) in questionsToShow" :key="'id' in q ? q.id : idx" :class="['relative pb-3 border-b border-secondary  rounded-none!', { 'draft-question': q.status === 'DRAFT' }, {
+        'border-b-0': idx === questionsToShow.length - 1
+      }]" size="xs">
         <!-- Draft/Enrollment status indicators -->
         <div class="absolute top-1 right-2 flex items-center gap-2">
           <!-- Draft badge -->
@@ -36,11 +36,11 @@
 
         <u-collapsible class="flex flex-col min-h-0">
 
-          <ui-paragraph size="xs" color="disabled" class="font-medium mb-2 text-wrap mr-12 cursor-pointer">
+          <ui-paragraph size="xs" color="content-on-background" class="font-medium mb-2 text-wrap mr-12 cursor-pointer">
             {{ idx + 1 }}. {{ q.question }}</ui-paragraph>
           <template #content>
 
-            <ul class="list-disc ml-3 space-y-2">
+            <ul class="list-disc ml-3 space-y-2 pl-2">
               <ui-paragraph size="xs" class="text-wrap" v-for="(choice, cIdx) in q.choices" :key="cIdx"
                 :color="cIdx === q.answerIndex ? 'success' : 'content-on-surface'" tag="li">
                 {{ choice }}

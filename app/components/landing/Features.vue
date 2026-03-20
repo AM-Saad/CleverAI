@@ -59,22 +59,22 @@ const featuresList = [
       <motion.div v-for="(feature, idx) in featuresList" :key="feature.title" :initial="{ opacity: 0, y: 50 }"
         :while-in-view="{ opacity: 1, y: 0 }" :viewport="{ once: true, margin: '-50px' }"
         :transition="{ duration: 0.5, delay: idx * 0.1 }"
-        class="group relative bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-8 rounded-[2rem] overflow-hidden hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300">
+        class="group relative bg-white  border border-neutral-200  p-8 rounded-[2rem] overflow-hidden hover:shadow-2xl hover:shadow-primary/5 hover:-translate-y-1 transition-all duration-300">
         <!-- Background Decoration -->
         <div
-          class="absolute -right-10 -top-10 w-40 h-40 bg-gradient-to-br from-primary/5 to-transparent dark:from-primary/10 rounded-full group-hover:scale-150 transition-transform duration-700 ease-out pointer-events-none" />
+          class="absolute -right-10 -top-10 w-40 h-40 bg-gradient-to-br from-primary/5 to-transparent  rounded-full group-hover:scale-150 transition-transform duration-700 ease-out pointer-events-none" />
 
         <div class="relative z-10 flex flex-col h-full">
           <div
-            class="w-14 h-14 bg-primary/10 dark:bg-primary/20 rounded-2xl flex items-center justify-center mb-6 text-primary dark:text-sky-400 group-hover:rotate-6 transition-transform duration-300">
+            class="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 text-primary  group-hover:rotate-6 transition-transform duration-300">
             <u-icon :name="feature.icon" class="text-3xl" />
           </div>
 
-          <h3 class="text-xl font-bold text-dark dark:text-white mb-3 group-hover:text-primary transition-colors">
+          <h3 class="text-xl font-bold text-dark mb-3 group-hover:text-primary transition-colors">
             {{ feature.title }}
           </h3>
 
-          <p class="text-neutral-500 dark:text-neutral-400 leading-relaxed text-sm grow">
+          <p class="text-neutral-500 leading-relaxed text-sm grow">
             {{ feature.description }}
           </p>
         </div>
