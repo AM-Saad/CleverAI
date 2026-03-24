@@ -1,11 +1,11 @@
-// shared/folder.contract.ts
+// shared/workspace.contract.ts
 import { z } from "zod";
 import { LLMEnum } from "./llm";
 
 const trim = (v: unknown) => (typeof v === "string" ? v.trim() : v);
 
 // Lightweight relation schemas (DB rows or generated DTOs). Passthrough preserves extra fields.
-const FolderFlashcardRelation = z
+const WorkspaceFlashcardRelation = z
   .object({
     id: z.string().optional(),
     // Support either DB naming (question/answer) or generated DTO (front/back)
@@ -18,7 +18,7 @@ const FolderFlashcardRelation = z
   })
   .passthrough();
 
-const FolderQuestionRelation = z
+const WorkspaceQuestionRelation = z
   .object({
     id: z.string().optional(),
     question: z.string(),
@@ -29,7 +29,7 @@ const FolderQuestionRelation = z
   })
   .passthrough();
 
-const FolderMaterialRelation = z
+const WorkspaceMaterialRelation = z
   .object({
     id: z.string().optional(),
     title: z.string(),
@@ -43,7 +43,7 @@ const FolderMaterialRelation = z
   })
   .passthrough();
 
-export const FolderSchema = z.object({
+export const WorkspaceSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string().nullable(),
@@ -53,29 +53,29 @@ export const FolderSchema = z.object({
   llmModel: LLMEnum,
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),
-  flashcards: z.array(FolderFlashcardRelation).optional(),
-  questions: z.array(FolderQuestionRelation).optional(),
-  materials: z.array(FolderMaterialRelation).optional(),
+  flashcards: z.array(WorkspaceFlashcardRelation).optional(),
+  questions: z.array(WorkspaceQuestionRelation).optional(),
+  materials: z.array(WorkspaceMaterialRelation).optional(),
 });
-export type Folder = z.infer<typeof FolderSchema>;
+export type Workspace = z.infer<typeof WorkspaceSchema>;
 
-export const CreateFolderDTO = z.object({
+export const CreateWorkspaceDTO = z.object({
   title: z.preprocess(trim, z.string().min(1)),
   description: z.preprocess(trim, z.string()).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
-export type CreateFolderDTO = z.infer<typeof CreateFolderDTO>;
+export type CreateWorkspaceDTO = z.infer<typeof CreateWorkspaceDTO>;
 
-export const UpdateFolderDTO = z.object({
+export const UpdateWorkspaceDTO = z.object({
   id: z.string(),
   title: z.preprocess(trim, z.string()).optional(),
   description: z.preprocess(trim, z.string()).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
   rawText: z.preprocess(trim, z.string()).optional(), // Deprecated, use materials instead
   order: z.number().optional(),
-  // Add material content directly to folder update for convenience
+  // Add material content directly to workspace update for convenience
   materialContent: z.preprocess(trim, z.string()).optional(),
   materialTitle: z.preprocess(trim, z.string()).optional(),
   materialType: z.string().optional(),
 });
-export type UpdateFolderDTO = z.infer<typeof UpdateFolderDTO>;
+export type UpdateWorkspaceDTO = z.infer<typeof UpdateWorkspaceDTO>;

@@ -31,7 +31,7 @@ interface NotesStore {
   setFilteredNoteIds: (ids: Set<string> | null) => void;
 }
 
-// Global store instance - keyed by folderId
+// Global store instance - keyed by workspaceId
 const stores = new Map<string, NotesStore>();
 // Ensure we only wire one 'online' listener for notes sync across the app
 let notesOnlineListenerRegistered = false;
@@ -39,13 +39,13 @@ let notesOnlineListenerRegistered = false;
 let offlineToastShown = false;
 
 /**
- * Creates or returns a notes store for a specific folder
+ * Creates or returns a notes store for a specific workspace
  * This provides local state management with optimistic updates
  */
-export function useNotesStore(folderId: string): NotesStore {
+export function useNotesStore(workspaceId: string): NotesStore {
   // Return existing store if available
-  if (stores.has(folderId)) {
-    return stores.get(folderId)!;
+  if (stores.has(workspaceId)) {
+    return stores.get(workspaceId)!;
   }
 
   const { $api } = useNuxtApp();
@@ -194,7 +194,7 @@ export function useNotesStore(folderId: string): NotesStore {
           localVersion: (note as any).localVersion
             ? (note as any).localVersion + 1
             : 1,
-          folderId: note.folderId,
+          workspaceId: note.workspaceId,
           content,
           tags: note.tags,
           noteType: (note as any).noteType,
@@ -219,7 +219,7 @@ export function useNotesStore(folderId: string): NotesStore {
       // If this is a temp note (created offline or not yet synced), create it on server instead
       if (id.startsWith("temp-")) {
         const createResult: Result<Note, APIError> = await $api.notes.create({
-          folderId: note.folderId,
+          workspaceId: note.workspaceId,
           content,
           tags: note.tags || [],
           noteType: (note as any).noteType || "TEXT",
@@ -281,7 +281,7 @@ export function useNotesStore(folderId: string): NotesStore {
           localVersion: (note as any).localVersion
             ? (note as any).localVersion + 1
             : 1,
-          folderId: note.folderId,
+          workspaceId: note.workspaceId,
           content,
           tags: note.tags,
           noteType: (note as any).noteType,
@@ -339,7 +339,7 @@ export function useNotesStore(folderId: string): NotesStore {
     // Add optimistic note
     const optimisticNote: NoteState = {
       id: tempId,
-      folderId,
+      workspaceId,
       content,
       tags,
       order: notes.value.size, // Add to end of list
@@ -363,7 +363,7 @@ export function useNotesStore(folderId: string): NotesStore {
         operation: "upsert",
         updatedAt: Date.now(),
         localVersion: 1,
-        folderId,
+        workspaceId,
         content,
         tags,
         noteType,
@@ -391,7 +391,7 @@ export function useNotesStore(folderId: string): NotesStore {
     try {
       // Attempt to submit to server
       const result = await $api.notes.create({
-        folderId,
+        workspaceId,
         content,
         tags,
         noteType,
@@ -443,7 +443,7 @@ export function useNotesStore(folderId: string): NotesStore {
           updatedAt: Date.now(),
           localVersion: 1,
           type: optimisticNote.type,
-          folderId: optimisticNote.folderId || undefined,
+          workspaceId: optimisticNote.workspaceId || undefined,
           content,
           tags,
           noteType,
@@ -587,14 +587,14 @@ export function useNotesStore(folderId: string): NotesStore {
 
       // Prepare payload for server
       const payload = {
-        folderId,
+        workspaceId,
         noteOrders: reorderedNotes.map((note, index) => ({
           id: note.id,
           order: index,
         })),
       };
       console.log("📝 [useNotesStore] Prepared payload for server:", {
-        folderId,
+        workspaceId,
         payload,
       });
 
@@ -669,11 +669,11 @@ export function useNotesStore(folderId: string): NotesStore {
 
   // Load notes from server with IndexedDB fallback
   const syncWithServer = async (): Promise<void> => {
-    loadingStates.value.set(folderId, true);
+    loadingStates.value.set(workspaceId, true);
     try {
-      const result = await $api.notes.getByFolder(folderId);
+      const result = await $api.notes.getByWorkspace(workspaceId);
 
-      console.log(`[useNotesStore] syncWithServer result for ${folderId}:`, result);
+      console.log(`[useNotesStore] syncWithServer result for ${workspaceId}:`, result);
 
       if (result.success) {
         // Store temp notes before clearing
@@ -684,7 +684,7 @@ export function useNotesStore(folderId: string): NotesStore {
         // Clear existing notes and load fresh data from server
         notes.value.clear();
 
-        console.log(`[useNotesStore] Loading ${result.data.length} notes into ${folderId}`);
+        console.log(`[useNotesStore] Loading ${result.data.length} notes into ${workspaceId}`);
 
         result.data.forEach((note: Note) => {
           const noteState: NoteState = {
@@ -709,7 +709,7 @@ export function useNotesStore(folderId: string): NotesStore {
         }
 
         lastSync.value = new Date();
-        loadingStates.value.set(folderId, false);
+        loadingStates.value.set(workspaceId, false);
         return;
       }
 
@@ -729,7 +729,7 @@ export function useNotesStore(folderId: string): NotesStore {
   // Fallback to load notes from IndexedDB when server fails
   const loadFromIndexedDBFallback = async (): Promise<void> => {
     try {
-      const localNotes = await loadNotesFromIndexedDB(folderId);
+      const localNotes = await loadNotesFromIndexedDB(workspaceId);
 
       if (localNotes.length > 0) {
         // Clear existing notes and load from IndexedDB
@@ -751,7 +751,7 @@ export function useNotesStore(folderId: string): NotesStore {
         color: "error",
       });
     } finally {
-      loadingStates.value.set(folderId, false);
+      loadingStates.value.set(workspaceId, false);
     }
   };
 
@@ -760,8 +760,8 @@ export function useNotesStore(folderId: string): NotesStore {
     return notes.value.get(id)?.isLoading ?? false;
   };
 
-  // Check if folder-level notes are being fetched
-  // Note: folder-level loading state is exposed via `loadingStates` ref
+  // Check if workspace-level notes are being fetched
+  // Note: workspace-level loading state is exposed via `loadingStates` ref
 
   const isNoteDirty = (id: string): boolean => {
     return notes.value.get(id)?.isDirty ?? false;
@@ -834,7 +834,7 @@ export function useNotesStore(folderId: string): NotesStore {
   };
 
   // Cache the store
-  stores.set(folderId, store);
+  stores.set(workspaceId, store);
 
   // Auto-sync on creation
   syncWithServer();
@@ -843,8 +843,8 @@ export function useNotesStore(folderId: string): NotesStore {
 }
 
 /**
- * Clean up store when folder is no longer needed
+ * Clean up store when workspace is no longer needed
  */
-export function cleanupNotesStore(folderId: string): void {
-  stores.delete(folderId);
+export function cleanupNotesStore(workspaceId: string): void {
+  stores.delete(workspaceId);
 }

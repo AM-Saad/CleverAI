@@ -1,6 +1,6 @@
 <script setup lang="ts">
 definePageMeta({
-  auth: { unauthenticatedOnly: true, navigateAuthenticatedTo: "/folders" },
+  auth: { unauthenticatedOnly: true, navigateAuthenticatedTo: "/workspaces" },
 });
 const { getProviders, signIn } = useAuth();
 

@@ -2,6 +2,7 @@
 import { OpenAI } from "openai";
 import { encoding_for_model } from "tiktoken";
 import { Errors } from "../error";
+import { LlmMeasured } from "../llmCost";
 
 // Small helper to avoid hard crashes on imperfect LLM JSON
 function safeParseJSON<T>(text: string, fallback: T): T {
@@ -63,7 +64,7 @@ export class DeepSeekStrategy implements LLMStrategy {
     let inputTokensEstimate = 0;
     try {
       // Use cl100k_base encoding (closest to DeepSeek tokenizer)
-      const enc = encoding_for_model("gpt-4");
+      const enc = encoding_for_model("gpt-4o" as any);
       inputTokensEstimate = enc.encode(prompt).length;
       enc.free();
     } catch { }
@@ -80,7 +81,7 @@ export class DeepSeekStrategy implements LLMStrategy {
       content = res.choices?.[0]?.message?.content?.trim() ?? "[]";
       let outputTokensEstimate = 0;
       try {
-        const enc = encoding_for_model("gpt-4");
+        const enc = encoding_for_model("gpt-4o" as any);
         outputTokensEstimate = enc.encode(
           typeof content === "string" ? content : ""
         ).length;
@@ -110,7 +111,9 @@ export class DeepSeekStrategy implements LLMStrategy {
       });
     }
 
-    const raw = safeParseJSON<any[]>(content, []);
+    // Strip <think> blocks from DeepSeek Reasoner before parsing JSON
+    const cleaned = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    const raw = safeParseJSON<any[]>(cleaned, []);
 
     // Minimal validation/sanitization to keep structure predictable
     const cards: FlashcardDTO[] = [];
@@ -152,7 +155,7 @@ export class DeepSeekStrategy implements LLMStrategy {
     const inputChars = input.length;
     let inputTokensEstimate = 0;
     try {
-      const enc = encoding_for_model("gpt-4");
+      const enc = encoding_for_model("gpt-4o" as any);
       inputTokensEstimate = enc.encode(prompt).length;
       enc.free();
     } catch { }
@@ -169,7 +172,7 @@ export class DeepSeekStrategy implements LLMStrategy {
       content = res.choices?.[0]?.message?.content?.trim() ?? "[]";
       let outputTokensEstimate = 0;
       try {
-        const enc = encoding_for_model("gpt-4");
+        const enc = encoding_for_model("gpt-4o" as any);
         outputTokensEstimate = enc.encode(
           typeof content === "string" ? content : ""
         ).length;
@@ -199,7 +202,9 @@ export class DeepSeekStrategy implements LLMStrategy {
       });
     }
 
-    const raw = safeParseJSON<any[]>(content, []);
+    // Strip <think> blocks from DeepSeek Reasoner before parsing JSON
+    const cleaned = content.replace(/<think>[\s\S]*?<\/think>/g, '').trim();
+    const raw = safeParseJSON<any[]>(cleaned, []);
 
     // Minimal validation/sanitization
     const questions: QuizQuestionDTO[] = [];

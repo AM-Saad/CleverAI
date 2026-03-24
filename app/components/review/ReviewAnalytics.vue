@@ -1,14 +1,7 @@
 <template>
   <div v-if="show">
-    <ReviewAnalyticsSummary
-      v-if="analytics"
-      :analytics="analytics"
-      @close="handleClose"
-    />
-    <div
-      v-else-if="isLoading"
-      class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6 text-center"
-    >
+    <ReviewAnalyticsSummary v-if="analytics" :analytics="analytics" @close="handleClose" />
+    <div v-else-if="isLoading" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6 text-center">
       <Loading />
       <p class="text-gray-600 dark:text-gray-400 mt-4">
         Loading analytics...
@@ -37,7 +30,7 @@ interface AnalyticsData {
 
 interface Props {
   show: boolean
-  folderId?: string
+  workspaceId?: string
 }
 
 const props = defineProps<Props>()
@@ -57,7 +50,7 @@ const loadAnalytics = async () => {
   isLoading.value = true
   try {
     const response = await $fetch('/api/review/analytics', {
-      query: props.folderId ? { folderId: props.folderId } : {},
+      query: props.workspaceId ? { workspaceId: props.workspaceId } : {},
     })
     analytics.value = response.data as AnalyticsData
   } catch (err) {

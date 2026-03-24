@@ -25,27 +25,27 @@ export default defineEventHandler(async (event) => {
     throw Errors.badRequest("Invalid query parameters");
   }
 
-  const { folderId } = parsedQuery;
+  const { workspaceId } = parsedQuery;
 
-  // Validate folder ownership if folderId provided
-  let folderTitle: string | undefined;
-  if (folderId) {
-    const folder = await prisma.folder.findFirst({
-      where: { id: folderId, userId: user.id },
+  // Validate workspace ownership if workspaceId provided
+  let workspaceTitle: string | undefined;
+  if (workspaceId) {
+    const workspace = await prisma.workspace.findFirst({
+      where: { id: workspaceId, userId: user.id },
       select: { id: true, title: true },
     });
 
-    if (!folder) {
-      throw Errors.forbidden("Folder not found or access denied");
+    if (!workspace) {
+      throw Errors.forbidden("Workspace not found or access denied");
     }
-    folderTitle = folder.title;
+    workspaceTitle = workspace.title;
   }
 
   // Build base where clause
   const baseWhere = {
     userId: user.id,
     suspended: false,
-    ...(folderId ? { folderId } : {}),
+    ...(workspaceId ? { workspaceId } : {}),
   };
 
   // Fetch all stats in parallel for performance
@@ -90,11 +90,11 @@ export default defineEventHandler(async (event) => {
     learning,
     due,
     mature,
-    context: folderId
+    context: workspaceId
       ? {
-          folderId,
-          folderTitle,
-        }
+        workspaceId,
+        workspaceTitle,
+      }
       : undefined,
   });
 

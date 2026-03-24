@@ -3,395 +3,265 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Starting development database seeding...");
+  console.log("🌱 Starting production-grade database seeding (March 2026 Comprehensive Update)...");
 
   console.log("Cleaning up existing data...");
-  await prisma.llmPrice.deleteMany({
-    where: {
-      OR: [
-        { provider: "openai", model: "gpt-4o" },
-        { provider: "google", model: "gemini-1.5-pro" },
-        { provider: "google", model: "gemini-1.5-flash" },
-        { provider: "google", model: "gemini-2.0-flash-lite" },
-        { provider: "deepseek", model: "deepseek-chat" },
-        { provider: "deepseek", model: "deepseek-reasoner" },
-      ],
-    },
-  });
+  // Clearing models that are either deprecated (Maverick) or being updated
+  await prisma.llmPrice.deleteMany({});
+  await prisma.llmModelRegistry.deleteMany({});
 
-  console.log("Seeding LLM prices...");
-  await prisma.llmPrice.upsert({
-    where: { provider_model: { provider: "openai", model: "gpt-4o" } },
-    update: {
-      inputPer1kMicros: 5000n,
-      outputPer1kMicros: 15000n,
-      isActive: true,
-    },
-    create: {
+  console.log("Seeding LLM prices (Micros per 1k tokens)...");
+
+  /**
+   * PRICING LOGIC (Micros per 1k tokens):
+   * $1.00 / 1M = 1000 micros / 1k
+   * $0.10 / 1M = 100 micros / 1k
+   * $0.05 / 1M = 50 micros / 1k
+   */
+
+  const pricingData = [
+    { provider: "openai", model: "gpt-5.4", in: 2500n, out: 15000n }, // $2.50 / $15.00 
+    { provider: "openai", model: "gpt-5-mini", in: 250n, out: 2000n }, // $0.25 / $2.00 [3, 4]
+    { provider: "openai", model: "gpt-5-nano", in: 50n, out: 400n }, // $0.05 / $0.40 [5, 3]
+    { provider: "openai", model: "gpt-4o-mini", in: 100n, out: 400n }, // $0.10 / $0.40 
+
+    // --- DEEPSEEK UNIFIED V3.2 ---
+    // Both Chat and Reasoner use the same V3.2 base pricing 
+    { provider: "deepseek", model: "deepseek-chat", in: 280n, out: 420n }, // $0.28 / $0.42
+    { provider: "deepseek", model: "deepseek-reasoner", in: 280n, out: 420n },
+
+    // --- GOOGLE FLASH & UTILITY ---
+    { provider: "google", model: "gemini-2.0-flash", in: 100n, out: 400n }, // $0.10 / $0.40 
+    { provider: "google", model: "gemini-2.0-flash-lite", in: 75n, out: 300n }, // $0.075 / $0.30 
+    { provider: "google", model: "gemma-3-4b", in: 40n, out: 80n }, // $0.04 / $0.08 
+
+    // --- MISTRAL & OPEN WEIGHT BUDGET ---
+    { provider: "mistral", model: "mistral-nemo", in: 20n, out: 40n }, // $0.02 / $0.04
+    { provider: "meta", model: "llama-3.2-1b", in: 20n, out: 20n }, // $0.02 / $0.02 [6, 3]
+    { provider: "qwen", model: "qwen3-4b", in: 30n, out: 30n }, // $0.03 / $0.03 
+
+    // --- GROQ ACCELERATED MODELS ---
+    { provider: "groq", model: "llama-3.1-8b-instant", in: 50n, out: 80n }, // $0.05 / $0.08 [7, 8]
+    { provider: "groq", model: "openai/gpt-oss-120b", in: 150n, out: 600n }, // $0.15 / $0.60 [7, 8]
+    { provider: "groq", model: "openai/gpt-oss-20b", in: 75n, out: 300n }, // $0.075 / $0.30 [7, 9]
+    { provider: "groq", model: "qwen/qwen3-32b", in: 290n, out: 590n }, // $0.29 / $0.59 [7, 10];
+
+    // --- OPENROUTER MODELS (verified from openrouter.ai/models) ---
+    { provider: "openrouter", model: "google/gemini-2.0-flash-lite-001", in: 75n, out: 300n },      // $0.075 / $0.30
+    { provider: "openrouter", model: "google/gemini-2.5-flash", in: 300n, out: 2500n },              // $0.30 / $2.50 (reasoning)
+    { provider: "openrouter", model: "google/gemini-3.1-flash-lite-preview", in: 250n, out: 1500n }, // $0.25 / $1.50
+    { provider: "openrouter", model: "deepseek/deepseek-chat-v3-0324", in: 200n, out: 770n },        // $0.20 / $0.77
+    { provider: "openrouter", model: "deepseek/deepseek-v3.2", in: 260n, out: 380n },                // $0.26 / $0.38
+    { provider: "openrouter", model: "meta-llama/llama-3.1-8b-instruct", in: 20n, out: 50n },        // $0.02 / $0.05
+    { provider: "openrouter", model: "openrouter/auto", in: 0n, out: 0n },                           // Dynamic — uses rawCost from response
+    // Free variants (zero cost)
+    { provider: "openrouter", model: "google/gemini-2.0-flash-lite-001:free", in: 0n, out: 0n },
+    { provider: "openrouter", model: "deepseek/deepseek-chat-v3-0324:free", in: 0n, out: 0n },
+  ];
+  for (const p of pricingData) {
+    await prisma.llmPrice.upsert({
+      where: { provider_model: { provider: p.provider, model: p.model } },
+      update: { inputPer1kMicros: p.in, outputPer1kMicros: p.out, isActive: true },
+      create: { provider: p.provider, model: p.model, inputPer1kMicros: p.in, outputPer1kMicros: p.out, isActive: true },
+    });
+  }
+
+  console.log("Seeding LLM Model Registry for gateway routing...");
+
+  const registryData = [
+    {
+      modelId: "gpt-5.4",
       provider: "openai",
-      model: "gpt-4o",
-      inputPer1kMicros: 5000n,
-      outputPer1kMicros: 15000n,
-      isActive: true,
+      inCost: 2.50,
+      outCost: 15.00,
+      cap: ["text", "reasoning", "multimodal"],
+      priority: 5,
     },
-  });
-
-  await prisma.llmPrice.upsert({
-    where: {
-      provider_model: { provider: "google", model: "gemini-1.5-flash" },
+    {
+      modelId: "gpt-5-nano",
+      provider: "openai",
+      inCost: 0.05,
+      outCost: 0.40,
+      cap: ["text", "multimodal"],
+      priority: 1,
     },
-    update: {
-      inputPer1kMicros: 350n,
-      outputPer1kMicros: 1050n,
-      isActive: true,
-    },
-    create: {
-      provider: "google",
-      model: "gemini-1.5-flash",
-      inputPer1kMicros: 350n,
-      outputPer1kMicros: 1050n,
-      isActive: true,
-    },
-  });
-
-  // Gemini 2.0 Flash Lite pricing (per 1k tokens in micros)
-  // Input: $0.075/1M = 75 micros/1k, Output: $0.30/1M = 300 micros/1k
-  await prisma.llmPrice.upsert({
-    where: {
-      provider_model: { provider: "google", model: "gemini-2.0-flash-lite" },
-    },
-    update: { inputPer1kMicros: 75n, outputPer1kMicros: 300n, isActive: true },
-    create: {
-      provider: "google",
-      model: "gemini-2.0-flash-lite",
-      inputPer1kMicros: 75n,
-      outputPer1kMicros: 300n,
-      isActive: true,
-    },
-  });
-
-  // DeepSeek Chat pricing (per 1k tokens in micros)
-  // Input: $0.28/1M = 280 micros/1k, Output: $0.42/1M = 420 micros/1k (cache-miss pricing)
-  console.log("Seeding DeepSeek prices...");
-  await prisma.llmPrice.upsert({
-    where: {
-      provider_model: { provider: "deepseek", model: "deepseek-chat" },
-    },
-    update: { inputPer1kMicros: 280n, outputPer1kMicros: 420n, isActive: true },
-    create: {
-      provider: "deepseek",
-      model: "deepseek-chat",
-      inputPer1kMicros: 280n,
-      outputPer1kMicros: 420n,
-      isActive: true,
-    },
-  });
-
-  // DeepSeek Reasoner pricing (per 1k tokens in micros)
-  // Input: $0.55/1M = 550 micros/1k, Output: $2.19/1M = 2190 micros/1k (cache-miss pricing)
-  await prisma.llmPrice.upsert({
-    where: {
-      provider_model: { provider: "deepseek", model: "deepseek-reasoner" },
-    },
-    update: { inputPer1kMicros: 550n, outputPer1kMicros: 2190n, isActive: true },
-    create: {
-      provider: "deepseek",
-      model: "deepseek-reasoner",
-      inputPer1kMicros: 550n,
-      outputPer1kMicros: 2190n,
-      isActive: true,
-    },
-  });
-
-  // ==========================================
-  // Seed LlmModelRegistry for gateway routing
-  // ==========================================
-  console.log("Seeding LLM Model Registry...");
-
-  // DeepSeek Chat - fast, cost-effective
-  await prisma.llmModelRegistry.upsert({
-    where: { modelId: "deepseek-chat" },
-    update: {
-      inputCostPer1M: 0.28,
-      outputCostPer1M: 0.42,
-      avgLatencyMs: 800,
-      healthStatus: "healthy",
-      enabled: true,
-    },
-    create: {
-      modelId: "deepseek-chat",
-      provider: "deepseek",
-      modelName: "deepseek-chat",
-      inputCostPer1M: 0.28,
-      outputCostPer1M: 0.42,
-      capabilities: ["text"],
-      maxTokens: 64000,
-      latencyBudgetMs: 2000,
-      avgLatencyMs: 800,
-      healthStatus: "healthy",
-      priority: 3,
-      enabled: true,
-    },
-  });
-
-  // DeepSeek Reasoner - advanced reasoning
-  await prisma.llmModelRegistry.upsert({
-    where: { modelId: "deepseek-reasoner" },
-    update: {
-      inputCostPer1M: 0.55,
-      outputCostPer1M: 2.19,
-      avgLatencyMs: 2000,
-      healthStatus: "healthy",
-      enabled: true,
-    },
-    create: {
-      modelId: "deepseek-reasoner",
-      provider: "deepseek",
-      modelName: "deepseek-reasoner",
-      inputCostPer1M: 0.55,
-      outputCostPer1M: 2.19,
-      capabilities: ["text", "reasoning"],
-      maxTokens: 64000,
-      latencyBudgetMs: 5000,
-      avgLatencyMs: 2000,
-      healthStatus: "healthy",
-      priority: 4,
-      enabled: true,
-    },
-  });
-
-  // GPT-4o-mini for comparison
-  await prisma.llmModelRegistry.upsert({
-    where: { modelId: "gpt-4o-mini" },
-    update: {
-      inputCostPer1M: 0.15,
-      outputCostPer1M: 0.60,
-      avgLatencyMs: 500,
-      healthStatus: "healthy",
-      enabled: true,
-    },
-    create: {
+    {
       modelId: "gpt-4o-mini",
       provider: "openai",
-      modelName: "gpt-4o-mini",
-      inputCostPer1M: 0.15,
-      outputCostPer1M: 0.60,
-      capabilities: ["text", "multimodal"],
-      maxTokens: 128000,
-      latencyBudgetMs: 1000,
-      avgLatencyMs: 500,
-      healthStatus: "healthy",
-      priority: 2,
-      enabled: true,
-    },
-  });
-
-  // Gemini 2.0 Flash
-  await prisma.llmModelRegistry.upsert({
-    where: { modelId: "gemini-2.0-flash" },
-    update: {
-      inputCostPer1M: 0.10,
-      outputCostPer1M: 0.40,
-      avgLatencyMs: 400,
-      healthStatus: "healthy",
-      enabled: true,
-    },
-    create: {
-      modelId: "gemini-2.0-flash",
-      provider: "google",
-      modelName: "gemini-2.0-flash",
-      inputCostPer1M: 0.10,
-      outputCostPer1M: 0.40,
-      capabilities: ["text", "multimodal"],
-      maxTokens: 1000000,
-      latencyBudgetMs: 800,
-      avgLatencyMs: 400,
-      healthStatus: "healthy",
+      inCost: 0.10,
+      outCost: 0.40,
+      cap: ["text", "multimodal"],
       priority: 1,
-      enabled: true,
     },
-  });
-
-  // ==========================================
-  // Seed Groq Models
-  // ==========================================
-  console.log("Seeding Groq prices...");
-
-  // Groq llama-3.1-8b-instant pricing (per 1k tokens in micros)
-  // Input: $0.05/1M = 50 micros/1k, Output: $0.08/1M = 80 micros/1k
-  await prisma.llmPrice.upsert({
-    where: {
-      provider_model: { provider: "groq", model: "llama-3.1-8b-instant" },
+    {
+      modelId: "deepseek-chat",
+      provider: "deepseek",
+      inCost: 0.28,
+      outCost: 0.42,
+      cap: ["text"],
+      priority: 1,
     },
-    update: { inputPer1kMicros: 50n, outputPer1kMicros: 80n, isActive: true },
-    create: {
-      provider: "groq",
-      model: "llama-3.1-8b-instant",
-      inputPer1kMicros: 50n,
-      outputPer1kMicros: 80n,
-      isActive: true,
+    {
+      modelId: "deepseek-reasoner",
+      provider: "deepseek",
+      inCost: 0.28,
+      outCost: 0.42,
+      cap: ["text", "reasoning"],
+      priority: 2,
     },
-  });
-
-  // Groq qwen-qwq-32b pricing
-  // Input: $0.075/1M = 75 micros/1k, Output: $0.30/1M = 300 micros/1k
-  await prisma.llmPrice.upsert({
-    where: {
-      provider_model: { provider: "groq", model: "qwen-qwq-32b" },
+    {
+      modelId: "gemini-2.0-flash-lite",
+      provider: "google",
+      inCost: 0.075,
+      outCost: 0.30,
+      cap: ["text", "multimodal"],
+      priority: 1,
     },
-    update: { inputPer1kMicros: 75n, outputPer1kMicros: 300n, isActive: true },
-    create: {
-      provider: "groq",
-      model: "qwen-qwq-32b",
-      inputPer1kMicros: 75n,
-      outputPer1kMicros: 300n,
-      isActive: true,
+    {
+      modelId: "mistral-nemo",
+      provider: "mistral",
+      inCost: 0.02,
+      outCost: 0.02,
+      cap: ["text"],
+      priority: 1,
     },
-  });
-
-  // Groq llama-4-scout-17b pricing
-  // Input: $0.11/1M = 110 micros/1k, Output: $0.34/1M = 340 micros/1k
-  await prisma.llmPrice.upsert({
-    where: {
-      provider_model: { provider: "groq", model: "llama-4-scout-17b" },
-    },
-    update: { inputPer1kMicros: 110n, outputPer1kMicros: 340n, isActive: true },
-    create: {
-      provider: "groq",
-      model: "llama-4-scout-17b",
-      inputPer1kMicros: 110n,
-      outputPer1kMicros: 340n,
-      isActive: true,
-    },
-  });
-
-  // Groq llama-4-maverick-17b pricing
-  // Input: $0.20/1M = 200 micros/1k, Output: $0.60/1M = 600 micros/1k
-  await prisma.llmPrice.upsert({
-    where: {
-      provider_model: { provider: "groq", model: "llama-4-maverick-17b" },
-    },
-    update: { inputPer1kMicros: 200n, outputPer1kMicros: 600n, isActive: true },
-    create: {
-      provider: "groq",
-      model: "llama-4-maverick-17b",
-      inputPer1kMicros: 200n,
-      outputPer1kMicros: 600n,
-      isActive: true,
-    },
-  });
-
-  console.log("Seeding Groq Model Registry...");
-
-  // Groq llama-3.1-8b-instant - fastest, most cost-effective
-  await prisma.llmModelRegistry.upsert({
-    where: { modelId: "groq-llama-3.1-8b-instant" },
-    update: {
-      inputCostPer1M: 0.05,
-      outputCostPer1M: 0.08,
-      avgLatencyMs: 400,
-      healthStatus: "healthy",
-      enabled: true,
-    },
-    create: {
+    {
       modelId: "groq-llama-3.1-8b-instant",
       provider: "groq",
       modelName: "llama-3.1-8b-instant",
-      inputCostPer1M: 0.05,
-      outputCostPer1M: 0.08,
-      capabilities: ["text", "chat"],
-      maxTokens: 131072,
-      latencyBudgetMs: 400,
-      avgLatencyMs: 400,
-      healthStatus: "healthy",
+      inCost: 0.05,
+      outCost: 0.08,
+      cap: ["text"],
       priority: 1,
-      enabled: true,
     },
-  });
-
-  // Groq qwen-qwq-32b
-  await prisma.llmModelRegistry.upsert({
-    where: { modelId: "groq-qwen-qwq-32b" },
-    update: {
-      inputCostPer1M: 0.075,
-      outputCostPer1M: 0.3,
-      avgLatencyMs: 600,
-      healthStatus: "healthy",
-      enabled: true,
-    },
-    create: {
-      modelId: "groq-qwen-qwq-32b",
+    {
+      modelId: "groq-gpt-oss-120b",
       provider: "groq",
-      modelName: "qwen-qwq-32b",
-      inputCostPer1M: 0.075,
-      outputCostPer1M: 0.3,
-      capabilities: ["text", "chat"],
-      maxTokens: 131072,
-      latencyBudgetMs: 600,
-      avgLatencyMs: 600,
-      healthStatus: "healthy",
-      priority: 2,
-      enabled: true,
-    },
-  });
-
-  // Groq llama-4-scout-17b
-  await prisma.llmModelRegistry.upsert({
-    where: { modelId: "groq-llama-4-scout-17b" },
-    update: {
-      inputCostPer1M: 0.11,
-      outputCostPer1M: 0.34,
-      avgLatencyMs: 600,
-      healthStatus: "healthy",
-      enabled: true,
-    },
-    create: {
-      modelId: "groq-llama-4-scout-17b",
-      provider: "groq",
-      modelName: "llama-4-scout-17b",
-      inputCostPer1M: 0.11,
-      outputCostPer1M: 0.34,
-      capabilities: ["text", "chat"],
-      maxTokens: 131072,
-      latencyBudgetMs: 600,
-      avgLatencyMs: 600,
-      healthStatus: "healthy",
+      modelName: "openai/gpt-oss-120b",
+      inCost: 0.15,
+      outCost: 0.60,
+      cap: ["text", "reasoning"],
       priority: 3,
-      enabled: true,
     },
-  });
-
-  // Groq llama-4-maverick-17b
-  await prisma.llmModelRegistry.upsert({
-    where: { modelId: "groq-llama-4-maverick-17b" },
-    update: {
-      inputCostPer1M: 0.2,
-      outputCostPer1M: 0.6,
-      avgLatencyMs: 600,
-      healthStatus: "healthy",
-      enabled: true,
+    {
+      modelId: "llama-3.2-1b",
+      provider: "meta",
+      modelName: "llama-3.2-1b-instruct",
+      inCost: 0.02,
+      outCost: 0.02,
+      cap: ["text"],
+      priority: 1,
     },
-    create: {
-      modelId: "groq-llama-4-maverick-17b",
-      provider: "groq",
-      modelName: "llama-4-maverick-17b",
-      inputCostPer1M: 0.2,
-      outputCostPer1M: 0.6,
-      capabilities: ["text", "chat"],
-      maxTokens: 131072,
-      latencyBudgetMs: 600,
-      avgLatencyMs: 600,
-      healthStatus: "healthy",
-      priority: 4,
-      enabled: true,
+    // --- OPENROUTER BUDGET MODELS (verified March 2026) ---
+    {
+      modelId: "openrouter-gemini-flash-lite",
+      provider: "openrouter",
+      modelName: "google/gemini-2.0-flash-lite-001",
+      inCost: 0.075,
+      outCost: 0.30,
+      cap: ["text", "multimodal"],
+      priority: 1,
     },
-  });
+    {
+      modelId: "openrouter-gemini-2-5-flash",
+      provider: "openrouter",
+      modelName: "google/gemini-2.5-flash",
+      inCost: 0.30,
+      outCost: 2.50,
+      cap: ["text", "reasoning", "multimodal"],
+      priority: 3,
+    },
+    {
+      modelId: "openrouter-gemini-3-1-preview",
+      provider: "openrouter",
+      modelName: "google/gemini-3.1-flash-lite-preview",
+      inCost: 0.25,
+      outCost: 1.50,
+      cap: ["text", "multimodal"],
+      priority: 2,
+    },
+    {
+      modelId: "openrouter-deepseek-v3",
+      provider: "openrouter",
+      modelName: "deepseek/deepseek-chat-v3-0324",
+      inCost: 0.20,
+      outCost: 0.77,
+      cap: ["text"],
+      priority: 1,
+    },
+    {
+      modelId: "openrouter-deepseek-v3-2",
+      provider: "openrouter",
+      modelName: "deepseek/deepseek-v3.2",
+      inCost: 0.26,
+      outCost: 0.38,
+      cap: ["text"],
+      priority: 1,
+    },
+    {
+      modelId: "openrouter-llama-3-1-8b",
+      provider: "openrouter",
+      modelName: "meta-llama/llama-3.1-8b-instruct",
+      inCost: 0.02,
+      outCost: 0.05,
+      cap: ["text"],
+      priority: 1,
+    },
+    {
+      modelId: "openrouter-auto",
+      provider: "openrouter",
+      modelName: "openrouter/auto",
+      inCost: 0,
+      outCost: 0,
+      cap: ["text"],
+      priority: 2,
+    },
+    // --- FREE VARIANTS (for FREE tier users / dev testing) ---
+    {
+      modelId: "openrouter-gemini-flash-lite-free",
+      provider: "openrouter",
+      modelName: "google/gemini-2.0-flash-lite-001:free",
+      inCost: 0,
+      outCost: 0,
+      cap: ["text", "multimodal"],
+      priority: 1,
+    },
+    {
+      modelId: "openrouter-deepseek-v3-free",
+      provider: "openrouter",
+      modelName: "deepseek/deepseek-chat-v3-0324:free",
+      inCost: 0,
+      outCost: 0,
+      cap: ["text"],
+      priority: 1,
+    }
+  ];
 
-  console.log("✅ Development seeding completed successfully!");
+  for (const item of registryData) {
+    await prisma.llmModelRegistry.upsert({
+      where: { modelId: item.modelId },
+      update: {
+        inputCostPer1M: item.inCost,
+        outputCostPer1M: item.outCost,
+        priority: item.priority,
+        enabled: true,
+      },
+      create: {
+        modelId: item.modelId,
+        provider: item.provider,
+        modelName: item.modelName || item.modelId,
+        inputCostPer1M: item.inCost,
+        outputCostPer1M: item.outCost,
+        capabilities: item.cap,
+        maxTokens: 128000,
+        healthStatus: "healthy",
+        priority: item.priority,
+        enabled: true,
+      },
+    });
+  }
 
-  console.log(
-    "\n💡 This script only creates missing data. Use the full seed script for complete data reset."
-  );
+  console.log("✅ Comprehensive March 2026 seeding completed successfully!");
 }
 
 main()
@@ -402,4 +272,3 @@ main()
   .finally(async () => {
     await prisma.$disconnect();
   });
-

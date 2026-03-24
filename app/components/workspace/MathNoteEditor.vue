@@ -322,7 +322,8 @@ const isExpressionsCollapsed = ref(true);
             {{ isDownloading ? "Fetching local AI model..." : "Recognising locally..." }}
           </span>
         </div>
-        <div v-if="isDownloading && progress > 0" class="w-48 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+        <div v-if="isDownloading && progress > 0"
+          class="w-48 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
           <div class="h-full bg-indigo-500 transition-all duration-300" :style="{ width: `${progress}%` }"></div>
         </div>
       </div>
@@ -395,7 +396,7 @@ const isExpressionsCollapsed = ref(true);
         </div>
       </motion.div>
     </div>
-    <!-- <FolderEditor /> -->
+    <!-- <WorkspaceEditor /> -->
   </div>
 </template>
 

@@ -60,6 +60,7 @@ export function computeAdaptiveItemCount(
  *
  * @param tokenEstimate - Estimated input + output tokens
  * @param provider - LLM provider (openai, google)
+ * @deprecated Use estimateCostMicros instead
  * @returns Estimated cost in USD
  */
 export function estimateCost(tokenEstimate: number, provider = "openai"): number {

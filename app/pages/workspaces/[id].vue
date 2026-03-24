@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useRoute } from "vue-router";
 import { defineAsyncComponent, onMounted, onBeforeUnmount } from "vue";
-import { useFolder } from "~/composables/folders/useFolders";
+import { useWorkspace } from "~/composables/workspaces/useWorkspaces";
 import { useResponsive } from "~/composables/ui/useResponsive";
 import type { EnrollCardResponse } from "~/shared/utils/review.contract";
 
@@ -19,10 +19,10 @@ const FloatingLearningHubButton = defineAsyncComponent(
 const LearningHubContent = defineAsyncComponent(
   () => import("~/components/hub/LearningHubContent.vue")
 );
-// const FolderNotesSection = defineAsyncComponent(
-//   () => import("~/components/folder/NotesSection.vue"),
+// const WorkspaceNotesSection = defineAsyncComponent(
+//   () => import("~/components/workspace/NotesSection.vue"),
 // );
-const FolderUploadMaterialForm = defineAsyncComponent(
+const WorkspaceUploadMaterialForm = defineAsyncComponent(
   () => import("~/components/materials/UploadMaterialForm.vue")
 );
 
@@ -31,7 +31,7 @@ const id = route.params.id;
 const toast = useToast();
 const { data: authData } = useAuth();
 const showUpload = ref(false);
-const { folder, loading, error, refresh } = useFolder(id! as string);
+const { workspace, loading, error, refresh } = useWorkspace(id! as string);
 
 // Context Bridge integration
 const contextBridge = useContextBridge();
@@ -40,7 +40,7 @@ const contextBridge = useContextBridge();
 const { isMobile } = useResponsive();
 const showLearningHubModal = ref(false);
 
-const { updateFolder, updating, typedError } = useUpdateFolder();
+const { updateWorkspace, updating, typedError } = useUpdateWorkspace();
 const { fetchMaterials: refreshMaterials } = useMaterialsStore(id as string);
 const {
   enrolledFlashcardIds,
@@ -48,7 +48,7 @@ const {
   onEnrolled,
   loading: enrollmentLoading,
   fetchEnrollments
-} = useFolderEnrollment(id as string, folder);
+} = useWorkspaceEnrollment(id as string, workspace);
 
 const { handleOfflineSubmit } = useOffline();
 
@@ -88,7 +88,7 @@ const saveMaterial = async (title: string, content: string, type: string) => {
         : null;
 
       handleOfflineSubmit({
-        payload: { ...payload, folderId: id as string, user: userData },
+        payload: { ...payload, workspaceId: id as string, user: userData },
         storeName: DB_CONFIG.STORES.FORMS,
         type: FORM_SYNC_TYPES.UPLOAD_MATERIAL,
       });
@@ -96,11 +96,11 @@ const saveMaterial = async (title: string, content: string, type: string) => {
     }
     handleOpenLearningHub();
 
-    await updateFolder(payload);
+    await updateWorkspace(payload);
     await refreshMaterials();
     toast.add({
       title: "Saved",
-      description: "Material uploaded to this folder.",
+      description: "Material uploaded to this workspace.",
       color: "success",
     });
   } catch (err: unknown) {
@@ -148,36 +148,36 @@ onBeforeUnmount(() => {
 
 
 <template>
-  <shared-page-wrapper id="folder-page" :title="`${folder?.title || '....'}`" :is-page-loading="loading">
+  <shared-page-wrapper id="workspace-page" :title="`${workspace?.title || '....'}`" :is-page-loading="loading">
     <template #header-info-leading>
-      <NuxtLink to="/folders" class="text-xs text-content-on-background flex items-center gap-1">
+      <NuxtLink to="/workspaces" class="text-xs text-content-on-background flex items-center gap-1">
         <u-icon name="i-heroicons-chevron-left" class="-ml-1" />
-        Back to Folders
+        Back to Workspaces
       </NuxtLink>
     </template>
 
     <template #actions>
       <div class="flex flex-col items-end gap-2">
-        <!-- Folder-specific Review Status - Minimal & Clean -->
-        <review-status-card :folder-id="`${id as string}`" :show-context="false" :show-refresh="false" :minimal="true"
-          variant="ghost" :empty-message="'You have no cards to review, enroll some or just chill.'" />
+        <!-- Workspace-specific Review Status - Minimal & Clean -->
+        <review-status-card :workspace-id="`${id as string}`" :show-context="false" :show-refresh="false"
+          :minimal="true" variant="ghost" :empty-message="'You have no cards to review, enroll some or just chill.'" />
       </div>
     </template>
     <shared-error-message v-if="error && !loading" :error="error" :refresh="refresh" />
 
-    <template v-if="folder" #default>
+    <template v-if="workspace" #default>
 
       <div class="flex flex-col md:flex-row gap-2 min-h-0 w-full grow">
 
 
         <!-- NOTES Goes Here -->
-        <folder-notes-section @add-to-material="handleAddToMaterial" />
+        <workspace-notes-section @add-to-material="handleAddToMaterial" />
 
 
         <!-- LEARNING HUB Goes Here - Desktop Only -->
         <div v-if="!isMobile" class="flex flex-col relative overflow-hidden shrink-0 basis-full md:basis-1/4 grow"
           id="learning-hub">
-          <LearningHubContent :folder-id="`${id as string}`" :materials-length="folder.materials?.length"
+          <LearningHubContent :workspace-id="`${id as string}`" :materials-length="workspace.materials?.length"
             :is-enrolling-loading="enrollmentLoading" :enrolled-flashcard-ids="enrolledFlashcardIds"
             :enrolled-question-ids="enrolledQuestionIds" :updating="updating" :show-upload="showUpload"
             @enrolled="handleEnrolled" @toggle-upload="toggleUploadForm" />
@@ -185,8 +185,8 @@ onBeforeUnmount(() => {
       </div>
 
       <!-- Mobile Learning Hub Modal -->
-      <LearningHubModal :show="showLearningHubModal" :folder-id="`${id as string}`"
-        :materials-length="folder.materials?.length" :enrollment-loading="enrollmentLoading"
+      <LearningHubModal :show="showLearningHubModal" :workspace-id="`${id as string}`"
+        :materials-length="workspace.materials?.length" :enrollment-loading="enrollmentLoading"
         :enrolled-flashcard-ids="enrolledFlashcardIds" :enrolled-question-ids="enrolledQuestionIds" :updating="updating"
         :show-upload="showUpload" @close="showLearningHubModal = false" @enrolled="handleEnrolled"
         @toggle-upload="toggleUploadForm" />
@@ -195,7 +195,7 @@ onBeforeUnmount(() => {
       <FloatingLearningHubButton :visible="isMobile" @click="handleOpenLearningHub" />
 
       <!-- Upload Materials Dialog -->
-      <FolderUploadMaterialForm :show="showUpload" @close="showUpload = false" />
+      <WorkspaceUploadMaterialForm :show="showUpload" @close="showUpload = false" />
 
       <!-- Context Bridge Slide-Over -->
       <ContextSlideOver :is-open="contextBridge.isSlideOverOpen.value" :preview="contextBridge.activePreview.value"

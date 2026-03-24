@@ -47,10 +47,10 @@ export default defineEventHandler(async (event) => {
             continue;
           }
         } else {
-          const folder = await prisma.folder.findFirst({
-            where: { id: note.folderId!, userId: user.id },
+          const workspace = await prisma.workspace.findFirst({
+            where: { id: note.workspaceId!, userId: user.id },
           });
-          if (!folder) {
+          if (!workspace) {
             applied.push(change.id);
             continue;
           }
@@ -72,17 +72,17 @@ export default defineEventHandler(async (event) => {
       const noteType = change.type || "FOLDER";
 
       // Validate based on note type
-      if (noteType === "FOLDER" && !change.folderId) {
+      if (noteType === "FOLDER" && !change.workspaceId) {
         conflicts.push({ id: change.id });
         continue;
       }
 
-      if (noteType === "FOLDER" && change.folderId) {
-        const folder = await prisma.folder.findFirst({
-          where: { id: change.folderId, userId: user.id },
+      if (noteType === "FOLDER" && change.workspaceId) {
+        const workspace = await prisma.workspace.findFirst({
+          where: { id: change.workspaceId, userId: user.id },
         });
-        if (!folder) {
-          // Cannot apply without valid/owned folder
+        if (!workspace) {
+          // Cannot apply without valid/owned workspace
           conflicts.push({ id: change.id });
           continue;
         }
@@ -110,7 +110,7 @@ export default defineEventHandler(async (event) => {
           } else {
             await prisma.note.create({
               data: {
-                folderId: change.folderId!,
+                workspaceId: change.workspaceId!,
                 type: "FOLDER",
                 content: change.content || "",
                 noteType: change.noteType ?? "TEXT",
@@ -137,7 +137,7 @@ export default defineEventHandler(async (event) => {
             await prisma.note.create({
               data: {
                 id: change.id,
-                folderId: change.folderId!,
+                workspaceId: change.workspaceId!,
                 type: "FOLDER",
                 content: change.content || "",
                 noteType: change.noteType ?? "TEXT",
@@ -155,10 +155,10 @@ export default defineEventHandler(async (event) => {
             continue;
           }
         } else {
-          const folder = await prisma.folder.findFirst({
-            where: { id: existing.folderId!, userId: user.id },
+          const workspace = await prisma.workspace.findFirst({
+            where: { id: existing.workspaceId!, userId: user.id },
           });
-          if (!folder) {
+          if (!workspace) {
             conflicts.push({ id: change.id });
             continue;
           }

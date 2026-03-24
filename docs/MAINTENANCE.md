@@ -124,7 +124,7 @@ headers.set('Retry-After', String(Math.ceil(resetTime / 1000)))
 
 | Area | Status | Notes |
 |------|--------|-------|
-| Resource ownership | ✅ Fixed | Folder ownership verified |
+| Resource ownership | ✅ Fixed | Workspace ownership verified |
 | API protection | ✅ Good | Session checked on all routes |
 | Admin routes | ✅ N/A | No admin functionality |
 
@@ -154,7 +154,7 @@ headers.set('Retry-After', String(Math.ceil(resetTime / 1000)))
 ### High Priority
 
 #### 1. Duplicated Token Estimation
-**Location**: `server/utils/llm/GPT35Strategy.ts`, `GeminiStrategy.ts`
+**Location**: `server/utils/llm/OpenAIStrategy.ts`, `GeminiStrategy.ts`
 
 **Issue**: Token estimation duplicated 4x across strategies:
 ```typescript
@@ -252,7 +252,7 @@ export default defineNuxtPlugin((nuxtApp) => {
 ```prisma
 model Note {
   // ...
-  @@index([folderId, order])  // For ordered listing
+  @@index([workspaceId, order])  // For ordered listing
 }
 ```
 
@@ -261,8 +261,8 @@ model Note {
 
 **Recommendation**: Add version prefix:
 ```
-/api/v1/folders
-/api/v2/folders  // New version
+/api/v1/workspaces
+/api/v2/workspaces  // New version
 ```
 
 ---
@@ -507,7 +507,7 @@ export default defineEventHandler(async () => {
 
 | Feature | Description |
 |---------|-------------|
-| Collaborative folders | Share folders with other users |
+| Collaborative workspaces | Share workspaces with other users |
 | AI study plans | Auto-generated study schedules |
 | Mobile apps | React Native or Flutter |
 | Offline flashcard review | Full SR functionality offline |
@@ -534,10 +534,10 @@ export default defineEventHandler(async () => {
 | Grade transaction missing | ✅ Fixed | Wrapped in $transaction |
 | Grade idempotency | ✅ Fixed | GradeRequest model |
 | Notification scheduling race | ✅ Fixed | Added cardId filter |
-| Folder authorization bypass | ✅ Fixed | Ownership check added |
+| Workspace authorization bypass | ✅ Fixed | Ownership check added |
 | IndexedDB failure silent | ✅ Fixed | ensureDB() with retry |
 | SW update listener leak | ✅ Fixed | Listener cleanup on unmount |
-| N+1 query in queue | ✅ Fixed | Single folder query |
+| N+1 query in queue | ✅ Fixed | Single workspace query |
 
 ### Database Schema Updates
 

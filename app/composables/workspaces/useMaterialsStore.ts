@@ -39,13 +39,13 @@ interface MaterialStore {
 const stores = new Map<string, MaterialStore>();
 
 /**
- * Creates or returns a notes store for a specific folder
+ * Creates or returns a notes store for a specific workspace
  * This provides local state management with optimistic updates
  */
-export function useMaterialsStore(folderId: string): MaterialStore {
+export function useMaterialsStore(workspaceId: string): MaterialStore {
   // Return existing store if available
-  if (stores.has(folderId)) {
-    return stores.get(folderId)!;
+  if (stores.has(workspaceId)) {
+    return stores.get(workspaceId)!;
   }
 
   const { $api } = useNuxtApp();
@@ -68,9 +68,9 @@ export function useMaterialsStore(folderId: string): MaterialStore {
     fetching,
     fetchError,
     fetchTypedError,
-  } = useMaterials(folderId);
+  } = useMaterials(workspaceId);
 
-  // Fetch materials for the folder from server and populate local state
+  // Fetch materials for the workspace from server and populate local state
   const fetchMaterials = async () => {
     try {
       const data = await fetchMaterialsFromAPI();
@@ -107,7 +107,7 @@ export function useMaterialsStore(folderId: string): MaterialStore {
     // // Add optimistic material
     // const optimisticMaterial: MaterialState = {
     //   id: tempId,
-    //   folderId: folderId,
+    //   workspaceId: workspaceId,
     //   content: payload.content,
     //   title: payload.title,
     //   type: payload.type,
@@ -121,7 +121,7 @@ export function useMaterialsStore(folderId: string): MaterialStore {
     try {
       // Attempt to submit to server
       const result: Result<Material, APIError> = await $api.materials.create({
-        folderId,
+        workspaceId,
         content: payload.content,
         title: payload.title,
         type: payload.type,
@@ -162,7 +162,7 @@ export function useMaterialsStore(folderId: string): MaterialStore {
     uploadError.value = null;
 
     try {
-      const result = await $api.materials.uploadFile(file, folderId, title);
+      const result = await $api.materials.uploadFile(file, workspaceId, title);
 
       if (result.success) {
         // Refresh materials list to include new material
@@ -294,7 +294,7 @@ export function useMaterialsStore(folderId: string): MaterialStore {
   };
 
   // Cache the store
-  stores.set(folderId, store);
+  stores.set(workspaceId, store);
 
   // Auto-sync on creation
   fetchMaterials();
@@ -302,8 +302,8 @@ export function useMaterialsStore(folderId: string): MaterialStore {
 }
 
 /**
- * Clean up store when folder is no longer needed
+ * Clean up store when workspace is no longer needed
  */
-export function cleanupMaterialStore(folderId: string): void {
-  stores.delete(folderId);
+export function cleanupMaterialStore(workspaceId: string): void {
+  stores.delete(workspaceId);
 }

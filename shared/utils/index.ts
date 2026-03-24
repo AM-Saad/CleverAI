@@ -1,4 +1,4 @@
-export * from './folder.contract'
+export * from './workspace.contract'
 export * from './material.contract'
 export * from './review.contract'
 export * from './note.contract'

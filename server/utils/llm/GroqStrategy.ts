@@ -117,7 +117,7 @@ export class GroqStrategy implements LLMStrategy {
     let inputTokensEstimate = 0;
     try {
       // Use cl100k_base encoding (closest to LLaMA tokenizer)
-      const enc = encoding_for_model("gpt-4");
+      const enc = encoding_for_model("gpt-4o" as any);
       inputTokensEstimate = enc.encode(prompt).length;
       enc.free();
     } catch { }
@@ -134,7 +134,7 @@ export class GroqStrategy implements LLMStrategy {
       content = res.choices?.[0]?.message?.content?.trim() ?? "[]";
       let outputTokensEstimate = 0;
       try {
-        const enc = encoding_for_model("gpt-4");
+        const enc = encoding_for_model("gpt-4o" as any);
         outputTokensEstimate = enc.encode(
           typeof content === "string" ? content : ""
         ).length;
@@ -213,7 +213,7 @@ export class GroqStrategy implements LLMStrategy {
     const inputChars = input.length;
     let inputTokensEstimate = 0;
     try {
-      const enc = encoding_for_model("gpt-4");
+      const enc = encoding_for_model("gpt-4o" as any);
       inputTokensEstimate = enc.encode(prompt).length;
       enc.free();
     } catch { }
@@ -230,7 +230,7 @@ export class GroqStrategy implements LLMStrategy {
       content = res.choices?.[0]?.message?.content?.trim() ?? "[]";
       let outputTokensEstimate = 0;
       try {
-        const enc = encoding_for_model("gpt-4");
+        const enc = encoding_for_model("gpt-4o" as any);
         outputTokensEstimate = enc.encode(
           typeof content === "string" ? content : ""
         ).length;

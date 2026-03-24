@@ -64,7 +64,7 @@
                 </UFormGroup>
 
                 <UFormGroup label="URL (Click Destination)" name="url" class="mb-4">
-                    <UInput v-model="state.url" placeholder="/folders or https://example.com" />
+                    <UInput v-model="state.url" placeholder="/workspaces or https://example.com" />
                 </UFormGroup>
 
                 <UFormGroup label="Target Users" name="targetUsers" class="mb-4">
@@ -228,7 +228,7 @@ const state = reactive({
     message: 'This is a test message from the notification endpoint',
     icon: '/icons/192x192.png',
     tag: 'test',
-    url: '/folders',
+    url: '/workspaces',
     requireInteraction: false
 })
 
@@ -298,11 +298,11 @@ async function testDirectNotification() {
         console.log('🔔 Service worker ready:', registration)
 
         await registration.showNotification('Direct Test Notification', {
-            body: 'Click this to test navigation to /folders',
+            body: 'Click this to test navigation to /workspaces',
             icon: '/icons/192x192.png',
             tag: 'direct-test',
             data: {
-                url: '/folders',
+                url: '/workspaces',
                 timestamp: Date.now()
             }
         })

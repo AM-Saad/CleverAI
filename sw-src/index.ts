@@ -334,11 +334,11 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
     }
   );
 
-  // 2. Folders API GET — network-first with cache fallback
+  // 2. Workspaces API GET — network-first with cache fallback
   registerRoute(
     ({ url, request }: { url: URL; request: Request }) =>
       url.origin === self.location.origin &&
-      url.pathname.startsWith("/api/folders") &&
+      url.pathname.startsWith("/api/workspaces") &&
       request.method === "GET",
     async ({ request }: RouteHandlerCallbackOptions) => {
       const cacheName = CACHE_NAMES.API_FOLDERS;
@@ -352,7 +352,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         if (resp.ok && isJson) {
           try {
             await cache.put(request, resp.clone());
-            log("Cached folders response:", request.url);
+            log("Cached workspaces response:", request.url);
           } catch {
             /* ignore quota/errors */
           }
@@ -360,16 +360,16 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         return resp;
       } catch {
         // offline/network fail: return cached if present
-        log("Folders API network failed, checking cache:", request.url);
+        log("Workspaces API network failed, checking cache:", request.url);
         const cached = await cache.match(request);
         if (cached) {
-          log("Serving cached folders:", request.url);
+          log("Serving cached workspaces:", request.url);
           return cached;
         }
 
         // No cache available - provide graceful fallback based on endpoint
         const url = new URL(request.url);
-        if (url.pathname === "/api/folders/count") {
+        if (url.pathname === "/api/workspaces/count") {
           // Return count fallback
           return new Response(
             JSON.stringify({ success: true, data: { count: 0 } }),

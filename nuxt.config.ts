@@ -17,7 +17,7 @@ export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
   debug: true,
-  // Use the existing `app/` folder as Nuxt source directory
+  // Use the existing `app/` workspace as Nuxt source directory
   srcDir: "app",
 
   modules: [
@@ -273,7 +273,7 @@ export default defineNuxtConfig({
   //   "/auth/**": { ssr: false },
   //   "/settings/**": { ssr: false },
   //   "/review/**": { ssr: false },
-  //   "/folders/**": { ssr: false },
+  //   "/workspaces/**": { ssr: false },
   // },
   css: ["~/assets/css/main.css"],
 
@@ -286,6 +286,7 @@ export default defineNuxtConfig({
     openaiKey: process.env.OPENAI_API_KEY,
     geminiKey: process.env.GEMINI_API_KEY,
     deepseekKey: process.env.DEEPSEEK_API_KEY,
+    openrouterKey: process.env.OPENROUTER_API_KEY,
     groqKey: process.env.GROQ_API_KEY,
     // Dev-only: Force a specific model for testing (e.g., 'deepseek-chat', 'gpt-4o-mini')
     devLlmModelOverride: process.env.DEV_LLM_MODEL_OVERRIDE,
@@ -310,7 +311,7 @@ export default defineNuxtConfig({
     // Public (exposed to client)
     public: {
       AUTH_ORIGIN: process.env.AUTH_ORIGIN,
-      APP_BASE_URL: process.env.APP_BASE_URL,
+      APP_BASE_URL: process.env.APP_BASE_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://cognilo.com'),
       SERVER_URL: process.env.SERVER_URL,
       VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,

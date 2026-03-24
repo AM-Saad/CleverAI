@@ -25,11 +25,11 @@ export default defineEventHandler(async (event) => {
     throw Errors.badRequest("Invalid material ID");
   }
 
-  // Fetch material with folder to verify ownership
+  // Fetch material with workspace to verify ownership
   const material = await prisma.material.findFirst({
     where: { id: params.id },
     include: {
-      folder: {
+      workspace: {
         select: { userId: true },
       },
     },
@@ -40,7 +40,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Verify ownership
-  if (material.folder.userId !== user.id) {
+  if (material.workspace.userId !== user.id) {
     throw Errors.forbidden("You do not have access to this material.");
   }
 

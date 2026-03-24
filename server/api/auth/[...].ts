@@ -11,7 +11,7 @@ console.log("[AUTH DEBUG] secret length:", runtimeConfig.auth?.secret?.length);
 const log = (...args: any[]) => {
   try {
     console.log("[AUTH]", ...args);
-  } catch {}
+  } catch { }
 };
 
 // Helper function to register user (replacement for AuthService)
@@ -92,7 +92,7 @@ export default NuxtAuthHandler({
           where: { email },
           include: {
             subscription: true,
-            folders: true,
+            workspaces: true,
           },
         });
 
@@ -231,7 +231,7 @@ export default NuxtAuthHandler({
             where: { email: token.email },
             include: {
               subscription: true,
-              folders: true,
+              workspaces: true,
             },
           });
           if (dbUser) {

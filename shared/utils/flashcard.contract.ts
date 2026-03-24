@@ -20,7 +20,7 @@ export type SourceRef = z.infer<typeof SourceRefSchema>;
 
 export const FlashcardSchema = z.object({
   id: z.string(),
-  folderId: z.string(),
+  workspaceId: z.string(),
   materialId: z.string().nullable(),
   front: z.string(),
   back: z.string(),
@@ -36,7 +36,7 @@ export type Flashcard = z.infer<typeof FlashcardSchema>;
 // ==========================================
 
 export const CreateFlashcardDTO = z.object({
-  folderId: z.string().min(1, "Folder ID is required"),
+  workspaceId: z.string().min(1, "Workspace ID is required"),
   front: z.preprocess(
     trim,
     z.string().min(1, "Front content is required").max(2000)

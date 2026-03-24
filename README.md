@@ -21,7 +21,7 @@ Cognilo is an AI-powered learning platform built with **Nuxt 4 + TypeScript**. I
 | **PWA & Offline** | Installable, full offline access via Workbox service worker |
 | **Subscription & Quota** | FREE / PRO / ENTERPRISE tiers with generation limits |
 | **Multiple LLM Backends** | OpenAI, Google Gemini, DeepSeek, Groq — smart routing by cost/latency/health |
-| **Sharing & Public Links** | Share folders/files with other users or via public URL |
+| **Sharing & Public Links** | Share workspaces/files with other users or via public URL |
 | **Passkey Authentication** | WebAuthn/passkey login alongside credentials |
 
 ---
@@ -51,7 +51,7 @@ Four provider strategies are implemented via the Strategy pattern:
 
 | Provider | Strategy File | Models |
 |----------|--------------|--------|
-| **OpenAI** | `GPT35Strategy.ts` | gpt-3.5-turbo, gpt-4o-mini, gpt-4o |
+| **OpenAI** | `OpenAIStrategy.ts` | gpt-3.5-turbo, gpt-4o-mini, gpt-4o |
 | **Google** | `GeminiStrategy.ts` | gemini-2.0-flash-lite, gemini-1.5-flash-8b |
 | **DeepSeek** | `DeepSeekStrategy.ts` | deepseek-chat, deepseek-reasoner |
 | **Groq** | `GroqStrategy.ts` | llama-3.1-8b-instant, qwen-qwq-32b, llama-4-scout-17b |

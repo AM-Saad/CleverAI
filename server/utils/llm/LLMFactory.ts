@@ -7,6 +7,7 @@ import { Errors } from '../error'
 import type { LLMModel } from "#shared/utils/llm";
 import type { LlmModelRegistry } from '@prisma/client'
 import { prisma } from '../prisma'
+import { LlmMeasured, logLlmUsage } from '../llmCost';
 
 /**
  * @deprecated Use `getLLMStrategyFromRegistry()` instead.
@@ -20,7 +21,7 @@ import { prisma } from '../prisma'
  */
 export const getLLMStrategy = (
   model: LLMModel,
-  ctx?: { userId?: string; folderId?: string; feature?: string }
+  ctx?: { userId?: string; workspaceId?: string; feature?: string }
 ): LLMStrategy => {
   console.warn(
     `[DEPRECATION] getLLMStrategy("${model}") is deprecated. ` +
@@ -29,10 +30,10 @@ export const getLLMStrategy = (
 
   switch (model) {
     case "gpt-3.5":
-      return new GPT35Strategy("gpt-3.5-turbo", (m: LlmMeasured) => {
+      return new OpenAIStrategy("gpt-3.5-turbo", (m: LlmMeasured) => {
         logLlmUsage(m, {
           userId: ctx?.userId,
-          folderId: ctx?.folderId,
+          workspaceId: ctx?.workspaceId,
           feature: ctx?.feature,
         });
       });
@@ -40,7 +41,7 @@ export const getLLMStrategy = (
       return new GeminiStrategy("gemini-2.0-flash-lite", (m: LlmMeasured) => {
         logLlmUsage(m, {
           userId: ctx?.userId,
-          folderId: ctx?.folderId,
+          workspaceId: ctx?.workspaceId,
           feature: ctx?.feature,
         });
       });
@@ -48,7 +49,7 @@ export const getLLMStrategy = (
       return new DeepSeekStrategy("deepseek-chat", (m: LlmMeasured) => {
         logLlmUsage(m, {
           userId: ctx?.userId,
-          folderId: ctx?.folderId,
+          workspaceId: ctx?.workspaceId,
           feature: ctx?.feature,
         });
       });
@@ -65,19 +66,22 @@ export const getLLMStrategy = (
  * Used by gateway to dynamically select and instantiate the correct strategy
  * 
  * @param modelId - The model ID from LlmModelRegistry (e.g., 'gpt-4o-mini', 'gemini-flash-8b')
- * @param ctx - Context for usage logging (userId, folderId, feature)
+ * @param ctx - Context for usage logging (userId, workspaceId, feature)
  * @param onMeasureCapture - Optional callback to capture measured values for gateway logging
  * @returns LLM strategy instance with measurement callback
  * @throws Error if model not found or provider unsupported
  */
 export async function getLLMStrategyFromRegistry(
   modelId: string,
-  ctx?: { userId?: string; folderId?: string; feature?: string },
+  ctx?: { userId?: string; workspaceId?: string; feature?: string },
   onMeasureCapture?: (m: LlmMeasured) => void
 ): Promise<LLMStrategy> {
+  const baseModelId = modelId.split(':')[0]
+  const suffix = modelId.includes(':') ? `:${modelId.split(':')[1]}` : ''
+
   // Fetch model from registry
   const model = await prisma.llmModelRegistry.findUnique({
-    where: { modelId }
+    where: { modelId: baseModelId }
   })
 
   if (!model) {
@@ -98,11 +102,11 @@ export async function getLLMStrategyFromRegistry(
 
   switch (provider) {
     case 'openai':
-      // All OpenAI models use GPT35Strategy (gpt-3.5-turbo, gpt-4o-mini, gpt-4o)
-      return new GPT35Strategy(model.modelId, (m: LlmMeasured) => {
+      // All OpenAI models use OpenAIStrategy (gpt-3.5-turbo, gpt-4o-mini, gpt-4o)
+      return new OpenAIStrategy(model.modelId, (m: LlmMeasured) => {
         logLlmUsage(m, {
           userId: ctx?.userId,
-          folderId: ctx?.folderId,
+          workspaceId: ctx?.workspaceId,
           feature: ctx?.feature,
         });
         onMeasureCapture?.(m);
@@ -113,7 +117,7 @@ export async function getLLMStrategyFromRegistry(
       return new GeminiStrategy(model.modelId, (m: LlmMeasured) => {
         logLlmUsage(m, {
           userId: ctx?.userId,
-          folderId: ctx?.folderId,
+          workspaceId: ctx?.workspaceId,
           feature: ctx?.feature,
         });
         onMeasureCapture?.(m);
@@ -124,7 +128,7 @@ export async function getLLMStrategyFromRegistry(
       return new DeepSeekStrategy(model.modelId, (m: LlmMeasured) => {
         logLlmUsage(m, {
           userId: ctx?.userId,
-          folderId: ctx?.folderId,
+          workspaceId: ctx?.workspaceId,
           feature: ctx?.feature,
         });
         onMeasureCapture?.(m);
@@ -135,17 +139,38 @@ export async function getLLMStrategyFromRegistry(
       return new GroqStrategy(model.modelId, (m: LlmMeasured) => {
         logLlmUsage(m, {
           userId: ctx?.userId,
-          folderId: ctx?.folderId,
+          workspaceId: ctx?.workspaceId,
           feature: ctx?.feature,
         });
         onMeasureCapture?.(m);
       });
 
+    case 'openrouter': {
+      // OpenRouter models — re-apply any suffix (like :nitro, :free, :floor)
+      const orModelName = `${model.modelName || model.modelId}${suffix}`;
+      const includeReasoning = model.capabilities.includes('reasoning');
+      return new OpenRouterStrategy(
+        orModelName,
+        (m: LlmMeasured) => {
+          logLlmUsage(m, {
+            userId: ctx?.userId,
+            workspaceId: ctx?.workspaceId,
+            feature: ctx?.feature,
+          });
+          onMeasureCapture?.(m);
+        },
+        {
+          includeReasoning,
+          providerSort: 'price', // Default: optimize for cost
+        }
+      );
+    }
+
     // case 'anthropic':
     //   return new ClaudeStrategy((m: LlmMeasured) => {
     //     logLlmUsage(m, {
     //       userId: ctx?.userId,
-    //       folderId: ctx?.folderId,
+    //       workspaceId: ctx?.workspaceId,
     //       feature: ctx?.feature,
     //     });
     //   });
@@ -154,7 +179,7 @@ export async function getLLMStrategyFromRegistry(
     //   return new MixtralStrategy((m: LlmMeasured) => {
     //     logLlmUsage(m, {
     //       userId: ctx?.userId,
-    //       folderId: ctx?.folderId,
+    //       workspaceId: ctx?.workspaceId,
     //       feature: ctx?.feature,
     //     });
     //   });

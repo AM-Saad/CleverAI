@@ -81,12 +81,13 @@
             <ui-label>
               Ease Factor
             </ui-label>
-            <u-input class="w-full" v-model.number="debugValues.easeFactor" type="range" min="1.3" max="5.0" step="0.1" />
+            <u-input class="w-full" v-model.number="debugValues.easeFactor" type="range" min="1.3" max="5.0"
+              step="0.1" />
             <div class="flex justify-between text-xs text-gray-500 mt-1">
               <span>1.3</span>
               <span class="font-mono font-semibold">{{
                 debugValues.easeFactor
-                }}</span>
+              }}</span>
               <span>5.0</span>
             </div>
           </div>
@@ -101,7 +102,7 @@
               <span>0</span>
               <span class="font-mono font-semibold">{{
                 debugValues.intervalDays
-                }}</span>
+              }}</span>
               <span>180</span>
             </div>
           </div>
@@ -116,7 +117,7 @@
               <span>0</span>
               <span class="font-mono font-semibold">{{
                 debugValues.repetitions
-                }}</span>
+              }}</span>
               <span>20</span>
             </div>
           </div>
@@ -131,7 +132,7 @@
               <span>0</span>
               <span class="font-mono font-semibold">{{
                 debugValues.streak
-                }}</span>
+              }}</span>
               <span>100</span>
             </div>
           </div>
@@ -513,7 +514,7 @@ interface AnalyticsData {
 }
 
 interface Props {
-  folderId?: string;
+  workspaceId?: string;
 }
 
 const props = defineProps<Props>();
@@ -589,7 +590,7 @@ const resourceFront = computed(() => {
     const flashcardResource = c.resource as {
       front: string;
       back: string;
-      folderId: string;
+      workspaceId: string;
       hint?: string;
       tags?: string[];
     };
@@ -598,7 +599,7 @@ const resourceFront = computed(() => {
   const materialResource = c.resource as {
     title: string;
     content: string;
-    folderId: string;
+    workspaceId: string;
     tags?: string[];
   };
   return materialResource.title;
@@ -611,7 +612,7 @@ const resourceBack = computed(() => {
     const flashcardResource = c.resource as {
       front: string;
       back: string;
-      folderId: string;
+      workspaceId: string;
       hint?: string;
       tags?: string[];
     };
@@ -620,7 +621,7 @@ const resourceBack = computed(() => {
   const materialResource = c.resource as {
     title: string;
     content: string;
-    folderId: string;
+    workspaceId: string;
     tags?: string[];
   };
   return materialResource.content;
@@ -633,7 +634,7 @@ const resourceHint = computed(() => {
     const flashcardResource = c.resource as {
       front: string;
       back: string;
-      folderId: string;
+      workspaceId: string;
       hint?: string;
       tags?: string[];
     };
@@ -928,7 +929,7 @@ const applyDebugValues = async () => {
     });
 
     // Refresh the queue to show updated values
-    await fetchQueue(props.folderId);
+    await fetchQueue(props.workspaceId);
 
     console.log("✅ Debug values applied successfully");
   } catch (err) {
@@ -998,7 +999,7 @@ const loadAnalytics = async () => {
   if (!analytics.value) {
     try {
       const response = await $fetch("/api/review/analytics", {
-        query: props.folderId ? { folderId: props.folderId } : {},
+        query: props.workspaceId ? { workspaceId: props.workspaceId } : {},
       });
       analytics.value = response.data as AnalyticsData;
     } catch (err) {
@@ -1016,9 +1017,9 @@ watch(showAnalytics, (newValue) => {
 
 // Watch for prop changes
 watch(
-  () => props.folderId,
+  () => props.workspaceId,
   () => {
-    fetchQueue(props.folderId);
+    fetchQueue(props.workspaceId);
     // Reset session stats
     studySessionReviews.value = 0;
     sessionStartTime.value = Date.now();

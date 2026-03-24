@@ -137,7 +137,7 @@ export default defineEventHandler(async (event) => {
   const parsed = parseResult.data;
   const {
     task,
-    folderId,
+    workspaceId,
     materialId,
     save,
     replace,
@@ -154,13 +154,13 @@ export default defineEventHandler(async (event) => {
   if (materialId) {
     loadedMaterial = await prisma.material.findUnique({
       where: { id: materialId },
-      include: { folder: { select: { userId: true, id: true } } },
+      include: { workspace: { select: { userId: true, id: true } } },
     });
 
     if (!loadedMaterial) {
       throw Errors.notFound("Material not found.");
     }
-    if (loadedMaterial.folder.userId !== user.id) {
+    if (loadedMaterial.workspace.userId !== user.id) {
       throw Errors.forbidden("You do not have access to this material.");
     }
 
@@ -181,34 +181,34 @@ export default defineEventHandler(async (event) => {
   if (text.length > MAX_CHARS) throw Errors.badRequest("Text too large");
 
   // ==========================================
-  // Folder/Material Permission Check
+  // Workspace/Material Permission Check
   // ==========================================
   let canSave = false;
-  let materialFolderId: string | undefined;
+  let materialWorkspaceId: string | undefined;
 
   // If materialId is provided, verify ownership (already done above)
   if (save && loadedMaterial) {
     canSave = true;
-    materialFolderId = loadedMaterial.folder.id;
+    materialWorkspaceId = loadedMaterial.workspace.id;
   } else if (save && materialId) {
     const material = await prisma.material.findFirst({
       where: { id: materialId },
-      include: { folder: { select: { userId: true, id: true } } },
+      include: { workspace: { select: { userId: true, id: true } } },
     });
     if (!material) {
       throw Errors.notFound("Material not found.");
     }
-    if (material.folder.userId !== user.id) {
+    if (material.workspace.userId !== user.id) {
       throw Errors.forbidden("You do not have access to this material.");
     }
     canSave = true;
-    materialFolderId = material.folder.id;
-  } else if (save && folderId) {
-    const ownerFolder = await prisma.folder.findFirst({
-      where: { id: folderId, userId: user.id },
+    materialWorkspaceId = material.workspace.id;
+  } else if (save && workspaceId) {
+    const ownerWorkspace = await prisma.workspace.findFirst({
+      where: { id: workspaceId, userId: user.id },
     });
-    if (!ownerFolder) {
-      throw Errors.forbidden("You do not have access to this folder.");
+    if (!ownerWorkspace) {
+      throw Errors.forbidden("You do not have access to this workspace.");
     }
     canSave = true;
   }
@@ -334,7 +334,7 @@ export default defineEventHandler(async (event) => {
       });
     } catch (err) {
       console.error("[llm.gateway] Model selection failed:", err);
-      await logGatewayFailure(requestId, user.id, task, err, undefined, folderId);
+      await logGatewayFailure(requestId, user.id, task, err, undefined, workspaceId);
       throw Errors.server("Failed to select model. Please try again.");
     }
   }
@@ -354,7 +354,7 @@ export default defineEventHandler(async (event) => {
       selectedModel.modelId,
       {
         userId: user.id,
-        folderId,
+        workspaceId,
         feature: task,
       },
       (m) => {
@@ -402,12 +402,12 @@ export default defineEventHandler(async (event) => {
       task,
       err,
       selectedModel.modelId,
-      folderId
+      workspaceId
     );
 
     // Still update latency even for failures (to track degraded performance)
     await updateModelLatency(selectedModel.modelId, latencyMs);
-
+    console.log(err)
     const message =
       err instanceof Error && /quota/i.test(err.message)
         ? "Quota exceeded. Please check your API plan/billing or try again later."
@@ -428,9 +428,9 @@ export default defineEventHandler(async (event) => {
   let deletedCount: number | undefined;
   let deletedReviewsCount: number | undefined;
 
-  const effectiveFolderId = materialFolderId || folderId;
+  const effectiveWorkspaceId = materialWorkspaceId || workspaceId;
 
-  if (canSave && effectiveFolderId) {
+  if (canSave && effectiveWorkspaceId) {
     try {
       if (task === "flashcards") {
         // Use transaction to ensure atomic delete + create
@@ -476,7 +476,7 @@ export default defineEventHandler(async (event) => {
                   : null;
 
                 return {
-                  folderId: effectiveFolderId,
+                  workspaceId: effectiveWorkspaceId,
                   materialId: materialId || null,
                   front: fc.front,
                   back: fc.back,
@@ -534,7 +534,7 @@ export default defineEventHandler(async (event) => {
                   : null;
 
                 return {
-                  folderId: effectiveFolderId,
+                  workspaceId: effectiveWorkspaceId,
                   materialId: materialId || null,
                   question: q.question,
                   choices: q.choices,
@@ -553,7 +553,7 @@ export default defineEventHandler(async (event) => {
     } catch (err) {
       console.error("[llm.gateway] Failed to save to database:", {
         requestId,
-        folderId: effectiveFolderId,
+        workspaceId: effectiveWorkspaceId,
         materialId,
         task,
         error: err,
@@ -620,7 +620,7 @@ export default defineEventHandler(async (event) => {
   await logGatewayRequest({
     requestId,
     userId: user.id,
-    folderId,
+    workspaceId,
     selectedModel,
     task,
     inputTokens,

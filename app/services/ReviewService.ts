@@ -56,11 +56,11 @@ export class ReviewService extends FetchFactory {
    * Get the review queue with optional filtering
    */
   async getQueue(
-    folderId?: string,
+    workspaceId?: string,
     limit: number = 20
   ): Promise<Result<ReviewQueueResponse>> {
     const params = new URLSearchParams();
-    if (folderId) params.append("folderId", folderId);
+    if (workspaceId) params.append("workspaceId", workspaceId);
     params.append("limit", limit.toString());
 
     const queryString = params.toString();
@@ -77,14 +77,14 @@ export class ReviewService extends FetchFactory {
   async getEnrollmentStatus(
     resourceIds?: string[],
     resourceType?: "material" | "flashcard" | "question",
-    folderId?: string
+    workspaceId?: string
   ): Promise<Result<EnrollmentStatusResponse>> {
     const params = new URLSearchParams();
     if (resourceIds && resourceIds.length > 0) {
       params.append("resourceIds", resourceIds.join(","));
     }
-    if (folderId) {
-      params.append("folderId", folderId);
+    if (workspaceId) {
+      params.append("workspaceId", workspaceId);
     }
     if (resourceType) params.append("resourceType", resourceType);
 
@@ -96,11 +96,11 @@ export class ReviewService extends FetchFactory {
 
   /**
    * Get review stats summary (lightweight - no cards)
-   * @param folderId Optional folder ID for folder-specific stats
+   * @param workspaceId Optional workspace ID for workspace-specific stats
    */
-  async getStats(folderId?: string): Promise<Result<ReviewSummaryStats>> {
+  async getStats(workspaceId?: string): Promise<Result<ReviewSummaryStats>> {
     const params = new URLSearchParams();
-    if (folderId) params.append("folderId", folderId);
+    if (workspaceId) params.append("workspaceId", workspaceId);
 
     const queryString = params.toString();
     const url = queryString

@@ -135,7 +135,7 @@ const saveMaterial = async (title: string, content: string, type: "text" | "vide
         : null;
 
       handleOfflineSubmit({
-        payload: { ...payload, folderId: id, user: userData },
+        payload: { ...payload, workspaceId: id, user: userData },
         storeName: DB_CONFIG.STORES.FORMS,
         type: FORM_SYNC_TYPES.UPLOAD_MATERIAL,
       });
@@ -273,7 +273,7 @@ watch(
 <template>
   <Teleport to="body">
     <shared-dialog-modal :show="props.show" @close="emit('close')" title="Add Material" icon="i-heroicons-document-plus"
-      description="Add a new material to your folder.">
+      description="Add a new material to your workspace.">
 
       <template #body>
         <!-- Source Toggle -->

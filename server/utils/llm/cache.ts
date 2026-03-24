@@ -104,7 +104,7 @@ export async function setSemanticCache(
 
 /**
  * Invalidate cache entries for a specific task or all tasks
- * Useful when folder content changes significantly
+ * Useful when workspace content changes significantly
  */
 export async function invalidateCache(task?: string): Promise<number> {
   try {

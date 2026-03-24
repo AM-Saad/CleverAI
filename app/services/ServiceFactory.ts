@@ -1,6 +1,6 @@
 import type { $Fetch } from "ofetch";
 import type FetchFactory from "./FetchFactory";
-import FoldersModule from "./Folder";
+import WorkspacesModule from "./Workspace";
 import { MaterialService } from "./Material";
 import { NoteService } from "./Note";
 import { BoardItemService } from "./BoardItem";
@@ -18,7 +18,7 @@ export class ServiceFactory {
     this.$fetch = fetcher;
   }
 
-  create(service: "folders"): FoldersModule;
+  create(service: "workspaces"): WorkspacesModule;
   create(service: "materials"): MaterialService;
   create(service: "notes"): NoteService;
   create(service: "boardItems"): BoardItemService;
@@ -31,8 +31,8 @@ export class ServiceFactory {
   create(service: string): FetchFactory;
   create(service: string): FetchFactory {
     switch (service) {
-      case "folders":
-        return new FoldersModule(this.$fetch);
+      case "workspaces":
+        return new WorkspacesModule(this.$fetch);
       case "materials":
         return new MaterialService(this.$fetch);
       case "notes":

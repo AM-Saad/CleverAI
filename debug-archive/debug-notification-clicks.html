@@ -152,7 +152,7 @@
                     icon: '/icons/192x192.png',
                     tag: 'debug-test',
                     data: {
-                        url: '/folders',
+                        url: '/workspaces',
                         timestamp: Date.now()
                     }
                 });
@@ -173,7 +173,7 @@
                     // Send a test message to the service worker
                     registration.active.postMessage({
                         type: 'TEST_NOTIFICATION_CLICK',
-                        data: { url: '/folders' }
+                        data: { url: '/workspaces' }
                     });
 
                     log('✅ Sent test message to service worker', 'success');

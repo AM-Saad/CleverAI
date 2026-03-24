@@ -33,7 +33,7 @@ export const LLMGenerateRequest = z.object({
   model: LLMEnum,
   task: TaskEnum,
   text: z.string().min(1),
-  folderId: z.string().optional(),
+  workspaceId: z.string().optional(),
   save: z.boolean().optional(),
   replace: z.boolean().optional(),
 });
@@ -86,7 +86,7 @@ export const GatewayGenerateRequest = z
   .object({
     task: TaskEnum,
     text: z.string().min(10).max(100000).optional(), // Optional if materialId provided
-    folderId: z.string().optional(),
+    workspaceId: z.string().optional(),
     materialId: z.string().optional(), // Generate from specific material
     save: z.boolean().optional(),
     replace: z.boolean().optional(),

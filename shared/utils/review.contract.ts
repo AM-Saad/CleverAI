@@ -79,21 +79,21 @@ export const ReviewCardSchema = z.object({
       back: z.string(),
       hint: z.string().optional(),
       tags: z.array(z.string()).optional(),
-      folderId: z.string(),
+      workspaceId: z.string(),
     }),
     z.object({
       // material
       title: z.string(),
       content: z.string(),
       tags: z.array(z.string()).optional(),
-      folderId: z.string(),
+      workspaceId: z.string(),
     }),
     z.object({
       // question
       question: z.string(),
       choices: z.array(z.string()),
       answerIndex: z.number(),
-      folderId: z.string(),
+      workspaceId: z.string(),
     }),
   ]),
   reviewState: z.object({
@@ -173,7 +173,7 @@ export type UpcomingReviews = z.infer<typeof UpcomingReviewsSchema>;
 
 /**
  * Lightweight stats for review status cards/widgets.
- * Used by both global (all folders) and folder-specific views.
+ * Used by both global (all workspaces) and workspace-specific views.
  */
 export const ReviewSummaryStatsSchema = z.object({
   /** Total enrolled cards (not suspended) */
@@ -186,11 +186,11 @@ export const ReviewSummaryStatsSchema = z.object({
   due: z.number(),
   /** Cards considered mature (3+ repetitions) */
   mature: z.number(),
-  /** Optional: folder context info */
+  /** Optional: workspace context info */
   context: z
     .object({
-      folderId: z.string().optional(),
-      folderTitle: z.string().optional(),
+      workspaceId: z.string().optional(),
+      workspaceTitle: z.string().optional(),
     })
     .optional(),
 });
@@ -200,7 +200,7 @@ export type ReviewSummaryStats = z.infer<typeof ReviewSummaryStatsSchema>;
  * Request params for stats endpoint
  */
 export const ReviewStatsQuerySchema = z.object({
-  /** Filter by folder ID (optional - omit for global stats) */
-  folderId: z.string().min(1).optional(),
+  /** Filter by workspace ID (optional - omit for global stats) */
+  workspaceId: z.string().min(1).optional(),
 });
 export type ReviewStatsQuery = z.infer<typeof ReviewStatsQuerySchema>;

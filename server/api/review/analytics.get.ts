@@ -3,7 +3,7 @@ import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 
 const AnalyticsQuerySchema = z.object({
-  folderId: z.string().optional(),
+  workspaceId: z.string().optional(),
   days: z.coerce.number().min(1).max(365).default(30),
 });
 
@@ -54,12 +54,12 @@ export default defineEventHandler(async (event) => {
   }
   const prisma = event.context.prisma;
 
-  const { folderId } = query;
+  const { workspaceId } = query;
 
   let cardReviews;
   try {
     cardReviews = await prisma.cardReview.findMany({
-      where: { userId: user.id, ...(folderId ? { folderId } : {}) },
+      where: { userId: user.id, ...(workspaceId ? { workspaceId } : {}) },
     });
   } catch {
     throw Errors.server("Failed to fetch review analytics");
@@ -74,7 +74,7 @@ export default defineEventHandler(async (event) => {
   const averageGrade =
     grades.length > 0
       ? grades.reduce((sum: number, grade: number) => sum + grade, 0) /
-        grades.length
+      grades.length
       : 0;
   const successfulReviews = grades.filter((g: number) => g >= 3).length;
   const retentionRate =
@@ -94,12 +94,12 @@ export default defineEventHandler(async (event) => {
   const averageEaseFactor =
     cardReviews.length > 0
       ? cardReviews.reduce((sum, cr) => sum + cr.easeFactor, 0) /
-        cardReviews.length
+      cardReviews.length
       : 2.5;
   const averageInterval =
     cardReviews.length > 0
       ? cardReviews.reduce((sum, cr) => sum + cr.intervalDays, 0) /
-        cardReviews.length
+      cardReviews.length
       : 1;
   const newCards = cardReviews.filter((cr) => cr.repetitions === 0).length;
   const learningCards = cardReviews.filter(

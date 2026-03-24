@@ -1,12 +1,12 @@
 import { useNuxtApp } from "#app";
 
-export function useNotes(folderId: string) {
+export function useNotes(workspaceId: string) {
   const { $api } = useNuxtApp();
 
   // Main notes data with centralized error handling
   const { data, pending, error, refresh } = useDataFetch<Note[]>(
-    `notes-${folderId}`,
-    () => $api.notes.getByFolder(folderId),
+    `notes-${workspaceId}`,
+    () => $api.notes.getByWorkspace(workspaceId),
   );
 
   // Create operation with centralized error handling

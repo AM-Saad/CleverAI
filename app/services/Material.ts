@@ -27,12 +27,12 @@ export class MaterialService extends FetchFactory {
   private readonly UPLOAD_RESOURCE = "/api/materials/upload";
 
   /**
-   * Get all materials for a folder
+   * Get all materials for a workspace
    */
-  async getByFolder(folderId: string): Promise<Result<Material[]>> {
+  async getByWorkspace(workspaceId: string): Promise<Result<Material[]>> {
     return this.call<Material[]>(
       "GET",
-      `${this.RESOURCE}?folderId=${folderId}`
+      `${this.RESOURCE}?workspaceId=${workspaceId}`
     );
   }
 
@@ -97,12 +97,12 @@ export class MaterialService extends FetchFactory {
    */
   async uploadFile(
     file: File,
-    folderId: string,
+    workspaceId: string,
     title?: string
   ): Promise<Result<UploadMaterialResponse>> {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("folderId", folderId);
+    formData.append("workspaceId", workspaceId);
     if (title) formData.append("title", title);
 
     return this.call<UploadMaterialResponse>(

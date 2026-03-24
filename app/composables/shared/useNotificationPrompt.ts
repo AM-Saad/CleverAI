@@ -101,8 +101,8 @@ export function useNotificationPrompt() {
   const checkIfUserHasCardsDue = async (): Promise<boolean> => {
     try {
       // This is a simplified check - you might want to call a specific API
-      // For now, check if user has any folders (indicates they're actively using the app)
-      const response = await $fetch("/api/folders/count");
+      // For now, check if user has any workspaces (indicates they're actively using the app)
+      const response = await $fetch("/api/workspaces/count");
       console.log("has cards due", response.data.count);
       return response.data.count > 0;
     } catch (error) {

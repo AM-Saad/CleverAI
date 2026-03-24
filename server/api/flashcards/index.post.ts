@@ -2,7 +2,7 @@
 /**
  * Create a manual flashcard
  * POST /api/flashcards
- * Body: { folderId: string, front: string, back: string }
+ * Body: { workspaceId: string, front: string, back: string }
  */
 
 import { CreateFlashcardDTO } from "@@/shared/utils/flashcard.contract";
@@ -19,25 +19,25 @@ export default defineEventHandler(async (event) => {
     throw Errors.badRequest("Invalid request data", parsed.error.issues);
   }
 
-  const { folderId, front, back, materialId } = parsed.data;
+  const { workspaceId, front, back, materialId } = parsed.data;
 
-  // Verify folder belongs to user
-  const folder = await prisma.folder.findFirst({
-    where: { id: folderId, userId: user.id },
+  // Verify workspace belongs to user
+  const workspace = await prisma.workspace.findFirst({
+    where: { id: workspaceId, userId: user.id },
   });
 
-  if (!folder) {
-    throw Errors.notFound("Folder");
+  if (!workspace) {
+    throw Errors.notFound("Workspace");
   }
 
-  // If materialId provided, verify it belongs to the folder
+  // If materialId provided, verify it belongs to the workspace
   if (materialId) {
     const material = await prisma.material.findFirst({
-      where: { id: materialId, folderId },
+      where: { id: materialId, workspaceId },
     });
 
     if (!material) {
-      throw Errors.badRequest("Material not found in this folder");
+      throw Errors.badRequest("Material not found in this workspace");
     }
   }
 
@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
     data: {
       front,
       back,
-      folderId,
+      workspaceId,
       materialId: materialId || null,
     },
   });

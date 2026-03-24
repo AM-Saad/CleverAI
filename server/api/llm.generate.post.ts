@@ -21,7 +21,7 @@ interface ParsedRequest {
   model: SupportedModel;
   task: GenerationTask;
   text: string;
-  folderId?: string;
+  workspaceId?: string;
   save?: boolean;
   replace?: boolean;
 }
@@ -114,7 +114,7 @@ export default defineEventHandler(async (event) => {
     );
   }
   const parsed = parseResult.data as ParsedRequest;
-  const { model, task, folderId, save, replace, text: originalText } = parsed;
+  const { model, task, workspaceId, save, replace, text: originalText } = parsed;
   const text = originalText.trim();
 
   const MAX_CHARS = 10_000;
@@ -123,18 +123,18 @@ export default defineEventHandler(async (event) => {
 
   const prisma = event.context.prisma;
   let canSave = false;
-  if (save && folderId) {
-    const ownerFolder = await prisma.folder.findFirst({
-      where: { id: folderId, userId: user.id },
+  if (save && workspaceId) {
+    const ownerWorkspace = await prisma.workspace.findFirst({
+      where: { id: workspaceId, userId: user.id },
     });
-    if (!ownerFolder)
-      throw Errors.forbidden("You do not have access to this folder.");
+    if (!ownerWorkspace)
+      throw Errors.forbidden("You do not have access to this workspace.");
     canSave = true;
   }
 
   const strategy = getLLMStrategy(model as SupportedModel, {
     userId: user.id,
-    folderId,
+    workspaceId,
     feature: task,
   });
   if (!strategy) throw Errors.badRequest(`Unsupported model: ${model}`);
@@ -143,11 +143,11 @@ export default defineEventHandler(async (event) => {
     if (task === "flashcards") {
       const flashcards: Flashcard[] = await strategy.generateFlashcards(text);
       let savedCount: number | undefined;
-      if (canSave && folderId) {
+      if (canSave && workspaceId) {
         if (flashcards.length) {
           const res = await prisma.flashcard.createMany({
             data: flashcards.map((fc: Flashcard) => ({
-              folderId,
+              workspaceId,
               front: fc.front,
               back: fc.back,
             })),
@@ -210,12 +210,12 @@ export default defineEventHandler(async (event) => {
 
     const quiz: QuizQuestion[] = await strategy.generateQuiz(text);
     let savedCount: number | undefined;
-    if (canSave && folderId) {
-      if (replace) await prisma.question.deleteMany({ where: { folderId } });
+    if (canSave && workspaceId) {
+      if (replace) await prisma.question.deleteMany({ where: { workspaceId } });
       if (quiz.length) {
         const res = await prisma.question.createMany({
           data: quiz.map((q: QuizQuestion) => ({
-            folderId,
+            workspaceId,
             question: q.question,
             choices: q.choices,
             answerIndex: q.answerIndex,
@@ -292,7 +292,7 @@ export default defineEventHandler(async (event) => {
         },
         {
           userId: user.id,
-          folderId,
+          workspaceId,
           feature: task,
           status: "error",
           errorCode: String(errorObj?.status ?? errorObj?.code ?? ""),

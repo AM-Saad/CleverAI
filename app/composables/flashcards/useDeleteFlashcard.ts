@@ -10,7 +10,7 @@ export function useDeleteFlashcard() {
 
   async function deleteFlashcard(id: string) {
     const result = await operation.execute(() =>
-      $api.folders.deleteFlashcard(id)
+      $api.workspaces.deleteFlashcard(id)
     );
 
     if (result) {

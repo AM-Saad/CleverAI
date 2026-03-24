@@ -37,12 +37,12 @@ export default class GatewayService extends FetchFactory {
    */
   async uploadMaterial(
     file: File,
-    folderId: string,
+    workspaceId: string,
     title?: string
   ): Promise<Result<UploadMaterialResponse>> {
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("folderId", folderId);
+    formData.append("workspaceId", workspaceId);
     if (title) formData.append("title", title);
 
     return this.call<UploadMaterialResponse>(
@@ -86,7 +86,7 @@ export default class GatewayService extends FetchFactory {
   async generateFlashcards(
     text: string,
     options?: {
-      folderId?: string;
+      workspaceId?: string;
       materialId?: string;
       save?: boolean;
       replace?: boolean;
@@ -108,7 +108,7 @@ export default class GatewayService extends FetchFactory {
   async generateQuiz(
     text: string,
     options?: {
-      folderId?: string;
+      workspaceId?: string;
       materialId?: string;
       save?: boolean;
       replace?: boolean;

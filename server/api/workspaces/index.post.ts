@@ -6,7 +6,7 @@ export default defineEventHandler(async (event) => {
   const prisma = event.context.prisma;
 
   const body = await readBody(event);
-  const parsed = CreateFolderDTO.safeParse(body);
+  const parsed = CreateWorkspaceDTO.safeParse(body);
   if (!parsed.success) {
     throw Errors.badRequest("Invalid request body", parsed.error.issues);
   }
@@ -15,13 +15,13 @@ export default defineEventHandler(async (event) => {
   const description = parsed.data.description?.trim() ?? null;
 
 
-  const maxOrder = await prisma.folder.aggregate({
+  const maxOrder = await prisma.workspace.aggregate({
     _max: { order: true },
     where: { userId: user.id },
   });
   const nextOrder = (maxOrder._max.order ?? 0) + 1;
 
-  const created = await prisma.folder.create({
+  const created = await prisma.workspace.create({
     data: {
       title,
       description: description ?? null,
@@ -31,7 +31,7 @@ export default defineEventHandler(async (event) => {
     },
   });
 
-  if (process.env.NODE_ENV === "development") FolderSchema.parse(created);
+  if (process.env.NODE_ENV === "development") WorkspaceSchema.parse(created);
   setResponseStatus(event, 201);
   return success(created);
 });

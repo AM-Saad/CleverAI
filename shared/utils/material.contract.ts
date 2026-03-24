@@ -16,7 +16,7 @@ export type MaterialType = z.infer<typeof MaterialTypeEnum>;
 
 export const MaterialSchema = z.object({
   id: z.string(),
-  folderId: z.string(),
+  workspaceId: z.string(),
   title: z.string(),
   content: z.string(),
   type: z.string().nullable().optional(),
@@ -29,7 +29,7 @@ export const MaterialSchema = z.object({
 export type Material = z.infer<typeof MaterialSchema>;
 
 export const CreateMaterialDTO = z.object({
-  folderId: z.string(),
+  workspaceId: z.string(),
   title: z.preprocess(trim, z.string().min(1)),
   content: z.preprocess(trim, z.string().min(1)),
   type: MaterialTypeEnum.optional(),

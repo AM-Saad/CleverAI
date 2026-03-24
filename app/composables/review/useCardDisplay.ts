@@ -21,7 +21,7 @@ export const useCardDisplay = (
       const flashcardResource = c.resource as {
         front: string;
         back: string;
-        folderId: string;
+        workspaceId: string;
         hint?: string;
         tags?: string[];
       };
@@ -31,7 +31,7 @@ export const useCardDisplay = (
     const materialResource = c.resource as {
       title: string;
       content: string;
-      folderId: string;
+      workspaceId: string;
       tags?: string[];
     };
     return materialResource.title;
@@ -50,7 +50,7 @@ export const useCardDisplay = (
       const flashcardResource = c.resource as {
         front: string;
         back: string;
-        folderId: string;
+        workspaceId: string;
         hint?: string;
         tags?: string[];
       };
@@ -60,7 +60,7 @@ export const useCardDisplay = (
     const materialResource = c.resource as {
       title: string;
       content: string;
-      folderId: string;
+      workspaceId: string;
       tags?: string[];
     };
     return materialResource.content;
@@ -78,7 +78,7 @@ export const useCardDisplay = (
       const flashcardResource = c.resource as {
         front: string;
         back: string;
-        folderId: string;
+        workspaceId: string;
         hint?: string;
         tags?: string[];
       };

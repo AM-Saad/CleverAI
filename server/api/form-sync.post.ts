@@ -15,7 +15,7 @@ import { requireRole } from "../utils/auth";
  * Form Sync API - Handles offline form synchronization
  *
  * Processes queued forms that were stored offline and syncs them when back online.
- * Supports different form types like material uploads, folder creation, etc.
+ * Supports different form types like material uploads, workspace creation, etc.
  *
  * @body Array of form sync records or single record:
  * {
@@ -125,13 +125,13 @@ async function handleFormSync(params: {
     case FORM_SYNC_TYPES.DELETE_MATERIAL:
       return await handleMaterialDelete(payload, user, prisma);
 
-    // Folder operations
+    // Workspace operations
     case FORM_SYNC_TYPES.CREATE_FOLDER:
-      return await handleFolderCreate(payload, user, prisma);
+      return await handleWorkspaceCreate(payload, user, prisma);
     case FORM_SYNC_TYPES.UPDATE_FOLDER:
-      return await handleFolderUpdate(payload, user, prisma);
+      return await handleWorkspaceUpdate(payload, user, prisma);
     case FORM_SYNC_TYPES.DELETE_FOLDER:
-      return await handleFolderDelete(payload, user, prisma);
+      return await handleWorkspaceDelete(payload, user, prisma);
 
     // Note operations
     case FORM_SYNC_TYPES.CREATE_NOTE:
@@ -166,21 +166,21 @@ async function handleMaterialUpload(
   user: { id: string; email: string },
   prisma: any
 ) {
-  const { materialTitle, materialContent, materialType, folderId } = payload;
+  const { materialTitle, materialContent, materialType, workspaceId } = payload;
 
-  if (!materialTitle || !materialContent || !folderId) {
+  if (!materialTitle || !materialContent || !workspaceId) {
     throw new Error(
-      "Missing required fields: materialTitle, materialContent, or folderId"
+      "Missing required fields: materialTitle, materialContent, or workspaceId"
     );
   }
 
-  // Verify folder belongs to user
-  const folder = await prisma.folder.findFirst({
-    where: { id: folderId as string, userId: user.id },
+  // Verify workspace belongs to user
+  const workspace = await prisma.workspace.findFirst({
+    where: { id: workspaceId as string, userId: user.id },
   });
 
-  if (!folder) {
-    throw new Error("Folder not found or access denied");
+  if (!workspace) {
+    throw new Error("Workspace not found or access denied");
   }
 
   return await prisma.material.create({
@@ -188,7 +188,7 @@ async function handleMaterialUpload(
       title: materialTitle as string,
       content: materialContent as string,
       type: (materialType as string) || "text",
-      folderId: folderId as string,
+      workspaceId: workspaceId as string,
       userId: user.id,
     },
   });
@@ -228,7 +228,7 @@ async function handleMaterialDelete(
 }
 
 // ===== FOLDER HANDLERS =====
-async function handleFolderCreate(
+async function handleWorkspaceCreate(
   payload: Record<string, unknown>,
   user: any,
   prisma: any
@@ -239,7 +239,7 @@ async function handleFolderCreate(
     throw new Error("Missing required field: name");
   }
 
-  return await prisma.folder.create({
+  return await prisma.workspace.create({
     data: {
       name: name as string,
       description: (description as string) || null,
@@ -248,36 +248,36 @@ async function handleFolderCreate(
   });
 }
 
-async function handleFolderUpdate(
+async function handleWorkspaceUpdate(
   payload: Record<string, unknown>,
   user: any,
   prisma: any
 ) {
-  const { folderId, ...updateData } = payload;
+  const { workspaceId, ...updateData } = payload;
 
-  if (!folderId) {
-    throw new Error("Missing folderId");
+  if (!workspaceId) {
+    throw new Error("Missing workspaceId");
   }
 
-  return await prisma.folder.updateMany({
-    where: { id: folderId as string, userId: user.id },
+  return await prisma.workspace.updateMany({
+    where: { id: workspaceId as string, userId: user.id },
     data: updateData,
   });
 }
 
-async function handleFolderDelete(
+async function handleWorkspaceDelete(
   payload: Record<string, unknown>,
   user: any,
   prisma: any
 ) {
-  const { folderId } = payload;
+  const { workspaceId } = payload;
 
-  if (!folderId) {
-    throw new Error("Missing folderId");
+  if (!workspaceId) {
+    throw new Error("Missing workspaceId");
   }
 
-  return await prisma.folder.deleteMany({
-    where: { id: folderId as string, userId: user.id },
+  return await prisma.workspace.deleteMany({
+    where: { id: workspaceId as string, userId: user.id },
   });
 }
 
@@ -287,16 +287,16 @@ async function handleNoteCreate(
   user: any,
   prisma: any
 ) {
-  const { content, folderId } = payload;
+  const { content, workspaceId } = payload;
 
-  if (!content || !folderId) {
-    throw new Error("Missing required fields: content or folderId");
+  if (!content || !workspaceId) {
+    throw new Error("Missing required fields: content or workspaceId");
   }
 
   return await prisma.note.create({
     data: {
       content: content as string,
-      folderId: folderId as string,
+      workspaceId: workspaceId as string,
       userId: user.id,
     },
   });

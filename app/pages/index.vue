@@ -147,7 +147,7 @@ const hasScrolledHalfViewport = computed(() => {
 
 const baseUrl = useRuntimeConfig().public.APP_BASE_URL as string;
 definePageMeta({
-  auth: { unauthenticatedOnly: true, navigateAuthenticatedTo: "/folders" },
+  auth: { unauthenticatedOnly: true, navigateAuthenticatedTo: "/workspaces" },
 
   title: "AI-Powered Spaced Repetition Learning Platform | Cognilo",
 });

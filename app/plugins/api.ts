@@ -17,7 +17,7 @@
 //   const factory = new ServiceFactory(fetcher);
 
 //   const api: IApiInstance = {
-//     folders: factory.create("folders"),
+//     workspaces: factory.create("workspaces"),
 //     auth: factory.create("auth"),
 //     review: factory.create("review"),
 //     materials: factory.create("materials"),
@@ -65,7 +65,7 @@ export default defineNuxtPlugin((_nuxtApp) => {
   const apiServiceFactory = new ServiceFactory(apiFetcher as $Fetch);
 
   const services = {
-    folders: apiServiceFactory.create("folders"),
+    workspaces: apiServiceFactory.create("workspaces"),
     materials: apiServiceFactory.create("materials"),
     notes: apiServiceFactory.create("notes"),
     boardItems: apiServiceFactory.create("boardItems"),

@@ -278,7 +278,7 @@ const contextMenuItems = computed(() => {
   return [
     {
       label: 'Add To Material',
-      icon: 'i-lucide-folder-plus',
+      icon: 'i-lucide-workspace-plus',
       disabled: !hasSelection,
       onSelect: () => {
         if (selectedText) {

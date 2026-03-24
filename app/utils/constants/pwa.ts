@@ -18,7 +18,7 @@ export const CACHE_NAMES = {
   IMAGES: "images",
   STATIC: "static",
   API_AUTH: "api-auth",
-  API_FOLDERS: "api-folders",
+  API_FOLDERS: "api-workspaces",
   API_NOTES: "api-notes",
 } as const;
 
@@ -187,7 +187,7 @@ export const URL_PATTERNS = {
 } as const;
 
 // ===== PREWARM PATHS =====
-export const PREWARM_PATHS = ["/", "/about", "/folders"] as const;
+export const PREWARM_PATHS = ["/", "/about", "/workspaces"] as const;
 
 // (STATIC_WARM_FILES removed) Static warm list now lives inline in sw prewarm implementation.
 

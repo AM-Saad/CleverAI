@@ -8,9 +8,9 @@ import {
 
 interface NotificationData {
   cardCount: number;
-  folderCount: number;
-  folders: Array<{
-    folderId: string;
+  workspaceCount: number;
+  workspaces: Array<{
+    workspaceId: string;
     cardCount: number;
   }>;
 }
@@ -144,7 +144,7 @@ export async function checkDueCards() {
           },
           select: {
             id: true,
-            folderId: true,
+            workspaceId: true,
             cardId: true,
             resourceType: true,
             nextReviewAt: true,
@@ -218,11 +218,11 @@ export async function checkDueCards() {
           continue;
         }
 
-        // Group cards by folder for better notification content
-        const cardsByFolder = dueCards.reduce(
+        // Group cards by workspace for better notification content
+        const cardsByWorkspace = dueCards.reduce(
           (acc, card) => {
-            if (!acc[card.folderId]) acc[card.folderId] = [];
-            acc[card.folderId].push(card);
+            if (!acc[card.workspaceId]) acc[card.workspaceId] = [];
+            acc[card.workspaceId].push(card);
             return acc;
           },
           {} as Record<string, typeof dueCards>
@@ -231,9 +231,9 @@ export async function checkDueCards() {
         // Create and send notification
         const notificationData: NotificationData = {
           cardCount: dueCards.length,
-          folderCount: Object.keys(cardsByFolder).length,
-          folders: Object.entries(cardsByFolder).map(([folderId, cards]) => ({
-            folderId,
+          workspaceCount: Object.keys(cardsByWorkspace).length,
+          workspaces: Object.entries(cardsByWorkspace).map(([workspaceId, cards]) => ({
+            workspaceId,
             cardCount: cards.length,
           })),
         };
@@ -323,14 +323,14 @@ async function sendCardDueNotification(
   data: NotificationData
 ): Promise<boolean> {
   try {
-    const { cardCount, folderCount } = data;
+    const { cardCount, workspaceCount } = data;
 
     // Create notification content
     const title = `📚 ${cardCount} Cards Ready for Review`;
     const body =
-      folderCount === 1
-        ? `You have cards waiting in 1 folder`
-        : `You have cards waiting across ${folderCount} folders`;
+      workspaceCount === 1
+        ? `You have cards waiting in 1 workspace`
+        : `You have cards waiting across ${workspaceCount} workspaces`;
 
     // Use existing notification API with internal cron authorization
     const response = await $fetch("/api/notifications/send", {

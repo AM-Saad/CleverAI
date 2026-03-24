@@ -12,14 +12,14 @@
                 <path id="Holder"
                   d="M15.8359 9.34961H57.6641C62.7666 9.34984 66.9871 13.3228 67.2959 18.416L68.5078 38.416C68.8441 43.9648 64.4349 48.6502 58.876 48.6504H14.624C9.06508 48.6502 4.65592 43.9648 4.99219 38.416L6.2041 18.416C6.51289 13.3228 10.7334 9.34984 15.8359 9.34961Z"
                   fill="#F1F1F1" stroke="#333333" stroke-width="0.7" />
-                <g id="Folders">
-                  <path id="Folder3"
+                <g id="Workspaces">
+                  <path id="Workspace3"
                     d="M15.9053 6.34961H57.8867C63.1118 6.34975 67.3881 10.5093 67.5332 15.7324L68.0439 34.1211C68.1946 39.5532 63.8317 44.039 58.3975 44.0391H15.3945C9.96035 44.0388 5.59838 39.5532 5.74902 34.1211L6.25977 15.7324C6.40485 10.5094 10.6803 6.34986 15.9053 6.34961Z"
                     fill="white" stroke="#333333" stroke-width="0.7" />
-                  <path id="Folder2"
+                  <path id="Workspace2"
                     d="M15.8967 6.35608H52.9368C58.1824 6.35615 62.4672 10.5473 62.5842 15.7916L62.9944 34.1735C63.1151 39.5858 58.7606 44.0386 53.3469 44.0387H15.4866C10.0728 44.0387 5.71843 39.5859 5.83911 34.1735L6.24927 15.7916C6.36626 10.5472 10.651 6.35608 15.8967 6.35608Z"
                     fill="white" stroke="#333333" stroke-width="0.7" />
-                  <path id="Folder1"
+                  <path id="Workspace1"
                     d="M15.6985 6.35608H46.4915C51.7631 6.35613 56.0588 10.587 56.1399 15.858L56.4231 34.2399C56.506 39.6267 52.162 44.0384 46.7747 44.0387H15.4163C10.0286 44.0387 5.68397 39.6268 5.76685 34.2399L6.05005 15.858C6.13114 10.5871 10.427 6.35626 15.6985 6.35608Z"
                     fill="white" fill-opacity="0.1" stroke="#333333" stroke-width="0.7" />
                 </g>
@@ -35,7 +35,7 @@
             Cognilo
           </router-link>
           <div class=" flex items-center justify-center" :title="online ? 'You are online' : 'You are offline'"
-            v-if="route.fullPath.startsWith('/folders') || route.fullPath.startsWith('/user')">
+            v-if="route.fullPath.startsWith('/workspaces') || route.fullPath.startsWith('/user')">
             <span v-if="online" class="bg-green-300 rounded-full border border-muted w-3 h-3 animate-pulse"
               title="Online"></span>
             <span v-if="!online" class="bg-gray-300 rounded-full border border-muted w-3 h-3" title="Offline"></span>
@@ -113,7 +113,7 @@ const sw = useServiceWorkerBridge();
 const online = useOnline()
 
 const route = useRoute();
-console.log("🏗️ [LAYOUT] Current route:", route.fullPath.startsWith('/folders'), route.fullPath.startsWith('/user'));
+console.log("🏗️ [LAYOUT] Current route:", route.fullPath.startsWith('/workspaces'), route.fullPath.startsWith('/user'));
 // Debounced navigation to avoid rapid duplicates from notification clicks
 const pending = new Set<string>();
 
@@ -156,22 +156,22 @@ console.log("🏗️ [LAYOUT] Default layout script setup completed");
 
 
 <style scoped>
-#Folder1,
-#Folder2,
-#Folder3 {
+#Workspace1,
+#Workspace2,
+#Workspace3 {
   opacity: 0;
-  animation: folderLoop 11s infinite;
+  animation: workspaceLoop 11s infinite;
 }
 
-#Folder1 {
+#Workspace1 {
   animation-delay: 1s;
 }
 
-#Folder2 {
+#Workspace2 {
   animation-delay: 0.6s;
 }
 
-#Folder3 {
+#Workspace3 {
   animation-delay: 0.2s;
 }
 
@@ -180,7 +180,7 @@ console.log("🏗️ [LAYOUT] Default layout script setup completed");
   animation: confirmLoop 11s infinite;
 }
 
-@keyframes folderLoop {
+@keyframes workspaceLoop {
   0% {
     opacity: 0;
     transform: translateY(-20px);
@@ -210,21 +210,21 @@ console.log("🏗️ [LAYOUT] Default layout script setup completed");
 
 @keyframes confirmLoop {
 
-  /* 0% to 50%: Folders are dropping/sitting. Confirm is HIDDEN. */
+  /* 0% to 50%: Workspaces are dropping/sitting. Confirm is HIDDEN. */
   0%,
   50% {
     opacity: 0;
     visibility: hidden;
   }
 
-  /* 55%: Fade in after folders have moved right. */
+  /* 55%: Fade in after workspaces have moved right. */
   55%,
   85% {
     opacity: 1;
     visibility: visible;
   }
 
-  /* 90%: Fade out BEFORE the folders reset to the top. */
+  /* 90%: Fade out BEFORE the workspaces reset to the top. */
   90%,
   100% {
     opacity: 0;

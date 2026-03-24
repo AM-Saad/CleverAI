@@ -30,7 +30,7 @@ interface AIModelStore {
 const stores = new Map<string, AIModelStore>();
 
 /**
- * Creates or returns a notes store for a specific folder
+ * Creates or returns a notes store for a specific workspace
  * This provides local state management with optimistic updates
  */
 export function useAIStore(storeId: string): AIModelStore {
@@ -236,7 +236,7 @@ export function useAIStore(storeId: string): AIModelStore {
 }
 
 /**
- * Clean up store when folder is no longer needed
+ * Clean up store when workspace is no longer needed
  */
 export function cleanupAIStore(storeId: string): void {
   stores.delete(storeId);

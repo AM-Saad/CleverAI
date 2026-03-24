@@ -25,12 +25,12 @@
           </MenuItem>
 
           <MenuItem v-slot="{ active }">
-          <router-link to="/folders" tabindex="2" :class="[
+          <router-link to="/workspaces" tabindex="2" :class="[
             active ? 'bg-primary text-dark' : '',
             'flex items-center gap-3 p-sm text-sm text-content-on-surface hover:text-on-primary',
           ]">
-            <UIcon :name="'i-heroicons-folder-open'" class="w-4 h-4" />
-            Folders
+            <UIcon :name="'i-heroicons-workspace-open'" class="w-4 h-4" />
+            Workspaces
           </router-link>
           </MenuItem>
           <MenuItem v-slot="{ active }">

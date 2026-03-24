@@ -4,9 +4,9 @@ import { Errors, success } from "@server/utils/error";
 import { NoteSchema } from "~/shared/utils/note.contract";
 
 const QuerySchema = z.object({
-  folderId: z
+  workspaceId: z
     .string()
-    .regex(/^[0-9a-fA-F]{24}$/, "Folder ID must be a valid MongoDB ObjectId"),
+    .regex(/^[0-9a-fA-F]{24}$/, "Workspace ID must be a valid MongoDB ObjectId"),
 });
 
 export default defineEventHandler(async (event) => {
@@ -24,15 +24,15 @@ export default defineEventHandler(async (event) => {
     throw Errors.badRequest("Invalid query parameters.");
   }
 
-  const folder = await prisma.folder.findFirst({
-    where: { id: query.folderId, userId: user.id },
+  const workspace = await prisma.workspace.findFirst({
+    where: { id: query.workspaceId, userId: user.id },
   });
-  if (!folder) {
-    throw Errors.notFound("Folder");
+  if (!workspace) {
+    throw Errors.notFound("Workspace");
   }
 
   const notes = await prisma.note.findMany({
-    where: { folderId: query.folderId },
+    where: { workspaceId: query.workspaceId },
     orderBy: { order: "asc" },
   });
 
@@ -40,5 +40,5 @@ export default defineEventHandler(async (event) => {
     notes.forEach((n) => NoteSchema.parse(n));
   }
 
-  return success(notes, { count: notes.length, folderId: query.folderId });
+  return success(notes, { count: notes.length, workspaceId: query.workspaceId });
 });

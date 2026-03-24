@@ -18,7 +18,7 @@
     IMAGES: "images",
     STATIC: "static",
     API_AUTH: "api-auth",
-    API_FOLDERS: "api-folders",
+    API_FOLDERS: "api-workspaces",
     API_NOTES: "api-notes"
   };
   var CACHE_CONFIG = {
@@ -105,7 +105,7 @@
     NOTES: "notes-sync",
     BOARD_ITEMS: "board-items-sync"
   };
-  var PREWARM_PATHS = ["/", "/about", "/folders"];
+  var PREWARM_PATHS = ["/", "/about", "/workspaces"];
   var AUTH_STUBS = {
     "/api/auth/session": { user: null, expires: null },
     "/api/auth/csrf": { csrfToken: null },
@@ -141,8 +141,8 @@
             const tx = req.transaction;
             if (tx) {
               const notesStore = tx.objectStore(STORES.NOTES);
-              if (!notesStore.indexNames.contains("folderId")) {
-                notesStore.createIndex("folderId", "folderId", { unique: false });
+              if (!notesStore.indexNames.contains("workspaceId")) {
+                notesStore.createIndex("workspaceId", "workspaceId", { unique: false });
               }
               if (!notesStore.indexNames.contains("updatedAt")) {
                 notesStore.createIndex("updatedAt", "updatedAt", { unique: false });
@@ -168,8 +168,8 @@
               if (!pending.indexNames.contains("updatedAt")) {
                 pending.createIndex("updatedAt", "updatedAt", { unique: false });
               }
-              if (!pending.indexNames.contains("folderId")) {
-                pending.createIndex("folderId", "folderId", { unique: false });
+              if (!pending.indexNames.contains("workspaceId")) {
+                pending.createIndex("workspaceId", "workspaceId", { unique: false });
               }
               if (!pending.indexNames.contains("conflicted")) {
                 pending.createIndex("conflicted", "conflicted", { unique: false });
@@ -3547,7 +3547,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       }
     );
     registerRoute(
-      ({ url, request }) => url.origin === self.location.origin && url.pathname.startsWith("/api/folders") && request.method === "GET",
+      ({ url, request }) => url.origin === self.location.origin && url.pathname.startsWith("/api/workspaces") && request.method === "GET",
       async ({ request }) => {
         var _a;
         const cacheName = CACHE_NAMES.API_FOLDERS;
@@ -3558,20 +3558,20 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           if (resp.ok && isJson) {
             try {
               await cache.put(request, resp.clone());
-              log("Cached folders response:", request.url);
+              log("Cached workspaces response:", request.url);
             } catch {
             }
           }
           return resp;
         } catch {
-          log("Folders API network failed, checking cache:", request.url);
+          log("Workspaces API network failed, checking cache:", request.url);
           const cached = await cache.match(request);
           if (cached) {
-            log("Serving cached folders:", request.url);
+            log("Serving cached workspaces:", request.url);
             return cached;
           }
           const url = new URL(request.url);
-          if (url.pathname === "/api/folders/count") {
+          if (url.pathname === "/api/workspaces/count") {
             return new Response(
               JSON.stringify({ success: true, data: { count: 0 } }),
               {

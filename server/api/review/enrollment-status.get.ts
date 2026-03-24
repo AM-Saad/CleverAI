@@ -5,7 +5,7 @@ import { Errors, success } from "@server/utils/error";
 const EnrollmentStatusRequestSchema = z.object({
   resourceIds: z.union([z.string(), z.array(z.string())]).optional(),
   resourceType: z.enum(["material", "flashcard", "question"]).optional(),
-  folderId: z.string().optional(),
+  workspaceId: z.string().optional(),
 });
 
 const EnrollmentStatusResponseSchema = z.object({
@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
     validatedQuery = EnrollmentStatusRequestSchema.parse({
       resourceIds,
       resourceType: rawQuery.resourceType,
-      folderId: rawQuery.folderId,
+      workspaceId: rawQuery.workspaceId,
     });
   } catch (e) {
     if (e instanceof z.ZodError) {
@@ -47,12 +47,12 @@ export default defineEventHandler(async (event) => {
   const enrollments: Record<string, boolean> = {};
 
   try {
-    if (validatedQuery.folderId) {
-      // OPTIMIZED: Fetch all for folder
+    if (validatedQuery.workspaceId) {
+      // OPTIMIZED: Fetch all for workspace
       const cards = await prisma.cardReview.findMany({
         where: {
           userId: user.id,
-          folderId: validatedQuery.folderId
+          workspaceId: validatedQuery.workspaceId
         },
         select: { cardId: true }
       });

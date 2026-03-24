@@ -2,7 +2,7 @@
   "name": "Cognilo",
   "short_name": "Cognilo",
   "description": " Cognilo is a powerful AI assistant that helps you with your daily tasks and provides intelligent solutions.",
-  "start_url": "/folders",
+  "start_url": "/workspaces",
   "display": "standalone",
   "background_color": "#f3f4f6",
   "theme_color": "#f3f4f6",
@@ -10,7 +10,7 @@
   "scope": "/",
   "id": "/",
   "note_taking": {
-    "new_note_url": "/folders/"
+    "new_note_url": "/workspaces/"
   },
   "display_override": [
     "standalone",

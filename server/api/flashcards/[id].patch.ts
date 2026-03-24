@@ -33,17 +33,17 @@ export default defineEventHandler(async (event) => {
     );
   }
 
-  // Verify flashcard exists and belongs to user's folder
+  // Verify flashcard exists and belongs to user's workspace
   const existingFlashcard = await prisma.flashcard.findFirst({
     where: { id },
-    include: { folder: { select: { userId: true } } },
+    include: { workspace: { select: { userId: true } } },
   });
 
   if (!existingFlashcard) {
     throw Errors.notFound("Flashcard");
   }
 
-  if (existingFlashcard.folder.userId !== user.id) {
+  if (existingFlashcard.workspace.userId !== user.id) {
     throw Errors.forbidden(
       "You don't have permission to update this flashcard"
     );

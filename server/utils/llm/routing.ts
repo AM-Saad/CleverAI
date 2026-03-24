@@ -88,26 +88,34 @@ export async function selectBestModel(
 
   // If preferred model specified and valid, use it
   if (ctx.preferredModelId) {
+    const baseModelId = ctx.preferredModelId.split(':')[0]
+    const suffix = ctx.preferredModelId.includes(':') ? `:${ctx.preferredModelId.split(':')[1]}` : ''
+    
     const preferred = await prisma.llmModelRegistry.findUnique({
       where: {
-        modelId: ctx.preferredModelId,
+        modelId: baseModelId,
       },
     })
 
     if (preferred && preferred.enabled && preferred.healthStatus !== 'down') {
+      // Clone and re-apply suffix so the original Prisma entity is not mutated
+      const routedModel = suffix
+        ? { ...preferred, modelId: `${preferred.modelId}${suffix}` }
+        : preferred
+
       const score = computeModelScore(preferred, inputTokens, outputTokens, ctx)
       const estimatedCostUsd =
         (inputTokens / 1_000_000) * preferred.inputCostPer1M +
         (outputTokens / 1_000_000) * preferred.outputCostPer1M
 
       console.info('[routing] Using preferred model:', {
-        modelId: preferred.modelId,
+        modelId: routedModel.modelId,
         score: score.toFixed(6),
         estimatedCostUsd: estimatedCostUsd.toFixed(6),
       })
 
       return {
-        model: preferred,
+        model: routedModel,
         score,
         estimatedCostUsd,
         inputTokens,
@@ -177,9 +185,9 @@ export async function selectBestModel(
     ) {
       console.info('[routing] Preferring healthy model over degraded:', {
         selected: topTwo[1].model.modelId,
-        skipped: topTwo[0].model.modelId,
+        skipped: topTwo[0]?.model.modelId,
       })
-      return topTwo[1]
+      return topTwo[1]!
     }
   }
 
@@ -195,7 +203,7 @@ export async function selectBestModel(
 
 /**
  * Map legacy model names to registry model IDs
- * Used for backward compatibility with existing folders
+ * Used for backward compatibility with existing workspaces
  */
 export function legacyModelToRegistryId(legacyModel: string): string | undefined {
   const mapping: Record<string, string> = {

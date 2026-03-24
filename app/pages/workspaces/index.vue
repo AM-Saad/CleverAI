@@ -4,10 +4,10 @@ const show = ref(false);
 const listView = ref<'grid' | 'list'>('grid');
 
 const showDeleteConfirm = ref(false);
-const folderToDelete = ref<string | null>(null);
-const editFolder = ref<Folder | null>(null);
-const { folders, loading, error, refresh } = useFolders();
-const { deleteFolder, deleting: deletingFolder } = useDeleteFolder(refresh);
+const workspaceToDelete = ref<string | null>(null);
+const editWorkspace = ref<Workspace | null>(null);
+const { workspaces, loading, error, refresh } = useWorkspaces();
+const { deleteWorkspace, deleting: deletingWorkspace } = useDeleteWorkspace(refresh);
 
 watch(error, (newError) => {
   if (newError) {
@@ -22,15 +22,15 @@ watch(error, (newError) => {
 
 const cancelUpsertModal = () => {
   show.value = false;
-  editFolder.value = null;
+  editWorkspace.value = null;
 };
-const confirmDeleteFolder = async () => {
-  if (!folderToDelete.value) return;
+const confirmDeleteWorkspace = async () => {
+  if (!workspaceToDelete.value) return;
   try {
-    await deleteFolder(folderToDelete.value);
+    await deleteWorkspace(workspaceToDelete.value);
     toast.add({
-      title: "Folder Deleted",
-      description: "The folder has been successfully deleted.",
+      title: "Workspace Deleted",
+      description: "The workspace has been successfully deleted.",
       color: "success",
     });
     window.dispatchEvent(new CustomEvent("refresh-review-stats"));
@@ -38,27 +38,27 @@ const confirmDeleteFolder = async () => {
   } catch (err) {
     toast.add({
       title: "Error",
-      description: "An error occurred while deleting the folder.",
+      description: "An error occurred while deleting the workspace.",
     });
   } finally {
     showDeleteConfirm.value = false;
-    folderToDelete.value = null;
+    workspaceToDelete.value = null;
   }
 };
 
 const toggleView = () => {
   listView.value = listView.value === 'grid' ? 'list' : 'grid';
-  localStorage.setItem('folderListView', listView.value);
+  localStorage.setItem('workspaceListView', listView.value);
 };
 
 
 
 // Load saved view preference from localStorage
 onMounted(() => {
-  const savedView = localStorage.getItem('folderListView') as 'grid' | 'list' || 'grid';
+  const savedView = localStorage.getItem('workspaceListView') as 'grid' | 'list' || 'grid';
   listView.value = savedView;
   if (import.meta.dev) {
-    console.log("[folders/index] forcing refresh() onMounted", { timestamp: Date.now() });
+    console.log("[workspaces/index] forcing refresh() onMounted", { timestamp: Date.now() });
     refresh();
   }
 });
@@ -84,10 +84,10 @@ onMounted(() => {
         <!-- Future filter options can go here -->
         <div class="basis-2/4 md:basis-3/4">
           <UiLabel for="search">Search</UiLabel>
-          <u-input id="search" type="text" placeholder="Search folders..." class="mt-1 w-full" />
+          <u-input id="search" type="text" placeholder="Search workspaces..." class="mt-1 w-full" />
         </div>
         <div class="flex gap-2 items-center place-self-end">
-          <u-button @click="show = true" size="sm">Create Folder</u-button>
+          <u-button @click="show = true" size="sm">Create Workspace</u-button>
           <u-button variant="subtle" @click="toggleView">
             <icon v-if="listView === 'grid'" name="i-lucide-list" class="inline-block" />
             <icon v-else name="i-lucide-grid" class="inline-block" />
@@ -107,42 +107,42 @@ onMounted(() => {
           </ui-card>
         </div>
       </div>
-      <div v-if="!loading && !folders?.length" class="text-gray-500">
-        No folders found.
+      <div v-if="!loading && !workspaces?.length" class="text-gray-500">
+        No workspaces found.
       </div>
-      <ul v-if="folders && folders?.length > 0 && !loading"
+      <ul v-if="workspaces && workspaces?.length > 0 && !loading"
         :class="listView === 'grid' ? 'grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'space-y-4'">
         <u-context-menu :items="[
           {
-            label: 'Edit Folder',
+            label: 'Edit Workspace',
             icon: 'i-lucide-edit',
 
             onSelect: () => {
-              console.log('Edit folder');
-              editFolder = folder;
+              console.log('Edit workspace');
+              editWorkspace = workspace;
               show = true;
             },
           },
           {
-            label: 'Delete Folder',
+            label: 'Delete Workspace',
             icon: 'i-lucide-trash',
-            disabled: deletingFolder,
+            disabled: deletingWorkspace,
             onSelect: () => {
-              console.log('Delete folder');
-              folderToDelete = folder.id;
+              console.log('Delete workspace');
+              workspaceToDelete = workspace.id;
               showDeleteConfirm = true;
             },
           },
-        ]" v-for="folder in folders" :key="folder.id">
+        ]" v-for="workspace in workspaces" :key="workspace.id">
           <ui-card hover="lift" shadow="none" tag="li" variant="default">
-            <NuxtLink :to="`/folders/${folder.id}`">
+            <NuxtLink :to="`/workspaces/${workspace.id}`">
               <div class="mb-1 flex items-center">
-                <icon name="ic:round-folder-open" class="inline-block mr-1 text-primary" size="22" />
+                <icon name="ic:round-workspace-open" class="inline-block mr-1 text-primary" size="22" />
 
-                <ui-subtitle size="sm" color="content-on-surface">{{ folder.title }}</ui-subtitle>
+                <ui-subtitle size="sm" color="content-on-surface">{{ workspace.title }}</ui-subtitle>
               </div>
-              <ui-paragraph v-if="folder.description" color="disabled">
-                {{ folder.description }}
+              <ui-paragraph v-if="workspace.description" color="disabled">
+                {{ workspace.description }}
               </ui-paragraph>
               <ui-paragraph v-else color="disabled">No description available.</ui-paragraph>
             </NuxtLink>
@@ -150,11 +150,12 @@ onMounted(() => {
         </u-context-menu>
       </ul>
     </div>
-    <folder-upsert-folder-form :show="show" @cancel="cancelUpsertModal" @created="refresh()" :folder="editFolder" />
+    <workspace-upsert-workspace-form :show="show" @cancel="cancelUpsertModal" @created="refresh()"
+      :workspace="editWorkspace" />
 
-    <shared-delete-confirmation-modal :show="showDeleteConfirm" title="Delete Folder" @close="showDeleteConfirm = false"
-      :loading="deletingFolder" @confirm="confirmDeleteFolder">
-      Are you sure you want to delete this folder? This action cannot be undone.
+    <shared-delete-confirmation-modal :show="showDeleteConfirm" title="Delete Workspace"
+      @close="showDeleteConfirm = false" :loading="deletingWorkspace" @confirm="confirmDeleteWorkspace">
+      Are you sure you want to delete this workspace? This action cannot be undone.
     </shared-delete-confirmation-modal>
   </shared-page-wrapper>
 </template>

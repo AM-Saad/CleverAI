@@ -23,25 +23,25 @@ export default defineEventHandler(async (event) => {
       throw Errors.badRequest("Invalid request body");
     }
 
-    // Verify folder ownership
-    const folder = await prisma.folder.findFirst({
-      where: { id: data.folderId, userId: user.id },
+    // Verify workspace ownership
+    const workspace = await prisma.workspace.findFirst({
+      where: { id: data.workspaceId, userId: user.id },
     });
-    if (!folder) {
-      throw Errors.notFound("Folder");
+    if (!workspace) {
+      throw Errors.notFound("Workspace");
     }
 
-    // Verify all notes belong to this folder
+    // Verify all notes belong to this workspace
     const noteIds = data.noteOrders.map((n) => n.id);
     const notes = await prisma.note.findMany({
       where: {
         id: { in: noteIds },
-        folderId: data.folderId,
+        workspaceId: data.workspaceId,
       },
     });
 
     if (notes.length !== noteIds.length) {
-      throw Errors.badRequest("Some notes do not belong to this folder");
+      throw Errors.badRequest("Some notes do not belong to this workspace");
     }
 
     // Update all note orders in a transaction
@@ -56,7 +56,7 @@ export default defineEventHandler(async (event) => {
 
     // Fetch updated notes for verification
     const updatedNotes = await prisma.note.findMany({
-      where: { folderId: data.folderId },
+      where: { workspaceId: data.workspaceId },
       orderBy: { order: "asc" },
     });
 
@@ -67,7 +67,7 @@ export default defineEventHandler(async (event) => {
     return success(updatedNotes, {
       message: "Notes reordered successfully",
       count: updatedNotes.length,
-      folderId: data.folderId,
+      workspaceId: data.workspaceId,
     });
   } catch (error: any) {
     console.error("💥 [API /notes/reorder] Unhandled error:", error);

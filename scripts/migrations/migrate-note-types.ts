@@ -1,8 +1,8 @@
 /**
  * Migration script to set the 'type' field for existing notes
  * Uses raw MongoDB commands to bypass Prisma's default value behavior
- * - Notes with folderId but no type -> type = "FOLDER"
- * - Notes without folderId -> type = "BOARD"
+ * - Notes with workspaceId but no type -> type = "FOLDER"
+ * - Notes without workspaceId -> type = "BOARD"
  */
 
 import { PrismaClient } from "@prisma/client";
@@ -17,7 +17,7 @@ async function main() {
   const notesWithoutType = await prisma.$runCommandRaw({
     find: "Note",
     filter: { type: { $exists: false } },
-  }) as { cursor: { firstBatch: Array<{ _id: { $oid: string }; folderId?: string }> } };
+  }) as { cursor: { firstBatch: Array<{ _id: { $oid: string }; workspaceId?: string }> } };
 
   const notes = notesWithoutType.cursor?.firstBatch || [];
   console.log(`📊 Found ${notes.length} notes WITHOUT type field (raw MongoDB)`);
@@ -27,35 +27,35 @@ async function main() {
     return;
   }
 
-  // Separate folder notes from board notes
-  const folderNoteIds = notes.filter((n) => n.folderId).map((n) => n._id);
-  const boardNoteIds = notes.filter((n) => !n.folderId).map((n) => n._id);
+  // Separate workspace notes from board notes
+  const workspaceNoteIds = notes.filter((n) => n.workspaceId).map((n) => n._id);
+  const boardNoteIds = notes.filter((n) => !n.workspaceId).map((n) => n._id);
 
-  console.log(`📁 Folder notes to migrate: ${folderNoteIds.length}`);
+  console.log(`📁 Workspace notes to migrate: ${workspaceNoteIds.length}`);
   console.log(`📋 Board notes to migrate: ${boardNoteIds.length}`);
 
-  // Update folder notes using raw MongoDB updateMany
-  if (folderNoteIds.length > 0) {
-    const folderResult = await prisma.$runCommandRaw({
+  // Update workspace notes using raw MongoDB updateMany
+  if (workspaceNoteIds.length > 0) {
+    const workspaceResult = await prisma.$runCommandRaw({
       update: "Note",
       updates: [
         {
-          q: { type: { $exists: false }, folderId: { $exists: true } },
+          q: { type: { $exists: false }, workspaceId: { $exists: true } },
           u: { $set: { type: "FOLDER" } },
           multi: true,
         },
       ],
     }) as { nModified?: number; n?: number };
-    console.log(`✅ Updated ${folderResult.nModified ?? folderResult.n ?? 0} folder notes`);
+    console.log(`✅ Updated ${workspaceResult.nModified ?? workspaceResult.n ?? 0} workspace notes`);
   }
 
-  // Update board notes (no folderId) using raw MongoDB updateMany
+  // Update board notes (no workspaceId) using raw MongoDB updateMany
   if (boardNoteIds.length > 0) {
     const boardResult = await prisma.$runCommandRaw({
       update: "Note",
       updates: [
         {
-          q: { type: { $exists: false }, folderId: { $exists: false } },
+          q: { type: { $exists: false }, workspaceId: { $exists: false } },
           u: { $set: { type: "BOARD" } },
           multi: true,
         },

@@ -11,12 +11,12 @@ import { useFuse } from "@vueuse/integrations/useFuse";
 import { computed, shallowRef, watch } from "vue";
 
 const props = defineProps<{
-  folderId: string;
+  workspaceId: string;
   onFocus?: () => void;
   onBlur?: () => void;
 }>();
 
-const notesStore = useNotesStore(props.folderId);
+const notesStore = useNotesStore(props.workspaceId);
 // Computed properties for reactive data
 const notes = computed(() => {
   const allNotes = Array.from(notesStore.notes.value.values());

@@ -2,8 +2,8 @@ import type { ReviewSummaryStats } from "~/shared/utils/review.contract";
 import { useOperation } from "../shared/useOperation";
 
 export interface UseReviewStatsOptions {
-  /** Folder ID to filter stats (omit for global stats) */
-  folderId?: string | Ref<string | undefined>;
+  /** Workspace ID to filter stats (omit for global stats) */
+  workspaceId?: string | Ref<string | undefined>;
   /** Auto-fetch on mount (default: true) */
   immediate?: boolean;
   /** Refetch interval in ms (0 = disabled) */
@@ -12,27 +12,27 @@ export interface UseReviewStatsOptions {
 
 /**
  * Composable for fetching review stats.
- * Supports both global (all folders) and folder-specific stats.
+ * Supports both global (all workspaces) and workspace-specific stats.
  *
  * @example
  * // Global stats
  * const { stats, isLoading, refresh } = useReviewStats()
  *
  * @example
- * // Folder-specific stats
- * const { stats } = useReviewStats({ folderId: 'abc123' })
+ * // Workspace-specific stats
+ * const { stats } = useReviewStats({ workspaceId: 'abc123' })
  *
  * @example
- * // Reactive folder ID
- * const folderId = ref('abc123')
- * const { stats } = useReviewStats({ folderId })
+ * // Reactive workspace ID
+ * const workspaceId = ref('abc123')
+ * const { stats } = useReviewStats({ workspaceId })
  */
 export const useReviewStats = (options: UseReviewStatsOptions = {}) => {
   const { $api } = useNuxtApp();
 
-  // Normalize folderId to a ref
-  const folderIdRef = computed(() => {
-    const id = options.folderId;
+  // Normalize workspaceId to a ref
+  const workspaceIdRef = computed(() => {
+    const id = options.workspaceId;
     return isRef(id) ? id.value : id;
   });
 
@@ -78,7 +78,7 @@ export const useReviewStats = (options: UseReviewStatsOptions = {}) => {
    * Fetch stats from API
    */
   const fetchStats = async () => {
-    await operation.execute(() => $api.review.getStats(folderIdRef.value));
+    await operation.execute(() => $api.review.getStats(workspaceIdRef.value));
   };
 
   /**
@@ -93,8 +93,8 @@ export const useReviewStats = (options: UseReviewStatsOptions = {}) => {
     });
   }
 
-  // Watch for folderId changes and refetch
-  watch(folderIdRef, () => {
+  // Watch for workspaceId changes and refetch
+  watch(workspaceIdRef, () => {
     fetchStats();
   });
 

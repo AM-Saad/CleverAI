@@ -62,11 +62,11 @@ export default defineEventHandler(async (event) => {
       throw Errors.notFound("Note");
     }
 
-    // Verify folder ownership
-    const folder = await prisma.folder.findFirst({
-      where: { id: note.folderId, userId: user.id },
+    // Verify workspace ownership
+    const workspace = await prisma.workspace.findFirst({
+      where: { id: note.workspaceId, userId: user.id },
     });
-    if (!folder) {
+    if (!workspace) {
       throw Errors.notFound("Note");
     }
 

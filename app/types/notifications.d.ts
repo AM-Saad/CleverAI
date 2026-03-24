@@ -60,7 +60,7 @@ export interface NotificationError {
 
 export enum NotificationType {
   SYSTEM = 'system',
-  FOLDER_UPDATE = 'folder_update',
+  FOLDER_UPDATE = 'workspace_update',
   QUIZ_REMINDER = 'quiz_reminder',
   STUDY_REMINDER = 'study_reminder',
   ACHIEVEMENT = 'achievement',

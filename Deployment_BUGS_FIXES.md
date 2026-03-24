@@ -182,15 +182,15 @@ if (
 ## 7. Confusion around routes without `/api`
 
 ### Symptoms
-- Visiting `/folders` triggered auth/session requests
+- Visiting `/workspaces` triggered auth/session requests
 - Confusing because URL did not include `/api`
 
 ### Root Cause
-Routes like `/folders/**` had SSR disabled:
+Routes like `/workspaces/**` had SSR disabled:
 
 ```ts
 routeRules: {
-  "/folders/**": { ssr: false },
+  "/workspaces/**": { ssr: false },
 }
 ```
 

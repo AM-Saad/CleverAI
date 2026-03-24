@@ -9,7 +9,7 @@ interface FlashcardData {
 
 interface Props {
   show: boolean;
-  folderId: string;
+  workspaceId: string;
   materialId?: string; // Optional: pre-select a material
   flashcard?: FlashcardData; // If provided, modal is in edit mode
 }
@@ -88,7 +88,7 @@ async function handleSubmit() {
   } else {
     // Create new flashcard
     const flashcard = await createFlashcard({
-      folderId: props.folderId,
+      workspaceId: props.workspaceId,
       front: state.front.trim(),
       back: state.back.trim(),
       materialId: props.materialId,

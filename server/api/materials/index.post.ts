@@ -20,16 +20,16 @@ export default defineEventHandler(async (event) => {
     throw Errors.badRequest("Invalid request body");
   }
 
-  const folder = await prisma.folder.findFirst({
-    where: { id: data.folderId, userId: user.id },
+  const workspace = await prisma.workspace.findFirst({
+    where: { id: data.workspaceId, userId: user.id },
   });
-  if (!folder) {
-    throw Errors.notFound("Folder");
+  if (!workspace) {
+    throw Errors.notFound("Workspace");
   }
 
   const material = await prisma.material.create({
     data: {
-      folderId: data.folderId,
+      workspaceId: data.workspaceId,
       title: data.title,
       content: data.content,
       type: data.type,
@@ -47,6 +47,6 @@ export default defineEventHandler(async (event) => {
   return success(material, {
     message: "Material created successfully",
     materialId: material.id,
-    folderId: data.folderId,
+    workspaceId: data.workspaceId,
   });
 });

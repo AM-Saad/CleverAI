@@ -5,7 +5,7 @@ import BlurReveal from '~/components/ui/blur-reveal/BlurReveal.vue';
 const featuresList = [
   {
     title: "Notes + Study Together",
-    description: "Jot text. Structure folders.",
+    description: "Jot text. Structure workspaces.",
     icon: 'mdi:note-plus-outline'
   },
   {

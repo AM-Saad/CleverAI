@@ -13,7 +13,7 @@ export function useUpdateFlashcard() {
 
   async function updateFlashcard(id: string, payload: UpdateFlashcardDTO) {
     const result = await operation.execute(() =>
-      $api.folders.updateFlashcard(id, payload)
+      $api.workspaces.updateFlashcard(id, payload)
     );
 
     if (result) {

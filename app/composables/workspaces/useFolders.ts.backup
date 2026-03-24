@@ -1,82 +1,82 @@
 import { z } from "zod";
 import { APIError } from "~/services/FetchFactory";
 
-const FolderResponse = z
-  .union([FolderSchema, z.object({ data: FolderSchema })])
+const WorkspaceResponse = z
+  .union([WorkspaceSchema, z.object({ data: WorkspaceSchema })])
   .transform((x) => ("id" in x ? x : x.data));
-const FoldersResponse = z
-  .union([z.array(FolderSchema), z.object({ data: z.array(FolderSchema) })])
+const WorkspacesResponse = z
+  .union([z.array(WorkspaceSchema), z.object({ data: z.array(WorkspaceSchema) })])
   .transform((x) => (Array.isArray(x) ? x : x.data));
 
 // Simplified schema assignments without problematic ZodOut type
-const FoldersResponseSchema = FoldersResponse;
-const FolderResponseSchema = FolderResponse;
+const WorkspacesResponseSchema = WorkspacesResponse;
+const WorkspaceResponseSchema = WorkspaceResponse;
 
-export function useFolders() {
+export function useWorkspaces() {
   const { $api } = useNuxtApp();
 
-  const { data, pending, error, refresh } = useDataFetch<Folder[]>(
-    "folders",
-    () => $api.folders.getFolders(FoldersResponseSchema),
+  const { data, pending, error, refresh } = useDataFetch<Workspace[]>(
+    "workspaces",
+    () => $api.workspaces.getWorkspaces(WorkspacesResponseSchema),
   );
   return {
-    folders: data,
+    workspaces: data,
     loading: pending,
     error,
     refresh,
   };
 }
 
-export function useCreateFolder() {
+export function useCreateWorkspace() {
   const { $api } = useNuxtApp();
 
   // Use centralized operation handling - all errors constructed by FetchFactory
-  const createOperation = useOperation<Folder>();
+  const createOperation = useOperation<Workspace>();
 
-  const createFolder = async (payload: typeof CreateFolderDTO) => {
+  const createWorkspace = async (payload: typeof CreateWorkspaceDTO) => {
     return await createOperation.execute(async () => {
-      return await $api.folders.postFolder(payload);
+      return await $api.workspaces.postWorkspace(payload);
     });
   };
 
   return {
-    createFolder,
+    createWorkspace,
     creating: createOperation.pending,
     error: createOperation.error,
     typedError: createOperation.typedError,
   };
 }
 
-export const useFolder = (id: string) => {
+export const useWorkspace = (id: string) => {
   const { $api } = useNuxtApp();
 
-  const { data, pending, error, refresh } = useDataFetch<Folder>(
-    `folder-${id}`,
-    () => $api.folders.getFolder(id, FolderResponseSchema),
+  const { data, pending, error, refresh } = useDataFetch<Workspace>(
+    `workspace-${id}`,
+    () => $api.workspaces.getWorkspace(id, WorkspaceResponseSchema),
   );
 
   return {
-    folder: data,
+    workspace: data,
     loading: pending,
     error,
     refresh,
   };
 };
 
-export function useDeleteFolder(id: string) {
+export function useDeleteWorkspace(id: string) {
   const { $api } = useNuxtApp();
 
   // Use centralized operation handling - all errors constructed by FetchFactory
   const deleteOperation = useOperation<{ success: boolean }>();
 
-  const deleteFolder = async () => {
+  const deleteWorkspace = async () => {
     return await deleteOperation.execute(async () => {
-      return await $api.folders.deleteFolder(id);
+      return await $api.workspaces.deleteWorkspace(id);
     });
   };
 
   return {
-    deleteFolder,
+    deleteWorkspace,
     deleting: deleteOperation.pending,
     error: deleteOperation.error,
     typedError: deleteOperation.typedError,
@@ -84,22 +84,22 @@ export function useDeleteFolder(id: string) {
   };
 }
 
-export function useUpdateFolder(id: string) {
+export function useUpdateWorkspace(id: string) {
   const { $api } = useNuxtApp();
 
   // Use centralized operation handling - all errors constructed by FetchFactory
-  const updateOperation = useOperation<Folder>();
+  const updateOperation = useOperation<Workspace>();
 
-  const updateFolder = async (
-    payload: typeof UpdateFolderDTO | Record<string, unknown>,
+  const updateWorkspace = async (
+    payload: typeof UpdateWorkspaceDTO | Record<string, unknown>,
   ) => {
     return await updateOperation.execute(async () => {
-      return await $api.folders.updateFolder(id, payload);
+      return await $api.workspaces.updateWorkspace(id, payload);
     });
   };
 
   return {
-    updateFolder,
+    updateWorkspace,
     updating: updateOperation.pending,
     error: updateOperation.error,
     typedError: updateOperation.typedError,
@@ -109,7 +109,7 @@ export function useUpdateFolder(id: string) {
 export function useGenerateFlashcards(
   model: Ref<string | undefined>,
   text: Ref<string | undefined>,
-  folderId: Ref<string | undefined>,
+  workspaceId: Ref<string | undefined>,
 ) {
   const { $api } = useNuxtApp();
   const flashcards = ref<Array<{ front: string; back: string }>>([]);
@@ -130,11 +130,11 @@ export function useGenerateFlashcards(
     flashcards.value = [];
 
     const t = text.value?.trim();
-    const fid = folderId.value;
-    console.log("Generating flashcards, text length:", t?.length, "folderId:", fid);
+    const fid = workspaceId.value;
+    console.log("Generating flashcards, text length:", t?.length, "workspaceId:", fid);
     if (!t) {
       genError.value =
-        "This folder has no content yet. Add text or materials, then try again.";
+        "This workspace has no content yet. Add text or materials, then try again.";
       console.log(genError.value);
       return;
     }
@@ -143,7 +143,7 @@ export function useGenerateFlashcards(
     try {
       // Use GatewayService for proper error handling
       const result = await $api.gateway.generateFlashcards(t, {
-        folderId: fid,
+        workspaceId: fid,
         save: !!fid,
         replace: true,
       });
@@ -174,7 +174,7 @@ export function useGenerateFlashcards(
           if (typeof result.savedCount === "number") {
             toast.add({
               title: "Saved",
-              description: `Saved ${result.savedCount} flashcards to this folder.`,
+              description: `Saved ${result.savedCount} flashcards to this workspace.`,
             });
           }
         } catch {
@@ -208,7 +208,7 @@ export function useGenerateFlashcards(
 export function useGenerateQuiz(
   model: Ref<string | undefined>,
   text: Ref<string | undefined>,
-  folderId: Ref<string | undefined>,
+  workspaceId: Ref<string | undefined>,
 ) {
   const { $api } = useNuxtApp();
   type Question = { question: string; choices: string[]; answerIndex: number };
@@ -230,11 +230,11 @@ export function useGenerateQuiz(
     questions.value = [];
 
     const t = text.value?.trim();
-    const fid = folderId.value;
+    const fid = workspaceId.value;
 
     if (!t) {
       genError.value = new APIError(
-        "This folder has no content yet. Add text or materials, then try again.",
+        "This workspace has no content yet. Add text or materials, then try again.",
       );
       return;
     }
@@ -243,7 +243,7 @@ export function useGenerateQuiz(
     try {
       // Use GatewayService for proper error handling
       const result = await $api.gateway.generateQuiz(t, {
-        folderId: fid,
+        workspaceId: fid,
         save: !!fid,
         replace: true,
       });
@@ -274,7 +274,7 @@ export function useGenerateQuiz(
           if (typeof result.savedCount === "number") {
             toast.add({
               title: "Saved",
-              description: `Saved ${result.savedCount} questions to this folder.`,
+              description: `Saved ${result.savedCount} questions to this workspace.`,
             });
           }
         } catch {
@@ -322,7 +322,7 @@ export function useGenerateQuiz(
           if (typeof parsed.savedCount === "number") {
             toast.add({
               title: "Saved",
-              description: `Saved ${parsed.savedCount} questions to this folder.`,
+              description: `Saved ${parsed.savedCount} questions to this workspace.`,
             });
           }
         } catch {

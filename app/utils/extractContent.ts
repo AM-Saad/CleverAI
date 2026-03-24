@@ -1,7 +1,7 @@
-// Helper function to extract content from folder materials
+// Helper function to extract content from workspace materials
 // This should replace rawText usage throughout the application
 
-interface FolderLike {
+interface WorkspaceLike {
   materials?: Array<{
     title?: string
     content?: string
@@ -10,20 +10,20 @@ interface FolderLike {
 }
 
 /**
- * Extract text content from folder materials for LLM generation
+ * Extract text content from workspace materials for LLM generation
  * Falls back to legacy rawText for backward compatibility
  */
-export function extractContentFromFolder(folder: FolderLike | null | undefined): string | undefined {
-  if (!folder) return undefined
+export function extractContentFromWorkspace(workspace: WorkspaceLike | null | undefined): string | undefined {
+  if (!workspace) return undefined
 
   // Priority 1: Use materials if available
-  if (folder.materials && Array.isArray(folder.materials) && folder.materials.length > 0) {
+  if (workspace.materials && Array.isArray(workspace.materials) && workspace.materials.length > 0) {
     // Combine all material content with titles as separators
-    return folder.materials
+    return workspace.materials
       .map((material) => `${material.title || 'Material'}\n\n${material.content || ''}`)
       .join('\n\n---\n\n')
   }
 
   // Priority 2: Fall back to legacy rawText for backward compatibility
-  return folder.rawText || undefined
+  return workspace.rawText || undefined
 }

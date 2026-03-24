@@ -5,7 +5,7 @@ import { prisma } from '../prisma'
 export interface GatewayLogData {
   requestId: string
   userId: string
-  folderId?: string
+  workspaceId?: string
   selectedModel: LlmModelRegistry
   task: string
   inputTokens: number
@@ -42,7 +42,7 @@ export async function logGatewayRequest(data: GatewayLogData): Promise<void> {
       data: {
         requestId: data.requestId,
         userId: data.userId,
-        folderId: data.folderId,
+        workspaceId: data.workspaceId,
         selectedModelId: data.selectedModel.modelId,
         provider: data.selectedModel.provider,
         task: data.task,
@@ -93,14 +93,14 @@ export async function logGatewayFailure(
   task: string,
   error: any,
   modelId?: string,
-  folderId?: string
+  workspaceId?: string
 ): Promise<void> {
   try {
     await prisma.llmGatewayLog.create({
       data: {
         requestId,
         userId,
-        folderId,
+        workspaceId,
         selectedModelId: modelId || 'unknown',
         provider: 'unknown',
         task,

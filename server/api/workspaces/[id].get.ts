@@ -7,15 +7,15 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, "id");
 
   if (!id) {
-    throw Errors.badRequest("Folder ID is required");
+    throw Errors.badRequest("Workspace ID is required");
   }
 
-  const folder = await prisma.folder.findFirst({
+  const workspace = await prisma.workspace.findFirst({
     where: { id, userId: user.id },
     include: { materials: true, flashcards: true, questions: true },
   });
-  if (!folder) {
-    throw Errors.notFound("Folder");
+  if (!workspace) {
+    throw Errors.notFound("Workspace");
   }
-  return success(folder);
+  return success(workspace);
 });

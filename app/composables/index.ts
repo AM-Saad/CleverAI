@@ -1,4 +1,4 @@
-export * from "./folders/";
+export * from "./workspaces/";
 export * from "./auth";
 export * from "./ui";
 export * from "./shared";

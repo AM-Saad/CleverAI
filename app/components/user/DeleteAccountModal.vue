@@ -58,7 +58,7 @@ const closeModal = (): void => {
                   Warning: This action cannot be undone
                 </h4>
                 <p class="text-sm text-red-700 dark:text-red-300">
-                  Deleting your account will remove all your data including folders, materials, flashcards, and
+                  Deleting your account will remove all your data including workspaces, materials, flashcards, and
                   progress.
                 </p>
               </div>

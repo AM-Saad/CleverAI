@@ -1,35 +1,22 @@
 <template>
   <div v-if="isDev" class="fixed bottom-4 right-4 z-50">
     <!-- Floating Action Button -->
-    <button
-      v-if="!showPanel"
+    <button v-if="!showPanel"
       class="bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 transform hover:scale-110"
-      title="Open Testing Dashboard"
-      @click="showPanel = true"
-    >
+      title="Open Testing Dashboard" @click="showPanel = true">
       <UIcon name="i-heroicons-beaker" class="w-6 h-6" />
     </button>
 
     <!-- Dashboard Panel -->
-    <div
-      v-if="showPanel"
-      class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 p-6 w-96 max-h-[80vh] overflow-y-auto"
-    >
+    <div v-if="showPanel"
+      class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl border border-gray-200 dark:border-gray-700 p-6 w-96 max-h-[80vh] overflow-y-auto">
       <!-- Header -->
       <div class="flex justify-between items-center mb-4">
-        <h2
-          class="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center"
-        >
-          <UIcon
-            name="i-heroicons-beaker"
-            class="w-5 h-5 mr-2 text-purple-600"
-          />
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
+          <UIcon name="i-heroicons-beaker" class="w-5 h-5 mr-2 text-purple-600" />
           🧪 Testing Dashboard
         </h2>
-        <button
-          @click="showPanel = false"
-          class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-        >
+        <button @click="showPanel = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
           <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
         </button>
       </div>
@@ -49,9 +36,7 @@
             <span class="font-mono">{{ userTimezone }}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-gray-600 dark:text-gray-400"
-              >User Local Time:</span
-            >
+            <span class="text-gray-600 dark:text-gray-400">User Local Time:</span>
             <span class="font-mono">{{ userLocalTime }}</span>
           </div>
           <div class="flex justify-between">
@@ -69,30 +54,19 @@
             ⚡ Quick Actions
           </h3>
           <div class="space-y-2">
-            <button
-              @click="triggerCron"
-              :disabled="isTriggering"
-              class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors flex items-center justify-center"
-            >
-              <UIcon
-                v-if="isTriggering"
-                name="i-heroicons-arrow-path"
-                class="w-4 h-4 mr-2 animate-spin"
-              />
+            <button @click="triggerCron" :disabled="isTriggering"
+              class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors flex items-center justify-center">
+              <UIcon v-if="isTriggering" name="i-heroicons-arrow-path" class="w-4 h-4 mr-2 animate-spin" />
               {{ isTriggering ? "Triggering..." : "🚀 Trigger Cron Now" }}
             </button>
 
-            <button
-              @click="openNotificationSettings"
-              class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
-            >
+            <button @click="openNotificationSettings"
+              class="w-full px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors">
               ⚙️ Open Notification Settings
             </button>
 
-            <button
-              @click="openReviewInterface"
-              class="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors"
-            >
+            <button @click="openReviewInterface"
+              class="w-full px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors">
               📚 Open Review Interface
             </button>
           </div>
@@ -104,12 +78,8 @@
             🎯 Test Scenarios
           </h3>
           <div class="space-y-2">
-            <button
-              v-for="scenario in scenarios"
-              :key="scenario.id"
-              @click="loadScenario(scenario)"
-              class="w-full px-3 py-2 text-left bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors text-sm"
-            >
+            <button v-for="scenario in scenarios" :key="scenario.id" @click="loadScenario(scenario)"
+              class="w-full px-3 py-2 text-left bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors text-sm">
               <div class="font-medium">
                 {{ scenario.emoji }} {{ scenario.name }}
               </div>
@@ -125,18 +95,14 @@
           <h3 class="font-medium text-gray-900 dark:text-gray-100 mb-2">
             📋 Current Settings
           </h3>
-          <div
-            class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-xs space-y-1"
-          >
+          <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-xs space-y-1">
             <div class="flex justify-between">
               <span>Card Due Time:</span>
               <span class="font-mono">{{ preferences.cardDueTime }}</span>
             </div>
             <div class="flex justify-between">
               <span>Threshold:</span>
-              <span class="font-mono"
-                >{{ preferences.cardDueThreshold }} cards</span
-              >
+              <span class="font-mono">{{ preferences.cardDueThreshold }} cards</span>
             </div>
             <div class="flex justify-between">
               <span>Timezone:</span>
@@ -173,32 +139,22 @@
           <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 text-xs">
             <div class="flex justify-between mb-1">
               <span>Status:</span>
-              <span
-                :class="
-                  lastCronResult.success ? 'text-green-600' : 'text-red-600'
-                "
-                class="font-medium"
-              >
+              <span :class="lastCronResult.success ? 'text-green-600' : 'text-red-600'
+                " class="font-medium">
                 {{ lastCronResult.success ? "✅ Success" : "❌ Failed" }}
               </span>
             </div>
             <div class="flex justify-between mb-1">
               <span>Processed:</span>
-              <span class="font-mono"
-                >{{ lastCronResult.results?.processed || 0 }} users</span
-              >
+              <span class="font-mono">{{ lastCronResult.results?.processed || 0 }} users</span>
             </div>
             <div class="flex justify-between mb-1">
               <span>Notifications:</span>
-              <span class="font-mono"
-                >{{ lastCronResult.results?.notificationsSent || 0 }} sent</span
-              >
+              <span class="font-mono">{{ lastCronResult.results?.notificationsSent || 0 }} sent</span>
             </div>
             <div class="flex justify-between">
               <span>Skipped:</span>
-              <span class="font-mono"
-                >{{ lastCronResult.results?.skipped || 0 }} users</span
-              >
+              <span class="font-mono">{{ lastCronResult.results?.skipped || 0 }} users</span>
             </div>
           </div>
         </div>
@@ -209,24 +165,15 @@
             🔗 Quick Links
           </h3>
           <div class="space-y-1 text-xs">
-            <a
-              href="/api/admin/cron/status"
-              target="_blank"
-              class="block text-blue-600 hover:text-blue-800 dark:text-blue-400"
-            >
+            <a href="/api/admin/cron/status" target="_blank"
+              class="block text-blue-600 hover:text-blue-800 dark:text-blue-400">
               📊 Cron Status API
             </a>
-            <a
-              href="/api/notifications/preferences"
-              target="_blank"
-              class="block text-blue-600 hover:text-blue-800 dark:text-blue-400"
-            >
+            <a href="/api/notifications/preferences" target="_blank"
+              class="block text-blue-600 hover:text-blue-800 dark:text-blue-400">
               ⚙️ Preferences API
             </a>
-            <button
-              @click="openBrowserConsole"
-              class="text-blue-600 hover:text-blue-800 dark:text-blue-400"
-            >
+            <button @click="openBrowserConsole" class="text-blue-600 hover:text-blue-800 dark:text-blue-400">
               💻 Browser Console Guide
             </button>
           </div>
@@ -473,8 +420,8 @@ const openNotificationSettings = () => {
 };
 
 const openReviewInterface = () => {
-  // Find a folder with cards and navigate to review
-  navigateTo("/folders"); // User can then select a folder to review
+  // Find a workspace with cards and navigate to review
+  navigateTo("/workspaces"); // User can then select a workspace to review
 };
 
 const openBrowserConsole = () => {

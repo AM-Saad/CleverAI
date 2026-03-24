@@ -41,8 +41,8 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
           const tx = req.transaction;
           if (tx) {
             const notesStore = tx.objectStore(STORES.NOTES);
-            if (!notesStore.indexNames.contains('folderId')) {
-              notesStore.createIndex('folderId', 'folderId', { unique: false });
+            if (!notesStore.indexNames.contains('workspaceId')) {
+              notesStore.createIndex('workspaceId', 'workspaceId', { unique: false });
             }
             if (!notesStore.indexNames.contains('updatedAt')) {
               notesStore.createIndex('updatedAt', 'updatedAt', { unique: false });
@@ -70,8 +70,8 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
             if (!pending.indexNames.contains('updatedAt')) {
               pending.createIndex('updatedAt', 'updatedAt', { unique: false });
             }
-            if (!pending.indexNames.contains('folderId')) {
-              pending.createIndex('folderId', 'folderId', { unique: false });
+            if (!pending.indexNames.contains('workspaceId')) {
+              pending.createIndex('workspaceId', 'workspaceId', { unique: false });
             }
             if (!pending.indexNames.contains('conflicted')) {
               pending.createIndex('conflicted', 'conflicted', { unique: false });
@@ -192,7 +192,7 @@ export const saveNoteToIndexedDB = async (note: NoteState): Promise<void> => {
           updatedAt: Date.now(),
           localVersion: (note as any).localVersion ? (note as any).localVersion + 1 : 1,
           type: (note as any).type,
-          folderId: (note as any).folderId,
+          workspaceId: (note as any).workspaceId,
           content: (note as any).content,
           tags: (note as any).tags || [],
         })
@@ -207,14 +207,14 @@ export const saveNoteToIndexedDB = async (note: NoteState): Promise<void> => {
 };
 
 export const loadNotesFromIndexedDB = async (
-  folderId: string
+  workspaceId: string
 ): Promise<NoteState[]> => {
   try {
     const db = await openUnifiedDB();
     const tx = db.transaction([DB_CONFIG.STORES.NOTES], "readonly");
     const store = tx.objectStore(DB_CONFIG.STORES.NOTES);
-    const index = store.index("folderId");
-    const request = index.getAll(folderId);
+    const index = store.index("workspaceId");
+    const request = index.getAll(workspaceId);
 
     return new Promise((resolve, reject) => {
       request.onsuccess = () => resolve(request.result || []);
@@ -435,7 +435,7 @@ export interface PendingNoteChange {
   operation: 'upsert' | 'delete'
   updatedAt: number // client timestamp
   localVersion: number // monotonic per note
-  folderId?: string
+  workspaceId?: string
   content?: string
   tags?: string[]
   noteType?: string

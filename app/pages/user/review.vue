@@ -2,12 +2,12 @@
   <shared-page-wrapper :title="pageTitle" :subtitle="pageSubtitle">
     <template #actions>
       <div class="flex items-center space-x-4">
-        <!-- Folder indicator if filtering -->
-        <div v-if="currentFolder" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-          <Icon name="heroicons:folder" class="w-4 h-4" />
-          <span>{{ currentFolder.title }}</span>
+        <!-- Workspace indicator if filtering -->
+        <div v-if="currentWorkspace" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+          <Icon name="heroicons:workspace" class="w-4 h-4" />
+          <span>{{ currentWorkspace.title }}</span>
           <NuxtLink to="/user/review" class="text-blue-600 hover:text-blue-700 dark:text-blue-400"
-            title="Review all folders">
+            title="Review all workspaces">
             <Icon name="heroicons:x-mark" class="w-4 h-4" />
           </NuxtLink>
         </div>
@@ -16,14 +16,14 @@
           Refresh Queue
         </u-button>
 
-        <NuxtLink to="/folders" class="text-content-on-background text-sm">
-          Back to Folders
+        <NuxtLink to="/workspaces" class="text-content-on-background text-sm">
+          Back to Workspaces
         </NuxtLink>
       </div>
     </template>
 
     <!-- Enhanced Review Interface -->
-    <ReviewCardReviewInterface :folder-id="folderId" @refresh="refreshQueue" @card-graded="handleCardGraded" />
+    <ReviewCardReviewInterface :workspace-id="workspaceId" @refresh="refreshQueue" @card-graded="handleCardGraded" />
   </shared-page-wrapper>
 </template>
 
@@ -32,45 +32,45 @@ const ReviewCardReviewInterface = defineAsyncComponent(
   () => import("~/components/review/CardReviewInterface.vue"),
 );
 
-// Get folder ID from query params
+// Get workspace ID from query params
 const route = useRoute()
-const folderId = computed(() => route.query.folderId as string | undefined)
+const workspaceId = computed(() => route.query.workspaceId as string | undefined)
 
-// Fetch folder info if filtering by folder
-const currentFolder = ref<{ id: string; title: string } | null>(null)
+// Fetch workspace info if filtering by workspace
+const currentWorkspace = ref<{ id: string; title: string } | null>(null)
 
-const fetchFolderInfo = async () => {
-  if (!folderId.value) {
-    currentFolder.value = null
+const fetchWorkspaceInfo = async () => {
+  if (!workspaceId.value) {
+    currentWorkspace.value = null
     return
   }
 
   try {
     const { $api } = useNuxtApp()
-    const folder = await $api.folders.getFolder(folderId.value)
-    currentFolder.value = folder ? { id: folder.id, title: folder.title } : null
+    const workspace = await $api.workspaces.getWorkspace(workspaceId.value)
+    currentWorkspace.value = workspace ? { id: workspace.id, title: workspace.title } : null
   } catch {
-    currentFolder.value = null
+    currentWorkspace.value = null
   }
 }
 
 // Dynamic page title/subtitle
 const pageTitle = computed(() =>
-  currentFolder.value
-    ? `Review: ${currentFolder.value.title}`
+  currentWorkspace.value
+    ? `Review: ${currentWorkspace.value.title}`
     : 'Spaced Repetition Review'
 )
 
 const pageSubtitle = computed(() =>
-  currentFolder.value
-    ? `Review cards from "${currentFolder.value.title}" folder`
+  currentWorkspace.value
+    ? `Review cards from "${currentWorkspace.value.title}" workspace`
     : 'Review your cards using the spaced repetition algorithm'
 )
 
 // SEO
 useHead({
-  title: computed(() => currentFolder.value
-    ? `Review ${currentFolder.value.title} - Cognilo`
+  title: computed(() => currentWorkspace.value
+    ? `Review ${currentWorkspace.value.title} - Cognilo`
     : "Review Cards - Cognilo"
   ),
   meta: [
@@ -86,16 +86,16 @@ const { fetchQueue } = useCardReview();
 
 // Additional methods for this page
 const refreshQueue = () => {
-  fetchQueue(folderId.value);
+  fetchQueue(workspaceId.value);
 };
 
 const handleCardGraded = (cardId: string, grade: string) => {
   // Optional: track analytics, show toast, etc.
 };
 
-// Watch for folderId changes (user navigates between folder reviews)
-watch(folderId, () => {
-  fetchFolderInfo()
+// Watch for workspaceId changes (user navigates between workspace reviews)
+watch(workspaceId, () => {
+  fetchWorkspaceInfo()
   refreshQueue()
 }, { immediate: true })
 </script>

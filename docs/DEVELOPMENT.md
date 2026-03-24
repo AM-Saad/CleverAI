@@ -606,7 +606,7 @@ export class NewProviderStrategy implements LLMStrategy {
 // 2. Register in factory
 // server/utils/llm/LLMFactory.ts
 const strategies = {
-  'gpt-3.5-turbo': GPT35Strategy,
+  'gpt-3.5-turbo': OpenAIStrategy,
   'gemini-2.0-flash-lite': GeminiStrategy,
   'new-model': NewProviderStrategy,
 }

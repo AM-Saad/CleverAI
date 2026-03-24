@@ -21,15 +21,15 @@ export default defineEventHandler(async (event) => {
     throw Errors.badRequest("Invalid request body");
   }
 
-  const folder = await prisma.folder.findFirst({
-    where: { id: data.folderId, userId: user.id },
+  const workspace = await prisma.workspace.findFirst({
+    where: { id: data.workspaceId, userId: user.id },
   });
-  if (!folder) {
-    throw Errors.notFound("Folder");
+  if (!workspace) {
+    throw Errors.notFound("Workspace");
   }
 
   const maxOrderNote = await prisma.note.findFirst({
-    where: { folderId: data.folderId },
+    where: { workspaceId: data.workspaceId },
     orderBy: { order: "desc" },
     select: { order: true },
   });
@@ -38,7 +38,7 @@ export default defineEventHandler(async (event) => {
 
   const note = await prisma.note.create({
     data: {
-      folderId: data.folderId,
+      workspaceId: data.workspaceId,
       content: data.content,
       tags: data.tags || [],
       order: nextOrder,
@@ -54,6 +54,6 @@ export default defineEventHandler(async (event) => {
   return success(note, {
     message: "Note created successfully",
     noteId: note.id,
-    folderId: data.folderId,
+    workspaceId: data.workspaceId,
   });
 });

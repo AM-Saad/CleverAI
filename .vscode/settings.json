@@ -8,7 +8,7 @@
     "editor.renderWhitespace": "none", // Hide whitespace characters
     "editor.guides.bracketPairs": "false", // Disable bracket pair guides
     "breadcrumbs.enabled": false, // Hide breadcrumbs navigation
-    "explorer.compactFolders": false, // Prevent compact folder display in explorer
+    "explorer.compactWorkspaces": false, // Prevent compact workspace display in explorer
     // Editor behavior
     "editor.formatOnSave": true, // Automatically format code on save
     "editor.defaultFormatter": "vue",

@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import type { NoteState } from "~/composables/folders/useNotesStore";
-import { useNotesStore } from "~/composables/folders/useNotesStore";
+import type { NoteState } from "~/composables/workspaces/useNotesStore";
+import { useNotesStore } from "~/composables/workspaces/useNotesStore";
 import { APIError } from "~/services/FetchFactory";
 import { ReorderGroup, ReorderItem } from "motion-v";
 import type { MathNoteMetadata } from "@@/shared/utils/note.contract";
 
 const route = useRoute();
-const folderId = route.params.id as string;
+const workspaceId = route.params.id as string;
 const emit = defineEmits(["add-to-material"]);
 
 // Use the optimistic notes store
-const notesStore = useNotesStore(folderId);
+const notesStore = useNotesStore(workspaceId);
 
 // Computed properties for reactive data
 const notes = computed(() => {
@@ -28,14 +28,14 @@ const noteToDelete = ref<string | null>(null);
 // Initialize currentNoteId - will be set when notes load
 const currentNoteId = ref<string | null>(null);
 
-// Restore last selected note for this folder from localStorage
+// Restore last selected note for this workspace from localStorage
 const getStoredNoteId = (availableNotes: NoteState[]): string | null => {
   if (typeof window === 'undefined') return null;
 
-  // No notes available - clean up localStorage for this folder
+  // No notes available - clean up localStorage for this workspace
   if (availableNotes.length === 0) {
     try {
-      localStorage.removeItem(`selectedNote_${folderId}`);
+      localStorage.removeItem(`selectedNote_${workspaceId}`);
     } catch {
       // localStorage not available
     }
@@ -43,16 +43,16 @@ const getStoredNoteId = (availableNotes: NoteState[]): string | null => {
   }
 
   try {
-    const stored = localStorage.getItem(`selectedNote_${folderId}`);
-    // Verify the note still exists and belongs to this folder
-    if (stored && availableNotes.some(n => n.id === stored && n.folderId === folderId)) {
+    const stored = localStorage.getItem(`selectedNote_${workspaceId}`);
+    // Verify the note still exists and belongs to this workspace
+    if (stored && availableNotes.some(n => n.id === stored && n.workspaceId === workspaceId)) {
       return stored;
     }
 
     // Stored note doesn't exist anymore - fallback to first note and update storage
     const firstNoteId = availableNotes[0]?.id || null;
     if (firstNoteId) {
-      localStorage.setItem(`selectedNote_${folderId}`, firstNoteId);
+      localStorage.setItem(`selectedNote_${workspaceId}`, firstNoteId);
       console.log(`🔄 Stored note not found, falling back to first note: ${firstNoteId}`);
     }
     return firstNoteId;
@@ -83,7 +83,7 @@ watch(notes, (newNotes) => {
     console.log('🗑️ All notes deleted, clearing selection');
     currentNoteId.value = null;
     try {
-      localStorage.removeItem(`selectedNote_${folderId}`);
+      localStorage.removeItem(`selectedNote_${workspaceId}`);
     } catch {
       // localStorage not available
     }
@@ -92,7 +92,7 @@ watch(notes, (newNotes) => {
 
 // Loading and error state for the initial fetch
 const isFetching = computed(
-  () => notesStore.loadingStates.value.get(`folder-${folderId}`) ?? false
+  () => notesStore.loadingStates.value.get(`workspace-${workspaceId}`) ?? false
 );
 const error = ref<APIError | null>(null); // Main error state for critical failures
 
@@ -109,11 +109,11 @@ const currentFullscreenNote = computed(() => {
 watch(currentNoteId, (noteId) => {
   if (typeof window === 'undefined' || !noteId) return;
   try {
-    // Verify note belongs to this folder before saving
+    // Verify note belongs to this workspace before saving
     const note = notesStore.getNote(noteId);
-    if (note && note.folderId === folderId) {
-      localStorage.setItem(`selectedNote_${folderId}`, noteId);
-      console.log(`💾 Saved selected note: ${noteId} for folder: ${folderId}`);
+    if (note && note.workspaceId === workspaceId) {
+      localStorage.setItem(`selectedNote_${workspaceId}`, noteId);
+      console.log(`💾 Saved selected note: ${noteId} for workspace: ${workspaceId}`);
     }
   } catch (err) {
     console.error('Failed to save selected note:', err);
@@ -292,7 +292,7 @@ onMounted(async () => {
         button-text="Create First Note" :center-description="true" @action="createNewNote('TEXT')">
         <template #description>
           Create your first note to capture important <br />thoughts and ideas
-          for this folder.
+          for this workspace.
         </template>
       </shared-empty-state>
 
@@ -302,7 +302,7 @@ onMounted(async () => {
         <ui-drawer :show="false" :mobile="false" teleport-to="#notes-section" :backdrop="false" :handle-visible="20"
           title="Notes">
           <div class="relative shrink-0 overflow-auto bg-light  rounded border border-secondary">
-            <folder-notes-search :folder-id="folderId" />
+            <workspace-notes-search :workspace-id="workspaceId" />
             <ReorderGroup v-model:values="localNotes" axis="y" class="relative flex-1 shrink-0 overflow-auto"
               @reorder="handleReorder">
               <UContextMenu v-for="(note, idx) in localNotes" :key="note.id" :items="[
@@ -336,7 +336,7 @@ onMounted(async () => {
           </div>
         </ui-drawer>
 
-        <folder-math-note-editor v-if="notesStore.getNote(currentNoteId!)?.noteType === 'MATH'"
+        <workspace-math-note-editor v-if="notesStore.getNote(currentNoteId!)?.noteType === 'MATH'"
           :note-id="currentNoteId!"
           :initial-metadata="(notesStore.getNote(currentNoteId!)?.metadata as MathNoteMetadata | undefined)"
           @update="(meta: MathNoteMetadata) => handleMathUpdate(currentNoteId!, meta)" />

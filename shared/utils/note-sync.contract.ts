@@ -5,7 +5,7 @@ export const PendingNoteChangeSchema = z.object({
   operation: z.enum(['upsert', 'delete']),
   updatedAt: z.number().int().nonnegative(),
   localVersion: z.number().int().nonnegative(),
-  folderId: z.string().optional(),
+  workspaceId: z.string().optional(),
   content: z.string().optional(),
   tags: z.array(z.string()).optional(),
   // Handle null and empty string by normalizing to undefined

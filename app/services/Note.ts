@@ -12,10 +12,10 @@ export class NoteService extends FetchFactory {
   private readonly RESOURCE = "/api/notes";
 
   /**
-   * Get all notes for a folder
+   * Get all notes for a workspace
    */
-  async getByFolder(folderId: string): Promise<Result<Note[]>> {
-    return this.call<Note[]>("GET", `${this.RESOURCE}?folderId=${folderId}`);
+  async getByWorkspace(workspaceId: string): Promise<Result<Note[]>> {
+    return this.call<Note[]>("GET", `${this.RESOURCE}?workspaceId=${workspaceId}`);
   }
 
   /**
@@ -43,7 +43,7 @@ export class NoteService extends FetchFactory {
   }
 
   /**
-   * Reorder notes in a folder
+   * Reorder notes in a workspace
    */
   async reorder(payload: ReorderNotesDTO): Promise<Result<Note[]>> {
     return this.call<Note[]>("PATCH", `${this.RESOURCE}/reorder`, payload);

@@ -5,4 +5,4 @@ export * from "./useDebugControls";
 export * from "./useSessionTimer";
 export * from "./useReviewStats";
 export * from "./useSessionSummary";
-export * from "./useFolderEnrollment";
+export * from "./useWorkspaceEnrollment";

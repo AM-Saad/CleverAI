@@ -367,7 +367,7 @@ const clearFilters = () => {
         <shared-empty-state v-if="!error && !isFetching && items.length === 0" title="No Board Items"
           button-text="Create First Item" :center-description="true" @action="createNewItem">
           <template #description>
-            Board notes are personal notes not tied to any folder.<br />
+            Board notes are personal notes not tied to any workspace.<br />
             Use tags to organize and find them easily.
           </template>
         </shared-empty-state>

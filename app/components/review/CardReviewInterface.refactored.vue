@@ -2,7 +2,7 @@
   <div class="max-w-4xl mx-auto p-6 space-y-6" tabindex="0" role="application"
     aria-label="Spaced repetition card review interface" @keydown="handleKeydown">
     <!-- Analytics Summary -->
-    <ReviewAnalytics :show="showAnalytics" :folder-id="folderId" @close="showAnalytics = false" />
+    <ReviewAnalytics :show="showAnalytics" :workspace-id="workspaceId" @close="showAnalytics = false" />
 
     <!-- Keyboard Shortcuts Help -->
     <review-keyboard-shortcuts :show="showShortcuts" @close="showShortcuts = false" />
@@ -83,7 +83,7 @@
 import type { ReviewGrade } from '~/shared/utils/review.contract'
 
 interface Props {
-  folderId?: string
+  workspaceId?: string
 }
 
 const props = defineProps<Props>()
@@ -197,9 +197,9 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 // Watch for prop changes
 watch(
-  () => props.folderId,
+  () => props.workspaceId,
   () => {
-    fetchQueue(props.folderId)
+    fetchQueue(props.workspaceId)
     resetSession()
   },
   { immediate: true }

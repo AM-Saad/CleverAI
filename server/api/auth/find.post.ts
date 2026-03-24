@@ -23,7 +23,7 @@ export default defineEventHandler(async (event) => {
 
   const existingUser = await prisma.user.findFirst({
     where: { email: parsed.email },
-    include: { subscription: true, folders: true }
+    include: { subscription: true, workspaces: true }
   })
 
   if (!existingUser) {

@@ -84,12 +84,12 @@
       </div>
 
 
-      <!-- Context info (folder name) if available -->
-      <div v-if="stats?.context?.folderTitle && showContext"
+      <!-- Context info (workspace name) if available -->
+      <div v-if="stats?.context?.workspaceTitle && showContext"
         class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
         <div class="flex items-center text-sm text-gray-500">
-          <Icon name="heroicons:folder" class="w-4 h-4 mr-1" />
-          {{ stats.context.folderTitle }}
+          <Icon name="heroicons:workspace" class="w-4 h-4 mr-1" />
+          {{ stats.context.workspaceTitle }}
         </div>
       </div>
     </div>
@@ -100,15 +100,15 @@
 import type { ReviewSummaryStats } from "~/shared/utils/review.contract";
 
 interface Props {
-  /** Folder ID for folder-specific stats (omit for global) */
-  folderId?: string;
+  /** Workspace ID for workspace-specific stats (omit for global) */
+  workspaceId?: string;
   /** Pre-loaded stats (skip fetch if provided) */
   initialStats?: ReviewSummaryStats;
   /** Show refresh button */
   showRefresh?: boolean;
   /** Show action button (Start Review) */
   showAction?: boolean;
-  /** Show folder context info */
+  /** Show workspace context info */
   showContext?: boolean;
   /** Compact mode for smaller spaces */
   compact?: boolean;
@@ -121,7 +121,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  folderId: undefined,
+  workspaceId: undefined,
   initialStats: undefined,
   showRefresh: true,
   showAction: true,
@@ -144,7 +144,7 @@ const {
   urgencyLevel,
   refresh,
 } = useReviewStats({
-  folderId: computed(() => props.folderId),
+  workspaceId: computed(() => props.workspaceId),
   immediate: !props.initialStats,
 });
 
@@ -157,10 +157,10 @@ if (props.initialStats) {
   stats.value = props.initialStats;
 }
 
-// Computed: Review link (with or without folder filter)
+// Computed: Review link (with or without workspace filter)
 const reviewLink = computed(() => {
   const base = "/user/review";
-  return props.folderId ? `${base}?folderId=${props.folderId}` : base;
+  return props.workspaceId ? `${base}?workspaceId=${props.workspaceId}` : base;
 });
 
 const isOnline = computed(() => navigator.onLine);

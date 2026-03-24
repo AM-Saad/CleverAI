@@ -8,7 +8,7 @@ import { z } from "zod";
 import { estimateTokensFromText } from "@server/utils/llm/tokenEstimate";
 
 const UploadRequestSchema = z.object({
-  folderId: z.string(),
+  workspaceId: z.string(),
   title: z.string().optional(),
 });
 
@@ -110,13 +110,13 @@ export default defineEventHandler(async (event) => {
   );
 
   // Validate fields
-  const folderId = Array.isArray(fields.folderId) ? fields.folderId[0] : fields.folderId;
+  const workspaceId = Array.isArray(fields.workspaceId) ? fields.workspaceId[0] : fields.workspaceId;
   const title = Array.isArray(fields.title) ? fields.title[0] : fields.title;
 
-  if (!folderId) {
+  if (!workspaceId) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'folderId is required',
+      statusMessage: 'workspaceId is required',
     });
   }
 
@@ -139,16 +139,16 @@ export default defineEventHandler(async (event) => {
     });
   }
 
-  // Verify folder ownership
-  const folder = await prisma.folder.findUnique({
-    where: { id: folderId },
+  // Verify workspace ownership
+  const workspace = await prisma.workspace.findUnique({
+    where: { id: workspaceId },
     select: { userId: true },
   });
 
-  if (!folder || folder.userId !== userId) {
+  if (!workspace || workspace.userId !== userId) {
     throw createError({
       statusCode: 403,
-      statusMessage: 'Folder not found or access denied',
+      statusMessage: 'Workspace not found or access denied',
     });
   }
 
@@ -196,7 +196,7 @@ export default defineEventHandler(async (event) => {
   // Save material with token metadata for analytics and avoiding recomputation
   const material = await prisma.material.create({
     data: {
-      folderId,
+      workspaceId,
       title: title || file.originalFilename || "Uploaded Document",
       content: extractedText,
       type: ext.substring(1), // Remove dot: .pdf -> pdf

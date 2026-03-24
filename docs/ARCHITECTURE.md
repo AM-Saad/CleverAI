@@ -104,7 +104,7 @@ Cognilo is a **Nuxt 4** application providing AI-powered flashcard generation, q
 ### LLM Providers
 | Provider | Strategy | Models |
 |----------|----------|--------|
-| OpenAI | `GPT35Strategy` | gpt-3.5-turbo, gpt-4o-mini, gpt-4o |
+| OpenAI | `OpenAIStrategy` | gpt-3.5-turbo, gpt-4o-mini, gpt-4o |
 | Google Gemini | `GeminiStrategy` | gemini-2.0-flash-lite, gemini-1.5-flash-8b |
 | DeepSeek | `DeepSeekStrategy` | deepseek-chat, deepseek-reasoner |
 | Groq | `GroqStrategy` | llama-3.1-8b-instant, qwen-qwq-32b, llama-4-scout-17b |
@@ -124,7 +124,7 @@ Cognilo is a **Nuxt 4** application providing AI-powered flashcard generation, q
 cognilo/
 ├── app/                          # Nuxt app source (srcDir)
 │   ├── components/               # Vue components
-│   │   ├── folder/               # Folder-specific (NotesSection, etc.)
+│   │   ├── workspace/               # Workspace-specific (NotesSection, etc.)
 │   │   ├── materials/            # Materials UI (GenerateButton, etc.)
 │   │   ├── review/               # SR review UI
 │   │   └── ui/                   # Base UI components (shadcn-vue)
@@ -136,8 +136,8 @@ cognilo/
 │   │   │   ├── useSpeachToText.ts
 │   │   │   ├── useTextSummarization.ts
 │   │   │   └── useTextToSpeechWorker.ts
-│   │   ├── folders/              # Folder, notes, materials, review composables
-│   │   │   ├── useFolders.ts
+│   │   ├── workspaces/              # Workspace, notes, materials, review composables
+│   │   │   ├── useWorkspaces.ts
 │   │   │   ├── useNotesStore.ts
 │   │   │   ├── useMaterialsStore.ts
 │   │   │   └── useCardReview.ts
@@ -145,7 +145,7 @@ cognilo/
 │   │   ├── review/               # Review session composables
 │   │   │   ├── useCardDisplay.ts
 │   │   │   ├── useDebugControls.ts
-│   │   │   ├── useFolderEnrollment.ts
+│   │   │   ├── useWorkspaceEnrollment.ts
 │   │   │   ├── useReviewStats.ts
 │   │   │   ├── useSessionSummary.ts
 │   │   │   └── useKeyboardShortcuts.ts
@@ -163,7 +163,7 @@ cognilo/
 │   │   ├── FetchFactory.ts       # HTTP client with Result pattern
 │   │   ├── ServiceFactory.ts     # Service bindings (10 services)
 │   │   ├── GatewayService.ts     # LLM gateway client
-│   │   ├── Folder.ts
+│   │   ├── Workspace.ts
 │   │   ├── Material.ts
 │   │   ├── Note.ts
 │   │   ├── ReviewService.ts
@@ -181,7 +181,7 @@ cognilo/
 │   │   ├── board-columns/        # Kanban columns CRUD
 │   │   ├── board-items/          # Kanban items CRUD
 │   │   ├── flashcards/           # Flashcard queries
-│   │   ├── folders/              # Folder CRUD
+│   │   ├── workspaces/              # Workspace CRUD
 │   │   ├── materials/            # Materials CRUD + upload
 │   │   ├── monitoring/           # Health monitoring
 │   │   ├── notes/                # Notes CRUD + sync
@@ -202,7 +202,7 @@ cognilo/
 │       └── llm/                  # LLM strategies & routing
 │           ├── LLMStrategy.ts    # Strategy interface
 │           ├── LLMFactory.ts     # Factory (legacy + registry)
-│           ├── GPT35Strategy.ts  # OpenAI provider
+│           ├── OpenAIStrategy.ts  # OpenAI provider
 │           ├── GeminiStrategy.ts # Google provider
 │           ├── DeepSeekStrategy.ts # DeepSeek provider
 │           ├── GroqStrategy.ts   # Groq provider
@@ -225,7 +225,7 @@ cognilo/
 │       ├── boardColumn.contract.ts
 │       ├── boardItem.contract.ts
 │       ├── flashcard.contract.ts
-│       ├── folder.contract.ts
+│       ├── workspace.contract.ts
 │       ├── llm-generate.contract.ts
 │       ├── material.contract.ts
 │       ├── note.contract.ts
@@ -253,7 +253,7 @@ cognilo/
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│     User     │────<│    Folder    │────<│   Material   │
+│     User     │────<│    Workspace    │────<│   Material   │
 │              │     │              │     │              │
 │ - email      │     │ - title      │     │ - title      │
 │ - password   │     │ - order      │     │ - type       │
@@ -312,10 +312,10 @@ cognilo/
 | Model | Purpose | Key Fields |
 |-------|---------|------------|
 | `User` | Authentication | email, password, role, passkey_user_id, deletedAt |
-| `Folder` | Content grouping | title, order, userId, llmModel, metadata, rawText |
-| `Material` | Learning content | title, type, content, metadata, llmModel, folderId |
-| `Flashcard` | Q&A pairs | front, back, folderId, materialId, sourceRef, status |
-| `Question` | Quiz questions | question, choices, answerIndex, folderId, materialId, sourceRef |
+| `Workspace` | Content grouping | title, order, userId, llmModel, metadata, rawText |
+| `Material` | Learning content | title, type, content, metadata, llmModel, workspaceId |
+| `Flashcard` | Q&A pairs | front, back, workspaceId, materialId, sourceRef, status |
+| `Question` | Quiz questions | question, choices, answerIndex, workspaceId, materialId, sourceRef |
 | `Note` | User notes | content (rich text), order, tags, noteType, metadata |
 | `BoardColumn` | Kanban column | name, order, userId |
 | `BoardItem` | Kanban item | content, tags, order, userId, columnId |
@@ -340,12 +340,12 @@ cognilo/
 @@unique([userId, cardId])            // CardReview - one per user+card
 @@unique([endpoint])                  // NotificationSubscription
 @@unique([userId, name])              // UserTag - unique name per user
-@@unique([userId, order])             // Folder - unique order per user
+@@unique([userId, order])             // Workspace - unique order per user
 @@unique([provider, model])           // LlmPrice
 
 // Performance indexes
 @@index([userId, nextReviewAt])       // Due card queries
-@@index([folderId])                   // Note ordering queries
+@@index([workspaceId])                   // Note ordering queries
 @@index([userId, order])              // Board items, columns, tags
 @@index([columnId, order])            // Board items within column
 @@index([materialId])                 // Flashcards/questions by material
@@ -386,7 +386,7 @@ cognilo/
 - Metadata support (JSON) for extensible note data
 
 **API Endpoints**:
-- `GET /api/notes?folderId=` — List notes
+- `GET /api/notes?workspaceId=` — List notes
 - `POST /api/notes` — Create note
 - `PATCH /api/notes/[id]` — Update note
 - `DELETE /api/notes` — Delete note(s)
@@ -433,7 +433,7 @@ if (grade >= 3) {
 **API Endpoints**:
 - `POST /api/review/enroll` — Enroll card in review (idempotent via upsert)
 - `POST /api/review/grade` — Submit grade (transactional + idempotent via GradeRequest)
-- `GET /api/review/queue?folderId=` — Get due cards
+- `GET /api/review/queue?workspaceId=` — Get due cards
 - `GET /api/review/analytics` — Learning statistics
 - `GET /api/review/enrollment-status` — Bulk enrollment check
 - `GET /api/review/stats` — Review statistics
@@ -451,7 +451,7 @@ if (grade >= 3) {
          │              │              │              │            │
          ▼              ▼              ▼              ▼            │
 ┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌─────────┐   │
-│GPT35Strategy │ │GeminiStrategy│ │DeepSeekStrat.│ │GroqStrat│   │
+│OpenAIStrategy │ │GeminiStrategy│ │DeepSeekStrat.│ │GroqStrat│   │
 │  (OpenAI)    │ │  (Google)    │ │  (DeepSeek)  │ │ (Groq)  │   │
 └──────────────┘ └──────────────┘ └──────────────┘ └─────────┘   │
 ```
@@ -479,29 +479,29 @@ Request → Auth → Quota Check → Rate Limit → Validate → Cache Lookup
 - URL content fetching
 - Direct text input
 - Material-to-flashcard/quiz generation via gateway
-- Folder organization
+- Workspace organization
 
 **API Endpoints**:
-- `GET /api/materials?folderId=` — List materials
+- `GET /api/materials?workspaceId=` — List materials
 - `POST /api/materials` — Create material
 - `POST /api/materials/upload` — Upload file (PDF, DOCX)
 - `GET /api/materials/[id]` — Get single material
 - `PATCH /api/materials/[id]` — Update material
 - `DELETE /api/materials` — Delete material(s)
 
-### 5. Folders Module
+### 5. Workspaces Module
 
 **Purpose**: Flat content organization with ordering.
 
-> **Note**: Folders are flat (no hierarchy/nesting). Each folder has an `order` field for positioning, with a `@@unique([userId, order])` constraint.
+> **Note**: Workspaces are flat (no hierarchy/nesting). Each workspace has an `order` field for positioning, with a `@@unique([userId, order])` constraint.
 
 **API Endpoints**:
-- `GET /api/folders` — List user's folders
-- `POST /api/folders` — Create folder
-- `GET /api/folders/[id]` — Get folder with contents
-- `PATCH /api/folders/[id]` — Update folder
-- `DELETE /api/folders/[id]` — Delete folder (cascade)
-- `GET /api/folders/count` — Get folder count
+- `GET /api/workspaces` — List user's workspaces
+- `POST /api/workspaces` — Create workspace
+- `GET /api/workspaces/[id]` — Get workspace with contents
+- `PATCH /api/workspaces/[id]` — Update workspace
+- `DELETE /api/workspaces/[id]` — Delete workspace (cascade)
+- `GET /api/workspaces/count` — Get workspace count
 
 ### 6. Kanban Board Module
 
@@ -543,7 +543,7 @@ Request → Auth → Quota Check → Rate Limit → Validate → Cache Lookup
 
 | Service Key | Class | Purpose |
 |-------------|-------|---------|
-| `folders` | `FoldersModule` | Folder CRUD |
+| `workspaces` | `WorkspacesModule` | Workspace CRUD |
 | `materials` | `MaterialService` | Materials CRUD |
 | `notes` | `NoteService` | Notes CRUD |
 | `boardItems` | `BoardItemService` | Board items CRUD |
@@ -598,10 +598,10 @@ Prisma Adapter → MongoDB
 const user = await requireRole(event, ["USER"])
 
 // Resource ownership check
-const folder = await prisma.folder.findFirst({
-  where: { id: folderId, userId: user.id }
+const workspace = await prisma.workspace.findFirst({
+  where: { id: workspaceId, userId: user.id }
 })
-if (!folder) throw createError({ statusCode: 403 })
+if (!workspace) throw createError({ statusCode: 403 })
 ```
 
 ---
@@ -691,7 +691,7 @@ All API contracts defined in `shared/utils/` using Zod 4:
 | `boardColumn.contract.ts` | Board column CRUD |
 | `boardItem.contract.ts` | Board item CRUD |
 | `flashcard.contract.ts` | Flashcard data |
-| `folder.contract.ts` | Folder CRUD |
+| `workspace.contract.ts` | Workspace CRUD |
 | `llm-generate.contract.ts` | LLM generation requests |
 | `material.contract.ts` | Material data |
 | `note.contract.ts` | Note CRUD |

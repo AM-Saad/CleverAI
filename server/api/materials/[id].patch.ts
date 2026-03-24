@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
   const data = parsed.data;
 
   const material = await prisma.material.findFirst({
-    where: { id, folder: { userId: user.id } },
+    where: { id, workspace: { userId: user.id } },
   });
   if (!material) {
     throw Errors.notFound("material");

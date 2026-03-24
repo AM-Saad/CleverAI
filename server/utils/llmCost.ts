@@ -1,19 +1,21 @@
 // server/utils/llmCost.ts
 export type CostInput = {
-  provider: "openai" | "google" | "deepseek" | "groq";
+  provider: "openai" | "google" | "deepseek" | "groq" | "openrouter";
   model: string;
   promptTokens: number;
   completionTokens: number;
 };
 
 export type LlmMeasured = {
-  provider: "openai" | "google" | "deepseek" | "groq";
+  provider: "openai" | "google" | "deepseek" | "groq" | "openrouter";
   model: string;
   promptTokens: number;
   completionTokens: number;
   totalTokens: number;
   requestId?: string;
   rawUsage?: unknown;
+  rawCost?: number;
+  reasoningTokens?: number;
   meta?: {
     inputChars?: number;
     outputChars?: number;
@@ -24,7 +26,7 @@ export type LlmMeasured = {
 
 export type LlmContext = {
   userId?: string;
-  folderId?: string;
+  workspaceId?: string;
   feature?: string; // "flashcards" | "quiz" | "chat" | etc.
   status?: "success" | "error";
   errorCode?: string;
@@ -36,9 +38,10 @@ export type LlmContext = {
  * Assumes a price row exists in LlmPrice for the given provider+model.
  */
 export async function logLlmUsage(measured: LlmMeasured, ctx: LlmContext = {}) {
+  const baseModel = measured.model.split(':')[0];
   const price = await prisma.llmPrice.findUnique({
     where: {
-      provider_model: { provider: measured.provider, model: measured.model },
+      provider_model: { provider: measured.provider, model: baseModel },
     },
     select: { inputPer1kMicros: true, outputPer1kMicros: true },
   });
@@ -49,13 +52,24 @@ export async function logLlmUsage(measured: LlmMeasured, ctx: LlmContext = {}) {
     );
   }
 
-  const { inputUsdMicros, outputUsdMicros, totalUsdMicros } =
-    await estimateCostMicros({
+  let inputUsdMicros = 0n;
+  let outputUsdMicros = 0n;
+  let totalUsdMicros = 0n;
+
+  if (typeof measured.rawCost === "number" && !isNaN(measured.rawCost) && measured.rawCost > 0) {
+    // OpenRouter supplies the total cost in USD — use it directly
+    totalUsdMicros = BigInt(Math.round(measured.rawCost * 1_000_000));
+  } else {
+    const estimated = await estimateCostMicros({
       provider: measured.provider,
       model: measured.model,
       promptTokens: measured.promptTokens,
       completionTokens: measured.completionTokens,
     });
+    inputUsdMicros = estimated.inputUsdMicros;
+    outputUsdMicros = estimated.outputUsdMicros;
+    totalUsdMicros = estimated.totalUsdMicros;
+  }
 
   await prisma.llmUsage.create({
     data: {
@@ -78,7 +92,7 @@ export async function logLlmUsage(measured: LlmMeasured, ctx: LlmContext = {}) {
       errorMessage: ctx.errorMessage,
 
       userId: ctx.userId,
-      folderId: ctx.folderId,
+      workspaceId: ctx.workspaceId,
       feature: ctx.feature,
 
       meta: measured.meta as any,
@@ -93,8 +107,9 @@ export async function estimateCostMicros({
   promptTokens,
   completionTokens,
 }: CostInput) {
+  const baseModel = model.split(':')[0];
   const price = await prisma.llmPrice.findUniqueOrThrow({
-    where: { provider_model: { provider, model } },
+    where: { provider_model: { provider, model: baseModel } },
     select: { inputPer1kMicros: true, outputPer1kMicros: true },
   });
 

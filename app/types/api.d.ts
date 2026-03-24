@@ -1,4 +1,4 @@
-import type FoldersModule from "~/services/Folder"
+import type WorkspacesModule from "~/services/Workspace"
 import type AuthModule from "~/services/AuthService"
 import type { ReviewService } from "~/services/ReviewService"
 import type { MaterialService } from "~/services/Material"
@@ -10,7 +10,7 @@ import type { UserTagService } from "~/services/UserTagService"
 import type GatewayService from "~/services/GatewayService"
 
 export interface IApiInstance {
-  folders: FoldersModule
+  workspaces: WorkspacesModule
   auth: AuthModule
   review: ReviewService
   materials: MaterialService

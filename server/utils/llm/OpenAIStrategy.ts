@@ -1,7 +1,8 @@
-// server/utils/llm/GPT35Strategy.ts
+// server/utils/llm/OpenAIStrategy.ts
 import { OpenAI } from "openai";
 import { encoding_for_model } from "tiktoken";
 import { Errors } from "../error";
+import { LlmMeasured } from "../llmCost";
 
 // Small helper to avoid hard crashes on imperfect LLM JSON
 function safeParseJSON<T>(text: string, fallback: T): T {
@@ -12,7 +13,7 @@ function safeParseJSON<T>(text: string, fallback: T): T {
   }
 }
 
-export class GPT35Strategy implements LLMStrategy {
+export class OpenAIStrategy implements LLMStrategy {
   private client: OpenAI;
   private modelId: string;
   private onMeasure?: (m: LlmMeasured) => void;
@@ -47,7 +48,7 @@ export class GPT35Strategy implements LLMStrategy {
     const inputChars = input.length;
     let inputTokensEstimate = 0;
     try {
-      const enc = encoding_for_model(this.modelId as any);
+      const enc = encoding_for_model("gpt-4o" as any);
       inputTokensEstimate = enc.encode(prompt).length;
       enc.free();
     } catch { }
@@ -64,13 +65,15 @@ export class GPT35Strategy implements LLMStrategy {
       content = res.choices?.[0]?.message?.content?.trim() ?? "[]";
       let outputTokensEstimate = 0;
       try {
-        const enc = encoding_for_model(this.modelId as any);
+        const enc = encoding_for_model("gpt-4o" as any);
         outputTokensEstimate = enc.encode(
           typeof content === "string" ? content : ""
         ).length;
         enc.free();
       } catch { }
       const outputChars = typeof content === "string" ? content.length : 0;
+      // Extract reasoning tokens if available (e.g., o1/o3 models)
+      const reasoningTokens = (res.usage as any)?.completion_tokens_details?.reasoning_tokens ?? 0;
       this.onMeasure?.({
         provider: "openai",
         model: this.modelId,
@@ -84,6 +87,7 @@ export class GPT35Strategy implements LLMStrategy {
           outputChars,
           inputTokensEstimate,
           outputTokensEstimate,
+          reasoningTokens,
         },
       });
     } catch (error: any) {
@@ -136,7 +140,7 @@ export class GPT35Strategy implements LLMStrategy {
     const inputChars = input.length;
     let inputTokensEstimate = 0;
     try {
-      const enc = encoding_for_model(this.modelId as any);
+      const enc = encoding_for_model("gpt-4o" as any);
       inputTokensEstimate = enc.encode(prompt).length;
       enc.free();
     } catch { }
@@ -153,13 +157,14 @@ export class GPT35Strategy implements LLMStrategy {
       content = res.choices?.[0]?.message?.content?.trim() ?? "[]";
       let outputTokensEstimate = 0;
       try {
-        const enc = encoding_for_model(this.modelId as any);
+        const enc = encoding_for_model("gpt-4o" as any);
         outputTokensEstimate = enc.encode(
           typeof content === "string" ? content : ""
         ).length;
         enc.free();
       } catch { }
       const outputChars = typeof content === "string" ? content.length : 0;
+      const reasoningTokens = (res.usage as any)?.completion_tokens_details?.reasoning_tokens ?? 0;
       this.onMeasure?.({
         provider: "openai",
         model: this.modelId,
@@ -173,6 +178,7 @@ export class GPT35Strategy implements LLMStrategy {
           outputChars,
           inputTokensEstimate,
           outputTokensEstimate,
+          reasoningTokens,
         },
       });
     } catch (error: any) {

@@ -3,9 +3,9 @@ import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 
 const QuerySchema = z.object({
-  folderId: z
+  workspaceId: z
     .string()
-    .regex(/^[0-9a-fA-F]{24}$/, "Folder ID must be a valid MongoDB ObjectId"),
+    .regex(/^[0-9a-fA-F]{24}$/, "Workspace ID must be a valid MongoDB ObjectId"),
 });
 
 export default defineEventHandler(async (event) => {
@@ -22,15 +22,15 @@ export default defineEventHandler(async (event) => {
     throw Errors.badRequest("Invalid query parameters.");
   }
 
-  const folder = await prisma.folder.findFirst({
-    where: { id: query.folderId, userId: user.id },
+  const workspace = await prisma.workspace.findFirst({
+    where: { id: query.workspaceId, userId: user.id },
   });
-  if (!folder) {
-    throw Errors.notFound("Folder");
+  if (!workspace) {
+    throw Errors.notFound("Workspace");
   }
 
   const materials = await prisma.material.findMany({
-    where: { folderId: query.folderId },
+    where: { workspaceId: query.workspaceId },
     orderBy: { createdAt: "desc" },
   });
 
@@ -40,6 +40,6 @@ export default defineEventHandler(async (event) => {
 
   return success(materials, {
     count: materials.length,
-    folderId: query.folderId,
+    workspaceId: query.workspaceId,
   });
 });

@@ -5,7 +5,7 @@ import { ReviewQueueResponseSchema } from "@shared/utils/review.contract";
 
 // Query validation
 const querySchema = z.object({
-  folderId: z.string().min(1).optional(),
+  workspaceId: z.string().min(1).optional(),
   limit: z.coerce.number().min(1).max(100).default(20),
 });
 
@@ -27,17 +27,17 @@ export default defineEventHandler(async (event) => {
     }
     throw Errors.badRequest("Invalid query parameters");
   }
-  const { folderId, limit } = parsedQuery;
+  const { workspaceId, limit } = parsedQuery;
 
-  // Validate folder ownership if folderId provided
-  if (folderId) {
-    const folderExists = await prisma.folder.findFirst({
-      where: { id: folderId, userId: user.id },
+  // Validate workspace ownership if workspaceId provided
+  if (workspaceId) {
+    const workspaceExists = await prisma.workspace.findFirst({
+      where: { id: workspaceId, userId: user.id },
       select: { id: true }, // Minimal selection for performance
     });
 
-    if (!folderExists) {
-      throw Errors.forbidden("Folder not found or access denied");
+    if (!workspaceExists) {
+      throw Errors.forbidden("Workspace not found or access denied");
     }
   }
 
@@ -46,7 +46,7 @@ export default defineEventHandler(async (event) => {
     userId: user.id,
     nextReviewAt: { lte: new Date() },
     suspended: false, // Exclude suspended cards
-    ...(folderId ? { folderId } : {}),
+    ...(workspaceId ? { workspaceId } : {}),
   };
 
   // Fetch due cardReviews
@@ -62,25 +62,25 @@ export default defineEventHandler(async (event) => {
   }
 
   const cardIds = cardReviews.map((c) => c.cardId);
-  const folderIds = [...new Set(cardReviews.map((c) => c.folderId))];
+  const workspaceIds = [...new Set(cardReviews.map((c) => c.workspaceId))];
 
-  // Fetch all data in parallel - materials, flashcards, questions, AND folders separately
-  // This avoids N+1 query by fetching folders in one query
-  const [materials, flashcards, questions, folders] = await Promise.all([
+  // Fetch all data in parallel - materials, flashcards, questions, AND workspaces separately
+  // This avoids N+1 query by fetching workspaces in one query
+  const [materials, flashcards, questions, workspaces] = await Promise.all([
     prisma.material.findMany({
       where: { id: { in: cardIds } },
-      // Don't include folder - we'll fetch separately
+      // Don't include workspace - we'll fetch separately
     }),
     prisma.flashcard.findMany({
       where: { id: { in: cardIds } },
-      // Don't include folder - we'll fetch separately
+      // Don't include workspace - we'll fetch separately
     }),
     prisma.question.findMany({
       where: { id: { in: cardIds } },
-      // Don't include folder - we'll fetch separately
+      // Don't include workspace - we'll fetch separately
     }),
-    prisma.folder.findMany({
-      where: { id: { in: folderIds } },
+    prisma.workspace.findMany({
+      where: { id: { in: workspaceIds } },
       select: { id: true, title: true, userId: true },
     }),
   ]);
@@ -88,7 +88,7 @@ export default defineEventHandler(async (event) => {
   const materialMap = new Map(materials.map((m) => [m.id, m]));
   const flashcardMap = new Map(flashcards.map((f) => [f.id, f]));
   const questionMap = new Map(questions.map((q) => [q.id, q]));
-  const folderMap = new Map(folders.map((f) => [f.id, f]));
+  const workspaceMap = new Map(workspaces.map((f) => [f.id, f]));
 
   // Check for orphaned cards
   const orphanedCards = cardReviews.filter((cr) => {
@@ -125,7 +125,7 @@ export default defineEventHandler(async (event) => {
             title: material.title,
             content: material.content,
             tags: [],
-            folderId: material.folderId,
+            workspaceId: material.workspaceId,
           },
           reviewState: {
             repetitions: cardReview.repetitions,
@@ -147,7 +147,7 @@ export default defineEventHandler(async (event) => {
             back: flashcard.back,
             hint: undefined,
             tags: [],
-            folderId: flashcard.folderId,
+            workspaceId: flashcard.workspaceId,
           },
           reviewState: {
             repetitions: cardReview.repetitions,
@@ -168,7 +168,7 @@ export default defineEventHandler(async (event) => {
             question: question.question,
             choices: question.choices,
             answerIndex: question.answerIndex,
-            folderId: question.folderId,
+            workspaceId: question.workspaceId,
           },
           reviewState: {
             repetitions: cardReview.repetitions,
@@ -190,7 +190,7 @@ export default defineEventHandler(async (event) => {
       where: {
         userId: user.id,
         suspended: false,
-        ...(folderId ? { folderId } : {}),
+        ...(workspaceId ? { workspaceId } : {}),
       },
     }),
     prisma.cardReview.count({
@@ -198,7 +198,7 @@ export default defineEventHandler(async (event) => {
         userId: user.id,
         suspended: false,
         repetitions: 0,
-        ...(folderId ? { folderId } : {}),
+        ...(workspaceId ? { workspaceId } : {}),
       },
     }),
     prisma.cardReview.count({
@@ -206,7 +206,7 @@ export default defineEventHandler(async (event) => {
         userId: user.id,
         suspended: false,
         repetitions: { gt: 0, lt: 3 },
-        ...(folderId ? { folderId } : {}),
+        ...(workspaceId ? { workspaceId } : {}),
       },
     }),
     prisma.cardReview.count({
@@ -214,7 +214,7 @@ export default defineEventHandler(async (event) => {
         userId: user.id,
         suspended: false,
         nextReviewAt: { lte: new Date() },
-        ...(folderId ? { folderId } : {}),
+        ...(workspaceId ? { workspaceId } : {}),
       },
     }),
   ]);

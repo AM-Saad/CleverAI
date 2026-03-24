@@ -1,4 +1,4 @@
-export * from "./useFolders";
+export * from "./useWorkspaces";
 export * from "./useMaterials";
 export * from "./useNotes";
 export * from "./useNotesStore";

@@ -19,11 +19,11 @@ export default defineEventHandler(async (event) => {
 
   try {
     // Update all items to ENROLLED status
-    // Verify ownership by checking folderId -> userId
+    // Verify ownership by checking workspaceId -> userId
     const result = await prisma.question.updateMany({
       where: {
         id: { in: itemIds },
-        folder: {
+        workspace: {
           userId: userId,
         },
       },

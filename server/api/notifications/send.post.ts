@@ -79,7 +79,7 @@ export default defineEventHandler(async (event) => {
               badge: message.badge || "/icons/72x72.png",
               tag: message.tag,
               requireInteraction: message.requireInteraction || false,
-              url: message.url || "/folders",
+              url: message.url || "/workspaces",
             })
           );
 

@@ -98,10 +98,10 @@ const emit = defineEmits<{
   (e: "enrolled", response: EnrollCardResponse): void;
 }>();
 
-const { folder, refresh: refreshFolder } = useFolder(id);
+const { workspace, refresh: refreshWorkspace } = useWorkspace(id);
 
 const existingQuestions = computed(
-  () => (folder.value as Folder | null | undefined)?.questions || []
+  () => (workspace.value as Workspace | null | undefined)?.questions || []
 );
 
 const questionsToShow = computed(() => existingQuestions.value);
@@ -121,7 +121,7 @@ async function bulkEnrollDrafts() {
   const success = await contextBridge.bulkEnroll(draftIds, 'question');
 
   if (success) {
-    await refreshFolder();
+    await refreshWorkspace();
   }
   bulkEnrolling.value = false;
 }

@@ -1,6 +1,6 @@
 # 📁 Debug Archive
 
-This folder contains legacy debug files that have been **consolidated into the centralized debug dashboard at `/debug`**.
+This workspace contains legacy debug files that have been **consolidated into the centralized debug dashboard at `/debug`**.
 
 > Historical context: Files and snippets here may reference deprecated constructs like `SW_MESSAGE_TYPE` (old enum alias) and `openFormsDB`/`openNotesDB`. These are preserved for reference only. For current architecture, contracts, and message flow see:
 > - docs/pwa/SW_MESSAGE_LIFECYCLE.md (authoritative message taxonomy, payloads, and flows)

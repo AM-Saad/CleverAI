@@ -1,13 +1,13 @@
 import { useNuxtApp } from "#app";
 import type { CreateMaterialDTO } from "~/shared/utils/material.contract";
 
-export function useMaterials(folderId: string) {
+export function useMaterials(workspaceId: string) {
   const { $api } = useNuxtApp();
 
   // Main materials data with centralized error handling
   const { data, pending, error, refresh } = useDataFetch<Material[]>(
-    `materials-${folderId}`,
-    () => $api.materials.getByFolder(folderId),
+    `materials-${workspaceId}`,
+    () => $api.materials.getByWorkspace(workspaceId),
   );
 
   // Remove operation with centralized error handling
@@ -25,7 +25,7 @@ export function useMaterials(folderId: string) {
   };
 
 
-  
+
   const createOperation = useOperation<Material>();
   const createMaterial = async (payload: CreateMaterialDTO) => {
     const result = await createOperation.execute(async () => {
@@ -40,7 +40,7 @@ export function useMaterials(folderId: string) {
   const fetchOperation = useOperation<Material[]>();
   const fetchMaterials = async () => {
     const result = await fetchOperation.execute(async () => {
-      const materials = await $api.materials.getByFolder(folderId);
+      const materials = await $api.materials.getByWorkspace(workspaceId);
       return materials;
     });
     return result;

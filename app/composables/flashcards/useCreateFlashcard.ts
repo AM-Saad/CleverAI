@@ -13,7 +13,7 @@ export function useCreateFlashcard() {
 
   async function createFlashcard(payload: CreateFlashcardDTO) {
     const result = await operation.execute(() =>
-      $api.folders.createFlashcard(payload)
+      $api.workspaces.createFlashcard(payload)
     );
 
     if (result) {

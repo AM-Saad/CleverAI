@@ -13,7 +13,7 @@ export async function requireAuth(event: any): Promise<any> {
     if (!session || !session.user || !session.user.email) {
       throw Errors.unauthorized("Authentication required");
     }
-
+    console.log("session", session);
     const email = session.user.email;
     const prisma = event.context.prisma;
     const user = await prisma.user.findUnique({ where: { email } });

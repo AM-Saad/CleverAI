@@ -135,7 +135,7 @@ export class GatewayService {
   async generateFlashcards(
     text: string,
     options?: {
-      folderId?: string;
+      workspaceId?: string;
       materialId?: string;
       save?: boolean;
       replace?: boolean;
@@ -250,7 +250,7 @@ const parsed = GatewayGenerateRequest.safeParse(body);
 const GatewayGenerateRequest = z.object({
   task: z.enum(['flashcards', 'quiz']),
   text: z.string().min(1).max(100000).optional(),
-  folderId: z.string().optional(),
+  workspaceId: z.string().optional(),
   materialId: z.string().optional(),
   preferredModelId: z.string().optional(),
   requiredCapability: z.enum(['text', 'multimodal', 'reasoning']).optional(),
@@ -263,10 +263,10 @@ const GatewayGenerateRequest = z.object({
 });
 ```
 
-**Material/Folder Permissions:**
+**Material/Workspace Permissions:**
 - If `materialId` is provided, the gateway loads the material and replaces `text` with `material.content`.
-- Ownership is enforced via `material.folder.userId === user.id`.
-- If `save` is true, folder/material ownership is required before saving.
+- Ownership is enforced via `material.workspace.userId === user.id`.
+- If `save` is true, workspace/material ownership is required before saving.
 - If no `materialId` is provided, `text` is required and must be non-empty.
 
 ---
@@ -370,7 +370,7 @@ export async function getLLMStrategyFromRegistry(modelId: string): Promise<LLMSt
   
   switch (model.provider) {
     case 'openai':
-      return new GPT35Strategy(model.modelId);
+      return new OpenAIStrategy(model.modelId);
     case 'google':
       return new GeminiStrategy(model.modelId);
     default:
@@ -389,10 +389,10 @@ const generationResult = await strategy.generateFlashcards(text, {
 });
 ```
 
-**GPT35Strategy Implementation ([GPT35Strategy.ts](server/utils/llm/GPT35Strategy.ts)):**
+**OpenAIStrategy Implementation ([OpenAIStrategy.ts](server/utils/llm/OpenAIStrategy.ts)):**
 
 ```typescript
-export class GPT35Strategy implements LLMStrategy {
+export class OpenAIStrategy implements LLMStrategy {
   private client: OpenAI;
   
   async generateFlashcards(text: string, options?: LLMOptions): Promise<Flashcard[]> {
@@ -440,7 +440,7 @@ export class GPT35Strategy implements LLMStrategy {
 #### **Step 4.9: Database Transaction (Save/Replace)**
 
 ```typescript
-if (canSave && effectiveFolderId) {
+if (canSave && effectiveWorkspaceId) {
   try {
     if (task === "flashcards") {
       // Use transaction to ensure atomic delete + create
@@ -476,7 +476,7 @@ if (canSave && effectiveFolderId) {
         if (result.length) {
           const res = await tx.flashcard.createMany({
             data: (result as Flashcard[]).map((fc) => ({
-              folderId: effectiveFolderId,
+              workspaceId: effectiveWorkspaceId,
               materialId: materialId || null,
               front: fc.front,
               back: fc.back,
@@ -521,7 +521,7 @@ if (canSave && effectiveFolderId) {
         if (result.length) {
           const res = await tx.question.createMany({
             data: (result as QuizQuestion[]).map((q) => ({
-              folderId: effectiveFolderId,
+              workspaceId: effectiveWorkspaceId,
               materialId: materialId || null,
               question: q.question,
               choices: q.choices,
@@ -537,7 +537,7 @@ if (canSave && effectiveFolderId) {
   } catch (err) {
     console.error("[llm.gateway] Failed to save to database:", {
       requestId,
-      folderId: effectiveFolderId,
+      workspaceId: effectiveWorkspaceId,
       materialId,
       task,
       error: err,
@@ -585,7 +585,7 @@ await setSemanticCache(text, task, {
 await logGatewayRequest({
   requestId,
   userId,
-  folderId,
+  workspaceId,
   selectedModel,
   task,
   inputTokens: estimatedInputTokens,
@@ -651,7 +651,7 @@ OPENAI_MOCK=1
 GEMINI_MOCK=1
 ```
 
-**Mock Output (GPT35Strategy):**
+**Mock Output (OpenAIStrategy):**
 ```json
 [
   { "front": "Mock Question 1", "back": "Mock Answer 1" },
@@ -771,7 +771,7 @@ User                UI                  Composable           Service            
 
 ### 1. **Strategy Pattern for LLM Providers**
 - **Interface:** `LLMStrategy` defines contract (`generateFlashcards`, `generateQuiz`)
-- **Implementations:** `GPT35Strategy`, `GeminiStrategy`
+- **Implementations:** `OpenAIStrategy`, `GeminiStrategy`
 - **Benefits:** Easy to add new providers (Anthropic, Mistral, etc.)
 
 ### 2. **Smart Routing with Scoring Algorithm**

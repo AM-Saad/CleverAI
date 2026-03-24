@@ -1,4 +1,4 @@
-// app/services/Folder.ts
+// app/services/Workspace.ts
 import FetchFactory from "~/services/FetchFactory";
 import { RESOURCES } from "~/utils/constants/resources.enum";
 import type { ZodSchema } from "zod";
@@ -10,17 +10,17 @@ import type {
   DeleteFlashcardResponse,
 } from "@@/shared/utils/flashcard.contract";
 import type {
-  Folder,
-  CreateFolderDTO,
-  UpdateFolderDTO,
-} from "@@/shared/utils/folder.contract";
+  Workspace,
+  CreateWorkspaceDTO,
+  UpdateWorkspaceDTO,
+} from "@@/shared/utils/workspace.contract";
 
-class FoldersModule extends FetchFactory {
+class WorkspacesModule extends FetchFactory {
   private RESOURCE = RESOURCES.FOLDERS;
 
-  async getFolders(
-    _validator?: ZodSchema<Folder[]>
-  ): Promise<Result<Folder[]>> {
+  async getWorkspaces(
+    _validator?: ZodSchema<Workspace[]>
+  ): Promise<Result<Workspace[]>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",
@@ -35,10 +35,10 @@ class FoldersModule extends FetchFactory {
     );
   }
 
-  async getFolder(
+  async getWorkspace(
     id: string,
-    _validator?: ZodSchema<Folder>
-  ): Promise<Result<Folder>> {
+    _validator?: ZodSchema<Workspace>
+  ): Promise<Result<Workspace>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",
@@ -54,8 +54,8 @@ class FoldersModule extends FetchFactory {
   }
 
   async create(
-    payload: CreateFolderDTO
-  ): Promise<Result<Folder>> {
+    payload: CreateWorkspaceDTO
+  ): Promise<Result<Workspace>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",
@@ -66,8 +66,8 @@ class FoldersModule extends FetchFactory {
 
   async update(
     id: string,
-    payload: Partial<typeof UpdateFolderDTO>
-  ): Promise<Result<Folder>> {
+    payload: Partial<typeof UpdateWorkspaceDTO>
+  ): Promise<Result<Workspace>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",
@@ -128,4 +128,4 @@ class FoldersModule extends FetchFactory {
   }
 }
 
-export default FoldersModule;
+export default WorkspacesModule;

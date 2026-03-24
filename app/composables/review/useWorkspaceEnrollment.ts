@@ -2,9 +2,9 @@ import type { EnrollCardResponse } from "~/shared/utils/review.contract";
 
 import { useOperation } from "~/composables/shared/useOperation";
 
-export function useFolderEnrollment(
-  folderId: string | Ref<string>,
-  folder: Ref<Folder | null | undefined>
+export function useWorkspaceEnrollment(
+  workspaceId: string | Ref<string>,
+  workspace: Ref<Workspace | null | undefined>
 ) {
   const { $api } = useNuxtApp();
 
@@ -15,18 +15,18 @@ export function useFolderEnrollment(
   const enrollmentOperation = useOperation<{ enrollments: Record<string, boolean> }>();
 
   // Helper to ensure we have a string ID
-  const resolvedFolderId = computed(() => unref(folderId));
+  const resolvedWorkspaceId = computed(() => unref(workspaceId));
 
 
-  // Optimization: Don't fetch if folder has no content
-  const hasQuestions = computed(() => folder.value?.questions && folder.value.questions.length > 0);
-  const hasFlashcards = computed(() => folder.value?.flashcards && folder.value.flashcards.length > 0);
+  // Optimization: Don't fetch if workspace has no content
+  const hasQuestions = computed(() => workspace.value?.questions && workspace.value.questions.length > 0);
+  const hasFlashcards = computed(() => workspace.value?.flashcards && workspace.value.flashcards.length > 0);
 
   const fetchEnrollments = async () => {
-    const fId = resolvedFolderId.value;
-    const currentFolder = folder.value;
+    const fId = resolvedWorkspaceId.value;
+    const currentWorkspace = workspace.value;
 
-    if (!fId || !currentFolder) return;
+    if (!fId || !currentWorkspace) return;
 
 
     if (!hasQuestions.value && !hasFlashcards.value) return;
@@ -40,20 +40,20 @@ export function useFolderEnrollment(
       enrolledQuestionIds.value.clear();
       enrolledFlashcardIds.value.clear();
 
-      // Populate sets based on known IDs in the folder
-      currentFolder.questions?.forEach((q) => {
+      // Populate sets based on known IDs in the workspace
+      currentWorkspace.questions?.forEach((q) => {
         if (q.id && enrollments[q.id]) enrolledQuestionIds.value.add(q.id);
       });
 
-      currentFolder.flashcards?.forEach((f) => {
+      currentWorkspace.flashcards?.forEach((f) => {
         if (f.id && enrollments[f.id]) enrolledFlashcardIds.value.add(f.id);
       });
     }
   };
 
-  // Auto-fetch when folder data becomes available
+  // Auto-fetch when workspace data becomes available
   watch(
-    folder,
+    workspace,
     (newVal) => {
       if (newVal) fetchEnrollments();
     },

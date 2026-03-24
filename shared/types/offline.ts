@@ -32,9 +32,9 @@ export const OFFLINE_PAGES: OfflinePage[] = [
   },
   {
     title: "FOLDERS",
-    path: "/folders",
-    description: "Manage your folders",
-    icon: "folder",
+    path: "/workspaces",
+    description: "Manage your workspaces",
+    icon: "workspace",
     priority: 4,
   },
 ] as const;
@@ -78,10 +78,10 @@ export const FORM_SYNC_TYPES = {
   UPDATE_MATERIAL: "update-material",
   DELETE_MATERIAL: "delete-material",
 
-  // Folder management
-  CREATE_FOLDER: "create-folder",
-  UPDATE_FOLDER: "update-folder",
-  DELETE_FOLDER: "delete-folder",
+  // Workspace management
+  CREATE_FOLDER: "create-workspace",
+  UPDATE_FOLDER: "update-workspace",
+  DELETE_FOLDER: "delete-workspace",
 
   // Note management
   CREATE_NOTE: "create-note",
@@ -109,9 +109,9 @@ export const FORM_SYNC_HANDLERS = {
   [FORM_SYNC_TYPES.UPDATE_MATERIAL]: "material",
   [FORM_SYNC_TYPES.DELETE_MATERIAL]: "material",
 
-  [FORM_SYNC_TYPES.CREATE_FOLDER]: "folder",
-  [FORM_SYNC_TYPES.UPDATE_FOLDER]: "folder",
-  [FORM_SYNC_TYPES.DELETE_FOLDER]: "folder",
+  [FORM_SYNC_TYPES.CREATE_FOLDER]: "workspace",
+  [FORM_SYNC_TYPES.UPDATE_FOLDER]: "workspace",
+  [FORM_SYNC_TYPES.DELETE_FOLDER]: "workspace",
 
   [FORM_SYNC_TYPES.CREATE_NOTE]: "note",
   [FORM_SYNC_TYPES.UPDATE_NOTE]: "note",

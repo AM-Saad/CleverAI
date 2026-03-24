@@ -68,13 +68,13 @@ For detailed information, see the documentation files linked above.
 - **FetchFactory** – Creates typed clients with:
   - `baseURL`, `headers`, auth if present.
   - Standardized error mapping (HTTP → domain errors).
-- **ServiceFactory** – Wraps endpoint groups (folders, flashcards, quizzes, generation).
+- **ServiceFactory** – Wraps endpoint groups (workspaces, flashcards, quizzes, generation).
 - **ErrorFactory** – Converts low-level errors into user-friendly messages with codes.
 
 **Composables**
-- `useFolders()` – CRUD + attach model metadata.
-- `useFlashcards(folderId)` – List/create from content.
-- `useQuizzes(folderId)` – List/create from content.
+- `useWorkspaces()` – CRUD + attach model metadata.
+- `useFlashcards(workspaceId)` – List/create from content.
+- `useQuizzes(workspaceId)` – List/create from content.
 - `useLLMGenerate()` – One-shot generation action with status, error, retry.
 
 Each composable maintains:
@@ -90,7 +90,7 @@ Each composable maintains:
 Input:
 ```ts
 {
-  folderId: string;
+  workspaceId: string;
   content: string;           // raw text (files preprocessed client-side)
   target: "flashcards" | "quiz";
   model: string;             // e.g., "gpt-3.5-turbo", "gpt-4o-mini", "gemini-1.5"
@@ -104,7 +104,7 @@ Flow:
 4. **Build prompt** (versioned).
 5. **Call provider** with safety/token limits.
 6. **Parse output** into domain DTOs (cards or quiz).
-7. **Persist** results under `folderId` (optional, or return only).
+7. **Persist** results under `workspaceId` (optional, or return only).
 8. **Log usage** with pricing snapshot (costs in micro-USD).
 9. Return typed response.
 
@@ -248,7 +248,7 @@ function selectStrategy(model: string): LLMStrategy {
 
 - **Unit**: strategies, prompt builders, parsers.
 - **Integration**: API routes with mocked providers & Redis.
-- **E2E**: happy path – create folder → generate flashcards/quiz → display.
+- **E2E**: happy path – create workspace → generate flashcards/quiz → display.
 
 ---
 
@@ -316,10 +316,10 @@ export const DB_CONFIG = {
 
 ### Stores
 - `forms` – Queues offline form submissions for Background Sync (`syncForm` tag).
-- `notes` – Local-first note content for folders, enabling offline editing and conflict mitigation.
+- `notes` – Local-first note content for workspaces, enabling offline editing and conflict mitigation.
 
 ### Indexes (Notes)
-- `folderId` – Efficient folder-level retrieval.
+- `workspaceId` – Efficient workspace-level retrieval.
 - `updatedAt` – Supports future conflict detection (compare client vs server timestamps).
 
 ### Retry & Resilience

@@ -2,7 +2,7 @@
   <div class="  space-y-6 p-2 rounded outline-primary" tabindex="0" role="application"
     aria-label="Spaced repetition card review interface" @keydown="handleKeydown">
     <!-- Analytics Summary -->
-    <ReviewAnalytics :show="showAnalytics" :folder-id="folderId" @close="showAnalytics = false" />
+    <ReviewAnalytics :show="showAnalytics" :workspace-id="workspaceId" @close="showAnalytics = false" />
 
     <!-- Keyboard Shortcuts Help -->
     <review-keyboard-shortcuts :show="showShortcuts" @close="showShortcuts = false" />
@@ -131,7 +131,7 @@ import confettiData from '~/assets/confetti-background.json';
 
 const confettiAnimation = confettiData;
 interface Props {
-  folderId?: string
+  workspaceId?: string
 }
 
 const props = defineProps<Props>()
@@ -253,9 +253,9 @@ const handleKeydown = (event: KeyboardEvent) => {
 
 // Watch for prop changes
 watch(
-  () => props.folderId,
+  () => props.workspaceId,
   () => {
-    fetchQueue(props.folderId)
+    fetchQueue(props.workspaceId)
     resetSession()
     startSession()
   },

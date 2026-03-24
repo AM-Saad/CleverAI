@@ -15,7 +15,7 @@ export interface ContextPreview {
   materialId?: string;
   noteId?: string;
   anchor: string; // blockId or page number
-  title?: string; // Material or folder title for display
+  title?: string; // Material or workspace title for display
 }
 
 interface ContextBridgeState {
@@ -43,7 +43,7 @@ const state = ref<ContextBridgeState>({
 export function useContextBridge() {
   const { $api } = useNuxtApp();
   const toast = useToast();
-  const notesStore = useNotesStore; // Will be called with folderId when needed
+  const notesStore = useNotesStore; // Will be called with workspaceId when needed
 
   // ==========================================
   // Getters
@@ -64,7 +64,7 @@ export function useContextBridge() {
    */
   const locateSource = async (
     card: Flashcard | any,
-    currentFolderId?: string
+    currentWorkspaceId?: string
   ) => {
     if (!card.sourceRef) {
       toast.add({
@@ -82,7 +82,7 @@ export function useContextBridge() {
     try {
       // Determine source type and open appropriate context
       if (sourceRef.type === "NOTE") {
-        await openNoteContext(sourceRef, currentFolderId);
+        await openNoteContext(sourceRef, currentWorkspaceId);
       } else if (sourceRef.type === "PDF") {
         await openPdfContext(sourceRef);
       }
@@ -115,11 +115,11 @@ export function useContextBridge() {
    */
   const openNoteContext = async (
     sourceRef: SourceRef,
-    currentFolderId?: string
+    currentWorkspaceId?: string
   ) => {
     // Check if we're already viewing the correct note
-    if (currentFolderId) {
-      const store = notesStore(currentFolderId);
+    if (currentWorkspaceId) {
+      const store = notesStore(currentWorkspaceId);
       const note = store.getNote?.(sourceRef.anchor) || null;
 
       if (note) {
@@ -211,8 +211,8 @@ export function useContextBridge() {
       // Call API to update status to ENROLLED
       const result =
         itemType === "flashcard"
-          ? await $api.folders.bulkEnrollFlashcards(itemIds)
-          : await $api.folders.bulkEnrollQuestions(itemIds);
+          ? await $api.workspaces.bulkEnrollFlashcards(itemIds)
+          : await $api.workspaces.bulkEnrollQuestions(itemIds);
 
       if (result.success) {
         toast.add({

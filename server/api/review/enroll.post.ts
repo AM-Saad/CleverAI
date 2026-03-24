@@ -29,26 +29,26 @@ export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]); // throws unauthorized if not
   const prisma = event.context.prisma;
 
-  let resolvedFolderId: string | null = null;
+  let resolvedWorkspaceId: string | null = null;
   if (resourceType === "material") {
     const material = await prisma.material.findFirst({
-      where: { id: resourceId, folder: { userId: user.id } },
-      include: { folder: true },
+      where: { id: resourceId, workspace: { userId: user.id } },
+      include: { workspace: true },
     });
-    if (material) resolvedFolderId = material.folderId;
+    if (material) resolvedWorkspaceId = material.workspaceId;
   } else if (resourceType === "flashcard") {
     const flashcard = await prisma.flashcard.findFirst({
-      where: { id: resourceId, folder: { userId: user.id } },
+      where: { id: resourceId, workspace: { userId: user.id } },
     });
-    if (flashcard) resolvedFolderId = flashcard.folderId;
+    if (flashcard) resolvedWorkspaceId = flashcard.workspaceId;
   } else if (resourceType === "question") {
     const question = await prisma.question.findFirst({
-      where: { id: resourceId, folder: { userId: user.id } },
+      where: { id: resourceId, workspace: { userId: user.id } },
     });
-    if (question) resolvedFolderId = question.folderId;
+    if (question) resolvedWorkspaceId = question.workspaceId;
   }
 
-  if (!resolvedFolderId) {
+  if (!resolvedWorkspaceId) {
     throw Errors.notFound("Resource");
   }
 
@@ -67,7 +67,7 @@ export default defineEventHandler(async (event) => {
     create: {
       userId: user.id,
       cardId: resourceId,
-      folderId: resolvedFolderId,
+      workspaceId: resolvedWorkspaceId,
       resourceType: resourceType,
       repetitions: 0,
       easeFactor: 2.5,

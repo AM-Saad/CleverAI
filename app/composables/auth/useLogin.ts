@@ -41,7 +41,7 @@ export function useLogin(): useLogin {
       }
       success.value = "Signed in successfully!";
 
-      await router.push("/folders");
+      await router.push("/workspaces");
     } catch (err) {
       const serverError = err as Error;
       error.value = new APIError(serverError.message || "An error occurred");

@@ -7,14 +7,14 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, "id");
 
   if (!id) {
-    throw Errors.badRequest("Folder id is required");
+    throw Errors.badRequest("Workspace id is required");
   }
 
-  const result = await prisma.folder.deleteMany({
+  const result = await prisma.workspace.deleteMany({
     where: { id, userId: user.id },
   });
   if (result.count === 0) {
-    throw Errors.notFound("Folder");
+    throw Errors.notFound("Workspace");
   }
   return success({ deleted: true });
 });

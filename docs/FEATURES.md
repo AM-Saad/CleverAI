@@ -11,7 +11,7 @@
 3. [XP & Gamification](#xp--gamification)
 4. [LLM Content Generation](#llm-content-generation)
 5. [Materials Management](#materials-management)
-6. [Folders & Organization](#folders--organization)
+6. [Workspaces & Organization](#workspaces--organization)
 7. [Kanban Board](#kanban-board)
 8. [User Tags](#user-tags)
 9. [On-Device AI](#on-device-ai)
@@ -40,7 +40,7 @@ A local-first rich text notes system with:
 interface Note {
   id: string
   content: string        // Rich text (HTML)
-  folderId: string
+  workspaceId: string
   order: number          // Position in list
   tags: string[]         // Note tags
   noteType: string       // "TEXT" (default) or custom
@@ -54,7 +54,7 @@ interface Note {
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/notes` | GET | List notes by folderId |
+| `/api/notes` | GET | List notes by workspaceId |
 | `/api/notes` | POST | Create note |
 | `/api/notes/[id]` | PATCH | Update note |
 | `/api/notes` | DELETE | Delete note(s) |
@@ -73,7 +73,7 @@ const {
   deleteNote,         // (id: string) => Promise<void>
   reorderNotes,       // (newOrder: OrderUpdate[]) => Promise<void>
   syncNotes,          // () => Promise<void>
-} = useNotesStore(folderId)
+} = useNotesStore(workspaceId)
 ```
 
 ---
@@ -149,7 +149,7 @@ Penalties are asymmetric — forgetting is penalized much more harshly than reme
 interface CardReview {
   id: string
   userId: string
-  folderId: string
+  workspaceId: string
   cardId: string           // Polymorphic: Flashcard.id, Material.id, or Question.id
   resourceType: string     // "flashcard" | "material" | "question"
 
@@ -201,7 +201,7 @@ interface CardReview {
 | `useCardDisplay` | Card rendering logic |
 | `useContentFormatter` | Content formatting for display |
 | `useDebugControls` | Dev-only algorithm testing |
-| `useFolderEnrollment` | Bulk folder enrollment |
+| `useWorkspaceEnrollment` | Bulk workspace enrollment |
 | `useKeyboardShortcuts` | Keyboard navigation |
 | `useReviewStats` | Statistics computation |
 | `useSessionSummary` | Session summary |
@@ -266,7 +266,7 @@ AI-powered generation of flashcards and questions from user content, using a str
 
 | Provider | Strategy | Models |
 |----------|----------|--------|
-| OpenAI | `GPT35Strategy` | gpt-3.5-turbo, gpt-4o-mini, gpt-4o |
+| OpenAI | `OpenAIStrategy` | gpt-3.5-turbo, gpt-4o-mini, gpt-4o |
 | Google | `GeminiStrategy` | gemini-2.0-flash-lite, gemini-1.5-flash-8b |
 | DeepSeek | `DeepSeekStrategy` | deepseek-chat, deepseek-reasoner |
 | Groq | `GroqStrategy` | llama-3.1-8b-instant, qwen-qwq-32b, llama-4-scout-17b |
@@ -344,7 +344,7 @@ interface Material {
   metadata?: Json         // Extensible metadata
   llmModel?: string       // Preferred LLM model
   llmPrompt?: string      // Custom prompt
-  folderId: string
+  workspaceId: string
   createdAt: Date
   updatedAt: Date
   flashcards: Flashcard[] // Generated flashcards
@@ -356,7 +356,7 @@ interface Material {
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/materials` | GET | List by folder |
+| `/api/materials` | GET | List by workspace |
 | `/api/materials` | POST | Create material |
 | `/api/materials/upload` | POST | Upload file (PDF, DOCX) |
 | `/api/materials/[id]` | GET | Get single |
@@ -378,18 +378,18 @@ When `replace=true`, old flashcards/questions and their CardReviews are cascade-
 
 ---
 
-## Folders & Organization
+## Workspaces & Organization
 
 ### Overview
 
-Flat content organization with ordering. Each folder groups notes, materials, flashcards, and questions.
+Flat content organization with ordering. Each workspace groups notes, materials, flashcards, and questions.
 
-> **Note**: Folders are flat — there is no hierarchy or nesting. Ordering is managed via the `order` field with a `@@unique([userId, order])` constraint.
+> **Note**: Workspaces are flat — there is no hierarchy or nesting. Ordering is managed via the `order` field with a `@@unique([userId, order])` constraint.
 
 ### Data Model
 
 ```typescript
-interface Folder {
+interface Workspace {
   id: string
   title: string
   description?: string
@@ -413,16 +413,16 @@ interface Folder {
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/folders` | GET | List user's folders |
-| `/api/folders` | POST | Create folder |
-| `/api/folders/[id]` | GET | Get with contents |
-| `/api/folders/[id]` | PATCH | Update |
-| `/api/folders/[id]` | DELETE | Delete (cascade) |
-| `/api/folders/count` | GET | Get folder count |
+| `/api/workspaces` | GET | List user's workspaces |
+| `/api/workspaces` | POST | Create workspace |
+| `/api/workspaces/[id]` | GET | Get with contents |
+| `/api/workspaces/[id]` | PATCH | Update |
+| `/api/workspaces/[id]` | DELETE | Delete (cascade) |
+| `/api/workspaces/count` | GET | Get workspace count |
 
 ### Cascade Delete
 
-Deleting a folder removes all contained notes, materials, flashcards, and questions via Prisma's `onDelete: Cascade`.
+Deleting a workspace removes all contained notes, materials, flashcards, and questions via Prisma's `onDelete: Cascade`.
 
 ---
 
@@ -585,7 +585,7 @@ interface ScheduledNotification {
   scheduledFor: Date
   sent: boolean
   sentAt?: Date
-  metadata?: Json        // Card count, folder info, etc.
+  metadata?: Json        // Card count, workspace info, etc.
   failureCount: number
   lastError?: string
   createdAt: Date

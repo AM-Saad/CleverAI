@@ -33,7 +33,7 @@
 
           <!-- Learning Hub Content Container -->
           <div class="flex-1 overflow-hidden h-full flex flex-col">
-            <LearningHubContent :folder-id="folderId" :materials-length="materialsLength"
+            <LearningHubContent :workspace-id="workspaceId" :materials-length="materialsLength"
               :is-enrolling-loading="enrollmentLoading" :enrolled-flashcard-ids="enrolledFlashcardIds"
               :enrolled-question-ids="enrolledQuestionIds" :updating="updating" :show-upload="showUpload"
               @enrolled="handleEnrolled" @toggle-upload="toggleUploadForm" />
@@ -51,7 +51,7 @@ import LearningHubContent from "./LearningHubContent.vue";
 
 interface Props {
   show: boolean;
-  folderId: string;
+  workspaceId: string;
   materialsLength?: number;
   enrollmentLoading: boolean;
   enrolledFlashcardIds: Set<string>;

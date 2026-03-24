@@ -7,47 +7,47 @@ export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, "id");
 
   const raw = await readBody(event);
-  const ParsedUpdateDTO = UpdateFolderDTO;
+  const ParsedUpdateDTO = UpdateWorkspaceDTO;
   const parsed = ParsedUpdateDTO.safeParse(raw);
   if (!parsed.success) {
     throw Errors.badRequest("Invalid request body", parsed.error.issues);
   }
   const body = parsed.data;
 
-  const existing = await prisma.folder.findFirst({
+  const existing = await prisma.workspace.findFirst({
     where: { id: id, userId: user.id },
   });
   if (!existing) {
-    throw Errors.notFound("Folder");
+    throw Errors.notFound("Workspace");
   }
 
-  const folderData: Record<string, unknown> = {};
-  if (typeof body.title === "string") folderData.title = body.title;
+  const workspaceData: Record<string, unknown> = {};
+  if (typeof body.title === "string") workspaceData.title = body.title;
   if (typeof body.description === "string" || body.description === null)
-    folderData.description = body.description ?? null;
-  if (typeof body.order === "number") folderData.order = body.order;
+    workspaceData.description = body.description ?? null;
+  if (typeof body.order === "number") workspaceData.order = body.order;
   if (
     body.metadata &&
     typeof body.metadata === "object" &&
     !Array.isArray(body.metadata)
   ) {
-    folderData.metadata = body.metadata;
+    workspaceData.metadata = body.metadata;
   }
 
   if (typeof body.rawText === "string" || body.rawText === null) {
-    folderData.rawText = body.rawText ?? null;
+    workspaceData.rawText = body.rawText ?? null;
   }
 
   let materialCreated = false;
   if (body.materialContent) {
     const materialData = {
-      folderId: id!,
-      title: body.materialTitle || "Folder Content",
+      workspaceId: id!,
+      title: body.materialTitle || "Workspace Content",
       content: body.materialContent,
       type: body.materialType || "text",
     };
     const existingMaterial = await prisma.material.findFirst({
-      where: { folderId: id, title: materialData.title },
+      where: { workspaceId: id, title: materialData.title },
     });
     if (existingMaterial) {
       await prisma.material.update({
@@ -64,29 +64,29 @@ export default defineEventHandler(async (event) => {
   }
 
   let updated = existing;
-  if (Object.keys(folderData).length > 0) {
-    updated = await prisma.folder.update({
+  if (Object.keys(workspaceData).length > 0) {
+    updated = await prisma.workspace.update({
       where: { id: id },
-      data: folderData,
+      data: workspaceData,
       include: { materials: true, flashcards: true, questions: true },
     });
   } else {
-    const freshFolder = await prisma.folder.findUnique({
+    const freshWorkspace = await prisma.workspace.findUnique({
       where: { id: id },
       include: { materials: true, flashcards: true, questions: true },
     });
-    if (freshFolder) updated = freshFolder;
+    if (freshWorkspace) updated = freshWorkspace;
   }
-  if (materialCreated && !Object.keys(folderData).length) {
-    const freshFolder = await prisma.folder.findUnique({
+  if (materialCreated && !Object.keys(workspaceData).length) {
+    const freshWorkspace = await prisma.workspace.findUnique({
       where: { id: id },
       include: { materials: true, flashcards: true, questions: true },
     });
-    if (freshFolder) updated = freshFolder;
+    if (freshWorkspace) updated = freshWorkspace;
   }
 
   if (process.env.NODE_ENV === "development") {
-    FolderSchema.parse(updated);
+    WorkspaceSchema.parse(updated);
   }
   return success(updated);
 });

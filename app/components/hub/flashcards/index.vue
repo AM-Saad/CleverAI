@@ -6,13 +6,13 @@ import type { Flashcard } from "@prisma/client";
 const route = useRoute();
 const id = route.params.id as string;
 
-const { folder, refresh: refreshFolder } = useFolder(id);
+const { workspace, refresh: refreshWorkspace } = useWorkspace(id);
 
 // Context Bridge integration
 const contextBridge = useContextBridge();
 
 const existingFlashcards = computed(
-  () => (folder.value as Folder | null | undefined)?.flashcards || [],
+  () => (workspace.value as Workspace | null | undefined)?.flashcards || [],
 );
 
 
@@ -51,16 +51,16 @@ function handleEnrollError(error: string) {
 }
 
 function handleFlashcardCreated(_flashcard: Flashcard) {
-  refreshFolder();
+  refreshWorkspace();
 }
 
 function handleFlashcardUpdated(_flashcard: Flashcard) {
-  refreshFolder();
+  refreshWorkspace();
   editingFlashcard.value = undefined;
 }
 
 function handleFlashcardDeleted() {
-  refreshFolder();
+  refreshWorkspace();
   deletingFlashcard.value = null;
 }
 
@@ -106,7 +106,7 @@ async function bulkEnrollDrafts() {
   const success = await contextBridge.bulkEnroll(draftIds, 'flashcard');
 
   if (success) {
-    await refreshFolder();
+    await refreshWorkspace();
   }
   bulkEnrolling.value = false;
 }
@@ -196,7 +196,7 @@ async function bulkEnrollDrafts() {
     </UCarousel>
 
     <!-- Create/Edit Flashcard Modal -->
-    <hub-flashcards-create-flashcard-modal :show="showCreateModal" :folder-id="id" :flashcard="editingFlashcard"
+    <hub-flashcards-create-flashcard-modal :show="showCreateModal" :workspace-id="id" :flashcard="editingFlashcard"
       @close="closeCreateModal" @created="handleFlashcardCreated" @updated="handleFlashcardUpdated" />
 
     <!-- Delete Flashcard Modal -->

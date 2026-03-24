@@ -44,7 +44,7 @@ export type MathNoteMetadata = z.infer<typeof MathNoteMetadataSchema>;
 
 export const NoteSchema = z.object({
   id: z.string(),
-  folderId: z.string(),
+  workspaceId: z.string(),
   content: z.string(),
   tags: z.array(z.string()).default([]),
   order: z.number().int().default(0),
@@ -64,7 +64,7 @@ export const NoteSchema = z.object({
 export type Note = z.infer<typeof NoteSchema>;
 
 export const CreateNoteDTO = z.object({
-  folderId: z.string(),
+  workspaceId: z.string(),
   content: z.preprocess(trim, z.string().min(0)),
   tags: z.array(z.string()).default([]),
   // Allow null/empty to be normalized
@@ -98,7 +98,7 @@ export const UpdateNoteDTO = z.object({
 export type UpdateNoteDTO = z.infer<typeof UpdateNoteDTO>;
 
 export const ReorderNotesDTO = z.object({
-  folderId: z.string(),
+  workspaceId: z.string(),
   noteOrders: z.array(
     z.object({
       id: z.string(),

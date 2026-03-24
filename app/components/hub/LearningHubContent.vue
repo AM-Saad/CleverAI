@@ -35,7 +35,7 @@
               </ui-subtitle>
               <template #content>
                 <div class="overflow-auto max-h-48 h-full my-1 border-t border-muted">
-                  <MaterialsList :folder-id="folderId" @removed="() => { }" @error="(e) => console.error(e)" />
+                  <MaterialsList :workspace-id="workspaceId" @removed="() => { }" @error="(e) => console.error(e)" />
                 </div>
               </template>
             </u-collapsible>
@@ -77,7 +77,7 @@ const MaterialsList = defineAsyncComponent(
 );
 
 interface Props {
-  folderId: string;
+  workspaceId: string;
   materialsLength?: number;
   isEnrollingLoading: boolean;
   enrolledFlashcardIds: Set<string>;
@@ -121,7 +121,7 @@ function select(index: number) {
   carousel.value?.emblaApi?.scrollTo(index);
 }
 
-watch(() => props.folderId, () => {
+watch(() => props.workspaceId, () => {
   fetchSubscriptionStatus();
 });
 </script>

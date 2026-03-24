@@ -84,11 +84,11 @@ export const useCardReview = () => {
 
   // Fetch review queue
   const fetchQueue = async (
-    folderId?: string,
+    workspaceId?: string,
     limit: number = 20
   ): Promise<void> => {
     const response = await fetchOp.execute(() =>
-      $api.review.getQueue(folderId, limit)
+      $api.review.getQueue(workspaceId, limit)
     );
 
     if (response) {
