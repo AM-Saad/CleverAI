@@ -96,7 +96,7 @@ watch(genError, (error) => {
 <template>
   <div class="flex items-center">
     <!-- Rate limit badge -->
-    <u-badge v-if="rateLimitRemaining !== null && subscriptionInfo.tier === 'FREE'" size="sm"
+    <u-badge v-if="rateLimitRemaining !== null && subscriptionInfo.tier === 'FREE'"
       :color="rateLimitRemaining >= 10 ? 'success' : rateLimitRemaining >= 3 ? 'warning' : 'error'" class="mr-2">
       {{ rateLimitRemaining }} left
     </u-badge>
@@ -107,7 +107,7 @@ watch(genError, (error) => {
       <u-tooltip
         :text="isQuotaExceeded ? 'Quota Exceeded, Upgrade your plan or create manual question/cards' : !hasContent ? 'Material has no content, add content then try again' : 'Generate Question or Flashcards'">
 
-        <u-button color="primary" size="xs" :loading="generating" :disabled="disabled || isQuotaExceeded || !hasContent"
+        <u-button color="primary" size="sm" :loading="generating" :disabled="disabled || isQuotaExceeded || !hasContent"
           aria-label="Generate Study Tools" variant='subtle'>
           <span v-if="!generating">Generate</span>
           <span v-else>Generating…</span>

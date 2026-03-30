@@ -98,11 +98,10 @@ const mode = computed(() => {
   };
 });
 
-const targetPos = ref(0);
+const targetPos = ref(props.show ? mode.value.open : mode.value.closed);
 const startPos = ref(0);
-
-
 const suspendDrag = ref(false);
+const isReady = ref(false);
 
 function isInteractive(el: EventTarget | null): boolean {
   const node = el as HTMLElement | null;
@@ -152,6 +151,10 @@ onMounted(() => {
     sheet.recompute();
     requestAnimationFrame(() => {
       snapTo(props.show ? mode.value.open : mode.value.closed);
+      // Prevent initial coordinate snapping flash
+      setTimeout(() => {
+        isReady.value = true;
+      }, 50);
     });
   });
 });
@@ -181,7 +184,7 @@ watch(
 );
 
 const { onKeydown } = useFocusTrap(
-  computed(() => props.show),
+  computed(() => props.show && props.backdrop),
   panelEl,
   {
     onEscape: () => {
@@ -218,7 +221,7 @@ function handleDragEnd(_: Event, info: DragInfo) {
 
 <template>
   <Teleport :to="props.teleportTo" defer>
-    <div>
+    <div style="display: contents;">
       <div v-if="props.backdrop && showOverlay" class="fixed inset-0 z-40" :class="props.backdropClass"
         aria-hidden="true" @click="
           () => {
@@ -228,14 +231,14 @@ function handleDragEnd(_: Event, info: DragInfo) {
             }
           }
         "></div>
-      <Motion ref="formRef" as="div" :initial="mode.axis === 'y' ? { y: 0 } : { x: 0 }"
-        :animate="mode.axis === 'y' ? { y: targetPos } : { x: targetPos }" :transition="transitionProps"
+      <Motion ref="formRef" as="div" :initial="mode.axis === 'y' ? { y: props.show ? mode.open : mode.closed } : { x: props.show ? mode.open : mode.closed }"
+        :animate="mode.axis === 'y' ? { y: targetPos } : { x: targetPos }" :transition="isReady ? transitionProps : { duration: 0 }"
         :drag="suspendDrag ? false : mode.axis" :drag-constraints="mode.constraints" :drag-elastic="0"
         :drag-snap-to-origin="false" :drag-momentum="false" :on-drag-start="handleDragStart"
         :on-drag-end="handleDragEnd" :class="[
-          'absolute cursor-grab active:cursor-grabbing overflow-hidden bg-surface backdrop-blur shadow-lg focus-visible:outline-none z-50 focus-visible:border border-primary',
+          'absolute cursor-grab active:cursor-grabbing overflow-hidden bg-surface backdrop-blur shadow-lg z-50 focus-visible:border border-primary',
           mode.containerClass,
-        ]" :style="mode.style" role="dialog" aria-modal="true" :aria-labelledby="'drawer-title'">
+        ]" :style="{ ...mode.style, ...(!isReady ? { visibility: 'hidden', opacity: 0 } : {}) }" role="dialog" aria-modal="true" :aria-labelledby="'drawer-title'">
         <div ref="panelEl" tabindex="-1" :class="[
           'relative h-full focus-visible:outline-none',
           mode.isMobile ? 'p-3 pt-6' : 'p-3 pl-7',

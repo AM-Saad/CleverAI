@@ -4,8 +4,9 @@ import type { FormSubmitEvent } from "@nuxt/ui";
 import { useRoute } from "vue-router";
 import type { UploadMaterialResponse } from "~/services/Material";
 import type { GatewayGenerateResponse } from "~/shared/utils/llm-generate.contract";
+import { useSpeachToText } from "~/composables/ai/useSpeachToText";
 
-type SourceType = "text" | "file";
+type SourceType = "text" | "file" | "voice";
 type DepthOption = "quick" | "balanced" | "deep";
 
 const emit = defineEmits<{
@@ -23,13 +24,28 @@ const toast = useToast();
 const { subscriptionInfo, updateFromData, handleApiError } = useSubscriptionStore();
 
 const id = route.params.id as string;
-const { createMaterial, uploadMaterial, uploading } = useMaterialsStore(id);
+const { createMaterial, uploadMaterial, uploading, addPendingTranscription, updatePendingTranscription, removePendingTranscription } = useMaterialsStore(id);
 const { handleOfflineSubmit } = useOffline();
+
+// ----- Voice transcription -----
+// useSpeachToText lives HERE (not inside SpeechRecorder) so it survives modal close
+const {
+  transcribe: doTranscribe,
+  currentTranscript,
+  isTranscribing: voiceTranscribing,
+  isDownloading: voiceModelDownloading,
+  progress: voiceModelProgress,
+  transcriptionError: voiceTranscriptionError,
+} = useSpeachToText({ modelId: 'onnx-community/whisper-tiny.en' });
+
+const activeVoiceJobId = ref<string | null>(null);
+const activeVoiceTitle = ref<string>('');
 
 // ----- Source toggle -----
 const sourceTabItems = [
   { icon: 'mdi:text-box', name: 'Text', value: 'text' as const },
   { icon: 'mdi:file-document', name: 'File', value: 'file' as const },
+  { icon: 'mdi:microphone', name: 'Voice', value: 'voice' as const },
 ];
 const sourceTabIndex = ref(0);
 const sourceType = computed<SourceType>(() => sourceTabItems[sourceTabIndex.value]?.value ?? 'text');
@@ -259,6 +275,119 @@ function closeAndReset() {
   setTimeout(resetState, 300);
 }
 
+// ----- Voice transcription handlers -----
+// beforeunload guard during transcription
+function beforeUnloadHandler(e: BeforeUnloadEvent) {
+  e.preventDefault();
+  e.returnValue = '';
+}
+
+watch(voiceTranscribing, (val) => {
+  if (val) {
+    window.addEventListener('beforeunload', beforeUnloadHandler);
+  } else {
+    window.removeEventListener('beforeunload', beforeUnloadHandler);
+  }
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', beforeUnloadHandler);
+});
+
+// When transcription finishes, save the material
+watch(currentTranscript, async (text) => {
+  if (!text || !activeVoiceJobId.value) return;
+
+  const jobId = activeVoiceJobId.value;
+  const title = activeVoiceTitle.value || 'Voice Recording';
+
+  updatePendingTranscription(jobId, 'saving');
+
+  const success = await createMaterial({
+    title,
+    content: text,
+    type: 'audio',
+  });
+
+  removePendingTranscription(jobId);
+  activeVoiceJobId.value = null;
+  activeVoiceTitle.value = '';
+
+  if (success) {
+    toast.add({
+      title: 'Transcription Complete',
+      description: `Material "${title}" saved successfully.`,
+      color: 'success',
+    });
+    sendNativeNotification('Transcription Complete', `Material "${title}" saved successfully.`);
+  } else {
+    toast.add({
+      title: 'Save Failed',
+      description: 'Transcription succeeded but saving the material failed.',
+      color: 'error',
+    });
+  }
+});
+
+// When transcription errors, clean up
+watch(voiceTranscriptionError, (err) => {
+  if (!err || !activeVoiceJobId.value) return;
+
+  removePendingTranscription(activeVoiceJobId.value);
+  activeVoiceJobId.value = null;
+  activeVoiceTitle.value = '';
+
+  toast.add({
+    title: 'Transcription Failed',
+    description: err.message,
+    color: 'error',
+  });
+});
+
+async function handleVoiceConfirmed(audioBlob: Blob, title: string) {
+  // 1. Close modal immediately
+  emit('close');
+
+  // 2. Create pending row
+  const jobId = `voice-${Date.now()}`;
+  activeVoiceJobId.value = jobId;
+  activeVoiceTitle.value = title;
+  addPendingTranscription(jobId, title);
+
+  // 3. Notify user
+  toast.add({
+    title: 'Transcription Started',
+    description: 'You will be notified when the transcription is finished.',
+    color: 'info',
+  });
+
+  // 4. Resample and transcribe (runs outside modal lifecycle)
+  try {
+    const { resampleAudioTo16kHz } = await import('~/utils/audio');
+    const audioFloat32 = await resampleAudioTo16kHz(audioBlob);
+    await doTranscribe(audioFloat32);
+    // The watch on currentTranscript will handle saving
+  } catch (err: any) {
+    console.error('Voice transcription failed:', err);
+    removePendingTranscription(jobId);
+    activeVoiceJobId.value = null;
+    activeVoiceTitle.value = '';
+    toast.add({
+      title: 'Transcription Failed',
+      description: err.message || 'An error occurred during transcription.',
+      color: 'error',
+    });
+  }
+}
+
+function sendNativeNotification(title: string, body: string) {
+  try {
+    if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+      new Notification(title, { body, icon: '/icon-192x192.png' });
+    }
+  } catch (e) { /* best-effort */ }
+}
+
 // Reset when modal closes
 watch(
   () => props.show,
@@ -303,7 +432,7 @@ watch(
         </u-form>
 
         <!-- FILE UPLOAD -->
-        <div v-else class="space-y-4">
+        <div v-if="sourceType === 'file'" class="space-y-4">
           <!-- File Input (before upload) -->
           <div v-if="!uploadedMaterial" class="py-3">
 
@@ -413,6 +542,12 @@ watch(
             </UButton>
           </div>
         </div>
+
+        <div v-if="sourceType === 'voice'" class="space-y-4">
+          <workspace-hub-materials-speech-recorder @confirmed="handleVoiceConfirmed" />
+        </div>
+
+
       </template>
     </shared-dialog-modal>
   </Teleport>

@@ -73,7 +73,7 @@ defineExpose({
 .fullscreen-backdrop {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.6);
+  background-color: rgba(23, 25, 38, 0.9);
   backdrop-filter: blur(4px);
   z-index: 10;
   will-change: opacity, backdrop-filter;
@@ -137,7 +137,7 @@ defineExpose({
 .fullscreen-header {
   flex-shrink: 0;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--color-border, rgba(0, 0, 0, 0.1));
+  /* border-bottom: 1px solid var(--color-border, rgba(0, 0, 0, 0.1)); */
   background: inherit;
 }
 
@@ -191,7 +191,7 @@ defineExpose({
 }
 
 .dark .fullscreen-backdrop {
-  background-color: rgba(0, 0, 0, 0.8);
+  /* background-color: rgba(0, 0, 0, 0.8); */
 }
 
 /* ===== Mobile ===== */

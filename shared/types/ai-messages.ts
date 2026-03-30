@@ -10,7 +10,8 @@ export type AITask =
   | "question-answering"
   | "text-generation"
   | "text-to-speech"
-  | "image-to-text";
+  | "image-to-text"
+  | "automatic-speech-recognition";
 
 // Model configuration
 export interface ModelConfig {

@@ -28,11 +28,15 @@ const props = defineProps<{
   noteId: string;
   /** Pre-existing math metadata to restore (lines + scope) */
   initialMetadata?: MathNoteMetadata;
+  /** Whether the editor is currently in fullscreen mode */
+  isFullscreen?: boolean;
 }>();
 
 const emit = defineEmits<{
   /** Fired after every successful recognition so the parent can persist */
   (e: "update", metadata: MathNoteMetadata): void;
+  (e: "toggle-fullscreen"): void;
+  (e: "delete"): void;
 }>();
 
 // ── AI composable (Using new Local AI hook while preserving the old file) ──
@@ -298,18 +302,37 @@ const isExpressionsCollapsed = ref(true);
 </script>
 
 <template>
-  <div class="math-note-editor flex flex-col gap-3">
+  <div class="math-note-editor flex flex-col gap-3 h-full">
+    <!-- Toolbar -->
+    <SharedNoteToolbar
+      :is-fullscreen="isFullscreen"
+      @toggleFullscreen="emit('toggle-fullscreen')"
+      @delete="emit('delete')"
+    >
+      <shared-note-toolbar-button variant="primary" :disabled="isRecognizing" @click="onRecognizeClick" 
+        :title="isRecognizing ? 'Solving...' : 'Solve Math'" :icon="isRecognizing ? 'i-lucide-loader' : 'i-lucide-calculator'" />
+
+      <div class="w-px h-6 bg-surface-strong mx-1 hidden sm:block" />
+
+      <shared-note-toolbar-button :disabled="!pendingBounds" @click="clearArea" icon="i-heroicons-scissors"
+        title="Clear area" />
+
+      <shared-note-toolbar-button @click="clearCanvas" icon="i-heroicons-sparkles" title="Clear canvas" />
+
+      <shared-note-toolbar-button @click="clearAll" variant="danger" icon="i-heroicons-arrow-path" title="Reset all" />
+    </SharedNoteToolbar>
+
     <!-- Error banner -->
     <div v-if="recognitionError"
-      class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+      class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300 mx-2">
       {{ recognitionError.message }}
     </div>
 
     <!-- Canvas with overlay layer -->
     <div :style="edgeGlowStyle"
-      class="relative rounded-lg border border-slate-200 dark:border-slate-700 bg-white shadow-inner overflow-hidden transition-shadow duration-200">
+      class="relative rounded-lg border border-slate-200 dark:border-slate-700 bg-white shadow-inner overflow-hidden transition-shadow duration-200 mx-2 flex-1 min-h-[300px]">
       <!-- @wheel MUST NOT be .passive because we call e.preventDefault() -->
-      <canvas ref="canvasRef" class="w-full touch-none" style="height: 360px; cursor: crosshair;"
+      <canvas ref="canvasRef" class="w-full h-full touch-none" style="cursor: crosshair;"
         @pointerdown="startStroke" @pointermove="continueStroke" @pointerup="endStroke" @pointerleave="endStroke"
         @wheel="onWheel" />
 
@@ -344,34 +367,8 @@ const isExpressionsCollapsed = ref(true);
       </TransitionGroup>
     </div>
 
-    <!-- Action buttons -->
-    <div class="flex items-center gap-2 flex-wrap">
-      <button
-        class="inline-flex items-center gap-1.5 rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        :disabled="isRecognizing" @click="onRecognizeClick">
-        <span v-if="isRecognizing" class="animate-spin">⏳</span>
-        <span v-else>=</span>
-        Solve
-      </button>
-      <button
-        class="inline-flex items-center gap-1.5 rounded-md border border-amber-300 px-3 py-1.5 text-sm font-medium text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950"
-        :disabled="!pendingBounds" @click="clearArea">
-        ✂ Clear area
-      </button>
-      <button
-        class="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800"
-        @click="clearCanvas">
-        Clear canvas
-      </button>
-      <button
-        class="inline-flex items-center gap-1.5 rounded-md border border-red-300 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400 dark:hover:bg-red-950"
-        @click="clearAll">
-        Reset all
-      </button>
-    </div>
-
     <!-- Recognised lines (KaTeX preview) - Collapsible via motion-v -->
-    <div v-if="lines.length" class="space-y-2">
+    <div v-if="lines.length" class="space-y-2 mx-2">
       <button @click="isExpressionsCollapsed = !isExpressionsCollapsed"
         class="flex w-full items-center justify-between rounded-md bg-slate-100 hover:bg-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 transition-colors dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400">
         <span>Recognised expressions ({{ lines.length }})</span>

@@ -3,7 +3,7 @@ import type { NoteState } from "~/composables/workspaces/useNotesStore";
 import { useNotesStore } from "~/composables/workspaces/useNotesStore";
 import { APIError } from "~/services/FetchFactory";
 import { ReorderGroup, ReorderItem } from "motion-v";
-import type { MathNoteMetadata } from "@@/shared/utils/note.contract";
+import type { MathNoteMetadata, CanvasNoteMetadata } from "@@/shared/utils/note.contract";
 
 const route = useRoute();
 const workspaceId = route.params.id as string;
@@ -215,6 +215,21 @@ const handleMathUpdate = async (id: string, metadata: MathNoteMetadata) => {
   await notesStore.updateNote(id, updatedNote);
 };
 
+// Update canvas note metadata
+const handleCanvasUpdate = async (id: string, metadata: CanvasNoteMetadata) => {
+  const note = notesStore.getNote(id);
+  if (!note) return;
+  const updatedNote: NoteState = {
+    ...note,
+    metadata: metadata as unknown as Record<string, unknown>,
+    content: `Canvas (${metadata.shapes.length} shapes)`,
+    isDirty: true,
+    updatedAt: new Date(),
+  };
+  await saveNoteToIndexedDB(updatedNote);
+  await notesStore.updateNote(id, updatedNote);
+};
+
 // Delete a note (optimistic with rollback on failure)
 const deleteNote = (id: string) => {
   noteToDelete.value = id;
@@ -258,27 +273,53 @@ onMounted(async () => {
       e instanceof APIError ? e : new APIError("Failed to load notes");
   }
 });
+
+// Dropdown items for 'New Note'
+const newNoteDropdownItems = [
+  [{
+    label: 'Text Note',
+    icon: 'i-heroicons-document-text',
+    onSelect: () => createNewNote('TEXT')
+  }, {
+    label: 'Math Note',
+    icon: 'i-heroicons-calculator',
+    onSelect: () => createNewNote('MATH')
+  }, {
+    label: 'Canvas',
+    icon: 'i-heroicons-paint-brush',
+    onSelect: () => createNewNote('CANVAS')
+  }]
+];
+
+const isDrawerOpen = ref(false);
 </script>
 
 
 <template>
   <ui-card variant="default" size="sm" shadow="none"
-    class="flex flex-col md:basis-2/3 shrink-0 md:shrink min-h-0 overflow-hidden basis-3/3 z-10"
-    contentClasses="flex flex-col">
+    class="flex flex-col md:basis-1/2 xl:basis-2/3 shrink-0 md:shrink min-h-0 overflow-hidden basis-3/3 z-10  relative!"
+    contentClasses="flex flex-col p-0!">
     <!-- Header -->
     <template v-slot:header>
       <div class="flex items-center gap-2">
         Notes
         <ui-label v-if="notes?.length"> ( {{ notes.length }} ) </ui-label>
       </div>
-      <u-button size="sm" color="primary" variant="ghost" @click="createNewNote('TEXT')">
-        <u-icon name="i-heroicons-plus" />
-        New Note
-      </u-button>
-      <u-button size="sm" color="primary" variant="ghost" @click="createNewNote('MATH')">
-        <u-icon name="i-heroicons-calculator" />
-        Math Note
-      </u-button>
+
+      <div class="flex items-center gap-2">
+
+        <UDropdownMenu :items="newNoteDropdownItems" :content="{ align: 'end', side: 'bottom', sideOffset: 4 }">
+          <u-button size="sm" color="primary" variant="ghost" trailing-icon="i-heroicons-chevron-down">
+            <u-icon name="i-heroicons-plus" />
+            New Note
+          </u-button>
+        </UDropdownMenu>
+        <u-button v-if="notes?.length" size="sm" color="neutral" variant="link" @click="isDrawerOpen = !isDrawerOpen"
+          :aria-label="isDrawerOpen ? 'Close notes list' : 'Open notes list'">
+          <icon :name="isDrawerOpen ? 'i-lucide-panel-left-close' : 'i-lucide-panel-left-open'" class="w-4 h-4" />
+        </u-button>
+
+      </div>
     </template>
     <template #default>
       <ui-loader :is-fetching="isFetching" v-if="isFetching" label="Loading notes..." />
@@ -297,10 +338,9 @@ onMounted(async () => {
       </shared-empty-state>
 
       <!-- Notes grid -->
-      <div v-if="!error && !isFetching && notes?.length" class="flex flex-1 min-h-0 overflow-hidden relative"
-        id="notes-section">
-        <ui-drawer :show="false" :mobile="false" teleport-to="#notes-section" :backdrop="false" :handle-visible="20"
-          title="Notes">
+      <div v-if="!error && !isFetching && notes?.length" class="flex flex-1 min-h-0 overflow-hidden" id="notes-section">
+        <ui-drawer :show="isDrawerOpen" @closed="isDrawerOpen = false" :mobile="false" :lock-scroll="false"
+          teleport-to="#notes-section" :backdrop="false" :handle-visible="2" title="Notes">
           <div class="relative shrink-0 overflow-auto bg-light  rounded border border-secondary">
             <workspace-notes-search :workspace-id="workspaceId" />
             <ReorderGroup v-model:values="localNotes" axis="y" class="relative flex-1 shrink-0 overflow-auto"
@@ -322,12 +362,16 @@ onMounted(async () => {
                     <icon name="i-lucide-loader" class="w-4 h-4 animate-spin" />
                   </div>
                   <ui-paragraph size="xs" class="truncate">
-                    <span v-if="note.noteType === 'MATH'" class="mr-1 text-indigo-500">∑</span>
+                    <span v-if="note.noteType === 'CANVAS'" class="mr-1 text-orange-500">🎨</span>
+                    <span v-else-if="note.noteType === 'MATH'" class="mr-1 text-indigo-500">∑</span>
                     {{
                       note.content
                         .replace(/<[^>]*>/g, "")
                         .trim()
-                        .slice(0, 30) || (note.noteType === 'MATH' ? 'Math note' : 'Empty note')
+                        .slice(0, 30) || (
+                        note.noteType === 'MATH' ? 'Math note' :
+                          note.noteType === 'CANVAS' ? 'Canvas note' :
+                            'Empty note')
                     }}
                   </ui-paragraph>
                 </ReorderItem>
@@ -339,8 +383,14 @@ onMounted(async () => {
         <workspace-math-note-editor v-if="notesStore.getNote(currentNoteId!)?.noteType === 'MATH'"
           :note-id="currentNoteId!"
           :initial-metadata="(notesStore.getNote(currentNoteId!)?.metadata as MathNoteMetadata | undefined)"
-          @update="(meta: MathNoteMetadata) => handleMathUpdate(currentNoteId!, meta)" />
-        <UiStickyNote v-else-if="notesStore.getNote(currentNoteId!)" :note="notesStore.getNote(currentNoteId!)!"
+          @update="(meta: MathNoteMetadata) => handleMathUpdate(currentNoteId!, meta)"
+          @toggle-fullscreen="fullscreen.toggle(currentNoteId!)" @delete="deleteNote(currentNoteId!)" />
+        <workspace-canvas-note-editor v-else-if="notesStore.getNote(currentNoteId!)?.noteType === 'CANVAS'"
+          :note-id="currentNoteId!"
+          :initial-metadata="(notesStore.getNote(currentNoteId!)?.metadata as CanvasNoteMetadata | undefined)"
+          @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(currentNoteId!, meta)"
+          @toggle-fullscreen="fullscreen.toggle(currentNoteId!)" @delete="deleteNote(currentNoteId!)" />
+        <workspace-text-note v-else-if="notesStore.getNote(currentNoteId!)" :note="notesStore.getNote(currentNoteId!)!"
           :delete-note="deleteNote" size="lg" @update="handleUpdateNote" @retry="handleRetry"
           @toggle-fullscreen="fullscreen.toggle" placeholder="Double-click to add your note..."
           @add-to-material="emit('add-to-material', $event)" />
@@ -360,10 +410,18 @@ onMounted(async () => {
       </div>
     </template>
 
-    <!-- Note content in fullscreen -->
     <div v-if="currentFullscreenNote" class="h-full">
-      <UiStickyNote :note="currentFullscreenNote" :delete-note="deleteNote" :is-fullscreen="true" size="lg"
-        @update="handleUpdateNote" @retry="handleRetry" @toggle-fullscreen="fullscreen.close"
+      <workspace-math-note-editor v-if="currentFullscreenNote.noteType === 'MATH'" :note-id="currentFullscreenNote.id"
+        :initial-metadata="(currentFullscreenNote!.metadata as MathNoteMetadata | undefined)" :is-fullscreen="true"
+        @update="(meta: MathNoteMetadata) => handleMathUpdate(currentFullscreenNote!.id, meta)"
+        @toggle-fullscreen="fullscreen.close" @delete="deleteNote(currentFullscreenNote!.id)" />
+      <workspace-canvas-note-editor v-else-if="currentFullscreenNote.noteType === 'CANVAS'"
+        :note-id="currentFullscreenNote.id"
+        :initial-metadata="(currentFullscreenNote!.metadata as CanvasNoteMetadata | undefined)" :is-fullscreen="true"
+        @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(currentFullscreenNote!.id, meta)"
+        @toggle-fullscreen="fullscreen.close" @delete="deleteNote(currentFullscreenNote!.id)" />
+      <workspace-text-note v-else :note="currentFullscreenNote" :delete-note="deleteNote" :is-fullscreen="true"
+        size="lg" @update="handleUpdateNote" @retry="handleRetry" @toggle-fullscreen="fullscreen.close"
         placeholder="Double-click to add your note..." @add-to-material="emit('add-to-material', $event)" />
     </div>
   </shared-fullscreen-wrapper>

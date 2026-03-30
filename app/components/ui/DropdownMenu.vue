@@ -29,7 +29,7 @@
             active ? 'bg-primary text-dark' : '',
             'flex items-center gap-3 p-sm text-sm text-content-on-surface hover:text-on-primary',
           ]">
-            <UIcon :name="'i-heroicons-workspace-open'" class="w-4 h-4" />
+            <UIcon :name="'i-heroicons-squares-2x2'" class="w-4 h-4" />
             Workspaces
           </router-link>
           </MenuItem>

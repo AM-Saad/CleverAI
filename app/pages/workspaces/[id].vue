@@ -6,24 +6,24 @@ import { useResponsive } from "~/composables/ui/useResponsive";
 import type { EnrollCardResponse } from "~/shared/utils/review.contract";
 
 const ContextSlideOver = defineAsyncComponent(
-  () => import("~/components/hub/ContextSlideOver.vue")
+  () => import("~/components/workspace/hub/ContextSlideOver.vue")
 );
 
 const LearningHubModal = defineAsyncComponent(
-  () => import("~/components/hub/LearningHubModal.vue")
+  () => import("~/components/workspace/hub/LearningHubModal.vue")
 );
 const FloatingLearningHubButton = defineAsyncComponent(
-  () => import("~/components/hub/FloatingLearningHubButton.vue")
+  () => import("~/components/workspace/hub/FloatingLearningHubButton.vue")
 );
 
 const LearningHubContent = defineAsyncComponent(
-  () => import("~/components/hub/LearningHubContent.vue")
+  () => import("~/components/workspace/hub/LearningHubContent.vue")
 );
 // const WorkspaceNotesSection = defineAsyncComponent(
 //   () => import("~/components/workspace/NotesSection.vue"),
 // );
 const WorkspaceUploadMaterialForm = defineAsyncComponent(
-  () => import("~/components/materials/UploadMaterialForm.vue")
+  () => import("~/components/workspace/hub/materials/UploadMaterialForm.vue")
 );
 
 const route = useRoute();
@@ -158,7 +158,7 @@ onBeforeUnmount(() => {
 
     <template #actions>
       <div class="flex flex-col items-end gap-2">
-        <!-- Workspace-specific Review Status - Minimal & Clean -->
+        <!-- Workspace-specific Review Status -->
         <review-status-card :workspace-id="`${id as string}`" :show-context="false" :show-refresh="false"
           :minimal="true" variant="ghost" :empty-message="'You have no cards to review, enroll some or just chill.'" />
       </div>
@@ -166,16 +166,15 @@ onBeforeUnmount(() => {
     <shared-error-message v-if="error && !loading" :error="error" :refresh="refresh" />
 
     <template v-if="workspace" #default>
-
       <div class="flex flex-col md:flex-row gap-2 min-h-0 w-full grow">
-
 
         <!-- NOTES Goes Here -->
         <workspace-notes-section @add-to-material="handleAddToMaterial" />
 
 
         <!-- LEARNING HUB Goes Here - Desktop Only -->
-        <div v-if="!isMobile" class="flex flex-col relative overflow-hidden shrink-0 basis-full md:basis-1/4 grow"
+        <div v-if="!isMobile"
+          class="flex flex-col relative overflow-hidden shrink-0 basis-full md:basis-1/3 xl:basis-1/4 grow"
           id="learning-hub">
           <LearningHubContent :workspace-id="`${id as string}`" :materials-length="workspace.materials?.length"
             :is-enrolling-loading="enrollmentLoading" :enrolled-flashcard-ids="enrolledFlashcardIds"

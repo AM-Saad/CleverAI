@@ -3,17 +3,17 @@ import { AI_WORKER_MESSAGE_TYPES } from "~/utils/constants/pwa";
 import { useAIStore } from "./useAIStore";
 
 /**
- * Composable for text summarization using AI models via Web Worker
+ * Composable for speech to text using AI models via Web Worker
  *
  * ARCHITECTURE NOTE: Uses the AI Worker (sw-src/ai-worker.ts) to run heavy
  * ONNX inference (5-30 seconds) off the main thread, keeping UI responsive.
  *
  * @example
  * ```ts
- * const { summarize, isLoading, error } = useTextSummarization();
+ * const { transcribing, isTranscribing, error } = useSpeachToText();
  *
- * const summary = await summarize('Long text to summarize...');
- * console.log(summary);
+ * const transcript = await transcribe(audioFloat32Array);
+ * console.log(transcript);
  * ```
  */
 export function useSpeachToText(options?: {
@@ -23,13 +23,13 @@ export function useSpeachToText(options?: {
   const { $aiWorker } = useNuxtApp();
   const store = useAIStore("global-ai-store");
   const { loadModel } = store;
-  const modelId = options?.modelId || "Xenova/realtime-whisper-webgpu";
+  const modelId = options?.modelId || "onnx-community/whisper-tiny.en";
   const task = "automatic-speech-recognition";
 
-  const isRecognizing = ref(false);
-  const currentSummary = ref<string | null>(null);
+  const isTranscribing = ref(false);
+  const currentTranscript = ref<string | null>(null);
   const error = ref<Error | null>(null);
-  const recognitionError = ref<Error | null>(null);
+  const transcriptionError = ref<Error | null>(null);
 
   // Use store abstractions for reactive model state
   const isDownloading = store.isModelDownloading(modelId);
@@ -40,115 +40,121 @@ export function useSpeachToText(options?: {
   const generateRequestId = () => `${task}-${Date.now()}-${Math.random()}`;
 
   /**
-   * Summarize a piece of text (non-blocking via worker)
+   * Transcribe audio data (non-blocking via worker)
    */
-  async function summarize(
-    text: string,
+  async function transcribe(
+    audioData: Float32Array,
     options?: {
-      maxLength?: number;
-      minLength?: number;
+      language?: string;
     }
-  ): Promise<void> {
-    if (!text || !text.trim()) {
-      throw new Error("No text provided to summarize");
+  ): Promise<string> {
+    if (!audioData || audioData.length === 0) {
+      throw new Error("No audio provided to transcribe");
     }
 
     // Reset state
-    currentSummary.value = null;
-    recognitionError.value = null;
+    currentTranscript.value = null;
+    transcriptionError.value = null;
 
     // Ensure model is loaded (loadModel handles caching internally)
     await loadModel(modelId, task);
 
     const requestId = generateRequestId();
-    isRecognizing.value = true;
+    isTranscribing.value = true;
 
-    // return new Promise((resolve, reject) => {
-    //   const timeout = setTimeout(
-    //     () => {
-    //       isRecognizing.value = false;
-    //       reject(new Error("Summarization timeout"));
-    //     },
-    //     2 * 60 * 1000
-    //   ); // 2 minute timeout
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(
+        () => {
+          isTranscribing.value = false;
+          reject(new Error("Transcription timeout"));
+        },
+        5 * 60 * 1000
+      ); // 5 minute timeout for speech-to-text
 
-    //   const handler = (event: Event) => {
-    //     const message = (event as CustomEvent<OutgoingAIMessage>).detail;
+      const handler = (event: Event) => {
+        const message = (event as CustomEvent<OutgoingAIMessage>).detail;
 
-    //     if (
-    //       message.type === AI_WORKER_MESSAGE_TYPES.INFERENCE_COMPLETE &&
-    //       message.data.requestId === requestId
-    //     ) {
-    //       clearTimeout(timeout);
-    //       window.removeEventListener("ai-worker-message", handler);
-    //       isRecognizing.value = false;
+        if (
+          message.type === AI_WORKER_MESSAGE_TYPES.INFERENCE_COMPLETE &&
+          message.data.requestId === requestId
+        ) {
+          clearTimeout(timeout);
+          window.removeEventListener("ai-worker-message", handler);
+          isTranscribing.value = false;
 
-    //       // Extract summary text from result
-    //       const result = message.data.result as
-    //         | { summary_text: string }
-    //         | Array<{ summary_text: string }>;
-    //       const summary = Array.isArray(result)
-    //         ? result[0]?.summary_text
-    //         : result?.summary_text;
+          // Extract text from result
+          const result = message.data.result as any;
+          let transcript = "";
+          console.log(result)
 
-    //       if (!summary) {
-    //         const err = new Error("No summary generated");
-    //         recognitionError.value = err;
-    //         reject(err);
-    //         return;
-    //       }
+          if (Array.isArray(result) && result.length > 0) {
+            transcript = result[0]?.text || result[0]?.generated_text || "";
+          } else if (result?.text || result?.generated_text) {
+            transcript = result.text || result.generated_text;
+          } else if (typeof result === "string") {
+            transcript = result;
+          }
 
-    //       console.log("Generated summary:", summary);
-    //       currentSummary.value = summary;
-    //       resolve(summary);
-    //     } else if (
-    //       message.type === AI_WORKER_MESSAGE_TYPES.INFERENCE_ERROR &&
-    //       message.data.requestId === requestId
-    //     ) {
-    //       clearTimeout(timeout);
-    //       window.removeEventListener("ai-worker-message", handler);
-    //       isRecognizing.value = false;
+          if (!transcript) {
+            const err = new Error("No transcript generated");
+            transcriptionError.value = err;
+            reject(err);
+            return;
+          }
 
-    //       const err = new Error(message.data.error);
-    //       recognitionError.value = err;
-    //       reject(err);
-    //     }
-    //   };
+          console.log("Generated transcript:", transcript);
+          currentTranscript.value = transcript;
+          resolve(transcript);
+        } else if (
+          message.type === AI_WORKER_MESSAGE_TYPES.INFERENCE_ERROR &&
+          message.data.requestId === requestId
+        ) {
+          clearTimeout(timeout);
+          window.removeEventListener("ai-worker-message", handler);
+          isTranscribing.value = false;
 
-    //   window.addEventListener("ai-worker-message", handler);
+          const err = new Error(message.data.error);
+          transcriptionError.value = err;
+          reject(err);
+        }
+      };
 
-    //   // Send inference request to worker
-    //   $aiWorker.postMessage({
-    //     type: AI_WORKER_MESSAGE_TYPES.RUN_INFERENCE,
-    //     data: {
-    //       requestId,
-    //       modelId,
-    //       task,
-    //       input: text,
-    //       options: {
-    //         max_length: options?.maxLength || 130,
-    //         min_length: options?.minLength || 30,
-    //         do_sample: false,
-    //       },
-    //     },
-    //   });
-    // });
+      window.addEventListener("ai-worker-message", handler);
+
+      // Send inference request to worker
+      $aiWorker.postMessage({
+        type: AI_WORKER_MESSAGE_TYPES.RUN_INFERENCE,
+        data: {
+          requestId,
+          modelId,
+          task,
+          input: audioData,
+          options: {
+            chunk_length_s: 30,
+            stride_length_s: 5,
+            ...(options?.language ? {
+              language: options.language,
+              task: "transcribe",
+            } : {})
+          },
+        },
+      });
+    });
   }
 
   /**
-   * Start recognition without awaiting (non-blocking)
+   * Start transcribing without awaiting (non-blocking)
    */
-  function startRecognition(
-    text: string,
+  function startTranscribing(
+    audioData: Float32Array,
     options?: {
-      maxLength?: number;
-      minLength?: number;
+      language?: string;
     }
   ) {
     // Fire and forget - don't await
-    // summarize(text, options).catch((err) => {
-    //   console.error("Background recognition failed:", err);
-    // });
+    transcribe(audioData, options).catch((err) => {
+      console.error("Background transcription failed:", err);
+    });
   }
 
   /**
@@ -156,17 +162,17 @@ export function useSpeachToText(options?: {
    */
   async function retry() {
     error.value = null;
-    recognitionError.value = null;
+    transcriptionError.value = null;
     return loadModel(modelId, task);
   }
 
   return {
-    summarize,
-    startRecognition,
-    currentSummary: readonly(currentSummary),
-    isRecognizing: readonly(isRecognizing),
+    transcribe,
+    startTranscribing,
+    currentTranscript: readonly(currentTranscript),
+    isTranscribing: readonly(isTranscribing),
     error: readonly(error),
-    recognitionError: readonly(recognitionError),
+    transcriptionError: readonly(transcriptionError),
     // Reactive computed refs from store
     isDownloading,
     progress,

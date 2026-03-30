@@ -48,7 +48,7 @@ export default defineAppConfig({
     },
     input: {
       slots: {
-        base: "focus:border-primary focus:ring-1 focus:ring-primary/90! focus:outline-0 focus-visible:outline-0 focus-visible:ring-0 ring-secondary!  rounded-full",
+        base: "focus:border-primary focus:ring-1 focus:ring-primary/90! focus:outline-0 focus-visible:outline-0 focus-visible:ring-0 ring-secondary! rounded-full text-content-on-surface!",
       }
     },
     formField: {

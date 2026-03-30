@@ -4,8 +4,8 @@ import { z } from "zod";
 const trim = (v: unknown) => (typeof v === "string" ? v.trim() : v);
 
 // ── Note type discriminator ──
-// "TEXT" = default rich-text note, "MATH" = handwritten math note
-export const NoteTypeSchema = z.enum(["TEXT", "MATH"]).default("TEXT");
+// "TEXT" = default rich-text note, "MATH" = handwritten math note, "CANVAS" = free-form drawing canvas
+export const NoteTypeSchema = z.enum(["TEXT", "MATH", "CANVAS"]).default("TEXT");
 export type NoteType = z.infer<typeof NoteTypeSchema>;
 
 // ── Math-specific metadata stored alongside the note ──
@@ -41,6 +41,44 @@ export const MathNoteMetadataSchema = z.object({
   ).default([]),
 });
 export type MathNoteMetadata = z.infer<typeof MathNoteMetadataSchema>;
+
+// ── Canvas-specific metadata stored alongside the note ──
+export const CanvasShapeSchema = z.object({
+  id: z.string(),
+  type: z.enum(["rect", "circle", "ellipse", "line", "text", "star", "arrow", "freedraw"]),
+  x: z.number().default(0),
+  y: z.number().default(0),
+  rotation: z.number().default(0),
+  scaleX: z.number().default(1),
+  scaleY: z.number().default(1),
+  fill: z.string().optional(),
+  stroke: z.string().optional(),
+  strokeWidth: z.number().optional(),
+  opacity: z.number().default(1),
+  // Shape-specific properties
+  width: z.number().optional(),
+  height: z.number().optional(),
+  radius: z.number().optional(),
+  radiusX: z.number().optional(),
+  radiusY: z.number().optional(),
+  points: z.array(z.number()).optional(),
+  text: z.string().optional(),
+  fontSize: z.number().optional(),
+  fontFamily: z.string().optional(),
+  numPoints: z.number().optional(),
+  innerRadius: z.number().optional(),
+  outerRadius: z.number().optional(),
+  closed: z.boolean().optional(),
+  tension: z.number().optional(),
+  dash: z.array(z.number()).optional(),
+  draggable: z.boolean().default(true),
+});
+export type CanvasShape = z.infer<typeof CanvasShapeSchema>;
+
+export const CanvasNoteMetadataSchema = z.object({
+  shapes: z.array(CanvasShapeSchema).default([]),
+});
+export type CanvasNoteMetadata = z.infer<typeof CanvasNoteMetadataSchema>;
 
 export const NoteSchema = z.object({
   id: z.string(),

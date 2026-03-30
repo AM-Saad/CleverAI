@@ -229,7 +229,7 @@ async function handleLoadModel(config: any): Promise<void> {
       ...options,
       quantized: isLatexModel ? false : (options.quantized ?? true),
       dtype: isLatexModel ? 'fp32' : (options.dtype ?? undefined),
-      device: options.device ?? "wasm",
+      device: options.device ?? "webgpu",
     };
     await getModel(task, modelId, modelOptions, progressCallback);
 

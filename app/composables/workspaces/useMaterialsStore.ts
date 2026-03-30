@@ -8,6 +8,13 @@ export interface MaterialState extends Material {
   error?: string | null;
 }
 
+export interface PendingTranscription {
+  id: string;
+  title: string;
+  status: 'transcribing' | 'saving';
+  startedAt: number;
+}
+
 interface MaterialStore {
   materials: Ref<Map<string, MaterialState>>;
   materialsList: ComputedRef<MaterialState[]>;
@@ -29,6 +36,13 @@ interface MaterialStore {
   // Upload state
   uploading: Ref<boolean>;
   uploadError: Ref<APIError | null>;
+
+  // Pending transcriptions
+  pendingTranscriptions: Ref<Map<string, PendingTranscription>>;
+  pendingTranscriptionsList: ComputedRef<PendingTranscription[]>;
+  addPendingTranscription: (id: string, title: string) => void;
+  updatePendingTranscription: (id: string, status: PendingTranscription['status']) => void;
+  removePendingTranscription: (id: string) => void;
 
   fetchMaterials: () => Promise<void>;
   getMaterial: (id: string) => Material | null;
@@ -62,6 +76,30 @@ export function useMaterialsStore(workspaceId: string): MaterialStore {
   // Upload state
   const uploading = ref(false);
   const uploadError = ref<APIError | null>(null);
+
+  // Pending transcriptions state
+  const pendingTranscriptions = ref<Map<string, PendingTranscription>>(new Map());
+  const pendingTranscriptionsList = computed(() => Array.from(pendingTranscriptions.value.values()));
+
+  const addPendingTranscription = (id: string, title: string) => {
+    pendingTranscriptions.value.set(id, {
+      id,
+      title,
+      status: 'transcribing',
+      startedAt: Date.now(),
+    });
+  };
+
+  const updatePendingTranscription = (id: string, status: PendingTranscription['status']) => {
+    const pending = pendingTranscriptions.value.get(id);
+    if (pending) {
+      pendingTranscriptions.value.set(id, { ...pending, status });
+    }
+  };
+
+  const removePendingTranscription = (id: string) => {
+    pendingTranscriptions.value.delete(id);
+  };
 
   const {
     fetchMaterials: fetchMaterialsFromAPI,
@@ -291,6 +329,11 @@ export function useMaterialsStore(workspaceId: string): MaterialStore {
     fetchTypedError,
     uploading,
     uploadError,
+    pendingTranscriptions,
+    pendingTranscriptionsList,
+    addPendingTranscription,
+    updatePendingTranscription,
+    removePendingTranscription,
   };
 
   // Cache the store

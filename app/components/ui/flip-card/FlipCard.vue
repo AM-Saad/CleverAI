@@ -16,7 +16,7 @@
 
     <!-- Back -->
     <div :class="cn(
-      'absolute top-0 h-full w-full overflow-hidden flex flex-col justify-between rounded-2xl border border-secondary bg-background p-4 text-content-on-background [backface-visibility:hidden]',
+      'absolute top-0 h-full w-full overflow-hidden flex flex-col justify-between rounded-2xl bg-background p-4 text-content-on-background [backface-visibility:hidden]',
     )
       " :style="{ transform: backTransform }">
       <slot name="back" />

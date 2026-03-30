@@ -143,64 +143,64 @@ async function bulkEnrollDrafts() {
       </template>
     </shared-empty-state>
 
-    <!-- Flashcards carousel -->
-    <UCarousel v-if="cardsToShow?.length" v-slot="{ item: card }" dots :items="cardsToShow" :ui="{
-      root: 'grow flex basis-full flex-col',
-      viewport: 'grow overflow-hidden basis-full rounded-lg',
-      container: 'flex grow basis-full gap-1 h-full w-full -ms-0 p-1',
-      item: 'select-none transition-opacity flex grow basis-full  min-h-full h-full ps-0 overflow-hidden',
-      dots: 'bottom-0 relative mt-2 flex justify-center gap-2',
-    }">
-      <ui-flip-card :class="card.status === 'DRAFT' ? 'draft-card' : ''">
-        <template #front>
-          <ui-paragraph size="base" class="mt-4">{{ card.front }}</ui-paragraph>
-          <!-- Top-right badges and actions -->
-          <div class="absolute top-2 right-2 flex items-center gap-2 ">
-            <!-- Draft badge -->
-            <u-badge v-if="card.status === 'DRAFT'" color="secondary" size="xs" class="text-xs">
-              Draft
-            </u-badge>
-            <!-- Enrolled badge -->
-            <span v-else-if="'id' in card && card.id && props.enrolledIds.has(card.id)"
-              class="inline-flex items-center justify-center h-6 w-8 rounded-full text-xs font-medium bg-primary border border-muted text-on-primary"
-              title="Enrolled in Review">✓</span>
-            <div class="justify-between gap-1 bg-primary/10 rounded-full overflow-hidden">
-              <!-- Context button -->
-              <u-button v-if="card.sourceRef" size="sm" variant="ghost"
-                @click.stop="contextBridge.locateSource(card, id)" title="View source context"
-                :disabled="props.isEnrollingLoading">
-                <Icon name="i-lucide-external-link" class="w-3 h-3" />
-              </u-button>
+    <!-- Flashcards Stack -->
+    <ui-card-stack v-if="cardsToShow?.length" :items="cardsToShow" class="h-full">
+      <template #default="{ item: card }">
+        <ui-flip-card :class="`w-full h-full ${card.status === 'DRAFT' ? 'draft-card' : ''}`">
+          <template #front>
+            <ui-paragraph size="base" class="mt-4">{{ card.front }}</ui-paragraph>
 
-              <!-- Edit button -->
-              <u-button v-if="'id' in card && card.id" size="sm" variant="ghost" @click.stop="openEditModal(card)"
-                title="Edit flashcard" :disabled="props.isEnrollingLoading">
-                <Icon name="i-lucide-pencil" class="w-3 h-3 disabled:opacity-50 disabled:cursor-not-allowed" />
-              </u-button>
-              <!-- Delete button -->
-              <u-button v-if="'id' in card && card.id" size="sm" variant="ghost" color="error"
-                @click.stop="openDeleteModal(card)" title="Delete flashcard" :disabled="props.isEnrollingLoading">
-                <Icon name="i-lucide-trash-2" class="w-3 h-3 disabled:opacity-50 disabled:cursor-not-allowed" />
-              </u-button>
+
+
+            <div class="absolute top-2 right-2 flex items-center gap-2 ">
+              <!-- Draft badge -->
+              <u-badge v-if="card.status === 'DRAFT'" color="secondary" size="xs" class="text-xs">
+                Draft
+              </u-badge>
+              <!-- Enrolled badge -->
+              <span v-else-if="'id' in card && card.id && props.enrolledIds.has(card.id)"
+                class="inline-flex items-center justify-center h-5 w-5 rounded-full text-xs font-light bg-primary  text-on-primary"
+                title="Enrolled in Review">
+                <Icon name="i-lucide-check" class="w-3 h-3" />
+              </span>
+              <div class="justify-between gap-1 bg-primary/10 rounded-full overflow-hidden">
+                <!-- Context button -->
+                <u-button v-if="card.sourceRef" size="sm" variant="ghost"
+                  @click.stop="contextBridge.locateSource(card, id)" title="View source context"
+                  :disabled="props.isEnrollingLoading">
+                  <Icon name="i-lucide-external-link" class="w-3 h-3" />
+                </u-button>
+
+                <!-- Edit button -->
+                <u-button v-if="'id' in card && card.id" size="sm" variant="ghost" @click.stop="openEditModal(card)"
+                  title="Edit flashcard" :disabled="props.isEnrollingLoading">
+                  <Icon name="i-lucide-pencil" class="w-3 h-3 disabled:opacity-50 disabled:cursor-not-allowed" />
+                </u-button>
+                <!-- Delete button -->
+                <u-button v-if="'id' in card && card.id" size="sm" variant="ghost" color="error"
+                  @click.stop="openDeleteModal(card)" title="Delete flashcard" :disabled="props.isEnrollingLoading">
+                  <Icon name="i-lucide-trash-2" class="w-3 h-3 disabled:opacity-50 disabled:cursor-not-allowed" />
+                </u-button>
+              </div>
             </div>
-          </div>
-        </template>
-        <template #back>
-          <ui-paragraph class="basis-3/4 overflow-auto" size="xs">{{ card.back
-          }}</ui-paragraph>
-          <review-enroll-button v-if="'id' in card && card.id" :resource-type="'flashcard'" :resource-id="card!.id"
-            :is-enrolled="props.enrolledIds.has(card.id)" @enrolled="handleCardEnrolled" @error="handleEnrollError" />
-          <div v-else class="text-xs">Save card to enable review</div>
-        </template>
-      </ui-flip-card>
-    </UCarousel>
+          </template>
+          <template #back>
+            <ui-paragraph class="basis-3/4 overflow-auto" size="xs">{{ card.back }}</ui-paragraph>
+            <review-enroll-button v-if="'id' in card && card.id" :resource-type="'flashcard'" :resource-id="card.id"
+              :is-enrolled="props.enrolledIds.has(card.id)" @enrolled="handleCardEnrolled" @error="handleEnrollError" />
+            <div v-else class="text-xs">Save card to enable review</div>
+          </template>
+        </ui-flip-card>
+      </template>
+    </ui-card-stack>
 
     <!-- Create/Edit Flashcard Modal -->
-    <hub-flashcards-create-flashcard-modal :show="showCreateModal" :workspace-id="id" :flashcard="editingFlashcard"
-      @close="closeCreateModal" @created="handleFlashcardCreated" @updated="handleFlashcardUpdated" />
+    <workspace-hub-flashcards-create-flashcard-modal :show="showCreateModal" :workspace-id="id"
+      :flashcard="editingFlashcard" @close="closeCreateModal" @created="handleFlashcardCreated"
+      @updated="handleFlashcardUpdated" />
 
     <!-- Delete Flashcard Modal -->
-    <hub-flashcards-delete-flashcard-modal v-if="deletingFlashcard" :show="showDeleteModal"
+    <workspace-hub-flashcards-delete-flashcard-modal v-if="deletingFlashcard" :show="showDeleteModal"
       :flashcard-id="deletingFlashcard.id" :is-enrolled="deletingFlashcard.isEnrolled"
       @close="showDeleteModal = false; deletingFlashcard = null" @deleted="handleFlashcardDeleted" />
   </div>

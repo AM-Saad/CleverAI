@@ -9809,6 +9809,11 @@ kolorist@^1.8.0:
   resolved "https://registry.yarnpkg.com/kolorist/-/kolorist-1.8.0.tgz#edddbbbc7894bc13302cdf740af6374d4a04743c"
   integrity sha512-Y+60/zizpJ3HRH8DCss+q95yr6145JXZo46OTpFvDZWLfRCE4qChOyk1b26nMaNpfHHgxagk9dXT5OP0Tfe+dQ==
 
+konva@^10.2.3:
+  version "10.2.3"
+  resolved "https://registry.yarnpkg.com/konva/-/konva-10.2.3.tgz#897c96a481538ea2eebe2f00444e41209bfa986f"
+  integrity sha512-NDGeIxm2nsQcp6oqZKS9T764JEi53RpQvpUxV2EK7Awm49fwdd1+EB1Nq1nyspRc0hOAKyKssoTFvPaKwiSUog==
+
 launch-editor@^2.11.1, launch-editor@^2.12.0:
   version "2.12.0"
   resolved "https://registry.yarnpkg.com/launch-editor/-/launch-editor-2.12.0.tgz#cc740f4e0263a6b62ead2485f9896e545321f817"
@@ -14465,6 +14470,11 @@ vue-eslint-parser@^9.4.3:
     esquery "^1.4.0"
     lodash "^4.17.21"
     semver "^7.3.6"
+
+vue-konva@^3.4.0:
+  version "3.4.0"
+  resolved "https://registry.yarnpkg.com/vue-konva/-/vue-konva-3.4.0.tgz#f1dfdde8f4988e22e197ad1e7cc47549f0cff695"
+  integrity sha512-l7yqAPmc6gPbdXzxoukTiXzA6EdqTtPhzQp1pTdppwWLiimPCgFHcqp8nApXQN5dqF11p2OejwjKv150cf9ncA==
 
 vue-router@^4.5.1, vue-router@^4.6.3:
   version "4.6.4"

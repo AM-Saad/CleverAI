@@ -5,24 +5,13 @@
     <div :class="noteContentClasses">
       <!-- Content area -->
       <div class="relative h-full flex flex-col flex-1 min-h-0 overflow-auto">
-        <!-- Top right actions -->
-        <div class="flex items-center h-fit mb-1 pb-0.5 bg-white z-10">
-          <div class="flex items-center gap-2" v-if="!isBoardItem">
-
-            <!-- Fullscreen toggle button (show when not loading and has content) -->
-            <u-button v-if="note.content.trim()" :class="{ 'opacity-75': note.isLoading }" variant="subtle"
-              color="primary" size="xs" :aria-label="isFullscreen ? 'Exit fullscreen' : 'View fullscreen'"
-              @click="$emit('toggleFullscreen', note.id)">
-              <icon v-if="isFullscreen" name="i-heroicons-arrows-pointing-in" class="w-3 h-3" />
-              <icon v-else name="i-heroicons-arrows-pointing-out" class="w-3 h-3" />
-            </u-button>
-            <u-button class="group-hover:opacity-70 hover:opacity-100 transition-opacity duration-200 cursor-pointer"
-              :class="{ 'opacity-75': note.isLoading }" variant="subtle" color="error" size="xs"
-              :disabled="note.isLoading" aria-label="Delete note" @click="deleteNote(note.id)">
-              <icon name="i-heroicons-trash" class="w-3 h-3" />
-            </u-button>
-          </div>
-        </div>
+        <!-- Toolbar -->
+        <SharedNoteToolbar v-if="!isBoardItem" :is-loading="note.isLoading" :is-fullscreen="isFullscreen"
+          @toggleFullscreen="$emit('toggle-fullscreen', note.id)"
+          @delete="deleteNote(note.id)">
+          <!-- Plug in the editor tools for Tiptap -->
+          <shared-tiptap-toolbar v-if="tiptapEditor" :editor="tiptapEditor" />
+        </SharedNoteToolbar>
 
         <!-- Error state -->
         <div v-if="note.error" class="flex flex-col items-center justify-center h-full text-red-600">
@@ -75,7 +64,7 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   update: [id: string, text: string];
   retry: [id: string];
-  toggleFullscreen: [id: string];
+  'toggle-fullscreen': [id: string];
   addToMaterial: [selectedText: string];
 }>();
 
@@ -83,6 +72,10 @@ const emit = defineEmits<{
 const isEditing = ref(true);
 const contentHtml = ref(props.note.content); // HTML content for tiptap v-model
 const originalText = ref(props.note.content); // To track changes for saving
+
+// Template ref bridging
+const tiptapRef = ref<{ editor: any } | null>(null);
+const tiptapEditor = computed(() => tiptapRef.value?.editor);
 
 // Computed classes for parent container
 const noteContainerClasses = computed(() => {
@@ -100,7 +93,7 @@ const noteContainerClasses = computed(() => {
 // Computed classes for the note content
 const noteContentClasses = computed(() => {
   return [
-    "note-content bg-white p-2 rounded",
+    "note-content bg-white rounded",
     "w-full h-full",
     "relative",
   ];

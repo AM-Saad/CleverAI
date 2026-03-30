@@ -1,5 +1,5 @@
 import type { APIError } from "@/services/FetchFactory";
-import type { OutgoingAIMessage } from "~/shared/types/ai-messages";
+import type { AITask, OutgoingAIMessage } from "~/shared/types/ai-messages";
 import { AI_WORKER_MESSAGE_TYPES } from "~/utils/constants/pwa";
 
 export interface ModelState {
@@ -19,7 +19,7 @@ interface AIModelStore {
   errorStates: Ref<Map<string, string | null>>;
   fetchError: Ref<APIError | null>;
   fetchTypedError: Ref<APIError | null>;
-  loadModel: (modelId: string, task: string) => Promise<void>;
+  loadModel: (modelId: string, task: AITask) => Promise<void>;
   getModelState: (modelId: string) => ComputedRef<ModelState | undefined>;
   isModelDownloading: (modelId: string) => ComputedRef<boolean>;
   getModelProgress: (modelId: string) => ComputedRef<number>;
@@ -54,7 +54,7 @@ export function useAIStore(storeId: string): AIModelStore {
   /**
    * Load the model if not already loaded
    */
-  async function loadModel(modelId: string, task: string): Promise<void> {
+  async function loadModel(modelId: string, task: AITask): Promise<void> {
     // Check if model is already loaded or loading
     const existingModel = models.value.get(modelId);
     if (existingModel?.isReady) {

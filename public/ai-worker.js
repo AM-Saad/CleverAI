@@ -164,7 +164,7 @@
         ...options,
         quantized: isLatexModel ? false : options.quantized ?? true,
         dtype: isLatexModel ? "fp32" : options.dtype ?? void 0,
-        device: options.device ?? "wasm"
+        device: options.device ?? "webgpu"
       };
       await getModel(task, modelId, modelOptions, progressCallback);
       self.postMessage({
