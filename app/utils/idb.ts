@@ -206,6 +206,24 @@ export const saveNoteToIndexedDB = async (note: NoteState): Promise<void> => {
   }
 };
 
+export const saveNotesToIndexedDB = async (notes: NoteState[]): Promise<void> => {
+  try {
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.NOTES)) {
+      console.warn('[IDB] NOTES store missing; skipping bulk save and falling back');
+      // If doing bulk saves, we attempt to save them individually to trigger the queueing fallback
+      for (const note of notes) {
+        await saveNoteToIndexedDB(note);
+      }
+      return;
+    }
+    // Perform bulk put using a single transaction
+    await putAllRecords(db, DB_CONFIG.STORES.NOTES as STORES, notes);
+  } catch (error) {
+    console.error("Failed to save notes to IndexedDB:", error);
+  }
+};
+
 export const loadNotesFromIndexedDB = async (
   workspaceId: string
 ): Promise<NoteState[]> => {
@@ -374,6 +392,68 @@ export async function putRecord<T>(
         try {
           const store = tx.objectStore(storeName);
           store.put(sanitizeForIDB(record));
+        } catch (inner) {
+          return reject(inner);
+        }
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error || new Error('IDB transaction aborted'));
+      });
+      return; // success
+    } catch (err: any) {
+      lastErr = err;
+      const transient = err && (err.name === 'InvalidStateError' || err.name === 'TransactionInactiveError');
+      if (!transient) break; // non-transient, stop retrying
+      if (attempt < MAX_ATTEMPTS - 1) {
+        await sleep(calcDelay(attempt));
+        continue;
+      }
+    }
+  }
+  throw lastErr;
+}
+
+/**
+ * Generic bulk put operation for any store using a single transaction.
+ */
+export async function putAllRecords<T>(
+  db: IDBDatabase,
+  storeName: STORES,
+  records: T[]
+): Promise<void> {
+  if (!records.length) return;
+
+  const {
+    MAX_ATTEMPTS,
+    BASE_DELAY_MS,
+    FACTOR,
+    MAX_DELAY_MS,
+    JITTER_PCT,
+  } = IDB_RETRY_CONFIG;
+
+  const sleep = (ms: number) => new Promise(res => setTimeout(res, ms));
+  const calcDelay = (attempt: number) => {
+    const raw = Math.min(BASE_DELAY_MS * Math.pow(FACTOR, attempt), MAX_DELAY_MS);
+    const jitter = raw * JITTER_PCT * (Math.random() * 2 - 1); // +/- jitter
+    return Math.max(0, Math.round(raw + jitter));
+  };
+
+  let lastErr: any;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    try {
+      const activeDb = attempt === 0 ? db : await openUnifiedDB();
+      await new Promise<void>((resolve, reject) => {
+        let tx: IDBTransaction;
+        try {
+          tx = activeDb.transaction([storeName], 'readwrite');
+        } catch (e: any) {
+          return reject(e);
+        }
+        try {
+          const store = tx.objectStore(storeName);
+          for (const record of records) {
+            store.put(sanitizeForIDB(record));
+          }
         } catch (inner) {
           return reject(inner);
         }

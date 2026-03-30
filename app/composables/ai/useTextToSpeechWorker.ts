@@ -34,6 +34,10 @@ export function useTextToSpeechWorker(options?: {
   const progress = ref(0);
   const isReady = ref(false);
 
+  // Track all in-flight per-request handlers so the onUnmounted guard can
+  // remove them if the component is destroyed before a Promise settles.
+  const activeHandlers = new Set<{ handler: EventListener; timeout: ReturnType<typeof setTimeout> }>();
+
   // Generate unique request IDs
   const generateRequestId = () => `${task}-${Date.now()}-${Math.random()}`;
 
@@ -88,6 +92,14 @@ export function useTextToSpeechWorker(options?: {
       handleWorkerMessage as EventListener
     );
 
+    // Clean up any in-flight per-request handlers (component destroyed before
+    // a loadModel() or synthesize() Promise settled).
+    for (const { handler, timeout } of activeHandlers) {
+      clearTimeout(timeout);
+      window.removeEventListener("ai-worker-message", handler);
+    }
+    activeHandlers.clear();
+
     // Cleanup audio URL
     if (audioUrl.value) {
       URL.revokeObjectURL(audioUrl.value);
@@ -103,6 +115,8 @@ export function useTextToSpeechWorker(options?: {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(
         () => {
+          activeHandlers.delete(entry);
+          window.removeEventListener("ai-worker-message", handler);
           reject(new Error("Model load timeout"));
         },
         5 * 60 * 1000
@@ -116,6 +130,7 @@ export function useTextToSpeechWorker(options?: {
           message.data.modelId === modelId
         ) {
           clearTimeout(timeout);
+          activeHandlers.delete(entry);
           window.removeEventListener("ai-worker-message", handler);
           resolve();
         } else if (
@@ -123,11 +138,15 @@ export function useTextToSpeechWorker(options?: {
           message.data.modelId === modelId
         ) {
           clearTimeout(timeout);
+          activeHandlers.delete(entry);
           window.removeEventListener("ai-worker-message", handler);
           reject(new Error(message.data.error));
         }
       };
 
+      // eslint-disable-next-line prefer-const
+      const entry = { handler: handler as EventListener, timeout };
+      activeHandlers.add(entry);
       window.addEventListener("ai-worker-message", handler);
 
       $aiWorker.postMessage({
@@ -170,6 +189,8 @@ export function useTextToSpeechWorker(options?: {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(
         () => {
+          activeHandlers.delete(entry);
+          window.removeEventListener("ai-worker-message", handler);
           isSynthesizing.value = false;
           reject(new Error("Speech synthesis timeout"));
         },
@@ -184,6 +205,7 @@ export function useTextToSpeechWorker(options?: {
           message.data.requestId === requestId
         ) {
           clearTimeout(timeout);
+          activeHandlers.delete(entry);
           window.removeEventListener("ai-worker-message", handler);
           isSynthesizing.value = false;
 
@@ -213,6 +235,7 @@ export function useTextToSpeechWorker(options?: {
           message.data.requestId === requestId
         ) {
           clearTimeout(timeout);
+          activeHandlers.delete(entry);
           window.removeEventListener("ai-worker-message", handler);
           isSynthesizing.value = false;
 
@@ -222,6 +245,9 @@ export function useTextToSpeechWorker(options?: {
         }
       };
 
+      // eslint-disable-next-line prefer-const
+      const entry = { handler: handler as EventListener, timeout };
+      activeHandlers.add(entry);
       window.addEventListener("ai-worker-message", handler);
 
       // Send inference request to worker

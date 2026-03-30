@@ -57,25 +57,18 @@ export const useCardReview = () => {
 
     if (response) {
       // Remove the graded card from the queue
-      const cardIndex = reviewQueue.value.findIndex(
-        (card) => card.cardId === cardId
-      );
+      const queue = reviewQueue.value;
+      const cardIndex = queue.findIndex((card) => card.cardId === cardId);
+      
       if (cardIndex !== -1) {
-        reviewQueue.value.splice(cardIndex, 1);
+        queue.splice(cardIndex, 1);
         queueStats.value.due = Math.max(0, queueStats.value.due - 1);
 
-        // Update current card index if needed
-        if (currentCardIndex.value >= reviewQueue.value.length) {
-          currentCardIndex.value = Math.max(0, reviewQueue.value.length - 1);
-        }
-
-        // Update current card
-        if (reviewQueue.value.length > 0) {
-          currentCard.value = reviewQueue.value[currentCardIndex.value] || null;
-        } else {
-          currentCard.value = null;
-          currentCardIndex.value = 0;
-        }
+        // Calculate bounded index and set current card in a single transactional step
+        const len = queue.length;
+        const newIndex = currentCardIndex.value >= len ? Math.max(0, len - 1) : currentCardIndex.value;
+        currentCardIndex.value = newIndex;
+        currentCard.value = queue[newIndex] ?? null;
       }
     }
 

@@ -32,7 +32,7 @@ const emit = defineEmits<{
 
 // ── State ──
 // Use JSON.parse(JSON.stringify) to strip Vue proxies to prevent DataCloneError on structuredClone
-const shapes = ref<CanvasShape[]>(
+const shapes = shallowRef<CanvasShape[]>(
   JSON.parse(JSON.stringify(props.initialMetadata?.shapes ?? []))
 );
 const selectedShapeId = ref<string | null>(null);
@@ -92,10 +92,9 @@ function commitState() {
 function applyToSelected(overrides: Partial<CanvasShape>) {
   if (!selectedShapeId.value) return;
   const idx = shapes.value.findIndex((s) => s.id === selectedShapeId.value);
-  if (idx !== -1) {
-    const updated = [...shapes.value];
-    updated[idx] = { ...updated[idx]!, ...overrides };
-    shapes.value = updated;
+  if (idx !== -1 && shapes.value[idx]) {
+    Object.assign(shapes.value[idx], overrides);
+    triggerRef(shapes);
     commitState();
   }
 }
@@ -185,7 +184,8 @@ function addStar() {
     x: 150 + Math.random() * 200,
     y: 120 + Math.random() * 150,
   });
-  shapes.value = [...shapes.value, s];
+  shapes.value.push(s);
+  triggerRef(shapes);
   selectedShapeId.value = s.id;
   commitState();
   updateTransformer();
@@ -291,16 +291,16 @@ function handleStageMouseDown(e: any) {
     currentDrawId = newId;
 
     if (activeTool.value === "rect") {
-      shapes.value = [...shapes.value, makeShape("rect", { id: newId, x: pos.x, y: pos.y, width: 0, height: 0 })];
+      shapes.value.push(makeShape("rect", { id: newId, x: pos.x, y: pos.y, width: 0, height: 0 }));
     } else if (activeTool.value === "circle") {
-      shapes.value = [...shapes.value, makeShape("circle", { id: newId, x: pos.x, y: pos.y, radius: 0 })];
+      shapes.value.push(makeShape("circle", { id: newId, x: pos.x, y: pos.y, radius: 0 }));
     } else if (activeTool.value === "line") {
-      shapes.value = [...shapes.value, makeShape("line", { id: newId, x: 0, y: 0, points: [pos.x, pos.y, pos.x, pos.y], fill: undefined })];
+      shapes.value.push(makeShape("line", { id: newId, x: 0, y: 0, points: [pos.x, pos.y, pos.x, pos.y], fill: undefined }));
     } else if (activeTool.value === "arrow") {
-      shapes.value = [...shapes.value, makeShape("arrow", { id: newId, x: 0, y: 0, points: [pos.x, pos.y, pos.x, pos.y], fill: undefined })];
+      shapes.value.push(makeShape("arrow", { id: newId, x: 0, y: 0, points: [pos.x, pos.y, pos.x, pos.y], fill: undefined }));
     } else if (activeTool.value === "text") {
       const s = makeShape("text", { id: newId, x: pos.x, y: pos.y, text: "Text", fontSize: 18, fontFamily: "Inter, system-ui, sans-serif", fill: strokeColor.value, stroke: undefined });
-      shapes.value = [...shapes.value, s];
+      shapes.value.push(s);
       selectedShapeId.value = newId;
       isDrawing = false;
       currentDrawId = null;
@@ -308,6 +308,7 @@ function handleStageMouseDown(e: any) {
       commitState();
       updateTransformer();
     }
+    triggerRef(shapes);
     return;
   }
 
@@ -317,7 +318,7 @@ function handleStageMouseDown(e: any) {
     const newId = genId();
     currentDrawId = newId;
     freeDrawPoints = [pos.x, pos.y];
-    shapes.value = [...shapes.value, makeShape("freedraw", {
+    shapes.value.push(makeShape("freedraw", {
       id: newId,
       x: 0,
       y: 0,
@@ -325,7 +326,8 @@ function handleStageMouseDown(e: any) {
       fill: undefined,
       tension: 0.5,
       closed: false,
-    })];
+    }));
+    triggerRef(shapes);
     return;
   }
 
@@ -372,8 +374,8 @@ function handleStageMouseMove(e: any) {
   const idx = shapes.value.findIndex((s) => s.id === currentDrawId);
   if (idx === -1) return;
 
-  const updated = [...shapes.value];
-  const shape = { ...updated[idx]! };
+  const shape = shapes.value[idx];
+  if (!shape) return;
 
   if (activeTool.value === "rect") {
     shape.width = Math.abs(pos.x - drawStart.x);
@@ -393,8 +395,7 @@ function handleStageMouseMove(e: any) {
     shape.points = [...freeDrawPoints];
   }
 
-  updated[idx] = shape;
-  shapes.value = updated;
+  triggerRef(shapes);
 }
 
 function handleStageMouseUp() {
@@ -416,46 +417,44 @@ function handleStageMouseUp() {
 function handleShapeDragEnd(e: any) {
   const id = e.target.id();
   const idx = shapes.value.findIndex((s) => s.id === id);
-  if (idx === -1) return;
+  if (idx === -1 || !shapes.value[idx]) return;
 
-  const updated = [...shapes.value];
-  updated[idx] = { ...updated[idx]!, x: e.target.x(), y: e.target.y() };
-  shapes.value = updated;
+  shapes.value[idx].x = e.target.x();
+  shapes.value[idx].y = e.target.y();
+  triggerRef(shapes);
   commitState();
 }
 
 function handleTransformEnd(e: any) {
   const id = e.target.id();
   const idx = shapes.value.findIndex((s) => s.id === id);
-  if (idx === -1) return;
+  if (idx === -1 || !shapes.value[idx]) return;
 
+  const shape = shapes.value[idx];
   const node = e.target;
-  const updated = [...shapes.value];
-  updated[idx] = {
-    ...updated[idx]!,
-    x: node.x(),
-    y: node.y(),
-    rotation: node.rotation(),
-    scaleX: node.scaleX(),
-    scaleY: node.scaleY(),
-  };
+  
+  shape.x = node.x();
+  shape.y = node.y();
+  shape.rotation = node.rotation();
+  shape.scaleX = node.scaleX();
+  shape.scaleY = node.scaleY();
 
   // For rect, bake scale into width/height to avoid styling stretch artifacts
-  if (updated[idx]!.type === "rect" && updated[idx]!.width && updated[idx]!.height) {
-    updated[idx]!.width = node.width() * node.scaleX();
-    updated[idx]!.height = node.height() * node.scaleY();
-    updated[idx]!.scaleX = 1;
-    updated[idx]!.scaleY = 1;
+  if (shape.type === "rect" && shape.width && shape.height) {
+    shape.width = node.width() * node.scaleX();
+    shape.height = node.height() * node.scaleY();
+    shape.scaleX = 1;
+    shape.scaleY = 1;
   }
 
   // Same for circle
-  if (updated[idx]!.type === "circle" && updated[idx]!.radius) {
-    updated[idx]!.radius = node.radius() * Math.max(node.scaleX(), node.scaleY());
-    updated[idx]!.scaleX = 1;
-    updated[idx]!.scaleY = 1;
+  if (shape.type === "circle" && shape.radius) {
+    shape.radius = node.radius() * Math.max(node.scaleX(), node.scaleY());
+    shape.scaleX = 1;
+    shape.scaleY = 1;
   }
 
-  shapes.value = updated;
+  triggerRef(shapes);
   commitState();
 }
 
@@ -500,10 +499,9 @@ function handleDblClick(e: any) {
     const newText = input.value;
     document.body.removeChild(input);
     const idx = shapes.value.findIndex((s) => s.id === id);
-    if (idx !== -1) {
-      const updated = [...shapes.value];
-      updated[idx] = { ...updated[idx]!, text: newText };
-      shapes.value = updated;
+    if (idx !== -1 && shapes.value[idx]) {
+      shapes.value[idx].text = newText;
+      triggerRef(shapes);
       commitState();
       updateTransformer(); // refresh bounding box handler
     }
@@ -602,7 +600,8 @@ function duplicateShape() {
   const original = shapes.value.find((s) => s.id === id);
   if (!original) return;
   const dup: CanvasShape = { ...JSON.parse(JSON.stringify(original)), id: genId(), x: (original.x || 0) + 30, y: (original.y || 0) + 30 };
-  shapes.value = [...shapes.value, dup];
+  shapes.value.push(dup);
+  triggerRef(shapes);
   selectedShapeId.value = dup.id;
   contextMenu.value.visible = false;
   commitState();

@@ -12,11 +12,27 @@ const emit = defineEmits(["add-to-material"]);
 // Use the optimistic notes store
 const notesStore = useNotesStore(workspaceId);
 
-// Computed properties for reactive data
+// Cached list of ordered IDs to prevent sorting on every text change
+const orderedNoteIds = ref<string[]>([]);
+
+watch(
+  () => {
+    // Only track id and order, ignores content changes
+    const arr = Array.from(notesStore.notes.value.values());
+    return arr.map(n => `${n.id}:${n.order}`).join('|');
+  },
+  () => {
+    const allNotes = Array.from(notesStore.notes.value.values());
+    allNotes.sort((a, b) => a.order - b.order);
+    orderedNoteIds.value = allNotes.map(n => n.id);
+  },
+  { immediate: true }
+);
+
 const notes = computed(() => {
-  const allNotes = Array.from(notesStore.notes.value.values());
-  // Sort by order field
-  return allNotes.sort((a, b) => a.order - b.order);
+  return orderedNoteIds.value
+    .map(id => notesStore.notes.value.get(id))
+    .filter((n): n is NoteState => !!n);
 });
 
 // Local writable ref for ReorderGroup v-model
@@ -353,7 +369,7 @@ const isDrawerOpen = ref(false);
                   'relative flex items-center gap-2 group w-full p-2.5  cursor-pointer hover:bg-secondary',
                   idx === localNotes.length - 1 ? '' : 'border-b border-secondary',
                   notesStore.filteredNoteIds.value
-                    ? notesStore.isNoteInFilter(note.id)
+                    ? notesStore.filteredNoteIds.value.has(note.id)
                       ? 'font-bold'
                       : 'opacity-50'
                     : '',

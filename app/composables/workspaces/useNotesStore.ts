@@ -1,7 +1,15 @@
 import type { APIError } from "@/services/FetchFactory";
 import type Result from "@/types/Result";
 import { DB_CONFIG } from "~/utils/constants/pwa";
-import { queueNoteChange, openUnifiedDB, loadBoardNotesFromIndexedDB } from "~/utils/idb";
+import {
+  saveNoteToIndexedDB,
+  saveNotesToIndexedDB,
+  loadNotesFromIndexedDB,
+  deleteNoteFromIndexedDB,
+  queueNoteChange,
+  openUnifiedDB,
+  loadBoardNotesFromIndexedDB,
+} from "~/utils/idb";
 
 export interface NoteState extends Note {
   // Local state tracking
@@ -25,18 +33,16 @@ interface NotesStore {
   clearNoteError: (id: string) => void;
   isNoteLoading: (id: string) => boolean;
   isNoteDirty: (id: string) => boolean;
-  isNoteInFilter: (id: string) => boolean;
   getNote: (id: string) => NoteState | null;
   setNotes?: (notes: NoteState[]) => void;
   setFilteredNoteIds: (ids: Set<string> | null) => void;
+  resetOfflineToast?: () => void;
 }
 
 // Global store instance - keyed by workspaceId
 const stores = new Map<string, NotesStore>();
 // Ensure we only wire one 'online' listener for notes sync across the app
 let notesOnlineListenerRegistered = false;
-// Track if we've shown offline toast to avoid spamming during multiple updates
-let offlineToastShown = false;
 
 /**
  * Creates or returns a notes store for a specific workspace
@@ -57,8 +63,12 @@ export function useNotesStore(workspaceId: string): NotesStore {
     try {
       let onlineSyncScheduled = false;
       window.addEventListener("online", async () => {
-        // Reset offline toast flag when back online
-        offlineToastShown = false;
+        // Reset offline toast flag for all active stores when back online
+        for (const store of stores.values()) {
+          if (store.resetOfflineToast) {
+            store.resetOfflineToast();
+          }
+        }
         if (onlineSyncScheduled) return;
         onlineSyncScheduled = true;
         try {
@@ -121,9 +131,6 @@ export function useNotesStore(workspaceId: string): NotesStore {
   // This ensures we don't trigger unnecessary sync events on every app load.
   // The window 'online' listener above handles immediate postMessage-based sync.
 
-  /**
-   * Register Background Sync for notes (only when there are pending changes)
-   */
   const registerNotesSync = async () => {
     if (!("serviceWorker" in navigator)) return;
     try {
@@ -135,6 +142,12 @@ export function useNotesStore(workspaceId: string): NotesStore {
     } catch {
       /* not supported or permission denied */
     }
+  };
+
+  // Track if we've shown offline toast for this specific store instance
+  let offlineToastShown = false;
+  const resetOfflineToast = () => {
+    offlineToastShown = false;
   };
 
   const { debouncedFunc: debouncedSave, cancel: cancelSave } = useDebounce(
@@ -599,9 +612,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
       });
 
       // Save to IndexedDB for persistence
-      for (const note of Array.from(notes.value.values())) {
-        await saveNoteToIndexedDB(note);
-      }
+      await saveNotesToIndexedDB(Array.from(notes.value.values()));
       console.log("💾 [useNotesStore] Saved to IndexedDB");
 
       // Attempt to submit to server
@@ -632,9 +643,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
         notes.value = originalNotes;
 
         // Restore original order in IndexedDB
-        for (const note of Array.from(originalNotes.values())) {
-          await saveNoteToIndexedDB(note);
-        }
+        await saveNotesToIndexedDB(Array.from(originalNotes.values()));
 
         toast.add({
           title: "Server Error",
@@ -781,8 +790,6 @@ export function useNotesStore(workspaceId: string): NotesStore {
     return await updateNoteToServer(id, note.content);
   };
 
-  // Note: Removed cleanup function as it's no longer needed with simplified approach
-
   // Clear error state for a note
   const clearNoteError = (id: string): void => {
     const note = notes.value.get(id);
@@ -828,16 +835,29 @@ export function useNotesStore(workspaceId: string): NotesStore {
     clearNoteError,
     isNoteLoading,
     isNoteDirty,
-    isNoteInFilter,
     setNotes,
     setFilteredNoteIds,
+    resetOfflineToast,
   };
 
-  // Cache the store
+  // Cache the store BEFORE triggering the async sync so that any
+  // concurrent call to useNotesStore() for the same workspaceId hits the
+  // cache rather than spinning up a second instance and a second network
+  // request.
   stores.set(workspaceId, store);
 
-  // Auto-sync on creation
-  syncWithServer();
+  // Defer the initial sync to the mounting phase so that:
+  //  1. The cache entry is already set (race condition above is avoided).
+  //  2. The composable can be called outside a component (e.g. in a Pinia
+  //     action or test) without triggering a spurious server round-trip.
+  if (getCurrentInstance()) {
+    onMounted(() => {
+      syncWithServer();
+    });
+  } else {
+    // Called outside a component – caller is responsible for triggering sync
+    // (e.g. via store.syncWithServer()) at the appropriate time.
+  }
 
   return store;
 }

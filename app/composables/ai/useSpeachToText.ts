@@ -31,6 +31,18 @@ export function useSpeachToText(options?: {
   const error = ref<Error | null>(null);
   const transcriptionError = ref<Error | null>(null);
 
+  // Track active handlers so we can clean them up if the component unmounts
+  // before a pending Promise settles (prevents orphaned event listeners).
+  const activeHandlers = new Set<{ handler: EventListener; timeout: ReturnType<typeof setTimeout> }>();
+
+  onUnmounted(() => {
+    for (const { handler, timeout } of activeHandlers) {
+      clearTimeout(timeout);
+      window.removeEventListener("ai-worker-message", handler);
+    }
+    activeHandlers.clear();
+  });
+
   // Use store abstractions for reactive model state
   const isDownloading = store.isModelDownloading(modelId);
   const progress = store.getModelProgress(modelId);
@@ -65,6 +77,8 @@ export function useSpeachToText(options?: {
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(
         () => {
+          activeHandlers.delete(entry);
+          window.removeEventListener("ai-worker-message", handler);
           isTranscribing.value = false;
           reject(new Error("Transcription timeout"));
         },
@@ -79,6 +93,7 @@ export function useSpeachToText(options?: {
           message.data.requestId === requestId
         ) {
           clearTimeout(timeout);
+          activeHandlers.delete(entry);
           window.removeEventListener("ai-worker-message", handler);
           isTranscribing.value = false;
 
@@ -110,6 +125,7 @@ export function useSpeachToText(options?: {
           message.data.requestId === requestId
         ) {
           clearTimeout(timeout);
+          activeHandlers.delete(entry);
           window.removeEventListener("ai-worker-message", handler);
           isTranscribing.value = false;
 
@@ -119,6 +135,10 @@ export function useSpeachToText(options?: {
         }
       };
 
+      // Register handler + timeout pair so onUnmounted can clean up if needed
+      // eslint-disable-next-line prefer-const
+      const entry = { handler: handler as EventListener, timeout };
+      activeHandlers.add(entry);
       window.addEventListener("ai-worker-message", handler);
 
       // Send inference request to worker

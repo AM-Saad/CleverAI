@@ -15,7 +15,6 @@ import type { NavigationMenuItem } from "@nuxt/ui";
 import type { Editor as TipTapEditor } from "@tiptap/core";
 import type {
   Selection as PMSelection,
-  SelectionBookmark,
 } from "prosemirror-state";
 import Document from "@tiptap/extension-document";
 import { ListItem, TaskItem, TaskList } from "@tiptap/extension-list";
@@ -56,11 +55,6 @@ const collaborationHandle = ref<CollaborationHandle>(null);
 const props = defineProps<{
   modelValue: string;
 }>();
-
-// store the last saved selection text (for quick access)
-const savedSelectionText = ref<string | null>(null);
-// bookmark to track selection across local transactions
-let savedBookmark: SelectionBookmark | null = null;
 
 // Expose editor publicly
 defineExpose({ editor });
@@ -245,25 +239,6 @@ const contextMenuItems = computed(() => {
   ];
 });
 
-// helper: map savedBookmark on each transaction so it stays valid across edits
-function attachBookmarkTracker() {
-  if (!editor.value) return;
-  try {
-    editor.value.on("transaction", ({ transaction }) => {
-      if (!savedBookmark) return;
-      try {
-        // bookmark.map exists on the object returned by getBookmark()
-        savedBookmark = savedBookmark.map(transaction.mapping);
-      } catch (e) {
-        // mapping failed; clear bookmark
-        savedBookmark = null;
-      }
-    });
-  } catch (e) {
-    /* ignore */
-  }
-}
-
 watch(
   () => props.modelValue,
   (value) => {
@@ -344,9 +319,6 @@ onMounted(async () => {
   // ensure view is mounted
   await nextTick();
 
-  // attach bookmark tracker so savedBookmark maps forward with transactions
-  attachBookmarkTracker();
-
   // init collaboration defensively (disabled for now)
   // try {
   //   const result = await initCollaboration(editor.value!, { roomName: 'my-doc' })
@@ -371,147 +343,6 @@ function getSelectedText(): string | null {
   } catch (e) {
     console.warn("getSelectedText failed", e);
     return null;
-  }
-}
-
-function saveSelectionBookmarkAndText(): { text: string | null; ok: boolean } {
-  if (!editor.value) return { text: null, ok: false };
-  const state = editor.value.state;
-  const sel = state.selection;
-  if (!sel) return { text: null, ok: false };
-  // store text for quick use
-  savedSelectionText.value = state.doc.textBetween(sel.from, sel.to, "\n");
-  // store bookmark to be resilient to local edits
-  savedBookmark = sel.getBookmark();
-  return { text: savedSelectionText.value, ok: true };
-}
-
-function restoreSelectionFromSavedBookmark(): boolean {
-  if (!editor.value || !savedBookmark) return false;
-  try {
-    const sel = (savedBookmark as SelectionBookmark).resolve(
-      editor.value.state.doc
-    ) as PMSelection;
-    const tr = editor.value.state.tr.setSelection(sel).scrollIntoView();
-    editor.value.view.dispatch(tr);
-    return true;
-  } catch (e) {
-    console.warn("restoreSelectionFromSavedBookmark failed", e);
-    return false;
-  }
-}
-
-// ----------------- Marker demo (persist across reloads) -----------------
-function generateId() {
-  // simple id; replace with a UUID generator if you prefer
-  return Math.random().toString(36).slice(2, 10);
-}
-
-function insertSelectionMarker() {
-  if (!editor.value) return;
-  const id = generateId();
-  const token = `[[MARKER:${id}]]`;
-  // insert the token at current selection (as plain text)
-  editor.value.chain().focus().insertContent(token).run();
-  // persist id so we can attempt cross-reload restore
-  try {
-    localStorage.setItem("tiptap-marker-id", id);
-    console.log("Inserted marker", id);
-  } catch (e) {
-    console.warn("Could not persist marker id", e);
-  }
-}
-
-function restoreMarkerFromLocalStorage() {
-  if (!editor.value) return false;
-  try {
-    const id = localStorage.getItem("tiptap-marker-id");
-    if (!id) {
-      console.warn("no marker id in localStorage");
-      return false;
-    }
-
-    const token = `[[MARKER:${id}]]`;
-    // find token in document text
-    const docText = editor.value.state.doc.textContent || "";
-    const idx = docText.indexOf(token);
-    if (idx === -1) {
-      console.warn("marker token not found in document");
-      return false;
-    }
-
-    // compute from/to positions by scanning document for positions — use a walking approach
-    let pos = 0;
-    let foundFrom = -1;
-    let foundTo = -1;
-    // walk through top-level nodes to compute absolute positions
-    editor.value.state.doc.descendants((node, posSoFar) => {
-      if (foundFrom !== -1) return false; // stop walking
-      const text = node.isText ? node.text || "" : "";
-      if (text) {
-        const localIdx = text.indexOf(token);
-        if (localIdx !== -1) {
-          // absolute position = posSoFar + localIdx
-          foundFrom = posSoFar + localIdx;
-          foundTo = foundFrom + token.length;
-          return false;
-        }
-      }
-      return true;
-    });
-
-    if (foundFrom === -1) {
-      console.warn("marker token not located by node traversal");
-      return false;
-    }
-
-    // set selection at token start and remove the token
-    const tr = editor.value.state.tr;
-    const sel = editor.value.state.selection;
-    // Some bundlers expose Selection differently; use the running editor's selection constructor at runtime
-    const SelCtor: any = (editor.value.state.selection as any).constructor;
-    tr.setSelection(SelCtor.create(editor.value.state.doc, foundFrom, foundTo));
-    tr.delete(foundFrom, foundTo);
-    editor.value.view.dispatch(tr.scrollIntoView());
-
-    // clean up persisted id
-    localStorage.removeItem("tiptap-marker-id");
-    console.log("Restored and removed marker", id);
-    return true;
-  } catch (e) {
-    console.warn("restoreMarkerFromLocalStorage failed", e);
-    return false;
-  }
-}
-
-// try auto-restore on mount (if a marker id exists)
-onMounted(() => {
-  try {
-    const stored = localStorage.getItem("tiptap-marker-id");
-    if (stored) {
-      // schedule a tick so editor view is ready
-      setTimeout(() => {
-        restoreMarkerFromLocalStorage();
-      }, 200);
-    }
-  } catch (e) {
-    /* ignore */
-  }
-});
-
-// UI handlers for the test buttons
-function handleGetSelection() {
-  const text = getSelectedText();
-  console.log("CURRENT SELECTION TEXT:", text);
-  // optionally you can emit or process the selected text here
-}
-
-function handleSaveSelection() {
-  const res = saveSelectionBookmarkAndText();
-  if (res.ok) {
-    console.log("SAVED SELECTION TEXT:", res.text);
-  } else {
-    console.warn("No selection to save");
   }
 }
 

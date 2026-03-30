@@ -5,21 +5,13 @@ import type {
   CreateMaterialDTO,
   UpdateMaterialDTO,
 } from "~/shared/utils/material.contract";
+import type { UploadMaterialResponse } from "~/shared/utils/llm-generate.contract";
+
+export type { UploadMaterialResponse } from "~/shared/utils/llm-generate.contract";
 
 export interface MaterialGeneratedContent {
   flashcardsCount: number;
   questionsCount: number;
-}
-
-/**
- * Response from file upload endpoint
- */
-export interface UploadMaterialResponse {
-  materialId: string;
-  tokenEstimate: number;
-  charCount: number;
-  pageCount?: number;
-  title: string;
 }
 
 export class MaterialService extends FetchFactory {

@@ -1,7 +1,7 @@
 import type { APIError } from "@/services/FetchFactory";
 import type Result from "@/types/Result";
 import { DB_CONFIG } from "~/utils/constants/pwa";
-import { queueBoardItemChange, openUnifiedDB, putRecord } from "~/utils/idb";
+import { queueBoardItemChange, openUnifiedDB, putRecord, putAllRecords } from "~/utils/idb";
 import type { BoardItem } from "~/shared/utils/boardItem.contract";
 import { SYNC_TAGS } from "~/utils/constants/pwa";
 import { getAllRecords } from "~/utils/idb";
@@ -37,6 +37,7 @@ interface BoardItemsStore {
   getItem: (id: string) => BoardItemState | null;
   setItems?: (items: BoardItemState[]) => void;
   setFilteredItemIds: (ids: Set<string> | null) => void;
+  resetOfflineToast?: () => void;
 }
 
 // Global store instance - single instance per user
@@ -44,8 +45,6 @@ let storeInstance: BoardItemsStore | null = null;
 
 // Ensure we only wire one 'online' listener
 let onlineListenerRegistered = false;
-// Track if we've shown offline toast
-let offlineToastShown = false;
 
 // Abort controllers for reorder operations to prevent race conditions
 let reorderAbortController: AbortController | null = null;
@@ -70,7 +69,9 @@ export function useBoardItemsStore(): BoardItemsStore {
     try {
       let onlineSyncScheduled = false;
       window.addEventListener("online", async () => {
-        offlineToastShown = false;
+        if (storeInstance?.resetOfflineToast) {
+          storeInstance.resetOfflineToast();
+        }
         if (onlineSyncScheduled) return;
         onlineSyncScheduled = true;
         try {
@@ -122,9 +123,6 @@ export function useBoardItemsStore(): BoardItemsStore {
     }
   }
 
-  /**
-   * Register Background Sync for board items
-   */
   const registerBoardItemsSync = async () => {
     if (!("serviceWorker" in navigator)) return;
     try {
@@ -136,6 +134,12 @@ export function useBoardItemsStore(): BoardItemsStore {
     } catch {
       /* not supported or permission denied */
     }
+  };
+
+  // Track if we've shown offline toast for this store instance
+  let offlineToastShown = false;
+  const resetOfflineToast = () => {
+    offlineToastShown = false;
   };
 
   const { debouncedFunc: debouncedSave, cancel: cancelSave } = useDebounce(
@@ -413,9 +417,7 @@ export function useBoardItemsStore(): BoardItemsStore {
           })),
       };
 
-      for (const item of Array.from(items.value.values())) {
-        await saveBoardItemToIndexedDB(item);
-      }
+      await saveBoardItemsToIndexedDB(Array.from(items.value.values()));
 
       // Check if aborted before making request
       if (signal.aborted) {
@@ -445,9 +447,7 @@ export function useBoardItemsStore(): BoardItemsStore {
         console.error("Server rejected board item reordering:", result.error);
         items.value = originalItems;
 
-        for (const item of Array.from(originalItems.values())) {
-          await saveBoardItemToIndexedDB(item);
-        }
+        await saveBoardItemsToIndexedDB(Array.from(originalItems.values()));
 
         toast.add({
           title: "Error",
@@ -667,8 +667,7 @@ export function useBoardItemsStore(): BoardItemsStore {
         items.value.set(item.id, item);
       });
 
-      // Save to IndexedDB in parallel (don't await individually)
-      Promise.all(orderedItems.map(item => saveBoardItemToIndexedDB(item))).catch(err => {
+      saveBoardItemsToIndexedDB(orderedItems).catch(err => {
         console.warn('IndexedDB save failed during reorder:', err);
       });
 
@@ -714,9 +713,8 @@ export function useBoardItemsStore(): BoardItemsStore {
         console.error("Server rejected item reordering:", result.error);
         items.value = originalItems;
         // Rollback IndexedDB in parallel
-        Promise.all(
-          Array.from(originalItems.values()).map(item => saveBoardItemToIndexedDB(item))
-        ).catch(err => console.warn('IndexedDB rollback failed:', err));
+        saveBoardItemsToIndexedDB(Array.from(originalItems.values()))
+        .catch(err => console.warn('IndexedDB rollback failed:', err));
         toast.add({
           title: "Error",
           description: "Failed to reorder items",
@@ -767,6 +765,7 @@ export function useBoardItemsStore(): BoardItemsStore {
     getItem,
     setItems,
     setFilteredItemIds,
+    resetOfflineToast,
   };
 
   // Cache the store
@@ -795,6 +794,16 @@ async function saveBoardItemToIndexedDB(item: BoardItemState): Promise<void> {
     await putRecord(db, DB_CONFIG.STORES.BOARD_ITEMS as STORES, item);
   } catch (error) {
     console.error("Failed to save board item to IndexedDB:", error);
+  }
+}
+
+async function saveBoardItemsToIndexedDB(itemsArr: BoardItemState[]): Promise<void> {
+  try {
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.BOARD_ITEMS)) return;
+    await putAllRecords(db, DB_CONFIG.STORES.BOARD_ITEMS as STORES, itemsArr);
+  } catch (error) {
+    console.error("Failed to batch save board items to IndexedDB:", error);
   }
 }
 

@@ -5,6 +5,7 @@ import { useRoute } from "vue-router";
 import type { UploadMaterialResponse } from "~/services/Material";
 import type { GatewayGenerateResponse } from "~/shared/utils/llm-generate.contract";
 import { useSpeachToText } from "~/composables/ai/useSpeachToText";
+import { useGenerateFromMaterial } from "~/composables/materials/useGenerateFromMaterial";
 
 type SourceType = "text" | "file" | "voice";
 type DepthOption = "quick" | "balanced" | "deep";
@@ -18,10 +19,9 @@ const props = defineProps<{
 }>();
 
 const route = useRoute();
-const { data } = useAuth();
 const { $api } = useNuxtApp();
 const toast = useToast();
-const { subscriptionInfo, updateFromData, handleApiError } = useSubscriptionStore();
+const { data } = useAuth();
 
 const id = route.params.id as string;
 const { createMaterial, uploadMaterial, uploading, addPendingTranscription, updatePendingTranscription, removePendingTranscription } = useMaterialsStore(id);
@@ -79,8 +79,10 @@ const uploadedMaterial = ref<UploadMaterialResponse | null>(null);
 const generateAfterUpload = ref(false);
 const generationType = ref<"flashcards" | "quiz">("flashcards");
 const selectedDepth = ref<DepthOption>("balanced");
-const generating = ref(false);
-const genError = ref<string | null>(null);
+
+const { startGenerate, generating, genError, lastResult } = useGenerateFromMaterial(
+  computed(() => uploadedMaterial.value?.materialId || '')
+);
 
 const depthOptions = [
   { value: "quick" as const, label: "Quick", description: "5-15 items" },
@@ -201,55 +203,11 @@ async function handleUpload() {
 async function handleGenerate() {
   if (!uploadedMaterial.value) return;
 
-  generating.value = true;
-  genError.value = null;
+  await startGenerate(generationType.value, { depth: selectedDepth.value });
 
-  try {
-    const generateFn =
-      generationType.value === "flashcards"
-        ? $api.gateway.generateFlashcards.bind($api.gateway)
-        : $api.gateway.generateQuiz.bind($api.gateway);
-
-    const result = await generateFn("", {
-      materialId: uploadedMaterial.value.materialId,
-      save: true,
-      replace: false,
-      generationConfig: {
-        depth: selectedDepth.value,
-      },
-    });
-
-    if (result.subscription) {
-      updateFromData({ subscription: result.subscription });
-    }
-
-    const itemType = generationType.value === "flashcards" ? "flashcards" : "questions";
-    toast.add({
-      title: "Generation Complete",
-      description: `Generated ${result.savedCount || estimatedItemCount.value} ${itemType} successfully`,
-      color: "success",
-    });
-
-    if (subscriptionInfo.value.tier === "FREE" && subscriptionInfo.value.remaining <= 3) {
-      toast.add({
-        title: "Free Tier Limit",
-        description: `You have ${subscriptionInfo.value.remaining} generations left.`,
-        color: "warning",
-      });
-    }
-
-    emit("generated", result);
+  if (!genError.value && lastResult.value) {
+    emit("generated", lastResult.value as any);
     closeAndReset();
-  } catch (err) {
-    handleApiError(err);
-    genError.value = err instanceof Error ? err.message : "Generation failed. Please try again.";
-    toast.add({
-      title: "Generation Failed",
-      description: genError.value,
-      color: "error",
-    });
-  } finally {
-    generating.value = false;
   }
 }
 
@@ -264,8 +222,6 @@ function resetState() {
   generateAfterUpload.value = false;
   generationType.value = "flashcards";
   selectedDepth.value = "balanced";
-  generating.value = false;
-  genError.value = null;
   // Source
   sourceTabIndex.value = 0;
 }

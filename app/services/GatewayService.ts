@@ -6,18 +6,8 @@ import type {
   GatewayGenerateRequest,
   GatewayGenerateResponse,
   GenerationConfig,
+  UploadMaterialResponse,
 } from "~/shared/utils/llm-generate.contract";
-
-/**
- * Material upload response
- */
-export interface UploadMaterialResponse {
-  materialId: string;
-  tokenEstimate: number;
-  charCount: number;
-  pageCount?: number;
-  title: string;
-}
 
 /**
  * Gateway Service

@@ -57,9 +57,6 @@ function select(index: number) {
   carousel.value?.emblaApi?.scrollTo(index);
 }
 
-watch(() => props.workspaceId, () => {
-  fetchSubscriptionStatus();
-});
 </script>
 
 <template>

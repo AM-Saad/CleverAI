@@ -113,15 +113,13 @@ onMounted(async () => {
   }
 });
 
-// ── Recognition trigger ──
-async function triggerRecognition() {
-  console.log("[MathNoteEditor] triggerRecognition called");
-  const canvas = canvasRef.value;
-  if (!canvas || !allStrokes.value.length) return;
+let lastProcessedStrokeIndex = 0;
+let globalMinX = Infinity, globalMinY = Infinity, globalMaxX = -Infinity, globalMaxY = -Infinity;
 
-  // 1. Calculate the global bounding box of ALL ink 
-  let globalMinX = Infinity, globalMinY = Infinity, globalMaxX = -Infinity, globalMaxY = -Infinity;
-  for (const s of allStrokes.value) {
+function updateBounds() {
+  for (let j = lastProcessedStrokeIndex; j < allStrokes.value.length; j++) {
+    const s = allStrokes.value[j];
+    if (!s) continue;
     for (let i = 0; i < s.x.length; i++) {
       if (s.x[i]! < globalMinX) globalMinX = s.x[i]!;
       if (s.x[i]! > globalMaxX) globalMaxX = s.x[i]!;
@@ -129,47 +127,60 @@ async function triggerRecognition() {
       if (s.y[i]! > globalMaxY) globalMaxY = s.y[i]!;
     }
   }
+  lastProcessedStrokeIndex = allStrokes.value.length;
+}
+
+// ── Recognition trigger ──
+async function triggerRecognition() {
+  console.log("[MathNoteEditor] triggerRecognition called");
+  const canvas = canvasRef.value;
+  if (!canvas || !allStrokes.value.length) return;
+
+  // 1. Calculate the global bounding box of ALL ink incrementally
+  updateBounds();
+
+  let minX = globalMinX, minY = globalMinY, maxX = globalMaxX, maxY = globalMaxY;
 
   // Fallback if no valid points
-  if (globalMinX === Infinity) {
-    globalMinX = 0; globalMinY = 0;
-    globalMaxX = canvas.getBoundingClientRect().width;
-    globalMaxY = canvas.getBoundingClientRect().height;
+  if (minX === Infinity) {
+    minX = 0; minY = 0;
+    maxX = canvas.getBoundingClientRect().width;
+    maxY = canvas.getBoundingClientRect().height;
   }
 
   // 2. Normalize strokes so the top-left starts at 0,0 locally
   // This ensures MyScript always processes the strokes accurately regardless of camera pan
   const normalizedStrokes = allStrokes.value.map(s => ({
     ...s,
-    x: s.x.map(x => x - globalMinX),
-    y: s.y.map(y => y - globalMinY)
+    x: s.x.map(x => x - minX),
+    y: s.y.map(y => y - minY)
   }));
 
   const strokeBox = pendingBounds.value
     ? { ...pendingBounds.value }
-    : { minX: globalMinX, minY: globalMinY, maxX: globalMaxX, maxY: globalMaxY };
+    : { minX, minY, maxX, maxY };
 
   // Adjust strokeBox to match normalized coordinates
   const normalizedStrokeBox = {
-    minX: strokeBox.minX - globalMinX,
-    minY: strokeBox.minY - globalMinY,
-    maxX: strokeBox.maxX - globalMinX,
-    maxY: strokeBox.maxY - globalMinY,
+    minX: strokeBox.minX - minX,
+    minY: strokeBox.minY - minY,
+    maxX: strokeBox.maxX - minX,
+    maxY: strokeBox.maxY - minY,
   };
 
   try {
     const outcome = await recognizeWithLocalAI(normalizedStrokes, normalizedStrokeBox, {
-      width: Math.ceil(globalMaxX - globalMinX) || 1,
-      height: Math.ceil(globalMaxY - globalMinY) || 1,
+      width: Math.ceil(maxX - minX) || 1,
+      height: Math.ceil(maxY - minY) || 1,
     });
     console.log("[MathNoteEditor] local AI outcome:", outcome);
 
     // Shift result bounding box back to world coordinates
     if (outcome.boundingBox) {
-      outcome.boundingBox.minX += globalMinX;
-      outcome.boundingBox.minY += globalMinY;
-      outcome.boundingBox.maxX += globalMinX;
-      outcome.boundingBox.maxY += globalMinY;
+      outcome.boundingBox.minX += minX;
+      outcome.boundingBox.minY += minY;
+      outcome.boundingBox.maxX += minX;
+      outcome.boundingBox.maxY += minY;
     }
     console.log("[MathNoteEditor] outcome.boundingBox:", outcome.boundingBox);
 
@@ -238,6 +249,8 @@ function clearCanvas() {
   lines.value = [];
   overlays.value = [];
   _clearCanvas();
+  lastProcessedStrokeIndex = 0;
+  globalMinX = Infinity; globalMinY = Infinity; globalMaxX = -Infinity; globalMaxY = -Infinity;
 }
 
 function clearAll() {
@@ -252,6 +265,8 @@ function clearAll() {
  */
 function clearArea() {
   _clearArea();
+  lastProcessedStrokeIndex = 0;
+  globalMinX = Infinity; globalMinY = Infinity; globalMaxX = -Infinity; globalMaxY = -Infinity;
 
   // Capture updated state and emit
   getScope().then((scope) => {

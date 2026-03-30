@@ -140,3 +140,11 @@ export const GatewayGenerateResponse = z.union([
   }),
 ]);
 export type GatewayGenerateResponse = z.infer<typeof GatewayGenerateResponse>;
+
+export interface UploadMaterialResponse {
+  materialId: string;
+  tokenEstimate: number;
+  charCount: number;
+  pageCount?: number;
+  title: string;
+}

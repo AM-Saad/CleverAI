@@ -40,6 +40,7 @@ export function useGenerateFromMaterial(
   // Confirmation dialog state
   const showConfirmDialog = ref(false);
   const pendingGenerationType = ref<GenerationType | null>(null);
+  const pendingGenerationConfig = ref<any>(null);
   const existingCounts = ref<MaterialGenerationState>({
     hasFlashcards: false,
     hasQuestions: false,
@@ -85,9 +86,10 @@ export function useGenerateFromMaterial(
   /**
    * Start generation - checks for existing content and shows confirmation if needed
    */
-  async function startGenerate(type: GenerationType) {
+  async function startGenerate(type: GenerationType, config?: any) {
     genError.value = null;
     pendingGenerationType.value = type;
+    pendingGenerationConfig.value = config;
 
     // Check for existing content
     const existing = await checkExistingContent();
@@ -100,7 +102,7 @@ export function useGenerateFromMaterial(
       showConfirmDialog.value = true;
     } else {
       // No existing content, proceed directly
-      await executeGeneration(type);
+      await executeGeneration(type, false, config);
     }
   }
 
@@ -110,7 +112,7 @@ export function useGenerateFromMaterial(
   async function confirmRegenerate(replace: boolean) {
     showConfirmDialog.value = false;
     if (pendingGenerationType.value) {
-      await executeGeneration(pendingGenerationType.value, replace);
+      await executeGeneration(pendingGenerationType.value, replace, pendingGenerationConfig.value);
     }
   }
 
@@ -125,28 +127,23 @@ export function useGenerateFromMaterial(
   /**
    * Execute the actual generation
    */
-  async function executeGeneration(type: GenerationType, replace = false) {
+  async function executeGeneration(type: GenerationType, replace = false, config?: any) {
     genError.value = null;
     generating.value = true;
     generationType.value = type;
 
     try {
-      // Fetch material content
-      const materialResponse = await $api.materials.getMaterial(
-        materialId.value
-      );
-
-      if (!materialResponse.success || !materialResponse.data) {
-        throw new Error("Failed to load material content");
-      }
-
-      const material = materialResponse.data;
-      const text = material.content?.trim();
-
-      if (!text) {
-        genError.value =
-          "This material has no content. Please add content first.";
-        return;
+      // For generating with just materialId (if text is not available yet)
+      let text = "";
+      try {
+        const materialResponse = await $api.materials.getMaterial(
+          materialId.value
+        );
+        if (materialResponse.success && materialResponse.data) {
+          text = materialResponse.data.content?.trim() || "";
+        }
+      } catch (e) {
+        // Fallback or allowed failure for large/deferred reads
       }
 
       // Call generation API
@@ -157,12 +154,14 @@ export function useGenerateFromMaterial(
           materialId: materialId.value,
           save: true,
           replace,
+          generationConfig: config,
         });
       } else {
         result = await $api.gateway.generateQuiz(text, {
           materialId: materialId.value,
           save: true,
           replace,
+          generationConfig: config,
         });
       }
 
