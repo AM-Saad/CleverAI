@@ -43,7 +43,8 @@
         </div>
 
 
-        <div v-if="status === 'authenticated'" class="flex gap-5">
+        <div v-if="status === 'authenticated'" class="flex gap-5 items-center">
+          <SharedCreditsPill />
           <ui-dropdown-menu />
         </div>
         <div v-else-if="status === 'unauthenticated'" class="flex gap-5">

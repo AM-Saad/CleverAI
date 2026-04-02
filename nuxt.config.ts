@@ -315,6 +315,8 @@ export default defineNuxtConfig({
       SERVER_URL: process.env.SERVER_URL,
       VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+      STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
+      APPLIXIR_SITE_ID: process.env.APPLIXIR_SITE_ID,
 
       enableLlmGateway: process.env.ENABLE_LLM_GATEWAY === "true",
     },

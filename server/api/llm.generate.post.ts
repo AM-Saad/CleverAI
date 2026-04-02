@@ -190,6 +190,7 @@ export default defineEventHandler(async (event) => {
           generationsUsed: updatedQuota.generationsUsed,
           generationsQuota: updatedQuota.generationsQuota,
           remaining: updatedQuota.remaining,
+          creditBalance: updatedQuota.creditBalance,
         },
       };
 
@@ -256,6 +257,7 @@ export default defineEventHandler(async (event) => {
         generationsUsed: updatedQuota.generationsUsed,
         generationsQuota: updatedQuota.generationsQuota,
         remaining: updatedQuota.remaining,
+        creditBalance: updatedQuota.creditBalance,
       },
     };
 

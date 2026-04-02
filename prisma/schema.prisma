@@ -46,6 +46,7 @@ model User {
     deletedAt           DateTime?
     scheduledDeletionAt DateTime? // Permanent deletion scheduled for 30 days after soft delete
     // --- End soft delete fields ---
+    creditTransactions  CreditTransaction[]
 }
 
 enum UserRole {
@@ -354,6 +355,31 @@ model UserSubscription {
     cancelAtPeriodEnd    Boolean          @default(false)
     createdAt            DateTime         @default(now())
     updatedAt            DateTime         @updatedAt
+    creditBalance        Int              @default(0)
+    lifetimeCredits      Int              @default(0)
+    lastFreeRefillAt     DateTime?
+}
+
+// Add this new model:
+model CreditTransaction {
+    id        String       @id @default(auto()) @map("_id") @db.ObjectId
+    userId    String       @db.ObjectId
+    user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    delta     Int
+    type      CreditTxType
+    metadata  Json?
+    createdAt DateTime     @default(now())
+
+    @@index([userId, createdAt])
+}
+
+enum CreditTxType {
+    FREE_MONTHLY_REFILL
+    AD_REWARD
+    STRIPE_PURCHASE
+    GENERATION_SPEND
+    SUBSCRIPTION_BONUS
+    ADMIN_GRANT
 }
 
 type SubscriptionKeys {
