@@ -1,10 +1,6 @@
 import type { APIError } from "@/services/FetchFactory";
 import type Result from "@/types/Result";
-import { DB_CONFIG } from "~/utils/constants/pwa";
-import { queueBoardItemChange, openUnifiedDB, putRecord, putAllRecords } from "~/utils/idb";
 import type { BoardItem } from "~/shared/utils/boardItem.contract";
-import { SYNC_TAGS } from "~/utils/constants/pwa";
-import { getAllRecords } from "~/utils/idb";
 
 type STORES = typeof DB_CONFIG.STORES[keyof typeof DB_CONFIG.STORES];
 
@@ -54,23 +50,22 @@ const reorderInColumnAbortControllers = new Map<string, AbortController>();
  * Creates or returns the board items store for the current user
  * This provides local state management with optimistic updates
  */
-export function useBoardItemsStore(): BoardItemsStore {
+export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   // Return existing store if available
-  if (storeInstance) {
-    return storeInstance;
-  }
+  // if (storeInstance) {
+  //   return storeInstance;
+  // }
 
   const { $api } = useNuxtApp();
   const toast = useToast();
-  const { handleOfflineSubmit } = useOffline();
 
   // Proactively trigger sync on reconnect when pending changes exist
-  if (process.client && !onlineListenerRegistered) {
+  if (import.meta.client && !onlineListenerRegistered) {
     try {
       let onlineSyncScheduled = false;
       window.addEventListener("online", async () => {
-        if (storeInstance?.resetOfflineToast) {
-          storeInstance.resetOfflineToast();
+        if (store?.resetOfflineToast) {
+          store.resetOfflineToast();
         }
         if (onlineSyncScheduled) return;
         onlineSyncScheduled = true;
@@ -110,8 +105,8 @@ export function useBoardItemsStore(): BoardItemsStore {
           const msg = event.data;
 
           if (msg.type === "BOARD_ITEMS_SYNCED" && msg.data?.appliedCount > 0) {
-            if (storeInstance) {
-              await storeInstance.syncWithServer();
+            if (store) {
+              await store.syncWithServer();
             }
           }
         });
@@ -276,6 +271,7 @@ export function useBoardItemsStore(): BoardItemsStore {
       content,
       tags,
       order: items.value.size,
+      workspaceId: workspaceId,
       createdAt: new Date(),
       updatedAt: new Date(),
       isLoading: true,
@@ -291,6 +287,7 @@ export function useBoardItemsStore(): BoardItemsStore {
         id: tempId,
         operation: "upsert",
         updatedAt: Date.now(),
+        workspaceId: workspaceId,
         localVersion: 1,
         content,
         tags,
@@ -311,12 +308,13 @@ export function useBoardItemsStore(): BoardItemsStore {
       }
       return tempId;
     }
-
+    console.log("workspaceId", workspaceId);
     try {
       const result = await $api.boardItems.create({
         content,
         tags,
         columnId: columnId ?? undefined,
+        workspaceId: workspaceId,
       });
 
       if (result.success) {
@@ -472,7 +470,7 @@ export function useBoardItemsStore(): BoardItemsStore {
   const syncWithServer = async (): Promise<void> => {
     loadingStates.value.set("global", true);
     try {
-      const result = await $api.boardItems.getAll();
+      const result = await $api.boardItems.getAll(workspaceId);
 
       if (result.success) {
         const tempItems = Array.from(items.value.values()).filter(i =>
@@ -714,7 +712,7 @@ export function useBoardItemsStore(): BoardItemsStore {
         items.value = originalItems;
         // Rollback IndexedDB in parallel
         saveBoardItemsToIndexedDB(Array.from(originalItems.values()))
-        .catch(err => console.warn('IndexedDB rollback failed:', err));
+          .catch(err => console.warn('IndexedDB rollback failed:', err));
         toast.add({
           title: "Error",
           description: "Failed to reorder items",
@@ -769,7 +767,7 @@ export function useBoardItemsStore(): BoardItemsStore {
   };
 
   // Cache the store
-  storeInstance = store;
+  // storeInstance = store;
 
   // Auto-sync on creation
   syncWithServer();

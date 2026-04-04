@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { useBoardColumnsStore } from "~/composables/useBoardColumnsStore";
-import { useBoardItemsStore } from "~/composables/useBoardItemsStore";
-import type { BoardItemState } from "~/composables/useBoardItemsStore";
+import { useBoardColumnsStore } from "~/composables/board/useBoardColumnsStore";
+import { useBoardItemsStore } from "~/composables/board/useBoardItemsStore";
+import type { BoardItemState } from "~/composables/board/useBoardItemsStore";
 
 const props = defineProps<{
   items: BoardItemState[]; // Filtered items for display
   allItems: BoardItemState[]; // All items for proper reordering
 }>();
 
+const route = useRoute();
+const id = route.params.id;
 // Stores
-const columnsStore = useBoardColumnsStore();
-const itemsStore = useBoardItemsStore();
+const columnsStore = useBoardColumnsStore(id as string);
+const itemsStore = useBoardItemsStore(id as string);
 
 const emit = defineEmits<{
   (e: "select-item", itemId: string): void;

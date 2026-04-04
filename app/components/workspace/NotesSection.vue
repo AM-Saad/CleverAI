@@ -313,7 +313,7 @@ const isDrawerOpen = ref(false);
 
 <template>
   <ui-card variant="default" size="sm" shadow="none"
-    class="flex flex-col md:basis-1/2 xl:basis-2/3 shrink-0 md:shrink min-h-0 overflow-hidden basis-3/3 z-10  relative!"
+    class="flex flex-col basis-1/3 min-h-0 overflow-hidden z-10 shrink-0  relative!"
     contentClasses="flex flex-col p-0!">
     <!-- Header -->
     <template v-slot:header>

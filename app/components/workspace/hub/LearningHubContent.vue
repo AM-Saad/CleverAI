@@ -36,14 +36,14 @@ const { fetchSubscriptionStatus } = useSubscriptionStore();
 
 const items = [
   {
-    name: "Questions",
-    icon: "bi:question-circle",
-    component: Questions,
-  },
-  {
     name: "Flash Cards",
     icon: "bi:card-text",
     component: FlashCards,
+  },
+  {
+    name: "Questions",
+    icon: "bi:question-circle",
+    component: Questions,
   },
 ];
 

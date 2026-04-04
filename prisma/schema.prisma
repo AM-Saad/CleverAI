@@ -70,6 +70,8 @@ model Workspace {
     updatedAt      DateTime        @updatedAt
     llmModel       String          @default("gpt-3.5")
     llmGatewayLogs LlmGatewayLog[]
+    boardColumns   BoardColumn[]
+    boardItems     BoardItem[]
 
     @@unique([userId, order])
 }
@@ -107,30 +109,36 @@ model Note {
 }
 
 model BoardItem {
-    id        String       @id @default(auto()) @map("_id") @db.ObjectId
-    user      User         @relation("UserBoardItems", fields: [userId], references: [id], onDelete: Cascade)
-    userId    String       @db.ObjectId
-    column    BoardColumn? @relation("ColumnItems", fields: [columnId], references: [id], onDelete: SetNull)
-    columnId  String?      @db.ObjectId
-    content   String
-    tags      String[]     @default([])
-    order     Int          @default(0)
-    createdAt DateTime     @default(now())
-    updatedAt DateTime     @updatedAt
+    id          String       @id @default(auto()) @map("_id") @db.ObjectId
+    user        User         @relation("UserBoardItems", fields: [userId], references: [id], onDelete: Cascade)
+    userId      String       @db.ObjectId
+    column      BoardColumn? @relation("ColumnItems", fields: [columnId], references: [id], onDelete: SetNull)
+    columnId    String?      @db.ObjectId
+    content     String
+    tags        String[]     @default([])
+    order       Int          @default(0)
+    createdAt   DateTime     @default(now())
+    updatedAt   DateTime     @updatedAt
+    // optional workspace relation
+    workspace   Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    workspaceId String?      @db.ObjectId
 
     @@index([userId, order])
     @@index([columnId, order])
 }
 
 model BoardColumn {
-    id        String      @id @default(auto()) @map("_id") @db.ObjectId
-    user      User        @relation("UserBoardColumns", fields: [userId], references: [id], onDelete: Cascade)
-    userId    String      @db.ObjectId
-    name      String
-    order     Int         @default(0)
-    createdAt DateTime    @default(now())
-    updatedAt DateTime    @updatedAt
-    items     BoardItem[] @relation("ColumnItems")
+    id          String      @id @default(auto()) @map("_id") @db.ObjectId
+    user        User        @relation("UserBoardColumns", fields: [userId], references: [id], onDelete: Cascade)
+    userId      String      @db.ObjectId
+    name        String
+    order       Int         @default(0)
+    createdAt   DateTime    @default(now())
+    updatedAt   DateTime    @updatedAt
+    items       BoardItem[] @relation("ColumnItems")
+    // optional workspace relation
+    workspace   Workspace?  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    workspaceId String?     @db.ObjectId
 
     @@index([userId, order])
 }

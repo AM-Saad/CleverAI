@@ -7,6 +7,7 @@ export const BoardItemSchema = z.object({
   id: z.string(),
   userId: z.string(),
   columnId: z.string().nullable().optional(),
+  workspaceId: z.string().nullable().optional(),
   content: z.string(),
   tags: z.array(z.string()).default([]),
   order: z.number().int().default(0),
@@ -19,6 +20,7 @@ export const CreateBoardItemDTO = z.object({
   content: z.preprocess(trim, z.string().min(0)),
   tags: z.array(z.string()).default([]),
   columnId: z.string().optional(),
+  workspaceId: z.string().nullable().optional(),
 });
 export type CreateBoardItemDTO = z.infer<typeof CreateBoardItemDTO>;
 

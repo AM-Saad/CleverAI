@@ -7,8 +7,7 @@
       <div class="relative h-full flex flex-col flex-1 min-h-0 overflow-auto">
         <!-- Toolbar -->
         <SharedNoteToolbar v-if="!isBoardItem" :is-loading="note.isLoading" :is-fullscreen="isFullscreen"
-          @toggleFullscreen="$emit('toggle-fullscreen', note.id)"
-          @delete="deleteNote(note.id)">
+          @toggleFullscreen="$emit('toggle-fullscreen', note.id)" @delete="deleteNote(note.id)">
           <!-- Plug in the editor tools for Tiptap -->
           <shared-tiptap-toolbar v-if="tiptapEditor" :editor="tiptapEditor" />
         </SharedNoteToolbar>
@@ -40,7 +39,7 @@
 
 <script setup lang="ts">
 import { watch } from "vue";
-import type { BoardItemState } from "~/composables/useBoardItemsStore";
+import type { BoardItemState } from "~/composables/board/useBoardItemsStore";
 
 // Common properties between NoteState and BoardItemState
 type NoteOrBoardItem = NoteState | BoardItemState;

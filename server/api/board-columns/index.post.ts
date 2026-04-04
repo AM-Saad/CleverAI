@@ -38,6 +38,7 @@ export default defineEventHandler(async (event) => {
         userId: user.id,
         name: data.name,
         order: newOrder,
+        workspaceId: data.workspaceId,
       },
     });
 

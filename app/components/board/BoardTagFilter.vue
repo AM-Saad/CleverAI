@@ -10,7 +10,9 @@ const emit = defineEmits<{
   "update:modelValue": [value: string[]];
 }>();
 
-const tagsStore = useUserTagsStore();
+const route = useRoute();
+const id = route.params.id;
+const tagsStore = useUserTagsStore(id as string);
 const isOpen = ref(false);
 
 // Load tags on mount
@@ -95,8 +97,8 @@ const selectedTags = computed(() => {
             class="w-full px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
             @click="toggleTag(tag.name)">
             <Icon :name="modelValue.includes(tag.name)
-                ? 'heroicons:check-circle-solid'
-                : 'heroicons:circle'
+              ? 'heroicons:check-circle-solid'
+              : 'heroicons:circle'
               " :class="[
                 'w-4 h-4',
                 modelValue.includes(tag.name)

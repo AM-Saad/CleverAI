@@ -18,8 +18,14 @@ export class BoardItemService extends FetchFactory {
   /**
    * Get all board items for the current user
    */
-  async getAll(): Promise<Result<BoardItem[]>> {
-    return this.call<BoardItem[]>("GET", this.RESOURCE);
+  async getAll(workspaceId?: string): Promise<Result<BoardItem[]>> {
+    const query = new URLSearchParams();
+    if (workspaceId) {
+      query.append("workspaceId", workspaceId);
+    }
+    console.log("workspaceId", workspaceId);
+    console.log("query", query.toString());
+    return this.call<BoardItem[]>("GET", `${this.RESOURCE}?${query.toString()}`);
   }
 
   /**

@@ -98,16 +98,15 @@ class FetchFactory {
     const attemptLimit = this.retries + 1;
     let attempt = 0;
     let lastError: APIError | null = null;
-
     while (attempt < attemptLimit) {
       // Create AbortController for timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
       try {
-        console.log(
-          `FetchFactory: Attempt ${attempt + 1} for ${method} ${url}`
-        );
+        // console.log(
+        //   `FetchFactory: Attempt ${attempt + 1} for ${method} ${url}`
+        // );
         const rawResp: MaybeEnvelope<unknown> = await this.$fetch(
           `${this.baseUrl}${url}`,
           {
@@ -122,7 +121,7 @@ class FetchFactory {
 
         // Unified envelope path
         if (rawResp && typeof rawResp === "object" && "success" in rawResp) {
-          console.log("FetchFactory: Received envelope response", rawResp);
+          // console.log("FetchFactory: Received envelope response", rawResp);
           const env = rawResp as SuccessEnvelope<unknown> | FailureEnvelope;
           if ((env as SuccessEnvelope).success === true) {
             let payload: unknown = (env as SuccessEnvelope).data;
@@ -159,7 +158,7 @@ class FetchFactory {
           }
         }
 
-        console.log("FetchFactory: Received legacy response", rawResp);
+        // console.log("FetchFactory: Received legacy response", rawResp);
         // Legacy path
         let legacyPayload: unknown = rawResp;
         if (validator) {
@@ -183,7 +182,7 @@ class FetchFactory {
           legacyPayload as TSchema extends z.ZodTypeAny ? z.infer<TSchema> : T
         );
       } catch (err) {
-        console.log(`FetchFactory: Error on attempt ${attempt + 1} for ${method} ${url}`, err);
+        // console.log(`FetchFactory: Error on attempt ${attempt + 1} for ${method} ${url}`, err);
         clearTimeout(timeoutId);
         // Handle timeout/abort specifically
         if (err instanceof Error && err.name === "AbortError") {

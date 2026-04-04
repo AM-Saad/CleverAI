@@ -1,8 +1,4 @@
 <script setup lang="ts">
-import { useBoardColumnsStore } from "~/composables/useBoardColumnsStore";
-import { useBoardItemsStore } from "~/composables/useBoardItemsStore";
-import type { BoardColumnState } from "~/composables/useBoardColumnsStore";
-import type { BoardItemState } from "~/composables/useBoardItemsStore";
 import { ReorderGroup, ReorderItem, useDragControls } from "motion-v";
 import { useReorderableList } from "~/composables/shared";
 
@@ -13,9 +9,11 @@ const props = defineProps<{
   getColumnIcon?: (name: string) => string;
 }>();
 
+
+const route = useRoute();
+const id = route.params.id;
 // Stores
-const columnsStore = useBoardColumnsStore();
-const itemsStore = useBoardItemsStore();
+const columnsStore = useBoardColumnsStore(id as string);
 
 // Get ordered columns
 const orderedColumns = computed(() => columnsStore.getOrderedColumns());
@@ -300,7 +298,8 @@ watch([localColumns, uncategorizedItems], () => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full min-h-0 bg-gray-50/50 rounded-xl shadow-inner overflow-hidden">
+  <div
+    class="flex flex-col h-full min-h-0 basis-1 grow-0 min-w-full bg-surface rounded-xl shadow-inner overflow-hidden">
 
     <!-- Mobile Header with Column Navigation -->
     <div class="lg:hidden shrink-0">
@@ -367,7 +366,7 @@ watch([localColumns, uncategorizedItems], () => {
 
     <!-- Kanban board -->
     <div v-else ref="boardContainer"
-      class="flex items-stretch gap-4 p-4 overflow-x-auto overflow-y-hidden pb-6 flex-1 min-h-0 h-full scroll-smooth snap-x snap-mandatory lg:snap-none kanban-scroll-container">
+      class="flex items-stretch gap-4 p-4 overflow-x-auto overflow-y-hidden pb-6 flex-1 min-h-0 h-full w-full scroll-smooth snap-x snap-mandatory lg:snap-none kanban-scroll-container">
 
       <!-- Uncategorized column (always first) -->
       <BoardColumn v-if="uncategorizedItems.length > 0 || orderedColumns.length === 0" id="column-uncategorized"
@@ -405,26 +404,27 @@ watch([localColumns, uncategorizedItems], () => {
       <!-- Add column button -->
       <div class="shrink-0 w-[85vw] lg:w-80 snap-center lg:snap-align-none h-full" style="height: 100%;">
         <div v-if="!showNewColumnInput"
-          class="h-full min-h-[200px] border-2 border-dashed border-gray-200 rounded-xl flex items-center justify-center cursor-pointer hover:border-primary-400 hover:bg-white transition-all group"
+          class="h-full min-h-[200px] border-2 border-dashed border-surface-strong rounded-xl flex items-center justify-center cursor-pointer hover:border-primary  transition-all group"
           @click="showNewColumnInput = true">
-          <div class="flex flex-col items-center gap-2 text-gray-400 group-hover:text-primary-500">
+          <div class="flex flex-col items-center gap-2 text-gray-400 group-hover:text-primary">
             <Icon name="heroicons:plus" class="w-8 h-8" />
             <span class="text-sm font-semibold uppercase tracking-wider">Add Column</span>
           </div>
         </div>
 
-        <div v-else class="bg-white rounded-xl border border-gray-200 p-4 shadow-lg ring-1 ring-black/5">
-          <h4 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">New Column</h4>
-          <UInput v-model="newColumnName" placeholder="Enter title..." size="md" class="mb-3" autofocus
+        <div v-else class="bg-white rounded-xl p-4 shadow-lg">
+          <UiSubtitle class="mb-3" size="sm">New Column</UiSubtitle>
+          <UInput v-model="newColumnName" placeholder="Enter title..." size="md" class="my-3 w-full" autofocus
             @keyup.enter="createColumn" @keyup.escape="cancelNewColumn" />
-          <div class="flex gap-2">
-            <UButton size="sm" color="primary" :loading="isCreatingColumn" :disabled="!newColumnName.trim()"
-              @click="createColumn" class="flex-1">
-              Create
-            </UButton>
+          <div class="flex justify-end gap-2 w-full">
             <UButton size="sm" color="neutral" variant="ghost" @click="cancelNewColumn">
               Cancel
             </UButton>
+            <UButton size="sm" color="primary" :loading="isCreatingColumn" :disabled="!newColumnName.trim()"
+              @click="createColumn">
+              Create
+            </UButton>
+
           </div>
         </div>
       </div>

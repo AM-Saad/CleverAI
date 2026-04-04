@@ -166,21 +166,23 @@ onBeforeUnmount(() => {
     <shared-error-message v-if="error && !loading" :error="error" :refresh="refresh" />
 
     <template v-if="workspace" #default>
-      <div class="flex flex-col md:flex-row gap-2 min-h-0 w-full grow">
 
-        <!-- NOTES Goes Here -->
-        <workspace-notes-section @add-to-material="handleAddToMaterial" />
+      <div class="flex flex-col md:flex-row gap-2 min-h-0 min-w-0 grow">
 
 
         <!-- LEARNING HUB Goes Here - Desktop Only -->
-        <div v-if="!isMobile"
-          class="flex flex-col relative overflow-hidden shrink-0 basis-full md:basis-1/3 xl:basis-1/4 grow"
-          id="learning-hub">
+        <div v-if="!isMobile" class="flex flex-col relative overflow-hidden basis-1/3 shrink-0" id="learning-hub">
           <LearningHubContent :workspace-id="`${id as string}`" :materials-length="workspace.materials?.length"
             :is-enrolling-loading="enrollmentLoading" :enrolled-flashcard-ids="enrolledFlashcardIds"
             :enrolled-question-ids="enrolledQuestionIds" :updating="updating" :show-upload="showUpload"
             @enrolled="handleEnrolled" @toggle-upload="toggleUploadForm" />
         </div>
+
+        <!-- NOTES Goes Here -->
+        <workspace-notes-section @add-to-material="handleAddToMaterial" />
+
+        <board-notes-section />
+
       </div>
 
       <!-- Mobile Learning Hub Modal -->

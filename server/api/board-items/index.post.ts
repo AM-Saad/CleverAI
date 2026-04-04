@@ -36,6 +36,7 @@ export default defineEventHandler(async (event) => {
       tags: data.tags || [],
       order: nextOrder,
       columnId: data.columnId || null,
+      workspaceId: data.workspaceId || null,
     },
   });
 

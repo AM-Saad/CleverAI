@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "@gradio/client": "^2.1.0",
     "@headlessui/vue": "^1.7.17",
     "@heroicons/vue": "^2.1.1",
     "@huggingface/transformers": "3.8.1",

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useBoardItemsStore } from "~/composables/useBoardItemsStore";
-import type { BoardItemState } from "~/composables/useBoardItemsStore";
-import type { BoardColumnState } from "~/composables/useBoardColumnsStore";
+import { useBoardItemsStore } from "~/composables/board/useBoardItemsStore";
+import type { BoardItemState } from "~/composables/board/useBoardItemsStore";
+import type { BoardColumnState } from "~/composables/board/useBoardColumnsStore";
 import { useReorderableList } from "~/composables/shared/useReorderableList";
 import { ReorderGroup, ReorderItem } from "motion-v";
 
@@ -26,7 +26,9 @@ const emit = defineEmits<{
   (e: "header-pointerdown", event: PointerEvent): void;
 }>();
 
-const itemsStore = useBoardItemsStore();
+const route = useRoute();
+const id = route.params.id;
+const itemsStore = useBoardItemsStore(id as string);
 
 // Use the reorderable list composable
 const {
@@ -175,7 +177,7 @@ const createItem = async () => {
 
 <template>
   <div
-    class="shrink-0 w-72 lg:w-80 flex flex-col h-full min-h-0 bg-gradient-to-b from-white to-gray-50/80 rounded-xl border border-t-0 border-surface-subtle shadow-xs transition-shadow">
+    class="shrink-0 flex flex-col h-full min-h-0 bg-gradient-to-b from-white to-gray-50/80 rounded-xl border border-t-0 border-surface-subtle shadow-xs transition-shadow w-72 max-w-full ">
     <!-- Column Header - This is the drag handle on desktop -->
     <div
       class="flex items-center justify-between p-3 border-b border-gray-200 bg-white rounded-t-xl group/header shrink-0 column-drag-handle"

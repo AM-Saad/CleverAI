@@ -1,20 +1,18 @@
 <script setup lang="ts">
-import { useBoardItemsStore } from "~/composables/useBoardItemsStore";
-import { useBoardColumnsStore } from "~/composables/useBoardColumnsStore";
-import { useUserTagsStore } from "~/composables/tags/useUserTagsStore";
-import { useFullscreenModal } from "~/composables/ui/useFullscreenModal";
-import type { BoardItemState } from "~/composables/useBoardItemsStore";
+import type { BoardItemState } from "~/composables/board/useBoardItemsStore";
 import { useFuse } from "@vueuse/integrations/useFuse";
 import { UI_CONFIG } from "~/utils/constants/ui";
 import { APIError } from "~/services/FetchFactory";
 
-const nuxtApp = useNuxtApp();
 
 
+const route = useRoute();
+const id = route.params.id;
+console.log("board id", id)
 // Stores
-const itemsStore = useBoardItemsStore();
-const columnsStore = useBoardColumnsStore();
-const tagsStore = useUserTagsStore();
+const itemsStore = useBoardItemsStore(id as string);
+const columnsStore = useBoardColumnsStore(id as string);
+const tagsStore = useUserTagsStore(id as string);
 const fullscreen = useFullscreenModal<string>();
 
 // View mode state (persisted to localStorage)
@@ -318,182 +316,178 @@ const clearFilters = () => {
 </script>
 
 <template>
-  <div>
-    <ui-card variant="ghost" size="lg" shadow="none"
-      class="flex flex-col shrink-0 min-h-0 mb-6 overflow-hidden h-[80vh]" contentClasses="flex flex-col flex-1 min-h-0"
-      header>
-      <!-- Header -->
-      <template #header>
-        <div class="flex items-center justify-between flex-wrap gap-2">
-          <div class="flex items-center gap-2">
-            <Icon name="heroicons:bookmark" class="w-5 h-5" />
-            Board
-            <ui-label v-if="items.length"> ({{ items.length }}) </ui-label>
-          </div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <!-- View toggle -->
-            <SharedBoardViewToggle v-model="viewMode" />
-
-            <!-- Search -->
-            <UInput v-model="searchQuery" icon="heroicons:magnifying-glass" placeholder="Search notes..." size="sm"
-              class="w-48" />
-
-            <!-- Tag filter -->
-            <SharedBoardTagFilter v-model="selectedTags" />
-
-            <!-- Clear filters button -->
-            <UButton v-if="searchQuery || selectedTags.length > 0" size="sm" color="neutral" variant="ghost"
-              icon="heroicons:x-mark" @click="clearFilters">
-              Clear
-            </UButton>
-
-            <!-- New note button -->
-            <UButton size="sm" color="primary" variant="outline" @click="createNewItem">
-              <Icon name="heroicons:plus" />
-              New Item
-            </UButton>
-          </div>
+  <ui-card size="lg" shadow="none"
+    class="flex flex-col basis-1/3 flex-1 min-h-0 overflow-hidden z-10 shrink-0 relative!" header>
+    <!-- Header -->
+    <template #header>
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <div class="flex items-center gap-2">
+          <Icon name="heroicons:bookmark" class="w-5 h-5" />
+          Board
+          <ui-label v-if="items.length"> ({{ items.length }}) </ui-label>
         </div>
-      </template>
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- View toggle -->
+          <BoardViewToggle v-model="viewMode" />
 
-      <!-- Content -->
-      <template #default>
-        <ui-loader v-if="isFetching" :is-fetching="isFetching" label="Loading board notes..." />
+          <!-- Search -->
+          <UInput v-model="searchQuery" icon="heroicons:magnifying-glass" placeholder="Search notes..." size="sm"
+            class="w-48" />
 
-        <!-- Error state -->
-        <shared-error-message v-if="error" :error="(error as APIError)" />
+          <!-- Tag filter -->
+          <BoardTagFilter v-model="selectedTags" />
 
-        <!-- Empty state -->
-        <shared-empty-state v-if="!error && !isFetching && items.length === 0" title="No Board Items"
-          button-text="Create First Item" :center-description="true" @action="createNewItem">
-          <template #description>
-            Board notes are personal notes not tied to any workspace.<br />
-            Use tags to organize and find them easily.
-          </template>
-        </shared-empty-state>
+          <!-- Clear filters button -->
+          <UButton v-if="searchQuery || selectedTags.length > 0" size="sm" color="neutral" variant="ghost"
+            icon="heroicons:x-mark" @click="clearFilters">
+            Clear
+          </UButton>
 
-        <!-- No results -->
-        <shared-empty-state v-if="!error && !isFetching && items.length > 0 && filteredItems.length === 0"
-          title="No matching notes" button-text="Clear Filters" :center-description="true" @action="clearFilters">
-          <template #description>
-            Try adjusting your search or tag filters.
-          </template>
-        </shared-empty-state>
-
-        <!-- Items grid with editor -->
-        <div v-if="!error && !isFetching && items.length > 0" class="flex flex-1 min-h-0 overflow-hidden">
-          <!-- Kanban View -->
-          <BoardKanbanView v-if="viewMode === 'board'" class="flex-1 h-full min-h-0" :items="filteredItems"
-            :all-items="items" :get-column-color="getColumnColor" :get-column-icon="getColumnIcon"
-            @select-item="(id) => currentItemId = id" @delete-item="deleteItem" />
-
-          <!-- List View -->
-          <BoardListView v-else class="flex-1 min-h-0 overflow-y-auto" :items="filteredItems" :all-items="items"
-            @select-item="(id) => currentItemId = id" @delete-item="deleteItem" />
-
-          <!-- Item editor (right side on desktop, slide-over on mobile) -->
-          <Transition enter-active-class="transition duration-300 ease-out"
-            enter-from-class="translate-x-full lg:translate-x-0 lg:opacity-0"
-            enter-to-class="translate-x-0 lg:opacity-100" leave-active-class="transition duration-200 ease-in"
-            leave-from-class="translate-x-0 lg:opacity-100"
-            leave-to-class="translate-x-full lg:translate-x-0 lg:opacity-0">
-            <div v-if="currentItem"
-              class="fixed inset-0 z-50 lg:relative lg:inset-auto lg:z-0 flex flex-col bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 lg:bg-transparent lg:border-0 transition-all w-full shrink-0 p-2"
-              :style="{ '--panel-width': `${panelWidth}px` }" :class="['lg:w-[var(--panel-width)]']">
-              <!-- Resizer handle (Desktop only) -->
-              <div
-                class="hidden lg:block absolute -left-0.5 top-1/2 -translate-y-1/2 bottom-0 h-[90%] w-1 cursor-col-resize hover:bg-primary transition-colors z-10 rounded-2xl"
-                @mousedown="startResizing" />
-
-              <!-- Editor header -->
-              <div
-                class="flex items-center justify-between p-4 lg:p-0 lg:mb-4 border-b border-gray-100 dark:border-gray-800 lg:border-0 shrink-0">
-                <div class="flex items-center gap-2">
-                  <UButton variant="ghost" color="neutral" icon="heroicons:chevron-left" class="lg:hidden"
-                    @click="currentItemId = null" />
-                  <span class="text-sm font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
-                    Edit Note
-                  </span>
-                </div>
-                <div class="flex items-center gap-1">
-                  <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:tag" @click="openTagEditor" />
-                  <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:arrows-pointing-out"
-                    class="hidden md:block" @click="fullscreen.toggle(currentItem.id)" />
-                </div>
-              </div>
-
-              <div class="flex-1 overflow-y-auto p-4 lg:p-0">
-                <!-- Tag editor -->
-                <div v-if="isEditingTags"
-                  class="mb-4 space-y-2 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-800">
-                  <SharedTagInput v-model="editingItemTags" placeholder="Add tags..." />
-                  <div class="flex gap-2">
-                    <UButton size="sm" color="primary" @click="saveEditingTags">Save</UButton>
-                    <UButton size="sm" color="neutral" variant="ghost" @click="isEditingTags = false">Cancel</UButton>
-                  </div>
-                </div>
-
-                <!-- Tags display -->
-                <div v-else-if="currentItem.tags && currentItem.tags.length > 0" class="mb-4 flex flex-wrap gap-1.5">
-                  <UBadge v-for="tag in currentItem.tags
-                    .map((name) => tagsStore.getTagByName(name))
-                    .filter((t): t is NonNullable<typeof t> => t !== null)" :key="tag.id"
-                    :style="{ backgroundColor: tag.color, color: '#ffffff' }" variant="solid" size="sm"
-                    class="rounded-full px-2.5">
-                    {{ tag.name }}
-                  </UBadge>
-                </div>
-
-                <!-- Sticky note editor -->
-                <div class="h-full min-h-[500px] lg:h-auto">
-                  <UiStickyNote :note="currentItem" :delete-note="deleteItem" @update="handleUpdateItem"
-                    @retry="handleRetry" @toggle-fullscreen="fullscreen.toggle" placeholder="Write your note..."
-                    class="h-full lg:h-auto" :is-board-item="true" />
-                </div>
-              </div>
-            </div>
-          </Transition>
+          <!-- New note button -->
+          <UButton size="sm" color="primary" variant="outline" @click="createNewItem">
+            <Icon name="heroicons:plus" />
+            New Item
+          </UButton>
         </div>
-      </template>
-    </ui-card>
-
-    <!-- Fullscreen Item View (Desktop) -->
-    <shared-fullscreen-wrapper :is-open="isFullscreenOpen" aria-label="Item fullscreen view" max-width="900px"
-      max-height="80vh" @close="fullscreen.close">
-      <template #header>
-        <div class="flex items-center justify-between w-full">
-          <div class="flex items-center gap-2">
-            <span class="font-medium text-gray-900 dark:text-gray-100">Board Item</span>
-            <!-- Tags in fullscreen -->
-            <div v-if="currentFullscreenItem?.tags && currentFullscreenItem.tags.length > 0"
-              class="flex flex-wrap gap-1">
-              <UBadge v-for="tag in currentFullscreenItem.tags
-                .map((name) => tagsStore.getTagByName(name))
-                .filter((t): t is NonNullable<typeof t> => t !== null)" :key="tag.id"
-                :style="{ backgroundColor: tag.color, color: '#ffffff' }" variant="solid" size="sm"
-                class="rounded-full px-2.5">
-                {{ tag.name }}
-              </UBadge>
-            </div>
-          </div>
-          <u-button variant="outline" color="neutral" size="xs" aria-label="Close fullscreen" class="hidden md:block"
-            @click="fullscreen.close()">
-            <icon name="i-heroicons-x-mark" :size="UI_CONFIG.ICON_SIZE" />
-          </u-button>
-        </div>
-      </template>
-
-      <div v-if="currentFullscreenItem" class="h-full">
-        <UiStickyNote :note="currentFullscreenItem" :delete-note="deleteItem" :is-fullscreen="true" size="lg"
-          @update="handleUpdateItem" @retry="handleRetry" @toggle-fullscreen="fullscreen.close"
-          placeholder="Write your note..." :is-board-item="true" />
       </div>
-    </shared-fullscreen-wrapper>
+    </template>
 
-    <!-- Delete confirmation -->
-    <shared-delete-confirmation-modal :show="showDeleteConfirm" title="Delete Item" @close="showDeleteConfirm = false"
-      @confirm="confirmDeleteItem">
-      Are you sure you want to delete this note? This action cannot be undone.
-    </shared-delete-confirmation-modal>
-  </div>
+    <!-- Content -->
+    <template #default>
+      <ui-loader v-if="isFetching" :is-fetching="isFetching" label="Loading board notes..." />
+
+      <!-- Error state -->
+      <shared-error-message v-if="error" :error="(error as APIError)" />
+
+      <!-- Empty state -->
+      <shared-empty-state v-if="!error && !isFetching && items.length === 0" title="No Board Items"
+        button-text="Create First Item" :center-description="true" @action="createNewItem">
+        <template #description>
+          Board notes are personal notes not tied to any workspace.<br />
+          Use tags to organize and find them easily.
+        </template>
+      </shared-empty-state>
+
+      <!-- No results -->
+      <shared-empty-state v-if="!error && !isFetching && items.length > 0 && filteredItems.length === 0"
+        title="No matching notes" button-text="Clear Filters" :center-description="true" @action="clearFilters">
+        <template #description>
+          Try adjusting your search or tag filters.
+        </template>
+      </shared-empty-state>
+
+      <!-- Items grid with editor -->
+      <div v-if="!error && !isFetching && items.length > 0" class="flex flex-1 shrink-0 min-h-0 overflow-hidden">
+        <!-- Kanban View -->
+        <BoardKanbanView v-if="viewMode === 'board'" class=" h-full min-h-0" :items="filteredItems" :all-items="items"
+          :get-column-color="getColumnColor" :get-column-icon="getColumnIcon" @select-item="(id) => currentItemId = id"
+          @delete-item="deleteItem" />
+
+        <!-- List View -->
+        <BoardListView v-else class="flex-1 min-h-0 overflow-y-auto" :items="filteredItems" :all-items="items"
+          @select-item="(id) => currentItemId = id" @delete-item="deleteItem" />
+
+        <!-- Item editor (right side on desktop, slide-over on mobile) -->
+        <Transition enter-active-class="transition duration-300 ease-out"
+          enter-from-class="translate-x-full lg:translate-x-0 lg:opacity-0"
+          enter-to-class="translate-x-0 lg:opacity-100" leave-active-class="transition duration-200 ease-in"
+          leave-from-class="translate-x-0 lg:opacity-100"
+          leave-to-class="translate-x-full lg:translate-x-0 lg:opacity-0">
+          <div v-if="currentItem"
+            class="fixed inset-0 z-50 lg:relative lg:inset-auto lg:z-0 flex flex-col bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 lg:bg-transparent lg:border-0 transition-all w-full shrink-0 p-2"
+            :style="{ '--panel-width': `${panelWidth}px` }" :class="['lg:w-[var(--panel-width)]']">
+            <!-- Resizer handle (Desktop only) -->
+            <div
+              class="hidden lg:block absolute -left-0.5 top-1/2 -translate-y-1/2 bottom-0 h-[90%] w-1 cursor-col-resize hover:bg-primary transition-colors z-10 rounded-2xl"
+              @mousedown="startResizing" />
+
+            <!-- Editor header -->
+            <div
+              class="flex items-center justify-between p-4 lg:p-0 lg:mb-4 border-b border-gray-100 dark:border-gray-800 lg:border-0 shrink-0">
+              <div class="flex items-center gap-2">
+                <UButton variant="ghost" color="neutral" icon="heroicons:chevron-left" class="lg:hidden"
+                  @click="currentItemId = null" />
+                <span class="text-sm font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
+                  Edit Note
+                </span>
+              </div>
+              <div class="flex items-center gap-1">
+                <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:tag" @click="openTagEditor" />
+                <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:arrows-pointing-out"
+                  class="hidden md:block" @click="fullscreen.toggle(currentItem.id)" />
+              </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto p-4 lg:p-0">
+              <!-- Tag editor -->
+              <div v-if="isEditingTags"
+                class="mb-4 space-y-2 bg-gray-50 dark:bg-gray-800/50 p-3 rounded-xl border border-gray-200 dark:border-gray-800">
+                <SharedTagInput v-model="editingItemTags" placeholder="Add tags..." />
+                <div class="flex gap-2">
+                  <UButton size="sm" color="primary" @click="saveEditingTags">Save</UButton>
+                  <UButton size="sm" color="neutral" variant="ghost" @click="isEditingTags = false">Cancel</UButton>
+                </div>
+              </div>
+
+              <!-- Tags display -->
+              <div v-else-if="currentItem.tags && currentItem.tags.length > 0" class="mb-4 flex flex-wrap gap-1.5">
+                <UBadge v-for="tag in currentItem.tags
+                  .map((name) => tagsStore.getTagByName(name))
+                  .filter((t): t is NonNullable<typeof t> => t !== null)" :key="tag.id"
+                  :style="{ backgroundColor: tag.color, color: '#ffffff' }" variant="solid" size="sm"
+                  class="rounded-full px-2.5">
+                  {{ tag.name }}
+                </UBadge>
+              </div>
+
+              <!-- Sticky note editor -->
+              <div class="h-full min-h-[500px] lg:h-auto">
+                <workspace-text-note :note="currentItem" :delete-note="deleteItem" @update="handleUpdateItem"
+                  @retry="handleRetry" @toggle-fullscreen="fullscreen.toggle" placeholder="Write your note..."
+                  class="h-full lg:h-auto" :is-board-item="true" />
+              </div>
+            </div>
+          </div>
+        </Transition>
+      </div>
+    </template>
+  </ui-card>
+
+  <!-- Fullscreen Item View (Desktop) -->
+  <shared-fullscreen-wrapper :is-open="isFullscreenOpen" aria-label="Item fullscreen view" max-width="900px"
+    max-height="80vh" @close="fullscreen.close">
+    <template #header>
+      <div class="flex items-center justify-between w-full">
+        <div class="flex items-center gap-2">
+          <span class="font-medium text-gray-900 dark:text-gray-100">Board Item</span>
+          <!-- Tags in fullscreen -->
+          <div v-if="currentFullscreenItem?.tags && currentFullscreenItem.tags.length > 0" class="flex flex-wrap gap-1">
+            <UBadge v-for="tag in currentFullscreenItem.tags
+              .map((name) => tagsStore.getTagByName(name))
+              .filter((t): t is NonNullable<typeof t> => t !== null)" :key="tag.id"
+              :style="{ backgroundColor: tag.color, color: '#ffffff' }" variant="solid" size="sm"
+              class="rounded-full px-2.5">
+              {{ tag.name }}
+            </UBadge>
+          </div>
+        </div>
+        <u-button variant="outline" color="neutral" size="xs" aria-label="Close fullscreen" class="hidden md:block"
+          @click="fullscreen.close()">
+          <icon name="i-heroicons-x-mark" :size="UI_CONFIG.ICON_SIZE" />
+        </u-button>
+      </div>
+    </template>
+
+    <div v-if="currentFullscreenItem" class="h-full">
+      <workspace-text-note :note="currentFullscreenItem" :delete-note="deleteItem" :is-fullscreen="true" size="lg"
+        @update="handleUpdateItem" @retry="handleRetry" @toggle-fullscreen="fullscreen.close"
+        placeholder="Write your note..." :is-board-item="true" />
+    </div>
+  </shared-fullscreen-wrapper>
+
+  <!-- Delete confirmation -->
+  <shared-delete-confirmation-modal :show="showDeleteConfirm" title="Delete Item" @close="showDeleteConfirm = false"
+    @confirm="confirmDeleteItem">
+    Are you sure you want to delete this note? This action cannot be undone.
+  </shared-delete-confirmation-modal>
 </template>

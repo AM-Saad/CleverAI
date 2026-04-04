@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { BoardItemState } from "~/composables/useBoardItemsStore";
+import type { BoardItemState } from "~/composables/board/useBoardItemsStore";
 import { useUserTagsStore } from "~/composables/tags/useUserTagsStore";
-import { useBoardColumnsStore } from "~/composables/useBoardColumnsStore";
+import { useBoardColumnsStore } from "~/composables/board/useBoardColumnsStore";
 
 const props = defineProps<{
   item: BoardItemState;
@@ -15,8 +15,10 @@ const emit = defineEmits<{
   move: [columnId: string | null];
 }>();
 
+const route = useRoute();
+const id = route.params.id;
 const tagsStore = useUserTagsStore();
-const columnsStore = useBoardColumnsStore();
+const columnsStore = useBoardColumnsStore(id as string);
 
 // Column options for movement
 const columnOptions = computed(() => {

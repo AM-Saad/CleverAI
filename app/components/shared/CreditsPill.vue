@@ -1,17 +1,16 @@
 <template>
   <div class="relative group">
-    <button
-      @click="isOpen = true"
-      class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/50 border border-gray-200 hover:border-primary/50 transition-all duration-300 backdrop-blur-md shadow-sm"
-    >
-      <span class="text-sm font-medium bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent decoration-none">
+    <button @click="isOpen = true"
+      class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/50 hover:border-primary/50 transition-all duration-300 backdrop-blur-md shadow-sm active:scale-90">
+      <span
+        class="text-sm font-medium bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent decoration-none">
         <UIcon name="i-heroicons-sparkles" class="w-4 h-4 inline-block -mt-0.5 mr-1 text-primary animate-pulse" />
         {{ balance }}
       </span>
     </button>
 
     <!-- The Credits Wallet Drawer inside the component -->
-    <SharedCreditsWallet :is-open="isOpen" @close="isOpen = false" />
+    <!-- <SharedCreditsWallet :is-open="isOpen" @close="isOpen = false" /> -->
   </div>
 </template>
 

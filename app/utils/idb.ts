@@ -558,6 +558,7 @@ export interface PendingBoardItemChange {
   operation: 'upsert' | 'delete'
   updatedAt: number // client timestamp
   localVersion: number // monotonic per item
+  workspaceId?: string
   content?: string
   tags?: string[]
   conflicted?: boolean

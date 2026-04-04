@@ -183,12 +183,12 @@ export default defineNuxtConfig({
     },
   },
   appConfig: {
-    toaster: {
-      position: "bottom-center" as const,
-      duration: 5000,
-      max: 5,
-      expand: true,
-    },
+    // toaster: {
+    //   position: "bottom-center" as const,
+    //   duration: 5000,
+    //   max: 5,
+    //   expand: true,
+    // },
   },
   auth: {
     isEnabled: true,
