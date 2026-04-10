@@ -1,7 +1,7 @@
 <template>
   <div class="overflow-auto h-full" ref="scrollContainer">
     <header
-      class="md:h-screen rounded-2xl py-2 flex flex-col lg:flex-row w-full  relative max-w-7xl mx-auto gap-8 md:gap-12 lg:gap-24 px-4 md:px-8 lg:px-12 overflow-hidden">
+      class="md:h-screen rounded-[var(--radius-2xl)] py-2 flex flex-col lg:flex-row w-full  relative max-w-7xl mx-auto gap-8 md:gap-12 lg:gap-24 px-4 md:px-8 lg:px-12 overflow-hidden">
       <div class="flex flex-col gap-2 relative z-20">
         <!-- 
         <motion.h1 :initial="{ opacity: 0, scale: 0.9 }" :animate="{ opacity: 1, scale: 1 }" :transition="{
@@ -56,7 +56,7 @@
           <div class="flex items-center gap-1 place-self-end my-xl">
             <span class="font-light text-sm text-dark dark:text-light">Watch us</span>
             <div
-              class="w-10 h-10 rounded-full border dark:border-light flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer">
+              class="w-10 h-10 rounded-full border dark:border-light flex items-center justify-center hover:bg-surface-subtle dark:hover:bg-surface cursor-pointer">
               <u-icon name="mdi:play" class="m-auto dark:text-light" />
             </div>
             <!-- <ui-watch-video /> -->
@@ -72,18 +72,18 @@
           :words="'Capture ideas. Learn them. Retain forever.'" />
         <landing-hero-animation />
       </section>
-      <motion.div :initial="{ opacity: 0, scale: 0 }"
+      <!-- <motion.div :initial="{ opacity: 0, scale: 0 }"
         :animate="hasScrolledHalfViewport ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 0 }" :transition="{
           duration: .7,
           delay: 0.1,
-        }" class="absolute top-0 left-1/2 transform -translate-x-1/2 w-[150%] h-[150%] z-0 bg-gray-200  rounded-full">
+          class=" absolute top-0 left-1/2 transform -translate-x-1/2 w-[150%] h-[150%] z-0 bg-secondary rounded-full">
 
-      </motion.div>
+      </motion.div> -->
     </div>
 
 
     <section
-      class="rounded-2xl py-2 w-full block relative z-10 max-w-7xl mx-auto gap-8 md:gap-12 lg:gap-24  md:px-8 lg:px-12">
+      class="rounded-[var(--radius-2xl)] py-2 w-full block relative z-10 max-w-7xl mx-auto gap-8 md:gap-12 lg:gap-24  md:px-8 lg:px-12">
       <landing-features />
     </section>
     <landing-scroll-reveal class="my-20" text="Learn smarter. Retain longer. Achieve more with Cognilo." />
@@ -99,7 +99,7 @@
       <!-- Background Gradients -->
       <div class="absolute inset-0 z-0 opacity-30 dark:opacity-20 pointer-events-none">
         <div class="absolute top-0 left-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl -translate-y-1/2"></div>
-        <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl translate-y-1/2"></div>
+        <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-primary/20 rounded-full blur-3xl translate-y-1/2"></div>
       </div>
 
       <div class="container relative z-10 mx-auto px-4 md:px-6">

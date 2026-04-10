@@ -1,17 +1,13 @@
 export default defineAppConfig({
-  theme: {
-    radius: 0.25,
-    blackAsPrimary: false
-  },
   ui: {
     colors: {
-      primary: 'green',
+      primary: 'indigo',
       neutral: 'slate'
     },
     toaster: {
       slots: {
         // viewport: "fixed flex flex-col w-[calc(100%-2rem)] sm:w-96 z-[100] data-[expanded=true]:h-(--height) focus:outline-none",
-        base: `pointer-events-auto bg-white border-0 ring-0 rounded-2xl p-3 px-8 absolute  z-(--index) transform-(--transform) 
+        base: `pointer-events-auto bg-white border-0 ring-0 rounded-[var(--radius-2xl)] p-3 px-8 absolute  z-(--index) transform-(--transform) 
         data-[expanded=false]:data-[front=false]:h-(--front-height) data-[expanded=false]:data-[front=false]:*:opacity-0 
         data-[front=false]:*:transition-opacity data-[front=false]:*:duration-100 data-[state=closed]:animate-[toast-closed_200ms_ease-in-out] 
         data-[state=closed]:data-[expanded=false]:data-[front=false]:animate-[toast-collapsed-closed_200ms_ease-in-out] 
@@ -54,12 +50,12 @@ export default defineAppConfig({
     },
     input: {
       slots: {
-        base: "focus:border-primary focus:ring-1 focus:ring-primary/90! focus:outline-0 focus-visible:outline-0 focus-visible:ring-0 ring-secondary! rounded-full text-content-on-surface!",
+        base: "focus:border-primary focus:ring-1 focus:ring-primary/90! focus:outline-0 focus-visible:outline-0 focus-visible:ring-0 ring-secondary! rounded-[var(--radius-lg)] text-content-on-surface!",
       }
     },
     textarea: {
       slots: {
-        base: "focus:border-primary focus:ring-1 focus:ring-primary/90! focus:outline-0 focus-visible:outline-0 focus-visible:ring-0 ring-secondary! rounded-lg text-content-on-surface!",
+        base: "focus:border-primary focus:ring-1 focus:ring-primary/90! focus:outline-0 focus-visible:outline-0 focus-visible:ring-0 ring-secondary! rounded-[var(--radius-lg)] text-content-on-surface!",
       }
     },
     formField: {
@@ -69,7 +65,7 @@ export default defineAppConfig({
     },
     button: {
       slots: {
-        base: 'rounded-full'
+        base: 'rounded-[var(--radius-lg)]'
       },
       compoundVariants: [
         {

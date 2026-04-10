@@ -87,7 +87,7 @@ function renderNoteWithAnchors(content: string): string {
 <style scoped>
 /* Highlight animation for the target block */
 :deep(.highlight-block) {
-  @apply bg-yellow-100 dark:bg-yellow-900/30 transition-colors duration-500;
+  @apply bg-warning/15 transition-colors duration-500;
   animation: pulse-highlight 1s ease-in-out;
 }
 
@@ -95,11 +95,11 @@ function renderNoteWithAnchors(content: string): string {
 
   0%,
   100% {
-    @apply bg-yellow-100 dark:bg-yellow-900/30;
+    @apply bg-warning/15;
   }
 
   50% {
-    @apply bg-yellow-200 dark:bg-yellow-900/50;
+    @apply bg-warning/25;
   }
 }
 </style>

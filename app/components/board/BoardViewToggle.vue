@@ -14,12 +14,13 @@ const options = [
 </script>
 
 <template>
-  <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+  <div class="flex items-center gap-1 bg-surface rounded-[var(--radius-lg)] p-1">
     <button v-for="option in options" :key="option.value"
-      class="flex items-center gap-1.5 px-2 py-1 rounded-md text-sm font-medium transition-colors" :class="[
+      class="flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-md)] text-sm font-medium transition-colors"
+      :class="[
         modelValue === option.value
-          ? 'bg-white text-gray-900 shadow-sm'
-          : 'text-gray-600 hover:text-gray-900'
+          ? 'bg-background text-content-on-background shadow-sm'
+          : 'text-content-secondary hover:text-content-on-surface'
       ]" @click="emit('update:modelValue', option.value)">
       <Icon :name="option.icon" class="w-4 h-4" />
       <!-- <span>{{ option.label }}</span> -->

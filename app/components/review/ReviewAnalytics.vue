@@ -1,9 +1,9 @@
 <template>
   <div v-if="show">
     <ReviewAnalyticsSummary v-if="analytics" :analytics="analytics" @close="handleClose" />
-    <div v-else-if="isLoading" class="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-6 text-center">
+    <div v-else-if="isLoading" class="bg-surface rounded-[var(--radius-lg)] shadow-lg p-6 mb-6 text-center">
       <Loading />
-      <p class="text-gray-600 dark:text-gray-400 mt-4">
+      <p class="text-content-secondary mt-4">
         Loading analytics...
       </p>
     </div>

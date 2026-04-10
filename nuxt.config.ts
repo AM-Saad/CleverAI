@@ -20,6 +20,12 @@ export default defineNuxtConfig({
   // Use the existing `app/` workspace as Nuxt source directory
   srcDir: "app",
 
+  // Force light mode app-wide — dark mode will be planned and implemented properly later
+  colorMode: {
+    preference: "light",
+    fallback: "light",
+  },
+
   modules: [
     "@sidebase/nuxt-auth",
     "@pinia/nuxt", // "@vite-pwa/nuxt",

@@ -104,7 +104,7 @@ onMounted(() => {
           </ui-card>
         </div>
       </div>
-      <div v-if="!loading && !workspaces?.length" class="text-gray-500">
+      <div v-if="!loading && !workspaces?.length" class="text-content-secondary">
         No workspaces found.
       </div>
       <ul v-if="workspaces && workspaces?.length > 0 && !loading"

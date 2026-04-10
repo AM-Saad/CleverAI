@@ -1,13 +1,13 @@
 <template>
   <div class="flex flex-col gap-1">
-    <label v-if="label" :for="id" class="text-sm font-medium text-gray-700">
+    <label v-if="label" :for="id" class="text-sm font-medium text-content-on-surface">
       {{ label }}
     </label>
 
     <UTextarea :id="id" v-model="modelValue" v-bind="$attrs" size="xs" />
 
-    <span v-if="error" class="text-xs text-red-500">{{ error }}</span>
-    <span v-else-if="hint" class="text-xs text-gray-500">{{ hint }}</span>
+    <span v-if="error" class="text-xs text-error">{{ error }}</span>
+    <span v-else-if="hint" class="text-xs text-content-secondary">{{ hint }}</span>
   </div>
 </template>
 

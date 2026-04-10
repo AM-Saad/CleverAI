@@ -90,18 +90,18 @@ const formattedDate = computed(() => {
 
 <template>
   <div :class="[
-    'group relative p-2 rounded-xl border cursor-pointer transition-all duration-200',
+    'group relative p-2 rounded-[var(--radius-xl)] border cursor-pointer transition-all duration-200',
     'hover:shadow-xs hover:-translate-y-0.5',
     isSelected
-      ? 'border-primary-500 bg-primary-50/50 shadow-xs ring-1 ring-primary-500/50'
+      ? 'border-primary bg-primary/5 shadow-xs ring-1 ring-primary/30'
       : 'border-surface-subtle bg-white hover:border-surface-strong',
     item.isLoading && 'opacity-60 pointer-events-none grayscale',
-    item.error && 'border-red-200 bg-red-50/30 ',
+    item.error && 'border-error/30 bg-error/5 ',
   ]" @click="emit('select')">
 
     <!-- Drag Handle (Mobile/Tablet Friendly) -->
     <div
-      class="lg:opacity-0 lg:group-hover:opacity-100 absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-6 flex flex-col justify-center items-center gap-0.5 text-gray-300 cursor-grab active:cursor-grabbing transition-opacity"
+      class="lg:opacity-0 lg:group-hover:opacity-100 absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-6 flex flex-col justify-center items-center gap-0.5 text-content-disabled cursor-grab active:cursor-grabbing transition-opacity"
       aria-hidden="true">
       <div class="w-1 h-1 bg-current rounded-full" />
       <div class="w-1 h-1 bg-current rounded-full" />
@@ -109,11 +109,11 @@ const formattedDate = computed(() => {
     </div>
 
     <!-- Loading/Error indicators -->
-    <div v-if="item.isLoading" class="absolute top-3 right-3 flex items-center gap-1 text-primary-500">
+    <div v-if="item.isLoading" class="absolute top-3 right-3 flex items-center gap-1 text-primary">
       <Icon name="svg-spinners:ring-resize" class="w-4 h-4" />
     </div>
 
-    <div v-if="item.error" class="absolute top-3 right-3 text-red-500" :title="item.error">
+    <div v-if="item.error" class="absolute top-3 right-3 text-error" :title="item.error">
       <Icon name="heroicons:exclamation-circle" class="w-4 h-4" />
     </div>
 
@@ -132,16 +132,15 @@ const formattedDate = computed(() => {
 
       <!-- Due date + attachments row -->
       <div v-if="dueDateInfo || attachmentCount > 0" class="flex items-center gap-2 flex-wrap mt-0.5">
-        <span v-if="dueDateInfo"
-          :class="['inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5',
-            dueDateInfo.isOverdue
-              ? 'bg-red-50 text-red-500 dark:bg-red-900/20'
-              : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20']">
+        <span v-if="dueDateInfo" :class="['inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5',
+          dueDateInfo.isOverdue
+            ? 'bg-error/10 text-error dark:bg-error/20'
+            : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20']">
           <Icon name="heroicons:calendar-days" class="w-3 h-3" />
           {{ dueDateInfo.label }}
         </span>
         <span v-if="attachmentCount > 0"
-          class="inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5 bg-gray-50 text-gray-500">
+          class="inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5 bg-secondary text-content-secondary">
           <Icon name="heroicons:paper-clip" class="w-3 h-3" />
           {{ attachmentCount }}
         </span>
@@ -149,7 +148,7 @@ const formattedDate = computed(() => {
 
       <!-- Footer: Date + Actions -->
       <div
-        class="flex items-center justify-between text-[10px] font-semibold text-gray-400  uppercase pt-2 border-t border-gray-50">
+        class="flex items-center justify-between text-[10px] font-semibold text-content-secondary  uppercase pt-2 border-t border-secondary">
         <span class="truncate">{{ formattedDate }}</span>
 
         <!-- Actions (visible on hover) -->
@@ -157,11 +156,11 @@ const formattedDate = computed(() => {
           <!-- Move to column -->
           <UDropdownMenu :items="columnOptions" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
             <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:arrows-right-left"
-              aria-label="Move to column" title="Move to column" class="hover:bg-primary-50" @click.stop />
+              aria-label="Move to column" title="Move to column" class="hover:bg-primary/10" @click.stop />
           </UDropdownMenu>
 
           <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:trash" @click.stop="emit('delete')"
-            aria-label="Delete note" class="hover:bg-red-50 hover:text-red-500" />
+            aria-label="Delete note" class="hover:bg-error/10 hover:text-error" />
         </div>
       </div>
     </div>

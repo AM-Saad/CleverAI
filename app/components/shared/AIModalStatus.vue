@@ -94,31 +94,23 @@ function getStatusLabel(model: { isDownloading: boolean; isLoading: boolean; isR
 </script>
 
 <template>
-  <Transition
-    enter-active-class="transition-all duration-300 ease-out"
-    enter-from-class="transform translate-y-full opacity-0"
-    enter-to-class="transform translate-y-0 opacity-100"
-    leave-active-class="transition-all duration-300 ease-in"
-    leave-from-class="transform translate-y-0 opacity-100"
+  <Transition enter-active-class="transition-all duration-300 ease-out"
+    enter-from-class="transform translate-y-full opacity-0" enter-to-class="transform translate-y-0 opacity-100"
+    leave-active-class="transition-all duration-300 ease-in" leave-from-class="transform translate-y-0 opacity-100"
     leave-to-class="transform translate-y-full opacity-0">
-    <div
-      v-if="showPanel"
-      id="ai-download-panel"
-      class="ai-dl-panel fixed bottom-0 right-4 w-80 max-sm:left-4 max-sm:right-4 max-sm:w-auto z-[999] rounded-t-xl overflow-hidden"
-    >
+    <div v-if="showPanel" id="ai-download-panel"
+      class="ai-dl-panel fixed bottom-0 right-4 w-80 max-sm:left-4 max-sm:right-4 max-sm:w-auto z-[999] rounded-t-xl overflow-hidden">
       <!-- Header -->
-      <header
-        class="ai-dl-header flex items-center justify-between cursor-pointer px-4 h-10 select-none"
-        tabindex="0"
-        @click="toggleCollapsed"
-        aria-label="AI Model Download Status"
-      >
+      <header class="ai-dl-header flex items-center justify-between cursor-pointer px-4 h-10 select-none" tabindex="0"
+        @click="toggleCollapsed" aria-label="AI Model Download Status">
         <div class="flex items-center gap-2">
           <!-- Animated cloud download icon -->
           <div class="ai-dl-icon-wrap">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="w-4 h-4">
               <path d="M5.5 16a3.5 3.5 0 0 1-.369-6.98 4 4 0 1 1 7.753-1.977A3.5 3.5 0 0 1 14.5 16h-9Z" />
-              <path fill-rule="evenodd" d="M10 2.75a.75.75 0 0 1 .75.75v5.59l1.72-1.72a.75.75 0 1 1 1.06 1.06l-3 3a.75.75 0 0 1-1.06 0l-3-3a.75.75 0 1 1 1.06-1.06l1.72 1.72V3.5a.75.75 0 0 1 .75-.75Z" clip-rule="evenodd" />
+              <path fill-rule="evenodd"
+                d="M10 2.75a.75.75 0 0 1 .75.75v5.59l1.72-1.72a.75.75 0 1 1 1.06 1.06l-3 3a.75.75 0 0 1-1.06 0l-3-3a.75.75 0 1 1 1.06-1.06l1.72 1.72V3.5a.75.75 0 0 1 .75-.75Z"
+                clip-rule="evenodd" />
             </svg>
           </div>
           <span class="text-xs font-semibold tracking-wide text-white/90">
@@ -128,35 +120,28 @@ function getStatusLabel(model: { isDownloading: boolean; isLoading: boolean; isR
             </span>
           </span>
         </div>
-        <svg
-          xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
-          class="w-3.5 h-3.5 text-white/50 transition-transform duration-200"
-          :class="{ 'rotate-180': collapsed }"
-        >
-          <path fill-rule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
+          class="w-3.5 h-3.5 text-white/50 transition-transform duration-200" :class="{ 'rotate-180': collapsed }">
+          <path fill-rule="evenodd"
+            d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z"
+            clip-rule="evenodd" />
         </svg>
       </header>
 
       <!-- Body -->
       <div v-show="!collapsed" class="ai-dl-body px-4 pb-3 pt-1 space-y-2.5 max-h-60 overflow-y-auto">
-        <div
-          v-for="model in visibleModels"
-          :key="model.modelId"
-          class="ai-dl-item rounded-lg p-2.5 space-y-1.5"
-        >
+        <div v-for="model in visibleModels" :key="model.modelId"
+          class="ai-dl-item rounded-[var(--radius-lg)] p-2.5 space-y-1.5">
           <!-- Model name + status -->
           <div class="flex items-center justify-between gap-2">
             <span class="text-xs font-medium text-white/90 truncate" :title="model.modelId">
               {{ getFriendlyName(model.modelId) }}
             </span>
-            <span
-              class="text-[10px] font-semibold uppercase tracking-wider shrink-0 px-1.5 py-0.5 rounded-full"
-              :class="{
-                'ai-dl-badge-downloading': model.isDownloading,
-                'ai-dl-badge-loading': model.isLoading && !model.isDownloading,
-                'ai-dl-badge-ready': model.isReady && !model.isDownloading && !model.isLoading,
-              }"
-            >
+            <span class="text-[10px] font-semibold uppercase tracking-wider shrink-0 px-1.5 py-0.5 rounded-full" :class="{
+              'ai-dl-badge-downloading': model.isDownloading,
+              'ai-dl-badge-loading': model.isLoading && !model.isDownloading,
+              'ai-dl-badge-ready': model.isReady && !model.isDownloading && !model.isLoading,
+            }">
               {{ getStatusLabel(model) }}
             </span>
           </div>
@@ -208,13 +193,20 @@ function getStatusLabel(model: { isDownloading: boolean; isLoading: boolean; isR
 }
 
 @keyframes ai-icon-pulse {
-  0%, 100% { opacity: 0.7; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }
 
 .ai-dl-body {
   scrollbar-width: thin;
-  scrollbar-color: rgba(255,255,255,0.1) transparent;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
 }
 
 .ai-dl-item {
@@ -240,8 +232,15 @@ function getStatusLabel(model: { isDownloading: boolean; isLoading: boolean; isR
 }
 
 @keyframes ai-badge-blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 /* Progress bar */
@@ -268,39 +267,46 @@ function getStatusLabel(model: { isDownloading: boolean; isLoading: boolean; isR
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255,255,255,0.3) 50%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      transparent 100%);
   animation: ai-progress-shine 1.5s ease-in-out infinite;
 }
 
 @keyframes ai-progress-shine {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 /* Shimmer for loading state */
 .ai-dl-shimmer {
-  background: linear-gradient(
-    90deg,
-    rgba(255,255,255,0.04) 0%,
-    rgba(255,255,255,0.12) 50%,
-    rgba(255,255,255,0.04) 100%
-  );
+  background: linear-gradient(90deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(255, 255, 255, 0.12) 50%,
+      rgba(255, 255, 255, 0.04) 100%);
   background-size: 200% 100%;
   animation: ai-shimmer 1.5s ease-in-out infinite;
 }
 
 @keyframes ai-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 /* Reduced Motion */
 @media (prefers-reduced-motion: reduce) {
+
   .ai-dl-panel,
   .ai-dl-panel *,
   .ai-dl-progress-fill,

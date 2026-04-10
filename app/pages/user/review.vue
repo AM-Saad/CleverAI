@@ -3,11 +3,10 @@
     <template #actions>
       <div class="flex items-center space-x-4">
         <!-- Workspace indicator if filtering -->
-        <div v-if="currentWorkspace" class="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+        <div v-if="currentWorkspace" class="flex items-center gap-2 text-sm text-content-secondary">
           <Icon name="heroicons:workspace" class="w-4 h-4" />
           <span>{{ currentWorkspace.title }}</span>
-          <NuxtLink to="/user/review" class="text-blue-600 hover:text-blue-700 dark:text-blue-400"
-            title="Review all workspaces">
+          <NuxtLink to="/user/review" class="text-primary hover:text-primary/70" title="Review all workspaces">
             <Icon name="heroicons:x-mark" class="w-4 h-4" />
           </NuxtLink>
         </div>

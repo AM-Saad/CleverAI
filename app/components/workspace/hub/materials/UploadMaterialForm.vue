@@ -393,8 +393,8 @@ watch(
           <div v-if="!uploadedMaterial" class="py-3">
 
             <input type="file" accept=".pdf,.docx,.txt" @change="onFileChange"
-              class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold  file:text-blue-700 hover:file:bg-blue-100  dark:file:text-blue-300" />
-            <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              class="block w-full text-sm text-content-secondary file:mr-4 file:py-2 file:px-4 file:rounded-[var(--radius-md)] file:border-0 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/10" />
+            <p class="mt-2 text-xs text-content-secondary">
               Supported formats: PDF, DOCX, TXT (max 50MB)
             </p>
 
@@ -405,7 +405,7 @@ watch(
             </div>
 
             <!-- Generation options (when enabled) -->
-            <div v-if="generateAfterUpload" class="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-md space-y-3">
+            <div v-if="generateAfterUpload" class="mt-3 p-3 bg-surface rounded-[var(--radius-md)] space-y-3">
               <div class="flex items-center gap-3">
                 <label class="text-sm font-medium">Generate:</label>
                 <UButtonGroup>
@@ -425,13 +425,13 @@ watch(
                 <label class="block text-sm font-medium mb-2">Depth</label>
                 <div class="grid grid-cols-3 gap-2">
                   <button v-for="option in depthOptions" :key="option.value" :class="[
-                    'px-3 py-2 rounded-md border-2 transition-colors text-xs',
+                    'px-3 py-2 rounded-[var(--radius-md)] border-2 transition-colors text-xs',
                     selectedDepth === option.value
-                      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/30'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
+                      ? 'border-primary bg-primary/10'
+                      : 'border-secondary hover:border-primary/40',
                   ]" @click="selectedDepth = option.value">
                     <div class="font-medium">{{ option.label }}</div>
-                    <div class="text-gray-500 dark:text-gray-400">{{ option.description }}</div>
+                    <div class="text-content-secondary">{{ option.description }}</div>
                   </button>
                 </div>
               </div>
@@ -448,7 +448,7 @@ watch(
 
           <!-- Document Info (after upload, if generating) -->
           <div v-if="uploadedMaterial && generateAfterUpload" class="space-y-4">
-            <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-md space-y-2">
+            <div class="bg-surface p-4 rounded-[var(--radius-md)] space-y-2">
               <div class="flex justify-between text-sm">
                 <span class="font-medium">Title:</span>
                 <span>{{ uploadedMaterial.title }}</span>
@@ -464,13 +464,13 @@ watch(
             </div>
 
             <!-- Estimated Output -->
-            <div class="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-md">
+            <div class="bg-primary/10 p-4 rounded-[var(--radius-md)]">
               <div class="text-sm space-y-1">
                 <div class="font-medium">Estimated Output:</div>
-                <div class="text-gray-700 dark:text-gray-300">
+                <div class="text-content-on-surface">
                   ~{{ estimatedItemCount }} {{ generationType === 'flashcards' ? 'flashcards' : 'questions' }}
                 </div>
-                <div class="text-xs text-gray-500 dark:text-gray-400 mt-2 flex items-center gap-1">
+                <div class="text-xs text-content-secondary mt-2 flex items-center gap-1">
                   <span>Estimated cost (approximate): ${{ estimatedCost.toFixed(4) }}</span>
                   <UTooltip text="Final cost depends on model selection and output length.">
                     <UIcon name="i-heroicons-information-circle" class="w-4 h-4 cursor-help" />
@@ -481,8 +481,7 @@ watch(
           </div>
 
           <!-- Error -->
-          <div v-if="genError"
-            class="bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-3 rounded-md text-sm">
+          <div v-if="genError" class="bg-error/10 text-error p-3 rounded-[var(--radius-md)] text-sm">
             {{ genError }}
           </div>
 

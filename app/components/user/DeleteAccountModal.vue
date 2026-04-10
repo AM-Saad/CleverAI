@@ -50,14 +50,14 @@ const closeModal = (): void => {
       <template #body>
         <u-form :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
           <!-- Warning Banner -->
-          <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4">
+          <div class="bg-error/10 border border-error/20 rounded-[var(--radius-lg)] p-4">
             <div class="flex">
-              <icon name="mdi:alert-circle" class="text-red-600 dark:text-red-400 mr-3 mt-0.5" size="20"></icon>
+              <icon name="mdi:alert-circle" class="text-error mr-3 mt-0.5" size="20"></icon>
               <div>
-                <h4 class="text-sm font-medium text-red-800 dark:text-red-200 mb-1">
+                <h4 class="text-sm font-medium text-error mb-1">
                   Warning: This action cannot be undone
                 </h4>
-                <p class="text-sm text-red-700 dark:text-red-300">
+                <p class="text-sm text-error/80">
                   Deleting your account will remove all your data including workspaces, materials, flashcards, and
                   progress.
                 </p>
@@ -67,7 +67,7 @@ const closeModal = (): void => {
 
           <u-form-field name="confirmationText" required>
             <template #label>
-              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              <label class="block text-sm font-medium text-content-on-surface">
                 Type <span class="font-bold text-red-600 dark:text-red-400">DELETE</span> to confirm
               </label>
             </template>
@@ -78,12 +78,12 @@ const closeModal = (): void => {
 
           <div class="flex items-start space-x-3">
             <input v-model="state.permanentDelete" type="checkbox" id="permanent-delete"
-              class="mt-1 h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded cursor-pointer" />
+              class="mt-1 h-4 w-4 accent-error focus:ring-error/30 border-secondary rounded cursor-pointer" />
             <div class="flex-1">
-              <label for="permanent-delete" class="text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer">
+              <label for="permanent-delete" class="text-sm font-medium text-content-on-surface cursor-pointer">
                 Delete immediately and permanently
               </label>
-              <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              <p class="text-xs text-content-secondary mt-1">
                 <span v-if="!state.permanentDelete">
                   By default, your account will be scheduled for deletion in 30 days. You can reactivate it by signing
                   in before

@@ -319,13 +319,11 @@ const isExpressionsCollapsed = ref(true);
 <template>
   <div class="math-note-editor flex flex-col gap-3 h-full">
     <!-- Toolbar -->
-    <SharedNoteToolbar
-      :is-fullscreen="isFullscreen"
-      @toggleFullscreen="emit('toggle-fullscreen')"
-      @delete="emit('delete')"
-    >
-      <shared-note-toolbar-button variant="primary" :disabled="isRecognizing" @click="onRecognizeClick" 
-        :title="isRecognizing ? 'Solving...' : 'Solve Math'" :icon="isRecognizing ? 'i-lucide-loader' : 'i-lucide-calculator'" />
+    <SharedNoteToolbar :is-fullscreen="isFullscreen" @toggleFullscreen="emit('toggle-fullscreen')"
+      @delete="emit('delete')">
+      <shared-note-toolbar-button variant="primary" :disabled="isRecognizing" @click="onRecognizeClick"
+        :title="isRecognizing ? 'Solving...' : 'Solve Math'"
+        :icon="isRecognizing ? 'i-lucide-loader' : 'i-lucide-calculator'" />
 
       <div class="w-px h-6 bg-surface-strong mx-1 shrink-0" />
 
@@ -338,54 +336,50 @@ const isExpressionsCollapsed = ref(true);
     </SharedNoteToolbar>
 
     <!-- Error banner -->
-    <div v-if="recognitionError"
-      class="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300 mx-2">
+    <div v-if="recognitionError" class="rounded-[var(--radius-md)] bg-error/10 px-3 py-2 text-sm text-error mx-2">
       {{ recognitionError.message }}
     </div>
 
     <!-- Canvas with overlay layer -->
-    <div :style="edgeGlowStyle"
-      class="relative rounded-lg border border-slate-200 dark:border-slate-700 bg-white shadow-inner overflow-hidden transition-shadow duration-200 mx-2 flex-1 min-h-[300px]">
+    <SharedNoteContentArea :style="edgeGlowStyle">
       <!-- @wheel MUST NOT be .passive because we call e.preventDefault() -->
-      <canvas ref="canvasRef" class="w-full h-full touch-none" style="cursor: crosshair;"
-        @pointerdown="startStroke" @pointermove="continueStroke" @pointerup="endStroke" @pointerleave="endStroke"
-        @wheel="onWheel" />
+      <canvas ref="canvasRef" class="w-full h-full touch-none" style="cursor: crosshair;" @pointerdown="startStroke"
+        @pointermove="continueStroke" @pointerup="endStroke" @pointerleave="endStroke" @wheel="onWheel" />
 
       <!-- Recognition-in-progress overlay -->
       <div v-if="isRecognizing || isDownloading"
-        class="absolute inset-0 flex flex-col items-center justify-center rounded-lg bg-white/70 backdrop-blur-sm dark:bg-slate-900/70 z-10 transition-opacity">
+        class="absolute inset-0 flex flex-col items-center justify-center rounded-[var(--radius-lg)] bg-background/70 backdrop-blur-sm dark:bg-surface/90 z-10 transition-opacity">
         <div class="flex items-center gap-2 mb-2">
-          <UIcon name="i-heroicons-sparkles" class="h-5 w-5 text-indigo-500 animate-pulse" />
-          <span class="text-sm font-medium text-slate-700 dark:text-slate-300">
+          <UIcon name="i-heroicons-sparkles" class="h-5 w-5 text-primary animate-pulse" />
+          <span class="text-sm font-medium text-content-on-surface">
             {{ isDownloading ? "Fetching local AI model..." : "Recognising locally..." }}
           </span>
         </div>
-        <div v-if="isDownloading && progress > 0"
-          class="w-48 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-          <div class="h-full bg-indigo-500 transition-all duration-300" :style="{ width: `${progress}%` }"></div>
+        <div v-if="isDownloading && progress > 0" class="w-48 h-1.5 bg-secondary rounded-full overflow-hidden">
+          <div class="h-full bg-primary transition-all duration-300" :style="{ width: `${progress}%` }"></div>
         </div>
       </div>
 
       <!-- KaTeX result overlays at bounding box positions -->
       <TransitionGroup name="overlay-fade">
         <div v-for="overlay in overlays" :key="overlay.id" v-show="overlay.visible"
-          class="absolute pointer-events-none px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-400/30 backdrop-blur-sm text-xs"
+          class="absolute pointer-events-none px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-success/15 border border-success/30 backdrop-blur-sm text-xs"
           :style="{
             left: `${worldToScreen(overlay.box.minX, Math.max(0, overlay.box.minY - 28)).x}px`,
             top: `${worldToScreen(overlay.box.minX, Math.max(0, overlay.box.minY - 28)).y}px`,
           }">
-          <span class="text-emerald-700 dark:text-emerald-300" v-html="renderLatex(overlay.latex)" />
-          <span v-if="overlay.result !== null" class="ml-1 font-bold text-emerald-600 dark:text-emerald-400">
+          <span class="text-success" v-html="renderLatex(overlay.latex)" />
+          <span v-if="overlay.result !== null" class="ml-1 font-bold text-success">
             = {{ overlay.result }}
           </span>
         </div>
       </TransitionGroup>
-    </div>
+    </SharedNoteContentArea>
 
     <!-- Recognised lines (KaTeX preview) - Collapsible via motion-v -->
     <div v-if="lines.length" class="space-y-2 mx-2">
       <button @click="isExpressionsCollapsed = !isExpressionsCollapsed"
-        class="flex w-full items-center justify-between rounded-md bg-slate-100 hover:bg-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 transition-colors dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-400">
+        class="flex w-full items-center justify-between rounded-[var(--radius-md)] bg-surface-subtle hover:bg-surface-strong px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-secondary transition-colors">
         <span>Recognised expressions ({{ lines.length }})</span>
         <UIcon :name="isExpressionsCollapsed ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-up'"
           class="h-4 w-4 transition-transform duration-200" />
@@ -398,10 +392,10 @@ const isExpressionsCollapsed = ref(true);
       }" :transition="{ type: 'spring', bounce: 0, duration: 0.4 }" class="overflow-hidden">
         <div class="space-y-2 pb-1 overflow-y-auto max-h-60 pr-1">
           <div v-for="(line, idx) in lines" :key="idx"
-            class="flex items-baseline gap-3 rounded-md border border-slate-100 bg-slate-50 px-3 py-2 font-mono text-sm dark:border-slate-700 dark:bg-slate-800">
+            class="flex items-baseline gap-3 rounded-[var(--radius-md)] border border-secondary bg-surface px-3 py-2 font-mono text-sm">
             <!-- LaTeX preview rendered via KaTeX -->
-            <span class="flex-1 text-slate-800 dark:text-slate-200" v-html="renderLatex(line.latex)" />
-            <span v-if="line.result !== null" class="font-bold text-emerald-600 dark:text-emerald-400">
+            <span class="flex-1 text-content-on-surface" v-html="renderLatex(line.latex)" />
+            <span v-if="line.result !== null" class="font-bold text-success">
               = {{ line.result }}
             </span>
           </div>

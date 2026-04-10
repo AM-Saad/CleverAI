@@ -128,7 +128,7 @@ const doConfirmRemove = async () => {
           <div class="flex items-center gap-2 flex-1 min-w-0">
             <icon name="i-lucide-mic" class="w-4 h-4 text-rose-500 shrink-0 animate-pulse" />
             <ui-subtitle weight="normal" size="xs" class="truncate" color="content-on-surface">{{ pt.title
-              }}</ui-subtitle>
+            }}</ui-subtitle>
             <span
               class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-800 shrink-0">
               <icon name="i-lucide-loader" class="w-3 h-3 animate-spin" />
@@ -139,7 +139,7 @@ const doConfirmRemove = async () => {
       </ui-card>
 
       <!-- Actual Materials -->
-      <ui-card v-for="(m, idx) in materials" :key="m.id" tag="li" size="sm" :class="['cursor-pointer group my-1 rounded-md!',
+      <ui-card v-for="(m, idx) in materials" :key="m.id" tag="li" size="sm" :class="['cursor-pointer group my-1 rounded-[var(--radius-md)]!',
         getMaterialTypeColor(m.type)
       ]" @click="() => fullscreen.open(m.id)">
         <div class="flex items-center justify-between gap-2">
@@ -149,7 +149,7 @@ const doConfirmRemove = async () => {
             <ui-subtitle weight="normal" size="xs" class="truncate" color="content-on-background">
               {{ m.title }}</ui-subtitle>
             <span v-if="enrolledMaterials.has(m.id)"
-              class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 shrink-0">
+              class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success/15 text-success shrink-0">
               <icon name="i-lucide-check-circle" class="w-3 h-3 mr-1" />
               Enrolled
             </span>
@@ -197,7 +197,7 @@ const doConfirmRemove = async () => {
         </div>
 
         <span v-if="currentMaterial && enrolledMaterials.has(currentMaterial.id)"
-          class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 mt-2">
+          class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success/15 text-success mt-2">
           <icon name="i-lucide-check-circle" class="w-3 h-3 mr-1" />
           Enrolled
         </span>

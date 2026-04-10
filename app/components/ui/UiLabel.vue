@@ -15,7 +15,7 @@ interface Props {
   /**
    * HTML tag to render
    */
-  tag?: "h2" | "h3" | "h4" | "h5" | "h6" | "div" | "span";
+  tag?: "label" | "span" | "p" | "div";
   /**
    * Subtitle size variant
    */
@@ -27,7 +27,7 @@ interface Props {
   /**
    * Text color variant
    */
-  color?: "primary" | "content-on-surface" | "content-on-surface-strong" | "content-on-background" | "white" | "danger" | "success" | "disabled";
+  color?: "primary" | "content-on-surface" | "content-on-surface-strong" | "content-on-background" | "content-secondary" | "white" | "danger" | "success" | "disabled";
 
   /**
    * Center alignment
@@ -36,7 +36,7 @@ interface Props {
 }
 
 const {
-  tag = "p",
+  tag = "span",
   size = "base",
   weight = "medium",
   color = "content-on-surface",
@@ -47,7 +47,6 @@ const sizeClasses = {
   sm: "text-xs",
   base: "text-sm",
   lg: "text-base",
-
 };
 
 const weightClasses = {
@@ -62,6 +61,7 @@ const colorClasses = {
   "content-on-surface": "text-content-on-surface",
   "content-on-surface-strong": "text-content-on-surface-strong",
   "content-on-background": "text-content-on-background",
+  "content-secondary": "text-content-secondary",
   white: "text-white",
   danger: "text-[color:var(--color-error)]",
   success: "text-success",

@@ -25,7 +25,7 @@ interface Props {
   /**
    * Text color variant
    */
-  color?: "primary" | "content-on-surface" | 'content-on-surface-strong' | "content-on-background" | 'disabled' | "white" | "danger" | "success";
+  color?: "primary" | "content-on-surface" | 'content-on-surface-strong' | "content-on-background" | "content-secondary" | 'disabled' | "white" | "danger" | "success";
   /**
   * Font weight
   */
@@ -50,10 +50,10 @@ const {
 } = defineProps<Props>();
 
 const sizeClasses = {
-  xs: "text-xs",
-  sm: "text-xs md:text-sm text-nowrap",
-  base: "text-base",
-  lg: "text-lg",
+  xs: "text-xs leading-normal",
+  sm: "text-sm leading-relaxed",
+  base: "text-base leading-relaxed",
+  lg: "text-lg leading-relaxed",
 };
 const weightClasses = {
   light: "font-light",
@@ -69,6 +69,7 @@ const colorClasses = {
   "content-on-surface": "text-content-on-surface",
   "content-on-surface-strong": "text-content-on-surface-strong",
   "content-on-background": "text-content-on-background",
+  "content-secondary": "text-content-secondary",
   white: "text-white",
   danger: "text-[color:var(--color-error)]",
   success: "text-success",

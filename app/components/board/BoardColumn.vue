@@ -178,10 +178,10 @@ const createItem = async () => {
 
 <template>
   <div
-    class="shrink-0 flex flex-col h-full min-h-0 bg-gradient-to-b from-white to-gray-50/80 rounded-xl border border-t-0 border-surface-subtle shadow-xs transition-shadow w-72 max-w-full ">
+    class="shrink-0 flex flex-col h-full min-h-0 bg-gradient-to-b from-white to-surface/80 rounded-[var(--radius-xl)] border border-t-0 border-surface-subtle shadow-xs transition-shadow w-72 max-w-full ">
     <!-- Column Header - This is the drag handle on desktop -->
     <div
-      class="flex items-center justify-between p-3 border-b border-gray-200 bg-white rounded-t-xl group/header shrink-0 column-drag-handle"
+      class="flex items-center justify-between p-3 border-b border-secondary bg-white rounded-t-[var(--radius-xl)] group/header shrink-0 column-drag-handle"
       @pointerdown="handleHeaderPointerDown" :class="{
         'lg:cursor-grab lg:active:cursor-grabbing': !isDefault && !isEditing,
         'lg:cursor-grabbing': isDragging
@@ -189,11 +189,11 @@ const createItem = async () => {
       <div v-if="!isEditing" class="flex items-center gap-2.5 flex-1 min-w-0">
         <!-- Drag handle icon (desktop only) -->
         <div v-if="!isDefault"
-          class="hidden lg:flex items-center text-gray-300 opacity-0 group-hover/header:opacity-100 transition-opacity">
+          class="hidden lg:flex items-center text-content-disabled opacity-0 group-hover/header:opacity-100 transition-opacity">
           <Icon name="heroicons:bars-2" class="w-4 h-4" />
         </div>
 
-        <div v-if="icon" class="flex items-center justify-center w-6 h-6 rounded bg-gray-50"
+        <div v-if="icon" class="flex items-center justify-center w-6 h-6 rounded bg-surface"
           :style="{ color: color || 'currentColor' }">
           <Icon :name="icon" class="w-4 h-4" />
         </div>
@@ -201,12 +201,12 @@ const createItem = async () => {
         <ui-subtitle size="sm" @dblclick.stop="startEditing" class="select-none">
           {{ columnName }}
         </ui-subtitle>
-        <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500">
+        <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-secondary text-content-secondary">
           {{ items.length }}
         </span>
 
         <!-- Loading indicator -->
-        <Icon v-if="isReordering" name="svg-spinners:ring-resize" class="w-3.5 h-3.5 text-primary-500" />
+        <Icon v-if="isReordering" name="svg-spinners:ring-resize" class="w-3.5 h-3.5 text-primary" />
       </div>
 
       <div v-else class="flex items-center gap-2 flex-1 pointer-events-auto" @click.stop @mousedown.stop
@@ -229,15 +229,15 @@ const createItem = async () => {
     </div>
 
     <!-- Items list - pointer-events enabled for item interactions -->
-    <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-3 bg-gray-100/30 pointer-events-auto"
+    <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-3 bg-surface/30 pointer-events-auto"
       :class="{ 'opacity-60': isDragDisabled }">
       <div :class="{ 'pointer-events-none': isDragDisabled }">
         <ReorderGroup v-model:values="localItems" class="flex flex-col gap-3">
           <ReorderItem v-for="item in localItems" :key="item.id" :value="item" v-slot="{ isDragging: itemDragging }">
             <div>
               <DragTracker :item-id="item.id" :is-dragging="itemDragging" />
-              <BoardItemCard :item="item" :is-selected="props.selectedItemId === item.id" @select="emit('select-item', item.id)"
-                @delete="emit('delete-item', item.id)"
+              <BoardItemCard :item="item" :is-selected="props.selectedItemId === item.id"
+                @select="emit('select-item', item.id)" @delete="emit('delete-item', item.id)"
                 @move="(targetId) => itemsStore.moveItemToColumn(item.id, targetId, 0)" />
             </div>
           </ReorderItem>
@@ -248,17 +248,17 @@ const createItem = async () => {
       <div v-if="items.length === 0"
         class="flex flex-col items-center justify-center py-10 opacity-40 grayscale group/empty">
         <Icon name="heroicons:sparkles"
-          class="w-8 h-8 text-gray-300 dark:text-gray-600 mb-2 transition-transform group-hover/empty:scale-110" />
-        <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-widest text-center px-4">
+          class="w-8 h-8 text-content-disabled dark:text-content-disabled mb-2 transition-transform group-hover/empty:scale-110" />
+        <p class="text-[11px] font-semibold text-content-secondary uppercase tracking-widest text-center px-4">
           Empty Column
         </p>
       </div>
     </div>
 
     <!-- Add item button -->
-    <div class="shrink-0 p-2.5 bg-white rounded-b-xl border-t border-gray-100 pointer-events-auto">
+    <div class="shrink-0 p-2.5 bg-white rounded-b-[var(--radius-xl)] border-t border-secondary pointer-events-auto">
       <UButton size="sm" color="neutral" variant="ghost"
-        class="w-full justify-start text-xs tracking-wide hover:bg-gray-50" icon="heroicons:plus-circle"
+        class="w-full justify-start text-xs tracking-wide hover:bg-surface-subtle" icon="heroicons:plus-circle"
         @click="createItem">
         New Item
       </UButton>

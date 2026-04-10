@@ -390,8 +390,8 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
                     <icon name="i-lucide-loader" class="w-4 h-4 animate-spin" />
                   </div>
                   <ui-paragraph size="xs" class="truncate">
-                    <span v-if="note.noteType === 'CANVAS'" class="mr-1 text-orange-500">🎨</span>
-                    <span v-else-if="note.noteType === 'MATH'" class="mr-1 text-indigo-500">∑</span>
+                    <span v-if="note.noteType === 'CANVAS'" class="mr-1 text-warning">🎨</span>
+                    <span v-else-if="note.noteType === 'MATH'" class="mr-1 text-primary">∑</span>
                     {{
                       note.content
                         .replace(/<[^>]*>/g, "")

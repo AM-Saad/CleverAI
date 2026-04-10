@@ -23,7 +23,7 @@ onUnmounted(() => {
     <Transition name="modal">
       <div v-if="show" class="modal-mask">
         <div
-          class="inner bg-white absolute left-[50%] top-[50%] w-md max-w-full -translate-x-1/2 -translate-y-1/2 transform rounded-md  shadow-lg z-50 overflow-auto">
+          class="inner bg-surface absolute left-[50%] top-[50%] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 transform rounded-[var(--radius-2xl)] shadow-lg z-50 overflow-auto mx-4">
           <div
             class="modal-header flex items-center justify-between font-medium text-content-on-surface border-b border-secondary bg-surface p-3.5 pb-2">
             <div class="flex flex-col gap-1">

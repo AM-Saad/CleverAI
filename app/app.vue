@@ -43,6 +43,10 @@ const { isLoading: isIndicatorLoading } = useLoadingIndicator({
     // This is how progress is calculated by default
     // estimatedProgress: (duration, elapsed) => (2 / Math.PI * 100) * Math.atan(elapsed / duration * 100 / 50),
 })
+
+// Force light mode — dark mode will be planned and implemented properly later
+const colorMode = useColorMode()
+colorMode.preference = 'light'
 // same as set(0, { force: true })
 // set the progress to 0, and show loading immediately
 // start({ force: true })

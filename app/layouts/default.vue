@@ -36,9 +36,9 @@
           </router-link>
           <div class=" flex items-center justify-center" :title="online ? 'You are online' : 'You are offline'"
             v-if="route.fullPath.startsWith('/workspaces') || route.fullPath.startsWith('/user')">
-            <span v-if="online" class="bg-green-300 rounded-full border border-surface-strong w-3 h-3 animate-pulse"
+            <span v-if="online" class="bg-success rounded-full border border-surface-strong w-3 h-3 animate-pulse"
               title="Online"></span>
-            <span v-if="!online" class="bg-gray-300 rounded-full border border-surface-strong w-3 h-3"
+            <span v-if="!online" class="bg-content-disabled rounded-full border border-surface-strong w-3 h-3"
               title="Offline"></span>
           </div>
         </div>
@@ -92,7 +92,7 @@
           </ul>
         </div>
       </div>
-      <p class="my-2 text-center text-sm dark:text-gray-300">
+      <p class="my-2 text-center text-sm dark:text-content-secondary">
         Provided by <a class="underline" href="https://amsaad.cc">Abdelrahman Saad</a>
       </p>
     </footer>

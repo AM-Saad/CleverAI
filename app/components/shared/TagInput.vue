@@ -114,7 +114,7 @@ const handleBlur = () => {
   <div class="relative">
     <!-- Selected Tags + Input -->
     <div
-      class="flex flex-wrap gap-1.5 p-2 border rounded-lg bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-700 focus-within:ring-2 focus-within:ring-primary-500 focus-within:border-primary-500">
+      class="flex flex-wrap gap-1.5 p-2 border rounded-[var(--radius-lg)] bg-white dark:bg-surface border-secondary focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary">
       <!-- Selected Tags -->
       <UBadge v-for="tag in selectedTags" :key="tag.id"
         :style="{ backgroundColor: tag.color, color: '#ffffff !important' }" variant="subtle" size="sm"
@@ -133,16 +133,15 @@ const handleBlur = () => {
         @blur="handleBlur" />
 
       <!-- Loading indicator -->
-      <Icon v-if="isCreating" name="svg-spinners:ring-resize" class="w-4 h-4 text-gray-400" />
+      <Icon v-if="isCreating" name="svg-spinners:ring-resize" class="w-4 h-4 text-content-secondary" />
     </div>
 
     <!-- Suggestions Dropdown -->
     <div v-if="showSuggestions && (suggestions.length > 0 || inputValue.trim())"
-      class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+      class="absolute z-10 w-full mt-1 bg-white dark:bg-surface border border-secondary rounded-[var(--radius-xl)] shadow-lg max-h-48 overflow-y-auto">
       <!-- Existing tag suggestions -->
       <button v-for="tag in suggestions" :key="tag.id" type="button"
-        class="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
-        @click="addTag(tag.name)">
+        class="w-full px-3 py-2 text-left hover:bg-surface-subtle flex items-center gap-2" @click="addTag(tag.name)">
         <UBadge :style="{ color: '#ffffff !important', backgroundColor: tag.color }" variant="subtle" size="sm">
           {{ tag.name }}
         </UBadge>
@@ -150,7 +149,7 @@ const handleBlur = () => {
 
       <!-- Create new tag option -->
       <button v-if="inputValue.trim() && !tagsStore.getTagByName(inputValue.trim())" type="button"
-        class="w-full px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 border-t border-gray-200 dark:border-gray-600"
+        class="w-full px-3 py-2 text-left hover:bg-surface-subtle flex items-center gap-2 border-t border-secondary"
         @click="addTag(inputValue)">
         <Icon name="heroicons:plus-circle" class="w-4 h-4 text-primary-500" />
         <span class="text-sm">Create "{{ inputValue.trim() }}"</span>

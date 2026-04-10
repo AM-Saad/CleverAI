@@ -5,7 +5,6 @@ import { useCreditsStore } from '~/composables/useCreditsStore'
 import { storeToRefs } from 'pinia'
 import { useRuntimeConfig } from '#app'
 import UiDrawer from '~/components/ui/Drawer.vue'
-import UiButton from '~/components/ui/Button.vue'
 
 const props = defineProps<{ isOpen: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -165,7 +164,7 @@ function invokeAd() {
     <div class="flex flex-col gap-6 px-2 pb-6">
       <!-- Hero Section -->
       <div
-        class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/50 to-blue-500/10  border-primary/20 p-8 text-center mt-2 shadow-sm">
+        class="relative overflow-hidden rounded-[var(--radius-2xl)] bg-gradient-to-br from-primary/50 to-primary/10 border-primary/20 p-8 text-center mt-2 shadow-sm">
         <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/90 rounded-full blur-3xl"></div>
         <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-500/90 rounded-full blur-3xl"></div>
 
@@ -186,7 +185,7 @@ function invokeAd() {
           <UIcon v-else name="i-heroicons-play-circle" class="w-5 h-5" />
           Watch Video (+1 Credit)
         </UButton>
-        <p class="text-xs text-gray-500 text-center">Support us by watching a short ad.</p>
+        <p class="text-xs text-content-secondary text-center">Support us by watching a short ad.</p>
 
         <!-- AppLixir Hidden Divs -->
         <div id="applixir_vanishing_div" style="display:none;position:absolute;z-index:2000">
@@ -194,55 +193,58 @@ function invokeAd() {
         </div>
       </div>
 
-      <div class="border-t border-gray-100 my-2"></div>
+      <div class="border-t border-secondary my-2"></div>
 
       <!-- Stripe Top-up Section -->
       <div>
         <h3 class="text-sm font-semibold uppercase tracking-wider mb-4">Top Up Credits</h3>
 
         <div v-if="clientSecret"
-          class="bg-white rounded-xl p-4 border border-gray-200 shadow-sm relative focus-within:ring-2 focus-within:ring-primary/50">
+          class="bg-white rounded-[var(--radius-2xl)] p-4 border border-secondary shadow-sm relative focus-within:ring-2 focus-within:ring-primary/50">
           <button v-if="!isPaymentProcessing"
-            class="absolute top-2 right-2 z-10 text-gray-400 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 p-1.5 rounded-full transition-colors"
+            class="absolute top-2 right-2 z-10 text-content-secondary hover:text-content-on-surface bg-secondary hover:bg-surface-strong p-1.5 rounded-full transition-colors"
             @click="clientSecret = null">
             <UIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
           </button>
 
           <div id="payment-element" class="mb-4 min-h-[250px]"></div>
 
-          <UiButton class="w-full py-3 rounded-xl flex items-center justify-center" @click="submitPayment">
+          <UButton class="w-full py-3 rounded-[var(--radius-xl)] flex items-center justify-center"
+            @click="submitPayment">
             <span v-if="isPaymentProcessing" class="flex items-center gap-2">
               <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
               Processing...
             </span>
             <span v-else>Pay Now</span>
-          </UiButton>
-          <div v-if="paymentError" class="text-red-500 text-sm mt-3 text-center bg-red-50 p-2 rounded-lg">{{
+          </UButton>
+          <div v-if="paymentError"
+            class="text-error text-sm mt-3 text-center bg-error/10 p-2 rounded-[var(--radius-md)]">
+            {{}
             paymentError }}
           </div>
         </div>
 
         <div v-else class="grid grid-cols-1 gap-3">
           <div v-if="paymentError && !clientSecret"
-            class="mb-2 p-3 text-sm text-red-600 bg-red-50 border border-red-100 rounded-lg">
+            class="mb-2 p-3 text-sm text-error bg-error/10 border border-error/20 rounded-[var(--radius-md)]">
             {{ paymentError }}
           </div>
 
           <div v-for="pack in packs" :key="pack.id" @click="initCheckout(pack.id)"
-            class="relative flex items-center justify-between p-4 rounded-xl bg-white hover:border-primary/50 hover:bg-gray-50 focus:bg-gray-50 cursor-pointer transition-all shadow-sm hover:shadow-md group">
+            class="relative flex items-center justify-between p-4 rounded-[var(--radius-2xl)] bg-white hover:border-primary/50 hover:bg-surface-subtle focus:bg-surface-subtle cursor-pointer transition-all shadow-sm hover:shadow-md group">
             <div class="flex flex-col">
               <UiSubtitle class="flex items-center gap-1.5">
                 {{ pack.credits }} Credits
               </UiSubtitle>
-              <span class="text-xs text-gray-500">{{ pack.description }}</span>
+              <span class="text-xs text-content-secondary">{{ pack.description }}</span>
             </div>
             <div
-              class="bg-gray-100 px-3 py-1.5 rounded-lg font-medium text-sm group-hover:bg-primary group-hover:text-white transition-colors">
+              class="bg-secondary px-3 py-1.5 rounded-[var(--radius-md)] font-medium text-sm group-hover:bg-primary group-hover:text-white transition-colors">
               {{ pack.displayPrice }}
             </div>
 
             <div v-if="checkoutLoading === pack.id"
-              class="absolute inset-0 bg-white/60 backdrop-blur-sm rounded-xl flex items-center justify-center">
+              class="absolute inset-0 bg-white/60 backdrop-blur-sm rounded-[var(--radius-2xl)] flex items-center justify-center">
               <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-primary" />
             </div>
           </div>

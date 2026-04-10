@@ -41,9 +41,9 @@ const {
 </script>
 
 <template>
-  <div class="flex items-center justify-center flex-col w-full max-w-xl mx-auto mt-8 ">
+  <div class="flex items-center justify-center flex-col w-full max-w-2xl mx-auto mt-8">
 
-    <form ref="forgetpassword" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
+    <form ref="forgetpassword" method="post" class="form w-full focus:bg-surface-subtle" autocomplete="test"
       @submit.prevent="submitForm">
       <UiTitle> Verify Your Account</UiTitle>
       <UiParagraph size="sm" color="muted">
@@ -69,18 +69,19 @@ const {
         </button>
       </div>
 
-      <UiParagraph size="sm" color="muted" class="mt-2 flex justify-end items-center gap-2">
+      <UiParagraph size="sm" color="content-secondary" class="mt-2 flex justify-end items-center gap-2">
 
         <span v-if="remainingAttempts !== null"> Attempts left: {{ remainingAttempts }}.</span>
         <span v-if="resendCountDown > 0">Resend in: {{ resendCountDown }}s.</span>
         <div v-if="resendCountDown > 0" class="flex items-center gap-2">
           <div class="relative h-5 w-5" aria-hidden="true">
-            <div class="absolute inset-0 rounded-full bg-gray-200"></div>
+            <div class="absolute inset-0 rounded-full bg-secondary"></div>
             <div class="absolute inset-0 rounded-full"
-              :style="{ background: `conic-gradient(#30c3c6 ${progressPercent}%, #e5e7eb ${progressPercent}%)` }"></div>
-            <div class="absolute inset-0.5 rounded-full bg-white"></div>
+              :style="{ background: `conic-gradient(var(--color-primary) ${progressPercent}%, var(--color-secondary) ${progressPercent}%)` }">
+            </div>
+            <div class="absolute inset-0.5 rounded-full bg-background"></div>
           </div>
-          <div class="h-1 flex-1 bg-gray-200 rounded">
+          <div class="h-1 flex-1 bg-secondary rounded-[var(--radius-sm)]">
             <div class="h-1 bg-primary rounded transition-all" :style="{ width: progressPercent + '%' }" />
           </div>
         </div>
@@ -88,7 +89,7 @@ const {
           <button class="underline cursor-pointer" :disabled="!canResend" @click.prevent="handleSendEmail">Resend
             Code</button>
         </span>
-        <span v-if="inlineHintVisible" class="block mt-1 text-red-600">Resend limit reached. Please wait for
+        <span v-if="inlineHintVisible" class="block mt-1 text-error">Resend limit reached. Please wait for
           cooldown.</span>
       </UiParagraph>
 

@@ -299,23 +299,22 @@ watch([localColumns, uncategorizedItems], () => {
 </script>
 
 <template>
-  <div
-    class="flex flex-col h-full min-h-0 min-w-0 bg-surface rounded-xl shadow-inner overflow-hidden">
+  <div class="flex flex-col h-full min-h-0 min-w-0 bg-surface rounded-[var(--radius-xl)] shadow-inner overflow-hidden">
 
     <!-- Mobile Header with Column Navigation -->
     <div class="lg:hidden shrink-0">
       <!-- Column Pills Navigation -->
-      <div class="flex items-center gap-2 p-2 overflow-x-auto border-b border-gray-200 bg-white scrollbar-hide">
+      <div class="flex items-center gap-2 p-2 overflow-x-auto border-b border-secondary bg-white scrollbar-hide">
 
         <!-- Loading indicator for columns -->
-        <Icon v-if="isReorderingColumns" name="svg-spinners:ring-resize" class="w-4 h-4 text-primary-500 shrink-0" />
+        <Icon v-if="isReorderingColumns" name="svg-spinners:ring-resize" class="w-4 h-4 text-primary shrink-0" />
 
         <button v-if="uncategorizedItems.length > 0 || orderedColumns.length === 0" @click="scrollToColumn(null)"
           :class="[
             'px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap border min-h-[36px]',
             activeColumnId === null
-              ? 'bg-primary-500 text-white border-primary-500 shadow-sm'
-              : 'bg-gray-100 text-gray-600 border-transparent hover:bg-gray-200'
+              ? 'bg-primary text-on-primary border-primary shadow-sm'
+              : 'bg-secondary text-content-on-surface border-transparent hover:bg-surface-strong'
           ]">
           <span class="flex items-center gap-1.5">
             <Icon name="heroicons:inbox" class="w-4 h-4" />
@@ -327,8 +326,8 @@ watch([localColumns, uncategorizedItems], () => {
         <button v-for="(column, index) in localColumns" :key="column.id" @click="scrollToColumn(column.id)" :class="[
           'px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap border flex items-center gap-1.5 min-h-[36px]',
           activeColumnId === column.id
-            ? 'bg-primary-500 text-white border-primary-500 shadow-sm'
-            : 'bg-gray-100 text-gray-600 border-transparent hover:bg-gray-200'
+            ? 'bg-primary text-on-primary border-primary shadow-sm'
+            : 'bg-secondary text-content-on-surface border-transparent hover:bg-surface-strong'
         ]">
           <Icon v-if="getColumnIcon" :name="getColumnIcon(column.name)" class="w-4 h-4" />
           {{ column.name }}
@@ -337,26 +336,26 @@ watch([localColumns, uncategorizedItems], () => {
 
         <!-- Navigation arrows integrated into pills bar -->
         <button @click="navigateColumn('prev')"
-          class="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-30 shrink-0"
+          class="p-2 rounded-full text-content-secondary hover:text-content-on-surface hover:bg-surface-strong transition-colors disabled:opacity-30 shrink-0"
           :disabled="activeColumnId === null && uncategorizedItems.length > 0">
           <Icon name="heroicons:chevron-left" class="w-4 h-4" />
         </button>
 
         <button @click="navigateColumn('next')"
-          class="p-2 rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-200 transition-colors disabled:opacity-30 shrink-0"
+          class="p-2 rounded-full text-content-secondary hover:text-content-on-surface hover:bg-surface-strong transition-colors disabled:opacity-30 shrink-0"
           :disabled="activeColumnId === localColumns[localColumns.length - 1]?.id">
           <Icon name="heroicons:chevron-right" class="w-4 h-4" />
         </button>
 
         <!-- Reorder columns button (mobile) -->
         <button v-if="localColumns.length > 1" @click="openColumnReorderModal"
-          class="p-2 rounded-full text-gray-400 hover:text-primary-500 hover:bg-primary-50 transition-all shrink-0"
+          class="p-2 rounded-full text-content-secondary hover:text-primary hover:bg-primary/10 transition-all shrink-0"
           title="Reorder columns">
           <Icon name="heroicons:arrows-up-down" class="w-5 h-5" />
         </button>
 
         <button @click="showNewColumnInput = true"
-          class="p-2 rounded-full text-gray-400 hover:text-primary-500 hover:bg-primary-50 transition-all shrink-0">
+          class="p-2 rounded-full text-content-secondary hover:text-primary hover:bg-primary/10 transition-all shrink-0">
           <Icon name="heroicons:plus" class="w-5 h-5" />
         </button>
       </div>
@@ -393,7 +392,7 @@ watch([localColumns, uncategorizedItems], () => {
                   :icon="getColumnIcon ? getColumnIcon(column.name) : undefined" :is-dragging="isDragging"
                   :selected-item-id="selectedItemId"
                   class="snap-center lg:snap-align-none shadow-sm w-[85vw] lg:w-80 shrink-0 h-full"
-                  :class="{ 'ring-2 ring-primary-500 ring-offset-2': isDragging }"
+                  :class="{ 'ring-2 ring-primary ring-offset-2': isDragging }"
                   @rename="(name) => columnsStore.updateColumn(column.id, name)"
                   @delete="columnsStore.deleteColumn(column.id)" @select-item="(id) => emit('select-item', id)"
                   @delete-item="(id) => emit('delete-item', id)" @item-dragging="handleItemDraggingChange"
@@ -409,13 +408,13 @@ watch([localColumns, uncategorizedItems], () => {
         <div v-if="!showNewColumnInput"
           class="h-full min-h-[200px] border-2 border-dashed border-surface-strong rounded-xl flex items-center justify-center cursor-pointer hover:border-primary  transition-all group"
           @click="showNewColumnInput = true">
-          <div class="flex flex-col items-center gap-2 text-gray-400 group-hover:text-primary">
+          <div class="flex flex-col items-center gap-2 text-content-secondary group-hover:text-primary">
             <Icon name="heroicons:plus" class="w-8 h-8" />
             <span class="text-sm font-semibold uppercase tracking-wider">Add Column</span>
           </div>
         </div>
 
-        <div v-else class="bg-white rounded-xl p-4 shadow-lg">
+        <div v-else class="bg-white rounded-[var(--radius-xl)] p-4 shadow-lg">
           <UiSubtitle class="mb-3" size="sm">New Column</UiSubtitle>
           <UInput v-model="newColumnName" placeholder="Enter title..." size="md" class="my-3 w-full" autofocus
             @keyup.enter="createColumn" @keyup.escape="cancelNewColumn" />
@@ -438,31 +437,31 @@ watch([localColumns, uncategorizedItems], () => {
       <template #content>
         <div class="p-4">
           <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-gray-900">Reorder Columns</h3>
+            <h3 class="text-lg font-semibold text-content-on-surface-strong">Reorder Columns</h3>
             <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
               @click="showColumnReorderModal = false" />
           </div>
 
           <div class="space-y-2 max-h-[60vh] overflow-y-auto">
             <div v-for="(column, index) in reorderingColumns" :key="column.id"
-              class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              class="flex items-center gap-3 p-3 bg-surface-subtle rounded-[var(--radius-xl)] border border-secondary">
               <div class="flex flex-col gap-1">
                 <button @click="moveColumnInModal(index, 'up')" :disabled="index === 0"
-                  class="p-1 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed">
+                  class="p-1 rounded hover:bg-surface-strong disabled:opacity-30 disabled:cursor-not-allowed">
                   <Icon name="heroicons:chevron-up" class="w-4 h-4" />
                 </button>
                 <button @click="moveColumnInModal(index, 'down')" :disabled="index === reorderingColumns.length - 1"
-                  class="p-1 rounded hover:bg-gray-200 disabled:opacity-30 disabled:cursor-not-allowed">
+                  class="p-1 rounded hover:bg-surface-strong disabled:opacity-30 disabled:cursor-not-allowed">
                   <Icon name="heroicons:chevron-down" class="w-4 h-4" />
                 </button>
               </div>
 
               <div class="flex items-center gap-2 flex-1">
-                <Icon v-if="getColumnIcon" :name="getColumnIcon(column.name)" class="w-5 h-5 text-gray-500" />
-                <span class="font-medium text-gray-900">{{ column.name }}</span>
+                <Icon v-if="getColumnIcon" :name="getColumnIcon(column.name)" class="w-5 h-5 text-content-secondary" />
+                <span class="font-medium text-content-on-surface">{{ column.name }}</span>
               </div>
 
-              <span class="text-xs text-gray-400 font-medium">{{ index + 1 }}</span>
+              <span class="text-xs text-content-secondary font-medium">{{ index + 1 }}</span>
             </div>
           </div>
 

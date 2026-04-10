@@ -50,7 +50,7 @@ const stagePosition = ref({ x: 0, y: 0 });
 // ── Refs ──
 const stageRef = ref<any>(null);
 const transformerRef = ref<any>(null);
-const containerRef = ref<HTMLDivElement | null>(null);
+const containerRef = ref<{ el: HTMLDivElement | null } | null>(null);
 const stageSize = ref({ width: 800, height: 400 });
 
 // ── History ──
@@ -121,9 +121,9 @@ function setStrokeDash(d: number[] | undefined) {
 
 // ── Canvas sizing ──
 onMounted(() => {
-  if (containerRef.value) {
+  if (containerRef.value?.el) {
     const windowHeight = window.innerHeight;
-    const rect = containerRef.value.getBoundingClientRect();
+    const rect = containerRef.value.el.getBoundingClientRect();
     // Default to a 60vh canvas size, to give plenty of space
     stageSize.value = { width: rect.width, height: Math.max(windowHeight * 0.6, 400) };
   }
@@ -133,7 +133,7 @@ onMounted(() => {
 onMounted(() => {
   const resizeObserver = new ResizeObserver((entries) => {
     for (const entry of entries) {
-      if (entry.target === containerRef.value) {
+      if (entry.target === containerRef.value?.el) {
         stageSize.value = {
           width: entry.contentRect.width,
           height: entry.contentRect.height,
@@ -141,8 +141,8 @@ onMounted(() => {
       }
     }
   });
-  if (containerRef.value) {
-    resizeObserver.observe(containerRef.value);
+  if (containerRef.value?.el) {
+    resizeObserver.observe(containerRef.value.el);
   }
   onUnmounted(() => {
     resizeObserver.disconnect();
@@ -224,16 +224,16 @@ function handleStageWheel(e: any) {
     const scaleBy = 1.05;
     const pointer = stage.getPointerPosition();
     if (!pointer) return;
-  
+
     const mousePointTo = {
       x: (pointer.x - stage.x()) / oldScale,
       y: (pointer.y - stage.y()) / oldScale,
     };
-  
+
     const direction = e.evt.deltaY > 0 ? -1 : 1;
     const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
     const boundedScale = Math.max(0.1, Math.min(newScale, 10));
-  
+
     stageScale.value = boundedScale;
     stagePosition.value = {
       x: pointer.x - mousePointTo.x * boundedScale,
@@ -432,7 +432,7 @@ function handleTransformEnd(e: any) {
 
   const shape = shapes.value[idx];
   const node = e.target;
-  
+
   shape.x = node.x();
   shape.y = node.y();
   shape.rotation = node.rotation();
@@ -787,8 +787,8 @@ function closeContextMenu() {
 watch(() => props.isFullscreen, () => {
   setTimeout(() => {
     // Re-evaluate container size after a tick to let DOM settle after fullscreen transition
-    if (containerRef.value) {
-      const rect = containerRef.value.getBoundingClientRect();
+    if (containerRef.value?.el) {
+      const rect = containerRef.value.el.getBoundingClientRect();
       stageSize.value = { width: rect.width, height: Math.max(window.innerHeight * 0.6, 400) };
     }
   }, 100);
@@ -818,34 +818,38 @@ function toggleFullscreenLocal() {
       <!-- Action buttons -->
       <div class="flex items-center gap-0.5">
         <!-- Undo / Redo -->
-        <shared-note-toolbar-button title="Undo" :shortcuts="['meta', 'z']" :disabled="!canUndo" icon="i-heroicons-arrow-uturn-left" @click="handleUndo" />
-        <shared-note-toolbar-button title="Redo" :shortcuts="['meta', 'shift', 'z']" :disabled="!canRedo" icon="i-heroicons-arrow-uturn-right" @click="handleRedo" />
+        <shared-note-toolbar-button title="Undo" :shortcuts="['meta', 'z']" :disabled="!canUndo"
+          icon="i-heroicons-arrow-uturn-left" @click="handleUndo" />
+        <shared-note-toolbar-button title="Redo" :shortcuts="['meta', 'shift', 'z']" :disabled="!canRedo"
+          icon="i-heroicons-arrow-uturn-right" @click="handleRedo" />
 
         <!-- Delete selected -->
-        <shared-note-toolbar-button title="Delete selected" :shortcuts="['delete']" variant="danger" :disabled="!selectedShapeId" icon="i-heroicons-trash" @click="deleteSelected" />
+        <shared-note-toolbar-button title="Delete selected" :shortcuts="['delete']" variant="danger"
+          :disabled="!selectedShapeId" icon="i-heroicons-trash" @click="deleteSelected" />
 
         <!-- Duplicate -->
-        <shared-note-toolbar-button title="Duplicate" :shortcuts="['meta', 'd']" :disabled="!selectedShapeId" icon="i-heroicons-document-duplicate" @click="duplicateShape" />
+        <shared-note-toolbar-button title="Duplicate" :shortcuts="['meta', 'd']" :disabled="!selectedShapeId"
+          icon="i-heroicons-document-duplicate" @click="duplicateShape" />
       </div>
 
-      <div class="w-px h-6 bg-slate-300 dark:bg-slate-600 shrink-0" />
+      <div class="w-px h-6 bg-secondary shrink-0" />
 
       <!-- Style Controls (Colors, Border) -->
       <div class="flex items-center gap-1.5">
         <!-- Fill Color Popover -->
-        <UPopover :popper="{ arrow: true }">
+        <UPopover :arrow="true" :modal="false">
           <shared-note-toolbar-button title="Fill Color" :icon-only="true">
-            <div class="w-4 h-4 rounded-sm border border-slate-300 bg-white"
+            <div class="w-4 h-4 rounded-[var(--radius-sm)] border border-secondary bg-white"
               :style="{ backgroundColor: fillColor === 'transparent' ? '#fff' : fillColor }">
               <UIcon v-if="fillColor === 'transparent'" name="i-heroicons-x-mark"
-                class="w-full h-full text-slate-400" />
+                class="w-full h-full text-content-disabled" />
             </div>
           </shared-note-toolbar-button>
           <template #content>
             <div class="p-2 grid grid-cols-5 gap-1.5">
               <button v-for="color in colorPresets" :key="'fill' + color" :title="`Fill: ${color}`"
                 class="w-6 h-6 rounded-full border-2 transition-transform duration-100 hover:scale-110 flex items-center justify-center"
-                :class="fillColor === color ? 'border-indigo-500 scale-110' : 'border-slate-300 dark:border-slate-600 text-slate-400'"
+                :class="fillColor === color ? 'border-primary scale-110' : 'border-secondary text-content-disabled'"
                 :style="{ backgroundColor: color === 'transparent' ? '#fff' : color }" @click="setFillColor(color)">
                 <UIcon v-if="color === 'transparent'" name="i-heroicons-x-mark" class="w-4 h-4" />
               </button>
@@ -854,19 +858,19 @@ function toggleFullscreenLocal() {
         </UPopover>
 
         <!-- Stroke Color Popover -->
-        <UPopover :popper="{ arrow: true }">
+        <UPopover :arrow="true" :modal="false">
           <shared-note-toolbar-button title="Border Color" :icon-only="true">
-            <div class="w-4 h-4 rounded-sm border-2"
+            <div class="w-4 h-4 rounded-[var(--radius-sm)] border-2"
               :style="{ borderColor: strokeColor === 'transparent' ? '#cbd5e1' : strokeColor, backgroundColor: 'transparent' }">
               <UIcon v-if="strokeColor === 'transparent'" name="i-heroicons-x-mark"
-                class="w-full h-full text-slate-400" />
+                class="w-full h-full text-content-disabled" />
             </div>
           </shared-note-toolbar-button>
           <template #content>
             <div class="p-2 grid grid-cols-5 gap-1.5 flex-col">
               <button v-for="color in colorPresets" :key="'stroke' + color" :title="`Border: ${color}`"
                 class="w-6 h-6 rounded-full border-2 transition-transform duration-100 hover:scale-110 flex items-center justify-center"
-                :class="strokeColor === color ? 'border-indigo-500 scale-110' : 'border-slate-300 dark:border-slate-600 text-slate-400'"
+                :class="strokeColor === color ? 'border-primary scale-110' : 'border-secondary text-content-disabled'"
                 :style="{ backgroundColor: color === 'transparent' ? '#fff' : color }" @click="setStrokeColor(color)">
                 <UIcon v-if="color === 'transparent'" name="i-heroicons-x-mark" class="w-4 h-4" />
               </button>
@@ -874,21 +878,22 @@ function toggleFullscreenLocal() {
           </template>
         </UPopover>
 
-        <div class="w-px h-6 bg-slate-300 dark:bg-surface-strong mx-1" />
+        <div class="w-px h-6 bg-secondary mx-1" />
 
         <!-- Stroke width and style togglers -->
-        <UDropdownMenu :items="borderThicknessItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
+        <UDropdownMenu :modal="false" :items="borderThicknessItems"
+          :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
           <shared-note-toolbar-button title="Border Thickness" icon="i-lucide-hash" />
         </UDropdownMenu>
-        <UDropdownMenu :items="borderStyleItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
+        <UDropdownMenu :modal="false" :items="borderStyleItems"
+          :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
           <shared-note-toolbar-button title="Border Style" icon="i-lucide-activity" />
         </UDropdownMenu>
       </div>
     </SharedNoteToolbar>
 
     <!-- Konva Stage Space -->
-    <div ref="containerRef"
-      class="relative flex-1 min-h-[400px] w-full rounded-lg border border-slate-200 bg-white shadow-inner overflow-hidden cursor-crosshair"
+    <SharedNoteContentArea ref="containerRef" class="min-h-[400px] cursor-crosshair"
       :class="{ 'cursor-grab': activeTool === 'hand' }">
       <ClientOnly>
         <v-stage ref="stageRef"
@@ -905,46 +910,45 @@ function toggleFullscreenLocal() {
         </v-stage>
       </ClientOnly>
 
-      <!-- Zoom Map / Info corner -->
+      <!-- Zoom map / info corner -->
       <div
-        class="absolute bottom-2 left-2 px-2 py-1 bg-white/80 rounded text-xs font-medium text-content-on-surface shadow pointer-events-none select-none backdrop-blur-sm">
+        class="absolute bottom-2 left-2 px-2 py-1 bg-background/80 rounded-[var(--radius-md)] text-xs font-medium text-content-on-surface pointer-events-none select-none backdrop-blur-sm">
         {{ Math.round(stageScale * 100) }}% | Use Hand mode to pan
       </div>
-    </div>
+    </SharedNoteContentArea>
 
     <!-- Context Menu (teleported to body) -->
     <Teleport to="body">
       <div v-if="contextMenu.visible"
-        class="fixed z-[9999] min-w-[160px] rounded-lg border border-slate-200 bg-white shadow-lg dark:border-slate-700 dark:bg-slate-800 py-1 animate-in fade-in zoom-in-95 duration-100"
+        class="fixed z-[9999] min-w-[160px] rounded-[var(--radius-xl)] border border-secondary bg-surface shadow-xl py-1 animate-in fade-in zoom-in-95 duration-100"
         :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }">
         <button
-          class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+          class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-content-on-surface hover:bg-surface-subtle"
           @click="bringToFront">
           <UIcon name="i-heroicons-arrow-up" class="w-4 h-4" /> Bring to Front
         </button>
         <button
-          class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+          class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-content-on-surface hover:bg-surface-subtle"
           @click="bringForward">
           <UIcon name="i-heroicons-chevron-up" class="w-4 h-4" /> Bring Forward
         </button>
         <button
-          class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+          class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-content-on-surface hover:bg-surface-subtle"
           @click="sendBackward">
           <UIcon name="i-heroicons-chevron-down" class="w-4 h-4" /> Send Backward
         </button>
         <button
-          class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+          class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-content-on-surface hover:bg-surface-subtle"
           @click="sendToBack">
           <UIcon name="i-heroicons-arrow-down" class="w-4 h-4" /> Send to Back
         </button>
-        <div class="my-1 h-px bg-slate-200 dark:bg-slate-700" />
+        <div class="my-1 h-px bg-secondary" />
         <button
-          class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+          class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-content-on-surface hover:bg-surface-subtle"
           @click="duplicateShape">
           <UIcon name="i-heroicons-document-duplicate" class="w-4 h-4" /> Duplicate
         </button>
-        <button
-          class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/30"
+        <button class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-error hover:bg-error/10"
           @click="deleteSelected">
           <UIcon name="i-heroicons-trash" class="w-4 h-4" /> Delete
         </button>

@@ -26,17 +26,19 @@ const emit = defineEmits<{
 </script>
 
 <template>
-  <div class="shared-note-toolbar relative flex items-center justify-between gap-1.5 flex-nowrap overflow-hidden rounded-t-lg bg-slate-50 p-1.5 border-b border-slate-200">
+  <div
+    class="shared-note-toolbar relative flex items-center justify-between gap-1.5 flex-nowrap overflow-hidden rounded-t-[var(--radius-lg)] bg-surface p-1.5 border-b border-secondary">
     <!-- Left/Primary Area: Note-type specific tools -->
     <div class="flex items-center gap-1.5 flex-nowrap flex-1 min-w-0 overflow-x-auto no-scrollbar scroll-smooth">
       <slot name="default"></slot>
     </div>
 
     <!-- Right/Secondary Area: Common Actions -->
-    <div v-if="!hideCommonActions" class="flex items-center gap-0.5 shrink-0 ml-auto pl-1 bg-slate-50 shadow-[-8px_0_12px_-4px_rgba(248,250,252,1)] z-10 relative">
+    <div v-if="!hideCommonActions"
+      class="flex items-center gap-0.5 shrink-0 ml-auto pl-1 bg-surface shadow-[-8px_0_12px_-4px_var(--color-surface)] z-10 relative">
       <slot name="common-actions-prefix"></slot>
 
-      <div v-if="$slots['common-actions-prefix']" class="w-px h-5 bg-slate-300 dark:bg-slate-600 mx-1 shrink-0" />
+      <div v-if="$slots['common-actions-prefix']" class="w-px h-5 bg-secondary mx-1 shrink-0" />
 
       <!-- Fullscreen toggle -->
       <shared-note-toolbar-button v-if="props.allowFullscreen" title="Toggle Fullscreen" :disabled="isLoading"
@@ -55,8 +57,11 @@ const emit = defineEmits<{
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
 .no-scrollbar {
-  -ms-overflow-style: none;  /* IE and Edge */
-  scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE and Edge */
+  scrollbar-width: none;
+  /* Firefox */
 }
 </style>

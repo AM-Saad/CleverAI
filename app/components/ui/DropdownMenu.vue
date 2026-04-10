@@ -2,7 +2,7 @@
   <Menu as="div" class="relative inline-block text-left">
     <div>
       <MenuButton role="button"
-        class="inline-flex w-full border border-transparent justify-center gap-x-1.5 rounded-xl text-sm font-semibold text-gray-900 shadow-sm hover:bg-gray-50 dark:hover:bg-transparent dark:hover:border-white transition-all duration-300 ease-in-out focus-visible:ring-1 ring-black dark:ring-white cursor-pointer">
+        class="inline-flex w-full border border-transparent justify-center gap-x-1.5 rounded-[var(--radius-xl)] text-sm font-semibold text-content-on-surface shadow-sm hover:bg-surface-subtle dark:hover:bg-transparent dark:hover:border-white transition-all duration-300 ease-in-out focus-visible:ring-1 ring-black dark:ring-white cursor-pointer">
         <img class="h-8 dark:invert-[1] dark:filter p-xs" :src="'/images/logo-geek.png'" alt="" />
       </MenuButton>
     </div>
@@ -11,7 +11,7 @@
       enter-to-class="transform opacity-100 scale-100" leave-active-class="transition ease-in duration-75"
       leave-from-class="transform opacity-100 scale-100" leave-to-class="transform opacity-0 scale-95">
       <MenuItems
-        class="bg-surface border border-secondary absolute right-0 z-20 w-48 origin-top-right overflow-hidden rounded-xl shadow-lg dark:ring-white ring-opacity-5 focus:outline-none">
+        class="bg-surface border border-secondary absolute right-0 z-20 w-48 origin-top-right overflow-hidden rounded-[var(--radius-xl)] shadow-lg dark:ring-white ring-opacity-5 focus:outline-none">
         <div class="overflow-hidden">
           <MenuItem v-slot="{ active }">
           <router-link to="/user/profile" tabindex="1" :class="[

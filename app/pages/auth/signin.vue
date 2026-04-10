@@ -22,13 +22,12 @@ const isValidPassword = computed(() => {
 </script>
 
 <template>
-  <div class="flex items-center justify-center flex-col w-full max-w-xl mx-auto mt-8 ">
-    <form ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
-      @submit.prevent="handleSubmit">
+  <div class="flex items-center justify-center flex-col w-full max-w-2xl mx-auto mt-8">
+    <form ref="login" method="post" class="form w-full" autocomplete="test" @submit.prevent="handleSubmit">
       <UiTitle>Login</UiTitle>
       <UiParagraph size="sm" color="content-on-background"> Login to your account</UiParagraph>
       <shared-error-message v-if="error" :error="error" />
-      <div class="mb-2 mt-2 rounded-md relative transition duration-10 00 text-xs">
+      <div class="mb-2 mt-2 rounded-[var(--radius-md)] relative transition duration-10 00 text-xs">
         <ui-input-field id="login-email-client" v-model="credentials.email" type="email" name="email"
           label="Email Address" title="Please enter a valid email address"
           pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$" tabindex="1" :styles="{
@@ -39,7 +38,7 @@ const isValidPassword = computed(() => {
             input: `${isValidPassword ? 'pt-8' : ''}`,
             inputField: `rounded-t-none  ${!isValidEmail ? ' -translate-y-full -z-10 hidden' : ''}`,
           }" />
-        <button :class="`w-8 h-8 absolute right-2 bottom-2 border border-gray-500 rounded-full text-center grid place-items-center cursor-pointer hover:opacity-90 bg-primary 
+        <button :class="`w-8 h-8 absolute right-2 bottom-2 border border-secondary rounded-full text-center grid place-items-center cursor-pointer hover:opacity-90 bg-primary 
           focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary
           hover:shadow ${isValidEmail && isValidPassword ? ' ' : 'opacity-75'}`" type="submit"
           :disabled="!isValidEmail || !isValidPassword || loading" @click.prevent="handleSubmit"
@@ -48,7 +47,7 @@ const isValidPassword = computed(() => {
           <icon v-else name="uil:redo" class="w-4 h-4 animate-spin text-white dark:text-dark" />
         </button>
       </div>
-      <div class="toggle-forms flex flex-col gap-2 justify-between  dark:text-gray-200">
+      <div class="toggle-forms flex flex-col gap-2 justify-between text-content-on-background">
         <UiParagraph size="xs" color="content-on-background">
           You don't have an account
           <router-link tabindex="4" class="font-semibold underline" to="/auth/signup">

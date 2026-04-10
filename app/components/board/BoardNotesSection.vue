@@ -456,14 +456,16 @@ const overflowMenuItems = computed(() => [
       <!-- Error state -->
       <div v-if="error && items.length === 0"
         class="flex flex-col items-center justify-center flex-1 gap-3 py-12 text-center px-6">
-        <div class="w-12 h-12 rounded-full bg-red-50 dark:bg-red-900/20 flex items-center justify-center">
-          <Icon name="heroicons:exclamation-triangle" class="w-6 h-6 text-red-500" />
+        <div class="w-12 h-12 rounded-full bg-error/10 flex items-center justify-center">
+          <Icon name="heroicons:exclamation-triangle" class="w-6 h-6 text-error" />
         </div>
         <div>
-          <p class="font-semibold text-gray-800 dark:text-gray-100">Failed to load board</p>
-          <p class="text-sm text-gray-500 mt-1">{{ (error as any)?.message || 'An unexpected error occurred' }}</p>
+          <p class="font-semibold text-content-on-surface-strong">Failed to load board</p>
+          <p class="text-sm text-content-secondary mt-1">{{ (error as any)?.message || 'An unexpected error occurred' }}
+          </p>
         </div>
-        <UButton size="sm" color="primary" variant="soft" icon="heroicons:arrow-path" @click="() => { error = null; itemsStore.syncWithServer(); columnsStore.syncWithServer(); }">
+        <UButton size="sm" color="primary" variant="soft" icon="heroicons:arrow-path"
+          @click="() => { error = null; itemsStore.syncWithServer(); columnsStore.syncWithServer(); }">
           Retry
         </UButton>
       </div>
@@ -481,90 +483,70 @@ const overflowMenuItems = computed(() => [
       <div v-if="!error && items.length > 0" class="flex flex-col flex-1 min-h-0 overflow-hidden relative">
 
         <!-- Subtle background sync indicator -->
-        <Transition enter-active-class="transition duration-200" enter-from-class="opacity-0" enter-to-class="opacity-100"
-          leave-active-class="transition duration-200" leave-from-class="opacity-100" leave-to-class="opacity-0">
+        <Transition enter-active-class="transition duration-200" enter-from-class="opacity-0"
+          enter-to-class="opacity-100" leave-active-class="transition duration-200" leave-from-class="opacity-100"
+          leave-to-class="opacity-0">
           <div v-if="isFetching"
-            class="absolute top-2 right-2 z-10 flex items-center gap-1.5 text-[10px] font-medium text-primary-600 dark:text-primary-400 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-sm border border-primary-100 dark:border-primary-800">
+            class="absolute top-2 right-2 z-10 flex items-center gap-1.5 text-[10px] font-medium text-primary bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-sm border border-primary/20">
             <Icon name="svg-spinners:ring-resize" class="w-3 h-3" />
             Syncing
           </div>
         </Transition>
 
         <!-- No results after filtering -->
-        <shared-empty-state v-if="filteredItems.length === 0"
-          title="No matching items" button-text="Clear Filters" :center-description="true" @action="clearFilters">
+        <shared-empty-state v-if="filteredItems.length === 0" title="No matching items" button-text="Clear Filters"
+          :center-description="true" @action="clearFilters">
           <template #description>
             Try adjusting your search or filters.
           </template>
         </shared-empty-state>
 
         <div v-else class="flex flex-1 min-h-0 overflow-hidden">
-        <!-- Kanban View -->
-        <BoardKanbanView v-if="viewMode === 'board'" class="flex-1 min-w-0 h-full min-h-0" :items="filteredItems" :all-items="items"
-          :selected-item-id="currentItemId ?? undefined"
-          :get-column-color="getColumnColor" :get-column-icon="getColumnIcon" @select-item="(id) => currentItemId = id"
-          @delete-item="deleteItem" />
+          <!-- Kanban View -->
+          <BoardKanbanView v-if="viewMode === 'board'" class="flex-1 min-w-0 h-full min-h-0" :items="filteredItems"
+            :all-items="items" :selected-item-id="currentItemId ?? undefined" :get-column-color="getColumnColor"
+            :get-column-icon="getColumnIcon" @select-item="(id) => currentItemId = id" @delete-item="deleteItem" />
 
-        <!-- List View -->
-        <BoardListView v-else class="flex-1 min-w-0 min-h-0 overflow-y-auto" :items="filteredItems" :all-items="items"
-          :selected-item-id="currentItemId ?? undefined"
-          @select-item="(id) => currentItemId = id" @delete-item="deleteItem" />
+          <!-- List View -->
+          <BoardListView v-else class="flex-1 min-w-0 min-h-0 overflow-y-auto" :items="filteredItems" :all-items="items"
+            :selected-item-id="currentItemId ?? undefined" @select-item="(id) => currentItemId = id"
+            @delete-item="deleteItem" />
 
-        <!-- Item editor:
+          <!-- Item editor:
              - xl+ (≥1280px): right-side panel inline (shares row with board/list)
              - Below xl: full-screen overlay teleported to <body> to escape overflow stacking
         -->
 
-        <!-- Desktop inline panel (xl+) -->
-        <Transition
-          enter-active-class="transition duration-300 ease-out"
-          enter-from-class="opacity-0 translate-x-2"
-          enter-to-class="opacity-100 translate-x-0"
-          leave-active-class="transition duration-200 ease-in"
-          leave-from-class="opacity-100 translate-x-0"
-          leave-to-class="opacity-0 translate-x-2">
-          <div v-if="currentItem"
-            class="hidden xl:flex flex-col border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 transition-all shrink-0 relative"
-            :style="{ width: `${panelWidth}px` }">
-            <!-- Resizer handle -->
-            <div
-              class="absolute -left-0.5 top-0 h-full w-1 cursor-col-resize hover:bg-primary-400 transition-colors z-10 rounded-2xl"
-              @mousedown="startResizing" />
-            <board-item-detail-panel
-              :item="currentItem"
-              :workspace-id="id as string"
-              @update="handleUpdateItem"
-              @update-meta="handleUpdateItemMeta"
-              @delete="deleteItem"
-              @retry="handleRetry"
-              @toggle-fullscreen="fullscreen.toggle(currentItem.id)"
-              @close="currentItemId = null" />
-          </div>
-        </Transition>
-
-        <!-- Overlay panel (below xl — includes lg 1024-1279px and mobile) -->
-        <Teleport to="body">
-          <Transition
-            enter-active-class="transition duration-300 ease-out"
-            enter-from-class="translate-x-full"
-            enter-to-class="translate-x-0"
-            leave-active-class="transition duration-200 ease-in"
-            leave-from-class="translate-x-0"
-            leave-to-class="translate-x-full">
+          <!-- Desktop inline panel (xl+) -->
+          <Transition enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-0 translate-x-2"
+            enter-to-class="opacity-100 translate-x-0" leave-active-class="transition duration-200 ease-in"
+            leave-from-class="opacity-100 translate-x-0" leave-to-class="opacity-0 translate-x-2">
             <div v-if="currentItem"
-              class="xl:hidden fixed inset-0 z-200 flex flex-col bg-white dark:bg-gray-900 overflow-hidden">
-              <board-item-detail-panel
-                :item="currentItem"
-                :workspace-id="id as string"
-                @update="handleUpdateItem"
-                @update-meta="handleUpdateItemMeta"
-                @delete="deleteItem"
-                @retry="handleRetry"
-                @toggle-fullscreen="fullscreen.toggle(currentItem.id)"
-                @close="currentItemId = null" />
+              class="hidden xl:flex flex-col border-l border-secondary bg-white dark:bg-surface transition-all shrink-0 relative"
+              :style="{ width: `${panelWidth}px` }">
+              <!-- Resizer handle -->
+              <div
+                class="absolute -left-0.5 top-0 h-full w-1 cursor-col-resize hover:bg-primary/40 transition-colors z-10 rounded-[var(--radius-2xl)]"
+                @mousedown="startResizing" />
+              <board-item-detail-panel :item="currentItem" :workspace-id="id as string" @update="handleUpdateItem"
+                @update-meta="handleUpdateItemMeta" @delete="deleteItem" @retry="handleRetry"
+                @toggle-fullscreen="fullscreen.toggle(currentItem.id)" @close="currentItemId = null" />
             </div>
           </Transition>
-        </Teleport>
+
+          <!-- Overlay panel (below xl — includes lg 1024-1279px and mobile) -->
+          <Teleport to="body">
+            <Transition enter-active-class="transition duration-300 ease-out" enter-from-class="translate-x-full"
+              enter-to-class="translate-x-0" leave-active-class="transition duration-200 ease-in"
+              leave-from-class="translate-x-0" leave-to-class="translate-x-full">
+              <div v-if="currentItem"
+                class="xl:hidden fixed inset-0 z-200 flex flex-col bg-white dark:bg-surface overflow-hidden">
+                <board-item-detail-panel :item="currentItem" :workspace-id="id as string" @update="handleUpdateItem"
+                  @update-meta="handleUpdateItemMeta" @delete="deleteItem" @retry="handleRetry"
+                  @toggle-fullscreen="fullscreen.toggle(currentItem.id)" @close="currentItemId = null" />
+              </div>
+            </Transition>
+          </Teleport>
         </div>
       </div>
     </template>
@@ -575,24 +557,17 @@ const overflowMenuItems = computed(() => [
     max-height="90vh" @close="fullscreen.close">
     <template #header>
       <div class="flex items-center justify-between w-full">
-        <span class="font-medium text-gray-900 dark:text-gray-100">Board Item</span>
-        <UButton variant="outline" color="neutral" size="xs" aria-label="Close fullscreen"
-          @click="fullscreen.close()">
+        <span class="font-medium text-content-on-surface-strong">Board Item</span>
+        <UButton variant="outline" color="neutral" size="xs" aria-label="Close fullscreen" @click="fullscreen.close()">
           <Icon name="i-heroicons-x-mark" :size="UI_CONFIG.ICON_SIZE" />
         </UButton>
       </div>
     </template>
 
     <div v-if="currentFullscreenItem" class="h-full overflow-hidden">
-      <board-item-detail-panel
-        :item="currentFullscreenItem"
-        :workspace-id="id as string"
-        @update="handleUpdateItem"
-        @update-meta="handleUpdateItemMeta"
-        @delete="deleteItem"
-        @retry="handleRetry"
-        @toggle-fullscreen="fullscreen.close"
-        @close="fullscreen.close" />
+      <board-item-detail-panel :item="currentFullscreenItem" :workspace-id="id as string" @update="handleUpdateItem"
+        @update-meta="handleUpdateItemMeta" @delete="deleteItem" @retry="handleRetry"
+        @toggle-fullscreen="fullscreen.close" @close="fullscreen.close" />
     </div>
   </shared-fullscreen-wrapper>
 
@@ -661,6 +636,6 @@ const overflowMenuItems = computed(() => [
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: var(--color-primary-500, #3b82f6);
+  background-color: var(--color-primary);
 }
 </style>
