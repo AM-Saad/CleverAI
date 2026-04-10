@@ -36,7 +36,7 @@ export function useTextSummarization(options?: {
       // Qwen3-VL-Demo typically uses a '/predict' or '/chat' endpoint.
       // We use handle_file to process URLs or local Blobs correctly.
       const result = await app.predict("/predict", [
-        // handle_file(imageInput),
+        handle_file(imageInput),
         prompt
       ]);
 

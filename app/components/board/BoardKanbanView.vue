@@ -7,6 +7,7 @@ const props = defineProps<{
   allItems: BoardItemState[]; // All items for proper reordering
   getColumnColor?: (index: number) => string;
   getColumnIcon?: (name: string) => string;
+  selectedItemId?: string;
 }>();
 
 
@@ -299,7 +300,7 @@ watch([localColumns, uncategorizedItems], () => {
 
 <template>
   <div
-    class="flex flex-col h-full min-h-0 basis-1 grow-0 min-w-full bg-surface rounded-xl shadow-inner overflow-hidden">
+    class="flex flex-col h-full min-h-0 min-w-0 bg-surface rounded-xl shadow-inner overflow-hidden">
 
     <!-- Mobile Header with Column Navigation -->
     <div class="lg:hidden shrink-0">
@@ -372,6 +373,7 @@ watch([localColumns, uncategorizedItems], () => {
       <BoardColumn v-if="uncategorizedItems.length > 0 || orderedColumns.length === 0" id="column-uncategorized"
         :column-id="null" column-name="Uncategorized" :items="uncategorizedItems"
         :all-column-items="allUncategorizedItems" :is-default="true" icon="heroicons:inbox" color="#94a3b8"
+        :selected-item-id="selectedItemId"
         class="snap-center lg:snap-align-none shadow-sm w-[85vw] lg:w-80 shrink-0 h-full"
         @select-item="(id) => emit('select-item', id)" @delete-item="(id) => emit('delete-item', id)"
         @item-dragging="handleItemDraggingChange" />
@@ -389,6 +391,7 @@ watch([localColumns, uncategorizedItems], () => {
                   :items="getColumnItems(column.id)" :all-column-items="getAllColumnItems(column.id)" :column="column"
                   :color="getColumnColor ? getColumnColor(index) : undefined"
                   :icon="getColumnIcon ? getColumnIcon(column.name) : undefined" :is-dragging="isDragging"
+                  :selected-item-id="selectedItemId"
                   class="snap-center lg:snap-align-none shadow-sm w-[85vw] lg:w-80 shrink-0 h-full"
                   :class="{ 'ring-2 ring-primary-500 ring-offset-2': isDragging }"
                   @rename="(name) => columnsStore.updateColumn(column.id, name)"

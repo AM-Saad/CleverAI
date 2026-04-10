@@ -6,9 +6,12 @@ const emit = defineEmits<{
   error: [err: string];
   generated: [result: { type: GenerationType; savedCount?: number }];
 }>();
+import { useExportContent } from "~/composables/shared/useExportContent";
+
 const route = useRoute();
 const id = route.params.id;
 const toast = useToast();
+const { exportContent } = useExportContent();
 
 const showConfirm = ref(false);
 const confirmId = ref<string | null>(null);
@@ -125,7 +128,7 @@ const doConfirmRemove = async () => {
           <div class="flex items-center gap-2 flex-1 min-w-0">
             <icon name="i-lucide-mic" class="w-4 h-4 text-rose-500 shrink-0 animate-pulse" />
             <ui-subtitle weight="normal" size="xs" class="truncate" color="content-on-surface">{{ pt.title
-            }}</ui-subtitle>
+              }}</ui-subtitle>
             <span
               class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-800 shrink-0">
               <icon name="i-lucide-loader" class="w-3 h-3 animate-spin" />
@@ -169,6 +172,19 @@ const doConfirmRemove = async () => {
             <workspace-hub-materials-generate-button v-if="currentMaterial" :material-id="currentMaterial.id"
               :material-content="currentMaterial.content" @generated="handleGenerated" @error="handleGenerateError" />
 
+            <UDropdownMenu v-if="currentMaterial" :items="[
+              [
+                { label: 'Download as TXT', icon: 'i-heroicons-document-text', onSelect: () => exportContent(currentMaterial!.title, currentMaterial!.content, 'txt') },
+                { label: 'Download as DOC', icon: 'i-heroicons-document', onSelect: () => exportContent(currentMaterial!.title, currentMaterial!.content, 'doc') },
+                { label: 'Download as PDF', icon: 'i-heroicons-document', onSelect: () => exportContent(currentMaterial!.title, currentMaterial!.content, 'pdf') }
+              ]
+            ]">
+              <u-button variant="outline" color="primary" size="sm">
+                <icon name="i-heroicons-arrow-down-tray" class="w-4 h-4 mr-1" />
+                Download
+              </u-button>
+            </UDropdownMenu>
+
             <u-button color="error" size="sm" variant="outline"
               @click="() => { if (currentMaterial) confirmRemoval(currentMaterial.id) }">
               Remove
@@ -188,7 +204,7 @@ const doConfirmRemove = async () => {
       </template>
 
       <ui-card tag="article" variant="ghost">
-        <ui-paragraph class="whitespace-pre-wrap">{{ currentMaterial?.content }}</ui-paragraph>
+        <ui-paragraph class="whitespace-pre-wrap" size="lg">{{ currentMaterial?.content }}</ui-paragraph>
       </ui-card>
     </shared-fullscreen-wrapper>
   </div>

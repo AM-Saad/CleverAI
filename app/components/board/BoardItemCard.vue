@@ -54,6 +54,19 @@ const noteTags = computed(() => {
     .filter((tag) => tag !== null) || [];
 });
 
+// Due date display
+const dueDateInfo = computed(() => {
+  if (!props.item.dueDate) return null;
+  const d = new Date(props.item.dueDate as string);
+  const now = new Date();
+  const isOverdue = d < now;
+  const label = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return { label, isOverdue };
+});
+
+// Attachment count
+const attachmentCount = computed(() => (props.item.attachments || []).length);
+
 // Formatted date
 const formattedDate = computed(() => {
   const date = props.item.updatedAt;
@@ -116,6 +129,23 @@ const formattedDate = computed(() => {
         variant="solid" size="sm" class="rounded-full px-2.5 mr-0.5">
         {{ tag.name }}
       </UBadge>
+
+      <!-- Due date + attachments row -->
+      <div v-if="dueDateInfo || attachmentCount > 0" class="flex items-center gap-2 flex-wrap mt-0.5">
+        <span v-if="dueDateInfo"
+          :class="['inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5',
+            dueDateInfo.isOverdue
+              ? 'bg-red-50 text-red-500 dark:bg-red-900/20'
+              : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20']">
+          <Icon name="heroicons:calendar-days" class="w-3 h-3" />
+          {{ dueDateInfo.label }}
+        </span>
+        <span v-if="attachmentCount > 0"
+          class="inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5 bg-gray-50 text-gray-500">
+          <Icon name="heroicons:paper-clip" class="w-3 h-3" />
+          {{ attachmentCount }}
+        </span>
+      </div>
 
       <!-- Footer: Date + Actions -->
       <div

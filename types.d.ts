@@ -1,4 +1,4 @@
-import type { OutgoingAIMessage } from "@@/shared/types/ai-messages";
+import type { IncomingAIMessage } from "@@/shared/types/ai-messages";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare module "web-push"
@@ -45,7 +45,7 @@ declare interface Blob {
 declare module '#app' {
   interface NuxtApp {
     $aiWorker: {
-      postMessage: (message: OutgoingAIMessage) => void;
+      postMessage: (message: IncomingAIMessage) => void;
       terminate: () => void;
       ready: boolean;
     };
@@ -55,7 +55,7 @@ declare module '#app' {
 declare module 'vue' {
   interface ComponentCustomProperties {
     $aiWorker: {
-      postMessage: (message: OutgoingAIMessage) => void;
+      postMessage: (message: IncomingAIMessage) => void;
       terminate: () => void;
       ready: boolean;
     };

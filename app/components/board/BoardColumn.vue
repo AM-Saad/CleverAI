@@ -15,6 +15,7 @@ const props = defineProps<{
   color?: string;
   icon?: string;
   isDragging?: boolean; // Whether this column is being dragged
+  selectedItemId?: string;
 }>();
 
 const emit = defineEmits<{
@@ -235,7 +236,7 @@ const createItem = async () => {
           <ReorderItem v-for="item in localItems" :key="item.id" :value="item" v-slot="{ isDragging: itemDragging }">
             <div>
               <DragTracker :item-id="item.id" :is-dragging="itemDragging" />
-              <BoardItemCard :item="item" :is-selected="false" @select="emit('select-item', item.id)"
+              <BoardItemCard :item="item" :is-selected="props.selectedItemId === item.id" @select="emit('select-item', item.id)"
                 @delete="emit('delete-item', item.id)"
                 @move="(targetId) => itemsStore.moveItemToColumn(item.id, targetId, 0)" />
             </div>

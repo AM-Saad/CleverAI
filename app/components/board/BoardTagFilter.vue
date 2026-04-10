@@ -67,9 +67,9 @@ const selectedTags = computed(() => {
 <template>
   <UPopover v-model:open="isOpen">
     <template #default="{ open }">
-      <UButton color="neutral" variant="solid" :icon="selectedCount > 0 ? 'heroicons:funnel-solid' : 'heroicons:funnel'"
+      <UButton size="sm" :icon="selectedCount > 0 ? 'heroicons:funnel-solid' : 'heroicons:funnel'"
         trailing-icon="heroicons:chevron-down-20-solid">
-        <span v-if="selectedCount === 0">Filter by tags</span>
+        <span v-if="selectedCount === 0">Filter</span>
         <span v-else>{{ selectedCount }} tag{{ selectedCount === 1 ? '' : 's' }}</span>
       </UButton>
     </template>
@@ -78,8 +78,8 @@ const selectedTags = computed(() => {
       <div class="w-64 p-2">
         <!-- Header -->
         <div class="flex items-center justify-between px-2 py-1 mb-2">
-          <span class="text-xs font-medium text-gray-500 dark:text-gray-400">
-            Filter by tags
+          <span class="text-xs font-medium text-gray-500">
+            Filter
           </span>
           <div class="flex gap-1">
             <UButton v-if="selectedCount > 0" size="xs" color="neutral" variant="ghost" @click="clearAll">

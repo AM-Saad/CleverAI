@@ -813,7 +813,7 @@ function toggleFullscreenLocal() {
         <shared-note-toolbar-button title="Star" icon="i-heroicons-star" @click="addStar" />
       </div>
 
-      <div class="w-px h-6 bg-surface-strong hidden md:block" />
+      <div class="w-px h-6 bg-surface-strong shrink-0" />
 
       <!-- Action buttons -->
       <div class="flex items-center gap-0.5">
@@ -828,7 +828,7 @@ function toggleFullscreenLocal() {
         <shared-note-toolbar-button title="Duplicate" :shortcuts="['meta', 'd']" :disabled="!selectedShapeId" icon="i-heroicons-document-duplicate" @click="duplicateShape" />
       </div>
 
-      <div class="w-px h-6 bg-slate-300 dark:bg-slate-600 hidden md:block" />
+      <div class="w-px h-6 bg-slate-300 dark:bg-slate-600 shrink-0" />
 
       <!-- Style Controls (Colors, Border) -->
       <div class="flex items-center gap-1.5">

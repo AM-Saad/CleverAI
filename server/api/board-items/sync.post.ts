@@ -43,6 +43,8 @@ export default defineEventHandler(async (event) => {
             content: item.content,
             tags: item.tags,
             order: item.order,
+            dueDate: item.dueDate ? new Date(item.dueDate) : null,
+            attachments: item.attachments ?? [],
             updatedAt: new Date(item.updatedAt),
           },
         });
@@ -56,6 +58,8 @@ export default defineEventHandler(async (event) => {
             content: item.content,
             tags: item.tags || [],
             order: item.order || 0,
+            dueDate: item.dueDate ? new Date(item.dueDate) : null,
+            attachments: item.attachments ?? [],
             createdAt: new Date(item.createdAt),
             updatedAt: new Date(item.updatedAt),
           },

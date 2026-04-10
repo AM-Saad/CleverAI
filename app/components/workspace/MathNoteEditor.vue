@@ -327,7 +327,7 @@ const isExpressionsCollapsed = ref(true);
       <shared-note-toolbar-button variant="primary" :disabled="isRecognizing" @click="onRecognizeClick" 
         :title="isRecognizing ? 'Solving...' : 'Solve Math'" :icon="isRecognizing ? 'i-lucide-loader' : 'i-lucide-calculator'" />
 
-      <div class="w-px h-6 bg-surface-strong mx-1 hidden sm:block" />
+      <div class="w-px h-6 bg-surface-strong mx-1 shrink-0" />
 
       <shared-note-toolbar-button :disabled="!pendingBounds" @click="clearArea" icon="i-heroicons-scissors"
         title="Clear area" />

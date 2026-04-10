@@ -194,7 +194,7 @@ const contextMenuItems = computed(() => {
   return [
     {
       label: 'Add To Material',
-      icon: 'i-lucide-workspace-plus',
+      icon: 'i-lucide-material',
       disabled: !hasSelection,
       onSelect: () => {
         if (selectedText) {
@@ -222,20 +222,20 @@ const contextMenuItems = computed(() => {
       disabled: !hasSelection || isSummarizing.value || isDownloading.value,
       onSelect: handleSummarize,
     },
-    {
-      label: isSummarizing.value
-        ? 'Summarizing...'
-        : isDownloading.value
-          ? 'Downloading Model...'
-          : 'Summarize Text',
-      icon: isSummarizing.value
-        ? 'i-lucide-loader'
-        : isDownloading.value
-          ? 'i-lucide-download'
-          : 'i-lucide-sparkles',
-      disabled: !hasSelection || isSummarizing.value || isDownloading.value,
-      onSelect: handleSummarize,
-    },
+    // {
+    //   label: isSummarizing.value
+    //     ? 'Summarizing...'
+    //     : isDownloading.value
+    //       ? 'Downloading Model...'
+    //       : 'Summarize Text',
+    //   icon: isSummarizing.value
+    //     ? 'i-lucide-loader'
+    //     : isDownloading.value
+    //       ? 'i-lucide-download'
+    //       : 'i-lucide-sparkles',
+    //   disabled: !hasSelection || isSummarizing.value || isDownloading.value,
+    //   onSelect: handleSummarize,
+    // },
   ];
 });
 

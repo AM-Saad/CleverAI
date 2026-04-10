@@ -10,6 +10,18 @@
           @toggleFullscreen="$emit('toggle-fullscreen', note.id)" @delete="deleteNote(note.id)">
           <!-- Plug in the editor tools for Tiptap -->
           <shared-tiptap-toolbar v-if="tiptapEditor" :editor="tiptapEditor" />
+
+          <UDropdownMenu :items="[
+            [
+              { label: 'Download as TXT', icon: 'i-heroicons-document-text', onSelect: () => exportContent('Note', note.content, 'txt') },
+              { label: 'Download as DOC', icon: 'i-heroicons-document', onSelect: () => exportContent('Note', note.content, 'doc') },
+              { label: 'Download as PDF', icon: 'i-heroicons-document', onSelect: () => exportContent('Note', note.content, 'pdf') }
+            ]
+          ]">
+            <u-button variant="outline" color="primary" size="sm">
+              <icon name="i-heroicons-arrow-down-tray" class="w-4 h-4" />
+            </u-button>
+          </UDropdownMenu>
         </SharedNoteToolbar>
 
         <!-- Error state -->
@@ -40,7 +52,7 @@
 <script setup lang="ts">
 import { watch } from "vue";
 import type { BoardItemState } from "~/composables/board/useBoardItemsStore";
-
+import { useExportContent } from "~/composables/shared/useExportContent";
 // Common properties between NoteState and BoardItemState
 type NoteOrBoardItem = NoteState | BoardItemState;
 
@@ -75,6 +87,8 @@ const originalText = ref(props.note.content); // To track changes for saving
 // Template ref bridging
 const tiptapRef = ref<{ editor: any } | null>(null);
 const tiptapEditor = computed(() => tiptapRef.value?.editor);
+
+const { exportContent } = useExportContent();
 
 // Computed classes for parent container
 const noteContainerClasses = computed(() => {

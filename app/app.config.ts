@@ -90,33 +90,41 @@ export default defineAppConfig({
 
       ],
     },
+    dropdownMenu: {
+      slots: {
+        content: 'bg-white ring-0 border border-secondary',
+        item: 'items-center',
+        itemLabel: 'text-content-on-surface',
+        itemLeadingIcon: 'text-content-on-surface!',
+      },
+      variants: {
+        active: {
+          false: {
+            item: 'data-highlighted:before:bg-surface-strong data-[state=open]:before:bg-surface-strong'
+          },
+          true: {
+            item: 'before:bg-surface-strong'
+          }
+        }
+      }
+    },
     contextMenu: {
       slots: {
         content: 'bg-surface ring-0 border border-secondary',
         item: 'items-center',
+        itemLabel: 'text-content-on-surface',
+        itemLeadingIcon: 'text-content-on-surface!',
 
       },
-      compoundVariants: [
-        {
-          color: 'primary',
-          active: false,
-          class: {
-            item: 'text-primary data-highlighted:text-primary data-highlighted:before:bg-primary data-[state=open]:before:bg-primary',
-            itemLeadingIcon: 'text-primary group-data-highlighted:text-primary group-data-[state=open]:text-primary'
-          }
-        },
-        {
-          color: 'primary',
-          active: true,
-          class: {
-            item: 'text-primary before:bg-primary',
-            itemLeadingIcon: 'text-primary'
+      variants: {
+        active: {
+          false: {
+            item: 'data-highlighted:before:bg-surface data-[state=open]:before:bg-surface'
+          },
+          true: {
+            item: 'before:bg-surface'
           }
         }
-      ],
-      defaultVariants: {
-        size: 'md',
-        color: 'primary'
       }
     }
   }

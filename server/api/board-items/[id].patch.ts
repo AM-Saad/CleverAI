@@ -61,8 +61,10 @@ export default defineEventHandler(async (event) => {
       prisma.boardItem.update({
         where: { id },
         data: {
-          content: data.content,
-          tags: data.tags,
+          ...(data.content !== undefined && { content: data.content }),
+          ...(data.tags !== undefined && { tags: data.tags }),
+          ...(data.dueDate !== undefined && { dueDate: data.dueDate ? new Date(data.dueDate as string) : null }),
+          ...(data.attachments !== undefined && { attachments: data.attachments }),
         },
       })
     );

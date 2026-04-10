@@ -6,6 +6,7 @@ import type { BoardItemState } from "~/composables/board/useBoardItemsStore";
 const props = defineProps<{
   items: BoardItemState[]; // Filtered items for display
   allItems: BoardItemState[]; // All items for proper reordering
+  selectedItemId?: string;
 }>();
 
 const route = useRoute();
@@ -164,7 +165,7 @@ const getColumnActions = (columnId: string) => {
         </UButton>
       </button>
       <div v-if="!collapsedSections.has('uncategorized')" class="p-3 space-y-2">
-        <BoardItemCard v-for="item in uncategorizedItems" :key="item.id" :item="item" :is-selected="false"
+        <BoardItemCard v-for="item in uncategorizedItems" :key="item.id" :item="item" :is-selected="props.selectedItemId === item.id"
           @select="emit('select-item', item.id)" @delete="emit('delete-item', item.id)"
           @move="(targetId) => itemsStore.moveItemToColumn(item.id, targetId, 0)" />
         <div v-if="uncategorizedItems.length === 0" class="text-center text-gray-400 py-6 text-sm">
@@ -202,7 +203,7 @@ const getColumnActions = (columnId: string) => {
         </div>
       </div>
       <div v-if="!collapsedSections.has(column.id)" class="p-3 space-y-2">
-        <BoardItemCard v-for="item in getColumnItems(column.id)" :key="item.id" :item="item" :is-selected="false"
+        <BoardItemCard v-for="item in getColumnItems(column.id)" :key="item.id" :item="item" :is-selected="props.selectedItemId === item.id"
           @select="emit('select-item', item.id)" @delete="emit('delete-item', item.id)"
           @move="(targetId) => itemsStore.moveItemToColumn(item.id, targetId, 0)" />
         <div v-if="getColumnItems(column.id).length === 0" class="text-center text-gray-400 py-6 text-sm">

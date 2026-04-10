@@ -1,6 +1,6 @@
 import type { APIError } from "@/services/FetchFactory";
 import type Result from "@/types/Result";
-import type { BoardItem } from "~/shared/utils/boardItem.contract";
+import type { BoardItem, BoardItemLink, BoardItemComment, Attachment } from "~/shared/utils/boardItem.contract";
 
 type STORES = typeof DB_CONFIG.STORES[keyof typeof DB_CONFIG.STORES];
 
@@ -11,14 +11,21 @@ export interface BoardItemState extends BoardItem {
   lastSaved?: Date;
   error?: string | null;
   isInFilteredList?: boolean;
+  // Lazily loaded relational data
+  links?: { sent: BoardItemLink[]; received: BoardItemLink[] };
+  linksLoading?: boolean;
+  comments?: BoardItemComment[];
+  commentsLoading?: boolean;
 }
 
 interface BoardItemsStore {
   items: Ref<Map<string, BoardItemState>>;
   loadingStates: Ref<Map<string, boolean>>;
   filteredItemIds: Ref<Set<string> | null>;
-  createItem: (content: string, tags?: string[], columnId?: string | null) => Promise<string | null>;
+  createItem: (content: string, tags?: string[], columnId?: string | null, dueDate?: string | null, attachments?: Attachment[]) => Promise<string | null>;
   updateItem: (id: string, updatedItem: BoardItemState) => Promise<boolean>;
+  loadItemLinks: (id: string) => Promise<void>;
+  loadItemComments: (id: string) => Promise<void>;
   deleteItem: (id: string) => Promise<boolean>;
   reorderItems: (reorderedItems: BoardItemState[]) => Promise<boolean>;
   moveItemToColumn: (itemId: string, columnId: string | null, newOrder: number) => Promise<boolean>;
@@ -138,8 +145,8 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   };
 
   const { debouncedFunc: debouncedSave, cancel: cancelSave } = useDebounce(
-    (id: string, content: string) => {
-      updateItemToServer(id, content);
+    (id: string) => {
+      updateItemToServer(id);
     },
     1000
   );
@@ -151,14 +158,13 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   const filteredItemIds = ref<Set<string> | null>(null);
 
   // Debounced server sync
-  const saveToServer = async (id: string, content: string) => {
-    debouncedSave(id, content);
+  const saveToServer = async (id: string) => {
+    debouncedSave(id);
   };
 
   // Sync board item changes to server
   const updateItemToServer = async (
-    id: string,
-    content: string
+    id: string
   ): Promise<boolean> => {
     const item = items.value.get(id);
     if (!item) return false;
@@ -175,8 +181,10 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
           localVersion: (item as any).localVersion
             ? (item as any).localVersion + 1
             : 1,
-          content,
+          content: item.content,
           tags: item.tags,
+          dueDate: item.dueDate ? (item.dueDate instanceof Date ? item.dueDate.toISOString() : item.dueDate as string) : null,
+          attachments: item.attachments,
         });
         await registerBoardItemsSync();
         if (!offlineToastShown) {
@@ -193,8 +201,10 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       }
 
       const result: Result<BoardItem, APIError> = await $api.boardItems.update(id, {
-        content,
+        content: item.content,
         tags: item.tags,
+        dueDate: item.dueDate ? (item.dueDate instanceof Date ? item.dueDate.toISOString() : item.dueDate as string) : null,
+        attachments: item.attachments,
       });
 
       if (result.success) {
@@ -209,7 +219,6 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
         return false;
       }
     } catch (error) {
-      console.error("Failed to sync board item to server:", error);
       if (!navigator.onLine) {
         await queueBoardItemChange({
           id,
@@ -218,8 +227,10 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
           localVersion: (item as any).localVersion
             ? (item as any).localVersion + 1
             : 1,
-          content,
+          content: item.content,
           tags: item.tags,
+          dueDate: item.dueDate ? (item.dueDate instanceof Date ? item.dueDate.toISOString() : item.dueDate as string) : null,
+          attachments: item.attachments,
         });
         await registerBoardItemsSync();
         if (!offlineToastShown) {
@@ -251,8 +262,8 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     // Save to IndexedDB
     await saveBoardItemToIndexedDB(updatedItem);
 
-    // Debounced server sync
-    await saveToServer(id, updatedItem.content);
+    // Debounced server sync (reads full item from store)
+    await saveToServer(id);
     return true;
   };
 
@@ -260,7 +271,9 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   const createItem = async (
     content: string,
     tags: string[] = [],
-    columnId: string | null = null
+    columnId: string | null = null,
+    dueDate: string | null = null,
+    attachments: Attachment[] = []
   ): Promise<string | null> => {
     const tempId = `temp-${Date.now()}`;
 
@@ -272,6 +285,8 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       tags,
       order: items.value.size,
       workspaceId: workspaceId,
+      dueDate,
+      attachments,
       createdAt: new Date(),
       updatedAt: new Date(),
       isLoading: true,
@@ -291,6 +306,8 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
         localVersion: 1,
         content,
         tags,
+        dueDate,
+        attachments,
       });
       await registerBoardItemsSync();
 
@@ -308,13 +325,14 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       }
       return tempId;
     }
-    console.log("workspaceId", workspaceId);
     try {
       const result = await $api.boardItems.create({
         content,
         tags,
         columnId: columnId ?? undefined,
         workspaceId: workspaceId,
+        dueDate: dueDate ?? undefined,
+        attachments: attachments,
       });
 
       if (result.success) {
@@ -555,7 +573,7 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     item.isLoading = true;
     items.value.set(id, item);
 
-    return await updateItemToServer(id, item.content);
+    return await updateItemToServer(id);
   };
 
   const clearItemError = (id: string) => {
@@ -578,6 +596,64 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   const setItems = (newItems: BoardItemState[]) => {
     items.value.clear();
     newItems.forEach((item) => items.value.set(item.id, item));
+  };
+
+  // Load links for a specific item on demand (used by detail panel)
+  const loadItemLinks = async (id: string): Promise<void> => {
+    const item = items.value.get(id);
+    if (!item) return;
+
+    item.linksLoading = true;
+    items.value.set(id, { ...item });
+
+    if (!navigator.onLine) {
+      item.linksLoading = false;
+      items.value.set(id, { ...item });
+      return;
+    }
+
+    try {
+      const result = await $api.boardItems.getLinks(id);
+      const current = items.value.get(id);
+      if (!current) return;
+      if (result.success) {
+        items.value.set(id, { ...current, links: result.data, linksLoading: false });
+      } else {
+        items.value.set(id, { ...current, linksLoading: false });
+      }
+    } catch {
+      const current = items.value.get(id);
+      if (current) items.value.set(id, { ...current, linksLoading: false });
+    }
+  };
+
+  // Load comments for a specific item on demand (used by detail panel)
+  const loadItemComments = async (id: string): Promise<void> => {
+    const item = items.value.get(id);
+    if (!item) return;
+
+    item.commentsLoading = true;
+    items.value.set(id, { ...item });
+
+    if (!navigator.onLine) {
+      item.commentsLoading = false;
+      items.value.set(id, { ...item });
+      return;
+    }
+
+    try {
+      const result = await $api.boardItems.getComments(id);
+      const current = items.value.get(id);
+      if (!current) return;
+      if (result.success) {
+        items.value.set(id, { ...current, comments: result.data, commentsLoading: false });
+      } else {
+        items.value.set(id, { ...current, commentsLoading: false });
+      }
+    } catch {
+      const current = items.value.get(id);
+      if (current) items.value.set(id, { ...current, commentsLoading: false });
+    }
   };
 
   // Move item to a different column
@@ -749,6 +825,8 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     filteredItemIds,
     createItem,
     updateItem,
+    loadItemLinks,
+    loadItemComments,
     deleteItem,
     reorderItems,
     moveItemToColumn,

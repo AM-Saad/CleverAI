@@ -561,6 +561,8 @@ export interface PendingBoardItemChange {
   workspaceId?: string
   content?: string
   tags?: string[]
+  dueDate?: string | null
+  attachments?: Array<{ id: string; name: string; url: string; type: string; size?: number }>
   conflicted?: boolean
 }
 

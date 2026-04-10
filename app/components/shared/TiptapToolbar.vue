@@ -29,7 +29,8 @@
     <shared-note-toolbar-button title="Colors" icon="i-lucide-palette" />
   </UDropdownMenu>
 
-  <div class="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block shrink-0"></div>
+  <div class="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-1 shrink-0"></div>
+
 
   <!-- Undo / Redo -->
   <shared-note-toolbar-button title="Undo" @click="props.editor.chain().focus().undo().run()"
@@ -42,6 +43,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { Editor } from '@tiptap/vue-3';
+
 
 const props = defineProps<{
   editor: Editor;

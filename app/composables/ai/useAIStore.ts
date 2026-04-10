@@ -7,6 +7,8 @@ export interface ModelState {
   modelId?: string;
   isDownloading: boolean;
   progress: number;
+  loaded: number;      // bytes downloaded so far
+  total: number;       // total bytes for the model
   isLoading: boolean;
   isReady?: boolean;
   error?: any;
@@ -20,6 +22,7 @@ interface AIModelStore {
   fetchError: Ref<APIError | null>;
   fetchTypedError: Ref<APIError | null>;
   loadModel: (modelId: string, task: AITask) => Promise<void>;
+  loadGenerativeModel: (modelId: string, options?: { modelClass?: string; dtype?: string; device?: string }) => Promise<void>;
   getModelState: (modelId: string) => ComputedRef<ModelState | undefined>;
   isModelDownloading: (modelId: string) => ComputedRef<boolean>;
   getModelProgress: (modelId: string) => ComputedRef<number>;
@@ -101,6 +104,8 @@ export function useAIStore(storeId: string): AIModelStore {
         isDownloading: false,
         error: null,
         progress: 0,
+        loaded: 0,
+        total: 0,
       });
 
       window.addEventListener("ai-worker-message", handler);
@@ -123,51 +128,164 @@ export function useAIStore(storeId: string): AIModelStore {
       });
     });
   }
+
+  /**
+   * Load a generative model (auto-classes API: AutoProcessor + Model)
+   * For LLMs like Gemma 4 that use chat templates and streaming.
+   */
+  async function loadGenerativeModel(
+    modelId: string,
+    options?: {
+      modelClass?: string;
+      dtype?: string;
+      device?: string;
+    }
+  ): Promise<void> {
+    // Check if model is already loaded or loading
+    const existingModel = models.value.get(modelId);
+    if (existingModel?.isReady) {
+      console.log(`[AI Store] Generative model ${modelId} already loaded`);
+      return;
+    }
+    if (existingModel?.isLoading) {
+      console.log(`[AI Store] Generative model ${modelId} already loading`);
+      return;
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(
+        () => {
+          reject(new Error("Generative model load timeout"));
+        },
+        10 * 60 * 1000
+      ); // 10 minute timeout (generative models are large)
+
+      const handler = (event: Event) => {
+        const message = (event as CustomEvent<OutgoingAIMessage>).detail;
+
+        if (
+          message.type === AI_WORKER_MESSAGE_TYPES.MODEL_LOAD_COMPLETE &&
+          message.data.modelId === modelId
+        ) {
+          clearTimeout(timeout);
+          window.removeEventListener("ai-worker-message", handler);
+          resolve();
+        } else if (
+          message.type === AI_WORKER_MESSAGE_TYPES.MODEL_LOAD_ERROR &&
+          message.data.modelId === modelId
+        ) {
+          clearTimeout(timeout);
+          window.removeEventListener("ai-worker-message", handler);
+          reject(new Error(message.data.error));
+        }
+      };
+
+      // Initialize model entry BEFORE registering listener
+      models.value.set(modelId, {
+        modelId,
+        isLoading: false,
+        isDownloading: false,
+        error: null,
+        progress: 0,
+        loaded: 0,
+        total: 0,
+      });
+
+      window.addEventListener("ai-worker-message", handler);
+
+      $aiWorker.postMessage({
+        type: AI_WORKER_MESSAGE_TYPES.LOAD_GENERATIVE_MODEL,
+        data: {
+          modelId,
+          modelClass: options?.modelClass,
+          dtype: options?.dtype ?? "q4f16",
+          device: options?.device ?? "webgpu",
+        },
+      });
+    });
+  }
   // Listen for worker messages
   const handleWorkerMessage = (event: CustomEvent<OutgoingAIMessage>) => {
     const message = event.detail;
-    // console.log("AI Worker Message:", message);
+
     switch (message.type) {
-      case AI_WORKER_MESSAGE_TYPES.MODEL_LOAD_INITIATE:
-        if (models.value.has(message.data.modelId)) {
-          const model = models.value.get(message.data.modelId)!;
+      case AI_WORKER_MESSAGE_TYPES.MODEL_LOAD_INITIATE: {
+        const id = message.data.modelId;
+        // Auto-create entry if not pre-registered (e.g. TTS composable
+        // triggers downloads outside of store.loadModel)
+        if (!models.value.has(id)) {
+          models.value.set(id, {
+            modelId: id,
+            isLoading: true,
+            isDownloading: true,
+            error: null,
+            progress: 0,
+            loaded: 0,
+            total: 0,
+          });
+        } else {
+          const model = models.value.get(id)!;
           model.isLoading = true;
           model.isDownloading = true;
           model.progress = 0;
           model.error = null;
-          models.value.set(message.data.modelId, model);
+          models.value.set(id, model);
         }
         break;
+      }
 
-      case AI_WORKER_MESSAGE_TYPES.MODEL_LOAD_PROGRESS:
-        if (models.value.has(message.data.modelId)) {
-          const model = models.value.get(message.data.modelId)!;
-          // Use the overall average progress calculated by the worker
-          // This represents progress across ALL model files, not just the current file
+      case AI_WORKER_MESSAGE_TYPES.MODEL_LOAD_PROGRESS: {
+        const id = message.data.modelId;
+        if (models.value.has(id)) {
+          const model = models.value.get(id)!;
+          // Use byte-weighted progress calculated by the worker
           model.progress = message.data.progress;
-          models.value.set(message.data.modelId, model);
+          model.loaded = message.data.loaded ?? 0;
+          model.total = message.data.total ?? 0;
+          models.value.set(id, model);
         }
         break;
+      }
 
-      case AI_WORKER_MESSAGE_TYPES.MODEL_LOAD_COMPLETE:
-        if (models.value.has(message.data.modelId)) {
-          const model = models.value.get(message.data.modelId)!;
-          model.isLoading = false;
+      case AI_WORKER_MESSAGE_TYPES.MODEL_LOAD_DONE:
+        // Per-file completion — no action needed at store level
+        break;
+
+      case AI_WORKER_MESSAGE_TYPES.MODEL_LOAD_COMPLETE: {
+        const id = message.data.modelId;
+        if (models.value.has(id)) {
+          const model = models.value.get(id)!;
           model.isDownloading = false;
+          model.isLoading = false;
           model.isReady = true;
           model.progress = 100;
-          models.value.set(message.data.modelId, model);
+          models.value.set(id, model);
         }
         break;
+      }
 
-      case AI_WORKER_MESSAGE_TYPES.MODEL_LOAD_ERROR:
-        if (models.value.has(message.data.modelId)) {
-          const model = models.value.get(message.data.modelId)!;
+      case AI_WORKER_MESSAGE_TYPES.MODEL_LOAD_ERROR: {
+        const id = message.data.modelId;
+        if (models.value.has(id)) {
+          const model = models.value.get(id)!;
           model.isLoading = false;
           model.isDownloading = false;
           model.error = new Error(message.data.error);
-          models.value.set(message.data.modelId, model);
+          models.value.set(id, model);
         }
+        break;
+      }
+
+      // These message types are handled elsewhere (plugin, composables)
+      // and do not need store-level handling.
+      case AI_WORKER_MESSAGE_TYPES.WORKER_READY:
+      case AI_WORKER_MESSAGE_TYPES.INFERENCE_STARTED:
+      case AI_WORKER_MESSAGE_TYPES.INFERENCE_COMPLETE:
+      case AI_WORKER_MESSAGE_TYPES.INFERENCE_ERROR:
+      case AI_WORKER_MESSAGE_TYPES.GENERATION_TOKEN:
+      case AI_WORKER_MESSAGE_TYPES.GENERATION_COMPLETE:
+      case AI_WORKER_MESSAGE_TYPES.GENERATION_ERROR:
+      case "WORKER_ERROR": // Handled by plugin with console.error
         break;
     }
   };
@@ -209,6 +327,7 @@ export function useAIStore(storeId: string): AIModelStore {
     fetchError,
     fetchTypedError,
     loadModel,
+    loadGenerativeModel,
     getModelState,
     isModelDownloading,
     getModelProgress,
