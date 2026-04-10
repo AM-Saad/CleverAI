@@ -1,35 +1,36 @@
 <template>
   <!-- Group: Headings -->
-  <UDropdownMenu :items="headingsItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
+  <UDropdownMenu :modal="false" :items="headingsItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
     <shared-note-toolbar-button title="Formatting" icon="i-lucide-type" />
   </UDropdownMenu>
 
   <!-- Group: Blocks -->
-  <UDropdownMenu :items="blocksItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
+  <UDropdownMenu :modal="false" :items="blocksItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
     <shared-note-toolbar-button title="Blocks" icon="i-lucide-layout" />
   </UDropdownMenu>
 
   <!-- Group: Lists -->
-  <UDropdownMenu :items="listsItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
+  <UDropdownMenu :modal="false" :items="listsItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
     <shared-note-toolbar-button title="Lists" icon="i-lucide-list" />
   </UDropdownMenu>
 
   <!-- Group: Tasks -->
-  <UDropdownMenu :items="tasksItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
+  <UDropdownMenu :modal="false" :items="tasksItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
     <shared-note-toolbar-button title="Tasks" icon="i-lucide-list-check" />
   </UDropdownMenu>
 
   <!-- Group: Insert -->
-  <UDropdownMenu :items="insertItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
+  <UDropdownMenu :modal="false" :items="insertItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
     <shared-note-toolbar-button title="Insert" icon="i-lucide-plus-square" />
   </UDropdownMenu>
 
   <!-- Group: Colors -->
-  <UDropdownMenu :items="colorsItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
+  <UDropdownMenu :modal="false" :items="colorsItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
     <shared-note-toolbar-button title="Colors" icon="i-lucide-palette" />
   </UDropdownMenu>
 
-  <div class="h-5 w-px bg-slate-200 dark:bg-slate-700 mx-1 hidden sm:block shrink-0"></div>
+  <div class="h-5 w-px bg-secondary mx-1 shrink-0"></div>
+
 
   <!-- Undo / Redo -->
   <shared-note-toolbar-button title="Undo" @click="props.editor.chain().focus().undo().run()"
@@ -42,6 +43,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import type { Editor } from '@tiptap/vue-3';
+
 
 const props = defineProps<{
   editor: Editor;

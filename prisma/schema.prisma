@@ -26,6 +26,8 @@ model User {
     userTags                  UserTag[]                    @relation("UserTags")
     boardItems                BoardItem[]                  @relation("UserBoardItems")
     boardColumns              BoardColumn[]                @relation("UserBoardColumns")
+    boardItemLinks            BoardItemLink[]              @relation("UserBoardItemLinks")
+    boardItemComments         BoardItemComment[]           @relation("UserBoardItemComments")
     subscription              UserSubscription?
     notificationSubscriptions NotificationSubscription[]
     scheduledNotifications    ScheduledNotification[]
@@ -46,6 +48,7 @@ model User {
     deletedAt           DateTime?
     scheduledDeletionAt DateTime? // Permanent deletion scheduled for 30 days after soft delete
     // --- End soft delete fields ---
+    creditTransactions  CreditTransaction[]
 }
 
 enum UserRole {
@@ -69,6 +72,8 @@ model Workspace {
     updatedAt      DateTime        @updatedAt
     llmModel       String          @default("gpt-3.5")
     llmGatewayLogs LlmGatewayLog[]
+    boardColumns   BoardColumn[]
+    boardItems     BoardItem[]
 
     @@unique([userId, order])
 }
@@ -106,30 +111,74 @@ model Note {
 }
 
 model BoardItem {
-    id        String       @id @default(auto()) @map("_id") @db.ObjectId
-    user      User         @relation("UserBoardItems", fields: [userId], references: [id], onDelete: Cascade)
-    userId    String       @db.ObjectId
-    column    BoardColumn? @relation("ColumnItems", fields: [columnId], references: [id], onDelete: SetNull)
-    columnId  String?      @db.ObjectId
-    content   String
-    tags      String[]     @default([])
-    order     Int          @default(0)
-    createdAt DateTime     @default(now())
-    updatedAt DateTime     @updatedAt
+    id            String             @id @default(auto()) @map("_id") @db.ObjectId
+    user          User               @relation("UserBoardItems", fields: [userId], references: [id], onDelete: Cascade)
+    userId        String             @db.ObjectId
+    column        BoardColumn?       @relation("ColumnItems", fields: [columnId], references: [id], onDelete: SetNull)
+    columnId      String?            @db.ObjectId
+    content       String
+    tags          String[]           @default([])
+    order         Int                @default(0)
+    dueDate       DateTime?
+    attachments   Json               @default("[]")
+    createdAt     DateTime           @default(now())
+    updatedAt     DateTime           @updatedAt
+    // optional workspace relation
+    workspace     Workspace?         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    workspaceId   String?            @db.ObjectId
+    // item linking
+    linksSent     BoardItemLink[]    @relation("ItemLinkSources")
+    linksReceived BoardItemLink[]    @relation("ItemLinkTargets")
+    // comments (future collaboration)
+    comments      BoardItemComment[]
 
     @@index([userId, order])
     @@index([columnId, order])
+    @@index([workspaceId])
+}
+
+model BoardItemLink {
+    id        String    @id @default(auto()) @map("_id") @db.ObjectId
+    source    BoardItem @relation("ItemLinkSources", fields: [sourceId], references: [id], onDelete: Cascade)
+    sourceId  String    @db.ObjectId
+    target    BoardItem @relation("ItemLinkTargets", fields: [targetId], references: [id], onDelete: Cascade)
+    targetId  String    @db.ObjectId
+    // PARENT | CHILD | RELATED | BLOCKS | BLOCKED_BY | DUPLICATE
+    linkType  String    @default("RELATED")
+    user      User      @relation("UserBoardItemLinks", fields: [userId], references: [id], onDelete: Cascade)
+    userId    String    @db.ObjectId
+    createdAt DateTime  @default(now())
+
+    @@unique([sourceId, targetId])
+    @@index([sourceId])
+    @@index([targetId])
+}
+
+model BoardItemComment {
+    id        String    @id @default(auto()) @map("_id") @db.ObjectId
+    item      BoardItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+    itemId    String    @db.ObjectId
+    user      User      @relation("UserBoardItemComments", fields: [userId], references: [id], onDelete: Cascade)
+    userId    String    @db.ObjectId
+    content   String
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
+
+    @@index([itemId])
 }
 
 model BoardColumn {
-    id        String      @id @default(auto()) @map("_id") @db.ObjectId
-    user      User        @relation("UserBoardColumns", fields: [userId], references: [id], onDelete: Cascade)
-    userId    String      @db.ObjectId
-    name      String
-    order     Int         @default(0)
-    createdAt DateTime    @default(now())
-    updatedAt DateTime    @updatedAt
-    items     BoardItem[] @relation("ColumnItems")
+    id          String      @id @default(auto()) @map("_id") @db.ObjectId
+    user        User        @relation("UserBoardColumns", fields: [userId], references: [id], onDelete: Cascade)
+    userId      String      @db.ObjectId
+    name        String
+    order       Int         @default(0)
+    createdAt   DateTime    @default(now())
+    updatedAt   DateTime    @updatedAt
+    items       BoardItem[] @relation("ColumnItems")
+    // optional workspace relation
+    workspace   Workspace?  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+    workspaceId String?     @db.ObjectId
 
     @@index([userId, order])
 }
@@ -354,6 +403,31 @@ model UserSubscription {
     cancelAtPeriodEnd    Boolean          @default(false)
     createdAt            DateTime         @default(now())
     updatedAt            DateTime         @updatedAt
+    creditBalance        Int              @default(0)
+    lifetimeCredits      Int              @default(0)
+    lastFreeRefillAt     DateTime?
+}
+
+// Add this new model:
+model CreditTransaction {
+    id        String       @id @default(auto()) @map("_id") @db.ObjectId
+    userId    String       @db.ObjectId
+    user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+    delta     Int
+    type      CreditTxType
+    metadata  Json?
+    createdAt DateTime     @default(now())
+
+    @@index([userId, createdAt])
+}
+
+enum CreditTxType {
+    FREE_MONTHLY_REFILL
+    AD_REWARD
+    STRIPE_PURCHASE
+    GENERATION_SPEND
+    SUBSCRIPTION_BONUS
+    ADMIN_GRANT
 }
 
 type SubscriptionKeys {

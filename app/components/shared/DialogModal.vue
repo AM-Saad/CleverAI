@@ -23,15 +23,15 @@ onUnmounted(() => {
     <Transition name="modal">
       <div v-if="show" class="modal-mask">
         <div
-          class="inner bg-white dark:bg-dark absolute left-[50%] top-[50%] w-96 -translate-x-1/2 -translate-y-1/2 transform rounded-md  shadow-lg z-50 overflow-auto">
+          class="inner bg-surface absolute left-[50%] top-[50%] w-full max-w-2xl -translate-x-1/2 -translate-y-1/2 transform rounded-[var(--radius-2xl)] shadow-lg z-50 overflow-auto mx-4">
           <div
-            class="modal-header flex items-center justify-between font-medium text-content-on-surface border-b border-secondary bg-surface p-3 pb-1">
+            class="modal-header flex items-center justify-between font-medium text-content-on-surface border-b border-secondary bg-surface p-3.5 pb-2">
             <div class="flex flex-col gap-1">
-              <ui-subtitle class="flex items-center gap-1" size="base" weight="semibold">
+              <ui-subtitle class="flex items-center gap-1" size="lg" color="content-on-surface">
                 <u-icon :name="icon" :size="UI_CONFIG.ICON_SIZE" />
                 {{ title }}
               </ui-subtitle>
-              <ui-paragraph v-if="description" size="xs">{{ description }}
+              <ui-paragraph v-if="description" size="sm">{{ description }}
               </ui-paragraph>
             </div>
             <u-button variant="ghost" size="xs" color="neutral"

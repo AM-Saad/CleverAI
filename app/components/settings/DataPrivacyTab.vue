@@ -9,7 +9,7 @@
           <UButton color="primary" variant="outline" @click="exportData">
             Export My Data
           </UButton>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+          <p class="text-xs text-content-secondary mt-2">
             Download all your data in JSON format
           </p>
         </div>
@@ -18,7 +18,7 @@
           <UButton color="primary" variant="outline" @click="importData">
             Import Data
           </UButton>
-          <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">
+          <p class="text-xs text-content-secondary mt-2">
             Import your data from a backup file
           </p>
         </div>

@@ -6,9 +6,12 @@ const emit = defineEmits<{
   error: [err: string];
   generated: [result: { type: GenerationType; savedCount?: number }];
 }>();
+import { useExportContent } from "~/composables/shared/useExportContent";
+
 const route = useRoute();
 const id = route.params.id;
 const toast = useToast();
+const { exportContent } = useExportContent();
 
 const showConfirm = ref(false);
 const confirmId = ref<string | null>(null);
@@ -136,7 +139,7 @@ const doConfirmRemove = async () => {
       </ui-card>
 
       <!-- Actual Materials -->
-      <ui-card v-for="(m, idx) in materials" :key="m.id" tag="li" size="sm" :class="['cursor-pointer group my-1 rounded-md!',
+      <ui-card v-for="(m, idx) in materials" :key="m.id" tag="li" size="sm" :class="['cursor-pointer group my-1 rounded-[var(--radius-md)]!',
         getMaterialTypeColor(m.type)
       ]" @click="() => fullscreen.open(m.id)">
         <div class="flex items-center justify-between gap-2">
@@ -146,7 +149,7 @@ const doConfirmRemove = async () => {
             <ui-subtitle weight="normal" size="xs" class="truncate" color="content-on-background">
               {{ m.title }}</ui-subtitle>
             <span v-if="enrolledMaterials.has(m.id)"
-              class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 shrink-0">
+              class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success/15 text-success shrink-0">
               <icon name="i-lucide-check-circle" class="w-3 h-3 mr-1" />
               Enrolled
             </span>
@@ -169,6 +172,19 @@ const doConfirmRemove = async () => {
             <workspace-hub-materials-generate-button v-if="currentMaterial" :material-id="currentMaterial.id"
               :material-content="currentMaterial.content" @generated="handleGenerated" @error="handleGenerateError" />
 
+            <UDropdownMenu v-if="currentMaterial" :items="[
+              [
+                { label: 'Download as TXT', icon: 'i-heroicons-document-text', onSelect: () => exportContent(currentMaterial!.title, currentMaterial!.content, 'txt') },
+                { label: 'Download as DOC', icon: 'i-heroicons-document', onSelect: () => exportContent(currentMaterial!.title, currentMaterial!.content, 'doc') },
+                { label: 'Download as PDF', icon: 'i-heroicons-document', onSelect: () => exportContent(currentMaterial!.title, currentMaterial!.content, 'pdf') }
+              ]
+            ]">
+              <u-button variant="outline" color="primary" size="sm">
+                <icon name="i-heroicons-arrow-down-tray" class="w-4 h-4 mr-1" />
+                Download
+              </u-button>
+            </UDropdownMenu>
+
             <u-button color="error" size="sm" variant="outline"
               @click="() => { if (currentMaterial) confirmRemoval(currentMaterial.id) }">
               Remove
@@ -181,14 +197,14 @@ const doConfirmRemove = async () => {
         </div>
 
         <span v-if="currentMaterial && enrolledMaterials.has(currentMaterial.id)"
-          class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 mt-2">
+          class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success/15 text-success mt-2">
           <icon name="i-lucide-check-circle" class="w-3 h-3 mr-1" />
           Enrolled
         </span>
       </template>
 
       <ui-card tag="article" variant="ghost">
-        <ui-paragraph class="whitespace-pre-wrap">{{ currentMaterial?.content }}</ui-paragraph>
+        <ui-paragraph class="whitespace-pre-wrap" size="lg">{{ currentMaterial?.content }}</ui-paragraph>
       </ui-card>
     </shared-fullscreen-wrapper>
   </div>

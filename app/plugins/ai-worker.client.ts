@@ -18,7 +18,7 @@
  * @see docs/AI_WORKER_ARCHITECTURE.md
  */
 
-import type { OutgoingAIMessage } from "@@/shared/types/ai-messages";
+import type { IncomingAIMessage } from "@@/shared/types/ai-messages";
 import { AI_WORKER_MESSAGE_TYPES } from "~/utils/constants/pwa";
 
 export default defineNuxtPlugin(() => {
@@ -26,7 +26,7 @@ export default defineNuxtPlugin(() => {
   if (process.server) return {};
 
   let worker: Worker | null = null;
-  const messageQueue: OutgoingAIMessage[] = [];
+  const messageQueue: IncomingAIMessage[] = [];
   let isWorkerReady = false;
 
   /**
@@ -68,6 +68,11 @@ export default defineNuxtPlugin(() => {
       // ── Worker → Window message handler ──
       worker.onmessage = (event: MessageEvent) => {
         const message = event.data;
+
+        // Log worker-level errors (Transformers.js load failure, unhandled errors)
+        if (message.type === "WORKER_ERROR") {
+          console.error("[AI Worker] Worker error:", message.data?.message, message.data?.stack);
+        }
 
         // Dispatch as CustomEvent so composables can listen via window.addEventListener
         const customEvent = new CustomEvent("ai-worker-message", {
@@ -123,7 +128,7 @@ export default defineNuxtPlugin(() => {
   });
 
   // ── Window → Worker message wrapper with queueing ──
-  const postMessageToWorker = (message: OutgoingAIMessage) => {
+  const postMessageToWorker = (message: IncomingAIMessage) => {
     if (!worker) {
       // Worker may still be loading (async creation) — queue the message
       console.log("[AI Worker] Queuing message (worker loading):", message.type);

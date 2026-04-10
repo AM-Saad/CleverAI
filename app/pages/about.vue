@@ -84,7 +84,7 @@
               <div class="p-4">
                 <ui-subtitle>{{ item.title }}</ui-subtitle>
                 <ui-paragraph size="sm" color="content-on-surface" class="text-wrap">{{ item.description
-                }}</ui-paragraph>
+                  }}</ui-paragraph>
               </div>
             </ui-card>
           </div>
@@ -101,7 +101,7 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div v-for="(person, idx) in targetAudience" :key="idx"
-              class="text-center p-4 rounded-xl bg-white dark:bg-neutral-800 shadow-sm">
+              class="text-center p-4 rounded-[var(--radius-xl)] bg-white dark:bg-surface shadow-sm">
               <span class="text-lg font-medium text-dark dark:text-light">{{ person }}</span>
             </div>
           </div>

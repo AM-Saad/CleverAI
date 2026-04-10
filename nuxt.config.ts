@@ -20,6 +20,12 @@ export default defineNuxtConfig({
   // Use the existing `app/` workspace as Nuxt source directory
   srcDir: "app",
 
+  // Force light mode app-wide — dark mode will be planned and implemented properly later
+  colorMode: {
+    preference: "light",
+    fallback: "light",
+  },
+
   modules: [
     "@sidebase/nuxt-auth",
     "@pinia/nuxt", // "@vite-pwa/nuxt",
@@ -183,12 +189,12 @@ export default defineNuxtConfig({
     },
   },
   appConfig: {
-    toaster: {
-      position: "bottom-center" as const,
-      duration: 5000,
-      max: 5,
-      expand: true,
-    },
+    // toaster: {
+    //   position: "bottom-center" as const,
+    //   duration: 5000,
+    //   max: 5,
+    //   expand: true,
+    // },
   },
   auth: {
     isEnabled: true,
@@ -315,6 +321,8 @@ export default defineNuxtConfig({
       SERVER_URL: process.env.SERVER_URL,
       VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
+      STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
+      APPLIXIR_SITE_ID: process.env.APPLIXIR_SITE_ID,
 
       enableLlmGateway: process.env.ENABLE_LLM_GATEWAY === "true",
     },

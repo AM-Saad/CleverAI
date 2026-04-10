@@ -1,34 +1,19 @@
 <template>
   <div class="flex justify-between pt-4">
-    <button
-      @click="$emit('previous')"
-      :disabled="isFirstCard || isSubmitting"
-      class="px-4 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-      aria-label="Go to previous card"
-    >
-      <Icon name="heroicons:arrow-left" class="w-4 h-4 inline mr-1" />
+    <UButton @click="$emit('previous')" :disabled="isFirstCard || isSubmitting" color="neutral" variant="soft"
+      icon="i-heroicons-arrow-left" aria-label="Go to previous card">
       Previous
-    </button>
+    </UButton>
 
-    <button
-      @click="$emit('skip')"
-      :disabled="isSubmitting"
-      class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-yellow-500 focus:ring-offset-2"
-      aria-label="Skip this card without grading"
-    >
-      <Icon name="heroicons:forward" class="w-4 h-4 inline mr-1" />
+    <UButton @click="$emit('skip')" :disabled="isSubmitting" color="warning" variant="soft" icon="i-heroicons-forward"
+      aria-label="Skip this card without grading">
       Skip <span class="text-sm opacity-75">(S)</span>
-    </button>
+    </UButton>
 
-    <button
-      @click="$emit('next')"
-      :disabled="isLastCard || isSubmitting"
-      class="px-4 py-2 bg-gray-200 hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed text-gray-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-      aria-label="Go to next card"
-    >
+    <UButton @click="$emit('next')" :disabled="isLastCard || isSubmitting" color="neutral" variant="soft"
+      trailing-icon="i-heroicons-arrow-right" aria-label="Go to next card">
       Next
-      <Icon name="heroicons:arrow-right" class="w-4 h-4 inline ml-1" />
-    </button>
+    </UButton>
   </div>
 </template>
 

@@ -5,9 +5,9 @@
       <div class="flex items-center justify-between w-full h-full">
         <div class="flex items-center gap-2 h-full">
 
-          <router-link to="/" class="flex items-center gap-2 text-content-on-surface font-medium text-xl h-full">
+          <router-link to="/" class="flex items-center text-content-on-surface font-medium text-xl h-full">
             <!-- <img class="h-6 dark:invert-[1] dark:filter" :src="'/images/CleverAI_icon.svg'" alt="" /> -->
-            <svg xmlns="http://www.w3.org/2000/svg" width="75" height="35" viewBox="0 0 75 55" fill="none">
+            <svg xmlns="http://www.w3.org/2000/svg" width="70" height="30" viewBox="0 0 75 55" fill="none">
               <g id="CleverLogo">
                 <path id="Holder"
                   d="M15.8359 9.34961H57.6641C62.7666 9.34984 66.9871 13.3228 67.2959 18.416L68.5078 38.416C68.8441 43.9648 64.4349 48.6502 58.876 48.6504H14.624C9.06508 48.6502 4.65592 43.9648 4.99219 38.416L6.2041 18.416C6.51289 13.3228 10.7334 9.34984 15.8359 9.34961Z"
@@ -36,14 +36,16 @@
           </router-link>
           <div class=" flex items-center justify-center" :title="online ? 'You are online' : 'You are offline'"
             v-if="route.fullPath.startsWith('/workspaces') || route.fullPath.startsWith('/user')">
-            <span v-if="online" class="bg-green-300 rounded-full border border-muted w-3 h-3 animate-pulse"
+            <span v-if="online" class="bg-success rounded-full border border-surface-strong w-3 h-3 animate-pulse"
               title="Online"></span>
-            <span v-if="!online" class="bg-gray-300 rounded-full border border-muted w-3 h-3" title="Offline"></span>
+            <span v-if="!online" class="bg-content-disabled rounded-full border border-surface-strong w-3 h-3"
+              title="Offline"></span>
           </div>
         </div>
 
 
-        <div v-if="status === 'authenticated'" class="flex gap-5">
+        <div v-if="status === 'authenticated'" class="flex gap-5 items-center">
+          <SharedCreditsPill />
           <ui-dropdown-menu />
         </div>
         <div v-else-if="status === 'unauthenticated'" class="flex gap-5">
@@ -90,7 +92,7 @@
           </ul>
         </div>
       </div>
-      <p class="my-2 text-center text-sm dark:text-gray-300">
+      <p class="my-2 text-center text-sm dark:text-content-secondary">
         Provided by <a class="underline" href="https://amsaad.cc">Abdelrahman Saad</a>
       </p>
     </footer>

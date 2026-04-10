@@ -26,12 +26,12 @@ const handleLogout = async () => {
         <h1 v-else>Not logged in</h1>
       </div>
       <button v-if="status === 'authenticated'"
-        class="flex items-center justify-center space-x-2 rounded-lg bg-red-500 px-3 py-2 text-lg text-white"
+        class="flex items-center justify-center space-x-2 rounded-[var(--radius-lg)] bg-error px-3 py-2 text-lg text-white"
         @click="signOut({ callbackUrl: '/logout' })">
         <span>Logout</span>
       </button>
       <button v-else
-        class="flex items-center justify-center space-x-2 rounded-lg bg-green-500 px-3 py-2 text-lg text-white"
+        class="flex items-center justify-center space-x-2 rounded-[var(--radius-lg)] bg-success px-3 py-2 text-lg text-white"
         @click="signIn('')">
         <i class="fa fa-right-to-bracket pt-0.5" />
         <span>Login</span>

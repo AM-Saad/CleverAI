@@ -1,26 +1,25 @@
 <template>
-  <div class="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-    <div class="w-full max-w-md p-8 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
+  <div class="flex items-center justify-center min-h-screen bg-background">
+    <div class="w-full max-w-md p-8 bg-white rounded-[var(--radius-2xl)] shadow-lg">
       <div class="text-center mb-6">
         <icon name="mdi:account-reactivate" class="text-primary mx-auto mb-4" size="64"></icon>
-        <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
+        <h1 class="text-2xl font-bold text-content-on-surface-strong">
           Reactivate Your Account
         </h1>
-        <p class="text-gray-600 dark:text-gray-400 mt-2">
+        <p class="text-content-secondary mt-2">
           Your account is scheduled for deletion. Reactivate it to continue using our services.
         </p>
       </div>
 
       <!-- Success message -->
-      <div v-if="successMessage"
-        class="mb-4 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md">
+      <div v-if="successMessage" class="mb-4 p-4 bg-success/10 border border-success/20 rounded-[var(--radius-lg)]">
         <div class="flex items-start">
-          <icon name="mdi:check-circle" class="text-green-600 dark:text-green-400 mr-3 mt-0.5" size="20"></icon>
+          <icon name="mdi:check-circle" class="text-success mr-3 mt-0.5" size="20"></icon>
           <div>
-            <p class="text-sm text-green-800 dark:text-green-200">
+            <p class="text-sm text-success">
               {{ successMessage }}
             </p>
-            <p class="text-sm text-green-700 dark:text-green-300 mt-2">
+            <p class="text-sm text-success/80 mt-2">
               <NuxtLink to="/auth/signIn" class="font-semibold underline">
                 Click here to sign in
               </NuxtLink>
@@ -30,11 +29,10 @@
       </div>
 
       <!-- Error message -->
-      <div v-if="errorMessage"
-        class="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
+      <div v-if="errorMessage" class="mb-4 p-4 bg-error/10 border border-error/20 rounded-[var(--radius-lg)]">
         <div class="flex items-start">
-          <icon name="mdi:alert-circle" class="text-red-600 dark:text-red-400 mr-3 mt-0.5" size="20"></icon>
-          <p class="text-sm text-red-800 dark:text-red-200">
+          <icon name="mdi:alert-circle" class="text-error mr-3 mt-0.5" size="20"></icon>
+          <p class="text-sm text-error">
             {{ errorMessage }}
           </p>
         </div>
@@ -47,7 +45,7 @@
 
       <!-- Reactivation button -->
       <div v-else-if="!successMessage" class="space-y-4">
-        <p class="text-sm text-gray-600 dark:text-gray-400">
+        <p class="text-sm text-content-secondary">
           Click the button below to reactivate your account and restore access to all your data.
         </p>
         <UButton color="primary" class="w-full justify-center" :disabled="pending" @click="handleReactivate">
@@ -98,7 +96,7 @@ const handleReactivate = async () => {
 // Auto-trigger reactivation if user comes from sign-in flow
 onMounted(() => {
   const email = route.query.email as string | undefined;
-  
+
   if (email) {
     // User was redirected from sign-in, show info
     errorMessage.value = "";

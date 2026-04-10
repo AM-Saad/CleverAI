@@ -44,9 +44,9 @@ const submitForm = async (): Promise<void> => {
 
 <template>
   <div>
-    <div v-if="!verified" class="flex items-center justify-center flex-col w-full max-w-xl mx-auto mt-8 ">
+    <div v-if="!verified" class="flex items-center justify-center flex-col w-full max-w-2xl mx-auto mt-8">
 
-      <form ref="forgetpassword" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
+      <form ref="forgetpassword" method="post" class="form w-full focus:bg-surface-subtle" autocomplete="test"
         @submit.prevent="submitForm">
         <UiTitle> {{ createNewPassword ? "Create" : "Reset" }} Password</UiTitle>
         <UiParagraph size="sm" color="muted">
@@ -66,24 +66,24 @@ const submitForm = async (): Promise<void> => {
               inputField: `rounded-t-none  ${!emailSent ? ' -translate-y-full -z-10 hidden' : ''}`,
             }" />
           <button
-            :class="`w-8 h-8 absolute right-2 bottom-2 border border-gray-500 rounded-full text-center grid place-items-center cursor-pointer hover:opacity-90 bg-primary hover:shadow`"
+            :class="`w-8 h-8 absolute right-2 bottom-2 border border-secondary rounded-full text-center grid place-items-center cursor-pointer hover:opacity-90 bg-primary hover:shadow`"
             type="submit" :disabled="loading" @click.prevent="submitForm">
             <icon v-if="!loading" name="i-heroicons-arrow-right" class="w-4 h-4 text-white dark:text-dark" />
             <icon v-else name="uil:redo" class="w-4 h-4 animate-spin text-white dark:text-dark" />
           </button>
         </div>
 
-        <UiParagraph v-if="emailSent" size="sm" color="muted" class="mt-2 flex justify-end items-center">
+        <UiParagraph v-if="emailSent" size="sm" color="content-secondary" class="mt-2 flex justify-end items-center">
           <div class="flex items-center gap-2">
             <span v-if="remainingAttempts !== null"> Attempts left: {{ remainingAttempts }}.</span>
             <span v-if="countDown > 0"> Resend in: {{ countDown }}s</span>
             <div v-if="countDown > 0" class="mt-2 flex items-center gap-2">
               <div class="relative h-5 w-5" aria-hidden="true">
-                <div class="absolute inset-0 rounded-full bg-gray-200"></div>
+                <div class="absolute inset-0 rounded-full bg-secondary"></div>
                 <div class="absolute inset-0 rounded-full"
-                  :style="{ background: `conic-gradient(#30c3c6 ${progressPercent}%, #e5e7eb ${progressPercent}%)` }">
+                  :style="{ background: `conic-gradient(var(--color-primary) ${progressPercent}%, var(--color-secondary) ${progressPercent}%)` }">
                 </div>
-                <div class="absolute inset-0.5 rounded-full bg-white"></div>
+                <div class="absolute inset-0.5 rounded-full bg-background"></div>
               </div>
             </div>
             <span v-else>
@@ -91,7 +91,7 @@ const submitForm = async (): Promise<void> => {
                 Code</button>.
             </span>
           </div>
-          <span v-if="inlineHintVisible" class="block mt-1 text-red-600">Resend limit reached. Please wait for
+          <span v-if="inlineHintVisible" class="block mt-1 text-error">Resend limit reached. Please wait for
             cooldown.</span>
         </UiParagraph>
       </form>

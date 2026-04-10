@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-4">
     <!-- Grade Question -->
-    <div class="text-center text-gray-700 dark:text-gray-300 font-medium">
+    <div class="text-center text-content-on-surface font-medium">
       How well did you know this?
     </div>
 
@@ -9,7 +9,7 @@
     <div class="grid grid-cols-2 md:grid-cols-6 gap-2" role="group" aria-label="Grade card options">
       <button v-for="(gradeOption, index) in gradeOptions" :key="index" @click="$emit('grade', gradeOption.value)"
         :disabled="isSubmitting"
-        class="relative p-1 text-center border rounded-lg transition-all duration-200 hover:bg-gray-100 dark:hover:bg-gray-600 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer"
+        class="relative p-1 text-center border rounded-[var(--radius-lg)] transition-all duration-200 hover:bg-surface-subtle disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer"
         :class="[gradeOption.colorClass, { 'animate-pulse': isSubmitting }]"
         :aria-label="`Grade ${gradeOption.value}: ${gradeOption.label} - ${gradeOption.description}`">
         <div class="font-semibold">{{ gradeOption.label }}</div>
@@ -76,7 +76,7 @@ const gradeOptions: GradeOption[] = [
     label: 'Good',
     description: 'Correct, hesitant',
     colorClass:
-      'border-blue-500 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 focus:ring-blue-500',
+      'border-info text-info hover:bg-info/10 focus:ring-info/50',
   },
   {
     value: '5',

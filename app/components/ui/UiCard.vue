@@ -107,12 +107,12 @@ const headerStyle = {
   elevated: "border-b border-primary-light",
 }
 
-const combinedContentClasses = ["ui-card__content bg-background", contentClasses].join(" ");
+const combinedContentClasses = ["ui-card__content", contentClasses].join(" ");
 </script>
 
 <style scoped>
 .ui-card {
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-2xl);
   transition: all 0.2s ease-in-out;
   display: flex;
   flex-direction: column;
@@ -127,7 +127,7 @@ const combinedContentClasses = ["ui-card__content bg-background", contentClasses
 
 .ui-card__footer {
   padding-top: var(--spacing-md);
-  border-top: 1px solid var(--color-surface-alt);
+  border-top: 1px solid var(--color-secondary);
   margin-top: var(--spacing-md);
 }
 

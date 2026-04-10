@@ -52,6 +52,9 @@ export function useGenerateFromMaterial(
   const { subscriptionInfo, isQuotaExceeded, updateFromData, handleApiError } =
     useSubscriptionStore();
 
+  const creditsStore = useCreditsStore()
+  const noCreditsModal = ref(false)
+
   /**
    * Check if material already has generated content
    */
@@ -90,6 +93,13 @@ export function useGenerateFromMaterial(
     genError.value = null;
     pendingGenerationType.value = type;
     pendingGenerationConfig.value = config;
+
+    const ok = await creditsStore.spendCredit()
+    if (!ok) {
+      noCreditsModal.value = true  // show "Watch ad or buy credits"
+      return
+    }
+
 
     // Check for existing content
     const existing = await checkExistingContent();

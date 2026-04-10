@@ -10,7 +10,9 @@ const emit = defineEmits<{
   "update:modelValue": [value: string[]];
 }>();
 
-const tagsStore = useUserTagsStore();
+const route = useRoute();
+const id = route.params.id;
+const tagsStore = useUserTagsStore(id as string);
 const isOpen = ref(false);
 
 // Load tags on mount
@@ -65,9 +67,9 @@ const selectedTags = computed(() => {
 <template>
   <UPopover v-model:open="isOpen">
     <template #default="{ open }">
-      <UButton color="neutral" variant="solid" :icon="selectedCount > 0 ? 'heroicons:funnel-solid' : 'heroicons:funnel'"
+      <UButton size="sm" :icon="selectedCount > 0 ? 'heroicons:funnel-solid' : 'heroicons:funnel'"
         trailing-icon="heroicons:chevron-down-20-solid">
-        <span v-if="selectedCount === 0">Filter by tags</span>
+        <span v-if="selectedCount === 0">Filter</span>
         <span v-else>{{ selectedCount }} tag{{ selectedCount === 1 ? '' : 's' }}</span>
       </UButton>
     </template>
@@ -76,8 +78,8 @@ const selectedTags = computed(() => {
       <div class="w-64 p-2">
         <!-- Header -->
         <div class="flex items-center justify-between px-2 py-1 mb-2">
-          <span class="text-xs font-medium text-gray-500 dark:text-gray-400">
-            Filter by tags
+          <span class="text-xs font-medium text-content-secondary">
+            Filter
           </span>
           <div class="flex gap-1">
             <UButton v-if="selectedCount > 0" size="xs" color="neutral" variant="ghost" @click="clearAll">
@@ -92,16 +94,16 @@ const selectedTags = computed(() => {
         <!-- Tag list -->
         <div v-if="allTags.length > 0" class="max-h-64 overflow-y-auto space-y-1">
           <button v-for="tag in allTags" :key="tag.id" type="button"
-            class="w-full px-2 py-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+            class="w-full px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-surface-subtle flex items-center gap-2"
             @click="toggleTag(tag.name)">
             <Icon :name="modelValue.includes(tag.name)
-                ? 'heroicons:check-circle-solid'
-                : 'heroicons:circle'
+              ? 'heroicons:check-circle-solid'
+              : 'heroicons:circle'
               " :class="[
                 'w-4 h-4',
                 modelValue.includes(tag.name)
-                  ? 'text-primary-500'
-                  : 'text-gray-300 dark:text-gray-600',
+                  ? 'text-primary'
+                  : 'text-content-disabled',
               ]" />
             <UBadge :color="(tag.color as any)" variant="subtle" size="sm" class="flex-1 justify-start">
               {{ tag.name }}
@@ -110,18 +112,18 @@ const selectedTags = computed(() => {
         </div>
 
         <!-- Empty state -->
-        <div v-else class="px-2 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
+        <div v-else class="px-2 py-8 text-center text-sm text-content-secondary">
           No tags yet. Create tags while adding notes.
         </div>
 
         <!-- Selected tags preview (when closed) -->
-        <div v-if="selectedTags.length > 0" class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+        <div v-if="selectedTags.length > 0" class="mt-2 pt-2 border-t border-secondary">
           <div class="flex flex-wrap gap-1">
             <UBadge v-for="tag in selectedTags.slice(0, 3)" :key="tag.id" :color="(tag.color as any)" variant="subtle"
               size="xs">
               {{ tag.name }}
             </UBadge>
-            <span v-if="selectedTags.length > 3" class="text-xs text-gray-500 dark:text-gray-400">
+            <span v-if="selectedTags.length > 3" class="text-xs text-content-secondary">
               +{{ selectedTags.length - 3 }} more
             </span>
           </div>

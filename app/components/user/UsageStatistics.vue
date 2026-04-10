@@ -5,7 +5,7 @@
       <div class="flex flex-col gap-6">
         <ui-loader v-if="isLlmUsageLoading" :is-fetching="isLlmUsageLoading" />
         <div v-else-if="llmUsageError" class="text-center py-8">
-          <p class="text-red-500">{{ llmUsageError }}</p>
+          <p class="text-error">{{ llmUsageError }}</p>
           <button class="mt-4 btn bg-primary text-white" @click="fetchLlmUsage">
             Try Again
           </button>

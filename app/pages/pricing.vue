@@ -222,7 +222,7 @@ h1 {
 
 .subtitle {
   text-align: center;
-  color: #64748b;
+  color: var(--color-content-secondary);
   margin-bottom: 3rem;
   font-size: 1.25rem;
 }
@@ -263,7 +263,7 @@ h1 {
   position: absolute;
   top: -10px;
   right: -10px;
-  background-color: #16a34a;
+  background-color: var(--color-success);
   color: white;
   font-size: 0.625rem;
   padding: 0.125rem 0.375rem;
@@ -279,7 +279,7 @@ h1 {
 
 .plan-card {
   background-color: white;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-2xl);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   padding: 2rem;
   display: flex;
@@ -290,7 +290,7 @@ h1 {
 }
 
 .plan-card.active {
-  border-color: #0ea5e9;
+  border-color: var(--color-primary);
   opacity: 1;
 }
 
@@ -315,7 +315,7 @@ h1 {
 }
 
 .plan-price .period {
-  color: #64748b;
+  color: var(--color-content-secondary);
   margin-left: 0.25rem;
 }
 
@@ -337,17 +337,17 @@ h1 {
 }
 
 .plan-features li svg {
-  color: #16a34a;
+  color: var(--color-success);
   margin-right: 0.75rem;
   flex-shrink: 0;
 }
 
 .subscribe-button {
-  background-color: #0ea5e9;
+  background-color: var(--color-primary);
   color: white;
   font-weight: 600;
   padding: 0.75rem;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-lg);
   border: none;
   cursor: pointer;
   width: 100%;
@@ -357,11 +357,11 @@ h1 {
 }
 
 .subscribe-button:hover {
-  background-color: #0284c7;
+  background-color: color-mix(in srgb, var(--color-primary) 85%, black);
 }
 
 .subscribe-button:disabled {
-  background-color: #93c5fd;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -383,7 +383,7 @@ h1 {
 }
 
 .guarantee-item svg {
-  color: #0ea5e9;
+  color: var(--color-primary);
   margin-right: 1rem;
   flex-shrink: 0;
 }
@@ -395,7 +395,7 @@ h1 {
 
 .guarantee-item p {
   margin: 0;
-  color: #64748b;
+  color: var(--color-content-secondary);
   font-size: 0.875rem;
 }
 

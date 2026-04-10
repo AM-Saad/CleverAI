@@ -2,26 +2,16 @@
 import { useRoute } from "vue-router";
 import { defineAsyncComponent, onMounted, onBeforeUnmount } from "vue";
 import { useWorkspace } from "~/composables/workspaces/useWorkspaces";
-import { useResponsive } from "~/composables/ui/useResponsive";
 import type { EnrollCardResponse } from "~/shared/utils/review.contract";
 
 const ContextSlideOver = defineAsyncComponent(
   () => import("~/components/workspace/hub/ContextSlideOver.vue")
 );
 
-const LearningHubModal = defineAsyncComponent(
-  () => import("~/components/workspace/hub/LearningHubModal.vue")
-);
-const FloatingLearningHubButton = defineAsyncComponent(
-  () => import("~/components/workspace/hub/FloatingLearningHubButton.vue")
-);
-
 const LearningHubContent = defineAsyncComponent(
   () => import("~/components/workspace/hub/LearningHubContent.vue")
 );
-// const WorkspaceNotesSection = defineAsyncComponent(
-//   () => import("~/components/workspace/NotesSection.vue"),
-// );
+
 const WorkspaceUploadMaterialForm = defineAsyncComponent(
   () => import("~/components/workspace/hub/materials/UploadMaterialForm.vue")
 );
@@ -36,9 +26,8 @@ const { workspace, loading, error, refresh } = useWorkspace(id! as string);
 // Context Bridge integration
 const contextBridge = useContextBridge();
 
-// Responsive behavior
-const { isMobile } = useResponsive();
-const showLearningHubModal = ref(false);
+// Layout ref for programmatic tab switching
+const layoutRef = ref<InstanceType<typeof import('~/components/workspace/WorkspaceLayout.vue').default> | null>(null);
 
 const { updateWorkspace, updating, typedError } = useUpdateWorkspace();
 const { fetchMaterials: refreshMaterials } = useMaterialsStore(id as string);
@@ -127,12 +116,7 @@ function handleEnrolled(response: EnrollCardResponse) {
 // Handle opening Learning Hub from external events (e.g., from notes component)
 function handleOpenLearningHub() {
   console.log("handleOpenLearningHub");
-  if (isMobile.value) {
-    showLearningHubModal.value = true;
-  } else {
-    const hub = document.getElementById('learning-hub');
-    hub?.scrollIntoView({ behavior: 'smooth' });
-  }
+  layoutRef.value?.scrollToTab('hub');
 }
 
 // Listen for custom events to open Learning Hub
@@ -166,32 +150,26 @@ onBeforeUnmount(() => {
     <shared-error-message v-if="error && !loading" :error="error" :refresh="refresh" />
 
     <template v-if="workspace" #default>
-      <div class="flex flex-col md:flex-row gap-2 min-h-0 w-full grow">
 
-        <!-- NOTES Goes Here -->
-        <workspace-notes-section @add-to-material="handleAddToMaterial" />
-
-
-        <!-- LEARNING HUB Goes Here - Desktop Only -->
-        <div v-if="!isMobile"
-          class="flex flex-col relative overflow-hidden shrink-0 basis-full md:basis-1/3 xl:basis-1/4 grow"
-          id="learning-hub">
+      <workspace-layout ref="layoutRef" :workspace-id="`${id as string}`">
+        <!-- Learning Hub Panel -->
+        <template #hub>
           <LearningHubContent :workspace-id="`${id as string}`" :materials-length="workspace.materials?.length"
             :is-enrolling-loading="enrollmentLoading" :enrolled-flashcard-ids="enrolledFlashcardIds"
             :enrolled-question-ids="enrolledQuestionIds" :updating="updating" :show-upload="showUpload"
             @enrolled="handleEnrolled" @toggle-upload="toggleUploadForm" />
-        </div>
-      </div>
+        </template>
 
-      <!-- Mobile Learning Hub Modal -->
-      <LearningHubModal :show="showLearningHubModal" :workspace-id="`${id as string}`"
-        :materials-length="workspace.materials?.length" :enrollment-loading="enrollmentLoading"
-        :enrolled-flashcard-ids="enrolledFlashcardIds" :enrolled-question-ids="enrolledQuestionIds" :updating="updating"
-        :show-upload="showUpload" @close="showLearningHubModal = false" @enrolled="handleEnrolled"
-        @toggle-upload="toggleUploadForm" />
+        <!-- Notes Panel -->
+        <template #notes>
+          <workspace-notes-section @add-to-material="handleAddToMaterial" />
+        </template>
 
-      <!-- Floating Action Button - Mobile Only -->
-      <FloatingLearningHubButton :visible="isMobile" @click="handleOpenLearningHub" />
+        <!-- Board Panel -->
+        <template #board>
+          <board-notes-section />
+        </template>
+      </workspace-layout>
 
       <!-- Upload Materials Dialog -->
       <WorkspaceUploadMaterialForm :show="showUpload" @close="showUpload = false" />

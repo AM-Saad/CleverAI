@@ -1,6 +1,6 @@
 <template>
   <div v-if="card"
-    class="bg-surface-subtle rounded-lg shadow overflow-hidden transition-all duration-300  w-4xl max-w-full mx-auto">
+    class="bg-surface-subtle rounded-[var(--radius-xl)] shadow overflow-hidden transition-all duration-300  w-4xl max-w-full mx-auto">
     <!-- Resource Type Badge -->
     <div class="p-4">
       <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium" :class="resourceTypeBadgeClass">
@@ -27,13 +27,13 @@
         </div>
 
         <!-- Hint if available -->
-        <div v-if="resourceHint" class="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg" role="complementary"
-          aria-label="Hint">
-          <div class="text-sm font-medium text-yellow-800 dark:text-yellow-200 mb-1">
+        <div v-if="resourceHint" class="mt-4 p-4 bg-warning/10 dark:bg-warning/5 rounded-[var(--radius-lg)]"
+          role="complementary" aria-label="Hint">
+          <div class="text-sm font-medium text-warning mb-1">
             <Icon name="heroicons:light-bulb" class="w-4 h-4 inline mr-1" />
             Hint:
           </div>
-          <div class="text-yellow-700 dark:text-yellow-300">
+          <div class="text-warning/80">
             {{ resourceHint }}
           </div>
         </div>

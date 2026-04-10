@@ -4,6 +4,8 @@ import { useNotesStore } from "~/composables/workspaces/useNotesStore";
 import { APIError } from "~/services/FetchFactory";
 import { ReorderGroup, ReorderItem } from "motion-v";
 import type { MathNoteMetadata, CanvasNoteMetadata } from "@@/shared/utils/note.contract";
+import { useAdaptiveToolbar } from "~/composables/ui/useAdaptiveToolbar";
+import { useExportContent } from "~/composables/shared/useExportContent";
 
 const route = useRoute();
 const workspaceId = route.params.id as string;
@@ -11,6 +13,7 @@ const emit = defineEmits(["add-to-material"]);
 
 // Use the optimistic notes store
 const notesStore = useNotesStore(workspaceId);
+const { exportContent } = useExportContent();
 
 // Cached list of ordered IDs to prevent sorting on every text change
 const orderedNoteIds = ref<string[]>([]);
@@ -308,33 +311,39 @@ const newNoteDropdownItems = [
 ];
 
 const isDrawerOpen = ref(false);
+
+// ─── Adaptive Toolbar ─────────────────────────────────────────────
+const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOverflowing } = useAdaptiveToolbar();
 </script>
 
 
 <template>
   <ui-card variant="default" size="sm" shadow="none"
-    class="flex flex-col md:basis-1/2 xl:basis-2/3 shrink-0 md:shrink min-h-0 overflow-hidden basis-3/3 z-10  relative!"
-    contentClasses="flex flex-col p-0!">
+    class="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden z-10 relative!" contentClasses="flex flex-col p-0!">
     <!-- Header -->
     <template v-slot:header>
-      <div class="flex items-center gap-2">
-        Notes
-        <ui-label v-if="notes?.length"> ( {{ notes.length }} ) </ui-label>
-      </div>
+      <div ref="toolbarRef" class="adaptive-toolbar w-full">
+        <div class="flex items-center gap-2">
+          <span>Notes</span>
+          <ui-label v-if="notes?.length"> ( {{ notes.length }} ) </ui-label>
+        </div>
 
-      <div class="flex items-center gap-2">
+        <div class="toolbar-actions">
+          <UDropdownMenu :items="newNoteDropdownItems" :content="{ align: 'end', side: 'bottom', sideOffset: 4 }">
+            <u-button size="sm" color="primary" variant="ghost"
+              :trailing-icon="showLabels ? 'i-heroicons-chevron-down' : ''">
+              <u-icon name="i-heroicons-plus" />
+              <span v-if="showLabels" class="toolbar-label">New Note</span>
+            </u-button>
+          </UDropdownMenu>
 
-        <UDropdownMenu :items="newNoteDropdownItems" :content="{ align: 'end', side: 'bottom', sideOffset: 4 }">
-          <u-button size="sm" color="primary" variant="ghost" trailing-icon="i-heroicons-chevron-down">
-            <u-icon name="i-heroicons-plus" />
-            New Note
-          </u-button>
-        </UDropdownMenu>
-        <u-button v-if="notes?.length" size="sm" color="neutral" variant="link" @click="isDrawerOpen = !isDrawerOpen"
-          :aria-label="isDrawerOpen ? 'Close notes list' : 'Open notes list'">
-          <icon :name="isDrawerOpen ? 'i-lucide-panel-left-close' : 'i-lucide-panel-left-open'" class="w-4 h-4" />
-        </u-button>
-
+          <Transition name="toolbar-fade">
+            <u-button v-if="notes?.length" size="sm" color="neutral" variant="link"
+              @click="isDrawerOpen = !isDrawerOpen" :aria-label="isDrawerOpen ? 'Close notes list' : 'Open notes list'">
+              <icon :name="isDrawerOpen ? 'i-lucide-panel-left-close' : 'i-lucide-panel-left-open'" class="w-4 h-4" />
+            </u-button>
+          </Transition>
+        </div>
       </div>
     </template>
     <template #default>
@@ -363,6 +372,9 @@ const isDrawerOpen = ref(false);
               @reorder="handleReorder">
               <UContextMenu v-for="(note, idx) in localNotes" :key="note.id" :items="[
                 // { label: 'Edit', onSelect: () => editNote(note) },
+                { label: 'Download as TXT', icon: 'i-heroicons-document-text', onSelect: () => exportContent('note', note.content, 'txt') },
+                { label: 'Download as DOC', icon: 'i-heroicons-document', onSelect: () => exportContent('note', note.content, 'doc') },
+                { label: 'Download as PDF', icon: 'i-heroicons-document', onSelect: () => exportContent('note', note.content, 'pdf') },
                 { label: 'Delete', onSelect: () => deleteNote(note.id) },
               ]" :context="note">
                 <ReorderItem :value="note" :class="[
@@ -378,8 +390,8 @@ const isDrawerOpen = ref(false);
                     <icon name="i-lucide-loader" class="w-4 h-4 animate-spin" />
                   </div>
                   <ui-paragraph size="xs" class="truncate">
-                    <span v-if="note.noteType === 'CANVAS'" class="mr-1 text-orange-500">🎨</span>
-                    <span v-else-if="note.noteType === 'MATH'" class="mr-1 text-indigo-500">∑</span>
+                    <span v-if="note.noteType === 'CANVAS'" class="mr-1 text-warning">🎨</span>
+                    <span v-else-if="note.noteType === 'MATH'" class="mr-1 text-primary">∑</span>
                     {{
                       note.content
                         .replace(/<[^>]*>/g, "")
@@ -417,14 +429,14 @@ const isDrawerOpen = ref(false);
   <!-- Fullscreen Note View -->
   <shared-fullscreen-wrapper :is-open="fullscreen.isOpen.value" aria-label="Note fullscreen view" max-width="900px"
     max-height="80vh" @close="fullscreen.close">
-    <template #header>
+    <!-- <template #header>
       <div class="flex items-center justify-between w-full">
         <span class="font-medium text-gray-900 dark:text-gray-100"></span>
         <u-button variant="ghost" size="xs" aria-label="Close fullscreen" @click="fullscreen.close">
           <icon name="i-heroicons-x-mark" :size="UI_CONFIG.ICON_SIZE" />
         </u-button>
       </div>
-    </template>
+    </template> -->
 
     <div v-if="currentFullscreenNote" class="h-full">
       <workspace-math-note-editor v-if="currentFullscreenNote.noteType === 'MATH'" :note-id="currentFullscreenNote.id"
@@ -454,5 +466,51 @@ const isDrawerOpen = ref(false);
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+/* ─── Adaptive Toolbar ───────────────────────────────────────────── */
+.adaptive-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  position: relative;
+}
+
+.toolbar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  justify-content: flex-end;
+}
+
+.toolbar-fade-enter-active,
+.toolbar-fade-leave-active {
+  transition: opacity 0.25s ease, max-width 0.25s ease, margin 0.25s ease;
+  overflow: hidden;
+}
+
+.toolbar-fade-enter-from,
+.toolbar-fade-leave-to {
+  opacity: 0;
+  max-width: 0;
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.toolbar-label {
+  transition: opacity 0.2s ease;
 }
 </style>

@@ -15,9 +15,9 @@ const { handleSubmit, credentials, fieldTypes, error, success, loading } =
 </script>
 
 <template>
-  <div class="flex items-center justify-center flex-col w-full max-w-xl mx-auto mt-8">
+  <div class="flex items-center justify-center flex-col w-full max-w-2xl mx-auto mt-8">
 
-    <form ref="signup" method="post" class="form w-full focus:bg-gray-100" autocomplete="test"
+    <form ref="signup" method="post" class="form w-full focus:bg-surface-subtle" autocomplete="test"
       @submit.prevent="handleSubmit()">
       <UiTitle>Sign up</UiTitle>
       <UiParagraph size="sm" color="disabled">

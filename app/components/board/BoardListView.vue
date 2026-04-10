@@ -1,16 +1,19 @@
 <script setup lang="ts">
-import { useBoardColumnsStore } from "~/composables/useBoardColumnsStore";
-import { useBoardItemsStore } from "~/composables/useBoardItemsStore";
-import type { BoardItemState } from "~/composables/useBoardItemsStore";
+import { useBoardColumnsStore } from "~/composables/board/useBoardColumnsStore";
+import { useBoardItemsStore } from "~/composables/board/useBoardItemsStore";
+import type { BoardItemState } from "~/composables/board/useBoardItemsStore";
 
 const props = defineProps<{
   items: BoardItemState[]; // Filtered items for display
   allItems: BoardItemState[]; // All items for proper reordering
+  selectedItemId?: string;
 }>();
 
+const route = useRoute();
+const id = route.params.id;
 // Stores
-const columnsStore = useBoardColumnsStore();
-const itemsStore = useBoardItemsStore();
+const columnsStore = useBoardColumnsStore(id as string);
+const itemsStore = useBoardItemsStore(id as string);
 
 const emit = defineEmits<{
   (e: "select-item", itemId: string): void;
@@ -148,24 +151,25 @@ const getColumnActions = (columnId: string) => {
   <div class="flex flex-col flex-1 min-h-0 overflow-y-auto gap-4 pr-1">
     <!-- Uncategorized section -->
     <div v-if="uncategorizedItems.length > 0 || orderedColumns.length === 0"
-      class="bg-white dark:bg-gray-900/40 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-      <button class="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800/60"
+      class="bg-white dark:bg-surface/40 rounded-[var(--radius-xl)] border border-secondary dark:border-secondary shadow-sm overflow-hidden">
+      <button class="w-full flex items-center justify-between px-4 py-3 bg-surface-subtle dark:bg-surface/60"
         @click="toggleSection('uncategorized')">
         <div class="flex items-center gap-2 text-left">
           <Icon :name="collapsedSections.has('uncategorized') ? 'heroicons:chevron-right' : 'heroicons:chevron-down'"
-            class="w-4 h-4 text-gray-500" />
-          <span class="font-semibold text-gray-800 dark:text-gray-100">Uncategorized</span>
-          <span class="text-xs text-gray-500">({{ uncategorizedItems.length }})</span>
+            class="w-4 h-4 text-content-secondary" />
+          <span class="font-semibold text-content-on-surface-strong dark:text-content-on-surface">Uncategorized</span>
+          <span class="text-xs text-content-secondary">({{ uncategorizedItems.length }})</span>
         </div>
         <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:plus" @click.stop="createItem">
           Add
         </UButton>
       </button>
       <div v-if="!collapsedSections.has('uncategorized')" class="p-3 space-y-2">
-        <BoardItemCard v-for="item in uncategorizedItems" :key="item.id" :item="item" :is-selected="false"
-          @select="emit('select-item', item.id)" @delete="emit('delete-item', item.id)"
+        <BoardItemCard v-for="item in uncategorizedItems" :key="item.id" :item="item"
+          :is-selected="props.selectedItemId === item.id" @select="emit('select-item', item.id)"
+          @delete="emit('delete-item', item.id)"
           @move="(targetId) => itemsStore.moveItemToColumn(item.id, targetId, 0)" />
-        <div v-if="uncategorizedItems.length === 0" class="text-center text-gray-400 py-6 text-sm">
+        <div v-if="uncategorizedItems.length === 0" class="text-center text-content-secondary py-6 text-sm">
           No items yet
         </div>
       </div>
@@ -173,14 +177,15 @@ const getColumnActions = (columnId: string) => {
 
     <!-- Column sections -->
     <div v-for="column in orderedColumns" :key="column.id"
-      class="bg-white dark:bg-gray-900/40 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm overflow-hidden">
-      <div class="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800/60 group/header">
+      class="bg-white dark:bg-surface/40 rounded-[var(--radius-xl)] border border-secondary dark:border-secondary shadow-sm overflow-hidden">
+      <div class="flex items-center justify-between px-4 py-3 bg-surface-subtle dark:bg-surface/60 group/header">
         <button v-if="isEditingColumn !== column.id" class="flex items-center gap-2 flex-1 text-left"
           @click="toggleSection(column.id)">
           <Icon :name="collapsedSections.has(column.id) ? 'heroicons:chevron-right' : 'heroicons:chevron-down'"
-            class="w-4 h-4 text-gray-500" />
-          <span class="font-semibold text-gray-800 dark:text-gray-100">{{ column.name }}</span>
-          <span class="text-xs text-gray-500">({{ getColumnItems(column.id).length }})</span>
+            class="w-4 h-4 text-content-secondary" />
+          <span class="font-semibold text-content-on-surface-strong dark:text-content-on-surface">{{ column.name
+            }}</span>
+          <span class="text-xs text-content-secondary">({{ getColumnItems(column.id).length }})</span>
         </button>
         <div v-else class="flex items-center gap-2 flex-1" data-editing @click.stop @mousedown.stop>
           <UInput v-model="editColumnName" size="xs" class="flex-1"
@@ -200,10 +205,11 @@ const getColumnActions = (columnId: string) => {
         </div>
       </div>
       <div v-if="!collapsedSections.has(column.id)" class="p-3 space-y-2">
-        <BoardItemCard v-for="item in getColumnItems(column.id)" :key="item.id" :item="item" :is-selected="false"
-          @select="emit('select-item', item.id)" @delete="emit('delete-item', item.id)"
+        <BoardItemCard v-for="item in getColumnItems(column.id)" :key="item.id" :item="item"
+          :is-selected="props.selectedItemId === item.id" @select="emit('select-item', item.id)"
+          @delete="emit('delete-item', item.id)"
           @move="(targetId) => itemsStore.moveItemToColumn(item.id, targetId, 0)" />
-        <div v-if="getColumnItems(column.id).length === 0" class="text-center text-gray-400 py-6 text-sm">
+        <div v-if="getColumnItems(column.id).length === 0" class="text-center text-content-secondary py-6 text-sm">
           No items yet
         </div>
       </div>

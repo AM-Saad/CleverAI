@@ -22,7 +22,7 @@ let globalStore: UserTagsStore | null = null;
 /**
  * Global user tags store (singleton per user session)
  */
-export function useUserTagsStore(): UserTagsStore {
+export function useUserTagsStore(workspaceId?: string): UserTagsStore {
   // Return existing store if available
   if (globalStore) {
     return globalStore;

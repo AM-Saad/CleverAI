@@ -62,24 +62,24 @@
         <ui-card variant="default" class-name="mt-1.5" size="sm" v-if="!notificationsLoading">
           <ui-subtitle>Push Notifications</ui-subtitle>
           <div class="mt-4">
-            <div v-if="notificationsLoading" class="text-sm text-gray-500">
+            <div v-if="notificationsLoading" class="text-sm text-content-secondary">
               Checking status...
             </div>
             <div v-else-if="isNotificationSubscribed" class="flex items-center justify-between">
-              <span class="text-sm text-green-600 dark:text-green-400">✓ Notifications enabled</span>
+              <span class="text-sm text-success">✓ Notifications enabled</span>
               <u-button size="sm" variant="subtle" color="error" @click="handleUnsubscribe"
                 :loading="notificationsLoading">
                 Disable
               </u-button>
             </div>
             <div v-else class="flex items-center justify-between">
-              <span class="text-sm text-gray-500">Notifications are disabled</span>
+              <span class="text-sm text-content-secondary">Notifications are disabled</span>
               <u-button size="sm" variant="subtle" color="primary" @click="handleResubscribe"
                 :loading="notificationsLoading">
                 Enable Notifications
               </u-button>
             </div>
-            <p v-if="notificationError" class="text-sm text-red-500 mt-2">{{ notificationError }}</p>
+            <p v-if="notificationError" class="text-sm text-error mt-2">{{ notificationError }}</p>
           </div>
         </ui-card>
         <ui-card variant="default" class-name="mt-1.5" size="sm" v-if="notificationsLoading || isProfileLoading">
@@ -97,11 +97,11 @@
             <div class="flex items-center justify-between">
               <ui-label>Current Plan:</ui-label>
               <span :class="{
-                'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300':
+                'bg-primary/15 text-primary':
                   subscriptionInfo.tier === 'PRO',
-                'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300':
+                'bg-secondary text-content-on-surface':
                   subscriptionInfo.tier === 'FREE',
-                'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300':
+                'bg-info/15 text-info':
                   subscriptionInfo.tier === 'ENTERPRISE',
               }" class="px-3 py-1 rounded-full text-xs font-semibold">
                 {{ subscriptionInfo.tier }}
@@ -124,16 +124,16 @@
                 {{ subscriptionInfo.generationsQuota }}</span>
             </ui-paragraph>
 
-            <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2.5">
+            <div class="w-full bg-secondary rounded-full h-2.5">
               <div class="h-2.5 rounded-full bg-primary" :style="{ width: `${usagePercentage}%` }"
-                :class="{ 'bg-red-500': usagePercentage > 90 }" />
+                :class="{ 'bg-error': usagePercentage > 90 }" />
             </div>
 
-            <p class="text-sm mt-2 text-gray-500 dark:text-gray-400">
+            <p class="text-sm mt-2 text-content-secondary">
               <span v-if="subscriptionInfo.remaining > 0">
                 {{ subscriptionInfo.remaining }} generations remaining
               </span>
-              <span v-else class="text-red-500">Quota exceeded</span>
+              <span v-else class="text-error">Quota exceeded</span>
             </p>
           </div>
         </ui-card>

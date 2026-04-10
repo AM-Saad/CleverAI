@@ -23,8 +23,8 @@ export function useTextSummarization(options?: {
   const { $aiWorker } = useNuxtApp();
   const store = useAIStore("global-ai-store");
   const { loadModel } = store;
-  const modelId = options?.modelId || "Xenova/distilbart-cnn-6-6";
-  const task = "summarization";
+  const modelId = options?.modelId || "onnx-community/Qwen3-1.7B-ONNX";
+  const task = "text-generation";
 
   const isSummarizing = ref(false);
   const currentSummary = ref<string | null>(null);

@@ -8,12 +8,12 @@
         <!-- Benefits -->
         <div class="space-y-3 mb-6">
           <div class="flex items-start gap-3">
-            <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-green-500 mt-0.5 shrink-0" />
+            <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-success mt-0.5 shrink-0" />
             <div>
-              <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <div class="text-sm font-medium text-content-on-surface-strong dark:text-content-on-surface">
                 Perfect Timing
               </div>
-              <div class="text-xs text-gray-600 dark:text-gray-400">
+              <div class="text-xs text-content-secondary dark:text-content-secondary">
                 Get notified exactly when cards are due for optimal memory
                 retention
               </div>
@@ -21,24 +21,24 @@
           </div>
 
           <div class="flex items-start gap-3">
-            <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+            <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
             <div>
-              <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <div class="text-sm font-medium text-content-on-surface-strong dark:text-content-on-surface">
                 Customizable Schedule
               </div>
-              <div class="text-xs text-gray-600 dark:text-gray-400">
+              <div class="text-xs text-content-secondary dark:text-content-secondary">
                 Set your preferred time, timezone, and quiet hours
               </div>
             </div>
           </div>
 
           <div class="flex items-start gap-3">
-            <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-green-500 mt-0.5 flex-shrink-0" />
+            <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
             <div>
-              <div class="text-sm font-medium text-gray-900 dark:text-gray-100">
+              <div class="text-sm font-medium text-content-on-surface-strong dark:text-content-on-surface">
                 Respect Your Time
               </div>
-              <div class="text-xs text-gray-600 dark:text-gray-400">
+              <div class="text-xs text-content-secondary dark:text-content-secondary">
                 Only notified when you have enough cards to make it worthwhile
               </div>
             </div>
@@ -47,14 +47,14 @@
 
         <!-- Permission Status -->
         <div v-if="permissionStatus === 'denied'"
-          class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+          class="mb-4 p-3 bg-error/10 border border-error/30 rounded-[var(--radius-xl)]">
           <div class="flex items-start gap-2">
-            <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
+            <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-error mt-0.5 flex-shrink-0" />
             <div>
-              <div class="text-sm font-medium text-red-800 dark:text-red-200">
+              <div class="text-sm font-medium text-error dark:text-red-200">
                 Notifications Blocked
               </div>
-              <div class="text-xs text-red-600 dark:text-red-300 mt-1">
+              <div class="text-xs text-error/80 dark:text-red-300 mt-1">
                 Please click the lock icon in your browser's address bar and
                 allow notifications for this site.
               </div>
@@ -63,9 +63,8 @@
         </div>
 
         <!-- Error Message -->
-        <div v-if="error"
-          class="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <div class="text-sm text-red-800 dark:text-red-200">
+        <div v-if="error" class="mb-4 p-3 bg-error/10 border border-error/20 rounded-[var(--radius-xl)]">
+          <div class="text-sm text-error dark:text-red-200">
             {{ error }}
           </div>
         </div>
@@ -92,7 +91,7 @@
           <!-- Don't ask again option -->
           <div class="flex items-center justify-center gap-2 pt-2">
             <UCheckbox v-model="dontAskAgain" :disabled="isLoading" />
-            <label for="dontAskAgain" class="text-xs text-gray-500 dark:text-gray-400 cursor-pointer"
+            <label for="dontAskAgain" class="text-xs text-content-secondary dark:text-content-secondary cursor-pointer"
               @click="dontAskAgain = !dontAskAgain">
               Don't ask me again
             </label>
@@ -100,8 +99,8 @@
         </div>
 
         <!-- Privacy Note -->
-        <div class="mt-4 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-          <div class="text-xs text-gray-600 dark:text-gray-400">
+        <div class="mt-4 p-3 bg-surface-subtle dark:bg-surface/50 rounded-[var(--radius-xl)]">
+          <div class="text-xs text-content-secondary dark:text-content-secondary">
             <UIcon name="i-heroicons-shield-check" class="w-4 h-4 inline mr-1" />
             Your notification preferences are stored locally and can be changed
             anytime in Settings.

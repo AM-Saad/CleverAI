@@ -188,8 +188,8 @@ const CardItem = {
       const renderDemoCard = () => [
         h('img', { src: props.item.src, alt: props.item.label, class: 'w-full h-full object-cover block pointer-events-none -webkit-user-drag-none' }),
         h('div', { class: 'absolute inset-x-0 bottom-0 p-5 pt-16 bg-gradient-to-t from-black/80 to-transparent font-serif text-xl tracking-tight text-white' }, props.item.label),
-        h(motion.div, { class: 'absolute top-5 right-5 px-4 py-1.5 rounded-lg text-[0.8rem] font-bold tracking-widest uppercase border text-green-400 border-green-400 rotate-[8deg] pointer-events-none', style: { opacity: likeOpacity } }, 'Next'),
-        h(motion.div, { class: 'absolute top-5 left-5 px-4 py-1.5 rounded-lg text-[0.8rem] font-bold tracking-widest uppercase border text-red-500 border-red-500 -rotate-[8deg] pointer-events-none', style: { opacity: nopeOpacity } }, 'Prev'),
+        h(motion.div, { class: 'absolute top-5 right-5 px-4 py-1.5 rounded-[var(--radius-lg)] text-[0.8rem] font-bold tracking-widest uppercase border text-success border-success rotate-[8deg] pointer-events-none', style: { opacity: likeOpacity } }, 'Next'),
+        h(motion.div, { class: 'absolute top-5 left-5 px-4 py-1.5 rounded-[var(--radius-lg)] text-[0.8rem] font-bold tracking-widest uppercase border text-error border-error -rotate-[8deg] pointer-events-none', style: { opacity: nopeOpacity } }, 'Prev'),
       ]
 
       const content = props.slots.default ? props.slots.default({ item: props.item }) : renderDemoCard()
@@ -254,7 +254,7 @@ const CardItem = {
       <div class="flex gap-2.5">
         <div v-for="(p, i) in deck.slice(0, 5)" :key="p.id || i" :class="[
           'w-2 h-2 rounded-full transition-all duration-300',
-          i === 0 ? 'bg-primary scale-125' : 'bg-slate-300'
+          i === 0 ? 'bg-primary scale-125' : 'bg-secondary'
         ]" />
       </div>
 

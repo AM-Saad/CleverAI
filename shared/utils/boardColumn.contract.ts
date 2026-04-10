@@ -8,6 +8,8 @@ export const BoardColumnSchema = z.object({
   userId: z.string(),
   name: z.string(),
   order: z.number().int().default(0),
+  workspaceId: z.string().nullable().optional(),
+  
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),
 });
@@ -15,6 +17,7 @@ export type BoardColumn = z.infer<typeof BoardColumnSchema>;
 
 export const CreateBoardColumnDTO = z.object({
   name: z.preprocess(trim, z.string().min(1, "Column name is required")),
+  workspaceId: z.string().optional(),
 });
 export type CreateBoardColumnDTO = z.infer<typeof CreateBoardColumnDTO>;
 

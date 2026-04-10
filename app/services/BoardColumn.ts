@@ -14,8 +14,12 @@ export class BoardColumnService extends FetchFactory {
   /**
    * Get all board columns for the current user
    */
-  async getAll(): Promise<Result<BoardColumn[]>> {
-    return this.call<BoardColumn[]>("GET", this.RESOURCE);
+  async getAll(workspaceId?: string): Promise<Result<BoardColumn[]>> {
+    const query = new URLSearchParams();
+    if (workspaceId) {
+      query.append("workspaceId", workspaceId);
+    }
+    return this.call<BoardColumn[]>("GET", `${this.RESOURCE}?${query.toString()}`);
   }
 
   /**

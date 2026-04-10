@@ -43,12 +43,12 @@ const {
 } = defineProps<Props>();
 
 const sizeClasses = {
-  xs: "text-xs",
-  sm: "text-sm",
-  base: "text-base",
-  lg: "text-base md:text-lg text-nowrap",
-  xl: "text-xl",
-  "2xl": "text-2xl",
+  xs: "text-xs leading-snug",
+  sm: "text-sm leading-snug",
+  base: "text-base leading-snug",
+  lg: "text-base md:text-lg leading-snug",
+  xl: "text-xl leading-snug",
+  "2xl": "text-2xl leading-snug tracking-tight",
 };
 
 const weightClasses = {

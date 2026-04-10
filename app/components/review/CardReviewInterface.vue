@@ -82,19 +82,19 @@
       v-if="showSummaryModal && sessionSummary" role="dialog" aria-modal="true" aria-labelledby="session-summary-title">
       >
       <div
-        class="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl max-w-md w-full space-y-6 text-center border dark:border-gray-700">
-        <h2 class="text-2xl font-bold text-gray-900 dark:text-white">Session Complete!</h2>
+        class="bg-white p-8 rounded-[var(--radius-2xl)] shadow-2xl max-w-md w-full space-y-6 text-center border border-secondary">
+        <h2 class="text-2xl font-bold text-content-on-surface-strong">Session Complete!</h2>
 
         <div class="space-y-4">
-          <div class="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <div class="text-sm text-gray-500 dark:text-gray-400">XP Gained</div>
-            <div class="text-3xl font-bold text-purple-600 dark:text-purple-400">+{{ sessionSummary.xpGained }}</div>
+          <div class="p-4 bg-surface-subtle rounded-[var(--radius-lg)]">
+            <div class="text-sm text-content-secondary">XP Gained</div>
+            <div class="text-3xl font-bold text-primary">+{{ sessionSummary.xpGained }}</div>
           </div>
 
           <div v-if="sessionSummary.leveledUp"
-            class="p-4 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded-lg animate-pulse">
-            <div class="text-lg font-bold text-yellow-700 dark:text-yellow-400">🎉 Level Up!</div>
-            <div class="text-sm text-yellow-600 dark:text-yellow-300">
+            class="p-4 bg-warning/10 border border-warning/20 rounded-[var(--radius-lg)] animate-pulse">
+            <div class="text-lg font-bold text-warning">🎉 Level Up!</div>
+            <div class="text-sm text-warning/80">
               Level {{ sessionSummary.levelBefore }} → <span class="font-meduim">{{ sessionSummary.levelAfter }}</span>
             </div>
           </div>
@@ -104,9 +104,9 @@
               class="mb-4 z-10 " />
           </div>
           <div v-if="sessionSummary.stageUnlocked"
-            class="p-4 bg-purple-50 dark:bg-purple-900/30 border border-purple-200 dark:border-purple-700 rounded-lg">
-            <div class="text-lg font-bold text-purple-700 dark:text-purple-400">🌟 New Stage Unlocked!</div>
-            <div class="text-sm text-purple-600 dark:text-purple-300">
+            class="p-4 bg-primary/10 border border-primary/20 rounded-[var(--radius-lg)] animate-pulse">
+            <div class="text-lg font-bold text-primary">🌟 New Stage Unlocked!</div>
+            <div class="text-sm text-primary/80">
               {{ sessionSummary.stageAfter }}
             </div>
           </div>

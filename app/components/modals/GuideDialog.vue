@@ -29,7 +29,7 @@ const gotit = (): void => {
       <template #header>
         <div class="flex flex-col">
           <div class="title text-xl font-bold">Check "Share Audio" Box</div>
-          <div class="desc my-2 text-sm text-gray-500 dark:text-gray-400">
+          <div class="desc my-2 text-sm text-content-secondary">
             Please check "Share Audio" box to record system audio.
           </div>
         </div>
@@ -39,7 +39,7 @@ const gotit = (): void => {
         <div class="my-2 flex justify-between gap-3">
           <div class="flex items-center gap-2">
             <input id="dontShow" type="checkbox" name="dontshow" @click="dontShow = !dontShow" />
-            <label for="dontShow" class="dark:text-gray-400">Don't Show Again</label>
+            <label for="dontShow" class="text-content-on-surface">Don't Show Again</label>
           </div>
         </div>
       </template>

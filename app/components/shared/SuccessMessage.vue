@@ -6,7 +6,7 @@ const props = defineProps<{
 
 <template>
   <div v-if="props.message">
-    <p class="bg-green-200/80  border dark:border-green-400 my-2 px-3 py-2 rounded-lg text-green-800 text-sm"
+    <p class="bg-success/10 border dark:border-success/30 my-2 px-3 py-2 rounded-[var(--radius-md)] text-success text-sm"
       v-html="props.message" />
   </div>
 </template>

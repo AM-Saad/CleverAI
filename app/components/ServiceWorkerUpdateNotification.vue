@@ -61,10 +61,11 @@
     leave-to-class="transform translate-y-full opacity-0">
     <div v-if="showDebugPanel && isDev" class="sw-debug-panel">
 
-      <div class="bg-white/95 dark:bg-gray-900/95 backdrop-blur border rounded-lg p-4 text-sm space-y-3 shadow-lg">
+      <div
+        class="bg-white/95 dark:bg-gray-900/95 backdrop-blur border rounded-[var(--radius-lg)] p-4 text-sm space-y-3 shadow-lg">
         <header class="flex items-center justify-between">
           <h3 class="font-semibold flex items-center gap-2">
-            <Icon name="heroicons:cloud" class="w-4 h-4 text-blue-500" />
+            <Icon name="heroicons:cloud" class="w-4 h-4 text-primary" />
             Service Worker
           </h3>
           <div class="flex items-center gap-2">
@@ -111,8 +112,8 @@
           </div>
         </section>
         <!-- Debug Controls (Development Mode) -->
-        <div class="mb-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <h4 class="font-medium text-yellow-900 mb-2 flex items-center gap-2">
+        <div class="mb-4 p-4 bg-warning/10 border border-warning/20 rounded-[var(--radius-lg)]">
+          <h4 class="font-medium text-warning mb-2 flex items-center gap-2">
             <Icon name="heroicons:wrench-screwdriver" class="w-4 h-4" />
             Debug Controls
           </h4>

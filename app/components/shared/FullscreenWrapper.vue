@@ -97,9 +97,9 @@ defineExpose({
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 90vw;
+  width: 97vw;
   height: 100vh;
-  max-width: var(--fs-max-width, 1200px);
+  max-width: var(--fs-max-width, 1400px);
   max-height: var(--fs-max-height, 95vh);
   z-index: 20;
 
@@ -108,7 +108,7 @@ defineExpose({
   overflow: hidden;
 
   background: var(--color-background, white);
-  border-radius: 12px;
+  border-radius: 8px;
   border: 1px solid var(--color-border, rgba(0, 0, 0, 0.1));
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
 
@@ -197,9 +197,11 @@ defineExpose({
 /* ===== Mobile ===== */
 @media (max-width: 768px) {
   .fullscreen-container {
-    width: 99vw;
-    height: 95vh;
-    border-radius: 8px;
+    width: 97vw;
+    height: 98vh;
+    border-radius: 4px;
+    max-height: var(--fs-max-height, 98vh);
+
   }
 
   .fullscreen-header,

@@ -11,7 +11,7 @@
       </Transition>
       <!-- Close Button - Premium Glass Style -->
       <button @click="handleClose"
-        class="absolute top-4 right-6 z-20 h-8 w-8 flex items-center justify-center rounded-xl bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/5 shadow-lg active:scale-90 transition-all cursor-pointer"
+        class="absolute top-4 right-6 z-20 h-8 w-8 flex items-center justify-center rounded-[var(--radius-xl)] bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/5 shadow-lg active:scale-90 transition-all cursor-pointer"
         aria-label="Close Learning Hub">
         <icon name="i-lucide-x" :size="20" class="text-light" />
       </button>

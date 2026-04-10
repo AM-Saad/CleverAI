@@ -49,10 +49,10 @@ const sizeClasses = {
   base: "text-base leading-tight",
   lg: "text-lg leading-tight",
   xl: "text-xl leading-tight",
-  "2xl": "text-2xl leading-tight",
-  "3xl": "text-3xl leading-tight",
-  "4xl": "text-4xl leading-tight",
-  "5xl": "text-5xl leading-tight",
+  "2xl": "text-2xl leading-tight tracking-tight",
+  "3xl": "text-3xl leading-tight tracking-tight",
+  "4xl": "text-4xl leading-tight tracking-tighter",
+  "5xl": "text-5xl leading-tight tracking-tighter",
 };
 
 const weightClasses = {

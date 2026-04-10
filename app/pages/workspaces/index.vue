@@ -71,9 +71,6 @@ onMounted(() => {
     <review-status-card class="mb-6" :show-context="false"
       empty-message="Enroll flashcards or materials to start reviewing" />
 
-    <!-- Board Notes Section -->
-    <board-notes-section />
-
     <shared-error-message v-if="error" :error="error" :refresh="refresh" />
 
     <div>
@@ -107,7 +104,7 @@ onMounted(() => {
           </ui-card>
         </div>
       </div>
-      <div v-if="!loading && !workspaces?.length" class="text-gray-500">
+      <div v-if="!loading && !workspaces?.length" class="text-content-secondary">
         No workspaces found.
       </div>
       <ul v-if="workspaces && workspaces?.length > 0 && !loading"

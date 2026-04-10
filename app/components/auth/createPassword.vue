@@ -88,13 +88,13 @@ const handleSubmit = async (): Promise<void> => {
             class="input" placeholder="Add your password..." autocomplete="false | unknown-autocomplete-value"
             tabindex="1" label="Password" />
           <div v-if="strengthScore !== null" class="mt-1">
-            <div class="h-1 w-full bg-gray-200 rounded">
+            <div class="h-1 w-full bg-secondary rounded-[var(--radius-sm)]">
               <div class="h-1 rounded transition-all" :style="{
                 width: `${((strengthScore ?? 0) + 1) * 20}%`,
-                backgroundColor: strengthScore! >= 3 ? '#16a34a' : strengthScore! >= 2 ? '#f59e0b' : '#ef4444'
+                backgroundColor: strengthScore! >= 3 ? 'var(--color-success)' : strengthScore! >= 2 ? 'var(--color-warning)' : 'var(--color-error)'
               }" />
             </div>
-            <ui-paragraph size="xs" color="muted" class="mt-1">Strength: {{ strengthLabel }}</ui-paragraph>
+            <ui-paragraph size="xs" color="content-secondary" class="mt-1">Strength: {{ strengthLabel }}</ui-paragraph>
           </div>
 
         </div>
@@ -105,19 +105,19 @@ const handleSubmit = async (): Promise<void> => {
         </div>
         <div class="mt-2 space-y-1 text-xs">
           <div
-            :class="{ 'text-green-600': /[A-Z]/.test(credentials.password || ''), 'text-gray-500': !/[A-Z]/.test(credentials.password || '') }">
+            :class="{ 'text-success': /[A-Z]/.test(credentials.password || ''), 'text-content-disabled': !/[A-Z]/.test(credentials.password || '') }">
             • Uppercase letter</div>
           <div
-            :class="{ 'text-green-600': /[a-z]/.test(credentials.password || ''), 'text-gray-500': !/[a-z]/.test(credentials.password || '') }">
+            :class="{ 'text-success': /[a-z]/.test(credentials.password || ''), 'text-content-disabled': !/[a-z]/.test(credentials.password || '') }">
             • Lowercase letter</div>
           <div
-            :class="{ 'text-green-600': /\d/.test(credentials.password || ''), 'text-gray-500': !/\d/.test(credentials.password || '') }">
+            :class="{ 'text-success': /\d/.test(credentials.password || ''), 'text-content-disabled': !/\d/.test(credentials.password || '') }">
             • Number</div>
           <div
-            :class="{ 'text-green-600': /[^A-Za-z0-9]/.test(credentials.password || ''), 'text-gray-500': !/[^A-Za-z0-9]/.test(credentials.password || '') }">
+            :class="{ 'text-success': /[^A-Za-z0-9]/.test(credentials.password || ''), 'text-content-disabled': !/[^A-Za-z0-9]/.test(credentials.password || '') }">
             • Symbol</div>
           <div
-            :class="{ 'text-green-600': (credentials.password || '').length >= 8, 'text-gray-500': (credentials.password || '').length < 8 }">
+            :class="{ 'text-success': (credentials.password || '').length >= 8, 'text-content-disabled': (credentials.password || '').length < 8 }">
             • At least 8 characters</div>
         </div>
       </div>

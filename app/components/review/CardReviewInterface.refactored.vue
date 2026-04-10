@@ -55,7 +55,7 @@
     <review-card-display v-if="currentCard && !isLoading && !error" :card="currentCard" :show-answer="showAnswer" />
 
     <!-- Action Buttons -->
-    <div v-if="currentCard && !isLoading && !error" class="border-t bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
+    <div v-if="currentCard && !isLoading && !error" class="border-t bg-surface p-6 rounded-[var(--radius-lg)]">
       <!-- Show Answer Button -->
       <review-answer-reveal-button v-if="!showAnswer" :is-submitting="isSubmitting" @reveal="revealAnswer" />
 

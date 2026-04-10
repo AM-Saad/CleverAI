@@ -1,8 +1,8 @@
 <template>
-  <UTooltip :text="title" :disabled="!title" :delay-duration="200" :popper="{ placement: 'top' }"
-    :disableClosingTrigger="true" :shortcuts="shortcuts">
+  <UTooltip :text="title" :disabled="!title" :delay-duration="200" :content="{ side: 'top', sideOffset: 6 }"
+    :shortcuts="shortcuts">
     <button type="button" :class="[
-      'inline-flex items-center justify-center gap-1.5 rounded-md text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20',
+      'inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-md)] text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20',
       active ? 'bg-primary/10 text-primary shadow-sm' : colorClasses,
       disabled ? 'opacity-50 cursor-not-allowed' : '',
       (($slots.default && !iconOnly) || label) ? 'px-2.5 py-1.5' : 'w-8 h-8'

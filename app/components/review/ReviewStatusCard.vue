@@ -21,7 +21,7 @@
 
     <!-- Empty State (no cards enrolled) -->
     <div v-if="isEmpty && !isLoading && !error" :class="`text-center ${minimal ? 'flex items-center gap-2' : ''}`">
-      <Icon name="heroicons:academic-cap" class="text-gray-400" :size="UI_CONFIG.ICON_SIZE" />
+      <Icon name="heroicons:academic-cap" class="text-content-disabled" :size="UI_CONFIG.ICON_SIZE" />
       <ui-paragraph size="xs">
         {{ emptyMessage }}
       </ui-paragraph>
@@ -54,30 +54,30 @@
       <!-- Stats Grid - Full variant for default/outline -->
       <div v-if="!minimal" class="flex md:justify-end justify-start gap-1 text-center w-full overflow-auto">
         <u-badge class="flex grid-1" variant="soft" color="error">
-          <div class="text-red-700 dark:text-red-300">Due</div>
+          <div class="text-error">Due</div>
 
-          <div class="text-red-600 dark:text-red-400">
+          <div class="text-error">
             {{ stats?.due ?? 0 }}
           </div>
         </u-badge>
         <u-badge class="flex grid-1" variant="soft" color="primary">
-          <div class="text-blue-700 dark:text-blue-300">New</div>
+          <div class="text-info">New</div>
 
-          <div class="text-blue-600 dark:text-blue-400">
+          <div class="text-info">
             {{ stats?.new ?? 0 }}
           </div>
         </u-badge>
         <u-badge class="flex grid-1" variant="soft" color="warning">
-          <div class="text-orange-700 dark:text-orange-300">Learning</div>
+          <div class="text-warning">Learning</div>
 
-          <div class="text-orange-600 dark:text-orange-400">
+          <div class="text-warning">
             {{ stats?.learning ?? 0 }}
           </div>
         </u-badge>
         <u-badge class="flex grid-1" variant="soft" color="success">
-          <div class="text-green-700 dark:text-green-300">Mature</div>
+          <div class="text-success">Mature</div>
 
-          <div class="text-green-600 dark:text-green-400">
+          <div class="text-success">
             {{ stats?.mature ?? 0 }}
           </div>
         </u-badge>
@@ -85,9 +85,8 @@
 
 
       <!-- Context info (workspace name) if available -->
-      <div v-if="stats?.context?.workspaceTitle && showContext"
-        class="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-        <div class="flex items-center text-sm text-gray-500">
+      <div v-if="stats?.context?.workspaceTitle && showContext" class="mt-3 pt-3 border-t border-secondary">
+        <div class="flex items-center text-sm text-content-secondary">
           <Icon name="heroicons:workspace" class="w-4 h-4 mr-1" />
           {{ stats.context.workspaceTitle }}
         </div>
@@ -173,7 +172,7 @@ const urgencyIndicatorClass = computed(() => {
     case "medium":
       return "bg-orange-500";
     case "low":
-      return "bg-blue-500";
+      return "bg-info";
     default:
       return "bg-green-500";
   }

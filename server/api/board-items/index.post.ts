@@ -36,6 +36,9 @@ export default defineEventHandler(async (event) => {
       tags: data.tags || [],
       order: nextOrder,
       columnId: data.columnId || null,
+      workspaceId: data.workspaceId || null,
+      dueDate: data.dueDate ? new Date(data.dueDate as string) : null,
+      attachments: data.attachments || [],
     },
   });
 

@@ -231,14 +231,16 @@ function handleDragEnd(_: Event, info: DragInfo) {
             }
           }
         "></div>
-      <Motion ref="formRef" as="div" :initial="mode.axis === 'y' ? { y: props.show ? mode.open : mode.closed } : { x: props.show ? mode.open : mode.closed }"
-        :animate="mode.axis === 'y' ? { y: targetPos } : { x: targetPos }" :transition="isReady ? transitionProps : { duration: 0 }"
-        :drag="suspendDrag ? false : mode.axis" :drag-constraints="mode.constraints" :drag-elastic="0"
-        :drag-snap-to-origin="false" :drag-momentum="false" :on-drag-start="handleDragStart"
-        :on-drag-end="handleDragEnd" :class="[
-          'absolute cursor-grab active:cursor-grabbing overflow-hidden bg-surface backdrop-blur shadow-lg z-50 focus-visible:border border-primary',
+      <Motion ref="formRef" as="div"
+        :initial="mode.axis === 'y' ? { y: props.show ? mode.open : mode.closed } : { x: props.show ? mode.open : mode.closed }"
+        :animate="mode.axis === 'y' ? { y: targetPos } : { x: targetPos }"
+        :transition="isReady ? transitionProps : { duration: 0 }" :drag="suspendDrag ? false : mode.axis"
+        :drag-constraints="mode.constraints" :drag-elastic="0" :drag-snap-to-origin="false" :drag-momentum="false"
+        :on-drag-start="handleDragStart" :on-drag-end="handleDragEnd" :class="[
+          'absolute cursor-grab active:cursor-grabbing overflow-hidden bg-white/20 backdrop-blur-md shadow-lg z-50 focus-visible:border border-primary',
           mode.containerClass,
-        ]" :style="{ ...mode.style, ...(!isReady ? { visibility: 'hidden', opacity: 0 } : {}) }" role="dialog" aria-modal="true" :aria-labelledby="'drawer-title'">
+        ]" :style="{ ...mode.style, ...(!isReady ? { visibility: 'hidden', opacity: 0 } : {}) }" role="dialog"
+        aria-modal="true" :aria-labelledby="'drawer-title'">
         <div ref="panelEl" tabindex="-1" :class="[
           'relative h-full focus-visible:outline-none',
           mode.isMobile ? 'p-3 pt-6' : 'p-3 pl-7',

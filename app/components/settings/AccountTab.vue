@@ -40,7 +40,7 @@
                     </UiLabel>
                 </div>
 
-                <div v-else class="text-center py-8 text-gray-500">
+                <div v-else class="text-center py-8 text-content-secondary">
                     Failed to load profile data
                 </div>
             </template>

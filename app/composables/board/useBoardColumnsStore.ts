@@ -3,7 +3,6 @@ import type Result from "@/types/Result";
 import { DB_CONFIG } from "~/utils/constants/pwa";
 import { openUnifiedDB, putRecord, getAllRecords } from "~/utils/idb";
 import type { BoardColumn } from "~/shared/utils/boardColumn.contract";
-import type { STORES } from "~/utils/constants/pwa";
 
 export interface BoardColumnState extends BoardColumn {
   // Local state tracking
@@ -27,6 +26,7 @@ interface BoardColumnsStore {
 
 // Global store instance - single instance per user
 let storeInstance: BoardColumnsStore | null = null;
+let storeWorkspaceId: string | undefined = undefined;
 
 // Abort controller for reorder operations
 let reorderAbortController: AbortController | null = null;
@@ -35,9 +35,10 @@ let reorderAbortController: AbortController | null = null;
  * Creates or returns the board columns store for the current user
  * This provides local state management with optimistic updates
  */
-export function useBoardColumnsStore(): BoardColumnsStore {
+export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
+  console.log("useBoardColumnsStore", workspaceId);
   // Return existing store if available
-  if (storeInstance) {
+  if (storeInstance && workspaceId === storeWorkspaceId) {
     return storeInstance;
   }
 
@@ -57,6 +58,7 @@ export function useBoardColumnsStore(): BoardColumnsStore {
       userId: "", // Will be set by server
       name,
       order: columns.value.size,
+      workspaceId: workspaceId,
       createdAt: new Date(),
       updatedAt: new Date(),
       isLoading: true,
@@ -69,7 +71,7 @@ export function useBoardColumnsStore(): BoardColumnsStore {
     await saveColumnToIndexedDB(optimisticColumn);
 
     try {
-      const result = await $api.boardColumns.create({ name });
+      const result = await $api.boardColumns.create({ name, workspaceId });
 
       if (result.success) {
         // Remove temp, add real
@@ -279,8 +281,9 @@ export function useBoardColumnsStore(): BoardColumnsStore {
   // Load columns from server with IndexedDB fallback
   const syncWithServer = async (): Promise<void> => {
     loadingStates.value.set("global", true);
+    console.log("syncing with server", workspaceId)
     try {
-      const result = await $api.boardColumns.getAll();
+      const result = await $api.boardColumns.getAll(workspaceId);
 
       if (result.success) {
         const tempColumns = Array.from(columns.value.values()).filter((c) =>
@@ -371,6 +374,7 @@ export function useBoardColumnsStore(): BoardColumnsStore {
 
   // Cache the store
   storeInstance = store;
+  storeWorkspaceId = workspaceId;
 
   // Auto-sync on creation
   syncWithServer();
