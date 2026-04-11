@@ -29,6 +29,34 @@ export class OpenAIStrategy implements LLMStrategy {
     this.onMeasure = onMeasure;
   }
 
+  /** Raw text generation — single chat completion, returns raw string. */
+  async generateText(prompt: string): Promise<string> {
+    if (process.env.OPENAI_MOCK === "1") {
+      return "{}";
+    }
+    try {
+      const res = await this.client.chat.completions.create({
+        model: this.modelId,
+        messages: [{ role: "user", content: prompt }],
+      });
+      const promptTokens = Number(res.usage?.prompt_tokens ?? 0);
+      const completionTokens = Number(res.usage?.completion_tokens ?? 0);
+      this.onMeasure?.({
+        provider: "openai",
+        model: this.modelId,
+        promptTokens,
+        completionTokens,
+        totalTokens: promptTokens + completionTokens,
+        requestId: res.id,
+        rawUsage: res.usage,
+        meta: {},
+      });
+      return res.choices?.[0]?.message?.content?.trim() ?? "";
+    } catch (error: any) {
+      throw createError({ statusCode: 502, statusMessage: `OpenAI error: ${error.message}` });
+    }
+  }
+
   async generateFlashcards(input: string, options?: LLMGenerationOptions): Promise<FlashcardDTO[]> {
     const itemCount = options?.itemCount ?? 5;
 

@@ -33,6 +33,8 @@ model User {
     scheduledNotifications    ScheduledNotification[]
     notificationPreferences   UserNotificationPreferences?
     llmGatewayLogs            LlmGatewayLog[]
+    languageWords             LanguageWord[]               @relation("UserLanguageWords")
+    languagePreferences       UserLanguagePreferences?
 
     // --- Authentication fields ---
     credentials           Json?
@@ -575,4 +577,87 @@ model LlmGatewayLog {
     @@index([selectedModelId, status])
     @@index([task, status])
     @@map("llm_gateway_logs")
+}
+
+// =========================
+// LANGUAGE LEARNING MODELS
+// =========================
+
+model LanguageWord {
+    id              String               @id @default(auto()) @map("_id") @db.ObjectId
+    user            User                 @relation("UserLanguageWords", fields: [userId], references: [id], onDelete: Cascade)
+    userId          String               @db.ObjectId
+    word            String
+    translation     String
+    translationLang String               @default("en")
+    sourceLang      String               @default("auto")
+    partOfSpeech    String?              @default("unknown")
+    phonetic        String?
+    sourceContext   String?
+    sourceType      String               @default("manual")
+    sourceRefId     String?              @db.ObjectId
+    relatedWordIds  String[]             @db.ObjectId
+    status          String               @default("captured")
+    createdAt       DateTime             @default(now())
+    updatedAt       DateTime             @updatedAt
+    stories         LanguageStory[]
+    reviews         LanguageCardReview[]
+
+    @@index([userId, status])
+    @@index([userId, createdAt])
+    @@index([userId, word, translationLang])
+}
+
+model LanguageStory {
+    id        String               @id @default(auto()) @map("_id") @db.ObjectId
+    word      LanguageWord         @relation(fields: [wordId], references: [id], onDelete: Cascade)
+    wordId    String               @db.ObjectId
+    userId    String               @db.ObjectId
+    storyText String
+    sentences Json
+    modelId   String?
+    rating    Int?
+    createdAt DateTime             @default(now())
+    reviews   LanguageCardReview[]
+
+    @@index([wordId])
+    @@index([userId])
+}
+
+model LanguageCardReview {
+    id             String         @id @default(auto()) @map("_id") @db.ObjectId
+    userId         String         @db.ObjectId
+    wordId         String         @db.ObjectId
+    word           LanguageWord   @relation(fields: [wordId], references: [id], onDelete: Cascade)
+    storyId        String?        @db.ObjectId
+    story          LanguageStory? @relation(fields: [storyId], references: [id], onDelete: SetNull)
+    intervalDays   Int            @default(0)
+    easeFactor     Float          @default(2.5)
+    repetitions    Int            @default(0)
+    nextReviewAt   DateTime
+    lastReviewedAt DateTime?
+    lastGrade      Int?
+    streak         Int            @default(0)
+    suspended      Boolean        @default(false)
+    createdAt      DateTime       @default(now())
+    updatedAt      DateTime       @updatedAt
+
+    @@unique([userId, wordId], name: "userId_wordId")
+    @@index([userId, nextReviewAt])
+}
+
+model UserLanguagePreferences {
+    id               String   @id @default(auto()) @map("_id") @db.ObjectId
+    user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+    userId           String   @unique @db.ObjectId
+    enabled          Boolean  @default(true)
+    targetLanguage   String   @default("en")
+    nativeLanguage   String   @default("auto")
+    autoEnroll       Boolean  @default(true)
+    sessionCardLimit Int      @default(12)
+    showConsent      Boolean  @default(true)
+    createdAt        DateTime @default(now())
+    updatedAt        DateTime @updatedAt
+
+    @@map("userLanguagePreferences")
 }

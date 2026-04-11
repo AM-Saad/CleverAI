@@ -19,4 +19,6 @@ export interface LLMGenerationOptions {
 export interface LLMStrategy {
   generateFlashcards(input: string, options?: LLMGenerationOptions): Promise<FlashcardDTO[]>;
   generateQuiz(input: string, options?: LLMGenerationOptions): Promise<QuizQuestionDTO[]>;
+  /** Raw text generation — used by language module and any non-domain callers. */
+  generateText(prompt: string): Promise<string>;
 }

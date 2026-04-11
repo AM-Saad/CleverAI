@@ -3,3 +3,4 @@ export * from "./useSheetMotion";
 export * from "./useMotionCommon";
 export * from "./useFocusTrap";
 export * from "./useFullscreenModal";
+export * from "./useQuickCaptureModal";

@@ -45,6 +45,11 @@
 
 
         <div v-if="status === 'authenticated'" class="flex gap-5 items-center">
+          <NuxtLink to="/language">
+            <u-button variant="ghost" size="sm" title="Language">
+              <Icon name="i-lucide-languages" class="w-4 h-4" />
+            </u-button>
+          </NuxtLink>
           <SharedCreditsPill />
           <ui-dropdown-menu />
         </div>
@@ -72,6 +77,10 @@
       <ServiceWorkerUpdateNotification mode="banner" />
       <SharedAIModalStatus />
       <slot />
+      <language-quick-capture-button v-if="status === 'authenticated'" />
+      <!-- Single global CreditsWallet — opened via creditsStore.openWallet() from anywhere in the app -->
+      <shared-credits-wallet v-if="status === 'authenticated'" :is-open="creditsStore.isWalletOpen"
+        @close="creditsStore.closeWallet()" />
     </div>
     <footer class="xl:container mx-auto rounded-sm  h-10 dark:bg-transparent" style="flex: 0 0 auto;">
       <div class="footer-wrapper grid">
@@ -109,6 +118,8 @@ console.log("🏗️ [LAYOUT] Default layout script setup initializing...");
 
 const { status } = useAuth();
 console.log("🏗️ [LAYOUT] Auth status:", status.value);
+
+const creditsStore = useCreditsStore();
 
 // Use the centralized SW bridge
 const sw = useServiceWorkerBridge();

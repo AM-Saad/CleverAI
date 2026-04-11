@@ -32,7 +32,7 @@ type MobileProp = boolean | "auto";
 const props = withDefaults(defineProps<DrawerProps>(), {
   side: "right",
   mobile: "auto",
-  breakpoint: "(max-width: 639px)",
+  breakpoint: "(max-width: 767px)",
   handleVisible: 32,
   sheetHeight: "80vh",
   widthClasses: "w-full sm:w-[22rem] lg:w-[28rem] max-w-[90vw]",
@@ -75,7 +75,7 @@ const mode = computed(() => {
       open: sheet.open,
       closed: sheet.closed.value,
       constraints: { top: sheet.open, bottom: sheet.closed.value },
-      containerClass: `left-0 right-0 bottom-0 w-full rounded-t-lg`,
+      containerClass: `left-0 right-0 bottom-0 w-full rounded-t-[var(--radius-2xl)]`,
       style: sheet.style,
       isMobile: true,
       handleClass: undefined as unknown as string,
@@ -102,6 +102,12 @@ const targetPos = ref(props.show ? mode.value.open : mode.value.closed);
 const startPos = ref(0);
 const suspendDrag = ref(false);
 const isReady = ref(false);
+
+// When teleporting to a specific container (e.g. #notes-section), position
+// must be absolute (relative to container). Only use fixed when going to body.
+const positionClass = computed(() =>
+  props.teleportTo === "body" ? "fixed" : "absolute"
+);
 
 function isInteractive(el: EventTarget | null): boolean {
   const node = el as HTMLElement | null;
@@ -165,6 +171,16 @@ watch(
     snapTo(v ? mode.value.open : mode.value.closed);
   }
 );
+
+// When the viewport crosses the breakpoint, the axis flips (x ↔ y).
+// Re-snap targetPos so the panel doesn't appear offset in the new mode.
+watch(isMobile, () => {
+  drawer.recompute();
+  sheet.recompute();
+  nextTick(() => {
+    snapTo(props.show ? mode.value.open : mode.value.closed);
+  });
+});
 
 watch(
   () => props.show,
@@ -232,12 +248,12 @@ function handleDragEnd(_: Event, info: DragInfo) {
           }
         "></div>
       <Motion ref="formRef" as="div"
-        :initial="mode.axis === 'y' ? { y: props.show ? mode.open : mode.closed } : { x: props.show ? mode.open : mode.closed }"
-        :animate="mode.axis === 'y' ? { y: targetPos } : { x: targetPos }"
+        :initial="mode.axis === 'y' ? { y: props.show ? mode.open : mode.closed, x: 0 } : { x: props.show ? mode.open : mode.closed, y: 0 }"
+        :animate="mode.axis === 'y' ? { y: targetPos, x: 0 } : { x: targetPos, y: 0 }"
         :transition="isReady ? transitionProps : { duration: 0 }" :drag="suspendDrag ? false : mode.axis"
         :drag-constraints="mode.constraints" :drag-elastic="0" :drag-snap-to-origin="false" :drag-momentum="false"
         :on-drag-start="handleDragStart" :on-drag-end="handleDragEnd" :class="[
-          'absolute cursor-grab active:cursor-grabbing overflow-hidden bg-white/20 backdrop-blur-md shadow-lg z-50 focus-visible:border border-primary',
+          positionClass, 'cursor-grab active:cursor-grabbing overflow-hidden bg-white/20 backdrop-blur-md shadow-lg z-50 focus-visible:border border-primary',
           mode.containerClass,
         ]" :style="{ ...mode.style, ...(!isReady ? { visibility: 'hidden', opacity: 0 } : {}) }" role="dialog"
         aria-modal="true" :aria-labelledby="'drawer-title'">

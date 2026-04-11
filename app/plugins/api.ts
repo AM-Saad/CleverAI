@@ -75,6 +75,7 @@ export default defineNuxtPlugin((_nuxtApp) => {
     user: apiServiceFactory.create("user"),
     userTags: apiServiceFactory.create("userTags"),
     gateway: apiServiceFactory.create("gateway"),
+    language: apiServiceFactory.create("language"),
   };
 
   console.log("🌐 [API PLUGIN] API services created:", Object.keys(services));

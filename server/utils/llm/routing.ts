@@ -6,7 +6,7 @@ import { estimateTokensFromText } from './tokenEstimate'
 
 export interface RoutingContext {
   userId: string
-  task: 'flashcards' | 'quiz' | 'chat'
+  task: 'flashcards' | 'quiz' | 'chat' | 'language_translate' | 'language_story'
   inputText: string
   requiredCapability?: string
   estimatedOutputTokens?: number
@@ -90,7 +90,7 @@ export async function selectBestModel(
   if (ctx.preferredModelId) {
     const baseModelId = ctx.preferredModelId.split(':')[0]
     const suffix = ctx.preferredModelId.includes(':') ? `:${ctx.preferredModelId.split(':')[1]}` : ''
-    
+
     const preferred = await prisma.llmModelRegistry.findUnique({
       where: {
         modelId: baseModelId,

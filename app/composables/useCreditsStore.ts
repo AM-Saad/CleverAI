@@ -3,6 +3,7 @@ export const useCreditsStore = defineStore('credits', () => {
   const balance = ref(0)
   const loading = ref(false)
   const error = ref<string | null>(null)
+  const isWalletOpen = ref(false)
 
   async function fetchBalance() {
     loading.value = true
@@ -28,7 +29,10 @@ export const useCreditsStore = defineStore('credits', () => {
     }
   }
 
+  function openWallet() { isWalletOpen.value = true }
+  function closeWallet() { isWalletOpen.value = false }
+
   const hasCredits = computed(() => balance.value > 0)
 
-  return { balance, loading, error, hasCredits, fetchBalance, spendCredit }
+  return { balance, loading, error, hasCredits, isWalletOpen, openWallet, closeWallet, fetchBalance, spendCredit }
 })
