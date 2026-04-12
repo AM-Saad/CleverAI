@@ -1,6 +1,6 @@
 <template>
   <component :is="tag" :class="[
-    'ui-card overflow-auto',
+    'ui-card',
     variantClasses[variant],
     shadowClasses[shadow],
     hoverClasses[hover],
@@ -120,9 +120,11 @@ const combinedContentClasses = ["ui-card__content", contentClasses].join(" ");
 
 
 .ui-card__content {
+  display: flex;
+  flex-direction: column;
   flex: 1 1 auto;
   min-height: 0;
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .ui-card__footer {

@@ -138,8 +138,10 @@ function onPointerCancelCapture() {
 }
 
 const showOverlay = computed(() => {
-  // Show when explicitly open or not snapped to the closed position
-  return Math.abs(targetPos.value - mode.value.closed) > 1;
+  // Backdrop is visible if and only if the user has explicitly opened the drawer.
+  // Using props.show avoids false positives when the axis flips on screen resize
+  // (targetPos vs mode.closed briefly diverge during the mode switch).
+  return props.show && isReady.value;
 });
 let alive = true;
 onBeforeUnmount(() => {
@@ -173,12 +175,31 @@ watch(
 );
 
 // When the viewport crosses the breakpoint, the axis flips (x ↔ y).
-// Re-snap targetPos so the panel doesn't appear offset in the new mode.
-watch(isMobile, () => {
-  drawer.recompute();
-  sheet.recompute();
+// We must synchronously land targetPos on the new coordinate space
+// before Vue re-renders, otherwise motion-v animates from the old axis
+// value to the new one and the backdrop fires a false positive.
+watch(isMobile, (mobile) => {
+  // 1. Prevent backdrop + hide panel so stale coordinates are invisible.
+  isReady.value = false;
+
+  // 2. Synchronously move to the correct closed/open position in the new
+  //    coordinate system.  Both motion composables pre-compute a reasonable
+  //    initial estimate from window dimensions, so this is accurate enough.
+  targetPos.value = props.show
+    ? 0 // open = 0 in both drawer (x) and sheet (y) modes
+    : (mobile ? sheet.closed.value : drawer.closed.value);
+
+  // 3. Let Vue settle, then remeasure actual DOM dimensions and re-snap
+  //    to the precisely measured closed position.
   nextTick(() => {
-    snapTo(props.show ? mode.value.open : mode.value.closed);
+    drawer.recompute();
+    sheet.recompute();
+    nextTick(() => {
+      targetPos.value = props.show ? mode.value.open : mode.value.closed;
+      requestAnimationFrame(() => {
+        isReady.value = true;
+      });
+    });
   });
 });
 

@@ -29,7 +29,8 @@ const emit = defineEmits<{
   <div
     class="shared-note-toolbar relative flex items-center justify-between gap-1.5 flex-nowrap overflow-hidden rounded-t-[var(--radius-lg)] bg-surface p-1.5 border-b border-secondary">
     <!-- Left/Primary Area: Note-type specific tools -->
-    <div class="flex items-center gap-1.5 flex-nowrap flex-1 min-w-0 overflow-x-auto no-scrollbar scroll-smooth">
+    <div
+      class="flex flex-1 flex-nowrap gap-1.5 items-center min-w-0 no-scrollbar overflow-x-auto rounded-lg scroll-smooth shadow-inner">
       <slot name="default"></slot>
     </div>
 

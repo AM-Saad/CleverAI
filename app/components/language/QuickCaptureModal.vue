@@ -53,24 +53,44 @@
               :exit="{ opacity: 0, y: stateDirection * 20 }" :transition="{ duration: 0.18, ease: 'easeInOut' }">
               <div class="space-y-4">
                 <div ref="inputContainerRef">
-                  <u-input v-model="wordInput" size="lg" placeholder="Type a word or phrase…" class="w-full"
+                  <shared-autocomplete-input v-model="wordInput" size="lg" placeholder="Type a word or phrase…"
+                    :suggestions="wordSuggestionsArr" class="w-full" @query="handleWordQuery" @accept="handleWordAccept"
                     @keyup.enter="handleCapture" />
+                  <!-- Live interim speech transcript -->
+                  <Transition name="ctx">
+                    <p v-if="isListening && !usingFallback && interimTranscript"
+                      class="mt-2 text-sm text-primary text-center italic select-none animate-pulse">
+                      “{{ interimTranscript }}”
+                    </p>
+                  </Transition>
                 </div>
 
                 <!-- Mic -->
-                <div class="flex justify-center">
-                  <button type="button" :disabled="recordingState === 'transcribing'" :class="[
+                <div class="flex flex-col items-center gap-1.5">
+                  <button type="button" :disabled="isProcessing" :class="[
                     'flex min-w-40 items-center justify-center gap-2 rounded-full border-2 px-5 py-2.5 text-sm font-medium transition-all duration-200 select-none',
-                    recordingState === 'idle'
+                    !isListening && !isProcessing
                       ? 'border-secondary bg-surface-strong text-content-secondary hover:border-primary/50 active:scale-95'
-                      : recordingState === 'recording'
+                      : isListening
                         ? 'border-error bg-error/10 text-error'
                         : 'cursor-not-allowed border-primary/20 bg-primary/10 opacity-60 text-content-secondary',
                   ]" @click="handleMicClick">
                     <Icon :name="micIcon" class="h-4 w-4 shrink-0"
-                      :class="recordingState === 'transcribing' ? 'animate-spin text-primary' : ''" />
+                      :class="isProcessing ? 'animate-spin text-primary' : ''" />
                     {{ micLabel }}
                   </button>
+                  <!-- Fallback indicator -->
+                  <Transition name="ctx">
+                    <span v-if="usingFallback && (isListening || isProcessing)"
+                      class="text-[11px] text-content-secondary flex items-center gap-1">
+                      <Icon name="i-lucide-cpu" class="h-3 w-3" />
+                      Using local AI
+                    </span>
+                  </Transition>
+                  <!-- Mic error -->
+                  <Transition name="ctx">
+                    <p v-if="micError" class="text-xs text-error text-center">{{ micError }}</p>
+                  </Transition>
                 </div>
 
                 <!-- Optional context -->
@@ -225,7 +245,8 @@
 
 <script setup lang="ts">
 import { AnimatePresence, motion } from 'motion-v';
-import { useSpeachToText } from '~/composables/ai/useSpeachToText';
+import { usePredictionaryInput } from '~/composables/usePredictionaryInput';
+import { useSpeechCapture } from '~/composables/useSpeechCapture';
 
 const props = defineProps<{ show: boolean }>();
 const emit = defineEmits<{ (e: 'close'): void }>();
@@ -281,62 +302,47 @@ const onBackdropClick = () => { if (!isLocked.value) handleClose(); };
 // ── Input ──────────────────────────────────────────────────────────────────────
 const wordInput = ref('');
 const contextInput = ref('');
+
+// ── Autocomplete ──────────────────────────────────────────────────────────────
+const { suggestions: wordSuggestions, onInput: predInput, onAccept: predAccept } = usePredictionaryInput();
+const wordSuggestionsArr = computed<string[]>(() => wordSuggestions.value.slice());
+const handleWordQuery = (val: string) => predInput(val);
+const handleWordAccept = (word: string) => { predAccept(word); };
 const showContext = ref(false);
 const inputContainerRef = ref<HTMLElement | null>(null);
 
 // ── Recording ──────────────────────────────────────────────────────────────────
-type RecordingState = 'idle' | 'recording' | 'transcribing';
-const recordingState = ref<RecordingState>('idle');
-const recordingSeconds = ref(0);
-let recordingTimer: ReturnType<typeof setInterval> | null = null;
-let activeRecorder: MediaRecorder | null = null;
-const { transcribe: _transcribe } = useSpeachToText();
+const {
+  isListening,
+  isProcessing,
+  usingFallback,
+  recordingSeconds,
+  interimTranscript,
+  error: micError,
+  start: startSpeech,
+  stop: stopSpeech,
+  cleanup: cleanupSpeech,
+} = useSpeechCapture({
+  maxDuration: 15,
+  onResult(transcript) { wordInput.value = transcript; },
+});
 
 const micIcon = computed(() => {
-  if (recordingState.value === 'transcribing') return 'i-lucide-loader-2';
-  if (recordingState.value === 'recording') return 'i-lucide-square';
+  if (isProcessing.value) return 'i-lucide-loader-2';
+  if (isListening.value) return 'i-lucide-square';
   return 'i-lucide-mic';
 });
 const micLabel = computed(() => {
-  if (recordingState.value === 'recording')
+  if (isListening.value && usingFallback.value)
     return `0:${String(recordingSeconds.value).padStart(2, '0')} — Stop`;
-  if (recordingState.value === 'transcribing') return 'Processing…';
+  if (isListening.value) return 'Listening… — Stop';
+  if (isProcessing.value) return 'Processing…';
   return 'Tap to speak';
 });
 
-const handleMicClick = async () => {
-  if (recordingState.value === 'recording') { activeRecorder?.stop(); return; }
-  if (recordingState.value !== 'idle') return;
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const rec = new MediaRecorder(stream);
-    activeRecorder = rec;
-    const chunks: Blob[] = [];
-    rec.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
-    rec.onstop = async () => {
-      stream.getTracks().forEach((t) => t.stop());
-      if (recordingTimer !== null) { clearInterval(recordingTimer); recordingTimer = null; }
-      if (chunks.length === 0) { recordingState.value = 'idle'; activeRecorder = null; return; }
-      recordingState.value = 'transcribing';
-      try {
-        const blob = new Blob(chunks, { type: 'audio/webm' });
-        const ab = await blob.arrayBuffer();
-        const ctx = new AudioContext({ sampleRate: 16000 });
-        const decoded = await ctx.decodeAudioData(ab);
-        const transcript = await _transcribe(decoded.getChannelData(0));
-        if (transcript) wordInput.value = transcript;
-      } catch { /* non-critical */ }
-      recordingState.value = 'idle';
-      activeRecorder = null;
-    };
-    rec.start();
-    recordingState.value = 'recording';
-    recordingSeconds.value = 0;
-    recordingTimer = setInterval(() => {
-      recordingSeconds.value++;
-      if (recordingSeconds.value >= 15) rec.stop();
-    }, 1000);
-  } catch { recordingState.value = 'idle'; }
+const handleMicClick = () => {
+  if (isListening.value) { stopSpeech(); return; }
+  startSpeech();
 };
 
 // ── Actions ────────────────────────────────────────────────────────────────────
@@ -359,10 +365,7 @@ const resetToIdle = () => {
   nextTick(() => inputContainerRef.value?.querySelector('input')?.focus());
 };
 const handleClose = () => {
-  if (activeRecorder) { try { activeRecorder.stop(); } catch { } activeRecorder = null; }
-  if (recordingTimer !== null) { clearInterval(recordingTimer); recordingTimer = null; }
-  recordingState.value = 'idle';
-  recordingSeconds.value = 0;
+  cleanupSpeech();
   dismissResult();
   wordInput.value = '';
   contextInput.value = '';

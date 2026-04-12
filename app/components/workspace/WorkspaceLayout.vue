@@ -6,7 +6,7 @@ const props = defineProps<{
   workspaceId: string;
 }>();
 
-const { isDesktop, isMobile } = useResponsive();
+const { isDesktop } = useResponsive();
 
 const {
   PANELS,
@@ -24,65 +24,15 @@ const {
   setActiveTab,
 } = useWorkspaceLayout(props.workspaceId);
 
-// ─── Mobile: scroll-snap + intersection observer ────────────────
-const scrollContainerRef = ref<HTMLElement | null>(null);
+// ─── Mobile: explicit tab switching (no swipe) ───────────────────
+const activePanelIndex = computed(() => {
+  const index = PANELS.findIndex((panel) => panel.id === activeTab.value);
+  return index === -1 ? 0 : index;
+});
 
 function scrollToTab(tab: PanelId) {
   setActiveTab(tab);
-  const idx = PANELS.findIndex((p) => p.id === tab);
-  const container = scrollContainerRef.value;
-  if (!container) return;
-  const panels = container.querySelectorAll<HTMLElement>(".mobile-panel");
-  panels[idx]?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
 }
-
-// IntersectionObserver to sync active tab with visible panel on swipe
-let observer: IntersectionObserver | null = null;
-
-function setupMobileObserver() {
-  if (!scrollContainerRef.value) return;
-
-  observer?.disconnect();
-  observer = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
-          const panelId = (entry.target as HTMLElement).dataset.panelId as PanelId;
-          if (panelId) {
-            activeTab.value = panelId;
-          }
-        }
-      }
-    },
-    {
-      root: scrollContainerRef.value,
-      threshold: 0.5,
-    }
-  );
-
-  nextTick(() => {
-    const panels = scrollContainerRef.value?.querySelectorAll<HTMLElement>(".mobile-panel");
-    panels?.forEach((el) => observer!.observe(el));
-  });
-}
-
-watch(isMobile, (mobile) => {
-  if (mobile) {
-    nextTick(setupMobileObserver);
-  } else {
-    observer?.disconnect();
-  }
-});
-
-onMounted(() => {
-  if (isMobile.value) {
-    nextTick(setupMobileObserver);
-  }
-});
-
-onBeforeUnmount(() => {
-  observer?.disconnect();
-});
 
 // ─── Desktop: Collapse button helpers ───────────────────────────
 function getCollapseIcon(panelId: PanelId): string {
@@ -163,26 +113,29 @@ defineExpose({
   </div>
 
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- MOBILE LAYOUT: Tab pills + scroll-snap swipeable panels        -->
+  <!-- MOBILE LAYOUT: Bottom tabs + translated panel track            -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <div v-else class="workspace-layout-mobile">
 
 
-    <!-- Swipeable panel container -->
-    <div ref="scrollContainerRef" class="mobile-panels-container">
-      <div v-for="panel in PANELS" :key="panel.id" class="mobile-panel" :data-panel-id="panel.id">
-        <slot :name="panel.id" />
+    <!-- Tab-controlled panel container -->
+    <div class="mobile-panels-container">
+      <div class="mobile-panels-track" :style="{ transform: `translateX(-${activePanelIndex * 100}%)` }">
+        <div v-for="panel in PANELS" :key="panel.id" class="mobile-panel" :data-panel-id="panel.id"
+          :aria-hidden="activeTab !== panel.id" :inert="activeTab !== panel.id">
+          <slot :name="panel.id" />
+        </div>
       </div>
     </div>
-    <!-- Tab pills -->
-    <div
-      class=" flex items-center justify-between gap-1.5 py-2 my-2 overflow-x-auto overflow-y-hidden shrink-0 bg-background mobile-tab-bar border-t border-surface">
-      <u-button v-for="panel in PANELS" :key="panel.id" @click="scrollToTab(panel.id)" size="lg"
-        :variant="activeTab === panel.id ? 'soft' : 'ghost'">
-        <u-icon :name="panel.icon" :size="UI_CONFIG.ICON_SIZE" />
-        <span>{{ panel.label }}</span>
-      </u-button>
-    </div>
+    <!-- Tab bar -->
+    <nav class="mobile-tab-bar" aria-label="Workspace sections">
+      <button v-for="panel in PANELS" :key="panel.id" type="button" :aria-selected="activeTab === panel.id"
+        :class="['mobile-tab-btn', activeTab === panel.id && 'is-active']" @click="scrollToTab(panel.id)">
+        <span class="mobile-tab-indicator" aria-hidden="true" />
+        <u-icon :name="panel.icon" class="mobile-tab-icon" />
+        <span class="mobile-tab-label">{{ panel.label }}</span>
+      </button>
+    </nav>
   </div>
 </template>
 
@@ -402,80 +355,99 @@ defineExpose({
   overflow: hidden;
 }
 
-/* ─── Tab Pills Bar ─────────────────────────────────────────────── */
+/* ─── Tab Bar ───────────────────────────────────────────────────── */
 
 .mobile-tab-bar {
-  /* display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  overflow-x: auto;
-  flex-shrink: 0;
-  border-bottom: 1px solid var(--ui-border, #e2e8f0);
-  background: var(--ui-bg, #fff);
-  scrollbar-width: none; */
-}
-
-.mobile-tab-bar::-webkit-scrollbar {
-  display: none;
-}
-
-.mobile-tab-pill {
   display: flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  background: var(--ui-bg, #fff);
+  border-top: 1px solid var(--ui-border, #e2e8f0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.mobile-tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  background: var(--ui-bg-muted, #f1f5f9);
-  color: var(--ui-text-dimmed, #64748b);
-  flex: 1 1 0;
   justify-content: center;
-  min-height: 40px;
+  gap: 3px;
+  min-height: 52px;
+  padding: 6px 4px 8px;
+  position: relative;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  color: var(--ui-text-dimmed, #94a3b8);
+  transition: color 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.mobile-tab-pill.is-active {
+.mobile-tab-btn:active {
+  background: color-mix(in srgb, var(--color-primary, #6366f1) 6%, transparent);
+}
+
+.mobile-tab-btn.is-active {
+  color: var(--color-primary, #6366f1);
+}
+
+/* Active indicator line at the top of each tab */
+.mobile-tab-indicator {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 2px;
+  border-radius: 0 0 3px 3px;
   background: var(--color-primary, #6366f1);
-  color: white;
-  border-color: var(--color-primary, #6366f1);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--color-primary, #6366f1) 40%, transparent);
+  transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.mobile-tab-pill:not(.is-active):active {
-  background: var(--ui-bg-accented, #e2e8f0);
-  transform: scale(0.97);
+.mobile-tab-btn.is-active .mobile-tab-indicator {
+  width: 28px;
 }
 
-.tab-label {
+.mobile-tab-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.mobile-tab-btn.is-active .mobile-tab-icon {
+  transform: translateY(-1px);
+}
+
+.mobile-tab-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   line-height: 1;
+  white-space: nowrap;
 }
 
-/* ─── Swipeable Container ───────────────────────────────────────── */
+/* ─── Mobile Panel Track ────────────────────────────────────────── */
 
 .mobile-panels-container {
-  display: flex;
+  position: relative;
   flex: 1 1 auto;
   min-height: 0;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
+  overflow: hidden;
 }
 
-.mobile-panels-container::-webkit-scrollbar {
-  display: none;
+.mobile-panels-track {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  will-change: transform;
+  transition: transform 250ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .mobile-panel {
   flex: 0 0 100%;
   min-width: 100%;
-  scroll-snap-align: center;
   display: flex;
   flex-direction: column;
   min-height: 0;

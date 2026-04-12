@@ -1,7 +1,13 @@
 <script setup lang="ts">
-import Konva from "konva";
+import CanvasNoteToolbar from "./CanvasNoteToolbar.vue";
 import { useCanvasHistory } from "~/composables/ui/useCanvasHistory";
+import { useCanvasStageInteractions, type CanvasTool } from "~/composables/ui/useCanvasStageInteractions";
+import { useCanvasViewport } from "~/composables/ui/useCanvasViewport";
 import type { CanvasShape, CanvasNoteMetadata } from "@@/shared/utils/note.contract";
+import {
+  clampNumber,
+  type BoundsRect,
+} from "~/utils/canvas/geometry";
 
 /**
  * CanvasNoteEditor — Full-featured Konva canvas editor.
@@ -30,51 +36,123 @@ const emit = defineEmits<{
   (e: "delete"): void;
 }>();
 
+const DEFAULT_WORLD_BOUNDS: BoundsRect = {
+  left: -600,
+  top: -400,
+  right: 1600,
+  bottom: 1200,
+};
+const WORLD_MIN_WIDTH = 2200;
+const WORLD_MIN_HEIGHT = 1600;
+const CONTENT_EDGE_PADDING = 160;
+const WORLD_PADDING = 320;
+const VIEWPORT_FIT_RATIO = 0.78;
+const MINIMAP_WIDTH = 160;
+const MINIMAP_HEIGHT = 112;
+const STROKE_WIDTH_MIN = 0.5;
+const STROKE_WIDTH_MAX = 32;
+const SNAP_THRESHOLD_PX = 10;
+const SNAP_GUIDE_PADDING = 48;
+
 // ── State ──
 // Use JSON.parse(JSON.stringify) to strip Vue proxies to prevent DataCloneError on structuredClone
 const shapes = shallowRef<CanvasShape[]>(
   JSON.parse(JSON.stringify(props.initialMetadata?.shapes ?? []))
 );
-const selectedShapeId = ref<string | null>(null);
-const activeTool = ref<"select" | "hand" | "rect" | "circle" | "line" | "arrow" | "text" | "freedraw">("select");
-
 const fillColor = ref("#3b82f6");
 const strokeColor = ref("#1e293b");
 const strokeWidthState = ref(2);
 const strokeDashState = ref<number[] | undefined>(undefined);
+const strokeWidthInput = ref(String(strokeWidthState.value));
 
 // ── Stage Viewport (Infinite Canvas) ──
-const stageScale = ref(1);
-const stagePosition = ref({ x: 0, y: 0 });
-
 // ── Refs ──
 const stageRef = ref<any>(null);
 const transformerRef = ref<any>(null);
-const containerRef = ref<{ el: HTMLDivElement | null } | null>(null);
-const stageSize = ref({ width: 800, height: 400 });
+const isCanvasFocused = ref(false);
+const isAspectRatioLocked = ref(false);
 
 // ── History ──
 const { canUndo, canRedo, pushState, undo, redo } = useCanvasHistory(
   props.initialMetadata?.shapes ?? []
 );
 
-// ── Context menu ──
-const contextMenu = ref({
-  visible: false,
-  x: 0,
-  y: 0,
-  shapeId: null as string | null,
-});
-
-// ── Drawing state ──
-let isDrawing = false;
-let drawStart = { x: 0, y: 0 };
-let currentDrawId: string | null = null;
-let freeDrawPoints: number[] = [];
-
 // ── Auto-save ──
 const SAVE_TIMEOUT_MS = 1500;
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+const {
+  containerRef,
+  constrainStageDrag,
+  constrainStagePosition,
+  focusCanvasHome,
+  handleMinimapDrag,
+  handleMinimapPointer,
+  isMinimapCollapsed,
+  minimapRef,
+  minimapShapes,
+  minimapViewport,
+  stagePosition,
+  stageScale,
+  stageSize,
+  toggleMinimap,
+} = useCanvasViewport({
+  shapes,
+  isFullscreen: toRef(props, "isFullscreen"),
+  defaultWorldBounds: DEFAULT_WORLD_BOUNDS,
+  worldMinWidth: WORLD_MIN_WIDTH,
+  worldMinHeight: WORLD_MIN_HEIGHT,
+  contentEdgePadding: CONTENT_EDGE_PADDING,
+  worldPadding: WORLD_PADDING,
+  viewportFitRatio: VIEWPORT_FIT_RATIO,
+  minimapWidth: MINIMAP_WIDTH,
+  minimapHeight: MINIMAP_HEIGHT,
+});
+
+const {
+  activeTool,
+  bringForward,
+  bringToFront,
+  closeContextMenu,
+  contextMenu,
+  deleteSelected,
+  duplicateShape,
+  handleContextMenu,
+  handleDblClick,
+  handleShapeDragStart,
+  handleShapeDragEnd,
+  handleShapeDragMove,
+  handleStageDragEnd,
+  handleStageMouseDown,
+  handleStageMouseMove,
+  handleStageMouseUp,
+  handleStageWheel,
+  handleTransformEnd,
+  inputMode,
+  selectTool,
+  selectedShapeIds,
+  selectedShapeId,
+  selectionRect,
+  sendBackward,
+  sendToBack,
+  snapEnabled,
+  snapGuides,
+  clearSelection,
+  updateTransformer,
+} = useCanvasStageInteractions({
+  shapes,
+  fillColor,
+  strokeColor,
+  strokeWidth: strokeWidthState,
+  strokeDash: strokeDashState,
+  stageScale,
+  stagePosition,
+  constrainStagePosition,
+  transformerRef,
+  commitState,
+  snapThresholdPx: SNAP_THRESHOLD_PX,
+  snapGuidePadding: SNAP_GUIDE_PADDING,
+});
 
 function scheduleAutoSave() {
   if (saveTimer) clearTimeout(saveTimer);
@@ -90,13 +168,21 @@ function commitState() {
 
 // ── Apply Style to Selected ──
 function applyToSelected(overrides: Partial<CanvasShape>) {
-  if (!selectedShapeId.value) return;
-  const idx = shapes.value.findIndex((s) => s.id === selectedShapeId.value);
-  if (idx !== -1 && shapes.value[idx]) {
-    Object.assign(shapes.value[idx], overrides);
-    triggerRef(shapes);
-    commitState();
+  if (!selectedShapeIds.value.length) return;
+
+  let didUpdate = false;
+  for (const shapeId of selectedShapeIds.value) {
+    const shape = shapes.value.find((candidate) => candidate.id === shapeId);
+    if (!shape) continue;
+
+    Object.assign(shape, overrides);
+    didUpdate = true;
   }
+
+  if (!didUpdate) return;
+
+  triggerRef(shapes);
+  commitState();
 }
 
 function setFillColor(c: string) {
@@ -119,511 +205,78 @@ function setStrokeDash(d: number[] | undefined) {
   applyToSelected({ dash: d });
 }
 
-// ── Canvas sizing ──
-onMounted(() => {
-  if (containerRef.value?.el) {
-    const windowHeight = window.innerHeight;
-    const rect = containerRef.value.el.getBoundingClientRect();
-    // Default to a 60vh canvas size, to give plenty of space
-    stageSize.value = { width: rect.width, height: Math.max(windowHeight * 0.6, 400) };
+function syncStrokeWidthInput(value = strokeWidthState.value) {
+  strokeWidthInput.value = String(value);
+}
+
+function applyStrokeWidthInput() {
+  const parsed = Number(strokeWidthInput.value);
+  if (!Number.isFinite(parsed)) {
+    syncStrokeWidthInput();
+    return;
+  }
+
+  const next = Math.round(clampNumber(parsed, STROKE_WIDTH_MIN, STROKE_WIDTH_MAX) * 10) / 10;
+  setStrokeWidth(next);
+}
+
+watch(strokeWidthState, (value) => {
+  syncStrokeWidthInput(value);
+}, { immediate: true });
+
+const selectedShapes = computed(() => shapes.value.filter((shape) => selectedShapeIds.value.includes(shape.id)));
+const transformerEnabledAnchors = computed(() => {
+  const singleSelectedShape = selectedShapes.value.length === 1 ? selectedShapes.value[0] : null;
+  if (!singleSelectedShape) {
+    return [
+      "top-left",
+      "top-center",
+      "top-right",
+      "middle-right",
+      "bottom-right",
+      "bottom-center",
+      "bottom-left",
+      "middle-left",
+    ];
+  }
+
+  switch (singleSelectedShape.type) {
+    case "circle":
+    case "star":
+    case "text":
+      return ["top-left", "top-right", "bottom-right", "bottom-left"];
+    default:
+      return [
+        "top-left",
+        "top-center",
+        "top-right",
+        "middle-right",
+        "bottom-right",
+        "bottom-center",
+        "bottom-left",
+        "middle-left",
+      ];
   }
 });
 
-// Window resize listener
-onMounted(() => {
-  const resizeObserver = new ResizeObserver((entries) => {
-    for (const entry of entries) {
-      if (entry.target === containerRef.value?.el) {
-        stageSize.value = {
-          width: entry.contentRect.width,
-          height: entry.contentRect.height,
-        };
-      }
-    }
-  });
-  if (containerRef.value?.el) {
-    resizeObserver.observe(containerRef.value.el);
+const keepAspectRatio = computed(() => {
+  if (isAspectRatioLocked.value) {
+    return true;
   }
-  onUnmounted(() => {
-    resizeObserver.disconnect();
-  });
+
+  if (selectedShapes.value.length !== 1) {
+    return false;
+  }
+
+  return ["circle", "star", "text"].includes(selectedShapes.value[0]!.type);
 });
-
-// ── ID generation ──
-let idCounter = Date.now();
-function genId(): string {
-  return `shape-${idCounter++}`;
-}
-
-// ── Shape defaults ──
-function makeShape(type: CanvasShape["type"], overrides: Partial<CanvasShape> = {}): CanvasShape {
-  return {
-    id: genId(),
-    type,
-    x: 100,
-    y: 100,
-    rotation: 0,
-    scaleX: 1,
-    scaleY: 1,
-    fill: type === "freedraw" || type === "line" || type === "arrow" ? undefined : fillColor.value,
-    stroke: strokeColor.value,
-    strokeWidth: strokeWidthState.value,
-    dash: strokeDashState.value,
-    opacity: 1,
-    draggable: true,
-    ...overrides,
-  };
-}
-
-// ── Toolbar: add shapes ──
-function addStar() {
-  const s = makeShape("star", {
-    numPoints: 5,
-    innerRadius: 20,
-    outerRadius: 45,
-    x: 150 + Math.random() * 200,
-    y: 120 + Math.random() * 150,
-  });
-  shapes.value.push(s);
-  triggerRef(shapes);
-  selectedShapeId.value = s.id;
-  commitState();
-  updateTransformer();
-}
-
-// ── Transformer management ──
-function updateTransformer() {
-  nextTick(() => {
-    const tr = transformerRef.value?.getNode();
-    if (!tr) return;
-    const stage = tr.getStage();
-    if (!stage) return;
-
-    if (!selectedShapeId.value || activeTool.value === "hand") {
-      tr.nodes([]);
-      return;
-    }
-
-    const node = stage.findOne(`#${selectedShapeId.value}`);
-    if (node) {
-      tr.nodes([node]);
-    } else {
-      tr.nodes([]);
-    }
-  });
-}
-
-// ── Infinite Canvas: Zoom & Pan ──
-function handleStageWheel(e: any) {
-  e.evt.preventDefault();
-  const stage = e.target.getStage();
-  const oldScale = stage.scaleX();
-
-  if (e.evt.ctrlKey || e.evt.metaKey) {
-    // Zoom
-    const scaleBy = 1.05;
-    const pointer = stage.getPointerPosition();
-    if (!pointer) return;
-
-    const mousePointTo = {
-      x: (pointer.x - stage.x()) / oldScale,
-      y: (pointer.y - stage.y()) / oldScale,
-    };
-
-    const direction = e.evt.deltaY > 0 ? -1 : 1;
-    const newScale = direction > 0 ? oldScale * scaleBy : oldScale / scaleBy;
-    const boundedScale = Math.max(0.1, Math.min(newScale, 10));
-
-    stageScale.value = boundedScale;
-    stagePosition.value = {
-      x: pointer.x - mousePointTo.x * boundedScale,
-      y: pointer.y - mousePointTo.y * boundedScale,
-    };
-  } else {
-    // Pan
-    stagePosition.value = {
-      x: stage.x() - e.evt.deltaX,
-      y: stage.y() - e.evt.deltaY,
-    };
-  }
-}
-
-function handleStageDragEnd(e: any) {
-  // If the stage itself triggered dragend (Panning)
-  if (e.target === e.target.getStage()) {
-    stagePosition.value = {
-      x: e.target.x(),
-      y: e.target.y(),
-    };
-    return;
-  }
-}
-
-// ── Stage events ──
-function getRelativePointerPosition(stage: any) {
-  const transform = stage.getAbsoluteTransform().copy();
-  transform.invert();
-  const pos = stage.getPointerPosition();
-  return transform.point(pos);
-}
-
-function handleStageMouseDown(e: any) {
-  // Close context menu
-  closeContextMenu();
-
-  const stage = e.target.getStage();
-
-  if (activeTool.value === "hand") {
-    // Hand tool disables drawing/selecting
-    selectedShapeId.value = null;
-    updateTransformer();
-    return;
-  }
-
-  // Get pointer relative to the scaled/panned infinite canvas coordinate system
-  const pos = getRelativePointerPosition(stage);
-
-  // If using a drawing tool, start drawing
-  if (activeTool.value !== "select" && activeTool.value !== "freedraw") {
-    isDrawing = true;
-    drawStart = { x: pos.x, y: pos.y };
-    const newId = genId();
-    currentDrawId = newId;
-
-    if (activeTool.value === "rect") {
-      shapes.value.push(makeShape("rect", { id: newId, x: pos.x, y: pos.y, width: 0, height: 0 }));
-    } else if (activeTool.value === "circle") {
-      shapes.value.push(makeShape("circle", { id: newId, x: pos.x, y: pos.y, radius: 0 }));
-    } else if (activeTool.value === "line") {
-      shapes.value.push(makeShape("line", { id: newId, x: 0, y: 0, points: [pos.x, pos.y, pos.x, pos.y], fill: undefined }));
-    } else if (activeTool.value === "arrow") {
-      shapes.value.push(makeShape("arrow", { id: newId, x: 0, y: 0, points: [pos.x, pos.y, pos.x, pos.y], fill: undefined }));
-    } else if (activeTool.value === "text") {
-      const s = makeShape("text", { id: newId, x: pos.x, y: pos.y, text: "Text", fontSize: 18, fontFamily: "Inter, system-ui, sans-serif", fill: strokeColor.value, stroke: undefined });
-      shapes.value.push(s);
-      selectedShapeId.value = newId;
-      isDrawing = false;
-      currentDrawId = null;
-      activeTool.value = "select";
-      commitState();
-      updateTransformer();
-    }
-    triggerRef(shapes);
-    return;
-  }
-
-  // Free draw tool
-  if (activeTool.value === "freedraw") {
-    isDrawing = true;
-    const newId = genId();
-    currentDrawId = newId;
-    freeDrawPoints = [pos.x, pos.y];
-    shapes.value.push(makeShape("freedraw", {
-      id: newId,
-      x: 0,
-      y: 0,
-      points: [...freeDrawPoints],
-      fill: undefined,
-      tension: 0.5,
-      closed: false,
-    }));
-    triggerRef(shapes);
-    return;
-  }
-
-  // Select tool: click on stage background → deselect
-  if (e.target === stage) {
-    selectedShapeId.value = null;
-    updateTransformer();
-    return;
-  }
-
-  // Click on transformer → do nothing
-  const clickedOnTransformer = e.target.getParent()?.className === "Transformer";
-  if (clickedOnTransformer) return;
-
-  // Click on a shape → select it
-  const id = e.target.id();
-  if (id && shapes.value.find((s) => s.id === id)) {
-    selectedShapeId.value = id;
-
-    // Sync current tool colors to the selected shape's colors
-    const shape = shapes.value.find((s) => s.id === id);
-    if (shape) {
-      if (shape.fill && shape.type !== "freedraw" && shape.type !== "line" && shape.type !== "arrow") {
-        fillColor.value = shape.fill;
-      }
-      if (shape.stroke) strokeColor.value = shape.stroke;
-      if (shape.strokeWidth) strokeWidthState.value = shape.strokeWidth;
-      strokeDashState.value = shape.dash;
-    }
-
-  } else {
-    selectedShapeId.value = null;
-  }
-  updateTransformer();
-}
-
-function handleStageMouseMove(e: any) {
-  if (activeTool.value === "hand") return;
-  if (!isDrawing || !currentDrawId) return;
-
-  const stage = e.target.getStage();
-  const pos = getRelativePointerPosition(stage);
-
-  const idx = shapes.value.findIndex((s) => s.id === currentDrawId);
-  if (idx === -1) return;
-
-  const shape = shapes.value[idx];
-  if (!shape) return;
-
-  if (activeTool.value === "rect") {
-    shape.width = Math.abs(pos.x - drawStart.x);
-    shape.height = Math.abs(pos.y - drawStart.y);
-    shape.x = Math.min(pos.x, drawStart.x);
-    shape.y = Math.min(pos.y, drawStart.y);
-  } else if (activeTool.value === "circle") {
-    const dx = pos.x - drawStart.x;
-    const dy = pos.y - drawStart.y;
-    shape.radius = Math.sqrt(dx * dx + dy * dy);
-    shape.x = drawStart.x;
-    shape.y = drawStart.y;
-  } else if (activeTool.value === "line" || activeTool.value === "arrow") {
-    shape.points = [drawStart.x, drawStart.y, pos.x, pos.y];
-  } else if (activeTool.value === "freedraw") {
-    freeDrawPoints.push(pos.x, pos.y);
-    shape.points = [...freeDrawPoints];
-  }
-
-  triggerRef(shapes);
-}
-
-function handleStageMouseUp() {
-  if (!isDrawing) return;
-  isDrawing = false;
-  if (currentDrawId) {
-    selectedShapeId.value = currentDrawId;
-    currentDrawId = null;
-    // Switch back to select for rect/circle/line/arrow (not freedraw)
-    if (activeTool.value !== "freedraw") {
-      activeTool.value = "select";
-    }
-    commitState();
-    updateTransformer();
-  }
-}
-
-// ── Shape events ──
-function handleShapeDragEnd(e: any) {
-  const id = e.target.id();
-  const idx = shapes.value.findIndex((s) => s.id === id);
-  if (idx === -1 || !shapes.value[idx]) return;
-
-  shapes.value[idx].x = e.target.x();
-  shapes.value[idx].y = e.target.y();
-  triggerRef(shapes);
-  commitState();
-}
-
-function handleTransformEnd(e: any) {
-  const id = e.target.id();
-  const idx = shapes.value.findIndex((s) => s.id === id);
-  if (idx === -1 || !shapes.value[idx]) return;
-
-  const shape = shapes.value[idx];
-  const node = e.target;
-
-  shape.x = node.x();
-  shape.y = node.y();
-  shape.rotation = node.rotation();
-  shape.scaleX = node.scaleX();
-  shape.scaleY = node.scaleY();
-
-  // For rect, bake scale into width/height to avoid styling stretch artifacts
-  if (shape.type === "rect" && shape.width && shape.height) {
-    shape.width = node.width() * node.scaleX();
-    shape.height = node.height() * node.scaleY();
-    shape.scaleX = 1;
-    shape.scaleY = 1;
-  }
-
-  // Same for circle
-  if (shape.type === "circle" && shape.radius) {
-    shape.radius = node.radius() * Math.max(node.scaleX(), node.scaleY());
-    shape.scaleX = 1;
-    shape.scaleY = 1;
-  }
-
-  triggerRef(shapes);
-  commitState();
-}
-
-// ── Double-click text editing ──
-function handleDblClick(e: any) {
-  const id = e.target.id();
-  const shape = shapes.value.find((s) => s.id === id);
-  if (!shape || shape.type !== "text") return;
-
-  const textNode = e.target;
-  const stage = textNode.getStage();
-  const stageBox = stage.container().getBoundingClientRect();
-  const textPosition = textNode.getAbsolutePosition(); // Handles stage pan/zoom !
-
-  const input = document.createElement("textarea");
-  document.body.appendChild(input);
-
-  input.value = shape.text || "";
-  input.style.position = "absolute";
-  input.style.top = `${stageBox.top + textPosition.y}px`;
-  input.style.left = `${stageBox.left + textPosition.x}px`;
-  // Width needs to account for stage scaling + text node scaling
-  const effectiveScale = textNode.scaleX() * stage.scaleX();
-  input.style.width = `${Math.max(textNode.width() * effectiveScale, 100)}px`;
-  input.style.fontSize = `${(shape.fontSize || 18) * effectiveScale}px`;
-  input.style.fontFamily = shape.fontFamily || "Inter, system-ui, sans-serif";
-  input.style.border = "2px solid #3b82f6";
-  input.style.borderRadius = "4px";
-  input.style.padding = "4px";
-  input.style.margin = "0";
-  input.style.outline = "none";
-  input.style.resize = "none";
-  input.style.background = "white";
-  input.style.color = shape.fill || "#1e293b";
-  input.style.zIndex = "9999";
-  input.style.lineHeight = "1.2";
-
-  input.focus();
-
-  const removeInput = () => {
-    if (!document.body.contains(input)) return;
-    const newText = input.value;
-    document.body.removeChild(input);
-    const idx = shapes.value.findIndex((s) => s.id === id);
-    if (idx !== -1 && shapes.value[idx]) {
-      shapes.value[idx].text = newText;
-      triggerRef(shapes);
-      commitState();
-      updateTransformer(); // refresh bounding box handler
-    }
-  };
-
-  input.addEventListener("blur", removeInput);
-  input.addEventListener("keydown", (ev) => {
-    if (ev.key === "Escape" || (ev.key === "Enter" && !ev.shiftKey)) {
-      ev.preventDefault();
-      input.blur();
-    }
-  });
-
-  // Temporarily hide the text node while editing
-  textNode.hide();
-  const recoverOriginalText = () => { textNode.show(); stage.draw(); }
-  input.addEventListener("blur", recoverOriginalText);
-}
-
-// ── Context Menu ──
-function handleContextMenu(e: any) {
-  e.evt.preventDefault();
-  const id = e.target.id();
-  if (!id || !shapes.value.find((s) => s.id === id)) return;
-
-  const stage = e.target.getStage();
-  const pointer = stage.getPointerPosition();
-  const stageBox = stage.container().getBoundingClientRect();
-
-  contextMenu.value = {
-    visible: true,
-    x: stageBox.left + pointer.x,
-    y: stageBox.top + pointer.y,
-    shapeId: id,
-  };
-
-  if (activeTool.value !== "hand") {
-    selectedShapeId.value = id;
-    updateTransformer();
-  }
-}
-
-function bringToFront() {
-  const id = contextMenu.value.shapeId;
-  if (!id) return;
-  const idx = shapes.value.findIndex((s) => s.id === id);
-  if (idx === -1) return;
-  const item = shapes.value[idx]!;
-  const updated = shapes.value.filter((_, i) => i !== idx);
-  updated.push(item);
-  shapes.value = updated;
-  contextMenu.value.visible = false;
-  commitState();
-}
-
-function bringForward() {
-  const id = contextMenu.value.shapeId;
-  if (!id) return;
-  const idx = shapes.value.findIndex((s) => s.id === id);
-  if (idx === -1 || idx === shapes.value.length - 1) return;
-  const updated = [...shapes.value];
-  [updated[idx], updated[idx + 1]] = [updated[idx + 1]!, updated[idx]!];
-  shapes.value = updated;
-  contextMenu.value.visible = false;
-  commitState();
-}
-
-function sendBackward() {
-  const id = contextMenu.value.shapeId;
-  if (!id) return;
-  const idx = shapes.value.findIndex((s) => s.id === id);
-  if (idx <= 0) return;
-  const updated = [...shapes.value];
-  [updated[idx - 1], updated[idx]] = [updated[idx]!, updated[idx - 1]!];
-  shapes.value = updated;
-  contextMenu.value.visible = false;
-  commitState();
-}
-
-function sendToBack() {
-  const id = contextMenu.value.shapeId;
-  if (!id) return;
-  const idx = shapes.value.findIndex((s) => s.id === id);
-  if (idx === -1) return;
-  const item = shapes.value[idx]!;
-  const updated = shapes.value.filter((_, i) => i !== idx);
-  updated.unshift(item);
-  shapes.value = updated;
-  contextMenu.value.visible = false;
-  commitState();
-}
-
-function duplicateShape() {
-  const id = contextMenu.value.shapeId || selectedShapeId.value;
-  if (!id) return;
-  const original = shapes.value.find((s) => s.id === id);
-  if (!original) return;
-  const dup: CanvasShape = { ...JSON.parse(JSON.stringify(original)), id: genId(), x: (original.x || 0) + 30, y: (original.y || 0) + 30 };
-  shapes.value.push(dup);
-  triggerRef(shapes);
-  selectedShapeId.value = dup.id;
-  contextMenu.value.visible = false;
-  commitState();
-  updateTransformer();
-}
-
-function deleteSelected() {
-  const id = contextMenu.value.shapeId || selectedShapeId.value;
-  if (!id) return;
-  shapes.value = shapes.value.filter((s) => s.id !== id);
-  selectedShapeId.value = null;
-  contextMenu.value.visible = false;
-  commitState();
-  updateTransformer();
-}
 
 // ── Undo / Redo ──
 function handleUndo() {
   const state = undo();
   if (state) {
     shapes.value = state;
-    selectedShapeId.value = null;
+    clearSelection();
     updateTransformer();
     scheduleAutoSave();
   }
@@ -633,29 +286,114 @@ function handleRedo() {
   const state = redo();
   if (state) {
     shapes.value = state;
-    selectedShapeId.value = null;
+    clearSelection();
     updateTransformer();
     scheduleAutoSave();
   }
 }
 
-// ── Keyboard shortcuts ──
-defineShortcuts({
-  meta_z: () => handleUndo(),
-  meta_shift_z: () => handleRedo(),
-  meta_d: () => duplicateShape(),
-  delete: () => {
-    if (selectedShapeId.value) deleteSelected();
-  },
-  backspace: () => {
-    if (selectedShapeId.value) deleteSelected();
-  },
-  escape: () => {
-    selectedShapeId.value = null;
+function focusCanvasSurface() {
+  containerRef.value?.el?.focus({ preventScroll: true });
+}
+
+function handleCanvasFocus() {
+  isCanvasFocused.value = true;
+}
+
+function handleCanvasBlur(event: FocusEvent) {
+  const nextTarget = event.relatedTarget as Node | null;
+  if (containerRef.value?.el?.contains(nextTarget)) {
+    return;
+  }
+
+  isCanvasFocused.value = false;
+  isAspectRatioLocked.value = false;
+}
+
+function isEditableTarget(target: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName);
+}
+
+function handleCanvasKeydown(event: KeyboardEvent) {
+  if (!isCanvasFocused.value || isEditableTarget(event.target)) {
+    return;
+  }
+
+  if (event.key === "Shift") {
+    isAspectRatioLocked.value = true;
+    return;
+  }
+
+  const key = event.key.toLowerCase();
+
+  if ((event.metaKey || event.ctrlKey) && key === "z") {
+    event.preventDefault();
+    if (event.shiftKey) {
+      handleRedo();
+    } else {
+      handleUndo();
+    }
+    return;
+  }
+
+  if ((event.metaKey || event.ctrlKey) && key === "d") {
+    event.preventDefault();
+    duplicateShape();
+    return;
+  }
+
+  if (event.metaKey || event.ctrlKey || event.altKey) {
+    return;
+  }
+
+  if (key === "delete" || key === "backspace") {
+    if (selectedShapeIds.value.length) {
+      event.preventDefault();
+      deleteSelected();
+    }
+    return;
+  }
+
+  if (key === "escape") {
+    event.preventDefault();
+    clearSelection();
     activeTool.value = "select";
     updateTransformer();
+    closeContextMenu();
+    return;
   }
-});
+
+  const toolShortcuts: Record<string, CanvasTool> = {
+    v: "select",
+    h: "hand",
+    r: "rect",
+    c: "circle",
+    e: "ellipse",
+    l: "line",
+    a: "arrow",
+    t: "text",
+    p: "freedraw",
+    s: "star",
+  };
+
+  const nextTool = toolShortcuts[key];
+  if (!nextTool) {
+    return;
+  }
+
+  event.preventDefault();
+  selectTool(nextTool);
+}
+
+function handleCanvasKeyup(event: KeyboardEvent) {
+  if (event.key === "Shift") {
+    isAspectRatioLocked.value = false;
+  }
+}
 
 onUnmounted(() => {
   if (saveTimer) clearTimeout(saveTimer);
@@ -676,7 +414,10 @@ function getShapeConfig(shape: CanvasShape): Record<string, any> {
     strokeWidth: shape.strokeWidth,
     dash: shape.dash,
     opacity: shape.opacity,
-    draggable: activeTool.value === "select" && shape.draggable,
+    draggable:
+      activeTool.value === "select"
+      && shape.draggable
+      && (inputMode.value !== "touch" || selectedShapeIds.value.includes(shape.id)),
   };
 
   switch (shape.type) {
@@ -719,6 +460,39 @@ function getShapeConfig(shape: CanvasShape): Record<string, any> {
   return base;
 }
 
+const stageConfig = computed(() => ({
+  width: stageSize.value.width,
+  height: stageSize.value.height,
+  scaleX: stageScale.value,
+  scaleY: stageScale.value,
+  x: stagePosition.value.x,
+  y: stagePosition.value.y,
+  draggable: activeTool.value === "hand",
+  dragBoundFunc: constrainStageDrag,
+}));
+
+const transformerConfig = computed(() => ({
+  rotateEnabled: true,
+  flipEnabled: false,
+  shiftBehavior: "none",
+  keepRatio: keepAspectRatio.value,
+  enabledAnchors: transformerEnabledAnchors.value,
+  ignoreStroke: true,
+  padding: 8,
+  anchorSize: 10,
+  borderStroke: "#384998",
+  anchorFill: "#ffffff",
+  anchorStroke: "#384998",
+  anchorStrokeWidth: 1.25,
+  boundBoxFunc: (oldBox: { width: number; height: number }, newBox: { width: number; height: number }) => {
+    if (Math.abs(newBox.width) < 12 || Math.abs(newBox.height) < 12) {
+      return oldBox;
+    }
+
+    return newBox;
+  },
+}));
+
 function konvaComponent(type: CanvasShape["type"]): string {
   switch (type) {
     case "rect": return "v-rect";
@@ -733,179 +507,67 @@ function konvaComponent(type: CanvasShape["type"]): string {
   }
 }
 
-// ── Color presets ──
-const colorPresets = [
-  "transparent", "#1e293b", "#64748b", "#ef4444", "#f97316", "#eab308",
-  "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899", "#ffffff",
-];
-const borderStyles = [
-  { label: 'Solid', dash: undefined },
-  { label: 'Dashed', dash: [10, 5] },
-  { label: 'Dotted', dash: [2, 4] },
-]
-const borderThickness = [
-  { label: '1px', width: 1 },
-  { label: '3px', width: 3 },
-  { label: '5px', width: 5 },
-]
-
-// ── Floating Toolbar config (Dropdowns) ──
-const borderThicknessItems = computed<any[][]>(() => [[
-  ...borderThickness.map((b) => ({
-    label: b.label,
-    onSelect: () => setStrokeWidth(b.width),
-  }))
-]]);
-
-const borderStyleItems = computed<any[][]>(() => [[
-  ...borderStyles.map((b) => ({
-    label: b.label,
-    onSelect: () => setStrokeDash(b.dash),
-  }))
-]]);
-
-// ── Tool items ──
-const tools = [
-  { id: "select", label: "Select", icon: "i-heroicons-cursor-arrow-rays" },
-  { id: "hand", label: "Pan/Zoom Camera", icon: "i-heroicons-hand-raised" },
-  { id: "rect", label: "Rectangle", icon: "i-heroicons-stop" },
-  { id: "circle", label: "Circle", icon: "i-heroicons-sun" },
-  { id: "line", label: "Line", icon: "i-heroicons-minus" },
-  { id: "arrow", label: "Arrow", icon: "i-heroicons-arrow-up-right" },
-  { id: "text", label: "Text", icon: "i-heroicons-language" },
-  { id: "freedraw", label: "Draw", icon: "i-heroicons-pencil" },
-] as const;
-
-// Close context menu on outside click
-function closeContextMenu() {
-  if (contextMenu.value) {
-    contextMenu.value.visible = false;
+const interactionHint = computed(() => {
+  if (inputMode.value === "touch") {
+    return "Touch: tap once to select, then drag the selected shape";
   }
-}
 
-// Fullscreen resize handling
-watch(() => props.isFullscreen, () => {
-  setTimeout(() => {
-    // Re-evaluate container size after a tick to let DOM settle after fullscreen transition
-    if (containerRef.value?.el) {
-      const rect = containerRef.value.el.getBoundingClientRect();
-      stageSize.value = { width: rect.width, height: Math.max(window.innerHeight * 0.6, 400) };
-    }
-  }, 100);
+  if (activeTool.value === "select") {
+    return "Drag on empty space to box-select | Hold Shift while resizing to lock aspect";
+  }
+
+  return "Hand mode pans | Snap guides align nearby shapes";
 });
-
-function toggleFullscreenLocal() {
-  emit('toggle-fullscreen');
-}
 
 </script>
 
 <template>
   <div class="canvas-note-editor flex flex-col gap-2 h-full w-full" @click="closeContextMenu">
-    <!-- Toolbar -->
-    <SharedNoteToolbar :is-fullscreen="isFullscreen" @toggleFullscreen="toggleFullscreenLocal" @delete="emit('delete')">
-      <!-- Shape tools -->
-      <div class="flex items-center gap-0.5 mr-2">
-        <shared-note-toolbar-button v-for="tool in tools" :key="tool.id" :title="tool.label"
-          :active="activeTool === tool.id" :icon="tool.icon" @click="activeTool = tool.id" />
-
-        <!-- Star button -->
-        <shared-note-toolbar-button title="Star" icon="i-heroicons-star" @click="addStar" />
-      </div>
-
-      <div class="w-px h-6 bg-surface-strong shrink-0" />
-
-      <!-- Action buttons -->
-      <div class="flex items-center gap-0.5">
-        <!-- Undo / Redo -->
-        <shared-note-toolbar-button title="Undo" :shortcuts="['meta', 'z']" :disabled="!canUndo"
-          icon="i-heroicons-arrow-uturn-left" @click="handleUndo" />
-        <shared-note-toolbar-button title="Redo" :shortcuts="['meta', 'shift', 'z']" :disabled="!canRedo"
-          icon="i-heroicons-arrow-uturn-right" @click="handleRedo" />
-
-        <!-- Delete selected -->
-        <shared-note-toolbar-button title="Delete selected" :shortcuts="['delete']" variant="danger"
-          :disabled="!selectedShapeId" icon="i-heroicons-trash" @click="deleteSelected" />
-
-        <!-- Duplicate -->
-        <shared-note-toolbar-button title="Duplicate" :shortcuts="['meta', 'd']" :disabled="!selectedShapeId"
-          icon="i-heroicons-document-duplicate" @click="duplicateShape" />
-      </div>
-
-      <div class="w-px h-6 bg-secondary shrink-0" />
-
-      <!-- Style Controls (Colors, Border) -->
-      <div class="flex items-center gap-1.5">
-        <!-- Fill Color Popover -->
-        <UPopover :arrow="true" :modal="false">
-          <shared-note-toolbar-button title="Fill Color" :icon-only="true">
-            <div class="w-4 h-4 rounded-[var(--radius-sm)] border border-secondary bg-white"
-              :style="{ backgroundColor: fillColor === 'transparent' ? '#fff' : fillColor }">
-              <UIcon v-if="fillColor === 'transparent'" name="i-heroicons-x-mark"
-                class="w-full h-full text-content-disabled" />
-            </div>
-          </shared-note-toolbar-button>
-          <template #content>
-            <div class="p-2 grid grid-cols-5 gap-1.5">
-              <button v-for="color in colorPresets" :key="'fill' + color" :title="`Fill: ${color}`"
-                class="w-6 h-6 rounded-full border-2 transition-transform duration-100 hover:scale-110 flex items-center justify-center"
-                :class="fillColor === color ? 'border-primary scale-110' : 'border-secondary text-content-disabled'"
-                :style="{ backgroundColor: color === 'transparent' ? '#fff' : color }" @click="setFillColor(color)">
-                <UIcon v-if="color === 'transparent'" name="i-heroicons-x-mark" class="w-4 h-4" />
-              </button>
-            </div>
-          </template>
-        </UPopover>
-
-        <!-- Stroke Color Popover -->
-        <UPopover :arrow="true" :modal="false">
-          <shared-note-toolbar-button title="Border Color" :icon-only="true">
-            <div class="w-4 h-4 rounded-[var(--radius-sm)] border-2"
-              :style="{ borderColor: strokeColor === 'transparent' ? '#cbd5e1' : strokeColor, backgroundColor: 'transparent' }">
-              <UIcon v-if="strokeColor === 'transparent'" name="i-heroicons-x-mark"
-                class="w-full h-full text-content-disabled" />
-            </div>
-          </shared-note-toolbar-button>
-          <template #content>
-            <div class="p-2 grid grid-cols-5 gap-1.5 flex-col">
-              <button v-for="color in colorPresets" :key="'stroke' + color" :title="`Border: ${color}`"
-                class="w-6 h-6 rounded-full border-2 transition-transform duration-100 hover:scale-110 flex items-center justify-center"
-                :class="strokeColor === color ? 'border-primary scale-110' : 'border-secondary text-content-disabled'"
-                :style="{ backgroundColor: color === 'transparent' ? '#fff' : color }" @click="setStrokeColor(color)">
-                <UIcon v-if="color === 'transparent'" name="i-heroicons-x-mark" class="w-4 h-4" />
-              </button>
-            </div>
-          </template>
-        </UPopover>
-
-        <div class="w-px h-6 bg-secondary mx-1" />
-
-        <!-- Stroke width and style togglers -->
-        <UDropdownMenu :modal="false" :items="borderThicknessItems"
-          :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-          <shared-note-toolbar-button title="Border Thickness" icon="i-lucide-hash" />
-        </UDropdownMenu>
-        <UDropdownMenu :modal="false" :items="borderStyleItems"
-          :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-          <shared-note-toolbar-button title="Border Style" icon="i-lucide-activity" />
-        </UDropdownMenu>
-      </div>
-    </SharedNoteToolbar>
+    <CanvasNoteToolbar :is-fullscreen="isFullscreen" :snap-enabled="snapEnabled" :active-tool="activeTool"
+      :fill-color="fillColor" :stroke-color="strokeColor" :stroke-width="strokeWidthState"
+      v-model:stroke-width-input="strokeWidthInput" :stroke-width-min="STROKE_WIDTH_MIN"
+      :stroke-width-max="STROKE_WIDTH_MAX" :can-undo="canUndo" :can-redo="canRedo"
+      :has-selection="selectedShapeIds.length > 0" @toggle-fullscreen="emit('toggle-fullscreen')"
+      @delete-note="emit('delete')" @toggle-snap="snapEnabled = !snapEnabled" @focus-canvas-home="focusCanvasHome"
+      @select-tool="selectTool" @set-fill-color="setFillColor" @set-stroke-color="setStrokeColor"
+      @apply-stroke-width-input="applyStrokeWidthInput" @set-border-style="setStrokeDash" @undo="handleUndo"
+      @redo="handleRedo" @delete-selected="deleteSelected" @duplicate-selection="duplicateShape" />
 
     <!-- Konva Stage Space -->
-    <SharedNoteContentArea ref="containerRef" class="min-h-[400px] cursor-crosshair"
-      :class="{ 'cursor-grab': activeTool === 'hand' }">
+    <SharedNoteContentArea ref="containerRef" class="min-h-[400px] cursor-crosshair" tabindex="0" role="application"
+      aria-label="Canvas editor" :class="{ 'cursor-grab': activeTool === 'hand' }"
+      @pointerdown.capture="focusCanvasSurface" @focus="handleCanvasFocus" @blur="handleCanvasBlur"
+      @keydown="handleCanvasKeydown" @keyup="handleCanvasKeyup">
       <ClientOnly>
-        <v-stage ref="stageRef"
-          :config="{ width: stageSize.width, height: stageSize.height, scaleX: stageScale, scaleY: stageScale, x: stagePosition.x, y: stagePosition.y, draggable: activeTool === 'hand' }"
-          @mousedown="handleStageMouseDown" @touchstart="handleStageMouseDown" @mousemove="handleStageMouseMove"
-          @touchmove="handleStageMouseMove" @mouseup="handleStageMouseUp" @touchend="handleStageMouseUp"
-          @wheel="handleStageWheel" @dragend="handleStageDragEnd">
+        <v-stage ref="stageRef" :config="stageConfig" @mousedown="handleStageMouseDown"
+          @touchstart="handleStageMouseDown" @mousemove="handleStageMouseMove" @touchmove="handleStageMouseMove"
+          @mouseup="handleStageMouseUp" @touchend="handleStageMouseUp" @wheel="handleStageWheel"
+          @dragend="handleStageDragEnd">
           <v-layer>
             <component v-for="shape in shapes" :is="konvaComponent(shape.type)" :key="shape.id"
-              :config="getShapeConfig(shape)" @dragend="handleShapeDragEnd" @transformend="handleTransformEnd"
-              @contextmenu="handleContextMenu" @dblclick="handleDblClick" />
-            <v-transformer ref="transformerRef" />
+              :config="getShapeConfig(shape)" @dragstart="handleShapeDragStart" @dragmove="handleShapeDragMove"
+              @dragend="handleShapeDragEnd" @transformend="handleTransformEnd" @contextmenu="handleContextMenu"
+              @dblclick="handleDblClick" />
+          </v-layer>
+
+          <v-layer :config="{ listening: false }">
+            <v-line v-for="guide in snapGuides" :key="guide.id"
+              :config="{ points: guide.points, stroke: '#384998', strokeWidth: 1, dash: [6, 4], listening: false }" />
+            <v-rect v-if="selectionRect.visible" :config="{
+              x: selectionRect.x,
+              y: selectionRect.y,
+              width: selectionRect.width,
+              height: selectionRect.height,
+              fill: 'rgba(56, 73, 152, 0.12)',
+              stroke: '#384998',
+              strokeWidth: 1,
+              dash: [4, 4],
+              listening: false,
+            }" />
+          </v-layer>
+
+          <v-layer>
+            <v-transformer ref="transformerRef" :config="transformerConfig" />
           </v-layer>
         </v-stage>
       </ClientOnly>
@@ -913,7 +575,61 @@ function toggleFullscreenLocal() {
       <!-- Zoom map / info corner -->
       <div
         class="absolute bottom-2 left-2 px-2 py-1 bg-background/80 rounded-[var(--radius-md)] text-xs font-medium text-content-on-surface pointer-events-none select-none backdrop-blur-sm">
-        {{ Math.round(stageScale * 100) }}% | Use Hand mode to pan
+        {{ Math.round(stageScale * 100) }}% | {{ interactionHint }}
+      </div>
+
+      <button v-if="isMinimapCollapsed" type="button"
+        class="absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 rounded-[var(--radius-lg)] border border-secondary bg-surface/95 px-2 py-1.5 text-xs font-medium text-content-on-surface shadow-lg backdrop-blur-sm"
+        @click.stop="toggleMinimap">
+        <UIcon name="i-lucide-map" class="w-3.5 h-3.5" />
+        <span>Map</span>
+      </button>
+
+      <div v-else ref="minimapRef"
+        class="absolute bottom-2 right-2 z-10 rounded-[var(--radius-xl)] border border-secondary bg-surface/95 p-2 shadow-lg backdrop-blur-sm"
+        @pointerdown.prevent="handleMinimapPointer" @pointermove.prevent="handleMinimapDrag">
+        <div
+          class="mb-1 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-content-secondary">
+          <span>Minimap</span>
+          <div class="flex items-center gap-1">
+            <button type="button" class="text-primary hover:text-primary/80" @pointerdown.stop
+              @click.stop="focusCanvasHome">
+              Focus
+            </button>
+            <button type="button" class="text-content-secondary hover:text-content-on-surface"
+              aria-label="Minimize minimap" @pointerdown.stop @click.stop="toggleMinimap">
+              <UIcon name="i-lucide-minus" class="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        <div class="relative overflow-hidden rounded-[var(--radius-lg)] border border-secondary/70 bg-background"
+          :style="{
+            width: `${MINIMAP_WIDTH}px`,
+            height: `${MINIMAP_HEIGHT}px`,
+            backgroundImage: 'linear-gradient(to right, color-mix(in srgb, var(--color-secondary) 65%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--color-secondary) 65%, transparent) 1px, transparent 1px)',
+            backgroundSize: '16px 16px'
+          }">
+          <div class="absolute inset-0 rounded-[inherit] border border-primary/10" />
+
+          <div v-for="(shape, index) in minimapShapes" :key="`minimap-${index}`"
+            class="absolute rounded-[var(--radius-sm)]" :style="{
+              left: `${shape.left}px`,
+              top: `${shape.top}px`,
+              width: `${shape.width}px`,
+              height: `${shape.height}px`,
+              backgroundColor: shape.outlined ? 'transparent' : shape.color,
+              border: `1px solid ${shape.color}`,
+              opacity: shape.outlined ? 0.9 : 0.65
+            }" />
+
+          <div class="absolute rounded-[var(--radius-sm)] border-2 border-primary bg-primary/10 shadow-sm" :style="{
+            left: `${minimapViewport.left}px`,
+            top: `${minimapViewport.top}px`,
+            width: `${minimapViewport.width}px`,
+            height: `${minimapViewport.height}px`
+          }" />
+        </div>
       </div>
     </SharedNoteContentArea>
 
