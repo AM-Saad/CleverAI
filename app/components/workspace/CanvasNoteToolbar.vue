@@ -112,47 +112,21 @@ const currentShapeTool = computed(() => shapeTools.find((tool) => tool.id === pr
     <div class="w-px h-6 bg-secondary shrink-0" />
 
     <div class="flex items-center gap-1.5">
-      <UPopover :arrow="true" :modal="false">
-        <shared-note-toolbar-button title="Fill Color" :icon-only="true">
-          <div class="w-4 h-4 rounded-[var(--radius-sm)] border border-secondary bg-white"
-            :style="{ backgroundColor: fillColor === 'transparent' ? '#fff' : fillColor }">
-            <UIcon v-if="fillColor === 'transparent'" name="i-heroicons-x-mark"
-              class="w-full h-full text-content-disabled" />
-          </div>
-        </shared-note-toolbar-button>
-        <template #content>
-          <div class="p-2 grid grid-cols-5 gap-1.5">
-            <button v-for="color in colorPresets" :key="`fill-${color}`" type="button" :title="`Fill: ${color}`"
-              class="w-6 h-6 rounded-full border-2 transition-transform duration-100 hover:scale-110 flex items-center justify-center"
-              :class="fillColor === color ? 'border-primary scale-110' : 'border-secondary text-content-disabled'"
-              :style="{ backgroundColor: color === 'transparent' ? '#fff' : color }"
-              @click="emit('setFillColor', color)">
-              <UIcon v-if="color === 'transparent'" name="i-heroicons-x-mark" class="w-4 h-4" />
-            </button>
-          </div>
-        </template>
-      </UPopover>
+      <SharedNoteColorPickerButton
+        title="Fill Color"
+        icon="i-lucide-paint-bucket"
+        :icon-only="true"
+        :modelValue="fillColor"
+        @update:modelValue="val => emit('setFillColor', val)"
+      />
 
-      <UPopover :arrow="true" :modal="false">
-        <shared-note-toolbar-button title="Border Color" :icon-only="true">
-          <div class="w-4 h-4 rounded-[var(--radius-sm)] border-2"
-            :style="{ borderColor: strokeColor === 'transparent' ? '#cbd5e1' : strokeColor, backgroundColor: 'transparent' }">
-            <UIcon v-if="strokeColor === 'transparent'" name="i-heroicons-x-mark"
-              class="w-full h-full text-content-disabled" />
-          </div>
-        </shared-note-toolbar-button>
-        <template #content>
-          <div class="p-2 grid grid-cols-5 gap-1.5 flex-col">
-            <button v-for="color in colorPresets" :key="`stroke-${color}`" type="button" :title="`Border: ${color}`"
-              class="w-6 h-6 rounded-full border-2 transition-transform duration-100 hover:scale-110 flex items-center justify-center"
-              :class="strokeColor === color ? 'border-primary scale-110' : 'border-secondary text-content-disabled'"
-              :style="{ backgroundColor: color === 'transparent' ? '#fff' : color }"
-              @click="emit('setStrokeColor', color)">
-              <UIcon v-if="color === 'transparent'" name="i-heroicons-x-mark" class="w-4 h-4" />
-            </button>
-          </div>
-        </template>
-      </UPopover>
+      <SharedNoteColorPickerButton
+        title="Border Color"
+        icon="i-lucide-pen-line"
+        :icon-only="true"
+        :modelValue="strokeColor"
+        @update:modelValue="val => emit('setStrokeColor', val)"
+      />
 
       <UPopover :arrow="true" :modal="false">
         <shared-note-toolbar-button title="Border Thickness">

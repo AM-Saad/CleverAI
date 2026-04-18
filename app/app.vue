@@ -55,6 +55,76 @@ const router = useRouter()
 // Notification modal state
 const showNotificationModal = ref(false)
 
+const { onOnline, onOffline } = useNetworkStatus()
+const toast = useToast()
+
+// Single offline/online toast identifiers for deduplication
+const OFFLINE_TOAST_ID = 'network-status-toast-offline'
+const ONLINE_TOAST_ID = 'network-status-toast-online'
+
+onMounted(() => {
+    if (import.meta.client) {
+        onOffline(() => {
+            toast.add({
+                id: OFFLINE_TOAST_ID,
+                title: "You are offline",
+                description: "You can continue working. Changes will sync when you reconnect.",
+                color: "warning",
+                icon: "heroicons:wifi",
+                timeout: 5000,
+            })
+            // Remove the online toast if it's showing
+            toast.remove(ONLINE_TOAST_ID)
+        })
+
+        onOnline(() => {
+            toast.add({
+                id: ONLINE_TOAST_ID,
+                title: "Back online",
+                description: "Connection restored.",
+                color: "success",
+                icon: "heroicons:wifi-solid",
+                timeout: 3000,
+            })
+            // Remove the offline toast if it's showing
+            toast.remove(OFFLINE_TOAST_ID)
+        })
+
+        // Centralized SW sync-completion toast (deduplicated).
+        // Both notes and board items sync messages funnel through here for a
+        // single user-facing notification instead of per-store toasts.
+        const SYNC_COMPLETE_TOAST_ID = 'sync-complete-toast'
+        let syncToastDebounce: ReturnType<typeof setTimeout> | null = null
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                const msg = event.data
+                if (!msg) return
+                const isSyncComplete =
+                    msg.type === 'NOTES_SYNCED' || msg.type === 'BOARD_ITEMS_SYNCED'
+                if (!isSyncComplete) return
+
+                const applied = msg.data?.appliedCount ?? 0
+                if (applied <= 0) return
+
+                // Debounce: if both notes and board items sync within 2s of each
+                // other, show a single combined toast instead of two.
+                if (syncToastDebounce) clearTimeout(syncToastDebounce)
+                syncToastDebounce = setTimeout(() => {
+                    toast.add({
+                        id: SYNC_COMPLETE_TOAST_ID,
+                        title: "All changes synced",
+                        description: "Your offline edits have been saved to the server.",
+                        color: "success",
+                        icon: "heroicons:cloud-arrow-up-solid",
+                        timeout: 3000,
+                    })
+                    syncToastDebounce = null
+                }, 1000)
+            })
+        }
+    }
+})
 
 const ErrorLogger = (error): void => {
     console.error('🚨 [APP.VUE] Error logged, redirecting to error page', error)

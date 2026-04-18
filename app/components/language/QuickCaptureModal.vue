@@ -1,21 +1,39 @@
 <template>
   <Teleport to="body">
     <AnimatePresence>
+
       <!-- ── Backdrop ──────────────────────────────────────────────────────── -->
       <motion.div v-if="show" key="qcm-bd" :initial="{ opacity: 0 }" :animate="{ opacity: 1 }" :exit="{ opacity: 0 }"
-        :transition="{ duration: 0.2 }" class="fixed inset-0 z-48 bg-black/10 backdrop-blur-sm"
+        :transition="{ duration: 0.2 }"
+        class="fixed inset-0 z-48 bg-black/10 pb-3 overflow-hidden bg-surface-container backdrop-blur-glass rounded-2xl shadow-glass border border-secondary flex flex-col w-full flex-1 min-h-0 "
         :class="{ 'cursor-not-allowed': isLocked }" @click="onBackdropClick" />
 
       <!-- ── Panel ─────────────────────────────────────────────────────────── -->
       <motion.div v-if="show" key="qcm-panel" role="dialog" aria-modal="true" aria-labelledby="qcm-title"
         :initial="{ opacity: 0, y: 24, scale: 0.96 }" :animate="{ opacity: 1, y: 0, scale: 1 }"
         :exit="{ opacity: 0, y: 16, scale: 0.97 }" :transition="{ type: 'spring', stiffness: 480, damping: 38 }"
-        class="fixed inset-x-0 bottom-[10vh] z-49 mx-auto flex w-[95%] lg:max-w-120 flex-col rounded-2xl bg-surface px-4"
+        class="fixed inset-x-0 bottom-[10vh] z-49 mx-auto flex w-[95%] lg:max-w-120  rounded-3xl  px-4  overflow-hidden bg-surface backdrop-blur-glass  shadow-glass border border-secondary  flex-col  flex-1 min-h-0 "
         style="max-height: 82svh; box-shadow: 0 24px 64px -8px rgba(0,0,0,0.22), 0 4px 20px -4px rgba(0,0,0,0.12), 0 0 0 1px rgba(255,255,255,0.06) inset;">
         <!-- Gradient top stripe -->
         <div
           class="absolute inset-x-0 top-0 h-px rounded-t-2xl bg-linear-to-r from-transparent via-primary/90 to-transparent" />
-
+        <svg class="absolute pointer-events-none"
+          style="inset: 0px;width: 100%;height: 100%;z-index: 50;filter: drop-shadow(rgba(168, 85, 247, 0.3) 0px 0px 8px);overflow: visible;">
+          <defs>
+            <linearGradient id="agent-panel-glow-grad" x1="0" y1="1" x2="1" y2="0" gradientUnits="objectBoundingBox">
+              <stop offset="0%" stop-color="#40D9C6" stop-opacity="1"></stop>
+              <stop offset="25%" stop-color="#4285F4" stop-opacity="1"></stop>
+              <stop offset="50%" stop-color="#6056F0" stop-opacity="1"></stop>
+              <stop offset="70%" stop-color="#9154E7" stop-opacity="1"></stop>
+              <stop offset="85%" stop-color="#9154E7" stop-opacity="0.2"></stop>
+              <stop offset="100%" stop-color="#6056F0" stop-opacity="0"></stop>
+              <animateTransform attributeName="gradientTransform" type="rotate" from="0 0.5 0.5" to="360 0.5 0.5"
+                dur="6s" repeatCount="indefinite"></animateTransform>
+            </linearGradient>
+          </defs>
+          <rect x="1" y="1" rx="16" ry="16" fill="none" stroke="url(#agent-panel-glow-grad)" stroke-width="2"
+            style="width: calc(100% - 2px); height: calc(100% - 2px);"></rect>
+        </svg>
         <!-- Header -->
         <div class="flex items-center justify-between pt-5 pb-4 shrink-0">
           <div class="flex items-center gap-3">

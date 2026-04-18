@@ -674,17 +674,11 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
 
   // --------------------- PUSH NOTIFICATIONS ---------------------
   swSelf.addEventListener("push", (event: PushEvent) => {
-    console.log("[SW] 🔔 Push event received:", event);
-    console.log("[SW] Push event data exists:", !!event.data);
-    console.log("[SW] Notification permission:", Notification.permission);
-
+    log("Push event received");
     event.waitUntil(
       (async () => {
         try {
           if (!event.data) {
-            console.log(
-              "[SW] ⚠️ No data in push event - showing fallback notification"
-            );
             await swSelf.registration.showNotification("Card Review", {
               body: "You have cards to review!",
               icon: "/icons/192x192.png",
@@ -693,7 +687,6 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
               requireInteraction: true,
               data: { url: "/user/review", timestamp: Date.now() },
             });
-            console.log("[SW] ✅ Fallback notification shown");
             return;
           }
 
@@ -709,22 +702,12 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
           }>;
 
           try {
-            const rawData = event.data.text();
-            console.log("[SW] Raw push data (text):", rawData);
-            data = JSON.parse(rawData);
-            console.log("[SW] Parsed push data:", data);
-          } catch (parseError) {
-            console.error("[SW] ❌ Failed to parse push data:", parseError);
-            // Try as JSON directly
+            data = JSON.parse(event.data.text());
+          } catch {
             try {
               data = event.data.json();
-              console.log("[SW] Parsed as JSON directly:", data);
             } catch {
-              console.log("[SW] Using fallback data structure");
-              data = {
-                title: "Card Review",
-                message: "You have cards to review!",
-              };
+              data = { title: "Card Review", message: "You have cards to review!" };
             }
           }
 
@@ -734,76 +717,34 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
             icon: data.icon || "/icons/192x192.png",
             badge: "/icons/72x72.png",
             tag: data.tag || "card-review",
-            requireInteraction: false, // Changed: macOS might not show persistent notifications in notification center
-            silent: false, // Never silent for debugging
+            requireInteraction: false,
+            silent: false,
             renotify: true,
             data: {
               url: data.url || "/review",
               timestamp: Date.now(),
-              originalData: data,
               ...(data.data || {}),
             },
-            // Add interactive actions (not in base NotificationOptions type but supported by browsers)
             actions: [
-              {
-                action: "review",
-                title: "📚 Review Now",
-              },
-              {
-                action: "snooze",
-                title: "⏰ Snooze 1hr",
-              },
-              {
-                action: "dismiss",
-                title: "❌ Dismiss",
-              },
+              { action: "review", title: "📚 Review Now" },
+              { action: "snooze", title: "⏰ Snooze 1hr" },
+              { action: "dismiss", title: "❌ Dismiss" },
             ],
-          } as NotificationOptions & {
-            actions?: Array<{ action: string; title: string }>;
-          };
-
-          console.log("[SW] 📢 Showing notification:", title);
-          console.log("[SW] Notification options:", options);
+          } as NotificationOptions & { actions?: Array<{ action: string; title: string }> };
 
           await swSelf.registration.showNotification(title, options);
-          console.log("[SW] ✅ Notification shown successfully!");
-
-          // Verify notification was created
-          const notifications = await swSelf.registration.getNotifications();
-          console.log(
-            "[SW] Current notifications count:",
-            notifications.length
-          );
-          console.log(
-            "[SW] Current notifications:",
-            notifications.map((n) => ({ title: n.title, tag: n.tag }))
-          );
+          log("Notification shown:", title);
         } catch (err) {
-          console.error("[SW] ❌ Push handler error:", err);
-          console.log(
-            "[SW] Registration state:",
-            swSelf.registration?.active?.state
-          );
-          console.log("[SW] Registration scope:", swSelf.registration?.scope);
-
-          // Emergency fallback
+          error("Push handler error:", err);
           try {
-            await swSelf.registration.showNotification(
-              "Cognilo - Error Fallback",
-              {
-                body: "Notification received but failed to process properly",
-                icon: "/icons/192x192.png",
-                tag: "error-fallback",
-                requireInteraction: true,
-                data: { url: "/user/review", timestamp: Date.now() },
-              }
-            );
-            console.log("[SW] ✅ Emergency fallback notification shown");
+            await swSelf.registration.showNotification("Cognilo", {
+              body: "Notification received but failed to process.",
+              icon: "/icons/192x192.png",
+              tag: "error-fallback",
+              data: { url: "/user/review", timestamp: Date.now() },
+            });
           } catch (fallbackError) {
-            console.error(
-              "[SW] ❌ Emergency fallback also failed:",
-              fallbackError
-            );
+            error("Emergency fallback notification failed:", fallbackError);
           }
         }
       })()
@@ -813,71 +754,47 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
   swSelf.addEventListener("notificationclick", (event: NotificationEvent) => {
     const action = event.action;
     const ndata = event.notification.data as { url?: string } | undefined;
-
-    console.log("[SW] 🖱️ Notification clicked:", { action, data: ndata });
-
+    log("Notification clicked:", action);
     event.notification.close();
 
     event.waitUntil(
       (async () => {
-        // Handle snooze action
         if (action === "snooze") {
-          console.log("[SW] ⏰ Snooze action triggered");
           try {
-            // Send snooze request to server
             await fetch("/api/notifications/snooze", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                duration: 3600, // 1 hour in seconds
-                timestamp: Date.now(),
-              }),
+              body: JSON.stringify({ duration: 3600, timestamp: Date.now() }),
             });
-            console.log("[SW] ✅ Snoozed for 1 hour");
-          } catch (error) {
-            console.error("[SW] ❌ Snooze failed:", error);
+          } catch (e) {
+            warn("Snooze request failed:", e);
           }
           return;
         }
 
-        // Handle dismiss action
-        if (action === "dismiss") {
-          console.log("[SW] ❌ Dismiss action triggered - notification closed");
-          // Just close, no further action
-          return;
-        }
+        if (action === "dismiss") return;
 
-        // Handle review action or default click (no action specified)
         const targetUrl = ndata?.url || "/";
-        console.log("[SW] 🔗 Navigating to:", targetUrl);
-
         const clients = await swSelf.clients.matchAll({
           type: "window",
           includeUncontrolled: true,
         });
         if (clients.length) {
-          // Focus existing window and navigate
           for (const c of clients) {
-            c.postMessage({
-              type: "NOTIFICATION_CLICK_NAVIGATE",
-              url: targetUrl,
-            });
+            c.postMessage({ type: SW_MESSAGE_TYPES.NOTIFICATION_CLICK_NAVIGATE, url: targetUrl });
           }
           try {
             await (clients[0] as WindowClient).focus();
-            console.log("[SW] ✅ Focused existing window");
-          } catch (focusError) {
-            console.warn("[SW] ⚠️ Could not focus window:", focusError);
+          } catch (e) {
+            warn("focus failed:", e);
           }
           return;
         }
 
-        // No existing window, open new one
         try {
           await swSelf.clients.openWindow(targetUrl);
-          console.log("[SW] ✅ Opened new window");
-        } catch (openError) {
-          console.error("[SW] ❌ Could not open window:", openError);
+        } catch (e) {
+          error("openWindow failed:", e);
         }
       })()
     );
@@ -926,7 +843,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
               log("No forms to sync");
               return;
             }
-            console.log("SW: Syncing forms records:", records);
+            log("SW: Syncing forms records:", records);
             const clients = await swSelf.clients.matchAll({ type: "window" });
             clients.forEach((c) =>
               c.postMessage({
@@ -1355,10 +1272,26 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         return;
       }
 
+      // Transform PendingBoardItemChange entries into the full BoardItemSchema
+      // shape the server endpoint validates against.
+      const syncPayload = pending.map((p: any) => ({
+        id: p.id,
+        userId: p.userId || "",  // server will use auth context
+        columnId: p.columnId ?? null,
+        workspaceId: p.workspaceId ?? null,
+        content: p.content || "",
+        tags: p.tags || [],
+        order: p.order ?? 0,
+        dueDate: p.dueDate ?? null,
+        attachments: p.attachments || [],
+        createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : new Date(p.updatedAt).toISOString(),
+        updatedAt: new Date(p.updatedAt).toISOString(),
+      }));
+
       const resp = await fetch("/api/board-items/sync", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ changes: pending }),
+        body: JSON.stringify(syncPayload),
       });
 
       if (!resp.ok) {
@@ -1368,12 +1301,15 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
 
       const result = (await resp.json().catch(() => ({}))) as {
         success?: boolean;
-        data?: {
-          applied?: string[];
-        };
+        data?: Array<{ id: string; status: string }>;
       };
 
-      const appliedIds = Array.from(new Set(result.data?.applied || []));
+      // Extract successful IDs (created or updated)
+      const appliedIds = Array.from(new Set(
+        (Array.isArray(result.data) ? result.data : [])
+          .filter(r => r.status === "created" || r.status === "updated")
+          .map(r => r.id)
+      ));
 
       if (appliedIds.length) {
         try {

@@ -43,6 +43,7 @@ import { Color, TextStyle } from "@tiptap/extension-text-style";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { Extension } from "@tiptap/core";
+import { Table, TableRow, TableHeader, TableCell } from "@tiptap/extension-table";
 // note: explicit Drop cursor intentionally omitted to avoid duplicate warnings
 import { Editor, EditorContent } from "@tiptap/vue-3";
 import { initCollaboration } from "@/utils/";
@@ -121,7 +122,7 @@ function acceptSuggestion(word: string) {
     .chain()
     .focus()
     .deleteRange({ from: from - currentWord.length, to: from })
-    .insertContent(word + ' ')
+    .insertText(word + ' ')
     .run();
   autoOnAccept(word);
   autoActiveIndex.value = 0;
@@ -131,6 +132,14 @@ function acceptSuggestion(word: string) {
 function updateAutoState() {
   if (!editor.value) return;
   const word = getCurrentWord();
+
+  if (word.length < 3) {
+    autoOnInput('');
+    autoActiveIndex.value = 0;
+    autoPosition.value = null;
+    return;
+  }
+
   autoOnInput(word);
   autoActiveIndex.value = 0;
   if (autoSuggestions.value.length === 0) {
@@ -407,13 +416,6 @@ onMounted(async () => {
           }
           return false;
         },
-        Enter: () => {
-          if (autoPosition.value && autoSuggestions.value.length > 0) {
-            acceptSuggestion(autoSuggestions.value[autoActiveIndex.value]);
-            return true;
-          }
-          return false;
-        },
         Escape: () => {
           if (autoPosition.value) {
             autoPosition.value = null;
@@ -434,6 +436,10 @@ onMounted(async () => {
       TextStyle.configure({ types: [ListItem.name] }),
       Image,
       // drop cursor intentionally omitted
+      Table.configure({ resizable: false }),
+      TableRow,
+      TableHeader,
+      TableCell,
       TaskList,
       CustomTaskItem,
       AutocompleteExtension,
@@ -546,6 +552,43 @@ function getSelectedText(): string | null {
 
 .tiptap h2 {
   font-size: 1.2rem;
+}
+
+/* Table styles */
+.tiptap table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0.75rem 0;
+  overflow: hidden;
+}
+
+.tiptap table td,
+.tiptap table th {
+  min-width: 1em;
+  border: 1px solid var(--color-border-secondary, #e2e8f0);
+  padding: 4px 8px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+  font-size: 0.8rem;
+}
+
+.tiptap table th {
+  font-weight: 600;
+  background-color: var(--color-surface-strong, #f8fafc);
+}
+
+.tiptap table .selectedCell:after {
+  z-index: 2;
+  position: absolute;
+  content: "";
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--color-primary-50, rgba(59, 130, 246, 0.1));
+  pointer-events: none;
 }
 
 .tiptap h3 {

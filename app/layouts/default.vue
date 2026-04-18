@@ -34,13 +34,14 @@
             </svg>
             Cognilo
           </router-link>
-          <div class=" flex items-center justify-center" :title="online ? 'You are online' : 'You are offline'"
-            v-if="route.fullPath.startsWith('/workspaces') || route.fullPath.startsWith('/user')">
-            <span v-if="online" class="bg-success rounded-full border border-surface-strong w-3 h-3 animate-pulse"
-              title="Online"></span>
-            <span v-if="!online" class="bg-content-disabled rounded-full border border-surface-strong w-3 h-3"
-              title="Offline"></span>
-          </div>
+          <Transition name="fade">
+            <span v-if="!online && (route.fullPath.startsWith('/workspaces') || route.fullPath.startsWith('/user'))"
+              class="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-0.5 text-xs font-medium text-warning ring-1 ring-inset ring-warning/25"
+              title="You are offline — changes are saved locally">
+              <span class="h-1.5 w-1.5 rounded-full bg-warning" />
+              Offline
+            </span>
+          </Transition>
         </div>
 
 
@@ -107,17 +108,11 @@
     </footer>
   </div>
 </template>
-<!-- eslint-disable no-console -->
-
 <script setup lang="ts">
 
 import { watch } from "vue";
-// import cleverAIIcon from "~/assets/images/CleverAI_icon.svg";
-
-console.log("🏗️ [LAYOUT] Default layout script setup initializing...");
 
 const { status } = useAuth();
-console.log("🏗️ [LAYOUT] Auth status:", status.value);
 
 const creditsStore = useCreditsStore();
 
@@ -126,7 +121,6 @@ const sw = useServiceWorkerBridge();
 const online = useOnline()
 
 const route = useRoute();
-console.log("🏗️ [LAYOUT] Current route:", route.fullPath.startsWith('/workspaces'), route.fullPath.startsWith('/user'));
 // Debounced navigation to avoid rapid duplicates from notification clicks
 const pending = new Set<string>();
 
@@ -149,7 +143,6 @@ onMounted(() => {
           } catch {
             /* ignore parse */
           }
-          console.log("🔔 Client: Navigating to:", targetUrl);
           await navigateTo(targetUrl);
         } finally {
           setTimeout(() => pending.delete(url), 1500);
@@ -160,12 +153,21 @@ onMounted(() => {
 
   watch(sw.lastFormSyncEventType, (t) => {
     if (!t) return;
-    console.log("🏗️ [LAYOUT] Form sync event:", t, sw.formSyncStatus.value);
   });
 });
-
-console.log("🏗️ [LAYOUT] Default layout script setup completed");
 </script>
+
+<style scoped>
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+</style>
 
 
 <style scoped>

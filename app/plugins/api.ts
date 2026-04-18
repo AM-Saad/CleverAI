@@ -78,6 +78,16 @@ export default defineNuxtPlugin((_nuxtApp) => {
     language: apiServiceFactory.create("language"),
   };
 
+  // Phase 4: Wire FetchFactory to report failures to the network monitor
+  const networkMonitor = useNetworkStatus();
+  Object.values(services).forEach((service) => {
+    service.setOnError(async (error) => {
+      if (error.code === "FETCH_ERROR" || error.code === "TIMEOUT") {
+        await networkMonitor.reportFailure();
+      }
+    });
+  });
+
   console.log("🌐 [API PLUGIN] API services created:", Object.keys(services));
 
   console.log("🌐 [API PLUGIN] API plugin initialized successfully");

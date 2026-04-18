@@ -214,8 +214,7 @@ const handleUpdateNote = async (id: string, text: string) => {
     updatedAt: new Date(),
   };
 
-  // Save to IndexedDB immediately for persistence
-  await saveNoteToIndexedDB(updatedNote);
+  // The store's updateNote handles both IDB persistence and debounced server sync
   await notesStore.updateNote(id, updatedNote);
 };
 
@@ -230,7 +229,6 @@ const handleMathUpdate = async (id: string, metadata: MathNoteMetadata) => {
     isDirty: true,
     updatedAt: new Date(),
   };
-  await saveNoteToIndexedDB(updatedNote);
   await notesStore.updateNote(id, updatedNote);
 };
 
@@ -245,7 +243,6 @@ const handleCanvasUpdate = async (id: string, metadata: CanvasNoteMetadata) => {
     isDirty: true,
     updatedAt: new Date(),
   };
-  await saveNoteToIndexedDB(updatedNote);
   await notesStore.updateNote(id, updatedNote);
 };
 

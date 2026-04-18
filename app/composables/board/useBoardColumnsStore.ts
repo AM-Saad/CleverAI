@@ -3,6 +3,7 @@ import type Result from "@/types/Result";
 import { DB_CONFIG } from "~/utils/constants/pwa";
 import { openUnifiedDB, putRecord, getAllRecords } from "~/utils/idb";
 import type { BoardColumn } from "~/shared/utils/boardColumn.contract";
+import { useNetworkStatus } from "~/composables/shared/useNetworkStatus";
 
 export interface BoardColumnState extends BoardColumn {
   // Local state tracking
@@ -44,6 +45,7 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
 
   const { $api } = useNuxtApp();
   const toast = useToast();
+  const networkMonitor = useNetworkStatus();
 
   // Local reactive state
   const columns = ref<Map<string, BoardColumnState>>(new Map());
@@ -51,6 +53,15 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
 
   // Create a new board column
   const createColumn = async (name: string): Promise<string | null> => {
+    if (!networkMonitor.isVerifiedOnline.value) {
+      toast.add({
+        title: "Offline",
+        description: "Column operations are disabled while offline.",
+        color: "warning"
+      });
+      return null;
+    }
+
     const tempId = `temp-${Date.now()}`;
 
     const optimisticColumn: BoardColumnState = {
@@ -112,6 +123,15 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
 
   // Update board column name
   const updateColumn = async (id: string, name: string): Promise<boolean> => {
+    if (!networkMonitor.isVerifiedOnline.value) {
+      toast.add({
+        title: "Offline",
+        description: "Column operations are disabled while offline.",
+        color: "warning"
+      });
+      return false;
+    }
+
     const originalColumn = columns.value.get(id);
     if (!originalColumn) return false;
 
@@ -161,6 +181,15 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
 
   // Delete board column
   const deleteColumn = async (id: string): Promise<boolean> => {
+    if (!networkMonitor.isVerifiedOnline.value) {
+      toast.add({
+        title: "Offline",
+        description: "Column operations are disabled while offline.",
+        color: "warning"
+      });
+      return false;
+    }
+
     const originalColumn = columns.value.get(id);
     if (!originalColumn) return false;
 
@@ -195,6 +224,15 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
 
   // Reorder board columns
   const reorderColumns = async (orderedColumns: BoardColumnState[]): Promise<boolean> => {
+    if (!networkMonitor.isVerifiedOnline.value) {
+      toast.add({
+        title: "Offline",
+        description: "Column operations are disabled while offline.",
+        color: "warning"
+      });
+      return false;
+    }
+
     // Abort any pending reorder request
     if (reorderAbortController) {
       reorderAbortController.abort();
@@ -281,7 +319,16 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
   // Load columns from server with IndexedDB fallback
   const syncWithServer = async (): Promise<void> => {
     loadingStates.value.set("global", true);
-    console.log("syncing with server", workspaceId)
+    
+    // IDB-first: always hydrate from local storage before the network attempt
+    try { await loadFromIndexedDBFallback(); } catch { /* ignore */ }
+
+    // If offline, do not attempt to fetch from server or overwrite IDB data
+    if (!networkMonitor.isVerifiedOnline.value) {
+      loadingStates.value.set("global", false);
+      return;
+    }
+
     try {
       const result = await $api.boardColumns.getAll(workspaceId);
 
@@ -312,16 +359,13 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
             /* best effort cleanup */
           }
         }
-
-        loadingStates.value.set("global", false);
-        return;
+      } else {
+        console.error("Failed to sync board columns: server returned failure", result.error);
       }
-
-      console.error("Failed to sync board columns: server returned failure", result.error);
-      await loadFromIndexedDBFallback();
     } catch (error) {
       console.error("Failed to sync board columns:", error);
-      await loadFromIndexedDBFallback();
+    } finally {
+      loadingStates.value.set("global", false);
     }
   };
 
@@ -333,20 +377,9 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
       if (localColumns.length > 0) {
         columns.value.clear();
         localColumns.forEach((col: BoardColumnState) => columns.value.set(col.id, col));
-
-        toast.add({
-          title: "Offline Mode",
-          description: `Loaded ${localColumns.length} columns from local storage.`,
-          color: "warning",
-        });
       }
-    } catch (error) {
-      console.error("Failed to load columns from IndexedDB:", error);
-      toast.add({
-        title: "Error",
-        description: "Failed to load columns from server or local storage.",
-        color: "error",
-      });
+    } catch {
+      // Silently fail — navbar pill already shows offline status.
     } finally {
       loadingStates.value.set("global", false);
     }
