@@ -27,7 +27,7 @@ const emit = defineEmits<{
 
 <template>
   <div
-    class="shared-note-toolbar relative flex items-center justify-between gap-1.5 flex-nowrap overflow-hidden rounded-t-[var(--radius-lg)] bg-surface p-1.5 border-b border-secondary">
+    class="shared-note-toolbar relative flex items-center justify-between gap-1.5 flex-nowrap overflow-hidden rounded-t-[var(--radius-lg)] bg-surface-subtle p-1.5 border-b border-secondary">
     <!-- Left/Primary Area: Note-type specific tools -->
     <div
       class="flex flex-1 flex-nowrap gap-1.5 items-center min-w-0 no-scrollbar overflow-x-auto rounded-lg scroll-smooth shadow-inner">

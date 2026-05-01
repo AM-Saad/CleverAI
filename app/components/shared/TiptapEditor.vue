@@ -78,6 +78,8 @@ const emit = defineEmits<{
 const collaborationHandle = ref<CollaborationHandle>(null);
 const props = defineProps<{
   modelValue: string;
+  /** When true, editor is not editable (passive split-pane mode) */
+  readonly?: boolean;
 }>();
 
 // Expose editor publicly
@@ -357,6 +359,14 @@ watch(
   { immediate: true }
 );
 
+watch(
+  () => props.readonly,
+  (isReadonly) => {
+    if (!editor.value) return;
+    editor.value.setEditable(!isReadonly);
+  }
+);
+
 // End Navigation menu items
 
 // ---------- lifecycle cleanup ----------
@@ -445,6 +455,7 @@ onMounted(async () => {
       AutocompleteExtension,
     ],
     content: props.modelValue || "",
+    editable: !props.readonly,
   });
   // Emit updates for v-model
   editor.value.on("update", () => {

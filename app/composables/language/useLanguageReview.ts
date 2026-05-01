@@ -1,4 +1,8 @@
-import type { LanguageQueueCard, LanguageGradeRequest } from "@shared/utils/language.contract";
+import type {
+  LanguageQueueCard,
+  LanguageGradeRequest,
+} from "@shared/utils/language.contract";
+import { useTextToSpeechWorker } from "~/composables/ai/useTextToSpeechWorker";
 
 export function useLanguageReview() {
   const { $api } = useNuxtApp();
@@ -17,11 +21,13 @@ export function useLanguageReview() {
 
   const currentCard = computed(() => queue.value[currentIndex.value] ?? null);
   const totalCards = computed(() => queue.value.length);
-  const remainingCards = computed(() => queue.value.length - currentIndex.value);
+  const remainingCards = computed(
+    () => queue.value.length - currentIndex.value,
+  );
   const progress = computed(() =>
     totalCards.value > 0
       ? Math.round((currentIndex.value / totalCards.value) * 100)
-      : 0
+      : 0,
   );
 
   const fetchQueue = async () => {
@@ -39,14 +45,19 @@ export function useLanguageReview() {
     return result;
   };
 
-  const grade = async (cardId: string, gradeValue: "0" | "1" | "2" | "3" | "4" | "5") => {
+  const grade = async (
+    cardId: string,
+    gradeValue: "0" | "1" | "2" | "3" | "4" | "5",
+  ) => {
     const payload: LanguageGradeRequest = {
       cardId,
       grade: gradeValue,
       requestId: `${cardId}-${Date.now()}`,
     };
 
-    const result = await gradeOperation.execute(() => $api.language.gradeCard(payload));
+    const result = await gradeOperation.execute(() =>
+      $api.language.gradeCard(payload),
+    );
 
     if (result) {
       nextCard();
@@ -71,10 +82,32 @@ export function useLanguageReview() {
 
   // TTS helper — uses the existing TTS worker composable
   const ttsWorker = useTextToSpeechWorker();
+  let activeAudio: HTMLAudioElement | null = null;
 
-  const speakWord = (text: string) => {
-    return ttsWorker.synthesize(text);
+  const speakWord = async (text: string, lang = "en") => {
+    try {
+      const audioUrl = await ttsWorker.synthesize(text, lang);
+      if (!audioUrl) return audioUrl;
+      if (activeAudio) {
+        activeAudio.pause();
+        activeAudio.currentTime = 0;
+      }
+      activeAudio = new Audio(audioUrl);
+      await activeAudio.play();
+      return audioUrl;
+    } catch (err) {
+      console.warn("[language] Text to speech failed", err);
+      return null;
+    }
   };
+
+  onBeforeUnmount(() => {
+    if (activeAudio) {
+      activeAudio.pause();
+      activeAudio.currentTime = 0;
+      activeAudio = null;
+    }
+  });
 
   return {
     // State

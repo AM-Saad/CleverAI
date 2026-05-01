@@ -38,7 +38,7 @@ Cognilo is an AI-powered learning platform built with **Nuxt 4 + TypeScript**. I
 | **Auth** | @sidebase/nuxt-auth (NextAuth.js), bcrypt, SimpleWebAuthn (passkeys) |
 | **Caching** | Redis (rate limiting, semantic caching) — in-memory fallback |
 | **Validation** | Zod 4 (shared contracts client + server) |
-| **AI Providers** | OpenAI SDK, @google/generative-ai, DeepSeek API, Groq API |
+| **AI Providers** | OpenAI SDK, @google/generative-ai, DeepSeek API, Groq API | OpenRouter
 | **On-Device AI** | @huggingface/transformers (web worker) |
 | **PWA** | Workbox 7, web-push, Background Sync |
 | **Testing** | Playwright |

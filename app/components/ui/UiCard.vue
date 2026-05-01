@@ -66,7 +66,7 @@ const {
 
 const variantClasses = {
   default:
-    "bg-surface border border-secondary ",
+    "bg-surface border border-surface-strong ",
   outline: "bg-transparent border border-secondary",
   ghost: "border-0",
 };

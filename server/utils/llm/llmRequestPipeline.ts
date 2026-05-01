@@ -15,7 +15,7 @@
  * ─────────────────────────────────────────────────────────────────────────
  * D1  Rate-limit MemCounters are module-level singletons so gateway and
  *     language requests share the same IP/user buckets.
- * D2  translate → checkQuota:false, incrementQuota:false (call with those opts)
+ * D2  language translate → cache hits and fresh calls may be billed by caller
  * D3  generate-story → checkQuota:true, incrementQuota:true (defaults)
  * D4  Frontend credit pre-check for story: handled in useLanguageCapture.
  *     Pipeline enforces server-side authoritatively regardless.
@@ -87,7 +87,7 @@ export interface LlmPipelineOptions {
    * calling requireRole a second time. Use when the endpoint already
    * called requireRole for a DB lookup before invoking the pipeline.
    */
-  user?: { id: string;[key: string]: any };
+  user?: { id: string; [key: string]: any };
 }
 
 export interface LlmFinalizeOptions {
@@ -109,15 +109,15 @@ export interface LlmFinalizeResult {
    * undefined when incrementQuota=false.
    */
   updatedQuota:
-  | {
-    tier: string;
-    generationsUsed: number;
-    generationsQuota: number;
-    remaining: number;
-    creditBalance: number;
-    creditSpent: boolean;
-  }
-  | undefined;
+    | {
+        tier: string;
+        generationsUsed: number;
+        generationsQuota: number;
+        remaining: number;
+        creditBalance: number;
+        creditSpent: boolean;
+      }
+    | undefined;
   totalLatencyMs: number;
   generationLatencyMs: number;
   inputTokens: number;
@@ -126,7 +126,7 @@ export interface LlmFinalizeResult {
 }
 
 export interface LlmPipelineContext {
-  user: { id: string;[key: string]: any };
+  user: { id: string; [key: string]: any };
   requestId: string;
   strategy: LLMStrategy;
   selectedModel: LlmModelRegistry;
@@ -150,7 +150,7 @@ export interface LlmPipelineContext {
 
 export async function llmRequestPipeline(
   event: H3Event,
-  options: LlmPipelineOptions
+  options: LlmPipelineOptions,
 ): Promise<LlmPipelineContext> {
   const requestId = randomUUID();
   const requestStartTime = Date.now();
@@ -180,41 +180,41 @@ export async function llmRequestPipeline(
       event.node.res.setHeader("x-quota-exceeded", "true");
       event.node.res.setHeader(
         "x-subscription-tier",
-        quotaCheck.subscription.tier
+        quotaCheck.subscription.tier,
       );
       event.node.res.setHeader(
         "x-generations-used",
-        String(quotaCheck.subscription.generationsUsed)
+        String(quotaCheck.subscription.generationsUsed),
       );
       event.node.res.setHeader(
         "x-generations-quota",
-        String(quotaCheck.subscription.generationsQuota)
+        String(quotaCheck.subscription.generationsQuota),
       );
       event.node.res.setHeader(
         "x-generations-remaining",
-        String(quotaCheck.subscription.remaining)
+        String(quotaCheck.subscription.remaining),
       );
       throw Errors.badRequest(
         "Quota exceeded. Please upgrade to continue generating content.",
-        { subscription: quotaCheck.subscription, type: "QUOTA_EXCEEDED" }
+        { subscription: quotaCheck.subscription, type: "QUOTA_EXCEEDED" },
       );
     }
     // Always expose current subscription state in headers on a passing check
     event.node.res.setHeader(
       "x-subscription-tier",
-      quotaCheck.subscription.tier
+      quotaCheck.subscription.tier,
     );
     event.node.res.setHeader(
       "x-generations-used",
-      String(quotaCheck.subscription.generationsUsed)
+      String(quotaCheck.subscription.generationsUsed),
     );
     event.node.res.setHeader(
       "x-generations-quota",
-      String(quotaCheck.subscription.generationsQuota)
+      String(quotaCheck.subscription.generationsQuota),
     );
     event.node.res.setHeader(
       "x-generations-remaining",
-      String(quotaCheck.subscription.remaining)
+      String(quotaCheck.subscription.remaining),
     );
   }
 
@@ -226,7 +226,7 @@ export async function llmRequestPipeline(
     rateLimitMax,
     _userRateLimitMap,
     now,
-    windowMs
+    windowMs,
   );
   const clientIp = getClientIp(event);
   const ipRemaining = await applyLimit(
@@ -234,14 +234,14 @@ export async function llmRequestPipeline(
     ipRateLimitMax,
     _ipRateLimitMap,
     now,
-    windowMs
+    windowMs,
   );
   setRateLimitHeaders(
     event,
     Math.min(userRemaining, ipRemaining),
     userRemaining,
     ipRemaining,
-    now
+    now,
   );
 
   // ── Model selection ──────────────────────────────────────────────────────
@@ -251,12 +251,16 @@ export async function llmRequestPipeline(
   const config = useRuntimeConfig();
   const devModelOverride =
     process.env.NODE_ENV === "development"
-      ? (config as any).devLlmModelOverride as string | undefined
+      ? ((config as any).devLlmModelOverride as string | undefined)
       : undefined;
 
   if (devModelOverride) {
     const overrideModel = await prisma.llmModelRegistry.findUnique({
       where: { modelId: devModelOverride },
+    });
+    console.log("[pipeline] DEV model override requested:", {
+      requestId,
+      overrideModelId: devModelOverride,
     });
     if (overrideModel) {
       selectedModel = overrideModel;
@@ -267,12 +271,20 @@ export async function llmRequestPipeline(
       });
     } else {
       console.warn(
-        `[pipeline] DEV_LLM_MODEL_OVERRIDE "${devModelOverride}" not found in registry`
+        `[pipeline] DEV_LLM_MODEL_OVERRIDE "${devModelOverride}" not found in registry`,
       );
     }
   }
 
   if (!selectedModel) {
+    console.log(
+      "[pipeline] No DEV override, proceeding to normal model selection:",
+      {
+        requestId,
+        task,
+        pinnedModelId,
+      },
+    );
     if (pinnedModelId) {
       // Caller specified an exact model — validate it is usable
       const pinned = await prisma.llmModelRegistry.findUnique({
@@ -284,10 +296,10 @@ export async function llmRequestPipeline(
           user.id,
           task,
           new Error(`Pinned model unavailable: ${pinnedModelId}`),
-          pinnedModelId
+          pinnedModelId,
         );
         throw Errors.server(
-          "Generation model is currently unavailable. Please try again."
+          "Generation model is currently unavailable. Please try again.",
         );
       }
       selectedModel = pinned;
@@ -340,7 +352,7 @@ export async function llmRequestPipeline(
         completionTokens: m.completionTokens,
         totalTokens: m.totalTokens,
       };
-    }
+    },
   );
 
   const tokenEstimate = estimateTokensFromText(inputText);
@@ -349,7 +361,7 @@ export async function llmRequestPipeline(
 
   // ── finalize closure ────────────────────────────────────────────────────
   const finalize = async (
-    opts: LlmFinalizeOptions = {}
+    opts: LlmFinalizeOptions = {},
   ): Promise<LlmFinalizeResult> => {
     const generationLatencyMs = Date.now() - generationStartTime;
     const totalLatencyMs = Date.now() - requestStartTime;
@@ -410,10 +422,7 @@ export async function llmRequestPipeline(
   };
 
   // ── fail closure ────────────────────────────────────────────────────────
-  const fail = async (
-    error: unknown,
-    workspaceId?: string
-  ): Promise<void> => {
+  const fail = async (error: unknown, workspaceId?: string): Promise<void> => {
     const generationLatencyMs = Date.now() - generationStartTime;
     // Track degraded latency so routing scorer can deprioritize this model
     await updateModelLatency(selectedModel!.modelId, generationLatencyMs);
@@ -423,7 +432,7 @@ export async function llmRequestPipeline(
       task,
       error,
       selectedModel!.modelId,
-      workspaceId
+      workspaceId,
     );
   };
 

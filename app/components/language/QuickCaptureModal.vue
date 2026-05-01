@@ -1,24 +1,35 @@
 <template>
   <Teleport to="body">
     <AnimatePresence>
-
       <!-- ── Backdrop ──────────────────────────────────────────────────────── -->
       <motion.div v-if="show" key="qcm-bd" :initial="{ opacity: 0 }" :animate="{ opacity: 1 }" :exit="{ opacity: 0 }"
         :transition="{ duration: 0.2 }"
-        class="fixed inset-0 z-48 bg-black/10 pb-3 overflow-hidden bg-surface-container backdrop-blur-glass rounded-2xl shadow-glass border border-secondary flex flex-col w-full flex-1 min-h-0 "
+        class="fixed inset-0 z-48 bg-black/10 pb-3   overflow-hidden bg-surface-container backdrop-blur-glass rounded-2xl shadow-glass border border-secondary flex flex-col w-full flex-1 min-h-0"
         :class="{ 'cursor-not-allowed': isLocked }" @click="onBackdropClick" />
 
       <!-- ── Panel ─────────────────────────────────────────────────────────── -->
       <motion.div v-if="show" key="qcm-panel" role="dialog" aria-modal="true" aria-labelledby="qcm-title"
         :initial="{ opacity: 0, y: 24, scale: 0.96 }" :animate="{ opacity: 1, y: 0, scale: 1 }"
         :exit="{ opacity: 0, y: 16, scale: 0.97 }" :transition="{ type: 'spring', stiffness: 480, damping: 38 }"
-        class="fixed inset-x-0 bottom-[10vh] z-49 mx-auto flex w-[95%] lg:max-w-120  rounded-3xl  px-4  overflow-hidden bg-surface backdrop-blur-glass  shadow-glass border border-secondary  flex-col  flex-1 min-h-0 "
-        style="max-height: 82svh; box-shadow: 0 24px 64px -8px rgba(0,0,0,0.22), 0 4px 20px -4px rgba(0,0,0,0.12), 0 0 0 1px rgba(255,255,255,0.06) inset;">
+        class="fixed inset-x-0 bottom-[10vh] z-49 mx-auto flex w-[95%] lg:max-w-100 rounded-2xl px-4 overflow-hidden bg-surface backdrop-blur-glass shadow-glass border border-secondary flex-col flex-1 min-h-0"
+        style="
+          max-height: 82svh;
+          box-shadow:
+            0 24px 64px -8px rgba(0, 0, 0, 0.22),
+            0 4px 20px -4px rgba(0, 0, 0, 0.12),
+            0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+        ">
         <!-- Gradient top stripe -->
-        <div
-          class="absolute inset-x-0 top-0 h-px rounded-t-2xl bg-linear-to-r from-transparent via-primary/90 to-transparent" />
-        <svg class="absolute pointer-events-none"
-          style="inset: 0px;width: 100%;height: 100%;z-index: 50;filter: drop-shadow(rgba(168, 85, 247, 0.3) 0px 0px 8px);overflow: visible;">
+        <!-- <div
+          class="absolute inset-x-0 top-0 h-px rounded-t-2xl bg-linear-to-r from-transparent via-primary/90 to-transparent" /> -->
+        <svg class="absolute pointer-events-none" style="
+            inset: 0px;
+            width: 100%;
+            height: 100%;
+            z-index: 50;
+            filter: drop-shadow(rgba(168, 85, 247, 0.3) 0px 0px 8px);
+            overflow: visible;
+          ">
           <defs>
             <linearGradient id="agent-panel-glow-grad" x1="0" y1="1" x2="1" y2="0" gradientUnits="objectBoundingBox">
               <stop offset="0%" stop-color="#40D9C6" stop-opacity="1"></stop>
@@ -31,9 +42,10 @@
                 dur="6s" repeatCount="indefinite"></animateTransform>
             </linearGradient>
           </defs>
-          <rect x="1" y="1" rx="16" ry="16" fill="none" stroke="url(#agent-panel-glow-grad)" stroke-width="2"
-            style="width: calc(100% - 2px); height: calc(100% - 2px);"></rect>
+          <rect x="1" y="1" rx="10" ry="10" fill="none" stroke="url(#agent-panel-glow-grad)" stroke-width="3"
+            style="width: calc(100% - 2px); height: calc(100% - 2px)"></rect>
         </svg>
+
         <!-- Header -->
         <div class="flex items-center justify-between pt-5 pb-4 shrink-0">
           <div class="flex items-center gap-3">
@@ -53,7 +65,7 @@
             </AnimatePresence>
           </div>
           <button type="button" aria-label="Close" :disabled="isLocked"
-            class="flex h-8 w-8 items-center justify-center rounded-full text-content-secondary transition-colors hover:bg-surface-strong hover:text-content-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40"
+            class="flex h-8 w-8 items-center justify-center rounded-full text-content-secondary transition-colors hover:bg-surface-strong hover:text-content-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40 active:scale-95"
             @click="handleClose">
             <Icon name="i-lucide-x" class="h-4 w-4" />
           </button>
@@ -64,7 +76,6 @@
         <!-- Body — scrollable, state transitions inside -->
         <div class="flex-1 overflow-y-auto py-5 min-h-0">
           <AnimatePresence mode="wait">
-
             <!-- ── IDLE ───────────────────────────────────────────────────── -->
             <motion.div v-if="internalState === 'idle'" key="state-idle"
               :initial="{ opacity: 0, y: stateDirection * -20 }" :animate="{ opacity: 1, y: 0 }"
@@ -107,7 +118,9 @@
                   </Transition>
                   <!-- Mic error -->
                   <Transition name="ctx">
-                    <p v-if="micError" class="text-xs text-error text-center">{{ micError }}</p>
+                    <p v-if="micError" class="text-xs text-error text-center">
+                      {{ micError }}
+                    </p>
                   </Transition>
                 </div>
 
@@ -116,7 +129,10 @@
                   <button type="button"
                     class="flex items-center gap-1 text-xs text-content-secondary transition-colors hover:text-content-on-surface"
                     @click="showContext = !showContext">
-                    <Icon :name="showContext ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="h-3 w-3" />
+                    <Icon :name="showContext
+                      ? 'i-lucide-chevron-up'
+                      : 'i-lucide-chevron-down'
+                      " class="h-3 w-3" />
                     Add context (optional)
                   </button>
                   <Transition name="ctx">
@@ -125,7 +141,20 @@
                   </Transition>
                 </div>
 
-                <u-button :disabled="!wordInput.trim()" :loading="isCapturing" @click="handleCapture">
+                <label class="flex items-center gap-3 rounded-lg border border-secondary bg-surface-subtle px-3 py-2.5">
+                  <input v-model="includeTranslation" type="checkbox"
+                    class="h-4 w-4 rounded border-secondary text-primary focus:ring-primary" />
+                  <span class="min-w-0">
+                    <span class="block text-sm font-medium text-content-on-surface">
+                      Translate to {{ translationLanguage }}
+                    </span>
+                    <span class="block text-xs text-content-secondary">
+                      Keep meanings and examples either way
+                    </span>
+                  </span>
+                </label>
+
+                <u-button size="sm" :disabled="!wordInput.trim()" :loading="isCapturing" @click="handleCapture">
                   <Icon name="i-lucide-send" class="mr-1.5 h-4 w-4" />
                   Translate
                 </u-button>
@@ -149,9 +178,7 @@
               :exit="{ opacity: 0, x: stateDirection * 20 }" :transition="{ duration: 0.18, ease: 'easeInOut' }">
               <div class="space-y-4">
                 <!-- Word card — uses primary gradient treatment -->
-                <div
-                  class="relative overflow-hidden rounded-xl border border-primary/15 bg-linear-to-br from-primary/8 to-primary/2 p-5">
-                  <div class="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-primary/6 blur-2xl" />
+                <div class="relative overflow-hidden rounded-xl border border-primary/15 bg-primary/5 p-5">
                   <div class="relative flex items-start justify-between gap-3">
                     <div class="min-w-0">
                       <p class="text-2xl font-semibold leading-tight text-content-on-surface">
@@ -160,18 +187,27 @@
                       <p v-if="captureResult.phonetic" class="mt-0.5 text-xs text-content-secondary">
                         {{ captureResult.phonetic }}
                       </p>
+                      <div class="mt-2 flex flex-wrap gap-1.5">
+                        <u-badge v-if="captureResult.category" variant="soft" color="neutral" class="text-xs">
+                          {{ captureResult.category }}
+                        </u-badge>
+                        <u-badge v-if="captureResult.difficulty" variant="soft" color="neutral" class="text-xs">
+                          {{ captureResult.difficulty }}
+                        </u-badge>
+                      </div>
                     </div>
                     <u-badge variant="soft" color="neutral" class="mt-1 shrink-0 text-xs">
                       {{ captureResult.partOfSpeech }}
                     </u-badge>
                   </div>
-                  <div class="relative mt-4 border-t border-primary/15 pt-4">
+                  <div v-if="captureResult.translation" class="relative mt-4 border-t border-primary/15 pt-4">
                     <p class="text-xl font-semibold leading-snug text-primary">
                       {{ captureResult.translation }}
                     </p>
                     <div class="mt-1.5 flex flex-wrap items-center gap-2">
                       <span class="text-xs uppercase tracking-wide text-content-disabled">
-                        {{ captureResult.detectedLang }} → {{ preferences?.targetLanguage ?? 'en' }}
+                        {{ captureResult.detectedLang }} →
+                        {{ translationLanguage }}
                       </span>
                       <u-badge v-if="captureResult.cached" variant="soft" color="success" class="text-xs">
                         Already saved
@@ -180,10 +216,66 @@
                   </div>
                 </div>
 
+                <div v-if="captureResult.meanings?.length"
+                  class="space-y-2 rounded-xl border border-secondary bg-surface-strong p-3.5">
+                  <div class="flex items-center gap-2">
+                    <Icon name="i-lucide-list-tree" class="h-4 w-4 text-primary" />
+                    <span class="text-sm font-semibold text-content-on-surface">
+                      Meanings
+                    </span>
+                  </div>
+                  <div class="space-y-2">
+                    <div v-for="(meaning, index) in captureResult.meanings" :key="`${meaning.definition}-${index}`"
+                      class="rounded-lg bg-surface px-3 py-2">
+                      <div class="flex items-start gap-2">
+                        <span class="mt-0.5 text-xs text-content-disabled">
+                          {{ index + 1 }}.
+                        </span>
+                        <div class="min-w-0 flex-1">
+                          <p class="text-sm text-content-on-surface">
+                            {{ meaning.definition }}
+                          </p>
+                          <p v-if="meaning.translation" class="mt-0.5 text-xs font-medium text-primary">
+                            {{ meaning.translation }}
+                          </p>
+                          <p v-if="meaning.example" class="mt-1 text-xs italic text-content-secondary">
+                            {{ meaning.example }}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div v-if="captureResult.examples?.length"
+                  class="rounded-xl border border-secondary bg-surface-strong p-3.5">
+                  <div class="mb-2 flex items-center gap-2">
+                    <Icon name="i-lucide-message-square-quote" class="h-4 w-4 text-primary" />
+                    <span class="text-sm font-semibold text-content-on-surface">
+                      Example
+                    </span>
+                  </div>
+                  <p class="text-sm leading-relaxed text-content-on-surface">
+                    {{ captureResult.examples[0]?.text }}
+                  </p>
+                  <p v-if="captureResult.examples[0]?.translation" class="mt-1 text-xs text-content-secondary">
+                    {{ captureResult.examples[0]?.translation }}
+                  </p>
+                </div>
+
                 <div class="flex flex-col gap-2">
+                  <u-button v-if="!captureResult.saved" variant="soft" color="neutral" class="w-full"
+                    :loading="isCapturing" @click="handleSaveOnly">
+                    <Icon name="i-lucide-book-plus" class="mr-1.5 h-4 w-4" />
+                    Save to Word Bank
+                  </u-button>
                   <u-button class="w-full" :loading="isGeneratingStory" @click="handleGenerateStory">
                     <Icon name="i-lucide-sparkles" class="mr-1.5 h-4 w-4" />
-                    Add to Deck + Generate Story
+                    {{
+                      captureResult.saved
+                        ? "Generate Story"
+                        : "Save to Deck + Generate Story"
+                    }}
                   </u-button>
                   <u-button variant="ghost" color="neutral" class="w-full" @click="resetToIdle">
                     <Icon name="i-lucide-rotate-ccw" class="mr-1.5 h-3.5 w-3.5" />
@@ -245,7 +337,6 @@
                 </div>
               </div>
             </motion.div>
-
           </AnimatePresence>
 
           <!-- Error (always visible, below active state) -->
@@ -262,12 +353,13 @@
 </template>
 
 <script setup lang="ts">
-import { AnimatePresence, motion } from 'motion-v';
-import { usePredictionaryInput } from '~/composables/usePredictionaryInput';
-import { useSpeechCapture } from '~/composables/useSpeechCapture';
+import { AnimatePresence, motion } from "motion-v";
+import { useSanitize } from "~/composables/shared/useSanitize";
+import { usePredictionaryInput } from "~/composables/usePredictionaryInput";
+import { useSpeechCapture } from "~/composables/useSpeechCapture";
 
 const props = defineProps<{ show: boolean }>();
-const emit = defineEmits<{ (e: 'close'): void }>();
+const emit = defineEmits<{ (e: "close"): void }>();
 
 const {
   state,
@@ -286,12 +378,19 @@ const {
   dismissResult,
   loadPreferences,
 } = useLanguageCapture();
+const { sanitizeHtml } = useSanitize();
 
 const internalState = computed(() => state.value);
 
 // Map state order so transitions slide forward/backward correctly
-const STATE_ORDER = ['idle', 'loading', 'result', 'story-loading', 'story-ready'] as const;
-type AppState = typeof STATE_ORDER[number];
+const STATE_ORDER = [
+  "idle",
+  "loading",
+  "result",
+  "story-loading",
+  "story-ready",
+] as const;
+type AppState = (typeof STATE_ORDER)[number];
 const prevStateIdx = ref(0);
 const stateDirection = ref(1); // +1 = forward, -1 = back
 watch(internalState, (next, prev) => {
@@ -303,29 +402,45 @@ watch(internalState, (next, prev) => {
 
 const statePill = computed(() => {
   const m: Record<string, string> = {
-    loading: 'Translating',
-    result: 'Result',
-    'story-loading': 'Generating story',
-    'story-ready': 'Story ready',
+    loading: "Translating",
+    result: "Result",
+    "story-loading": "Generating story",
+    "story-ready": "Story ready",
   };
-  return m[internalState.value] ?? '';
+  return m[internalState.value] ?? "";
 });
+const translationLanguage = computed(
+  () => preferences.value?.nativeLanguage ?? "en",
+);
 
 // Backdrop dismiss locked during async ops
-const isLocked = computed(() =>
-  internalState.value === 'loading' || internalState.value === 'story-loading'
+const isLocked = computed(
+  () =>
+    internalState.value === "loading" ||
+    internalState.value === "story-loading",
 );
-const onBackdropClick = () => { if (!isLocked.value) handleClose(); };
+const onBackdropClick = () => {
+  if (!isLocked.value) handleClose();
+};
 
 // ── Input ──────────────────────────────────────────────────────────────────────
-const wordInput = ref('');
-const contextInput = ref('');
+const wordInput = ref("");
+const contextInput = ref("");
+const includeTranslation = ref(true);
 
 // ── Autocomplete ──────────────────────────────────────────────────────────────
-const { suggestions: wordSuggestions, onInput: predInput, onAccept: predAccept } = usePredictionaryInput();
-const wordSuggestionsArr = computed<string[]>(() => wordSuggestions.value.slice());
+const {
+  suggestions: wordSuggestions,
+  onInput: predInput,
+  onAccept: predAccept,
+} = usePredictionaryInput();
+const wordSuggestionsArr = computed<string[]>(() =>
+  wordSuggestions.value.slice(),
+);
 const handleWordQuery = (val: string) => predInput(val);
-const handleWordAccept = (word: string) => { predAccept(word); };
+const handleWordAccept = (word: string) => {
+  predAccept(word);
+};
 const showContext = ref(false);
 const inputContainerRef = ref<HTMLElement | null>(null);
 
@@ -342,24 +457,29 @@ const {
   cleanup: cleanupSpeech,
 } = useSpeechCapture({
   maxDuration: 15,
-  onResult(transcript) { wordInput.value = transcript; },
+  onResult(transcript) {
+    wordInput.value = transcript;
+  },
 });
 
 const micIcon = computed(() => {
-  if (isProcessing.value) return 'i-lucide-loader-2';
-  if (isListening.value) return 'i-lucide-square';
-  return 'i-lucide-mic';
+  if (isProcessing.value) return "i-lucide-loader-2";
+  if (isListening.value) return "i-lucide-square";
+  return "i-lucide-mic";
 });
 const micLabel = computed(() => {
   if (isListening.value && usingFallback.value)
-    return `0:${String(recordingSeconds.value).padStart(2, '0')} — Stop`;
-  if (isListening.value) return 'Listening… — Stop';
-  if (isProcessing.value) return 'Processing…';
-  return 'Tap to speak';
+    return `0:${String(recordingSeconds.value).padStart(2, "0")} — Stop`;
+  if (isListening.value) return "Listening… — Stop";
+  if (isProcessing.value) return "Processing…";
+  return "Tap to speak";
 });
 
 const handleMicClick = () => {
-  if (isListening.value) { stopSpeech(); return; }
+  if (isListening.value) {
+    stopSpeech();
+    return;
+  }
   startSpeech();
 };
 
@@ -369,41 +489,70 @@ const handleCapture = async () => {
   if (!word) return;
   await captureWord(word, {
     sourceContext: contextInput.value.trim() || undefined,
-    sourceType: 'manual',
+    includeTranslation: includeTranslation.value,
+    translateOnly: true,
+    sourceType: "manual",
+  });
+};
+const handleSaveOnly = async () => {
+  const word = wordInput.value.trim();
+  if (!word) return;
+  await captureWord(word, {
+    sourceContext: contextInput.value.trim() || undefined,
+    includeTranslation: includeTranslation.value,
+    translateOnly: false,
+    sourceType: "manual",
   });
 };
 const handleGenerateStory = async () => {
-  if (!captureResult.value?.wordId) return;
-  await generateStory(captureResult.value.wordId);
+  let wordId = captureResult.value?.wordId;
+  if (!wordId) {
+    const savedWord = await captureWord(wordInput.value.trim(), {
+      sourceContext: contextInput.value.trim() || undefined,
+      includeTranslation: includeTranslation.value,
+      sourceType: "manual",
+      translateOnly: false,
+    });
+    wordId = savedWord?.wordId;
+  }
+  if (!wordId) return;
+  await generateStory(wordId);
 };
 const resetToIdle = () => {
   dismissResult();
-  wordInput.value = '';
+  wordInput.value = "";
   showContext.value = false;
-  nextTick(() => inputContainerRef.value?.querySelector('input')?.focus());
+  includeTranslation.value = true;
+  nextTick(() => inputContainerRef.value?.querySelector("input")?.focus());
 };
 const handleClose = () => {
   cleanupSpeech();
   dismissResult();
-  wordInput.value = '';
-  contextInput.value = '';
+  wordInput.value = "";
+  contextInput.value = "";
   showContext.value = false;
-  emit('close');
+  includeTranslation.value = true;
+  emit("close");
 };
 const highlightCloze = (text: string, clozeWord: string) => {
-  const esc = clozeWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return text.replace(
-    new RegExp(`\\b${esc}\\b`, 'gi'),
-    `<mark class="bg-primary/20 text-primary rounded px-0.5">$&</mark>`,
+  const esc = clozeWord.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return sanitizeHtml(
+    text.replace(
+      new RegExp(`\\b${esc}\\b`, "gi"),
+      `<mark class="bg-primary/20 text-primary rounded px-0.5">$&</mark>`,
+    ),
   );
 };
 
-watch(() => props.show, (v) => {
-  if (v) {
-    loadPreferences();
-    nextTick(() => inputContainerRef.value?.querySelector('input')?.focus());
-  }
-});
+watch(
+  () => props.show,
+  (v) => {
+    if (v) {
+      loadPreferences();
+      nextTick(() => inputContainerRef.value?.querySelector("input")?.focus());
+    }
+  },
+);
 </script>
 
 <style scoped>

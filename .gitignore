@@ -24,3 +24,5 @@ logs
 .env.prod
 .env.*
 .vercel
+
+goose-recipes

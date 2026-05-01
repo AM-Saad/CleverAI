@@ -26,11 +26,6 @@ export default defineEventHandler(async (event) => {
   }
 
   const story = word.stories[0] ?? null;
-  if (!story) {
-    throw Errors.badRequest(
-      "Generate a story first before enrolling this word in your review deck."
-    );
-  }
 
   // Idempotent upsert — safe to call even if already enrolled
   await prisma.$transaction(async (tx) => {
@@ -41,11 +36,11 @@ export default defineEventHandler(async (event) => {
           wordId: id,
         },
       },
-      update: { storyId: story.id, suspended: false },
+      update: { storyId: story?.id ?? undefined, suspended: false },
       create: {
         userId: user.id,
         wordId: id,
-        storyId: story.id,
+        storyId: story?.id ?? null,
         nextReviewAt: new Date(),
         repetitions: 0,
         easeFactor: 2.5,

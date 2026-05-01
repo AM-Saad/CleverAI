@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     if (e instanceof ZodError) {
       throw Errors.badRequest(
         "Invalid query parameters",
-        e.issues.map((i) => ({ path: i.path, message: i.message }))
+        e.issues.map((i) => ({ path: i.path, message: i.message })),
       );
     }
     throw Errors.badRequest("Invalid query parameters");
@@ -27,17 +27,13 @@ export default defineEventHandler(async (event) => {
   const prefs = await prisma.userLanguagePreferences.findUnique({
     where: { userId: user.id },
   });
-  const limit = Math.min(
-    parsedQuery.limit,
-    prefs?.sessionCardLimit ?? 12
-  );
+  const limit = Math.min(parsedQuery.limit, prefs?.sessionCardLimit ?? 12);
 
   const cardReviews = await prisma.languageCardReview.findMany({
     where: {
       userId: user.id,
       nextReviewAt: { lte: new Date() },
       suspended: false,
-      storyId: { not: null }, // only cards that have a story can be reviewed
     },
     take: limit,
     orderBy: { nextReviewAt: "asc" },
@@ -71,6 +67,7 @@ export default defineEventHandler(async (event) => {
     storyId: cr.story?.id ?? null,
     storyText: cr.story?.storyText ?? null,
     sentences: cr.story?.sentences ?? null,
+    mode: cr.story ? "story_cloze" : "word_translation",
     reviewState: {
       intervalDays: cr.intervalDays,
       easeFactor: cr.easeFactor,

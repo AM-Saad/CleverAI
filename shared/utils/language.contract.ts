@@ -2,24 +2,39 @@ import { z } from "zod";
 import { SubscriptionInfoSchema } from "./llm-generate.contract";
 import type { SubscriptionInfo } from "./llm-generate.contract";
 
+export const SUPPORTED_LANGUAGE_OPTIONS = [
+  { value: "en", label: "English" },
+  { value: "ar", label: "Arabic" },
+  { value: "es", label: "Spanish" },
+  { value: "fr", label: "French" },
+  { value: "de", label: "German" },
+  { value: "it", label: "Italian" },
+] as const;
+
+export const SUPPORTED_LANGUAGE_CODES = SUPPORTED_LANGUAGE_OPTIONS.map(
+  (language) => language.value,
+);
+
+export const SupportedLanguageCodeSchema = z.enum([
+  "en",
+  "ar",
+  "es",
+  "fr",
+  "de",
+  "it",
+]);
+
+export type SupportedLanguageCode = z.infer<typeof SupportedLanguageCodeSchema>;
+
+export const getLanguageLabel = (code: string) =>
+  SUPPORTED_LANGUAGE_OPTIONS.find((language) => language.value === code)
+    ?.label ?? code;
+
 export const LanguageSentenceSchema = z.object({
   text: z.string(),
   clozeWord: z.string(),
   clozeBlank: z.string(),
   clozeIndex: z.number(),
-});
-
-export const LanguageWordSchema = z.object({
-  id: z.string(),
-  word: z.string(),
-  translation: z.string(),
-  translationLang: z.string(),
-  sourceLang: z.string(),
-  sourceContext: z.string().optional(),
-  sourceType: z.string(),
-  status: z.string(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
 });
 
 export const LanguageStorySchema = z.object({
@@ -31,11 +46,57 @@ export const LanguageStorySchema = z.object({
   createdAt: z.coerce.date(),
 });
 
+export const LanguageStoryPreviewSchema = z.object({
+  id: z.string(),
+  storyText: z.string(),
+  sentences: z.array(LanguageSentenceSchema),
+});
+
+export const LanguageMeaningSchema = z.object({
+  definition: z.string(),
+  translation: z.string().optional(),
+  example: z.string().optional(),
+  partOfSpeech: z.string().optional(),
+  category: z.string().optional(),
+  register: z.string().optional(),
+});
+
+export const LanguageExampleSchema = z.object({
+  text: z.string(),
+  translation: z.string().optional(),
+});
+
+export const LanguageWordSchema = z.object({
+  id: z.string(),
+  translationId: z.string().nullable().optional(),
+  word: z.string(),
+  translation: z.string(),
+  translationLang: z.string(),
+  sourceLang: z.string(),
+  sourceContext: z.string().optional(),
+  sourceType: z.string(),
+  partOfSpeech: z.string().optional(),
+  phonetic: z.string().nullable().optional(),
+  meanings: z.array(LanguageMeaningSchema).optional(),
+  examples: z.array(LanguageExampleSchema).optional(),
+  category: z.string().nullable().optional(),
+  difficulty: z.string().nullable().optional(),
+  isPhrase: z.boolean().optional(),
+  metadata: z.record(z.string(), z.unknown()).nullable().optional(),
+  stories: z.array(LanguageStoryPreviewSchema).optional(),
+  status: z.string(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+});
+
 export const CaptureWordDTO = z.object({
   word: z.string().min(1).max(200),
   sourceContext: z.string().max(500).optional(),
   sourceLang: z.string().optional().default("auto"),
-  targetLang: z.string().optional().default("en"),
+  targetLang: SupportedLanguageCodeSchema.optional().default("en"),
+  includeTranslation: z.boolean().optional().default(true),
+  translateOnly: z.boolean().optional().default(false),
+  forceRetranslate: z.boolean().optional().default(false),
   sourceType: z
     .enum(["note", "material", "external", "manual"])
     .default("manual"),
@@ -55,8 +116,8 @@ export const LanguageGradeRequestSchema = z.object({
 
 export const LanguagePreferencesDTO = z.object({
   enabled: z.boolean().optional(),
-  targetLanguage: z.string().optional(),
-  nativeLanguage: z.string().optional(),
+  targetLanguage: SupportedLanguageCodeSchema.optional(),
+  nativeLanguage: SupportedLanguageCodeSchema.optional(),
   autoEnroll: z.boolean().optional(),
   sessionCardLimit: z.number().int().min(5).max(50).optional(),
   showConsent: z.boolean().optional(),
@@ -64,6 +125,14 @@ export const LanguagePreferencesDTO = z.object({
 
 export const LanguageWordsQuerySchema = z.object({
   status: z.string().optional(),
+  category: z.string().optional(),
+  hasStory: z
+    .enum(["true", "false"])
+    .optional()
+    .transform((value) => (value === undefined ? undefined : value === "true")),
+  search: z.string().max(100).optional(),
+  targetLanguage: SupportedLanguageCodeSchema.optional(),
+  nativeLanguage: SupportedLanguageCodeSchema.optional(),
   limit: z.coerce.number().min(1).max(100).optional().default(50),
   cursor: z.string().optional(),
 });
@@ -78,6 +147,7 @@ export const LanguageQueueCardSchema = z.object({
   storyId: z.string().nullable().optional(),
   storyText: z.string().nullable().optional(),
   sentences: z.array(LanguageSentenceSchema).nullable().optional(),
+  mode: z.enum(["story_cloze", "word_translation"]).default("word_translation"),
   reviewState: z.object({
     intervalDays: z.number(),
     easeFactor: z.number(),
@@ -106,6 +176,8 @@ export const LanguageStatsSchema = z.object({
 export type LanguageWord = z.infer<typeof LanguageWordSchema>;
 export type LanguageStory = z.infer<typeof LanguageStorySchema>;
 export type LanguageSentence = z.infer<typeof LanguageSentenceSchema>;
+export type LanguageMeaning = z.infer<typeof LanguageMeaningSchema>;
+export type LanguageExample = z.infer<typeof LanguageExampleSchema>;
 export type CaptureWordDTO = z.infer<typeof CaptureWordDTO>;
 export type GenerateStoryDTO = z.infer<typeof GenerateStoryDTO>;
 export type LanguageGradeRequest = z.infer<typeof LanguageGradeRequestSchema>;
@@ -128,14 +200,25 @@ export interface UserLanguagePreferences {
 }
 
 export interface CaptureWordResponse {
-  wordId: string;
+  wordId?: string;
+  translationId?: string;
   word: string;
   translation: string;
   partOfSpeech: string;
   detectedLang: string;
   phonetic?: string;
+  meanings?: LanguageMeaning[];
+  examples?: LanguageExample[];
+  category?: string;
+  difficulty?: string;
+  isPhrase?: boolean;
+  metadata?: Record<string, unknown>;
+  saved: boolean;
+  status?: string;
   /** true when the word was already in the user's deck — no LLM call was made */
   cached?: boolean;
+  /** true when the lexical data came from the shared translation pool */
+  sharedCacheHit?: boolean;
 }
 
 export interface GenerateStoryResponse {
@@ -144,7 +227,10 @@ export interface GenerateStoryResponse {
   sentences: LanguageSentence[];
   wordId: string;
   /** Present when story generation consumed a quota slot. */
-  subscription?: Pick<SubscriptionInfo, "tier" | "generationsUsed" | "generationsQuota" | "remaining">;
+  subscription?: Pick<
+    SubscriptionInfo,
+    "tier" | "generationsUsed" | "generationsQuota" | "remaining"
+  >;
 }
 
 export { SubscriptionInfoSchema };

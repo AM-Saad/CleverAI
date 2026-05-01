@@ -1,11 +1,7 @@
 <script setup lang="ts">
-import type { NoteState } from "~/composables/workspaces/useNotesStore";
-import { useNotesStore } from "~/composables/workspaces/useNotesStore";
 import { APIError } from "~/services/FetchFactory";
 import { ReorderGroup, ReorderItem } from "motion-v";
 import type { MathNoteMetadata, CanvasNoteMetadata } from "@@/shared/utils/note.contract";
-import { useAdaptiveToolbar } from "~/composables/ui/useAdaptiveToolbar";
-import { useExportContent } from "~/composables/shared/useExportContent";
 
 const route = useRoute();
 const workspaceId = route.params.id as string;
@@ -254,6 +250,7 @@ const deleteNote = (id: string) => {
 
 const confirmDeleteNote = async () => {
   if (noteToDelete.value) {
+    splitNotes.handleNoteDeleted(noteToDelete.value);
     await notesStore.deleteNote(noteToDelete.value);
     noteToDelete.value = null;
   }
@@ -309,6 +306,121 @@ const newNoteDropdownItems = [
 
 const isDrawerOpen = ref(false);
 
+// ─── Split Notes ─────────────────────────────────────────────────
+const splitNotes = useSplitNotes(workspaceId, () => {
+  const ids = new Set<string>();
+  for (const id of notesStore.notes.value.keys()) ids.add(id);
+  return ids;
+});
+
+// Keep splitNotes in sync with drawer selection
+watch(currentNoteId, (id) => {
+  if (!id) return;
+  // Skip when the change was triggered by pane activation (already handled)
+  if (_skipNextWatcherSync.value) {
+    _skipNextWatcherSync.value = false;
+    return;
+  }
+  if (!splitNotes.isSplit.value) {
+    // Single-view: always update primary
+    splitNotes.setPrimaryNote(id);
+  } else {
+    // Split-view: update whichever pane is active
+    if (splitNotes.activePane.value === 'primary') {
+      // Guard: don't set primary to same as secondary
+      if (id !== splitNotes.secondaryNoteId.value) {
+        splitNotes.setPrimaryNote(id);
+      }
+    } else {
+      // Active pane is secondary — update secondary note
+      if (id !== splitNotes.primaryNoteId.value) {
+        splitNotes.setSecondaryNote(id);
+      }
+    }
+  }
+});
+
+// Restore split state once notes are loaded
+watch(notes, (newNotes) => {
+  if (newNotes.length >= 2 && !splitNotes.isSplit.value) {
+    splitNotes.restore();
+    // After restore, sync currentNoteId if primary was set
+    if (splitNotes.primaryNoteId.value && newNotes.some(n => n.id === splitNotes.primaryNoteId.value)) {
+      currentNoteId.value = splitNotes.primaryNoteId.value;
+    }
+  }
+}, { once: true });
+
+// Handle note deletion — propagate to split state
+const _originalDeleteConfirm = confirmDeleteNote;
+
+// Drag-to-split: track whether a split-drag is in flight globally
+const isSplitDragging = ref(false);
+
+function handleSplitDragStart(event: DragEvent, noteId: string) {
+  event.dataTransfer!.setData('text/note-id', noteId);
+  event.dataTransfer!.effectAllowed = 'copy';
+  isSplitDragging.value = true;
+}
+
+function handleSplitDragEnd() {
+  isSplitDragging.value = false;
+  splitNotes.endDragOver();
+}
+
+function handleSplitDrop(noteId: string, position: 'left' | 'right') {
+  isSplitDragging.value = false;
+  splitNotes.endDragOver();
+  // Don't split to same note as current primary
+  if (noteId === currentNoteId.value) return;
+  splitNotes.setPrimaryNote(currentNoteId.value);
+  splitNotes.openSplit(noteId, position);
+}
+
+// Toggle split from toolbar: open with next note, or close
+function toggleSplitView() {
+  if (splitNotes.isSplit.value) {
+    splitNotes.closeSplit();
+    return;
+  }
+  // Pick the next note that isn't currentNoteId
+  const others = notes.value.filter(n => n.id !== currentNoteId.value);
+  if (!others.length) return;
+  splitNotes.setPrimaryNote(currentNoteId.value);
+  splitNotes.openSplit(others[0]!.id, 'right');
+}
+
+// Computed: is a given note the secondary (split) note?
+const isNoteInSplit = (noteId: string) =>
+  splitNotes.isSplit.value &&
+  (noteId === splitNotes.primaryNoteId.value || noteId === splitNotes.secondaryNoteId.value);
+
+// Computed: active/passive per pane side
+const isLeftActive = computed(() => splitNotes.activePaneSide.value === 'left');
+const isRightActive = computed(() => splitNotes.activePaneSide.value === 'right');
+
+// Activate a pane and sync currentNoteId to the note in that pane
+const _skipNextWatcherSync = ref(false);
+const splitPaneLayoutRef = ref<InstanceType<typeof import('~/components/shared/SplitPaneLayout.vue').default> | null>(null);
+
+function activateLeftPane() {
+  splitNotes.activateLeft();
+  const noteId = splitNotes.leftNoteId.value;
+  if (noteId && noteId !== currentNoteId.value) {
+    _skipNextWatcherSync.value = true;
+    currentNoteId.value = noteId;
+  }
+}
+
+function activateRightPane() {
+  splitNotes.activateRight();
+  const noteId = splitNotes.rightNoteId.value;
+  if (noteId && noteId !== currentNoteId.value) {
+    _skipNextWatcherSync.value = true;
+    currentNoteId.value = noteId;
+  }
+}
+
 // ─── Adaptive Toolbar ─────────────────────────────────────────────
 const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOverflowing } = useAdaptiveToolbar();
 </script>
@@ -333,6 +445,15 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
               <span v-if="showLabels" class="toolbar-label">New Note</span>
             </u-button>
           </UDropdownMenu>
+
+
+          <Transition name="toolbar-fade">
+            <u-button v-if="notes?.length >= 2" size="sm" :color="splitNotes.isSplit.value ? 'primary' : 'neutral'"
+              variant="link" :aria-label="splitNotes.isSplit.value ? 'Close split view' : 'Open split view'"
+              :aria-pressed="splitNotes.isSplit.value" @click="toggleSplitView">
+              <icon name="i-lucide-columns-2" class="w-4 h-4" />
+            </u-button>
+          </Transition>
 
           <Transition name="toolbar-fade">
             <u-button v-if="notes?.length" size="sm" color="neutral" variant="link"
@@ -372,21 +493,31 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
                 { label: 'Download as TXT', icon: 'i-heroicons-document-text', onSelect: () => exportContent('note', note.content, 'txt') },
                 { label: 'Download as DOC', icon: 'i-heroicons-document', onSelect: () => exportContent('note', note.content, 'doc') },
                 { label: 'Download as PDF', icon: 'i-heroicons-document', onSelect: () => exportContent('note', note.content, 'pdf') },
+                {
+                  label: isNoteInSplit(note.id) ? 'Remove from Split' : 'Open in Split View',
+                  icon: 'i-lucide-columns-2',
+                  disabled: localNotes.length < 2 || (isNoteInSplit(note.id) && note.id === splitNotes.primaryNoteId.value && !splitNotes.isSplit.value),
+                  onSelect: () => isNoteInSplit(note.id) && note.id === splitNotes.secondaryNoteId.value
+                    ? splitNotes.closeSplit()
+                    : (splitNotes.setPrimaryNote(currentNoteId), splitNotes.openSplit(note.id, 'right'))
+                },
                 { label: 'Delete', onSelect: () => deleteNote(note.id) },
               ]" :context="note">
                 <ReorderItem :value="note" :class="[
-                  'relative flex items-center gap-2 group w-full p-2.5  cursor-pointer hover:bg-secondary',
+                  'relative flex items-center gap-2 group w-full p-2.5 cursor-pointer hover:bg-secondary',
                   idx === localNotes.length - 1 ? '' : 'border-b border-secondary',
                   notesStore.filteredNoteIds.value
                     ? notesStore.filteredNoteIds.value.has(note.id)
                       ? 'font-bold'
                       : 'opacity-50'
                     : '',
+                  note.id === splitNotes.primaryNoteId.value && splitNotes.isSplit.value ? 'split-indicator-primary' : '',
+                  note.id === splitNotes.secondaryNoteId.value ? 'split-indicator-secondary' : '',
                 ]" @click="currentNoteId = note.id">
                   <div v-if="note.isLoading" class="flex items-center gap-1 text-primary">
                     <icon name="i-lucide-loader" class="w-4 h-4 animate-spin" />
                   </div>
-                  <ui-paragraph size="xs" class="truncate">
+                  <ui-paragraph size="xs" class="truncate flex-1">
                     <span v-if="note.noteType === 'CANVAS'" class="mr-1 text-warning">🎨</span>
                     <span v-else-if="note.noteType === 'MATH'" class="mr-1 text-primary">∑</span>
                     {{
@@ -399,55 +530,273 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
                             'Empty note')
                     }}
                   </ui-paragraph>
+                  <!-- Split drag handle — separate from ReorderItem drag (HTML5 DnD) -->
+                  <span v-if="localNotes.length >= 2" draggable="true"
+                    class="split-drag-handle opacity-0 group-hover:opacity-60 hover:opacity-100! transition-opacity cursor-grab active:cursor-grabbing shrink-0 hidden sm:flex"
+                    :aria-label="`Drag to split view: ${note.content.replace(/<[^>]*>/g, '').trim().slice(0, 20) || 'note'}`"
+                    @pointerdown.stop @dragstart="handleSplitDragStart($event, note.id)" @dragend="handleSplitDragEnd">
+                    <icon name="i-lucide-columns-2" class="w-3.5 h-3.5 text-content-secondary" />
+                  </span>
                 </ReorderItem>
               </UContextMenu>
             </ReorderGroup>
           </div>
         </ui-drawer>
 
-        <workspace-math-note-editor v-if="notesStore.getNote(currentNoteId!)?.noteType === 'MATH'"
-          :note-id="currentNoteId!"
-          :initial-metadata="(notesStore.getNote(currentNoteId!)?.metadata as MathNoteMetadata | undefined)"
-          @update="(meta: MathNoteMetadata) => handleMathUpdate(currentNoteId!, meta)"
-          @toggle-fullscreen="fullscreen.toggle(currentNoteId!)" @delete="deleteNote(currentNoteId!)" />
-        <workspace-canvas-note-editor v-else-if="notesStore.getNote(currentNoteId!)?.noteType === 'CANVAS'"
-          :note-id="currentNoteId!"
-          :initial-metadata="(notesStore.getNote(currentNoteId!)?.metadata as CanvasNoteMetadata | undefined)"
-          @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(currentNoteId!, meta)"
-          @toggle-fullscreen="fullscreen.toggle(currentNoteId!)" @delete="deleteNote(currentNoteId!)" />
-        <workspace-text-note v-else-if="notesStore.getNote(currentNoteId!)" :note="notesStore.getNote(currentNoteId!)!"
-          :delete-note="deleteNote" size="lg" @update="handleUpdateNote" @retry="handleRetry"
-          @toggle-fullscreen="fullscreen.toggle" placeholder="Double-click to add your note..."
-          @add-to-material="emit('add-to-material', $event)" />
+
+        <!-- ── Editor area: single or split ─────────────────────────── -->
+
+        <!-- Single view (no split) -->
+        <template v-if="!splitNotes.isSplit.value">
+          <!-- Drop zone overlay — visible only when dragging a split handle -->
+          <div class="relative flex flex-1 min-h-0 min-w-0 overflow-hidden" @dragover.prevent @dragenter.prevent>
+            <workspace-notes-split-drop-zone :is-dragging="isSplitDragging" :hovered-zone="splitNotes.hoveredZone.value"
+              @hover-zone="(z) => z ? splitNotes.startDragOver(z) : splitNotes.endDragOver()" @drop="handleSplitDrop" />
+            <workspace-math-note-editor v-if="notesStore.getNote(currentNoteId!)?.noteType === 'MATH'"
+              :note-id="currentNoteId!"
+              :initial-metadata="(notesStore.getNote(currentNoteId!)?.metadata as MathNoteMetadata | undefined)"
+              @update="(meta: MathNoteMetadata) => handleMathUpdate(currentNoteId!, meta)"
+              @toggle-fullscreen="fullscreen.toggle(currentNoteId!)" @delete="deleteNote(currentNoteId!)" />
+            <workspace-canvas-note-editor v-else-if="notesStore.getNote(currentNoteId!)?.noteType === 'CANVAS'"
+              :note-id="currentNoteId!"
+              :initial-metadata="(notesStore.getNote(currentNoteId!)?.metadata as CanvasNoteMetadata | undefined)"
+              @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(currentNoteId!, meta)"
+              @toggle-fullscreen="fullscreen.toggle(currentNoteId!)" @delete="deleteNote(currentNoteId!)" />
+            <workspace-text-note v-else-if="notesStore.getNote(currentNoteId!)"
+              :note="notesStore.getNote(currentNoteId!)!" :delete-note="deleteNote" size="lg" @update="handleUpdateNote"
+              @retry="handleRetry" @toggle-fullscreen="fullscreen.toggle" placeholder="Double-click to add your note..."
+              @add-to-material="emit('add-to-material', $event)" />
+          </div>
+        </template>
+
+        <!-- Split view -->
+        <template v-else>
+          <shared-split-pane-layout ref="splitPaneLayoutRef" :storage-key="`splitPaneSizes_${workspaceId}`"
+            :left-label="notesStore.getNote(splitNotes.leftNoteId.value!)?.content.replace(/<[^>]*>/g, '').trim().slice(0, 20) || 'Note'"
+            :right-label="notesStore.getNote(splitNotes.rightNoteId.value!)?.content.replace(/<[^>]*>/g, '').trim().slice(0, 20) || 'Note'"
+            left-icon="i-lucide-notebook-pen" right-icon="i-lucide-notebook-pen" class="flex-1 min-h-0 min-w-0">
+            <!-- LEFT PANE slot -->
+            <template #left>
+              <div class="split-pane" :class="isLeftActive ? 'split-pane--active' : 'split-pane--passive'"
+                @pointerdown.capture="activateLeftPane">
+                <!-- Pane header -->
+                <div class="split-pane-header" @pointerdown.stop>
+                  <span class="split-pane-title truncate">
+                    {{ notesStore.getNote(splitNotes.leftNoteId.value!)?.content.replace(/<[^>]*>/g, '').trim().slice(0,
+                      28) || 'Note' }}
+                  </span>
+                  <div class="flex items-center gap-1 shrink-0">
+                    <u-button size="xs" color="neutral" variant="ghost" aria-label="Minimize left pane"
+                      @click="splitPaneLayoutRef?.toggleLeft()">
+                      <icon name="i-lucide-panel-left-close" class="w-3.5 h-3.5" />
+                    </u-button>
+                    <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
+                      @click="splitNotes.swapPanes()">
+                      <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
+                    </u-button>
+                    <u-button size="xs" color="neutral" variant="ghost" aria-label="Close left pane"
+                      @click="isLeftActive ? splitNotes.closePane('primary') : splitNotes.closePane('secondary')">
+                      <icon name="i-lucide-x" class="w-3.5 h-3.5" />
+                    </u-button>
+                  </div>
+                </div>
+                <!-- Left editor -->
+                <div class="split-pane-editor" :class="{ 'split-pane-editor--passive': !isLeftActive }">
+                  <template v-if="splitNotes.leftNoteId.value && notesStore.getNote(splitNotes.leftNoteId.value)">
+                    <workspace-math-note-editor
+                      v-if="notesStore.getNote(splitNotes.leftNoteId.value)?.noteType === 'MATH'"
+                      :key="`split-left-${splitNotes.leftNoteId.value}`" :note-id="splitNotes.leftNoteId.value"
+                      :initial-metadata="(notesStore.getNote(splitNotes.leftNoteId.value)?.metadata as MathNoteMetadata | undefined)"
+                      :readonly="!isLeftActive"
+                      @update="(meta: MathNoteMetadata) => handleMathUpdate(splitNotes.leftNoteId.value!, meta)"
+                      @toggle-fullscreen="fullscreen.toggle(splitNotes.leftNoteId.value!)"
+                      @delete="deleteNote(splitNotes.leftNoteId.value!)" />
+                    <workspace-canvas-note-editor
+                      v-else-if="notesStore.getNote(splitNotes.leftNoteId.value)?.noteType === 'CANVAS'"
+                      :key="`split-left-canvas-${splitNotes.leftNoteId.value}`" :note-id="splitNotes.leftNoteId.value"
+                      :initial-metadata="(notesStore.getNote(splitNotes.leftNoteId.value)?.metadata as CanvasNoteMetadata | undefined)"
+                      :readonly="!isLeftActive"
+                      @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(splitNotes.leftNoteId.value!, meta)"
+                      @toggle-fullscreen="fullscreen.toggle(splitNotes.leftNoteId.value!)"
+                      @delete="deleteNote(splitNotes.leftNoteId.value!)" />
+                    <workspace-text-note v-else :key="`split-left-text-${splitNotes.leftNoteId.value}`"
+                      :note="notesStore.getNote(splitNotes.leftNoteId.value)!" :delete-note="deleteNote"
+                      :readonly="!isLeftActive" size="lg" @update="handleUpdateNote" @retry="handleRetry"
+                      @toggle-fullscreen="fullscreen.toggle" @add-to-material="emit('add-to-material', $event)" />
+                  </template>
+                </div>
+              </div>
+            </template>
+
+            <!-- RIGHT PANE slot -->
+            <template #right>
+              <div class="split-pane" :class="isRightActive ? 'split-pane--active' : 'split-pane--passive'"
+                @pointerdown.capture="activateRightPane">
+                <!-- Pane header -->
+                <div class="split-pane-header" @pointerdown.stop>
+                  <span class="split-pane-title truncate">
+                    {{ notesStore.getNote(splitNotes.rightNoteId.value!)?.content.replace(/<[^>]*>/g,
+                      '').trim().slice(0, 28) || 'Note' }}
+                  </span>
+                  <div class="flex items-center gap-1 shrink-0">
+                    <u-button size="xs" color="neutral" variant="ghost" aria-label="Minimize right pane"
+                      @click="splitPaneLayoutRef?.toggleRight()">
+                      <icon name="i-lucide-panel-right-close" class="w-3.5 h-3.5" />
+                    </u-button>
+                    <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
+                      @click="splitNotes.swapPanes()">
+                      <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
+                    </u-button>
+                    <u-button size="xs" color="neutral" variant="ghost" aria-label="Close right pane"
+                      @click="isRightActive ? splitNotes.closePane('secondary') : splitNotes.closePane('primary')">
+                      <icon name="i-lucide-x" class="w-3.5 h-3.5" />
+                    </u-button>
+                  </div>
+                </div>
+                <!-- Right editor -->
+                <div class="split-pane-editor" :class="{ 'split-pane-editor--passive': !isRightActive }">
+                  <template v-if="splitNotes.rightNoteId.value && notesStore.getNote(splitNotes.rightNoteId.value)">
+                    <workspace-math-note-editor
+                      v-if="notesStore.getNote(splitNotes.rightNoteId.value)?.noteType === 'MATH'"
+                      :key="`split-right-${splitNotes.rightNoteId.value}`" :note-id="splitNotes.rightNoteId.value"
+                      :initial-metadata="(notesStore.getNote(splitNotes.rightNoteId.value)?.metadata as MathNoteMetadata | undefined)"
+                      :readonly="!isRightActive"
+                      @update="(meta: MathNoteMetadata) => handleMathUpdate(splitNotes.rightNoteId.value!, meta)"
+                      @toggle-fullscreen="fullscreen.toggle(splitNotes.rightNoteId.value!)"
+                      @delete="deleteNote(splitNotes.rightNoteId.value!)" />
+                    <workspace-canvas-note-editor
+                      v-else-if="notesStore.getNote(splitNotes.rightNoteId.value)?.noteType === 'CANVAS'"
+                      :key="`split-right-canvas-${splitNotes.rightNoteId.value}`"
+                      :note-id="splitNotes.rightNoteId.value"
+                      :initial-metadata="(notesStore.getNote(splitNotes.rightNoteId.value)?.metadata as CanvasNoteMetadata | undefined)"
+                      :readonly="!isRightActive"
+                      @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(splitNotes.rightNoteId.value!, meta)"
+                      @toggle-fullscreen="fullscreen.toggle(splitNotes.rightNoteId.value!)"
+                      @delete="deleteNote(splitNotes.rightNoteId.value!)" />
+                    <workspace-text-note v-else :key="`split-right-text-${splitNotes.rightNoteId.value}`"
+                      :note="notesStore.getNote(splitNotes.rightNoteId.value)!" :delete-note="deleteNote"
+                      :readonly="!isRightActive" size="lg" @update="handleUpdateNote" @retry="handleRetry"
+                      @toggle-fullscreen="fullscreen.toggle" @add-to-material="emit('add-to-material', $event)" />
+                  </template>
+                </div>
+              </div>
+            </template>
+          </shared-split-pane-layout>
+        </template>
+
       </div>
     </template>
   </ui-card>
 
   <!-- Fullscreen Note View -->
-  <shared-fullscreen-wrapper :is-open="fullscreen.isOpen.value" aria-label="Note fullscreen view" max-width="900px"
-    max-height="80vh" @close="fullscreen.close">
-    <!-- <template #header>
-      <div class="flex items-center justify-between w-full">
-        <span class="font-medium text-gray-900 dark:text-gray-100"></span>
-        <u-button variant="ghost" size="xs" aria-label="Close fullscreen" @click="fullscreen.close">
-          <icon name="i-heroicons-x-mark" :size="UI_CONFIG.ICON_SIZE" />
-        </u-button>
-      </div>
-    </template> -->
+  <shared-fullscreen-wrapper :is-open="fullscreen.isOpen.value" aria-label="Note fullscreen view"
+    :max-width="splitNotes.isSplit.value ? '95vw' : '900px'" max-height="90vh" @close="fullscreen.close">
 
     <div v-if="currentFullscreenNote" class="h-full">
-      <workspace-math-note-editor v-if="currentFullscreenNote.noteType === 'MATH'" :note-id="currentFullscreenNote.id"
-        :initial-metadata="(currentFullscreenNote!.metadata as MathNoteMetadata | undefined)" :is-fullscreen="true"
-        @update="(meta: MathNoteMetadata) => handleMathUpdate(currentFullscreenNote!.id, meta)"
-        @toggle-fullscreen="fullscreen.close" @delete="deleteNote(currentFullscreenNote!.id)" />
-      <workspace-canvas-note-editor v-else-if="currentFullscreenNote.noteType === 'CANVAS'"
-        :note-id="currentFullscreenNote.id"
-        :initial-metadata="(currentFullscreenNote!.metadata as CanvasNoteMetadata | undefined)" :is-fullscreen="true"
-        @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(currentFullscreenNote!.id, meta)"
-        @toggle-fullscreen="fullscreen.close" @delete="deleteNote(currentFullscreenNote!.id)" />
-      <workspace-text-note v-else :note="currentFullscreenNote" :delete-note="deleteNote" :is-fullscreen="true"
-        size="lg" @update="handleUpdateNote" @retry="handleRetry" @toggle-fullscreen="fullscreen.close"
-        placeholder="Double-click to add your note..." @add-to-material="emit('add-to-material', $event)" />
+
+      <!-- Single fullscreen -->
+      <template v-if="!splitNotes.isSplit.value">
+        <workspace-math-note-editor v-if="currentFullscreenNote.noteType === 'MATH'" :note-id="currentFullscreenNote.id"
+          :initial-metadata="(currentFullscreenNote!.metadata as MathNoteMetadata | undefined)" :is-fullscreen="true"
+          @update="(meta: MathNoteMetadata) => handleMathUpdate(currentFullscreenNote!.id, meta)"
+          @toggle-fullscreen="fullscreen.close" @delete="deleteNote(currentFullscreenNote!.id)" />
+        <workspace-canvas-note-editor v-else-if="currentFullscreenNote.noteType === 'CANVAS'"
+          :note-id="currentFullscreenNote.id"
+          :initial-metadata="(currentFullscreenNote!.metadata as CanvasNoteMetadata | undefined)" :is-fullscreen="true"
+          @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(currentFullscreenNote!.id, meta)"
+          @toggle-fullscreen="fullscreen.close" @delete="deleteNote(currentFullscreenNote!.id)" />
+        <workspace-text-note v-else :note="currentFullscreenNote" :delete-note="deleteNote" :is-fullscreen="true"
+          size="lg" @update="handleUpdateNote" @retry="handleRetry" @toggle-fullscreen="fullscreen.close"
+          placeholder="Double-click to add your note..." @add-to-material="emit('add-to-material', $event)" />
+      </template>
+
+      <!-- Split fullscreen -->
+      <template v-else>
+        <shared-split-pane-layout :storage-key="`splitPaneSizes_${workspaceId}`"
+          :left-label="notesStore.getNote(splitNotes.leftNoteId.value!)?.content.replace(/<[^>]*>/g, '').trim().slice(0, 20) || 'Note'"
+          :right-label="notesStore.getNote(splitNotes.rightNoteId.value!)?.content.replace(/<[^>]*>/g, '').trim().slice(0, 20) || 'Note'"
+          left-icon="i-lucide-notebook-pen" right-icon="i-lucide-notebook-pen" class="flex-1 min-h-0">
+          <template #left>
+            <div class="split-pane" :class="isLeftActive ? 'split-pane--active' : 'split-pane--passive'"
+              @pointerdown.capture="activateLeftPane">
+              <div class="split-pane-header" @pointerdown.stop>
+                <span class="split-pane-title truncate">
+                  {{ notesStore.getNote(splitNotes.leftNoteId.value!)?.content.replace(/<[^>]*>/g, '').trim().slice(0,
+                    28) || 'Note' }}
+                </span>
+                <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
+                  @click="splitNotes.swapPanes()">
+                  <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
+                </u-button>
+              </div>
+              <div class="split-pane-editor" :class="{ 'split-pane-editor--passive': !isLeftActive }">
+                <template v-if="splitNotes.leftNoteId.value && notesStore.getNote(splitNotes.leftNoteId.value)">
+                  <workspace-math-note-editor
+                    v-if="notesStore.getNote(splitNotes.leftNoteId.value)?.noteType === 'MATH'"
+                    :key="`fs-split-left-${splitNotes.leftNoteId.value}`" :note-id="splitNotes.leftNoteId.value"
+                    :initial-metadata="(notesStore.getNote(splitNotes.leftNoteId.value)?.metadata as MathNoteMetadata | undefined)"
+                    :is-fullscreen="true" :readonly="!isLeftActive"
+                    @update="(meta: MathNoteMetadata) => handleMathUpdate(splitNotes.leftNoteId.value!, meta)"
+                    @toggle-fullscreen="fullscreen.close" @delete="deleteNote(splitNotes.leftNoteId.value!)" />
+                  <workspace-canvas-note-editor
+                    v-else-if="notesStore.getNote(splitNotes.leftNoteId.value)?.noteType === 'CANVAS'"
+                    :key="`fs-split-left-canvas-${splitNotes.leftNoteId.value}`" :note-id="splitNotes.leftNoteId.value"
+                    :initial-metadata="(notesStore.getNote(splitNotes.leftNoteId.value)?.metadata as CanvasNoteMetadata | undefined)"
+                    :is-fullscreen="true" :readonly="!isLeftActive"
+                    @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(splitNotes.leftNoteId.value!, meta)"
+                    @toggle-fullscreen="fullscreen.close" @delete="deleteNote(splitNotes.leftNoteId.value!)" />
+                  <workspace-text-note v-else :key="`fs-split-left-text-${splitNotes.leftNoteId.value}`"
+                    :note="notesStore.getNote(splitNotes.leftNoteId.value)!" :delete-note="deleteNote"
+                    :is-fullscreen="true" :readonly="!isLeftActive" size="lg" @update="handleUpdateNote"
+                    @retry="handleRetry" @toggle-fullscreen="fullscreen.close"
+                    @add-to-material="emit('add-to-material', $event)" />
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <template #right>
+            <div class="split-pane" :class="isRightActive ? 'split-pane--active' : 'split-pane--passive'"
+              @pointerdown.capture="activateRightPane">
+              <div class="split-pane-header" @pointerdown.stop>
+                <span class="split-pane-title truncate">
+                  {{ notesStore.getNote(splitNotes.rightNoteId.value!)?.content.replace(/<[^>]*>/g, '').trim().slice(0,
+                    28) || 'Note' }}
+                </span>
+                <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
+                  @click="splitNotes.swapPanes()">
+                  <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
+                </u-button>
+              </div>
+              <div class="split-pane-editor" :class="{ 'split-pane-editor--passive': !isRightActive }">
+                <template v-if="splitNotes.rightNoteId.value && notesStore.getNote(splitNotes.rightNoteId.value)">
+                  <workspace-math-note-editor
+                    v-if="notesStore.getNote(splitNotes.rightNoteId.value)?.noteType === 'MATH'"
+                    :key="`fs-split-right-${splitNotes.rightNoteId.value}`" :note-id="splitNotes.rightNoteId.value"
+                    :initial-metadata="(notesStore.getNote(splitNotes.rightNoteId.value)?.metadata as MathNoteMetadata | undefined)"
+                    :is-fullscreen="true" :readonly="!isRightActive"
+                    @update="(meta: MathNoteMetadata) => handleMathUpdate(splitNotes.rightNoteId.value!, meta)"
+                    @toggle-fullscreen="fullscreen.close" @delete="deleteNote(splitNotes.rightNoteId.value!)" />
+                  <workspace-canvas-note-editor
+                    v-else-if="notesStore.getNote(splitNotes.rightNoteId.value)?.noteType === 'CANVAS'"
+                    :key="`fs-split-right-canvas-${splitNotes.rightNoteId.value}`"
+                    :note-id="splitNotes.rightNoteId.value"
+                    :initial-metadata="(notesStore.getNote(splitNotes.rightNoteId.value)?.metadata as CanvasNoteMetadata | undefined)"
+                    :is-fullscreen="true" :readonly="!isRightActive"
+                    @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(splitNotes.rightNoteId.value!, meta)"
+                    @toggle-fullscreen="fullscreen.close" @delete="deleteNote(splitNotes.rightNoteId.value!)" />
+                  <workspace-text-note v-else :key="`fs-split-right-text-${splitNotes.rightNoteId.value}`"
+                    :note="notesStore.getNote(splitNotes.rightNoteId.value)!" :delete-note="deleteNote"
+                    :is-fullscreen="true" :readonly="!isRightActive" size="lg" @update="handleUpdateNote"
+                    @retry="handleRetry" @toggle-fullscreen="fullscreen.close"
+                    @add-to-material="emit('add-to-material', $event)" />
+                </template>
+              </div>
+            </div>
+          </template>
+        </shared-split-pane-layout>
+      </template>
+
     </div>
   </shared-fullscreen-wrapper>
 
@@ -463,6 +812,74 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
   display: flex;
   flex-direction: column;
   min-height: 0;
+}
+
+/* ─── Split View ─────────────────────────────────────────────────── */
+
+.split-pane {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  transition: opacity 0.2s ease;
+  position: relative;
+}
+
+.split-pane--active {
+  opacity: 1;
+}
+
+.split-pane--passive {
+  opacity: 0.65;
+}
+
+.split-pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--color-border-secondary, #e5e7eb);
+  background: var(--color-surface, #fff);
+  min-height: 32px;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.split-pane--active .split-pane-header {
+  border-bottom-color: var(--color-primary, #3b82f6);
+  background-color: #38499814;
+}
+
+.split-pane-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-content-secondary, #6b7280);
+  max-width: calc(100% - 60px);
+}
+
+.split-pane--active .split-pane-title {
+  color: var(--color-primary, #3b82f6);
+}
+
+.split-pane-editor {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  position: relative;
+}
+
+/* Split indicators in drawer */
+.split-indicator-primary {
+  border-left: 2px solid var(--color-primary, #3b82f6);
+}
+
+.split-indicator-secondary {
+  border-left: 2px solid var(--color-success, #22c55e);
 }
 
 /* ─── Adaptive Toolbar ───────────────────────────────────────────── */

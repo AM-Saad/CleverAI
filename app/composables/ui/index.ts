@@ -6,3 +6,9 @@ export * from "./useFullscreenModal";
 export * from "./useQuickCaptureModal";
 export * from "./useCanvasViewport";
 export * from "./useCanvasStageInteractions";
+export * from "./useSplitNotes";
+export * from "./useAdaptiveToolbar";
+export * from "./useCanvasHistory";
+export * from './useInfiniteCanvas'
+export * from './useWorkspaceLayout'
+export * from './useResponsive'

@@ -38,7 +38,7 @@
       <client-only>
         <div ref="editorContainerRef" class="h-full flex-1 min-h-0 shrink-0">
           <shared-tiptap-editor ref="tiptapRef" :id="note.id" v-model="contentHtml" :isFullScreen="isFullscreen"
-            @addToMaterial="handleAddToMaterial" />
+            :readonly="props.readonly" @addToMaterial="handleAddToMaterial" />
         </div>
       </client-only>
     </SharedNoteContentArea>
@@ -59,6 +59,8 @@ interface Props {
   isFullscreen?: boolean;
   deleteNote: (id: string) => void;
   isBoardItem?: boolean;
+  /** When true, renders read-only (passive pane in split view) */
+  readonly?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -66,6 +68,7 @@ const props = withDefaults(defineProps<Props>(), {
   size: "md",
   isFullscreen: false,
   isBoardItem: false,
+  readonly: false,
 });
 
 const emit = defineEmits<{

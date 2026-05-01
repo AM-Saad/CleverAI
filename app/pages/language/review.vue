@@ -11,7 +11,7 @@
     </div>
 
     <!-- Session view fills the rest -->
-    <language-language-session-view class="flex-1 min-h-0" />
+    <language-session-view class="flex-1 min-h-0" />
   </div>
 </template>
 

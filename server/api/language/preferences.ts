@@ -24,7 +24,8 @@ export default defineEventHandler(async (event) => {
       userId: prefs.userId,
       enabled: prefs.enabled,
       targetLanguage: prefs.targetLanguage,
-      nativeLanguage: prefs.nativeLanguage,
+      nativeLanguage:
+        prefs.nativeLanguage === "auto" ? "en" : prefs.nativeLanguage,
       autoEnroll: prefs.autoEnroll,
       sessionCardLimit: prefs.sessionCardLimit,
       showConsent: prefs.showConsent,

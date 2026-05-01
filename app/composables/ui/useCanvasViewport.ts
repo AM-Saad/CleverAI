@@ -60,7 +60,7 @@ export function useCanvasViewport(options: UseCanvasViewportOptions) {
   const minimapRef = ref<HTMLElement | null>(null);
   const stageSize = ref<StageSize>(options.initialStageSize ?? { width: 800, height: 400 });
   const didFitInitialViewport = ref(false);
-  const isMinimapCollapsed = ref(false);
+  const isMinimapCollapsed = ref(true);
 
   const minStageHeight = options.minStageHeight ?? 400;
   const viewportHeightRatio = options.viewportHeightRatio ?? 0.6;

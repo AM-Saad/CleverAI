@@ -1,8 +1,5 @@
 <script setup lang="ts">
 import CanvasNoteToolbar from "./CanvasNoteToolbar.vue";
-import { useCanvasHistory } from "~/composables/ui/useCanvasHistory";
-import { useCanvasStageInteractions, type CanvasTool } from "~/composables/ui/useCanvasStageInteractions";
-import { useCanvasViewport } from "~/composables/ui/useCanvasViewport";
 import type { CanvasShape, CanvasNoteMetadata } from "@@/shared/utils/note.contract";
 import {
   clampNumber,
@@ -28,6 +25,8 @@ const props = defineProps<{
   noteId: string;
   initialMetadata?: CanvasNoteMetadata;
   isFullscreen?: boolean;
+  /** When true, canvas is not interactive (passive split-pane mode) */
+  readonly?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -467,8 +466,9 @@ const stageConfig = computed(() => ({
   scaleY: stageScale.value,
   x: stagePosition.value.x,
   y: stagePosition.value.y,
-  draggable: activeTool.value === "hand",
+  draggable: !props.readonly && activeTool.value === "hand",
   dragBoundFunc: constrainStageDrag,
+  listening: !props.readonly,
 }));
 
 const transformerConfig = computed(() => ({
@@ -579,38 +579,37 @@ const interactionHint = computed(() => {
       </div>
 
       <button v-if="isMinimapCollapsed" type="button"
-        class="absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 rounded-[var(--radius-lg)] border border-secondary bg-surface/95 px-2 py-1.5 text-xs font-medium text-content-on-surface shadow-lg backdrop-blur-sm"
+        class="absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 rounded-[var(--radius-lg)] border border-secondary bg-surface/95 px-2 py-1.5 text-xs font-medium text-content-on-surface shadow-lg backdrop-blur-sm active:scale-90"
         @click.stop="toggleMinimap">
         <UIcon name="i-lucide-map" class="w-3.5 h-3.5" />
         <span>Map</span>
       </button>
 
       <div v-else ref="minimapRef"
-        class="absolute bottom-2 right-2 z-10 rounded-[var(--radius-xl)] border border-secondary bg-surface/95 p-2 shadow-lg backdrop-blur-sm"
-        @pointerdown.prevent="handleMinimapPointer" @pointermove.prevent="handleMinimapDrag">
+        class="absolute bottom-2 right-2 z-10 rounded-[var(--radius-xl)] border border-secondary bg-surface/95 p-2 shadow-lg backdrop-blur-sm">
         <div
           class="mb-1 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-content-secondary">
           <span>Minimap</span>
-          <div class="flex items-center gap-1">
+          <div class="flex items-center gap-2">
             <button type="button" class="text-primary hover:text-primary/80" @pointerdown.stop
               @click.stop="focusCanvasHome">
               Focus
             </button>
-            <button type="button" class="text-content-secondary hover:text-content-on-surface"
+            <button type="button"
+              class="text-content-secondary hover:text-content-on-surface cursor-pointer bg-surface-strong flex h-3 w-3 items-center justify-center rounded-xs opacity-80 hover:opacity-100"
               aria-label="Minimize minimap" @pointerdown.stop @click.stop="toggleMinimap">
-              <UIcon name="i-lucide-minus" class="w-3.5 h-3.5" />
+              <UIcon name="i-lucide-minus" />
             </button>
           </div>
         </div>
 
-        <div class="relative overflow-hidden rounded-[var(--radius-lg)] border border-secondary/70 bg-background"
-          :style="{
-            width: `${MINIMAP_WIDTH}px`,
-            height: `${MINIMAP_HEIGHT}px`,
-            backgroundImage: 'linear-gradient(to right, color-mix(in srgb, var(--color-secondary) 65%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--color-secondary) 65%, transparent) 1px, transparent 1px)',
-            backgroundSize: '16px 16px'
-          }">
-          <div class="absolute inset-0 rounded-[inherit] border border-primary/10" />
+        <div class="relative overflow-hidden rounded-[var(--radius-lg)] shadow-inner bg-background" :style="{
+          width: `${MINIMAP_WIDTH}px`,
+          height: `${MINIMAP_HEIGHT}px`,
+          backgroundImage: 'linear-gradient(to right, color-mix(in srgb, var(--color-secondary) 65%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--color-secondary) 65%, transparent) 1px, transparent 1px)',
+          backgroundSize: '16px 16px'
+        }" @pointerdown.prevent="handleMinimapPointer" @pointermove.prevent="handleMinimapDrag">
+          <div class="absolute inset-0 shadow-inner rounded-[inherit] border border-primary/10" />
 
           <div v-for="(shape, index) in minimapShapes" :key="`minimap-${index}`"
             class="absolute rounded-[var(--radius-sm)]" :style="{

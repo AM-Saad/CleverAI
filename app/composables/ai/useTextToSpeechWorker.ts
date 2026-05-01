@@ -20,6 +20,7 @@ import { AI_WORKER_MESSAGE_TYPES } from "~/utils/constants/pwa";
 export function useTextToSpeechWorker(options?: {
   modelId?: string;
   immediate?: boolean;
+  preferLocalModel?: boolean;
 }) {
   const { $aiWorker } = useNuxtApp();
   const modelId = options?.modelId || "Xenova/speecht5_tts";
@@ -36,10 +37,29 @@ export function useTextToSpeechWorker(options?: {
 
   // Track all in-flight per-request handlers so the onUnmounted guard can
   // remove them if the component is destroyed before a Promise settles.
-  const activeHandlers = new Set<{ handler: EventListener; timeout: ReturnType<typeof setTimeout> }>();
+  const activeHandlers = new Set<{
+    handler: EventListener;
+    timeout: ReturnType<typeof setTimeout>;
+  }>();
 
   // Generate unique request IDs
   const generateRequestId = () => `${task}-${Date.now()}-${Math.random()}`;
+
+  const speakWithBrowser = (text: string, lang = "en") =>
+    new Promise<string>((resolve, reject) => {
+      if (!import.meta.client || !("speechSynthesis" in window)) {
+        reject(new Error("Browser speech synthesis is not available"));
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = lang === "auto" ? "en" : lang;
+      utterance.rate = 0.95;
+      utterance.onend = () => resolve("");
+      utterance.onerror = () => reject(new Error("Speech synthesis failed"));
+      window.speechSynthesis.speak(utterance);
+    });
 
   // Listen for worker messages
   const handleWorkerMessage = (event: CustomEvent<OutgoingAIMessage>) => {
@@ -82,14 +102,14 @@ export function useTextToSpeechWorker(options?: {
   onMounted(() => {
     window.addEventListener(
       "ai-worker-message",
-      handleWorkerMessage as EventListener
+      handleWorkerMessage as EventListener,
     );
   });
 
   onUnmounted(() => {
     window.removeEventListener(
       "ai-worker-message",
-      handleWorkerMessage as EventListener
+      handleWorkerMessage as EventListener,
     );
 
     // Clean up any in-flight per-request handlers (component destroyed before
@@ -119,7 +139,7 @@ export function useTextToSpeechWorker(options?: {
           window.removeEventListener("ai-worker-message", handler);
           reject(new Error("Model load timeout"));
         },
-        5 * 60 * 1000
+        5 * 60 * 1000,
       ); // 5 minute timeout
 
       const handler = (event: Event) => {
@@ -166,7 +186,7 @@ export function useTextToSpeechWorker(options?: {
   /**
    * Synthesize speech from text (non-blocking via worker)
    */
-  async function synthesize(text: string): Promise<string> {
+  async function synthesize(text: string, lang = "en"): Promise<string> {
     if (!text || !text.trim()) {
       throw new Error("No text provided to synthesize");
     }
@@ -177,6 +197,19 @@ export function useTextToSpeechWorker(options?: {
       audioUrl.value = null;
     }
     synthesisError.value = null;
+
+    if (!options?.preferLocalModel) {
+      isSynthesizing.value = true;
+      try {
+        return await speakWithBrowser(text, lang);
+      } catch (err) {
+        synthesisError.value =
+          err instanceof Error ? err : new Error(String(err));
+        throw synthesisError.value;
+      } finally {
+        isSynthesizing.value = false;
+      }
+    }
 
     // Ensure model is loaded
     if (!isReady.value) {
@@ -194,7 +227,7 @@ export function useTextToSpeechWorker(options?: {
           isSynthesizing.value = false;
           reject(new Error("Speech synthesis timeout"));
         },
-        2 * 60 * 1000
+        2 * 60 * 1000,
       ); // 2 minute timeout
 
       const handler = (event: Event) => {
@@ -295,11 +328,11 @@ export function useTextToSpeechWorker(options?: {
     // Audio data (convert float to int16)
     let offset = 44;
     for (let i = 0; i < audioData.length; i++) {
-      const sample = Math.max(-1, Math.min(1, audioData[i]));
+      const sample = Math.max(-1, Math.min(1, audioData[i] ?? 0));
       view.setInt16(
         offset,
         sample < 0 ? sample * 0x8000 : sample * 0x7fff,
-        true
+        true,
       );
       offset += 2;
     }

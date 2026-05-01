@@ -83,7 +83,8 @@
       <shared-credits-wallet v-if="status === 'authenticated'" :is-open="creditsStore.isWalletOpen"
         @close="creditsStore.closeWallet()" />
     </div>
-    <footer class="xl:container mx-auto rounded-sm  h-10 dark:bg-transparent" style="flex: 0 0 auto;">
+    <footer v-if="!route.fullPath.startsWith('/workspaces') && !route.fullPath.startsWith('/user')"
+      class="xl:container mx-auto rounded-sm  h-10 dark:bg-transparent" style="flex: 0 0 auto;">
       <div class="footer-wrapper grid">
         <div class="footer-social">
           <ul>
