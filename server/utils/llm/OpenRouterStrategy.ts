@@ -162,6 +162,13 @@ export class OpenRouterStrategy implements LLMStrategy {
   }
 
   // ---------------------------------------------------------------
+  // Public API — Raw text (used by language module)
+  // ---------------------------------------------------------------
+  async generateText(prompt: string): Promise<string> {
+    return this.callOpenRouter(prompt);
+  }
+
+  // ---------------------------------------------------------------
   // Public API — Flashcards
   // ---------------------------------------------------------------
   async generateFlashcards(

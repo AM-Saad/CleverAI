@@ -74,99 +74,30 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
+import { useAudioRecorder } from '~/composables/useAudioRecorder';
 
 const emit = defineEmits<{
   (e: 'confirmed', audioBlob: Blob, title: string): void;
   (e: 'error', error: Error): void;
 }>();
 
-const isRecording = ref(false);
-const errorMsg = ref<string | null>(null);
 const fileInput = ref<HTMLInputElement | null>(null);
 const materialTitle = ref('');
 
 // Staged audio: recorded or uploaded, waiting for user confirmation
 const stagedAudio = ref<{ blob: Blob; label: string } | null>(null);
 
-let mediaRecorder: MediaRecorder | null = null;
-let audioChunks: Blob[] = [];
+const { isRecording, error: recordingError, startRecording, stopRecording } = useAudioRecorder({
+  maxDuration: 0, // no limit for material recordings — user decides when to stop
+  onRecorded(blob) {
+    stagedAudio.value = { blob, label: 'Voice Recording' };
+  },
+});
 
-// ── Recording ──
-async function startRecording() {
-  errorMsg.value = null;
-  audioChunks = [];
-
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
-      }
-    });
-
-    const types = [
-      'audio/webm;codecs=opus',
-      'audio/mp4',
-      'audio/ogg;codecs=opus',
-      'audio/webm',
-      ''
-    ];
-
-    let mimeType = '';
-    for (const type of types) {
-      if (type === '' || MediaRecorder.isTypeSupported(type)) {
-        mimeType = type;
-        break;
-      }
-    }
-
-    mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
-
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) {
-        audioChunks.push(e.data);
-      }
-    };
-
-    mediaRecorder.onstop = () => {
-      stream.getTracks().forEach(track => track.stop());
-
-      if (audioChunks.length === 0) {
-        errorMsg.value = "No audio recorded.";
-        return;
-      }
-
-      const audioBlob = new Blob(audioChunks, { type: mimeType || 'audio/webm' });
-      stagedAudio.value = { blob: audioBlob, label: 'Voice Recording' };
-    };
-
-    mediaRecorder.start();
-    isRecording.value = true;
-  } catch (err: any) {
-    console.error('Failed to start recording:', err);
-    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-      errorMsg.value = 'Microphone permission denied. Please allow microphone access to record.';
-    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
-      errorMsg.value = 'No microphone found on this device.';
-    } else {
-      errorMsg.value = `Could not start recording: ${err.message}`;
-    }
-  }
-}
-
-function stopRecording() {
-  if (mediaRecorder && isRecording.value) {
-    if (mediaRecorder.state !== 'inactive') {
-      mediaRecorder.stop();
-    }
-    isRecording.value = false;
-  }
-}
+const errorMsg = computed(() => recordingError.value);
 
 // ── File upload ──
 function handleFileUpload(event: Event) {
-  errorMsg.value = null;
   const target = event.target as HTMLInputElement;
   const file = target.files?.[0];
 
@@ -186,6 +117,5 @@ function confirmTranscribe() {
 function clearStaged() {
   stagedAudio.value = null;
   materialTitle.value = '';
-  errorMsg.value = null;
 }
 </script>

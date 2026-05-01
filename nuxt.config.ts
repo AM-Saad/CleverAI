@@ -174,6 +174,12 @@ export default defineNuxtConfig({
       ],
       script: [
         {
+          // Predictionary word-prediction library — self-hosted, client-side only
+          src: "/scripts/vendor/predictionary.js",
+          defer: true,
+          tagPosition: "bodyClose",
+        },
+        {
           type: "application/ld+json",
           innerHTML: JSON.stringify({
             "@context": "https://schema.org",

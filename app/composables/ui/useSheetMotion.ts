@@ -55,7 +55,7 @@ export function useSheetMotion(
 
   const constraints = computed(() => ({ top: OPEN, bottom: closed.value }));
   const containerClass = computed(
-    () => "left-0 right-0 bottom-0 h-[75vh] w-full rounded-t-3xl",
+    () => "left-0 right-0 bottom-0 w-full rounded-t-[var(--radius-2xl)]",
   );
 
   function decide(

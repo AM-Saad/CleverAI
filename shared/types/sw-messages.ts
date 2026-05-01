@@ -57,6 +57,20 @@ export interface SwUpdateAvailableMessage {
   version: string;
 }
 
+// Board items sync lifecycle
+export interface BoardItemsSyncStartedMessage {
+  type: typeof SW_MESSAGE_TYPES.BOARD_ITEMS_SYNC_STARTED;
+  data: { message: string; pendingCount: number; mode: SyncMode };
+}
+export interface BoardItemsSyncedMessage {
+  type: typeof SW_MESSAGE_TYPES.BOARD_ITEMS_SYNCED;
+  data: { appliedCount: number; mode: SyncMode };
+}
+export interface BoardItemsSyncErrorMessage {
+  type: typeof SW_MESSAGE_TYPES.BOARD_ITEMS_SYNC_ERROR;
+  data?: { message?: string; mode?: SyncMode };
+}
+
 // Navigation after notification click
 export interface NotificationClickNavigateMessage {
   type: typeof SW_MESSAGE_TYPES.NOTIFICATION_CLICK_NAVIGATE;
@@ -74,6 +88,9 @@ export type OutgoingSWMessage =
   | NotesSyncedMessage
   | NotesSyncErrorMessage
   | NotesSyncConflictsMessage
+  | BoardItemsSyncStartedMessage
+  | BoardItemsSyncedMessage
+  | BoardItemsSyncErrorMessage
   | FormSyncStartedMessage
   | FormSyncedMessage
   | FormSyncErrorMessage
@@ -97,6 +114,9 @@ export interface SetDebugMessage {
 export interface SyncNotesMessage {
   type: typeof SW_MESSAGE_TYPES.SYNC_NOTES;
 }
+export interface SyncBoardItemsMessage {
+  type: typeof SW_MESSAGE_TYPES.SYNC_BOARD_ITEMS;
+}
 
 // (Internal test notification click trigger retained separately)
 export interface TestNotificationClickMessage {
@@ -109,6 +129,7 @@ export type IncomingSWMessage =
   | ClaimControlMessage
   | SetDebugMessage
   | SyncNotesMessage
+  | SyncBoardItemsMessage
   | TestNotificationClickMessage;
 
 // Public aggregate namespace

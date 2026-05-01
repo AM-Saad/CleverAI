@@ -405,9 +405,9 @@ const overflowMenuItems = computed(() => [
           </UButton>
 
           <!-- Secondary: View toggle (wide + compact) -->
-          <Transition name="toolbar-fade">
+          <!-- <Transition name="toolbar-fade">
             <BoardViewToggle v-if="showSecondaryActions" v-model="viewMode" />
-          </Transition>
+          </Transition> -->
 
 
 
@@ -534,7 +534,6 @@ const overflowMenuItems = computed(() => [
             </div>
           </Transition>
 
-          <!-- Overlay panel (below xl — includes lg 1024-1279px and mobile) -->
           <Teleport to="body">
             <Transition enter-active-class="transition duration-300 ease-out" enter-from-class="translate-x-full"
               enter-to-class="translate-x-0" leave-active-class="transition duration-200 ease-in"

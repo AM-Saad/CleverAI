@@ -53,7 +53,6 @@ export function useGenerateFromMaterial(
     useSubscriptionStore();
 
   const creditsStore = useCreditsStore()
-  const noCreditsModal = ref(false)
 
   /**
    * Check if material already has generated content
@@ -94,9 +93,11 @@ export function useGenerateFromMaterial(
     pendingGenerationType.value = type;
     pendingGenerationConfig.value = config;
 
-    const ok = await creditsStore.spendCredit()
-    if (!ok) {
-      noCreditsModal.value = true  // show "Watch ad or buy credits"
+    // Gate on local balance (server is authoritative — it will also block and spend).
+    // We do NOT call the spend endpoint here; that would double-deduct credits
+    // because the server's incrementGenerationCount already spends when needed.
+    if (!creditsStore.hasCredits && isQuotaExceeded.value) {
+      creditsStore.openWallet()
       return
     }
 
@@ -159,20 +160,29 @@ export function useGenerateFromMaterial(
       // Call generation API
       let result: GatewayGenerateResponse;
 
-      if (type === "flashcards") {
-        result = await $api.gateway.generateFlashcards(text, {
-          materialId: materialId.value,
-          save: true,
-          replace,
-          generationConfig: config,
-        });
-      } else {
-        result = await $api.gateway.generateQuiz(text, {
-          materialId: materialId.value,
-          save: true,
-          replace,
-          generationConfig: config,
-        });
+      try {
+        if (type === "flashcards") {
+          result = await $api.gateway.generateFlashcards(text, {
+            materialId: materialId.value,
+            save: true,
+            replace,
+            generationConfig: config,
+          });
+        } else {
+          result = await $api.gateway.generateQuiz(text, {
+            materialId: materialId.value,
+            save: true,
+            replace,
+            generationConfig: config,
+          });
+        }
+      } catch (apiErr: any) {
+        // Server returns 402 when free quota is exhausted AND creditBalance = 0
+        if (apiErr?.statusCode === 402 || apiErr?.data?.statusCode === 402) {
+          creditsStore.openWallet();
+          return;
+        }
+        throw apiErr;
       }
 
       // Update subscription info from response

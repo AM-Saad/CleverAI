@@ -1,11 +1,32 @@
 <template>
-  <div v-if="editor" class="container flex flex-col p-1 h-full min-h-0 w-full overflow-y-auto">
+  <div v-if="editor" ref="editorContainerRef"
+    class="container relative flex flex-col p-1 h-full min-h-0 w-full overflow-y-auto">
 
     <div class="flex flex-col w-full">
       <UContextMenu :items="contextMenuItems">
         <editor-content :editor="editor" class="flex-1 pt-6" />
       </UContextMenu>
     </div>
+
+    <!-- Autocomplete floating dropdown -->
+    <Transition name="auto-suggestions">
+      <div v-if="autoPosition && autoSuggestions.length"
+        :style="{ top: autoPosition.top + 'px', left: autoPosition.left + 'px' }"
+        class="absolute z-50 min-w-36 bg-surface border border-secondary rounded-xl shadow-lg overflow-hidden"
+        role="listbox" aria-label="Suggestions">
+        <button v-for="(item, i) in autoSuggestions" :key="item" type="button" role="option"
+          :aria-selected="i === autoActiveIndex" :class="[
+            'w-full text-left px-3 py-1.5 text-sm flex items-center justify-between gap-3 transition-colors',
+            i === autoActiveIndex
+              ? 'bg-primary/10 text-primary'
+              : 'text-content-on-surface hover:bg-surface-strong',
+          ]" @mousedown.prevent="acceptSuggestion(item)">
+          <span>{{ item }}</span>
+          <kbd v-if="i === 0"
+            class="shrink-0 hidden sm:inline-flex items-center rounded border border-secondary px-1 py-0.5 text-[10px] font-mono text-content-secondary">Tab</kbd>
+        </button>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -21,10 +42,13 @@ import { ListItem, TaskItem, TaskList } from "@tiptap/extension-list";
 import { Color, TextStyle } from "@tiptap/extension-text-style";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
+import { Extension } from "@tiptap/core";
+import { Table, TableRow, TableHeader, TableCell } from "@tiptap/extension-table";
 // note: explicit Drop cursor intentionally omitted to avoid duplicate warnings
 import { Editor, EditorContent } from "@tiptap/vue-3";
 import { initCollaboration } from "@/utils/";
 import { useTextSummarization } from '~/composables/ai/useTextSummarization';
+import { usePredictionaryInput } from '~/composables/usePredictionaryInput';
 
 // ---------- Types ----------
 type CollaborationHandle = {
@@ -54,10 +78,95 @@ const emit = defineEmits<{
 const collaborationHandle = ref<CollaborationHandle>(null);
 const props = defineProps<{
   modelValue: string;
+  /** When true, editor is not editable (passive split-pane mode) */
+  readonly?: boolean;
 }>();
 
 // Expose editor publicly
 defineExpose({ editor });
+
+// ---------- Autocomplete (Predictionary) ----------
+const editorContainerRef = ref<HTMLElement | null>(null);
+const autoActiveIndex = ref(0);
+const autoPosition = ref<{ top: number; left: number } | null>(null);
+const { suggestions: autoSuggestions, onInput: autoOnInput, onAccept: autoOnAccept } = usePredictionaryInput();
+
+function getCurrentWord(): string {
+  if (!editor.value) return '';
+  const state = editor.value.state;
+  const { from } = state.selection;
+  try {
+    const textBefore = state.doc.textBetween(
+      Math.max(0, state.selection.$from.start()),
+      from,
+      '\n',
+    );
+    return textBefore.match(/(\S+)$/)?.[1] ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function acceptSuggestion(word: string) {
+  if (!editor.value || !word) return;
+  const state = editor.value.state;
+  const { from } = state.selection;
+  let currentWord = '';
+  try {
+    const textBefore = state.doc.textBetween(
+      Math.max(0, state.selection.$from.start()),
+      from,
+      '\n',
+    );
+    currentWord = textBefore.match(/(\S+)$/)?.[1] ?? '';
+  } catch { /* ignore */ }
+  editor.value
+    .chain()
+    .focus()
+    .deleteRange({ from: from - currentWord.length, to: from })
+    .insertText(word + ' ')
+    .run();
+  autoOnAccept(word);
+  autoActiveIndex.value = 0;
+  autoPosition.value = null;
+}
+
+function updateAutoState() {
+  if (!editor.value) return;
+  const word = getCurrentWord();
+
+  if (word.length < 3) {
+    autoOnInput('');
+    autoActiveIndex.value = 0;
+    autoPosition.value = null;
+    return;
+  }
+
+  autoOnInput(word);
+  autoActiveIndex.value = 0;
+  if (autoSuggestions.value.length === 0) {
+    autoPosition.value = null;
+    return;
+  }
+  // Position dropdown below current cursor
+  try {
+    const { from } = editor.value.state.selection;
+    const coords = editor.value.view.coordsAtPos(from);
+    const containerRect = editorContainerRef.value?.getBoundingClientRect();
+    const scrollTop = editorContainerRef.value?.scrollTop ?? 0;
+    if (containerRect) {
+      autoPosition.value = {
+        top: coords.bottom - containerRect.top + scrollTop + 4,
+        left: Math.min(
+          coords.left - containerRect.left,
+          containerRect.width - 160,
+        ),
+      };
+    }
+  } catch {
+    autoPosition.value = null;
+  }
+}
 
 // ---------- Text-to-Speech Integration ----------
 const isSpeaking = ref(false);
@@ -250,6 +359,14 @@ watch(
   { immediate: true }
 );
 
+watch(
+  () => props.readonly,
+  (isReadonly) => {
+    if (!editor.value) return;
+    editor.value.setEditable(!isReadonly);
+  }
+);
+
 // End Navigation menu items
 
 // ---------- lifecycle cleanup ----------
@@ -280,6 +397,46 @@ onBeforeUnmount(async () => {
 // ---------- mount and initialization ----------
 onMounted(async () => {
   // create editor instance
+  // Autocomplete Tiptap extension — handles Tab / Arrow / Escape while dropdown is open
+  const AutocompleteExtension = Extension.create({
+    name: 'predictionary',
+    addKeyboardShortcuts() {
+      return {
+        Tab: () => {
+          if (autoSuggestions.value.length > 0) {
+            acceptSuggestion(autoSuggestions.value[autoActiveIndex.value]);
+            return true;
+          }
+          return false;
+        },
+        ArrowDown: () => {
+          if (autoPosition.value && autoSuggestions.value.length > 0) {
+            autoActiveIndex.value = Math.min(
+              autoActiveIndex.value + 1,
+              autoSuggestions.value.length - 1,
+            );
+            return true;
+          }
+          return false;
+        },
+        ArrowUp: () => {
+          if (autoPosition.value && autoSuggestions.value.length > 0) {
+            autoActiveIndex.value = Math.max(autoActiveIndex.value - 1, 0);
+            return true;
+          }
+          return false;
+        },
+        Escape: () => {
+          if (autoPosition.value) {
+            autoPosition.value = null;
+            return true;
+          }
+          return false;
+        },
+      };
+    },
+  });
+
   editor.value = new Editor({
     extensions: [
       // disable StarterKit document to avoid duplicate 'doc' name
@@ -289,15 +446,22 @@ onMounted(async () => {
       TextStyle.configure({ types: [ListItem.name] }),
       Image,
       // drop cursor intentionally omitted
+      Table.configure({ resizable: false }),
+      TableRow,
+      TableHeader,
+      TableCell,
       TaskList,
       CustomTaskItem,
+      AutocompleteExtension,
     ],
     content: props.modelValue || "",
+    editable: !props.readonly,
   });
   // Emit updates for v-model
   editor.value.on("update", () => {
     const html = editor.value?.getHTML();
     emit("update:modelValue", html || "");
+    updateAutoState();
   });
 
   // dev transaction logger (safe)
@@ -356,6 +520,18 @@ function getSelectedText(): string | null {
   font-family: "Inter", sans-serif;
 }
 
+/* Autocomplete dropdown transition */
+.auto-suggestions-enter-active,
+.auto-suggestions-leave-active {
+  transition: opacity 0.1s ease, transform 0.1s ease;
+}
+
+.auto-suggestions-enter-from,
+.auto-suggestions-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
 .tiptap:focus-visible {
   outline: none;
 }
@@ -387,6 +563,43 @@ function getSelectedText(): string | null {
 
 .tiptap h2 {
   font-size: 1.2rem;
+}
+
+/* Table styles */
+.tiptap table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0.75rem 0;
+  overflow: hidden;
+}
+
+.tiptap table td,
+.tiptap table th {
+  min-width: 1em;
+  border: 1px solid var(--color-border-secondary, #e2e8f0);
+  padding: 4px 8px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+  font-size: 0.8rem;
+}
+
+.tiptap table th {
+  font-weight: 600;
+  background-color: var(--color-surface-strong, #f8fafc);
+}
+
+.tiptap table .selectedCell:after {
+  z-index: 2;
+  position: absolute;
+  content: "";
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  background: var(--color-primary-50, rgba(59, 130, 246, 0.1));
+  pointer-events: none;
 }
 
 .tiptap h3 {

@@ -29,6 +29,9 @@ const SettingsSecurityTab = defineAsyncComponent(
 const SettingsDataPrivacyTab = defineAsyncComponent(
   () => import("~/components/settings/DataPrivacyTab.vue"),
 );
+const SettingsLanguagePreferences = defineAsyncComponent(
+  () => import("~/pages/language/settings.vue"),
+);
 
 // Tab configuration
 const tabs = [
@@ -61,6 +64,12 @@ const tabs = [
     name: "Data & Privacy",
     icon: "i-heroicons-document-text",
     component: SettingsDataPrivacyTab,
+  },
+  {
+    key: "language",
+    name: "Language",
+    icon: "i-lucide-languages",
+    component: SettingsLanguagePreferences,
   },
 ];
 

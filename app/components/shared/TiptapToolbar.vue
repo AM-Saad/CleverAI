@@ -24,10 +24,19 @@
     <shared-note-toolbar-button title="Insert" icon="i-lucide-plus-square" />
   </UDropdownMenu>
 
-  <!-- Group: Colors -->
-  <UDropdownMenu :modal="false" :items="colorsItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-    <shared-note-toolbar-button title="Colors" icon="i-lucide-palette" />
+  <!-- Group: Table -->
+  <UDropdownMenu :modal="false" :items="tableItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
+    <shared-note-toolbar-button title="Table" icon="i-lucide-table" />
   </UDropdownMenu>
+
+  <!-- Group: Colors -->
+  <SharedNoteColorPickerButton
+    title="Text Color"
+    icon="i-lucide-palette"
+    :icon-only="true"
+    :modelValue="currentColor"
+    @update:modelValue="val => props.editor.chain().focus().setColor(val).run()"
+  />
 
   <div class="h-5 w-px bg-secondary mx-1 shrink-0"></div>
 
@@ -41,13 +50,36 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import type { Editor } from '@tiptap/vue-3';
 
 
 const props = defineProps<{
   editor: Editor;
 }>();
+
+const currentColor = ref<string | undefined>(undefined);
+
+function updateColor() {
+  if (props.editor) {
+    currentColor.value = props.editor.getAttributes('textStyle').color || undefined;
+  }
+}
+
+onMounted(() => {
+  if (props.editor) {
+    props.editor.on('transaction', updateColor);
+    props.editor.on('selectionUpdate', updateColor);
+    updateColor();
+  }
+});
+
+onUnmounted(() => {
+  if (props.editor) {
+    props.editor.off('transaction', updateColor);
+    props.editor.off('selectionUpdate', updateColor);
+  }
+});
 
 function addImage(): void {
   const url = window.prompt("URL");
@@ -183,33 +215,62 @@ const insertItems = computed<any[][]>(() => [[
     icon: "i-lucide-image",
     onSelect: () => addImage(),
   },
+  {
+    label: "Insert table",
+    icon: "i-lucide-table",
+    onSelect: () => props.editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
+  },
 ]]);
 
-const colorsItems = computed<any[][]>(() => [[
+const tableItems = computed<any[][]>(() => [[
   {
-    label: "Primary",
-    icon: "i-lucide-circle",
-    onSelect: () => props.editor.chain().focus().setColor("#2563EB").run(),
+    label: "Add row before",
+    icon: "i-lucide-row-spacing",
+    onSelect: () => props.editor.chain().focus().addRowBefore().run(),
   },
   {
-    label: "Secondary",
-    icon: "i-lucide-circle",
-    onSelect: () => props.editor.chain().focus().setColor("#6B7280").run(),
+    label: "Add row after",
+    icon: "i-lucide-row-spacing",
+    onSelect: () => props.editor.chain().focus().addRowAfter().run(),
   },
   {
-    label: "Red",
-    icon: "i-lucide-circle",
-    onSelect: () => props.editor.chain().focus().setColor("#EF4444").run(),
+    label: "Delete row",
+    icon: "i-lucide-trash-2",
+    onSelect: () => props.editor.chain().focus().deleteRow().run(),
+  },
+], [
+  {
+    label: "Add column before",
+    icon: "i-lucide-columns",
+    onSelect: () => props.editor.chain().focus().addColumnBefore().run(),
   },
   {
-    label: "Green",
-    icon: "i-lucide-circle",
-    onSelect: () => props.editor.chain().focus().setColor("#10B981").run(),
+    label: "Add column after",
+    icon: "i-lucide-columns",
+    onSelect: () => props.editor.chain().focus().addColumnAfter().run(),
   },
   {
-    label: "Yellow",
-    icon: "i-lucide-circle",
-    onSelect: () => props.editor.chain().focus().setColor("#F59E0B").run(),
+    label: "Delete column",
+    icon: "i-lucide-trash-2",
+    onSelect: () => props.editor.chain().focus().deleteColumn().run(),
+  },
+], [
+  {
+    label: "Toggle header row",
+    icon: "i-lucide-table-2",
+    onSelect: () => props.editor.chain().focus().toggleHeaderRow().run(),
+  },
+  {
+    label: "Merge/split cells",
+    icon: "i-lucide-combine",
+    onSelect: () => props.editor.chain().focus().mergeOrSplit().run(),
+  },
+  {
+    label: "Delete table",
+    icon: "i-lucide-x",
+    onSelect: () => props.editor.chain().focus().deleteTable().run(),
   },
 ]]);
+
+
 </script>

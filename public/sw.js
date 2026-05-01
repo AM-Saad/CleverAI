@@ -47,14 +47,16 @@
     // 9: Board notes feature - added type/userId indexes to notes store
     // 10: BoardItem separation - added BOARD_ITEMS and PENDING_BOARD_ITEMS stores
     // 11: Added BOARD_COLUMNS store for board column offline support
-    VERSION: 11,
+    // 12: Added USER_TAGS store for offline tag caching
+    VERSION: 12,
     STORES: {
       FORMS: "forms",
       NOTES: "notes",
       PENDING_NOTES: "pendingNotes",
       BOARD_ITEMS: "boardItems",
       PENDING_BOARD_ITEMS: "pendingBoardItems",
-      BOARD_COLUMNS: "boardColumns"
+      BOARD_COLUMNS: "boardColumns",
+      USER_TAGS: "userTags"
     }
   };
   var IDB_RETRY_CONFIG = {
@@ -136,6 +138,7 @@
         ensureStore(STORES.BOARD_ITEMS);
         ensureStore(STORES.PENDING_BOARD_ITEMS);
         ensureStore(STORES.BOARD_COLUMNS);
+        ensureStore(STORES.USER_TAGS);
         try {
           if (db.objectStoreNames.contains(STORES.NOTES)) {
             const tx = req.transaction;
@@ -158,6 +161,9 @@
               }
               if (!boardItemsStore.indexNames.contains("updatedAt")) {
                 boardItemsStore.createIndex("updatedAt", "updatedAt", { unique: false });
+              }
+              if (!boardItemsStore.indexNames.contains("workspaceId")) {
+                boardItemsStore.createIndex("workspaceId", "workspaceId", { unique: false });
               }
             }
           }
@@ -189,7 +195,8 @@
             DB_CONFIG.STORES.PENDING_NOTES,
             DB_CONFIG.STORES.BOARD_ITEMS,
             DB_CONFIG.STORES.PENDING_BOARD_ITEMS,
-            DB_CONFIG.STORES.BOARD_COLUMNS
+            DB_CONFIG.STORES.BOARD_COLUMNS,
+            DB_CONFIG.STORES.USER_TAGS
           ];
           const missing = required.filter((s) => !db.objectStoreNames.contains(s));
           if (missing.length) {
@@ -251,10 +258,14 @@
       req.onerror = () => reject(req.error);
     });
   }
-  async function loadPendingNoteChanges() {
+  async function loadPendingNoteChanges(workspaceId) {
     const db = await openUnifiedDB();
     if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) return [];
-    return getAllRecords(db, DB_CONFIG.STORES.PENDING_NOTES);
+    const records = await getAllRecords(db, DB_CONFIG.STORES.PENDING_NOTES);
+    if (workspaceId) {
+      return records.filter((r) => !r.workspaceId || r.workspaceId === workspaceId);
+    }
+    return records;
   }
   async function deletePendingNoteChanges(ids) {
     if (!ids.length) return;
@@ -262,10 +273,14 @@
     if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) return;
     await Promise.all(ids.map((id) => deleteRecord(db, DB_CONFIG.STORES.PENDING_NOTES, id)));
   }
-  async function loadPendingBoardItemChanges() {
+  async function loadPendingBoardItemChanges(workspaceId) {
     const db = await openUnifiedDB();
     if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_BOARD_ITEMS)) return [];
-    return getAllRecords(db, DB_CONFIG.STORES.PENDING_BOARD_ITEMS);
+    const records = await getAllRecords(db, DB_CONFIG.STORES.PENDING_BOARD_ITEMS);
+    if (workspaceId) {
+      return records.filter((r) => !r.workspaceId || r.workspaceId === workspaceId);
+    }
+    return records;
   }
   async function deletePendingBoardItemChanges(ids) {
     if (!ids.length) return;
@@ -3815,17 +3830,11 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       }
     });
     swSelf.addEventListener("push", (event) => {
-      console.log("[SW] \u{1F514} Push event received:", event);
-      console.log("[SW] Push event data exists:", !!event.data);
-      console.log("[SW] Notification permission:", Notification.permission);
+      log("Push event received");
       event.waitUntil(
         (async () => {
-          var _a, _b, _c;
           try {
             if (!event.data) {
-              console.log(
-                "[SW] \u26A0\uFE0F No data in push event - showing fallback notification"
-              );
               await swSelf.registration.showNotification("Card Review", {
                 body: "You have cards to review!",
                 icon: "/icons/192x192.png",
@@ -3834,26 +3843,16 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
                 requireInteraction: true,
                 data: { url: "/user/review", timestamp: Date.now() }
               });
-              console.log("[SW] \u2705 Fallback notification shown");
               return;
             }
             let data;
             try {
-              const rawData = event.data.text();
-              console.log("[SW] Raw push data (text):", rawData);
-              data = JSON.parse(rawData);
-              console.log("[SW] Parsed push data:", data);
-            } catch (parseError) {
-              console.error("[SW] \u274C Failed to parse push data:", parseError);
+              data = JSON.parse(event.data.text());
+            } catch {
               try {
                 data = event.data.json();
-                console.log("[SW] Parsed as JSON directly:", data);
               } catch {
-                console.log("[SW] Using fallback data structure");
-                data = {
-                  title: "Card Review",
-                  message: "You have cards to review!"
-                };
+                data = { title: "Card Review", message: "You have cards to review!" };
               }
             }
             const title = data.title || "Card Review";
@@ -3863,69 +3862,32 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
               badge: "/icons/72x72.png",
               tag: data.tag || "card-review",
               requireInteraction: false,
-              // Changed: macOS might not show persistent notifications in notification center
               silent: false,
-              // Never silent for debugging
               renotify: true,
               data: {
                 url: data.url || "/review",
                 timestamp: Date.now(),
-                originalData: data,
                 ...data.data || {}
               },
-              // Add interactive actions (not in base NotificationOptions type but supported by browsers)
               actions: [
-                {
-                  action: "review",
-                  title: "\u{1F4DA} Review Now"
-                },
-                {
-                  action: "snooze",
-                  title: "\u23F0 Snooze 1hr"
-                },
-                {
-                  action: "dismiss",
-                  title: "\u274C Dismiss"
-                }
+                { action: "review", title: "\u{1F4DA} Review Now" },
+                { action: "snooze", title: "\u23F0 Snooze 1hr" },
+                { action: "dismiss", title: "\u274C Dismiss" }
               ]
             };
-            console.log("[SW] \u{1F4E2} Showing notification:", title);
-            console.log("[SW] Notification options:", options);
             await swSelf.registration.showNotification(title, options);
-            console.log("[SW] \u2705 Notification shown successfully!");
-            const notifications = await swSelf.registration.getNotifications();
-            console.log(
-              "[SW] Current notifications count:",
-              notifications.length
-            );
-            console.log(
-              "[SW] Current notifications:",
-              notifications.map((n) => ({ title: n.title, tag: n.tag }))
-            );
+            log("Notification shown:", title);
           } catch (err) {
-            console.error("[SW] \u274C Push handler error:", err);
-            console.log(
-              "[SW] Registration state:",
-              (_b = (_a = swSelf.registration) == null ? void 0 : _a.active) == null ? void 0 : _b.state
-            );
-            console.log("[SW] Registration scope:", (_c = swSelf.registration) == null ? void 0 : _c.scope);
+            error("Push handler error:", err);
             try {
-              await swSelf.registration.showNotification(
-                "Cognilo - Error Fallback",
-                {
-                  body: "Notification received but failed to process properly",
-                  icon: "/icons/192x192.png",
-                  tag: "error-fallback",
-                  requireInteraction: true,
-                  data: { url: "/user/review", timestamp: Date.now() }
-                }
-              );
-              console.log("[SW] \u2705 Emergency fallback notification shown");
+              await swSelf.registration.showNotification("Cognilo", {
+                body: "Notification received but failed to process.",
+                icon: "/icons/192x192.png",
+                tag: "error-fallback",
+                data: { url: "/user/review", timestamp: Date.now() }
+              });
             } catch (fallbackError) {
-              console.error(
-                "[SW] \u274C Emergency fallback also failed:",
-                fallbackError
-              );
+              error("Emergency fallback notification failed:", fallbackError);
             }
           }
         })()
@@ -3934,58 +3896,43 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     swSelf.addEventListener("notificationclick", (event) => {
       const action = event.action;
       const ndata = event.notification.data;
-      console.log("[SW] \u{1F5B1}\uFE0F Notification clicked:", { action, data: ndata });
+      log("Notification clicked:", action);
       event.notification.close();
       event.waitUntil(
         (async () => {
           if (action === "snooze") {
-            console.log("[SW] \u23F0 Snooze action triggered");
             try {
               await fetch("/api/notifications/snooze", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  duration: 3600,
-                  // 1 hour in seconds
-                  timestamp: Date.now()
-                })
+                body: JSON.stringify({ duration: 3600, timestamp: Date.now() })
               });
-              console.log("[SW] \u2705 Snoozed for 1 hour");
-            } catch (error2) {
-              console.error("[SW] \u274C Snooze failed:", error2);
+            } catch (e) {
+              warn("Snooze request failed:", e);
             }
             return;
           }
-          if (action === "dismiss") {
-            console.log("[SW] \u274C Dismiss action triggered - notification closed");
-            return;
-          }
+          if (action === "dismiss") return;
           const targetUrl = (ndata == null ? void 0 : ndata.url) || "/";
-          console.log("[SW] \u{1F517} Navigating to:", targetUrl);
           const clients = await swSelf.clients.matchAll({
             type: "window",
             includeUncontrolled: true
           });
           if (clients.length) {
             for (const c of clients) {
-              c.postMessage({
-                type: "NOTIFICATION_CLICK_NAVIGATE",
-                url: targetUrl
-              });
+              c.postMessage({ type: SW_MESSAGE_TYPES.NOTIFICATION_CLICK_NAVIGATE, url: targetUrl });
             }
             try {
               await clients[0].focus();
-              console.log("[SW] \u2705 Focused existing window");
-            } catch (focusError) {
-              console.warn("[SW] \u26A0\uFE0F Could not focus window:", focusError);
+            } catch (e) {
+              warn("focus failed:", e);
             }
             return;
           }
           try {
             await swSelf.clients.openWindow(targetUrl);
-            console.log("[SW] \u2705 Opened new window");
-          } catch (openError) {
-            console.error("[SW] \u274C Could not open window:", openError);
+          } catch (e) {
+            error("openWindow failed:", e);
           }
         })()
       );
@@ -4022,7 +3969,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
                 log("No forms to sync");
                 return;
               }
-              console.log("SW: Syncing forms records:", records);
+              log("SW: Syncing forms records:", records);
               const clients = await swSelf.clients.matchAll({ type: "window" });
               clients.forEach(
                 (c) => c.postMessage({
@@ -4334,7 +4281,6 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       }
     }
     async function syncPendingBoardItems(mode) {
-      var _a;
       if (boardItemsSyncInProgress) return;
       boardItemsSyncInProgress = true;
       try {
@@ -4359,17 +4305,36 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           );
           return;
         }
+        const syncPayload = pending.map((p) => {
+          var _a, _b, _c, _d;
+          return {
+            id: p.id,
+            userId: p.userId || "",
+            // server will use auth context
+            columnId: (_a = p.columnId) != null ? _a : null,
+            workspaceId: (_b = p.workspaceId) != null ? _b : null,
+            content: p.content || "",
+            tags: p.tags || [],
+            order: (_c = p.order) != null ? _c : 0,
+            dueDate: (_d = p.dueDate) != null ? _d : null,
+            attachments: p.attachments || [],
+            createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : new Date(p.updatedAt).toISOString(),
+            updatedAt: new Date(p.updatedAt).toISOString()
+          };
+        });
         const resp = await fetch("/api/board-items/sync", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ changes: pending })
+          body: JSON.stringify(syncPayload)
         });
         if (!resp.ok) {
           error("[Board Items Sync] Server error:", resp.status);
           throw new Error("Board items sync failed");
         }
         const result = await resp.json().catch(() => ({}));
-        const appliedIds = Array.from(new Set(((_a = result.data) == null ? void 0 : _a.applied) || []));
+        const appliedIds = Array.from(new Set(
+          (Array.isArray(result.data) ? result.data : []).filter((r) => r.status === "created" || r.status === "updated").map((r) => r.id)
+        ));
         if (appliedIds.length) {
           try {
             await deletePendingBoardItemChanges(appliedIds);

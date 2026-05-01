@@ -151,6 +151,16 @@ export async function checkDueCards() {
           },
         });
 
+        // Also count language review cards due for this user
+        const languageDueCount = await prisma.languageCardReview.count({
+          where: {
+            userId: userPref.userId,
+            nextReviewAt: { lte: now },
+            suspended: false,
+            storyId: { not: null },
+          },
+        });
+
         console.log(`📚 User ${userPref.userId} has ${dueCards.length} due cards`);
 
         // Check if we should send a daily study reminder
@@ -183,9 +193,9 @@ export async function checkDueCards() {
         }
 
         // Check if we should send notification based on threshold
-        if (dueCards.length < userPref.cardDueThreshold) {
+        if (totalDueCount < userPref.cardDueThreshold) {
           console.log(
-            `📈 Skipping user ${userPref.userId} - only ${dueCards.length} due cards (threshold: ${userPref.cardDueThreshold})`
+            `📈 Skipping user ${userPref.userId} - only ${totalDueCount} due cards (threshold: ${userPref.cardDueThreshold})`
           );
           results.skipped++;
           continue;
@@ -230,7 +240,7 @@ export async function checkDueCards() {
 
         // Create and send notification
         const notificationData: NotificationData = {
-          cardCount: dueCards.length,
+          cardCount: totalDueCount,
           workspaceCount: Object.keys(cardsByWorkspace).length,
           workspaces: Object.entries(cardsByWorkspace).map(([workspaceId, cards]) => ({
             workspaceId,

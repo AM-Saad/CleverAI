@@ -30,6 +30,8 @@ const props = defineProps<{
   initialMetadata?: MathNoteMetadata;
   /** Whether the editor is currently in fullscreen mode */
   isFullscreen?: boolean;
+  /** When true, stroke input is disabled (passive split-pane mode) */
+  readonly?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -343,8 +345,11 @@ const isExpressionsCollapsed = ref(true);
     <!-- Canvas with overlay layer -->
     <SharedNoteContentArea :style="edgeGlowStyle">
       <!-- @wheel MUST NOT be .passive because we call e.preventDefault() -->
-      <canvas ref="canvasRef" class="w-full h-full touch-none" style="cursor: crosshair;" @pointerdown="startStroke"
-        @pointermove="continueStroke" @pointerup="endStroke" @pointerleave="endStroke" @wheel="onWheel" />
+      <canvas ref="canvasRef" class="w-full h-full touch-none"
+        :style="{ cursor: props.readonly ? 'default' : 'crosshair' }"
+        @pointerdown="!props.readonly && startStroke($event)" @pointermove="!props.readonly && continueStroke($event)"
+        @pointerup="!props.readonly && endStroke($event)" @pointerleave="!props.readonly && endStroke($event)"
+        @wheel="onWheel" />
 
       <!-- Recognition-in-progress overlay -->
       <div v-if="isRecognizing || isDownloading"

@@ -49,7 +49,8 @@ export const DB_CONFIG = {
   // 9: Board notes feature - added type/userId indexes to notes store
   // 10: BoardItem separation - added BOARD_ITEMS and PENDING_BOARD_ITEMS stores
   // 11: Added BOARD_COLUMNS store for board column offline support
-  VERSION: 11,
+  // 12: Added USER_TAGS store for offline tag caching
+  VERSION: 12,
   STORES: {
     FORMS: "forms",
     NOTES: "notes",
@@ -57,6 +58,7 @@ export const DB_CONFIG = {
     BOARD_ITEMS: "boardItems",
     PENDING_BOARD_ITEMS: "pendingBoardItems",
     BOARD_COLUMNS: "boardColumns",
+    USER_TAGS: "userTags",
   },
 } as const;
 

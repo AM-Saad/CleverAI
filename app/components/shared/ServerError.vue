@@ -1,5 +1,5 @@
 <template>
-  <UiCard v-if="typedError && !loading" class="max-w-xl mx-auto text-center" variant="outline" shadow="none" size="sm">
+  <UiCard v-if="typedError && !loading" class=" mx-auto text-center" variant="outline" shadow="none" size="sm">
     <div class="flex items-center gap-2">
       <div v-if="typedError.status" class="text-white mt-1">
         <u-icon v-if="typedError.status < 500" name="i-heroicons-bell" :size="UI_CONFIG.ICON_SIZE" />

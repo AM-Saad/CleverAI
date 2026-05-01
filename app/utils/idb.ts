@@ -34,6 +34,7 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
       ensureStore(STORES.BOARD_ITEMS);
       ensureStore(STORES.PENDING_BOARD_ITEMS);
       ensureStore(STORES.BOARD_COLUMNS);
+      ensureStore(STORES.USER_TAGS);
 
       // Add indexes for NOTES store if missing.
       try {
@@ -59,6 +60,9 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
             }
             if (!boardItemsStore.indexNames.contains('updatedAt')) {
               boardItemsStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+            }
+            if (!boardItemsStore.indexNames.contains('workspaceId')) {
+              boardItemsStore.createIndex('workspaceId', 'workspaceId', { unique: false });
             }
           }
         }
@@ -93,6 +97,7 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
           DB_CONFIG.STORES.BOARD_ITEMS,
           DB_CONFIG.STORES.PENDING_BOARD_ITEMS,
           DB_CONFIG.STORES.BOARD_COLUMNS,
+          DB_CONFIG.STORES.USER_TAGS,
         ];
         const missing = required.filter(s => !db.objectStoreNames.contains(s));
         if (missing.length) {
@@ -231,11 +236,24 @@ export const loadNotesFromIndexedDB = async (
     const db = await openUnifiedDB();
     const tx = db.transaction([DB_CONFIG.STORES.NOTES], "readonly");
     const store = tx.objectStore(DB_CONFIG.STORES.NOTES);
-    const index = store.index("workspaceId");
-    const request = index.getAll(workspaceId);
 
+    // Use the workspaceId index when available for performance.
+    // Fall back to a full-store scan filtered client-side in case the index
+    // was never created (old schema) or the upgrade transaction was interrupted.
+    if (store.indexNames.contains("workspaceId")) {
+      const index = store.index("workspaceId");
+      const request = index.getAll(workspaceId);
+      return new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result || []);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    // Full-scan fallback — filter by workspaceId on the client side.
+    const request = store.getAll();
     return new Promise((resolve, reject) => {
-      request.onsuccess = () => resolve(request.result || []);
+      request.onsuccess = () =>
+        resolve((request.result || []).filter((n: any) => n.workspaceId === workspaceId));
       request.onerror = () => reject(request.error);
     });
   } catch (error) {
@@ -533,12 +551,16 @@ export async function queueNoteChange(change: PendingNoteChange): Promise<void> 
 }
 
 /**
- * Load all pending note changes.
+ * Load all pending note changes. If workspaceId is provided, filters the results.
  */
-export async function loadPendingNoteChanges(): Promise<PendingNoteChange[]> {
+export async function loadPendingNoteChanges(workspaceId?: string): Promise<PendingNoteChange[]> {
   const db = await openUnifiedDB();
   if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) return [];
-  return getAllRecords<PendingNoteChange>(db, DB_CONFIG.STORES.PENDING_NOTES as STORES);
+  const records = await getAllRecords<PendingNoteChange>(db, DB_CONFIG.STORES.PENDING_NOTES as STORES);
+  if (workspaceId) {
+    return records.filter(r => !r.workspaceId || r.workspaceId === workspaceId);
+  }
+  return records;
 }
 
 /**
@@ -559,10 +581,14 @@ export interface PendingBoardItemChange {
   updatedAt: number // client timestamp
   localVersion: number // monotonic per item
   workspaceId?: string
+  userId?: string
+  columnId?: string | null
+  order?: number
   content?: string
   tags?: string[]
   dueDate?: string | null
   attachments?: Array<{ id: string; name: string; url: string; type: string; size?: number }>
+  createdAt?: number | string
   conflicted?: boolean
 }
 
@@ -576,12 +602,16 @@ export async function queueBoardItemChange(change: PendingBoardItemChange): Prom
 }
 
 /**
- * Load all pending board item changes.
+ * Load all pending board item changes. If workspaceId is provided, filters the results.
  */
-export async function loadPendingBoardItemChanges(): Promise<PendingBoardItemChange[]> {
+export async function loadPendingBoardItemChanges(workspaceId?: string): Promise<PendingBoardItemChange[]> {
   const db = await openUnifiedDB();
   if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_BOARD_ITEMS)) return [];
-  return getAllRecords<PendingBoardItemChange>(db, DB_CONFIG.STORES.PENDING_BOARD_ITEMS as STORES);
+  const records = await getAllRecords<PendingBoardItemChange>(db, DB_CONFIG.STORES.PENDING_BOARD_ITEMS as STORES);
+  if (workspaceId) {
+    return records.filter(r => !r.workspaceId || r.workspaceId === workspaceId);
+  }
+  return records;
 }
 
 /**

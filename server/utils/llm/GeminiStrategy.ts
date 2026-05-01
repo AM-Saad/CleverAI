@@ -177,6 +177,12 @@ export class GeminiStrategy implements LLMStrategy {
     }
   }
 
+  /** Raw text generation — delegates to chatOnce with code-fence stripping. */
+  async generateText(prompt: string): Promise<string> {
+    const raw = await this.chatOnce(prompt);
+    return stripCodeFences(raw);
+  }
+
   async generateFlashcards(input: string, options?: LLMGenerationOptions): Promise<FlashcardDTO[]> {
     const itemCount = options?.itemCount ?? 5;
 

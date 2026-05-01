@@ -153,7 +153,7 @@ function invokeAd() {
 
 <template>
   <UiDrawer :show="internalIsOpen" @closed="internalIsOpen = false" side="right"
-    widthClasses="w-full sm:w-[28rem] max-w-[90vw]" title="Credits Wallet" :backdrop="false" :handleVisible="0">
+    widthClasses="w-full sm:w-[28rem] max-w-[90vw]" title="Credits Wallet" :backdrop="true" :handleVisible="0">
     <template #header>
       <div class="flex items-center gap-2 px-2 py-1">
         <UIcon name="i-heroicons-wallet" class="w-6 h-6 text-primary" />
@@ -219,8 +219,8 @@ function invokeAd() {
           </UButton>
           <div v-if="paymentError"
             class="text-error text-sm mt-3 text-center bg-error/10 p-2 rounded-[var(--radius-md)]">
-            {{}
-            paymentError }}
+            {{
+              paymentError }}
           </div>
         </div>
 
@@ -230,8 +230,10 @@ function invokeAd() {
             {{ paymentError }}
           </div>
 
-          <div v-for="pack in packs" :key="pack.id" @click="initCheckout(pack.id)"
-            class="relative flex items-center justify-between p-4 rounded-[var(--radius-2xl)] bg-white hover:border-primary/50 hover:bg-surface-subtle focus:bg-surface-subtle cursor-pointer transition-all shadow-sm hover:shadow-md group">
+          <button v-for="pack in packs" :key="pack.id" type="button"
+            :aria-label="`Select ${pack.credits} credits pack for ${pack.displayPrice}`" :disabled="!!checkoutLoading"
+            class="relative flex items-center justify-between w-full p-4 rounded-2xl bg-white border border-transparent hover:border-primary/50 hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none cursor-pointer transition-all shadow-sm hover:shadow-md group text-left"
+            @click="initCheckout(pack.id)">
             <div class="flex flex-col">
               <UiSubtitle class="flex items-center gap-1.5">
                 {{ pack.credits }} Credits
@@ -247,7 +249,7 @@ function invokeAd() {
               class="absolute inset-0 bg-white/60 backdrop-blur-sm rounded-[var(--radius-2xl)] flex items-center justify-center">
               <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-primary" />
             </div>
-          </div>
+          </button>
         </div>
       </div>
     </div>

@@ -84,9 +84,11 @@ const columnDraggingDisabled = computed(() =>
 );
 
 // Column drag controls for header-only dragging
-const columnDragControls = ref(new Map<string, ReturnType<typeof useDragControls>>());
+type ColumnDragControls = ReturnType<typeof useDragControls>;
 
-const getColumnDragControls = (columnId: string) => {
+const columnDragControls = ref(new Map<string, ColumnDragControls>());
+
+const getColumnDragControls = (columnId: string): any => {
   let controls = columnDragControls.value.get(columnId);
   if (!controls) {
     controls = useDragControls();
@@ -304,17 +306,17 @@ watch([localColumns, uncategorizedItems], () => {
     <!-- Mobile Header with Column Navigation -->
     <div class="lg:hidden shrink-0">
       <!-- Column Pills Navigation -->
-      <div class="flex items-center gap-2 p-2 overflow-x-auto border-b border-secondary bg-white scrollbar-hide">
+      <div class="flex items-center gap-2 p-2 overflow-x-auto border-b border-secondary bg-surface scrollbar-hide">
 
         <!-- Loading indicator for columns -->
         <Icon v-if="isReorderingColumns" name="svg-spinners:ring-resize" class="w-4 h-4 text-primary shrink-0" />
 
         <button v-if="uncategorizedItems.length > 0 || orderedColumns.length === 0" @click="scrollToColumn(null)"
           :class="[
-            'px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap border min-h-[36px]',
+            'px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0',
             activeColumnId === null
-              ? 'bg-primary text-on-primary border-primary shadow-sm'
-              : 'bg-secondary text-content-on-surface border-transparent hover:bg-surface-strong'
+              ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
+              : 'bg-surface-strong text-content-secondary hover:text-content-on-surface hover:bg-secondary'
           ]">
           <span class="flex items-center gap-1.5">
             <Icon name="heroicons:inbox" class="w-4 h-4" />
@@ -324,10 +326,10 @@ watch([localColumns, uncategorizedItems], () => {
         </button>
 
         <button v-for="(column, index) in localColumns" :key="column.id" @click="scrollToColumn(column.id)" :class="[
-          'px-4 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap border flex items-center gap-1.5 min-h-[36px]',
+          'px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0',
           activeColumnId === column.id
-            ? 'bg-primary text-on-primary border-primary shadow-sm'
-            : 'bg-secondary text-content-on-surface border-transparent hover:bg-surface-strong'
+            ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
+            : 'bg-surface-strong text-content-secondary hover:text-content-on-surface hover:bg-secondary'
         ]">
           <Icon v-if="getColumnIcon" :name="getColumnIcon(column.name)" class="w-4 h-4" />
           {{ column.name }}
@@ -406,7 +408,7 @@ watch([localColumns, uncategorizedItems], () => {
       <!-- Add column button -->
       <div class="shrink-0 w-[85vw] lg:w-80 snap-center lg:snap-align-none h-full" style="height: 100%;">
         <div v-if="!showNewColumnInput"
-          class="h-full min-h-[200px] border-2 border-dashed border-surface-strong rounded-xl flex items-center justify-center cursor-pointer hover:border-primary  transition-all group"
+          class="h-full min-h-50 border-2 border-dashed border-surface-strong rounded-[var(--radius-xl)] flex items-center justify-center cursor-pointer hover:border-primary transition-all group"
           @click="showNewColumnInput = true">
           <div class="flex flex-col items-center gap-2 text-content-secondary group-hover:text-primary">
             <Icon name="heroicons:plus" class="w-8 h-8" />
@@ -433,49 +435,50 @@ watch([localColumns, uncategorizedItems], () => {
     </div>
 
     <!-- Mobile Column Reorder Modal -->
-    <UModal v-model:open="showColumnReorderModal">
-      <template #content>
-        <div class="p-4">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-lg font-semibold text-content-on-surface-strong">Reorder Columns</h3>
-            <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
-              @click="showColumnReorderModal = false" />
-          </div>
+    <shared-dialog-modal :show="showColumnReorderModal" title="Reorder Columns" icon="heroicons:arrows-up-down"
+      @close="showColumnReorderModal = false">
+      <template #body>
+        <ui-paragraph size="sm" color="content-secondary" class="mb-4">
+          Adjust the order used in the board tabs and column list on mobile.
+        </ui-paragraph>
 
-          <div class="space-y-2 max-h-[60vh] overflow-y-auto">
-            <div v-for="(column, index) in reorderingColumns" :key="column.id"
-              class="flex items-center gap-3 p-3 bg-surface-subtle rounded-[var(--radius-xl)] border border-secondary">
-              <div class="flex flex-col gap-1">
-                <button @click="moveColumnInModal(index, 'up')" :disabled="index === 0"
-                  class="p-1 rounded hover:bg-surface-strong disabled:opacity-30 disabled:cursor-not-allowed">
-                  <Icon name="heroicons:chevron-up" class="w-4 h-4" />
-                </button>
-                <button @click="moveColumnInModal(index, 'down')" :disabled="index === reorderingColumns.length - 1"
-                  class="p-1 rounded hover:bg-surface-strong disabled:opacity-30 disabled:cursor-not-allowed">
-                  <Icon name="heroicons:chevron-down" class="w-4 h-4" />
-                </button>
-              </div>
-
-              <div class="flex items-center gap-2 flex-1">
-                <Icon v-if="getColumnIcon" :name="getColumnIcon(column.name)" class="w-5 h-5 text-content-secondary" />
-                <span class="font-medium text-content-on-surface">{{ column.name }}</span>
-              </div>
-
-              <span class="text-xs text-content-secondary font-medium">{{ index + 1 }}</span>
+        <div class="space-y-2 max-h-[60vh] overflow-y-auto">
+          <div v-for="(column, index) in reorderingColumns" :key="column.id"
+            class="flex items-center gap-3 rounded-[var(--radius-xl)] border border-secondary bg-surface-subtle p-3">
+            <div class="flex flex-col gap-1">
+              <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:chevron-up" :disabled="index === 0"
+                :aria-label="`Move ${column.name} up`" @click="moveColumnInModal(index, 'up')" />
+              <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:chevron-down"
+                :disabled="index === reorderingColumns.length - 1" :aria-label="`Move ${column.name} down`"
+                @click="moveColumnInModal(index, 'down')" />
             </div>
-          </div>
 
-          <div class="flex gap-2 mt-4">
-            <UButton color="primary" class="flex-1" :loading="isReorderingColumns" @click="saveColumnReorder">
-              Save Order
-            </UButton>
-            <UButton color="neutral" variant="outline" @click="showColumnReorderModal = false">
-              Cancel
-            </UButton>
+            <div class="flex min-w-0 flex-1 items-center gap-2">
+              <Icon v-if="getColumnIcon" :name="getColumnIcon(column.name)"
+                class="h-5 w-5 shrink-0 text-content-secondary" />
+              <ui-subtitle size="sm" class="truncate">
+                {{ column.name }}
+              </ui-subtitle>
+            </div>
+
+            <ui-paragraph size="xs" color="content-secondary" class="shrink-0 font-medium">
+              {{ index + 1 }}
+            </ui-paragraph>
           </div>
         </div>
       </template>
-    </UModal>
+
+      <template #footer>
+        <div class="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+          <UButton color="neutral" variant="outline" @click="showColumnReorderModal = false">
+            Cancel
+          </UButton>
+          <UButton color="primary" :loading="isReorderingColumns" @click="saveColumnReorder">
+            Save Order
+          </UButton>
+        </div>
+      </template>
+    </shared-dialog-modal>
   </div>
 </template>
 
