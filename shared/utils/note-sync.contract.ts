@@ -30,6 +30,7 @@ export type NotesSyncRequest = z.infer<typeof NotesSyncRequestSchema>;
 
 export const NotesSyncResponseSchema = z.object({
   applied: z.array(z.string()).default([]),
-  conflicts: z.array(z.object({ id: z.string() })).default([])
+  conflicts: z.array(z.object({ id: z.string() })).default([]),
+  idMap: z.record(z.string(), z.string()).default({}),
 });
 export type NotesSyncResponse = z.infer<typeof NotesSyncResponseSchema>;

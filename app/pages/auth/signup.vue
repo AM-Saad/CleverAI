@@ -43,7 +43,7 @@ const { handleSubmit, credentials, fieldTypes, error, success, loading } =
       </div>
 
       <div class="flex flex-col gap-2 items-start">
-        <UiParagraph size="sm" color="muted">
+        <UiParagraph size="sm" color="content-secondary">
           Already have an account
           <router-link class="font-semibold underline" tabindex="4" to="/auth/signIn">
             Login
@@ -55,7 +55,7 @@ const { handleSubmit, credentials, fieldTypes, error, success, loading } =
       </div>
     </form>
     <div v-if="mappedProviders.length" class="flex flex-col justify-center mt-4 gap-y-2">
-      <UiParagraph size="sm" color="muted">
+      <UiParagraph size="sm" color="content-secondary">
         Or sign up with a social account below 👇
       </UiParagraph>
       <u-button v-for="provider in mappedProviders" :key="provider?.id"

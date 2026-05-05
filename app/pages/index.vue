@@ -227,11 +227,17 @@ console.log("🏠 [INDEX.VUE] Page meta defined");
 
 async function registerPeriodicSync(): Promise<void> {
   console.log("🏠 [INDEX.VUE] registerPeriodicSync called");
-  const registration = await navigator.serviceWorker.ready;
+  const registration = await navigator.serviceWorker.ready as ServiceWorkerRegistration & {
+    periodicSync?: {
+      register: (tag: string, options: { minInterval: number }) => Promise<void>;
+    };
+  };
 
-  if ("periodicSync" in registration) {
+  const periodicSync = registration.periodicSync;
+
+  if (periodicSync) {
     try {
-      await registration.periodicSync.register("contentSync", {
+      await periodicSync.register("contentSync", {
         //   minInterval: 24 * 60 * 60 * 1000, // Sync every 24 hours
         minInterval: 3,
       });

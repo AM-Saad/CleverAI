@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { useUserTagsStore } from "~/composables/tags/useUserTagsStore";
 import type { UserTag } from "~/shared/utils/user-tag.contract";
 
 const props = defineProps<{
@@ -30,14 +29,12 @@ const availableTags = computed(() => {
 
 // Filter suggestions based on input
 const suggestions = computed(() => {
-  if (!inputValue.value.trim()) return [];
+  const search = inputValue.value.trim().toLowerCase();
 
-  const search = inputValue.value.toLowerCase();
-  return availableTags.value.filter(
-    (tag) =>
-      tag.name.toLowerCase().includes(search) &&
-      !props.modelValue.includes(tag.name)
-  );
+  return availableTags.value.filter((tag) => {
+    if (props.modelValue.includes(tag.name)) return false;
+    return !search || tag.name.toLowerCase().includes(search);
+  });
 });
 
 // Currently selected tags as tag objects
@@ -114,11 +111,11 @@ const handleBlur = () => {
   <div class="relative">
     <!-- Selected Tags + Input -->
     <div
-      class="flex flex-wrap gap-1.5 p-2 border rounded-[var(--radius-lg)] bg-white dark:bg-surface border-secondary focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary">
+      class="flex flex-wrap gap-1.5 p-2 border rounded-lg bg-white dark:bg-surface border-secondary focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary">
       <!-- Selected Tags -->
       <UBadge v-for="tag in selectedTags" :key="tag.id"
         :style="{ backgroundColor: tag.color, color: '#ffffff !important' }" variant="subtle" size="sm"
-        class="flex items-center gap-1">
+        class="rounded-full px-2.5 mr-0.5">
         {{ tag.name }}
         <button type="button" @click="removeTag(tag.name)"
           class="hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-0.5">
@@ -137,14 +134,14 @@ const handleBlur = () => {
     </div>
 
     <!-- Suggestions Dropdown -->
-    <div v-if="showSuggestions && (suggestions.length > 0 || inputValue.trim())"
-      class="absolute z-10 w-full mt-1 bg-white dark:bg-surface border border-secondary rounded-[var(--radius-xl)] shadow-lg max-h-48 overflow-y-auto">
+    <div v-if="showSuggestions && (suggestions.length > 0 || !!inputValue.trim())"
+      class="absolute z-10 w-full mt-1 bg-white dark:bg-surface border border-secondary rounded-xl shadow-lg max-h-48 overflow-y-auto">
       <!-- Existing tag suggestions -->
       <button v-for="tag in suggestions" :key="tag.id" type="button"
-        class="w-full px-3 py-2 text-left hover:bg-surface-subtle flex items-center gap-2" @click="addTag(tag.name)">
-        <UBadge :style="{ color: '#ffffff !important', backgroundColor: tag.color }" variant="subtle" size="sm">
-          {{ tag.name }}
-        </UBadge>
+        class="w-full px-3 py-2 text-left hover:bg-surface-subtle flex items-center gap-2 cursor-pointer"
+        @click="addTag(tag.name)">
+
+        {{ tag.name }}
       </button>
 
       <!-- Create new tag option -->

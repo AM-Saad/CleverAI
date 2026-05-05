@@ -141,7 +141,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, computed } from 'vue';
-import { motion, animate } from "motion-v";
+import { motion } from "motion-v";
 
 type Step = 'typing' | 'highlighting' | 'menu' | 'clicking' | 'list' | 'clicking-generate' | 'generating' | 'converted';
 const step = ref<Step>('typing');
@@ -171,15 +171,39 @@ const headerText = computed(() => {
 
 // Transition handlers for smoother animations
 const onNoteViewLeave = (el: Element, done: () => void) => {
-  animate(el as HTMLElement, { opacity: 0, x: -20 }, { duration: 0.3, easing: 'ease-out' }).finished.then(done);
+  void (el as HTMLElement)
+    .animate(
+      [
+        { opacity: 1, transform: "translateX(0px)" },
+        { opacity: 0, transform: "translateX(-20px)" },
+      ],
+      { duration: 300, easing: "ease-out", fill: "forwards" },
+    )
+    .finished.then(done);
 };
 
 const onMenuEnter = (el: Element, done: () => void) => {
-  animate(el as HTMLElement, { opacity: [0, 1], scale: [0.9, 1], y: [10, 0] }, { duration: 0.3, easing: [0.34, 1.56, 0.64, 1] }).finished.then(done);
+  void (el as HTMLElement)
+    .animate(
+      [
+        { opacity: 0, transform: "translateY(10px) scale(0.9)" },
+        { opacity: 1, transform: "translateY(0px) scale(1)" },
+      ],
+      { duration: 300, easing: "cubic-bezier(0.34, 1.56, 0.64, 1)", fill: "forwards" },
+    )
+    .finished.then(done);
 };
 
 const onMenuLeave = (el: Element, done: () => void) => {
-  animate(el as HTMLElement, { opacity: 0, scale: 0.95, y: -5 }, { duration: 0.2, easing: 'ease-in' }).finished.then(done);
+  void (el as HTMLElement)
+    .animate(
+      [
+        { opacity: 1, transform: "translateY(0px) scale(1)" },
+        { opacity: 0, transform: "translateY(-5px) scale(0.95)" },
+      ],
+      { duration: 200, easing: "ease-in", fill: "forwards" },
+    )
+    .finished.then(done);
 };
 
 // Animation sequence callbacks

@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { z, ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
@@ -29,7 +30,28 @@ export default defineEventHandler(async (event) => {
   });
   const limit = Math.min(parsedQuery.limit, prefs?.sessionCardLimit ?? 12);
 
-  const cardReviews = await prisma.languageCardReview.findMany({
+  type LanguageQueueRow = Prisma.LanguageCardReviewGetPayload<{
+    include: {
+      word: {
+        select: {
+          id: true;
+          word: true;
+          translation: true;
+          sourceLang: true;
+          translationLang: true;
+        };
+      };
+      story: {
+        select: {
+          id: true;
+          storyText: true;
+          sentences: true;
+        };
+      };
+    };
+  }>;
+
+  const cardReviews: LanguageQueueRow[] = await prisma.languageCardReview.findMany({
     where: {
       userId: user.id,
       nextReviewAt: { lte: new Date() },
@@ -57,24 +79,24 @@ export default defineEventHandler(async (event) => {
     },
   });
 
-  const cards = cardReviews.map((cr) => ({
-    cardId: cr.id,
-    wordId: cr.wordId,
-    word: cr.word.word,
-    translation: cr.word.translation,
-    sourceLang: cr.word.sourceLang,
-    translationLang: cr.word.translationLang,
-    storyId: cr.story?.id ?? null,
-    storyText: cr.story?.storyText ?? null,
-    sentences: cr.story?.sentences ?? null,
-    mode: cr.story ? "story_cloze" : "word_translation",
+  const cards = cardReviews.map((cardReview: LanguageQueueRow) => ({
+    cardId: cardReview.id,
+    wordId: cardReview.wordId,
+    word: cardReview.word.word,
+    translation: cardReview.word.translation,
+    sourceLang: cardReview.word.sourceLang,
+    translationLang: cardReview.word.translationLang,
+    storyId: cardReview.story?.id ?? null,
+    storyText: cardReview.story?.storyText ?? null,
+    sentences: cardReview.story?.sentences ?? null,
+    mode: cardReview.story ? "story_cloze" : "word_translation",
     reviewState: {
-      intervalDays: cr.intervalDays,
-      easeFactor: cr.easeFactor,
-      repetitions: cr.repetitions,
-      nextReviewAt: cr.nextReviewAt,
-      lastGrade: cr.lastGrade,
-      streak: cr.streak,
+      intervalDays: cardReview.intervalDays,
+      easeFactor: cardReview.easeFactor,
+      repetitions: cardReview.repetitions,
+      nextReviewAt: cardReview.nextReviewAt,
+      lastGrade: cardReview.lastGrade,
+      streak: cardReview.streak,
     },
   }));
 

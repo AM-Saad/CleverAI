@@ -88,12 +88,13 @@ export async function selectBestModel(
 
   // If preferred model specified and valid, use it
   if (ctx.preferredModelId) {
-    const baseModelId = ctx.preferredModelId.split(':')[0]
-    const suffix = ctx.preferredModelId.includes(':') ? `:${ctx.preferredModelId.split(':')[1]}` : ''
+    const [baseModelId, suffixPart] = ctx.preferredModelId.split(':')
+    const resolvedBaseModelId = baseModelId ?? ctx.preferredModelId
+    const suffix = suffixPart ? `:${suffixPart}` : ''
 
     const preferred = await prisma.llmModelRegistry.findUnique({
       where: {
-        modelId: baseModelId,
+        modelId: resolvedBaseModelId,
       },
     })
 
@@ -166,6 +167,11 @@ export async function selectBestModel(
   // Sort by score (lowest = best)
   scored.sort((a, b) => a.score - b.score)
 
+  const selectedModel = scored[0]
+  if (!selectedModel) {
+    throw Errors.server('No scored models available. Please try again later.')
+  }
+
   console.info('[routing] Model candidates:', scored.slice(0, 3).map(s => ({
     modelId: s.model.modelId,
     provider: s.model.provider,
@@ -178,27 +184,31 @@ export async function selectBestModel(
   // For PRO+ users, consider using top 2 and pick based on health
   if (ctx.userTier !== 'FREE' && scored.length > 1) {
     const topTwo = scored.slice(0, 2)
+    const primary = topTwo[0]
+    const secondary = topTwo[1]
     // If best model is degraded but second is healthy, use second
     if (
-      topTwo[0].model.healthStatus === 'degraded' &&
-      topTwo[1].model.healthStatus === 'healthy'
+      primary &&
+      secondary &&
+      primary.model.healthStatus === 'degraded' &&
+      secondary.model.healthStatus === 'healthy'
     ) {
       console.info('[routing] Preferring healthy model over degraded:', {
-        selected: topTwo[1].model.modelId,
-        skipped: topTwo[0]?.model.modelId,
+        selected: secondary.model.modelId,
+        skipped: primary.model.modelId,
       })
-      return topTwo[1]!
+      return secondary
     }
   }
 
   console.info('[routing] Selected model:', {
-    modelId: scored[0].model.modelId,
-    provider: scored[0].model.provider,
-    score: scored[0].score.toFixed(6),
-    estimatedCostUsd: scored[0].estimatedCostUsd.toFixed(6),
+    modelId: selectedModel.model.modelId,
+    provider: selectedModel.model.provider,
+    score: selectedModel.score.toFixed(6),
+    estimatedCostUsd: selectedModel.estimatedCostUsd.toFixed(6),
   })
 
-  return scored[0]
+  return selectedModel
 }
 
 /**

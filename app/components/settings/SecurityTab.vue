@@ -17,7 +17,7 @@
                     <UiSubtitle size="xl" color="danger" weight="bold">
                         Danger Zone
                     </UiSubtitle>
-                    <UiParagraph color="muted">
+                    <UiParagraph color="content-secondary">
                         Permanently delete your account and all data
                     </UiParagraph>
                     <UButton color="error" variant="outline" @click="showDeleteModal = true">

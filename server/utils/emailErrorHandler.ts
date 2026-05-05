@@ -1,4 +1,6 @@
 // server/utils/emailErrorHandler.ts
+import { EmailError, EmailErrorType } from "./resend.server";
+
 export interface EmailErrorResponse {
   success: false;
   error: {
@@ -56,7 +58,7 @@ export const handleEmailError = (
       error: {
         type: error.type,
         message: error.message,
-        timestamp: error.timestamp,
+        timestamp: new Date(),
         emailAddress: error.emailAddress,
       },
       statusCode,
@@ -123,8 +125,7 @@ export const logEmailOperation = (
     operation,
     success: result.success,
     timestamp: new Date().toISOString(),
-    recipientEmail:
-      recipientEmail || result.success ? undefined : result.error.emailAddress,
+    recipientEmail: recipientEmail ?? (result.success ? undefined : result.error.emailAddress),
   };
 
   if (result.success) {

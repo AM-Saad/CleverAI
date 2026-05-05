@@ -61,7 +61,7 @@ export function generateEmailTemplate(
     case 'welcome':
       return generateWelcomeEmail(data as WelcomeEmailData)
     case 'passwordReset':
-      return generatePasswordResetEmail(data as PasswordResetEmailData, args[0] as string)
+      return generatePasswordResetEmail(data as PasswordResetEmailData)
     case 'notification':
       return generateNotificationEmail(
         data as NotificationEmailData,

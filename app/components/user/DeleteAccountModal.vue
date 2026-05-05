@@ -44,7 +44,7 @@ const closeModal = (): void => {
 
 <template>
   <Teleport to="body">
-    <shared-dialog-modal :show="props.show" @close="closeModal" title="Delete Account" icon="mdi:account-remove"
+    <shared-dialog-modal :show="props.show" @close="closeModal" title="Delete Account" icon="delete"
       description="This action will remove all your data">
 
       <template #body>
@@ -52,7 +52,7 @@ const closeModal = (): void => {
           <!-- Warning Banner -->
           <div class="bg-error/10 border border-error/20 rounded-[var(--radius-lg)] p-4">
             <div class="flex">
-              <icon name="mdi:alert-circle" class="text-error mr-3 mt-0.5" size="20"></icon>
+              <UIcon name="i-lucide-alert-circle" class="text-error mr-3 mt-0.5" size="20"></UIcon>
               <div>
                 <h4 class="text-sm font-medium text-error mb-1">
                   Warning: This action cannot be undone

@@ -8,6 +8,8 @@
  * 2. Deletes the flashcard itself
  */
 
+import type { Prisma } from "@prisma/client";
+import { Errors, success } from "@server/utils/error";
 import { requireRole } from "~~/server/utils/auth";
 
 export default defineEventHandler(async (event) => {
@@ -36,7 +38,7 @@ export default defineEventHandler(async (event) => {
   }
 
   // Use transaction to ensure atomicity
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     // 1. Delete associated CardReview records
     const deletedReviews = await tx.cardReview.deleteMany({
       where: {

@@ -59,6 +59,36 @@ export const ReorderBoardItemsDTO = z.object({
 });
 export type ReorderBoardItemsDTO = z.infer<typeof ReorderBoardItemsDTO>;
 
+// ─── Offline Sync ────────────────────────────────────────────────────────────
+
+export const BoardItemSyncItemSchema = BoardItemSchema.extend({
+  operation: z.enum(["upsert", "delete"]).default("upsert"),
+  localVersion: z.number().int().nonnegative().optional(),
+});
+export type BoardItemSyncItem = z.infer<typeof BoardItemSyncItemSchema>;
+
+export const BoardItemsSyncRequestSchema = z.array(BoardItemSyncItemSchema);
+export type BoardItemsSyncRequest = z.infer<typeof BoardItemsSyncRequestSchema>;
+
+export const BoardItemsSyncResponseSchema = z.object({
+  applied: z.array(z.string()).default([]),
+  conflicts: z.array(z.object({ id: z.string() })).default([]),
+  idMap: z.record(z.string(), z.string()).default({}),
+  results: z
+    .array(
+      z.object({
+        id: z.string(),
+        status: z.enum(["created", "updated", "deleted", "conflict", "error"]),
+        data: BoardItemSchema.optional(),
+        error: z.string().optional(),
+      })
+    )
+    .default([]),
+});
+export type BoardItemsSyncResponse = z.infer<
+  typeof BoardItemsSyncResponseSchema
+>;
+
 // ─── Item Link ───────────────────────────────────────────────────────────────
 
 export const LINK_TYPES = ["PARENT", "CHILD", "RELATED", "BLOCKS", "BLOCKED_BY", "DUPLICATE"] as const;

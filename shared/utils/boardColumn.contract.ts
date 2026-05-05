@@ -1,5 +1,6 @@
 // shared/boardColumn.contract.ts
 import { z } from "zod";
+import { BoardItemSchema } from "./boardItem.contract";
 
 const trim = (v: unknown) => (typeof v === "string" ? v.trim() : v);
 
@@ -9,7 +10,7 @@ export const BoardColumnSchema = z.object({
   name: z.string(),
   order: z.number().int().default(0),
   workspaceId: z.string().nullable().optional(),
-  
+
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),
 });
@@ -42,6 +43,14 @@ export const MoveItemToColumnDTO = z.object({
   newOrder: z.number().int().min(0),
 });
 export type MoveItemToColumnDTO = z.infer<typeof MoveItemToColumnDTO>;
+
+export const DeleteBoardColumnResponseSchema = z.object({
+  deletedColumnId: z.string(),
+  movedItems: z.array(BoardItemSchema).default([]),
+});
+export type DeleteBoardColumnResponse = z.infer<
+  typeof DeleteBoardColumnResponseSchema
+>;
 
 export const ReorderItemsInColumnDTO = z.object({
   columnId: z.string().nullable(),

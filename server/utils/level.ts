@@ -65,16 +65,16 @@ export function getLevelFromTotalXP(totalXP: number): LevelProgress {
   };
 }
 
-export interface UserProgress extends LevelProgress {
+export interface LevelUserProgress extends LevelProgress {
   stage: string;
 }
 
 /**
  * value-added selector to get full user progress info.
  * @param totalXP Total accumulated XP
- * @returns UserProgress object
+ * @returns LevelUserProgress object
  */
-export function getUserProgress(totalXP: number): UserProgress {
+export function getUserProgress(totalXP: number): LevelUserProgress {
   const progress = getLevelFromTotalXP(totalXP);
   const stage = getStageFromLevel(progress.level);
 

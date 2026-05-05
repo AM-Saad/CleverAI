@@ -6,9 +6,13 @@ import {
   CaptureWordDTO,
   getLanguageLabel,
 } from "@shared/utils/language.contract";
+import {
+  setQuotaHeaders,
+  throwQuotaExceeded,
+} from "@server/modules/subscription/infrastructure/http/quotaHttp";
 import { translationPrompt } from "@server/utils/llm/languagePrompts";
 import { llmRequestPipeline } from "@server/utils/llm/llmRequestPipeline";
-import { checkUserQuota, incrementGenerationCount } from "@server/utils/quota";
+import { PrismaQuotaPort } from "@server/modules/subscription/infrastructure/PrismaQuotaPort";
 import type {
   LanguageExample,
   LanguageMeaning,
@@ -119,43 +123,20 @@ const jsonRecord = (value: unknown): Record<string, unknown> =>
     ? (value as Record<string, unknown>)
     : {};
 
-const setQuotaHeaders = (
-  event: H3Event,
-  subscription: {
-    tier: string;
-    generationsUsed: number;
-    generationsQuota: number;
-    remaining: number;
-    creditBalance?: number;
-  },
-) => {
-  event.node.res.setHeader("x-subscription-tier", subscription.tier);
-  event.node.res.setHeader(
-    "x-generations-used",
-    String(subscription.generationsUsed),
-  );
-  event.node.res.setHeader(
-    "x-generations-quota",
-    String(subscription.generationsQuota),
-  );
-  event.node.res.setHeader(
-    "x-generations-remaining",
-    String(subscription.remaining),
-  );
-};
+const quotaPort = new PrismaQuotaPort();
 
 const billSharedTranslationHit = async (event: H3Event, userId: string) => {
-  const quota = await checkUserQuota(userId);
+  const quota = await quotaPort.checkGenerationQuota(userId);
   setQuotaHeaders(event, quota.subscription);
   if (!quota.canGenerate) {
-    event.node.res.setHeader("x-quota-exceeded", "true");
-    throw Errors.badRequest(
+    throwQuotaExceeded(
+      event,
+      quota.subscription,
       "Quota exceeded. Please upgrade to continue translating.",
-      { subscription: quota.subscription, type: "QUOTA_EXCEEDED" },
     );
   }
 
-  const updatedQuota = await incrementGenerationCount(userId);
+  const updatedQuota = await quotaPort.consumeGeneration(userId);
   setQuotaHeaders(event, updatedQuota);
   return updatedQuota;
 };
@@ -316,6 +297,7 @@ export default defineEventHandler(async (event) => {
   );
 
   const ctx = await llmRequestPipeline(event, {
+    quotaPort,
     task: "language_translate",
     inputText: prompt,
     estimatedOutputTokens: 450,

@@ -31,12 +31,11 @@
 
 <script lang="ts" setup>
 import { Motion } from "motion-v";
-import type { Variant, Transition } from "motion-v";
 
 const BASE_TRANSITION = {
   repeat: Infinity,
   ease: "linear",
-};
+} as const;
 
 const BASE_ITEM_VARIANTS = {
   hidden: { opacity: 1 },
@@ -49,10 +48,10 @@ interface CircularTextProps {
   class?: string;
   reverse?: boolean;
   radius?: number;
-  transition?: Transition;
+  transition?: Record<string, unknown>;
   variants?: {
-    container?: Variant;
-    item?: Variant;
+    container?: Record<string, unknown>;
+    item?: Record<string, unknown>;
   };
 }
 
@@ -69,7 +68,7 @@ const letters = computed(() => {
 const finalTransition = computed(() => ({
   ...BASE_TRANSITION,
   ...props.transition,
-  duration: props.transition?.duration ?? props.duration,
+  duration: (props.transition as { duration?: number } | undefined)?.duration ?? props.duration,
 }));
 
 const containerVariants = computed(() => ({

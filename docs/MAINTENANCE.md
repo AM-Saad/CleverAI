@@ -18,66 +18,42 @@
 
 ## Critical Issues
 
-### 🔴 CRITICAL: FetchFactory Retry Logic Broken
+### ✅ RESOLVED: FetchFactory Retry Logic Broken
 
 **Location**: `app/services/FetchFactory.ts`
 
-**Issue**: Retry logic never executes because `attempt` is declared with `const`:
+**Previous issue**: Retry logic never executed because `attempt` was declared with `const`.
+
+**Current status**: Source now uses `let attempt = 0`; this item is retained as historical context only.
 ```typescript
-// BROKEN - attempt never increments
 const attemptLimit = this.retries + 1
-const attempt = 0  // ← Should be `let`
+let attempt = 0
 while (attempt < attemptLimit) {
-  // ... retry logic ...
-  // attempt++ has no effect
+  // retry loop
 }
 ```
 
-**Impact**: 
-- All API calls fail on first error
-- No retry for transient failures (429, 503)
-- Poor UX during network hiccups
-
-**Fix**:
-```typescript
-let attempt = 0  // Change const to let
-```
-
-**Priority**: P0 - Fix immediately
+**Priority**: None.
 
 ---
 
-### 🔴 CRITICAL: Exposed Google Client Secret
+### ✅ RESOLVED: Google Client Secret Public Exposure
 
-**Location**: `nuxt.config.ts` (approximately line 286)
+**Location**: `nuxt.config.ts`
 
-**Issue**: `GOOGLE_CLIENT_SECRET` is exposed in public runtime config:
-```typescript
-public: {
-  // ... other config ...
-  GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET, // ← DANGER
-}
-```
+**Previous issue**: `GOOGLE_CLIENT_SECRET` was believed to be exposed in public runtime config.
 
-**Impact**:
-- Secret visible in client-side JavaScript
-- OAuth security compromised
-- Potential account takeover
-
-**Fix**:
-Move to `runtimeConfig.private` (server-only):
+**Current status**: `googleClientSecret` is in server-only `runtimeConfig`; only `GOOGLE_CLIENT_ID` remains public.
 ```typescript
 runtimeConfig: {
-  private: {
-    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
-  },
+  googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
   public: {
-    // Only non-sensitive values
+    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
   }
 }
 ```
 
-**Priority**: P0 - Fix immediately, rotate secret
+**Priority**: None.
 
 ---
 
@@ -434,7 +410,7 @@ curl -X POST http://localhost:3000/api/cron/send-notifications \
 **Recommended Structure**:
 ```typescript
 // Structured logging
-logger.info('llm.generate', {
+logger.info('llm.gateway', {
   userId,
   model,
   promptTokens,
@@ -442,7 +418,7 @@ logger.info('llm.generate', {
   latencyMs,
 })
 
-logger.error('llm.generate.failed', {
+logger.error('llm.gateway.failed', {
   userId,
   model,
   error: error.message,

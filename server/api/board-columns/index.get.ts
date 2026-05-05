@@ -1,3 +1,4 @@
+import type { BoardColumn } from "@prisma/client";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { BoardColumnSchema } from "@@/shared/utils/boardColumn.contract";
@@ -13,13 +14,13 @@ export default defineEventHandler(async (event) => {
   }
   try {
 
-    const columns = await prisma.boardColumn.findMany({
+    const columns: BoardColumn[] = await prisma.boardColumn.findMany({
       where: query,
       orderBy: { order: "asc" },
     });
 
     if (process.env.NODE_ENV === "development") {
-      columns.forEach((column) => BoardColumnSchema.parse(column));
+      columns.forEach((column: BoardColumn) => BoardColumnSchema.parse(column));
     }
 
     return success(columns, { count: columns.length });

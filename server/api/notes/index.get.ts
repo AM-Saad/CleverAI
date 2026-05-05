@@ -1,3 +1,4 @@
+import type { Note } from "@prisma/client";
 import { z } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
@@ -31,13 +32,13 @@ export default defineEventHandler(async (event) => {
     throw Errors.notFound("Workspace");
   }
 
-  const notes = await prisma.note.findMany({
+  const notes: Note[] = await prisma.note.findMany({
     where: { workspaceId: query.workspaceId },
     orderBy: { order: "asc" },
   });
 
   if (process.env.NODE_ENV === "development") {
-    notes.forEach((n) => NoteSchema.parse(n));
+    notes.forEach((note: Note) => NoteSchema.parse(note));
   }
 
   return success(notes, { count: notes.length, workspaceId: query.workspaceId });

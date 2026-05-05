@@ -221,7 +221,7 @@ watch(
 );
 
 const { onKeydown } = useFocusTrap(
-  computed(() => props.show && props.backdrop),
+  computed(() => props.show),
   panelEl,
   {
     onEscape: () => {
@@ -277,8 +277,8 @@ function handleDragEnd(_: Event, info: DragInfo) {
           positionClass, 'cursor-grab active:cursor-grabbing overflow-hidden bg-white/20 backdrop-blur-md shadow-lg z-50 focus-visible:border border-primary',
           mode.containerClass,
         ]" :style="{ ...mode.style, ...(!isReady ? { visibility: 'hidden', opacity: 0 } : {}) }" role="dialog"
-        aria-modal="true" :aria-labelledby="'drawer-title'">
-        <div ref="panelEl" tabindex="-1" :class="[
+        aria-modal="true" :aria-labelledby="'drawer-title'" :aria-hidden="!props.show">
+        <div ref="panelEl" tabindex="-1" :inert="!props.show" :class="[
           'relative h-full focus-visible:outline-none',
           mode.isMobile ? 'p-3 pt-6' : 'p-3 pl-7',
         ]" @keydown="onKeydown" @pointerdown.capture="onPointerDownCapture" @pointerup.capture="onPointerUpCapture"

@@ -4,7 +4,7 @@
 
     <div class="flex flex-col w-full">
       <UContextMenu :items="contextMenuItems">
-        <editor-content :editor="editor" class="flex-1 pt-6" />
+        <EditorContent :editor="editor" class="flex-1 pt-6" />
       </UContextMenu>
     </div>
 
@@ -31,9 +31,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onBeforeUnmount, onMounted, watch, computed } from "vue";
+import { ref, shallowRef, nextTick, onBeforeUnmount, onMounted, watch, computed } from "vue";
 import type { NavigationMenuItem } from "@nuxt/ui";
-import type { Editor as TipTapEditor } from "@tiptap/core";
 import type {
   Selection as PMSelection,
 } from "prosemirror-state";
@@ -70,13 +69,15 @@ const CustomTaskItem = TaskItem.extend({
 });
 
 // ---------- reactive refs ----------
-const editor = ref<TipTapEditor | null>(null);
+const editor = shallowRef<Editor | null>(null);
 const emit = defineEmits<{
   (e: "update:modelValue", value: string): void;
   (e: "addToMaterial", value: string): void;
 }>();
 const collaborationHandle = ref<CollaborationHandle>(null);
 const props = defineProps<{
+  id?: string;
+  isFullScreen?: boolean;
   modelValue: string;
   /** When true, editor is not editable (passive split-pane mode) */
   readonly?: boolean;
@@ -124,7 +125,7 @@ function acceptSuggestion(word: string) {
     .chain()
     .focus()
     .deleteRange({ from: from - currentWord.length, to: from })
-    .insertText(word + ' ')
+    .insertContent(word + ' ')
     .run();
   autoOnAccept(word);
   autoActiveIndex.value = 0;
@@ -403,8 +404,9 @@ onMounted(async () => {
     addKeyboardShortcuts() {
       return {
         Tab: () => {
-          if (autoSuggestions.value.length > 0) {
-            acceptSuggestion(autoSuggestions.value[autoActiveIndex.value]);
+          const activeSuggestion = autoSuggestions.value[autoActiveIndex.value];
+          if (activeSuggestion) {
+            acceptSuggestion(activeSuggestion);
             return true;
           }
           return false;
@@ -443,7 +445,7 @@ onMounted(async () => {
       StarterKit.configure({ document: false }),
       CustomDocument,
       Color.configure({ types: [TextStyle.name, ListItem.name] }),
-      TextStyle.configure({ types: [ListItem.name] }),
+      TextStyle,
       Image,
       // drop cursor intentionally omitted
       Table.configure({ resizable: false }),
@@ -457,16 +459,19 @@ onMounted(async () => {
     content: props.modelValue || "",
     editable: !props.readonly,
   });
+  const editorInstance = editor.value;
+  if (!editorInstance) return;
+
   // Emit updates for v-model
-  editor.value.on("update", () => {
-    const html = editor.value?.getHTML();
+  editorInstance.on("update", () => {
+    const html = editorInstance.getHTML();
     emit("update:modelValue", html || "");
     updateAutoState();
   });
 
   // dev transaction logger (safe)
   try {
-    editor.value.on("transaction", ({ transaction }) => {
+    editorInstance.on("transaction", ({ transaction }) => {
       try {
         // console.group('TipTap transaction',transaction)
         // console.log(transaction.steps.map(s => s.constructor.name))

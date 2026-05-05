@@ -68,7 +68,7 @@ const viewerComponent = computed(() => {
           <div v-if="isLoading" class="flex items-center justify-center h-full">
             <div class="flex flex-col items-center gap-3">
               <u-icon name="i-lucide-loader" class="w-8 h-8 animate-spin text-primary" />
-              <ui-paragraph size="sm" color="muted">Loading context...</ui-paragraph>
+              <ui-paragraph size="sm" color="content-secondary">Loading context...</ui-paragraph>
             </div>
           </div>
 
@@ -78,7 +78,7 @@ const viewerComponent = computed(() => {
 
           <!-- Empty State -->
           <div v-else class="flex items-center justify-center h-full">
-            <ui-paragraph size="sm" color="muted">No context available</ui-paragraph>
+            <ui-paragraph size="sm" color="content-secondary">No context available</ui-paragraph>
           </div>
         </div>
       </div>

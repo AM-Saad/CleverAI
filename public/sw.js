@@ -249,6 +249,78 @@
     });
     return unifiedDbPromise;
   }
+  function sanitizeForIDB(obj) {
+    if (obj === null || obj === void 0) return obj;
+    if (typeof obj !== "object") return obj;
+    if (obj instanceof Date) return obj;
+    if (Array.isArray(obj)) {
+      return obj.map((item) => sanitizeForIDB(item));
+    }
+    if (obj.constructor === Object || obj.constructor === void 0) {
+      const sanitized = {};
+      for (const [key, value] of Object.entries(obj)) {
+        if (typeof value === "function" || typeof value === "symbol" || value === void 0) {
+          continue;
+        }
+        sanitized[key] = sanitizeForIDB(value);
+      }
+      return sanitized;
+    }
+    try {
+      JSON.stringify(obj);
+      return obj;
+    } catch {
+      return String(obj);
+    }
+  }
+  async function putRecord(db, storeName, record) {
+    const {
+      MAX_ATTEMPTS,
+      BASE_DELAY_MS,
+      FACTOR,
+      MAX_DELAY_MS,
+      JITTER_PCT
+    } = IDB_RETRY_CONFIG;
+    const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+    const calcDelay = (attempt) => {
+      const raw = Math.min(BASE_DELAY_MS * Math.pow(FACTOR, attempt), MAX_DELAY_MS);
+      const jitter = raw * JITTER_PCT * (Math.random() * 2 - 1);
+      return Math.max(0, Math.round(raw + jitter));
+    };
+    let lastErr;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      try {
+        const activeDb = attempt === 0 ? db : await openUnifiedDB();
+        await new Promise((resolve, reject) => {
+          let tx;
+          try {
+            tx = activeDb.transaction([storeName], "readwrite");
+          } catch (e) {
+            return reject(e);
+          }
+          try {
+            const store = tx.objectStore(storeName);
+            store.put(sanitizeForIDB(record));
+          } catch (inner) {
+            return reject(inner);
+          }
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error || new Error("IDB transaction aborted"));
+        });
+        return;
+      } catch (err) {
+        lastErr = err;
+        const transient = err && (err.name === "InvalidStateError" || err.name === "TransactionInactiveError");
+        if (!transient) break;
+        if (attempt < MAX_ATTEMPTS - 1) {
+          await sleep(calcDelay(attempt));
+          continue;
+        }
+      }
+    }
+    throw lastErr;
+  }
   async function getAllRecords(db, storeName) {
     return new Promise((resolve, reject) => {
       const tx = db.transaction([storeName], "readonly");
@@ -4211,7 +4283,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       }
     }
     async function syncPendingNotes(mode) {
-      var _a, _b, _c;
+      var _a, _b, _c, _d;
       if (notesSyncInProgress) return;
       notesSyncInProgress = true;
       try {
@@ -4248,6 +4320,32 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         const result = await resp.json().catch(() => ({}));
         const appliedIds = Array.from(new Set(((_a = result.data) == null ? void 0 : _a.applied) || []));
         const conflictsCount = ((_c = (_b = result.data) == null ? void 0 : _b.conflicts) == null ? void 0 : _c.length) || 0;
+        const idMap = ((_d = result.data) == null ? void 0 : _d.idMap) || {};
+        if (Object.keys(idMap).length) {
+          try {
+            const db2 = await openUnifiedDB();
+            for (const [tempId, serverId] of Object.entries(idMap)) {
+              const original = pending.find((p) => p.id === tempId);
+              if (original) {
+                await putRecord(db2, DB_CONFIG.STORES.NOTES, {
+                  id: serverId,
+                  workspaceId: original.workspaceId,
+                  content: original.content || "",
+                  tags: original.tags || [],
+                  order: 0,
+                  noteType: original.noteType || "TEXT",
+                  metadata: original.metadata,
+                  createdAt: new Date(original.updatedAt),
+                  updatedAt: new Date(original.updatedAt),
+                  isDirty: false
+                });
+                await deleteRecord(db2, DB_CONFIG.STORES.NOTES, tempId);
+              }
+            }
+          } catch (e) {
+            error("[Notes Sync] Failed to apply server id map:", e);
+          }
+        }
         if (appliedIds.length) {
           try {
             await deletePendingNoteChanges(appliedIds);
@@ -4281,6 +4379,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       }
     }
     async function syncPendingBoardItems(mode) {
+      var _a;
       if (boardItemsSyncInProgress) return;
       boardItemsSyncInProgress = true;
       try {
@@ -4306,17 +4405,19 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           return;
         }
         const syncPayload = pending.map((p) => {
-          var _a, _b, _c, _d;
+          var _a2, _b, _c, _d, _e;
           return {
             id: p.id,
+            operation: p.operation || "upsert",
+            localVersion: (_a2 = p.localVersion) != null ? _a2 : 1,
             userId: p.userId || "",
             // server will use auth context
-            columnId: (_a = p.columnId) != null ? _a : null,
-            workspaceId: (_b = p.workspaceId) != null ? _b : null,
+            columnId: (_b = p.columnId) != null ? _b : null,
+            workspaceId: (_c = p.workspaceId) != null ? _c : null,
             content: p.content || "",
             tags: p.tags || [],
-            order: (_c = p.order) != null ? _c : 0,
-            dueDate: (_d = p.dueDate) != null ? _d : null,
+            order: (_d = p.order) != null ? _d : 0,
+            dueDate: (_e = p.dueDate) != null ? _e : null,
             attachments: p.attachments || [],
             createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : new Date(p.updatedAt).toISOString(),
             updatedAt: new Date(p.updatedAt).toISOString()
@@ -4332,9 +4433,38 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           throw new Error("Board items sync failed");
         }
         const result = await resp.json().catch(() => ({}));
-        const appliedIds = Array.from(new Set(
-          (Array.isArray(result.data) ? result.data : []).filter((r) => r.status === "created" || r.status === "updated").map((r) => r.id)
-        ));
+        const resultData = result.data;
+        const appliedIds = Array.from(
+          new Set(
+            Array.isArray(resultData) ? resultData.filter((r) => r.status === "created" || r.status === "updated" || r.status === "deleted").map((r) => r.id) : (resultData == null ? void 0 : resultData.applied) || []
+          )
+        );
+        const idMap = !Array.isArray(resultData) ? (resultData == null ? void 0 : resultData.idMap) || {} : {};
+        if (Object.keys(idMap).length) {
+          try {
+            const db2 = await openUnifiedDB();
+            const resultItems = !Array.isArray(resultData) ? (resultData == null ? void 0 : resultData.results) || [] : [];
+            for (const [tempId, serverId] of Object.entries(idMap)) {
+              const original = pending.find((p) => p.id === tempId);
+              const serverItem = (_a = resultItems.find((r) => r.id === tempId)) == null ? void 0 : _a.data;
+              if (serverItem) {
+                await putRecord(db2, DB_CONFIG.STORES.BOARD_ITEMS, {
+                  ...serverItem,
+                  id: serverId
+                });
+              } else if (original) {
+                await putRecord(db2, DB_CONFIG.STORES.BOARD_ITEMS, {
+                  ...original,
+                  id: serverId,
+                  isDirty: false
+                });
+              }
+              await deleteRecord(db2, DB_CONFIG.STORES.BOARD_ITEMS, tempId);
+            }
+          } catch (e) {
+            error("[Board Items Sync] Failed to apply server id map:", e);
+          }
+        }
         if (appliedIds.length) {
           try {
             await deletePendingBoardItemChanges(appliedIds);

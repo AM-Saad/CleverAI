@@ -76,7 +76,7 @@ const handleSubmit = async (): Promise<void> => {
   <div class="flex items-center justify-center flex-col w-full max-w-xl mx-auto">
     <form ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test" @submit="handleSubmit">
       <ui-title>Create Password</ui-title>
-      <ui-paragraph size="sm" color="muted" class="mb-4">
+      <ui-paragraph size="sm" color="content-secondary" class="mb-4">
         This page will expire in 15 minutes
       </ui-paragraph>
       <shared-error-message v-if="error" :error="error.message" />

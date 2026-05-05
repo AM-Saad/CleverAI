@@ -87,6 +87,7 @@ function extractTxtText(buffer: Buffer): { text: string } {
 }
 
 export default defineEventHandler(async (event) => {
+  const prisma = event.context.prisma;
   // Auth check
   const user = await requireRole(event, ["USER"]);
   const userId = user.id;
@@ -130,6 +131,12 @@ export default defineEventHandler(async (event) => {
   }
 
   const file = Array.isArray(fileArray) ? fileArray[0] : fileArray;
+  if (!file) {
+    throw createError({
+      statusCode: 400,
+      statusMessage: "No file uploaded",
+    });
+  }
   const ext = path.extname(file.originalFilename || '').toLowerCase();
 
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
@@ -159,20 +166,21 @@ export default defineEventHandler(async (event) => {
   let extractedText = '';
   let pageCount: number | undefined;
 
-  switch (ext) {
-    case '.pdf':
+  if (ext === ".pdf") {
       const pdfResult = await extractPdfText(buffer);
       extractedText = pdfResult.text;
       pageCount = pdfResult.pageCount;
-      break;
-    case '.docx':
+  } else if (ext === ".docx") {
       const docxResult = await extractDocxText(buffer);
       extractedText = docxResult.text;
-      break;
-    case '.txt':
+  } else if (ext === ".txt") {
       const txtResult = extractTxtText(buffer);
       extractedText = txtResult.text;
-      break;
+  } else {
+    throw createError({
+      statusCode: 400,
+      statusMessage: `Unsupported file type. Allowed: ${ALLOWED_EXTENSIONS.join(", ")}`,
+    });
   }
 
   // Validate extracted text

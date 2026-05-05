@@ -1,5 +1,8 @@
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
+import {
+  DeleteBoardColumnResponseSchema,
+} from "@@/shared/utils/boardColumn.contract";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -20,18 +23,59 @@ export default defineEventHandler(async (event) => {
       throw Errors.notFound("Board column not found");
     }
 
-    // Move items in this column to uncategorized (null columnId)
-    await prisma.boardItem.updateMany({
-      where: { columnId: columnId, userId: user.id },
-      data: { columnId: null },
+    const deletedColumn = await prisma.$transaction(async (tx: any) => {
+      const sourceItems = await tx.boardItem.findMany({
+        where: { columnId, userId: user.id },
+        orderBy: { order: "asc" },
+      });
+
+      const uncategorizedItems = await tx.boardItem.findMany({
+        where: {
+          userId: user.id,
+          workspaceId: existingColumn.workspaceId ?? null,
+          columnId: null,
+        },
+        orderBy: { order: "asc" },
+      });
+
+      const movedItemIds = new Set(sourceItems.map((item: { id: string }) => item.id));
+      const normalizedUncategorizedItems = [...uncategorizedItems, ...sourceItems].map(
+        (item, index) => ({
+          ...item,
+          columnId: null,
+          order: index,
+        }),
+      );
+
+      await Promise.all(
+        normalizedUncategorizedItems.map((item) =>
+          tx.boardItem.update({
+            where: { id: item.id },
+            data: {
+              columnId: null,
+              order: item.order,
+            },
+          }),
+        ),
+      );
+
+      await tx.boardColumn.delete({
+        where: { id: columnId },
+      });
+
+      return {
+        deletedColumnId: columnId,
+        movedItems: normalizedUncategorizedItems.filter((item) =>
+          movedItemIds.has(item.id),
+        ),
+      };
     });
 
-    // Delete the column
-    await prisma.boardColumn.delete({
-      where: { id: columnId },
-    });
+    if (process.env.NODE_ENV === "development") {
+      DeleteBoardColumnResponseSchema.parse(deletedColumn);
+    }
 
-    return success(null, { message: "Board column deleted successfully" });
+    return success(deletedColumn, { message: "Board column deleted successfully" });
   } catch (error: any) {
     console.error("💥 [API /board-columns/:id] DELETE error:", error);
     if (error.statusCode) throw error;

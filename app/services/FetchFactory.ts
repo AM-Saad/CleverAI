@@ -85,7 +85,7 @@ class FetchFactory {
     url: string,
     data: object | undefined,
     fetchOptions: FetchOptions<"json"> | undefined,
-    validator: z.ZodSchema
+    validator: TSchema
   ): Promise<Result<z.infer<TSchema>>>;
 
   async call<T, TSchema extends z.ZodTypeAny>(

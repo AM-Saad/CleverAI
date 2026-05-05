@@ -1,6 +1,8 @@
+import type { Material } from "@prisma/client";
 import { z } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
+import { MaterialSchema } from "@@/shared/utils/material.contract";
 
 const QuerySchema = z.object({
   workspaceId: z
@@ -12,7 +14,7 @@ export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
   const prisma = event.context.prisma;
   const rawQuery = getQuery(event);
-  let query;
+  let query: z.infer<typeof QuerySchema>;
   try {
     query = QuerySchema.parse(rawQuery);
   } catch (err) {
@@ -29,13 +31,13 @@ export default defineEventHandler(async (event) => {
     throw Errors.notFound("Workspace");
   }
 
-  const materials = await prisma.material.findMany({
+  const materials: Material[] = await prisma.material.findMany({
     where: { workspaceId: query.workspaceId },
     orderBy: { createdAt: "desc" },
   });
 
   if (process.env.NODE_ENV === "development") {
-    materials.forEach((m) => MaterialSchema.parse(m));
+    materials.forEach((material: Material) => MaterialSchema.parse(material));
   }
 
   return success(materials, {

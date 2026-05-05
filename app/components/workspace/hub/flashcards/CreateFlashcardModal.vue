@@ -110,7 +110,7 @@ function handleClose() {
 
 <template>
   <shared-dialog-modal :show="show" @close="handleClose" :title="isEditMode ? 'Edit Flashcard' : 'Create Flashcard'"
-    :icon="isEditMode ? 'i-lucide-pencil' : 'i-lucide-plus-square'">
+    :icon="isEditMode ? 'pen' : 'pencil'">
 
     <template #body>
       <u-form :schema="schema" :state="state" class="space-y-2" @submit="handleSubmit">

@@ -21,19 +21,11 @@ export default defineEventHandler(async (event) => {
     throw Errors.notFound("Note");
   }
 
-  // Verify ownership based on note type
-  if (note.type === "BOARD") {
-    if (note.userId !== user.id) {
-      throw Errors.notFound("Note");
-    }
-  } else {
-    // Workspace note - verify workspace ownership
-    const workspace = await prisma.workspace.findFirst({
-      where: { id: note.workspaceId!, userId: user.id },
-    });
-    if (!workspace) {
-      throw Errors.notFound("Note");
-    }
+  const workspace = await prisma.workspace.findFirst({
+    where: { id: note.workspaceId, userId: user.id },
+  });
+  if (!workspace) {
+    throw Errors.notFound("Note");
   }
 
   await prisma.note.delete({

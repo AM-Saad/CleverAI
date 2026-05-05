@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { SnoozeNotificationDTO } from "@@/shared/utils/notification.contract";
 import { safeGetServerSession } from "@server/utils/safeGetServerSession";
 import { Errors, success } from "@server/utils/error";
@@ -8,6 +9,7 @@ interface SessionWithUser {
 
 export default defineEventHandler(async (event) => {
   try {
+    const prisma = event.context.prisma;
     // Get session
     const session = (await safeGetServerSession(
       event
@@ -69,7 +71,7 @@ export default defineEventHandler(async (event) => {
         message: `Notifications snoozed for ${Math.floor(duration / 60)} minutes`,
       }
     );
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Snooze notification error:", error);
     if (error instanceof z.ZodError) {
       throw Errors.badRequest("Invalid snooze data", { issues: error.issues });

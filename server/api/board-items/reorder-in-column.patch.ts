@@ -1,3 +1,4 @@
+import type { BoardItem } from "@prisma/client";
 import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
@@ -11,7 +12,7 @@ export default defineEventHandler(async (event) => {
 
     const body = await readBody(event);
 
-    let data;
+    let data: ReorderItemsInColumnDTO;
     try {
       data = ReorderItemsInColumnDTO.parse(body);
     } catch (err) {
@@ -36,7 +37,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Verify all items belong to user
-    const itemIds = data.itemOrders.map((i) => i.id);
+    const itemIds = data.itemOrders.map((item: { id: string }) => item.id);
     const items = await prisma.boardItem.findMany({
       where: {
         id: { in: itemIds },
@@ -53,31 +54,29 @@ export default defineEventHandler(async (event) => {
 
     // OPTIMIZED: Use parallel updateMany operations instead of sequential updates
     // This reduces N database round-trips to a single batch operation
-    const updatePromises = data.itemOrders.map((itemOrder) =>
-      prisma.boardItem.update({
-        where: { id: itemOrder.id },
-        data: { order: itemOrder.order },
-        select: { id: true, order: true }, // Minimal data return
-      })
-    );
-
-    // Execute all updates in parallel within a transaction
-    await prisma.$transaction(updatePromises, {
-      maxWait: 5000,
-      timeout: 10000,
+    await prisma.$transaction(async (tx: any) => {
+      await Promise.all(
+        data.itemOrders.map((itemOrder) =>
+          tx.boardItem.update({
+            where: { id: itemOrder.id },
+            data: { order: itemOrder.order },
+            select: { id: true, order: true },
+          })
+        )
+      );
     });
 
     // Return minimal success response - client already has the data
     // Only fetch if truly needed for verification in development
     if (process.env.NODE_ENV === "development") {
-      const updatedItems = await prisma.boardItem.findMany({
+      const updatedItems: BoardItem[] = await prisma.boardItem.findMany({
         where: {
           userId: user.id,
           columnId: data.columnId,
         },
         orderBy: { order: "asc" },
       });
-      updatedItems.forEach((i) => BoardItemSchema.parse(i));
+      updatedItems.forEach((item: BoardItem) => BoardItemSchema.parse(item));
       return success(updatedItems, {
         message: "Board items reordered successfully",
         count: updatedItems.length,
@@ -86,7 +85,10 @@ export default defineEventHandler(async (event) => {
 
     // In production, return the order data without re-fetching
     return success(
-      data.itemOrders.map((io) => ({ id: io.id, order: io.order })),
+      data.itemOrders.map((itemOrder) => ({
+        id: itemOrder.id,
+        order: itemOrder.order,
+      })),
       {
         message: "Board items reordered successfully",
         count: data.itemOrders.length,

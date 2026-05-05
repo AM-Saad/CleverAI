@@ -14,6 +14,9 @@
 </template>
 
 <script setup lang="ts">
+import { computed, defineAsyncComponent, ref, type Component } from "vue";
+import type { IconName } from "~/utils/icons.generated";
+
 const SettingsAccountTab = defineAsyncComponent(
   () => import("~/components/settings/AccountTab.vue"),
 );
@@ -34,41 +37,48 @@ const SettingsLanguagePreferences = defineAsyncComponent(
 );
 
 // Tab configuration
-const tabs = [
+interface SettingsTab {
+  key: string;
+  name: string;
+  icon: IconName;
+  component: Component;
+}
+
+const tabs: SettingsTab[] = [
   {
     key: "account",
     name: "Account",
-    icon: "i-heroicons-user",
+    icon: "user",
     component: SettingsAccountTab,
   },
   {
     key: "notifications",
     name: "Notifications",
-    icon: "i-heroicons-bell",
+    icon: "bell",
     component: SettingsNotificationPreferences,
   },
   {
     key: "study",
     name: "Study",
-    icon: "i-heroicons-academic-cap",
+    icon: "study",
     component: SettingsStudyTab,
   },
   {
     key: "security",
     name: "Security",
-    icon: "i-heroicons-shield-check",
+    icon: "security",
     component: SettingsSecurityTab,
   },
   {
     key: "data",
     name: "Data & Privacy",
-    icon: "i-heroicons-document-text",
+    icon: "document",
     component: SettingsDataPrivacyTab,
   },
   {
     key: "language",
     name: "Language",
-    icon: "i-lucide-languages",
+    icon: "translation",
     component: SettingsLanguagePreferences,
   },
 ];

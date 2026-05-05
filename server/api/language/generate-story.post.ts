@@ -5,10 +5,12 @@ import { GenerateStoryDTO } from "@shared/utils/language.contract";
 import { getLanguageLabel } from "@shared/utils/language.contract";
 import { languageStoryPrompt } from "@server/utils/llm/languagePrompts";
 import { llmRequestPipeline } from "@server/utils/llm/llmRequestPipeline";
+import { PrismaQuotaPort } from "@server/modules/subscription/infrastructure/PrismaQuotaPort";
 import type { LanguageSentence } from "@shared/utils/language.contract";
 import type { Prisma } from "@prisma/client";
 
 type RelatedWordCandidate = { id: string; word: string };
+const quotaPort = new PrismaQuotaPort();
 
 export default defineEventHandler(async (event) => {
   const prisma = event.context.prisma;
@@ -79,6 +81,7 @@ export default defineEventHandler(async (event) => {
   // Pipeline: story generation counts toward quota (D3).
   // Pass pre-fetched user so pipeline skips a redundant requireRole call.
   const ctx = await llmRequestPipeline(event, {
+    quotaPort,
     task: "language_story",
     inputText: prompt,
     estimatedOutputTokens: 300,

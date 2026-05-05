@@ -46,7 +46,7 @@ const {
     <form ref="forgetpassword" method="post" class="form w-full focus:bg-surface-subtle" autocomplete="test"
       @submit.prevent="submitForm">
       <UiTitle> Verify Your Account</UiTitle>
-      <UiParagraph size="sm" color="muted">
+      <UiParagraph size="sm" color="content-secondary">
         Enter your email to receive a verification code
       </UiParagraph>
       <shared-error-message v-if="error" :error="error" />

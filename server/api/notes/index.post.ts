@@ -43,7 +43,7 @@ export default defineEventHandler(async (event) => {
       tags: data.tags || [],
       order: nextOrder,
       noteType: data.noteType ?? "TEXT",
-      // metadata: data.metadata ?? undefined,
+      metadata: data.metadata as any,
     },
   });
 

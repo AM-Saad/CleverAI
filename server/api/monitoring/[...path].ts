@@ -178,6 +178,7 @@ function getHealthRecommendations(
   performanceImpact: Awaited<ReturnType<typeof getPerformanceImpact>>
 ) {
   const recommendations: string[] = [];
+  const topError = errorRate.topErrors[0];
 
   if (errorRate.errorRate > 5) {
     recommendations.push(
@@ -198,12 +199,9 @@ function getHealthRecommendations(
     );
   }
 
-  if (
-    errorRate.topErrors.length > 0 &&
-    errorRate.topErrors[0].percentage > 50
-  ) {
+  if (topError && topError.percentage > 50) {
     recommendations.push(
-      `Single error type dominates: ${errorRate.topErrors[0].code} (${errorRate.topErrors[0].percentage.toFixed(1)}%)`
+      `Single error type dominates: ${topError.code} (${topError.percentage.toFixed(1)}%)`
     );
   }
 

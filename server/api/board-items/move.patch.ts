@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
 
     const body = await readBody(event);
 
-    let data;
+    let data: ReturnType<typeof MoveItemToColumnDTO.parse>;
     try {
       data = MoveItemToColumnDTO.parse(body);
     } catch (err) {
@@ -44,14 +44,84 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // Update the item's column and order
-    const updatedItem = await prisma.boardItem.update({
-      where: { id: data.itemId },
-      data: {
-        columnId: data.targetColumnId,
-        order: data.newOrder,
+    const currentItem = existingItem;
+    const sourceColumnId = currentItem.columnId ?? null;
+    const targetColumnId = data.targetColumnId ?? null;
+
+    const sourceItems = await prisma.boardItem.findMany({
+      where: {
+        userId: user.id,
+        columnId: sourceColumnId,
+        id: { not: data.itemId },
       },
+      orderBy: { order: "asc" },
     });
+
+    const targetItems =
+      sourceColumnId === targetColumnId
+        ? sourceItems
+        : await prisma.boardItem.findMany({
+          where: {
+            userId: user.id,
+            columnId: targetColumnId,
+            id: { not: data.itemId },
+          },
+          orderBy: { order: "asc" },
+        });
+
+    const insertIndex = Math.min(
+      Math.max(data.newOrder, 0),
+      targetItems.length,
+    );
+
+    const operations = [];
+
+    if (sourceColumnId === targetColumnId) {
+      const reorderedItems = [...sourceItems];
+      reorderedItems.splice(insertIndex, 0, currentItem);
+
+      operations.push(
+        ...reorderedItems.map((item: { id: string }, index: number) =>
+          prisma.boardItem.update({
+            where: { id: item.id },
+            data: { order: index },
+          }),
+        ),
+      );
+    } else {
+      operations.push(
+        ...sourceItems.map((item: { id: string }, index: number) =>
+          prisma.boardItem.update({
+            where: { id: item.id },
+            data: { order: index },
+          }),
+        ),
+      );
+
+      const normalizedTargetItems = [...targetItems];
+      normalizedTargetItems.splice(insertIndex, 0, currentItem);
+
+      operations.push(
+        ...normalizedTargetItems.map((item: { id: string }, index: number) =>
+          prisma.boardItem.update({
+            where: { id: item.id },
+            data: {
+              columnId: targetColumnId,
+              order: index,
+            },
+          }),
+        ),
+      );
+    }
+
+    operations.push(
+      prisma.boardItem.findUniqueOrThrow({
+        where: { id: data.itemId },
+      }),
+    );
+
+    const transactionResults = await prisma.$transaction(operations);
+    const updatedItem = transactionResults[transactionResults.length - 1];
 
     if (process.env.NODE_ENV === "development") {
       BoardItemSchema.parse(updatedItem);

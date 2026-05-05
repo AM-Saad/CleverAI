@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { GenerationType } from "~/composables/materials/useGenerateFromMaterial";
+import type { IconName, MaterialType } from "#imports";
 
 const emit = defineEmits<{
   removed: [id: string];
@@ -25,21 +26,22 @@ const {
 } = useMaterialsStore(id as string);
 
 // Material type to icon mapping
-const materialTypeIcons: Record<string, string> = {
-  text: 'i-lucide-text',
-  audio: 'i-lucide-mic',
-  pdf: 'i-lucide-file-text',
-  video: 'i-lucide-video',
-  url: 'i-lucide-link',
-  document: 'i-lucide-file',
+const materialTypeIcons: Record<MaterialType, IconName> = {
+  text: 'document',
+  audio: 'mic',
+  pdf: 'pdf',
+  video: 'video',
+  url: 'link',
+  document: 'sheet',
 };
 
-function getMaterialTypeIcon(type: string | null | undefined): string {
-  return materialTypeIcons[type || ''] || 'i-lucide-file';
+function getMaterialTypeIcon(type: MaterialType): IconName {
+  const mappedType = materialTypeIcons[type || ''];
+  return mappedType || 'i-lucide-file';
 }
 
 // Material type to border color mapping
-const materialTypeColors: Record<string, string> = {
+const materialTypeColors: Record<MaterialType, string> = {
   audio: 'border-l-2 border-l-rose-500/50',
   video: 'border-l-2 border-l-blue-500/50',
   pdf: 'border-l-2 border-l-green-500/50',
@@ -48,7 +50,7 @@ const materialTypeColors: Record<string, string> = {
   document: 'border-l-2 border-l-orange-500/50',
 };
 
-function getMaterialTypeColor(type: string | null | undefined): string {
+function getMaterialTypeColor(type: MaterialType): string {
   return materialTypeColors[type || ''] || '';
 }
 
@@ -128,7 +130,7 @@ const doConfirmRemove = async () => {
           <div class="flex items-center gap-2 flex-1 min-w-0">
             <icon name="i-lucide-mic" class="w-4 h-4 text-rose-500 shrink-0 animate-pulse" />
             <ui-subtitle weight="normal" size="xs" class="truncate" color="content-on-surface">{{ pt.title
-            }}</ui-subtitle>
+              }}</ui-subtitle>
             <span
               class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-800 shrink-0">
               <icon name="i-lucide-loader" class="w-3 h-3 animate-spin" />
@@ -139,13 +141,12 @@ const doConfirmRemove = async () => {
       </ui-card>
 
       <!-- Actual Materials -->
-      <ui-card v-for="(m, idx) in materials" :key="m.id" tag="li" size="sm" :class="['cursor-pointer group my-1 rounded-[var(--radius-md)]!',
-        getMaterialTypeColor(m.type)
+      <ui-card v-for="(m, idx) in materials" :key="m.id" tag="li" size="sm" variant="surface" :class="['cursor-pointer group my-1 rounded-[var(--radius-md)]!',
+        getMaterialTypeColor(m.type!)
       ]" @click="() => fullscreen.open(m.id)">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2 flex-1 min-w-0">
-            <icon :name="getMaterialTypeIcon(m.type)" class="w-4 h-4 shrink-0 text-content-on-background"
-              :size="UI_CONFIG.ICON_SIZE" />
+            <shared-icon :name="getMaterialTypeIcon(m.type!)" :size="UI_CONFIG.ICON_SIZE" />
             <ui-subtitle weight="normal" size="xs" class="truncate" color="content-on-background">
               {{ m.title }}</ui-subtitle>
             <span v-if="enrolledMaterials.has(m.id)"

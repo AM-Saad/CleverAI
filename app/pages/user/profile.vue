@@ -22,10 +22,6 @@
               <span>{{ formattedCreatedDate }}</span>
             </ui-label>
             <ui-label class="flex justify-between py-1.5">
-              <span>Phone:</span>
-              <span>{{ profileData?.phone || "Not provided" }}</span>
-            </ui-label>
-            <ui-label class="flex justify-between py-1.5">
               <span>Gender:</span>
               <span class="capitalize">{{
                 profileData?.gender || "Not specified"
@@ -173,7 +169,6 @@ interface UserProfile {
   id: string;
   name: string;
   email: string;
-  phone: string;
   gender?: string;
   role: string;
   createdAt: string;

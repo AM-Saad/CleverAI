@@ -7,7 +7,14 @@ import { Errors } from '../error'
 import type { LLMModel } from "#shared/utils/llm";
 import type { LlmModelRegistry } from '@prisma/client'
 import { prisma } from '../prisma'
-import { LlmMeasured, logLlmUsage } from '../llmCost';
+import type { LLMStrategy } from './LLMStrategy';
+import { OpenAIStrategy } from './OpenAIStrategy';
+import { GeminiStrategy } from './GeminiStrategy';
+import { DeepSeekStrategy } from './DeepSeekStrategy';
+import { GroqStrategy } from './GroqStrategy';
+import { OpenRouterStrategy } from './OpenRouterStrategy';
+import type { LlmMeasured } from '../llmCost';
+import { logLlmUsage } from '../llmCost';
 
 /**
  * @deprecated Use `getLLMStrategyFromRegistry()` instead.
@@ -76,12 +83,13 @@ export async function getLLMStrategyFromRegistry(
   ctx?: { userId?: string; workspaceId?: string; feature?: string },
   onMeasureCapture?: (m: LlmMeasured) => void
 ): Promise<LLMStrategy> {
-  const baseModelId = modelId.split(':')[0]
-  const suffix = modelId.includes(':') ? `:${modelId.split(':')[1]}` : ''
+  const [baseModelId, suffixPart] = modelId.split(':')
+  const resolvedBaseModelId = baseModelId ?? modelId
+  const suffix = suffixPart ? `:${suffixPart}` : ''
 
   // Fetch model from registry
   const model = await prisma.llmModelRegistry.findUnique({
-    where: { modelId: baseModelId }
+    where: { modelId: resolvedBaseModelId }
   })
 
   if (!model) {

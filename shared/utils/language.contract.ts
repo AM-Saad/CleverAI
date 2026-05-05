@@ -232,5 +232,3 @@ export interface GenerateStoryResponse {
     "tier" | "generationsUsed" | "generationsQuota" | "remaining"
   >;
 }
-
-export { SubscriptionInfoSchema };

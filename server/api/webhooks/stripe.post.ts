@@ -1,8 +1,9 @@
-// server/api/webhooks/stripe.post.ts
-import Stripe from 'stripe'
-import { CreditTxType } from '@prisma/client'
+import { getHeader, readRawBody } from "h3";
+import Stripe from "stripe";
+import { grantStripePurchaseCredits } from "../../modules/subscription/application/grantStripePurchaseCredits";
 
 export default defineEventHandler(async (event) => {
+  const prisma = event.context.prisma;
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
   const rawBody = await readRawBody(event)
   const sig = getHeader(event, 'stripe-signature')!
@@ -20,13 +21,14 @@ export default defineEventHandler(async (event) => {
   if (stripeEvent.type === 'payment_intent.succeeded') {
     const intent = stripeEvent.data.object as Stripe.PaymentIntent
     const { userId, packId } = intent.metadata
-    const pack = CREDIT_PACKS.find(p => p.id === packId)
-    if (!pack || !userId) return { received: true }
+    if (!packId || !userId) return { received: true }
 
-    await grantCredits(userId, pack.credits, CreditTxType.STRIPE_PURCHASE, {
+    await grantStripePurchaseCredits({
+      prisma,
+      userId,
+      packId,
       stripePaymentIntentId: intent.id,
-      packId
-    })
+    });
   }
 
   return { received: true }

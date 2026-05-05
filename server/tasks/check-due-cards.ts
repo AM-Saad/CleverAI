@@ -9,6 +9,7 @@ import {
 interface NotificationData {
   cardCount: number;
   workspaceCount: number;
+  languageCardCount?: number;
   workspaces: Array<{
     workspaceId: string;
     cardCount: number;
@@ -157,11 +158,13 @@ export async function checkDueCards() {
             userId: userPref.userId,
             nextReviewAt: { lte: now },
             suspended: false,
-            storyId: { not: null },
           },
         });
+        const totalDueCount = dueCards.length + languageDueCount;
 
-        console.log(`📚 User ${userPref.userId} has ${dueCards.length} due cards`);
+        console.log(
+          `📚 User ${userPref.userId} has ${dueCards.length} review cards and ${languageDueCount} language cards due`
+        );
 
         // Check if we should send a daily study reminder
         if (
@@ -231,8 +234,7 @@ export async function checkDueCards() {
         // Group cards by workspace for better notification content
         const cardsByWorkspace = dueCards.reduce(
           (acc, card) => {
-            if (!acc[card.workspaceId]) acc[card.workspaceId] = [];
-            acc[card.workspaceId].push(card);
+            (acc[card.workspaceId] ??= []).push(card);
             return acc;
           },
           {} as Record<string, typeof dueCards>
@@ -246,6 +248,7 @@ export async function checkDueCards() {
             workspaceId,
             cardCount: cards.length,
           })),
+          languageCardCount: languageDueCount,
         };
 
 
@@ -337,10 +340,15 @@ async function sendCardDueNotification(
 
     // Create notification content
     const title = `📚 ${cardCount} Cards Ready for Review`;
+    const languageSuffix = data.languageCardCount
+      ? `, including ${data.languageCardCount} language cards`
+      : "";
     const body =
-      workspaceCount === 1
-        ? `You have cards waiting in 1 workspace`
-        : `You have cards waiting across ${workspaceCount} workspaces`;
+      workspaceCount === 0
+        ? `You have language cards waiting for review`
+        : workspaceCount === 1
+          ? `You have cards waiting in 1 workspace${languageSuffix}`
+          : `You have cards waiting across ${workspaceCount} workspaces${languageSuffix}`;
 
     // Use existing notification API with internal cron authorization
     const response = await $fetch("/api/notifications/send", {

@@ -65,7 +65,7 @@ function getFriendlyName(modelId?: string): string {
   if (FRIENDLY_NAMES[modelId]) return FRIENDLY_NAMES[modelId];
   // Fall back to extracting just the model name from "org/model-name"
   const parts = modelId.split('/');
-  const name = parts[parts.length - 1];
+  const name = parts[parts.length - 1] ?? modelId;
   // Clean up common suffixes and convert dashes/underscores
   return name
     .replace(/-ONNX$/i, '')

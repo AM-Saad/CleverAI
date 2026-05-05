@@ -16,7 +16,7 @@
     </div>
 
     <!-- Dropdown suggestion list -->
-    <Transition name="suggestions">
+    <!-- <Transition name="suggestions">
       <div v-if="showDropdown"
         class="absolute z-50 left-0 right-0 top-full mt-1 bg-surface border border-secondary rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto"
         role="listbox" :aria-label="dropdownLabel">
@@ -32,7 +32,7 @@
             class="shrink-0 hidden sm:inline-flex items-center gap-0.5 rounded border border-secondary px-1 py-0.5 text-[10px] font-mono text-content-secondary">Tab</kbd>
         </button>
       </div>
-    </Transition>
+    </Transition> -->
   </div>
 </template>
 
@@ -88,46 +88,48 @@ function handleInput(val: string) {
 }
 
 function handleKeydown(e: KeyboardEvent) {
-  if (!showDropdown.value && !ghostSuffix.value) return;
+  // if (!showDropdown.value && !ghostSuffix.value) return;
 
-  switch (e.key) {
-    case 'Tab': {
-      // Accept ghost / first suggestion
-      e.preventDefault();
-      if (ghostSuffix.value) {
-        acceptGhost();
-      } else if (props.suggestions[activeIndex.value]) {
-        selectItem(props.suggestions[activeIndex.value]);
-      }
-      break;
-    }
-    case 'ArrowDown': {
-      if (!showDropdown.value) break;
-      e.preventDefault();
-      activeIndex.value = Math.min(activeIndex.value + 1, props.suggestions.length - 1);
-      break;
-    }
-    case 'ArrowUp': {
-      if (!showDropdown.value) break;
-      e.preventDefault();
-      activeIndex.value = Math.max(activeIndex.value - 1, 0);
-      break;
-    }
-    case 'Enter': {
-      if (showDropdown.value && props.suggestions[activeIndex.value]) {
-        e.preventDefault();
-        selectItem(props.suggestions[activeIndex.value]);
-      }
-      break;
-    }
-    case 'Escape': {
-      if (showDropdown.value) {
-        e.preventDefault();
-        emit('query', ''); // ask host to clear
-      }
-      break;
-    }
-  }
+  // switch (e.key) {
+  //   case 'Tab': {
+  //     // Accept ghost / first suggestion
+  //     e.preventDefault();
+  //     if (ghostSuffix.value) {
+  //       acceptGhost();
+  //     } else {
+  //       const activeSuggestion = props.suggestions[activeIndex.value];
+  //       if (activeSuggestion) selectItem(activeSuggestion);
+  //     }
+  //     break;
+  //   }
+  //   case 'ArrowDown': {
+  //     if (!showDropdown.value) break;
+  //     e.preventDefault();
+  //     activeIndex.value = Math.min(activeIndex.value + 1, props.suggestions.length - 1);
+  //     break;
+  //   }
+  //   case 'ArrowUp': {
+  //     if (!showDropdown.value) break;
+  //     e.preventDefault();
+  //     activeIndex.value = Math.max(activeIndex.value - 1, 0);
+  //     break;
+  //   }
+  //   case 'Enter': {
+  //     const activeSuggestion = props.suggestions[activeIndex.value];
+  //     if (showDropdown.value && activeSuggestion) {
+  //       e.preventDefault();
+  //       selectItem(activeSuggestion);
+  //     }
+  //     break;
+  //   }
+  //   case 'Escape': {
+  //     if (showDropdown.value) {
+  //       e.preventDefault();
+  //       emit('query', ''); // ask host to clear
+  //     }
+  //     break;
+  //   }
+  // }
 }
 
 function acceptGhost() {

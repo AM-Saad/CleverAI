@@ -1,3 +1,4 @@
+import type { Note } from "@prisma/client";
 import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
@@ -10,7 +11,7 @@ export default defineEventHandler(async (event) => {
 
     const body = await readBody(event);
 
-    let data;
+    let data: ReorderNotesDTO;
     try {
       data = ReorderNotesDTO.parse(body);
     } catch (err) {
@@ -32,7 +33,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Verify all notes belong to this workspace
-    const noteIds = data.noteOrders.map((n) => n.id);
+    const noteIds = data.noteOrders.map((note: { id: string }) => note.id);
     const notes = await prisma.note.findMany({
       where: {
         id: { in: noteIds },
@@ -45,23 +46,25 @@ export default defineEventHandler(async (event) => {
     }
 
     // Update all note orders in a transaction
-    const updatePromises = data.noteOrders.map((noteOrder) =>
-      prisma.note.update({
-        where: { id: noteOrder.id },
-        data: { order: noteOrder.order },
-      })
-    );
-
-    await prisma.$transaction(updatePromises);
+    await prisma.$transaction(async (tx: any) => {
+      await Promise.all(
+        data.noteOrders.map((noteOrder) =>
+          tx.note.update({
+            where: { id: noteOrder.id },
+            data: { order: noteOrder.order },
+          })
+        )
+      );
+    });
 
     // Fetch updated notes for verification
-    const updatedNotes = await prisma.note.findMany({
+    const updatedNotes: Note[] = await prisma.note.findMany({
       where: { workspaceId: data.workspaceId },
       orderBy: { order: "asc" },
     });
 
     if (process.env.NODE_ENV === "development") {
-      updatedNotes.forEach((n) => NoteSchema.parse(n));
+      updatedNotes.forEach((note: Note) => NoteSchema.parse(note));
     }
 
     return success(updatedNotes, {

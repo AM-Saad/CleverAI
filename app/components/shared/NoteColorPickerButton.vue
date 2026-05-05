@@ -1,6 +1,6 @@
 <template>
   <shared-note-toolbar-button :title="title" class="relative overflow-hidden cursor-pointer" :icon-only="iconOnly">
-    <UIcon :name="icon" class="w-[18px] h-[18px] shrink-0"
+    <shared-icon :name="icon" class="w-[18px] h-[18px] shrink-0"
       :style="{ color: isValidColor ? modelValue : fallbackColor }" />
     <span v-if="!iconOnly && label" class="hidden sm:inline">{{ label }}</span>
     <input type="color" :value="isValidColor ? modelValue : fallbackColor" @input="handleInput"
@@ -10,11 +10,12 @@
 </template>
 
 <script setup lang="ts">
+import type { IconName } from '#imports';
 import { computed } from 'vue';
 
 const props = withDefaults(defineProps<{
   modelValue: string | undefined | null;
-  icon: string;
+  icon: IconName;
   title?: string;
   label?: string;
   iconOnly?: boolean;

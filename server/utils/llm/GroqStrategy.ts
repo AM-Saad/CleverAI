@@ -1,7 +1,13 @@
 // server/utils/llm/GroqStrategy.ts
 import { OpenAI } from "openai";
 import { encoding_for_model } from "tiktoken";
-import { Errors } from "../error";
+import type {
+  FlashcardDTO,
+  QuizQuestionDTO,
+} from "../../../shared/utils/llm-generate.contract";
+import type { LLMGenerationOptions, LLMStrategy } from "./LLMStrategy";
+import type { LlmMeasured } from "../llmCost";
+import { flashcardPrompt, quizPrompt } from "./prompts";
 
 // Small helper to avoid hard crashes on imperfect LLM JSON
 function safeParseJSON<T>(text: string, fallback: T): T {
@@ -95,6 +101,38 @@ export class GroqStrategy implements LLMStrategy {
     });
     this.modelId = modelId;
     this.onMeasure = onMeasure;
+  }
+
+  async generateText(prompt: string): Promise<string> {
+    if (process.env.GROQ_MOCK === "1") {
+      return "{}";
+    }
+
+    try {
+      const res = await this.client.chat.completions.create({
+        model: this.modelId,
+        messages: [{ role: "user", content: prompt }],
+      });
+      const promptTokens = Number(res.usage?.prompt_tokens ?? 0);
+      const completionTokens = Number(res.usage?.completion_tokens ?? 0);
+      this.onMeasure?.({
+        provider: "groq",
+        model: this.modelId,
+        promptTokens,
+        completionTokens,
+        totalTokens: promptTokens + completionTokens,
+        requestId: res.id,
+        rawUsage: res.usage,
+        meta: {},
+      });
+      const content = res.choices?.[0]?.message?.content?.trim() ?? "";
+      return stripCodeFences(content);
+    } catch (error: any) {
+      throw createError({
+        statusCode: 502,
+        statusMessage: `Groq error: ${error.status} ${error.message}`,
+      });
+    }
   }
 
   async generateFlashcards(input: string, options?: LLMGenerationOptions): Promise<FlashcardDTO[]> {

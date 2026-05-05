@@ -62,7 +62,12 @@ export function isWithinTimeWindow(
     const now = getUserLocalTime(timezone);
     const currentTimeMinutes = now.getHours() * 60 + now.getMinutes();
 
-    const [targetHour, targetMinute] = targetTime.split(":").map(Number);
+    const [targetHourRaw, targetMinuteRaw] = targetTime.split(":");
+    const targetHour = Number(targetHourRaw);
+    const targetMinute = Number(targetMinuteRaw);
+    if (Number.isNaN(targetHour) || Number.isNaN(targetMinute)) {
+      return false;
+    }
     const targetTimeMinutes = targetHour * 60 + targetMinute;
 
     // Check if current time is within the window
@@ -240,7 +245,12 @@ export function getNextNotificationWindow(
 ): string {
   try {
     const now = getUserLocalTime(timezone);
-    const [targetHour, targetMinute] = targetTime.split(":").map(Number);
+    const [targetHourRaw, targetMinuteRaw] = targetTime.split(":");
+    const targetHour = Number(targetHourRaw);
+    const targetMinute = Number(targetMinuteRaw);
+    if (Number.isNaN(targetHour) || Number.isNaN(targetMinute)) {
+      return "soon";
+    }
 
     // Create target time for today
     const targetToday = new Date(now);

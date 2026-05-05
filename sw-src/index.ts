@@ -19,6 +19,7 @@ import {
   openUnifiedDB,
   getAllRecords,
   deleteRecord,
+  putRecord,
   loadPendingNoteChanges,
   deletePendingNoteChanges,
   loadPendingBoardItemChanges,
@@ -1199,11 +1200,39 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         data?: {
           applied?: string[];
           conflicts?: Array<{ id: string }>;
+          idMap?: Record<string, string>;
         };
       };
 
       const appliedIds = Array.from(new Set(result.data?.applied || []));
       const conflictsCount = result.data?.conflicts?.length || 0;
+      const idMap = result.data?.idMap || {};
+
+      if (Object.keys(idMap).length) {
+        try {
+          const db = await openUnifiedDB();
+          for (const [tempId, serverId] of Object.entries(idMap)) {
+            const original = pending.find((p: any) => p.id === tempId);
+            if (original) {
+              await putRecord(db, DB_CONFIG.STORES.NOTES as any, {
+                id: serverId,
+                workspaceId: original.workspaceId,
+                content: original.content || "",
+                tags: original.tags || [],
+                order: 0,
+                noteType: original.noteType || "TEXT",
+                metadata: original.metadata,
+                createdAt: new Date(original.updatedAt),
+                updatedAt: new Date(original.updatedAt),
+                isDirty: false,
+              });
+              await deleteRecord(db, DB_CONFIG.STORES.NOTES as any, tempId);
+            }
+          }
+        } catch (e) {
+          error("[Notes Sync] Failed to apply server id map:", e);
+        }
+      }
 
       if (appliedIds.length) {
         try {
@@ -1276,6 +1305,8 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       // shape the server endpoint validates against.
       const syncPayload = pending.map((p: any) => ({
         id: p.id,
+        operation: p.operation || "upsert",
+        localVersion: p.localVersion ?? 1,
         userId: p.userId || "",  // server will use auth context
         columnId: p.columnId ?? null,
         workspaceId: p.workspaceId ?? null,
@@ -1301,15 +1332,55 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
 
       const result = (await resp.json().catch(() => ({}))) as {
         success?: boolean;
-        data?: Array<{ id: string; status: string }>;
+        data?:
+          | Array<{ id: string; status: string }>
+          | {
+            applied?: string[];
+            conflicts?: Array<{ id: string }>;
+            idMap?: Record<string, string>;
+            results?: Array<{ id: string; status: string; data?: any }>;
+          };
       };
 
-      // Extract successful IDs (created or updated)
-      const appliedIds = Array.from(new Set(
-        (Array.isArray(result.data) ? result.data : [])
-          .filter(r => r.status === "created" || r.status === "updated")
-          .map(r => r.id)
-      ));
+      const resultData = result.data;
+      const appliedIds = Array.from(
+        new Set(
+          Array.isArray(resultData)
+            ? resultData
+              .filter((r) => r.status === "created" || r.status === "updated" || r.status === "deleted")
+              .map((r) => r.id)
+            : resultData?.applied || []
+        )
+      );
+
+      const idMap = !Array.isArray(resultData) ? resultData?.idMap || {} : {};
+      if (Object.keys(idMap).length) {
+        try {
+          const db = await openUnifiedDB();
+          const resultItems = !Array.isArray(resultData)
+            ? resultData?.results || []
+            : [];
+          for (const [tempId, serverId] of Object.entries(idMap)) {
+            const original = pending.find((p: any) => p.id === tempId);
+            const serverItem = resultItems.find((r) => r.id === tempId)?.data;
+            if (serverItem) {
+              await putRecord(db, DB_CONFIG.STORES.BOARD_ITEMS as any, {
+                ...serverItem,
+                id: serverId,
+              });
+            } else if (original) {
+              await putRecord(db, DB_CONFIG.STORES.BOARD_ITEMS as any, {
+                ...original,
+                id: serverId,
+                isDirty: false,
+              });
+            }
+            await deleteRecord(db, DB_CONFIG.STORES.BOARD_ITEMS as any, tempId);
+          }
+        } catch (e) {
+          error("[Board Items Sync] Failed to apply server id map:", e);
+        }
+      }
 
       if (appliedIds.length) {
         try {

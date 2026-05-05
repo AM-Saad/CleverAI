@@ -333,6 +333,49 @@ definePageMeta({
   layout: "default",
 });
 
+type NotificationPermissionState = "default" | "denied" | "granted";
+type LogLevel = "success" | "error" | "info" | "warning";
+
+interface DebugLogEntry {
+  timestamp: string;
+  level: LogLevel;
+  message: string;
+}
+
+interface SWLogEntry {
+  timestamp: string;
+  type: string;
+  message: string;
+}
+
+interface TimingGatesState {
+  timezone: string;
+  currentTime: string;
+  activeHoursEnabled: boolean;
+  activeHoursStart: string;
+  activeHoursEnd: string;
+  quietHoursEnabled: boolean;
+  quietHoursStart: string;
+  quietHoursEnd: string;
+  sendAnytime: boolean;
+  recentCount: number;
+  inActiveHours: boolean;
+  inQuietHours: boolean;
+}
+
+interface SubscriptionDebugInfo {
+  endpoint: string;
+  keys: string;
+}
+
+interface LastResultState {
+  operation: string;
+  success: boolean;
+  data?: unknown;
+  message?: string;
+  timestamp: string;
+}
+
 // Tab configuration
 const selectedTab = ref(0);
 const tabs = [
@@ -368,7 +411,7 @@ const loading = reactive({
 
 // Status tracking
 const notificationStatus = reactive({
-  permission: "default",
+  permission: "default" as NotificationPermissionState,
   subscribed: false,
 });
 
@@ -380,7 +423,7 @@ const swStatus = reactive({
 
 const cronStatus = reactive({
   running: false,
-  lastRun: null,
+  lastRun: null as string | null,
 });
 
 // Test notification form
@@ -395,16 +438,16 @@ const testNotification = reactive({
 });
 
 // Data stores
-const timingGates = ref(null);
-const subscriptionInfo = ref(null);
-const logs = ref([]);
-const swLogs = ref([]);
-const logsContainer = ref();
-const lastResult = ref(null);
+const timingGates = ref<TimingGatesState | null>(null);
+const subscriptionInfo = ref<SubscriptionDebugInfo | null>(null);
+const logs = ref<DebugLogEntry[]>([]);
+const swLogs = ref<SWLogEntry[]>([]);
+const logsContainer = ref<HTMLElement | null>(null);
+const lastResult = ref<LastResultState | null>(null);
 const logMonitoring = ref(false);
 
 // Helper functions
-const addLog = (level: string, message: string) => {
+const addLog = (level: LogLevel, message: string) => {
   const timestamp = new Date().toLocaleTimeString();
   logs.value.push({ timestamp, level, message });
 
@@ -424,7 +467,7 @@ const addSWLog = (type: string, message: string) => {
 const setResult = (
   operation: string,
   success: boolean,
-  data?: any,
+  data?: unknown,
   message?: string,
 ) => {
   lastResult.value = {
@@ -477,7 +520,6 @@ const testDirectNotification = async () => {
       requireInteraction: testNotification.requireInteraction,
       silent: false,
       badge: "/icons/72x72.png",
-      image: "/icons/192x192.png",
     });
 
     notification.onclick = () => {

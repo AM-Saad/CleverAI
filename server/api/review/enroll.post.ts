@@ -1,8 +1,13 @@
 import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
-import { calculateEnrollXP } from "@server/utils/xp";
-import { startOfDay, endOfDay } from "date-fns";
+import {
+  EnrollCardRequestSchema,
+  EnrollCardResponseSchema,
+} from "@shared/utils/review.contract";
+import { enrollReviewableResource } from "@server/modules/review/application/enrollReviewableResource";
+import { PrismaReviewableResourceResolver } from "@server/modules/review/infrastructure/PrismaReviewableResourceResolver";
+import { PrismaXpPort } from "@server/modules/review/infrastructure/PrismaXpPort";
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event);
@@ -29,98 +34,14 @@ export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]); // throws unauthorized if not
   const prisma = event.context.prisma;
 
-  let resolvedWorkspaceId: string | null = null;
-  if (resourceType === "material") {
-    const material = await prisma.material.findFirst({
-      where: { id: resourceId, workspace: { userId: user.id } },
-      include: { workspace: true },
-    });
-    if (material) resolvedWorkspaceId = material.workspaceId;
-  } else if (resourceType === "flashcard") {
-    const flashcard = await prisma.flashcard.findFirst({
-      where: { id: resourceId, workspace: { userId: user.id } },
-    });
-    if (flashcard) resolvedWorkspaceId = flashcard.workspaceId;
-  } else if (resourceType === "question") {
-    const question = await prisma.question.findFirst({
-      where: { id: resourceId, workspace: { userId: user.id } },
-    });
-    if (question) resolvedWorkspaceId = question.workspaceId;
-  }
-
-  if (!resolvedWorkspaceId) {
-    throw Errors.notFound("Resource");
-  }
-
-  // Use upsert to handle concurrent enrollment requests safely
-  // This prevents duplicate CardReview records for the same user+card combination
-  const card = await prisma.cardReview.upsert({
-    where: {
-      userId_cardId: {
-        userId: user.id,
-        cardId: resourceId,
-      },
-    },
-    update: {
-      // No-op update if already exists (just return existing record)
-    },
-    create: {
-      userId: user.id,
-      cardId: resourceId,
-      workspaceId: resolvedWorkspaceId,
-      resourceType: resourceType,
-      repetitions: 0,
-      easeFactor: 2.5,
-      intervalDays: 0,
-      nextReviewAt: new Date(),
-      streak: 0,
-    },
+  const { card, isNewEnrollment, xpEarned } = await enrollReviewableResource({
+    prisma,
+    resolver: new PrismaReviewableResourceResolver(prisma),
+    xpPort: new PrismaXpPort(),
+    userId: user.id,
+    resourceType,
+    resourceId,
   });
-
-  // Determine if this was a new enrollment or existing
-  const isNewEnrollment = !card.lastReviewedAt;
-
-  let xpEarned = 0;
-
-  if (isNewEnrollment) {
-    // Check if we already awarded enroll XP for this card to be safe (idempotency)
-    const existingXp = await prisma.xpEvent.findFirst({
-      where: {
-        userId: user.id,
-        cardId: card.cardId, // CORRECT: Use polymorphic resource ID
-        source: "enroll"
-      }
-    });
-
-    if (!existingXp) {
-      const now = new Date();
-      const dayStart = startOfDay(now);
-      const dayEnd = endOfDay(now);
-
-      // Query today's accumulated XP
-      const DailyXpAggregate = await prisma.xpEvent.aggregate({
-        where: {
-          userId: user.id,
-          createdAt: { gte: dayStart, lte: dayEnd },
-        },
-        _sum: { xp: true },
-      });
-      const currentDailyXP = DailyXpAggregate._sum.xp || 0;
-
-      const xp = calculateEnrollXP(currentDailyXP);
-
-      await prisma.xpEvent.create({
-        data: {
-          userId: user.id,
-          cardId: card.cardId, // CORRECT: Use polymorphic resource ID
-          source: "enroll",
-          xp: xp,
-          createdAt: now
-        }
-      });
-      xpEarned = xp;
-    }
-  }
 
   return success(
     EnrollCardResponseSchema.parse({

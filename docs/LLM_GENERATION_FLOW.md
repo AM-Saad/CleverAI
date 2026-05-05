@@ -627,17 +627,7 @@ return {
 
 ## 🔀 Alternative Paths
 
-### Legacy Endpoint: `/api/llm.generate`
-
-[llm.generate.post.ts](server/api/llm.generate.post.ts) (310 lines)
-
-| Feature | Gateway (`llm.gateway`) | Legacy (`llm.generate`) |
-|---------|-------------------------|-------------------------|
-| Model Selection | Auto (smart routing) | Manual (required param) |
-| Strategy Factory | `getLLMStrategyFromRegistry()` | `getLLMStrategy()` |
-| Model Scoring | ✅ | ❌ |
-| Health-Aware | ✅ | ❌ |
-| Same Auth/Quota/Rate Limit | ✅ | ✅ |
+The legacy `/api/llm.generate` route has been removed. All generation traffic now goes through `/api/llm.gateway`, which is the single supported path for routing, quota enforcement, caching, and usage logging.
 
 ---
 

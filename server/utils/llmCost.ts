@@ -38,7 +38,7 @@ export type LlmContext = {
  * Assumes a price row exists in LlmPrice for the given provider+model.
  */
 export async function logLlmUsage(measured: LlmMeasured, ctx: LlmContext = {}) {
-  const baseModel = measured.model.split(':')[0];
+  const baseModel = measured.model.split(':')[0] ?? measured.model;
   const price = await prisma.llmPrice.findUnique({
     where: {
       provider_model: { provider: measured.provider, model: baseModel },
@@ -107,7 +107,7 @@ export async function estimateCostMicros({
   promptTokens,
   completionTokens,
 }: CostInput) {
-  const baseModel = model.split(':')[0];
+  const baseModel = model.split(':')[0] ?? model;
   const price = await prisma.llmPrice.findUniqueOrThrow({
     where: { provider_model: { provider, model: baseModel } },
     select: { inputPer1kMicros: true, outputPer1kMicros: true },

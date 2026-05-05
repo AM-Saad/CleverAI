@@ -48,7 +48,7 @@
         <div v-if="status === 'authenticated'" class="flex gap-5 items-center">
           <NuxtLink to="/language">
             <u-button variant="ghost" size="sm" title="Language">
-              <Icon name="i-lucide-languages" class="w-4 h-4" />
+              <shared-icon name="translation" class="w-4 h-4" />
             </u-button>
           </NuxtLink>
           <SharedCreditsPill />
@@ -73,7 +73,7 @@
       </div>
     </nav>
 
-    <div class=" mx-auto h-full w-full flex-1 flex flex-col px-4 overflow-hidden" style=" flex: 1 1 auto;">
+    <div class=" mx-auto h-full w-full flex-1 flex flex-col px-4 py-1.5 overflow-hidden" style=" flex: 1 1 auto;">
       <!-- <UToaster /> -->
       <ServiceWorkerUpdateNotification mode="banner" />
       <SharedAIModalStatus />

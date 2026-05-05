@@ -1,5 +1,9 @@
 // server/utils/llm/LLMStrategy.ts
 // Strategy contracts should return plain DTOs, not Prisma entities.
+import type {
+  FlashcardDTO,
+  QuizQuestionDTO,
+} from "../../../shared/utils/llm-generate.contract";
 
 // export interface FlashcardDTO {
 //   front: string;

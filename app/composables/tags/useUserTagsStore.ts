@@ -136,7 +136,10 @@ export function useUserTagsStore(workspaceId?: string): UserTagsStore {
       } else {
         // Server returned an error but we have IDB data — don't show error
         if (tags.value.size === 0) {
-          console.error("Failed to load tags:", result.error);
+          console.error(
+            "Failed to load tags:",
+            result.success ? undefined : result.error,
+          );
         }
       }
     } catch (error) {
@@ -176,7 +179,9 @@ export function useUserTagsStore(workspaceId?: string): UserTagsStore {
         });
         return result.data.id;
       } else {
-        const errorMsg = result.error?.message || "Failed to create tag";
+        const errorMsg = result.success
+          ? "Failed to create tag"
+          : result.error.message || "Failed to create tag";
         toast.add({
           title: "Error",
           description: errorMsg,
@@ -225,7 +230,9 @@ export function useUserTagsStore(workspaceId?: string): UserTagsStore {
       } else {
         // Revert on error
         tags.value.set(id, tag);
-        const errorMsg = result.error?.message || "Failed to update tag";
+        const errorMsg = result.success
+          ? "Failed to update tag"
+          : result.error.message || "Failed to update tag";
         toast.add({
           title: "Error",
           description: errorMsg,

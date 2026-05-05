@@ -19,7 +19,7 @@ export const MaterialSchema = z.object({
   workspaceId: z.string(),
   title: z.string(),
   content: z.string(),
-  type: z.string().nullable().optional(),
+  type: MaterialTypeEnum.nullable().optional(),
   metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   llmModel: z.string().nullable().optional(),
   llmPrompt: z.string().nullable().optional(),

@@ -1,7 +1,16 @@
+import type {
+  CardReview,
+  Flashcard,
+  Material,
+  Question,
+} from "@prisma/client";
 import { z } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
-import { ReviewQueueResponseSchema } from "@shared/utils/review.contract";
+import {
+  type ReviewQueueResponse,
+  ReviewQueueResponseSchema,
+} from "@shared/utils/review.contract";
 
 // Query validation
 const querySchema = z.object({
@@ -50,7 +59,7 @@ export default defineEventHandler(async (event) => {
   };
 
   // Fetch due cardReviews
-  let cardReviews;
+  let cardReviews: CardReview[];
   try {
     cardReviews = await prisma.cardReview.findMany({
       where: whereClause,
@@ -61,128 +70,119 @@ export default defineEventHandler(async (event) => {
     throw Errors.server("Failed to load review queue");
   }
 
-  const cardIds = cardReviews.map((c) => c.cardId);
-  const workspaceIds = [...new Set(cardReviews.map((c) => c.workspaceId))];
+  const cardIds = cardReviews.map((cardReview) => cardReview.cardId);
+  const workspaceIds = [
+    ...new Set(cardReviews.map((cardReview) => cardReview.workspaceId)),
+  ];
 
   // Fetch all data in parallel - materials, flashcards, questions, AND workspaces separately
   // This avoids N+1 query by fetching workspaces in one query
-  const [materials, flashcards, questions, workspaces] = await Promise.all([
+  const [materials, flashcards, questions] = await Promise.all([
     prisma.material.findMany({
       where: { id: { in: cardIds } },
-      // Don't include workspace - we'll fetch separately
     }),
     prisma.flashcard.findMany({
       where: { id: { in: cardIds } },
-      // Don't include workspace - we'll fetch separately
     }),
     prisma.question.findMany({
       where: { id: { in: cardIds } },
-      // Don't include workspace - we'll fetch separately
-    }),
-    prisma.workspace.findMany({
-      where: { id: { in: workspaceIds } },
-      select: { id: true, title: true, userId: true },
     }),
   ]);
 
-  const materialMap = new Map(materials.map((m) => [m.id, m]));
-  const flashcardMap = new Map(flashcards.map((f) => [f.id, f]));
-  const questionMap = new Map(questions.map((q) => [q.id, q]));
-  const workspaceMap = new Map(workspaces.map((f) => [f.id, f]));
+  const materialMap = new Map<string, Material>(
+    materials.map((material: Material) => [material.id, material])
+  );
+  const flashcardMap = new Map<string, Flashcard>(
+    flashcards.map((flashcard: Flashcard) => [flashcard.id, flashcard])
+  );
+  const questionMap = new Map<string, Question>(
+    questions.map((question: Question) => [question.id, question])
+  );
 
   // Check for orphaned cards
-  const orphanedCards = cardReviews.filter((cr) => {
-    const type = cr.resourceType.toLowerCase();
-    if (type === "material") return !materialMap.has(cr.cardId);
-    if (type === "question") return !questionMap.has(cr.cardId);
-    return !flashcardMap.has(cr.cardId);
+  const orphanedCards = cardReviews.filter((cardReview) => {
+    const type = cardReview.resourceType.toLowerCase();
+    if (type === "material") return !materialMap.has(cardReview.cardId);
+    if (type === "question") return !questionMap.has(cardReview.cardId);
+    return !flashcardMap.has(cardReview.cardId);
   });
   if (orphanedCards.length > 0) {
     console.warn(
       `[review/queue] WARNING: ${orphanedCards.length} orphaned CardReview records found (resources deleted):`,
-      orphanedCards.map((c) => ({
-        id: c.id,
-        cardId: c.cardId,
-        resourceType: c.resourceType,
+      orphanedCards.map((cardReview) => ({
+        id: cardReview.id,
+        cardId: cardReview.cardId,
+        resourceType: cardReview.resourceType,
       }))
     );
   }
 
-  const cards = cardReviews
-    .map((cardReview) => {
-      const resourceType = cardReview.resourceType.toLowerCase() as
-        | "material"
-        | "flashcard"
-        | "question";
-      if (resourceType === "material") {
-        const material = materialMap.get(cardReview.cardId);
-        if (!material) return null;
-        return {
-          cardId: cardReview.id,
-          resourceType: "material" as const,
-          resourceId: cardReview.cardId,
-          resource: {
-            title: material.title,
-            content: material.content,
-            tags: [],
-            workspaceId: material.workspaceId,
-          },
-          reviewState: {
-            repetitions: cardReview.repetitions,
-            easeFactor: cardReview.easeFactor,
-            intervalDays: cardReview.intervalDays,
-            nextReviewAt: cardReview.nextReviewAt.toISOString(),
-            lastReviewedAt: cardReview.lastReviewedAt?.toISOString(),
-          },
-        };
-      } else if (resourceType === "flashcard") {
-        const flashcard = flashcardMap.get(cardReview.cardId);
-        if (!flashcard) return null;
-        return {
-          cardId: cardReview.id,
-          resourceType: "flashcard" as const,
-          resourceId: cardReview.cardId,
-          resource: {
-            front: flashcard.front,
-            back: flashcard.back,
-            hint: undefined,
-            tags: [],
-            workspaceId: flashcard.workspaceId,
-          },
-          reviewState: {
-            repetitions: cardReview.repetitions,
-            easeFactor: cardReview.easeFactor,
-            intervalDays: cardReview.intervalDays,
-            nextReviewAt: cardReview.nextReviewAt.toISOString(),
-            lastReviewedAt: cardReview.lastReviewedAt?.toISOString(),
-          },
-        };
-      } else if (resourceType === "question") {
-        const question = questionMap.get(cardReview.cardId);
-        if (!question) return null;
-        return {
-          cardId: cardReview.id,
-          resourceType: "question" as const,
-          resourceId: cardReview.cardId,
-          resource: {
-            question: question.question,
-            choices: question.choices,
-            answerIndex: question.answerIndex,
-            workspaceId: question.workspaceId,
-          },
-          reviewState: {
-            repetitions: cardReview.repetitions,
-            easeFactor: cardReview.easeFactor,
-            intervalDays: cardReview.intervalDays,
-            nextReviewAt: cardReview.nextReviewAt.toISOString(),
-            lastReviewedAt: cardReview.lastReviewedAt?.toISOString(),
-          },
-        };
-      } else {
-        return null;
-      }
-    })
-    .filter(Boolean);
+  const cards: ReviewQueueResponse["cards"] = [];
+  for (const cardReview of cardReviews) {
+    const reviewState = {
+      repetitions: cardReview.repetitions,
+      easeFactor: cardReview.easeFactor,
+      intervalDays: cardReview.intervalDays,
+      nextReviewAt: cardReview.nextReviewAt.toISOString(),
+      lastReviewedAt: cardReview.lastReviewedAt?.toISOString(),
+    };
+
+    const resourceType = cardReview.resourceType.toLowerCase() as
+      | "material"
+      | "flashcard"
+      | "question";
+    if (resourceType === "material") {
+      const material = materialMap.get(cardReview.cardId);
+      if (!material) continue;
+      cards.push({
+        cardId: cardReview.id,
+        resourceType: "material",
+        resourceId: cardReview.cardId,
+        resource: {
+          title: material.title,
+          content: material.content,
+          tags: [],
+          workspaceId: material.workspaceId,
+        },
+        reviewState,
+      });
+      continue;
+    }
+
+    if (resourceType === "flashcard") {
+      const flashcard = flashcardMap.get(cardReview.cardId);
+      if (!flashcard) continue;
+      cards.push({
+        cardId: cardReview.id,
+        resourceType: "flashcard",
+        resourceId: cardReview.cardId,
+        resource: {
+          front: flashcard.front,
+          back: flashcard.back,
+          hint: undefined,
+          tags: [],
+          workspaceId: flashcard.workspaceId,
+        },
+        reviewState,
+      });
+      continue;
+    }
+
+    const question = questionMap.get(cardReview.cardId);
+    if (!question) continue;
+    cards.push({
+      cardId: cardReview.id,
+      resourceType: "question",
+      resourceId: cardReview.cardId,
+      resource: {
+        question: question.question,
+        choices: question.choices,
+        answerIndex: question.answerIndex,
+        workspaceId: question.workspaceId,
+      },
+      reviewState,
+    });
+  }
 
   // Stats (execute in parallel where possible)
   const [totalCards, newCards, learningCards, dueCards] = await Promise.all([

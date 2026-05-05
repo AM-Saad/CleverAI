@@ -11,7 +11,6 @@ export const AuthUserSchema = z.object({
   id: z.string(),
   name: z.string(),
   email: z.string().email().optional(),
-  phone: z.string(),
   gender: z.string().optional(),
   role: z.enum(["USER"]),
   createdAt: z.string().datetime().or(z.date()).or(z.string()),

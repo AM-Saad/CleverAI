@@ -8,7 +8,6 @@ export const UserProfileSchema = z.object({
   id: z.string(),
   name: z.string(),
   email: z.string().email().nullable(),
-  phone: z.string(),
   gender: z.string().nullable(),
   role: z.enum(["USER"]),
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
@@ -21,7 +20,6 @@ export type UserProfile = z.infer<typeof UserProfileSchema>;
 // Update profile DTO
 export const UpdateProfileDTO = z.object({
   name: z.preprocess(trim, z.string().min(1, "Name is required")).optional(),
-  phone: z.preprocess(trim, z.string().min(10, "Phone must be at least 10 characters")).optional(),
   gender: z.preprocess(trim, z.string()).optional(),
 });
 export type UpdateProfileDTO = z.infer<typeof UpdateProfileDTO>;

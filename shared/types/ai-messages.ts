@@ -230,7 +230,7 @@ export interface UnloadModelMessage {
 }
 
 // Set debug mode
-export interface SetDebugMessage {
+export interface AISetDebugMessage {
   type: typeof AI_WORKER_MESSAGE_TYPES.SET_DEBUG;
   value: boolean;
 }
@@ -241,7 +241,7 @@ export type IncomingAIMessage =
   | RunInferenceMessage
   | RunGenerationMessage
   | UnloadModelMessage
-  | SetDebugMessage;
+  | AISetDebugMessage;
 
 // Utility type guards
 export function isOutgoingAIMessage(msg: unknown): msg is OutgoingAIMessage {
@@ -258,4 +258,3 @@ export function isIncomingAIMessage(msg: unknown): msg is IncomingAIMessage {
  * (e.g., the worker plugin's postMessage queue).
  */
 export type AIWorkerMessage = OutgoingAIMessage | IncomingAIMessage;
-

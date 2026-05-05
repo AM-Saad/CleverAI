@@ -95,7 +95,7 @@
       <section id="who-it-s-for"
         class="bg-neutral-100 dark:bg-neutral-900 rounded-3xl p-8 md:p-12 relative overflow-hidden">
         <div class="relative z-10">
-          <ui-subtitle tag="h2" size="3xl" weight="bold" class="mb-8 text-center">
+          <ui-subtitle tag="h2" size="2xl" weight="bold" class="mb-8 text-center text-3xl md:text-4xl">
             Built for Every Learner
           </ui-subtitle>
 

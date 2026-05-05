@@ -1,23 +1,10 @@
 <template>
-  <div class="text-center py-12">
-    <div class="text-error mb-4">
-      <Icon name="heroicons:exclamation-triangle" class="w-8 h-8 mx-auto mb-2" />
-      {{ error }}
-    </div>
-    <UButton @click="$emit('clearError')" color="error" variant="solid">
-      Clear Error
-    </UButton>
-  </div>
+  <FeatureErrorState v-bind="$attrs" />
 </template>
 
 <script setup lang="ts">
-interface Props {
-  error: string
-}
+import type { Component } from "vue";
+import RawFeatureErrorState from "~/features/review/components/states/ErrorState.vue";
 
-defineProps<Props>()
-
-defineEmits<{
-  clearError: []
-}>()
+const FeatureErrorState = RawFeatureErrorState as Component;
 </script>

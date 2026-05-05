@@ -5,6 +5,19 @@
  */
 
 import { DB_CONFIG, IDB_RETRY_CONFIG } from "./constants/pwa";
+import type { Note } from "../../shared/utils/note.contract";
+import type { PendingNoteChange } from "../../shared/utils/note-sync.contract";
+
+type STORES = (typeof DB_CONFIG)["STORES"][keyof typeof DB_CONFIG.STORES];
+
+type StoredNoteState = Note & {
+  userId?: string;
+  type?: string;
+  isLoading?: boolean;
+  isDirty?: boolean;
+  lastSaved?: Date;
+  error?: string | null;
+};
 
 // Unified DB open promise (singleton) to avoid repeated upgrade races.
 let unifiedDbPromise: Promise<IDBDatabase> | null = null;
@@ -174,7 +187,7 @@ export async function countRecords(
 // (Removed deprecated openFormsDB/openNotesDB wrappers; use openUnifiedDB directly everywhere.)
 
 
-export const saveNoteToIndexedDB = async (note: NoteState): Promise<void> => {
+export const saveNoteToIndexedDB = async (note: StoredNoteState): Promise<void> => {
   try {
     const db = await openUnifiedDB();
     if (!db.objectStoreNames.contains(DB_CONFIG.STORES.NOTES)) {
@@ -196,7 +209,6 @@ export const saveNoteToIndexedDB = async (note: NoteState): Promise<void> => {
           operation: 'upsert',
           updatedAt: Date.now(),
           localVersion: (note as any).localVersion ? (note as any).localVersion + 1 : 1,
-          type: (note as any).type,
           workspaceId: (note as any).workspaceId,
           content: (note as any).content,
           tags: (note as any).tags || [],
@@ -211,7 +223,7 @@ export const saveNoteToIndexedDB = async (note: NoteState): Promise<void> => {
   }
 };
 
-export const saveNotesToIndexedDB = async (notes: NoteState[]): Promise<void> => {
+export const saveNotesToIndexedDB = async (notes: StoredNoteState[]): Promise<void> => {
   try {
     const db = await openUnifiedDB();
     if (!db.objectStoreNames.contains(DB_CONFIG.STORES.NOTES)) {
@@ -231,7 +243,7 @@ export const saveNotesToIndexedDB = async (notes: NoteState[]): Promise<void> =>
 
 export const loadNotesFromIndexedDB = async (
   workspaceId: string
-): Promise<NoteState[]> => {
+): Promise<StoredNoteState[]> => {
   try {
     const db = await openUnifiedDB();
     const tx = db.transaction([DB_CONFIG.STORES.NOTES], "readonly");
@@ -264,7 +276,7 @@ export const loadNotesFromIndexedDB = async (
 
 export const loadBoardNotesFromIndexedDB = async (
   userId: string
-): Promise<NoteState[]> => {
+): Promise<StoredNoteState[]> => {
   try {
     const db = await openUnifiedDB();
     const tx = db.transaction([DB_CONFIG.STORES.NOTES], "readonly");
@@ -527,19 +539,6 @@ export async function getAllRecords<T>(
 }
 
 // -------------------- Pending Notes Queue --------------------
-
-export interface PendingNoteChange {
-  id: string // note id (key)
-  operation: 'upsert' | 'delete'
-  updatedAt: number // client timestamp
-  localVersion: number // monotonic per note
-  workspaceId?: string
-  content?: string
-  tags?: string[]
-  noteType?: string
-  metadata?: Record<string, unknown>
-  conflicted?: boolean
-}
 
 /**
  * Queue a note change into PENDING_NOTES (coalesces by note id).

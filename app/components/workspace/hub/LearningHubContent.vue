@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent, ref, computed } from "vue";
 import type { EnrollCardResponse } from "~/shared/utils/review.contract";
+import type { IconName } from "#imports";
 
 const FlashCards = defineAsyncComponent(
   () => import("~/components/workspace/hub/flashcards/index.vue")
@@ -30,19 +31,17 @@ defineEmits<{
 }>();
 
 const activeIndex = ref(0);
-const carousel = useTemplateRef("carousel");
 // Subscription info
-const { fetchSubscriptionStatus } = useSubscriptionStore();
 
-const items = [
+const items: { name: string; icon?: IconName; component: any }[] = [
   {
     name: "Flash Cards",
-    icon: "bi:card-text",
+    icon: "flashcards",
     component: FlashCards,
   },
   {
     name: "Questions",
-    icon: "bi:question-circle",
+    icon: "question",
     component: Questions,
   },
 ];
@@ -54,7 +53,6 @@ const currentEnrolledIds = computed(() => {
 
 function select(index: number) {
   activeIndex.value = index;
-  carousel.value?.emblaApi?.scrollTo(index);
 }
 
 </script>
@@ -71,10 +69,12 @@ function select(index: number) {
           Learning Hub
           <u-tooltip
             text="Upload New Material, or select part of the text from your note to create a study material that you can generate flashcard, and question from it to feed the Spaced Repetition Engine">
-            <icon name="i-lucide-info" :size="UI_CONFIG.ICON_SIZE" class="text-content-on-background" />
+
+            <shared-icon name="info" color="text-content-on-background" />
+
           </u-tooltip>
         </div>
-        <u-button variant="outline" size="sm" :aria-expanded="showUpload" aria-controls="upload-materials"
+        <u-button variant="outline" size="xs" :aria-expanded="showUpload" aria-controls="upload-materials"
           @click="$emit('toggle-upload')" title="Create New Study Material">
           New Material
         </u-button>

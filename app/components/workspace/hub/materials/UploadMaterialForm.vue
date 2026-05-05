@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import * as z from "zod";
+import type { IconName } from '#imports';
 import type { FormSubmitEvent } from "@nuxt/ui";
 import { useRoute } from "vue-router";
 import type { UploadMaterialResponse } from "~/services/Material";
@@ -43,9 +44,9 @@ const activeVoiceTitle = ref<string>('');
 
 // ----- Source toggle -----
 const sourceTabItems = [
-  { icon: 'mdi:text-box', name: 'Text', value: 'text' as const },
-  { icon: 'mdi:file-document', name: 'File', value: 'file' as const },
-  { icon: 'mdi:microphone', name: 'Voice', value: 'voice' as const },
+  { icon: 'document' as IconName, name: 'Text', value: 'text' as const },
+  { icon: 'pdf' as IconName, name: 'File', value: 'file' as const },
+  { icon: 'mic' as IconName, name: 'Voice', value: 'voice' as const },
 ];
 const sourceTabIndex = ref(0);
 const sourceType = computed<SourceType>(() => sourceTabItems[sourceTabIndex.value]?.value ?? 'text');
@@ -357,7 +358,7 @@ watch(
 
 <template>
   <Teleport to="body">
-    <shared-dialog-modal :show="props.show" @close="emit('close')" title="Add Material" icon="i-heroicons-document-plus"
+    <shared-dialog-modal :show="props.show" @close="emit('close')" title="Add Material" icon="document"
       description="Add a new material to your workspace.">
 
       <template #body>
@@ -367,25 +368,33 @@ watch(
         </div>
 
         <!-- TEXT FORM -->
-        <u-form v-if="sourceType === 'text'" :schema="schema" :state="state" class="space-y-2" @submit="onSubmit">
-          <u-form-field label="Material Title" name="materialTitle">
-            <u-input v-model="state.materialTitle" placeholder="Enter material title" :ui="{
-              root: 'w-full',
-            }" />
-          </u-form-field>
+        <ui-card v-if="sourceType === 'text'" variant="surface" size="sm">
+          <template #header>
+            <div class="flex items-center gap-2">
+              <shared-icon name="document" class="w-5 h-5" />
+              Text Material
+            </div>
+          </template>
+          <u-form :schema="schema" :state="state" class="space-y-2" @submit="onSubmit">
+            <u-form-field label="Material Title" name="materialTitle">
+              <u-input v-model="state.materialTitle" placeholder="Enter material title" :ui="{
+                root: 'w-full',
+              }" />
+            </u-form-field>
 
 
-          <u-form-field label="Material Content" name="materialContent">
-            <u-textarea v-model="state.materialContent" placeholder="Enter your material content here..." :ui="{
-              root: 'w-full',
-            }" />
-          </u-form-field>
+            <u-form-field label="Material Content" name="materialContent">
+              <u-textarea v-model="state.materialContent" placeholder="Enter your material content here..." :ui="{
+                root: 'w-full',
+              }" />
+            </u-form-field>
 
-          <div class="flex gap-3 justify-end pt-2">
-            <u-button variant="ghost" @click="emit('close')">Cancel</u-button>
-            <u-button type="submit">Submit</u-button>
-          </div>
-        </u-form>
+            <div class="flex gap-3 justify-end pt-2">
+              <u-button variant="ghost" @click="emit('close')">Cancel</u-button>
+              <u-button type="submit">Submit</u-button>
+            </div>
+          </u-form>
+        </ui-card>
 
         <!-- FILE UPLOAD -->
         <div v-if="sourceType === 'file'" class="space-y-4">
@@ -473,7 +482,7 @@ watch(
                 <div class="text-xs text-content-secondary mt-2 flex items-center gap-1">
                   <span>Estimated cost (approximate): ${{ estimatedCost.toFixed(4) }}</span>
                   <UTooltip text="Final cost depends on model selection and output length.">
-                    <UIcon name="i-heroicons-information-circle" class="w-4 h-4 cursor-help" />
+                    <shared-icon name="info" class="w-4 h-4 cursor-help" />
                   </UTooltip>
                 </div>
               </div>

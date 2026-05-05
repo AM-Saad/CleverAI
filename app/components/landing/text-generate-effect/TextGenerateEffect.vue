@@ -34,21 +34,22 @@ const spanStyle = computed(() => ({
 
 const { stop } = useIntersectionObserver(
   scope,
-  ([{ isIntersecting }]) => {
-    if (isIntersecting && scope.value) {
-      const spans = (scope.value as HTMLElement).querySelectorAll("span");
+  (entries) => {
+    const entry = entries[0];
+    if (!entry?.isIntersecting || !scope.value) return;
 
-      setTimeout(() => {
-        spans.forEach((span: HTMLElement, index: number) => {
-          setTimeout(() => {
-            span.style.opacity = "1";
-            span.style.filter = props.filter ? "blur(0px)" : "none";
-          }, index * 200);
-        });
-      }, props.delay);
+    const spans = (scope.value as HTMLElement).querySelectorAll("span");
 
-      stop();
-    }
+    setTimeout(() => {
+      spans.forEach((span: HTMLElement, index: number) => {
+        setTimeout(() => {
+          span.style.opacity = "1";
+          span.style.filter = props.filter ? "blur(0px)" : "none";
+        }, index * 200);
+      });
+    }, props.delay);
+
+    stop();
   }
 );
 </script>

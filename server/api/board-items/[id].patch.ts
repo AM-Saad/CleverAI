@@ -1,7 +1,12 @@
+import type { BoardItem } from "@prisma/client";
 import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
-import { UpdateBoardItemDTO, BoardItemSchema } from "~/shared/utils/boardItem.contract";
+import {
+  type UpdateBoardItemDTO,
+  UpdateBoardItemDTO as UpdateBoardItemDTOSchema,
+  BoardItemSchema,
+} from "~/shared/utils/boardItem.contract";
 
 // Simple retry helper for transient Prisma write conflicts / deadlocks
 async function retryPrismaUpdate<T>(
@@ -30,9 +35,9 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event);
 
-  let data;
+  let data: UpdateBoardItemDTO;
   try {
-    data = UpdateBoardItemDTO.parse(body);
+    data = UpdateBoardItemDTOSchema.parse(body);
   } catch (err) {
     if (err instanceof ZodError) {
       throw Errors.badRequest(
@@ -57,7 +62,7 @@ export default defineEventHandler(async (event) => {
       throw Errors.notFound("Board item");
     }
 
-    const updatedItem = await retryPrismaUpdate(() =>
+    const updatedItem: BoardItem = await retryPrismaUpdate(() =>
       prisma.boardItem.update({
         where: { id },
         data: {

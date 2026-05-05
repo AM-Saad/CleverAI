@@ -107,7 +107,7 @@ export interface SkipWaitingMessage {
 export interface ClaimControlMessage {
   type: typeof SW_MESSAGE_TYPES.CLAIM_CONTROL;
 }
-export interface SetDebugMessage {
+export interface SWSetDebugMessage {
   type: typeof SW_MESSAGE_TYPES.SET_DEBUG;
   value: boolean;
 }
@@ -127,7 +127,7 @@ export interface TestNotificationClickMessage {
 export type IncomingSWMessage =
   | SkipWaitingMessage
   | ClaimControlMessage
-  | SetDebugMessage
+  | SWSetDebugMessage
   | SyncNotesMessage
   | SyncBoardItemsMessage
   | TestNotificationClickMessage;

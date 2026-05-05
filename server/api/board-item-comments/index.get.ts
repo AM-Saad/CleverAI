@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 
@@ -19,7 +20,13 @@ export default defineEventHandler(async (event) => {
   if (!item) throw Errors.notFound("Board item");
 
   try {
-    const comments = await prisma.boardItemComment.findMany({
+    type CommentRow = Prisma.BoardItemCommentGetPayload<{
+      include: {
+        user: { select: { id: true; name: true; email: true } };
+      };
+    }>;
+
+    const comments: CommentRow[] = await prisma.boardItemComment.findMany({
       where: { itemId },
       orderBy: { createdAt: "asc" },
       include: {
@@ -27,14 +34,14 @@ export default defineEventHandler(async (event) => {
       },
     });
 
-    const shaped = comments.map((c) => ({
-      id: c.id,
-      itemId: c.itemId,
-      userId: c.userId,
-      content: c.content,
-      createdAt: c.createdAt,
-      updatedAt: c.updatedAt,
-      author: { name: c.user.name, email: c.user.email ?? undefined },
+    const shaped = comments.map((comment: CommentRow) => ({
+      id: comment.id,
+      itemId: comment.itemId,
+      userId: comment.userId,
+      content: comment.content,
+      createdAt: comment.createdAt,
+      updatedAt: comment.updatedAt,
+      author: { name: comment.user.name, email: comment.user.email ?? undefined },
     }));
 
     return success(shaped, { count: shaped.length });

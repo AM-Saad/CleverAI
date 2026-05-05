@@ -79,7 +79,8 @@ export function getFocusableElements(root: HTMLElement): HTMLElement[] {
 
 export function focusFirst(root: HTMLElement) {
   const els = getFocusableElements(root);
-  if (els.length) els[0].focus();
+  const first = els[0];
+  if (first) first.focus();
   else root.focus();
 }
 
@@ -89,6 +90,7 @@ export function trapTab(e: KeyboardEvent, root: HTMLElement) {
   if (!els.length) return;
   const first = els[0];
   const last = els[els.length - 1];
+  if (!first || !last) return;
   const active = document.activeElement as HTMLElement | null;
 
   if (e.shiftKey) {

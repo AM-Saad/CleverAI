@@ -5,8 +5,8 @@
         <u-icon v-if="typedError.status < 500" name="i-heroicons-bell" :size="UI_CONFIG.ICON_SIZE" />
         <u-icon v-else name="i-heroicons-bell-slash" :size="UI_CONFIG.ICON_SIZE" />
       </div>
-      <ui-subtitle size="sm" v-if="typedError.details">
-        {{ typedError.details.data?.message }}.
+      <ui-subtitle size="sm" v-if="errorDetails">
+        {{ errorDetails.data?.message }}.
       </ui-subtitle>
       <ui-subtitle size="sm" v-else>
         {{ online ? typedError.message || 'An unexpected error occurred. Please try again later.' :
@@ -14,22 +14,33 @@
       </ui-subtitle>
     </div>
     <DevOnly>
-      <ui-paragraph size="xs" :center="false" color="muted" class="mt-2" v-if="typedError.details">
-        {{ typedError.details ? ` ${typedError.details.data.code} - ${typedError.details.data.message}` : '' }}
+      <ui-paragraph size="xs" :center="false" color="content-secondary" class="mt-2" v-if="errorDetails">
+        {{ ` ${errorDetails.data?.code ?? ''} - ${errorDetails.data?.message ?? ''}` }}
       </ui-paragraph>
     </DevOnly>
   </UiCard>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useOnline } from '@vueuse/core'
+import type { APIError } from '@/services/FetchFactory'
+
+interface ErrorDetailsPayload {
+  data?: {
+    code?: string
+    message?: string
+  }
+}
 
 defineProps<{
   loading: boolean;
+  refresh?: () => void;
 }>();
-const typedError = defineModel<
-  import("/Users/Bodda/cleverAI/app/services/FetchFactory").APIError | null
->("typedError", { required: true });
+const typedError = defineModel<APIError | null>('typedError', { required: true });
 const online = useOnline()
+const errorDetails = computed(
+  () => typedError.value?.details as ErrorDetailsPayload | undefined,
+)
 
 </script>

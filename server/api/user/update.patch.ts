@@ -47,23 +47,11 @@ export default defineEventHandler(async (event) => {
       throw Errors.forbidden("Cannot update deleted account");
     }
 
-    // Check if phone number is being changed and if it's already in use
-    if (updateData.phone && updateData.phone !== existingUser.phone) {
-      const phoneExists = await prisma.user.findUnique({
-        where: { phone: updateData.phone },
-      });
-
-      if (phoneExists) {
-        throw Errors.conflict("Phone number already in use");
-      }
-    }
-
     // Update user profile
     const updatedUser = await prisma.user.update({
       where: { email: session.user.email },
       data: {
         ...(updateData.name && { name: updateData.name }),
-        ...(updateData.phone && { phone: updateData.phone }),
         ...(updateData.gender !== undefined && { gender: updateData.gender }),
         updatedAt: new Date(),
       },

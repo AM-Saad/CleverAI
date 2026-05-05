@@ -37,6 +37,16 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { onErrorCaptured } from 'vue'
+
+type WindowControlsOverlay = {
+    addEventListener: (type: 'geometrychange', listener: () => void) => void
+    getTitlebarAreaRect: () => { width: number }
+}
+
+type NavigatorWithWindowControlsOverlay = Navigator & {
+    windowControlsOverlay?: WindowControlsOverlay
+}
+
 const { isLoading: isIndicatorLoading } = useLoadingIndicator({
     duration: 10000,
     throttle: 2000,
@@ -71,7 +81,7 @@ onMounted(() => {
                 description: "You can continue working. Changes will sync when you reconnect.",
                 color: "warning",
                 icon: "heroicons:wifi",
-                timeout: 5000,
+                duration: 5000,
             })
             // Remove the online toast if it's showing
             toast.remove(ONLINE_TOAST_ID)
@@ -84,7 +94,7 @@ onMounted(() => {
                 description: "Connection restored.",
                 color: "success",
                 icon: "heroicons:wifi-solid",
-                timeout: 3000,
+                duration: 3000,
             })
             // Remove the offline toast if it's showing
             toast.remove(OFFLINE_TOAST_ID)
@@ -117,7 +127,7 @@ onMounted(() => {
                         description: "Your offline edits have been saved to the server.",
                         color: "success",
                         icon: "heroicons:cloud-arrow-up-solid",
-                        timeout: 3000,
+                        duration: 3000,
                     })
                     syncToastDebounce = null
                 }, 1000)
@@ -126,12 +136,12 @@ onMounted(() => {
     }
 })
 
-const ErrorLogger = (error): void => {
+const ErrorLogger = (error: unknown): void => {
     console.error('🚨 [APP.VUE] Error logged, redirecting to error page', error)
     router.replace({
         name: 'error',
         params: {
-            error: error
+            error: error instanceof Error ? error.message : String(error)
         }
     })
 }
@@ -163,9 +173,10 @@ onMounted(() => {
             showNotificationModal.value = true
         })
     }
-    if ("windowControlsOverlay" in navigator) {
-        navigator.windowControlsOverlay.addEventListener('geometrychange', () => {
-            const { width } = navigator.windowControlsOverlay.getTitlebarAreaRect();
+    const navigatorWithOverlay = navigator as NavigatorWithWindowControlsOverlay
+    if (navigatorWithOverlay.windowControlsOverlay) {
+        navigatorWithOverlay.windowControlsOverlay.addEventListener('geometrychange', () => {
+            const { width } = navigatorWithOverlay.windowControlsOverlay!.getTitlebarAreaRect();
 
             // Yes, we could do this with a media-query, but we only care
             // if the window-controls-overlay feature is being used.

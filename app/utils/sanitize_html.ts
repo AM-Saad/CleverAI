@@ -1,9 +1,12 @@
 export const sanitizeHtml = (html = "") => {
     if (!html) return "";
-    const doc = new DOMParser().parseFromString(html, "text/html");
-    doc.querySelectorAll("script,style").forEach((n) => n.remove());
-    doc.querySelectorAll("*").forEach((el) => {
-        for (const attr of Array.from(el.attributes)) {
+    const DOMParserCtor = (globalThis as { DOMParser?: new () => { parseFromString: (input: string, type: string) => any } }).DOMParser;
+    if (!DOMParserCtor) return html;
+    const doc = new DOMParserCtor().parseFromString(html, "text/html");
+    doc.querySelectorAll("script,style").forEach((node: any) => node.remove());
+    doc.querySelectorAll("*").forEach((el: any) => {
+        const attrs = Array.from(el.attributes ?? []) as Array<{ name: string; value: string }>;
+        for (const attr of attrs) {
             if (/^on/i.test(attr.name)) el.removeAttribute(attr.name);
             if (
                 attr.name === "href" &&

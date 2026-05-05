@@ -155,6 +155,30 @@ cognilo/
 │   │   └── user/                 # User composables
 │   ├── domain/                   # Domain logic (DDD)
 │   │   └── sr/                   # Spaced repetition domain
+│   ├── features/                 # Incremental frontend feature modules
+│   │   ├── review/               # Review feature slice
+│   │   │   ├── containers/       # Route/page orchestration components
+│   │   │   ├── components/       # Feature-owned UI
+│   │   │   ├── composables/      # Feature workflows and state
+│   │   │   └── services/         # Feature API service implementation
+│   │   ├── language-learning/    # Language capture, word bank, and language review
+│   │   │   ├── containers/
+│   │   │   ├── components/
+│   │   │   ├── composables/
+│   │   │   └── services/
+│   │   ├── notifications/        # Push subscription, prompts, and preferences UI
+│   │   │   ├── components/
+│   │   │   └── composables/
+│   │   ├── notes/                # Workspace notes UI, local-first state, notes API client
+│   │   │   ├── containers/
+│   │   │   ├── components/
+│   │   │   ├── composables/
+│   │   │   └── services/
+│   │   └── board/                # Board UI, board state, board API clients
+│   │       ├── containers/
+│   │       ├── components/
+│   │       ├── composables/
+│   │       └── services/
 │   ├── layouts/                  # Page layouts
 │   ├── middleware/               # Route middleware
 │   ├── pages/                    # File-based routing
@@ -193,7 +217,6 @@ cognilo/
 │   │   ├── user/                 # User management
 │   │   ├── ai-worker.get.ts      # AI worker endpoint
 │   │   ├── llm.gateway.post.ts   # Smart LLM gateway
-│   │   ├── llm.generate.post.ts  # Legacy LLM endpoint (deprecated)
 │   │   └── llm-usage.get.ts      # Usage analytics
 │   ├── services/                 # Backend services
 │   │   ├── NotificationScheduler.ts
@@ -244,6 +267,40 @@ cognilo/
 ├── scripts/                      # Build/migration scripts
 └── tests/                        # Playwright tests
 ```
+
+---
+
+## Frontend Feature Modules
+
+Frontend migration follows the backend modular-monolith direction, but remains incremental.
+
+Rules:
+
+- `app/pages/*` should become thin route adapters that render feature containers.
+- `app/features/<feature>/containers` owns route-level UI orchestration for that feature.
+- `app/features/<feature>/composables` owns feature workflows and state.
+- `app/features/<feature>/services` owns feature API clients.
+- Existing `app/components/*` and `app/composables/*` auto-import paths remain compatibility entrypoints until each feature is safely migrated.
+
+Nuxt auto-import policy:
+
+- Do not rely on Nuxt auto-import discovery inside `app/features/*`.
+- Feature internals should use explicit imports.
+- If an existing auto-imported name is already used widely, keep a small wrapper in `app/composables/*` or `app/services/*` that re-exports the feature implementation.
+- Move visual components only after the feature container/composable/service boundary is stable, so component auto-import names do not change unexpectedly.
+
+Current frontend slice:
+
+- `review` owns `ReviewPageContainer`, `ReviewService`, review queue workflow, review stats, and session summary.
+- Legacy entrypoints such as `useCardReview`, `useReviewStats`, `useSessionSummary`, and `app/services/ReviewService.ts` remain as compatibility wrappers.
+- `language-learning` owns language pages, language service, language capture/review/stats workflows, speech capture, and language UI components.
+- Legacy entrypoints such as `useLanguageCapture`, `useLanguageReview`, `useLanguageStats`, `useSpeechCapture`, and `app/services/LanguageService.ts` remain as compatibility wrappers.
+- `notifications` owns push subscription, prompt timing, and notification preferences UI.
+- Legacy entrypoints such as `useNotifications`, `useNotificationPrompt`, `NotificationSubscriptionModal`, and `NotificationPreferences` remain as compatibility wrappers.
+- `notes` owns the workspace notes panel, note search, text/math/canvas note editors, local-first note state, and the notes API client.
+- Legacy entrypoints such as `WorkspaceNotesSection`, workspace note editor components, `useNotesStore`, and `app/services/Note.ts` remain as compatibility wrappers.
+- `board` owns the workspace board panel, kanban/list views, board cards, filters, board item/column stores, and board API clients.
+- Legacy entrypoints such as `BoardNotesSection`, `app/components/board/*`, `useBoardItemsStore`, `useBoardColumnsStore`, `app/services/BoardItem.ts`, and `app/services/BoardColumn.ts` remain as compatibility wrappers.
 
 ---
 
@@ -356,6 +413,51 @@ cognilo/
 ---
 
 ## Core Modules
+
+### Modular Monolith Boundary
+
+Cognilo remains one Nuxt/Nitro deployment, but backend business logic is now moving behind internal feature modules under `server/modules`.
+
+```
+server/modules/
+├── shared-kernel/        # events and cross-feature primitives
+├── review/               # SM-2, enrollment, grading, review ports
+├── language-learning/    # language word enrollment/review adapters
+├── notifications/        # scheduling and delivery ports/adapters
+├── notes/                # workspace note sync use cases
+├── board/                # board item sync use cases
+├── subscription/         # quota and credit ports/adapters
+└── ai-generation/        # generation lifecycle events/use cases
+```
+
+**Dependency rules**:
+- `server/api/*` routes are adapters: validate/authenticate, call an application service, return a response.
+- Domain code must not import Prisma, H3/Nitro, Nuxt, `$fetch`, or UI code.
+- Cross-feature behavior goes through ports or domain events, not direct repository calls.
+- Public API URLs stay stable while internal use cases move module-by-module.
+
+**Fitness check**:
+- Run `yarn arch:check` before merging module changes.
+- Run `yarn test:unit` for fast module-level regression coverage of the current proof slice.
+- The check scans `server/modules/**` and fails on frontend imports, API route imports, domain-to-infrastructure/application imports, and direct cross-module imports into another module's application or infrastructure layer.
+- The unit runner uses the existing `tsx` dependency and currently covers SM-2, shared review grading, workspace note sync temp ID mapping/deletes, board item sync temp ID mapping/conflicts, generation quota credit-spend behavior, ad-reward idempotency, Stripe purchase idempotency, and generated artifact persistence.
+
+**Current proof slice**:
+- Review grading and language grading share `gradeReviewCard`.
+- Review enrollment uses `enrollReviewableResource` plus `ReviewableResourceResolver`.
+- Language word enrollment uses `enrollLanguageWord`.
+- XP and notification side effects are behind ports.
+- Notes and board sync routes delegate conflict detection, temp ID mapping, and apply results to module use cases.
+- Subscription routes now delegate quota checks, credit balance/spend, Stripe checkout intent creation, ad rewards, and Stripe purchase grants to module application services while preserving existing endpoint contracts.
+- AI generation gateway request preparation and completion now live in `prepareGatewayGeneration` and `completeGatewayGeneration`.
+- Semantic cache reads/writes for the gateway now go through `GenerationCachePort`, keeping Redis-backed caching behind a module adapter.
+- Notes and board frontend features now surface local sync state explicitly through feature-owned status bars plus per-item dirty/error indicators.
+
+**Notes + Board sync QA checklist**:
+- Edit a note offline, refresh, and confirm it rehydrates with a `Local` indicator until sync completes.
+- Move a board item offline, refresh, and confirm the pending column/order still render before reconnecting.
+- Reconnect and confirm both features clear pending indicators after sync.
+- Force a failed sync and confirm retry affordances remain visible without discarding local edits.
 
 ### 1. Notes Module
 

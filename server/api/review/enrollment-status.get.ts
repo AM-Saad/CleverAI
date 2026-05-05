@@ -57,7 +57,7 @@ export default defineEventHandler(async (event) => {
         select: { cardId: true }
       });
 
-      cards.forEach(c => {
+      cards.forEach((c: { cardId: string }) => {
         enrollments[c.cardId] = true;
       });
 
@@ -76,7 +76,7 @@ export default defineEventHandler(async (event) => {
       // But for simplicity, we can just return the ones found as true.
       // Frontend usually assumes missing = false.
 
-      cards.forEach(c => {
+      cards.forEach((c: { cardId: string }) => {
         enrollments[c.cardId] = true;
       });
     }

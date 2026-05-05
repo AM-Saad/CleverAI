@@ -34,7 +34,7 @@ interface Props {
   /**
    * Card visual variant
    */
-  variant?: "default" | "outline" | "ghost";
+  variant?: "default" | "outline" | "ghost" | "surface" | "surface-strong";
   /**
    * Card size (affects padding)
    */
@@ -67,8 +67,11 @@ const {
 const variantClasses = {
   default:
     "bg-surface border border-surface-strong ",
+
   outline: "bg-transparent border border-secondary",
   ghost: "border-0",
+  surface: "bg-surface-subtle border border-surface-strong",
+  "surface-strong": "bg-surface-strong border border-surface-strong",
 };
 
 const sizeClasses = {
@@ -103,8 +106,9 @@ const headerSizesClasses = {
 const headerStyle = {
   default: "dark:bg-transparent border-b border-secondary ",
   outline: "border-b border-secondary ",
+  surface: "border-b border-surface-strong",
   ghost: "border-0",
-  elevated: "border-b border-primary-light",
+  "surface-strong": "border-b border-surface-strong",
 }
 
 const combinedContentClasses = ["ui-card__content", contentClasses].join(" ");

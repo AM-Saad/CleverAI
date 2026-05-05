@@ -2,6 +2,8 @@
 import { ref, watch, type Ref } from "vue";
 import { getFocusableElements } from "~/composables/ui/useMotionCommon";
 
+type FocusTrapTarget = HTMLElement | { $el?: unknown } | null;
+
 export interface FocusTrapOptions {
   /** Called when the user presses Escape inside the trapped region */
   onEscape?: () => void;
@@ -17,16 +19,30 @@ export interface FocusTrapOptions {
  */
 export function useFocusTrap(
   active: Ref<boolean>,
-  panelEl: Ref<HTMLElement | null>,
+  panelEl: Ref<FocusTrapTarget>,
   opts: FocusTrapOptions = {},
 ) {
   const lastFocusedEl = ref<HTMLElement | null>(null);
+
+  const resolveRoot = (target: FocusTrapTarget): HTMLElement | null => {
+    if (typeof HTMLElement !== "undefined" && target instanceof HTMLElement) {
+      return target;
+    }
+
+    const el =
+      typeof target === "object" && target && "$el" in target
+        ? target.$el
+        : null;
+    return typeof HTMLElement !== "undefined" && el instanceof HTMLElement
+      ? el
+      : null;
+  };
 
   watch(active, (v) => {
     if (v) {
       lastFocusedEl.value = (document.activeElement as HTMLElement) || null;
       requestAnimationFrame(() => {
-        const root = panelEl.value;
+        const root = resolveRoot(panelEl.value);
         if (!root) return;
         if (opts.initialFocus) {
           const el = root.querySelector<HTMLElement>(opts.initialFocus);
@@ -36,20 +52,21 @@ export function useFocusTrap(
           }
         }
         const focusables = getFocusableElements(root);
-        if (focusables.length) focusables[0].focus();
+        const firstFocusable = focusables[0];
+        if (firstFocusable) firstFocusable.focus();
         else root.focus();
       });
     } else {
       requestAnimationFrame(() => {
         try {
           lastFocusedEl.value?.focus();
-        } catch {}
+        } catch { }
       });
     }
   });
 
   function onKeydown(e: KeyboardEvent) {
-    const root = panelEl.value;
+    const root = resolveRoot(panelEl.value);
     if (!root) return;
 
     if (e.key === "Escape" && opts.onEscape) {
@@ -66,6 +83,7 @@ export function useFocusTrap(
 
     const first = els[0];
     const last = els[els.length - 1];
+    if (!first || !last) return;
     const activeEl = document.activeElement as HTMLElement | null;
 
     if (e.shiftKey) {

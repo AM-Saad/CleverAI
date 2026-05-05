@@ -60,7 +60,7 @@ watch(
     <!-- Error -->
     <div v-else-if="error" class="flex flex-col items-center justify-center p-8 gap-3">
       <u-icon name="i-lucide-alert-circle" class="w-8 h-8 text-error" />
-      <ui-paragraph size="sm" color="muted">
+      <ui-paragraph size="sm" color="content-secondary">
         Failed to load PDF content
       </ui-paragraph>
     </div>
@@ -70,7 +70,7 @@ watch(
       <!-- Material Header -->
       <div class="sticky top-0 bg-surface-100 dark:bg-dark border-b border-muted px-6 py-3 z-10">
         <ui-subtitle size="sm" weight="medium">{{ material.title }}</ui-subtitle>
-        <ui-paragraph v-if="material.metadata?.pageCount" size="xs" color="muted">
+        <ui-paragraph v-if="material.metadata?.pageCount" size="xs" color="content-secondary">
           {{ material.metadata.pageCount }} pages • Viewing page {{ targetPage }}
         </ui-paragraph>
       </div>
@@ -97,7 +97,7 @@ watch(
         <!-- Fallback if no content -->
         <div v-else class="flex flex-col items-center justify-center p-8 gap-3">
           <u-icon name="i-lucide-file-text" class="w-8 h-8 text-muted" />
-          <ui-paragraph size="sm" color="muted">
+          <ui-paragraph size="sm" color="content-secondary">
             No content available for this PDF
           </ui-paragraph>
         </div>
@@ -106,7 +106,7 @@ watch(
 
     <!-- Empty -->
     <div v-else class="flex items-center justify-center p-8">
-      <ui-paragraph size="sm" color="muted">
+      <ui-paragraph size="sm" color="content-secondary">
         Material not found
       </ui-paragraph>
     </div>

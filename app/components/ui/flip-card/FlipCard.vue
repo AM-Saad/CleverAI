@@ -10,7 +10,8 @@
     " :style="{ transform: wrapperTransform }" @click="flipped = !flipped">
 
     <!-- Front -->
-    <div class="absolute top-0 size-full overflow-hidden rounded-2xl  bg-surface  [backface-visibility:hidden] p-4">
+    <div
+      class="absolute top-0 size-full overflow-hidden rounded-2xl  bg-surface-subtle  [backface-visibility:hidden] p-4">
       <slot name="front" />
     </div>
 

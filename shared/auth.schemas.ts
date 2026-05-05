@@ -19,7 +19,6 @@ export const registerSchema = z.object({
   confirmPassword: passwordSchema,
   provider: z.string().optional().default('credentials'),
   gender: z.string().optional(),
-  phone: z.string().min(1, 'Phone is required'),
   role: z.enum(['USER']).default('USER')
 })
 

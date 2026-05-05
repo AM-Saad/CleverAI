@@ -7,7 +7,7 @@
       disabled ? 'opacity-50 cursor-not-allowed' : '',
       (($slots.default && !iconOnly) || label) ? 'px-2.5 py-1.5' : 'w-8 h-8'
     ]" :aria-label="title || label" :disabled="disabled" @click="emit('click', $event)">
-      <UIcon v-if="icon" :name="icon" class="w-[18px] h-[18px] shrink-0" />
+      <shared-icon v-if="icon" :name="icon" class="w-[18px] h-[18px] shrink-0" />
       <span v-if="label" :class="{ 'hidden sm:inline': hideLabelOnMobile }">{{ label }}</span>
       <slot />
     </button>
@@ -15,10 +15,11 @@
 </template>
 
 <script setup lang="ts">
+import type { IconName } from '#imports';
 import { computed } from 'vue';
 
 const props = defineProps<{
-  icon?: string;
+  icon?: IconName;
   label?: string;
   title?: string;
   active?: boolean;
@@ -32,6 +33,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'click', event: MouseEvent): void;
 }>();
+console.log('NoteToolbarButton props:', props.icon);
 
 const colorClasses = computed(() => {
   if (props.variant === 'danger') {

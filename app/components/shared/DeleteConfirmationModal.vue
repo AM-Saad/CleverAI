@@ -28,7 +28,7 @@ function handleClose() {
 
 <template>
   <shared-dialog-modal :show="show" @close="handleClose" :title="title"
-    :icon="isDestructive ? 'i-lucide-trash-2' : 'i-lucide-info-circle'">
+    :icon="isDestructive ? 'delete' : 'info'">
 
 
     <template #body>
@@ -39,7 +39,7 @@ function handleClose() {
 
         <!-- Warning if enrolled -->
         <div v-if="isEnrolled" class="flex items-start gap-3 p-3 rounded-lg bg-warning/10 border border-warning/20">
-          <Icon name="i-lucide-alert-triangle" class="w-5 h-5 text-warning shrink-0 mt-0.5" />
+          <UIcon name="i-lucide-alert-triangle" class="w-5 h-5 text-warning shrink-0 mt-0.5" />
           <div class="text-sm">
             <p class="font-medium text-warning">{{ enrollmentWarning }}</p>
             <p class="text-muted mt-1">
@@ -58,7 +58,7 @@ function handleClose() {
         </u-button>
         <u-button :color="isDestructive ? 'error' : 'primary'" @click="$emit('confirm')" :loading="loading"
           :disabled="loading">
-          <icon v-if="isDestructive" name="i-lucide-trash-2" class="w-4 h-4 mr-1" />
+          <Icon v-if="isDestructive" name="delete" class="w-4 h-4 mr-1" />
           {{ confirmText }}
         </u-button>
       </div>

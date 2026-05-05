@@ -289,7 +289,6 @@ interface LLMGenerationOptions {
 | Endpoint | Purpose |
 |----------|---------|
 | `POST /api/llm.gateway` | Smart routing with caching, quota, scoring |
-| `POST /api/llm.generate` | Legacy endpoint (deprecated) |
 | `GET /api/llm-usage` | Admin analytics |
 
 ### Smart Routing

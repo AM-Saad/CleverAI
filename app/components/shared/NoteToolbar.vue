@@ -43,12 +43,11 @@ const emit = defineEmits<{
 
       <!-- Fullscreen toggle -->
       <shared-note-toolbar-button v-if="props.allowFullscreen" title="Toggle Fullscreen" :disabled="isLoading"
-        @click="emit('toggleFullscreen')"
-        :icon="isFullscreen ? 'i-heroicons-arrows-pointing-in' : 'i-heroicons-arrows-pointing-out'" />
+        @click="emit('toggleFullscreen')" :icon="isFullscreen ? 'shrink' : 'expand'" />
 
       <!-- Delete -->
       <shared-note-toolbar-button title="Delete Note" variant="danger" :disabled="isLoading" @click="emit('delete')">
-        <UIcon name="i-heroicons-trash" class="w-4 h-4 group-hover:scale-110 transition-transform" />
+        <shared-icon name="delete" class="w-4 h-4 group-hover:scale-110 transition-transform" />
       </shared-note-toolbar-button>
     </div>
   </div>

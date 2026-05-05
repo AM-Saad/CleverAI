@@ -125,6 +125,12 @@ export default defineNuxtConfig({
         { name: "application-name", content: "Cognilo" },
       ],
       link: [
+        { rel: "preconnect", href: "https://fonts.googleapis.com" },
+        { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" },
+        {
+          rel: "stylesheet",
+          href: "https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Saira:ital,wght@0,100..900;1,100..900&display=swap",
+        },
         { rel: "manifest", href: "/manifest.webmanifest" },
         {
           rel: "icon",
@@ -243,6 +249,9 @@ export default defineNuxtConfig({
       assetsInlineLimit: 4096, // inline assets under 4kb for better performance and reduce requests
       minify: "esbuild",
       target: "es2022", // Support BigInt and modern JS features
+      rollupOptions: {
+        external: ["@huggingface/transformers", "onnxruntime-web"], // Don't bundle transformers - causes ONNX Runtime webpack errors
+      },
     },
     esbuild: {
       target: "es2022", // Support BigInt and modern JS features
@@ -268,14 +277,6 @@ export default defineNuxtConfig({
     },
 
   },
-
-  build: {
-    // transpile: ['trpc-nuxt']
-    rollupOptions: {
-      external: ["@huggingface/transformers", "onnxruntime-web"], // Don't bundle transformers - causes ONNX Runtime webpack errors
-    },
-  },
-
   ssr: false,
   // routeRules: {
   //   "/about": { prerender: true },

@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { PushSubscriptionDTO } from "@@/shared/utils/notification.contract";
 import { safeGetServerSession } from "@server/utils/safeGetServerSession";
 import { Errors, success } from "@server/utils/error";
@@ -9,6 +10,7 @@ interface SessionWithUser {
 export default defineEventHandler(async (event) => {
   let body: unknown;
   try {
+    const prisma = event.context.prisma;
     body = await readBody(event);
 
     const subscription = PushSubscriptionDTO.parse(body);
@@ -46,7 +48,7 @@ export default defineEventHandler(async (event) => {
     });
 
     return success(savedSubscription, { message: "Subscription saved" });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Failed to save subscription:", error);
     if (error instanceof z.ZodError) {
       throw Errors.badRequest("Invalid subscription data", {

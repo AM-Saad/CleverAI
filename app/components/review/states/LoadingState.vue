@@ -1,12 +1,10 @@
 <template>
-  <div class="text-center py-12">
-    <!-- <Loading /> -->
-    <p class="text-gray-600 dark:text-gray-400 mt-4">
-      Loading review cards...
-    </p>
-  </div>
+  <FeatureLoadingState v-bind="$attrs" />
 </template>
 
 <script setup lang="ts">
-// Pure presentational component
+import type { Component } from "vue";
+import RawFeatureLoadingState from "~/features/review/components/states/LoadingState.vue";
+
+const FeatureLoadingState = RawFeatureLoadingState as Component;
 </script>

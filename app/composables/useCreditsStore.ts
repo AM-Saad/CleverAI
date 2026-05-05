@@ -1,4 +1,16 @@
 // app/composables/useCreditsStore.ts
+interface CreditsBalanceResponse {
+  balance?: number;
+  data?: {
+    balance?: number;
+  };
+}
+
+interface SpendCreditResponse {
+  ok?: boolean;
+  success?: boolean;
+}
+
 export const useCreditsStore = defineStore('credits', () => {
   const balance = ref(0)
   const loading = ref(false)
@@ -9,8 +21,8 @@ export const useCreditsStore = defineStore('credits', () => {
     loading.value = true
     error.value = null
     try {
-      const data = await $fetch('/api/credits/balance')
-      balance.value = data.balance
+      const data = await $fetch<CreditsBalanceResponse>('/api/credits/balance')
+      balance.value = data.data?.balance ?? data.balance ?? 0
     } catch (err: any) {
       error.value = err?.data?.message ?? 'Failed to fetch credit balance'
       console.error('[credits] fetchBalance error:', err)
@@ -21,9 +33,10 @@ export const useCreditsStore = defineStore('credits', () => {
 
   async function spendCredit(): Promise<boolean> {
     try {
-      const { ok } = await $fetch('/api/credits/spend', { method: 'POST' })
-      if (ok) balance.value = Math.max(0, balance.value - 1)
-      return ok
+      const result = await $fetch<SpendCreditResponse>('/api/credits/spend', { method: 'POST' })
+      const spent = result.ok ?? result.success ?? false
+      if (spent) balance.value = Math.max(0, balance.value - 1)
+      return spent
     } catch {
       return false
     }

@@ -3,7 +3,6 @@
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
-@import url('https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Saira:ital,wght@0,100..900;1,100..900&display=swap');
 
 /* ============================================================
    CleverAI Design System — Token Definitions
@@ -15,99 +14,136 @@
   --font-sans: "Saira", sans-serif;
 
   /* ── Brand ───────────────────────────────────────────────── */
-  --color-primary:    #384998;   /* CTAs, active states, focus rings */
-  --color-on-primary: #ffffff;   /* text on primary-filled backgrounds */
+  --color-primary: #384998;
+  /* CTAs, active states, focus rings */
+  --color-on-primary: #ffffff;
+  /* text on primary-filled backgrounds */
 
   /* ── Semantic Feedback ───────────────────────────────────── */
-  --color-success: #10b981;      /* enrolled, completed, positive */
-  --color-warning: #f59e0b;      /* due soon, caution */
-  --color-error:   #ef4444;      /* wrong, destructive, failed */
-  --color-info:    #00c7e4;      /* new cards, informational */
+  --color-success: #10b981;
+  /* enrolled, completed, positive */
+  --color-warning: #f59e0b;
+  /* due soon, caution */
+  --color-error: #ef4444;
+  /* wrong, destructive, failed */
+  --color-info: #00c7e4;
+  /* new cards, informational */
 
   /* ── Structure ───────────────────────────────────────────── */
-  --color-secondary: #e7e9ec;    /* borders, dividers, chip backgrounds — NOT a CTA color */
+  --color-secondary: #e7e9ec;
+  /* borders, dividers, chip backgrounds — NOT a CTA color */
 
   /* ── Surface Hierarchy ───────────────────────────────────── */
-  --color-background:     #fafafa;  /* viewport / page background */
-  --color-surface:        #f2f2f2;  /* raised surfaces: cards, panels */
-  --color-surface-subtle: #F1F3F5;  /* list-row hover background */
-  --color-surface-strong: #e0e0e0;  /* active / selected surface state */
+  --color-background: #fafafa;
+  /* viewport / page background */
+  --color-surface: #f0f0f2;
+  /* raised surfaces: cards, panels */
+  --color-surface-subtle: #f4f5f7;
+  /* list-row hover background */
+  --color-surface-strong: #dddfe5;
+  /* active / selected surface state */
 
   /* ── Text Hierarchy ──────────────────────────────────────── */
-  --color-content-on-background:       #333333;  /* body text on page background */
-  --color-content-on-surface:          #575252;  /* body text inside cards/panels */
-  --color-content-on-surface-strong:   #333333;  /* subheads & strong text in panels */
-  --color-content-secondary:           #6B7280;  /* metadata, timestamps, captions */
-  --color-content-disabled:            #9CA3AF;  /* placeholders, disabled copy */
+  --color-content-on-background: #333333;
+  /* body text on page background */
+  --color-content-on-surface: #575252;
+  /* body text inside cards/panels */
+  --color-content-on-surface-strong: #333333;
+  /* subheads & strong text in panels */
+  --color-content-secondary: #6B7280;
+  /* metadata, timestamps, captions */
+  --color-content-disabled: #9CA3AF;
+  /* placeholders, disabled copy */
 
   /* ── Border Radius ───────────────────────────────────────── */
-  --radius-sm:  0.125rem;  /*  2px — status dots, progress bar fill */
-  --radius-md:  0.25rem;   /*  4px — chips, tags, badges, UBadge */
-  --radius-lg:  0.375rem;  /*  6px — buttons, inputs, selects, textareas */
-  --radius-xl:  0.5rem;    /*  8px — dropdowns, tooltips, small panels */
-  --radius-2xl: 0.75rem;   /* 12px — UiCard, modals, dialogs, search bar */
+  --radius-sm: 0.125rem;
+  /*  2px — status dots, progress bar fill */
+  --radius-md: 0.25rem;
+  /*  4px — chips, tags, badges, UBadge */
+  --radius-lg: 0.375rem;
+  /*  6px — buttons, inputs, selects, textareas */
+  --radius-xl: 0.5rem;
+  /*  8px — dropdowns, tooltips, small panels */
+  --radius-2xl: 0.75rem;
+  /* 12px — UiCard, modals, dialogs, search bar */
 
   /* ── Letter Spacing ──────────────────────────────────────── */
-  --tracking-tighter: -0.04em;   /* page hero / 4xl+ headings */
-  --tracking-tight:   -0.025em;  /* section headings / 2xl–3xl */
-  --tracking-normal:   0em;
-  --tracking-wide:     0.025em;  /* overlines, uppercase labels */
+  --tracking-tighter: -0.04em;
+  /* page hero / 4xl+ headings */
+  --tracking-tight: -0.025em;
+  /* section headings / 2xl–3xl */
+  --tracking-normal: 0em;
+  --tracking-wide: 0.025em;
+  /* overlines, uppercase labels */
 
   /* ── Line Height ─────────────────────────────────────────── */
-  --leading-tight:   1.25;   /* headings */
-  --leading-snug:    1.375;  /* card / panel headings */
-  --leading-normal:  1.5;    /* labels, captions */
-  --leading-relaxed: 1.625;  /* body paragraphs */
+  --leading-tight: 1.25;
+  /* headings */
+  --leading-snug: 1.375;
+  /* card / panel headings */
+  --leading-normal: 1.5;
+  /* labels, captions */
+  --leading-relaxed: 1.625;
+  /* body paragraphs */
 
   /* ── Shadow Scale ────────────────────────────────────────── */
-  --shadow-card-hover:   0 8px 30px rgba(0, 0, 0, 0.08);
-  --shadow-dropdown:     0 4px 16px rgba(0, 0, 0, 0.12);
-  --shadow-modal:        0 20px 60px rgba(0, 0, 0, 0.15);
+  --shadow-card-hover: 0 8px 30px rgba(0, 0, 0, 0.08);
+  --shadow-dropdown: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.15);
   --shadow-primary-glow: 0 4px 12px rgba(56, 73, 152, 0.25);
 
   /* ── Spacing (4px base unit) ─────────────────────────────── */
-  --space-1:  0.25rem;   /*  4px */
-  --space-2:  0.5rem;    /*  8px */
-  --space-3:  0.75rem;   /* 12px */
-  --space-4:  1rem;      /* 16px */
-  --space-6:  1.5rem;    /* 24px */
-  --space-8:  2rem;      /* 32px */
-  --space-12: 3rem;      /* 48px */
-  --space-16: 4rem;      /* 64px */
+  --space-1: 0.25rem;
+  /*  4px */
+  --space-2: 0.5rem;
+  /*  8px */
+  --space-3: 0.75rem;
+  /* 12px */
+  --space-4: 1rem;
+  /* 16px */
+  --space-6: 1.5rem;
+  /* 24px */
+  --space-8: 2rem;
+  /* 32px */
+  --space-12: 3rem;
+  /* 48px */
+  --space-16: 4rem;
+  /* 64px */
 
   /* ── Legacy spacing aliases (kept for backward-compat) ───── */
-  --margin-xs:  var(--space-1);
-  --margin-sm:  var(--space-2);
-  --margin-md:  var(--space-4);
-  --margin-lg:  var(--space-6);
-  --margin-xl:  var(--space-8);
+  --margin-xs: var(--space-1);
+  --margin-sm: var(--space-2);
+  --margin-md: var(--space-4);
+  --margin-lg: var(--space-6);
+  --margin-xl: var(--space-8);
   --margin-2xl: calc(var(--space-8) + var(--space-4));
 
-  --padding-xs:  var(--space-1);
-  --padding-sm:  var(--space-2);
-  --padding-md:  var(--space-4);
-  --padding-lg:  var(--space-6);
-  --padding-xl:  var(--space-8);
+  --padding-xs: var(--space-1);
+  --padding-sm: var(--space-2);
+  --padding-md: var(--space-4);
+  --padding-lg: var(--space-6);
+  --padding-xl: var(--space-8);
   --padding-2xl: calc(var(--space-8) + var(--space-4));
 
   /* also alias as --spacing-* for components that referenced it */
-  --spacing-xs:  var(--space-1);
-  --spacing-sm:  var(--space-2);
-  --spacing-md:  var(--space-4);
-  --spacing-lg:  var(--space-6);
-  --spacing-xl:  var(--space-8);
+  --spacing-xs: var(--space-1);
+  --spacing-sm: var(--space-2);
+  --spacing-md: var(--space-4);
+  --spacing-lg: var(--space-6);
+  --spacing-xl: var(--space-8);
 }
 
 @layer theme {
   .dark {
-  --color-light: #3e3e3f;
-    
+    --color-light: #3e3e3f;
+
   }
 }
+
 @utility backdrop-blur-glass {
-    --tw-backdrop-blur: blur(40px);
-    -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
-    backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+  --tw-backdrop-blur: blur(40px);
+  -webkit-backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+  backdrop-filter: var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
 }
 
 /* Optional: global component shape/layout tokens */
@@ -122,14 +158,15 @@
 html.dark,
 :is(.dark) {
   /* --ui-bg: var(--color-dark); */
-  
+
 
 }
+
 input:-webkit-autofill,
-input:-webkit-autofill:hover, 
+input:-webkit-autofill:hover,
 input:-webkit-autofill:focus {
   /* 1. Explicitly set the cursor color (change #333 to your text color) */
-  caret-color: #333 !important; 
+  caret-color: #333 !important;
 
   /* 2. Overlap fix: Add a tiny padding if the cursor is hidden behind the border */
   padding-left: 5px !important;
@@ -144,6 +181,7 @@ input:-webkit-autofill:focus {
 input:not(:placeholder-shown) {
   caret-color: #333;
 }
+
 body {
   /* font-family: "Source Sans 3", sans-serif; */
   /* font-family: "Sen", sans-serif; */
@@ -152,12 +190,13 @@ body {
   color: unset;
 }
 
-.header-brand-name-gradient{
-      background-image: linear-gradient(90deg, rgb(49, 165, 217) 0%, rgb(248, 54, 145) 46%, rgb(255, 184, 0) 100%);
-    color: transparent;
-    background-clip: text;
-    text-decoration: none !important;
+.header-brand-name-gradient {
+  background-image: linear-gradient(90deg, rgb(49, 165, 217) 0%, rgb(248, 54, 145) 46%, rgb(255, 184, 0) 100%);
+  color: transparent;
+  background-clip: text;
+  text-decoration: none !important;
 }
+
 a {
   outline: none;
 }
@@ -167,6 +206,7 @@ a:not(.btn):focus-visible {
   -moz-outline-radius: 8px;
   outline-style: ridge;
 }
+
 .blur {
   --tw-blur: blur(8px);
 }
@@ -183,8 +223,9 @@ a:not(.btn):focus-visible {
 } */
 
 div[data-reka-popper-content-wrapper] {
-  @apply z-50!
+  @apply z-50
 }
+
 @media (prefers-color-scheme: dark) {
   .options-select {
     @apply text-white;
@@ -199,9 +240,11 @@ div[data-reka-popper-content-wrapper] {
   0% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
+
   100% {
     background-position: 0% 50%;
   }
@@ -212,13 +255,11 @@ div[data-reka-popper-content-wrapper] {
 }
 
 .animate-gradient {
-  background-image: linear-gradient(
-    -45deg, 
-    #30c3c6,
-    #2c7a7b,
-    #ffa45c,
-    #ffcdab
-  );
+  background-image: linear-gradient(-45deg,
+      #30c3c6,
+      #2c7a7b,
+      #ffa45c,
+      #ffcdab);
   background-size: 400% 400%;
   animation: gradient-animation 15s ease infinite;
 }
@@ -227,9 +268,11 @@ div[data-reka-popper-content-wrapper] {
   0% {
     background-position: 0% 50%;
   }
+
   50% {
     background-position: 100% 50%;
   }
+
   100% {
     background-position: 0% 50%;
   }
@@ -237,46 +280,84 @@ div[data-reka-popper-content-wrapper] {
 
 @theme {
   --animate-reveal-height: reveal-height 0.5s ease-out;
+
   @keyframes reveal-height {
     from {
       height: 0;
     }
+
     to {
       height: 100%;
     }
   }
 
   --animate-wiggle: wiggle 0.3s ease-in-out infinite;
+
   @keyframes wiggle {
-    0%, 100% { transform: rotate(-3deg); }
-    50% { transform: rotate(3deg); }
+
+    0%,
+    100% {
+      transform: rotate(-3deg);
+    }
+
+    50% {
+      transform: rotate(3deg);
+    }
   }
 
-  --animate-typing: typing 3.5s steps(40, end), blink-caret .75s step-end infinite;
+  --animate-typing: typing 3.5s steps(40, end),
+  blink-caret .75s step-end infinite;
+
   @keyframes typing {
-    from { width: 0 }
-    to { width: 100% }
+    from {
+      width: 0
+    }
+
+    to {
+      width: 100%
+    }
   }
+
   @keyframes blink-caret {
-    from, to { border-color: transparent }
-    50% { border-color: var(--color-primary) }
+
+    from,
+    to {
+      border-color: transparent
+    }
+
+    50% {
+      border-color: var(--color-primary)
+    }
   }
 
   --animate-pulse-soft: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
   @keyframes pulse-soft {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: .5; transform: scale(1.05); }
+
+    0%,
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    50% {
+      opacity: .5;
+      transform: scale(1.05);
+    }
   }
 
 
-    --animate-glow: glow 6s infinite linear;
+  --animate-glow: glow 6s infinite linear;
+
   @keyframes glow {
     0% {
       background-position: 0% 0%;
     }
+
     50% {
       background-position: 100% 100%;
     }
+
     to {
       background-position: 0% 0%;
     }

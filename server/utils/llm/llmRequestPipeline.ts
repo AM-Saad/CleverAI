@@ -26,7 +26,16 @@ import { useRuntimeConfig } from "#imports";
 import type { H3Event } from "h3";
 import { Errors } from "../error";
 import { requireRole } from "../auth";
-import { checkUserQuota, incrementGenerationCount } from "../quota";
+import { publishGenerationQuotaConsumed } from "@server/modules/ai-generation/application/generationEvents";
+import {
+  setQuotaHeaders,
+  throwQuotaExceeded,
+} from "@server/modules/subscription/infrastructure/http/quotaHttp";
+import type {
+  ConsumedQuota,
+  QuotaPort,
+  QuotaStatus,
+} from "@server/modules/subscription/ports/QuotaPort";
 import {
   applyLimit,
   getClientIp,
@@ -52,6 +61,8 @@ const _ipRateLimitMap: MemCounter = new Map();
 // ─── Public types ──────────────────────────────────────────────────────────
 
 export interface LlmPipelineOptions {
+  /** Injected adapter for quota checks and consumption. */
+  quotaPort: QuotaPort;
   /** Task label used for routing, logging, and LlmGatewayLog.task. */
   task: string;
   /** Input text for token estimation and model routing. */
@@ -108,16 +119,7 @@ export interface LlmFinalizeResult {
    * Updated quota returned by incrementGenerationCount.
    * undefined when incrementQuota=false.
    */
-  updatedQuota:
-    | {
-        tier: string;
-        generationsUsed: number;
-        generationsQuota: number;
-        remaining: number;
-        creditBalance: number;
-        creditSpent: boolean;
-      }
-    | undefined;
+  updatedQuota: ConsumedQuota | undefined;
   totalLatencyMs: number;
   generationLatencyMs: number;
   inputTokens: number;
@@ -131,7 +133,7 @@ export interface LlmPipelineContext {
   strategy: LLMStrategy;
   selectedModel: LlmModelRegistry;
   /** Populated when checkQuota=true, undefined otherwise. */
-  quotaCheck: Awaited<ReturnType<typeof checkUserQuota>> | undefined;
+  quotaCheck: QuotaStatus | undefined;
   /** Token estimate for inputText (for convenience — matches what finalize uses). */
   tokenEstimate: number;
   /**
@@ -161,6 +163,7 @@ export async function llmRequestPipeline(
     estimatedOutputTokens = 400,
     requiredCapability,
     pinnedModelId,
+    quotaPort,
     checkQuota = true,
     incrementQuota = true,
     rateLimitMax = 5,
@@ -173,49 +176,20 @@ export async function llmRequestPipeline(
   const user = options.user ?? (await requireRole(event, ["USER"]));
 
   // ── Quota gate ──────────────────────────────────────────────────────────
-  let quotaCheck: Awaited<ReturnType<typeof checkUserQuota>> | undefined;
+  let quotaCheck:
+    | QuotaStatus
+    | undefined;
   if (checkQuota) {
-    quotaCheck = await checkUserQuota(user.id);
+    quotaCheck = await quotaPort.checkGenerationQuota(user.id);
     if (!quotaCheck.canGenerate) {
-      event.node.res.setHeader("x-quota-exceeded", "true");
-      event.node.res.setHeader(
-        "x-subscription-tier",
-        quotaCheck.subscription.tier,
-      );
-      event.node.res.setHeader(
-        "x-generations-used",
-        String(quotaCheck.subscription.generationsUsed),
-      );
-      event.node.res.setHeader(
-        "x-generations-quota",
-        String(quotaCheck.subscription.generationsQuota),
-      );
-      event.node.res.setHeader(
-        "x-generations-remaining",
-        String(quotaCheck.subscription.remaining),
-      );
-      throw Errors.badRequest(
+      throwQuotaExceeded(
+        event,
+        quotaCheck.subscription,
         "Quota exceeded. Please upgrade to continue generating content.",
-        { subscription: quotaCheck.subscription, type: "QUOTA_EXCEEDED" },
       );
     }
     // Always expose current subscription state in headers on a passing check
-    event.node.res.setHeader(
-      "x-subscription-tier",
-      quotaCheck.subscription.tier,
-    );
-    event.node.res.setHeader(
-      "x-generations-used",
-      String(quotaCheck.subscription.generationsUsed),
-    );
-    event.node.res.setHeader(
-      "x-generations-quota",
-      String(quotaCheck.subscription.generationsQuota),
-    );
-    event.node.res.setHeader(
-      "x-generations-remaining",
-      String(quotaCheck.subscription.remaining),
-    );
+    setQuotaHeaders(event, quotaCheck.subscription);
   }
 
   // ── Rate limiting ────────────────────────────────────────────────────────
@@ -389,7 +363,14 @@ export async function llmRequestPipeline(
     // Increment quota only for billed tasks
     let updatedQuota: LlmFinalizeResult["updatedQuota"];
     if (incrementQuota) {
-      updatedQuota = await incrementGenerationCount(user.id);
+      updatedQuota = await quotaPort.consumeGeneration(user.id);
+      await publishGenerationQuotaConsumed({
+        userId: user.id,
+        requestId,
+        task,
+        creditSpent: updatedQuota.creditSpent,
+        remaining: updatedQuota.remaining,
+      });
     }
 
     // Write LlmGatewayLog row regardless of quota tracking

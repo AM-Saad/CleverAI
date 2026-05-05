@@ -161,25 +161,25 @@ async function bulkEnrollDrafts() {
               <span v-else-if="'id' in card && card.id && props.enrolledIds.has(card.id)"
                 class="inline-flex items-center justify-center h-5 w-5 rounded-full text-xs font-light bg-primary  text-on-primary"
                 title="Enrolled in Review">
-                <Icon name="i-lucide-check" class="w-3 h-3" />
+                <shared-icon name="check" />
               </span>
-              <div class="justify-between gap-1 bg-primary/10 rounded-full overflow-hidden">
+              <div class="flex justify-between bg-primary/10 rounded-full overflow-hidden">
                 <!-- Context button -->
                 <u-button v-if="card.sourceRef" size="sm" variant="ghost"
                   @click.stop="contextBridge.locateSource(card, id)" title="View source context"
                   :disabled="props.isEnrollingLoading">
-                  <Icon name="i-lucide-external-link" class="w-3 h-3" />
+                  <shared-icon name="external-link" />
                 </u-button>
 
                 <!-- Edit button -->
                 <u-button v-if="'id' in card && card.id" size="sm" variant="ghost" @click.stop="openEditModal(card)"
                   title="Edit flashcard" :disabled="props.isEnrollingLoading">
-                  <Icon name="i-lucide-pencil" class="w-3 h-3 disabled:opacity-50 disabled:cursor-not-allowed" />
+                  <shared-icon name="pencil" class=" disabled:opacity-50 disabled:cursor-not-allowed" />
                 </u-button>
                 <!-- Delete button -->
                 <u-button v-if="'id' in card && card.id" size="sm" variant="ghost" color="error"
                   @click.stop="openDeleteModal(card)" title="Delete flashcard" :disabled="props.isEnrollingLoading">
-                  <Icon name="i-lucide-trash-2" class="w-3 h-3 disabled:opacity-50 disabled:cursor-not-allowed" />
+                  <shared-icon name="delete" class=" disabled:opacity-50 disabled:cursor-not-allowed" />
                 </u-button>
               </div>
             </div>

@@ -1,3 +1,4 @@
+import type { BoardItem } from "@prisma/client";
 import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
@@ -10,7 +11,7 @@ export default defineEventHandler(async (event) => {
 
     const body = await readBody(event);
 
-    let data;
+    let data: ReorderBoardItemsDTO;
     try {
       data = ReorderBoardItemsDTO.parse(body);
     } catch (err) {
@@ -24,7 +25,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Verify all items belong to user
-    const itemIds = data.itemOrders.map((i) => i.id);
+    const itemIds = data.itemOrders.map((item: { id: string }) => item.id);
     const items = await prisma.boardItem.findMany({
       where: {
         id: { in: itemIds },
@@ -37,23 +38,25 @@ export default defineEventHandler(async (event) => {
     }
 
     // Update all item orders in a transaction
-    const updatePromises = data.itemOrders.map((itemOrder) =>
-      prisma.boardItem.update({
-        where: { id: itemOrder.id },
-        data: { order: itemOrder.order },
-      })
-    );
-
-    await prisma.$transaction(updatePromises);
+    await prisma.$transaction(async (tx: any) => {
+      await Promise.all(
+        data.itemOrders.map((itemOrder) =>
+          tx.boardItem.update({
+            where: { id: itemOrder.id },
+            data: { order: itemOrder.order },
+          })
+        )
+      );
+    });
 
     // Fetch updated items for verification
-    const updatedItems = await prisma.boardItem.findMany({
+    const updatedItems: BoardItem[] = await prisma.boardItem.findMany({
       where: { userId: user.id },
       orderBy: { order: "asc" },
     });
 
     if (process.env.NODE_ENV === "development") {
-      updatedItems.forEach((i) => BoardItemSchema.parse(i));
+      updatedItems.forEach((item: BoardItem) => BoardItemSchema.parse(item));
     }
 
     return success(updatedItems, {

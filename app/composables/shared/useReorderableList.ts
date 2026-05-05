@@ -1,4 +1,4 @@
-import { ref, reactive, computed, watch, nextTick, defineComponent, type Ref, type ComputedRef } from 'vue';
+import { ref, reactive, computed, watch, nextTick, defineComponent, onBeforeUnmount, type Ref, type ComputedRef } from 'vue';
 
 /**
  * Options for configuring the reorderable list composable
@@ -10,6 +10,10 @@ export interface UseReorderableListOptions<T extends { id: string }> {
   onDragStateChange?: (isDragging: boolean) => void;
   /** ID field key for the DragTracker component props (default: 'id') */
   idKey?: string;
+  /** Delay before persisting the reordered list so quick successive moves collapse into one request */
+  reorderDebounceMs?: number;
+  /** Time window to suppress clicks immediately before/after dragging */
+  clickSuppressMs?: number;
   /** Enable debug logging */
   debug?: boolean;
   /** Component name for debug logs */
@@ -34,6 +38,8 @@ export interface UseReorderableListReturn<T extends { id: string }> {
   DragTracker: ReturnType<typeof defineComponent>;
   /** Sync local items with source (call when props change) */
   syncFromSource: (items: T[]) => void;
+  /** Returns true when pointer interactions for an item should be ignored */
+  shouldSuppressInteraction: (id: string) => boolean;
 }
 
 /**
@@ -61,16 +67,26 @@ export interface UseReorderableListReturn<T extends { id: string }> {
 export function useReorderableList<T extends { id: string }>(
   options: UseReorderableListOptions<T>
 ): UseReorderableListReturn<T> {
-  const { onReorder, onDragStateChange, idKey = 'itemId', debug = false, debugName = 'ReorderableList' } = options;
+  const {
+    onReorder,
+    onDragStateChange,
+    idKey = 'itemId',
+    reorderDebounceMs = 200,
+    clickSuppressMs = 200,
+    debug = false,
+    debugName = 'ReorderableList'
+  } = options;
 
   // Local state
   const localItems = ref<T[]>([]) as Ref<T[]>;
   const isReordering = ref(false);
   const draggingStates = reactive<Map<string, boolean>>(new Map());
+  const interactionSuppressedUntil = reactive<Map<string, number>>(new Map());
 
   // Tracking variables
   let pendingReorder: T[] | null = null;
   let lastReorderedIds = '';
+  let reorderTimer: ReturnType<typeof setTimeout> | null = null;
 
   // Debug logger
   const log = (...args: unknown[]) => {
@@ -86,6 +102,17 @@ export function useReorderableList<T extends { id: string }>(
 
   // Computed: disable dragging during reorder
   const isDragDisabled = computed(() => isReordering.value);
+
+  const clearScheduledReorder = () => {
+    if (!reorderTimer) return;
+    clearTimeout(reorderTimer);
+    reorderTimer = null;
+  };
+
+  const shouldSuppressInteraction = (id: string): boolean => {
+    if (draggingStates.get(id)) return true;
+    return (interactionSuppressedUntil.get(id) ?? 0) > Date.now();
+  };
 
   // Notify parent when drag state changes
   watch(isAnyDragging, (isDragging) => {
@@ -120,23 +147,51 @@ export function useReorderableList<T extends { id: string }>(
     isAnyDragging,
     async (isDragging, wasDragging) => {
       if (wasDragging && !isDragging && pendingReorder) {
-        log('Drag ended, executing reorder');
-        const orderToExecute = [...pendingReorder];
-        pendingReorder = null;
-
-        // IMPORTANT: Set reordering flag IMMEDIATELY to prevent sync from reverting
-        // This blocks syncFromSource before any reactivity can change localItems
-        isReordering.value = true;
-
-        await nextTick();
-        await executeReorder(orderToExecute);
+        log('Drag ended, scheduling reorder');
+        scheduleReorder();
       }
     }
   );
 
   // Update drag state for individual items
   const updateDragState = (id: string, isDragging: boolean) => {
+    const wasDragging = draggingStates.get(id) ?? false;
     draggingStates.set(id, isDragging);
+
+    if (isDragging || wasDragging) {
+      interactionSuppressedUntil.set(id, Date.now() + clickSuppressMs);
+    }
+  };
+
+  const scheduleReorder = () => {
+    clearScheduledReorder();
+
+    const executeScheduledReorder = async () => {
+      reorderTimer = null;
+
+      if (!pendingReorder || isAnyDragging.value || isReordering.value) {
+        return;
+      }
+
+      const orderToExecute = [...pendingReorder];
+      pendingReorder = null;
+
+      // IMPORTANT: Set reordering flag IMMEDIATELY to prevent sync from reverting
+      // This blocks syncFromSource before any reactivity can change localItems
+      isReordering.value = true;
+
+      await nextTick();
+      await executeReorder(orderToExecute);
+    };
+
+    if (reorderDebounceMs <= 0) {
+      void executeScheduledReorder();
+      return;
+    }
+
+    reorderTimer = setTimeout(() => {
+      void executeScheduledReorder();
+    }, reorderDebounceMs);
   };
 
   // Execute the reorder operation
@@ -166,7 +221,7 @@ export function useReorderableList<T extends { id: string }>(
   // Sync local items from source (props)
   const syncFromSource = (items: T[]) => {
     // Don't sync during drag or reorder
-    if (isAnyDragging.value || isReordering.value) {
+    if (isAnyDragging.value || isReordering.value || reorderTimer !== null) {
       log('Skipping sync (drag or reorder in progress)');
       return;
     }
@@ -181,6 +236,10 @@ export function useReorderableList<T extends { id: string }>(
     localItems.value = [...items];
     pendingReorder = null;
   };
+
+  onBeforeUnmount(() => {
+    clearScheduledReorder();
+  });
 
   // DragTracker component factory
   const DragTracker = defineComponent({
@@ -207,6 +266,7 @@ export function useReorderableList<T extends { id: string }>(
     isDragDisabled,
     updateDragState,
     DragTracker,
-    syncFromSource
+    syncFromSource,
+    shouldSuppressInteraction
   };
 }

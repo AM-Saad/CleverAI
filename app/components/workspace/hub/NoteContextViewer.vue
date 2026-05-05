@@ -44,7 +44,7 @@ onMounted(() => {
     <!-- Error -->
     <div v-else-if="error" class="flex flex-col items-center justify-center p-8 gap-3">
       <u-icon name="i-lucide-alert-circle" class="w-8 h-8 text-error" />
-      <ui-paragraph size="sm" color="muted">
+      <ui-paragraph size="sm" color="content-secondary">
         Failed to load note content
       </ui-paragraph>
     </div>
@@ -57,7 +57,7 @@ onMounted(() => {
 
     <!-- Empty -->
     <div v-else class="flex items-center justify-center p-8">
-      <ui-paragraph size="sm" color="muted">
+      <ui-paragraph size="sm" color="content-secondary">
         Note not found
       </ui-paragraph>
     </div>

@@ -1,7 +1,8 @@
+import type { Note, Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
-import { UpdateNoteDTO, NoteSchema } from "~/shared/utils/note.contract";
+import { type UpdateNoteDTO, UpdateNoteDTO as UpdateNoteDTOSchema, NoteSchema } from "~/shared/utils/note.contract";
 
 // Simple retry helper for transient Prisma write conflicts / deadlocks.
 // Uses exponential backoff with jitter. Keep local to this route for now; can be
@@ -34,9 +35,9 @@ export default defineEventHandler(async (event) => {
 
   const body = await readBody(event);
 
-  let data;
+  let data: UpdateNoteDTO;
   try {
-    data = UpdateNoteDTO.parse(body);
+    data = UpdateNoteDTOSchema.parse(body);
   } catch (err) {
     if (err instanceof ZodError) {
       throw Errors.badRequest(
@@ -70,15 +71,19 @@ export default defineEventHandler(async (event) => {
       throw Errors.notFound("Note");
     }
 
-    const updatedNote = await retryPrismaUpdate(() =>
+    const updateData: Prisma.NoteUpdateInput = {
+      ...(data.content !== undefined && { content: data.content }),
+      ...(data.tags !== undefined && { tags: data.tags }),
+      ...(data.noteType !== undefined && { noteType: data.noteType }),
+      ...(data.metadata !== undefined && {
+        metadata: data.metadata as Prisma.InputJsonValue,
+      }),
+    };
+
+    const updatedNote: Note = await retryPrismaUpdate(() =>
       prisma.note.update({
         where: { id },
-        data: {
-          content: data.content,
-          tags: data.tags,
-          ...(data.noteType !== undefined && { noteType: data.noteType }),
-          ...(data.metadata !== undefined && { metadata: data.metadata }),
-        },
+        data: updateData,
       })
     );
 

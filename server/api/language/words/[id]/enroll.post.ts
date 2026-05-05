@@ -1,5 +1,6 @@
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
+import { enrollLanguageWord } from "@server/modules/language-learning/application/enrollLanguageWord";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -10,50 +11,5 @@ export default defineEventHandler(async (event) => {
     throw Errors.badRequest("Word ID is required");
   }
 
-  const word = await prisma.languageWord.findFirst({
-    where: { id, userId: user.id },
-    include: {
-      stories: {
-        orderBy: { createdAt: "desc" },
-        take: 1,
-        select: { id: true },
-      },
-    },
-  });
-
-  if (!word) {
-    throw Errors.notFound("Word");
-  }
-
-  const story = word.stories[0] ?? null;
-
-  // Idempotent upsert — safe to call even if already enrolled
-  await prisma.$transaction(async (tx) => {
-    await tx.languageCardReview.upsert({
-      where: {
-        userId_wordId: {
-          userId: user.id,
-          wordId: id,
-        },
-      },
-      update: { storyId: story?.id ?? undefined, suspended: false },
-      create: {
-        userId: user.id,
-        wordId: id,
-        storyId: story?.id ?? null,
-        nextReviewAt: new Date(),
-        repetitions: 0,
-        easeFactor: 2.5,
-        intervalDays: 0,
-        streak: 0,
-      },
-    });
-
-    await tx.languageWord.update({
-      where: { id },
-      data: { status: "enrolled" },
-    });
-  });
-
-  return success({ wordId: id, status: "enrolled" });
+  return success(await enrollLanguageWord({ prisma, userId: user.id, wordId: id }));
 });

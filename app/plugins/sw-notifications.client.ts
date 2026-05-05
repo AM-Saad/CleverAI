@@ -47,7 +47,7 @@ export default defineNuxtPlugin(() => {
         description: String(data.message ?? "Browser storage is having issues."),
         color: "warning",
         actions: data.action
-          ? [{ label: "Fix Now", onClick: () => router.push(String(data.action)) }]
+          ? [{ label: "Fix Now", onClick: async () => { await router.push(String(data.action)); } }]
           : undefined,
       });
       return;

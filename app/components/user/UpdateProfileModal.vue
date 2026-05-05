@@ -6,7 +6,6 @@ import type { UpdateProfileDTO } from "@@/shared/utils/user.contract";
 
 interface UserProfile {
   name: string;
-  phone: string;
   gender?: string;
 }
 
@@ -22,7 +21,6 @@ const emit = defineEmits<{
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
-  phone: z.string().min(10, "Phone must be at least 10 characters"),
   gender: z.string().optional(),
 });
 
@@ -30,7 +28,6 @@ type Schema = z.output<typeof schema>;
 
 const state = reactive<Partial<Schema>>({
   name: undefined,
-  phone: undefined,
   gender: undefined,
 });
 
@@ -47,7 +44,6 @@ watch(
   (newVal) => {
     if (newVal) {
       state.name = props.currentProfile.name || "";
-      state.phone = props.currentProfile.phone || "";
       state.gender = props.currentProfile.gender || "";
     }
   }
@@ -56,12 +52,11 @@ watch(
 const hasChanges = computed(() => {
   return (
     state.name !== props.currentProfile.name ||
-    state.phone !== props.currentProfile.phone ||
     state.gender !== (props.currentProfile.gender || "")
   );
 });
 
-const canSubmit = computed(() => state.name && state.phone && hasChanges.value);
+const canSubmit = computed(() => state.name && hasChanges.value);
 
 async function onSubmit(event: FormSubmitEvent<Schema>) {
   if (!canSubmit.value) return;
@@ -70,9 +65,6 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
   if (state.name !== props.currentProfile.name) {
     updates.name = state.name;
-  }
-  if (state.phone !== props.currentProfile.phone) {
-    updates.phone = state.phone;
   }
   if (state.gender !== (props.currentProfile.gender || "")) {
     updates.gender = state.gender;
@@ -88,22 +80,13 @@ const closeModal = (): void => {
 
 <template>
   <Teleport to="body">
-    <shared-dialog-modal :show="props.show" @close="closeModal" title="Update Profile" icon="mdi:account-edit"
+    <shared-dialog-modal :show="props.show" @close="closeModal" title="Update Profile" icon="edit"
       description="Update your profile information">
 
       <template #body>
         <u-form :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
           <u-form-field label="Name" name="name" required>
             <u-input v-model="state.name" placeholder="Your name" autofocus class="w-full" />
-          </u-form-field>
-
-          <u-form-field label="Phone" name="phone" required>
-            <u-input v-model="state.phone" type="tel" placeholder="Your phone number" class="w-full" />
-            <template #hint>
-              <p class="text-xs text-gray-500 dark:text-gray-400">
-                Minimum 10 characters
-              </p>
-            </template>
           </u-form-field>
 
           <u-form-field label="Gender" name="gender">

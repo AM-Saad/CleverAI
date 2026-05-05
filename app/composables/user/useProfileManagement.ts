@@ -7,10 +7,8 @@ import type {
   ReactivateAccountResponse,
   ChangePasswordDTO,
   ChangePasswordResponse,
+  UserProfile,
 } from "@@/shared/utils/user.contract";
-import type { UserProfile } from "@/services/UserService";
-
-export type { UserProfile };
 
 export function useProfileManagement() {
   const { $api } = useNuxtApp();

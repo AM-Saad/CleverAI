@@ -57,16 +57,22 @@ const containerVariants = {
 }
 
 const cardVariants = {
-  collapsed: (i) => ({
-    y: i * 10,
-    scale: 1 - i * 0.02,
-    zIndex: 100 - i,
-  }),
-  expanded: (i) => ({
-    y: i * 60,
+  collapsed: (i: unknown) => {
+    const index = typeof i === 'number' ? i : 0
+    return {
+      y: index * 10,
+      scale: 1 - index * 0.02,
+      zIndex: 100 - index,
+    }
+  },
+  expanded: (i: unknown) => {
+    const index = typeof i === 'number' ? i : 0
+    return {
+    y: index * 60,
     scale: 1,
     zIndex: 100,
-  }),
+    }
+  },
 }
 </script>
 

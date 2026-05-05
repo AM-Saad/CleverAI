@@ -91,8 +91,7 @@ watch(
   <Teleport to="body">
     <!-- use the modal component, pass in the prop -->
     <shared-dialog-modal :show="props.show" @close="closeModel"
-      :title="props.workspace ? 'Edit Workspace' : 'Create Workspace'"
-      :icon="props.workspace ? 'uil:workspace-network' : 'uil:workspace-network'"
+      :title="props.workspace ? 'Edit Workspace' : 'Create Workspace'" :icon="'workspaces'"
       :description="props.workspace ? '' : 'Workspace is a container for organizing your content.'">
       <template #body>
         <shared-error-message :error="typedError || updateTypedError" />

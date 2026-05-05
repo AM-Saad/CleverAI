@@ -1,7 +1,12 @@
 // server/utils/llm/OpenRouterStrategy.ts
 import { OpenRouter } from "@openrouter/sdk";
-import { Errors } from "../error";
-import { LlmMeasured } from "../llmCost";
+import type {
+  FlashcardDTO,
+  QuizQuestionDTO,
+} from "../../../shared/utils/llm-generate.contract";
+import type { LLMGenerationOptions, LLMStrategy } from "./LLMStrategy";
+import type { LlmMeasured } from "../llmCost";
+import { flashcardPrompt, quizPrompt } from "./prompts";
 
 // Small helper to avoid hard crashes on imperfect LLM JSON
 function safeParseJSON<T>(text: string, fallback: T): T {

@@ -75,7 +75,7 @@ For detailed information, see the documentation files linked above.
 - `useWorkspaces()` – CRUD + attach model metadata.
 - `useFlashcards(workspaceId)` – List/create from content.
 - `useQuizzes(workspaceId)` – List/create from content.
-- `useLLMGenerate()` – One-shot generation action with status, error, retry.
+- `useGenerateFromMaterial()` / gateway-backed generation flows – One-shot generation actions with status, error, retry.
 
 Each composable maintains:
 - `state`: loading, data, error.
@@ -86,27 +86,31 @@ Each composable maintains:
 
 ## 7) API Endpoints (Nuxt Server Routes)
 
-### `POST /api/llm.generate`
+### `POST /api/llm.gateway`
 Input:
 ```ts
 {
-  workspaceId: string;
-  content: string;           // raw text (files preprocessed client-side)
-  target: "flashcards" | "quiz";
-  model: string;             // e.g., "gpt-3.5-turbo", "gpt-4o-mini", "gemini-1.5"
+  task: "flashcards" | "quiz";
+  text?: string;             // raw text
+  materialId?: string;       // or generate from uploaded material
+  workspaceId?: string;
+  save?: boolean;
+  replace?: boolean;
+  preferredModelId?: string;
+  requiredCapability?: "text" | "multimodal" | "reasoning";
 }
 ```
 
 Flow:
 1. **Rate limit** (user+IP; headers returned).
 2. **Validate** input with Zod.
-3. **Resolve strategy** by model → provider.
-4. **Build prompt** (versioned).
+3. **Select model** through gateway routing and capability checks.
+4. **Build prompt / load material** as needed.
 5. **Call provider** with safety/token limits.
 6. **Parse output** into domain DTOs (cards or quiz).
 7. **Persist** results under `workspaceId` (optional, or return only).
-8. **Log usage** with pricing snapshot (costs in micro-USD).
-9. Return typed response.
+8. **Apply quota + usage logging** through the shared generation/subscription flow.
+9. Return typed response with routing metadata.
 
 ### `GET /api/llm-usage?window=7d`
 - Returns aggregated usage and cost for dashboards.
@@ -357,4 +361,3 @@ Characteristics:
 - **Do not close the shared DB** arbitrarily; connections persist across helpers.
 - **Schema changes** require version bump + additive migration only (non-destructive).
 - **Backoff tuning**: Increase `MAX_ATTEMPTS` or `BASE_DELAY_MS` only if observing frequent transient failures.
-

@@ -1,52 +1,47 @@
 <template>
   <!-- Group: Headings -->
   <UDropdownMenu :modal="false" :items="headingsItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-    <shared-note-toolbar-button title="Formatting" icon="i-lucide-type" />
+    <shared-note-toolbar-button title="Formatting" icon="text-icon" />
   </UDropdownMenu>
 
   <!-- Group: Blocks -->
   <UDropdownMenu :modal="false" :items="blocksItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-    <shared-note-toolbar-button title="Blocks" icon="i-lucide-layout" />
+    <shared-note-toolbar-button title="Blocks" icon="blocks" />
   </UDropdownMenu>
 
   <!-- Group: Lists -->
   <UDropdownMenu :modal="false" :items="listsItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-    <shared-note-toolbar-button title="Lists" icon="i-lucide-list" />
+    <shared-note-toolbar-button title="Lists" icon="list" />
   </UDropdownMenu>
 
   <!-- Group: Tasks -->
   <UDropdownMenu :modal="false" :items="tasksItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-    <shared-note-toolbar-button title="Tasks" icon="i-lucide-list-check" />
+    <shared-note-toolbar-button title="Tasks" icon="list-check" />
   </UDropdownMenu>
 
   <!-- Group: Insert -->
   <UDropdownMenu :modal="false" :items="insertItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-    <shared-note-toolbar-button title="Insert" icon="i-lucide-plus-square" />
+    <shared-note-toolbar-button title="Insert" icon="plus-square" />
   </UDropdownMenu>
 
   <!-- Group: Table -->
   <UDropdownMenu :modal="false" :items="tableItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-    <shared-note-toolbar-button title="Table" icon="i-lucide-table" />
+    <shared-note-toolbar-button title="Table" icon="table" />
   </UDropdownMenu>
 
   <!-- Group: Colors -->
-  <SharedNoteColorPickerButton
-    title="Text Color"
-    icon="i-lucide-palette"
-    :icon-only="true"
-    :modelValue="currentColor"
-    @update:modelValue="val => props.editor.chain().focus().setColor(val).run()"
-  />
+  <SharedNoteColorPickerButton title="Text Color" icon="color-picker" :icon-only="true" :modelValue="currentColor"
+    @update:modelValue="val => props.editor.chain().focus().setColor(val).run()" />
 
   <div class="h-5 w-px bg-secondary mx-1 shrink-0"></div>
 
 
   <!-- Undo / Redo -->
   <shared-note-toolbar-button title="Undo" @click="props.editor.chain().focus().undo().run()"
-    :disabled="!props.editor.can().chain().focus().undo().run()" icon="i-lucide-undo" />
+    :disabled="!props.editor.can().chain().focus().undo().run()" icon="undo" />
 
   <shared-note-toolbar-button title="Redo" @click="props.editor.chain().focus().redo().run()"
-    :disabled="!props.editor.can().chain().focus().redo().run()" icon="i-lucide-redo" />
+    :disabled="!props.editor.can().chain().focus().redo().run()" icon="redo" />
 </template>
 
 <script setup lang="ts">

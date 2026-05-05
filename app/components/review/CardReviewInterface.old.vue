@@ -493,6 +493,8 @@
 </template>
 
 <script setup lang="ts">
+// @ts-nocheck
+// Legacy snapshot kept for reference only. Active review UI lives in app/features/review.
 import { reactive } from "vue";
 import type { ReviewGrade } from "~/shared/review.contract";
 

@@ -27,10 +27,6 @@
                     </UiLabel>
 
                     <UiLabel size="lg">
-                        Phone: {{ profile.phone || 'Not provided' }}
-                    </UiLabel>
-
-                    <UiLabel size="lg">
                         Gender: {{ profile.gender ? profile.gender.charAt(0).toUpperCase() + profile.gender.slice(1) :
                             'Not specified' }}
                     </UiLabel>
@@ -50,15 +46,13 @@
         <!-- Update Profile Modal -->
         <user-update-profile-modal v-if="profile" :show="showUpdateModal" :current-profile="{
             name: profile.name,
-            phone: profile.phone,
             gender: profile.gender || ''
         }" @close="showUpdateModal = false" @update="handleUpdateProfile" />
     </div>
 </template>
 
 <script setup lang="ts">
-import type { UpdateProfileDTO } from "@@/shared/utils/user.contract";
-import type { UserProfile } from "~/composables/user/useProfileManagement";
+import type { UpdateProfileDTO, UserProfile } from "@@/shared/utils/user.contract";
 
 const { status } = useAuth();
 const toast = useToast();

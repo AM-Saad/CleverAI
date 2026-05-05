@@ -351,12 +351,13 @@ const loadPreferences = async () => {
 const triggerCron = async () => {
   isTriggering.value = true;
   try {
-    const result = (await $fetch("/api/admin/cron/trigger/check-due-cards", {
+    const endpoint = "/api/admin/cron/trigger/check-due-cards" as string;
+    const result = await $fetch<CronResult>(endpoint, {
       method: "POST",
       headers: {
         "x-cron-secret": "test-secret-token-for-debugging",
       },
-    })) as CronResult;
+    });
     lastCronResult.value = result;
     console.log("✅ Cron triggered successfully:", result);
 

@@ -6,7 +6,7 @@
         buttonBaseClass,
         activeIndexLocal === index ? activeClass : inactiveClass,
       ]" @click="onSelect(index)">
-        <UIcon v-if="tab.icon" :name="String(tab.icon)" :size="UI_CONFIG.ICON_SIZE" />
+        <shared-icon v-if="tab.icon" :name="tab.icon" :size="UI_CONFIG.ICON_SIZE" />
         <span>{{ tab.name }}</span>
       </button>
     </nav>
@@ -14,12 +14,14 @@
 </template>
 
 <script setup lang="ts">
+import type { IconName } from '~/utils/icons.generated';
+
 import { toRef, computed, type PropType } from "vue";
 // Tailwind safelist for dynamically generated responsive classes
 const _TW_SAFELIST = 'flex-row border-b border-muted gap-5 text-sm flex-col gap-7 sm:flex-row sm:flex-col md:flex-row md:flex-col lg:flex-row lg:flex-col xl:flex-row xl:flex-col sm:gap-5 sm:gap-7 md:gap-5 md:gap-7 lg:gap-5 lg:gap-7 xl:gap-5 xl:gap-7';
 const props = defineProps({
   items: {
-    type: Array as () => Array<Record<string, unknown>>,
+    type: Array as PropType<{ name: string; icon?: IconName }[]>,
     required: true,
   },
   modelValue: {

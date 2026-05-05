@@ -1,3 +1,4 @@
+import type { BoardItem } from "@prisma/client";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { BoardItemSchema } from "~/shared/utils/boardItem.contract";
@@ -14,13 +15,13 @@ export default defineEventHandler(async (event) => {
 
   try {
 
-    const items = await prisma.boardItem.findMany({
+    const items: BoardItem[] = await prisma.boardItem.findMany({
       where: query,
       orderBy: { order: "asc" },
     });
 
     if (process.env.NODE_ENV === "development") {
-      items.forEach((item) => BoardItemSchema.parse(item));
+      items.forEach((item: BoardItem) => BoardItemSchema.parse(item));
     }
 
     return success(items, { count: items.length });

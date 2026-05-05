@@ -3,7 +3,7 @@
     <div>
       <MenuButton role="button"
         class="inline-flex w-full border border-transparent justify-center gap-x-1.5 rounded-[var(--radius-xl)] text-sm font-semibold text-content-on-surface shadow-sm hover:bg-surface-subtle dark:hover:bg-transparent dark:hover:border-white transition-all duration-300 ease-in-out focus-visible:ring-1 ring-black dark:ring-white cursor-pointer">
-        <img class="h-8 dark:invert-[1] dark:filter p-xs" :src="'/images/logo-geek.png'" alt="" />
+        <shared-icon name="user" class="w-8 h-8" />
       </MenuButton>
     </div>
 
@@ -18,7 +18,7 @@
             active ? 'bg-primary ' : '',
             'flex items-center gap-3 p-sm text-sm text-content-on-surface hover:text-on-primary',
           ]">
-            <UIcon :name="'i-heroicons-user'" class="w-4 h-4" />
+            <shared-icon :name="'user'" class="w-4 h-4" />
 
             My Account
           </router-link>
@@ -29,7 +29,7 @@
             active ? 'bg-primary text-dark' : '',
             'flex items-center gap-3 p-sm text-sm text-content-on-surface hover:text-on-primary',
           ]">
-            <UIcon :name="'i-heroicons-squares-2x2'" class="w-4 h-4" />
+            <shared-icon :name="'workspaces'" class="w-4 h-4" />
             Workspaces
           </router-link>
           </MenuItem>
@@ -38,7 +38,7 @@
             active ? 'bg-primary' : '',
             'flex items-center gap-3 p-sm text-sm text-content-on-surface hover:text-on-primary',
           ]">
-            <UIcon :name="'i-heroicons-cog-6-tooth'" class="w-4 h-4" />
+            <shared-icon :name="'settings'" class="w-4 h-4" />
             Settings
           </router-link>
           </MenuItem>

@@ -1,6 +1,9 @@
 // app/services/UserService.ts
 import FetchFactory from "./FetchFactory";
 import type { Result } from "@/types/Result";
+import {
+  UserProgressSchema,
+} from "@@/shared/utils/user.contract";
 import type {
   UserProfile,
   UpdateProfileDTO,
@@ -10,9 +13,7 @@ import type {
   ReactivateAccountResponse,
   ChangePasswordDTO,
   ChangePasswordResponse,
-  ChangePasswordResponse,
   UserProgress,
-  UserProgressSchema,
 } from "@@/shared/utils/user.contract";
 
 export class UserService extends FetchFactory {
@@ -29,7 +30,7 @@ export class UserService extends FetchFactory {
    * Fetch user progress (level, XP)
    */
   async getProgress(): Promise<Result<UserProgress>> {
-    return this.call<UserProgress>(
+    return this.call(
       "GET",
       `${this.RESOURCE}/progress`,
       undefined,

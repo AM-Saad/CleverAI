@@ -1,3 +1,4 @@
+import type { LlmUsage } from "@prisma/client";
 import { requireRole } from "~~/server/utils/auth";
 
 export default defineEventHandler(async (event) => {
@@ -52,7 +53,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Get LLM usage stats for the user
-    const usageStats = await prisma.llmUsage.findMany({
+    const usageStats: LlmUsage[] = await prisma.llmUsage.findMany({
       where: {
         userId: user.id,
         createdAt: {
@@ -114,7 +115,7 @@ export default defineEventHandler(async (event) => {
       byModel[model].usdMicros += usage.totalUsdMicros || BigInt(0);
 
       // Group by day
-      const dateStr = usage.createdAt.toISOString().split("T")[0];
+      const dateStr = usage.createdAt.toISOString().split("T")[0] ?? usage.createdAt.toISOString();
       if (!byDay[dateStr]) {
         byDay[dateStr] = {
           date: dateStr,
@@ -152,9 +153,12 @@ export default defineEventHandler(async (event) => {
     const dateSet = new Set(Object.keys(byDay));
 
     for (let d = new Date(fromDate); d <= toDate; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().split("T")[0];
+      const dateStr = d.toISOString().slice(0, 10);
       if (dateSet.has(dateStr)) {
-        dailyUsage.push(byDay[dateStr]);
+        const dayUsage = byDay[dateStr];
+        if (dayUsage) {
+          dailyUsage.push(dayUsage);
+        }
       } else {
         dailyUsage.push({
           date: dateStr,
@@ -166,7 +170,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // Recent usage history (last 10 entries)
-    const recentUsage = usageStats.slice(0, 10).map((usage) => ({
+    const recentUsage = usageStats.slice(0, 10).map((usage: LlmUsage) => ({
       id: usage.id,
       date: usage.createdAt.toISOString(),
       feature: usage.feature || "unknown",

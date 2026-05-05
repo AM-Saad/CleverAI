@@ -1,3 +1,4 @@
+import type { CardReview } from "@prisma/client";
 import { z } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
@@ -56,7 +57,7 @@ export default defineEventHandler(async (event) => {
 
   const { workspaceId } = query;
 
-  let cardReviews;
+  let cardReviews: CardReview[];
   try {
     cardReviews = await prisma.cardReview.findMany({
       where: { userId: user.id, ...(workspaceId ? { workspaceId } : {}) },
@@ -66,11 +67,11 @@ export default defineEventHandler(async (event) => {
   }
 
   const totalCards = cardReviews.length;
-  const totalReviews = cardReviews.filter((cr) => cr.repetitions > 0).length;
+  const totalReviews = cardReviews.filter((cardReview) => cardReview.repetitions > 0).length;
   const validGrades = cardReviews.filter(
-    (cr) => cr.lastGrade !== null && cr.lastGrade !== undefined
+    (cardReview) => cardReview.lastGrade !== null && cardReview.lastGrade !== undefined
   );
-  const grades = validGrades.map((cr) => cr.lastGrade!);
+  const grades = validGrades.map((cardReview) => cardReview.lastGrade!);
   const averageGrade =
     grades.length > 0
       ? grades.reduce((sum: number, grade: number) => sum + grade, 0) /
@@ -87,29 +88,29 @@ export default defineEventHandler(async (event) => {
     "4": grades.filter((g: number) => g === 4).length,
     "5": grades.filter((g: number) => g === 5).length,
   };
-  const allStreaks = cardReviews.map((cr) => cr.streak);
+  const allStreaks = cardReviews.map((cardReview) => cardReview.streak);
   const currentStreak = Math.max(...allStreaks, 0);
   const longestStreak = currentStreak;
-  const totalReviewDays = cardReviews.filter((cr) => cr.lastReviewedAt).length;
+  const totalReviewDays = cardReviews.filter((cardReview) => cardReview.lastReviewedAt).length;
   const averageEaseFactor =
     cardReviews.length > 0
-      ? cardReviews.reduce((sum, cr) => sum + cr.easeFactor, 0) /
+      ? cardReviews.reduce((sum, cardReview) => sum + cardReview.easeFactor, 0) /
       cardReviews.length
       : 2.5;
   const averageInterval =
     cardReviews.length > 0
-      ? cardReviews.reduce((sum, cr) => sum + cr.intervalDays, 0) /
+      ? cardReviews.reduce((sum, cardReview) => sum + cardReview.intervalDays, 0) /
       cardReviews.length
       : 1;
-  const newCards = cardReviews.filter((cr) => cr.repetitions === 0).length;
+  const newCards = cardReviews.filter((cardReview) => cardReview.repetitions === 0).length;
   const learningCards = cardReviews.filter(
-    (cr) => cr.repetitions > 0 && cr.repetitions < 3
+    (cardReview) => cardReview.repetitions > 0 && cardReview.repetitions < 3
   ).length;
   const dueCards = cardReviews.filter(
-    (cr) => cr.nextReviewAt <= new Date()
+    (cardReview) => cardReview.nextReviewAt <= new Date()
   ).length;
   const masteredCards = cardReviews.filter(
-    (cr) => cr.repetitions >= 3 && cr.easeFactor > 2.5
+    (cardReview) => cardReview.repetitions >= 3 && cardReview.easeFactor > 2.5
   ).length;
 
   const analytics = ReviewAnalyticsSchema.parse({
