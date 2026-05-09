@@ -1,47 +1,36 @@
 import type { APIError } from "@/services/FetchFactory";
 import type Result from "@/types/Result";
 import type { Note, NoteType } from "@@/shared/utils/note.contract";
+import { normalizeWorkspaceNoteTitle } from "@@/shared/utils/workspaceNote";
 import { DB_CONFIG, SW_MESSAGE_TYPES } from "~/utils/constants/pwa";
 import {
-  saveNoteToIndexedDB,
-  saveNotesToIndexedDB,
-  loadNotesFromIndexedDB,
-  deleteNoteFromIndexedDB,
-  queueNoteChange,
-  loadPendingNoteChanges,
-  loadBoardNotesFromIndexedDB,
-} from "~/utils/idb";
-import {
-  createOfflineToastState,
-  registerNotesSync,
   setupOnlineListener,
   setupSyncCompletionListener,
 } from "~/utils/sync/offlineSync";
 import { useNetworkStatus } from "~/composables/shared/useNetworkStatus";
+import { createIndexedDbNotesLocalRepository } from "./notesLocalRepository";
+import { createIndexedDbNotesPendingQueue } from "./notesPendingQueue";
+import { createNotesSyncCoordinator } from "./notesSyncCoordinator";
+import {
+  normalizeCreateContent,
+  normalizeLocalNote,
+  noteStateFromServer,
+  type NoteState,
+} from "./noteTransforms";
 
-export interface NoteState extends Note {
-  // Local state tracking
-  isLoading?: boolean;
-  isDirty?: boolean;
-  lastSaved?: Date;
-  error?: string | null;
-  isInFilteredList?: boolean;
-}
-
-const NOTE_TYPES = new Set<NoteType>(["TEXT", "MATH", "CANVAS"]);
-const toNoteType = (value: string | undefined): NoteType =>
-  NOTE_TYPES.has(value as NoteType) ? (value as NoteType) : "TEXT";
+export type { NoteState } from "./noteTransforms";
 
 interface NotesStore {
   notes: Ref<Map<string, NoteState>>;
   loadingStates: Ref<Map<string, boolean>>;
   lastSync: Ref<Date | null>;
   filteredNoteIds: Ref<Set<string> | null>;
-  createNote: (content: string, tags?: string[], noteType?: NoteType, metadata?: Record<string, unknown>) => Promise<string | null>;
+  createNote: (content: string, tags?: string[], noteType?: NoteType, metadata?: Record<string, unknown>, title?: string) => Promise<string | null>;
   updateNote: (id: string, updatedNote: NoteState) => Promise<boolean>;
   deleteNote: (id: string) => Promise<boolean>;
   reorderNotes: (reorderedNotes: NoteState[]) => Promise<boolean>;
   syncWithServer: () => Promise<void>;
+  syncPendingChanges: () => Promise<boolean>;
   retryFailedNote: (id: string) => Promise<boolean>;
   clearNoteError: (id: string) => void;
   isNoteLoading: (id: string) => boolean;
@@ -69,8 +58,9 @@ export function useNotesStore(workspaceId: string): NotesStore {
 
   const { $api } = useNuxtApp();
   const toast = useToast();
-  const { handleOfflineSubmit } = useOffline();
   const networkMonitor = useNetworkStatus();
+  const localRepository = createIndexedDbNotesLocalRepository();
+  const pendingQueue = createIndexedDbNotesPendingQueue();
 
   // Register once-per-app online listener and sync completion listener.
   if (process.client && !notesOnlineListenerRegistered) {
@@ -83,11 +73,9 @@ export function useNotesStore(workspaceId: string): NotesStore {
       // Step 1 of reconnect: flush all debounced saves so the latest edit
       // is written to PENDING_NOTES before the SW reads them.
       onBeforeSync: async () => {
-        for (const s of stores.values()) {
-          (s as any)._flushDebounce?.();
-        }
-        // Brief yield to let IDB transactions complete
-        await new Promise((r) => setTimeout(r, 50));
+        await Promise.all(
+          Array.from(stores.values()).map((s) => (s as any)._flushDebounce?.()),
+        );
       },
     });
 
@@ -116,20 +104,18 @@ export function useNotesStore(workspaceId: string): NotesStore {
 
   // (Removed offline toast deduplication state)
 
-  const { debouncedFunc: debouncedSave, cancel: cancelSave, flush: flushSave } = useDebounce(
-    (id: string, content: string) => {
-      updateNoteToServer(id, content);
+  const { debouncedFunc: debouncedSave, flush: flushSave } = useDebounce(
+    (id: string, content: string, title?: string) => {
+      updateNoteToServer(id, content, title);
     },
     1000
   );
 
   // Expose flush so the online listener can call it before sync
-  const _flushDebounce = () => {
+  const _flushDebounce = async () => {
     // flush() calls the underlying fn immediately and cancels the timer
     const dirtyNotes = Array.from(notes.value.values()).filter(n => n.isDirty);
-    for (const n of dirtyNotes) {
-      flushSave(n.id, n.content);
-    }
+    await Promise.allSettled(dirtyNotes.map((n) => Promise.resolve(flushSave(n.id, n.content, n.title))));
   };
 
   // Local reactive state
@@ -137,39 +123,54 @@ export function useNotesStore(workspaceId: string): NotesStore {
   const loadingStates = ref<Map<string, boolean>>(new Map());
   const lastSync = ref<Date | null>(null);
   const filteredNoteIds = ref<Set<string> | null>(null);
+  const syncCoordinator = createNotesSyncCoordinator({
+    workspaceId,
+    notes,
+    localRepository,
+    pendingQueue,
+  });
 
   // Debounced server sync to reduce API calls during typing
-  const saveToServer = async (id: string, content: string) => {
-    debouncedSave(id, content);
+  const saveToServer = async (id: string, content: string, title?: string) => {
+    debouncedSave(id, content, title);
   };
 
-  // Simple offline sync - only when actually offline
-  const queueForOfflineSync = (
-    type: FormSyncType,
-    payload: any,
-    formId: string
-  ) => {
+  const syncPendingChanges = async (): Promise<boolean> => {
+    await _flushDebounce();
+
     if (!networkMonitor.isVerifiedOnline.value) {
-      handleOfflineSubmit({
-        payload,
-        storeName: DB_CONFIG.STORES.FORMS,
-        type,
-        formId,
-      });
+      return false;
     }
+
+    const pendingChanges = await pendingQueue.load(workspaceId);
+    if (!pendingChanges.length) {
+      return true;
+    }
+
+    const result = await $api.notes.sync({ changes: pendingChanges });
+    if (!result.success) {
+      return false;
+    }
+
+    await syncCoordinator.applySyncResult(result.data);
+    await pendingQueue.remove(result.data.applied ?? []);
+    lastSync.value = new Date();
+    return true;
   };
 
   // Sync note changes to server (local-first approach)
   const updateNoteToServer = async (
     id: string,
-    content: string
+    content: string,
+    title?: string,
   ): Promise<boolean> => {
     const note = notes.value.get(id);
     if (!note) return false;
+    const resolvedTitle = normalizeWorkspaceNoteTitle(title ?? note.title, content);
 
     // Helper: queue a pending change for offline sync and show a single toast.
     const queueOfflineUpdate = async () => {
-      await queueNoteChange({
+      await pendingQueue.add({
         id,
         operation: "upsert",
         updatedAt: Date.now(),
@@ -177,12 +178,13 @@ export function useNotesStore(workspaceId: string): NotesStore {
           ? (note as any).localVersion + 1
           : 1,
         workspaceId: note.workspaceId,
+        title: resolvedTitle,
         content,
         tags: note.tags,
         noteType: (note as any).noteType,
         metadata: (note as any).metadata,
       });
-      await registerNotesSync();
+      await pendingQueue.registerBackgroundSync();
       note.isLoading = false;
       note.isDirty = true;
     };
@@ -201,6 +203,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
       if (id.startsWith("temp-")) {
         const createResult: Result<Note, APIError> = await $api.notes.create({
           workspaceId: note.workspaceId,
+          title: resolvedTitle,
           content,
           tags: note.tags || [],
           noteType: (note as any).noteType || "TEXT",
@@ -209,17 +212,17 @@ export function useNotesStore(workspaceId: string): NotesStore {
 
         if (createResult.success) {
           notes.value.delete(id);
-          await deleteNoteFromIndexedDB(id);
+          await localRepository.delete(id);
 
           const serverNote: NoteState = {
-            ...createResult.data,
+            ...normalizeLocalNote(createResult.data),
             isLoading: false,
             isDirty: false,
             lastSaved: new Date(),
             error: null,
           };
           notes.value.set(createResult.data.id, serverNote);
-          await saveNoteToIndexedDB(serverNote);
+          await localRepository.save(serverNote);
           return true;
         }
 
@@ -236,6 +239,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
 
       // Attempt to submit to server (normal update for real IDs)
       const result: Result<Note, APIError> = await $api.notes.update(id, {
+        title: resolvedTitle,
         content,
         tags: note.tags,
         ...((note as any).noteType && { noteType: (note as any).noteType }),
@@ -277,15 +281,18 @@ export function useNotesStore(workspaceId: string): NotesStore {
     updatedNote: NoteState
   ): Promise<boolean> => {
     // Step 1: Optimistic update
-    updatedNote.updatedAt = new Date();
-    updatedNote.isDirty = true;
-    notes.value.set(id, updatedNote);
+    const nextNote = normalizeLocalNote({
+      ...updatedNote,
+      updatedAt: new Date(),
+      isDirty: true,
+    });
+    notes.value.set(id, nextNote);
     // Persist locally immediately for offline continuity
     try {
-      await saveNoteToIndexedDB(updatedNote);
+      await localRepository.save(nextNote);
     } catch { }
     // Step 2: Debounced server sync
-    saveToServer(id, updatedNote.content);
+    saveToServer(id, nextNote.content, nextNote.title);
     return true;
   };
 
@@ -294,15 +301,19 @@ export function useNotesStore(workspaceId: string): NotesStore {
     content: string,
     tags: string[] = [],
     noteType: NoteType = "TEXT",
-    metadata?: Record<string, unknown>
+    metadata?: Record<string, unknown>,
+    title?: string,
   ): Promise<string | null> => {
     const tempId = `temp-${Date.now()}`;
+    const resolvedContent = normalizeCreateContent(content, noteType);
+    const resolvedTitle = normalizeWorkspaceNoteTitle(title, resolvedContent);
 
     // Add optimistic note
-    const optimisticNote: NoteState = {
+    const optimisticNote: NoteState = normalizeLocalNote({
       id: tempId,
       workspaceId,
-      content,
+      title: resolvedTitle,
+      content: resolvedContent,
       tags,
       order: notes.value.size, // Add to end of list
       noteType,
@@ -312,26 +323,27 @@ export function useNotesStore(workspaceId: string): NotesStore {
       isLoading: true,
       isDirty: false,
       error: null,
-    };
+    });
 
     // Save to IndexedDB first for persistence
-    await saveNoteToIndexedDB(optimisticNote);
+    await localRepository.save(optimisticNote);
     notes.value.set(tempId, optimisticNote);
 
     // Check if offline BEFORE attempting API call
     if (!networkMonitor.isVerifiedOnline.value) {
-      await queueNoteChange({
+      await pendingQueue.add({
         id: tempId,
         operation: "upsert",
         updatedAt: Date.now(),
         localVersion: 1,
         workspaceId,
-        content,
+        title: resolvedTitle,
+        content: resolvedContent,
         tags,
         noteType,
         metadata,
       });
-      await registerNotesSync();
+      await pendingQueue.registerBackgroundSync();
 
       // Update optimistic note state
       optimisticNote.isLoading = false;
@@ -346,7 +358,8 @@ export function useNotesStore(workspaceId: string): NotesStore {
       // Attempt to submit to server
       const result = await $api.notes.create({
         workspaceId,
-        content,
+        title: resolvedTitle,
+        content: resolvedContent,
         tags,
         noteType,
         metadata,
@@ -355,34 +368,35 @@ export function useNotesStore(workspaceId: string): NotesStore {
       if (result.success) {
         // Server success - replace temp note with real note
         notes.value.delete(tempId);
-        await deleteNoteFromIndexedDB(tempId);
+        await localRepository.delete(tempId);
 
         const serverNote: NoteState = {
-          ...result.data,
+          ...normalizeLocalNote(result.data),
           isLoading: false,
           isDirty: false,
           lastSaved: new Date(),
           error: null,
         };
         notes.value.set(result.data.id, serverNote);
-        await saveNoteToIndexedDB(serverNote);
+        await localRepository.save(serverNote);
         return result.data.id;
       }
 
       // FetchFactory network error — queue for offline sync silently.
       if (result.error?.code === "FETCH_ERROR" || result.error?.code === "TIMEOUT" || !networkMonitor.isVerifiedOnline.value) {
-        await queueNoteChange({
+        await pendingQueue.add({
           id: tempId,
           operation: "upsert",
           updatedAt: Date.now(),
           localVersion: 1,
           workspaceId,
-          content,
+          title: resolvedTitle,
+          content: resolvedContent,
           tags,
           noteType,
           metadata,
         });
-        await registerNotesSync();
+        await pendingQueue.registerBackgroundSync();
         optimisticNote.isLoading = false;
         optimisticNote.isDirty = true;
         notes.value.set(tempId, optimisticNote);
@@ -405,25 +419,26 @@ export function useNotesStore(workspaceId: string): NotesStore {
     } catch {
       // Unexpected error — if offline, queue; else remove optimistic note.
       if (!networkMonitor.isVerifiedOnline.value) {
-        await queueNoteChange({
+        await pendingQueue.add({
           id: tempId,
           operation: "upsert",
           updatedAt: Date.now(),
           localVersion: 1,
           workspaceId,
-          content,
+          title: resolvedTitle,
+          content: resolvedContent,
           tags,
           noteType,
           metadata,
         });
-        await registerNotesSync();
+        await pendingQueue.registerBackgroundSync();
         optimisticNote.isLoading = false;
         optimisticNote.isDirty = true;
         notes.value.set(tempId, optimisticNote);
         return tempId;
       }
       notes.value.delete(tempId);
-      await deleteNoteFromIndexedDB(tempId);
+      await localRepository.delete(tempId);
       toast.add({
         title: "Error",
         description: "Failed to create note - check your connection",
@@ -439,12 +454,12 @@ export function useNotesStore(workspaceId: string): NotesStore {
 
     // Optimistic removal from reactive state
     notes.value.delete(id);
-    await deleteNoteFromIndexedDB(id);
+    await localRepository.delete(id);
 
     // If already offline, queue delete immediately — don't attempt fetch.
     if (!networkMonitor.isVerifiedOnline.value) {
-      await queueNoteChange({ id, operation: "delete", updatedAt: Date.now(), localVersion: 1 });
-      await registerNotesSync();
+      await pendingQueue.add({ id, operation: "delete", updatedAt: Date.now(), localVersion: 1 });
+      await pendingQueue.registerBackgroundSync();
       return true;
     }
 
@@ -455,26 +470,26 @@ export function useNotesStore(workspaceId: string): NotesStore {
 
       // Network error from FetchFactory — queue for background sync.
       if (result.error?.code === "FETCH_ERROR" || result.error?.code === "TIMEOUT" || !networkMonitor.isVerifiedOnline.value) {
-        await queueNoteChange({ id, operation: "delete", updatedAt: Date.now(), localVersion: 1 });
-        await registerNotesSync();
+        await pendingQueue.add({ id, operation: "delete", updatedAt: Date.now(), localVersion: 1 });
+        await pendingQueue.registerBackgroundSync();
         return true;
       }
 
       // Genuine server rejection — restore the note.
       const restoredNote = { ...note, isLoading: false, error: "Server rejected deletion" };
       notes.value.set(id, restoredNote);
-      await saveNoteToIndexedDB(restoredNote);
+      await localRepository.save(restoredNote);
       toast.add({ title: "Server Error", description: "Server rejected deletion. Note restored.", color: "error" });
       return false;
     } catch {
       if (!networkMonitor.isVerifiedOnline.value) {
-        await queueNoteChange({ id, operation: "delete", updatedAt: Date.now(), localVersion: 1 });
-        await registerNotesSync();
+        await pendingQueue.add({ id, operation: "delete", updatedAt: Date.now(), localVersion: 1 });
+        await pendingQueue.registerBackgroundSync();
         return true;
       }
       // Restore note on unknown error
       notes.value.set(id, { ...note, isLoading: false });
-      await saveNoteToIndexedDB(note);
+      await localRepository.save(note);
       toast.add({ title: "Error", description: "Failed to delete note - check your connection", color: "error" });
       return false;
     }
@@ -507,7 +522,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
       };
 
       // Save to IndexedDB for persistence
-      await saveNotesToIndexedDB(Array.from(notes.value.values()));
+      await localRepository.saveMany(Array.from(notes.value.values()));
 
       const result = await $api.notes.reorder(payload);
 
@@ -529,7 +544,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
         notes.value = originalNotes;
 
         // Restore original order in IndexedDB
-        await saveNotesToIndexedDB(Array.from(originalNotes.values()));
+        await localRepository.saveMany(Array.from(originalNotes.values()));
 
         toast.add({
           title: "Server Error",
@@ -564,7 +579,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
 
     // IDB-first: always hydrate from local storage before the network attempt
     // so that an offline reload immediately shows the user's last-known data.
-    try { await hydrateFromIDB(); } catch { /* ignore — navbar pill shows offline */ }
+    try { await syncCoordinator.hydrateFromLocalState(); } catch { /* ignore — navbar pill shows offline */ }
 
     // BUG-1 fix: if we're not verified online, stop here.
     // The SW's cached API response is stale server data that would overwrite
@@ -576,12 +591,17 @@ export function useNotesStore(workspaceId: string): NotesStore {
     }
 
     try {
+      await syncPendingChanges();
+      const pendingAfterSync = new Set(
+        (await pendingQueue.load(workspaceId)).map((change) => change.id),
+      );
+
       const result = await $api.notes.getByWorkspace(workspaceId);
 
       if (result.success) {
-        // Preserve any temp (offline-created) notes so they aren't lost.
-        const tempNotes = Array.from(notes.value.values()).filter(n =>
-          n.id.startsWith("temp-")
+        // Preserve only unresolved temp notes that still have pending sync work.
+        const tempNotes = Array.from(notes.value.values()).filter((n) =>
+          n.id.startsWith("temp-") && pendingAfterSync.has(n.id)
         );
 
         // BUG-5 fix: preserve any dirty (in-progress edit) notes.
@@ -594,13 +614,9 @@ export function useNotesStore(workspaceId: string): NotesStore {
           }
         }
 
-        const noteStates: NoteState[] = result.data.map((note: Note) => ({
-          ...note,
-          isLoading: false,
-          isDirty: false,
-          lastSaved: new Date(),
-          error: null,
-        }));
+        const noteStates: NoteState[] = result.data.map((note: Note) =>
+          noteStateFromServer(note)
+        );
 
         notes.value.clear();
         noteStates.forEach((ns) => {
@@ -620,12 +636,12 @@ export function useNotesStore(workspaceId: string): NotesStore {
 
         // Awaited so a reload immediately after sync reads up-to-date IDB data.
         // Only persist non-dirty notes to IDB; dirty ones are already there.
-        await saveNotesToIndexedDB(noteStates.filter(ns => !dirtyNotes.has(ns.id)));
+        await localRepository.saveMany(noteStates.filter(ns => !dirtyNotes.has(ns.id)));
 
         // Cleanup temp notes from IDB (they now have real server IDs)
         for (const tempNote of tempNotes) {
           try {
-            await deleteNoteFromIndexedDB(tempNote.id);
+            await localRepository.delete(tempNote.id);
           } catch {
             /* best effort cleanup */
           }
@@ -633,84 +649,9 @@ export function useNotesStore(workspaceId: string): NotesStore {
 
         lastSync.value = new Date();
       }
-      // Server failed: IDB data from hydrateFromIDB remains visible.
+      // Server failed: IDB data from hydrateFromLocalState remains visible.
     } catch {
-      // Network error: IDB data from hydrateFromIDB remains visible.
-    } finally {
-      loadingStates.value.set(workspaceId, false);
-    }
-  };
-
-  // Pure IDB hydration — no loading-state side effects.
-  // Loads NOTES store and overlays any PENDING_NOTES so offline edits survive
-  // a page reload even when the NOTES store write hasn't completed yet.
-  const hydrateFromIDB = async (): Promise<void> => {
-    const [localNotes, pendingChanges] = await Promise.all([
-      loadNotesFromIndexedDB(workspaceId),
-      loadPendingNoteChanges(workspaceId),
-    ]);
-
-    if (localNotes.length === 0 && pendingChanges.length === 0) return;
-
-    const noteMap = new Map<string, NoteState>();
-    localNotes.forEach((note: NoteState) => noteMap.set(note.id, note));
-
-    // Overlay pending changes: the PENDING_NOTES store is the authoritative
-    // source for edits made while offline, even if the NOTES store write
-    // hadn't flushed before the reload.
-    for (const change of pendingChanges) {
-      if (change.operation === "delete") {
-        noteMap.delete(change.id);
-      } else if (change.operation === "upsert") {
-        const existing = noteMap.get(change.id);
-        if (existing) {
-          // BUG-2 fix: timestamp-based stale pending guard.
-          // If the NOTES store entry is newer than the pending change,
-          // the pending change is stale from a previous sync cycle — skip it.
-          const existingTime = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0;
-          const pendingTime = change.updatedAt || 0;
-          if (existingTime > pendingTime) {
-            // NOTES entry is more recent — the pending change is stale, skip it
-            continue;
-          }
-
-          noteMap.set(change.id, {
-            ...existing,
-            content: change.content ?? existing.content,
-            tags: change.tags ?? existing.tags,
-            metadata: change.metadata ?? existing.metadata,
-            isDirty: true,
-          });
-        } else if (change.workspaceId === workspaceId) {
-          // New note created offline that isn't in the NOTES store yet.
-          noteMap.set(change.id, {
-            id: change.id,
-            workspaceId: change.workspaceId!,
-            content: change.content || "",
-            tags: change.tags || [],
-            order: noteMap.size,
-            noteType: toNoteType(change.noteType),
-            metadata: change.metadata,
-            createdAt: new Date(change.updatedAt),
-            updatedAt: new Date(change.updatedAt),
-            isDirty: true,
-            isLoading: false,
-            error: null,
-          });
-        }
-      }
-    }
-
-    notes.value.clear();
-    noteMap.forEach((note, id) => notes.value.set(id, note));
-  };
-
-  // Thin wrapper used by error paths or direct callers.
-  const loadFromIndexedDBFallback = async (): Promise<void> => {
-    try {
-      await hydrateFromIDB();
-    } catch {
-      // Silently fail — the navbar offline pill already tells the user.
+      // Network error: IDB data from hydrateFromLocalState remains visible.
     } finally {
       loadingStates.value.set(workspaceId, false);
     }
@@ -739,7 +680,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
     notes.value.set(id, note);
 
     // Retry the save operation
-    return await updateNoteToServer(id, note.content);
+    return await updateNoteToServer(id, note.content, note.title);
   };
 
   // Clear error state for a note
@@ -756,7 +697,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
   const setNotes = (newNotes: NoteState[]) => {
     notes.value.clear();
     newNotes.forEach((note) => {
-      notes.value.set(note.id, note);
+      notes.value.set(note.id, normalizeLocalNote(note));
     });
   };
 
@@ -773,7 +714,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
   };
 
   // Create store instance
-  const store: NotesStore & { _flushDebounce?: () => void } = {
+  const store: NotesStore & { _flushDebounce?: () => Promise<void> } = {
     notes,
     loadingStates,
     lastSync,
@@ -785,6 +726,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
     reorderNotes,
     getNote,
     syncWithServer,
+    syncPendingChanges,
     retryFailedNote,
     clearNoteError,
     isNoteLoading,

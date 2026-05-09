@@ -280,6 +280,12 @@ defineExpose({ toggleLeft, toggleRight, collapsedSide, isResizing });
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  padding: 0.75rem;
+  /* space for handle */
+  /* background-color: var(--color-surface-subtle);
+  border-radius: 0.75rem;
+  margin: 0.5rem;
+  border: 2px solid var(--color-surface-strong); */
 }
 
 .spl-layout--horizontal {

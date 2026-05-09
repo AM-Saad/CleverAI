@@ -61,10 +61,44 @@ export type ReorderBoardItemsDTO = z.infer<typeof ReorderBoardItemsDTO>;
 
 // ─── Offline Sync ────────────────────────────────────────────────────────────
 
-export const BoardItemSyncItemSchema = BoardItemSchema.extend({
+const SyncTimestampSchema = z
+  .number()
+  .int()
+  .nonnegative()
+  .or(z.string().datetime())
+  .or(z.date())
+  .or(z.string());
+
+const BoardItemSyncBaseSchema = z.object({
+  id: z.string(),
   operation: z.enum(["upsert", "delete"]).default("upsert"),
   localVersion: z.number().int().nonnegative().optional(),
+  userId: z.string().optional(),
+  workspaceId: z.string().nullable().optional(),
+  columnId: z.string().nullable().optional(),
+  order: z.number().int().optional(),
+  content: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  dueDate: z.string().datetime().or(z.date()).nullable().optional(),
+  attachments: z.array(AttachmentSchema).optional(),
+  createdAt: SyncTimestampSchema.optional(),
+  updatedAt: SyncTimestampSchema,
+  conflicted: z.boolean().optional(),
 });
+
+export const BoardItemSyncItemSchema = z.discriminatedUnion("operation", [
+  BoardItemSyncBaseSchema.extend({
+    operation: z.literal("delete"),
+  }),
+  BoardItemSyncBaseSchema.extend({
+    operation: z.literal("upsert"),
+    content: z.string().default(""),
+    tags: z.array(z.string()).default([]),
+    order: z.number().int().default(0),
+    attachments: z.array(AttachmentSchema).default([]),
+    createdAt: SyncTimestampSchema,
+  }),
+]);
 export type BoardItemSyncItem = z.infer<typeof BoardItemSyncItemSchema>;
 
 export const BoardItemsSyncRequestSchema = z.array(BoardItemSyncItemSchema);

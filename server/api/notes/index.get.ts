@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { NoteSchema } from "~/shared/utils/note.contract";
+import { normalizeWorkspaceNoteTitle } from "@@/shared/utils/workspaceNote";
 
 const QuerySchema = z.object({
   workspaceId: z
@@ -37,9 +38,17 @@ export default defineEventHandler(async (event) => {
     orderBy: { order: "asc" },
   });
 
+  const normalizedNotes = notes.map((note) => ({
+    ...note,
+    title: normalizeWorkspaceNoteTitle(note.title, note.content),
+  }));
+
   if (process.env.NODE_ENV === "development") {
-    notes.forEach((note: Note) => NoteSchema.parse(note));
+    normalizedNotes.forEach((note) => NoteSchema.parse(note));
   }
 
-  return success(notes, { count: notes.length, workspaceId: query.workspaceId });
+  return success(normalizedNotes, {
+    count: normalizedNotes.length,
+    workspaceId: query.workspaceId,
+  });
 });

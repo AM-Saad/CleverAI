@@ -2,6 +2,10 @@
 import { z } from "zod";
 
 const trim = (v: unknown) => (typeof v === "string" ? v.trim() : v);
+const OptionalNoteTitleSchema = z.preprocess(
+  (val) => (val === null || val === undefined ? undefined : trim(val)),
+  z.string().optional()
+);
 
 // ── Note type discriminator ──
 // "TEXT" = default rich-text note, "MATH" = handwritten math note, "CANVAS" = free-form drawing canvas
@@ -83,6 +87,7 @@ export type CanvasNoteMetadata = z.infer<typeof CanvasNoteMetadataSchema>;
 export const NoteSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
+  title: OptionalNoteTitleSchema,
   content: z.string(),
   tags: z.array(z.string()).default([]),
   order: z.number().int().default(0),
@@ -103,6 +108,7 @@ export type Note = z.infer<typeof NoteSchema>;
 
 export const CreateNoteDTO = z.object({
   workspaceId: z.string(),
+  title: OptionalNoteTitleSchema,
   content: z.preprocess(trim, z.string().min(0)),
   tags: z.array(z.string()).default([]),
   // Allow null/empty to be normalized
@@ -119,6 +125,7 @@ export const CreateNoteDTO = z.object({
 export type CreateNoteDTO = z.infer<typeof CreateNoteDTO>;
 
 export const UpdateNoteDTO = z.object({
+  title: OptionalNoteTitleSchema,
   content: z.preprocess(trim, z.string().min(0)).optional(),
   tags: z.array(z.string()).optional(),
   // Allow string to be sent (some clients may send the string value directly)

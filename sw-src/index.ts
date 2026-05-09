@@ -1217,6 +1217,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
               await putRecord(db, DB_CONFIG.STORES.NOTES as any, {
                 id: serverId,
                 workspaceId: original.workspaceId,
+                title: original.title,
                 content: original.content || "",
                 tags: original.tags || [],
                 order: 0,

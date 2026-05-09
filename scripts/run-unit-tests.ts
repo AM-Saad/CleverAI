@@ -9,7 +9,22 @@ import { rewardAdCredit } from "../server/modules/subscription/application/rewar
 import { grantStripePurchaseCredits } from "../server/modules/subscription/application/grantStripePurchaseCredits";
 import { saveGeneratedArtifacts } from "../server/modules/ai-generation/application/saveGeneratedArtifacts";
 import { prepareGatewayGeneration } from "../server/modules/ai-generation/application/prepareGatewayGeneration";
+import { completeGatewayCacheHit } from "../server/modules/ai-generation/application/completeGatewayGeneration";
+import { quotaHeaders } from "../server/modules/subscription/infrastructure/http/quotaHttp";
 import { mergePendingBoardItems } from "../app/features/board/composables/mergePendingBoardItems";
+import { BoardItemsSyncRequestSchema } from "../shared/utils/boardItem.contract";
+import {
+  CreateNoteDTO,
+  UpdateNoteDTO,
+} from "../shared/utils/note.contract";
+import { PendingNoteChangeSchema } from "../shared/utils/note-sync.contract";
+import {
+  DEFAULT_WORKSPACE_NOTE_HTML,
+  TITLE_FALLBACK,
+  extractWorkspaceNoteTitle,
+  normalizeWorkspaceNoteContent,
+  normalizeWorkspaceNoteTitle,
+} from "../shared/utils/workspaceNote";
 import type {
   ReviewCardRecord,
   ReviewRepository,
@@ -30,7 +45,7 @@ function test(name: string, run: TestCase["run"]) {
 }
 
 class FakeReviewRepository implements ReviewRepository {
-  constructor(public record: ReviewCardRecord | null) {}
+  constructor(public record: ReviewCardRecord | null) { }
 
   async findByIdForUser() {
     return this.record;
@@ -96,6 +111,7 @@ function fakeNotesPrisma() {
           const row = {
             id,
             workspaceId: data.workspaceId,
+            title: data.title,
             content: data.content,
             tags: data.tags,
             noteType: data.noteType,
@@ -440,7 +456,7 @@ test("shared review grading updates card state and awards XP", async () => {
 });
 
 test("workspace note sync maps temp IDs to server IDs", async () => {
-  const { prisma } = fakeNotesPrisma();
+  const { notes, prisma } = fakeNotesPrisma();
 
   const result = await syncWorkspaceNotes({
     prisma,
@@ -453,6 +469,7 @@ test("workspace note sync maps temp IDs to server IDs", async () => {
           updatedAt: Date.parse("2026-01-01T00:00:00.000Z"),
           localVersion: 1,
           workspaceId: "workspace-1",
+          title: "Draft title",
           content: "Draft note",
           metadata: { color: "blue" },
         },
@@ -462,6 +479,7 @@ test("workspace note sync maps temp IDs to server IDs", async () => {
 
   assert.deepEqual(result.applied, ["temp-note-1"]);
   assert.equal(result.idMap["temp-note-1"], "server-note-1");
+  assert.equal(notes.get("server-note-1")?.title, "Draft title");
   assert.deepEqual(result.conflicts, []);
 });
 
@@ -518,6 +536,94 @@ test("workspace note sync reports server-newer conflicts", async () => {
 
   assert.deepEqual(result.applied, []);
   assert.deepEqual(result.conflicts, [{ id: "note-1" }]);
+});
+
+test("workspace note normalization uses the default empty template", () => {
+  assert.equal(normalizeWorkspaceNoteContent(""), DEFAULT_WORKSPACE_NOTE_HTML);
+  assert.equal(normalizeWorkspaceNoteContent(undefined), DEFAULT_WORKSPACE_NOTE_HTML);
+});
+
+test("workspace note normalization prepends an empty title heading for legacy content", () => {
+  assert.equal(
+    normalizeWorkspaceNoteContent("<p>Legacy body</p>"),
+    "<h1></h1><p>Legacy body</p>",
+  );
+});
+
+test("workspace note normalization keeps the first heading and upgrades it to h1", () => {
+  assert.equal(
+    normalizeWorkspaceNoteContent("<h3>Legacy title</h3><p>Body</p>"),
+    "<h1>Legacy title</h1><p>Body</p>",
+  );
+});
+
+test("workspace note title extraction falls back when the first heading is empty", () => {
+  assert.equal(extractWorkspaceNoteTitle("<h1></h1><p>Body</p>"), TITLE_FALLBACK);
+  assert.equal(extractWorkspaceNoteTitle("<p>Body only</p>"), TITLE_FALLBACK);
+});
+
+test("workspace note title extraction reads and decodes the first heading text", () => {
+  assert.equal(
+    extractWorkspaceNoteTitle("<h2>Alpha &amp; Beta</h2><p>Body</p>"),
+    "Alpha & Beta",
+  );
+});
+
+test("workspace note title normalization prefers explicit titles and otherwise derives from content", () => {
+  assert.equal(
+    normalizeWorkspaceNoteTitle("  Explicit Title  ", "<h1>Ignored</h1><p>Body</p>"),
+    "Explicit Title",
+  );
+  assert.equal(
+    normalizeWorkspaceNoteTitle(undefined, "<h1>Derived Title</h1><p>Body</p>"),
+    "Derived Title",
+  );
+  assert.equal(normalizeWorkspaceNoteTitle("", "<p>No heading</p>"), TITLE_FALLBACK);
+});
+
+test("note contracts accept legacy records without title", () => {
+  const created = CreateNoteDTO.parse({
+    workspaceId: "workspace-1",
+    content: DEFAULT_WORKSPACE_NOTE_HTML,
+  });
+  const updated = UpdateNoteDTO.parse({
+    content: "<h1>Updated</h1><p>Body</p>",
+  });
+  const pending = PendingNoteChangeSchema.parse({
+    id: "temp-note-2",
+    operation: "upsert",
+    updatedAt: Date.now(),
+    localVersion: 1,
+    workspaceId: "workspace-1",
+    content: DEFAULT_WORKSPACE_NOTE_HTML,
+  });
+
+  assert.equal(created.title, undefined);
+  assert.equal(updated.title, undefined);
+  assert.equal(pending.title, undefined);
+});
+
+test("workspace note sync derives fallback title when payload omits it", async () => {
+  const { notes, prisma } = fakeNotesPrisma();
+
+  await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request: {
+      changes: [
+        {
+          id: "temp-note-3",
+          operation: "upsert",
+          updatedAt: Date.parse("2026-01-01T00:00:00.000Z"),
+          localVersion: 1,
+          workspaceId: "workspace-1",
+          content: "<h1>Derived title</h1><p>Body</p>",
+        },
+      ],
+    },
+  });
+
+  assert.equal(notes.get("server-note-1")?.title, "Derived title");
 });
 
 test("board item sync maps temp IDs to server IDs", async () => {
@@ -615,6 +721,41 @@ test("board item sync treats missing deletes as applied", async () => {
   assert.deepEqual(result.applied, ["board-missing"]);
   assert.deepEqual(result.conflicts, []);
   assert.equal(result.results[0]?.status, "deleted");
+});
+
+test("board item sync contract accepts minimal delete records", () => {
+  const parsed = BoardItemsSyncRequestSchema.parse([
+    {
+      id: "board-missing",
+      operation: "delete",
+      updatedAt: Date.now(),
+      localVersion: 1,
+    },
+  ]);
+
+  assert.equal(parsed[0]?.operation, "delete");
+  assert.equal(parsed[0]?.id, "board-missing");
+});
+
+test("board item sync contract accepts numeric offline upserts", () => {
+  const now = Date.now();
+  const parsed = BoardItemsSyncRequestSchema.parse([
+    {
+      id: "temp-board-2",
+      operation: "upsert",
+      workspaceId: "workspace-1",
+      columnId: null,
+      content: "Offline task",
+      tags: [],
+      order: 0,
+      attachments: [],
+      createdAt: now,
+      updatedAt: now,
+    },
+  ]);
+
+  assert.equal(parsed[0]?.operation, "upsert");
+  assert.equal(parsed[0]?.content, "Offline task");
 });
 
 test("mergePendingBoardItems preserves pending column and order", () => {
@@ -717,6 +858,25 @@ test("generation quota spends a credit after free quota is exhausted", async () 
   assert.equal(result.generationsUsed, 10);
   assert.equal(result.creditBalance, 1);
   assert.equal(creditTransactions.length, 1);
+});
+
+test("quotaHeaders returns plain HTTP header data", () => {
+  assert.deepEqual(
+    quotaHeaders({
+      tier: "FREE",
+      generationsUsed: 4,
+      generationsQuota: 10,
+      remaining: 6,
+      creditBalance: 1,
+      creditSpent: false,
+    }),
+    {
+      "x-subscription-tier": "FREE",
+      "x-generations-used": "4",
+      "x-generations-quota": "10",
+      "x-generations-remaining": "6",
+    },
+  );
 });
 
 test("reward ad credit stays idempotent for duplicate session tokens", async () => {
@@ -830,6 +990,49 @@ test("generated flashcards save through shared ai-generation service", async () 
   assert.equal(result.deletedCount, 1);
   assert.equal(result.deletedReviewsCount, 1);
   assert.equal(flashcards.size, 2);
+});
+
+test("gateway cache hit consumes quota and returns cached payload metadata", async () => {
+  const consumed: string[] = [];
+
+  const result = await completeGatewayCacheHit({
+    quotaPort: {
+      getStatus: async () => {
+        throw new Error("not used");
+      },
+      consumeGeneration: async (userId: string) => {
+        consumed.push(userId);
+        return {
+          tier: "FREE",
+          generationsUsed: 2,
+          generationsQuota: 10,
+          remaining: 8,
+          creditBalance: 0,
+          creditSpent: false,
+        };
+      },
+    },
+    userId: "user-1",
+    requestId: "request-1",
+    task: "flashcards",
+    cachedValue: {
+      task: "flashcards",
+      modelId: "model-a",
+      provider: "provider-a",
+      flashcards: [{ front: "Q", back: "A" }],
+    },
+    itemCount: 1,
+    tokenEstimate: 12,
+    requestStartTime: Date.now(),
+  });
+
+  assert.deepEqual(consumed, ["user-1"]);
+  assert.equal(result.response.cached, true);
+  assert.equal(result.response.selectedModelId, "model-a");
+  assert.equal(result.response.provider, "provider-a");
+  assert.equal(result.response.task, "flashcards");
+  assert.equal(result.response.flashcards.length, 1);
+  assert.equal(result.updatedQuota.remaining, 8);
 });
 
 test("gateway generation prep injects PDF markers and derives save workspace", async () => {

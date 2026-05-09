@@ -5,6 +5,7 @@ const path = require("node:path");
 
 const root = process.cwd();
 const modulesRoot = path.join(root, "server", "modules");
+const frontendFeaturesRoot = path.join(root, "app", "features");
 
 const forbiddenEverywhere = [
   {
@@ -139,8 +140,107 @@ function checkFile(file) {
   return violations;
 }
 
-const files = walk(modulesRoot);
-const violations = files.flatMap(checkFile);
+const frontendLegacyImportsByFeature = {
+  board: [
+    "~/components/board",
+    "@/components/board",
+    "~/composables/board",
+    "@/composables/board",
+    "~/services/BoardItem",
+    "@/services/BoardItem",
+    "~/services/BoardColumn",
+    "@/services/BoardColumn",
+  ],
+  notes: [
+    "~/components/workspace/NotesSection",
+    "@/components/workspace/NotesSection",
+    "~/components/workspace/NotesSearch",
+    "@/components/workspace/NotesSearch",
+    "~/components/workspace/NotesSplitDropZone",
+    "@/components/workspace/NotesSplitDropZone",
+    "~/components/workspace/TextNote",
+    "@/components/workspace/TextNote",
+    "~/components/workspace/MathNoteEditor",
+    "@/components/workspace/MathNoteEditor",
+    "~/components/workspace/CanvasNoteEditor",
+    "@/components/workspace/CanvasNoteEditor",
+    "~/components/workspace/CanvasNoteToolbar",
+    "@/components/workspace/CanvasNoteToolbar",
+    "~/composables/workspaces/useNotesStore",
+    "@/composables/workspaces/useNotesStore",
+    "~/services/Note",
+    "@/services/Note",
+  ],
+  review: [
+    "~/components/review",
+    "@/components/review",
+    "~/composables/review",
+    "@/composables/review",
+    "~/composables/workspaces/useCardReview",
+    "@/composables/workspaces/useCardReview",
+    "~/services/ReviewService",
+    "@/services/ReviewService",
+  ],
+  "language-learning": [
+    "~/components/language",
+    "@/components/language",
+    "~/composables/language",
+    "@/composables/language",
+    "~/composables/useSpeechCapture",
+    "@/composables/useSpeechCapture",
+    "~/services/LanguageService",
+    "@/services/LanguageService",
+  ],
+  notifications: [
+    "~/components/modals/NotificationSubscriptionModal",
+    "@/components/modals/NotificationSubscriptionModal",
+    "~/components/settings/NotificationPreferences",
+    "@/components/settings/NotificationPreferences",
+    "~/composables/shared/useNotifications",
+    "@/composables/shared/useNotifications",
+    "~/composables/shared/useNotificationPrompt",
+    "@/composables/shared/useNotificationPrompt",
+  ],
+  materials: [
+    "~/components/workspace/hub/materials",
+    "@/components/workspace/hub/materials",
+    "~/composables/materials",
+    "@/composables/materials",
+  ],
+};
+
+function frontendFeatureNameFor(file) {
+  const rel = path.relative(frontendFeaturesRoot, file).split(path.sep);
+  return rel[0];
+}
+
+function checkFrontendFeatureFile(file) {
+  const rel = path.relative(root, file);
+  const source = fs.readFileSync(file, "utf8");
+  const featureName = frontendFeatureNameFor(file);
+  const forbiddenLegacyImports = frontendLegacyImportsByFeature[featureName] || [];
+  const violations = [];
+
+  for (const specifier of extractSpecifiers(source)) {
+    if (forbiddenLegacyImports.some((prefix) => specifier === prefix || specifier.startsWith(`${prefix}/`))) {
+      violations.push({
+        rel,
+        specifier,
+        message:
+          "frontend feature internals must import feature-local code directly, not their own legacy wrappers",
+      });
+    }
+  }
+
+  return violations;
+}
+
+const serverFiles = walk(modulesRoot);
+const frontendFiles = walk(frontendFeaturesRoot);
+const violations = [
+  ...serverFiles.flatMap(checkFile),
+  ...frontendFiles.flatMap(checkFrontendFeatureFile),
+];
 
 if (violations.length) {
   console.error("Architecture boundary check failed:\n");
@@ -153,5 +253,5 @@ if (violations.length) {
 }
 
 console.log(
-  `[arch-check] OK: ${files.length} server module files respect architecture boundaries.`
+  `[arch-check] OK: ${serverFiles.length} server module files and ${frontendFiles.length} frontend feature files respect architecture boundaries.`
 );

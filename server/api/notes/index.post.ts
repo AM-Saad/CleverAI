@@ -2,6 +2,7 @@ import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { CreateNoteDTO, NoteSchema } from "~/shared/utils/note.contract";
+import { normalizeWorkspaceNoteTitle } from "@@/shared/utils/workspaceNote";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -39,6 +40,7 @@ export default defineEventHandler(async (event) => {
   const note = await prisma.note.create({
     data: {
       workspaceId: data.workspaceId,
+      title: normalizeWorkspaceNoteTitle(data.title, data.content),
       content: data.content,
       tags: data.tags || [],
       order: nextOrder,
@@ -47,13 +49,18 @@ export default defineEventHandler(async (event) => {
     },
   });
 
+  const normalizedNote = {
+    ...note,
+    title: normalizeWorkspaceNoteTitle(note.title, note.content),
+  };
+
   if (process.env.NODE_ENV === "development") {
-    NoteSchema.parse(note);
+    NoteSchema.parse(normalizedNote);
   }
 
-  return success(note, {
+  return success(normalizedNote, {
     message: "Note created successfully",
-    noteId: note.id,
+    noteId: normalizedNote.id,
     workspaceId: data.workspaceId,
   });
 });

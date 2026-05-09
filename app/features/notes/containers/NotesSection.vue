@@ -2,6 +2,10 @@
 import { APIError } from "~/services/FetchFactory";
 import { ReorderGroup, ReorderItem } from "motion-v";
 import type { MathNoteMetadata, CanvasNoteMetadata, NoteType } from "@@/shared/utils/note.contract";
+import {
+  DEFAULT_WORKSPACE_NOTE_HTML,
+  TITLE_FALLBACK,
+} from "@@/shared/utils/workspaceNote";
 import LocalSyncStatus from "~/components/shared/LocalSyncStatus.vue";
 import type { NoteState } from "~/features/notes/composables/useNotesStore";
 import CanvasNoteEditor from "../components/CanvasNoteEditor.vue";
@@ -19,6 +23,26 @@ const emit = defineEmits(["add-to-material"]);
 const notesStore = useNotesStore(workspaceId);
 const { exportContent } = useExportContent();
 const networkStatus = useNetworkStatus();
+
+interface TextNoteUpdatePayload {
+  title: string;
+  content: string;
+}
+
+const getNoteDisplayTitle = (note?: NoteState | null, maxLength?: number) => {
+  if (!note) {
+    return "Note";
+  }
+
+  const rawTitle =
+    note.noteType === "MATH" && (!note.title || note.title === TITLE_FALLBACK)
+      ? "Math note"
+      : note.noteType === "CANVAS" && (!note.title || note.title === TITLE_FALLBACK)
+        ? "Canvas note"
+        : note.title || TITLE_FALLBACK;
+
+  return maxLength ? rawTitle.slice(0, maxLength) : rawTitle;
+};
 
 // Cached list of ordered IDs to prevent sorting on every text change
 const orderedNoteIds = ref<string[]>([]);
@@ -203,7 +227,8 @@ watch(
 
 // Create a new note (optimistic)
 const createNewNote = async (noteType: NoteType = "TEXT") => {
-  const noteId = await notesStore.createNote("", [], noteType);
+  const initialContent = noteType === "TEXT" ? DEFAULT_WORKSPACE_NOTE_HTML : "";
+  const noteId = await notesStore.createNote(initialContent, [], noteType);
 
   if (noteId) {
     currentNoteId.value = noteId;
@@ -211,16 +236,21 @@ const createNewNote = async (noteType: NoteType = "TEXT") => {
 };
 
 // Update an existing note (optimistic with debounced save)
-const handleUpdateNote = async (id: string, text: string) => {
+const handleUpdateNote = async (id: string, payload: string | TextNoteUpdatePayload) => {
   // Optimistic update - user sees change immediately
   const note = notesStore.getNote(id);
   if (!note) {
     console.error("Note not found for update:", id);
     return;
   }
+
+  const content = typeof payload === "string" ? payload : payload.content;
+  const title = typeof payload === "string" ? note.title : payload.title;
+
   const updatedNote: NoteState = {
     ...note,
-    content: text,
+    title,
+    content,
     isDirty: true,
     updatedAt: new Date(),
   };
@@ -512,21 +542,12 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
       <!-- Error state for initial fetch -->
       <shared-error-message v-if="error" :error="error" />
 
-      <LocalSyncStatus
-        v-if="!error && notes?.length"
-        class="mx-4 mt-3"
-        feature-label="Notes"
-        :pending-count="dirtyNotesCount"
-        :error-count="failedNotesCount"
-        :is-fetching="isFetching"
-        :is-online="networkStatus.isOnline.value"
-        :is-verified-online="networkStatus.isVerifiedOnline.value"
-        :is-connecting="networkStatus.isConnecting.value"
-        :last-sync="notesStore.lastSync.value"
-        :action-label="failedNotesCount > 0 ? 'Retry failed' : 'Sync now'"
-        :action-disabled="isFetching"
-        @action="handleSyncStatusAction"
-      />
+      <LocalSyncStatus v-if="!error && notes?.length" class="mx-4 my-0.5" feature-label="Notes"
+        :pending-count="dirtyNotesCount" :error-count="failedNotesCount" :is-fetching="isFetching"
+        :is-online="networkStatus.isOnline.value" :is-verified-online="networkStatus.isVerifiedOnline.value"
+        :is-connecting="networkStatus.isConnecting.value" :last-sync="notesStore.lastSync.value"
+        :action-label="failedNotesCount > 0 ? 'Retry failed' : 'Sync now'" :action-disabled="isFetching"
+        @action="handleSyncStatusAction" />
 
       <!-- Notes content -->
 
@@ -579,37 +600,25 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
                   <ui-paragraph size="xs" class="truncate flex-1">
                     <span v-if="note.noteType === 'CANVAS'" class="mr-1 text-warning">🎨</span>
                     <span v-else-if="note.noteType === 'MATH'" class="mr-1 text-primary">∑</span>
-                    {{
-                      note.content
-                        .replace(/<[^>]*>/g, "")
-                        .trim()
-                        .slice(0, 30) || (
-                        note.noteType === 'MATH' ? 'Math note' :
-                          note.noteType === 'CANVAS' ? 'Canvas note' :
-                            'Empty note')
-                    }}
+                    {{ getNoteDisplayTitle(note, 30) }}
                   </ui-paragraph>
                   <div class="flex items-center gap-1 shrink-0">
-                    <span
-                      v-if="note.error"
+                    <span v-if="note.error"
                       class="inline-flex items-center rounded-full bg-error/10 px-1.5 py-0.5 text-[10px] font-medium text-error"
-                      title="Sync failed. Open the note to retry."
-                    >
+                      title="Sync failed. Open the note to retry.">
                       Retry
                     </span>
-                    <span
-                      v-else-if="note.isDirty"
+                    <span v-else-if="note.isDirty"
                       class="inline-flex items-center rounded-full bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning"
-                      title="Saved locally and waiting to sync."
-                    >
+                      title="Saved locally and waiting to sync.">
                       Local
                     </span>
                   </div>
                   <!-- Split drag handle — separate from ReorderItem drag (HTML5 DnD) -->
                   <span v-if="localNotes.length >= 2" draggable="true"
                     class="split-drag-handle opacity-0 group-hover:opacity-60 hover:opacity-100! transition-opacity cursor-grab active:cursor-grabbing shrink-0 hidden sm:flex"
-                    :aria-label="`Drag to split view: ${note.content.replace(/<[^>]*>/g, '').trim().slice(0, 20) || 'note'}`"
-                    @pointerdown.stop @dragstart="handleSplitDragStart($event, note.id)" @dragend="handleSplitDragEnd">
+                    :aria-label="`Drag to split view: ${getNoteDisplayTitle(note, 20)}`" @pointerdown.stop
+                    @dragstart="handleSplitDragStart($event, note.id)" @dragend="handleSplitDragEnd">
                     <shared-icon name="split" class="w-3.5 h-3.5 text-content-secondary" />
                   </span>
                 </ReorderItem>
@@ -646,8 +655,8 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
         <!-- Split view -->
         <template v-else>
           <shared-split-pane-layout ref="splitPaneLayoutRef" :storage-key="`splitPaneSizes_${workspaceId}`"
-            :left-label="notesStore.getNote(splitNotes.leftNoteId.value!)?.content.replace(/<[^>]*>/g, '').trim().slice(0, 20) || 'Note'"
-            :right-label="notesStore.getNote(splitNotes.rightNoteId.value!)?.content.replace(/<[^>]*>/g, '').trim().slice(0, 20) || 'Note'"
+            :left-label="getNoteDisplayTitle(notesStore.getNote(splitNotes.leftNoteId.value!), 20)"
+            :right-label="getNoteDisplayTitle(notesStore.getNote(splitNotes.rightNoteId.value!), 20)"
             left-icon="i-lucide-notebook-pen" right-icon="i-lucide-notebook-pen" class="flex-1 min-h-0 min-w-0">
             <!-- LEFT PANE slot -->
             <template #left>
@@ -656,8 +665,7 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
                 <!-- Pane header -->
                 <div class="split-pane-header" @pointerdown.stop>
                   <span class="split-pane-title truncate">
-                    {{ notesStore.getNote(splitNotes.leftNoteId.value!)?.content.replace(/<[^>]*>/g, '').trim().slice(0,
-                      28) || 'Note' }}
+                    {{ getNoteDisplayTitle(notesStore.getNote(splitNotes.leftNoteId.value!), 28) }}
                   </span>
                   <div class="flex items-center gap-1 shrink-0">
                     <u-button size="xs" color="neutral" variant="ghost" aria-label="Minimize left pane"
@@ -707,8 +715,7 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
                 <!-- Pane header -->
                 <div class="split-pane-header" @pointerdown.stop>
                   <span class="split-pane-title truncate">
-                    {{ notesStore.getNote(splitNotes.rightNoteId.value!)?.content.replace(/<[^>]*>/g,
-                      '').trim().slice(0, 28) || 'Note' }}
+                    {{ getNoteDisplayTitle(notesStore.getNote(splitNotes.rightNoteId.value!), 28) }}
                   </span>
                   <div class="flex items-center gap-1 shrink-0">
                     <u-button size="xs" color="neutral" variant="ghost" aria-label="Minimize right pane"
@@ -783,16 +790,15 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
       <!-- Split fullscreen -->
       <template v-else>
         <shared-split-pane-layout :storage-key="`splitPaneSizes_${workspaceId}`"
-          :left-label="notesStore.getNote(splitNotes.leftNoteId.value!)?.content.replace(/<[^>]*>/g, '').trim().slice(0, 20) || 'Note'"
-          :right-label="notesStore.getNote(splitNotes.rightNoteId.value!)?.content.replace(/<[^>]*>/g, '').trim().slice(0, 20) || 'Note'"
+          :left-label="getNoteDisplayTitle(notesStore.getNote(splitNotes.leftNoteId.value!), 20)"
+          :right-label="getNoteDisplayTitle(notesStore.getNote(splitNotes.rightNoteId.value!), 20)"
           left-icon="i-lucide-notebook-pen" right-icon="i-lucide-notebook-pen" class="flex-1 min-h-0">
           <template #left>
             <div class="split-pane" :class="isLeftActive ? 'split-pane--active' : 'split-pane--passive'"
               @pointerdown.capture="activateLeftPane">
               <div class="split-pane-header" @pointerdown.stop>
                 <span class="split-pane-title truncate">
-                  {{ notesStore.getNote(splitNotes.leftNoteId.value!)?.content.replace(/<[^>]*>/g, '').trim().slice(0,
-                    28) || 'Note' }}
+                  {{ getNoteDisplayTitle(notesStore.getNote(splitNotes.leftNoteId.value!), 28) }}
                 </span>
                 <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
                   @click="splitNotes.swapPanes()">
@@ -828,8 +834,7 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
               @pointerdown.capture="activateRightPane">
               <div class="split-pane-header" @pointerdown.stop>
                 <span class="split-pane-title truncate">
-                  {{ notesStore.getNote(splitNotes.rightNoteId.value!)?.content.replace(/<[^>]*>/g, '').trim().slice(0,
-                    28) || 'Note' }}
+                  {{ getNoteDisplayTitle(notesStore.getNote(splitNotes.rightNoteId.value!), 28) }}
                 </span>
                 <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
                   @click="splitNotes.swapPanes()">
@@ -891,10 +896,14 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
   height: 100%;
   transition: opacity 0.2s ease;
   position: relative;
+  background-color: var(--color-white);
+  padding: .5rem;
+  border-radius: 0.375rem;
 }
 
 .split-pane--active {
   opacity: 1;
+
 }
 
 .split-pane--passive {

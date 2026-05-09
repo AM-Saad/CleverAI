@@ -28,9 +28,10 @@ Feature internals should import local components and composables explicitly inst
 
 
 
-###TODO
 ## Conflict Policy
 
-- Item edits are last-write-wins unless the server entity was deleted.
-- Failed sync keeps the local item visible with retry affordance.
-- If the target column no longer exists, move the item to the default/backlog column and surface a warning.
+- Pending item changes are coalesced by board item ID in IndexedDB.
+- Offline-created `temp-*` items are replaced from the server `idMap` after sync, then the temp ID is removed locally.
+- Applied sync changes clear dirty/loading/error state and delete matching pending queue entries.
+- Server-newer conflicts keep the local item visible, dirty, and retryable.
+- Column mutations remain online-only; item sync does not create or repair columns.

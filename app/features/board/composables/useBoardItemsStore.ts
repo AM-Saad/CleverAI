@@ -1,6 +1,7 @@
 import type { APIError } from "@/services/FetchFactory";
 import type Result from "@/types/Result";
 import type { BoardItem, BoardItemLink, BoardItemComment, Attachment } from "~/shared/utils/boardItem.contract";
+import { BoardItemsSyncRequestSchema } from "@@/shared/utils/boardItem.contract";
 import { DB_CONFIG, SW_MESSAGE_TYPES } from "~/utils/constants/pwa";
 import {
   createOfflineToastState,
@@ -55,7 +56,7 @@ interface BoardItemsStore {
 }
 
 type BoardItemsStoreInternal = BoardItemsStore & {
-  _flushDebounce?: () => void;
+  _flushDebounce?: () => Promise<void>;
 };
 
 const BOARD_ITEMS_STORE_FALLBACK_KEY = "__default__";
@@ -93,10 +94,11 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       },
       // Step 1 of reconnect: flush debounced saves before sync
       onBeforeSync: async () => {
-        boardItemsStores.forEach((store) => {
-          store._flushDebounce?.();
-        });
-        await new Promise((r) => setTimeout(r, 50));
+        await Promise.all(
+          Array.from(boardItemsStores.values()).map((store) =>
+            store._flushDebounce?.(),
+          ),
+        );
       },
     });
 
@@ -134,11 +136,11 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   );
 
   // Expose flush so the online listener can call it before sync
-  const _flushDebounce = () => {
+  const _flushDebounce = async () => {
     const dirtyItems = Array.from(items.value.values()).filter(i => i.isDirty);
-    for (const i of dirtyItems) {
-      flushSave(i.id);
-    }
+    await Promise.allSettled(
+      dirtyItems.map((item) => Promise.resolve(flushSave(item.id))),
+    );
   };
 
   // Local reactive state
@@ -252,6 +254,84 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       item.isLoading = false;
       return false;
     }
+  };
+
+  const applySyncResultLocally = async (response: {
+    applied?: string[];
+    conflicts?: Array<{ id: string }>;
+    idMap?: Record<string, string>;
+  }) => {
+    const appliedIds = response.applied ?? [];
+    const conflicts = response.conflicts ?? [];
+    const idMap = response.idMap ?? {};
+    const now = new Date();
+
+    for (const [tempId, serverId] of Object.entries(idMap)) {
+      const tempItem = items.value.get(tempId);
+      if (!tempItem) continue;
+
+      items.value.delete(tempId);
+      await deleteBoardItemFromIndexedDB(tempId);
+
+      const serverItem: BoardItemState = {
+        ...tempItem,
+        id: serverId,
+        isDirty: false,
+        isLoading: false,
+        lastSaved: now,
+        error: null,
+      };
+      items.value.set(serverId, serverItem);
+      await saveBoardItemToIndexedDB(serverItem);
+    }
+
+    for (const itemId of appliedIds) {
+      const localId = idMap[itemId] ?? itemId;
+      const item = items.value.get(localId);
+      if (!item) continue;
+
+      item.isDirty = false;
+      item.isLoading = false;
+      item.lastSaved = now;
+      item.error = null;
+      items.value.set(localId, { ...item });
+      await saveBoardItemToIndexedDB(item);
+    }
+
+    for (const conflict of conflicts) {
+      const item = items.value.get(conflict.id);
+      if (!item) continue;
+
+      item.isLoading = false;
+      item.isDirty = true;
+      item.error = "Sync conflict detected. Review this item and retry.";
+      items.value.set(conflict.id, { ...item });
+      await saveBoardItemToIndexedDB(item);
+    }
+  };
+
+  const syncPendingChanges = async (): Promise<boolean> => {
+    await _flushDebounce();
+
+    if (!networkMonitor.isVerifiedOnline.value) {
+      return false;
+    }
+
+    const pendingChanges = await loadPendingBoardItemChanges(workspaceId);
+    if (!pendingChanges.length) {
+      return true;
+    }
+
+    const syncRequest = BoardItemsSyncRequestSchema.parse(pendingChanges);
+    const result = await $api.boardItems.sync(syncRequest);
+    if (!result.success) {
+      return false;
+    }
+
+    await applySyncResultLocally(result.data);
+    await deletePendingBoardItemChanges(result.data.applied ?? []);
+    lastSync.value = new Date();
+    return true;
   };
 
   // Update board item content - local-first approach
@@ -522,11 +602,15 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     }
 
     try {
+      await syncPendingChanges();
+      const pendingAfterSync = new Set(
+        (await loadPendingBoardItemChanges(workspaceId)).map((change) => change.id),
+      );
       const result = await $api.boardItems.getAll(workspaceId);
 
       if (result.success) {
         const tempItems = Array.from(items.value.values()).filter(i =>
-          i.id.startsWith("temp-")
+          i.id.startsWith("temp-") && pendingAfterSync.has(i.id)
         );
 
         // Preserve dirty items (in-progress edits)

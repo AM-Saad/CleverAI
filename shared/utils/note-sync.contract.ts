@@ -6,6 +6,7 @@ export const PendingNoteChangeSchema = z.object({
   updatedAt: z.number().int().nonnegative(),
   localVersion: z.number().int().nonnegative(),
   workspaceId: z.string().optional(),
+  title: z.string().optional(),
   content: z.string().optional(),
   tags: z.array(z.string()).optional(),
   // Handle null and empty string by normalizing to undefined

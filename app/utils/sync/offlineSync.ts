@@ -185,7 +185,8 @@ export function setupSyncCompletionListener(
     const msg = event.data;
     if (!msg || msg.type !== options.messageType) return;
     const applied: number = msg.data?.appliedCount ?? 0;
-    if (applied > 0) {
+    const conflicts: number = msg.data?.conflictsCount ?? 0;
+    if (applied > 0 || conflicts > 0) {
       await options.onSynced(applied);
     }
   };

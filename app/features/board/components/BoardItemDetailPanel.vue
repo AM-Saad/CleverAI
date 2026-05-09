@@ -333,10 +333,10 @@ watch(() => props.item.id, async () => {
 
         <!-- Rich text editor -->
         <div class="flex-1 min-h-75">
-          <TextNote :note="item" :delete-note="() => emit('delete', item.id)"
-            placeholder="Write your note..." :is-board-item="true"
-            @update="(id, content) => emit('update', id, content)" @retry="(id) => emit('retry', id)"
-            @toggle-fullscreen="emit('toggle-fullscreen')" />
+          <TextNote :note="item" :delete-note="() => emit('delete', item.id)" placeholder="Write your note..."
+            :is-board-item="true"
+            @update="(id, payload) => emit('update', id, typeof payload === 'string' ? payload : payload.content)"
+            @retry="(id) => emit('retry', id)" @toggle-fullscreen="emit('toggle-fullscreen')" />
         </div>
       </div>
 

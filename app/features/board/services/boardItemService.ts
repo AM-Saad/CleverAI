@@ -9,7 +9,7 @@ import type {
   CreateBoardItemDTO,
   UpdateBoardItemDTO,
   ReorderBoardItemsDTO,
-  BoardItemSyncItem,
+  BoardItemsSyncRequest,
   BoardItemsSyncResponse,
   CreateBoardItemLinkDTO,
   CreateBoardItemCommentDTO,
@@ -92,7 +92,7 @@ export class BoardItemService extends FetchFactory {
    * Sync multiple board items (for offline sync)
    */
   async sync(
-    items: BoardItemSyncItem[]
+    items: BoardItemsSyncRequest
   ): Promise<Result<BoardItemsSyncResponse>> {
     return this.call<BoardItemsSyncResponse>(
       "POST",

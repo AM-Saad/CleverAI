@@ -1,4 +1,4 @@
-import { domainEventBus } from "@server/modules/shared-kernel/events/DomainEventBus";
+import { domainEventBus } from "../../shared-kernel/events/DomainEventBus";
 
 export function publishGenerationRequested(payload: Record<string, unknown>) {
   return domainEventBus.publish({

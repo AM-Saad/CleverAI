@@ -31,7 +31,7 @@
 
   <!-- Group: Colors -->
   <SharedNoteColorPickerButton title="Text Color" icon="color-picker" :icon-only="true" :modelValue="currentColor"
-    @update:modelValue="val => props.editor.chain().focus().setColor(val).run()" />
+    @update:modelValue="val => setTextColor(props.editor, val)" />
 
   <div class="h-5 w-px bg-secondary mx-1 shrink-0"></div>
 
@@ -47,7 +47,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import type { Editor } from '@tiptap/vue-3';
-
+import {
+  clearFormatting,
+  setTextColor,
+  toggleInlineMark,
+} from "~/utils/editor/tiptapCommands";
 
 const props = defineProps<{
   editor: Editor;
@@ -131,17 +135,22 @@ const headingsItems = computed<any[][]>(() => [[
   {
     label: "Bold",
     icon: "i-lucide-bold",
-    onSelect: () => props.editor.chain().focus().toggleBold().run(),
+    onSelect: () => toggleInlineMark(props.editor, "bold"),
   },
   {
     label: "Italic",
     icon: "i-lucide-italic",
-    onSelect: () => props.editor.chain().focus().toggleItalic().run(),
+    onSelect: () => toggleInlineMark(props.editor, "italic"),
   },
   {
     label: "Strike",
     icon: "i-lucide-strikethrough",
-    onSelect: () => props.editor.chain().focus().toggleStrike().run(),
+    onSelect: () => toggleInlineMark(props.editor, "strike"),
+  },
+  {
+    label: "Clear formatting",
+    icon: "i-lucide-remove-formatting",
+    onSelect: () => clearFormatting(props.editor),
   },
 ]]);
 

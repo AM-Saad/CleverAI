@@ -169,6 +169,9 @@ cognilo/
 │   │   ├── notifications/        # Push subscription, prompts, and preferences UI
 │   │   │   ├── components/
 │   │   │   └── composables/
+│   │   ├── materials/            # Material upload/listing and generation UI
+│   │   │   ├── components/
+│   │   │   └── composables/
 │   │   ├── notes/                # Workspace notes UI, local-first state, notes API client
 │   │   │   ├── containers/
 │   │   │   ├── components/
@@ -297,10 +300,18 @@ Current frontend slice:
 - Legacy entrypoints such as `useLanguageCapture`, `useLanguageReview`, `useLanguageStats`, `useSpeechCapture`, and `app/services/LanguageService.ts` remain as compatibility wrappers.
 - `notifications` owns push subscription, prompt timing, and notification preferences UI.
 - Legacy entrypoints such as `useNotifications`, `useNotificationPrompt`, `NotificationSubscriptionModal`, and `NotificationPreferences` remain as compatibility wrappers.
+- `materials` owns material upload/listing UI and material generation workflow state.
+- Legacy entrypoints such as workspace hub material components and `useGenerateFromMaterial` remain as compatibility wrappers.
 - `notes` owns the workspace notes panel, note search, text/math/canvas note editors, local-first note state, and the notes API client.
 - Legacy entrypoints such as `WorkspaceNotesSection`, workspace note editor components, `useNotesStore`, and `app/services/Note.ts` remain as compatibility wrappers.
 - `board` owns the workspace board panel, kanban/list views, board cards, filters, board item/column stores, and board API clients.
 - Legacy entrypoints such as `BoardNotesSection`, `app/components/board/*`, `useBoardItemsStore`, `useBoardColumnsStore`, `app/services/BoardItem.ts`, and `app/services/BoardColumn.ts` remain as compatibility wrappers.
+
+Architecture fitness:
+
+- `yarn arch:check` enforces server module boundaries and prevents frontend feature internals from importing their own legacy wrapper paths.
+- Server domain code must remain framework- and persistence-free.
+- Cross-feature behavior should go through ports, shared contracts, or explicit shared UI/composables rather than another feature's legacy wrapper.
 
 ---
 

@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { type UpdateNoteDTO, UpdateNoteDTO as UpdateNoteDTOSchema, NoteSchema } from "~/shared/utils/note.contract";
+import { normalizeWorkspaceNoteTitle } from "@@/shared/utils/workspaceNote";
 
 // Simple retry helper for transient Prisma write conflicts / deadlocks.
 // Uses exponential backoff with jitter. Keep local to this route for now; can be
@@ -72,6 +73,10 @@ export default defineEventHandler(async (event) => {
     }
 
     const updateData: Prisma.NoteUpdateInput = {
+      title: normalizeWorkspaceNoteTitle(
+        data.title !== undefined ? data.title : note.title,
+        data.content !== undefined ? data.content : note.content,
+      ),
       ...(data.content !== undefined && { content: data.content }),
       ...(data.tags !== undefined && { tags: data.tags }),
       ...(data.noteType !== undefined && { noteType: data.noteType }),
@@ -87,13 +92,18 @@ export default defineEventHandler(async (event) => {
       })
     );
 
+    const normalizedNote = {
+      ...updatedNote,
+      title: normalizeWorkspaceNoteTitle(updatedNote.title, updatedNote.content),
+    };
+
     if (process.env.NODE_ENV === "development") {
-      NoteSchema.parse(updatedNote);
+      NoteSchema.parse(normalizedNote);
     }
 
-    return success(updatedNote, {
+    return success(normalizedNote, {
       message: "Note updated successfully",
-      noteId: updatedNote.id,
+      noteId: normalizedNote.id,
     });
   } catch (error: any) {
     // Provide slightly more actionable messaging for conflict scenario (frontend can optionally surface a soft warning)

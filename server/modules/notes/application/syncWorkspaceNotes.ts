@@ -1,5 +1,6 @@
 import { NotesSyncResponseSchema } from "../../../../shared/utils/note-sync.contract";
 import type { NotesSyncRequest } from "../../../../shared/utils/note-sync.contract";
+import { normalizeWorkspaceNoteTitle } from "../../../../shared/utils/workspaceNote";
 
 export async function syncWorkspaceNotes(input: {
   prisma: any;
@@ -60,6 +61,7 @@ export async function syncWorkspaceNotes(input: {
         const data = {
           ...(isTempId ? {} : { id: change.id }),
           workspaceId: change.workspaceId,
+          title: normalizeWorkspaceNoteTitle(change.title, change.content),
           content: change.content || "",
           tags: change.tags || [],
           noteType: change.noteType ?? "TEXT",
@@ -90,6 +92,10 @@ export async function syncWorkspaceNotes(input: {
       await prisma.note.update({
         where: { id: change.id },
         data: {
+          title: normalizeWorkspaceNoteTitle(
+            change.title !== undefined ? change.title : existing.title,
+            change.content ?? existing.content,
+          ),
           content: change.content ?? existing.content,
           tags: change.tags ?? existing.tags,
           ...(change.noteType !== undefined && { noteType: change.noteType }),

@@ -106,9 +106,9 @@ export function useDebounce<TArgs extends unknown[], TReturn = void>(
     }
   };
 
-  const flush = (...args: TArgs) => {
+  const flush = (...args: TArgs): TReturn | Promise<TReturn> => {
     cancel();
-    func(...args);
+    return func(...args);
   };
 
   // Cleanup on unmount

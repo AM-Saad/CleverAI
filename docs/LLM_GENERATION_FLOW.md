@@ -8,11 +8,13 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                              FRONTEND (Nuxt 3)                              │
+│                              FRONTEND (Nuxt 4)                              │
 ├─────────────────────────────────────────────────────────────────────────────┤
-│  GenerateButton.vue → useGenerateFromMaterial → GatewayService.ts          │
+│  features/materials/GenerateButton.vue → useGenerateFromMaterial           │
+│         ↓                                        ↓                         │
+│   [UI Trigger]                         GatewayService.ts                   │
 │         ↓                      ↓                       ↓                    │
-│   [UI Trigger]         [State Machine]         [HTTP Client]               │
+│                         [State Machine]         [HTTP Client]              │
 └──────────────────────────────────┬──────────────────────────────────────────┘
                                    │ POST /api/llm.gateway
                                    ▼
@@ -20,19 +22,15 @@
 │                         SERVER (Nitro / H3)                                 │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │  llm.gateway.post.ts                                                        │
-│       │                                                                     │
-│       ├─→ [1] Auth Check (requireRole)                                      │
-│       ├─→ [2] Quota Check (checkUserQuota)                                  │
-│       ├─→ [3] Rate Limiting (applyLimit)                                    │
-│       ├─→ [4] Request Validation (Zod)                                      │
-│       ├─→ [5] Semantic Cache Lookup                                         │
-│       ├─→ [6] Model Selection (selectBestModel)                             │
-│       ├─→ [7] Strategy Instantiation (LLMFactory)                           │
-│       ├─→ [8] LLM API Call (OpenAI / Gemini / DeepSeek)                    │
-│       ├─→ [9] Database Transaction (save/replace)                           │
-│       ├─→ [10] Quota Increment                                              │
-│       ├─→ [11] Cache Set                                                    │
-│       └─→ [12] Analytics Logging                                            │
+│       │ parse/auth only                                                     │
+│       ▼                                                                     │
+│  ai-generation/application/runGatewayGeneration                             │
+│       ├─→ prepareGatewayGeneration                                          │
+│       ├─→ llmRequestPipeline (quota, rate limits, model, strategy)          │
+│       ├─→ SemanticGenerationCachePort                                       │
+│       ├─→ LLM strategy call                                                 │
+│       ├─→ completeGatewayGeneration / saveGeneratedArtifacts                │
+│       └─→ plain response + headers                                          │
 └──────────────────────────────────┬──────────────────────────────────────────┘
                                    │
                                    ▼
@@ -50,7 +48,7 @@
 
 ### **Phase 1: User Initiates Generation**
 
-#### [GenerateButton.vue](app/components/materials/GenerateButton.vue)
+#### [GenerateButton.vue](app/features/materials/components/GenerateButton.vue)
 
 ```vue
 <!-- User clicks dropdown menu option -->
@@ -68,7 +66,7 @@
 
 ### **Phase 2: Composable State Machine**
 
-#### [useGenerateFromMaterial.ts](app/composables/materials/useGenerateFromMaterial.ts)
+#### [useGenerateFromMaterial.ts](app/features/materials/composables/useGenerateFromMaterial.ts)
 
 ```typescript
 export function useGenerateFromMaterial(materialId: Ref<string>) {
@@ -162,11 +160,20 @@ export class GatewayService {
 
 ---
 
-### **Phase 4: Server Gateway Handler**
+### **Phase 4: Server Gateway Adapter + Application Service**
 
-#### [llm.gateway.post.ts](server/api/llm.gateway.post.ts) (547 lines)
+#### [llm.gateway.post.ts](server/api/llm.gateway.post.ts)
 
-This is the **core orchestration endpoint**. Here's the complete flow:
+The route is now a thin adapter:
+
+- capture request start time
+- authenticate with `requireRole`
+- parse `GatewayGenerateRequest`
+- call `runGatewayGeneration`
+- set returned headers
+- return `success(response)`
+
+Core lifecycle orchestration lives in `server/modules/ai-generation/application/runGatewayGeneration.ts`.
 
 ---
 
@@ -180,24 +187,9 @@ const userId = user.id;
 
 ---
 
-#### **Step 4.2: Quota Check**
+#### **Step 4.2: Application Orchestration**
 
-```typescript
-const quotaResult = await checkUserQuota(userId);
-
-if (!quotaResult.canGenerate) {
-  // Returns 400 (bad request) with quota headers and subscription payload
-  throw Errors.badRequest(
-    "Free tier quota exceeded. Please upgrade to continue generating content.",
-    { subscription: quotaResult.subscription, type: "QUOTA_EXCEEDED" }
-  );
-}
-```
-
-**Quota Logic ([quota.ts](server/utils/quota.ts)):**
-- FREE tier: 10 generations, decrements on each use
-- PRO tier: Unlimited (`canGenerate = true` always)
-- Auto-creates subscription record if missing
+`runGatewayGeneration` delegates quota, rate limiting, model selection, and provider execution to `llmRequestPipeline`. Quota behavior is exposed through the `QuotaPort` interface and the Prisma implementation lives in `server/modules/subscription`.
 
 ---
 

@@ -4330,6 +4330,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
                 await putRecord(db2, DB_CONFIG.STORES.NOTES, {
                   id: serverId,
                   workspaceId: original.workspaceId,
+                  title: original.title,
                   content: original.content || "",
                   tags: original.tags || [],
                   order: 0,

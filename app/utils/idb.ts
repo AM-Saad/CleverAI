@@ -210,6 +210,7 @@ export const saveNoteToIndexedDB = async (note: StoredNoteState): Promise<void> 
           updatedAt: Date.now(),
           localVersion: (note as any).localVersion ? (note as any).localVersion + 1 : 1,
           workspaceId: (note as any).workspaceId,
+          title: (note as any).title,
           content: (note as any).content,
           tags: (note as any).tags || [],
         })

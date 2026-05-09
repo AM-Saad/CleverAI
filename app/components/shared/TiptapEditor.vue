@@ -38,16 +38,27 @@ import type {
 } from "prosemirror-state";
 import Document from "@tiptap/extension-document";
 import { ListItem, TaskItem, TaskList } from "@tiptap/extension-list";
+import Placeholder from "@tiptap/extension-placeholder";
 import { Color, TextStyle } from "@tiptap/extension-text-style";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { Extension } from "@tiptap/core";
 import { Table, TableRow, TableHeader, TableCell } from "@tiptap/extension-table";
+import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
+import { common, createLowlight } from "lowlight";
 // note: explicit Drop cursor intentionally omitted to avoid duplicate warnings
-import { Editor, EditorContent } from "@tiptap/vue-3";
+import { Editor, EditorContent, VueNodeViewRenderer } from "@tiptap/vue-3";
 import { initCollaboration } from "@/utils/";
+import { normalizeWorkspaceNoteContent } from "@@/shared/utils/workspaceNote";
 import { useTextSummarization } from '~/composables/ai/useTextSummarization';
 import { usePredictionaryInput } from '~/composables/usePredictionaryInput';
+
+import CodeBlockNode from './CodeBlockNode.vue';
+import Paper from './Paper.js';
+
+// Create lowlight instance with common languages (~35 languages)
+const lowlight = createLowlight(common);
+
 
 // ---------- Types ----------
 type CollaborationHandle = {
@@ -64,24 +75,93 @@ const CustomDocument = Document.extend({
   content: "block+",
 });
 
+const WorkspaceNoteDocument = Document.extend({
+  content: "heading block*",
+});
+
+const WorkspaceNotePlaceholder = Placeholder.configure({
+  emptyEditorClass: "is-workspace-note-editor-empty",
+  emptyNodeClass: "is-workspace-note-node-empty",
+  placeholder: ({ node, pos }) => {
+    if (node.type.name === "heading" && pos === 0) {
+      return "What's the title?";
+    }
+
+    return "";
+  },
+  showOnlyCurrent: true,
+  includeChildren: false,
+  showOnlyWhenEditable: true,
+});
+
+const WorkspaceNoteBehavior = Extension.create({
+  name: "workspaceNoteBehavior",
+
+  addKeyboardShortcuts() {
+    return {
+      Backspace: () => {
+        const { selection } = this.editor.state;
+        const { $from } = selection;
+        const currentNode = $from.parent;
+
+        if (
+          props.documentMode !== "workspace-note" ||
+          currentNode.type.name !== "paragraph" ||
+          $from.parentOffset !== 0 ||
+          $from.before($from.depth) <= 1
+        ) {
+          return false;
+        }
+
+        const previousNode = this.editor.state.doc.resolve($from.before($from.depth) - 1).nodeBefore;
+        if (previousNode?.type.name !== "heading") {
+          return false;
+        }
+
+        // Keep the body from merging back into the protected title line.
+        return true;
+      },
+    };
+  },
+});
+
 const CustomTaskItem = TaskItem.extend({
   content: "paragraph block*",
 });
 
+// const CustomPaper = Document.extend({
+//   content: "paper",
+// });
+
+
+
 // ---------- reactive refs ----------
 const editor = shallowRef<Editor | null>(null);
+const isApplyingExternalValue = ref(false);
 const emit = defineEmits<{
   (e: "update:modelValue", value: string): void;
   (e: "addToMaterial", value: string): void;
+  (e: "blur"): void;
 }>();
 const collaborationHandle = ref<CollaborationHandle>(null);
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   id?: string;
   isFullScreen?: boolean;
   modelValue: string;
   /** When true, editor is not editable (passive split-pane mode) */
   readonly?: boolean;
-}>();
+  documentMode?: "default" | "workspace-note";
+}>(), {
+  documentMode: "default",
+});
+
+const normalizeEditorContent = (value?: string | null) => {
+  if (props.documentMode !== "workspace-note") {
+    return value || "";
+  }
+
+  return normalizeWorkspaceNoteContent(value);
+};
 
 // Expose editor publicly
 defineExpose({ editor });
@@ -354,8 +434,11 @@ watch(
   (value) => {
     if (!editor.value) return;
     const current = editor.value.getHTML();
-    if (current === value) return;
-    editor.value.commands.setContent(value || "");
+    const normalizedValue = normalizeEditorContent(value);
+    if (current === normalizedValue) return;
+    isApplyingExternalValue.value = true;
+    editor.value.commands.setContent(normalizedValue);
+    isApplyingExternalValue.value = false;
   },
   { immediate: true }
 );
@@ -441,9 +524,10 @@ onMounted(async () => {
 
   editor.value = new Editor({
     extensions: [
-      // disable StarterKit document to avoid duplicate 'doc' name
-      StarterKit.configure({ document: false }),
-      CustomDocument,
+      // disable StarterKit document + codeBlock to avoid duplicate names
+      StarterKit.configure({ document: false, codeBlock: false }),
+      props.documentMode === "workspace-note" ? WorkspaceNoteDocument : CustomDocument,
+      ...(props.documentMode === "workspace-note" ? [WorkspaceNotePlaceholder, WorkspaceNoteBehavior] : []),
       Color.configure({ types: [TextStyle.name, ListItem.name] }),
       TextStyle,
       Image,
@@ -455,8 +539,19 @@ onMounted(async () => {
       TaskList,
       CustomTaskItem,
       AutocompleteExtension,
+      // Syntax-highlighted code blocks via lowlight
+      CodeBlockLowlight.extend({
+        addNodeView() {
+          return VueNodeViewRenderer(CodeBlockNode);
+        },
+      }).configure({
+        lowlight,
+        defaultLanguage: null,
+      }),
+      // CustomPaper,
+      // Paper
     ],
-    content: props.modelValue || "",
+    content: normalizeEditorContent(props.modelValue),
     editable: !props.readonly,
   });
   const editorInstance = editor.value;
@@ -464,9 +559,23 @@ onMounted(async () => {
 
   // Emit updates for v-model
   editorInstance.on("update", () => {
-    const html = editorInstance.getHTML();
+    if (isApplyingExternalValue.value) return;
+    let html = editorInstance.getHTML();
+    const normalizedHtml = normalizeEditorContent(html);
+
+    if (normalizedHtml !== html) {
+      isApplyingExternalValue.value = true;
+      editorInstance.commands.setContent(normalizedHtml);
+      isApplyingExternalValue.value = false;
+      html = normalizedHtml;
+    }
+
     emit("update:modelValue", html || "");
     updateAutoState();
+  });
+
+  editorInstance.on("blur", () => {
+    emit("blur");
   });
 
   // dev transaction logger (safe)
@@ -541,12 +650,25 @@ function getSelectedText(): string | null {
   outline: none;
 }
 
+.tiptap .is-workspace-note-node-empty:not([data-placeholder=""])::before {
+  color: var(--color-content-disabled, #9ca3af);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+.tiptap h1:first-child {
+  margin-bottom: 0.75rem;
+  font-weight: 700;
+}
+
 /* Basic list spacing */
 .tiptap ul,
 .tiptap ol {
   padding: 0 1rem;
   margin: 1.25rem 1rem 1.25rem 0.4rem;
-  list-style: none;
+  list-style: unset;
   /* taskList is custom, remove bullets */
 }
 
@@ -617,34 +739,311 @@ function getSelectedText(): string | null {
   font-size: 1rem;
 }
 
-/* code blocks */
+/* ======= Inline code ======= */
 .tiptap code {
-  background-color: var(--purple-light);
-  border-radius: 0.4rem;
-  color: var(--color-light);
-  font-size: 0.85rem;
-  padding: 0.25em 0.3em;
+  background-color: var(--purple-light, rgba(139, 92, 246, 0.12));
+  border-radius: 0.35rem;
+  color: var(--color-primary, #a78bfa);
+  font-size: 0.82rem;
+  font-family: "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace;
+  padding: 0.2em 0.4em;
+  font-weight: 500;
 }
 
+/* ======= Code Block Wrapper (NodeView) ======= */
+.code-block-wrapper {
+  margin: 1.25rem 0;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    0 1px 3px rgba(0, 0, 0, 0.1);
+  transition: box-shadow 0.2s ease;
+}
+
+.code-block-wrapper:hover {
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.2),
+    0 2px 6px rgba(0, 0, 0, 0.12);
+}
+
+/* --- Header bar --- */
+.code-block-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0.75rem;
+  background: #1e2030;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  user-select: none;
+}
+
+/* Language selector */
+.code-block-lang-selector {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.code-block-lang-select {
+  appearance: none;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.375rem;
+  color: #8b92a8;
+  font-size: 0.7rem;
+  font-family: "Inter", sans-serif;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 0.2rem 1.6rem 0.2rem 0.5rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-transform: lowercase;
+}
+
+.code-block-lang-select:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #c0c8e0;
+}
+
+.code-block-lang-select:focus {
+  outline: none;
+  border-color: rgba(139, 92, 246, 0.5);
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15);
+}
+
+.code-block-lang-icon {
+  position: absolute;
+  right: 0.4rem;
+  pointer-events: none;
+  color: #8b92a8;
+  display: flex;
+  align-items: center;
+}
+
+/* Copy button */
+.code-block-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.375rem;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #8b92a8;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.code-block-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #c0c8e0;
+}
+
+.code-block-copy-btn:active {
+  transform: scale(0.92);
+}
+
+/* --- Pre / Code inside NodeView --- */
+.code-block-wrapper pre {
+  background: #191b28 !important;
+  margin: 0 !important;
+  padding: 1rem 1.25rem !important;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+}
+
+.code-block-wrapper pre::-webkit-scrollbar {
+  height: 6px;
+}
+
+.code-block-wrapper pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.code-block-wrapper pre::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.code-block-wrapper pre code {
+  background: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  color: #c0c8e0;
+  font-family: "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace;
+  font-size: 0.8rem;
+  line-height: 1.65;
+  font-weight: 400;
+  tab-size: 2;
+}
+
+/* ======= Fallback pre (non-NodeView) ======= */
 .tiptap pre {
-  background: var(--color-dark);
-  border-radius: 0.5rem;
-  color: var(--color-light);
-  font-family: "JetBrainsMono", monospace;
-  margin: 1.5rem 0;
-  padding: 0.75rem 1rem;
+  background: #1f1e24;
+  color: #c0c8e0;
+  font-family: "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace;
+  margin: 1.25rem 0;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+}
+
+/* ======= Syntax Highlighting Theme — Moonlight ======= */
+
+/* Keywords: if, else, return, const, let, var, function, class, etc. */
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-name {
+  color: #c792ea;
+}
+
+/* Strings */
+.hljs-string,
+.hljs-attr,
+.hljs-selector-id {
+  color: #c3e88d;
+}
+
+/* Numbers & literals */
+.hljs-number,
+.hljs-literal,
+.hljs-variable.constant_,
+.hljs-selector-class {
+  color: #f78c6c;
+}
+
+/* Comments */
+.hljs-comment,
+.hljs-quote {
+  color: #636d83;
+  font-style: italic;
+}
+
+/* Function names & calls */
+.hljs-title,
+.hljs-title.function_,
+.hljs-title.class_ {
+  color: #82aaff;
+}
+
+/* Types & class names */
+.hljs-type,
+.hljs-template-tag,
+.hljs-template-variable {
+  color: #ffcb6b;
+}
+
+/* HTML/XML tags */
+.hljs-tag {
+  color: #89ddff;
+}
+
+/* Attributes */
+.hljs-attribute {
+  color: #c792ea;
+}
+
+/* Symbols, operators */
+.hljs-symbol,
+.hljs-bullet,
+.hljs-link {
+  color: #89ddff;
+}
+
+/* Regex */
+.hljs-regexp {
+  color: #89ddff;
+}
+
+/* Deletion/Addition in diffs */
+.hljs-deletion {
+  color: #ff5370;
+  background: rgba(255, 83, 112, 0.1);
+}
+
+.hljs-addition {
+  color: #c3e88d;
+  background: rgba(195, 232, 141, 0.1);
+}
+
+/* Meta, preprocessor */
+.hljs-meta {
+  color: #89ddff;
+}
+
+.hljs-meta .hljs-keyword {
+  color: #ff5370;
+}
+
+.hljs-meta .hljs-string {
+  color: #c3e88d;
+}
+
+/* Section headings (markdown etc.) */
+.hljs-section {
+  color: #82aaff;
+  font-weight: 700;
+}
+
+/* Params */
+.hljs-params {
+  color: #c0c8e0;
+}
+
+/* Property */
+.hljs-property {
+  color: #f07178;
+}
+
+/* Punctuation */
+.hljs-punctuation {
+  color: #89ddff;
+}
+
+/* Emphasis & strong */
+.hljs-emphasis {
+  font-style: italic;
+}
+
+.hljs-strong {
+  font-weight: 700;
+}
+
+/* Subst (template expressions) */
+.hljs-subst {
+  color: #c0c8e0;
 }
 
 /* blockquote & hr */
-.tiptap blockquote {
-  border-left: 3px solid var(--gray-3);
-  margin: 1.5rem 0;
-  padding-left: 1rem;
+/* div:has(> blockquote) {
+  background-color: #ededed;
+  margin: 10px auto;
+  padding: 15px;
+  border-radius: 5px;
+} */
+
+.tiptap blockquote p::before {
+  content: "\201C";
 }
+
+.tiptap blockquote p::after {
+  content: "\201D";
+}
+
+.tiptap blockquote+p {
+  text-align: right;
+}
+
 
 .tiptap hr {
   border: none;
-  border-top: 1px solid var(--color-neutral);
+  border-top: 1px solid var(--color-secondary);
   margin: 0.5rem 0;
 }
 

@@ -48,7 +48,10 @@ const matchAllWhenSearchEmpty = shallowRef(false);
 
 const options = computed<UseFuseOptions<NoteState>>(() => ({
   fuseOptions: {
-    keys: ["content"],
+    keys: [
+      { name: "title", weight: 0.7 },
+      { name: "content", weight: 0.3 },
+    ],
     isCaseSensitive: isCaseSensitive.value,
     threshold: exactMatch.value ? 0 : 0.3, // Lower = stricter (0.0 = exact, 1.0 = match anything)
     distance: 100, // Maximum distance for fuzzy matching
