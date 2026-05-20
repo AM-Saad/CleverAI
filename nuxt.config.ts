@@ -17,7 +17,7 @@ const appBaseUrl =
   process.env.AUTH_ORIGIN ||
   process.env.SERVER_URL ||
   railwayBaseUrl ||
-  (isDevelopment ? "http://localhost:8080" : "https://cognilo.com");
+  (isDevelopment ? "http://localhost:8080" : "");
 const serverUrl = process.env.SERVER_URL || appBaseUrl;
 
 if (
