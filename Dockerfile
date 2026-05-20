@@ -1,11 +1,11 @@
 # syntax = docker/dockerfile:1
 
 
-# Adjust NODE_VERSION as desired
-ARG NODE_VERSION=22.21.1
+# Keep Railway aligned with package.json engines.node = "20.x"
+ARG NODE_VERSION=20
 FROM node:${NODE_VERSION}-slim AS base
 
-LABEL fly_launch_runtime="Nuxt/Prisma"
+LABEL `="Nuxt/Prisma"
 
 # Nuxt/Prisma app lives here
 WORKDIR /app
@@ -23,13 +23,21 @@ FROM base AS build
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential node-gyp openssl pkg-config python-is-python3
 
-# Install node modules (Prisma schema must exist before install)
+
+# Install node modules. postinstall runs Nuxt prepare and Prisma generate, so
+# copy the minimum app/config/schema files it needs before yarn install.
 COPY package.json yarn.lock ./
-COPY prisma ./prisma
+COPY nuxt.config.ts tsconfig.json ./
+COPY app ./app
+COPY public ./public
+COPY scripts ./scripts
+COPY server ./server
+COPY shared ./shared
+COPY sw-src ./sw-src
 RUN yarn install --frozen-lockfile --production=false
 
 # Generate Prisma Client
-RUN npx prisma generate --schema=prisma/schema.prisma
+RUN npx prisma generate --schema=server/prisma/schema.prisma
 
 # Copy application code
 COPY . .
@@ -51,6 +59,6 @@ RUN apt-get update -qq && \
 COPY --from=build /app/.output /app/.output
 
 # Start the server by default, this can be overwritten at runtime
-EXPOSE 3000
-ENV HOST=0
+EXPOSE 8080
+ENV HOST=0.0.0.0
 CMD [ "node", ".output/server/index.mjs" ]
