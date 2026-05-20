@@ -545,6 +545,13 @@ function closeVisualPane(side: "left" | "right") {
 
 // ─── Adaptive Toolbar ─────────────────────────────────────────────
 const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOverflowing } = useAdaptiveToolbar();
+
+function handleContainerScroll(e: Event) {
+  const el = e.currentTarget as HTMLElement;
+  if (el && el.scrollLeft !== 0) {
+    el.scrollLeft = 0;
+  }
+}
 </script>
 
 
@@ -570,18 +577,22 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
 
 
           <Transition name="toolbar-fade">
-            <u-button v-if="notes?.length >= 2" size="sm" :color="splitNotes.isSplit.value ? 'primary' : 'neutral'"
-              variant="link" :aria-label="splitNotes.isSplit.value ? 'Close split view' : 'Open split view'"
-              :aria-pressed="splitNotes.isSplit.value" @click="toggleSplitView">
-              <shared-icon name="split" class="w-4 h-4" />
-            </u-button>
+            <div v-if="notes?.length >= 2">
+              <u-button size="sm" :color="splitNotes.isSplit.value ? 'primary' : 'neutral'"
+                variant="link" :aria-label="splitNotes.isSplit.value ? 'Close split view' : 'Open split view'"
+                :aria-pressed="splitNotes.isSplit.value" @click="toggleSplitView">
+                <shared-icon name="split" class="w-4 h-4" />
+              </u-button>
+            </div>
           </Transition>
 
           <Transition name="toolbar-fade">
-            <u-button v-if="notes?.length" size="sm" color="neutral" variant="link"
-              @click="isDrawerOpen = !isDrawerOpen" :aria-label="isDrawerOpen ? 'Close notes list' : 'Open notes list'">
-              <shared-icon :name="isDrawerOpen ? 'panel-left-close' : 'panel-left-open'" class="w-4 h-4" />
-            </u-button>
+            <div v-if="notes?.length">
+              <u-button size="sm" color="neutral" variant="link"
+                @click="isDrawerOpen = !isDrawerOpen" :aria-label="isDrawerOpen ? 'Close notes list' : 'Open notes list'">
+                <shared-icon :name="isDrawerOpen ? 'panel-left-close' : 'panel-left-open'" class="w-4 h-4" />
+              </u-button>
+            </div>
           </Transition>
         </div>
       </div>
@@ -610,9 +621,9 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
       </shared-empty-state>
 
       <!-- Notes grid -->
-      <div v-if="!error && !isFetching && notes?.length" class="flex flex-1 min-h-0 overflow-hidden" id="notes-section">
+      <div v-if="!error && !isFetching && notes?.length" class="relative flex flex-1 min-h-0 overflow-hidden" id="notes-section" @scroll="handleContainerScroll">
         <ui-drawer :show="isDrawerOpen" @closed="isDrawerOpen = false" :mobile="false" :lock-scroll="false"
-          teleport-to="#notes-section" :backdrop="false" :handle-visible="2" title="Notes">
+          teleport-to="#notes-section" :backdrop="false" :handle-visible="2" title="Notes" side="right">
           <NotesDrawer
             :workspace-id="workspaceId"
             :notes="notes"
