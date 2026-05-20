@@ -4,10 +4,26 @@ import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "node:path";
 import vueDevTools from 'vite-plugin-vue-devtools'
 
+const isDevelopment = process.env.NODE_ENV === "development";
+const railwayDomain =
+  process.env.RAILWAY_PUBLIC_DOMAIN || process.env.RAILWAY_STATIC_URL;
+const railwayBaseUrl = railwayDomain
+  ? railwayDomain.startsWith("http")
+    ? railwayDomain
+    : `https://${railwayDomain}`
+  : undefined;
+const appBaseUrl =
+  process.env.APP_BASE_URL ||
+  process.env.AUTH_ORIGIN ||
+  process.env.SERVER_URL ||
+  railwayBaseUrl ||
+  (isDevelopment ? "http://localhost:8080" : "https://cognilo.com");
+const serverUrl = process.env.SERVER_URL || appBaseUrl;
+
 if (
   process.env.NODE_ENV === "production" &&
   !process.env.NUXT_AUTH_SECRET &&
-  !process.env.NEXT_RUNTIME
+  !process.env.RAILWAY_ENVIRONMENT
 ) {
   console.warn(
     "[WARN] NUXT_AUTH_SECRET not present at build time (expected on Railway)."
@@ -15,8 +31,8 @@ if (
 }
 export default defineNuxtConfig({
   compatibilityDate: "2025-07-15",
-  devtools: { enabled: true },
-  debug: true,
+  devtools: { enabled: isDevelopment },
+  debug: isDevelopment,
   // Use the existing `app/` workspace as Nuxt source directory
   srcDir: "app",
 
@@ -323,9 +339,9 @@ export default defineNuxtConfig({
 
     // Public (exposed to client)
     public: {
-      AUTH_ORIGIN: process.env.AUTH_ORIGIN,
-      APP_BASE_URL: process.env.APP_BASE_URL || (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://cognilo.com'),
-      SERVER_URL: process.env.SERVER_URL,
+      AUTH_ORIGIN: process.env.AUTH_ORIGIN || appBaseUrl,
+      APP_BASE_URL: appBaseUrl,
+      SERVER_URL: serverUrl,
       VAPID_PUBLIC_KEY: process.env.VAPID_PUBLIC_KEY,
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
       STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,

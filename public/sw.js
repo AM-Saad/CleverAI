@@ -4460,6 +4460,16 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       notesSyncInProgress = true;
       try {
         const clients = await swSelf.clients.matchAll({ type: "window" });
+        if (mode === "background" && clients.length > 0) {
+          log("[Notes Sync] Background sync deferred \u2014 client tabs are open, they own sync");
+          clients.forEach(
+            (c) => c.postMessage({
+              type: SW_MESSAGE_TYPES.NOTES_SYNCED,
+              data: { appliedCount: 0, conflictsCount: 0, mode, deferredToClient: true }
+            })
+          );
+          return;
+        }
         const pending = await loadPendingNoteChanges();
         const pendingGroups = await loadPendingNoteGroupChanges();
         const pendingLayouts = await loadPendingNoteLayoutChanges();

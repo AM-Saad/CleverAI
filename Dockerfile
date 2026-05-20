@@ -18,25 +18,28 @@ RUN npm install -g yarn@$YARN_VERSION --force
 
 # Throw-away build stage to reduce size of final image
 FROM base AS build
+ENV HUSKY=0
 
 # Install packages needed to build node modules
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential node-gyp openssl pkg-config python-is-python3
 
-# Install node modules. postinstall runs Nuxt prepare and Prisma generate, so
+# Install node modules. postinstall runs Prisma generate and Nuxt prepare, so
 # copy the minimum app/config/schema files it needs before yarn install.
 COPY package.json yarn.lock ./
-COPY nuxt.config.ts tsconfig.json ./
+COPY nuxt.config.ts tsconfig.json prisma.config.ts types.d.ts ./
 COPY app ./app
+COPY prisma ./prisma
 COPY public ./public
 COPY scripts ./scripts
 COPY server ./server
 COPY shared ./shared
 COPY sw-src ./sw-src
+COPY types ./types
 RUN yarn install --frozen-lockfile --production=false
 
 # Generate Prisma Client
-RUN npx prisma generate --schema=server/prisma/schema.prisma
+RUN npx prisma generate --schema=prisma/schema.prisma
 
 # Copy application code
 COPY . .
