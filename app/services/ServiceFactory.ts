@@ -3,6 +3,7 @@ import type FetchFactory from "./FetchFactory";
 import WorkspacesModule from "./Workspace";
 import { MaterialService } from "./Material";
 import { NoteService } from "./Note";
+import { NoteGroupService } from "./NoteGroup";
 import { BoardItemService } from "./BoardItem";
 import { BoardColumnService } from "./BoardColumn";
 import { ReviewService } from "./ReviewService";
@@ -22,6 +23,7 @@ export class ServiceFactory {
   create(service: "workspaces"): WorkspacesModule;
   create(service: "materials"): MaterialService;
   create(service: "notes"): NoteService;
+  create(service: "noteGroups"): NoteGroupService;
   create(service: "boardItems"): BoardItemService;
   create(service: "boardColumns"): BoardColumnService;
   create(service: "review"): ReviewService;
@@ -39,6 +41,8 @@ export class ServiceFactory {
         return new MaterialService(this.$fetch);
       case "notes":
         return new NoteService(this.$fetch);
+      case "noteGroups":
+        return new NoteGroupService(this.$fetch);
       case "boardItems":
         return new BoardItemService(this.$fetch);
       case "boardColumns":

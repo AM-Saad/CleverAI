@@ -29,8 +29,17 @@ export default defineEventHandler(async (event) => {
     throw Errors.notFound("Workspace");
   }
 
+  if (data.groupId) {
+    const group = await (prisma as any).noteGroup.findFirst({
+      where: { id: data.groupId, workspaceId: data.workspaceId },
+    });
+    if (!group) {
+      throw Errors.badRequest("Note group does not belong to this workspace");
+    }
+  }
+
   const maxOrderNote = await prisma.note.findFirst({
-    where: { workspaceId: data.workspaceId },
+    where: { workspaceId: data.workspaceId, groupId: data.groupId ?? null },
     orderBy: { order: "desc" },
     select: { order: true },
   });
@@ -40,6 +49,7 @@ export default defineEventHandler(async (event) => {
   const note = await prisma.note.create({
     data: {
       workspaceId: data.workspaceId,
+      groupId: data.groupId ?? null,
       title: normalizeWorkspaceNoteTitle(data.title, data.content),
       content: data.content,
       tags: data.tags || [],

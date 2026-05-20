@@ -48,11 +48,17 @@
     // 10: BoardItem separation - added BOARD_ITEMS and PENDING_BOARD_ITEMS stores
     // 11: Added BOARD_COLUMNS store for board column offline support
     // 12: Added USER_TAGS store for offline tag caching
-    VERSION: 12,
+    // 13: Added groupId index for workspace note grouping
+    // 14: Added pendingNoteLayouts store for local-first note/group layout sync
+    // 15: Added noteGroups + pendingNoteGroupChanges for local-first note grouping
+    VERSION: 15,
     STORES: {
       FORMS: "forms",
       NOTES: "notes",
+      NOTE_GROUPS: "noteGroups",
       PENDING_NOTES: "pendingNotes",
+      PENDING_NOTE_GROUP_CHANGES: "pendingNoteGroupChanges",
+      PENDING_NOTE_LAYOUTS: "pendingNoteLayouts",
       BOARD_ITEMS: "boardItems",
       PENDING_BOARD_ITEMS: "pendingBoardItems",
       BOARD_COLUMNS: "boardColumns",
@@ -134,7 +140,10 @@
         };
         ensureStore(STORES.FORMS);
         ensureStore(STORES.NOTES);
+        ensureStore(STORES.NOTE_GROUPS);
         ensureStore(STORES.PENDING_NOTES);
+        ensureStore(STORES.PENDING_NOTE_GROUP_CHANGES);
+        ensureStore(STORES.PENDING_NOTE_LAYOUTS);
         ensureStore(STORES.BOARD_ITEMS);
         ensureStore(STORES.PENDING_BOARD_ITEMS);
         ensureStore(STORES.BOARD_COLUMNS);
@@ -149,6 +158,21 @@
               }
               if (!notesStore.indexNames.contains("updatedAt")) {
                 notesStore.createIndex("updatedAt", "updatedAt", { unique: false });
+              }
+              if (!notesStore.indexNames.contains("groupId")) {
+                notesStore.createIndex("groupId", "groupId", { unique: false });
+              }
+            }
+          }
+          if (db.objectStoreNames.contains(STORES.NOTE_GROUPS)) {
+            const tx = req.transaction;
+            if (tx) {
+              const groupsStore = tx.objectStore(STORES.NOTE_GROUPS);
+              if (!groupsStore.indexNames.contains("workspaceId")) {
+                groupsStore.createIndex("workspaceId", "workspaceId", { unique: false });
+              }
+              if (!groupsStore.indexNames.contains("order")) {
+                groupsStore.createIndex("order", "order", { unique: false });
               }
             }
           }
@@ -182,6 +206,18 @@
               }
             }
           }
+          if (db.objectStoreNames.contains(STORES.PENDING_NOTE_GROUP_CHANGES)) {
+            const tx = req.transaction;
+            if (tx) {
+              const pendingGroups = tx.objectStore(STORES.PENDING_NOTE_GROUP_CHANGES);
+              if (!pendingGroups.indexNames.contains("workspaceId")) {
+                pendingGroups.createIndex("workspaceId", "workspaceId", { unique: false });
+              }
+              if (!pendingGroups.indexNames.contains("updatedAt")) {
+                pendingGroups.createIndex("updatedAt", "updatedAt", { unique: false });
+              }
+            }
+          }
         } catch (e) {
           console.warn("[IDB] Failed creating indexes during upgrade:", e);
         }
@@ -192,7 +228,10 @@
           const required = [
             DB_CONFIG.STORES.FORMS,
             DB_CONFIG.STORES.NOTES,
+            DB_CONFIG.STORES.NOTE_GROUPS,
             DB_CONFIG.STORES.PENDING_NOTES,
+            DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES,
+            DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS,
             DB_CONFIG.STORES.BOARD_ITEMS,
             DB_CONFIG.STORES.PENDING_BOARD_ITEMS,
             DB_CONFIG.STORES.BOARD_COLUMNS,
@@ -321,6 +360,57 @@
     }
     throw lastErr;
   }
+  async function putAllRecords(db, storeName, records) {
+    if (!records.length) return;
+    const {
+      MAX_ATTEMPTS,
+      BASE_DELAY_MS,
+      FACTOR,
+      MAX_DELAY_MS,
+      JITTER_PCT
+    } = IDB_RETRY_CONFIG;
+    const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
+    const calcDelay = (attempt) => {
+      const raw = Math.min(BASE_DELAY_MS * Math.pow(FACTOR, attempt), MAX_DELAY_MS);
+      const jitter = raw * JITTER_PCT * (Math.random() * 2 - 1);
+      return Math.max(0, Math.round(raw + jitter));
+    };
+    let lastErr;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      try {
+        const activeDb = attempt === 0 ? db : await openUnifiedDB();
+        await new Promise((resolve, reject) => {
+          let tx;
+          try {
+            tx = activeDb.transaction([storeName], "readwrite");
+          } catch (e) {
+            return reject(e);
+          }
+          try {
+            const store = tx.objectStore(storeName);
+            for (const record of records) {
+              store.put(sanitizeForIDB(record));
+            }
+          } catch (inner) {
+            return reject(inner);
+          }
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+          tx.onabort = () => reject(tx.error || new Error("IDB transaction aborted"));
+        });
+        return;
+      } catch (err) {
+        lastErr = err;
+        const transient = err && (err.name === "InvalidStateError" || err.name === "TransactionInactiveError");
+        if (!transient) break;
+        if (attempt < MAX_ATTEMPTS - 1) {
+          await sleep(calcDelay(attempt));
+          continue;
+        }
+      }
+    }
+    throw lastErr;
+  }
   async function getAllRecords(db, storeName) {
     return new Promise((resolve, reject) => {
       const tx = db.transaction([storeName], "readonly");
@@ -344,6 +434,88 @@
     const db = await openUnifiedDB();
     if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) return;
     await Promise.all(ids.map((id) => deleteRecord(db, DB_CONFIG.STORES.PENDING_NOTES, id)));
+  }
+  async function loadPendingNoteGroupChanges(workspaceId) {
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES)) return [];
+    const records = await getAllRecords(
+      db,
+      DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES
+    );
+    const scoped = workspaceId ? records.filter((record) => record.workspaceId === workspaceId) : records;
+    return scoped.sort((a, b) => a.updatedAt - b.updatedAt);
+  }
+  async function deletePendingNoteGroupChanges(ids) {
+    if (!ids.length) return;
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES)) return;
+    await Promise.all(
+      ids.map((id) => deleteRecord(db, DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES, id))
+    );
+  }
+  async function loadPendingNoteLayoutChanges() {
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS)) return [];
+    return getAllRecords(db, DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS);
+  }
+  async function deletePendingNoteLayoutChange(workspaceId) {
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS)) return;
+    await deleteRecord(db, DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS, workspaceId);
+  }
+  async function remapPendingNoteGroupIds(groupIdMap) {
+    const entries = Object.entries(groupIdMap);
+    if (!entries.length) return;
+    const db = await openUnifiedDB();
+    if (db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) {
+      const changes = await getAllRecords(db, DB_CONFIG.STORES.PENDING_NOTES);
+      const remapped = changes.filter((change) => change.groupId && groupIdMap[change.groupId]).map((change) => {
+        var _a;
+        return {
+          ...change,
+          groupId: change.groupId ? (_a = groupIdMap[change.groupId]) != null ? _a : change.groupId : change.groupId
+        };
+      });
+      if (remapped.length) {
+        await putAllRecords(db, DB_CONFIG.STORES.PENDING_NOTES, remapped);
+      }
+    }
+    if (db.objectStoreNames.contains(DB_CONFIG.STORES.NOTES)) {
+      const notes = await getAllRecords(db, DB_CONFIG.STORES.NOTES);
+      const remapped = notes.filter((note) => note.groupId && groupIdMap[note.groupId]).map((note) => {
+        var _a;
+        return {
+          ...note,
+          groupId: note.groupId ? (_a = groupIdMap[note.groupId]) != null ? _a : note.groupId : note.groupId
+        };
+      });
+      if (remapped.length) {
+        await putAllRecords(db, DB_CONFIG.STORES.NOTES, remapped);
+      }
+    }
+    if (db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS)) {
+      const layouts = await getAllRecords(db, DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS);
+      const remapped = layouts.map((layout) => ({
+        ...layout,
+        notes: layout.notes.map((note) => {
+          var _a;
+          return {
+            ...note,
+            groupId: note.groupId ? (_a = groupIdMap[note.groupId]) != null ? _a : note.groupId : note.groupId
+          };
+        }),
+        groups: layout.groups.map((group) => {
+          var _a;
+          return {
+            ...group,
+            id: (_a = groupIdMap[group.id]) != null ? _a : group.id
+          };
+        })
+      }));
+      if (remapped.length) {
+        await putAllRecords(db, DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS, remapped);
+      }
+    }
   }
   async function loadPendingBoardItemChanges(workspaceId) {
     const db = await openUnifiedDB();
@@ -4283,23 +4455,25 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       }
     }
     async function syncPendingNotes(mode) {
-      var _a, _b, _c, _d;
+      var _a;
       if (notesSyncInProgress) return;
       notesSyncInProgress = true;
       try {
         const clients = await swSelf.clients.matchAll({ type: "window" });
         const pending = await loadPendingNoteChanges();
+        const pendingGroups = await loadPendingNoteGroupChanges();
+        const pendingLayouts = await loadPendingNoteLayoutChanges();
         clients.forEach(
           (c) => c.postMessage({
             type: SW_MESSAGE_TYPES.NOTES_SYNC_STARTED,
             data: {
               message: "Syncing notes\u2026",
-              pendingCount: pending.length,
+              pendingCount: pending.length + pendingGroups.length + pendingLayouts.length,
               mode
             }
           })
         );
-        if (!pending.length) {
+        if (!pending.length && !pendingGroups.length && !pendingLayouts.length) {
           clients.forEach(
             (c) => c.postMessage({
               type: SW_MESSAGE_TYPES.NOTES_SYNCED,
@@ -4308,19 +4482,78 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           );
           return;
         }
-        const resp = await fetch("/api/notes/sync", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ changes: pending })
+        const postNotesSync = async (payload) => {
+          const resp = await fetch("/api/notes/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          if (!resp.ok) {
+            error("[Notes Sync] Server error:", resp.status);
+            throw new Error("Notes sync failed");
+          }
+          return await resp.json().catch(() => ({}));
+        };
+        const syncResults = [];
+        const [firstLayout, ...remainingLayouts] = pendingLayouts;
+        syncResults.push({
+          result: await postNotesSync({
+            changes: pending,
+            groupChanges: pendingGroups,
+            ...firstLayout && { layoutChange: firstLayout }
+          }),
+          layout: firstLayout
         });
-        if (!resp.ok) {
-          error("[Notes Sync] Server error:", resp.status);
-          throw new Error("Notes sync failed");
+        for (const layout of remainingLayouts) {
+          syncResults.push({
+            result: await postNotesSync({ changes: [], layoutChange: layout }),
+            layout
+          });
         }
-        const result = await resp.json().catch(() => ({}));
-        const appliedIds = Array.from(new Set(((_a = result.data) == null ? void 0 : _a.applied) || []));
-        const conflictsCount = ((_c = (_b = result.data) == null ? void 0 : _b.conflicts) == null ? void 0 : _c.length) || 0;
-        const idMap = ((_d = result.data) == null ? void 0 : _d.idMap) || {};
+        const appliedIds = Array.from(
+          new Set(syncResults.flatMap(({ result }) => {
+            var _a2;
+            return ((_a2 = result.data) == null ? void 0 : _a2.applied) || [];
+          }))
+        );
+        const conflictsCount = syncResults.reduce(
+          (total, { result }) => {
+            var _a2, _b;
+            return total + (((_b = (_a2 = result.data) == null ? void 0 : _a2.conflicts) == null ? void 0 : _b.length) || 0);
+          },
+          0
+        );
+        const groupAppliedIds = Array.from(
+          new Set(syncResults.flatMap(({ result }) => {
+            var _a2;
+            return ((_a2 = result.data) == null ? void 0 : _a2.groupApplied) || [];
+          }))
+        );
+        const groupConflictsCount = syncResults.reduce(
+          (total, { result }) => {
+            var _a2, _b;
+            return total + (((_b = (_a2 = result.data) == null ? void 0 : _a2.groupConflicts) == null ? void 0 : _b.length) || 0);
+          },
+          0
+        );
+        const idMap = syncResults.reduce((acc, { result }) => {
+          var _a2;
+          Object.assign(acc, ((_a2 = result.data) == null ? void 0 : _a2.idMap) || {});
+          return acc;
+        }, {});
+        const groupIdMap = syncResults.reduce((acc, { result }) => {
+          var _a2;
+          Object.assign(acc, ((_a2 = result.data) == null ? void 0 : _a2.groupIdMap) || {});
+          return acc;
+        }, {});
+        const syncedLayouts = syncResults.filter(({ result, layout }) => {
+          var _a2;
+          return ((_a2 = result.data) == null ? void 0 : _a2.layoutApplied) && layout;
+        }).map(({ layout }) => layout);
+        const layoutConflict = syncResults.some(({ result }) => {
+          var _a2;
+          return Boolean((_a2 = result.data) == null ? void 0 : _a2.layoutConflict);
+        });
         if (Object.keys(idMap).length) {
           try {
             const db2 = await openUnifiedDB();
@@ -4330,6 +4563,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
                 await putRecord(db2, DB_CONFIG.STORES.NOTES, {
                   id: serverId,
                   workspaceId: original.workspaceId,
+                  groupId: (_a = original.groupId) != null ? _a : null,
                   title: original.title,
                   content: original.content || "",
                   tags: original.tags || [],
@@ -4354,19 +4588,54 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
             error("[Notes Sync] Failed to clear synced changes:", e);
           }
         }
-        if (conflictsCount) {
+        if (groupAppliedIds.length) {
+          try {
+            await deletePendingNoteGroupChanges(groupAppliedIds);
+            await remapPendingNoteGroupIds(groupIdMap);
+            const db2 = await openUnifiedDB();
+            for (const tempId of Object.keys(groupIdMap)) {
+              await deleteRecord(db2, DB_CONFIG.STORES.NOTE_GROUPS, tempId);
+            }
+          } catch (e) {
+            error("[Notes Sync] Failed to clear synced group changes:", e);
+          }
+        }
+        if (syncedLayouts.length) {
+          try {
+            await Promise.all(
+              syncedLayouts.map((layout) => deletePendingNoteLayoutChange(layout.workspaceId))
+            );
+          } catch (e) {
+            error("[Notes Sync] Failed to clear synced layout change:", e);
+          }
+        }
+        if (conflictsCount || groupConflictsCount || layoutConflict) {
           clients.forEach(
             (c) => c.postMessage({
               type: SW_MESSAGE_TYPES.NOTES_SYNC_CONFLICTS,
-              data: { conflictsCount, mode }
+              data: { conflictsCount, groupConflictsCount, layoutConflict, mode }
             })
           );
         }
-        log("[Notes Sync] Complete:", { applied: appliedIds.length, conflicts: conflictsCount });
+        log("[Notes Sync] Complete:", {
+          applied: appliedIds.length,
+          conflicts: conflictsCount,
+          groupApplied: groupAppliedIds.length,
+          groupConflicts: groupConflictsCount,
+          layoutApplied: syncedLayouts.length,
+          layoutConflict
+        });
         clients.forEach(
           (c) => c.postMessage({
             type: SW_MESSAGE_TYPES.NOTES_SYNCED,
-            data: { appliedCount: appliedIds.length, conflictsCount, mode }
+            data: {
+              appliedCount: appliedIds.length,
+              conflictsCount: conflictsCount + groupConflictsCount,
+              groupAppliedCount: groupAppliedIds.length,
+              layoutApplied: syncedLayouts.length,
+              layoutConflict,
+              mode
+            }
           })
         );
       } catch (err) {

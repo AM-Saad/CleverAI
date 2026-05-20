@@ -36,6 +36,7 @@
     "generate:api": "tsx scripts/codegen/api-client-generator.ts"
   },
   "dependencies": {
+    "@formkit/drag-and-drop": "^0.5.3",
     "@google/generative-ai": "^0.24.1",
     "@gradio/client": "^2.1.0",
     "@headlessui/vue": "^1.7.17",

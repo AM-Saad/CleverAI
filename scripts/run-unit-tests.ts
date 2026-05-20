@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { ref } from "vue";
 import { calculateSM2 } from "../server/modules/review/domain/sm2";
 import { gradeReviewCard } from "../server/modules/review/application/gradeReviewCard";
 import { syncBoardItems } from "../server/modules/board/application/syncBoardItems";
+import { applyWorkspaceNoteLayout } from "../server/modules/notes/application/applyWorkspaceNoteLayout";
 import { syncWorkspaceNotes } from "../server/modules/notes/application/syncWorkspaceNotes";
 import { consumeGenerationQuota } from "../server/modules/subscription/application/generationQuota";
 import { createStripeCreditCheckout } from "../server/modules/subscription/application/createStripeCreditCheckout";
@@ -15,9 +17,24 @@ import { mergePendingBoardItems } from "../app/features/board/composables/mergeP
 import { BoardItemsSyncRequestSchema } from "../shared/utils/boardItem.contract";
 import {
   CreateNoteDTO,
+  ReorderNotesDTO,
   UpdateNoteDTO,
 } from "../shared/utils/note.contract";
-import { PendingNoteChangeSchema } from "../shared/utils/note-sync.contract";
+import {
+  CreateNoteGroupDTO,
+  ReorderNoteGroupsDTO,
+  UpdateNoteGroupDTO,
+} from "../shared/utils/note-group.contract";
+import {
+  NoteLayoutChangeSchema,
+  NotesSyncRequestSchema,
+  PendingNoteChangeSchema,
+} from "../shared/utils/note-sync.contract";
+import {
+  buildCanonicalNoteLayout,
+  type NotesLayoutCommand,
+  type NotesLayoutStatus,
+} from "../app/features/notes/composables/notesLayoutController";
 import {
   DEFAULT_WORKSPACE_NOTE_HTML,
   TITLE_FALLBACK,
@@ -25,6 +42,12 @@ import {
   normalizeWorkspaceNoteContent,
   normalizeWorkspaceNoteTitle,
 } from "../shared/utils/workspaceNote";
+import {
+  buildWorkspaceTextDraftCommit,
+  resolveEditorSaveState,
+  saveStateLabel,
+} from "../app/features/notes/composables/notesDraftCommitter";
+import { createNotesSplitInteractionController } from "../app/features/notes/composables/notesSplitInteractionController";
 import type {
   ReviewCardRecord,
   ReviewRepository,
@@ -32,6 +55,7 @@ import type {
 } from "../server/modules/review/ports/ReviewRepository";
 import type { XpPort } from "../server/modules/review/ports/XpPort";
 import type { BoardItemState } from "../app/features/board/composables/useBoardItemsStore";
+import type { ActivePane, SplitPosition } from "../app/composables/ui/useSplitNotes";
 
 type TestCase = {
   name: string;
@@ -92,11 +116,16 @@ function fakePrismaForReview() {
 }
 
 function fakeNotesPrisma() {
-  const notes = new Map<string, any>();
-  let noteSequence = 1;
+	  const notes = new Map<string, any>();
+	  const noteGroups = new Map<string, any>([
+	    ["group-1", { id: "group-1", workspaceId: "workspace-1", title: "Group 1", order: 0 }],
+	  ]);
+	  let noteSequence = 1;
+	  let noteGroupSequence = 1;
 
   return {
     notes,
+    noteGroups,
     prisma: {
       workspace: {
         findFirst: async ({ where }: any) =>
@@ -104,16 +133,61 @@ function fakeNotesPrisma() {
             ? { id: "workspace-1", userId: "user-1" }
             : null,
       },
+      noteGroup: {
+        findFirst: async ({ where }: any) => {
+          const group = noteGroups.get(where.id);
+          if (!group) return null;
+          if (where.workspaceId && group.workspaceId !== where.workspaceId) return null;
+          return group;
+        },
+        findMany: async ({ where }: any) =>
+          Array.from(noteGroups.values()).filter((group) => {
+            if (where?.workspaceId && group.workspaceId !== where.workspaceId) return false;
+            if (where?.id?.in && !where.id.in.includes(group.id)) return false;
+            return true;
+          }),
+	        update: async ({ where, data }: any) => {
+	          const existing = noteGroups.get(where.id);
+	          assert.ok(existing, "expected existing note group");
+	          const row = { ...existing, ...data };
+	          noteGroups.set(where.id, row);
+	          return row;
+	        },
+	        create: async ({ data }: any) => {
+	          const id = data.id ?? `server-group-${noteGroupSequence++}`;
+	          const row = {
+	            id,
+	            workspaceId: data.workspaceId,
+	            title: data.title,
+	            order: data.order ?? 0,
+	          };
+	          noteGroups.set(id, row);
+	          return row;
+	        },
+	        delete: async ({ where }: any) => {
+	          const existing = noteGroups.get(where.id);
+	          noteGroups.delete(where.id);
+	          return existing;
+	        },
+	      },
       note: {
         findFirst: async ({ where }: any) => notes.get(where.id) ?? null,
+        findMany: async ({ where }: any) =>
+          Array.from(notes.values()).filter((note) => {
+            if (where?.workspaceId && note.workspaceId !== where.workspaceId) return false;
+            if (where?.id?.in && !where.id.in.includes(note.id)) return false;
+            return true;
+          }),
         create: async ({ data }: any) => {
           const id = data.id ?? `server-note-${noteSequence++}`;
           const row = {
             id,
             workspaceId: data.workspaceId,
+            groupId: data.groupId ?? null,
             title: data.title,
             content: data.content,
             tags: data.tags,
+            order: data.order ?? 0,
             noteType: data.noteType,
             metadata: data.metadata,
             updatedAt: new Date("2026-01-01T00:00:00.000Z"),
@@ -134,6 +208,40 @@ function fakeNotesPrisma() {
           return existing;
         },
       },
+      $transaction: async <T>(fn: (tx: any) => Promise<T>) =>
+        fn({
+	          note: {
+	            updateMany: async ({ where, data }: any) => {
+	              for (const [id, existing] of notes) {
+	                if (where.workspaceId && existing.workspaceId !== where.workspaceId) continue;
+	                if (where.groupId !== undefined && existing.groupId !== where.groupId) continue;
+	                notes.set(id, { ...existing, ...data, updatedAt: new Date() });
+	              }
+	              return { count: notes.size };
+	            },
+	            update: async ({ where, data }: any) => {
+	              const existing = notes.get(where.id);
+	              assert.ok(existing, "expected existing note");
+	              const row = { ...existing, ...data, updatedAt: new Date() };
+	              notes.set(where.id, row);
+              return row;
+            },
+          },
+          noteGroup: {
+	            update: async ({ where, data }: any) => {
+	              const existing = noteGroups.get(where.id);
+	              assert.ok(existing, "expected existing note group");
+	              const row = { ...existing, ...data };
+	              noteGroups.set(where.id, row);
+	              return row;
+	            },
+	            delete: async ({ where }: any) => {
+	              const existing = noteGroups.get(where.id);
+	              noteGroups.delete(where.id);
+	              return existing;
+	            },
+	          },
+	        }),
     },
   };
 }
@@ -187,6 +295,45 @@ function fakeBoardPrisma() {
           return existing;
         },
       },
+    },
+  };
+}
+
+function fakeSplitNotesState(input: {
+  isSplit?: boolean;
+  primaryNoteId?: string | null;
+  secondaryNoteId?: string | null;
+  secondaryPosition?: SplitPosition;
+  activePane?: ActivePane;
+} = {}) {
+  const isSplit = ref(input.isSplit ?? false);
+  const primaryNoteId = ref<string | null>(input.primaryNoteId ?? null);
+  const secondaryNoteId = ref<string | null>(input.secondaryNoteId ?? null);
+  const secondaryPosition = ref<SplitPosition>(input.secondaryPosition ?? "right");
+  const activePane = ref<ActivePane>(input.activePane ?? "primary");
+
+  return {
+    isSplit,
+    primaryNoteId,
+    secondaryNoteId,
+    secondaryPosition,
+    activePane,
+    setPrimaryNote: (noteId: string | null) => {
+      primaryNoteId.value = noteId;
+    },
+    setSecondaryNote: (noteId: string) => {
+      if (!isSplit.value) return;
+      secondaryNoteId.value = noteId;
+    },
+    openSplit: (noteId: string, position: SplitPosition = "right") => {
+      if (!primaryNoteId.value || primaryNoteId.value === noteId) return;
+      secondaryNoteId.value = noteId;
+      secondaryPosition.value = position;
+      isSplit.value = true;
+      activePane.value = "primary";
+    },
+    setActivePane: (pane: ActivePane) => {
+      activePane.value = pane;
     },
   };
 }
@@ -603,6 +750,76 @@ test("note contracts accept legacy records without title", () => {
   assert.equal(pending.title, undefined);
 });
 
+test("note contracts accept group IDs while preserving legacy reorder payloads", () => {
+  const created = CreateNoteDTO.parse({
+    workspaceId: "workspace-1",
+    groupId: "group-1",
+    content: DEFAULT_WORKSPACE_NOTE_HTML,
+  });
+  const updated = UpdateNoteDTO.parse({
+    groupId: null,
+    content: "<h1>Updated</h1><p>Body</p>",
+  });
+  const legacyReorder = ReorderNotesDTO.parse({
+    workspaceId: "workspace-1",
+    noteOrders: [{ id: "note-1", order: 0 }],
+  });
+  const groupedReorder = ReorderNotesDTO.parse({
+    workspaceId: "workspace-1",
+    noteOrders: [{ id: "note-1", groupId: "group-1", order: 0 }],
+  });
+
+  assert.equal(created.groupId, "group-1");
+  assert.equal(updated.groupId, null);
+  assert.equal(legacyReorder.noteOrders[0]?.groupId, undefined);
+  assert.equal(groupedReorder.noteOrders[0]?.groupId, "group-1");
+});
+
+test("note group contracts accept create, rename, and reorder payloads", () => {
+  const created = CreateNoteGroupDTO.parse({
+    workspaceId: "workspace-1",
+    title: "  Research  ",
+  });
+  const updated = UpdateNoteGroupDTO.parse({ title: "  Inbox  " });
+  const reordered = ReorderNoteGroupsDTO.parse({
+    workspaceId: "workspace-1",
+    groupOrders: [
+      { id: "group-2", order: 0 },
+      { id: "group-1", order: 1 },
+    ],
+  });
+
+  assert.equal(created.title, "Research");
+  assert.equal(updated.title, "Inbox");
+  assert.deepEqual(reordered.groupOrders.map((group) => group.id), ["group-2", "group-1"]);
+});
+
+test("workspace text draft commit normalizes content and extracts title on commit", () => {
+  const commit = buildWorkspaceTextDraftCommit("<h2>Draft Title</h2><p>Body</p>");
+
+  assert.equal(commit.title, "Draft Title");
+  assert.equal(commit.content, "<h1>Draft Title</h1><p>Body</p>");
+});
+
+test("workspace text draft commit preserves legacy body with fallback title", () => {
+  const commit = buildWorkspaceTextDraftCommit("<p>Legacy body</p>");
+
+  assert.equal(commit.title, TITLE_FALLBACK);
+  assert.equal(commit.content, "<h1></h1><p>Legacy body</p>");
+});
+
+test("notes editor save state favors conflicts, drafts, local saves, and synced labels", () => {
+  assert.equal(
+    resolveEditorSaveState({ hasLocalDraft: true, error: "Server rejected update" }),
+    "conflict",
+  );
+  assert.equal(resolveEditorSaveState({ hasLocalDraft: true, isLoading: true }), "editing");
+  assert.equal(resolveEditorSaveState({ hasLocalDraft: true }), "editing");
+  assert.equal(resolveEditorSaveState({ hasLocalDraft: false, isDirty: true }), "saved-local");
+  assert.equal(resolveEditorSaveState({ hasLocalDraft: false, isLoading: true }), "syncing");
+  assert.equal(saveStateLabel(resolveEditorSaveState({ hasLocalDraft: false })), "Synced");
+});
+
 test("workspace note sync derives fallback title when payload omits it", async () => {
   const { notes, prisma } = fakeNotesPrisma();
 
@@ -624,6 +841,460 @@ test("workspace note sync derives fallback title when payload omits it", async (
   });
 
   assert.equal(notes.get("server-note-1")?.title, "Derived title");
+});
+
+test("workspace note sync preserves group IDs on create and update", async () => {
+  const { notes, prisma } = fakeNotesPrisma();
+
+  await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request: {
+      changes: [
+        {
+          id: "temp-note-4",
+          operation: "upsert",
+          updatedAt: Date.parse("2026-01-01T00:00:00.000Z"),
+          localVersion: 1,
+          workspaceId: "workspace-1",
+          groupId: "group-1",
+          content: "<h1>Grouped note</h1><p>Body</p>",
+        },
+      ],
+    },
+  });
+
+  assert.equal(notes.get("server-note-1")?.groupId, "group-1");
+
+  await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request: {
+      changes: [
+        {
+          id: "server-note-1",
+          operation: "upsert",
+          updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+          localVersion: 2,
+          workspaceId: "workspace-1",
+          groupId: null,
+          content: "<h1>Ungrouped again</h1><p>Body</p>",
+        },
+      ],
+    },
+  });
+
+  assert.equal(notes.get("server-note-1")?.groupId, null);
+});
+
+test("note layout contracts accept layout-only sync requests", () => {
+  const layout = NoteLayoutChangeSchema.parse({
+    workspaceId: "workspace-1",
+    updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+    notes: [
+      { id: "note-1", groupId: "group-1", order: 0 },
+      { id: "note-2", groupId: null, order: 0 },
+    ],
+    groups: [{ id: "group-1", order: 0 }],
+  });
+  const request = NotesSyncRequestSchema.parse({ layoutChange: layout });
+
+  assert.equal(layout.id, "workspace-1");
+  assert.deepEqual(request.changes, []);
+  assert.equal(request.layoutChange?.notes[0]?.groupId, "group-1");
+});
+
+test("workspace note layout applies note moves and group order without touching content", async () => {
+  const { notes, noteGroups, prisma } = fakeNotesPrisma();
+  notes.set("note-1", {
+    id: "note-1",
+    workspaceId: "workspace-1",
+    groupId: null,
+    title: "One",
+    content: "<h1>One</h1><p>Body</p>",
+    tags: [],
+    noteType: "TEXT",
+    metadata: null,
+    order: 0,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  });
+  notes.set("note-2", {
+    id: "note-2",
+    workspaceId: "workspace-1",
+    groupId: "group-1",
+    title: "Two",
+    content: "<h1>Two</h1><p>Body</p>",
+    tags: [],
+    noteType: "TEXT",
+    metadata: null,
+    order: 0,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  });
+
+  const beforeContent = notes.get("note-1")?.content;
+  const result = await applyWorkspaceNoteLayout({
+    prisma,
+    userId: "user-1",
+    layout: {
+      id: "workspace-1",
+      workspaceId: "workspace-1",
+      updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+      localVersion: 2,
+      notes: [
+        { id: "note-2", groupId: null, order: 0 },
+        { id: "note-1", groupId: "group-1", order: 0 },
+      ],
+      groups: [{ id: "group-1", order: 3 }],
+    },
+  });
+
+  assert.equal(result.layoutApplied, true);
+  assert.equal(notes.get("note-1")?.groupId, "group-1");
+  assert.equal(notes.get("note-1")?.order, 0);
+  assert.equal(notes.get("note-1")?.content, beforeContent);
+  assert.equal(notes.get("note-2")?.groupId, null);
+  assert.equal(noteGroups.get("group-1")?.order, 3);
+});
+
+test("workspace note layout rejects foreign note groups", async () => {
+  const { notes, prisma } = fakeNotesPrisma();
+  notes.set("note-1", {
+    id: "note-1",
+    workspaceId: "workspace-1",
+    groupId: null,
+    title: "One",
+    content: "<h1>One</h1><p>Body</p>",
+    tags: [],
+    noteType: "TEXT",
+    metadata: null,
+    order: 0,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  });
+
+  await assert.rejects(
+    () =>
+      applyWorkspaceNoteLayout({
+        prisma,
+        userId: "user-1",
+        layout: {
+          id: "workspace-1",
+          workspaceId: "workspace-1",
+          updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+          localVersion: 1,
+          notes: [{ id: "note-1", groupId: "foreign-group", order: 0 }],
+          groups: [],
+        },
+      }),
+    /Some note groups do not belong/,
+  );
+});
+
+test("workspace note sync applies layout changes after content changes", async () => {
+  const { notes, prisma } = fakeNotesPrisma();
+  notes.set("note-1", {
+    id: "note-1",
+    workspaceId: "workspace-1",
+    groupId: null,
+    title: "One",
+    content: "<h1>One</h1><p>Body</p>",
+    tags: [],
+    noteType: "TEXT",
+    metadata: null,
+    order: 0,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  });
+
+  const result = await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request: {
+      changes: [],
+      layoutChange: {
+        id: "workspace-1",
+        workspaceId: "workspace-1",
+        updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+        localVersion: 2,
+        notes: [{ id: "note-1", groupId: "group-1", order: 0 }],
+        groups: [{ id: "group-1", order: 0 }],
+      },
+    },
+  });
+
+  assert.equal(result.layoutApplied, true);
+  assert.equal(result.layoutConflict, false);
+  assert.equal(notes.get("note-1")?.groupId, "group-1");
+  assert.deepEqual(result.applied, []);
+});
+
+test("workspace note sync remaps temp IDs before applying layout", async () => {
+  const { notes, prisma } = fakeNotesPrisma();
+
+  const result = await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request: {
+      changes: [
+        {
+          id: "temp-note-with-layout",
+          operation: "upsert",
+          updatedAt: Date.parse("2026-01-01T00:00:00.000Z"),
+          localVersion: 1,
+          workspaceId: "workspace-1",
+          content: "<h1>Temp layout</h1><p>Body</p>",
+        },
+      ],
+      layoutChange: {
+        id: "workspace-1",
+        workspaceId: "workspace-1",
+        updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+        localVersion: 2,
+        notes: [{ id: "temp-note-with-layout", groupId: "group-1", order: 0 }],
+        groups: [{ id: "group-1", order: 0 }],
+      },
+    },
+  });
+
+  assert.equal(result.idMap["temp-note-with-layout"], "server-note-1");
+  assert.equal(result.layoutApplied, true);
+  assert.equal(result.layoutConflict, false);
+  assert.equal(notes.get("server-note-1")?.groupId, "group-1");
+});
+
+test("workspace note sync maps temp group IDs before content and layout", async () => {
+  const { notes, noteGroups, prisma } = fakeNotesPrisma();
+
+  const result = await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request: {
+      changes: [
+        {
+          id: "temp-note-in-temp-group",
+          operation: "upsert",
+          updatedAt: Date.parse("2026-01-01T00:00:00.000Z"),
+          localVersion: 1,
+          workspaceId: "workspace-1",
+          groupId: "temp-group-1",
+          content: "<h1>Grouped note</h1><p>Body</p>",
+        },
+      ],
+      groupChanges: [
+        {
+          id: "temp-group-1",
+          operation: "create",
+          workspaceId: "workspace-1",
+          title: "Client group",
+          order: 1,
+          updatedAt: Date.parse("2026-01-01T00:00:00.000Z"),
+          localVersion: 1,
+        },
+      ],
+      layoutChange: {
+        id: "workspace-1",
+        workspaceId: "workspace-1",
+        updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+        localVersion: 2,
+        notes: [{ id: "temp-note-in-temp-group", groupId: "temp-group-1", order: 0 }],
+        groups: [
+          { id: "group-1", order: 0 },
+          { id: "temp-group-1", order: 1 },
+        ],
+      },
+    },
+  });
+
+  const serverGroupId = result.groupIdMap["temp-group-1"];
+  assert.ok(serverGroupId);
+  assert.equal(noteGroups.get(serverGroupId)?.title, "Client group");
+  assert.equal(notes.get("server-note-1")?.groupId, serverGroupId);
+  assert.equal(result.layoutApplied, true);
+});
+
+test("workspace note sync deletes groups by moving notes to ungrouped first", async () => {
+  const { notes, noteGroups, prisma } = fakeNotesPrisma();
+  notes.set("note-1", {
+    id: "note-1",
+    workspaceId: "workspace-1",
+    groupId: "group-1",
+    title: "Grouped",
+    content: "<h1>Grouped</h1><p>Body</p>",
+    tags: [],
+    noteType: "TEXT",
+    metadata: null,
+    order: 0,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  });
+
+  const result = await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request: {
+      changes: [],
+      groupChanges: [
+        {
+          id: "group-1",
+          operation: "delete",
+          workspaceId: "workspace-1",
+          updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+          localVersion: 1,
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(result.groupApplied, ["group-1"]);
+  assert.equal(noteGroups.has("group-1"), false);
+  assert.equal(notes.get("note-1")?.groupId, null);
+});
+
+test("notes layout controller types support semantic layout commands and statuses", () => {
+  const command: NotesLayoutCommand = {
+    type: "MOVE_NOTE",
+    noteId: "note-1",
+    toGroupId: null,
+    toIndex: 0,
+  };
+  const status: NotesLayoutStatus = "queued";
+
+  assert.equal(command.type, "MOVE_NOTE");
+  assert.equal(status, "queued");
+});
+
+test("notes layout canonicalization creates contiguous per-group orders", () => {
+  const layout = buildCanonicalNoteLayout([
+    { id: "note-3", groupId: "group-1", order: 9 },
+    { id: "note-1", groupId: null, order: 2 },
+    { id: "note-2", groupId: "group-1", order: 0 },
+  ] as any);
+
+  assert.deepEqual(layout, [
+    { id: "note-2", groupId: "group-1", order: 0 },
+    { id: "note-3", groupId: "group-1", order: 1 },
+    { id: "note-1", groupId: null, order: 0 },
+  ]);
+});
+
+test("notes split click opens split from the current note without touching layout", () => {
+  const splitNotes = fakeSplitNotesState({ primaryNoteId: null });
+  let currentNoteId = "note-1";
+  const controller = createNotesSplitInteractionController({
+    splitNotes: splitNotes as any,
+    getCurrentNoteId: () => currentNoteId,
+    setCurrentNoteId: (noteId) => {
+      currentNoteId = noteId;
+    },
+  });
+
+  controller.execute({ type: "CLICK_SPLIT", noteId: "note-2" });
+
+  assert.equal(splitNotes.isSplit.value, true);
+  assert.equal(splitNotes.primaryNoteId.value, "note-1");
+  assert.equal(splitNotes.secondaryNoteId.value, "note-2");
+  assert.equal(splitNotes.secondaryPosition.value, "right");
+  assert.equal(splitNotes.activePane.value, "secondary");
+  assert.equal(currentNoteId, "note-2");
+});
+
+test("notes split click replaces the active pane without duplicating the other pane", () => {
+  const splitNotes = fakeSplitNotesState({
+    isSplit: true,
+    primaryNoteId: "note-1",
+    secondaryNoteId: "note-2",
+    secondaryPosition: "right",
+    activePane: "secondary",
+  });
+  let currentNoteId = "note-2";
+  const controller = createNotesSplitInteractionController({
+    splitNotes: splitNotes as any,
+    getCurrentNoteId: () => currentNoteId,
+    setCurrentNoteId: (noteId) => {
+      currentNoteId = noteId;
+    },
+  });
+
+  controller.execute({ type: "CLICK_SPLIT", noteId: "note-3" });
+
+  assert.equal(splitNotes.primaryNoteId.value, "note-1");
+  assert.equal(splitNotes.secondaryNoteId.value, "note-3");
+  assert.equal(splitNotes.activePane.value, "secondary");
+  assert.equal(currentNoteId, "note-3");
+
+  controller.execute({ type: "CLICK_SPLIT", noteId: "note-1" });
+
+  assert.equal(splitNotes.primaryNoteId.value, "note-1");
+  assert.equal(splitNotes.secondaryNoteId.value, "note-3");
+  assert.equal(currentNoteId, "note-3");
+});
+
+test("notes split drop targets the visual side independently from note selection", () => {
+  const splitNotes = fakeSplitNotesState({
+    isSplit: true,
+    primaryNoteId: "note-1",
+    secondaryNoteId: "note-2",
+    secondaryPosition: "right",
+    activePane: "secondary",
+  });
+  let currentNoteId = "note-2";
+  const controller = createNotesSplitInteractionController({
+    splitNotes: splitNotes as any,
+    getCurrentNoteId: () => currentNoteId,
+    setCurrentNoteId: (noteId) => {
+      currentNoteId = noteId;
+    },
+  });
+
+  controller.startSplitDrag("note-3");
+  controller.setHoveredZone("left");
+  controller.execute({ type: "DROP_SPLIT", noteId: "note-3", position: "left" });
+
+  assert.equal(splitNotes.primaryNoteId.value, "note-3");
+  assert.equal(splitNotes.secondaryNoteId.value, "note-2");
+  assert.equal(splitNotes.activePane.value, "primary");
+  assert.equal(controller.isSplitDragging.value, true);
+  assert.equal(controller.hoveredSplitZone.value, "left");
+  assert.equal(currentNoteId, "note-3");
+
+  controller.endSplitDrag();
+
+  assert.equal(controller.isSplitDragging.value, false);
+  assert.equal(controller.hoveredSplitZone.value, null);
+  assert.equal(controller.draggedSplitNoteId.value, null);
+});
+
+test("workspace note sync reports layout conflicts separately from content changes", async () => {
+  const { notes, prisma } = fakeNotesPrisma();
+  notes.set("note-1", {
+    id: "note-1",
+    workspaceId: "workspace-1",
+    groupId: null,
+    title: "One",
+    content: "<h1>One</h1><p>Body</p>",
+    tags: [],
+    noteType: "TEXT",
+    metadata: null,
+    order: 0,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  });
+
+  const result = await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request: {
+      changes: [],
+      layoutChange: {
+        id: "workspace-1",
+        workspaceId: "workspace-1",
+        updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+        localVersion: 2,
+        notes: [{ id: "note-1", groupId: "missing-group", order: 0 }],
+        groups: [],
+      },
+    },
+  });
+
+  assert.equal(result.layoutApplied, false);
+  assert.equal(result.layoutConflict, true);
+  assert.equal(notes.get("note-1")?.groupId, null);
 });
 
 test("board item sync maps temp IDs to server IDs", async () => {

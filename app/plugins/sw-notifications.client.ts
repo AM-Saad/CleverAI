@@ -12,6 +12,7 @@
 import { SW_MESSAGE_TYPES } from "~/utils/constants/pwa";
 
 export default defineNuxtPlugin(() => {
+  if (!import.meta.env.PROD) return;
   if (!("serviceWorker" in navigator)) return;
 
   const toast = useToast();

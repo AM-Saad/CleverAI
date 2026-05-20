@@ -3,10 +3,18 @@
     class="container relative flex flex-col p-1 h-full min-h-0 w-full overflow-y-auto">
 
     <div class="flex flex-col w-full">
-      <UContextMenu :items="contextMenuItems">
+      <UContextMenu :items="props.readonly ? [] : contextMenuItems">
         <EditorContent :editor="editor" class="flex-1 pt-6" />
       </UContextMenu>
     </div>
+
+    <!-- Bubble Menu (floating toolbar on text selection) -->
+    <SharedTiptapBubbleMenu
+      :editor="editor"
+      :context="editorContext"
+      :readonly="props.readonly"
+      @ai-action="handleBubbleAiAction"
+    />
 
     <!-- Autocomplete floating dropdown -->
     <Transition name="auto-suggestions">
@@ -52,6 +60,14 @@ import { initCollaboration } from "@/utils/";
 import { normalizeWorkspaceNoteContent } from "@@/shared/utils/workspaceNote";
 import { useTextSummarization } from '~/composables/ai/useTextSummarization';
 import { usePredictionaryInput } from '~/composables/usePredictionaryInput';
+import { useEditorContext } from '~/composables/editor/useEditorContext';
+import {
+  createEditorActions,
+  getActionsForCategory,
+  getContextMenuGroups,
+  toMenuItems,
+} from '~/composables/editor/useEditorActionRegistry';
+import { KeyboardShortcutsExtension } from '~/extensions/tiptap/KeyboardShortcuts';
 
 import CodeBlockNode from './CodeBlockNode.vue';
 import Paper from './Paper.js';
@@ -189,7 +205,7 @@ function getCurrentWord(): string {
 }
 
 function acceptSuggestion(word: string) {
-  if (!editor.value || !word) return;
+  if (!editor.value || props.readonly || !word) return;
   const state = editor.value.state;
   const { from } = state.selection;
   let currentWord = '';
@@ -213,7 +229,10 @@ function acceptSuggestion(word: string) {
 }
 
 function updateAutoState() {
-  if (!editor.value) return;
+  if (!editor.value || props.readonly) {
+    autoPosition.value = null;
+    return;
+  }
   const word = getCurrentWord();
 
   if (word.length < 3) {
@@ -337,6 +356,7 @@ const summaryInsertPosition = ref<number | null>(null);
 
 // Watch for summary completion and insert it
 watch(currentSummary, (summary) => {
+  if (props.readonly) return;
   if (summary && summaryInsertPosition.value !== null && editor.value) {
     console.log('Summary ready, inserting into editor:', summary);
 
@@ -353,6 +373,7 @@ watch(currentSummary, (summary) => {
 });
 
 function handleSummarize() {
+  if (props.readonly) return;
   const selectedText = getSelectedText();
   if (!selectedText || !selectedText.trim()) {
     console.warn('No text selected to summarize');
@@ -376,57 +397,120 @@ function handleSummarize() {
 }
 
 
-// Context menu items
+// ─── Editor Context & Action Registry ────────────────────────────
+const { context: editorContext } = useEditorContext(editor);
+const registeredActions = createEditorActions();
+
+/** Handle AI actions triggered from the BubbleMenu */
+function handleBubbleAiAction(actionId: string) {
+  if (props.readonly) return;
+  switch (actionId) {
+    case 'summarize':
+      handleSummarize();
+      break;
+    case 'readAloud':
+      isSpeaking.value ? stopSpeaking() : handleReadAloud();
+      break;
+  }
+}
+
+// ─── Dynamic Context Menu ────────────────────────────────────────
 const contextMenuItems = computed(() => {
+  if (props.readonly) return [];
+  const ctx = editorContext.value;
+  const ed = editor.value;
+  if (!ed) return [];
+
+  const groups: Array<Array<{
+    label: string;
+    icon: string;
+    disabled?: boolean;
+    onSelect: () => void;
+  }>> = [];
+
+  // ── Group 1: Context-specific actions ──────────────────────
+  // Table actions (when cursor is inside a table)
+  if (ctx.isInTable) {
+    const tableActions = getActionsForCategory(registeredActions, 'table', ctx);
+    if (tableActions.length) {
+      groups.push(toMenuItems(tableActions, ed));
+    }
+  }
+
+  // Task actions (when cursor is inside a task item)
+  if (ctx.isInTaskItem) {
+    const taskActions = getActionsForCategory(registeredActions, 'task', ctx);
+    if (taskActions.length) {
+      groups.push(toMenuItems(taskActions, ed));
+    }
+  }
+
+  // ── Group 2: Formatting (when text is selected, not in code block)
+  if (ctx.hasSelection && !ctx.isInCodeBlock) {
+    const formatActions = getActionsForCategory(registeredActions, 'formatting', ctx);
+    if (formatActions.length) {
+      groups.push(toMenuItems(formatActions, ed));
+    }
+  }
+
+  // ── Group 3: Insert actions (when no selection or general use)
+  if (!ctx.isInCodeBlock && !ctx.isInTable) {
+    const insertActions = getActionsForCategory(registeredActions, 'insert', ctx);
+    if (insertActions.length) {
+      groups.push(toMenuItems(insertActions, ed));
+    }
+  }
+
+  // ── Group 4: AI & custom actions (always available) ────────
   const selectedText = getSelectedText();
   const hasSelection = selectedText && selectedText.trim().length > 0;
 
-  return [
-    {
-      label: 'Add To Material',
-      icon: 'i-lucide-material',
-      disabled: !hasSelection,
-      onSelect: () => {
-        if (selectedText) {
-          emit('addToMaterial', selectedText);
-        }
-      },
+  const aiAndCustomActions: Array<{
+    label: string;
+    icon: string;
+    disabled?: boolean;
+    onSelect: () => void;
+  }> = [];
+
+  // Add to Material
+  aiAndCustomActions.push({
+    label: 'Add To Material',
+    icon: 'i-lucide-book-marked',
+    disabled: !hasSelection,
+    onSelect: () => {
+      if (selectedText) {
+        emit('addToMaterial', selectedText);
+      }
     },
-    {
-      label: isSpeaking.value ? 'Stop Reading' : ttsError.value ? 'TTS Unavailable' : 'Read Aloud',
-      icon: isSpeaking.value ? 'i-lucide-volume-x' : ttsError.value ? 'i-lucide-alert-circle' : 'i-lucide-volume-2',
-      disabled: !hasSelection || !ttsAvailable.value,
-      onSelect: isSpeaking.value ? stopSpeaking : handleReadAloud,
-    },
-    {
-      label: isSummarizing.value
-        ? 'Summarizing...'
-        : isDownloading.value
-          ? 'Downloading Model...'
-          : 'Summarize Text',
-      icon: isSummarizing.value
-        ? 'i-lucide-loader'
-        : isDownloading.value
-          ? 'i-lucide-download'
-          : 'i-lucide-sparkles',
-      disabled: !hasSelection || isSummarizing.value || isDownloading.value,
-      onSelect: handleSummarize,
-    },
-    // {
-    //   label: isSummarizing.value
-    //     ? 'Summarizing...'
-    //     : isDownloading.value
-    //       ? 'Downloading Model...'
-    //       : 'Summarize Text',
-    //   icon: isSummarizing.value
-    //     ? 'i-lucide-loader'
-    //     : isDownloading.value
-    //       ? 'i-lucide-download'
-    //       : 'i-lucide-sparkles',
-    //   disabled: !hasSelection || isSummarizing.value || isDownloading.value,
-    //   onSelect: handleSummarize,
-    // },
-  ];
+  });
+
+  // Read Aloud
+  aiAndCustomActions.push({
+    label: isSpeaking.value ? 'Stop Reading' : ttsError.value ? 'TTS Unavailable' : 'Read Aloud',
+    icon: isSpeaking.value ? 'i-lucide-volume-x' : ttsError.value ? 'i-lucide-alert-circle' : 'i-lucide-volume-2',
+    disabled: !hasSelection || !ttsAvailable.value,
+    onSelect: isSpeaking.value ? stopSpeaking : handleReadAloud,
+  });
+
+  // Summarize
+  aiAndCustomActions.push({
+    label: isSummarizing.value
+      ? 'Summarizing...'
+      : isDownloading.value
+        ? 'Downloading Model...'
+        : 'Summarize Text',
+    icon: isSummarizing.value
+      ? 'i-lucide-loader'
+      : isDownloading.value
+        ? 'i-lucide-download'
+        : 'i-lucide-sparkles',
+    disabled: !hasSelection || isSummarizing.value || isDownloading.value,
+    onSelect: handleSummarize,
+  });
+
+  groups.push(aiAndCustomActions);
+
+  return groups;
 });
 
 watch(
@@ -448,6 +532,12 @@ watch(
   (isReadonly) => {
     if (!editor.value) return;
     editor.value.setEditable(!isReadonly);
+    if (isReadonly) {
+      autoPosition.value = null;
+      if (isSpeaking.value) {
+        stopSpeaking();
+      }
+    }
   }
 );
 
@@ -468,13 +558,16 @@ onBeforeUnmount(async () => {
     }
     collaborationHandle.value = null;
   }
-  if (editor.value) {
+
+  const instance = editor.value;
+  editor.value = null;
+
+  if (instance) {
     try {
-      editor.value.destroy();
+      instance.destroy();
     } catch (e) {
       /* ignore */
     }
-    editor.value = null;
   }
 });
 
@@ -539,6 +632,7 @@ onMounted(async () => {
       TaskList,
       CustomTaskItem,
       AutocompleteExtension,
+      KeyboardShortcutsExtension,
       // Syntax-highlighted code blocks via lowlight
       CodeBlockLowlight.extend({
         addNodeView() {
@@ -548,8 +642,7 @@ onMounted(async () => {
         lowlight,
         defaultLanguage: null,
       }),
-      // CustomPaper,
-      // Paper
+      Paper,
     ],
     content: normalizeEditorContent(props.modelValue),
     editable: !props.readonly,
@@ -560,18 +653,11 @@ onMounted(async () => {
   // Emit updates for v-model
   editorInstance.on("update", () => {
     if (isApplyingExternalValue.value) return;
-    let html = editorInstance.getHTML();
-    const normalizedHtml = normalizeEditorContent(html);
-
-    if (normalizedHtml !== html) {
-      isApplyingExternalValue.value = true;
-      editorInstance.commands.setContent(normalizedHtml);
-      isApplyingExternalValue.value = false;
-      html = normalizedHtml;
-    }
-
+    const html = editorInstance.getHTML();
     emit("update:modelValue", html || "");
-    updateAutoState();
+    if (!props.readonly) {
+      updateAutoState();
+    }
   });
 
   editorInstance.on("blur", () => {

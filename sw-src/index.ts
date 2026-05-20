@@ -21,7 +21,12 @@ import {
   deleteRecord,
   putRecord,
   loadPendingNoteChanges,
+  loadPendingNoteGroupChanges,
+  loadPendingNoteLayoutChanges,
   deletePendingNoteChanges,
+  deletePendingNoteGroupChanges,
+  deletePendingNoteLayoutChange,
+  remapPendingNoteGroupIds,
   loadPendingBoardItemChanges,
   deletePendingBoardItemChanges,
 } from "../app/utils/idb";
@@ -1161,20 +1166,42 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
     notesSyncInProgress = true;
     try {
       const clients = await swSelf.clients.matchAll({ type: "window" });
+
+      // ── Dual-sync race prevention ──
+      // When Background Sync fires and client tabs are open, defer to the
+      // client-side sync path (useNotesStore.syncPendingChanges) which is the
+      // primary sync owner. The SW only auto-syncs when no tabs are open
+      // (e.g., app backgrounded or all tabs closed). Manual triggers (via
+      // postMessage from a client) proceed normally since the client explicitly
+      // asked the SW to do the work.
+      if (mode === "background" && clients.length > 0) {
+        log("[Notes Sync] Background sync deferred — client tabs are open, they own sync");
+        // Nudge clients to run their own sync in case the online listener missed
+        clients.forEach((c) =>
+          c.postMessage({
+            type: SW_MESSAGE_TYPES.NOTES_SYNCED,
+            data: { appliedCount: 0, conflictsCount: 0, mode, deferredToClient: true },
+          })
+        );
+        return;
+      }
+
       const pending = await loadPendingNoteChanges();
+      const pendingGroups = await loadPendingNoteGroupChanges();
+      const pendingLayouts = await loadPendingNoteLayoutChanges();
 
       clients.forEach((c) =>
         c.postMessage({
           type: SW_MESSAGE_TYPES.NOTES_SYNC_STARTED,
           data: {
             message: "Syncing notes…",
-            pendingCount: pending.length,
+            pendingCount: pending.length + pendingGroups.length + pendingLayouts.length,
             mode,
           },
         })
       );
 
-      if (!pending.length) {
+      if (!pending.length && !pendingGroups.length && !pendingLayouts.length) {
         clients.forEach((c) =>
           c.postMessage({
             type: SW_MESSAGE_TYPES.NOTES_SYNCED,
@@ -1184,29 +1211,87 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         return;
       }
 
-      const resp = await fetch("/api/notes/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ changes: pending }),
-      });
-
-      if (!resp.ok) {
-        error("[Notes Sync] Server error:", resp.status);
-        throw new Error("Notes sync failed");
-      }
-
-      const result = (await resp.json().catch(() => ({}))) as {
+      type NotesSyncPayload = {
+        changes: typeof pending;
+        groupChanges?: typeof pendingGroups;
+        layoutChange?: (typeof pendingLayouts)[number];
+      };
+      type NotesSyncResult = {
         success?: boolean;
         data?: {
           applied?: string[];
           conflicts?: Array<{ id: string }>;
           idMap?: Record<string, string>;
+          groupApplied?: string[];
+          groupConflicts?: Array<{ id: string }>;
+          groupIdMap?: Record<string, string>;
+          layoutApplied?: boolean;
+          layoutConflict?: boolean;
         };
       };
 
-      const appliedIds = Array.from(new Set(result.data?.applied || []));
-      const conflictsCount = result.data?.conflicts?.length || 0;
-      const idMap = result.data?.idMap || {};
+      const postNotesSync = async (payload: NotesSyncPayload): Promise<NotesSyncResult> => {
+        const resp = await fetch("/api/notes/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!resp.ok) {
+          error("[Notes Sync] Server error:", resp.status);
+          throw new Error("Notes sync failed");
+        }
+
+        return (await resp.json().catch(() => ({}))) as NotesSyncResult;
+      };
+
+      const syncResults: Array<{
+        result: NotesSyncResult;
+        layout?: (typeof pendingLayouts)[number];
+      }> = [];
+      const [firstLayout, ...remainingLayouts] = pendingLayouts;
+      syncResults.push({
+        result: await postNotesSync({
+          changes: pending,
+          groupChanges: pendingGroups,
+          ...(firstLayout && { layoutChange: firstLayout }),
+        }),
+        layout: firstLayout,
+      });
+
+      for (const layout of remainingLayouts) {
+        syncResults.push({
+          result: await postNotesSync({ changes: [], layoutChange: layout }),
+          layout,
+        });
+      }
+
+      const appliedIds = Array.from(
+        new Set(syncResults.flatMap(({ result }) => result.data?.applied || []))
+      );
+      const conflictsCount = syncResults.reduce(
+        (total, { result }) => total + (result.data?.conflicts?.length || 0),
+        0
+      );
+      const groupAppliedIds = Array.from(
+        new Set(syncResults.flatMap(({ result }) => result.data?.groupApplied || []))
+      );
+      const groupConflictsCount = syncResults.reduce(
+        (total, { result }) => total + (result.data?.groupConflicts?.length || 0),
+        0
+      );
+      const idMap = syncResults.reduce<Record<string, string>>((acc, { result }) => {
+        Object.assign(acc, result.data?.idMap || {});
+        return acc;
+      }, {});
+      const groupIdMap = syncResults.reduce<Record<string, string>>((acc, { result }) => {
+        Object.assign(acc, result.data?.groupIdMap || {});
+        return acc;
+      }, {});
+      const syncedLayouts = syncResults
+        .filter(({ result, layout }) => result.data?.layoutApplied && layout)
+        .map(({ layout }) => layout!);
+      const layoutConflict = syncResults.some(({ result }) => Boolean(result.data?.layoutConflict));
 
       if (Object.keys(idMap).length) {
         try {
@@ -1217,6 +1302,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
               await putRecord(db, DB_CONFIG.STORES.NOTES as any, {
                 id: serverId,
                 workspaceId: original.workspaceId,
+                groupId: original.groupId ?? null,
                 title: original.title,
                 content: original.content || "",
                 tags: original.tags || [],
@@ -1243,20 +1329,57 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         }
       }
 
-      if (conflictsCount) {
+      if (groupAppliedIds.length) {
+        try {
+          await deletePendingNoteGroupChanges(groupAppliedIds);
+          await remapPendingNoteGroupIds(groupIdMap);
+          const db = await openUnifiedDB();
+          for (const tempId of Object.keys(groupIdMap)) {
+            await deleteRecord(db, DB_CONFIG.STORES.NOTE_GROUPS as any, tempId);
+          }
+        } catch (e) {
+          error("[Notes Sync] Failed to clear synced group changes:", e);
+        }
+      }
+
+      if (syncedLayouts.length) {
+        try {
+          await Promise.all(
+            syncedLayouts.map((layout) => deletePendingNoteLayoutChange(layout.workspaceId))
+          );
+        } catch (e) {
+          error("[Notes Sync] Failed to clear synced layout change:", e);
+        }
+      }
+
+      if (conflictsCount || groupConflictsCount || layoutConflict) {
         clients.forEach((c) =>
           c.postMessage({
             type: SW_MESSAGE_TYPES.NOTES_SYNC_CONFLICTS,
-            data: { conflictsCount, mode },
+            data: { conflictsCount, groupConflictsCount, layoutConflict, mode },
           })
         );
       }
 
-      log("[Notes Sync] Complete:", { applied: appliedIds.length, conflicts: conflictsCount });
+      log("[Notes Sync] Complete:", {
+        applied: appliedIds.length,
+        conflicts: conflictsCount,
+        groupApplied: groupAppliedIds.length,
+        groupConflicts: groupConflictsCount,
+        layoutApplied: syncedLayouts.length,
+        layoutConflict,
+      });
       clients.forEach((c) =>
         c.postMessage({
           type: SW_MESSAGE_TYPES.NOTES_SYNCED,
-          data: { appliedCount: appliedIds.length, conflictsCount, mode },
+          data: {
+            appliedCount: appliedIds.length,
+            conflictsCount: conflictsCount + groupConflictsCount,
+            groupAppliedCount: groupAppliedIds.length,
+            layoutApplied: syncedLayouts.length,
+            layoutConflict,
+            mode,
+          },
         })
       );
     } catch (err) {

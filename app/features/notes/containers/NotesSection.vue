@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { APIError } from "~/services/FetchFactory";
-import { ReorderGroup, ReorderItem } from "motion-v";
 import type { MathNoteMetadata, CanvasNoteMetadata, NoteType } from "@@/shared/utils/note.contract";
+import type { NoteGroup } from "@@/shared/utils/note-group.contract";
+import type { NoteLayoutItem } from "@@/shared/utils/note-sync.contract";
+import type { SplitPosition } from "~/composables/ui/useSplitNotes";
 import {
   DEFAULT_WORKSPACE_NOTE_HTML,
   TITLE_FALLBACK,
@@ -10,9 +12,11 @@ import LocalSyncStatus from "~/components/shared/LocalSyncStatus.vue";
 import type { NoteState } from "~/features/notes/composables/useNotesStore";
 import CanvasNoteEditor from "../components/CanvasNoteEditor.vue";
 import MathNoteEditor from "../components/MathNoteEditor.vue";
-import NotesSearch from "../components/NotesSearch.vue";
+import NotesDrawer from "../components/NotesDrawer.vue";
 import NotesSplitDropZone from "../components/NotesSplitDropZone.vue";
 import TextNote from "../components/TextNote.vue";
+import { createNotesSplitInteractionController } from "../composables/notesSplitInteractionController";
+import { useNoteGroupsStore } from "../composables/useNoteGroupsStore";
 import { useNotesStore } from "../composables/useNotesStore";
 
 const route = useRoute();
@@ -21,6 +25,7 @@ const emit = defineEmits(["add-to-material"]);
 
 // Use the optimistic notes store
 const notesStore = useNotesStore(workspaceId);
+const noteGroupsStore = useNoteGroupsStore(workspaceId);
 const { exportContent } = useExportContent();
 const networkStatus = useNetworkStatus();
 
@@ -49,13 +54,13 @@ const orderedNoteIds = ref<string[]>([]);
 
 watch(
   () => {
-    // Only track id and order, ignores content changes
+    // Only track id, group, and order, ignores content changes
     const arr = Array.from(notesStore.notes.value.values());
-    return arr.map(n => `${n.id}:${n.order}`).join('|');
+    return arr.map(n => `${n.id}:${n.groupId ?? "ungrouped"}:${n.order}`).join('|');
   },
   () => {
     const allNotes = Array.from(notesStore.notes.value.values());
-    allNotes.sort((a, b) => a.order - b.order);
+    allNotes.sort((a, b) => (a.groupId ?? "").localeCompare(b.groupId ?? "") || a.order - b.order);
     orderedNoteIds.value = allNotes.map(n => n.id);
   },
   { immediate: true }
@@ -67,8 +72,6 @@ const notes = computed(() => {
     .filter((n): n is NoteState => !!n);
 });
 
-// Local writable ref for ReorderGroup v-model
-const localNotes = ref<NoteState[]>([]);
 const isReordering = ref(false);
 const showDeleteConfirm = ref(false);
 const noteToDelete = ref<string | null>(null);
@@ -143,15 +146,36 @@ const isFetching = computed(
   () => notesStore.loadingStates.value.get(workspaceId) ?? false
 );
 const error = ref<APIError | null>(null); // Main error state for critical failures
-const dirtyNotesCount = computed(() =>
-  Array.from(notesStore.notes.value.values()).filter((note) => note.isDirty).length,
-);
-const failedNotesCount = computed(() =>
-  Array.from(notesStore.notes.value.values()).filter((note) => Boolean(note.error)).length,
-);
+const dirtyNotesCount = computed(() => notesStore.dirtyCount.value);
+const layoutPendingCount = computed(() => notesStore.layoutPendingCount.value);
+const layoutStatus = computed(() => notesStore.layoutStatus.value);
+const pendingChangesCount = computed(() => dirtyNotesCount.value + layoutPendingCount.value);
+const pendingChangesDetail = computed(() => {
+  const parts: string[] = [];
+  if (dirtyNotesCount.value) {
+    parts.push(`${dirtyNotesCount.value} content edit${dirtyNotesCount.value === 1 ? "" : "s"}`);
+  }
+  if (layoutPendingCount.value) {
+    const label =
+      layoutStatus.value === "syncing"
+        ? "layout syncing"
+        : layoutStatus.value === "conflict"
+          ? "layout conflict"
+          : "layout saved locally";
+    parts.push(label);
+  }
+  return parts.join(" and ");
+});
+const failedNotesCount = computed(() => notesStore.errorCount.value);
 
 // Use shared fullscreen composable
 const fullscreen = useFullscreenModal<string>();
+const isFullscreenOpen = computed(() => fullscreen.isOpen.value);
+
+const currentNote = computed(() => {
+  if (!currentNoteId.value) return null;
+  return notesStore.getNote(currentNoteId.value) ?? null;
+});
 
 // Computed property for the fullscreen note
 const currentFullscreenNote = computed(() => {
@@ -174,61 +198,10 @@ watch(currentNoteId, (noteId) => {
   }
 });
 
-// Debounced reorder handler to prevent rapid-fire requests
-let reorderTimeout: ReturnType<typeof setTimeout> | null = null;
-
-// Watch notes and update localNotes
-watch(
-  notes,
-  (newNotes) => {
-    // Only update if we're not currently reordering to avoid conflicts
-    if (!isReordering.value) {
-      localNotes.value = [...newNotes];
-    }
-  },
-  { immediate: false }
-);
-
-// Watch localNotes for reordering (when user drags)
-watch(
-  localNotes,
-  (newOrder, oldOrder) => {
-    // Only trigger if the order actually changed (not initial load)
-    if (
-      oldOrder &&
-      oldOrder.length > 0 &&
-      newOrder.length === oldOrder.length
-    ) {
-      const orderChanged = newOrder.some(
-        (note, index) => note.id !== oldOrder[index]?.id
-      );
-      if (orderChanged) {
-        console.log(
-          "🔄 [NotesSection] localNotes order changed by user, debouncing reorder..."
-        );
-
-        // Clear any pending reorder
-        if (reorderTimeout) {
-          clearTimeout(reorderTimeout);
-        }
-
-        // Debounce the reorder call (wait for user to stop dragging)
-        reorderTimeout = setTimeout(() => {
-          console.log(
-            "⏱️ [NotesSection] Debounce complete, calling handleReorder"
-          );
-          handleReorder(newOrder);
-        }, 500); // Wait 500ms after user stops dragging
-      }
-    }
-  },
-  { deep: true }
-);
-
 // Create a new note (optimistic)
-const createNewNote = async (noteType: NoteType = "TEXT") => {
+const createNewNote = async (noteType: NoteType = "TEXT", groupId: string | null = null) => {
   const initialContent = noteType === "TEXT" ? DEFAULT_WORKSPACE_NOTE_HTML : "";
-  const noteId = await notesStore.createNote(initialContent, [], noteType);
+  const noteId = await notesStore.createNote(initialContent, [], noteType, undefined, undefined, groupId);
 
   if (noteId) {
     currentNoteId.value = noteId;
@@ -311,6 +284,9 @@ const handleRetry = (id: string) => {
 const syncNotesNow = async () => {
   error.value = null;
   await notesStore.syncWithServer();
+  if (networkStatus.isVerifiedOnline.value) {
+    await noteGroupsStore.syncWithServer();
+  }
 };
 
 const retryFailedNotes = async () => {
@@ -330,14 +306,56 @@ const handleSyncStatusAction = async () => {
 };
 
 // Handle reordering of notes
-const handleReorder = async (newOrder: NoteState[]) => {
+const handleReorder = async (newOrder: NoteLayoutItem[]) => {
+  console.log(`🔍 [TRACE:REORDER] handleReorder called`, { count: newOrder.length, items: newOrder });
   if (isReordering.value) {
-    console.log("⏭️ [NotesSection] Already reordering, skipping...");
+    console.log("🔍 [TRACE:REORDER] handleReorder SKIPPED — already reordering");
     return;
   }
   isReordering.value = true;
-  await notesStore.reorderNotes(newOrder);
-  isReordering.value = false;
+  try {
+    const result = await notesStore.reorderNotes(newOrder);
+    console.log(`🔍 [TRACE:REORDER] handleReorder DONE`, { result });
+  } catch (err) {
+    console.error(`🔍 [TRACE:REORDER] handleReorder ERROR`, err);
+  } finally {
+    isReordering.value = false;
+  }
+};
+
+const createNoteInGroup = async (groupId: string | null) => {
+  await createNewNote("TEXT", groupId);
+};
+
+const handleCreateGroup = async (title: string) => {
+  await noteGroupsStore.createGroup(title);
+};
+
+const handleRenameGroup = async (groupId: string, title: string) => {
+  await noteGroupsStore.renameGroup(groupId, title);
+};
+
+const handleDeleteGroup = async (groupId: string) => {
+  const deleted = await noteGroupsStore.deleteGroup(groupId);
+  if (deleted) {
+    await notesStore.clearGroup(groupId);
+  }
+};
+
+const handleReorderGroups = async (orderedGroups: NoteGroup[]) => {
+  await noteGroupsStore.reorderGroups(orderedGroups);
+  await notesStore.refreshLayoutPendingCount();
+};
+
+const handleSplitNoteFromDrawer = (noteId: string) => {
+  if (notes.value.length < 2) return;
+  splitInteraction.execute({ type: "CLICK_SPLIT", noteId });
+};
+
+const handleDownloadNote = (noteId: string, format: "txt" | "doc" | "pdf") => {
+  const note = notesStore.getNote(noteId);
+  if (!note) return;
+  exportContent("note", note.content, format);
 };
 
 // Fullscreen functionality is now handled by useFullscreen composable
@@ -351,8 +369,15 @@ const shouldSyncNotes = () => {
 onMounted(async () => {
   try {
     error.value = null;
-    if (shouldSyncNotes()) {
-      await notesStore.syncWithServer();
+    await notesStore.hydrateLocalNotes();
+    if (shouldSyncNotes() && networkStatus.isVerifiedOnline.value) {
+      void notesStore.refreshFromServer().catch((e: unknown) => {
+        error.value =
+          e instanceof APIError ? e : new APIError("Failed to refresh notes");
+      });
+      void noteGroupsStore.syncWithServer();
+    } else if (networkStatus.isVerifiedOnline.value) {
+      void noteGroupsStore.syncWithServer();
     }
   } catch (e: unknown) {
     error.value =
@@ -385,33 +410,64 @@ const splitNotes = useSplitNotes(workspaceId, () => {
   for (const id of notesStore.notes.value.keys()) ids.add(id);
   return ids;
 });
+const _skipNextWatcherSync = ref(false);
+const splitInteraction = createNotesSplitInteractionController({
+  splitNotes,
+  getCurrentNoteId: () => currentNoteId.value,
+  setCurrentNoteId: (noteId: string) => {
+    _skipNextWatcherSync.value = true;
+    currentNoteId.value = noteId;
+  },
+});
 
-// Keep splitNotes in sync with drawer selection
+const leftSplitNote = computed(() => {
+  const noteId = splitNotes.leftNoteId.value;
+  return noteId ? notesStore.getNote(noteId) ?? null : null;
+});
+const rightSplitNote = computed(() => {
+  const noteId = splitNotes.rightNoteId.value;
+  return noteId ? notesStore.getNote(noteId) ?? null : null;
+});
+
+// Keep single-view split primary in sync with drawer selection. In split mode,
+// pane contents change only through explicit split commands to avoid watcher
+// driven DOM branch swaps during pane activation.
 watch(currentNoteId, (id) => {
   if (!id) return;
-  // Skip when the change was triggered by pane activation (already handled)
   if (_skipNextWatcherSync.value) {
     _skipNextWatcherSync.value = false;
     return;
   }
   if (!splitNotes.isSplit.value) {
-    // Single-view: always update primary
     splitNotes.setPrimaryNote(id);
-  } else {
-    // Split-view: update whichever pane is active
-    if (splitNotes.activePane.value === 'primary') {
-      // Guard: don't set primary to same as secondary
-      if (id !== splitNotes.secondaryNoteId.value) {
-        splitNotes.setPrimaryNote(id);
-      }
-    } else {
-      // Active pane is secondary — update secondary note
-      if (id !== splitNotes.primaryNoteId.value) {
-        splitNotes.setSecondaryNote(id);
-      }
-    }
   }
 });
+
+function handleOpenNoteFromDrawer(noteId: string) {
+  console.log(`🔍 [TRACE:SPLIT] handleOpenNoteFromDrawer`, { noteId, isSplit: splitNotes.isSplit.value, activePane: splitNotes.activePane.value });
+  if (!splitNotes.isSplit.value) {
+    currentNoteId.value = noteId;
+    splitNotes.setPrimaryNote(noteId);
+    return;
+  }
+
+  if (splitNotes.activePane.value === "primary") {
+    if (noteId === splitNotes.secondaryNoteId.value) {
+      console.log(`🔍 [TRACE:SPLIT] handleOpenNoteFromDrawer — switching to secondary`);
+      splitNotes.setActivePane("secondary");
+    } else {
+      splitNotes.setPrimaryNote(noteId);
+    }
+  } else if (noteId === splitNotes.primaryNoteId.value) {
+    console.log(`🔍 [TRACE:SPLIT] handleOpenNoteFromDrawer — switching to primary`);
+    splitNotes.setActivePane("primary");
+  } else {
+    splitNotes.setSecondaryNote(noteId);
+  }
+
+  _skipNextWatcherSync.value = true;
+  currentNoteId.value = noteId;
+}
 
 // Restore split state once notes are loaded
 watch(notes, (newNotes) => {
@@ -427,71 +483,64 @@ watch(notes, (newNotes) => {
 // Handle note deletion — propagate to split state
 const _originalDeleteConfirm = confirmDeleteNote;
 
-// Drag-to-split: track whether a split-drag is in flight globally
-const isSplitDragging = ref(false);
-
-function handleSplitDragStart(event: DragEvent, noteId: string) {
-  event.dataTransfer!.setData('text/note-id', noteId);
-  event.dataTransfer!.effectAllowed = 'copy';
-  isSplitDragging.value = true;
-}
-
-function handleSplitDragEnd() {
-  isSplitDragging.value = false;
-  splitNotes.endDragOver();
-}
-
-function handleSplitDrop(noteId: string, position: 'left' | 'right') {
-  isSplitDragging.value = false;
-  splitNotes.endDragOver();
-  // Don't split to same note as current primary
-  if (noteId === currentNoteId.value) return;
-  splitNotes.setPrimaryNote(currentNoteId.value);
-  splitNotes.openSplit(noteId, position);
-}
-
 // Toggle split from toolbar: open with next note, or close
 function toggleSplitView() {
+  console.log(`🔍 [TRACE:SPLIT] toggleSplitView`, { isSplit: splitNotes.isSplit.value, currentNoteId: currentNoteId.value });
   if (splitNotes.isSplit.value) {
     splitNotes.closeSplit();
     return;
   }
-  // Pick the next note that isn't currentNoteId
   const others = notes.value.filter(n => n.id !== currentNoteId.value);
-  if (!others.length) return;
+  if (!others.length) { console.log(`🔍 [TRACE:SPLIT] toggleSplitView ABORTED — no other notes`); return; }
   splitNotes.setPrimaryNote(currentNoteId.value);
   splitNotes.openSplit(others[0]!.id, 'right');
 }
-
-// Computed: is a given note the secondary (split) note?
-const isNoteInSplit = (noteId: string) =>
-  splitNotes.isSplit.value &&
-  (noteId === splitNotes.primaryNoteId.value || noteId === splitNotes.secondaryNoteId.value);
 
 // Computed: active/passive per pane side
 const isLeftActive = computed(() => splitNotes.activePaneSide.value === 'left');
 const isRightActive = computed(() => splitNotes.activePaneSide.value === 'right');
 
 // Activate a pane and sync currentNoteId to the note in that pane
-const _skipNextWatcherSync = ref(false);
 const splitPaneLayoutRef = ref<InstanceType<typeof import('~/components/shared/SplitPaneLayout.vue').default> | null>(null);
 
+function paneForSide(side: "left" | "right"): "primary" | "secondary" {
+  if (side === "left") {
+    return splitNotes.secondaryPosition.value === "left" ? "secondary" : "primary";
+  }
+  return splitNotes.secondaryPosition.value === "right" ? "secondary" : "primary";
+}
+
 function activateLeftPane() {
+  console.log(`🔍 [TRACE:SPLIT] activateLeftPane`, { leftNoteId: splitNotes.leftNoteId.value, currentNoteId: currentNoteId.value });
   splitNotes.activateLeft();
   const noteId = splitNotes.leftNoteId.value;
   if (noteId && noteId !== currentNoteId.value) {
     _skipNextWatcherSync.value = true;
     currentNoteId.value = noteId;
+    console.log(`🔍 [TRACE:SPLIT] activateLeftPane — currentNoteId set to ${noteId} synchronously`);
   }
 }
 
 function activateRightPane() {
+  console.log(`🔍 [TRACE:SPLIT] activateRightPane`, { rightNoteId: splitNotes.rightNoteId.value, currentNoteId: currentNoteId.value });
   splitNotes.activateRight();
   const noteId = splitNotes.rightNoteId.value;
   if (noteId && noteId !== currentNoteId.value) {
     _skipNextWatcherSync.value = true;
     currentNoteId.value = noteId;
+    console.log(`🔍 [TRACE:SPLIT] activateRightPane — currentNoteId set to ${noteId} synchronously`);
   }
+}
+
+function handleSplitDrop(noteId: string, position: SplitPosition) {
+  console.log(`🔍 [TRACE:SPLIT] handleSplitDrop`, { noteId, position });
+  splitInteraction.execute({ type: "DROP_SPLIT", noteId, position });
+  splitInteraction.endSplitDrag();
+}
+
+function closeVisualPane(side: "left" | "right") {
+  console.log(`🔍 [TRACE:SPLIT] closeVisualPane`, { side, pane: paneForSide(side) });
+  splitNotes.closePane(paneForSide(side));
 }
 
 // ─── Adaptive Toolbar ─────────────────────────────────────────────
@@ -543,7 +592,7 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
       <shared-error-message v-if="error" :error="error" />
 
       <LocalSyncStatus v-if="!error && notes?.length" class="mx-4 my-0.5" feature-label="Notes"
-        :pending-count="dirtyNotesCount" :error-count="failedNotesCount" :is-fetching="isFetching"
+        :pending-count="pendingChangesCount" :pending-detail="pendingChangesDetail" :error-count="failedNotesCount" :is-fetching="isFetching"
         :is-online="networkStatus.isOnline.value" :is-verified-online="networkStatus.isVerifiedOnline.value"
         :is-connecting="networkStatus.isConnecting.value" :last-sync="notesStore.lastSync.value"
         :action-label="failedNotesCount > 0 ? 'Retry failed' : 'Sync now'" :action-disabled="isFetching"
@@ -564,203 +613,175 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
       <div v-if="!error && !isFetching && notes?.length" class="flex flex-1 min-h-0 overflow-hidden" id="notes-section">
         <ui-drawer :show="isDrawerOpen" @closed="isDrawerOpen = false" :mobile="false" :lock-scroll="false"
           teleport-to="#notes-section" :backdrop="false" :handle-visible="2" title="Notes">
-          <div class="relative shrink-0 overflow-auto bg-light  rounded border border-secondary">
-            <NotesSearch :workspace-id="workspaceId" />
-            <ReorderGroup v-model:values="localNotes" axis="y" class="relative flex-1 shrink-0 overflow-auto"
-              @reorder="handleReorder">
-              <UContextMenu v-for="(note, idx) in localNotes" :key="note.id" :items="[
-                // { label: 'Edit', onSelect: () => editNote(note) },
-                { label: 'Download as TXT', icon: 'i-heroicons-document-text', onSelect: () => exportContent('note', note.content, 'txt') },
-                { label: 'Download as DOC', icon: 'i-heroicons-document', onSelect: () => exportContent('note', note.content, 'doc') },
-                { label: 'Download as PDF', icon: 'i-heroicons-document', onSelect: () => exportContent('note', note.content, 'pdf') },
-                {
-                  label: isNoteInSplit(note.id) ? 'Remove from Split' : 'Open in Split View',
-                  icon: 'i-lucide-columns-2',
-                  disabled: localNotes.length < 2 || (isNoteInSplit(note.id) && note.id === splitNotes.primaryNoteId.value && !splitNotes.isSplit.value),
-                  onSelect: () => isNoteInSplit(note.id) && note.id === splitNotes.secondaryNoteId.value
-                    ? splitNotes.closeSplit()
-                    : (splitNotes.setPrimaryNote(currentNoteId), splitNotes.openSplit(note.id, 'right'))
-                },
-                { label: 'Delete', onSelect: () => deleteNote(note.id) },
-              ]" :context="note">
-                <ReorderItem :value="note" :class="[
-                  'relative flex items-center gap-2 group w-full p-2.5 cursor-pointer hover:bg-secondary',
-                  idx === localNotes.length - 1 ? '' : 'border-b border-secondary',
-                  notesStore.filteredNoteIds.value
-                    ? notesStore.filteredNoteIds.value.has(note.id)
-                      ? 'font-bold'
-                      : 'opacity-50'
-                    : '',
-                  note.id === splitNotes.primaryNoteId.value && splitNotes.isSplit.value ? 'split-indicator-primary' : '',
-                  note.id === splitNotes.secondaryNoteId.value ? 'split-indicator-secondary' : '',
-                ]" @click="currentNoteId = note.id">
-                  <div v-if="note.isLoading" class="flex items-center gap-1 text-primary">
-                    <icon name="i-lucide-loader" class="w-4 h-4 animate-spin" />
-                  </div>
-                  <ui-paragraph size="xs" class="truncate flex-1">
-                    <span v-if="note.noteType === 'CANVAS'" class="mr-1 text-warning">🎨</span>
-                    <span v-else-if="note.noteType === 'MATH'" class="mr-1 text-primary">∑</span>
-                    {{ getNoteDisplayTitle(note, 30) }}
-                  </ui-paragraph>
-                  <div class="flex items-center gap-1 shrink-0">
-                    <span v-if="note.error"
-                      class="inline-flex items-center rounded-full bg-error/10 px-1.5 py-0.5 text-[10px] font-medium text-error"
-                      title="Sync failed. Open the note to retry.">
-                      Retry
-                    </span>
-                    <span v-else-if="note.isDirty"
-                      class="inline-flex items-center rounded-full bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning"
-                      title="Saved locally and waiting to sync.">
-                      Local
-                    </span>
-                  </div>
-                  <!-- Split drag handle — separate from ReorderItem drag (HTML5 DnD) -->
-                  <span v-if="localNotes.length >= 2" draggable="true"
-                    class="split-drag-handle opacity-0 group-hover:opacity-60 hover:opacity-100! transition-opacity cursor-grab active:cursor-grabbing shrink-0 hidden sm:flex"
-                    :aria-label="`Drag to split view: ${getNoteDisplayTitle(note, 20)}`" @pointerdown.stop
-                    @dragstart="handleSplitDragStart($event, note.id)" @dragend="handleSplitDragEnd">
-                    <shared-icon name="split" class="w-3.5 h-3.5 text-content-secondary" />
-                  </span>
-                </ReorderItem>
-              </UContextMenu>
-            </ReorderGroup>
-          </div>
+          <NotesDrawer
+            :workspace-id="workspaceId"
+            :notes="notes"
+            :groups="noteGroupsStore.orderedGroups.value"
+            :selected-note-id="currentNoteId"
+            :filtered-note-ids="notesStore.filteredNoteIds.value"
+            :is-verified-online="networkStatus.isVerifiedOnline.value"
+            :primary-split-note-id="splitNotes.primaryNoteId.value"
+            :secondary-split-note-id="splitNotes.secondaryNoteId.value"
+            :is-split="splitNotes.isSplit.value"
+            :can-split="notes.length >= 2"
+            :is-group-collapsed="noteGroupsStore.isCollapsed"
+            :get-note-display-title="getNoteDisplayTitle"
+            @select-note="handleOpenNoteFromDrawer"
+            @create-note="createNoteInGroup"
+            @create-group="handleCreateGroup"
+            @rename-group="handleRenameGroup"
+            @delete-group="handleDeleteGroup"
+            @reorder-groups="handleReorderGroups"
+            @layout-notes-changed="handleReorder"
+            @delete-note="deleteNote"
+            @split-note="handleSplitNoteFromDrawer"
+            @split-note-drag-start="splitInteraction.startSplitDrag"
+            @split-note-drag-end="splitInteraction.endSplitDrag"
+            @download-note="handleDownloadNote"
+            @toggle-group-collapse="noteGroupsStore.toggleCollapsed"
+          />
         </ui-drawer>
 
 
         <!-- ── Editor area: single or split ─────────────────────────── -->
 
-        <!-- Single view (no split) -->
-        <template v-if="!splitNotes.isSplit.value">
-          <!-- Drop zone overlay — visible only when dragging a split handle -->
-          <div class="relative flex flex-1 min-h-0 min-w-0 overflow-hidden" @dragover.prevent @dragenter.prevent>
-            <NotesSplitDropZone :is-dragging="isSplitDragging" :hovered-zone="splitNotes.hoveredZone.value"
-              @hover-zone="(z) => z ? splitNotes.startDragOver(z) : splitNotes.endDragOver()" @drop="handleSplitDrop" />
-            <MathNoteEditor v-if="notesStore.getNote(currentNoteId!)?.noteType === 'MATH'" :note-id="currentNoteId!"
-              :initial-metadata="(notesStore.getNote(currentNoteId!)?.metadata as MathNoteMetadata | undefined)"
+        <div class="relative flex flex-1 min-h-0 min-w-0 overflow-hidden">
+          <NotesSplitDropZone
+            :is-dragging="splitInteraction.isSplitDragging.value"
+            :hovered-zone="splitInteraction.hoveredSplitZone.value"
+            @hover-zone="splitInteraction.setHoveredZone"
+            @drop="handleSplitDrop"
+          />
+
+          <div v-if="isFullscreenOpen" class="flex flex-1 min-h-0 min-w-0" aria-hidden="true" />
+
+          <!-- Single view (no split) -->
+          <div v-else-if="!splitNotes.isSplit.value" key="single-view-container" class="flex flex-1 min-h-0 min-w-0">
+            <MathNoteEditor v-if="currentNote?.noteType === 'MATH'" :note-id="currentNote.id"
+              :initial-metadata="(currentNote.metadata as MathNoteMetadata | undefined)"
               @update="(meta: MathNoteMetadata) => handleMathUpdate(currentNoteId!, meta)"
               @toggle-fullscreen="fullscreen.toggle(currentNoteId!)" @delete="deleteNote(currentNoteId!)" />
-            <CanvasNoteEditor v-else-if="notesStore.getNote(currentNoteId!)?.noteType === 'CANVAS'"
-              :note-id="currentNoteId!"
-              :initial-metadata="(notesStore.getNote(currentNoteId!)?.metadata as CanvasNoteMetadata | undefined)"
+            <CanvasNoteEditor v-else-if="currentNote?.noteType === 'CANVAS'"
+              :note-id="currentNote.id"
+              :initial-metadata="(currentNote.metadata as CanvasNoteMetadata | undefined)"
               @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(currentNoteId!, meta)"
               @toggle-fullscreen="fullscreen.toggle(currentNoteId!)" @delete="deleteNote(currentNoteId!)" />
-            <TextNote v-else-if="notesStore.getNote(currentNoteId!)" :note="notesStore.getNote(currentNoteId!)!"
+            <TextNote v-else-if="currentNote" :note="currentNote"
               :delete-note="deleteNote" size="lg" @update="handleUpdateNote" @retry="handleRetry"
               @toggle-fullscreen="fullscreen.toggle" placeholder="Double-click to add your note..."
               @add-to-material="emit('add-to-material', $event)" />
           </div>
-        </template>
 
-        <!-- Split view -->
-        <template v-else>
-          <shared-split-pane-layout ref="splitPaneLayoutRef" :storage-key="`splitPaneSizes_${workspaceId}`"
-            :left-label="getNoteDisplayTitle(notesStore.getNote(splitNotes.leftNoteId.value!), 20)"
-            :right-label="getNoteDisplayTitle(notesStore.getNote(splitNotes.rightNoteId.value!), 20)"
-            left-icon="i-lucide-notebook-pen" right-icon="i-lucide-notebook-pen" class="flex-1 min-h-0 min-w-0">
-            <!-- LEFT PANE slot -->
-            <template #left>
-              <div class="split-pane" :class="isLeftActive ? 'split-pane--active' : 'split-pane--passive'"
-                @pointerdown.capture="activateLeftPane">
-                <!-- Pane header -->
-                <div class="split-pane-header" @pointerdown.stop>
-                  <span class="split-pane-title truncate">
-                    {{ getNoteDisplayTitle(notesStore.getNote(splitNotes.leftNoteId.value!), 28) }}
-                  </span>
-                  <div class="flex items-center gap-1 shrink-0">
-                    <u-button size="xs" color="neutral" variant="ghost" aria-label="Minimize left pane"
-                      @click="splitPaneLayoutRef?.toggleLeft()">
-                      <shared-icon name="panel-left-close" class="w-3.5 h-3.5" />
-                    </u-button>
-                    <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
-                      @click="splitNotes.swapPanes()">
-                      <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
-                    </u-button>
-                    <u-button size="xs" color="neutral" variant="ghost" aria-label="Close left pane"
-                      @click="isLeftActive ? splitNotes.closePane('primary') : splitNotes.closePane('secondary')">
-                      <icon name="i-lucide-x" class="w-3.5 h-3.5" />
-                    </u-button>
+          <!-- Split view -->
+          <div v-else key="split-view-container" class="flex flex-1 min-h-0 min-w-0">
+            <shared-split-pane-layout ref="splitPaneLayoutRef" :storage-key="`splitPaneSizes_${workspaceId}`"
+              :left-label="getNoteDisplayTitle(leftSplitNote, 20)"
+              :right-label="getNoteDisplayTitle(rightSplitNote, 20)"
+              left-icon="i-lucide-notebook-pen" right-icon="i-lucide-notebook-pen" class="flex-1 min-h-0 min-w-0">
+              <!-- LEFT PANE slot -->
+              <template #left>
+                <div class="split-pane" :class="isLeftActive ? 'split-pane--active' : 'split-pane--passive'"
+                  @pointerdown.capture="activateLeftPane">
+                  <!-- Pane header -->
+                  <div class="split-pane-header" @pointerdown.stop>
+                    <span class="split-pane-title truncate">
+                      {{ getNoteDisplayTitle(leftSplitNote, 28) }}
+                    </span>
+                    <div class="flex items-center gap-1 shrink-0">
+                      <u-button size="xs" color="neutral" variant="ghost" aria-label="Minimize left pane"
+                        @click="splitPaneLayoutRef?.toggleLeft()">
+                        <shared-icon name="panel-left-close" class="w-3.5 h-3.5" />
+                      </u-button>
+                      <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
+                        @click="splitNotes.swapPanes()">
+                        <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
+                      </u-button>
+                      <u-button size="xs" color="neutral" variant="ghost" aria-label="Close left pane"
+                        @click="closeVisualPane('left')">
+                        <icon name="i-lucide-x" class="w-3.5 h-3.5" />
+                      </u-button>
+                    </div>
+                  </div>
+                  <!-- Left editor -->
+                  <div class="split-pane-editor" :class="{ 'split-pane-editor--passive': !isLeftActive }">
+                    <div v-if="splitNotes.leftNoteId.value && leftSplitNote" class="flex flex-col flex-1 min-h-0">
+                      <MathNoteEditor v-if="leftSplitNote.noteType === 'MATH'"
+                        :key="`split-left-${splitNotes.leftNoteId.value}`" :note-id="splitNotes.leftNoteId.value"
+                        :initial-metadata="(leftSplitNote.metadata as MathNoteMetadata | undefined)"
+                        :readonly="!isLeftActive"
+                        @update="(meta: MathNoteMetadata) => handleMathUpdate(splitNotes.leftNoteId.value!, meta)"
+                        @toggle-fullscreen="fullscreen.toggle(splitNotes.leftNoteId.value!)"
+                        @delete="deleteNote(splitNotes.leftNoteId.value!)" />
+                      <CanvasNoteEditor v-else-if="leftSplitNote.noteType === 'CANVAS'"
+                        :key="`split-left-canvas-${splitNotes.leftNoteId.value}`" :note-id="splitNotes.leftNoteId.value"
+                        :initial-metadata="(leftSplitNote.metadata as CanvasNoteMetadata | undefined)"
+                        :readonly="!isLeftActive"
+                        @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(splitNotes.leftNoteId.value!, meta)"
+                        @toggle-fullscreen="fullscreen.toggle(splitNotes.leftNoteId.value!)"
+                        @delete="deleteNote(splitNotes.leftNoteId.value!)" />
+                      <TextNote v-else :key="`split-left-text-${splitNotes.leftNoteId.value}`"
+                        :note="leftSplitNote" :delete-note="deleteNote"
+                        :readonly="!isLeftActive" size="lg" @update="handleUpdateNote" @retry="handleRetry"
+                        @toggle-fullscreen="fullscreen.toggle" @add-to-material="emit('add-to-material', $event)" />
+                    </div>
                   </div>
                 </div>
-                <!-- Left editor -->
-                <div class="split-pane-editor" :class="{ 'split-pane-editor--passive': !isLeftActive }">
-                  <template v-if="splitNotes.leftNoteId.value && notesStore.getNote(splitNotes.leftNoteId.value)">
-                    <MathNoteEditor v-if="notesStore.getNote(splitNotes.leftNoteId.value)?.noteType === 'MATH'"
-                      :key="`split-left-${splitNotes.leftNoteId.value}`" :note-id="splitNotes.leftNoteId.value"
-                      :initial-metadata="(notesStore.getNote(splitNotes.leftNoteId.value)?.metadata as MathNoteMetadata | undefined)"
-                      :readonly="!isLeftActive"
-                      @update="(meta: MathNoteMetadata) => handleMathUpdate(splitNotes.leftNoteId.value!, meta)"
-                      @toggle-fullscreen="fullscreen.toggle(splitNotes.leftNoteId.value!)"
-                      @delete="deleteNote(splitNotes.leftNoteId.value!)" />
-                    <CanvasNoteEditor v-else-if="notesStore.getNote(splitNotes.leftNoteId.value)?.noteType === 'CANVAS'"
-                      :key="`split-left-canvas-${splitNotes.leftNoteId.value}`" :note-id="splitNotes.leftNoteId.value"
-                      :initial-metadata="(notesStore.getNote(splitNotes.leftNoteId.value)?.metadata as CanvasNoteMetadata | undefined)"
-                      :readonly="!isLeftActive"
-                      @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(splitNotes.leftNoteId.value!, meta)"
-                      @toggle-fullscreen="fullscreen.toggle(splitNotes.leftNoteId.value!)"
-                      @delete="deleteNote(splitNotes.leftNoteId.value!)" />
-                    <TextNote v-else :key="`split-left-text-${splitNotes.leftNoteId.value}`"
-                      :note="notesStore.getNote(splitNotes.leftNoteId.value)!" :delete-note="deleteNote"
-                      :readonly="!isLeftActive" size="lg" @update="handleUpdateNote" @retry="handleRetry"
-                      @toggle-fullscreen="fullscreen.toggle" @add-to-material="emit('add-to-material', $event)" />
-                  </template>
-                </div>
-              </div>
-            </template>
+              </template>
 
-            <!-- RIGHT PANE slot -->
-            <template #right>
-              <div class="split-pane" :class="isRightActive ? 'split-pane--active' : 'split-pane--passive'"
-                @pointerdown.capture="activateRightPane">
-                <!-- Pane header -->
-                <div class="split-pane-header" @pointerdown.stop>
-                  <span class="split-pane-title truncate">
-                    {{ getNoteDisplayTitle(notesStore.getNote(splitNotes.rightNoteId.value!), 28) }}
-                  </span>
-                  <div class="flex items-center gap-1 shrink-0">
-                    <u-button size="xs" color="neutral" variant="ghost" aria-label="Minimize right pane"
-                      @click="splitPaneLayoutRef?.toggleRight()">
-                      <icon name="i-lucide-panel-right-close" class="w-3.5 h-3.5" />
-                    </u-button>
-                    <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
-                      @click="splitNotes.swapPanes()">
-                      <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
-                    </u-button>
-                    <u-button size="xs" color="neutral" variant="ghost" aria-label="Close right pane"
-                      @click="isRightActive ? splitNotes.closePane('secondary') : splitNotes.closePane('primary')">
-                      <icon name="i-lucide-x" class="w-3.5 h-3.5" />
-                    </u-button>
+              <!-- RIGHT PANE slot -->
+              <template #right>
+                <div class="split-pane" :class="isRightActive ? 'split-pane--active' : 'split-pane--passive'"
+                  @pointerdown.capture="activateRightPane">
+                  <!-- Pane header -->
+                  <div class="split-pane-header" @pointerdown.stop>
+                    <span class="split-pane-title truncate">
+                      {{ getNoteDisplayTitle(rightSplitNote, 28) }}
+                    </span>
+                    <div class="flex items-center gap-1 shrink-0">
+                      <u-button size="xs" color="neutral" variant="ghost" aria-label="Minimize right pane"
+                        @click="splitPaneLayoutRef?.toggleRight()">
+                        <icon name="i-lucide-panel-right-close" class="w-3.5 h-3.5" />
+                      </u-button>
+                      <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
+                        @click="splitNotes.swapPanes()">
+                        <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
+                      </u-button>
+                      <u-button size="xs" color="neutral" variant="ghost" aria-label="Close right pane"
+                        @click="closeVisualPane('right')">
+                        <icon name="i-lucide-x" class="w-3.5 h-3.5" />
+                      </u-button>
+                    </div>
+                  </div>
+                  <!-- Right editor -->
+                  <div class="split-pane-editor" :class="{ 'split-pane-editor--passive': !isRightActive }">
+                    <div v-if="splitNotes.rightNoteId.value && rightSplitNote" class="flex flex-col flex-1 min-h-0">
+                      <MathNoteEditor v-if="rightSplitNote.noteType === 'MATH'"
+                        :key="`split-right-${splitNotes.rightNoteId.value}`" :note-id="splitNotes.rightNoteId.value"
+                        :initial-metadata="(rightSplitNote.metadata as MathNoteMetadata | undefined)"
+                        :readonly="!isRightActive"
+                        @update="(meta: MathNoteMetadata) => handleMathUpdate(splitNotes.rightNoteId.value!, meta)"
+                        @toggle-fullscreen="fullscreen.toggle(splitNotes.rightNoteId.value!)"
+                        @delete="deleteNote(splitNotes.rightNoteId.value!)" />
+                      <CanvasNoteEditor
+                        v-else-if="rightSplitNote.noteType === 'CANVAS'"
+                        :key="`split-right-canvas-${splitNotes.rightNoteId.value}`"
+                        :note-id="splitNotes.rightNoteId.value"
+                        :initial-metadata="(rightSplitNote.metadata as CanvasNoteMetadata | undefined)"
+                        :readonly="!isRightActive"
+                        @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(splitNotes.rightNoteId.value!, meta)"
+                        @toggle-fullscreen="fullscreen.toggle(splitNotes.rightNoteId.value!)"
+                        @delete="deleteNote(splitNotes.rightNoteId.value!)" />
+                      <TextNote v-else :key="`split-right-text-${splitNotes.rightNoteId.value}`"
+                        :note="rightSplitNote" :delete-note="deleteNote"
+                        :readonly="!isRightActive" size="lg" @update="handleUpdateNote" @retry="handleRetry"
+                        @toggle-fullscreen="fullscreen.toggle" @add-to-material="emit('add-to-material', $event)" />
+                    </div>
                   </div>
                 </div>
-                <!-- Right editor -->
-                <div class="split-pane-editor" :class="{ 'split-pane-editor--passive': !isRightActive }">
-                  <template v-if="splitNotes.rightNoteId.value && notesStore.getNote(splitNotes.rightNoteId.value)">
-                    <MathNoteEditor v-if="notesStore.getNote(splitNotes.rightNoteId.value)?.noteType === 'MATH'"
-                      :key="`split-right-${splitNotes.rightNoteId.value}`" :note-id="splitNotes.rightNoteId.value"
-                      :initial-metadata="(notesStore.getNote(splitNotes.rightNoteId.value)?.metadata as MathNoteMetadata | undefined)"
-                      :readonly="!isRightActive"
-                      @update="(meta: MathNoteMetadata) => handleMathUpdate(splitNotes.rightNoteId.value!, meta)"
-                      @toggle-fullscreen="fullscreen.toggle(splitNotes.rightNoteId.value!)"
-                      @delete="deleteNote(splitNotes.rightNoteId.value!)" />
-                    <CanvasNoteEditor
-                      v-else-if="notesStore.getNote(splitNotes.rightNoteId.value)?.noteType === 'CANVAS'"
-                      :key="`split-right-canvas-${splitNotes.rightNoteId.value}`"
-                      :note-id="splitNotes.rightNoteId.value"
-                      :initial-metadata="(notesStore.getNote(splitNotes.rightNoteId.value)?.metadata as CanvasNoteMetadata | undefined)"
-                      :readonly="!isRightActive"
-                      @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(splitNotes.rightNoteId.value!, meta)"
-                      @toggle-fullscreen="fullscreen.toggle(splitNotes.rightNoteId.value!)"
-                      @delete="deleteNote(splitNotes.rightNoteId.value!)" />
-                    <TextNote v-else :key="`split-right-text-${splitNotes.rightNoteId.value}`"
-                      :note="notesStore.getNote(splitNotes.rightNoteId.value)!" :delete-note="deleteNote"
-                      :readonly="!isRightActive" size="lg" @update="handleUpdateNote" @retry="handleRetry"
-                      @toggle-fullscreen="fullscreen.toggle" @add-to-material="emit('add-to-material', $event)" />
-                  </template>
-                </div>
-              </div>
-            </template>
-          </shared-split-pane-layout>
-        </template>
+              </template>
+            </shared-split-pane-layout>
+          </div>
+        </div>
 
       </div>
     </template>
@@ -790,41 +811,45 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
       <!-- Split fullscreen -->
       <template v-else>
         <shared-split-pane-layout :storage-key="`splitPaneSizes_${workspaceId}`"
-          :left-label="getNoteDisplayTitle(notesStore.getNote(splitNotes.leftNoteId.value!), 20)"
-          :right-label="getNoteDisplayTitle(notesStore.getNote(splitNotes.rightNoteId.value!), 20)"
+          :left-label="getNoteDisplayTitle(leftSplitNote, 20)"
+          :right-label="getNoteDisplayTitle(rightSplitNote, 20)"
           left-icon="i-lucide-notebook-pen" right-icon="i-lucide-notebook-pen" class="flex-1 min-h-0">
           <template #left>
             <div class="split-pane" :class="isLeftActive ? 'split-pane--active' : 'split-pane--passive'"
               @pointerdown.capture="activateLeftPane">
               <div class="split-pane-header" @pointerdown.stop>
                 <span class="split-pane-title truncate">
-                  {{ getNoteDisplayTitle(notesStore.getNote(splitNotes.leftNoteId.value!), 28) }}
+                  {{ getNoteDisplayTitle(leftSplitNote, 28) }}
                 </span>
                 <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
                   @click="splitNotes.swapPanes()">
                   <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
                 </u-button>
+                <u-button size="xs" color="neutral" variant="ghost" aria-label="Close left pane"
+                  @click="closeVisualPane('left')">
+                  <icon name="i-lucide-x" class="w-3.5 h-3.5" />
+                </u-button>
               </div>
               <div class="split-pane-editor" :class="{ 'split-pane-editor--passive': !isLeftActive }">
-                <template v-if="splitNotes.leftNoteId.value && notesStore.getNote(splitNotes.leftNoteId.value)">
-                  <MathNoteEditor v-if="notesStore.getNote(splitNotes.leftNoteId.value)?.noteType === 'MATH'"
+                <div v-if="splitNotes.leftNoteId.value && leftSplitNote" class="flex flex-col flex-1 min-h-0">
+                  <MathNoteEditor v-if="leftSplitNote.noteType === 'MATH'"
                     :key="`fs-split-left-${splitNotes.leftNoteId.value}`" :note-id="splitNotes.leftNoteId.value"
-                    :initial-metadata="(notesStore.getNote(splitNotes.leftNoteId.value)?.metadata as MathNoteMetadata | undefined)"
+                    :initial-metadata="(leftSplitNote.metadata as MathNoteMetadata | undefined)"
                     :is-fullscreen="true" :readonly="!isLeftActive"
                     @update="(meta: MathNoteMetadata) => handleMathUpdate(splitNotes.leftNoteId.value!, meta)"
                     @toggle-fullscreen="fullscreen.close" @delete="deleteNote(splitNotes.leftNoteId.value!)" />
-                  <CanvasNoteEditor v-else-if="notesStore.getNote(splitNotes.leftNoteId.value)?.noteType === 'CANVAS'"
+                  <CanvasNoteEditor v-else-if="leftSplitNote.noteType === 'CANVAS'"
                     :key="`fs-split-left-canvas-${splitNotes.leftNoteId.value}`" :note-id="splitNotes.leftNoteId.value"
-                    :initial-metadata="(notesStore.getNote(splitNotes.leftNoteId.value)?.metadata as CanvasNoteMetadata | undefined)"
+                    :initial-metadata="(leftSplitNote.metadata as CanvasNoteMetadata | undefined)"
                     :is-fullscreen="true" :readonly="!isLeftActive"
                     @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(splitNotes.leftNoteId.value!, meta)"
                     @toggle-fullscreen="fullscreen.close" @delete="deleteNote(splitNotes.leftNoteId.value!)" />
                   <TextNote v-else :key="`fs-split-left-text-${splitNotes.leftNoteId.value}`"
-                    :note="notesStore.getNote(splitNotes.leftNoteId.value)!" :delete-note="deleteNote"
+                    :note="leftSplitNote" :delete-note="deleteNote"
                     :is-fullscreen="true" :readonly="!isLeftActive" size="lg" @update="handleUpdateNote"
                     @retry="handleRetry" @toggle-fullscreen="fullscreen.close"
                     @add-to-material="emit('add-to-material', $event)" />
-                </template>
+                </div>
               </div>
             </div>
           </template>
@@ -834,34 +859,38 @@ const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOver
               @pointerdown.capture="activateRightPane">
               <div class="split-pane-header" @pointerdown.stop>
                 <span class="split-pane-title truncate">
-                  {{ getNoteDisplayTitle(notesStore.getNote(splitNotes.rightNoteId.value!), 28) }}
+                  {{ getNoteDisplayTitle(rightSplitNote, 28) }}
                 </span>
                 <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
                   @click="splitNotes.swapPanes()">
                   <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
                 </u-button>
+                <u-button size="xs" color="neutral" variant="ghost" aria-label="Close right pane"
+                  @click="closeVisualPane('right')">
+                  <icon name="i-lucide-x" class="w-3.5 h-3.5" />
+                </u-button>
               </div>
               <div class="split-pane-editor" :class="{ 'split-pane-editor--passive': !isRightActive }">
-                <template v-if="splitNotes.rightNoteId.value && notesStore.getNote(splitNotes.rightNoteId.value)">
-                  <MathNoteEditor v-if="notesStore.getNote(splitNotes.rightNoteId.value)?.noteType === 'MATH'"
+                <div v-if="splitNotes.rightNoteId.value && rightSplitNote" class="flex flex-col flex-1 min-h-0">
+                  <MathNoteEditor v-if="rightSplitNote.noteType === 'MATH'"
                     :key="`fs-split-right-${splitNotes.rightNoteId.value}`" :note-id="splitNotes.rightNoteId.value"
-                    :initial-metadata="(notesStore.getNote(splitNotes.rightNoteId.value)?.metadata as MathNoteMetadata | undefined)"
+                    :initial-metadata="(rightSplitNote.metadata as MathNoteMetadata | undefined)"
                     :is-fullscreen="true" :readonly="!isRightActive"
                     @update="(meta: MathNoteMetadata) => handleMathUpdate(splitNotes.rightNoteId.value!, meta)"
                     @toggle-fullscreen="fullscreen.close" @delete="deleteNote(splitNotes.rightNoteId.value!)" />
-                  <CanvasNoteEditor v-else-if="notesStore.getNote(splitNotes.rightNoteId.value)?.noteType === 'CANVAS'"
+                  <CanvasNoteEditor v-else-if="rightSplitNote.noteType === 'CANVAS'"
                     :key="`fs-split-right-canvas-${splitNotes.rightNoteId.value}`"
                     :note-id="splitNotes.rightNoteId.value"
-                    :initial-metadata="(notesStore.getNote(splitNotes.rightNoteId.value)?.metadata as CanvasNoteMetadata | undefined)"
+                    :initial-metadata="(rightSplitNote.metadata as CanvasNoteMetadata | undefined)"
                     :is-fullscreen="true" :readonly="!isRightActive"
                     @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(splitNotes.rightNoteId.value!, meta)"
                     @toggle-fullscreen="fullscreen.close" @delete="deleteNote(splitNotes.rightNoteId.value!)" />
                   <TextNote v-else :key="`fs-split-right-text-${splitNotes.rightNoteId.value}`"
-                    :note="notesStore.getNote(splitNotes.rightNoteId.value)!" :delete-note="deleteNote"
+                    :note="rightSplitNote" :delete-note="deleteNote"
                     :is-fullscreen="true" :readonly="!isRightActive" size="lg" @update="handleUpdateNote"
                     @retry="handleRetry" @toggle-fullscreen="fullscreen.close"
                     @add-to-material="emit('add-to-material', $event)" />
-                </template>
+                </div>
               </div>
             </div>
           </template>

@@ -50,11 +50,17 @@ export const DB_CONFIG = {
   // 10: BoardItem separation - added BOARD_ITEMS and PENDING_BOARD_ITEMS stores
   // 11: Added BOARD_COLUMNS store for board column offline support
   // 12: Added USER_TAGS store for offline tag caching
-  VERSION: 12,
+  // 13: Added groupId index for workspace note grouping
+  // 14: Added pendingNoteLayouts store for local-first note/group layout sync
+  // 15: Added noteGroups + pendingNoteGroupChanges for local-first note grouping
+  VERSION: 15,
   STORES: {
     FORMS: "forms",
     NOTES: "notes",
+    NOTE_GROUPS: "noteGroups",
     PENDING_NOTES: "pendingNotes",
+    PENDING_NOTE_GROUP_CHANGES: "pendingNoteGroupChanges",
+    PENDING_NOTE_LAYOUTS: "pendingNoteLayouts",
     BOARD_ITEMS: "boardItems",
     PENDING_BOARD_ITEMS: "pendingBoardItems",
     BOARD_COLUMNS: "boardColumns",
@@ -72,6 +78,15 @@ export const IDB_RETRY_CONFIG = {
   FACTOR: 2, // exponential growth factor
   MAX_DELAY_MS: 400, // upper bound clamp
   JITTER_PCT: 0.2, // +/-20% jitter
+} as const;
+
+// ===== PENDING QUEUE LIMITS =====
+// Prevents unbounded IDB growth from long offline sessions.
+export const PENDING_QUEUE_CONFIG = {
+  MAX_PENDING_NOTES: 200,
+  MAX_PENDING_GROUPS: 50,
+  MAX_PENDING_LAYOUTS: 10,
+  STALENESS_DAYS: 14, // evict changes older than 14 days
 } as const;
 
 // ===== MESSAGE TYPES =====

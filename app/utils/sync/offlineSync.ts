@@ -46,8 +46,13 @@ export function createOfflineToastState() {
 export async function registerBackgroundSync(tag: string): Promise<void> {
   if (!("serviceWorker" in navigator)) return;
   try {
-    const reg = await navigator.serviceWorker.ready;
-    if ("sync" in reg) {
+    // navigator.serviceWorker.ready can hang indefinitely if no SW is active
+    // (e.g. dev mode). Race with a timeout to avoid blocking the caller.
+    const reg = await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
+    ]);
+    if (reg && "sync" in reg) {
       // @ts-expect-error Background Sync API is not in all TS DOM libs
       await reg.sync.register(tag);
     }
@@ -77,6 +82,14 @@ export interface OnlineListenerOptions {
    * Strict ordering: onBeforeSync() → await → IDB check → SW postMessage
    */
   onBeforeSync?: () => Promise<void> | void;
+  /**
+   * When provided, the listener calls this function directly instead of
+   * routing through the Service Worker via postMessage. This makes the
+   * client the primary sync owner, eliminating the dual-sync race
+   * condition where both the client and SW read the same IDB queues and
+   * POST to the same server endpoint.
+   */
+  onSyncDirect?: () => Promise<void> | void;
 }
 
 /**
@@ -135,8 +148,16 @@ export function setupOnlineListener(options: OnlineListenerOptions): () => void 
       );
       if (!pending.length) return;
 
-      // Step 3: Trigger SW sync
-      if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+      // Step 3: Trigger sync — prefer direct client-side sync to avoid
+      // dual-sync race with SW. Fall back to SW postMessage only if no
+      // direct handler is provided.
+      if (options.onSyncDirect) {
+        try {
+          await options.onSyncDirect();
+        } catch (e) {
+          console.warn('[OfflineSync] onSyncDirect failed:', e);
+        }
+      } else if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({
           type: options.swMessageType,
         });
@@ -186,7 +207,9 @@ export function setupSyncCompletionListener(
     if (!msg || msg.type !== options.messageType) return;
     const applied: number = msg.data?.appliedCount ?? 0;
     const conflicts: number = msg.data?.conflictsCount ?? 0;
-    if (applied > 0 || conflicts > 0) {
+    const layouts: number = msg.data?.layoutApplied ?? 0;
+    const layoutConflict: boolean = Boolean(msg.data?.layoutConflict);
+    if (applied > 0 || conflicts > 0 || layouts > 0 || layoutConflict) {
       await options.onSynced(applied);
     }
   };

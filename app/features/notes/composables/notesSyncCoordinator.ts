@@ -2,7 +2,9 @@ import type { Ref } from "vue";
 import type { NotesSyncResponse } from "@@/shared/utils/note-sync.contract";
 import { normalizeWorkspaceNoteTitle } from "@@/shared/utils/workspaceNote";
 import type { NotesLocalRepository } from "./notesLocalRepository";
+import type { NotesLayoutQueue } from "./notesLayoutQueue";
 import type { NotesPendingQueue } from "./notesPendingQueue";
+import { remapPendingNoteGroupIds } from "~/utils/idb";
 import {
   normalizeLocalNote,
   noteStateFromPendingChange,
@@ -18,14 +20,16 @@ export function createNotesSyncCoordinator(input: {
   workspaceId: string;
   notes: Ref<Map<string, NoteState>>;
   localRepository: NotesLocalRepository;
+  layoutQueue: NotesLayoutQueue;
   pendingQueue: NotesPendingQueue;
 }): NotesSyncCoordinator {
-  const { workspaceId, notes, localRepository, pendingQueue } = input;
+  const { workspaceId, notes, localRepository, layoutQueue, pendingQueue } = input;
 
   const applySyncResult = async (response: NotesSyncResponse): Promise<void> => {
     const appliedIds = response.applied ?? [];
     const conflicts = response.conflicts ?? [];
     const idMap = response.idMap ?? {};
+    const groupIdMap = response.groupIdMap ?? {};
     const now = new Date();
 
     for (const [tempId, serverId] of Object.entries(idMap)) {
@@ -63,6 +67,23 @@ export function createNotesSyncCoordinator(input: {
       await localRepository.save(nextNote);
     }
 
+    if (Object.keys(groupIdMap).length) {
+      await remapPendingNoteGroupIds(groupIdMap);
+      const affectedNotes: NoteState[] = [];
+      for (const [noteId, note] of notes.value) {
+        if (!note.groupId || !groupIdMap[note.groupId]) continue;
+        const nextNote = normalizeLocalNote({
+          ...note,
+          groupId: groupIdMap[note.groupId],
+        });
+        notes.value.set(noteId, nextNote);
+        affectedNotes.push(nextNote);
+      }
+      if (affectedNotes.length) {
+        await localRepository.saveMany(affectedNotes);
+      }
+    }
+
     for (const conflict of conflicts) {
       const note = notes.value.get(conflict.id);
       if (!note) continue;
@@ -83,8 +104,9 @@ export function createNotesSyncCoordinator(input: {
       localRepository.loadByWorkspace(workspaceId),
       pendingQueue.load(workspaceId),
     ]);
+    const pendingLayout = await layoutQueue.load(workspaceId);
 
-    if (localNotes.length === 0 && pendingChanges.length === 0) return;
+    if (localNotes.length === 0 && pendingChanges.length === 0 && !pendingLayout) return;
 
     const noteMap = new Map<string, NoteState>();
     localNotes.forEach((note) => noteMap.set(note.id, normalizeLocalNote(note)));
@@ -113,6 +135,7 @@ export function createNotesSyncCoordinator(input: {
           ),
           content: change.content ?? existing.content,
           tags: change.tags ?? existing.tags,
+          groupId: change.groupId !== undefined ? change.groupId : existing.groupId,
           metadata: change.metadata ?? existing.metadata,
           isDirty: true,
         });
@@ -121,6 +144,18 @@ export function createNotesSyncCoordinator(input: {
 
       if (change.workspaceId === workspaceId) {
         noteMap.set(change.id, noteStateFromPendingChange(change, noteMap.size));
+      }
+    }
+
+    if (pendingLayout) {
+      for (const layoutNote of pendingLayout.notes) {
+        const existing = noteMap.get(layoutNote.id);
+        if (!existing) continue;
+        noteMap.set(layoutNote.id, {
+          ...existing,
+          groupId: layoutNote.groupId,
+          order: layoutNote.order,
+        });
       }
     }
 

@@ -21,12 +21,28 @@ export default Node.create({
     return [
       {
         tag: 'div[data-type="paper"]',
+        getAttrs: (dom) => {
+          try {
+            return {
+              lines: JSON.parse(dom.getAttribute('data-lines') || '[]'),
+            }
+          } catch {
+            return { lines: [] }
+          }
+        },
       },
     ]
   },
 
   renderHTML({ HTMLAttributes }) {
-    return ['div', mergeAttributes(HTMLAttributes, { 'data-type': 'paper' })]
+    const { lines, ...rest } = HTMLAttributes
+    return [
+      'div',
+      mergeAttributes(rest, {
+        'data-type': 'paper',
+        'data-lines': JSON.stringify(lines || []),
+      }),
+    ]
   },
 
   addNodeView() {

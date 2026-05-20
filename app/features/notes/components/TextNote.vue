@@ -3,9 +3,13 @@
   <div ref="noteRef" :class="noteContainerClasses">
     <!-- Toolbar sits above the styled content area (matches math/canvas note pattern) -->
     <SharedNoteToolbar v-if="!isBoardItem" :is-loading="note.isLoading" :is-fullscreen="isFullscreen"
-      @toggleFullscreen="$emit('toggle-fullscreen', note.id)" @delete="deleteNote(note.id)">
+      :readonly="props.readonly" @toggleFullscreen="handleToggleFullscreen" @delete="deleteNote(note.id)">
       <!-- Plug in the editor tools for Tiptap -->
       <shared-tiptap-toolbar v-if="tiptapEditor" :editor="tiptapEditor" />
+
+      <span class="px-2 text-[11px] font-medium text-content-secondary">
+        {{ saveStateText }}
+      </span>
 
       <UDropdownMenu :modal="false" :items="[
         [
@@ -47,13 +51,16 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, watch } from "vue";
-import {
-  normalizeWorkspaceNoteContent,
-  normalizeWorkspaceNoteTitle,
-} from "@@/shared/utils/workspaceNote";
+import { nextTick, onBeforeUnmount, onMounted, watch } from "vue";
+import { normalizeWorkspaceNoteContent } from "@@/shared/utils/workspaceNote";
 import { useExportContent } from "~/composables/shared/useExportContent";
 import { useDebounce } from "~/utils/debounce";
+import {
+  buildWorkspaceTextDraftCommit,
+  resolveEditorSaveState,
+  saveStateLabel,
+} from "../composables/notesDraftCommitter";
+import { registerNotesDraftFlusher } from "../composables/notesEditorRuntimeState";
 
 interface NoteOrBoardItem {
   id: string;
@@ -100,20 +107,20 @@ const normalizeEditorValue = (value: string) => (
   props.isBoardItem ? sanitizeHtml(value) : normalizeWorkspaceNoteContent(sanitizeHtml(value))
 );
 
-const emitUpdate = (content: string) => {
+const emitUpdate = (noteId: string, content: string) => {
   if (props.isBoardItem) {
-    emit("update", props.note.id, content);
+    emit("update", noteId, content);
     return;
   }
 
-  emit("update", props.note.id, {
-    title: normalizeWorkspaceNoteTitle(undefined, content),
-    content,
-  });
+  emit("update", noteId, buildWorkspaceTextDraftCommit(content));
 };
 
 const contentHtml = ref(normalizeEditorValue(props.note.content)); // HTML content for tiptap v-model
-const originalText = ref(normalizeEditorValue(props.note.content)); // To track changes for saving
+const lastCommittedContent = ref(normalizeEditorValue(props.note.content)); // To track changes for saving
+const draftNoteId = ref(props.note.id);
+const hasLocalDraft = ref(false);
+const isApplyingExternalContent = ref(false);
 
 // Template ref bridging
 const tiptapRef = ref<{ editor: any } | null>(null);
@@ -122,13 +129,33 @@ const tiptapEditor = computed(() => tiptapRef.value?.editor);
 const { exportContent } = useExportContent();
 const { debouncedFunc: scheduleSave, flush: flushScheduledSave } = useDebounce(
   () => {
-    const normalized = normalizeEditorValue(contentHtml.value);
-    if (normalized === (originalText.value || "").trim()) return;
-    emitUpdate(normalized);
-    originalText.value = normalized;
+    commitDraft();
   },
-  250,
+  700,
 );
+
+const saveState = computed(() =>
+  resolveEditorSaveState({
+    hasLocalDraft: hasLocalDraft.value,
+    isDirty: "isDirty" in props.note ? Boolean((props.note as any).isDirty) : false,
+    isLoading: props.note.isLoading,
+    error: props.note.error,
+  }),
+);
+const saveStateText = computed(() => saveStateLabel(saveState.value));
+
+const commitDraft = (noteId = draftNoteId.value, force = false) => {
+  if (props.readonly && !force) return;
+  const normalized = normalizeEditorValue(contentHtml.value);
+  if (normalized === lastCommittedContent.value) {
+    hasLocalDraft.value = false;
+    return;
+  }
+
+  emitUpdate(noteId, normalized);
+  lastCommittedContent.value = normalized;
+  hasLocalDraft.value = false;
+};
 
 // Computed classes for parent container — flex column mirrors math/canvas note pattern
 const noteContainerClasses = computed(() => {
@@ -142,18 +169,18 @@ const noteContainerClasses = computed(() => {
 watch(
   () => props.note.content,
   (nextContent) => {
+    if (props.note.id === draftNoteId.value && hasLocalDraft.value) return;
     const normalized = normalizeEditorValue(nextContent);
     if (normalized === contentHtml.value) return;
+    isApplyingExternalContent.value = true;
     contentHtml.value = normalized;
-    originalText.value = normalized;
+    lastCommittedContent.value = normalized;
+    hasLocalDraft.value = false;
+    nextTick(() => {
+      isApplyingExternalContent.value = false;
+    });
   }
 );
-
-const saveNote = async (html: string) => {
-  const normalized = normalizeEditorValue(html);
-  if (normalized === (originalText.value || "").trim()) return;
-  scheduleSave();
-};
 
 const handleAddToMaterial = (selectedText: string) => {
   emit("addToMaterial", selectedText);
@@ -163,24 +190,63 @@ const handleAddToMaterial = (selectedText: string) => {
 
 const retry = () => emit("retry", props.note.id);
 
-const flushPendingSave = () => {
+const flushPendingSave = (noteId = draftNoteId.value) => {
   const normalized = normalizeEditorValue(contentHtml.value);
-  if (normalized === (originalText.value || "").trim()) return;
+  if (normalized === lastCommittedContent.value) {
+    hasLocalDraft.value = false;
+    return;
+  }
   flushScheduledSave();
+  commitDraft(noteId, true);
 };
+
+const handleToggleFullscreen = () => {
+  flushPendingSave();
+  emit("toggle-fullscreen", props.note.id);
+};
+
+let unregisterDraftFlusher: (() => void) | null = null;
+
+onMounted(() => {
+  if (!props.isBoardItem) {
+    unregisterDraftFlusher = registerNotesDraftFlusher(() => flushPendingSave());
+  }
+});
 
 onBeforeUnmount(() => {
   flushPendingSave();
+  unregisterDraftFlusher?.();
 });
 
 // Watch for tiptap content changes to auto-save (we persist plain text)
-watch(contentHtml, (newHtml) => {
-  if (!isEditing.value) return;
-  const normalized = normalizeEditorValue(newHtml);
-  if (normalized !== (originalText.value || "").trim()) {
-    saveNote(normalized);
+watch(contentHtml, () => {
+  if (!isEditing.value || props.readonly || isApplyingExternalContent.value) return;
+  hasLocalDraft.value = contentHtml.value !== lastCommittedContent.value;
+  if (hasLocalDraft.value) {
+    scheduleSave();
   }
 });
+
+watch(
+  () => props.note.id,
+  (nextId, previousId) => {
+    if (previousId) {
+      flushPendingSave(previousId);
+    }
+
+    draftNoteId.value = nextId;
+    const normalized = normalizeEditorValue(props.note.content);
+    isApplyingExternalContent.value = true;
+    contentHtml.value = normalized;
+    lastCommittedContent.value = normalized;
+    hasLocalDraft.value = false;
+    nextTick(() => {
+      isApplyingExternalContent.value = false;
+    });
+  },
+);
+
+defineExpose({ flushPendingSave });
 </script>
 
 <style scoped>

@@ -88,7 +88,7 @@ export default defineAppConfig({
     },
     dropdownMenu: {
       slots: {
-        content: 'bg-white ring-0 border border-secondary',
+        content: 'bg-white ring-0 border border-secondary z-50',
         item: 'items-center',
         itemLabel: 'text-content-on-surface',
         itemLeadingIcon: 'text-content-on-surface!',
@@ -106,7 +106,7 @@ export default defineAppConfig({
     },
     contextMenu: {
       slots: {
-        content: 'bg-surface ring-0 border border-secondary',
+        content: 'bg-surface ring-0 border border-secondary z-50',
         item: 'items-center',
         itemLabel: 'text-content-on-surface',
         itemLeadingIcon: 'text-content-on-surface!',

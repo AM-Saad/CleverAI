@@ -68,6 +68,7 @@ export default defineNuxtPlugin((_nuxtApp) => {
     workspaces: apiServiceFactory.create("workspaces"),
     materials: apiServiceFactory.create("materials"),
     notes: apiServiceFactory.create("notes"),
+    noteGroups: apiServiceFactory.create("noteGroups"),
     boardItems: apiServiceFactory.create("boardItems"),
     boardColumns: apiServiceFactory.create("boardColumns"),
     auth: apiServiceFactory.create("auth"),

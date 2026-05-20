@@ -72,17 +72,28 @@ export default defineEventHandler(async (event) => {
       throw Errors.notFound("Note");
     }
 
-    const updateData: Prisma.NoteUpdateInput = {
+    if (data.groupId) {
+      const group = await (prisma as any).noteGroup.findFirst({
+        where: { id: data.groupId, workspaceId: note.workspaceId },
+      });
+      if (!group) {
+        throw Errors.badRequest("Note group does not belong to this workspace");
+      }
+    }
+
+    const updateData: any = {
       title: normalizeWorkspaceNoteTitle(
         data.title !== undefined ? data.title : note.title,
         data.content !== undefined ? data.content : note.content,
       ),
+      ...(data.groupId !== undefined && { groupId: data.groupId }),
       ...(data.content !== undefined && { content: data.content }),
       ...(data.tags !== undefined && { tags: data.tags }),
       ...(data.noteType !== undefined && { noteType: data.noteType }),
       ...(data.metadata !== undefined && {
         metadata: data.metadata as Prisma.InputJsonValue,
       }),
+      version: { increment: 1 },
     };
 
     const updatedNote: Note = await retryPrismaUpdate(() =>

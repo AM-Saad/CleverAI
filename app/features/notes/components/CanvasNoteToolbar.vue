@@ -15,6 +15,7 @@ interface Props {
   canUndo: boolean;
   canRedo: boolean;
   hasSelection: boolean;
+  readonly?: boolean;
 }
 
 type Tool = {
@@ -95,7 +96,7 @@ const currentShapeTool = computed(() => shapeTools.find((tool) => tool.id === pr
 </script>
 
 <template>
-  <SharedNoteToolbar :is-fullscreen="isFullscreen" @toggleFullscreen="emit('toggleFullscreen')"
+  <SharedNoteToolbar :is-fullscreen="isFullscreen" :readonly="readonly" @toggleFullscreen="emit('toggleFullscreen')"
     @delete="emit('deleteNote')">
     <template #common-actions-prefix>
       <shared-note-toolbar-button title="Toggle Snap Guides" icon="magnet" :active="snapEnabled"

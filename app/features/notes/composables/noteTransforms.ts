@@ -11,6 +11,8 @@ export interface NoteState extends Note {
   lastSaved?: Date;
   error?: string | null;
   isInFilteredList?: boolean;
+  /** Monotonic server version for optimistic concurrency — incremented on every server write */
+  version: number;
 }
 
 const NOTE_TYPES = new Set<NoteType>(["TEXT", "MATH", "CANVAS"]);
@@ -19,12 +21,13 @@ export const toNoteType = (value: string | undefined): NoteType =>
   NOTE_TYPES.has(value as NoteType) ? (value as NoteType) : "TEXT";
 
 export const normalizeLocalNote = <
-  T extends { content: string; title?: string | null },
+  T extends { content: string; title?: string | null; version?: number },
 >(
   note: T,
-): T & { title: string } => ({
+): T & { title: string; version: number } => ({
   ...note,
   title: normalizeWorkspaceNoteTitle(note.title, note.content),
+  version: note.version ?? 1,
 });
 
 export const normalizeCreateContent = (
@@ -35,6 +38,7 @@ export const normalizeCreateContent = (
 export function noteStateFromServer(note: Note): NoteState {
   return {
     ...normalizeLocalNote(note),
+    version: note.version ?? 1,
     isLoading: false,
     isDirty: false,
     lastSaved: new Date(),
@@ -49,12 +53,14 @@ export function noteStateFromPendingChange(
   return {
     id: change.id,
     workspaceId: change.workspaceId!,
+    groupId: change.groupId ?? null,
     title: normalizeWorkspaceNoteTitle(change.title, change.content),
     content: change.content || "",
     tags: change.tags || [],
     order,
     noteType: toNoteType(change.noteType),
     metadata: change.metadata,
+    version: change.serverVersion ?? 1,
     createdAt: new Date(change.updatedAt),
     updatedAt: new Date(change.updatedAt),
     isDirty: true,

@@ -3,6 +3,7 @@
 // Important: Do NOT block Nuxt mount. Never await a SW that may never be ready in dev.
 export default defineNuxtPlugin(() => {
   if (import.meta.server) return;
+  if (!import.meta.env.PROD) return;
   if (!("serviceWorker" in navigator)) return; // Fire-and-forget background task. Times out if no SW controls the page.
   (async () => {
     try {

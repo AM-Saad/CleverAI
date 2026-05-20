@@ -68,6 +68,7 @@ model Workspace {
   flashcards     Flashcard[]
   materials      Material[]
   notes          Note[]
+  noteGroups     NoteGroup[]
   user           User            @relation("UserWorkspaces", fields: [userId], references: [id], onDelete: Cascade)
   userId         String          @db.ObjectId
   createdAt      DateTime        @default(now())
@@ -101,16 +102,34 @@ model Note {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
   workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   workspaceId String    @db.ObjectId
+  group       NoteGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  groupId     String?   @db.ObjectId
   title       String?
   content     String
   tags        String[]  @default([])
   order       Int       @default(0)
   noteType    String?   @default("TEXT")
   metadata    Json?
+  version     Int       @default(1)
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
   @@index([workspaceId])
+  @@index([workspaceId, groupId, order])
+}
+
+model NoteGroup {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId String    @db.ObjectId
+  title       String
+  order       Int       @default(0)
+  notes       Note[]
+  version     Int       @default(1)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([workspaceId, order])
 }
 
 model BoardItem {

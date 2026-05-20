@@ -3,6 +3,7 @@ import { useRoute } from "vue-router";
 import { defineAsyncComponent, onMounted, onBeforeUnmount } from "vue";
 import { useWorkspace } from "~/composables/workspaces/useWorkspaces";
 import type { EnrollCardResponse } from "~/shared/utils/review.contract";
+import { cleanupNotesStore } from "~/features/notes/composables/useNotesStore";
 
 const ContextSlideOver = defineAsyncComponent(
   () => import("~/components/workspace/hub/ContextSlideOver.vue")
@@ -126,6 +127,8 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('open-learning-hub', handleOpenLearningHub);
+  // Release memory from the notes store cache for this workspace
+  cleanupNotesStore(id as string);
 });
 </script>
 

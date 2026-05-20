@@ -2,6 +2,7 @@
 const props = withDefaults(defineProps<{
   featureLabel: string;
   pendingCount?: number;
+  pendingDetail?: string;
   errorCount?: number;
   isFetching?: boolean;
   isOnline?: boolean;
@@ -12,6 +13,7 @@ const props = withDefaults(defineProps<{
   actionDisabled?: boolean;
 }>(), {
   pendingCount: 0,
+  pendingDetail: "",
   errorCount: 0,
   isFetching: false,
   isOnline: true,
@@ -86,19 +88,19 @@ const description = computed(() => {
 
   if (status.value === "offline") {
     const pendingCopy = props.pendingCount > 0
-      ? `${props.pendingCount} local change${props.pendingCount === 1 ? "" : "s"} will sync when the connection is verified.`
+      ? `${props.pendingDetail || `${props.pendingCount} local change${props.pendingCount === 1 ? "" : "s"}`} will sync when the connection is verified.`
       : "Edits stay local until the connection is verified.";
     return props.isConnecting ? `Reconnecting now. ${pendingCopy}` : pendingCopy;
   }
 
   if (status.value === "syncing") {
     return props.pendingCount > 0
-      ? `Sending ${props.pendingCount} queued change${props.pendingCount === 1 ? "" : "s"} to the server.`
+      ? `Sending ${props.pendingDetail || `${props.pendingCount} queued change${props.pendingCount === 1 ? "" : "s"}`} to the server.`
       : "Refreshing the latest server state.";
   }
 
   if (status.value === "pending") {
-    return `${props.pendingCount} local change${props.pendingCount === 1 ? " is" : "s are"} waiting to sync.`;
+    return `${props.pendingDetail || `${props.pendingCount} local change${props.pendingCount === 1 ? "" : "s"}`} ${props.pendingCount === 1 ? "is" : "are"} waiting to sync.`;
   }
 
   if (!props.lastSync) {

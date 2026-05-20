@@ -213,6 +213,10 @@ onBeforeUnmount(() => {
   document.removeEventListener('mouseup', stopResize);
   document.removeEventListener('touchmove', onTouchMove);
   document.removeEventListener('touchend', stopResize);
+  if (isResizing.value) {
+    document.body.style.cursor = '';
+    document.body.style.userSelect = '';
+  }
 });
 
 // ─── Expose for parent refs ───────────────────────────────────────
@@ -235,10 +239,12 @@ defineExpose({ toggleLeft, toggleRight, collapsedSide, isResizing });
         <u-icon :name="leftCollapseIcon" class="spl-strip-expand" />
       </div>
 
-      <!-- Panel content -->
-      <template v-else>
+      <!-- Panel content — <div> instead of <template> to provide a stable
+           DOM parent. <template v-else> creates a fragment whose parentNode
+           can become null during reactive slot updates → insertBefore crash. -->
+      <div v-else class="spl-panel-content">
         <slot name="left" />
-      </template>
+      </div>
     </div>
 
     <!-- ── RESIZE HANDLE ────────────────────────────────────────── -->
@@ -263,10 +269,10 @@ defineExpose({ toggleLeft, toggleRight, collapsedSide, isResizing });
         </slot>
       </div>
 
-      <!-- Panel content -->
-      <template v-else>
+      <!-- Panel content — stable DOM parent (see left panel comment) -->
+      <div v-else class="spl-panel-content">
         <slot name="right" />
-      </template>
+      </div>
     </div>
 
   </div>
@@ -312,6 +318,15 @@ defineExpose({ toggleLeft, toggleRight, collapsedSide, isResizing });
   min-height: 0;
   overflow: hidden;
   position: relative;
+}
+
+.spl-panel-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
 /* ── Collapsed strip ─────────────────────────────────────────────── */

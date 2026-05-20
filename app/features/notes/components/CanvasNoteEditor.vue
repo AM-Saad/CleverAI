@@ -523,7 +523,7 @@ const interactionHint = computed(() => {
 
 <template>
   <div class="canvas-note-editor flex flex-col gap-2 h-full w-full" @click="closeContextMenu">
-    <CanvasNoteToolbar :is-fullscreen="isFullscreen" :snap-enabled="snapEnabled" :active-tool="activeTool"
+    <CanvasNoteToolbar :is-fullscreen="isFullscreen" :readonly="props.readonly" :snap-enabled="snapEnabled" :active-tool="activeTool"
       :fill-color="fillColor" :stroke-color="strokeColor" :stroke-width="strokeWidthState"
       v-model:stroke-width-input="strokeWidthInput" :stroke-width-min="STROKE_WIDTH_MIN"
       :stroke-width-max="STROKE_WIDTH_MAX" :can-undo="canUndo" :can-redo="canRedo"

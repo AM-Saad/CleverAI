@@ -12,6 +12,8 @@ import type {
   NotesSyncResponse,
 } from "@@/shared/utils/note-sync.contract.ts";
 
+import type { FetchOptions } from "ofetch";
+
 export class NoteService extends FetchFactory {
   private readonly RESOURCE = "/api/notes";
 
@@ -49,8 +51,8 @@ export class NoteService extends FetchFactory {
   /**
    * Reorder notes in a workspace
    */
-  async reorder(payload: ReorderNotesDTO): Promise<Result<Note[]>> {
-    return this.call<Note[]>("PATCH", `${this.RESOURCE}/reorder`, payload);
+  async reorder(payload: ReorderNotesDTO, options?: FetchOptions<"json">): Promise<Result<{ layoutApplied: boolean }>> {
+    return this.call<{ layoutApplied: boolean }>("PATCH", `${this.RESOURCE}/reorder`, payload, options);
   }
 
   /**

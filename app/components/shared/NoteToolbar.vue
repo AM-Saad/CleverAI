@@ -12,11 +12,14 @@ interface Props {
   activeTools?: string[];
   /** Flag to hide the common actions block completely if desired */
   hideCommonActions?: boolean;
+  /** Pass true if editor pane is passive/readonly */
+  readonly?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
   allowFullscreen: true,
-  hideCommonActions: false
+  hideCommonActions: false,
+  readonly: false
 });
 
 const emit = defineEmits<{
@@ -27,7 +30,8 @@ const emit = defineEmits<{
 
 <template>
   <div
-    class="shared-note-toolbar relative flex items-center justify-between gap-1.5 flex-nowrap overflow-hidden rounded-t-[var(--radius-lg)] bg-surface-subtle py-1.5 border-b border-secondary">
+    class="shared-note-toolbar relative flex items-center justify-between gap-1.5 flex-nowrap overflow-hidden rounded-t-[var(--radius-lg)] bg-surface-subtle py-1.5 border-b border-secondary transition-all duration-200"
+    :class="{ 'opacity-65 pointer-events-none': props.readonly }">
     <!-- Left/Primary Area: Note-type specific tools -->
     <div
       class="flex flex-1 flex-nowrap gap-1.5 items-center min-w-0 no-scrollbar overflow-x-auto rounded-lg scroll-smooth shadow-inner">

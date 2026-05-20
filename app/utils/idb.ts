@@ -4,9 +4,14 @@
  * Ensures identical schema handling and non-destructive migrations.
  */
 
-import { DB_CONFIG, IDB_RETRY_CONFIG } from "./constants/pwa";
+import { DB_CONFIG, IDB_RETRY_CONFIG, PENDING_QUEUE_CONFIG } from "./constants/pwa";
 import type { Note } from "../../shared/utils/note.contract";
-import type { PendingNoteChange } from "../../shared/utils/note-sync.contract";
+import type { NoteGroup } from "../../shared/utils/note-group.contract";
+import type {
+  NoteLayoutChange,
+  PendingNoteChange,
+  PendingNoteGroupChange,
+} from "../../shared/utils/note-sync.contract";
 
 type STORES = (typeof DB_CONFIG)["STORES"][keyof typeof DB_CONFIG.STORES];
 
@@ -43,7 +48,10 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
       };
       ensureStore(STORES.FORMS);
       ensureStore(STORES.NOTES);
+      ensureStore(STORES.NOTE_GROUPS);
       ensureStore(STORES.PENDING_NOTES);
+      ensureStore(STORES.PENDING_NOTE_GROUP_CHANGES);
+      ensureStore(STORES.PENDING_NOTE_LAYOUTS);
       ensureStore(STORES.BOARD_ITEMS);
       ensureStore(STORES.PENDING_BOARD_ITEMS);
       ensureStore(STORES.BOARD_COLUMNS);
@@ -60,6 +68,21 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
             }
             if (!notesStore.indexNames.contains('updatedAt')) {
               notesStore.createIndex('updatedAt', 'updatedAt', { unique: false });
+            }
+            if (!notesStore.indexNames.contains('groupId')) {
+              notesStore.createIndex('groupId', 'groupId', { unique: false });
+            }
+          }
+        }
+        if (db.objectStoreNames.contains(STORES.NOTE_GROUPS)) {
+          const tx = req.transaction;
+          if (tx) {
+            const groupsStore = tx.objectStore(STORES.NOTE_GROUPS);
+            if (!groupsStore.indexNames.contains('workspaceId')) {
+              groupsStore.createIndex('workspaceId', 'workspaceId', { unique: false });
+            }
+            if (!groupsStore.indexNames.contains('order')) {
+              groupsStore.createIndex('order', 'order', { unique: false });
             }
           }
         }
@@ -95,6 +118,18 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
             }
           }
         }
+        if (db.objectStoreNames.contains(STORES.PENDING_NOTE_GROUP_CHANGES)) {
+          const tx = req.transaction;
+          if (tx) {
+            const pendingGroups = tx.objectStore(STORES.PENDING_NOTE_GROUP_CHANGES);
+            if (!pendingGroups.indexNames.contains('workspaceId')) {
+              pendingGroups.createIndex('workspaceId', 'workspaceId', { unique: false });
+            }
+            if (!pendingGroups.indexNames.contains('updatedAt')) {
+              pendingGroups.createIndex('updatedAt', 'updatedAt', { unique: false });
+            }
+          }
+        }
       } catch (e) {
         console.warn('[IDB] Failed creating indexes during upgrade:', e);
       }
@@ -106,7 +141,10 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
         const required = [
           DB_CONFIG.STORES.FORMS,
           DB_CONFIG.STORES.NOTES,
+          DB_CONFIG.STORES.NOTE_GROUPS,
           DB_CONFIG.STORES.PENDING_NOTES,
+          DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES,
+          DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS,
           DB_CONFIG.STORES.BOARD_ITEMS,
           DB_CONFIG.STORES.PENDING_BOARD_ITEMS,
           DB_CONFIG.STORES.BOARD_COLUMNS,
@@ -212,6 +250,7 @@ export const saveNoteToIndexedDB = async (note: StoredNoteState): Promise<void> 
           workspaceId: (note as any).workspaceId,
           title: (note as any).title,
           content: (note as any).content,
+          groupId: (note as any).groupId ?? null,
           tags: (note as any).tags || [],
         })
       } catch { }
@@ -336,6 +375,65 @@ export const deleteNoteFromIndexedDB = async (noteId: string): Promise<void> => 
     await deleteRecord(db, DB_CONFIG.STORES.NOTES as STORES, noteId);
   } catch (error) {
     console.error("Failed to delete note from IndexedDB:", error);
+  }
+};
+
+export const saveNoteGroupToIndexedDB = async (group: NoteGroup): Promise<void> => {
+  try {
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.NOTE_GROUPS)) return;
+    await putRecord(db, DB_CONFIG.STORES.NOTE_GROUPS as STORES, group);
+  } catch (error) {
+    console.error("Failed to save note group to IndexedDB:", error);
+  }
+};
+
+export const saveNoteGroupsToIndexedDB = async (groups: NoteGroup[]): Promise<void> => {
+  try {
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.NOTE_GROUPS)) return;
+    await putAllRecords(db, DB_CONFIG.STORES.NOTE_GROUPS as STORES, groups);
+  } catch (error) {
+    console.error("Failed to save note groups to IndexedDB:", error);
+  }
+};
+
+export const loadNoteGroupsFromIndexedDB = async (workspaceId: string): Promise<NoteGroup[]> => {
+  try {
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.NOTE_GROUPS)) return [];
+    const tx = db.transaction([DB_CONFIG.STORES.NOTE_GROUPS], "readonly");
+    const store = tx.objectStore(DB_CONFIG.STORES.NOTE_GROUPS);
+
+    if (store.indexNames.contains("workspaceId")) {
+      const request = store.index("workspaceId").getAll(workspaceId);
+      return new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve((request.result || []).sort((a, b) => a.order - b.order));
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    const request = store.getAll();
+    return new Promise((resolve, reject) => {
+      request.onsuccess = () =>
+        resolve((request.result || [])
+          .filter((group: NoteGroup) => group.workspaceId === workspaceId)
+          .sort((a: NoteGroup, b: NoteGroup) => a.order - b.order));
+      request.onerror = () => reject(request.error);
+    });
+  } catch (error) {
+    console.error("Failed to load note groups from IndexedDB:", error);
+    return [];
+  }
+};
+
+export const deleteNoteGroupFromIndexedDB = async (groupId: string): Promise<void> => {
+  try {
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.NOTE_GROUPS)) return;
+    await deleteRecord(db, DB_CONFIG.STORES.NOTE_GROUPS as STORES, groupId);
+  } catch (error) {
+    console.error("Failed to delete note group from IndexedDB:", error);
   }
 };
 
@@ -573,6 +671,124 @@ export async function deletePendingNoteChanges(ids: string[]): Promise<void> {
   await Promise.all(ids.map(id => deleteRecord(db, DB_CONFIG.STORES.PENDING_NOTES as STORES, id)));
 }
 
+// -------------------- Pending Note Groups Queue --------------------
+
+export async function queueNoteGroupChange(change: PendingNoteGroupChange): Promise<void> {
+  const db = await openUnifiedDB();
+  if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES)) return;
+  await putRecord(db, DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES as STORES, change);
+}
+
+export async function loadPendingNoteGroupChanges(workspaceId?: string): Promise<PendingNoteGroupChange[]> {
+  const db = await openUnifiedDB();
+  if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES)) return [];
+  const records = await getAllRecords<PendingNoteGroupChange>(
+    db,
+    DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES as STORES,
+  );
+  const scoped = workspaceId
+    ? records.filter((record) => record.workspaceId === workspaceId)
+    : records;
+  return scoped.sort((a, b) => a.updatedAt - b.updatedAt);
+}
+
+export async function deletePendingNoteGroupChanges(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  const db = await openUnifiedDB();
+  if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES)) return;
+  await Promise.all(
+    ids.map((id) => deleteRecord(db, DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES as STORES, id)),
+  );
+}
+
+// -------------------- Pending Notes Layout Queue --------------------
+
+/**
+ * Queue the latest workspace note/group layout. This intentionally coalesces by
+ * workspace so repeated drags do not create content-like dirty records.
+ */
+export async function queueNoteLayoutChange(change: NoteLayoutChange): Promise<void> {
+  const db = await openUnifiedDB();
+  if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS)) return;
+  await putRecord(db, DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS as STORES, {
+    ...change,
+    id: change.workspaceId,
+  });
+}
+
+export async function loadPendingNoteLayoutChange(workspaceId: string): Promise<NoteLayoutChange | null> {
+  const db = await openUnifiedDB();
+  if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS)) return null;
+  const record = await getRecord<NoteLayoutChange>(
+    db,
+    DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS as STORES,
+    workspaceId,
+  );
+  return record ?? null;
+}
+
+export async function loadPendingNoteLayoutChanges(): Promise<NoteLayoutChange[]> {
+  const db = await openUnifiedDB();
+  if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS)) return [];
+  return getAllRecords<NoteLayoutChange>(db, DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS as STORES);
+}
+
+export async function deletePendingNoteLayoutChange(workspaceId: string): Promise<void> {
+  const db = await openUnifiedDB();
+  if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS)) return;
+  await deleteRecord(db, DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS as STORES, workspaceId);
+}
+
+export async function remapPendingNoteGroupIds(groupIdMap: Record<string, string>): Promise<void> {
+  const entries = Object.entries(groupIdMap);
+  if (!entries.length) return;
+  const db = await openUnifiedDB();
+
+  if (db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) {
+    const changes = await getAllRecords<PendingNoteChange>(db, DB_CONFIG.STORES.PENDING_NOTES as STORES);
+    const remapped = changes
+      .filter((change) => change.groupId && groupIdMap[change.groupId])
+      .map((change) => ({
+        ...change,
+        groupId: change.groupId ? groupIdMap[change.groupId] ?? change.groupId : change.groupId,
+      }));
+    if (remapped.length) {
+      await putAllRecords(db, DB_CONFIG.STORES.PENDING_NOTES as STORES, remapped);
+    }
+  }
+
+  if (db.objectStoreNames.contains(DB_CONFIG.STORES.NOTES)) {
+    const notes = await getAllRecords<StoredNoteState>(db, DB_CONFIG.STORES.NOTES as STORES);
+    const remapped = notes
+      .filter((note) => note.groupId && groupIdMap[note.groupId])
+      .map((note) => ({
+        ...note,
+        groupId: note.groupId ? groupIdMap[note.groupId] ?? note.groupId : note.groupId,
+      }));
+    if (remapped.length) {
+      await putAllRecords(db, DB_CONFIG.STORES.NOTES as STORES, remapped);
+    }
+  }
+
+  if (db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS)) {
+    const layouts = await getAllRecords<NoteLayoutChange>(db, DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS as STORES);
+    const remapped = layouts.map((layout) => ({
+      ...layout,
+      notes: layout.notes.map((note) => ({
+        ...note,
+        groupId: note.groupId ? groupIdMap[note.groupId] ?? note.groupId : note.groupId,
+      })),
+      groups: layout.groups.map((group) => ({
+        ...group,
+        id: groupIdMap[group.id] ?? group.id,
+      })),
+    }));
+    if (remapped.length) {
+      await putAllRecords(db, DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS as STORES, remapped);
+    }
+  }
+}
+
 // -------------------- Pending Board Items Queue --------------------
 
 export interface PendingBoardItemChange {
@@ -679,4 +895,66 @@ export async function deleteRecord(
     }
   }
   throw lastErr;
+}
+
+// ===== PENDING QUEUE STALENESS EVICTION =====
+
+let evictionRanThisSession = false;
+
+/**
+ * Evicts stale and excess pending changes from a given IDB store.
+ * - Deletes records where `updatedAt < Date.now() - maxAgeDays`.
+ * - If count still exceeds `maxCount`, deletes oldest-first.
+ * - Runs once per browser session to avoid unnecessary IDB churn.
+ */
+export async function evictStalePendingChanges(options?: {
+  /** Run even if already executed this session */
+  force?: boolean;
+}): Promise<void> {
+  if (evictionRanThisSession && !options?.force) return;
+  evictionRanThisSession = true;
+
+  const db = await openUnifiedDB();
+  const maxAgeMs = PENDING_QUEUE_CONFIG.STALENESS_DAYS * 24 * 60 * 60 * 1000;
+  const now = Date.now();
+
+  const storeConfigs: Array<{ store: STORES; maxCount: number }> = [
+    { store: DB_CONFIG.STORES.PENDING_NOTES as STORES, maxCount: PENDING_QUEUE_CONFIG.MAX_PENDING_NOTES },
+    { store: DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES as STORES, maxCount: PENDING_QUEUE_CONFIG.MAX_PENDING_GROUPS },
+    { store: DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS as STORES, maxCount: PENDING_QUEUE_CONFIG.MAX_PENDING_LAYOUTS },
+  ];
+
+  for (const { store, maxCount } of storeConfigs) {
+    if (!db.objectStoreNames.contains(store)) continue;
+
+    try {
+      const records = await getAllRecords<{ id: string; updatedAt?: number }>(db, store);
+      if (!records.length) continue;
+
+      // Phase 1: delete stale records
+      const stale = records.filter(
+        (r) => r.updatedAt && now - r.updatedAt > maxAgeMs,
+      );
+      for (const r of stale) {
+        try {
+          await deleteRecord(db, store, r.id);
+        } catch { /* best effort */ }
+      }
+
+      // Phase 2: if still over limit, delete oldest first
+      const remaining = records
+        .filter((r) => !stale.includes(r))
+        .sort((a, b) => (a.updatedAt ?? 0) - (b.updatedAt ?? 0));
+      if (remaining.length > maxCount) {
+        const excess = remaining.slice(0, remaining.length - maxCount);
+        for (const r of excess) {
+          try {
+            await deleteRecord(db, store, r.id);
+          } catch { /* best effort */ }
+        }
+      }
+    } catch {
+      // Store-level failure — non-critical, skip.
+    }
+  }
 }

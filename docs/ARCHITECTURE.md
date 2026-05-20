@@ -302,8 +302,8 @@ Current frontend slice:
 - Legacy entrypoints such as `useNotifications`, `useNotificationPrompt`, `NotificationSubscriptionModal`, and `NotificationPreferences` remain as compatibility wrappers.
 - `materials` owns material upload/listing UI and material generation workflow state.
 - Legacy entrypoints such as workspace hub material components and `useGenerateFromMaterial` remain as compatibility wrappers.
-- `notes` owns the workspace notes panel, note search, text/math/canvas note editors, local-first note state, and the notes API client.
-- Legacy entrypoints such as `WorkspaceNotesSection`, workspace note editor components, `useNotesStore`, and `app/services/Note.ts` remain as compatibility wrappers.
+- `notes` owns the workspace notes panel, grouped notes drawer, note search, text/math/canvas note editors, local-first note state, note group state, and the notes API clients.
+- Legacy entrypoints such as `WorkspaceNotesSection`, workspace note editor components, `useNotesStore`, and `app/services/Note.ts` remain as compatibility wrappers. Note groups use feature-owned frontend entrypoints plus `app/services/NoteGroup.ts` as the service compatibility wrapper.
 - `board` owns the workspace board panel, kanban/list views, board cards, filters, board item/column stores, and board API clients.
 - Legacy entrypoints such as `BoardNotesSection`, `app/components/board/*`, `useBoardItemsStore`, `useBoardColumnsStore`, `app/services/BoardItem.ts`, and `app/services/BoardColumn.ts` remain as compatibility wrappers.
 
@@ -463,6 +463,7 @@ server/modules/
 - AI generation gateway request preparation and completion now live in `prepareGatewayGeneration` and `completeGatewayGeneration`.
 - Semantic cache reads/writes for the gateway now go through `GenerationCachePort`, keeping Redis-backed caching behind a module adapter.
 - Notes and board frontend features now surface local sync state explicitly through feature-owned status bars plus per-item dirty/error indicators.
+- Notes layout is separate from note content: grouped drawer drag emits layout commands, `notesLayoutController` queues latest workspace layout, and row-level `Local` is reserved for content edits only.
 
 **Notes + Board sync QA checklist**:
 - Edit a note offline, refresh, and confirm it rehydrates with a `Local` indicator until sync completes.
@@ -478,22 +479,26 @@ server/modules/
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │  NotesSection   │────>│  useNotesStore  │────>│    IndexedDB    │
-│  (Component)    │     │  (Composable)   │     │  (notes store)  │
+│ + NotesDrawer   │     │ + layout ctrl   │     │ notes + queues  │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
         │                       │                       │
-        │                       │ debounced sync        │
+        │                       │ content + layout sync │
         ▼                       ▼                       ▼
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  Drag & Drop    │     │  /api/notes/*   │────>│    MongoDB      │
-│  Reordering     │     │  CRUD + sync    │     │  (persistent)   │
+│ Grouped drawer  │     │ /api/notes/*    │────>│    MongoDB      │
+│ Move/reorder    │     │ /api/note-groups│     │  notes/groups   │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
 **Key Features**:
 - Optimistic updates (instant UI feedback)
-- Debounced server sync
+- Debounced content sync
+- Layout command controller for note move/reorder and workspace layout queueing
 - Conflict detection via `updatedAt` timestamps
 - Background sync via service worker `notes-sync` tag
+- First-class note groups: one group per note, virtual `Ungrouped` section for `groupId: null`
+- Group CRUD is online-first in v1; moving notes among existing groups is local-first through layout sync
+- Sync order is draft flush, content queue drain, temp ID remap, layout queue drain, then server refresh
 - Rich text editing with Tiptap + sanitization
 - Note types: `TEXT` (default), customizable via `noteType` field
 - Metadata support (JSON) for extensible note data
@@ -504,7 +509,12 @@ server/modules/
 - `PATCH /api/notes/[id]` — Update note
 - `DELETE /api/notes` — Delete note(s)
 - `POST /api/notes/sync` — Bulk sync from client
-- `PATCH /api/notes/reorder` — Update order positions
+- `PATCH /api/notes/reorder` — Update order positions and optional `groupId`
+- `GET /api/note-groups?workspaceId=` — List note groups
+- `POST /api/note-groups` — Create note group
+- `PATCH /api/note-groups/[id]` — Rename note group
+- `DELETE /api/note-groups/[id]` — Delete note group and move notes to `Ungrouped`
+- `PATCH /api/note-groups/reorder` — Reorder groups
 
 ### 2. Spaced Repetition Module
 

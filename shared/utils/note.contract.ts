@@ -87,6 +87,7 @@ export type CanvasNoteMetadata = z.infer<typeof CanvasNoteMetadataSchema>;
 export const NoteSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
+  groupId: z.string().nullable().optional(),
   title: OptionalNoteTitleSchema,
   content: z.string(),
   tags: z.array(z.string()).default([]),
@@ -103,11 +104,14 @@ export const NoteSchema = z.object({
     (val) => (val === null ? undefined : val),
     z.record(z.string(), z.unknown()).optional()
   ),
+  /** Monotonic server version for optimistic concurrency control */
+  version: z.number().int().default(1),
 });
 export type Note = z.infer<typeof NoteSchema>;
 
 export const CreateNoteDTO = z.object({
   workspaceId: z.string(),
+  groupId: z.string().nullable().optional(),
   title: OptionalNoteTitleSchema,
   content: z.preprocess(trim, z.string().min(0)),
   tags: z.array(z.string()).default([]),
@@ -125,6 +129,7 @@ export const CreateNoteDTO = z.object({
 export type CreateNoteDTO = z.infer<typeof CreateNoteDTO>;
 
 export const UpdateNoteDTO = z.object({
+  groupId: z.string().nullable().optional(),
   title: OptionalNoteTitleSchema,
   content: z.preprocess(trim, z.string().min(0)).optional(),
   tags: z.array(z.string()).optional(),
@@ -147,9 +152,9 @@ export const ReorderNotesDTO = z.object({
   noteOrders: z.array(
     z.object({
       id: z.string(),
+      groupId: z.string().nullable().optional(),
       order: z.number().int().min(0),
     })
   ),
 });
 export type ReorderNotesDTO = z.infer<typeof ReorderNotesDTO>;
-

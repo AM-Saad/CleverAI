@@ -321,7 +321,7 @@ const isExpressionsCollapsed = ref(true);
 <template>
   <div class="math-note-editor flex flex-col gap-3 h-full">
     <!-- Toolbar -->
-    <SharedNoteToolbar :is-fullscreen="isFullscreen" @toggleFullscreen="emit('toggle-fullscreen')"
+    <SharedNoteToolbar :is-fullscreen="isFullscreen" :readonly="props.readonly" @toggleFullscreen="emit('toggle-fullscreen')"
       @delete="emit('delete')">
       <shared-note-toolbar-button variant="primary" :disabled="isRecognizing" @click="onRecognizeClick"
         :title="isRecognizing ? 'Solving...' : 'Solve Math'"

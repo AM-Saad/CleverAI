@@ -2,7 +2,18 @@ import { defineNuxtPlugin } from "#app";
 // Registers the custom service worker at /sw.js and migrates away from any lingering dev-sw.
 export default defineNuxtPlugin(() => {
   // ✅ Do not register SW during dev/HMR. Prevents Workbox errors for dev URLs.
-  if (!import.meta.env.PROD) return;
+  if (!import.meta.env.PROD) {
+    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (const registration of registrations) {
+          registration.unregister().then((success) => {
+            if (success) console.log("[SW] Unregistered active service worker in development mode");
+          });
+        }
+      });
+    }
+    return;
+  }
 
   if (!("serviceWorker" in navigator)) return;
 
