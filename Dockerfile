@@ -5,7 +5,7 @@
 ARG NODE_VERSION=20
 FROM node:${NODE_VERSION}-slim AS base
 
-LABEL `="Nuxt/Prisma"
+LABEL railway_runtime="Nuxt/Prisma"
 
 # Nuxt/Prisma app lives here
 WORKDIR /app
@@ -22,7 +22,6 @@ FROM base AS build
 # Install packages needed to build node modules
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential node-gyp openssl pkg-config python-is-python3
-
 
 # Install node modules. postinstall runs Nuxt prepare and Prisma generate, so
 # copy the minimum app/config/schema files it needs before yarn install.
