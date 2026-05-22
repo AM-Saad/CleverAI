@@ -89,7 +89,7 @@ export default defineAppConfig({
     dropdownMenu: {
       slots: {
         content: 'bg-white ring-0 border border-secondary z-50',
-        item: 'items-center',
+        item: 'items-center shrink-0',
         itemLabel: 'text-content-on-surface',
         itemLeadingIcon: 'text-content-on-surface!',
       },

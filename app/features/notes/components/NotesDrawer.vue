@@ -269,7 +269,6 @@ function handleNoteDragStart(groupId: string | null) {
 }
 
 function handleNoteDragEnd(groupId: string | null) {
-  console.log(`🔍 [TRACE:REORDER] NotesDrawer handleNoteDragEnd`, { groupId });
   isDraggingNote.value = false;
   commitSectionNotes();
 }
@@ -319,7 +318,6 @@ function handleRowIntent(intent: NoteRowIntent) {
 function commitSectionNotes() {
   const signature = currentLayoutSignature();
   if (signature === lastCommittedLayoutSignature) {
-    console.log(`🔍 [TRACE:REORDER] NotesDrawer commit SKIPPED — signature unchanged`);
     return;
   }
   lastCommittedLayoutSignature = signature;
@@ -337,12 +335,10 @@ function commitSectionNotes() {
       });
     });
   }
-  console.log(`🔍 [TRACE:REORDER] NotesDrawer EMITTING layout-notes-changed`, { count: orderedNotes.length, notes: orderedNotes });
   emit("layout-notes-changed", orderedNotes);
 }
 
 function handleSectionNotesReordered(groupId: string | null, noteIds: string[]) {
-  console.log(`🔍 [TRACE:REORDER] NotesDrawer handleSectionNotesReordered`, { groupId, noteIds });
   const nextState = new Map(sectionNoteState.value);
   nextState.set(sectionKey(groupId), noteIds);
   sectionNoteState.value = nextState;

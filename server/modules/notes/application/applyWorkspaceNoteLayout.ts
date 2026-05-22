@@ -36,7 +36,6 @@ export async function applyWorkspaceNoteLayout(input: {
   layout: NoteLayoutChange;
 }) {
   const { prisma, userId, layout: rawLayout } = input;
-  console.log(`🔍 [TRACE:SERVER] applyWorkspaceNoteLayout`, { workspaceId: rawLayout.workspaceId, notes: rawLayout.notes.length, groups: rawLayout.groups.length });
 
   const workspace = await prisma.workspace.findFirst({
     where: { id: rawLayout.workspaceId, userId },
@@ -133,8 +132,6 @@ export async function applyWorkspaceNoteLayout(input: {
     return cur.order !== group.order;
   });
 
-  console.log(`🔍 [TRACE:SERVER] applyWorkspaceNoteLayout — valid: ${validNotes.length} notes, ${validGroups.length} groups | changed: ${changedNotes.length} notes, ${changedGroups.length} groups | skipped: ${skippedNotes.length} notes, ${skippedGroups.length} groups`);
-
   // Individual parallel updates — no transaction needed since each is idempotent
   if (changedNotes.length || changedGroups.length) {
     await Promise.all([
@@ -156,6 +153,5 @@ export async function applyWorkspaceNoteLayout(input: {
     ]);
   }
 
-  console.log(`🔍 [TRACE:SERVER] applyWorkspaceNoteLayout DONE`);
   return { layoutApplied: true, skippedNotes, skippedGroups };
 }

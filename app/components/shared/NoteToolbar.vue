@@ -30,11 +30,11 @@ const emit = defineEmits<{
 
 <template>
   <div
-    class="shared-note-toolbar relative flex items-center justify-between gap-1.5 flex-nowrap overflow-hidden rounded-t-[var(--radius-lg)] bg-surface-subtle py-1.5 border-b border-secondary transition-all duration-200"
+    class="shared-note-toolbar relative flex shrink-0 items-center justify-between gap-1.5 flex-nowrap overflow-hidden  bg-surface-subtle py-1.5 border-b border-secondary transition-all duration-200"
     :class="{ 'opacity-65 pointer-events-none': props.readonly }">
     <!-- Left/Primary Area: Note-type specific tools -->
     <div
-      class="flex flex-1 flex-nowrap gap-1.5 items-center min-w-0 no-scrollbar overflow-x-auto rounded-lg scroll-smooth shadow-inner">
+      class="flex flex-1 flex-nowrap gap-1.5 items-center min-w-0 no-scrollbar overflow-x-auto rounded-lg scroll-smooth shadow-inner px-1.5 py-1">
       <slot name="default"></slot>
     </div>
 

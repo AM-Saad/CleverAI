@@ -33,7 +33,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'click', event: MouseEvent): void;
 }>();
-console.log('NoteToolbarButton props:', props.icon);
 
 const colorClasses = computed(() => {
   if (props.variant === 'danger') {

@@ -26,25 +26,6 @@ export function createNotesSplitInteractionController(input: {
 
   function replacePane(noteId: string, targetPane: "primary" | "secondary") {
     if (noteWouldDuplicateOtherPane(noteId, targetPane)) {
-      // Note is already open in the other pane. To avoid duplication and honor the drop intent,
-      // we perform a swap: place the current target pane's note into the other pane,
-      // and place this note into the target pane.
-      const otherNoteId = targetPane === "primary"
-        ? input.splitNotes.primaryNoteId.value
-        : input.splitNotes.secondaryNoteId.value;
-
-      if (otherNoteId) {
-        if (targetPane === "primary") {
-          input.splitNotes.setPrimaryNote(noteId);
-          input.splitNotes.setSecondaryNote(otherNoteId);
-          input.splitNotes.setActivePane("primary");
-        } else {
-          input.splitNotes.setSecondaryNote(noteId);
-          input.splitNotes.setPrimaryNote(otherNoteId);
-          input.splitNotes.setActivePane("secondary");
-        }
-        input.setCurrentNoteId(noteId);
-      }
       return;
     }
 

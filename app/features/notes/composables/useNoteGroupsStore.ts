@@ -10,6 +10,7 @@ import {
 } from "~/utils/idb";
 import { createIndexedDbNotesGroupQueue } from "./notesGroupQueue";
 import { createIndexedDbNotesLayoutQueue } from "./notesLayoutQueue";
+import { useNotesStore } from "./useNotesStore";
 
 interface NoteGroupsStore {
   groups: Ref<Map<string, NoteGroup>>;
@@ -43,8 +44,6 @@ export function useNoteGroupsStore(workspaceId: string): NoteGroupsStore {
   const loading = ref(false);
   const error = ref<APIError | null>(null);
   const collapsedGroupIds = ref<Set<string>>(new Set());
-  let activeGroupAbortController: AbortController | null = null;
-  let groupReorderTimer: ReturnType<typeof setTimeout> | null = null;
 
   const storageKey = `collapsedNoteGroups_${workspaceId}`;
 
@@ -104,6 +103,8 @@ export function useNoteGroupsStore(workspaceId: string): NoteGroupsStore {
       if (syncResult.success) {
         await groupQueue.remove(syncResult.data.groupApplied ?? []);
         await remapPendingNoteGroupIds(syncResult.data.groupIdMap ?? {});
+        const notesStore = useNotesStore(workspaceId);
+        await notesStore.remapGroupIds(syncResult.data.groupIdMap ?? {});
         await Promise.all(
           Object.keys(syncResult.data.groupIdMap ?? {}).map((tempId) =>
             deleteNoteGroupFromIndexedDB(tempId),
@@ -122,6 +123,10 @@ export function useNoteGroupsStore(workspaceId: string): NoteGroupsStore {
             nextGroups.set(serverId, { ...tempGroup, id: serverId });
             groups.value = nextGroups;
           }
+        }
+
+        if (Object.keys(syncResult.data.groupIdMap ?? {}).length) {
+          void notesStore.syncWithServer();
         }
       } else {
         error.value = syncResult.error;
@@ -249,71 +254,7 @@ export function useNoteGroupsStore(workspaceId: string): NoteGroupsStore {
     }
     await saveNoteGroupsToIndexedDB(Array.from(nextGroups.values()));
 
-    // Clear any pending group reorder debounce timer
-    if (groupReorderTimer) {
-      clearTimeout(groupReorderTimer);
-      groupReorderTimer = null;
-    }
-
-    // Abort the active group reorder request
-    if (activeGroupAbortController) {
-      console.log(`🔍 [TRACE:REORDER_GROUP] aborting active group reorder PATCH request`);
-      activeGroupAbortController.abort();
-      activeGroupAbortController = null;
-    }
-
-    // Debounce server PATCH for 1000ms
-    groupReorderTimer = setTimeout(async () => {
-      groupReorderTimer = null;
-
-      if (!networkMonitor.isVerifiedOnline.value) {
-        console.log(`🔍 [TRACE:REORDER_GROUP] background group reorder deferred — offline`);
-        return;
-      }
-
-      const controller = new AbortController();
-      activeGroupAbortController = controller;
-
-      try {
-        console.log(`🔍 [TRACE:REORDER_GROUP] sending group reorder PATCH to server...`);
-        const res = await $api.noteGroups.reorder(
-          {
-            workspaceId,
-            groupOrders,
-          },
-          { signal: controller.signal }
-        );
-
-        if (controller.signal.aborted) {
-          console.log(`🔍 [TRACE:REORDER_GROUP] request aborted, ignoring response`);
-          return;
-        }
-
-        if (activeGroupAbortController === controller) {
-          activeGroupAbortController = null;
-        }
-
-        if (res.success) {
-          if (res.data.layoutApplied) {
-            console.log(`🔍 [TRACE:REORDER_GROUP] background group reorder succeeded`);
-            const fresh = await layoutQueue.load(workspaceId);
-            if (fresh && fresh.localVersion === change.localVersion) {
-              await layoutQueue.remove(workspaceId);
-            }
-          } else {
-            console.warn(`🔍 [TRACE:REORDER_GROUP] background group reorder returned layoutApplied=false`);
-          }
-        } else {
-          console.warn(`🔍 [TRACE:REORDER_GROUP] background group reorder failed`, res.error);
-        }
-      } catch (err: any) {
-        if (err.name === "AbortError" || (err instanceof Error && err.message.includes("aborted"))) {
-          console.log(`🔍 [TRACE:REORDER_GROUP] group reorder PATCH aborted successfully`);
-          return;
-        }
-        console.error(`🔍 [TRACE:REORDER_GROUP] background group reorder failed with error`, err);
-      }
-    }, 1000);
+    if (networkMonitor.isVerifiedOnline.value) void syncWithServer();
 
     return true;
   };

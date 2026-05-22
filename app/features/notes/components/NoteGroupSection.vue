@@ -125,20 +125,17 @@ const [notesListRef, dragNotes] = useDragAndDrop<NoteState>([], {
   longPress: true,
   longPressDuration: 180,
   onDragstart: () => {
-    console.log(`🔍 [TRACE:REORDER] NoteGroupSection onDragstart`, { groupId: props.groupId });
     isUserDraggingNotes.value = true;
     emit("drag-start", props.groupId);
   },
   onDragend: () => {
-    console.log(`🔍 [TRACE:REORDER] NoteGroupSection onDragend`, { groupId: props.groupId, isUserDraggingNotes: isUserDraggingNotes.value });
     emit("drag-end", props.groupId);
     requestAnimationFrame(() => {
       isUserDraggingNotes.value = false;
-      console.log(`🔍 [TRACE:REORDER] NoteGroupSection onDragend RAF — isUserDraggingNotes set to false`);
     });
   },
-  onSort: () => { console.log(`🔍 [TRACE:REORDER] NoteGroupSection onSort`, { groupId: props.groupId }); emitUserNoteLayout(); },
-  onTransfer: () => { console.log(`🔍 [TRACE:REORDER] NoteGroupSection onTransfer`, { groupId: props.groupId }); emitUserNoteLayout(true); },
+  onSort: () => emitUserNoteLayout(),
+  onTransfer: () => emitUserNoteLayout(true),
 });
 
 watch(
@@ -192,18 +189,14 @@ function emitUserNoteLayout(force = false) {
   // Capture drag state synchronously — by the time nextTick fires,
   // onDragend's requestAnimationFrame may have reset the flag.
   const wasDragging = isUserDraggingNotes.value;
-  console.log(`🔍 [TRACE:REORDER] emitUserNoteLayout called`, { force, wasDragging, isApplyingExternal: isApplyingExternalNotes.value, groupId: props.groupId });
   if (isApplyingExternalNotes.value || (!force && !wasDragging)) {
-    console.log(`🔍 [TRACE:REORDER] emitUserNoteLayout SUPPRESSED`, { isApplyingExternal: isApplyingExternalNotes.value, force, wasDragging });
     return;
   }
   nextTick(() => {
     if (isApplyingExternalNotes.value) {
-      console.log(`🔍 [TRACE:REORDER] emitUserNoteLayout nextTick SUPPRESSED — isApplyingExternalNotes`);
       return;
     }
     const noteIds = dragNotes.value.map((note) => note.id);
-    console.log(`🔍 [TRACE:REORDER] emitUserNoteLayout EMITTING notes-reordered`, { groupId: props.groupId, noteIds });
     emit("notes-reordered", props.groupId, noteIds);
   });
 }

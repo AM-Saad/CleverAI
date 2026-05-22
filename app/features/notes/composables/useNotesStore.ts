@@ -44,6 +44,7 @@ interface NotesStore {
   applyLayoutCommand: (command: NotesLayoutCommand) => Promise<boolean>;
   reorderNotes: (reorderedNotes: NoteState[] | Array<{ id: string; groupId: string | null; order: number }>) => Promise<boolean>;
   clearGroup: (groupId: string) => Promise<void>;
+  remapGroupIds: (groupIdMap: Record<string, string>) => Promise<void>;
   hydrateLocalNotes: () => Promise<void>;
   refreshFromServer: () => Promise<void>;
   syncWithServer: () => Promise<void>;
@@ -199,17 +200,14 @@ export function useNotesStore(workspaceId: string): NotesStore {
 
   let layoutSyncTimer: ReturnType<typeof setTimeout> | null = null;
   const scheduleLayoutSync = () => {
-    console.log(`🔍 [TRACE:SYNC] scheduleLayoutSync called`, { isOnline: networkMonitor.isOnline.value, isVerifiedOnline: networkMonitor.isVerifiedOnline.value });
     if (layoutSyncTimer) clearTimeout(layoutSyncTimer);
     layoutSyncTimer = setTimeout(async () => {
       layoutSyncTimer = null;
-      if (!networkMonitor.isOnline.value) { console.log(`🔍 [TRACE:SYNC] scheduleLayoutSync ABORTED — offline`); return; }
+      if (!networkMonitor.isOnline.value) return;
       if (!networkMonitor.isVerifiedOnline.value) {
-        console.log(`🔍 [TRACE:SYNC] scheduleLayoutSync — waiting for verified online...`);
         const connected = await networkMonitor.waitForConnection(1500);
-        if (!connected) { console.log(`🔍 [TRACE:SYNC] scheduleLayoutSync ABORTED — connection verification failed`); return; }
+        if (!connected) return;
       }
-      console.log(`🔍 [TRACE:SYNC] scheduleLayoutSync — calling syncPendingChanges()`);
       void syncPendingChanges();
     }, 500);
   };
@@ -278,11 +276,9 @@ export function useNotesStore(workspaceId: string): NotesStore {
   };
 
   const syncPendingChanges = async (): Promise<boolean> => {
-    console.log(`🔍 [TRACE:SYNC] syncPendingChanges START`);
     await _flushDebounce();
 
     if (!networkMonitor.isVerifiedOnline.value) {
-      console.log(`🔍 [TRACE:SYNC] syncPendingChanges ABORTED — not verified online`);
       await refreshLayoutPendingCount();
       return false;
     }
@@ -290,13 +286,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
     const pendingChanges = await pendingQueue.load(workspaceId);
     const pendingGroupChanges = await groupQueue.load(workspaceId);
     const pendingLayout = await layoutQueue.load(workspaceId);
-    console.log(`🔍 [TRACE:SYNC] syncPendingChanges loaded queues`, {
-      pendingChanges: pendingChanges.length,
-      pendingGroupChanges: pendingGroupChanges.length,
-      pendingLayout: pendingLayout ? { notes: pendingLayout.notes?.length, groups: pendingLayout.groups?.length } : null,
-    });
     if (!pendingChanges.length && !pendingGroupChanges.length && !pendingLayout) {
-      console.log(`🔍 [TRACE:SYNC] syncPendingChanges — nothing to sync`);
       layoutPendingCount.value = 0;
       layoutStatus.value = "synced";
       resetSyncRetry();
@@ -315,7 +305,6 @@ export function useNotesStore(workspaceId: string): NotesStore {
       change.operation === "upsert" &&
       !isTempId
     ) {
-      console.log(`🔍 [TRACE:SYNC] syncPendingChanges — executing hybrid direct PATCH for note ${change.id}`);
       const updatePayload: UpdateNoteDTO = {
         title: change.title,
         content: change.content,
@@ -327,7 +316,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
 
       const patchResult = await $api.notes.update(change.id, updatePayload);
       if (!patchResult.success) {
-        console.error(`🔍 [TRACE:SYNC] syncPendingChanges direct PATCH FAILED`, { error: patchResult.error });
+        console.error("Failed to sync note update", { error: patchResult.error });
         logNotesOperation("sync-failure", {
           workspaceId,
           reason: "notes-patch-api-failed",
@@ -336,7 +325,6 @@ export function useNotesStore(workspaceId: string): NotesStore {
         return false;
       }
 
-      console.log(`🔍 [TRACE:SYNC] syncPendingChanges direct PATCH SUCCESS`, { noteId: change.id });
       resetSyncRetry();
 
       // Construct a mock sync response to update local versions and clean state
@@ -385,7 +373,6 @@ export function useNotesStore(workspaceId: string): NotesStore {
     });
     if (pendingLayout) layoutStatus.value = "syncing";
 
-    console.log(`🔍 [TRACE:SYNC] syncPendingChanges — calling $api.notes.sync()`);
     const result = await $api.notes.sync({
       changes: pendingChanges,
       contentChanges: [],
@@ -393,7 +380,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
       ...(pendingLayout && { layoutChange: pendingLayout }),
     });
     if (!result.success) {
-      console.error(`🔍 [TRACE:SYNC] syncPendingChanges API FAILED`, { error: result.error });
+      console.error("Failed to sync notes queues", { error: result.error });
       await refreshLayoutPendingCount();
       if (pendingLayout) layoutStatus.value = "failed";
       logNotesOperation("sync-failure", {
@@ -403,14 +390,6 @@ export function useNotesStore(workspaceId: string): NotesStore {
       scheduleSyncRetry();
       return false;
     }
-
-    console.log(`🔍 [TRACE:SYNC] syncPendingChanges API SUCCESS`, {
-      applied: result.data.applied,
-      groupApplied: result.data.groupApplied,
-      layoutApplied: result.data.layoutApplied,
-      layoutConflict: result.data.layoutConflict,
-      errors: result.data.errors,
-    });
 
     // Success — reset retry state
     resetSyncRetry();
@@ -542,9 +521,9 @@ export function useNotesStore(workspaceId: string): NotesStore {
       error: null,
     });
 
-    // Save to IndexedDB first for persistence
-    await localRepository.save(optimisticNote);
     notes.value.set(tempId, optimisticNote);
+    // Update the UI immediately, then persist the same local state.
+    await localRepository.save(optimisticNote);
 
     await pendingQueue.add({
       id: tempId,
@@ -565,7 +544,8 @@ export function useNotesStore(workspaceId: string): NotesStore {
     optimisticNote.isDirty = true;
     notes.value.set(tempId, optimisticNote);
 
-    if (networkMonitor.isVerifiedOnline.value) {
+    const usesPendingGroup = Boolean(resolvedGroupId?.startsWith("temp-"));
+    if (networkMonitor.isVerifiedOnline.value && !usesPendingGroup) {
       void syncPendingChanges();
     }
     return tempId;
@@ -596,9 +576,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
   };
 
   const applyLayoutCommand = async (command: NotesLayoutCommand): Promise<boolean> => {
-    console.log(`🔍 [TRACE:REORDER] store.applyLayoutCommand`, { type: command.type });
     const result = await layoutController.apply(command);
-    console.log(`🔍 [TRACE:REORDER] store.applyLayoutCommand result`, { result });
     if (!result) {
       toast.add({
         title: "Layout not saved",
@@ -613,7 +591,6 @@ export function useNotesStore(workspaceId: string): NotesStore {
   const reorderNotes = async (
     reorderedNotes: NoteState[] | Array<{ id: string; groupId: string | null; order: number }>,
   ): Promise<boolean> => {
-    console.log(`🔍 [TRACE:REORDER] store.reorderNotes called`, { count: reorderedNotes.length });
     return applyLayoutCommand({
       type: "APPLY_NOTE_LAYOUT",
       notes: reorderedNotes.map((note) => ({
@@ -631,6 +608,26 @@ export function useNotesStore(workspaceId: string): NotesStore {
       order: note.order,
     }));
     await layoutController.queueNoteLayout(nextLayout);
+  };
+
+  const remapGroupIds = async (groupIdMap: Record<string, string>): Promise<void> => {
+    if (!Object.keys(groupIdMap).length) return;
+    const changedNotes: NoteState[] = [];
+    const nextNotes = new Map(notes.value);
+
+    for (const [id, note] of nextNotes) {
+      if (!note.groupId || !groupIdMap[note.groupId]) continue;
+      const nextNote = normalizeLocalNote({
+        ...note,
+        groupId: groupIdMap[note.groupId],
+      });
+      nextNotes.set(id, nextNote);
+      changedNotes.push(nextNote);
+    }
+
+    if (!changedNotes.length) return;
+    notes.value = nextNotes;
+    await localRepository.saveMany(changedNotes);
   };
 
   const hydrateLocalNotes = async (): Promise<void> => {
@@ -807,6 +804,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
     applyLayoutCommand,
     reorderNotes,
     clearGroup,
+    remapGroupIds,
     getNote,
     hydrateLocalNotes,
     refreshFromServer,

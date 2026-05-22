@@ -9,12 +9,8 @@
     </div>
 
     <!-- Bubble Menu (floating toolbar on text selection) -->
-    <SharedTiptapBubbleMenu
-      :editor="editor"
-      :context="editorContext"
-      :readonly="props.readonly"
-      @ai-action="handleBubbleAiAction"
-    />
+    <SharedTiptapBubbleMenu :editor="editor" :context="editorContext" :readonly="props.readonly"
+      @ai-action="handleBubbleAiAction" />
 
     <!-- Autocomplete floating dropdown -->
     <Transition name="auto-suggestions">
@@ -839,12 +835,12 @@ function getSelectedText(): string | null {
 /* ======= Code Block Wrapper (NodeView) ======= */
 .code-block-wrapper {
   margin: 1.25rem 0;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  /* border: 1px solid rgba(255, 255, 255, 0.06);
   box-shadow:
     0 2px 8px rgba(0, 0, 0, 0.15),
-    0 1px 3px rgba(0, 0, 0, 0.1);
+    0 1px 3px rgba(0, 0, 0, 0.1); */
   transition: box-shadow 0.2s ease;
 }
 
@@ -936,7 +932,6 @@ function getSelectedText(): string | null {
 
 /* --- Pre / Code inside NodeView --- */
 .code-block-wrapper pre {
-  background: #191b28 !important;
   margin: 0 !important;
   padding: 1rem 1.25rem !important;
   overflow-x: auto;

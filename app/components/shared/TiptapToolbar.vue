@@ -1,52 +1,11 @@
 <template>
-  <!-- Group: Headings -->
-  <UDropdownMenu :modal="false" :items="headingsItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-    <shared-note-toolbar-button title="Formatting" icon="text-icon" />
-  </UDropdownMenu>
-
-  <!-- Group: Blocks -->
-  <UDropdownMenu :modal="false" :items="blocksItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-    <shared-note-toolbar-button title="Blocks" icon="blocks" />
-  </UDropdownMenu>
-
-  <!-- Group: Lists -->
-  <UDropdownMenu :modal="false" :items="listsItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-    <shared-note-toolbar-button title="Lists" icon="list" />
-  </UDropdownMenu>
-
-  <!-- Group: Tasks -->
-  <UDropdownMenu :modal="false" :items="tasksItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-    <shared-note-toolbar-button title="Tasks" icon="list-check" />
-  </UDropdownMenu>
-
-  <!-- Group: Insert -->
-  <UDropdownMenu :modal="false" :items="insertItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-    <shared-note-toolbar-button title="Insert" icon="plus-square" />
-  </UDropdownMenu>
-
-  <!-- Group: Table -->
-  <UDropdownMenu :modal="false" :items="tableItems" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-    <shared-note-toolbar-button title="Table" icon="table" />
-  </UDropdownMenu>
-
-  <!-- Group: Colors -->
-  <SharedNoteColorPickerButton title="Text Color" icon="color-picker" :icon-only="true" :modelValue="currentColor"
-    @update:modelValue="val => setTextColor(props.editor, val)" />
-
-  <div class="h-5 w-px bg-secondary mx-1 shrink-0"></div>
-
-
-  <!-- Undo / Redo -->
-  <shared-note-toolbar-button title="Undo" @click="props.editor.chain().focus().undo().run()"
-    :disabled="!props.editor.can().chain().focus().undo().run()" icon="undo" />
-
-  <shared-note-toolbar-button title="Redo" @click="props.editor.chain().focus().redo().run()"
-    :disabled="!props.editor.can().chain().focus().redo().run()" icon="redo" />
+  <SharedNoteToolbarControls :controls="toolbarControls" />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import type { Editor } from '@tiptap/vue-3';
+import type { NoteToolbarControl } from "~/components/shared/NoteToolbarControls.vue";
 import {
   clearFormatting,
   setTextColor,
@@ -276,5 +235,78 @@ const tableItems = computed<any[][]>(() => [[
   },
 ]]);
 
+const toolbarControls = computed<NoteToolbarControl[]>(() => [
+  {
+    type: "dropdown",
+    id: "formatting",
+    title: "Formatting",
+    icon: "text-icon",
+    items: headingsItems.value,
+  },
+  {
+    type: "dropdown",
+    id: "blocks",
+    title: "Blocks",
+    icon: "blocks",
+    items: blocksItems.value,
+  },
+  {
+    type: "dropdown",
+    id: "lists",
+    title: "Lists",
+    icon: "list",
+    items: listsItems.value,
+  },
+  {
+    type: "dropdown",
+    id: "tasks",
+    title: "Tasks",
+    icon: "list-check",
+    items: tasksItems.value,
+  },
+  {
+    type: "dropdown",
+    id: "insert",
+    title: "Insert",
+    icon: "plus-square",
+    items: insertItems.value,
+  },
+  {
+    type: "dropdown",
+    id: "table",
+    title: "Table",
+    icon: "table",
+    items: tableItems.value,
+  },
+  {
+    type: "color",
+    id: "text-color",
+    title: "Text Color",
+    icon: "color-picker",
+    iconOnly: true,
+    modelValue: currentColor.value,
+    onUpdate: (value) => setTextColor(props.editor, value),
+  },
+  {
+    type: "separator",
+    id: "edit-separator",
+  },
+  {
+    type: "button",
+    id: "undo",
+    title: "Undo",
+    icon: "undo",
+    disabled: !props.editor.can().chain().focus().undo().run(),
+    onSelect: () => props.editor.chain().focus().undo().run(),
+  },
+  {
+    type: "button",
+    id: "redo",
+    title: "Redo",
+    icon: "redo",
+    disabled: !props.editor.can().chain().focus().redo().run(),
+    onSelect: () => props.editor.chain().focus().redo().run(),
+  },
+]);
 
 </script>

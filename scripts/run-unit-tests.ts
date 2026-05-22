@@ -661,6 +661,7 @@ test("workspace note sync reports server-newer conflicts", async () => {
     tags: [],
     noteType: "TEXT",
     metadata: null,
+    version: 2,
     updatedAt: new Date("2026-01-03T00:00:00.000Z"),
   });
 
@@ -674,6 +675,7 @@ test("workspace note sync reports server-newer conflicts", async () => {
           operation: "upsert",
           updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
           localVersion: 1,
+          serverVersion: 1,
           workspaceId: "workspace-1",
           content: "Client stale note",
         },
@@ -956,7 +958,7 @@ test("workspace note layout applies note moves and group order without touching 
   assert.equal(noteGroups.get("group-1")?.order, 3);
 });
 
-test("workspace note layout rejects foreign note groups", async () => {
+test("workspace note layout skips foreign note groups", async () => {
   const { notes, prisma } = fakeNotesPrisma();
   notes.set("note-1", {
     id: "note-1",
@@ -971,22 +973,20 @@ test("workspace note layout rejects foreign note groups", async () => {
     updatedAt: new Date("2026-01-01T00:00:00.000Z"),
   });
 
-  await assert.rejects(
-    () =>
-      applyWorkspaceNoteLayout({
-        prisma,
-        userId: "user-1",
-        layout: {
-          id: "workspace-1",
-          workspaceId: "workspace-1",
-          updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
-          localVersion: 1,
-          notes: [{ id: "note-1", groupId: "foreign-group", order: 0 }],
-          groups: [],
-        },
-      }),
-    /Some note groups do not belong/,
-  );
+  await applyWorkspaceNoteLayout({
+    prisma,
+    userId: "user-1",
+    layout: {
+      id: "workspace-1",
+      workspaceId: "workspace-1",
+      updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+      localVersion: 1,
+      notes: [{ id: "note-1", groupId: "foreign-group", order: 0 }],
+      groups: [],
+    },
+  });
+
+  assert.equal(notes.get("note-1")?.groupId, null);
 });
 
 test("workspace note sync applies layout changes after content changes", async () => {
@@ -1261,7 +1261,7 @@ test("notes split drop targets the visual side independently from note selection
   assert.equal(controller.draggedSplitNoteId.value, null);
 });
 
-test("workspace note sync reports layout conflicts separately from content changes", async () => {
+test("workspace note sync skips missing layout groups without touching content", async () => {
   const { notes, prisma } = fakeNotesPrisma();
   notes.set("note-1", {
     id: "note-1",
@@ -1292,8 +1292,8 @@ test("workspace note sync reports layout conflicts separately from content chang
     },
   });
 
-  assert.equal(result.layoutApplied, false);
-  assert.equal(result.layoutConflict, true);
+  assert.equal(result.layoutApplied, true);
+  assert.equal(result.layoutConflict, false);
   assert.equal(notes.get("note-1")?.groupId, null);
 });
 

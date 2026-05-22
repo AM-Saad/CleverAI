@@ -8,7 +8,6 @@ import type { NotesLocalRepository } from "./notesLocalRepository";
 import type { NotesLayoutQueue } from "./notesLayoutQueue";
 import type { NoteState } from "./noteTransforms";
 import { logNotesOperation } from "./notesOperationLog";
-import { useNetworkStatus } from "~/composables/shared/useNetworkStatus";
 
 export type NotesLayoutStatus =
   | "idle"
@@ -83,17 +82,11 @@ export function createNotesLayoutController(input: {
     onLayoutPendingChanged,
     requestSync,
   } = input;
-  const networkMonitor = useNetworkStatus();
   const status = ref<NotesLayoutStatus>("idle");
-  let activeAbortController: AbortController | null = null;
-  let saveToServerTimer: ReturnType<typeof setTimeout> | null = null;
 
   const saveLayoutChange = async (noteLayout: NoteLayoutItem[]) => {
-    console.log(`🔍 [TRACE:REORDER] layoutController.saveLayoutChange`, { noteCount: noteLayout.length });
     try {
-      console.log(`🔍 [TRACE:REORDER] saveLayoutChange → step 1: layoutQueue.load()`);
       const existingLayout = await layoutQueue.load(workspaceId);
-      console.log(`🔍 [TRACE:REORDER] saveLayoutChange → step 1 DONE`, { hadExisting: !!existingLayout });
 
       const change: NoteLayoutChange = {
         id: workspaceId,
@@ -104,110 +97,27 @@ export function createNotesLayoutController(input: {
         groups: existingLayout?.groups?.length ? existingLayout.groups : getGroupLayout(),
       };
 
-      console.log(`🔍 [TRACE:REORDER] saveLayoutChange → step 2: layoutQueue.save()`);
       await layoutQueue.save(change);
-      console.log(`🔍 [TRACE:REORDER] saveLayoutChange → step 2 DONE`);
 
-      console.log(`🔍 [TRACE:REORDER] saveLayoutChange → step 3: onLayoutPendingChanged()`);
-      if (!networkMonitor.isVerifiedOnline.value) {
-        await layoutQueue.registerBackgroundSync();
-      }
+      await layoutQueue.registerBackgroundSync();
       await onLayoutPendingChanged();
-      console.log(`🔍 [TRACE:REORDER] saveLayoutChange → step 3 DONE`);
 
       status.value = "queued";
-      console.log(`🔍 [TRACE:REORDER] layoutController.saveLayoutChange SAVED to IDB`, { localVersion: change.localVersion, notes: change.notes.length, groups: change.groups.length });
       logNotesOperation("layout-queued", {
         workspaceId,
         notes: noteLayout.length,
         groups: change.groups.length,
       });
 
-      // Clear any pending debounce timer
-      if (saveToServerTimer) {
-        clearTimeout(saveToServerTimer);
-        saveToServerTimer = null;
-      }
-
-      // Abort the active background update
-      if (activeAbortController) {
-        console.log(`🔍 [TRACE:REORDER] aborting active layout PATCH request`);
-        activeAbortController.abort();
-        activeAbortController = null;
-      }
-
-      // Debounce server PATCH for 1000ms
-      saveToServerTimer = setTimeout(async () => {
-        saveToServerTimer = null;
-
-        if (!networkMonitor.isVerifiedOnline.value) {
-          console.log(`🔍 [TRACE:REORDER] background layout update deferred — currently offline`);
-          return;
-        }
-
-        const controller = new AbortController();
-        activeAbortController = controller;
-
-        try {
-          status.value = "syncing";
-          console.log(`🔍 [TRACE:REORDER] sending layout PATCH request to server...`);
-          const { $api } = useNuxtApp();
-          const res = await $api.notes.reorder(
-            {
-              workspaceId,
-              noteOrders: noteLayout.map((n) => ({
-                id: n.id,
-                groupId: n.groupId,
-                order: n.order,
-              })),
-            },
-            { signal: controller.signal }
-          );
-
-          if (controller.signal.aborted) {
-            console.log(`🔍 [TRACE:REORDER] request aborted, ignoring response`);
-            return;
-          }
-
-          if (activeAbortController === controller) {
-            activeAbortController = null;
-          }
-
-          if (res.success) {
-            if (res.data.layoutApplied) {
-              console.log(`🔍 [TRACE:REORDER] server accepted layout layoutApplied=true`);
-              const fresh = await layoutQueue.load(workspaceId);
-              if (fresh && fresh.localVersion === change.localVersion) {
-                await layoutQueue.remove(workspaceId);
-                await onLayoutPendingChanged();
-              }
-              status.value = "synced";
-            } else {
-              console.warn(`🔍 [TRACE:REORDER] layout PATCH returned layoutApplied=false`);
-              status.value = "failed";
-            }
-          } else {
-            console.warn(`🔍 [TRACE:REORDER] layout PATCH failed`, res.error);
-            status.value = "failed";
-          }
-        } catch (error: any) {
-          if (error.name === "AbortError" || (error instanceof Error && error.message.includes("aborted"))) {
-            console.log(`🔍 [TRACE:REORDER] layout PATCH aborted successfully`);
-            return;
-          }
-          console.error(`🔍 [TRACE:REORDER] layout PATCH error`, error);
-          status.value = "failed";
-        }
-      }, 1000);
+      requestSync();
 
     } catch (err) {
-      console.error(`🔍 [TRACE:REORDER] saveLayoutChange ERROR`, err);
+      console.error("Failed to save note layout locally", err);
       throw err;
     }
   };
 
   const queueNoteLayout = async (noteLayout: NoteLayoutItem[]): Promise<boolean> => {
-    console.log(`🔍 [TRACE:REORDER] layoutController.queueNoteLayout`, { itemCount: noteLayout.length });
     try {
       const canonical = buildCanonicalNoteLayout(noteLayout);
       const changedNotes: NoteState[] = [];
@@ -227,18 +137,14 @@ export function createNotesLayoutController(input: {
       }
 
       if (!changedNotes.length) {
-        console.log(`🔍 [TRACE:REORDER] layoutController.queueNoteLayout — NO CHANGES detected`);
         return true;
       }
 
-      console.log(`🔍 [TRACE:REORDER] layoutController.queueNoteLayout — ${changedNotes.length} notes changed, saving to IDB`);
-      console.log(`🔍 [TRACE:REORDER] queueNoteLayout → localRepository.saveMany START`);
       await localRepository.saveMany(changedNotes);
-      console.log(`🔍 [TRACE:REORDER] queueNoteLayout → localRepository.saveMany DONE`);
       await saveLayoutChange(canonical);
       return true;
     } catch (error) {
-      console.error(`🔍 [TRACE:REORDER] layoutController.queueNoteLayout ERROR`, error);
+      console.error("Failed to queue note layout", error);
       status.value = "failed";
       logNotesOperation("sync-failure", {
         workspaceId,
@@ -250,7 +156,6 @@ export function createNotesLayoutController(input: {
   };
 
   const apply = async (command: NotesLayoutCommand): Promise<boolean> => {
-    console.log(`🔍 [TRACE:REORDER] layoutController.apply`, { type: command.type });
     if (command.type === "APPLY_NOTE_LAYOUT") {
       return queueNoteLayout(command.notes);
     }

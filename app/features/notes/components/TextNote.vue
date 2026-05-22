@@ -160,9 +160,9 @@ const commitDraft = (noteId = draftNoteId.value, force = false) => {
 // Computed classes for parent container — flex column mirrors math/canvas note pattern
 const noteContainerClasses = computed(() => {
   return [
-    "note-container flex flex-col flex-1 basis-4/5 shrink-0",
+    "note-container flex h-full min-h-0 min-w-0 flex-col flex-1 basis-4/5 shrink-0 overflow-hidden",
     "transition-all duration-100",
-    "gap-2",
+    "",
   ];
 });
 

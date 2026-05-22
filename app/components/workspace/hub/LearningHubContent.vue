@@ -61,7 +61,7 @@ function select(index: number) {
   <div class="flex flex-col relative overflow-hidden h-full">
     <!-- <ui-gradient-bg /> -->
     <ui-card variant="default" size="sm"
-      class="relative  m-[2px] dark:m-px  flex-1 shrink min-h-0 overflow-hidden w-[97%] mx-auto"
+      class="relative  m-[2px] dark:m-px  flex-1 shrink min-h-0 overflow-hidden w-full mx-auto"
       content-classes="h-full flex flex-col p-0">
       <template #header>
         <div class="flex items-center gap-1">

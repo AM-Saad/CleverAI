@@ -522,9 +522,9 @@ const interactionHint = computed(() => {
 </script>
 
 <template>
-  <div class="canvas-note-editor flex flex-col gap-2 h-full w-full" @click="closeContextMenu">
-    <CanvasNoteToolbar :is-fullscreen="isFullscreen" :readonly="props.readonly" :snap-enabled="snapEnabled" :active-tool="activeTool"
-      :fill-color="fillColor" :stroke-color="strokeColor" :stroke-width="strokeWidthState"
+  <div class="canvas-note-editor flex flex-col h-full w-full" @click="closeContextMenu">
+    <CanvasNoteToolbar :is-fullscreen="isFullscreen" :readonly="props.readonly" :snap-enabled="snapEnabled"
+      :active-tool="activeTool" :fill-color="fillColor" :stroke-color="strokeColor" :stroke-width="strokeWidthState"
       v-model:stroke-width-input="strokeWidthInput" :stroke-width-min="STROKE_WIDTH_MIN"
       :stroke-width-max="STROKE_WIDTH_MAX" :can-undo="canUndo" :can-redo="canRedo"
       :has-selection="selectedShapeIds.length > 0" @toggle-fullscreen="emit('toggle-fullscreen')"
@@ -603,7 +603,7 @@ const interactionHint = computed(() => {
           </div>
         </div>
 
-        <div class="relative overflow-hidden rounded-[var(--radius-lg)] shadow-inner bg-background" :style="{
+        <div class="relative overflow-hidden shadow-inner bg-background" :style="{
           width: `${MINIMAP_WIDTH}px`,
           height: `${MINIMAP_HEIGHT}px`,
           backgroundImage: 'linear-gradient(to right, color-mix(in srgb, var(--color-secondary) 65%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--color-secondary) 65%, transparent) 1px, transparent 1px)',

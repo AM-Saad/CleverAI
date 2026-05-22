@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { IconName } from "#imports";
+import type { NoteToolbarControl } from "~/components/shared/NoteToolbarControls.vue";
 import { computed } from "vue";
 
 interface Props {
@@ -71,11 +72,6 @@ const borderStyles = [
   { label: "Dotted", dash: [2, 4] },
 ];
 
-const strokeWidthInputModel = computed({
-  get: () => props.strokeWidthInput,
-  set: (value: string | number) => emit("update:strokeWidthInput", String(value)),
-});
-
 const shapeDropdownItems = computed(() => [[
   ...shapeTools.map((tool) => ({
     label: tool.label,
@@ -93,6 +89,110 @@ const borderStyleItems = computed(() => [[
 
 const isShapeToolActive = computed(() => shapeTools.some((tool) => tool.id === props.activeTool));
 const currentShapeTool = computed(() => shapeTools.find((tool) => tool.id === props.activeTool) ?? shapeTools[0]!);
+
+const toolControls = computed<NoteToolbarControl[]>(() => [
+  ...modeTools.map((tool) => ({
+    type: "button" as const,
+    id: `tool-${tool.id}`,
+    title: tool.label,
+    active: props.activeTool === tool.id,
+    icon: tool.icon,
+    onSelect: () => emit("selectTool", tool.id),
+  })),
+  {
+    type: "dropdown",
+    id: "shape-tools",
+    title: "Add Shape",
+    label: "Shapes",
+    hideLabelOnMobile: true,
+    active: isShapeToolActive.value,
+    icon: currentShapeTool.value.icon,
+    trailingIcon: "i-heroicons-chevron-down",
+    items: shapeDropdownItems.value,
+  },
+]);
+
+const styleControls = computed<NoteToolbarControl[]>(() => [
+  {
+    type: "color",
+    id: "fill-color",
+    title: "Fill Color",
+    icon: "color-bucket",
+    iconOnly: true,
+    modelValue: props.fillColor,
+    onUpdate: (value) => emit("setFillColor", value),
+  },
+  {
+    type: "color",
+    id: "border-color",
+    title: "Border Color",
+    icon: "edit",
+    iconOnly: true,
+    modelValue: props.strokeColor,
+    onUpdate: (value) => emit("setStrokeColor", value),
+  },
+  {
+    type: "number-popover",
+    id: "border-thickness",
+    title: "Border Thickness",
+    label: "Border thickness",
+    icon: "i-lucide-hash",
+    valueLabel: props.strokeWidth,
+    inputValue: props.strokeWidthInput,
+    min: props.strokeWidthMin,
+    max: props.strokeWidthMax,
+    step: 0.5,
+    onUpdateInput: (value) => emit("update:strokeWidthInput", value),
+    onApply: () => emit("applyStrokeWidthInput"),
+  },
+  {
+    type: "dropdown",
+    id: "border-style",
+    title: "Border Style",
+    icon: "activity",
+    items: borderStyleItems.value,
+  },
+]);
+
+const editControls = computed<NoteToolbarControl[]>(() => [
+  {
+    type: "button",
+    id: "undo",
+    title: "Undo",
+    shortcuts: ["meta", "z"],
+    disabled: !props.canUndo,
+    icon: "undo",
+    onSelect: () => emit("undo"),
+  },
+  {
+    type: "button",
+    id: "redo",
+    title: "Redo",
+    shortcuts: ["meta", "shift", "z"],
+    disabled: !props.canRedo,
+    icon: "redo",
+    onSelect: () => emit("redo"),
+  },
+  {
+    type: "button",
+    id: "delete-selected",
+    title: "Delete selected",
+    shortcuts: ["delete"],
+    variant: "danger",
+    disabled: !props.hasSelection,
+    icon: "delete",
+    onSelect: () => emit("deleteSelected"),
+  },
+  {
+    type: "button",
+    id: "duplicate-selection",
+    title: "Duplicate",
+    shortcuts: ["meta", "d"],
+    disabled: !props.hasSelection,
+    icon: "duplicate",
+    onSelect: () => emit("duplicateSelection"),
+  },
+]);
 </script>
 
 <template>
@@ -105,59 +205,19 @@ const currentShapeTool = computed(() => shapeTools.find((tool) => tool.id === pr
     </template>
 
     <div class="flex items-center gap-0.5 mr-2">
-      <shared-note-toolbar-button v-for="tool in modeTools" :key="tool.id" :title="tool.label"
-        :active="activeTool === tool.id" :icon="tool.icon" @click="emit('selectTool', tool.id)" />
-
-      <UDropdownMenu :modal="false" :items="shapeDropdownItems"
-        :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-        <shared-note-toolbar-button title="Add Shape" :active="isShapeToolActive" :icon="currentShapeTool.icon">
-          <span class="hidden sm:inline">Shapes</span>
-          <UIcon name="i-heroicons-chevron-down" class="w-3.5 h-3.5 opacity-60" />
-        </shared-note-toolbar-button>
-      </UDropdownMenu>
+      <SharedNoteToolbarControls :controls="toolControls" />
     </div>
 
     <div class="w-px h-6 bg-secondary shrink-0" />
 
     <div class="flex items-center gap-1.5">
-      <SharedNoteColorPickerButton title="Fill Color" icon="color-bucket" :icon-only="true" :modelValue="fillColor"
-        @update:modelValue="val => emit('setFillColor', val)" />
-
-      <SharedNoteColorPickerButton title="Border Color" icon="edit" :icon-only="true" :modelValue="strokeColor"
-        @update:modelValue="val => emit('setStrokeColor', val)" />
-
-      <UPopover :arrow="true" :modal="false">
-        <shared-note-toolbar-button title="Border Thickness">
-          <UIcon name="i-lucide-hash" class="w-4.5 h-4.5 shrink-0" />
-          <span class="hidden sm:inline">{{ strokeWidth }}</span>
-        </shared-note-toolbar-button>
-        <template #content>
-          <div class="w-40 p-3 space-y-2">
-            <ui-label size="sm">Border thickness</ui-label>
-            <UInput v-model="strokeWidthInputModel" type="number" size="sm" inputmode="decimal" :min="strokeWidthMin"
-              :max="strokeWidthMax" step="0.5" @change="emit('applyStrokeWidthInput')"
-              @blur="emit('applyStrokeWidthInput')" @keyup.enter="emit('applyStrokeWidthInput')" />
-          </div>
-        </template>
-      </UPopover>
-
-      <UDropdownMenu :modal="false" :items="borderStyleItems"
-        :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-        <shared-note-toolbar-button title="Border Style" icon="activity" />
-      </UDropdownMenu>
+      <SharedNoteToolbarControls :controls="styleControls" />
     </div>
 
     <div class="w-px h-6 bg-surface-strong shrink-0" />
 
     <div class="flex items-center gap-0.5">
-      <shared-note-toolbar-button title="Undo" :shortcuts="['meta', 'z']" :disabled="!canUndo" icon="undo"
-        @click="emit('undo')" />
-      <shared-note-toolbar-button title="Redo" :shortcuts="['meta', 'shift', 'z']" :disabled="!canRedo" icon="redo"
-        @click="emit('redo')" />
-      <shared-note-toolbar-button title="Delete selected" :shortcuts="['delete']" variant="danger"
-        :disabled="!hasSelection" icon="delete" @click="emit('deleteSelected')" />
-      <shared-note-toolbar-button title="Duplicate" :shortcuts="['meta', 'd']" :disabled="!hasSelection"
-        icon="duplicate" @click="emit('duplicateSelection')" />
+      <SharedNoteToolbarControls :controls="editControls" />
     </div>
   </SharedNoteToolbar>
 </template>

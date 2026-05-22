@@ -286,7 +286,8 @@ defineExpose({ toggleLeft, toggleRight, collapsedSide, isResizing });
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  padding: 0.75rem;
+  background-color: var(--color-white, #fff);
+  padding: 0.5rem;
   /* space for handle */
   /* background-color: var(--color-surface-subtle);
   border-radius: 0.75rem;
@@ -327,6 +328,9 @@ defineExpose({ toggleLeft, toggleRight, collapsedSide, isResizing });
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  padding: 2px;
+  background: #fff;
+  border-radius: .2rem;
 }
 
 /* ── Collapsed strip ─────────────────────────────────────────────── */
@@ -404,7 +408,7 @@ defineExpose({ toggleLeft, toggleRight, collapsedSide, isResizing });
   z-index: 10;
   transition: background 0.15s ease;
   border-radius: 4px;
-  margin: 2rem 0;
+  margin: 2rem 2px;
 }
 
 .spl-handle--vertical {

@@ -19,8 +19,7 @@ defineExpose({ get el() { return rootEl.value } })
 </script>
 
 <template>
-  <div ref="rootEl"
-    class="relative rounded-[var(--radius-lg)] border border-secondary bg-background shadow-inner overflow-hidden transition-shadow duration-200 flex-1 min-h-[300px]">
+  <div ref="rootEl" class="relative  shadow-inner overflow-hidden transition-shadow duration-200 flex-1 min-h-[300px]">
     <slot />
   </div>
 </template>

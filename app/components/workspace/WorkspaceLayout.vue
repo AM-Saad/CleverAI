@@ -363,7 +363,8 @@ defineExpose({
   align-items: stretch;
   flex-shrink: 0;
   background: var(--ui-bg, #fff);
-  border-top: 1px solid var(--ui-border, #e2e8f0);
+  border: 1px solid var(--ui-border, #e2e8f0);
+  border-radius: var(--radius-xl, 12px);
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 

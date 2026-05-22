@@ -9,14 +9,14 @@
     <!-- Fullscreen container -->
     <Transition :name="disableAnimation ? '' : 'fs-card'">
       <div v-if="isOpen" ref="containerRef" class="fullscreen-container" role="dialog" aria-modal="true"
-        :aria-label="ariaLabel">
+        :aria-label="ariaLabel" :style="containerStyle">
         <!-- Sticky header -->
         <header v-if="$slots.header" class="fullscreen-header">
           <slot name="header" />
         </header>
 
         <!-- Scrollable content -->
-        <div class="fullscreen-content">
+        <div class="fullscreen-content" :class="{ 'fullscreen-content--static': !contentScrollable }">
           <slot />
         </div>
 
@@ -41,6 +41,8 @@ interface Props {
   maxWidth?: string;
   /** Max height of the fullscreen container */
   maxHeight?: string;
+  /** Whether the fullscreen body should provide the scroll container */
+  contentScrollable?: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -48,6 +50,7 @@ const props = withDefaults(defineProps<Props>(), {
   disableAnimation: false,
   maxWidth: "1200px",
   maxHeight: "800px",
+  contentScrollable: true,
 });
 
 defineEmits<{
@@ -152,6 +155,10 @@ defineExpose({
   /* Custom scrollbar */
   scrollbar-width: thin;
   scrollbar-color: rgba(156, 163, 175, 0.3) transparent;
+}
+
+.fullscreen-content--static {
+  overflow: hidden;
 }
 
 .fullscreen-content::-webkit-scrollbar {

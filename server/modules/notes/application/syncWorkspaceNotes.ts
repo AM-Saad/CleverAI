@@ -9,14 +9,6 @@ export async function syncWorkspaceNotes(input: {
   request: NotesSyncRequest;
 }) {
   const { prisma, request, userId } = input;
-  console.log(`🔍 [TRACE:SERVER] syncWorkspaceNotes called`, {
-    userId,
-    contentChanges: request.changes?.length ?? 0,
-    groupChanges: request.groupChanges?.length ?? 0,
-    hasLayout: Boolean(request.layoutChange),
-    layoutNotes: request.layoutChange?.notes?.length,
-    layoutGroups: request.layoutChange?.groups?.length,
-  });
   const applied: string[] = [];
   const conflicts: Array<{ id: string }> = [];
   const idMap: Record<string, string> = {};
@@ -313,9 +305,8 @@ export async function syncWorkspaceNotes(input: {
         layout: layoutChange,
       });
       layoutApplied = true;
-      console.log(`🔍 [TRACE:SERVER] layout applied successfully`);
     } catch (e) {
-      console.error("🔍 [TRACE:SERVER] Error applying layout change:", {
+      console.error("Error applying notes layout change:", {
         workspaceId: request.layoutChange.workspaceId,
         error: e,
         errorMessage: e instanceof Error ? e.message : String(e),
@@ -340,14 +331,6 @@ export async function syncWorkspaceNotes(input: {
     errors,
     layoutApplied,
     layoutConflict,
-  });
-  console.log(`🔍 [TRACE:SERVER] syncWorkspaceNotes DONE`, {
-    applied: response.applied.length,
-    conflicts: response.conflicts.length,
-    groupApplied: response.groupApplied.length,
-    layoutApplied: response.layoutApplied,
-    layoutConflict: response.layoutConflict,
-    errors: response.errors,
   });
   return response;
 }
