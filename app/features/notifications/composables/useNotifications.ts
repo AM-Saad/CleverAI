@@ -1,6 +1,10 @@
 import { ref } from "vue";
 import { useRuntimeConfig } from "#app";
 import { useAuth } from "#imports";
+import {
+  canUseServiceWorker,
+  getServiceWorkerReadyRegistration,
+} from "~/utils/serviceWorkerRuntime";
 
 // Utility function to convert VAPID key
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
@@ -37,9 +41,42 @@ export function useNotifications() {
       throw new Error("Service Worker not supported");
     }
 
+    if (!canUseServiceWorker()) {
+      throw new Error("Service Worker is disabled in this environment");
+    }
+
     if (!("PushManager" in window)) {
       throw new Error("Push notifications not supported");
     }
+  };
+
+  const encodeSubscriptionKey = (key: ArrayBuffer | null): string => {
+    if (!key) return "";
+
+    return btoa(String.fromCharCode(...new Uint8Array(key)));
+  };
+
+  const toSubscriptionPayload = (subscription: PushSubscription) => ({
+    endpoint: subscription.endpoint,
+    keys: {
+      auth: encodeSubscriptionKey(subscription.getKey("auth")),
+      p256dh: encodeSubscriptionKey(subscription.getKey("p256dh")),
+    },
+    userId,
+    userAgent: navigator.userAgent,
+    expirationTime: subscription.expirationTime,
+  });
+
+  const syncSubscriptionToServer = async (
+    subscription: PushSubscription,
+  ): Promise<void> => {
+    const subscriptionData = toSubscriptionPayload(subscription);
+    console.log("Sending subscription data:", subscriptionData);
+
+    await $fetch("/api/notifications/subscribe", {
+      method: "POST",
+      body: subscriptionData,
+    });
   };
 
   const registerNotification = async (): Promise<void> => {
@@ -66,15 +103,20 @@ export function useNotifications() {
 
       console.log("Notification permission granted");
 
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await getServiceWorkerReadyRegistration();
+      if (!registration) {
+        throw new Error("Service Worker is not ready yet");
+      }
 
       // Check if already subscribed
       const existingSubscription =
         await registration.pushManager.getSubscription();
       console.log("Existing subscription:", existingSubscription);
       if (existingSubscription) {
+        isLoading.value = true;
+        await syncSubscriptionToServer(existingSubscription);
         isSubscribed.value = true;
-        console.log("Already subscribed to push notifications");
+        console.log("Existing push notification subscription refreshed");
         return;
       }
 
@@ -83,11 +125,14 @@ export function useNotifications() {
 
       // Try to get VAPID key from API (runtime) first, fallback to config (build-time)
       let vapidKey = config.public.VAPID_PUBLIC_KEY as string;
-      
+
       if (!vapidKey || vapidKey.length < 50) {
         console.log("🔑 VAPID key not in config, fetching from API...");
         try {
-          const response = await $fetch<{ success: boolean; data: { vapidPublicKey: string | null } }>("/api/notifications/vapid-key");
+          const response = await $fetch<{
+            success: boolean;
+            data: { vapidPublicKey: string | null };
+          }>("/api/notifications/vapid-key");
           if (response.success && response.data.vapidPublicKey) {
             vapidKey = response.data.vapidPublicKey;
             console.log("🔑 VAPID key fetched from API successfully");
@@ -97,11 +142,16 @@ export function useNotifications() {
         }
       }
 
-      console.log("🔑 VAPID Key being used:", vapidKey ? `${vapidKey.substring(0, 20)}...` : "UNDEFINED/EMPTY");
+      console.log(
+        "🔑 VAPID Key being used:",
+        vapidKey ? `${vapidKey.substring(0, 20)}...` : "UNDEFINED/EMPTY",
+      );
       console.log("🔑 VAPID Key length:", vapidKey?.length);
 
       if (!vapidKey || vapidKey.length < 50) {
-        throw new Error(`Invalid VAPID key. Check your VAPID_PUBLIC_KEY environment variable on the server.`);
+        throw new Error(
+          `Invalid VAPID key. Check your VAPID_PUBLIC_KEY environment variable on the server.`,
+        );
       }
 
       const subscription = await registration.pushManager.subscribe({
@@ -109,38 +159,7 @@ export function useNotifications() {
         applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
       });
 
-      // Get current user from auth session
-      // TODO: Replace with actual session when auth is implemented
-
-      // Properly serialize the subscription object
-      const subscriptionData = {
-        endpoint: subscription.endpoint,
-        keys: {
-          auth: subscription.getKey("auth")
-            ? btoa(
-                String.fromCharCode(
-                  ...new Uint8Array(subscription.getKey("auth")!),
-                ),
-              )
-            : "",
-          p256dh: subscription.getKey("p256dh")
-            ? btoa(
-                String.fromCharCode(
-                  ...new Uint8Array(subscription.getKey("p256dh")!),
-                ),
-              )
-            : "",
-        },
-        userId: userId,
-      };
-
-      console.log("Sending subscription data:", subscriptionData);
-
-      // Send the subscription object to the server
-      await $fetch("/api/notifications/subscribe", {
-        method: "POST",
-        body: subscriptionData,
-      });
+      await syncSubscriptionToServer(subscription);
       // If request didn't throw, consider it successful under unified contract
       isSubscribed.value = true;
       console.log("Subscription successful");
@@ -156,7 +175,8 @@ export function useNotifications() {
 
   const unsubscribe = async (): Promise<void> => {
     try {
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await getServiceWorkerReadyRegistration();
+      if (!registration) return;
       const subscription = await registration.pushManager.getSubscription();
 
       if (subscription) {
@@ -189,7 +209,8 @@ export function useNotifications() {
 
   const checkSubscriptionStatus = async (): Promise<void> => {
     try {
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await getServiceWorkerReadyRegistration();
+      if (!registration) return;
       const subscription = await registration.pushManager.getSubscription();
       isSubscribed.value = !!subscription;
     } catch (err) {
@@ -204,7 +225,10 @@ export function useNotifications() {
       isLoading.value = true;
 
       // First unsubscribe if there's an existing subscription
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await getServiceWorkerReadyRegistration();
+      if (!registration) {
+        throw new Error("Service Worker is not ready yet");
+      }
       const existingSubscription =
         await registration.pushManager.getSubscription();
 

@@ -10,10 +10,10 @@
  */
 
 import { SW_MESSAGE_TYPES } from "~/utils/constants/pwa";
+import { canUseServiceWorker } from "~/utils/serviceWorkerRuntime";
 
 export default defineNuxtPlugin(() => {
-  if (!import.meta.env.PROD) return;
-  if (!("serviceWorker" in navigator)) return;
+  if (!canUseServiceWorker()) return;
 
   const toast = useToast();
   const router = useRouter();

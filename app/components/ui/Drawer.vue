@@ -274,7 +274,7 @@ function handleDragEnd(_: Event, info: DragInfo) {
         :transition="isReady ? transitionProps : { duration: 0 }" :drag="suspendDrag ? false : mode.axis"
         :drag-constraints="mode.constraints" :drag-elastic="0" :drag-snap-to-origin="false" :drag-momentum="false"
         :on-drag-start="handleDragStart" :on-drag-end="handleDragEnd" :class="[
-          positionClass, 'cursor-grab active:cursor-grabbing overflow-hidden bg-white/20 backdrop-blur-md shadow-lg z-50 focus-visible:border border-primary',
+          positionClass, 'cursor-grab active:cursor-grabbing overflow-hidden bg-white  shadow-lg z-50 focus-visible:border border-primary',
           mode.containerClass,
         ]" :style="{ ...mode.style, ...(!isReady ? { visibility: 'hidden', opacity: 0 } : {}) }" role="dialog"
         aria-modal="true" :aria-labelledby="'drawer-title'" :aria-hidden="!props.show">

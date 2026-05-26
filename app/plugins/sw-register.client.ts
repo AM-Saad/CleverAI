@@ -1,21 +1,27 @@
 import { defineNuxtPlugin } from "#app";
+import {
+  getAllServiceWorkerRegistrations,
+  getCurrentServiceWorkerRegistration,
+  hasServiceWorkerSupport,
+  isServiceWorkerRuntimeEnabled,
+} from "~/utils/serviceWorkerRuntime";
+
 // Registers the custom service worker at /sw.js and migrates away from any lingering dev-sw.
 export default defineNuxtPlugin(() => {
-  // ✅ Do not register SW during dev/HMR. Prevents Workbox errors for dev URLs.
-  if (!import.meta.env.PROD) {
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      navigator.serviceWorker.getRegistrations().then((registrations) => {
-        for (const registration of registrations) {
-          registration.unregister().then((success) => {
-            if (success) console.log("[SW] Unregistered active service worker in development mode");
-          });
-        }
-      });
-    }
+  if (!hasServiceWorkerSupport()) return;
+
+  // Single runtime toggle: when disabled, dev should actively unregister
+  // lingering registrations so behavior stays deterministic.
+  if (!isServiceWorkerRuntimeEnabled()) {
+    getAllServiceWorkerRegistrations().then((registrations) => {
+      for (const registration of registrations) {
+        registration.unregister().then((success) => {
+          if (success) console.log("[SW] Unregistered service worker because runtime SW is disabled");
+        });
+      }
+    });
     return;
   }
-
-  if (!("serviceWorker" in navigator)) return;
 
   const SW_URL = "/sw.js";
   const isDevSW = (reg: ServiceWorkerRegistration | null | undefined) =>
@@ -35,7 +41,7 @@ export default defineNuxtPlugin(() => {
   const init = async () => {
     try {
       // Get the registration controlling this page's scope
-      const reg = await navigator.serviceWorker.getRegistration();
+      const reg = await getCurrentServiceWorkerRegistration();
 
       if (!reg) {
         await registerCustom();

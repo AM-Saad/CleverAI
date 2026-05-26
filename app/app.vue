@@ -100,39 +100,6 @@ onMounted(() => {
             toast.remove(OFFLINE_TOAST_ID)
         })
 
-        // Centralized SW sync-completion toast (deduplicated).
-        // Both notes and board items sync messages funnel through here for a
-        // single user-facing notification instead of per-store toasts.
-        const SYNC_COMPLETE_TOAST_ID = 'sync-complete-toast'
-        let syncToastDebounce: ReturnType<typeof setTimeout> | null = null
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.addEventListener('message', (event) => {
-                const msg = event.data
-                if (!msg) return
-                const isSyncComplete =
-                    msg.type === 'NOTES_SYNCED' || msg.type === 'BOARD_ITEMS_SYNCED'
-                if (!isSyncComplete) return
-
-                const applied = msg.data?.appliedCount ?? 0
-                if (applied <= 0) return
-
-                // Debounce: if both notes and board items sync within 2s of each
-                // other, show a single combined toast instead of two.
-                if (syncToastDebounce) clearTimeout(syncToastDebounce)
-                syncToastDebounce = setTimeout(() => {
-                    toast.add({
-                        id: SYNC_COMPLETE_TOAST_ID,
-                        title: "All changes synced",
-                        description: "Your offline edits have been saved to the server.",
-                        color: "success",
-                        icon: "heroicons:cloud-arrow-up-solid",
-                        duration: 3000,
-                    })
-                    syncToastDebounce = null
-                }, 1000)
-            })
-        }
     }
 })
 

@@ -4,6 +4,8 @@
  *
  * Note: Named "useFullscreenModal" to avoid conflict with VueUse's "useFullscreen"
  */
+import { computed, onMounted, onUnmounted, readonly, ref } from "vue";
+
 export function useFullscreenModal<T extends string = string>() {
   const fullscreenId = ref<T | null>(null);
   const isTransitioning = ref(false);
@@ -26,6 +28,18 @@ export function useFullscreenModal<T extends string = string>() {
     setTimeout(() => {
       isTransitioning.value = false;
     }, TRANSITION_DURATION);
+  }
+
+  /**
+   * Retarget an already-open fullscreen modal without starting a new transition.
+   * Useful when the visible entity changes because the surrounding layout changed.
+   */
+  function replace(id: T) {
+    fullscreenId.value = id;
+
+    if (typeof document !== "undefined") {
+      document.body.style.overflow = "hidden";
+    }
   }
 
   /**
@@ -97,6 +111,8 @@ export function useFullscreenModal<T extends string = string>() {
     isOpen,
     /** Open fullscreen for a specific item */
     open,
+    /** Retarget the fullscreen modal without transition guards */
+    replace,
     /** Close fullscreen */
     close,
     /** Toggle fullscreen for a specific item */

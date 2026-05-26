@@ -1,6 +1,7 @@
 const FIRST_HEADING_PATTERN = /^(\s*)<h([1-6])\b([^>]*)>([\s\S]*?)<\/h\2>/i;
 const TITLE_FALLBACK = "Untitled note";
 const DEFAULT_WORKSPACE_NOTE_HTML = "<h1></h1><p></p>";
+const BODY_HEADING_PATTERN = /<h([1-6])\b([^>]*)>([\s\S]*?)<\/h\1>/gi;
 
 const HTML_ENTITY_MAP: Record<string, string> = {
   amp: "&",
@@ -50,7 +51,18 @@ export function normalizeWorkspaceNoteContent(content?: string | null): string {
   const [, leadingWhitespace, , attributes, headingContent] = headingMatch;
   const normalizedHeading = `${leadingWhitespace}<h1${attributes}>${headingContent}</h1>`;
 
-  return trimmed.replace(FIRST_HEADING_PATTERN, normalizedHeading);
+  const body = trimmed.slice(headingMatch[0].length).replace(
+    BODY_HEADING_PATTERN,
+    (_match, level: string, attrs: string, bodyHeadingContent: string) => {
+      const plainText = stripHtml(bodyHeadingContent);
+      if (!plainText) return "<p></p>";
+      return level === "1"
+        ? `<h2${attrs}>${bodyHeadingContent}</h2>`
+        : `<h${level}${attrs}>${bodyHeadingContent}</h${level}>`;
+    },
+  );
+
+  return `${normalizedHeading}${body}`;
 }
 
 export function extractWorkspaceNoteTitle(content?: string | null): string {

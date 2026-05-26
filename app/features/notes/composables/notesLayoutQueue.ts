@@ -1,4 +1,5 @@
 import type { NoteLayoutChange } from "@@/shared/utils/note-sync.contract";
+import type { LayoutQueue } from "../../../utils/local-first/ports";
 import {
   deletePendingNoteLayoutChange,
   loadPendingNoteLayoutChange,
@@ -6,12 +7,7 @@ import {
 } from "~/utils/idb";
 import { registerNotesSync } from "~/utils/sync/offlineSync";
 
-export interface NotesLayoutQueue {
-  save(change: NoteLayoutChange): Promise<void>;
-  load(workspaceId: string): Promise<NoteLayoutChange | null>;
-  remove(workspaceId: string): Promise<void>;
-  registerBackgroundSync(): Promise<void>;
-}
+export type NotesLayoutQueue = LayoutQueue<NoteLayoutChange>;
 
 export function createIndexedDbNotesLayoutQueue(): NotesLayoutQueue {
   return {

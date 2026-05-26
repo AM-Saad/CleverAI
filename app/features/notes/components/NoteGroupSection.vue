@@ -25,6 +25,7 @@
       </u-button>
 
       <button
+        v-if="!editing"
         type="button"
         class="min-w-0 flex-1 truncate text-left text-xs font-semibold text-content-secondary"
         @click="$emit('toggle-collapse', groupId)"
@@ -33,7 +34,41 @@
         <span class="font-normal opacity-70">({{ notes.length }})</span>
       </button>
 
+      <form
+        v-else
+        class="flex min-w-0 flex-1 items-center gap-1"
+        @submit.prevent="groupId && $emit('submit-rename-group', groupId)"
+      >
+        <UInput
+          :model-value="editingTitle"
+          :data-note-group-rename-input="groupId"
+          size="xs"
+          class="min-w-0 flex-1"
+          @update:model-value="$emit('update:editing-title', String($event ?? ''))"
+          @keydown.esc.prevent="$emit('cancel-rename-group')"
+        />
+        <u-button
+          size="xs"
+          color="primary"
+          variant="solid"
+          type="submit"
+          :disabled="!editingTitle.trim()"
+        >
+          Save
+        </u-button>
+        <u-button
+          size="xs"
+          color="neutral"
+          variant="ghost"
+          type="button"
+          @click="$emit('cancel-rename-group')"
+        >
+          Cancel
+        </u-button>
+      </form>
+
       <u-button
+        v-if="!editing"
         size="xs"
         color="neutral"
         variant="ghost"
@@ -43,7 +78,7 @@
         <icon name="i-lucide-plus" class="h-3.5 w-3.5" />
       </u-button>
 
-      <UDropdownMenu v-if="!isUngrouped" :modal="false" :items="groupMenuItems">
+      <UDropdownMenu v-if="!isUngrouped && !editing" :modal="false" :items="groupMenuItems">
         <u-button
           size="xs"
           color="neutral"
@@ -60,10 +95,10 @@
       <div
         ref="notesListRef"
         class="notes-drop-list bg-light"
-        :class="{ 'notes-drop-list--empty': !dragNotes.length }"
+        :class="{ 'notes-drop-list--empty': !dragNoteRows.length }"
       >
         <NoteRow
-          v-for="note in dragNotes"
+          v-for="note in dragNoteRows"
           :key="note.id"
           :note="note"
           :display-title="getNoteDisplayTitle(note, 30)"
@@ -76,7 +111,7 @@
         />
       </div>
       <div
-        v-if="!dragNotes.length"
+        v-if="!dragNoteRows.length"
         class="pointer-events-none absolute inset-0 flex items-center px-3 text-xs text-content-secondary"
       >
         Drop notes here
@@ -103,6 +138,8 @@ const props = defineProps<{
   isSplit: boolean;
   canSplit: boolean;
   groupActionsDisabled: boolean;
+  editing: boolean;
+  editingTitle: string;
   getNoteDisplayTitle: (note?: NoteState | null, maxLength?: number) => string;
 }>();
 
@@ -110,7 +147,7 @@ const isUngrouped = computed(() => props.groupId === null);
 const isApplyingExternalNotes = ref(false);
 const isUserDraggingNotes = ref(false);
 
-const [notesListRef, dragNotes] = useDragAndDrop<NoteState>([], {
+const [notesListRef, dragNoteIds] = useDragAndDrop<string>([], {
   group: "workspace-notes",
   dragHandle: "[data-note-drag-handle]",
   draggingClass: "note-row--dragging",
@@ -139,14 +176,24 @@ const [notesListRef, dragNotes] = useDragAndDrop<NoteState>([], {
 });
 
 watch(
-  () => props.notes.map((note) => `${note.id}:${note.groupId ?? "ungrouped"}:${note.order}`).join("|"),
+  () => props.notes
+    .map((note) => `${note.id}:${note.groupId ?? "ungrouped"}:${note.order}`)
+    .join("|"),
   async () => {
+    if (isUserDraggingNotes.value) return;
     isApplyingExternalNotes.value = true;
-    dragNotes.value = props.notes.slice();
+    dragNoteIds.value = props.notes.map((note) => note.id);
     await nextTick();
     isApplyingExternalNotes.value = false;
   },
   { immediate: true },
+);
+
+const noteById = computed(() => new Map(props.notes.map((note) => [note.id, note])));
+const dragNoteRows = computed(() =>
+  dragNoteIds.value
+    .map((id) => noteById.value.get(id))
+    .filter((note): note is NoteState => Boolean(note)),
 );
 
 const groupMenuItems = computed(() => [
@@ -170,6 +217,9 @@ const emit = defineEmits<{
   "toggle-collapse": [groupId: string | null];
   "rename-group": [groupId: string];
   "delete-group": [groupId: string];
+  "update:editing-title": [title: string];
+  "submit-rename-group": [groupId: string];
+  "cancel-rename-group": [];
   "create-note": [groupId: string | null];
   "notes-reordered": [groupId: string | null, noteIds: string[]];
   "drag-start": [groupId: string | null];
@@ -196,8 +246,7 @@ function emitUserNoteLayout(force = false) {
     if (isApplyingExternalNotes.value) {
       return;
     }
-    const noteIds = dragNotes.value.map((note) => note.id);
-    emit("notes-reordered", props.groupId, noteIds);
+    emit("notes-reordered", props.groupId, dragNoteIds.value.slice());
   });
 }
 

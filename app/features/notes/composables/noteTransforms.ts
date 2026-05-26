@@ -1,9 +1,9 @@
-import type { Note, NoteType } from "@@/shared/utils/note.contract";
-import type { PendingNoteChange } from "@@/shared/utils/note-sync.contract";
+import type { Note, NoteType } from "../../../../shared/utils/note.contract";
+import type { PendingNoteChange } from "../../../../shared/utils/note-sync.contract";
 import {
   normalizeWorkspaceNoteContent,
   normalizeWorkspaceNoteTitle,
-} from "@@/shared/utils/workspaceNote";
+} from "../../../../shared/utils/workspaceNote";
 
 export interface NoteState extends Note {
   isLoading?: boolean;
@@ -11,6 +11,7 @@ export interface NoteState extends Note {
   lastSaved?: Date;
   error?: string | null;
   isInFilteredList?: boolean;
+  localVersion?: number;
   /** Monotonic server version for optimistic concurrency — incremented on every server write */
   version: number;
 }

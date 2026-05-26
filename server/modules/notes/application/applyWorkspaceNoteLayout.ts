@@ -132,25 +132,27 @@ export async function applyWorkspaceNoteLayout(input: {
     return cur.order !== group.order;
   });
 
-  // Individual parallel updates — no transaction needed since each is idempotent
+  // Apply as one atomic layout change. Reorder/move operations are user-visible
+  // workspace state, so partial persistence is worse than a retryable failure.
   if (changedNotes.length || changedGroups.length) {
-    await Promise.all([
-      ...changedNotes.map((note) =>
-        prisma.note.update({
+    await prisma.$transaction(async (tx: any) => {
+      for (const note of changedNotes) {
+        await tx.note.update({
           where: { id: note.id },
           data: {
             groupId: note.groupId,
             order: note.order,
           },
-        }),
-      ),
-      ...changedGroups.map((group) =>
-        prisma.noteGroup.update({
+        });
+      }
+
+      for (const group of changedGroups) {
+        await tx.noteGroup.update({
           where: { id: group.id },
           data: { order: group.order },
-        }),
-      ),
-    ]);
+        });
+      }
+    });
   }
 
   return { layoutApplied: true, skippedNotes, skippedGroups };

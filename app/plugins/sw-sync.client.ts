@@ -1,18 +1,18 @@
 // app/plugins/sw-sync.client.ts
+import {
+  getServiceWorkerReadyRegistration,
+  isServiceWorkerRuntimeEnabled,
+} from "~/utils/serviceWorkerRuntime";
 
 // Important: Do NOT block Nuxt mount. Never await a SW that may never be ready in dev.
 export default defineNuxtPlugin(() => {
   if (import.meta.server) return;
-  if (!import.meta.env.PROD) return;
-  if (!("serviceWorker" in navigator)) return; // Fire-and-forget background task. Times out if no SW controls the page.
+  if (!isServiceWorkerRuntimeEnabled()) return;
   (async () => {
     try {
-      const reg = await Promise.race<ServiceWorkerRegistration | null>([
-        navigator.serviceWorker.ready,
-        new Promise((resolve) => setTimeout(() => resolve(null), 1500)),
-      ]);
+      const reg = await getServiceWorkerReadyRegistration(1500);
 
-      if (!reg) return; // no controlling SW (likely dev) – skip silently
+      if (!reg) return;
 
       // One-off Background Sync: let the SW run syncs when online
       // Note: FORM sync is registered here because it's always available

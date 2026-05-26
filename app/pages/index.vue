@@ -227,11 +227,16 @@ console.log("🏠 [INDEX.VUE] Page meta defined");
 
 async function registerPeriodicSync(): Promise<void> {
   console.log("🏠 [INDEX.VUE] registerPeriodicSync called");
-  const registration = await navigator.serviceWorker.ready as ServiceWorkerRegistration & {
+  const registration = await getServiceWorkerReadyRegistration() as (ServiceWorkerRegistration & {
     periodicSync?: {
       register: (tag: string, options: { minInterval: number }) => Promise<void>;
     };
-  };
+  }) | null;
+
+  if (!registration) {
+    console.log("Periodic sync unavailable because service worker is disabled or not ready.");
+    return;
+  }
 
   const periodicSync = registration.periodicSync;
 
@@ -269,3 +274,4 @@ body {
   background-color: #fff !important;
 }
 </style>
+import { getServiceWorkerReadyRegistration } from "~/utils/serviceWorkerRuntime";

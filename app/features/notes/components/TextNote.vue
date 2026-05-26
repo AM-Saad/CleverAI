@@ -33,9 +33,12 @@
             d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <span class="text-sm font-medium text-center">{{ note.error }}</span>
-        <UButton variant="ghost" color="error" size="xs" class="mt-2 underline" @click="retry">
+        <UButton v-if="!isConflictError" variant="ghost" color="error" size="xs" class="mt-2 underline" @click="retry">
           Try again
         </UButton>
+        <span v-else class="mt-2 text-xs text-content-secondary">
+          Local changes are preserved until conflict resolution is available.
+        </span>
       </div>
 
       <!-- Editor -->
@@ -96,6 +99,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   update: [id: string, payload: string | WorkspaceNoteUpdatePayload];
+  "draft-update": [id: string, payload: WorkspaceNoteUpdatePayload];
   retry: [id: string];
   'toggle-fullscreen': [id: string];
   addToMaterial: [selectedText: string];
@@ -116,11 +120,28 @@ const emitUpdate = (noteId: string, content: string) => {
   emit("update", noteId, buildWorkspaceTextDraftCommit(content));
 };
 
+const emitDraftUpdate = () => {
+  if (props.isBoardItem || props.readonly) return;
+  if (draftFrame !== null) return;
+
+  draftFrame = window.requestAnimationFrame(() => {
+    draftFrame = null;
+    const normalized = normalizeEditorValue(contentHtml.value);
+    const draft = buildWorkspaceTextDraftCommit(normalized);
+    const signature = `${draft.title}\n${draft.content}`;
+    if (signature === lastDraftSignature.value) return;
+    lastDraftSignature.value = signature;
+    emit("draft-update", draftNoteId.value, draft);
+  });
+};
+
 const contentHtml = ref(normalizeEditorValue(props.note.content)); // HTML content for tiptap v-model
 const lastCommittedContent = ref(normalizeEditorValue(props.note.content)); // To track changes for saving
 const draftNoteId = ref(props.note.id);
 const hasLocalDraft = ref(false);
 const isApplyingExternalContent = ref(false);
+const lastDraftSignature = ref("");
+let draftFrame: number | null = null;
 
 // Template ref bridging
 const tiptapRef = ref<{ editor: any } | null>(null);
@@ -143,6 +164,9 @@ const saveState = computed(() =>
   }),
 );
 const saveStateText = computed(() => saveStateLabel(saveState.value));
+const isConflictError = computed(() =>
+  Boolean(props.note.error?.includes("Sync conflict detected")),
+);
 
 const commitDraft = (noteId = draftNoteId.value, force = false) => {
   if (props.readonly && !force) return;
@@ -175,6 +199,7 @@ watch(
     isApplyingExternalContent.value = true;
     contentHtml.value = normalized;
     lastCommittedContent.value = normalized;
+    lastDraftSignature.value = "";
     hasLocalDraft.value = false;
     nextTick(() => {
       isApplyingExternalContent.value = false;
@@ -214,6 +239,10 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  if (draftFrame !== null) {
+    window.cancelAnimationFrame(draftFrame);
+    draftFrame = null;
+  }
   flushPendingSave();
   unregisterDraftFlusher?.();
 });
@@ -223,6 +252,7 @@ watch(contentHtml, () => {
   if (!isEditing.value || props.readonly || isApplyingExternalContent.value) return;
   hasLocalDraft.value = contentHtml.value !== lastCommittedContent.value;
   if (hasLocalDraft.value) {
+    emitDraftUpdate();
     scheduleSave();
   }
 });
@@ -239,6 +269,7 @@ watch(
     isApplyingExternalContent.value = true;
     contentHtml.value = normalized;
     lastCommittedContent.value = normalized;
+    lastDraftSignature.value = "";
     hasLocalDraft.value = false;
     nextTick(() => {
       isApplyingExternalContent.value = false;

@@ -17,6 +17,10 @@
 
 import { DB_CONFIG, SYNC_TAGS } from "~/utils/constants/pwa";
 import { openUnifiedDB, getAllRecords } from "~/utils/idb";
+import {
+  canUseServiceWorker,
+  getServiceWorkerReadyRegistration,
+} from "~/utils/serviceWorkerRuntime";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Per-store toast deduplication
@@ -44,14 +48,9 @@ export function createOfflineToastState() {
  * Safe to call multiple times — the browser deduplicates registrations.
  */
 export async function registerBackgroundSync(tag: string): Promise<void> {
-  if (!("serviceWorker" in navigator)) return;
+  if (!canUseServiceWorker()) return;
   try {
-    // navigator.serviceWorker.ready can hang indefinitely if no SW is active
-    // (e.g. dev mode). Race with a timeout to avoid blocking the caller.
-    const reg = await Promise.race([
-      navigator.serviceWorker.ready,
-      new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000)),
-    ]);
+    const reg = await getServiceWorkerReadyRegistration(2000);
     if (reg && "sync" in reg) {
       // @ts-expect-error Background Sync API is not in all TS DOM libs
       await reg.sync.register(tag);
@@ -68,6 +67,8 @@ export async function registerBackgroundSync(tag: string): Promise<void> {
 export interface OnlineListenerOptions {
   /** IDB store to poll for pending records, e.g. DB_CONFIG.STORES.PENDING_NOTES */
   pendingStoreName: string;
+  /** Optional additional stores to poll as one logical sync queue. */
+  pendingStoreNames?: string[];
   /** SW message type string to post when pending records are found */
   swMessageType: string;
   /** Called for every registered store instance when the app comes online so
@@ -104,7 +105,10 @@ const registeredOnlineListeners = new Set<string>();
 export function setupOnlineListener(options: OnlineListenerOptions): () => void {
   if (!process.client) return () => {};
 
-  const key = `${options.pendingStoreName}:${options.swMessageType}`;
+  const pendingStoreNames = options.pendingStoreNames?.length
+    ? options.pendingStoreNames
+    : [options.pendingStoreName];
+  const key = `${pendingStoreNames.join("+")}:${options.swMessageType}`;
   if (registeredOnlineListeners.has(key)) {
     // Already registered; still wire up the per-store onOnline callback via a
     // lightweight additional listener (cheap, no IDB poll).
@@ -138,15 +142,18 @@ export function setupOnlineListener(options: OnlineListenerOptions): () => void 
         }
       }
 
-      // Step 2: Check IDB for pending records
+      // Step 2: Check IDB for pending records across this logical queue.
       const db = await openUnifiedDB();
-      if (!db.objectStoreNames.contains(options.pendingStoreName)) return;
-
-      const pending = await getAllRecords<{ id: string }>(
-        db,
-        options.pendingStoreName as typeof DB_CONFIG.STORES[keyof typeof DB_CONFIG.STORES]
-      );
-      if (!pending.length) return;
+      let pendingCount = 0;
+      for (const storeName of pendingStoreNames) {
+        if (!db.objectStoreNames.contains(storeName)) continue;
+        const pending = await getAllRecords<{ id: string }>(
+          db,
+          storeName as typeof DB_CONFIG.STORES[keyof typeof DB_CONFIG.STORES]
+        );
+        pendingCount += pending.length;
+      }
+      if (!pendingCount) return;
 
       // Step 3: Trigger sync — prefer direct client-side sync to avoid
       // dual-sync race with SW. Fall back to SW postMessage only if no
@@ -157,7 +164,7 @@ export function setupOnlineListener(options: OnlineListenerOptions): () => void 
         } catch (e) {
           console.warn('[OfflineSync] onSyncDirect failed:', e);
         }
-      } else if ("serviceWorker" in navigator && navigator.serviceWorker.controller) {
+      } else if (canUseServiceWorker() && navigator.serviceWorker.controller) {
         navigator.serviceWorker.controller.postMessage({
           type: options.swMessageType,
         });
@@ -197,7 +204,7 @@ const registeredSyncCompletionListeners = new Set<string>();
 export function setupSyncCompletionListener(
   options: SyncCompletionListenerOptions
 ): () => void {
-  if (!process.client || !("serviceWorker" in navigator)) return () => {};
+  if (!process.client || !canUseServiceWorker()) return () => {};
 
   if (registeredSyncCompletionListeners.has(options.messageType)) return () => {};
   registeredSyncCompletionListeners.add(options.messageType);

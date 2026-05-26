@@ -1,11 +1,7 @@
 import { z } from "zod";
 import { PushSubscriptionDTO } from "@@/shared/utils/notification.contract";
-import { safeGetServerSession } from "@server/utils/safeGetServerSession";
 import { Errors, success } from "@server/utils/error";
-
-interface SessionWithUser {
-  user?: { email?: string; id?: string };
-}
+import { requireRole } from "~~/server/utils/auth";
 
 export default defineEventHandler(async (event) => {
   let body: unknown;
@@ -14,28 +10,46 @@ export default defineEventHandler(async (event) => {
     body = await readBody(event);
 
     const subscription = PushSubscriptionDTO.parse(body);
-
-    const session = (await safeGetServerSession(
-      event
-    )) as SessionWithUser | null;
-    if (!session?.user?.email) {
-      throw Errors.unauthorized(
-        "Must be logged in to subscribe to notifications"
-      );
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-    if (!user) throw Errors.unauthorized("User not found");
+    const user = await requireRole(event, ["USER"]);
+    const now = new Date();
+    const userAgent =
+      subscription.userAgent || getHeader(event, "user-agent") || undefined;
+    const expiresAt =
+      typeof subscription.expirationTime === "number"
+        ? new Date(subscription.expirationTime)
+        : null;
 
     const existingSubscription =
       await prisma.notificationSubscription.findUnique({
         where: { endpoint: subscription.endpoint },
+        select: { id: true, userId: true },
       });
+
     if (existingSubscription) {
-      return success(existingSubscription, {
-        message: "Subscription already exists",
+      if (
+        existingSubscription.userId &&
+        existingSubscription.userId !== user.id
+      ) {
+        throw Errors.conflict(
+          "This browser subscription is already linked to another account",
+        );
+      }
+
+      const savedSubscription = await prisma.notificationSubscription.update({
+        where: { id: existingSubscription.id },
+        data: {
+          keys: subscription.keys,
+          userId: user.id,
+          isActive: true,
+          failureCount: 0,
+          lastSeen: now,
+          userAgent,
+          expiresAt,
+        },
+      });
+
+      return success(savedSubscription, {
+        message: "Subscription refreshed",
       });
     }
 
@@ -44,12 +58,20 @@ export default defineEventHandler(async (event) => {
         endpoint: subscription.endpoint,
         keys: subscription.keys,
         userId: user.id,
+        isActive: true,
+        failureCount: 0,
+        lastSeen: now,
+        userAgent,
+        expiresAt,
       },
     });
 
     return success(savedSubscription, { message: "Subscription saved" });
   } catch (error: unknown) {
     console.error("Failed to save subscription:", error);
+    if (error && typeof error === "object" && "statusCode" in error) {
+      throw error;
+    }
     if (error instanceof z.ZodError) {
       throw Errors.badRequest("Invalid subscription data", {
         issues: error.issues,

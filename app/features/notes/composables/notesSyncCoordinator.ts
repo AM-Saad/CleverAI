@@ -1,10 +1,13 @@
 import type { Ref } from "vue";
-import type { NotesSyncResponse } from "@@/shared/utils/note-sync.contract";
-import { normalizeWorkspaceNoteTitle } from "@@/shared/utils/workspaceNote";
+import type { NotesSyncResponse } from "../../../../shared/utils/note-sync.contract";
+import { normalizeWorkspaceNoteTitle } from "../../../../shared/utils/workspaceNote";
 import type { NotesLocalRepository } from "./notesLocalRepository";
 import type { NotesLayoutQueue } from "./notesLayoutQueue";
 import type { NotesPendingQueue } from "./notesPendingQueue";
-import { remapPendingNoteGroupIds } from "~/utils/idb";
+import {
+  remapPendingNoteGroupIds,
+  remapPendingNoteIds,
+} from "../../../utils/idb";
 import {
   normalizeLocalNote,
   noteStateFromPendingChange,
@@ -22,11 +25,15 @@ export function createNotesSyncCoordinator(input: {
   localRepository: NotesLocalRepository;
   layoutQueue: NotesLayoutQueue;
   pendingQueue: NotesPendingQueue;
+  onNoteIdRemapped?: (tempId: string, serverId: string) => void;
 }): NotesSyncCoordinator {
-  const { workspaceId, notes, localRepository, layoutQueue, pendingQueue } = input;
+  const { workspaceId, notes, localRepository, layoutQueue, pendingQueue, onNoteIdRemapped } = input;
 
   const applySyncResult = async (response: NotesSyncResponse): Promise<void> => {
     const appliedIds = response.applied ?? [];
+    const appliedNoteMetadata = new Map(
+      (response.appliedNotes ?? []).map((note) => [note.id, note]),
+    );
     const conflicts = response.conflicts ?? [];
     const idMap = response.idMap ?? {};
     const groupIdMap = response.groupIdMap ?? {};
@@ -36,28 +43,43 @@ export function createNotesSyncCoordinator(input: {
       const tempNote = notes.value.get(tempId);
       if (!tempNote) continue;
 
-      notes.value.delete(tempId);
-      await localRepository.delete(tempId);
+      const appliedMetadata = appliedNoteMetadata.get(tempId);
 
       const serverNote: NoteState = {
         ...normalizeLocalNote(tempNote),
         id: serverId,
+        version: appliedMetadata?.version ?? tempNote.version,
+        updatedAt: appliedMetadata?.updatedAt
+          ? new Date(appliedMetadata.updatedAt)
+          : tempNote.updatedAt,
         isDirty: false,
         isLoading: false,
         lastSaved: now,
         error: null,
       };
       notes.value.set(serverId, serverNote);
+      notes.value.delete(tempId);
+      onNoteIdRemapped?.(tempId, serverId);
       await localRepository.save(serverNote);
+      await localRepository.delete(tempId);
+    }
+
+    if (Object.keys(idMap).length) {
+      await remapPendingNoteIds(idMap);
     }
 
     for (const noteId of appliedIds) {
       const localId = idMap[noteId] ?? noteId;
       const note = notes.value.get(localId);
       if (!note) continue;
+      const appliedMetadata = appliedNoteMetadata.get(noteId);
 
       const nextNote: NoteState = normalizeLocalNote({
         ...note,
+        version: appliedMetadata?.version ?? note.version,
+        updatedAt: appliedMetadata?.updatedAt
+          ? new Date(appliedMetadata.updatedAt)
+          : note.updatedAt,
         isDirty: false,
         isLoading: false,
         lastSaved: now,
@@ -87,12 +109,26 @@ export function createNotesSyncCoordinator(input: {
     for (const conflict of conflicts) {
       const note = notes.value.get(conflict.id);
       if (!note) continue;
+      const pendingChanges = conflict.reason === "VERSION_MISMATCH" && conflict.serverVersion !== undefined
+        ? await pendingQueue.load(workspaceId)
+        : [];
+      const pendingChange = pendingChanges.find((change) => change.id === conflict.id);
+
+      if (pendingChange) {
+        await pendingQueue.add({
+          ...pendingChange,
+          serverVersion: conflict.serverVersion,
+        });
+      }
 
       const nextNote: NoteState = normalizeLocalNote({
         ...note,
+        version: conflict.serverVersion ?? note.version,
         isLoading: false,
         isDirty: true,
-        error: "Sync conflict detected. Review this note and retry.",
+        error: conflict.reason === "VERSION_MISMATCH"
+          ? "Server version refreshed. Retry will keep your local changes."
+          : "Sync conflict detected. Review this note and retry.",
       });
       notes.value.set(conflict.id, nextNote);
       await localRepository.save(nextNote);

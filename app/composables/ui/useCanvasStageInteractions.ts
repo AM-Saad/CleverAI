@@ -261,6 +261,37 @@ export function useCanvasStageInteractions(options: UseCanvasStageInteractionsOp
     });
   }
 
+  function applyCanonicalShapeToNode(shape: CanvasShape, node: any) {
+    node.scaleX?.(shape.scaleX ?? 1);
+    node.scaleY?.(shape.scaleY ?? 1);
+
+    switch (shape.type) {
+      case "rect":
+        if (shape.width !== undefined) node.width?.(shape.width);
+        if (shape.height !== undefined) node.height?.(shape.height);
+        break;
+      case "circle":
+        if (shape.radius !== undefined) node.radius?.(shape.radius);
+        break;
+      case "ellipse":
+        if (shape.radiusX !== undefined) node.radiusX?.(shape.radiusX);
+        if (shape.radiusY !== undefined) node.radiusY?.(shape.radiusY);
+        break;
+      case "line":
+      case "arrow":
+      case "freedraw":
+        if (shape.points) node.points?.(shape.points);
+        break;
+      case "text":
+        if (shape.fontSize !== undefined) node.fontSize?.(shape.fontSize);
+        break;
+      case "star":
+        if (shape.innerRadius !== undefined) node.innerRadius?.(shape.innerRadius);
+        if (shape.outerRadius !== undefined) node.outerRadius?.(shape.outerRadius);
+        break;
+    }
+  }
+
   function syncDraggedSelectionNodes(node: any, leaderId: string) {
     if (!dragSelectionState || dragSelectionState.leaderId !== leaderId) {
       return;
@@ -726,6 +757,7 @@ export function useCanvasStageInteractions(options: UseCanvasStageInteractionsOp
       shape.y = node.y();
       shape.rotation = node.rotation();
       normalizeShapeTransform(shape, node);
+      applyCanonicalShapeToNode(shape, node);
       didUpdate = true;
     }
 

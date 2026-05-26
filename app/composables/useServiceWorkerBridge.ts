@@ -1,4 +1,8 @@
 import { SW_MESSAGE_TYPES } from "../utils/constants/pwa";
+import {
+  canUseServiceWorker,
+  getServiceWorkerReadyRegistration,
+} from "../utils/serviceWorkerRuntime";
 import type {
   OutgoingSWMessage,
   FormSyncStartedMessage,
@@ -84,11 +88,11 @@ export function useServiceWorkerBridge() {
 
   async function ensureRegistration() {
     if (registration.value) return registration.value;
-    if ("serviceWorker" in navigator) {
-      registration.value = await navigator.serviceWorker.ready;
-      if (registration.value.active) isControlling.value = true;
-      if (registration.value) wireRegistrationListeners(registration.value);
-    }
+    if (!canUseServiceWorker()) return null;
+
+    registration.value = await getServiceWorkerReadyRegistration();
+    if (registration.value?.active) isControlling.value = true;
+    if (registration.value) wireRegistrationListeners(registration.value);
     return registration.value;
   }
 
@@ -156,12 +160,14 @@ export function useServiceWorkerBridge() {
 
   function startListening() {
     if (wired) return;
+    if (!canUseServiceWorker()) return;
     wired = true;
     messageHandler = handleMessage;
     navigator.serviceWorker.addEventListener("message", messageHandler);
   }
 
   onMounted(async () => {
+    if (!canUseServiceWorker()) return;
     await ensureRegistration();
     startListening();
     checkForWaitingAndSignal().catch(() => {});

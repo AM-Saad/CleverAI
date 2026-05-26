@@ -30,8 +30,8 @@ const emit = defineEmits<{
 
 const status = computed(() => {
   if (props.errorCount > 0) return "error";
-  if (!props.isOnline || !props.isVerifiedOnline) return "offline";
   if (props.isFetching || props.isConnecting) return "syncing";
+  if (!props.isOnline || !props.isVerifiedOnline) return "offline";
   if (props.pendingCount > 0) return "pending";
   return "synced";
 });
@@ -121,7 +121,7 @@ function formatSyncTime(value: Date | string) {
 </script>
 
 <template>
-  <div class="flex items-start justify-between gap-3 rounded-[var(--radius-lg)] border px-3 py-2" :class="toneClasses">
+  <div class="flex items-center justify-between gap-3 rounded-[var(--radius-lg)] border px-3 h-10" :class="toneClasses">
     <div class="min-w-0 flex items-start justify-between gap-2">
       <Icon :name="iconName" class="mt-0.5 h-4 w-4 shrink-0" :class="{ 'animate-spin': status === 'syncing' }" />
       <div class="flex items-center gap-2 min-w-0">

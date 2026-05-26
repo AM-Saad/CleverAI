@@ -35,11 +35,12 @@
             Cognilo
           </router-link>
           <Transition name="fade">
-            <span v-if="!online && (route.fullPath.startsWith('/workspaces') || route.fullPath.startsWith('/user'))"
-              class="inline-flex items-center gap-1 rounded-full bg-warning/15 px-2.5 py-0.5 text-xs font-medium text-warning ring-1 ring-inset ring-warning/25"
-              title="You are offline — changes are saved locally">
-              <span class="h-1.5 w-1.5 rounded-full bg-warning" />
-              Offline
+            <span v-if="networkPill && (route.fullPath.startsWith('/workspaces') || route.fullPath.startsWith('/user'))"
+              class="inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset"
+              :class="networkPill.class"
+              :title="networkPill.title">
+              <span class="h-1.5 w-1.5 rounded-full" :class="networkPill.dotClass" />
+              {{ networkPill.label }}
             </span>
           </Transition>
         </div>
@@ -111,7 +112,7 @@
 </template>
 <script setup lang="ts">
 
-import { watch } from "vue";
+import { computed, watch } from "vue";
 
 const { status } = useAuth();
 
@@ -119,9 +120,30 @@ const creditsStore = useCreditsStore();
 
 // Use the centralized SW bridge
 const sw = useServiceWorkerBridge();
-const online = useOnline()
+const networkStatus = useNetworkStatus();
 
 const route = useRoute();
+const networkPill = computed(() => {
+  if (!networkStatus.isOnline.value) {
+    return {
+      label: "Offline",
+      title: "You are offline — changes are saved locally",
+      class: "bg-warning/15 text-warning ring-warning/25",
+      dotClass: "bg-warning",
+    };
+  }
+
+  if (!networkStatus.isVerifiedOnline.value || networkStatus.isConnecting.value) {
+    return {
+      label: "Reconnecting",
+      title: "Checking server reachability before syncing changes",
+      class: "bg-primary/10 text-primary ring-primary/20",
+      dotClass: "bg-primary animate-pulse",
+    };
+  }
+
+  return null;
+});
 // Debounced navigation to avoid rapid duplicates from notification clicks
 const pending = new Set<string>();
 

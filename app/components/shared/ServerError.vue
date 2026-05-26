@@ -23,7 +23,6 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
-import { useOnline } from '@vueuse/core'
 import type { APIError } from '@/services/FetchFactory'
 
 interface ErrorDetailsPayload {
@@ -38,7 +37,7 @@ defineProps<{
   refresh?: () => void;
 }>();
 const typedError = defineModel<APIError | null>('typedError', { required: true });
-const online = useOnline()
+const { isVerifiedOnline: online } = useNetworkStatus()
 const errorDetails = computed(
   () => typedError.value?.details as ErrorDetailsPayload | undefined,
 )

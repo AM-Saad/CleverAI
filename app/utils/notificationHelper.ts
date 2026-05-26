@@ -2,6 +2,8 @@
  * Utility functions for handling push notifications
  */
 
+import { canUseServiceWorker, getServiceWorkerReadyRegistration } from "~/utils/serviceWorkerRuntime";
+
 export interface NotificationTestResult {
   success: boolean;
   message: string;
@@ -38,8 +40,21 @@ export async function testPushNotifications(): Promise<NotificationTestResult> {
       };
     }
 
+    if (!canUseServiceWorker()) {
+      return {
+        success: false,
+        message: "Service Worker is disabled in this environment",
+      };
+    }
+
     // Check for active subscription
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await getServiceWorkerReadyRegistration();
+    if (!registration) {
+      return {
+        success: false,
+        message: "Service Worker is not ready",
+      };
+    }
     const subscription = await registration.pushManager.getSubscription();
 
     if (!subscription) {

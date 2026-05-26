@@ -12,6 +12,7 @@ import type {
   PendingNoteChange,
   PendingNoteGroupChange,
 } from "../../shared/utils/note-sync.contract";
+import type { LocalFirstConflictRecord } from "./local-first/types";
 
 type STORES = (typeof DB_CONFIG)["STORES"][keyof typeof DB_CONFIG.STORES];
 
@@ -23,6 +24,11 @@ type StoredNoteState = Note & {
   lastSaved?: Date;
   error?: string | null;
 };
+
+export interface NoteSyncConflictRecord extends Omit<LocalFirstConflictRecord, "scope" | "resolution"> {
+  scope: "content" | "group" | "layout";
+  resolution?: "keep-local" | "keep-server" | "manual-merge";
+}
 
 // Unified DB open promise (singleton) to avoid repeated upgrade races.
 let unifiedDbPromise: Promise<IDBDatabase> | null = null;
@@ -52,6 +58,7 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
       ensureStore(STORES.PENDING_NOTES);
       ensureStore(STORES.PENDING_NOTE_GROUP_CHANGES);
       ensureStore(STORES.PENDING_NOTE_LAYOUTS);
+      ensureStore(STORES.NOTE_SYNC_CONFLICTS);
       ensureStore(STORES.BOARD_ITEMS);
       ensureStore(STORES.PENDING_BOARD_ITEMS);
       ensureStore(STORES.BOARD_COLUMNS);
@@ -130,6 +137,21 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
             }
           }
         }
+        if (db.objectStoreNames.contains(STORES.NOTE_SYNC_CONFLICTS)) {
+          const tx = req.transaction;
+          if (tx) {
+            const conflicts = tx.objectStore(STORES.NOTE_SYNC_CONFLICTS);
+            if (!conflicts.indexNames.contains('workspaceId')) {
+              conflicts.createIndex('workspaceId', 'workspaceId', { unique: false });
+            }
+            if (!conflicts.indexNames.contains('entityId')) {
+              conflicts.createIndex('entityId', 'entityId', { unique: false });
+            }
+            if (!conflicts.indexNames.contains('scope')) {
+              conflicts.createIndex('scope', 'scope', { unique: false });
+            }
+          }
+        }
       } catch (e) {
         console.warn('[IDB] Failed creating indexes during upgrade:', e);
       }
@@ -145,6 +167,7 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
           DB_CONFIG.STORES.PENDING_NOTES,
           DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES,
           DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS,
+          DB_CONFIG.STORES.NOTE_SYNC_CONFLICTS,
           DB_CONFIG.STORES.BOARD_ITEMS,
           DB_CONFIG.STORES.PENDING_BOARD_ITEMS,
           DB_CONFIG.STORES.BOARD_COLUMNS,
@@ -787,6 +810,55 @@ export async function remapPendingNoteGroupIds(groupIdMap: Record<string, string
       await putAllRecords(db, DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS as STORES, remapped);
     }
   }
+}
+
+export async function remapPendingNoteIds(noteIdMap: Record<string, string>): Promise<void> {
+  const entries = Object.entries(noteIdMap);
+  if (!entries.length) return;
+  const db = await openUnifiedDB();
+
+  if (db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS)) {
+    const layouts = await getAllRecords<NoteLayoutChange>(db, DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS as STORES);
+    const remapped = layouts.map((layout) => ({
+      ...layout,
+      notes: layout.notes.map((note) => ({
+        ...note,
+        id: noteIdMap[note.id] ?? note.id,
+      })),
+    }));
+    if (remapped.length) {
+      await putAllRecords(db, DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS as STORES, remapped);
+    }
+  }
+}
+
+// -------------------- Notes Sync Conflicts --------------------
+
+export async function saveNoteSyncConflict(conflict: NoteSyncConflictRecord): Promise<void> {
+  const db = await openUnifiedDB();
+  if (!db.objectStoreNames.contains(DB_CONFIG.STORES.NOTE_SYNC_CONFLICTS)) return;
+  await putRecord(db, DB_CONFIG.STORES.NOTE_SYNC_CONFLICTS as STORES, conflict);
+}
+
+export async function loadNoteSyncConflicts(workspaceId?: string): Promise<NoteSyncConflictRecord[]> {
+  const db = await openUnifiedDB();
+  if (!db.objectStoreNames.contains(DB_CONFIG.STORES.NOTE_SYNC_CONFLICTS)) return [];
+  const records = await getAllRecords<NoteSyncConflictRecord>(
+    db,
+    DB_CONFIG.STORES.NOTE_SYNC_CONFLICTS as STORES,
+  );
+  return workspaceId
+    ? records.filter((record) => record.workspaceId === workspaceId)
+    : records;
+}
+
+export async function deleteNoteSyncConflicts(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  const db = await openUnifiedDB();
+  if (!db.objectStoreNames.contains(DB_CONFIG.STORES.NOTE_SYNC_CONFLICTS)) return;
+  await Promise.all(
+    ids.map((id) => deleteRecord(db, DB_CONFIG.STORES.NOTE_SYNC_CONFLICTS as STORES, id)),
+  );
 }
 
 // -------------------- Pending Board Items Queue --------------------

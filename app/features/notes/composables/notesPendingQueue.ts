@@ -1,4 +1,5 @@
 import type { PendingNoteChange } from "@@/shared/utils/note-sync.contract";
+import type { PendingQueue } from "../../../utils/local-first/ports";
 import {
   deletePendingNoteChanges,
   loadPendingNoteChanges,
@@ -6,12 +7,7 @@ import {
 } from "~/utils/idb";
 import { registerNotesSync } from "~/utils/sync/offlineSync";
 
-export interface NotesPendingQueue {
-  add(change: PendingNoteChange): Promise<void>;
-  load(workspaceId?: string): Promise<PendingNoteChange[]>;
-  remove(ids: string[]): Promise<void>;
-  registerBackgroundSync(): Promise<void>;
-}
+export type NotesPendingQueue = PendingQueue<PendingNoteChange>;
 
 export function createIndexedDbNotesPendingQueue(): NotesPendingQueue {
   return {

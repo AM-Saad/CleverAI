@@ -10,7 +10,26 @@ export async function syncWorkspaceNotes(input: {
 }) {
   const { prisma, request, userId } = input;
   const applied: string[] = [];
-  const conflicts: Array<{ id: string }> = [];
+  const appliedNotes: Array<{ id: string; version: number; updatedAt?: string }> = [];
+  const conflicts: Array<{
+    id: string;
+    reason?: string;
+    resolution?: string;
+    serverVersion?: number;
+    clientServerVersion?: number;
+    serverSnapshot?: {
+      id: string;
+      workspaceId: string;
+      groupId?: string | null;
+      title?: string;
+      content?: string;
+      tags?: string[];
+      noteType?: string;
+      metadata?: unknown;
+      version?: number;
+      updatedAt?: string;
+    };
+  }> = [];
   const idMap: Record<string, string> = {};
   const groupApplied: string[] = [];
   const groupConflicts: Array<{ id: string }> = [];
@@ -20,6 +39,19 @@ export async function syncWorkspaceNotes(input: {
   let layoutConflict = false;
   const groupChanges = request.groupChanges ?? [];
   const contentChanges = request.changes ?? [];
+
+  const toServerSnapshot = (note: any) => ({
+    id: note.id,
+    workspaceId: note.workspaceId,
+    groupId: note.groupId ?? null,
+    title: note.title ?? undefined,
+    content: note.content ?? undefined,
+    tags: note.tags ?? undefined,
+    noteType: note.noteType ?? undefined,
+    metadata: note.metadata ?? undefined,
+    version: note.version ?? undefined,
+    updatedAt: note.updatedAt ? new Date(note.updatedAt).toISOString() : undefined,
+  });
 
   for (const change of groupChanges) {
     try {
@@ -175,7 +207,13 @@ export async function syncWorkspaceNotes(input: {
           note.version !== undefined &&
           note.version !== change.serverVersion
         ) {
-          conflicts.push({ id: change.id });
+          conflicts.push({
+            id: change.id,
+            reason: "VERSION_MISMATCH",
+            serverVersion: note.version,
+            clientServerVersion: change.serverVersion,
+            serverSnapshot: toServerSnapshot(note),
+          });
           continue;
         }
 
@@ -229,6 +267,11 @@ export async function syncWorkspaceNotes(input: {
         };
         const created = await prisma.note.create({ data });
         if (isTempId) idMap[change.id] = created.id;
+        appliedNotes.push({
+          id: change.id,
+          version: created.version ?? 1,
+          updatedAt: created.updatedAt ? new Date(created.updatedAt).toISOString() : undefined,
+        });
         applied.push(change.id);
         continue;
       }
@@ -246,11 +289,17 @@ export async function syncWorkspaceNotes(input: {
         existing.version !== undefined &&
         existing.version !== change.serverVersion
       ) {
-        conflicts.push({ id: change.id });
+        conflicts.push({
+          id: change.id,
+          reason: "VERSION_MISMATCH",
+          serverVersion: existing.version,
+          clientServerVersion: change.serverVersion,
+          serverSnapshot: toServerSnapshot(existing),
+        });
         continue;
       }
 
-      await prisma.note.update({
+      const updated = await prisma.note.update({
         where: { id: change.id },
         data: {
           title: normalizeWorkspaceNoteTitle(
@@ -266,6 +315,11 @@ export async function syncWorkspaceNotes(input: {
           }),
           version: { increment: 1 },
         },
+      });
+      appliedNotes.push({
+        id: change.id,
+        version: updated.version ?? existing.version ?? 1,
+        updatedAt: updated.updatedAt ? new Date(updated.updatedAt).toISOString() : undefined,
       });
       applied.push(change.id);
     } catch (e) {
@@ -322,6 +376,7 @@ export async function syncWorkspaceNotes(input: {
 
   const response = NotesSyncResponseSchema.parse({
     applied,
+    appliedNotes,
     conflicts,
     idMap,
     noteIdMap: idMap,

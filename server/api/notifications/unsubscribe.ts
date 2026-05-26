@@ -1,18 +1,10 @@
 import { z } from "zod";
 import { UnsubscribeDTO } from "@@/shared/utils/notification.contract";
-import { safeGetServerSession } from "@server/utils/safeGetServerSession";
 import { Errors, success } from "@server/utils/error";
-
-type SessionWithUser = {
-  user?: {
-    email?: string;
-    id?: string;
-    [key: string]: unknown;
-  };
-  [key: string]: unknown;
-} | null;
+import { requireRole } from "~~/server/utils/auth";
 
 export default defineEventHandler(async (event) => {
+  const prisma = event.context.prisma;
   const raw = await readBody(event);
   let parsed;
   try {
@@ -21,28 +13,22 @@ export default defineEventHandler(async (event) => {
     if (e instanceof z.ZodError) {
       throw Errors.badRequest(
         "Invalid unsubscribe data",
-        e.issues.map((issue) => ({ path: issue.path, message: issue.message }))
+        e.issues.map((issue) => ({ path: issue.path, message: issue.message })),
       );
     }
     throw Errors.badRequest("Invalid unsubscribe data");
   }
 
-  const session = (await safeGetServerSession(event)) as SessionWithUser;
-  if (!session?.user?.email) {
-    throw Errors.unauthorized("Must be logged in to unsubscribe");
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
-  });
-  if (!user) {
-    throw Errors.unauthorized("User not found");
-  }
+  const user = await requireRole(event, ["USER"]);
 
   let deletedSubscription;
   try {
     deletedSubscription = await prisma.notificationSubscription.deleteMany({
-      where: { endpoint: parsed.endpoint, userId: user.id },
+      where: {
+        userId: user.id,
+        ...(parsed.endpoint ? { endpoint: parsed.endpoint } : {}),
+        ...(parsed.subscriptionId ? { id: parsed.subscriptionId } : {}),
+      },
     });
   } catch {
     throw Errors.server("Failed to remove subscription");
@@ -54,6 +40,6 @@ export default defineEventHandler(async (event) => {
 
   return success({
     message: "Subscription removed successfully",
-    removedCount: deletedSubscription.count,
+    deletedCount: deletedSubscription.count,
   });
 });

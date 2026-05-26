@@ -51,7 +51,8 @@
     // 13: Added groupId index for workspace note grouping
     // 14: Added pendingNoteLayouts store for local-first note/group layout sync
     // 15: Added noteGroups + pendingNoteGroupChanges for local-first note grouping
-    VERSION: 15,
+    // 16: Added noteSyncConflicts for durable local/server conflict snapshots
+    VERSION: 16,
     STORES: {
       FORMS: "forms",
       NOTES: "notes",
@@ -59,6 +60,7 @@
       PENDING_NOTES: "pendingNotes",
       PENDING_NOTE_GROUP_CHANGES: "pendingNoteGroupChanges",
       PENDING_NOTE_LAYOUTS: "pendingNoteLayouts",
+      NOTE_SYNC_CONFLICTS: "noteSyncConflicts",
       BOARD_ITEMS: "boardItems",
       PENDING_BOARD_ITEMS: "pendingBoardItems",
       BOARD_COLUMNS: "boardColumns",
@@ -144,6 +146,7 @@
         ensureStore(STORES.PENDING_NOTES);
         ensureStore(STORES.PENDING_NOTE_GROUP_CHANGES);
         ensureStore(STORES.PENDING_NOTE_LAYOUTS);
+        ensureStore(STORES.NOTE_SYNC_CONFLICTS);
         ensureStore(STORES.BOARD_ITEMS);
         ensureStore(STORES.PENDING_BOARD_ITEMS);
         ensureStore(STORES.BOARD_COLUMNS);
@@ -218,6 +221,21 @@
               }
             }
           }
+          if (db.objectStoreNames.contains(STORES.NOTE_SYNC_CONFLICTS)) {
+            const tx = req.transaction;
+            if (tx) {
+              const conflicts = tx.objectStore(STORES.NOTE_SYNC_CONFLICTS);
+              if (!conflicts.indexNames.contains("workspaceId")) {
+                conflicts.createIndex("workspaceId", "workspaceId", { unique: false });
+              }
+              if (!conflicts.indexNames.contains("entityId")) {
+                conflicts.createIndex("entityId", "entityId", { unique: false });
+              }
+              if (!conflicts.indexNames.contains("scope")) {
+                conflicts.createIndex("scope", "scope", { unique: false });
+              }
+            }
+          }
         } catch (e) {
           console.warn("[IDB] Failed creating indexes during upgrade:", e);
         }
@@ -232,6 +250,7 @@
             DB_CONFIG.STORES.PENDING_NOTES,
             DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES,
             DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS,
+            DB_CONFIG.STORES.NOTE_SYNC_CONFLICTS,
             DB_CONFIG.STORES.BOARD_ITEMS,
             DB_CONFIG.STORES.PENDING_BOARD_ITEMS,
             DB_CONFIG.STORES.BOARD_COLUMNS,

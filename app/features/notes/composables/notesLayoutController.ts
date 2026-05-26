@@ -83,10 +83,14 @@ export function createNotesLayoutController(input: {
     requestSync,
   } = input;
   const status = ref<NotesLayoutStatus>("idle");
+  let layoutGeneration = 0;
 
-  const saveLayoutChange = async (noteLayout: NoteLayoutItem[]) => {
+  const saveLayoutChange = async (noteLayout: NoteLayoutItem[], generation: number) => {
     try {
+      if (generation !== layoutGeneration) return;
       const existingLayout = await layoutQueue.load(workspaceId);
+      if (generation !== layoutGeneration) return;
+      const currentGroupLayout = getGroupLayout();
 
       const change: NoteLayoutChange = {
         id: workspaceId,
@@ -94,10 +98,11 @@ export function createNotesLayoutController(input: {
         updatedAt: Date.now(),
         localVersion: (existingLayout?.localVersion ?? 0) + 1,
         notes: noteLayout,
-        groups: existingLayout?.groups?.length ? existingLayout.groups : getGroupLayout(),
+        groups: currentGroupLayout.length ? currentGroupLayout : existingLayout?.groups ?? [],
       };
 
       await layoutQueue.save(change);
+      if (generation !== layoutGeneration) return;
 
       await layoutQueue.registerBackgroundSync();
       await onLayoutPendingChanged();
@@ -118,41 +123,44 @@ export function createNotesLayoutController(input: {
   };
 
   const queueNoteLayout = async (noteLayout: NoteLayoutItem[]): Promise<boolean> => {
-    try {
-      const canonical = buildCanonicalNoteLayout(noteLayout);
-      const changedNotes: NoteState[] = [];
+    const generation = ++layoutGeneration;
+    const canonical = buildCanonicalNoteLayout(noteLayout);
+    const changedNotes: NoteState[] = [];
 
-      for (const item of canonical) {
-        const existing = notes.value.get(item.id);
-        if (!existing) continue;
-        if (existing.groupId === item.groupId && existing.order === item.order) continue;
+    for (const item of canonical) {
+      const existing = notes.value.get(item.id);
+      if (!existing) continue;
+      if (existing.groupId === item.groupId && existing.order === item.order) continue;
 
-        const nextNote = {
-          ...existing,
-          groupId: item.groupId,
-          order: item.order,
-        };
-        notes.value.set(item.id, nextNote);
-        changedNotes.push(nextNote);
-      }
-
-      if (!changedNotes.length) {
-        return true;
-      }
-
-      await localRepository.saveMany(changedNotes);
-      await saveLayoutChange(canonical);
-      return true;
-    } catch (error) {
-      console.error("Failed to queue note layout", error);
-      status.value = "failed";
-      logNotesOperation("sync-failure", {
-        workspaceId,
-        reason: "layout-queue-failed",
-        error,
-      });
-      return false;
+      const nextNote = {
+        ...existing,
+        groupId: item.groupId,
+        order: item.order,
+      };
+      notes.value.set(item.id, nextNote);
+      changedNotes.push(nextNote);
     }
+
+    status.value = "queued";
+    void (async () => {
+      try {
+        if (changedNotes.length) {
+          await localRepository.saveMany(changedNotes);
+        }
+
+        await saveLayoutChange(canonical, generation);
+      } catch (error) {
+        console.error("Failed to queue note layout", error);
+        status.value = "failed";
+        logNotesOperation("sync-failure", {
+          workspaceId,
+          reason: "layout-queue-failed",
+          error,
+        });
+      }
+    })();
+
+    return true;
   };
 
   const apply = async (command: NotesLayoutCommand): Promise<boolean> => {
@@ -168,13 +176,27 @@ export function createNotesLayoutController(input: {
       const targetGroupId =
         command.type === "MOVE_NOTE" ? command.toGroupId : command.groupId;
       const withoutMoving = current.filter((note) => note.id !== command.noteId);
-      const targetGroup = withoutMoving.filter((note) => note.groupId === targetGroupId);
+      const notesByGroup = new Map<string, NoteLayoutItem[]>();
+      for (const note of withoutMoving) {
+        const key = groupKey(note.groupId);
+        const group = notesByGroup.get(key) ?? [];
+        group.push(note);
+        notesByGroup.set(key, group);
+      }
+
+      for (const group of notesByGroup.values()) {
+        group.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+      }
+
+      const targetKey = groupKey(targetGroupId);
+      const targetGroup = notesByGroup.get(targetKey) ?? [];
       const targetIndex = Math.max(0, Math.min(command.toIndex, targetGroup.length));
       targetGroup.splice(targetIndex, 0, { ...moving, groupId: targetGroupId });
+      notesByGroup.set(targetKey, targetGroup);
 
-      const nextLayout = withoutMoving
-        .filter((note) => note.groupId !== targetGroupId)
-        .concat(targetGroup);
+      const nextLayout = Array.from(notesByGroup.values()).flatMap((group) =>
+        group.map((note, order) => ({ ...note, order })),
+      );
       return queueNoteLayout(nextLayout);
     }
 

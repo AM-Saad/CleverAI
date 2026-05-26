@@ -14,6 +14,7 @@ import CanvasNoteEditor from "../components/CanvasNoteEditor.vue";
 import MathNoteEditor from "../components/MathNoteEditor.vue";
 import NotesDrawer from "../components/NotesDrawer.vue";
 import NotesSplitDropZone from "../components/NotesSplitDropZone.vue";
+import NotesSyncInspector from "../components/NotesSyncInspector.vue";
 import TextNote from "../components/TextNote.vue";
 import { createNotesSplitInteractionController } from "../composables/notesSplitInteractionController";
 import { useNoteGroupsStore } from "../composables/useNoteGroupsStore";
@@ -26,8 +27,16 @@ const emit = defineEmits(["add-to-material"]);
 // Use the optimistic notes store
 const notesStore = useNotesStore(workspaceId);
 const noteGroupsStore = useNoteGroupsStore(workspaceId);
+notesStore.setGroupLayoutProvider(() =>
+  noteGroupsStore.orderedGroups.value.map((group, index) => ({
+    id: group.id,
+    order: group.order ?? index,
+  })),
+);
 const { exportContent } = useExportContent();
 const networkStatus = useNetworkStatus();
+const isDev = import.meta.dev;
+const isDevSyncInspectorVisible = ref(false);
 
 interface TextNoteUpdatePayload {
   title: string;
@@ -49,27 +58,10 @@ const getNoteDisplayTitle = (note?: NoteState | null, maxLength?: number) => {
   return maxLength ? rawTitle.slice(0, maxLength) : rawTitle;
 };
 
-// Cached list of ordered IDs to prevent sorting on every text change
-const orderedNoteIds = ref<string[]>([]);
-
-watch(
-  () => {
-    // Only track id, group, and order, ignores content changes
-    const arr = Array.from(notesStore.notes.value.values());
-    return arr.map(n => `${n.id}:${n.groupId ?? "ungrouped"}:${n.order}`).join('|');
-  },
-  () => {
-    const allNotes = Array.from(notesStore.notes.value.values());
-    allNotes.sort((a, b) => (a.groupId ?? "").localeCompare(b.groupId ?? "") || a.order - b.order);
-    orderedNoteIds.value = allNotes.map(n => n.id);
-  },
-  { immediate: true }
-);
-
 const notes = computed(() => {
-  return orderedNoteIds.value
-    .map(id => notesStore.notes.value.get(id))
-    .filter((n): n is NoteState => !!n);
+  return Array.from(notesStore.notes.value.values()).sort(
+    (a, b) => (a.groupId ?? "").localeCompare(b.groupId ?? "") || a.order - b.order,
+  );
 });
 
 const isReordering = ref(false);
@@ -94,7 +86,7 @@ const getStoredNoteId = (availableNotes: NoteState[]): string | null => {
   }
 
   try {
-    const stored = localStorage.getItem(`selectedNote_${workspaceId}`);
+    const stored = notesStore.resolveNoteId(localStorage.getItem(`selectedNote_${workspaceId}`));
     // Verify the note still exists and belongs to this workspace
     if (stored && availableNotes.some(n => n.id === stored && n.workspaceId === workspaceId)) {
       return stored;
@@ -104,7 +96,6 @@ const getStoredNoteId = (availableNotes: NoteState[]): string | null => {
     const firstNoteId = availableNotes[0]?.id || null;
     if (firstNoteId) {
       localStorage.setItem(`selectedNote_${workspaceId}`, firstNoteId);
-      console.log(`🔄 Stored note not found, falling back to first note: ${firstNoteId}`);
     }
     return firstNoteId;
   } catch {
@@ -115,6 +106,12 @@ const getStoredNoteId = (availableNotes: NoteState[]): string | null => {
 
 // Initialize selection when notes are first loaded
 watch(notes, (newNotes) => {
+  const resolvedCurrent = notesStore.resolveNoteId(currentNoteId.value);
+  if (resolvedCurrent && resolvedCurrent !== currentNoteId.value) {
+    currentNoteId.value = resolvedCurrent;
+    return;
+  }
+
   // Only set initial selection if not already set and notes are available
   if (!currentNoteId.value && newNotes.length > 0) {
     currentNoteId.value = getStoredNoteId(newNotes);
@@ -124,14 +121,12 @@ watch(notes, (newNotes) => {
   if (currentNoteId.value && newNotes.length > 0) {
     const noteExists = newNotes.some(n => n.id === currentNoteId.value);
     if (!noteExists) {
-      console.log(`⚠️ Selected note ${currentNoteId.value} was deleted, selecting new note`);
       currentNoteId.value = getStoredNoteId(newNotes);
     }
   }
 
   // Handle case where all notes were deleted
   if (currentNoteId.value && newNotes.length === 0) {
-    console.log('🗑️ All notes deleted, clearing selection');
     currentNoteId.value = null;
     try {
       localStorage.removeItem(`selectedNote_${workspaceId}`);
@@ -173,8 +168,9 @@ const fullscreen = useFullscreenModal<string>();
 const isFullscreenOpen = computed(() => fullscreen.isOpen.value);
 
 const currentNote = computed(() => {
-  if (!currentNoteId.value) return null;
-  return notesStore.getNote(currentNoteId.value) ?? null;
+  const resolvedId = notesStore.resolveNoteId(currentNoteId.value);
+  if (!resolvedId) return null;
+  return notesStore.getNote(resolvedId) ?? null;
 });
 
 // Computed property for the fullscreen note
@@ -185,13 +181,17 @@ const currentFullscreenNote = computed(() => {
 
 // Persist selected note to localStorage when it changes
 watch(currentNoteId, (noteId) => {
-  if (typeof window === 'undefined' || !noteId) return;
+  const resolvedId = notesStore.resolveNoteId(noteId);
+  if (resolvedId && resolvedId !== noteId) {
+    currentNoteId.value = resolvedId;
+    return;
+  }
+  if (typeof window === 'undefined' || !resolvedId) return;
   try {
     // Verify note belongs to this workspace before saving
-    const note = notesStore.getNote(noteId);
+    const note = notesStore.getNote(resolvedId);
     if (note && note.workspaceId === workspaceId) {
-      localStorage.setItem(`selectedNote_${workspaceId}`, noteId);
-      console.log(`💾 Saved selected note: ${noteId} for workspace: ${workspaceId}`);
+      localStorage.setItem(`selectedNote_${workspaceId}`, resolvedId);
     }
   } catch (err) {
     console.error('Failed to save selected note:', err);
@@ -233,6 +233,13 @@ const handleUpdateNote = async (id: string, payload: string | TextNoteUpdatePayl
   await notesStore.updateNote(id, updatedNote);
 };
 
+const handleDraftUpdate = (id: string, payload: TextNoteUpdatePayload) => {
+  notesStore.applyNoteDraft(id, {
+    title: payload.title,
+    content: payload.content,
+  });
+};
+
 // Update math note metadata
 const handleMathUpdate = async (id: string, metadata: MathNoteMetadata) => {
   const note = notesStore.getNote(id);
@@ -269,7 +276,8 @@ const deleteNote = (id: string) => {
 
 const confirmDeleteNote = async () => {
   if (noteToDelete.value) {
-    splitNotes.handleNoteDeleted(noteToDelete.value);
+    const nextVisibleNoteId = splitNotes.handleNoteDeleted(noteToDelete.value);
+    syncVisibleNoteAfterSplitChange(nextVisibleNoteId);
     await notesStore.deleteNote(noteToDelete.value);
     noteToDelete.value = null;
   }
@@ -325,10 +333,7 @@ const createNoteInGroup = async (groupId: string | null) => {
   if (noteGroupsStore.isCollapsed(groupId)) {
     noteGroupsStore.toggleCollapsed(groupId);
   }
-  const noteId = await createNewNote("TEXT", groupId);
-  if (noteId && groupId?.startsWith("temp-") && networkStatus.isVerifiedOnline.value) {
-    void noteGroupsStore.syncWithServer();
-  }
+  await createNewNote("TEXT", groupId);
 };
 
 const handleCreateGroup = async (title: string) => {
@@ -481,9 +486,6 @@ watch(notes, (newNotes) => {
   }
 }, { once: true });
 
-// Handle note deletion — propagate to split state
-const _originalDeleteConfirm = confirmDeleteNote;
-
 // Toggle split from toolbar: open with next note, or close
 function toggleSplitView() {
   if (splitNotes.isSplit.value) {
@@ -533,8 +535,27 @@ function handleSplitDrop(noteId: string, position: SplitPosition) {
   splitInteraction.endSplitDrag();
 }
 
+function syncVisibleNoteAfterSplitChange(noteId: string | null) {
+  if (!noteId) {
+    if (fullscreen.isOpen.value) {
+      fullscreen.close();
+    }
+    return;
+  }
+
+  if (noteId !== currentNoteId.value) {
+    _skipNextWatcherSync.value = true;
+    currentNoteId.value = noteId;
+  }
+
+  if (fullscreen.isOpen.value && fullscreen.fullscreenId.value !== noteId) {
+    fullscreen.replace(noteId);
+  }
+}
+
 function closeVisualPane(side: "left" | "right") {
-  splitNotes.closePane(paneForSide(side));
+  const nextVisibleNoteId = splitNotes.closePane(paneForSide(side));
+  syncVisibleNoteAfterSplitChange(nextVisibleNoteId);
 }
 
 // ─── Adaptive Toolbar ─────────────────────────────────────────────
@@ -596,12 +617,20 @@ function handleContainerScroll(e: Event) {
       <!-- Error state for initial fetch -->
       <shared-error-message v-if="error" :error="error" />
 
-      <!-- <LocalSyncStatus v-if="!error && notes?.length" class="mx-4 my-0.5" feature-label="Notes"
-        :pending-count="pendingChangesCount" :pending-detail="pendingChangesDetail" :error-count="failedNotesCount" :is-fetching="isFetching"
-        :is-online="networkStatus.isOnline.value" :is-verified-online="networkStatus.isVerifiedOnline.value"
-        :is-connecting="networkStatus.isConnecting.value" :last-sync="notesStore.lastSync.value"
-        :action-label="failedNotesCount > 0 ? 'Retry failed' : 'Sync now'" :action-disabled="isFetching"
-        @action="handleSyncStatusAction" /> -->
+      <LocalSyncStatus v-if="!error && notes?.length" class="mx-4 my-0.5" feature-label="Notes"
+        :pending-count="pendingChangesCount" :pending-detail="pendingChangesDetail" :error-count="failedNotesCount"
+        :is-fetching="isFetching" :is-online="networkStatus.isOnline.value"
+        :is-verified-online="networkStatus.isVerifiedOnline.value" :is-connecting="networkStatus.isConnecting.value"
+        :last-sync="notesStore.lastSync.value" :action-label="failedNotesCount > 0 ? 'Retry failed' : 'Sync now'"
+        :action-disabled="isFetching" @action="handleSyncStatusAction" />
+      <div v-if="isDev" class="mx-4 mb-1 flex justify-end">
+        <u-button size="xs" color="neutral" variant="ghost"
+          @click="isDevSyncInspectorVisible = !isDevSyncInspectorVisible">
+          <icon name="i-lucide-bug" class="h-3.5 w-3.5" />
+          {{ isDevSyncInspectorVisible ? "Hide sync debug" : "Show sync debug" }}
+        </u-button>
+      </div>
+      <NotesSyncInspector v-if="isDev && isDevSyncInspectorVisible" :workspace-id="workspaceId" />
 
       <!-- Notes content -->
 
@@ -618,7 +647,7 @@ function handleContainerScroll(e: Event) {
       <div v-if="!error && !isFetching && notes?.length" class="relative flex flex-1 min-h-0 overflow-hidden"
         id="notes-section" @scroll="handleContainerScroll">
         <ui-drawer :show="isDrawerOpen" @closed="isDrawerOpen = false" :mobile="false" :lock-scroll="false"
-          teleport-to="#notes-section" :backdrop="false" :handle-visible="2" title="Notes" side="right">
+          teleport-to="#notes-section" :backdrop="false" :handle-visible="0" title="Notes" side="right">
           <NotesDrawer :workspace-id="workspaceId" :notes="notes" :groups="noteGroupsStore.orderedGroups.value"
             :selected-note-id="currentNoteId" :filtered-note-ids="notesStore.filteredNoteIds.value"
             :is-verified-online="networkStatus.isVerifiedOnline.value"
@@ -650,13 +679,15 @@ function handleContainerScroll(e: Event) {
               :initial-metadata="(currentNote.metadata as MathNoteMetadata | undefined)"
               @update="(meta: MathNoteMetadata) => handleMathUpdate(currentNoteId!, meta)"
               @toggle-fullscreen="fullscreen.toggle(currentNoteId!)" @delete="deleteNote(currentNoteId!)" />
-            <CanvasNoteEditor v-else-if="currentNote?.noteType === 'CANVAS'" :note-id="currentNote.id"
+            <CanvasNoteEditor v-else-if="currentNote?.noteType === 'CANVAS'" :key="`single-canvas-${currentNote.id}`"
+              :note-id="currentNote.id"
               :initial-metadata="(currentNote.metadata as CanvasNoteMetadata | undefined)"
               @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(currentNoteId!, meta)"
               @toggle-fullscreen="fullscreen.toggle(currentNoteId!)" @delete="deleteNote(currentNoteId!)" />
             <TextNote v-else-if="currentNote" :note="currentNote" :delete-note="deleteNote" size="lg"
-              @update="handleUpdateNote" @retry="handleRetry" @toggle-fullscreen="fullscreen.toggle"
-              placeholder="Double-click to add your note..." @add-to-material="emit('add-to-material', $event)" />
+              @update="handleUpdateNote" @draft-update="handleDraftUpdate" @retry="handleRetry"
+              @toggle-fullscreen="fullscreen.toggle" placeholder="Double-click to add your note..."
+              @add-to-material="emit('add-to-material', $event)" />
           </div>
 
           <!-- Split view -->
@@ -676,15 +707,15 @@ function handleContainerScroll(e: Event) {
                     </span>
                     <div class="flex items-center gap-1 shrink-0">
                       <u-button size="xs" color="neutral" variant="ghost" aria-label="Minimize left pane"
-                        @click="splitPaneLayoutRef?.toggleLeft()">
+                        @click.stop="splitPaneLayoutRef?.toggleLeft()">
                         <shared-icon name="panel-left-close" class="w-3.5 h-3.5" />
                       </u-button>
                       <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
-                        @click="splitNotes.swapPanes()">
+                        @click.stop="splitNotes.swapPanes()">
                         <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
                       </u-button>
                       <u-button size="xs" color="neutral" variant="ghost" aria-label="Close left pane"
-                        @click="closeVisualPane('left')">
+                        @click.stop="closeVisualPane('left')">
                         <icon name="i-lucide-x" class="w-3.5 h-3.5" />
                       </u-button>
                     </div>
@@ -708,7 +739,7 @@ function handleContainerScroll(e: Event) {
                         @delete="deleteNote(splitNotes.leftNoteId.value!)" />
                       <TextNote v-else :key="`split-left-text-${splitNotes.leftNoteId.value}`" :note="leftSplitNote"
                         :delete-note="deleteNote" :readonly="!isLeftActive" size="lg" @update="handleUpdateNote"
-                        @retry="handleRetry" @toggle-fullscreen="fullscreen.toggle"
+                        @draft-update="handleDraftUpdate" @retry="handleRetry" @toggle-fullscreen="fullscreen.toggle"
                         @add-to-material="emit('add-to-material', $event)" />
                     </div>
                   </div>
@@ -726,15 +757,15 @@ function handleContainerScroll(e: Event) {
                     </span>
                     <div class="flex items-center gap-1 shrink-0">
                       <u-button size="xs" color="neutral" variant="ghost" aria-label="Minimize right pane"
-                        @click="splitPaneLayoutRef?.toggleRight()">
+                        @click.stop="splitPaneLayoutRef?.toggleRight()">
                         <icon name="i-lucide-panel-right-close" class="w-3.5 h-3.5" />
                       </u-button>
                       <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
-                        @click="splitNotes.swapPanes()">
+                        @click.stop="splitNotes.swapPanes()">
                         <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
                       </u-button>
                       <u-button size="xs" color="neutral" variant="ghost" aria-label="Close right pane"
-                        @click="closeVisualPane('right')">
+                        @click.stop="closeVisualPane('right')">
                         <icon name="i-lucide-x" class="w-3.5 h-3.5" />
                       </u-button>
                     </div>
@@ -759,7 +790,7 @@ function handleContainerScroll(e: Event) {
                         @delete="deleteNote(splitNotes.rightNoteId.value!)" />
                       <TextNote v-else :key="`split-right-text-${splitNotes.rightNoteId.value}`" :note="rightSplitNote"
                         :delete-note="deleteNote" :readonly="!isRightActive" size="lg" @update="handleUpdateNote"
-                        @retry="handleRetry" @toggle-fullscreen="fullscreen.toggle"
+                        @draft-update="handleDraftUpdate" @retry="handleRetry" @toggle-fullscreen="fullscreen.toggle"
                         @add-to-material="emit('add-to-material', $event)" />
                     </div>
                   </div>
@@ -786,13 +817,15 @@ function handleContainerScroll(e: Event) {
           :initial-metadata="(currentFullscreenNote!.metadata as MathNoteMetadata | undefined)" :is-fullscreen="true"
           @update="(meta: MathNoteMetadata) => handleMathUpdate(currentFullscreenNote!.id, meta)"
           @toggle-fullscreen="fullscreen.close" @delete="deleteNote(currentFullscreenNote!.id)" />
-        <CanvasNoteEditor v-else-if="currentFullscreenNote.noteType === 'CANVAS'" :note-id="currentFullscreenNote.id"
+        <CanvasNoteEditor v-else-if="currentFullscreenNote.noteType === 'CANVAS'"
+          :key="`fullscreen-canvas-${currentFullscreenNote.id}`" :note-id="currentFullscreenNote.id"
           :initial-metadata="(currentFullscreenNote!.metadata as CanvasNoteMetadata | undefined)" :is-fullscreen="true"
           @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(currentFullscreenNote!.id, meta)"
           @toggle-fullscreen="fullscreen.close" @delete="deleteNote(currentFullscreenNote!.id)" />
         <TextNote v-else :note="currentFullscreenNote" :delete-note="deleteNote" :is-fullscreen="true" size="lg"
-          @update="handleUpdateNote" @retry="handleRetry" @toggle-fullscreen="fullscreen.close"
-          placeholder="Double-click to add your note..." @add-to-material="emit('add-to-material', $event)" />
+          @update="handleUpdateNote" @draft-update="handleDraftUpdate" @retry="handleRetry"
+          @toggle-fullscreen="fullscreen.close" placeholder="Double-click to add your note..."
+          @add-to-material="emit('add-to-material', $event)" />
       </template>
 
       <!-- Split fullscreen -->
@@ -809,11 +842,11 @@ function handleContainerScroll(e: Event) {
                   {{ getNoteDisplayTitle(leftSplitNote, 28) }}
                 </span>
                 <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
-                  @click="splitNotes.swapPanes()">
+                  @click.stop="splitNotes.swapPanes()">
                   <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
                 </u-button>
                 <u-button size="xs" color="neutral" variant="ghost" aria-label="Close left pane"
-                  @click="closeVisualPane('left')">
+                  @click.stop="closeVisualPane('left')">
                   <icon name="i-lucide-x" class="w-3.5 h-3.5" />
                 </u-button>
               </div>
@@ -833,8 +866,8 @@ function handleContainerScroll(e: Event) {
                     @toggle-fullscreen="fullscreen.close" @delete="deleteNote(splitNotes.leftNoteId.value!)" />
                   <TextNote v-else :key="`fs-split-left-text-${splitNotes.leftNoteId.value}`" :note="leftSplitNote"
                     :delete-note="deleteNote" :is-fullscreen="true" :readonly="!isLeftActive" size="lg"
-                    @update="handleUpdateNote" @retry="handleRetry" @toggle-fullscreen="fullscreen.close"
-                    @add-to-material="emit('add-to-material', $event)" />
+                    @update="handleUpdateNote" @draft-update="handleDraftUpdate" @retry="handleRetry"
+                    @toggle-fullscreen="fullscreen.close" @add-to-material="emit('add-to-material', $event)" />
                 </div>
               </div>
             </div>
@@ -848,11 +881,11 @@ function handleContainerScroll(e: Event) {
                   {{ getNoteDisplayTitle(rightSplitNote, 28) }}
                 </span>
                 <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
-                  @click="splitNotes.swapPanes()">
+                  @click.stop="splitNotes.swapPanes()">
                   <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
                 </u-button>
                 <u-button size="xs" color="neutral" variant="ghost" aria-label="Close right pane"
-                  @click="closeVisualPane('right')">
+                  @click.stop="closeVisualPane('right')">
                   <icon name="i-lucide-x" class="w-3.5 h-3.5" />
                 </u-button>
               </div>
@@ -873,8 +906,8 @@ function handleContainerScroll(e: Event) {
                     @toggle-fullscreen="fullscreen.close" @delete="deleteNote(splitNotes.rightNoteId.value!)" />
                   <TextNote v-else :key="`fs-split-right-text-${splitNotes.rightNoteId.value}`" :note="rightSplitNote"
                     :delete-note="deleteNote" :is-fullscreen="true" :readonly="!isRightActive" size="lg"
-                    @update="handleUpdateNote" @retry="handleRetry" @toggle-fullscreen="fullscreen.close"
-                    @add-to-material="emit('add-to-material', $event)" />
+                    @update="handleUpdateNote" @draft-update="handleDraftUpdate" @retry="handleRetry"
+                    @toggle-fullscreen="fullscreen.close" @add-to-material="emit('add-to-material', $event)" />
                 </div>
               </div>
             </div>

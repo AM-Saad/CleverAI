@@ -53,7 +53,8 @@ export const DB_CONFIG = {
   // 13: Added groupId index for workspace note grouping
   // 14: Added pendingNoteLayouts store for local-first note/group layout sync
   // 15: Added noteGroups + pendingNoteGroupChanges for local-first note grouping
-  VERSION: 15,
+  // 16: Added noteSyncConflicts for durable local/server conflict snapshots
+  VERSION: 16,
   STORES: {
     FORMS: "forms",
     NOTES: "notes",
@@ -61,6 +62,7 @@ export const DB_CONFIG = {
     PENDING_NOTES: "pendingNotes",
     PENDING_NOTE_GROUP_CHANGES: "pendingNoteGroupChanges",
     PENDING_NOTE_LAYOUTS: "pendingNoteLayouts",
+    NOTE_SYNC_CONFLICTS: "noteSyncConflicts",
     BOARD_ITEMS: "boardItems",
     PENDING_BOARD_ITEMS: "pendingBoardItems",
     BOARD_COLUMNS: "boardColumns",

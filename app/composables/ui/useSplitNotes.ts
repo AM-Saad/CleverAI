@@ -5,6 +5,7 @@
  * "active" (editable), and drag-hover state for the drop zones.
  * Persists to localStorage per workspace.
  */
+import { computed, readonly, ref } from "vue";
 
 export type SplitPosition = 'left' | 'right';
 export type ActivePane = 'primary' | 'secondary';
@@ -99,40 +100,36 @@ export function useSplitNotes(workspaceId: string, validNoteIds: () => Set<strin
    * The current `primaryNoteId` stays on the opposite side.
    */
   function openSplit(noteId: string, position: SplitPosition = 'right') {
-    console.log(`🔍 [TRACE:SPLIT] openSplit called`, { noteId, position, primaryNoteId: primaryNoteId.value });
-    if (!primaryNoteId.value) { console.log(`🔍 [TRACE:SPLIT] openSplit ABORTED — no primaryNoteId`); return; }
-    if (noteId === primaryNoteId.value) { console.log(`🔍 [TRACE:SPLIT] openSplit ABORTED — same note`); return; }
+    if (!primaryNoteId.value) return;
+    if (noteId === primaryNoteId.value) return;
 
     secondaryNoteId.value = noteId;
     secondaryPosition.value = position;
     isSplit.value = true;
     activePane.value = 'primary';
     persist();
-    console.log(`🔍 [TRACE:SPLIT] openSplit DONE`, { isSplit: true, primary: primaryNoteId.value, secondary: noteId, position });
   }
 
   /** Close split, keep primary as the single visible note */
   function closeSplit() {
-    console.log(`🔍 [TRACE:SPLIT] closeSplit called`, { wasSplit: isSplit.value, primary: primaryNoteId.value, secondary: secondaryNoteId.value });
     isSplit.value = false;
     secondaryNoteId.value = null;
     activePane.value = 'primary';
     persist();
+    return primaryNoteId.value;
   }
 
   /**
    * Close a specific pane. The surviving note becomes the single-view note.
    */
   function closePane(pane: ActivePane) {
-    console.log(`🔍 [TRACE:SPLIT] closePane called`, { pane, primary: primaryNoteId.value, secondary: secondaryNoteId.value });
     if (pane === 'secondary') {
-      closeSplit();
+      return closeSplit();
     } else {
       if (secondaryNoteId.value) {
-        console.log(`🔍 [TRACE:SPLIT] closePane — promoting secondary ${secondaryNoteId.value} to primary`);
         primaryNoteId.value = secondaryNoteId.value;
       }
-      closeSplit();
+      return closeSplit();
     }
   }
 
@@ -140,28 +137,24 @@ export function useSplitNotes(workspaceId: string, validNoteIds: () => Set<strin
   function swapPanes() {
     const from = secondaryPosition.value;
     secondaryPosition.value = from === 'right' ? 'left' : 'right';
-    console.log(`🔍 [TRACE:SPLIT] swapPanes`, { from, to: secondaryPosition.value, primary: primaryNoteId.value, secondary: secondaryNoteId.value });
     persist();
   }
 
   /** Set which pane is active (editable). The other becomes passive. */
   function setActivePane(pane: ActivePane) {
-    console.log(`🔍 [TRACE:SPLIT] setActivePane`, { pane, prev: activePane.value });
     activePane.value = pane;
   }
 
   /** Activate the left pane */
   function activateLeft() {
-    console.log(`🔍 [TRACE:SPLIT] activateLeft called`, { isSplit: isSplit.value, secondaryPosition: secondaryPosition.value });
-    if (!isSplit.value) { console.log(`🔍 [TRACE:SPLIT] activateLeft ABORTED — not split`); return; }
+    if (!isSplit.value) return;
     const pane: ActivePane = secondaryPosition.value === 'left' ? 'secondary' : 'primary';
     setActivePane(pane);
   }
 
   /** Activate the right pane */
   function activateRight() {
-    console.log(`🔍 [TRACE:SPLIT] activateRight called`, { isSplit: isSplit.value, secondaryPosition: secondaryPosition.value });
-    if (!isSplit.value) { console.log(`🔍 [TRACE:SPLIT] activateRight ABORTED — not split`); return; }
+    if (!isSplit.value) return;
     const pane: ActivePane = secondaryPosition.value === 'right' ? 'secondary' : 'primary';
     setActivePane(pane);
   }
@@ -174,14 +167,16 @@ export function useSplitNotes(workspaceId: string, validNoteIds: () => Set<strin
     if (!isSplit.value) {
       if (primaryNoteId.value === deletedId) {
         primaryNoteId.value = null;
+        persist();
       }
-      return;
+      return primaryNoteId.value;
     }
     if (deletedId === secondaryNoteId.value) {
-      closeSplit();
+      return closeSplit();
     } else if (deletedId === primaryNoteId.value) {
-      closePane('primary');
+      return closePane('primary');
     }
+    return primaryNoteId.value;
   }
 
   /**
@@ -189,7 +184,12 @@ export function useSplitNotes(workspaceId: string, validNoteIds: () => Set<strin
    * Called when the user selects a different note in single-view mode.
    */
   function setPrimaryNote(noteId: string | null) {
-    console.log(`🔍 [TRACE:SPLIT] setPrimaryNote`, { noteId, prev: primaryNoteId.value });
+    if (isSplit.value && noteId && noteId === secondaryNoteId.value) {
+      setActivePane('secondary');
+      persist();
+      return;
+    }
+
     primaryNoteId.value = noteId;
     persist();
   }
@@ -197,6 +197,12 @@ export function useSplitNotes(workspaceId: string, validNoteIds: () => Set<strin
   /** Update the secondary note (e.g. when the active pane is secondary and user picks a drawer item) */
   function setSecondaryNote(noteId: string) {
     if (!isSplit.value) return;
+    if (noteId === primaryNoteId.value) {
+      setActivePane('primary');
+      persist();
+      return;
+    }
+
     secondaryNoteId.value = noteId;
     persist();
   }

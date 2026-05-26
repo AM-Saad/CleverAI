@@ -1,12 +1,5 @@
-import type { Note, NoteType, UpdateNoteDTO } from "@@/shared/utils/note.contract";
-import type { NotesSyncResponse } from "@@/shared/utils/note-sync.contract";
-import { normalizeWorkspaceNoteTitle } from "@@/shared/utils/workspaceNote";
-import { DB_CONFIG, SW_MESSAGE_TYPES } from "~/utils/constants/pwa";
-import { evictStalePendingChanges } from "~/utils/idb";
-import {
-  setupOnlineListener,
-  setupSyncCompletionListener,
-} from "~/utils/sync/offlineSync";
+import type { NoteType } from "@@/shared/utils/note.contract";
+import type { NoteGroupLayoutItem } from "@@/shared/utils/note-sync.contract";
 import { useNetworkStatus } from "~/composables/shared/useNetworkStatus";
 import { createIndexedDbNotesLocalRepository } from "./notesLocalRepository";
 import {
@@ -18,14 +11,25 @@ import { createIndexedDbNotesGroupQueue } from "./notesGroupQueue";
 import { createIndexedDbNotesLayoutQueue } from "./notesLayoutQueue";
 import { createIndexedDbNotesPendingQueue } from "./notesPendingQueue";
 import { createNotesSyncCoordinator } from "./notesSyncCoordinator";
-import { logNotesOperation } from "./notesOperationLog";
 import {
-  normalizeCreateContent,
   normalizeLocalNote,
-  noteStateFromServer,
   type NoteState,
 } from "./noteTransforms";
-import { flushRegisteredNotesDrafts } from "./notesEditorRuntimeState";
+import { createIndexedDbNotesConflictRepository } from "./notesConflictRepository";
+import { createNotesConflictResolver } from "./notesConflictResolver";
+import { createNotesErrorPolicy } from "./notesErrorPolicy";
+import { createNotesMemoryStore } from "./notesMemoryStore";
+import { createNotesCommandService } from "./notesCommandService";
+import { createNotesSyncRuntime } from "./notesSyncRuntime";
+import { createNotesContentQueue } from "./notesContentQueue";
+import {
+  registerNotesSyncListenersOnce,
+  setActiveNotesWorkspace,
+} from "./notesSyncListeners";
+import {
+  cleanupNotesWorkspaceRuntime,
+  useNotesWorkspaceRuntime,
+} from "./notesWorkspaceRuntime";
 
 export type { NoteState } from "./noteTransforms";
 
@@ -38,6 +42,7 @@ interface NotesStore {
   layoutPendingCount: Ref<number>;
   layoutStatus: Ref<NotesLayoutStatus>;
   errorCount: ComputedRef<number>;
+  applyNoteDraft: (id: string, draft: Partial<Pick<NoteState, "title" | "content" | "metadata">>) => boolean;
   createNote: (content: string, tags?: string[], noteType?: NoteType, metadata?: Record<string, unknown>, title?: string, groupId?: string | null) => Promise<string | null>;
   updateNote: (id: string, updatedNote: NoteState) => Promise<boolean>;
   deleteNote: (id: string) => Promise<boolean>;
@@ -49,6 +54,8 @@ interface NotesStore {
   refreshFromServer: () => Promise<void>;
   syncWithServer: () => Promise<void>;
   syncPendingChanges: () => Promise<boolean>;
+  flushDrafts: () => Promise<void>;
+  setGroupLayoutProvider: (provider: () => NoteGroupLayoutItem[]) => void;
   refreshLayoutPendingCount: () => Promise<void>;
   retryFailedNote: (id: string) => Promise<boolean>;
   clearNoteError: (id: string) => void;
@@ -57,19 +64,19 @@ interface NotesStore {
   getNote: (id: string) => NoteState | null;
   setNotes?: (notes: NoteState[]) => void;
   setFilteredNoteIds: (ids: Set<string> | null) => void;
+  resolveNoteId: (id: string | null) => string | null;
   resetOfflineToast?: () => void;
 }
 
 // Global store instance - keyed by workspaceId
 const stores = new Map<string, NotesStore>();
-// Ensure we only wire one 'online' listener for notes sync across the app
-let notesOnlineListenerRegistered = false;
 
 /**
  * Creates or returns a notes store for a specific workspace
  * This provides local state management with optimistic updates
  */
 export function useNotesStore(workspaceId: string): NotesStore {
+  setActiveNotesWorkspace(workspaceId);
   // Return existing store if available
   if (stores.has(workspaceId)) {
     return stores.get(workspaceId)!;
@@ -78,125 +85,128 @@ export function useNotesStore(workspaceId: string): NotesStore {
   const { $api } = useNuxtApp();
   const toast = useToast();
   const networkMonitor = useNetworkStatus();
+  const workspaceRuntime = useNotesWorkspaceRuntime(workspaceId);
   const localRepository = createIndexedDbNotesLocalRepository();
   const layoutQueue = createIndexedDbNotesLayoutQueue();
   const groupQueue = createIndexedDbNotesGroupQueue();
   const pendingQueue = createIndexedDbNotesPendingQueue();
-
-  // Register once-per-app online listener and sync completion listener.
-  if (process.client && !notesOnlineListenerRegistered) {
-    // Helper: drain all stores' pending changes directly (client-owned sync).
-    const drainAllStoresSync = async () => {
-      for (const s of stores.values()) {
-        await s.syncPendingChanges();
-      }
-    };
-
-    // Helper: flush all stores' debounced saves before syncing.
-    const flushAllStoresDrafts = async () => {
-      await Promise.all(
-        Array.from(stores.values()).map((s) => (s as any)._flushDebounce?.()),
-      );
-    };
-
-    setupOnlineListener({
-      pendingStoreName: DB_CONFIG.STORES.PENDING_NOTES,
-      swMessageType: SW_MESSAGE_TYPES.SYNC_NOTES,
-      onOnline: () => {
-        // Obsolete: resetOfflineToast no longer needed, using global toast deduplication
-      },
-      // Step 1 of reconnect: flush all debounced saves so the latest edit
-      // is written to PENDING_NOTES before the SW reads them.
-      onBeforeSync: flushAllStoresDrafts,
-      // Step 3 of reconnect: client-owned sync (bypasses SW to avoid dual-sync race).
-      onSyncDirect: drainAllStoresSync,
-    });
-
-    setupOnlineListener({
-      pendingStoreName: DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS,
-      swMessageType: SW_MESSAGE_TYPES.SYNC_NOTES,
-      onBeforeSync: flushAllStoresDrafts,
-      onSyncDirect: drainAllStoresSync,
-    });
-
-    setupOnlineListener({
-      pendingStoreName: DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES,
-      swMessageType: SW_MESSAGE_TYPES.SYNC_NOTES,
-      onBeforeSync: flushAllStoresDrafts,
-      onSyncDirect: drainAllStoresSync,
-    });
-
-    // Guard: avoid re-entrant sync cycles (SW synced → syncWithServer → triggers another sync → ...).
-    let notesSyncRefreshing = false;
-
-    setupSyncCompletionListener({
-      messageType: SW_MESSAGE_TYPES.NOTES_SYNCED,
-      onSynced: async (appliedCount: number) => {
-        if (notesSyncRefreshing) return; // prevent re-entry
-        notesSyncRefreshing = true;
-        try {
-          // Hydrate from IDB only, rather than triggering a full server refetch and loader.
-          for (const s of stores.values()) {
-            await (s as any).hydrateLocalNotes?.();
-          }
-        } finally {
-          notesSyncRefreshing = false;
-        }
-      },
-    });
-
-    notesOnlineListenerRegistered = true;
-  }
-
-  // (Removed offline toast deduplication state)
-
-  const { debouncedFunc: debouncedSave, flush: flushSave, isWaiting: isSaveWaiting } = useDebounce(
-    (id: string, content: string, title?: string) => {
-      updateNoteToServer(id, content, title);
-    },
-    1000
-  );
-
-  // Expose flush so the online listener can call it before sync
-  const _flushDebounce = async () => {
-    await flushRegisteredNotesDrafts();
-    if (!isSaveWaiting.value) return; // Breaks recursive loop!
-    
-    // flush() calls the underlying fn immediately and cancels the timer
-    const dirtyNotes = Array.from(notes.value.values()).filter(n => n.isDirty);
-    await Promise.allSettled(dirtyNotes.map((n) => Promise.resolve(flushSave(n.id, n.content, n.title))));
-  };
+  const conflictRepository = createIndexedDbNotesConflictRepository();
 
   // Local reactive state
   const notes = ref<Map<string, NoteState>>(new Map());
   const loadingStates = ref<Map<string, boolean>>(new Map());
   const lastSync = ref<Date | null>(null);
   const filteredNoteIds = ref<Set<string> | null>(null);
+  const noteIdAliases = ref<Map<string, string>>(new Map());
   const noteValues = computed(() => Array.from(notes.value.values()));
+  const memoryStore = createNotesMemoryStore(notes);
   const dirtyCount = computed(() => noteValues.value.filter((note) => note.isDirty).length);
   const layoutPendingCount = ref(0);
   const layoutStatus = ref<NotesLayoutStatus>("idle");
   const errorCount = computed(() => noteValues.value.filter((note) => Boolean(note.error)).length);
+  let groupLayoutProvider: () => NoteGroupLayoutItem[] = () =>
+    workspaceRuntime.getGroupLayout();
+  const setGroupLayoutProvider = (provider: () => NoteGroupLayoutItem[]) => {
+    groupLayoutProvider = provider;
+  };
   const syncCoordinator = createNotesSyncCoordinator({
     workspaceId,
     notes,
     localRepository,
     layoutQueue,
     pendingQueue,
+    onNoteIdRemapped: (tempId, serverId) => {
+      const nextAliases = new Map(noteIdAliases.value);
+      nextAliases.set(tempId, serverId);
+      noteIdAliases.value = nextAliases;
+    },
+  });
+  const conflictResolver = createNotesConflictResolver({
+    workspaceId,
+    notes,
+    conflictRepository,
+    pendingQueue,
+    localRepository,
   });
 
-  // Debounced server sync to reduce API calls during typing
-  const saveToServer = async (id: string, content: string, title?: string) => {
-    debouncedSave(id, content, title);
+  const applyNoteDraft = (
+    id: string,
+    draft: Partial<Pick<NoteState, "title" | "content" | "metadata">>,
+  ): boolean => {
+    const note = notes.value.get(id);
+    if (!note) return false;
+
+    const nextNote = normalizeLocalNote({
+      ...note,
+      ...draft,
+      updatedAt: new Date(),
+    });
+    notes.value.set(id, nextNote);
+    return true;
   };
 
-  const refreshLayoutPendingCount = async () => {
-    const pendingLayout = await layoutQueue.load(workspaceId);
-    layoutPendingCount.value = pendingLayout ? 1 : 0;
-    if (pendingLayout && layoutStatus.value === "idle") {
-      layoutStatus.value = "queued";
-    }
+  const errorPolicy = createNotesErrorPolicy({ maxAttempts: 4 });
+  const resetSyncRetry = () => errorPolicy.reset();
+  let syncRuntime: ReturnType<typeof createNotesSyncRuntime>;
+  const syncPendingChanges = async (): Promise<boolean> => {
+    return syncRuntime.syncPendingChanges("background");
   };
+  const scheduleSyncRetry = () => {
+    errorPolicy.scheduleRetry({
+      workspaceId,
+      retry: () => {
+        if (networkMonitor.isVerifiedOnline.value) {
+          void syncPendingChanges();
+        }
+      },
+      onTerminalFailure: () => {
+        toast.add({
+          title: "Sync failed",
+          description: "4 retries exhausted. Your local notes are still saved. Retry sync or export affected notes.",
+          color: "error",
+        });
+      },
+    });
+  };
+  const contentQueue = createNotesContentQueue({
+    workspaceId,
+    notes,
+    pendingQueue,
+    isVerifiedOnline: networkMonitor.isVerifiedOnline,
+    requestSync: () => {
+      if (networkMonitor.isVerifiedOnline.value) {
+        void syncPendingChanges();
+      }
+    },
+  });
+  const flushDrafts = contentQueue.flushDrafts;
+  const queueContentSave = contentQueue.queueContentSave;
+
+  syncRuntime = createNotesSyncRuntime({
+    workspaceId,
+    notes,
+    loadingStates,
+    lastSync,
+    layoutPendingCount,
+    layoutStatus,
+    noteIdAliases,
+    localRepository,
+    pendingQueue,
+    groupQueue,
+    layoutQueue,
+    syncCoordinator,
+    conflictResolver,
+    networkMonitor: {
+      isVerifiedOnline: networkMonitor.isVerifiedOnline,
+    },
+    notesApi: $api.notes,
+    flushDrafts,
+    resetSyncRetry,
+    scheduleSyncRetry,
+    hydrateLocalGroups: () => workspaceRuntime.hydrateLocalGroups(),
+  });
+
+  const refreshLayoutPendingCount = () => syncRuntime.refreshLayoutPendingCount();
 
   let layoutSyncTimer: ReturnType<typeof setTimeout> | null = null;
   const scheduleLayoutSync = () => {
@@ -209,7 +219,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
         if (!connected) return;
       }
       void syncPendingChanges();
-    }, 500);
+    }, 50);
   };
 
   const layoutController = createNotesLayoutController({
@@ -217,7 +227,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
     notes,
     localRepository,
     layoutQueue,
-    getGroupLayout: () => [],
+    getGroupLayout: () => groupLayoutProvider(),
     onLayoutPendingChanged: refreshLayoutPendingCount,
     requestSync: scheduleLayoutSync,
   });
@@ -226,263 +236,33 @@ export function useNotesStore(workspaceId: string): NotesStore {
     layoutStatus.value = status;
   });
 
-  // ── Sync retry with exponential backoff ──
-  const syncRetry = {
-    attempts: 0,
-    timer: null as ReturnType<typeof setTimeout> | null,
-    maxAttempts: 5,
-    baseDelay: 1000,
-    maxDelay: 60_000,
-    jitterPct: 0.2,
-  };
-  const calcRetryDelay = () => {
-    const raw = Math.min(
-      syncRetry.baseDelay * Math.pow(2, syncRetry.attempts),
-      syncRetry.maxDelay,
-    );
-    const jitter = raw * syncRetry.jitterPct * (Math.random() * 2 - 1);
-    return Math.max(0, Math.round(raw + jitter));
-  };
-  const resetSyncRetry = () => {
-    syncRetry.attempts = 0;
-    if (syncRetry.timer) {
-      clearTimeout(syncRetry.timer);
-      syncRetry.timer = null;
-    }
-  };
-  const scheduleSyncRetry = () => {
-    if (syncRetry.attempts >= syncRetry.maxAttempts) {
-      toast.add({
-        title: "Sync failed",
-        description: `${syncRetry.maxAttempts} retries exhausted. Tap to retry manually.`,
-        color: "error",
-      });
-      return;
-    }
-    const delay = calcRetryDelay();
-    syncRetry.attempts++;
-    logNotesOperation("sync-failure", {
-      workspaceId,
-      reason: "scheduling-retry",
-      attempt: syncRetry.attempts,
-      delay,
-    });
-    syncRetry.timer = setTimeout(() => {
-      syncRetry.timer = null;
+  const commandService = createNotesCommandService({
+    memoryStore,
+    localRepository,
+    pendingQueue,
+    layoutController,
+    registerBackgroundSync: () => pendingQueue.registerBackgroundSync(),
+    requestSync: () => {
       if (networkMonitor.isVerifiedOnline.value) {
         void syncPendingChanges();
       }
-    }, delay);
-  };
+    },
+  });
 
-  const syncPendingChanges = async (): Promise<boolean> => {
-    await _flushDebounce();
-
-    if (!networkMonitor.isVerifiedOnline.value) {
-      await refreshLayoutPendingCount();
-      return false;
-    }
-
-    const pendingChanges = await pendingQueue.load(workspaceId);
-    const pendingGroupChanges = await groupQueue.load(workspaceId);
-    const pendingLayout = await layoutQueue.load(workspaceId);
-    if (!pendingChanges.length && !pendingGroupChanges.length && !pendingLayout) {
-      layoutPendingCount.value = 0;
-      layoutStatus.value = "synced";
-      resetSyncRetry();
-      return true;
-    }
-
-    // Hybrid Online Sync: if we have EXACTLY ONE content upsert, NO group/layout changes, and a non-temporary ID,
-    // call PATCH /api/notes/[id] directly instead of the heavier /api/notes/sync.
-    const change = pendingChanges[0];
-    const isTempId = change?.id?.startsWith("temp-");
-    if (
-      change &&
-      !pendingGroupChanges.length &&
-      !pendingLayout &&
-      pendingChanges.length === 1 &&
-      change.operation === "upsert" &&
-      !isTempId
-    ) {
-      const updatePayload: UpdateNoteDTO = {
-        title: change.title,
-        content: change.content,
-        groupId: change.groupId,
-        tags: change.tags,
-        noteType: change.noteType as NoteType | undefined,
-        metadata: change.metadata as Record<string, unknown> | undefined,
-      };
-
-      const patchResult = await $api.notes.update(change.id, updatePayload);
-      if (!patchResult.success) {
-        console.error("Failed to sync note update", { error: patchResult.error });
-        logNotesOperation("sync-failure", {
-          workspaceId,
-          reason: "notes-patch-api-failed",
-        });
-        scheduleSyncRetry();
-        return false;
-      }
-
-      resetSyncRetry();
-
-      // Construct a mock sync response to update local versions and clean state
-      const serverNote = patchResult.data;
-      const syncResult: NotesSyncResponse = {
-        applied: [change.id],
-        conflicts: [],
-        idMap: {},
-        noteIdMap: {},
-        groupApplied: [],
-        groupConflicts: [],
-        groupIdMap: {},
-        errors: [],
-        layoutApplied: false,
-        layoutConflict: false,
-      };
-
-      await syncCoordinator.applySyncResult(syncResult);
-
-      // Update note version locally to match server's newly incremented version
-      const note = notes.value.get(change.id);
-      if (note && serverNote) {
-        note.version = serverNote.version;
-        await localRepository.save(note);
-      }
-
-      await pendingQueue.remove([change.id]);
-      await refreshLayoutPendingCount();
-      lastSync.value = new Date();
-
-      logNotesOperation("sync-success", {
-        workspaceId,
-        applied: 1,
-        groupApplied: 0,
-        layoutApplied: false,
-        layoutConflict: false,
-      });
-      return true;
-    }
-
-    logNotesOperation("sync-start", {
-      workspaceId,
-      contentChanges: pendingChanges.length,
-      groupChanges: pendingGroupChanges.length,
-      layout: Boolean(pendingLayout),
-    });
-    if (pendingLayout) layoutStatus.value = "syncing";
-
-    const result = await $api.notes.sync({
-      changes: pendingChanges,
-      contentChanges: [],
-      groupChanges: pendingGroupChanges,
-      ...(pendingLayout && { layoutChange: pendingLayout }),
-    });
-    if (!result.success) {
-      console.error("Failed to sync notes queues", { error: result.error });
-      await refreshLayoutPendingCount();
-      if (pendingLayout) layoutStatus.value = "failed";
-      logNotesOperation("sync-failure", {
-        workspaceId,
-        reason: "notes-sync-api-failed",
-      });
-      scheduleSyncRetry();
-      return false;
-    }
-
-    // Success — reset retry state
-    resetSyncRetry();
-
-    await syncCoordinator.applySyncResult(result.data);
-    await pendingQueue.remove(result.data.applied ?? []);
-    await groupQueue.remove(result.data.groupApplied ?? []);
-    if (result.data.layoutApplied && pendingLayout) {
-      await layoutQueue.remove(workspaceId);
-    }
-    await refreshLayoutPendingCount();
-    layoutStatus.value = result.data.layoutConflict
-      ? "conflict"
-      : layoutPendingCount.value
-        ? "queued"
-        : "synced";
-    lastSync.value = new Date();
-    logNotesOperation("sync-success", {
-      workspaceId,
-      applied: result.data.applied.length,
-      groupApplied: result.data.groupApplied.length,
-      layoutApplied: result.data.layoutApplied,
-      layoutConflict: result.data.layoutConflict,
-    });
-    return !result.data.layoutConflict;
-  };
-
-  // Queue note changes for the single sync engine. Online state only decides
-  // whether we schedule a background drain, never whether the local save exists.
-  const updateNoteToServer = async (
-    id: string,
-    content: string,
-    title?: string,
-  ): Promise<boolean> => {
-    const note = notes.value.get(id);
-    if (!note) return false;
-    const resolvedTitle = normalizeWorkspaceNoteTitle(title ?? note.title, content);
-
-    try {
-      note.isLoading = true;
-      note.error = null;
-      await pendingQueue.add({
-        id,
-        operation: "upsert",
-        updatedAt: Date.now(),
-        localVersion: (note as any).localVersion
-          ? (note as any).localVersion + 1
-          : 1,
-        serverVersion: note.version,
-        workspaceId: note.workspaceId,
-        groupId: note.groupId ?? null,
-        title: resolvedTitle,
-        content,
-        tags: note.tags,
-        noteType: (note as any).noteType,
-        metadata: (note as any).metadata,
-      });
-      if (!networkMonitor.isVerifiedOnline.value) {
-        await pendingQueue.registerBackgroundSync();
-      }
-      logNotesOperation("content-queued", { workspaceId: note.workspaceId, id });
-      note.isLoading = false;
-      note.isDirty = true;
-      if (networkMonitor.isVerifiedOnline.value) {
-        void syncPendingChanges();
-      }
-      return true;
-    } catch {
-      note.isLoading = false;
-      note.error = "Failed to save note locally";
-      return false;
-    }
-  };
+  workspaceRuntime.registerSyncDrainer((reason) =>
+    syncRuntime.syncPendingChanges(reason),
+  );
 
   // Update note content - local-first approach with IndexedDB persistence
   const updateNote = async (
     id: string,
     updatedNote: NoteState
   ): Promise<boolean> => {
-    // Step 1: Optimistic update
-    const nextNote = normalizeLocalNote({
-      ...updatedNote,
-      updatedAt: new Date(),
-      isDirty: true,
+    return commandService.updateNoteContent({
+      id,
+      note: updatedNote,
+      queueContentSave,
     });
-    notes.value.set(id, nextNote);
-    // Persist locally immediately for offline continuity
-    try {
-      await localRepository.save(nextNote);
-    } catch { }
-    // Step 2: Debounced server sync
-    saveToServer(id, nextNote.content, nextNote.title);
-    return true;
   };
 
   // Create a new note - simple optimistic approach
@@ -494,85 +274,25 @@ export function useNotesStore(workspaceId: string): NotesStore {
     title?: string,
     groupId?: string | null,
   ): Promise<string | null> => {
-    const tempId = `temp-${Date.now()}`;
-    const resolvedContent = normalizeCreateContent(content, noteType);
-    const resolvedTitle = normalizeWorkspaceNoteTitle(title, resolvedContent);
-    const resolvedGroupId = groupId ?? null;
-    const nextOrder = Array.from(notes.value.values()).filter(
-      (note) => (note.groupId ?? null) === resolvedGroupId,
-    ).length;
-
-    // Add optimistic note
-    const optimisticNote: NoteState = normalizeLocalNote({
-      id: tempId,
+    return commandService.createNote({
       workspaceId,
-      groupId: resolvedGroupId,
-      title: resolvedTitle,
-      content: resolvedContent,
-      tags,
-      order: nextOrder,
-      noteType,
-      metadata,
-      version: 1,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isLoading: true,
-      isDirty: false,
-      error: null,
-    });
-
-    notes.value.set(tempId, optimisticNote);
-    // Update the UI immediately, then persist the same local state.
-    await localRepository.save(optimisticNote);
-
-    await pendingQueue.add({
-      id: tempId,
-      operation: "upsert",
-      updatedAt: Date.now(),
-      localVersion: 1,
-      workspaceId,
-      groupId: resolvedGroupId,
-      title: resolvedTitle,
-      content: resolvedContent,
+      content,
       tags,
       noteType,
       metadata,
+      title,
+      groupId,
     });
-    await pendingQueue.registerBackgroundSync();
-
-    optimisticNote.isLoading = false;
-    optimisticNote.isDirty = true;
-    notes.value.set(tempId, optimisticNote);
-
-    const usesPendingGroup = Boolean(resolvedGroupId?.startsWith("temp-"));
-    if (networkMonitor.isVerifiedOnline.value && !usesPendingGroup) {
-      void syncPendingChanges();
-    }
-    return tempId;
   };
   // Delete a note - simple optimistic approach
   const deleteNote = async (id: string): Promise<boolean> => {
     const note = notes.value.get(id);
     if (!note) return false;
 
-    // Optimistic removal from reactive state
-    notes.value.delete(id);
-    await localRepository.delete(id);
-
-    await pendingQueue.add({
+    return commandService.deleteNote({
       id,
-      operation: "delete",
-      updatedAt: Date.now(),
-      localVersion: 1,
-      serverVersion: note.version,
-      workspaceId: note.workspaceId,
+      note,
     });
-    await pendingQueue.registerBackgroundSync();
-
-    if (networkMonitor.isVerifiedOnline.value) {
-      void syncPendingChanges();
-    }
-    return true;
   };
 
   const applyLayoutCommand = async (command: NotesLayoutCommand): Promise<boolean> => {
@@ -610,126 +330,10 @@ export function useNotesStore(workspaceId: string): NotesStore {
     await layoutController.queueNoteLayout(nextLayout);
   };
 
-  const remapGroupIds = async (groupIdMap: Record<string, string>): Promise<void> => {
-    if (!Object.keys(groupIdMap).length) return;
-    const changedNotes: NoteState[] = [];
-    const nextNotes = new Map(notes.value);
-
-    for (const [id, note] of nextNotes) {
-      if (!note.groupId || !groupIdMap[note.groupId]) continue;
-      const nextNote = normalizeLocalNote({
-        ...note,
-        groupId: groupIdMap[note.groupId],
-      });
-      nextNotes.set(id, nextNote);
-      changedNotes.push(nextNote);
-    }
-
-    if (!changedNotes.length) return;
-    notes.value = nextNotes;
-    await localRepository.saveMany(changedNotes);
-  };
-
-  const hydrateLocalNotes = async (): Promise<void> => {
-    try {
-      // Evict stale/excess pending changes once per session during first hydration
-      await evictStalePendingChanges();
-      await syncCoordinator.hydrateFromLocalState();
-    } finally {
-      await refreshLayoutPendingCount();
-    }
-  };
-
-  const refreshFromServer = async (): Promise<void> => {
-    if (!networkMonitor.isVerifiedOnline.value) {
-      await refreshLayoutPendingCount();
-      return;
-    }
-
-    loadingStates.value.set(workspaceId, true);
-
-    try {
-      const hadPendingChanges = (await pendingQueue.load(workspaceId)).length > 0;
-      const hadPendingGroups = (await groupQueue.load(workspaceId)).length > 0;
-      const hadPendingLayout = Boolean(await layoutQueue.load(workspaceId));
-      const pendingSynced = await syncPendingChanges();
-      const remainingChanges = await pendingQueue.load(workspaceId);
-      const remainingGroups = await groupQueue.load(workspaceId);
-      const remainingLayout = await layoutQueue.load(workspaceId);
-
-      if (
-        (hadPendingChanges || hadPendingGroups || hadPendingLayout) &&
-        (!pendingSynced || remainingChanges.length > 0 || remainingGroups.length > 0 || remainingLayout)
-      ) {
-        return;
-      }
-
-      const pendingAfterSync = new Set(
-        remainingChanges.map((change) => change.id),
-      );
-
-      const result = await $api.notes.getByWorkspace(workspaceId);
-
-      if (!result.success) return;
-
-      // Preserve only unresolved temp notes that still have pending sync work.
-      const tempNotes = Array.from(notes.value.values()).filter((n) =>
-        n.id.startsWith("temp-") && pendingAfterSync.has(n.id)
-      );
-
-      // Preserve dirty in-progress edits; server data may be stale relative to IDB.
-      const dirtyNotes = new Map<string, NoteState>();
-      for (const [id, note] of notes.value) {
-        if (note.isDirty && !id.startsWith("temp-")) {
-          dirtyNotes.set(id, note);
-        }
-      }
-
-      const noteStates: NoteState[] = result.data.map((note: Note) =>
-        noteStateFromServer(note)
-      );
-
-      notes.value.clear();
-      noteStates.forEach((ns) => {
-        const dirty = dirtyNotes.get(ns.id);
-        notes.value.set(ns.id, dirty ?? ns);
-      });
-
-      for (const tempNote of tempNotes) {
-        notes.value.set(tempNote.id, tempNote);
-      }
-
-      await localRepository.saveMany(noteStates.filter(ns => !dirtyNotes.has(ns.id)));
-
-      for (const tempNote of tempNotes) {
-        try {
-          await localRepository.delete(tempNote.id);
-        } catch {
-          /* best effort cleanup */
-        }
-      }
-
-      lastSync.value = new Date();
-    } finally {
-      await refreshLayoutPendingCount();
-      loadingStates.value.set(workspaceId, false);
-    }
-  };
-
-  // Manual full sync: hydrate local first, then drain pending work and refresh.
-  const syncWithServer = async (): Promise<void> => {
-    await hydrateLocalNotes();
-
-    if (!networkMonitor.isVerifiedOnline.value) {
-      return;
-    }
-
-    try {
-      await refreshFromServer();
-    } catch {
-      // IDB data from hydrateLocalNotes remains visible.
-    }
-  };
+  const remapGroupIds = syncRuntime.remapGroupIds;
+  const hydrateLocalNotes = syncRuntime.hydrateLocalNotes;
+  const refreshFromServer = syncRuntime.refreshFromServer;
+  const syncWithServer = syncRuntime.syncWithServer;
 
   // Utility functions
   const isNoteLoading = (id: string): boolean => {
@@ -747,6 +351,14 @@ export function useNotesStore(workspaceId: string): NotesStore {
   const retryFailedNote = async (id: string): Promise<boolean> => {
     const note = notes.value.get(id);
     if (!note || !note.error) return false;
+    if (note.error.includes("Sync conflict detected")) {
+      toast.add({
+        title: "Resolve conflict first",
+        description: "This note has local and server versions. It will not overwrite either side until a conflict choice is made.",
+        color: "warning",
+      });
+      return false;
+    }
 
     // Clear error state and retry with current content
     note.error = null;
@@ -754,7 +366,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
     notes.value.set(id, note);
 
     // Retry the save operation
-    return await updateNoteToServer(id, note.content, note.title);
+    return await contentQueue.queueContentSaveNow(id, note.content, note.title);
   };
 
   // Clear error state for a note
@@ -768,6 +380,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
   const getNote = (id: string): NoteState => {
     return notes.value.get(id)!;
   };
+  const resolveNoteId = syncRuntime.resolveNoteId;
   const setNotes = (newNotes: NoteState[]) => {
     notes.value.clear();
     newNotes.forEach((note) => {
@@ -788,7 +401,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
   };
 
   // Create store instance
-  const store: NotesStore & { _flushDebounce?: () => Promise<void> } = {
+  const store: NotesStore = {
     notes,
     loadingStates,
     lastSync,
@@ -796,8 +409,9 @@ export function useNotesStore(workspaceId: string): NotesStore {
     layoutPendingCount,
     layoutStatus,
     errorCount,
-    _flushDebounce,
+    flushDrafts,
     filteredNoteIds,
+    applyNoteDraft,
     createNote,
     updateNote,
     deleteNote,
@@ -810,6 +424,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
     refreshFromServer,
     syncWithServer,
     syncPendingChanges,
+    setGroupLayoutProvider,
     refreshLayoutPendingCount,
     retryFailedNote,
     clearNoteError,
@@ -817,6 +432,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
     isNoteDirty,
     setNotes,
     setFilteredNoteIds,
+    resolveNoteId,
   };
 
   // Cache the store BEFORE triggering the async sync so that any
@@ -824,6 +440,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
   // cache rather than spinning up a second instance and a second network
   // request.
   stores.set(workspaceId, store);
+  registerNotesSyncListenersOnce(stores);
 
   // Defer local hydration to the mounting phase so that:
   //  1. The cache entry is already set (race condition above is avoided).
@@ -846,4 +463,5 @@ export function useNotesStore(workspaceId: string): NotesStore {
  */
 export function cleanupNotesStore(workspaceId: string): void {
   stores.delete(workspaceId);
+  cleanupNotesWorkspaceRuntime(workspaceId);
 }

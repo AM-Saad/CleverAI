@@ -22,6 +22,8 @@ export const PushSubscriptionDTO = z.object({
     p256dh: z.string(),
   }),
   userId: z.string().optional(),
+  userAgent: z.string().optional(),
+  expirationTime: z.number().nullable().optional(),
 });
 export type PushSubscriptionDTO = z.infer<typeof PushSubscriptionDTO>;
 
@@ -29,9 +31,15 @@ export type PushSubscriptionDTO = z.infer<typeof PushSubscriptionDTO>;
 // Unsubscribe DTO
 // ==========================================
 
-export const UnsubscribeDTO = z.object({
-  endpoint: z.string().url(),
-});
+export const UnsubscribeDTO = z
+  .object({
+    endpoint: z.string().url().optional(),
+    subscriptionId: z.string().optional(),
+  })
+  .refine((value) => value.endpoint || value.subscriptionId, {
+    message: "endpoint or subscriptionId is required",
+    path: ["endpoint"],
+  });
 export type UnsubscribeDTO = z.infer<typeof UnsubscribeDTO>;
 
 // ==========================================

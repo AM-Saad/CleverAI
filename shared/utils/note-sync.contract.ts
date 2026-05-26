@@ -71,6 +71,20 @@ export const PendingNoteGroupChangeSchema = z.object({
 });
 export type PendingNoteGroupChange = z.infer<typeof PendingNoteGroupChangeSchema>;
 
+export const NoteConflictSnapshotSchema = z.object({
+  id: z.string(),
+  workspaceId: z.string(),
+  groupId: z.string().nullable().optional(),
+  title: z.string().optional(),
+  content: z.string().optional(),
+  tags: z.array(z.string()).optional(),
+  noteType: z.string().optional(),
+  metadata: z.unknown().optional(),
+  version: z.number().int().nonnegative().optional(),
+  updatedAt: z.string().optional(),
+});
+export type NoteConflictSnapshot = z.infer<typeof NoteConflictSnapshotSchema>;
+
 export const NotesSyncRequestSchema = z.object({
   changes: z.array(PendingNoteChangeSchema).default([]),
   contentChanges: z.array(PendingNoteChangeSchema).default([]),
@@ -92,7 +106,19 @@ export type NotesSyncRequest = z.infer<typeof NotesSyncRequestSchema>;
 
 export const NotesSyncResponseSchema = z.object({
   applied: z.array(z.string()).default([]),
-  conflicts: z.array(z.object({ id: z.string() })).default([]),
+  appliedNotes: z.array(z.object({
+    id: z.string(),
+    version: z.number().int().nonnegative(),
+    updatedAt: z.string().optional(),
+  })).default([]),
+  conflicts: z.array(z.object({
+    id: z.string(),
+    reason: z.string().optional(),
+    resolution: z.string().optional(),
+    serverVersion: z.number().int().nonnegative().optional(),
+    clientServerVersion: z.number().int().nonnegative().optional(),
+    serverSnapshot: NoteConflictSnapshotSchema.optional(),
+  })).default([]),
   idMap: z.record(z.string(), z.string()).default({}),
   noteIdMap: z.record(z.string(), z.string()).default({}),
   groupApplied: z.array(z.string()).default([]),

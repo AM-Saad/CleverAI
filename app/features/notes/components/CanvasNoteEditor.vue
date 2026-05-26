@@ -72,7 +72,7 @@ const isCanvasFocused = ref(false);
 const isAspectRatioLocked = ref(false);
 
 // ── History ──
-const { canUndo, canRedo, pushState, undo, redo } = useCanvasHistory(
+const { canUndo, canRedo, pushState, undo, redo, reset: resetHistory } = useCanvasHistory(
   props.initialMetadata?.shapes ?? []
 );
 
@@ -156,12 +156,25 @@ const {
 function scheduleAutoSave() {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    emit("update", { shapes: JSON.parse(JSON.stringify(shapes.value)) });
+    saveTimer = null;
+    flushAutoSave();
   }, SAVE_TIMEOUT_MS);
 }
 
+function cloneShapes(source: CanvasShape[] = []): CanvasShape[] {
+  return JSON.parse(JSON.stringify(source));
+}
+
+function flushAutoSave() {
+  if (saveTimer) {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+  }
+  emit("update", { shapes: cloneShapes(shapes.value) });
+}
+
 function commitState() {
-  pushState(JSON.parse(JSON.stringify(shapes.value)));
+  pushState(cloneShapes(shapes.value));
   scheduleAutoSave();
 }
 
@@ -394,8 +407,25 @@ function handleCanvasKeyup(event: KeyboardEvent) {
   }
 }
 
+watch(
+  () => props.noteId,
+  () => {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+    const nextShapes = cloneShapes(props.initialMetadata?.shapes ?? []);
+    shapes.value = nextShapes;
+    resetHistory(nextShapes);
+    clearSelection();
+    updateTransformer();
+  },
+);
+
 onUnmounted(() => {
-  if (saveTimer) clearTimeout(saveTimer);
+  if (saveTimer) {
+    flushAutoSave();
+  }
 });
 
 // ── Helpers ──

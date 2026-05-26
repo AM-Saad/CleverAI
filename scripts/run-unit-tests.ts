@@ -32,9 +32,25 @@ import {
 } from "../shared/utils/note-sync.contract";
 import {
   buildCanonicalNoteLayout,
+  createNotesLayoutController,
   type NotesLayoutCommand,
   type NotesLayoutStatus,
 } from "../app/features/notes/composables/notesLayoutController";
+import { createNotesSyncCoordinator } from "../app/features/notes/composables/notesSyncCoordinator";
+import { createNotesSyncRuntime } from "../app/features/notes/composables/notesSyncRuntime";
+import { createNotesConflictResolver } from "../app/features/notes/composables/notesConflictResolver";
+import { createNotesCommandService } from "../app/features/notes/composables/notesCommandService";
+import { createNotesContentQueue } from "../app/features/notes/composables/notesContentQueue";
+import { createNotesGroupCommandService } from "../app/features/notes/composables/notesGroupCommandService";
+import { createNotesMemoryStore } from "../app/features/notes/composables/notesMemoryStore";
+import { createNotesSyncEngine } from "../app/features/notes/composables/notesSyncEngine";
+import { createNotesTempId } from "../app/features/notes/composables/tempIds";
+import { createClientTempId } from "../app/utils/local-first/tempIds";
+import {
+  createLocalFirstErrorPolicy,
+  isLocalFirstConflict,
+} from "../app/utils/local-first/errorPolicy";
+import type { LocalFirstConflictRecord } from "../app/utils/local-first/types";
 import {
   DEFAULT_WORKSPACE_NOTE_HTML,
   TITLE_FALLBACK,
@@ -48,6 +64,8 @@ import {
   saveStateLabel,
 } from "../app/features/notes/composables/notesDraftCommitter";
 import { createNotesSplitInteractionController } from "../app/features/notes/composables/notesSplitInteractionController";
+import { useSplitNotes, type ActivePane, type SplitPosition } from "../app/composables/ui/useSplitNotes";
+import { normalizeShapeTransform } from "../app/utils/canvas/geometry";
 import type {
   ReviewCardRecord,
   ReviewRepository,
@@ -55,7 +73,6 @@ import type {
 } from "../server/modules/review/ports/ReviewRepository";
 import type { XpPort } from "../server/modules/review/ports/XpPort";
 import type { BoardItemState } from "../app/features/board/composables/useBoardItemsStore";
-import type { ActivePane, SplitPosition } from "../app/composables/ui/useSplitNotes";
 
 type TestCase = {
   name: string;
@@ -190,6 +207,7 @@ function fakeNotesPrisma() {
             order: data.order ?? 0,
             noteType: data.noteType,
             metadata: data.metadata,
+            version: data.version ?? 1,
             updatedAt: new Date("2026-01-01T00:00:00.000Z"),
           };
           notes.set(id, row);
@@ -198,7 +216,15 @@ function fakeNotesPrisma() {
         update: async ({ where, data }: any) => {
           const existing = notes.get(where.id);
           assert.ok(existing, "expected existing note");
-          const row = { ...existing, ...data, updatedAt: new Date() };
+          const row = {
+            ...existing,
+            ...data,
+            version:
+              data.version?.increment !== undefined
+                ? (existing.version ?? 1) + data.version.increment
+                : data.version ?? existing.version,
+            updatedAt: new Date(),
+          };
           notes.set(where.id, row);
           return row;
         },
@@ -222,7 +248,15 @@ function fakeNotesPrisma() {
 	            update: async ({ where, data }: any) => {
 	              const existing = notes.get(where.id);
 	              assert.ok(existing, "expected existing note");
-	              const row = { ...existing, ...data, updatedAt: new Date() };
+	              const row = {
+	                ...existing,
+	                ...data,
+	                version:
+	                  data.version?.increment !== undefined
+	                    ? (existing.version ?? 1) + data.version.increment
+	                    : data.version ?? existing.version,
+	                updatedAt: new Date(),
+	              };
 	              notes.set(where.id, row);
               return row;
             },
@@ -334,6 +368,81 @@ function fakeSplitNotesState(input: {
     },
     setActivePane: (pane: ActivePane) => {
       activePane.value = pane;
+    },
+  };
+}
+
+function createRealSplitNotes(validIds = ["note-1", "note-2", "note-3"]) {
+  return useSplitNotes(`unit-${Math.random().toString(36).slice(2)}`, () => new Set(validIds));
+}
+
+async function flushAsyncWork() {
+  await new Promise((resolve) => setTimeout(resolve, 0));
+}
+
+function fakeNotesLayoutRuntime(
+  initialNotes: any[],
+  groupLayout: Array<{ id: string; order: number }> = [
+    { id: "group-1", order: 0 },
+    { id: "group-2", order: 1 },
+  ],
+) {
+  const notes = ref(new Map(initialNotes.map((note) => [note.id, { ...note }])));
+  const savedNotes: any[][] = [];
+  let savedLayout: any | null = null;
+  let registeredBackgroundSync = 0;
+  let pendingChanged = 0;
+  let syncRequested = 0;
+
+  const controller = createNotesLayoutController({
+    workspaceId: "workspace-1",
+    notes: notes as any,
+    localRepository: {
+      save: async (note: any) => {
+        savedNotes.push([note]);
+      },
+      saveMany: async (items: any[]) => {
+        savedNotes.push(items);
+      },
+      delete: async () => {},
+      loadByWorkspace: async () => Array.from(notes.value.values()),
+    } as any,
+    layoutQueue: {
+      load: async () => savedLayout,
+      save: async (layout: any) => {
+        savedLayout = layout;
+      },
+      remove: async () => {
+        savedLayout = null;
+      },
+      registerBackgroundSync: async () => {
+        registeredBackgroundSync++;
+      },
+    } as any,
+    getGroupLayout: () => groupLayout,
+    onLayoutPendingChanged: async () => {
+      pendingChanged++;
+    },
+    requestSync: () => {
+      syncRequested++;
+    },
+  });
+
+  return {
+    controller,
+    notes,
+    savedNotes,
+    get savedLayout() {
+      return savedLayout;
+    },
+    get registeredBackgroundSync() {
+      return registeredBackgroundSync;
+    },
+    get pendingChanged() {
+      return pendingChanged;
+    },
+    get syncRequested() {
+      return syncRequested;
     },
   };
 }
@@ -626,6 +735,11 @@ test("workspace note sync maps temp IDs to server IDs", async () => {
 
   assert.deepEqual(result.applied, ["temp-note-1"]);
   assert.equal(result.idMap["temp-note-1"], "server-note-1");
+  assert.deepEqual(result.appliedNotes, [{
+    id: "temp-note-1",
+    version: 1,
+    updatedAt: "2026-01-01T00:00:00.000Z",
+  }]);
   assert.equal(notes.get("server-note-1")?.title, "Draft title");
   assert.deepEqual(result.conflicts, []);
 });
@@ -684,7 +798,338 @@ test("workspace note sync reports server-newer conflicts", async () => {
   });
 
   assert.deepEqual(result.applied, []);
-  assert.deepEqual(result.conflicts, [{ id: "note-1" }]);
+  assert.deepEqual(result.conflicts, [{
+    id: "note-1",
+    reason: "VERSION_MISMATCH",
+    serverVersion: 2,
+    clientServerVersion: 1,
+    serverSnapshot: {
+      id: "note-1",
+      workspaceId: "workspace-1",
+      groupId: null,
+      title: undefined,
+      content: "Server note",
+      tags: [],
+      noteType: "TEXT",
+      metadata: undefined,
+      version: 2,
+      updatedAt: "2026-01-03T00:00:00.000Z",
+    },
+  }]);
+});
+
+test("workspace note sync returns fresh versions for repeated same-client edits", async () => {
+  const { notes, prisma } = fakeNotesPrisma();
+  notes.set("note-1", {
+    id: "note-1",
+    workspaceId: "workspace-1",
+    title: "First",
+    content: "<h1>First</h1><p>Body</p>",
+    tags: [],
+    noteType: "TEXT",
+    metadata: null,
+    version: 1,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  });
+
+  const first = await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request: {
+      changes: [
+        {
+          id: "note-1",
+          operation: "upsert",
+          updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+          localVersion: 1,
+          serverVersion: 1,
+          workspaceId: "workspace-1",
+          content: "<h1>Second</h1><p>Body</p>",
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(first.applied, ["note-1"]);
+  assert.equal(first.appliedNotes[0]?.version, 2);
+  assert.equal(notes.get("note-1")?.version, 2);
+
+  const second = await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request: {
+      changes: [
+        {
+          id: "note-1",
+          operation: "upsert",
+          updatedAt: Date.parse("2026-01-03T00:00:00.000Z"),
+          localVersion: 2,
+          serverVersion: first.appliedNotes[0]?.version,
+          workspaceId: "workspace-1",
+          content: "<h1>Third</h1><p>Body</p>",
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(second.conflicts, []);
+  assert.deepEqual(second.applied, ["note-1"]);
+  assert.equal(second.appliedNotes[0]?.version, 3);
+});
+
+test("notes sync coordinator stores fresh applied note versions locally", async () => {
+  const notes = ref(new Map<string, any>([
+    ["note-1", {
+      id: "note-1",
+      workspaceId: "workspace-1",
+      title: "Local",
+      content: "<h1>Local</h1>",
+      tags: [],
+      order: 0,
+      noteType: "TEXT",
+      metadata: null,
+      version: 1,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+      isDirty: true,
+      isLoading: true,
+      error: null,
+    }],
+  ]));
+  const saved = new Map<string, any>();
+  const coordinator = createNotesSyncCoordinator({
+    workspaceId: "workspace-1",
+    notes,
+    localRepository: {
+      save: async (note: any) => {
+        saved.set(note.id, note);
+      },
+      saveMany: async (items: any[]) => {
+        for (const note of items) saved.set(note.id, note);
+      },
+      delete: async (id: string) => {
+        saved.delete(id);
+      },
+      loadByWorkspace: async () => Array.from(saved.values()),
+    } as any,
+    layoutQueue: {
+      load: async () => null,
+      save: async () => {},
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    } as any,
+    pendingQueue: {
+      add: async () => {},
+      load: async () => [],
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    } as any,
+  });
+
+  await coordinator.applySyncResult({
+    applied: ["note-1"],
+    appliedNotes: [{
+      id: "note-1",
+      version: 2,
+      updatedAt: "2026-01-02T00:00:00.000Z",
+    }],
+    conflicts: [],
+    idMap: {},
+    noteIdMap: {},
+    groupApplied: [],
+    groupConflicts: [],
+    groupIdMap: {},
+    errors: [],
+    layoutApplied: false,
+    layoutConflict: false,
+  });
+
+  assert.equal(notes.value.get("note-1")?.version, 2);
+  assert.equal(notes.value.get("note-1")?.isDirty, false);
+  assert.equal(saved.get("note-1")?.version, 2);
+});
+
+test("notes sync coordinator rebases version conflicts for retry", async () => {
+  const notes = ref(new Map<string, any>([
+    ["note-1", {
+      id: "note-1",
+      workspaceId: "workspace-1",
+      title: "Local",
+      content: "<h1>Local</h1>",
+      tags: [],
+      order: 0,
+      noteType: "TEXT",
+      metadata: null,
+      version: 1,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+      isDirty: true,
+      isLoading: true,
+      error: null,
+    }],
+  ]));
+  const pending = new Map<string, any>([
+    ["note-1", {
+      id: "note-1",
+      operation: "upsert",
+      updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+      localVersion: 1,
+      serverVersion: 1,
+      workspaceId: "workspace-1",
+      content: "<h1>Local</h1>",
+    }],
+  ]);
+  const saved = new Map<string, any>();
+  const coordinator = createNotesSyncCoordinator({
+    workspaceId: "workspace-1",
+    notes,
+    localRepository: {
+      save: async (note: any) => {
+        saved.set(note.id, note);
+      },
+      saveMany: async (items: any[]) => {
+        for (const note of items) saved.set(note.id, note);
+      },
+      delete: async (id: string) => {
+        saved.delete(id);
+      },
+      loadByWorkspace: async () => Array.from(saved.values()),
+    } as any,
+    layoutQueue: {
+      load: async () => null,
+      save: async () => {},
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    } as any,
+    pendingQueue: {
+      add: async (change: any) => {
+        pending.set(change.id, change);
+      },
+      load: async () => Array.from(pending.values()),
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    } as any,
+  });
+
+  await coordinator.applySyncResult({
+    applied: [],
+    appliedNotes: [],
+    conflicts: [{
+      id: "note-1",
+      reason: "VERSION_MISMATCH",
+      resolution: "RETRY_LOCAL_WINS",
+      serverVersion: 2,
+      clientServerVersion: 1,
+    }],
+    idMap: {},
+    noteIdMap: {},
+    groupApplied: [],
+    groupConflicts: [],
+    groupIdMap: {},
+    errors: [],
+    layoutApplied: false,
+    layoutConflict: false,
+  });
+
+  assert.equal(notes.value.get("note-1")?.version, 2);
+  assert.equal(saved.get("note-1")?.version, 2);
+  assert.equal(pending.get("note-1")?.serverVersion, 2);
+  assert.equal(notes.value.get("note-1")?.isDirty, true);
+});
+
+test("notes conflict resolver stores local and server snapshots and blocks resend", async () => {
+  const notes = ref(new Map<string, any>([
+    ["note-1", {
+      id: "note-1",
+      workspaceId: "workspace-1",
+      title: "Local",
+      content: "<h1>Local</h1>",
+      tags: [],
+      order: 0,
+      noteType: "TEXT",
+      metadata: null,
+      version: 1,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+      isDirty: true,
+      isLoading: true,
+      error: null,
+    }],
+  ]));
+  const pending = new Map<string, any>([
+    ["note-1", {
+      id: "note-1",
+      operation: "upsert",
+      updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+      localVersion: 1,
+      serverVersion: 1,
+      workspaceId: "workspace-1",
+      content: "<h1>Local</h1>",
+    }],
+  ]);
+  const conflicts = new Map<string, any>();
+  const saved = new Map<string, any>();
+  const resolver = createNotesConflictResolver({
+    workspaceId: "workspace-1",
+    notes,
+    conflictRepository: {
+      save: async (conflict: any) => {
+        conflicts.set(conflict.id, conflict);
+      },
+      load: async () => Array.from(conflicts.values()),
+      remove: async (ids: string[]) => {
+        ids.forEach((id) => conflicts.delete(id));
+      },
+    } as any,
+    pendingQueue: {
+      add: async (change: any) => {
+        pending.set(change.id, change);
+      },
+      load: async () => Array.from(pending.values()),
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    } as any,
+    localRepository: {
+      save: async (note: any) => {
+        saved.set(note.id, note);
+      },
+      saveMany: async () => {},
+      delete: async () => {},
+      loadByWorkspace: async () => [],
+    } as any,
+  });
+
+  const recorded = await resolver.recordContentConflicts({
+    applied: [],
+    appliedNotes: [],
+    conflicts: [{
+      id: "note-1",
+      reason: "VERSION_MISMATCH",
+      serverVersion: 2,
+      clientServerVersion: 1,
+      serverSnapshot: {
+        id: "note-1",
+        workspaceId: "workspace-1",
+        title: "Server",
+        content: "<h1>Server</h1>",
+        version: 2,
+      },
+    }],
+    idMap: {},
+    noteIdMap: {},
+    groupApplied: [],
+    groupConflicts: [],
+    groupIdMap: {},
+    errors: [],
+    layoutApplied: false,
+    layoutConflict: false,
+  });
+
+  assert.equal(recorded, 1);
+  assert.equal(conflicts.size, 1);
+  assert.equal(pending.get("note-1")?.conflicted, true);
+  assert.equal(notes.value.get("note-1")?.error?.includes("Sync conflict detected"), true);
+  assert.equal(saved.get("note-1")?.version, 2);
 });
 
 test("workspace note normalization uses the default empty template", () => {
@@ -703,6 +1148,17 @@ test("workspace note normalization keeps the first heading and upgrades it to h1
   assert.equal(
     normalizeWorkspaceNoteContent("<h3>Legacy title</h3><p>Body</p>"),
     "<h1>Legacy title</h1><p>Body</p>",
+  );
+});
+
+test("workspace note normalization removes extra empty title-like headings", () => {
+  assert.equal(
+    normalizeWorkspaceNoteContent("<h1>Title</h1><p>Body</p><h1></h1>"),
+    "<h1>Title</h1><p>Body</p><p></p>",
+  );
+  assert.equal(
+    normalizeWorkspaceNoteContent("<h1>Title</h1><h1>Section</h1>"),
+    "<h1>Title</h1><h2>Section</h2>",
   );
 });
 
@@ -794,6 +1250,60 @@ test("note group contracts accept create, rename, and reorder payloads", () => {
   assert.equal(created.title, "Research");
   assert.equal(updated.title, "Inbox");
   assert.deepEqual(reordered.groupOrders.map((group) => group.id), ["group-2", "group-1"]);
+});
+
+test("workspace note sync creates groups from queued local changes", async () => {
+  const { noteGroups, prisma } = fakeNotesPrisma();
+
+  const result = await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request: {
+      changes: [],
+      groupChanges: [
+        {
+          id: "temp-group-created-locally",
+          operation: "create",
+          workspaceId: "workspace-1",
+          title: "Local Group",
+          order: 1,
+          updatedAt: Date.parse("2026-01-01T00:00:00.000Z"),
+          localVersion: 1,
+        },
+      ],
+    },
+  });
+
+  const serverGroupId = result.groupIdMap["temp-group-created-locally"];
+  assert.ok(serverGroupId);
+  assert.deepEqual(result.groupApplied, ["temp-group-created-locally"]);
+  assert.equal(noteGroups.get(serverGroupId)?.title, "Local Group");
+  assert.equal(noteGroups.get(serverGroupId)?.order, 1);
+});
+
+test("workspace note sync renames groups from queued local changes", async () => {
+  const { noteGroups, prisma } = fakeNotesPrisma();
+
+  const result = await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request: {
+      changes: [],
+      groupChanges: [
+        {
+          id: "group-1",
+          operation: "rename",
+          workspaceId: "workspace-1",
+          title: "Renamed Group",
+          updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+          localVersion: 2,
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(result.groupApplied, ["group-1"]);
+  assert.equal(noteGroups.get("group-1")?.title, "Renamed Group");
 });
 
 test("workspace text draft commit normalizes content and extracts title on commit", () => {
@@ -1110,6 +1620,75 @@ test("workspace note sync maps temp group IDs before content and layout", async 
   assert.equal(result.layoutApplied, true);
 });
 
+test("workspace note sync persists multiple temp notes in a new temp group layout", async () => {
+  const { notes, noteGroups, prisma } = fakeNotesPrisma();
+
+  const result = await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request: {
+      changes: [
+        {
+          id: "temp-note-a",
+          operation: "upsert",
+          updatedAt: Date.parse("2026-01-01T00:00:00.000Z"),
+          localVersion: 1,
+          workspaceId: "workspace-1",
+          groupId: "temp-group-batch",
+          content: "<h1>Second visual note</h1><p>Body</p>",
+        },
+        {
+          id: "temp-note-b",
+          operation: "upsert",
+          updatedAt: Date.parse("2026-01-01T00:00:01.000Z"),
+          localVersion: 1,
+          workspaceId: "workspace-1",
+          groupId: "temp-group-batch",
+          content: "<h1>First visual note</h1><p>Body</p>",
+        },
+      ],
+      groupChanges: [
+        {
+          id: "temp-group-batch",
+          operation: "create",
+          workspaceId: "workspace-1",
+          title: "Batch group",
+          order: 1,
+          updatedAt: Date.parse("2026-01-01T00:00:00.000Z"),
+          localVersion: 1,
+        },
+      ],
+      layoutChange: {
+        id: "workspace-1",
+        workspaceId: "workspace-1",
+        updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+        localVersion: 2,
+        notes: [
+          { id: "temp-note-b", groupId: "temp-group-batch", order: 0 },
+          { id: "temp-note-a", groupId: "temp-group-batch", order: 1 },
+        ],
+        groups: [
+          { id: "group-1", order: 0 },
+          { id: "temp-group-batch", order: 1 },
+        ],
+      },
+    },
+  });
+
+  const serverGroupId = result.groupIdMap["temp-group-batch"];
+  const firstServerNoteId = result.idMap["temp-note-b"];
+  const secondServerNoteId = result.idMap["temp-note-a"];
+
+  assert.ok(serverGroupId);
+  assert.equal(noteGroups.get(serverGroupId)?.order, 1);
+  assert.equal(notes.get(firstServerNoteId)?.groupId, serverGroupId);
+  assert.equal(notes.get(firstServerNoteId)?.order, 0);
+  assert.equal(notes.get(secondServerNoteId)?.groupId, serverGroupId);
+  assert.equal(notes.get(secondServerNoteId)?.order, 1);
+  assert.equal(result.layoutApplied, true);
+  assert.equal(result.layoutConflict, false);
+});
+
 test("workspace note sync deletes groups by moving notes to ungrouped first", async () => {
   const { notes, noteGroups, prisma } = fakeNotesPrisma();
   notes.set("note-1", {
@@ -1172,6 +1751,709 @@ test("notes layout canonicalization creates contiguous per-group orders", () => 
     { id: "note-3", groupId: "group-1", order: 1 },
     { id: "note-1", groupId: null, order: 0 },
   ]);
+});
+
+test("notes layout move queues layout only without dirtying content", async () => {
+  const runtime = fakeNotesLayoutRuntime([
+    {
+      id: "note-1",
+      workspaceId: "workspace-1",
+      groupId: null,
+      order: 0,
+      title: "One",
+      content: "<h1>One</h1><p>Body</p>",
+      isDirty: false,
+    },
+    {
+      id: "note-2",
+      workspaceId: "workspace-1",
+      groupId: "group-1",
+      order: 0,
+      title: "Two",
+      content: "<h1>Two</h1><p>Body</p>",
+      isDirty: false,
+    },
+  ]);
+
+  const result = await runtime.controller.apply({
+    type: "MOVE_NOTE",
+    noteId: "note-1",
+    toGroupId: "group-1",
+    toIndex: 1,
+  });
+
+  assert.equal(result, true);
+  assert.equal(runtime.notes.value.get("note-1")?.groupId, "group-1");
+  assert.equal(runtime.notes.value.get("note-1")?.order, 1);
+  assert.equal(runtime.notes.value.get("note-1")?.isDirty, false);
+  await flushAsyncWork();
+  assert.equal(runtime.savedLayout?.notes.length, 2);
+  assert.deepEqual(runtime.savedLayout?.groups, [
+    { id: "group-1", order: 0 },
+    { id: "group-2", order: 1 },
+  ]);
+  assert.equal(runtime.registeredBackgroundSync, 1);
+  assert.equal(runtime.syncRequested, 1);
+});
+
+test("notes layout latest snapshot overwrites older pending layout", async () => {
+  const runtime = fakeNotesLayoutRuntime([
+    { id: "note-1", workspaceId: "workspace-1", groupId: null, order: 0, isDirty: false },
+    { id: "note-2", workspaceId: "workspace-1", groupId: null, order: 1, isDirty: false },
+    { id: "note-3", workspaceId: "workspace-1", groupId: "group-1", order: 0, isDirty: false },
+  ]);
+
+  await runtime.controller.apply({
+    type: "MOVE_NOTE",
+    noteId: "note-1",
+    toGroupId: "group-1",
+    toIndex: 1,
+  });
+  await runtime.controller.apply({
+    type: "MOVE_NOTE",
+    noteId: "note-2",
+    toGroupId: "group-1",
+    toIndex: 0,
+  });
+  await flushAsyncWork();
+
+  assert.equal(runtime.savedLayout?.localVersion, 2);
+  assert.deepEqual(runtime.savedLayout?.notes, [
+    { id: "note-2", groupId: "group-1", order: 0 },
+    { id: "note-3", groupId: "group-1", order: 1 },
+    { id: "note-1", groupId: "group-1", order: 2 },
+  ]);
+});
+
+test("notes layout queues already-applied layout for new local notes", async () => {
+  const runtime = fakeNotesLayoutRuntime([
+    { id: "note-1", workspaceId: "workspace-1", groupId: "group-1", order: 0, isDirty: false },
+    { id: "temp-note-created-in-group", workspaceId: "workspace-1", groupId: "group-1", order: 1, isDirty: true },
+  ]);
+
+  const result = await runtime.controller.queueNoteLayout([
+    { id: "note-1", groupId: "group-1", order: 0 },
+    { id: "temp-note-created-in-group", groupId: "group-1", order: 1 },
+  ]);
+
+  assert.equal(result, true);
+  await flushAsyncWork();
+  assert.deepEqual(runtime.savedLayout?.notes, [
+    { id: "note-1", groupId: "group-1", order: 0 },
+    { id: "temp-note-created-in-group", groupId: "group-1", order: 1 },
+  ]);
+  assert.equal(runtime.registeredBackgroundSync, 1);
+});
+
+test("notes layout snapshots use the current group layout instead of stale queued groups", async () => {
+  const runtime = fakeNotesLayoutRuntime(
+    [
+      { id: "note-1", workspaceId: "workspace-1", groupId: "temp-group-fresh", order: 0, isDirty: true },
+    ],
+    [
+      { id: "group-1", order: 0 },
+      { id: "temp-group-fresh", order: 1 },
+    ],
+  );
+
+  await runtime.controller.queueNoteLayout([
+    { id: "note-1", groupId: "group-1", order: 0 },
+  ]);
+  await runtime.controller.queueNoteLayout([
+    { id: "note-1", groupId: "temp-group-fresh", order: 0 },
+  ]);
+  await flushAsyncWork();
+
+  assert.deepEqual(runtime.savedLayout?.groups, [
+    { id: "group-1", order: 0 },
+    { id: "temp-group-fresh", order: 1 },
+  ]);
+});
+
+test("notes command service updates editor memory before durable save resolves", async () => {
+  let releaseSave: (() => void) | null = null;
+  const saveGate = new Promise<void>((resolve) => {
+    releaseSave = resolve;
+  });
+  let saveStarted = false;
+  let queuedContent: any = null;
+  const note = {
+    id: "note-1",
+    workspaceId: "workspace-1",
+    groupId: null,
+    title: "Old",
+    content: "<h1>Old</h1><p>Body</p>",
+    tags: [],
+    order: 0,
+    noteType: "TEXT",
+    metadata: null,
+    version: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isDirty: false,
+    isLoading: false,
+    error: null,
+  };
+  const notes = ref(new Map<string, any>([[note.id, note]]));
+  const service = createNotesCommandService({
+    memoryStore: createNotesMemoryStore(notes as any),
+    localRepository: {
+      save: async () => {
+        saveStarted = true;
+        await saveGate;
+      },
+      saveMany: async () => {},
+      delete: async () => {},
+      loadByWorkspace: async () => [],
+    } as any,
+    pendingQueue: {
+      add: async () => {},
+      load: async () => [],
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    } as any,
+    layoutController: {
+      status: ref("idle"),
+      apply: async () => true,
+      queueNoteLayout: async () => true,
+    } as any,
+    registerBackgroundSync: async () => {},
+    requestSync: () => {},
+  });
+
+  const result = await service.updateNoteContent({
+    id: "note-1",
+    note: {
+      ...note,
+      title: "Live title",
+      content: "<h1>Live title</h1><p>Updated</p>",
+    },
+    queueContentSave: (id, content, title) => {
+      queuedContent = { id, content, title };
+    },
+  });
+
+  assert.equal(result, true);
+  assert.equal(notes.value.get("note-1")?.title, "Live title");
+  assert.equal(notes.value.get("note-1")?.content, "<h1>Live title</h1><p>Updated</p>");
+  assert.equal(notes.value.get("note-1")?.isDirty, true);
+  assert.equal(saveStarted, true);
+  assert.equal(queuedContent, null);
+
+  releaseSave?.();
+  await flushAsyncWork();
+  assert.deepEqual(queuedContent, {
+    id: "note-1",
+    content: "<h1>Live title</h1><p>Updated</p>",
+    title: "Live title",
+  });
+});
+
+test("notes command service creates notes inside groups before queue persistence resolves", async () => {
+  let releaseSave: (() => void) | null = null;
+  const saveGate = new Promise<void>((resolve) => {
+    releaseSave = resolve;
+  });
+  const notes = ref(new Map<string, any>());
+  let queuedCreate: any = null;
+  let queuedLayout = false;
+  const service = createNotesCommandService({
+    memoryStore: createNotesMemoryStore(notes as any),
+    localRepository: {
+      save: async () => {
+        await saveGate;
+      },
+      saveMany: async () => {},
+      delete: async () => {},
+      loadByWorkspace: async () => [],
+    } as any,
+    pendingQueue: {
+      add: async (change: any) => {
+        queuedCreate = change;
+      },
+      load: async () => [],
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    } as any,
+    layoutController: {
+      status: ref("idle"),
+      apply: async () => true,
+      queueNoteLayout: async () => {
+        queuedLayout = true;
+        return true;
+      },
+    } as any,
+    registerBackgroundSync: async () => {},
+    requestSync: () => {},
+  });
+
+  const id = await service.createNote({
+    workspaceId: "workspace-1",
+    groupId: "group-1",
+    content: DEFAULT_WORKSPACE_NOTE_HTML,
+  });
+
+  assert.ok(id?.startsWith("temp-"));
+  assert.equal(notes.value.get(id!)?.groupId, "group-1");
+  assert.equal(notes.value.get(id!)?.order, 0);
+  assert.equal(queuedCreate, null);
+
+  releaseSave?.();
+  await flushAsyncWork();
+  assert.equal(queuedCreate?.id, id);
+  assert.equal(queuedCreate?.groupId, "group-1");
+  assert.equal(queuedLayout, true);
+});
+
+test("notes content queue flushes all pending note saves and requests sync once per note", async () => {
+  const notes = ref(new Map<string, any>([
+    ["note-1", {
+      id: "note-1",
+      workspaceId: "workspace-1",
+      groupId: null,
+      title: "One",
+      content: "<h1>One</h1>",
+      tags: [],
+      order: 0,
+      noteType: "TEXT",
+      metadata: null,
+      version: 1,
+      localVersion: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isDirty: false,
+      isLoading: false,
+      error: null,
+    }],
+    ["note-2", {
+      id: "note-2",
+      workspaceId: "workspace-1",
+      groupId: "group-1",
+      title: "Two",
+      content: "<h1>Two</h1>",
+      tags: [],
+      order: 0,
+      noteType: "TEXT",
+      metadata: null,
+      version: 1,
+      localVersion: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isDirty: false,
+      isLoading: false,
+      error: null,
+    }],
+  ]));
+  const queued: any[] = [];
+  let syncRequests = 0;
+  const queue = createNotesContentQueue({
+    workspaceId: "workspace-1",
+    notes: notes as any,
+    pendingQueue: {
+      add: async (change: any) => {
+        queued.push(change);
+      },
+      load: async () => [],
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    },
+    isVerifiedOnline: ref(true),
+    requestSync: () => {
+      syncRequests++;
+    },
+    debounceMs: 1000,
+    flushEditorDrafts: async () => {},
+  });
+
+  queue.queueContentSave("note-1", "<h1>One live</h1>", "One live");
+  queue.queueContentSave("note-2", "<h1>Two live</h1>", "Two live");
+  await queue.flushDrafts();
+
+  assert.deepEqual(queued.map((change) => change.id).sort(), ["note-1", "note-2"]);
+  assert.equal(notes.value.get("note-1")?.isDirty, true);
+  assert.equal(notes.value.get("note-2")?.isDirty, true);
+  assert.equal(syncRequests, 2);
+});
+
+test("notes content queue keeps offline edits durable without requesting page sync", async () => {
+  const notes = ref(new Map<string, any>([
+    ["note-1", {
+      id: "note-1",
+      workspaceId: "workspace-1",
+      groupId: null,
+      title: "One",
+      content: "<h1>One</h1>",
+      tags: [],
+      order: 0,
+      noteType: "TEXT",
+      metadata: null,
+      version: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isDirty: false,
+      isLoading: false,
+      error: null,
+    }],
+  ]));
+  let backgroundSyncRegistered = 0;
+  let syncRequests = 0;
+  const queue = createNotesContentQueue({
+    workspaceId: "workspace-1",
+    notes: notes as any,
+    pendingQueue: {
+      add: async () => {},
+      load: async () => [],
+      remove: async () => {},
+      registerBackgroundSync: async () => {
+        backgroundSyncRegistered++;
+      },
+    },
+    isVerifiedOnline: ref(false),
+    requestSync: () => {
+      syncRequests++;
+    },
+    flushEditorDrafts: async () => {},
+  });
+
+  const saved = await queue.queueContentSaveNow("note-1", "<h1>Offline</h1>", "Offline");
+
+  assert.equal(saved, true);
+  assert.equal(notes.value.get("note-1")?.isDirty, true);
+  assert.equal(backgroundSyncRegistered, 1);
+  assert.equal(syncRequests, 0);
+});
+
+test("notes group command service updates drawer memory before durable save resolves", async () => {
+  let releaseSave: (() => void) | null = null;
+  const saveGate = new Promise<void>((resolve) => {
+    releaseSave = resolve;
+  });
+  const groups = ref(new Map<string, any>());
+  let queuedGroup: any = null;
+  const service = createNotesGroupCommandService({
+    workspaceId: "workspace-1",
+    groups: groups as any,
+    groupQueue: {
+      add: async (change: any) => {
+        queuedGroup = change;
+      },
+      load: async () => [],
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    },
+    layoutQueue: {
+      save: async () => {},
+      load: async () => null,
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    },
+    getOrderedGroups: () => Array.from(groups.value.values()),
+    saveGroup: async () => {
+      await saveGate;
+    },
+    saveGroups: async () => {},
+    deleteGroupLocal: async () => {},
+    registerBackgroundSync: async () => {},
+    scheduleSync: () => {},
+    setError: () => {},
+  });
+
+  const id = service.createGroup("Immediate group");
+
+  assert.ok(id?.startsWith("temp-group-"));
+  assert.equal(groups.value.get(id!)?.title, "Immediate group");
+  assert.equal(groups.value.get(id!)?.order, 0);
+  assert.equal(queuedGroup, null);
+
+  releaseSave?.();
+  await flushAsyncWork();
+  assert.equal(queuedGroup?.id, id);
+  assert.equal(queuedGroup?.operation, "create");
+});
+
+test("notes sync engine reruns when work is requested during an in-flight sync", async () => {
+  let releaseFirstDrain: (() => void) | null = null;
+  const firstDrainGate = new Promise<void>((resolve) => {
+    releaseFirstDrain = resolve;
+  });
+  let drainCount = 0;
+  const engine = createNotesSyncEngine({
+    drainWorkspace: async () => {
+      drainCount++;
+      if (drainCount === 1) {
+        await firstDrainGate;
+      }
+      return true;
+    },
+  });
+
+  const firstRun = engine.syncWorkspace("workspace-1", "background");
+  const secondRun = engine.syncWorkspace("workspace-1", "background");
+
+  assert.equal(firstRun, secondRun);
+  assert.equal(drainCount, 1);
+
+  releaseFirstDrain?.();
+  await firstRun;
+
+  assert.equal(drainCount, 2);
+});
+
+test("notes sync runtime drains queues in deterministic order", async () => {
+  const events: string[] = [];
+  const pendingChanges = [{
+    id: "note-1",
+    operation: "upsert",
+    updatedAt: Date.now(),
+    localVersion: 1,
+    workspaceId: "workspace-1",
+    title: "Local",
+    content: "<h1>Local</h1>",
+    tags: [],
+    noteType: "TEXT",
+    metadata: null,
+  }];
+  const pendingGroups = [{
+    id: "group-1",
+    operation: "rename",
+    workspaceId: "workspace-1",
+    title: "Group",
+    updatedAt: Date.now(),
+    localVersion: 1,
+  }];
+  const pendingLayout = {
+    id: "workspace-1",
+    workspaceId: "workspace-1",
+    updatedAt: Date.now(),
+    localVersion: 1,
+    notes: [{ id: "note-1", groupId: "group-1", order: 0 }],
+    groups: [{ id: "group-1", order: 0 }],
+  };
+  const notes = ref(new Map<string, any>([
+    ["note-1", {
+      id: "note-1",
+      workspaceId: "workspace-1",
+      groupId: "group-1",
+      title: "Local",
+      content: "<h1>Local</h1>",
+      tags: [],
+      order: 0,
+      noteType: "TEXT",
+      metadata: null,
+      version: 1,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      isDirty: true,
+      isLoading: false,
+      error: null,
+    }],
+  ]));
+  const layoutPendingCount = ref(0);
+  const layoutStatus = ref<any>("idle");
+  let syncPayload: any = null;
+  let layoutRemoved = false;
+
+  const runtime = createNotesSyncRuntime({
+    workspaceId: "workspace-1",
+    notes: notes as any,
+    loadingStates: ref(new Map()),
+    lastSync: ref(null),
+    layoutPendingCount,
+    layoutStatus,
+    noteIdAliases: ref(new Map()),
+    localRepository: {
+      save: async () => {},
+      saveMany: async () => {},
+      loadByWorkspace: async () => [],
+      delete: async () => {},
+    } as any,
+    pendingQueue: {
+      add: async () => {},
+      load: async () => pendingChanges as any,
+      remove: async (ids: string[]) => {
+        events.push(`content-remove:${ids.join(",")}`);
+      },
+      registerBackgroundSync: async () => {},
+    },
+    groupQueue: {
+      add: async () => {},
+      load: async () => pendingGroups as any,
+      remove: async (ids: string[]) => {
+        events.push(`group-remove:${ids.join(",")}`);
+      },
+      registerBackgroundSync: async () => {},
+    },
+    layoutQueue: {
+      save: async () => {},
+      load: async () => (layoutRemoved ? null : pendingLayout as any),
+      remove: async (workspaceId: string) => {
+        layoutRemoved = true;
+        events.push(`layout-remove:${workspaceId}`);
+      },
+      registerBackgroundSync: async () => {},
+    },
+    syncCoordinator: {
+      hydrateFromLocalState: async () => {},
+      applySyncResult: async () => {
+        events.push("apply-result");
+      },
+    },
+    conflictResolver: {
+      hasConflicts: async () => false,
+      hydrateConflictState: async () => {},
+      recordContentConflicts: async () => {
+        events.push("record-conflicts");
+        return 0;
+      },
+    },
+    networkMonitor: {
+      isVerifiedOnline: ref(true),
+    },
+    notesApi: {
+      getByWorkspace: async () => ({ success: true, data: [] }),
+      sync: async (payload: any) => {
+        events.push("api-sync");
+        syncPayload = payload;
+        return {
+          success: true,
+          data: {
+            applied: ["note-1"],
+            appliedNotes: [],
+            conflicts: [],
+            idMap: {},
+            noteIdMap: {},
+            groupApplied: ["group-1"],
+            groupConflicts: [],
+            groupIdMap: {},
+            errors: [],
+            layoutApplied: true,
+            layoutConflict: false,
+          },
+        };
+      },
+    },
+    flushDrafts: async () => {
+      events.push("flush-drafts");
+    },
+    resetSyncRetry: () => {
+      events.push("reset-retry");
+    },
+    scheduleSyncRetry: () => {
+      events.push("schedule-retry");
+    },
+    hydrateLocalGroups: async () => {},
+  });
+
+  const synced = await runtime.syncPendingChanges("manual");
+
+  assert.equal(synced, true);
+  assert.equal(syncPayload.changes.length, 1);
+  assert.equal(syncPayload.groupChanges.length, 1);
+  assert.equal(syncPayload.layoutChange.workspaceId, "workspace-1");
+  assert.deepEqual(events, [
+    "flush-drafts",
+    "api-sync",
+    "reset-retry",
+    "apply-result",
+    "record-conflicts",
+    "content-remove:note-1",
+    "group-remove:group-1",
+    "layout-remove:workspace-1",
+  ]);
+  assert.equal(layoutStatus.value, "synced");
+  assert.equal(layoutPendingCount.value, 0);
+});
+
+test("notes temp IDs are unique for fast repeated note and group creation", () => {
+  const ids = new Set<string>();
+  for (let i = 0; i < 100; i++) {
+    ids.add(createNotesTempId("temp"));
+    ids.add(createNotesTempId("temp-group"));
+  }
+
+  assert.equal(ids.size, 200);
+  assert.ok(Array.from(ids).every((id) => id.startsWith("temp-")));
+});
+
+test("shared local-first temp IDs are unique and scoped", () => {
+  const ids = new Set<string>();
+  const noteId = createClientTempId("note");
+  const groupId = createClientTempId("note-group");
+  const boardItemId = createClientTempId("board-item");
+
+  for (let i = 0; i < 100; i++) {
+    ids.add(createClientTempId("note"));
+    ids.add(createClientTempId("note-group"));
+  }
+
+  assert.equal(ids.size, 200);
+  assert.ok(noteId.startsWith("temp-"));
+  assert.ok(groupId.startsWith("temp-group-"));
+  assert.ok(boardItemId.startsWith("temp-board-item-"));
+});
+
+test("shared local-first retry policy retries transient failures and stops at the cap", async () => {
+  const scheduled: Array<{ attempt: number; delay: number }> = [];
+  const callbacks: Array<() => void> = [];
+  let terminalFailures = 0;
+  const policy = createLocalFirstErrorPolicy({
+    maxAttempts: 2,
+    baseDelay: 1,
+    jitterPct: 0,
+    setTimeoutFn: ((callback: () => void, delay?: number) => {
+      callbacks.push(callback);
+      scheduled.push({ attempt: scheduled.length + 1, delay: delay ?? 0 });
+      return callbacks.length as any;
+    }) as typeof setTimeout,
+    clearTimeoutFn: (() => {}) as typeof clearTimeout,
+  });
+
+  policy.scheduleRetry({
+    workspaceId: "workspace-1",
+    retry: () => {},
+    onTerminalFailure: () => {
+      terminalFailures++;
+    },
+  });
+  policy.scheduleRetry({
+    workspaceId: "workspace-1",
+    retry: () => {},
+    onTerminalFailure: () => {
+      terminalFailures++;
+    },
+  });
+  policy.scheduleRetry({
+    workspaceId: "workspace-1",
+    retry: () => {},
+    onTerminalFailure: () => {
+      terminalFailures++;
+    },
+  });
+
+  assert.equal(policy.attempts(), 2);
+  assert.equal(scheduled.length, 2);
+  assert.equal(terminalFailures, 1);
+});
+
+test("shared local-first conflict records preserve local and server snapshots", () => {
+  const conflict: LocalFirstConflictRecord = {
+    id: "workspace-1:content:note-1",
+    workspaceId: "workspace-1",
+    scope: "content",
+    entityId: "note-1",
+    reason: "VERSION_MISMATCH",
+    createdAt: 1,
+    updatedAt: 2,
+    localSnapshot: { title: "Local" },
+    serverSnapshot: { title: "Server" },
+    serverVersion: 3,
+    clientServerVersion: 2,
+  };
+
+  assert.deepEqual(conflict.localSnapshot, { title: "Local" });
+  assert.deepEqual(conflict.serverSnapshot, { title: "Server" });
+  assert.equal(isLocalFirstConflict("VERSION_MISMATCH"), true);
+  assert.equal(isLocalFirstConflict("network timeout"), false);
 });
 
 test("notes split click opens split from the current note without touching layout", () => {
@@ -1259,6 +2541,140 @@ test("notes split drop targets the visual side independently from note selection
   assert.equal(controller.isSplitDragging.value, false);
   assert.equal(controller.hoveredSplitZone.value, null);
   assert.equal(controller.draggedSplitNoteId.value, null);
+});
+
+test("canvas transform normalization bakes rect scale into dimensions once", () => {
+  const shape: any = {
+    id: "shape-1",
+    type: "rect",
+    x: 10,
+    y: 20,
+    width: 100,
+    height: 50,
+    scaleX: 1,
+    scaleY: 1,
+  };
+
+  normalizeShapeTransform(shape, {
+    scaleX: () => 0.5,
+    scaleY: () => 2,
+    width: () => 100,
+    height: () => 50,
+  });
+
+  assert.equal(shape.width, 50);
+  assert.equal(shape.height, 100);
+  assert.equal(shape.scaleX, 1);
+  assert.equal(shape.scaleY, 1);
+});
+
+test("canvas transform normalization preserves circle shape with uniform radius", () => {
+  const shape: any = {
+    id: "shape-1",
+    type: "circle",
+    x: 10,
+    y: 20,
+    radius: 40,
+    scaleX: 1,
+    scaleY: 1,
+  };
+
+  normalizeShapeTransform(shape, {
+    scaleX: () => 0.25,
+    scaleY: () => 4,
+    radius: () => 40,
+  });
+
+  assert.equal(shape.radius, 40);
+  assert.equal(shape.scaleX, 1);
+  assert.equal(shape.scaleY, 1);
+});
+
+test("useSplitNotes maps visual activation to the correct logical pane", () => {
+  const rightSecondary = createRealSplitNotes();
+  rightSecondary.setPrimaryNote("note-1");
+  rightSecondary.openSplit("note-2", "right");
+
+  rightSecondary.activateRight();
+  assert.equal(rightSecondary.activePane.value, "secondary");
+  assert.equal(rightSecondary.activePaneSide.value, "right");
+
+  rightSecondary.activateLeft();
+  assert.equal(rightSecondary.activePane.value, "primary");
+  assert.equal(rightSecondary.activePaneSide.value, "left");
+
+  const leftSecondary = createRealSplitNotes();
+  leftSecondary.setPrimaryNote("note-1");
+  leftSecondary.openSplit("note-2", "left");
+
+  leftSecondary.activateLeft();
+  assert.equal(leftSecondary.activePane.value, "secondary");
+  assert.equal(leftSecondary.activePaneSide.value, "left");
+
+  leftSecondary.activateRight();
+  assert.equal(leftSecondary.activePane.value, "primary");
+  assert.equal(leftSecondary.activePaneSide.value, "right");
+});
+
+test("useSplitNotes swap keeps note identity active while moving visual side", () => {
+  const splitNotes = createRealSplitNotes();
+  splitNotes.setPrimaryNote("note-1");
+  splitNotes.openSplit("note-2", "right");
+  splitNotes.setActivePane("secondary");
+
+  assert.equal(splitNotes.rightNoteId.value, "note-2");
+  assert.equal(splitNotes.activePaneSide.value, "right");
+
+  splitNotes.swapPanes();
+
+  assert.equal(splitNotes.leftNoteId.value, "note-2");
+  assert.equal(splitNotes.rightNoteId.value, "note-1");
+  assert.equal(splitNotes.activePane.value, "secondary");
+  assert.equal(splitNotes.activePaneSide.value, "left");
+});
+
+test("useSplitNotes closing panes returns the surviving note and restores single view", () => {
+  const closePrimary = createRealSplitNotes();
+  closePrimary.setPrimaryNote("note-1");
+  closePrimary.openSplit("note-2", "right");
+
+  const promotedNoteId = closePrimary.closePane("primary");
+
+  assert.equal(promotedNoteId, "note-2");
+  assert.equal(closePrimary.isSplit.value, false);
+  assert.equal(closePrimary.primaryNoteId.value, "note-2");
+  assert.equal(closePrimary.secondaryNoteId.value, null);
+  assert.equal(closePrimary.activePane.value, "primary");
+
+  const closeSecondary = createRealSplitNotes();
+  closeSecondary.setPrimaryNote("note-1");
+  closeSecondary.openSplit("note-2", "right");
+
+  const primaryNoteId = closeSecondary.closePane("secondary");
+
+  assert.equal(primaryNoteId, "note-1");
+  assert.equal(closeSecondary.isSplit.value, false);
+  assert.equal(closeSecondary.primaryNoteId.value, "note-1");
+  assert.equal(closeSecondary.secondaryNoteId.value, null);
+  assert.equal(closeSecondary.activePane.value, "primary");
+});
+
+test("useSplitNotes refuses duplicate note assignments across split panes", () => {
+  const splitNotes = createRealSplitNotes();
+  splitNotes.setPrimaryNote("note-1");
+  splitNotes.openSplit("note-2", "right");
+
+  splitNotes.setSecondaryNote("note-1");
+
+  assert.equal(splitNotes.primaryNoteId.value, "note-1");
+  assert.equal(splitNotes.secondaryNoteId.value, "note-2");
+  assert.equal(splitNotes.activePane.value, "primary");
+
+  splitNotes.setPrimaryNote("note-2");
+
+  assert.equal(splitNotes.primaryNoteId.value, "note-1");
+  assert.equal(splitNotes.secondaryNoteId.value, "note-2");
+  assert.equal(splitNotes.activePane.value, "secondary");
 });
 
 test("workspace note sync skips missing layout groups without touching content", async () => {

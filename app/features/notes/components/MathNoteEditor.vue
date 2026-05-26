@@ -134,7 +134,6 @@ function updateBounds() {
 
 // ── Recognition trigger ──
 async function triggerRecognition() {
-  console.log("[MathNoteEditor] triggerRecognition called");
   const canvas = canvasRef.value;
   if (!canvas || !allStrokes.value.length) return;
 
@@ -175,7 +174,6 @@ async function triggerRecognition() {
       width: Math.ceil(maxX - minX) || 1,
       height: Math.ceil(maxY - minY) || 1,
     });
-    console.log("[MathNoteEditor] local AI outcome:", outcome);
 
     // Shift result bounding box back to world coordinates
     if (outcome.boundingBox) {
@@ -184,10 +182,8 @@ async function triggerRecognition() {
       outcome.boundingBox.maxX += minX;
       outcome.boundingBox.maxY += minY;
     }
-    console.log("[MathNoteEditor] outcome.boundingBox:", outcome.boundingBox);
 
     const trimmedLatex = outcome.latex.trim();
-    console.log("[MathNoteEditor] trimmedLatex:", trimmedLatex);
     // UI Feedback for low confidence/empty extraction
     if (!trimmedLatex) {
       console.warn("[MathNoteEditor] Recognition returned empty LaTeX.");
@@ -213,11 +209,6 @@ async function triggerRecognition() {
       },
     ];
 
-    console.log("[MathNoteEditor] lines.value:", lines.value);
-
-    console.log("[MathNoteEditor] outcome:", outcome);
-    console.log("[MathNoteEditor] strokeBox:", strokeBox);
-    console.log("[MathNoteEditor] trimmedLatex:", trimmedLatex);
     // If LaTeX ends with "=" and we have a result, redraw to show inline result
     if (trimmedLatex.endsWith("=") && outcome.result !== null) {
       requestAnimationFrame(redrawAll);

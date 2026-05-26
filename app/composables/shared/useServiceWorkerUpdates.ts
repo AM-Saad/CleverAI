@@ -1,3 +1,10 @@
+import {
+  canUseServiceWorker,
+  getAllServiceWorkerRegistrations,
+  getServiceWorkerReadyRegistration,
+  isServiceWorkerRuntimeEnabled,
+} from "~/utils/serviceWorkerRuntime";
+
 // Global reactive state (singleton)
 const globalState = {
   updateAvailable: ref(false),
@@ -32,7 +39,7 @@ export function useServiceWorkerUpdates() {
       console.log("🔄 [DEV] Forcing service worker update...");
 
       // First, unregister all existing service workers
-      const registrations = await navigator.serviceWorker.getRegistrations();
+      const registrations = await getAllServiceWorkerRegistrations();
       for (const registration of registrations) {
         console.log("🔄 [DEV] Unregistering:", registration.scope);
         await registration.unregister();
@@ -66,7 +73,11 @@ export function useServiceWorkerUpdates() {
 
     try {
       console.log("🔄 [DEV] Forcing service worker control...");
-      const registration = await navigator.serviceWorker.ready;
+      const registration = await getServiceWorkerReadyRegistration();
+      if (!registration) {
+        console.warn("Service worker is not ready");
+        return;
+      }
 
       if (registration.waiting) {
         registration.waiting.postMessage({ type: "SKIP_WAITING" });
@@ -116,9 +127,9 @@ export function useServiceWorkerUpdates() {
       console.log("🔍 [DEV] Debugging service worker...");
       console.log("🔍 [DEV] Navigator serviceWorker:", navigator.serviceWorker);
       console.log("🔍 [DEV] Controller:", navigator.serviceWorker.controller);
-      console.log("🔍 [DEV] Ready state:", await navigator.serviceWorker.ready);
+      console.log("🔍 [DEV] Ready state:", await getServiceWorkerReadyRegistration());
 
-      const registrations = await navigator.serviceWorker.getRegistrations();
+      const registrations = await getAllServiceWorkerRegistrations();
       console.log("🔍 [DEV] All registrations:", registrations);
 
       if (navigator.serviceWorker.controller) {
@@ -195,13 +206,17 @@ export function useServiceWorkerUpdates() {
   };
 
   const checkForUpdates = async () => {
-    if (!("serviceWorker" in navigator)) {
+    if (!canUseServiceWorker()) {
       console.warn("Service Worker not supported");
       return;
     }
 
     try {
-      registration = await navigator.serviceWorker.ready;
+      registration = await getServiceWorkerReadyRegistration();
+      if (!registration) {
+        console.warn("Service worker is not ready");
+        return;
+      }
       console.log("🔄 Checking for service worker updates...");
       console.log("🔍 Current registration state:", {
         installing: !!registration.installing,
@@ -320,7 +335,7 @@ export function useServiceWorkerUpdates() {
   };
 
   const setupUpdateListeners = () => {
-    if (!("serviceWorker" in navigator)) return;
+    if (!canUseServiceWorker()) return;
 
     // Listen for new service worker installations
     navigator.serviceWorker.addEventListener("controllerchange", () => {
@@ -359,6 +374,7 @@ export function useServiceWorkerUpdates() {
 
   // Initialize on mount
   onMounted(() => {
+    if (!isServiceWorkerRuntimeEnabled()) return;
     setupUpdateListeners();
     // Initial check after a short delay
     setTimeout(checkForUpdates, 1000);

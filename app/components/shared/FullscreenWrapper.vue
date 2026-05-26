@@ -150,7 +150,7 @@ defineExpose({
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 1.5rem;
+  padding: .5rem;
 
   /* Custom scrollbar */
   scrollbar-width: thin;
@@ -205,10 +205,9 @@ defineExpose({
 @media (max-width: 768px) {
   .fullscreen-container {
     width: 97vw;
-    height: 98vh;
+    height: 100vh;
     border-radius: 4px;
-    max-height: var(--fs-max-height, 98vh);
-
+    max-height: 98vh
   }
 
   .fullscreen-header,
@@ -217,7 +216,7 @@ defineExpose({
   }
 
   .fullscreen-content {
-    padding: 1rem;
+    padding: 0rem;
   }
 }
 

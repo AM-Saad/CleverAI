@@ -1,4 +1,5 @@
 import type { NoteState } from "./noteTransforms";
+import type { LocalRepository } from "../../../utils/local-first/ports";
 import {
   deleteNoteFromIndexedDB,
   loadNotesFromIndexedDB,
@@ -6,12 +7,7 @@ import {
   saveNotesToIndexedDB,
 } from "~/utils/idb";
 
-export interface NotesLocalRepository {
-  save(note: NoteState): Promise<void>;
-  saveMany(notes: NoteState[]): Promise<void>;
-  loadByWorkspace(workspaceId: string): Promise<NoteState[]>;
-  delete(id: string): Promise<void>;
-}
+export type NotesLocalRepository = LocalRepository<NoteState>;
 
 export function createIndexedDbNotesLocalRepository(): NotesLocalRepository {
   return {

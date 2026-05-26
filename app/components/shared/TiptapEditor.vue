@@ -2,9 +2,9 @@
   <div v-if="editor" ref="editorContainerRef"
     class="container relative flex flex-col p-1 h-full min-h-0 w-full overflow-y-auto">
 
-    <div class="flex flex-col w-full">
+    <div class="flex flex-col w-full min-w-0">
       <UContextMenu :items="props.readonly ? [] : contextMenuItems">
-        <EditorContent :editor="editor" class="flex-1 pt-6" />
+        <EditorContent :editor="editor" class="flex-1 min-w-0 w-full pt-6" />
       </UContextMenu>
     </div>
 
@@ -150,6 +150,7 @@ const CustomTaskItem = TaskItem.extend({
 // ---------- reactive refs ----------
 const editor = shallowRef<Editor | null>(null);
 const isApplyingExternalValue = ref(false);
+const isEditorFocused = ref(false);
 const emit = defineEmits<{
   (e: "update:modelValue", value: string): void;
   (e: "addToMaterial", value: string): void;
@@ -166,6 +167,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   documentMode: "default",
 });
+const activeDocumentId = ref<string | null>(props.id ?? null);
 
 const normalizeEditorContent = (value?: string | null) => {
   if (props.documentMode !== "workspace-note") {
@@ -175,6 +177,25 @@ const normalizeEditorContent = (value?: string | null) => {
   return normalizeWorkspaceNoteContent(value);
 };
 
+const applyExternalContent = (value: string | null | undefined, options: { force?: boolean } = {}) => {
+  if (!editor.value) return;
+
+  const normalizedValue = normalizeEditorContent(value);
+  const current = editor.value.getHTML();
+  if (current === normalizedValue) return;
+
+  if (!options.force && isEditorFocused.value && !props.readonly) {
+    return;
+  }
+
+  isApplyingExternalValue.value = true;
+  try {
+    editor.value.commands.setContent(normalizedValue);
+  } finally {
+    isApplyingExternalValue.value = false;
+  }
+};
+
 // Expose editor publicly
 defineExpose({ editor });
 
@@ -182,6 +203,7 @@ defineExpose({ editor });
 const editorContainerRef = ref<HTMLElement | null>(null);
 const autoActiveIndex = ref(0);
 const autoPosition = ref<{ top: number; left: number } | null>(null);
+const dismissedSuggestionWord = ref<string | null>(null);
 const { suggestions: autoSuggestions, onInput: autoOnInput, onAccept: autoOnAccept } = usePredictionaryInput();
 
 function getCurrentWord(): string {
@@ -221,27 +243,44 @@ function acceptSuggestion(word: string) {
     .run();
   autoOnAccept(word);
   autoActiveIndex.value = 0;
+  dismissedSuggestionWord.value = null;
   autoPosition.value = null;
+}
+
+function closeSuggestions(options: { clearInput?: boolean; dismissCurrentWord?: boolean } = {}) {
+  if (options.dismissCurrentWord) {
+    dismissedSuggestionWord.value = getCurrentWord() || null;
+  }
+
+  autoActiveIndex.value = 0;
+  autoPosition.value = null;
+  if (options.clearInput) {
+    autoOnInput('');
+  }
 }
 
 function updateAutoState() {
   if (!editor.value || props.readonly) {
-    autoPosition.value = null;
+    closeSuggestions({ clearInput: true });
     return;
   }
   const word = getCurrentWord();
 
   if (word.length < 3) {
-    autoOnInput('');
-    autoActiveIndex.value = 0;
-    autoPosition.value = null;
+    dismissedSuggestionWord.value = null;
+    closeSuggestions({ clearInput: true });
+    return;
+  }
+
+  if (dismissedSuggestionWord.value === word) {
+    closeSuggestions({ clearInput: true });
     return;
   }
 
   autoOnInput(word);
   autoActiveIndex.value = 0;
   if (autoSuggestions.value.length === 0) {
-    autoPosition.value = null;
+    closeSuggestions();
     return;
   }
   // Position dropdown below current cursor
@@ -251,16 +290,21 @@ function updateAutoState() {
     const containerRect = editorContainerRef.value?.getBoundingClientRect();
     const scrollTop = editorContainerRef.value?.scrollTop ?? 0;
     if (containerRect) {
+      const dropdownWidth = 160;
+      const gutter = 8;
       autoPosition.value = {
         top: coords.bottom - containerRect.top + scrollTop + 4,
-        left: Math.min(
-          coords.left - containerRect.left,
-          containerRect.width - 160,
+        left: Math.max(
+          gutter,
+          Math.min(
+            coords.left - containerRect.left,
+            Math.max(gutter, containerRect.width - dropdownWidth - gutter),
+          ),
         ),
       };
     }
   } catch {
-    autoPosition.value = null;
+    closeSuggestions();
   }
 }
 
@@ -510,15 +554,17 @@ const contextMenuItems = computed(() => {
 });
 
 watch(
-  () => props.modelValue,
-  (value) => {
+  [() => props.id, () => props.modelValue],
+  ([id, value]) => {
     if (!editor.value) return;
-    const current = editor.value.getHTML();
-    const normalizedValue = normalizeEditorContent(value);
-    if (current === normalizedValue) return;
-    isApplyingExternalValue.value = true;
-    editor.value.commands.setContent(normalizedValue);
-    isApplyingExternalValue.value = false;
+
+    const nextDocumentId = id ?? null;
+    const switchedDocument = nextDocumentId !== activeDocumentId.value;
+    if (switchedDocument) {
+      activeDocumentId.value = nextDocumentId;
+    }
+
+    applyExternalContent(value, { force: switchedDocument });
   },
   { immediate: true }
 );
@@ -529,7 +575,7 @@ watch(
     if (!editor.value) return;
     editor.value.setEditable(!isReadonly);
     if (isReadonly) {
-      autoPosition.value = null;
+      closeSuggestions({ clearInput: true });
       if (isSpeaking.value) {
         stopSpeaking();
       }
@@ -602,7 +648,7 @@ onMounted(async () => {
         },
         Escape: () => {
           if (autoPosition.value) {
-            autoPosition.value = null;
+            closeSuggestions({ clearInput: true, dismissCurrentWord: true });
             return true;
           }
           return false;
@@ -656,7 +702,13 @@ onMounted(async () => {
     }
   });
 
+  editorInstance.on("focus", () => {
+    isEditorFocused.value = true;
+  });
+
   editorInstance.on("blur", () => {
+    isEditorFocused.value = false;
+    closeSuggestions({ clearInput: true });
     emit("blur");
   });
 
@@ -710,10 +762,61 @@ function getSelectedText(): string | null {
 </script>
 
 <style>
-/* container class used in your template */
 .tiptap {
   color: inherit;
   font-family: "Inter", sans-serif;
+  display: block;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  inline-size: 100%;
+  min-inline-size: 0;
+  writing-mode: horizontal-tb;
+  box-sizing: border-box;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1.65;
+}
+
+.ProseMirror {
+  display: block;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  inline-size: 100%;
+  min-inline-size: 0;
+  writing-mode: horizontal-tb;
+  box-sizing: border-box;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.ProseMirror p,
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4,
+.ProseMirror h5,
+.ProseMirror h6,
+.ProseMirror li {
+  display: block;
+  width: 100%;
+  max-width: none;
+  min-width: 0;
+  inline-size: 100%;
+  min-inline-size: 0;
+  box-sizing: border-box;
+  white-space: normal;
+  overflow-wrap: normal;
+  word-break: normal;
+  line-height: 1.65;
+}
+
+.tiptap pre,
+.tiptap code {
+  overflow-wrap: anywhere;
 }
 
 /* Autocomplete dropdown transition */

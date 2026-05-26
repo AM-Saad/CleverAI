@@ -1,4 +1,5 @@
 // app/composables/useOffline.ts
+import { getServiceWorkerReadyRegistration } from "~/utils/serviceWorkerRuntime";
 
 /**
  * Minimal offline form queueing for login (or other small forms).
@@ -82,7 +83,8 @@ export function useOffline() {
 
     // 2) Ask the active SW to run background sync when online
     try {
-      const reg = await navigator.serviceWorker.ready;
+      const reg = await getServiceWorkerReadyRegistration();
+      if (!reg) return;
       // This tag is what the SW listens for in its 'sync' event
       // We cannot pass payload here; the SW reads from IndexedDB instead.
       // @ts-expect-error - older TS libdefs don't know about SyncManager in some targets

@@ -4,7 +4,7 @@
  *
  * Three signals combine for near-real-time accuracy:
  *  1. navigator.onLine events — instant but unreliable (true on captive portals)
- *  2. Server ping (HEAD /api/auth/session) — slow but reliable, confirms reachability
+ *  2. Server ping (GET /api/health) — slow but reliable, confirms reachability
  *  3. API failure reports — FetchFactory reports FETCH_ERROR / TIMEOUT to trigger
  *     an immediate re-verify
  *
@@ -32,7 +32,7 @@ const onlineCallbacks = new Set<() => void | Promise<void>>();
 const offlineCallbacks = new Set<() => void | Promise<void>>();
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-const PING_URL = '/api/auth/session'; // lightweight, always-cached endpoint
+const PING_URL = '/api/health'; // lightweight unauthenticated endpoint
 const PING_TIMEOUT_MS = 5_000;
 const PERIODIC_PING_INTERVAL_MS = 30_000;
 const TRANSITION_DEBOUNCE_MS = 2_000;
@@ -49,12 +49,11 @@ async function ping(): Promise<boolean> {
 
   try {
     const resp = await fetch(PING_URL, {
-      method: 'HEAD',
+      method: 'GET',
       cache: 'no-store',
       signal: pingController.signal,
     });
-    return resp.ok || resp.status === 401 || resp.status === 403;
-    // 401/403 means server is reachable but user is unauthenticated — still "online"
+    return resp.ok;
   } catch {
     return false;
   } finally {
