@@ -3,6 +3,7 @@ import type { Result } from "~/types/Result";
 import {
   LanguageStatsSchema,
   LanguageGradeResponseSchema,
+  LanguageQueueCardSchema,
 } from "@shared/utils/language.contract";
 import { SubscriptionInfoSchema } from "@shared/utils/llm-generate.contract";
 import type {
@@ -74,7 +75,7 @@ const GenerateStoryResponseSchema = z.object({
 });
 
 const LanguageQueueResponseSchema = z.object({
-  cards: z.array(z.any()),
+  cards: z.array(LanguageQueueCardSchema),
 });
 
 const PreferencesSchema = z.object({
@@ -167,10 +168,23 @@ export class LanguageService extends FetchFactory {
     return this.call("POST", `${this.RESOURCE}/words/${id}/enroll`, {}, {});
   }
 
-  async getQueue(): Promise<Result<{ cards: LanguageQueueCard[] }>> {
+  async getQueue(params?: {
+    limit?: number;
+    targetLanguage?: string;
+    nativeLanguage?: string;
+  }): Promise<Result<{ cards: LanguageQueueCard[] }>> {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set("limit", String(params.limit));
+    if (params?.targetLanguage) {
+      query.set("targetLanguage", params.targetLanguage);
+    }
+    if (params?.nativeLanguage) {
+      query.set("nativeLanguage", params.nativeLanguage);
+    }
+    const qs = query.toString();
     return this.call<typeof LanguageQueueResponseSchema>(
       "GET",
-      `${this.RESOURCE}/queue`,
+      `${this.RESOURCE}/queue${qs ? `?${qs}` : ""}`,
       undefined,
       {},
       LanguageQueueResponseSchema,
@@ -211,10 +225,21 @@ export class LanguageService extends FetchFactory {
     );
   }
 
-  async getStats(): Promise<Result<LanguageStats>> {
+  async getStats(params?: {
+    targetLanguage?: string;
+    nativeLanguage?: string;
+  }): Promise<Result<LanguageStats>> {
+    const query = new URLSearchParams();
+    if (params?.targetLanguage) {
+      query.set("targetLanguage", params.targetLanguage);
+    }
+    if (params?.nativeLanguage) {
+      query.set("nativeLanguage", params.nativeLanguage);
+    }
+    const qs = query.toString();
     return this.call<typeof LanguageStatsSchema>(
       "GET",
-      `${this.RESOURCE}/stats`,
+      `${this.RESOURCE}/stats${qs ? `?${qs}` : ""}`,
       undefined,
       {},
       LanguageStatsSchema,

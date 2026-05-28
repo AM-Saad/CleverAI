@@ -184,17 +184,23 @@ Language learning owns capture, translation, stories, word bank, and language-sp
 
 ```mermaid
 flowchart TD
-  LangUI["Language feature containers/components"] --> LangService["languageService"]
+  LangUI["Language feature containers/components"] --> LangRuntime["LanguageLearningRuntime"]
+  LangRuntime --> LangService["languageService"]
   LangService --> Translate["/api/language/translate"]
   LangService --> Story["/api/language/generate-story"]
   LangService --> Queue["/api/language/queue"]
   LangService --> GradeRoute["/api/language/grade"]
   LangService --> EnrollRoute["/api/language/words/:id/enroll"]
 
+  Translate --> CaptureWord["captureLanguageWord"]
+  Story --> GenerateStory["generateLanguageStory"]
+  Queue --> QueueUseCase["getLanguageReviewQueue"]
   GradeRoute --> SharedGrade["review.gradeReviewCard"]
   SharedGrade --> LangRepo["PrismaLanguageReviewRepository"]
   EnrollRoute --> EnrollWord["enrollLanguageWord"]
-  EnrollWord --> Prisma["LanguageWord / LanguageStory / LanguageCardReview"]
+  GenerateStory --> EnrollWord
+  CaptureWord --> Prisma["LanguageWord / LanguageTranslation"]
+  EnrollWord --> Prisma2["LanguageStory / LanguageCardReview"]
 ```
 
 Important invariants:
@@ -202,9 +208,12 @@ Important invariants:
 - Language grading reuses the shared review engine.
 - Language review persistence is isolated by `PrismaLanguageReviewRepository`.
 - Language word enrollment emits `LanguageWordEnrolled`.
-- Translation/story routes still contain some route-level behavior.
+- Translation and story routes are thin adapters over language application services.
+- Capture/story LLM responses are parsed and validated before quota finalization.
+- Language Learning is online-first for v1; cached translation billing is preserved behind an explicit quota policy.
+- Frontend word-bank refresh goes through `LanguageLearningRuntime`, not global browser events.
 
-Current maturity: medium-high. Review reuse is strong; generation/capture routes can be further modularized.
+Current maturity: high for review reuse and medium-high for capture/story. Full offline review remains a future slice.
 
 ## Materials Module
 

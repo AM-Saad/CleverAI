@@ -4,6 +4,7 @@ import type {
   SupportedLanguageCode,
   UserLanguagePreferences,
 } from "@shared/utils/language.contract";
+import { useLanguageLearningRuntime } from "./languageLearningRuntime";
 
 type CaptureState =
   | "idle"
@@ -16,6 +17,7 @@ export function useLanguageCapture() {
   const { $api } = useNuxtApp();
   const creditsStore = useCreditsStore();
   const subscriptionStore = useSubscriptionStore();
+  const runtime = useLanguageLearningRuntime();
 
   // State machine
   const state = ref<CaptureState>("idle");
@@ -45,7 +47,7 @@ export function useLanguageCapture() {
       ]
     | null
   >(null);
-  const preferences = ref<UserLanguagePreferences | null>(null);
+  const preferences = runtime.preferences;
 
   // Operations
   const captureOperation = useOperation<CaptureWordResponse>();
@@ -58,7 +60,7 @@ export function useLanguageCapture() {
     const result = await prefsOperation.execute(() =>
       $api.language.getPreferences(),
     );
-    if (result) preferences.value = result;
+    if (result) runtime.setPreferences(result);
     return result;
   };
 
@@ -122,10 +124,9 @@ export function useLanguageCapture() {
 
     if (result) {
       captureResult.value = result;
+      runtime.setLatestCapture(result);
       state.value = "result";
-      if (import.meta.client && result.saved) {
-        window.dispatchEvent(new CustomEvent("language:words-changed"));
-      }
+      if (result.saved) runtime.invalidateWords();
     } else {
       state.value = "idle";
     }
@@ -139,7 +140,9 @@ export function useLanguageCapture() {
 
     // Update preferences to hide consent next time
     await $api.language.updatePreferences({ showConsent: false });
-    if (preferences.value) preferences.value.showConsent = false;
+    if (preferences.value) {
+      runtime.setPreferences({ ...preferences.value, showConsent: false });
+    }
 
     const pending = pendingCapture.value as any;
     pendingCapture.value = null;
@@ -157,7 +160,9 @@ export function useLanguageCapture() {
 
     // Still update prefs so consent doesn't show again
     await $api.language.updatePreferences({ showConsent: false });
-    if (preferences.value) preferences.value.showConsent = false;
+    if (preferences.value) {
+      runtime.setPreferences({ ...preferences.value, showConsent: false });
+    }
 
     const pending = pendingCapture.value as any;
     pendingCapture.value = null;
@@ -188,10 +193,9 @@ export function useLanguageCapture() {
 
     if (result) {
       storyResult.value = result;
+      runtime.setLatestStory(result);
       state.value = "story-ready";
-      if (import.meta.client) {
-        window.dispatchEvent(new CustomEvent("language:words-changed"));
-      }
+      runtime.invalidateWords();
       // Update the global subscription display if the server returned quota info
       if (result.subscription) {
         subscriptionStore.updateFromData({ subscription: result.subscription });

@@ -93,6 +93,7 @@ import {
   SUPPORTED_LANGUAGE_OPTIONS,
   type SupportedLanguageCode,
 } from "@shared/utils/language.contract";
+import { useLanguageLearningRuntime } from "../composables/languageLearningRuntime";
 
 const props = withDefaults(defineProps<{ compact?: boolean }>(), {
   compact: false,
@@ -100,6 +101,7 @@ const props = withDefaults(defineProps<{ compact?: boolean }>(), {
 const emit = defineEmits<{ (e: "saved"): void }>();
 
 const { $api } = useNuxtApp();
+const languageRuntime = useLanguageLearningRuntime();
 
 const fetchOp = useOperation<any>();
 const saveOp = useOperation<any>();
@@ -123,6 +125,7 @@ const form = ref<{
 const load = async () => {
   const result = await fetchOp.execute(() => $api.language.getPreferences());
   if (result) {
+    languageRuntime.setPreferences(result);
     form.value = {
       enabled: result.enabled ?? true,
       targetLanguage: (result.targetLanguage ?? "en") as SupportedLanguageCode,
@@ -141,7 +144,11 @@ const handleSave = async () => {
   const result = await saveOp.execute(() =>
     $api.language.updatePreferences(form.value!),
   );
-  if (result) emit("saved");
+  if (result) {
+    languageRuntime.setPreferences(result);
+    languageRuntime.invalidateWords();
+    emit("saved");
+  }
 };
 
 onMounted(() => load());

@@ -66,6 +66,10 @@ import {
 import { createNotesSplitInteractionController } from "../app/features/notes/composables/notesSplitInteractionController";
 import { useSplitNotes, type ActivePane, type SplitPosition } from "../app/composables/ui/useSplitNotes";
 import { normalizeShapeTransform } from "../app/utils/canvas/geometry";
+import { parseLexicalEntry } from "../server/modules/language-learning/domain/lexicalEntry";
+import { parseLanguageStoryResponse } from "../server/modules/language-learning/domain/storyResponse";
+import { listLanguageWords } from "../server/modules/language-learning/application/listLanguageWords";
+import { createLanguageLearningRuntime } from "../app/features/language-learning/composables/languageLearningRuntime";
 import type {
   ReviewCardRecord,
   ReviewRepository,
@@ -1159,6 +1163,20 @@ test("workspace note normalization removes extra empty title-like headings", () 
   assert.equal(
     normalizeWorkspaceNoteContent("<h1>Title</h1><h1>Section</h1>"),
     "<h1>Title</h1><h2>Section</h2>",
+  );
+});
+
+test("workspace note normalization repairs obvious fragmented single-character paragraphs", () => {
+  assert.equal(
+    normalizeWorkspaceNoteContent("<h1>A</h1><p>Sss</p><p>s</p><p><br></p><p>a</p><p>s</p><p>a</p><p>s</p>"),
+    "<h1>A</h1><p>Sss</p><p>sasas</p>",
+  );
+});
+
+test("workspace note normalization preserves short intentional single-character paragraphs", () => {
+  assert.equal(
+    normalizeWorkspaceNoteContent("<h1>A</h1><p>x</p><p>y</p><p>Body</p>"),
+    "<h1>A</h1><p>x</p><p>y</p><p>Body</p>",
   );
 });
 
@@ -3190,6 +3208,211 @@ test("gateway generation prep enforces workspace ownership before save", async (
     (error: any) =>
       error?.message === "You do not have access to this workspace.",
   );
+});
+
+test("language lexical parser validates JSON before callers finalize generation", () => {
+  assert.throws(() => parseLexicalEntry("not-json", "hola"));
+
+  const entry = parseLexicalEntry(
+    JSON.stringify({
+      translation: "hello",
+      detectedLang: "es",
+      partOfSpeech: "interjection",
+      meanings: [{ definition: "greeting", translation: "hello" }],
+      examples: [{ text: "Hola, Ana", translation: "Hello, Ana" }],
+    }),
+    "hola",
+  );
+
+  assert.equal(entry.translation, "hello");
+  assert.equal(entry.detectedLang, "es");
+  assert.equal(entry.meanings[0]?.definition, "greeting");
+});
+
+test("language story parser rejects incomplete LLM story responses", () => {
+  assert.throws(() =>
+    parseLanguageStoryResponse(JSON.stringify({ storyText: "Only text" })),
+  );
+
+  const story = parseLanguageStoryResponse(
+    JSON.stringify({
+      storyText: "Hola Ana.",
+      sentences: [
+        {
+          text: "Hola Ana.",
+          clozeWord: "Hola",
+          clozeBlank: "____ Ana.",
+          clozeIndex: 0,
+        },
+      ],
+    }),
+  );
+
+  assert.equal(story.storyText, "Hola Ana.");
+  assert.equal(story.sentences[0]?.clozeWord, "Hola");
+});
+
+test("language words listing paginates after hasStory filtering", async () => {
+  const rows = [
+    {
+      id: "word-without-story",
+      userId: "user-1",
+      createdAt: new Date("2026-01-03T00:00:00.000Z"),
+      stories: [],
+    },
+    {
+      id: "word-with-story",
+      userId: "user-1",
+      createdAt: new Date("2026-01-02T00:00:00.000Z"),
+      stories: [{ id: "story-1", storyText: "Story", sentences: [] }],
+    },
+    {
+      id: "older-word-with-story",
+      userId: "user-1",
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      stories: [{ id: "story-2", storyText: "Older story", sentences: [] }],
+    },
+  ];
+
+  const prisma = {
+    languageWord: {
+      findMany: async ({ where, take }: any) => {
+        if (where?.category?.not === null) return [];
+        const cursorDate = where?.createdAt?.lt
+          ? new Date(where.createdAt.lt)
+          : null;
+        return rows
+          .filter((row) => !cursorDate || row.createdAt < cursorDate)
+          .slice(0, take);
+      },
+    },
+  };
+
+  const result = await listLanguageWords({
+    prisma,
+    userId: "user-1",
+    hasStory: true,
+    limit: 1,
+  });
+
+  assert.deepEqual(
+    result.words.map((word: any) => word.id),
+    ["word-with-story"],
+  );
+  assert.equal(result.nextCursor, "2026-01-02T00:00:00.000Z");
+});
+
+test("language runtime owns word-bank fetch filters and language scoping", async () => {
+  const calls: any[] = [];
+  const runtime = createLanguageLearningRuntime({
+    api: {
+      getWords: async (params: any) => {
+        calls.push(params);
+        return {
+          success: true,
+          data: {
+            words: [
+              {
+                id: "word-1",
+                word: "hola",
+                translation: "hello",
+                translationLang: "en",
+                sourceLang: "es",
+                sourceType: "manual",
+                status: "captured",
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              },
+            ],
+            nextCursor: "cursor-1",
+            categories: ["greeting"],
+          },
+        };
+      },
+      deleteWord: async () => ({ success: true, data: { message: "ok" } }),
+      enrollWord: async (id: string) => ({
+        success: true,
+        data: { wordId: id, status: "enrolled" },
+      }),
+      getStats: async () => ({
+        success: true,
+        data: { total: 1, due: 0, enrolled: 0, mastered: 0 },
+      }),
+    },
+  });
+
+  runtime.setPreferences({
+    id: "prefs-1",
+    userId: "user-1",
+    enabled: true,
+    targetLanguage: "es",
+    nativeLanguage: "en",
+    autoEnroll: true,
+    sessionCardLimit: 12,
+    showConsent: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+  runtime.setWordFilters({
+    status: "captured",
+    category: "greeting",
+    hasStory: true,
+    search: "hol",
+  });
+
+  await runtime.fetchWords();
+
+  assert.equal(calls[0].targetLanguage, "es");
+  assert.equal(calls[0].nativeLanguage, "en");
+  assert.equal(calls[0].status, "captured");
+  assert.equal(calls[0].category, "greeting");
+  assert.equal(calls[0].hasStory, true);
+  assert.equal(runtime.words.value[0]?.word, "hola");
+  assert.deepEqual(runtime.categories.value, ["greeting"]);
+  assert.equal(runtime.hasMore.value, true);
+});
+
+test("language runtime mutates word-bank memory after enroll and delete", async () => {
+  const runtime = createLanguageLearningRuntime({
+    api: {
+      getWords: async () => ({
+        success: true,
+        data: {
+          words: [
+            {
+              id: "word-1",
+              word: "hola",
+              translation: "hello",
+              translationLang: "en",
+              sourceLang: "es",
+              sourceType: "manual",
+              status: "captured",
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          ],
+          nextCursor: null,
+          categories: [],
+        },
+      }),
+      deleteWord: async () => ({ success: true, data: { message: "ok" } }),
+      enrollWord: async (id: string) => ({
+        success: true,
+        data: { wordId: id, status: "enrolled" },
+      }),
+      getStats: async () => ({
+        success: true,
+        data: { total: 1, due: 0, enrolled: 1, mastered: 0 },
+      }),
+    },
+  });
+
+  await runtime.fetchWords();
+  await runtime.enrollWord("word-1");
+  assert.equal(runtime.words.value[0]?.status, "enrolled");
+
+  await runtime.deleteWord("word-1");
+  assert.deepEqual(runtime.words.value, []);
 });
 
 let failed = 0;

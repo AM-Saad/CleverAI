@@ -1,7 +1,11 @@
-import { z, ZodError } from "zod";
+import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { LanguagePreferencesDTO } from "@shared/utils/language.contract";
+import {
+  getOrCreateLanguagePreferences,
+  updateLanguagePreferences,
+} from "@server/modules/language-learning/application/languagePreferences";
 
 export default defineEventHandler(async (event) => {
   const method = getMethod(event);
@@ -9,36 +13,13 @@ export default defineEventHandler(async (event) => {
   const prisma = event.context.prisma;
 
   if (method === "GET") {
-    let prefs = await prisma.userLanguagePreferences.findUnique({
-      where: { userId: user.id },
-    });
-
-    if (!prefs) {
-      prefs = await prisma.userLanguagePreferences.create({
-        data: { userId: user.id },
-      });
-    }
-
-    return success({
-      id: prefs.id,
-      userId: prefs.userId,
-      enabled: prefs.enabled,
-      targetLanguage: prefs.targetLanguage,
-      nativeLanguage:
-        prefs.nativeLanguage === "auto" ? "en" : prefs.nativeLanguage,
-      autoEnroll: prefs.autoEnroll,
-      sessionCardLimit: prefs.sessionCardLimit,
-      showConsent: prefs.showConsent,
-      createdAt: prefs.createdAt,
-      updatedAt: prefs.updatedAt,
-    });
+    return success(await getOrCreateLanguagePreferences({ prisma, userId: user.id }));
   }
 
   if (method === "PUT") {
-    const body = await readBody(event);
     let validatedPrefs;
     try {
-      validatedPrefs = LanguagePreferencesDTO.parse(body);
+      validatedPrefs = LanguagePreferencesDTO.parse(await readBody(event));
     } catch (err) {
       if (err instanceof ZodError) {
         throw Errors.badRequest("Invalid preferences data", err.issues);
@@ -46,30 +27,13 @@ export default defineEventHandler(async (event) => {
       throw Errors.badRequest("Invalid preferences data");
     }
 
-    const prefs = await prisma.userLanguagePreferences.upsert({
-      where: { userId: user.id },
-      update: {
-        ...validatedPrefs,
-        updatedAt: new Date(),
-      },
-      create: {
+    return success(
+      await updateLanguagePreferences({
+        prisma,
         userId: user.id,
-        ...validatedPrefs,
-      },
-    });
-
-    return success({
-      id: prefs.id,
-      userId: prefs.userId,
-      enabled: prefs.enabled,
-      targetLanguage: prefs.targetLanguage,
-      nativeLanguage: prefs.nativeLanguage,
-      autoEnroll: prefs.autoEnroll,
-      sessionCardLimit: prefs.sessionCardLimit,
-      showConsent: prefs.showConsent,
-      createdAt: prefs.createdAt,
-      updatedAt: prefs.updatedAt,
-    });
+        data: validatedPrefs,
+      }),
+    );
   }
 
   throw Errors.methodNotAllowed();

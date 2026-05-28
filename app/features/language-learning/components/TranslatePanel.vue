@@ -349,7 +349,7 @@
 <script setup lang="ts">
 import { AnimatePresence, motion } from "motion-v";
 import { useSanitize } from "~/composables/shared/useSanitize";
-import { useSpeachToText } from "~/composables/ai/useSpeachToText";
+import { useSpeechCapture } from "../composables/useSpeechCapture";
 
 const props = defineProps<{ show: boolean }>();
 const emit = defineEmits<{ (e: "close"): void }>();
@@ -385,12 +385,20 @@ const inputContainerRef = ref<HTMLElement | null>(null);
 const bodyRef = ref<HTMLElement | null>(null);
 
 // ── Recording ─────────────────────────────────────────────────────────────────
-type RecordingState = "idle" | "recording" | "transcribing";
-const recordingState = ref<RecordingState>("idle");
-const recordingSeconds = ref(0);
-let recordingTimer: ReturnType<typeof setInterval> | null = null;
-let activeRecorder: MediaRecorder | null = null;
-const { transcribe: _transcribe } = useSpeachToText();
+const speechCapture = useSpeechCapture({
+  maxDuration: 15,
+  onResult(transcript) {
+    wordInput.value = transcript;
+  },
+});
+const recordingState = computed(() =>
+  speechCapture.isProcessing.value
+    ? "transcribing"
+    : speechCapture.isListening.value
+      ? "recording"
+      : "idle",
+);
+const recordingSeconds = speechCapture.recordingSeconds;
 
 const micIcon = computed(() => {
   if (recordingState.value === "transcribing") return "i-lucide-loader-2";
@@ -406,54 +414,11 @@ const micLabel = computed(() => {
 
 const handleMicClick = async () => {
   if (recordingState.value === "recording") {
-    activeRecorder?.stop();
+    speechCapture.stop();
     return;
   }
   if (recordingState.value !== "idle") return;
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const rec = new MediaRecorder(stream);
-    activeRecorder = rec;
-    const chunks: Blob[] = [];
-    rec.ondataavailable = (e) => {
-      if (e.data.size > 0) chunks.push(e.data);
-    };
-    rec.onstop = async () => {
-      stream.getTracks().forEach((t) => t.stop());
-      if (recordingTimer !== null) {
-        clearInterval(recordingTimer);
-        recordingTimer = null;
-      }
-      if (chunks.length === 0) {
-        recordingState.value = "idle";
-        activeRecorder = null;
-        return;
-      }
-      recordingState.value = "transcribing";
-      try {
-        const blob = new Blob(chunks, { type: "audio/webm" });
-        const arrayBuffer = await blob.arrayBuffer();
-        const audioCtx = new AudioContext({ sampleRate: 16000 });
-        const decoded = await audioCtx.decodeAudioData(arrayBuffer);
-        const floatData = decoded.getChannelData(0);
-        const transcript = await _transcribe(floatData);
-        if (transcript) wordInput.value = transcript;
-      } catch {
-        /* STT failure non-critical */
-      }
-      recordingState.value = "idle";
-      activeRecorder = null;
-    };
-    rec.start();
-    recordingState.value = "recording";
-    recordingSeconds.value = 0;
-    recordingTimer = setInterval(() => {
-      recordingSeconds.value++;
-      if (recordingSeconds.value >= 15) rec.stop();
-    }, 1000);
-  } catch {
-    recordingState.value = "idle";
-  }
+  speechCapture.start();
 };
 
 // ── Actions ───────────────────────────────────────────────────────────────────
@@ -485,18 +450,7 @@ const resetToIdle = () => {
   nextTick(() => inputContainerRef.value?.querySelector("input")?.focus());
 };
 const handleClose = () => {
-  if (activeRecorder) {
-    try {
-      activeRecorder.stop();
-    } catch {}
-    activeRecorder = null;
-  }
-  if (recordingTimer !== null) {
-    clearInterval(recordingTimer);
-    recordingTimer = null;
-  }
-  recordingState.value = "idle";
-  recordingSeconds.value = 0;
+  speechCapture.cleanup();
   dismissResult();
   wordInput.value = "";
   contextInput.value = "";

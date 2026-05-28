@@ -1,37 +1,25 @@
 <script setup lang="ts">
 import { useTextToSpeechWorker } from "~/composables/ai/useTextToSpeechWorker";
 import type { LanguageWord } from "~/shared/utils/language.contract";
+import { useLanguageLearningRuntime } from "../composables/languageLearningRuntime";
 
-const { $api } = useNuxtApp();
 const route = useRoute();
 const router = useRouter();
 const { generateStory: generateStoryCapture } = useLanguageCapture();
 const ttsWorker = useTextToSpeechWorker();
+const languageRuntime = useLanguageLearningRuntime();
 
-const words = ref<LanguageWord[]>([]);
-const serverCategories = ref<string[]>([]);
-const cursor = ref<string | undefined>(undefined);
-const hasMore = ref(false);
+const words = languageRuntime.words;
+const hasMore = languageRuntime.hasMore;
 const activeTab = ref("all");
 const selectedCategory = ref("all");
 const storyFilter = ref<"all" | "with">("all");
 const searchQuery = ref("");
 const expandedStoryIds = ref(new Set<string>());
 
-type WordsResult = {
-  words: LanguageWord[];
-  nextCursor: string | null;
-  categories?: string[];
-};
-
-const fetchOp = useOperation<WordsResult>();
-const loadMoreOp = useOperation<WordsResult>();
-const deleteOp = useOperation<{ message: string }>();
-const enrollOp = useOperation<{ wordId: string; status: string }>();
-
-const isLoading = fetchOp.pending;
-const isLoadingMore = loadMoreOp.pending;
-const error = fetchOp.error;
+const isLoading = readonly(languageRuntime.isFetchingWords);
+const isLoadingMore = readonly(languageRuntime.isLoadingMoreWords);
+const error = readonly(languageRuntime.wordBankError);
 
 const enrollingId = ref<string | null>(null);
 const generatingStoryId = ref<string | null>(null);
@@ -52,7 +40,7 @@ const tabs = computed(() => {
   ].filter((tab) => tab.value === "all" || tab.count > 0);
 });
 
-const categories = computed(() => serverCategories.value.slice(0, 12));
+const categories = computed(() => languageRuntime.categories.value.slice(0, 12));
 
 const filteredWords = computed(() => {
   const query = searchQuery.value.trim().toLowerCase();
@@ -82,43 +70,17 @@ const pendingDelete = ref<LanguageWord | null>(null);
 const deletingId = ref<string | null>(null);
 
 const fetchWords = async () => {
-  cursor.value = undefined;
-  const result = await fetchOp.execute(() =>
-    $api.language.getWords({
-      limit: 50,
-      status: activeTab.value === "all" ? undefined : activeTab.value,
-      category:
-        selectedCategory.value === "all" ? undefined : selectedCategory.value,
-      hasStory: storyFilter.value === "with" ? true : undefined,
-      search: searchQuery.value.trim() || undefined,
-    }),
-  );
-  if (result) {
-    words.value = result.words ?? [];
-    serverCategories.value = result.categories ?? [];
-    cursor.value = result.nextCursor ?? undefined;
-    hasMore.value = !!result.nextCursor;
-  }
+  languageRuntime.setWordFilters({
+    status: activeTab.value,
+    category: selectedCategory.value,
+    hasStory: storyFilter.value === "with",
+    search: searchQuery.value,
+  });
+  return languageRuntime.fetchWords();
 };
 
 const loadMore = async () => {
-  if (!cursor.value) return;
-  const result = await loadMoreOp.execute(() =>
-    $api.language.getWords({
-      limit: 50,
-      cursor: cursor.value,
-      status: activeTab.value === "all" ? undefined : activeTab.value,
-      category:
-        selectedCategory.value === "all" ? undefined : selectedCategory.value,
-      hasStory: storyFilter.value === "with" ? true : undefined,
-      search: searchQuery.value.trim() || undefined,
-    }),
-  );
-  if (result) {
-    words.value.push(...(result.words ?? []));
-    cursor.value = result.nextCursor ?? undefined;
-    hasMore.value = !!result.nextCursor;
-  }
+  return languageRuntime.loadMoreWords();
 };
 
 const storyFor = (word: LanguageWord) =>
@@ -161,7 +123,14 @@ const handleSpeakStory = async (word: LanguageWord) => {
   if (!storyText) return;
   speakingId.value = `${word.id}:story`;
   try {
-    await ttsWorker.synthesize(storyText, word.sourceLang);
+    const audioUrl = await ttsWorker.synthesize(storyText, word.sourceLang);
+    if (!audioUrl) return;
+    if (activeAudio) {
+      activeAudio.pause();
+      activeAudio.currentTime = 0;
+    }
+    activeAudio = new Audio(audioUrl);
+    await activeAudio.play();
   } catch (err) {
     console.warn("[language] Story text to speech failed", err);
   } finally {
@@ -179,30 +148,19 @@ const executeDelete = async () => {
   deletingId.value = id;
   pendingDelete.value = null;
 
-  await deleteOp.execute(() => $api.language.deleteWord(id));
-  if (!deleteOp.error.value) {
-    words.value = words.value.filter((word) => word.id !== id);
-  }
+  await languageRuntime.deleteWord(id);
   deletingId.value = null;
 };
 
 const handleEnroll = async (word: LanguageWord) => {
   enrollingId.value = word.id;
-  const result = await enrollOp.execute(() =>
-    $api.language.enrollWord(word.id),
-  );
-  if (result) {
-    const idx = words.value.findIndex((item) => item.id === word.id);
-    const current = words.value[idx];
-    if (current) words.value[idx] = { ...current, status: "enrolled" };
-  }
+  await languageRuntime.enrollWord(word.id);
   enrollingId.value = null;
 };
 
 const handleGenerateStory = async (word: LanguageWord) => {
   generatingStoryId.value = word.id;
-  const result = await generateStoryCapture(word.id);
-  if (result) await fetchWords();
+  await generateStoryCapture(word.id);
   generatingStoryId.value = null;
 };
 
@@ -243,9 +201,8 @@ const writeFiltersToRoute = () => {
 };
 
 let didReadInitialRoute = false;
-const handleExternalWordsChanged = () => {
-  void fetchWords();
-};
+const { debouncedFunc: scheduleFilterRouteWrite, cancel: cancelFilterRouteWrite } =
+  useDebounce(writeFiltersToRoute, 250);
 
 watch(
   () => route.query,
@@ -257,20 +214,20 @@ watch(
 
 watch([activeTab, selectedCategory, storyFilter, searchQuery], () => {
   if (!didReadInitialRoute) return;
-  writeFiltersToRoute();
+  scheduleFilterRouteWrite();
+});
+
+watch(languageRuntime.wordBankRevision, () => {
+  if (didReadInitialRoute) void fetchWords();
 });
 
 onMounted(() => {
   syncFiltersFromRoute();
   didReadInitialRoute = true;
   void fetchWords();
-  window.addEventListener("language:words-changed", handleExternalWordsChanged);
 });
 onBeforeUnmount(() => {
-  window.removeEventListener(
-    "language:words-changed",
-    handleExternalWordsChanged,
-  );
+  cancelFilterRouteWrite();
   if (activeAudio) {
     activeAudio.pause();
     activeAudio.currentTime = 0;
@@ -408,7 +365,7 @@ defineExpose({ refresh: fetchWords });
       </ui-card>
 
       <div v-if="hasMore" class="flex justify-center pt-2">
-        <u-button variant="ghost" color="neutral" size="sm" :loading="isLoadingMore" @click="loadMore">
+        <u-button variant="ghost" color="neutral" size="sm" :loading="isLoadingMore" @click="() => void loadMore()">
           Load more
         </u-button>
       </div>

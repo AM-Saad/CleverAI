@@ -3,13 +3,17 @@ import type {
   LanguageGradeRequest,
 } from "@shared/utils/language.contract";
 import { useTextToSpeechWorker } from "~/composables/ai/useTextToSpeechWorker";
+import { useLanguageLearningRuntime } from "./languageLearningRuntime";
 
 export function useLanguageReview() {
   const { $api } = useNuxtApp();
+  const languageRuntime = useLanguageLearningRuntime();
 
   const queue = ref<LanguageQueueCard[]>([]);
   const currentIndex = ref(0);
   const isComplete = ref(false);
+  const gradedCardIds = ref(new Set<string>());
+  const requestIdsByCard = new Map<string, string>();
 
   const fetchOperation = useOperation<{ cards: LanguageQueueCard[] }>();
   const gradeOperation = useOperation<{
@@ -34,8 +38,15 @@ export function useLanguageReview() {
     isComplete.value = false;
     currentIndex.value = 0;
     queue.value = [];
+    gradedCardIds.value = new Set();
+    requestIdsByCard.clear();
 
-    const result = await fetchOperation.execute(() => $api.language.getQueue());
+    const result = await fetchOperation.execute(() =>
+      $api.language.getQueue({
+        targetLanguage: languageRuntime.preferences.value?.targetLanguage,
+        nativeLanguage: languageRuntime.preferences.value?.nativeLanguage,
+      }),
+    );
     if (result) {
       queue.value = result.cards;
       if (result.cards.length === 0) {
@@ -49,10 +60,19 @@ export function useLanguageReview() {
     cardId: string,
     gradeValue: "0" | "1" | "2" | "3" | "4" | "5",
   ) => {
+    if (gradeOperation.pending.value || gradedCardIds.value.has(cardId)) {
+      return null;
+    }
+    if (!requestIdsByCard.has(cardId)) {
+      const uniquePart =
+        globalThis.crypto?.randomUUID?.() ??
+        `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      requestIdsByCard.set(cardId, `${cardId}-${uniquePart}`);
+    }
     const payload: LanguageGradeRequest = {
       cardId,
       grade: gradeValue,
-      requestId: `${cardId}-${Date.now()}`,
+      requestId: requestIdsByCard.get(cardId),
     };
 
     const result = await gradeOperation.execute(() =>
@@ -60,6 +80,9 @@ export function useLanguageReview() {
     );
 
     if (result) {
+      const nextGraded = new Set(gradedCardIds.value);
+      nextGraded.add(cardId);
+      gradedCardIds.value = nextGraded;
       nextCard();
     }
 
