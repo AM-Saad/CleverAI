@@ -9,7 +9,7 @@ import type { SW_MESSAGE_TYPES } from "../../app/utils/constants/pwa";
 type ValueOf<T> = T[keyof T];
 
 // Modes for sync operations
-export type SyncMode = "manual" | "background";
+export type SyncMode = "manual" | "background" | "reconnect" | "refresh";
 
 // ---------------- Outgoing (SW -> Window) ----------------
 // Notes sync lifecycle
@@ -19,7 +19,15 @@ export interface NotesSyncStartedMessage {
 }
 export interface NotesSyncedMessage {
   type: typeof SW_MESSAGE_TYPES.NOTES_SYNCED;
-  data: { appliedCount: number; conflictsCount: number; mode: SyncMode };
+  data: {
+    appliedCount: number;
+    conflictsCount: number;
+    mode: SyncMode;
+    groupAppliedCount?: number;
+    layoutApplied?: number;
+    layoutConflict?: boolean;
+    deferredToClient?: boolean;
+  };
 }
 export interface NotesSyncErrorMessage {
   type: typeof SW_MESSAGE_TYPES.NOTES_SYNC_ERROR;
@@ -27,7 +35,12 @@ export interface NotesSyncErrorMessage {
 }
 export interface NotesSyncConflictsMessage {
   type: typeof SW_MESSAGE_TYPES.NOTES_SYNC_CONFLICTS;
-  data: { conflictsCount: number; mode: SyncMode };
+  data: {
+    conflictsCount: number;
+    mode: SyncMode;
+    groupConflictsCount?: number;
+    layoutConflict?: boolean;
+  };
 }
 
 // Form sync lifecycle

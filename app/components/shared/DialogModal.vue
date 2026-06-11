@@ -26,7 +26,7 @@ const { onKeydown } = useFocusTrap(computed(() => props.show), panelEl, {
       <div v-if="props.show" class="modal-mask">
         <div ref="panelEl" role="dialog" aria-modal="true" :aria-label="ariaLabel" :aria-hidden="!props.show"
           :inert="!props.show" tabindex="-1" @keydown="onKeydown"
-          class="inner bg-surface absolute left-[50%] top-[50%] md:w-2/3 lg:w-1/3 w-11/12 -translate-x-1/2 -translate-y-1/2 transform rounded-2xl shadow-lg z-50 overflow-auto">
+          class="inner bg-surface absolute left-[50%] top-[50%] md:w-2/3 lg:w-1/3 w-11/12 -translate-x-1/2 -translate-y-1/2 transform rounded-[var(--radius-2xl)] shadow-[var(--component-dialog-shadow)] z-50 overflow-auto">
           <div
             class="modal-header flex items-center justify-between font-medium text-content-on-surface border-b border-secondary bg-surface p-3.5 pb-2">
             <slot name="header">
@@ -68,7 +68,7 @@ const { onKeydown } = useFocusTrap(computed(() => props.show), panelEl, {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgb(2 6 23 / 80%);
+  background-color: var(--ds-backdrop-strong);
   display: flex;
   transition: opacity 0.3s ease;
 }

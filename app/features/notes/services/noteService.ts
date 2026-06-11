@@ -11,6 +11,11 @@ import type {
   NotesSyncRequest,
   NotesSyncResponse,
 } from "@@/shared/utils/note-sync.contract.ts";
+import type {
+  NoteCollabSnapshotRequest,
+  NoteCollabSnapshotResponse,
+  NoteCollabTokenResponse,
+} from "@@/shared/utils/note-collab.contract.ts";
 
 import type { FetchOptions } from "ofetch";
 
@@ -63,6 +68,24 @@ export class NoteService extends FetchFactory {
       "POST",
       `${this.RESOURCE}/sync`,
       payload
+    );
+  }
+
+  async getCollabToken(id: string): Promise<Result<NoteCollabTokenResponse>> {
+    return this.call<NoteCollabTokenResponse>(
+      "GET",
+      `${this.RESOURCE}/${id}/collab-token`,
+    );
+  }
+
+  async saveCollabSnapshot(
+    id: string,
+    payload: NoteCollabSnapshotRequest,
+  ): Promise<Result<NoteCollabSnapshotResponse>> {
+    return this.call<NoteCollabSnapshotResponse>(
+      "POST",
+      `${this.RESOURCE}/${id}/collab-snapshot`,
+      payload,
     );
   }
 }

@@ -75,25 +75,25 @@ const variantClasses = {
 };
 
 const sizeClasses = {
-  xs: "p-1",
-  sm: "p-2",
-  md: "p-3",
-  lg: "p-3 lg:p-4",
-  xl: "p-5",
+  xs: "p-[var(--component-card-padding-xs)]",
+  sm: "p-[var(--component-card-padding-sm)]",
+  md: "p-[var(--component-card-padding-md)]",
+  lg: "p-[var(--component-card-padding-md)] lg:p-[var(--component-card-padding-lg)]",
+  xl: "p-[var(--component-card-padding-xl)]",
 };
 
 const shadowClasses = {
   none: "shadow-none!",
-  sm: "shadow-sm",
-  md: "shadow-md",
-  lg: "shadow-lg",
-  xl: "shadow-xl",
+  sm: "shadow-[var(--shadow-dropdown)]",
+  md: "shadow-[var(--shadow-dropdown)]",
+  lg: "shadow-[var(--shadow-card-hover)]",
+  xl: "shadow-[var(--shadow-modal)]",
 };
 
 const hoverClasses = {
   none: "",
-  lift: "hover:shadow-lg hover:-translate-y-1",
-  glow: "hover:shadow-lg hover:shadow-[color:var(--color-primary)]/20",
+  lift: "hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-1",
+  glow: "hover:shadow-[var(--shadow-primary-glow)]",
   scale: "hover:scale-[1.02]",
 };
 const headerSizesClasses = {
@@ -116,7 +116,7 @@ const combinedContentClasses = ["ui-card__content", contentClasses].join(" ");
 
 <style scoped>
 .ui-card {
-  border-radius: var(--radius-2xl);
+  border-radius: var(--component-card-radius);
   transition: all 0.2s ease-in-out;
   display: flex;
   flex-direction: column;

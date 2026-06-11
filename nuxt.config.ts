@@ -346,6 +346,8 @@ export default defineNuxtConfig({
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
       STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
       APPLIXIR_SITE_ID: process.env.APPLIXIR_SITE_ID,
+      notesCollabEnabled: process.env.NUXT_PUBLIC_NOTES_COLLAB_ENABLED === "true",
+      collabWsUrl: process.env.NUXT_PUBLIC_COLLAB_WS_URL || "ws://127.0.0.1:1234",
       // Single dev toggle for the app service worker.
       // Production always enables the service worker regardless of this flag.
       serviceWorkerEnabledInDev: process.env.NUXT_PUBLIC_SERVICE_WORKER_IN_DEV === "true",

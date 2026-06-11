@@ -350,6 +350,10 @@ async function sendCardDueNotification(
           ? `You have cards waiting in 1 workspace${languageSuffix}`
           : `You have cards waiting across ${workspaceCount} workspaces${languageSuffix}`;
 
+    const redirectUrl = workspaceCount === 0 && data.languageCardCount && data.languageCardCount > 0
+      ? "/language/review"
+      : "/user/review";
+
     // Use existing notification API with internal cron authorization
     const response = await $fetch("/api/notifications/send", {
       method: "POST",
@@ -360,7 +364,7 @@ async function sendCardDueNotification(
         title,
         message: body, // API expects 'message' not 'body'
         targetUsers: [userId],
-        url: "/user/review",
+        url: redirectUrl,
         tag: "card-due",
         requireInteraction: true,
         icon: "/icons/192x192.png",

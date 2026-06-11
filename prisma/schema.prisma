@@ -104,6 +104,7 @@ model Note {
   workspaceId String    @db.ObjectId
   group       NoteGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
   groupId     String?   @db.ObjectId
+  collabDocument NoteCollabDocument?
   title       String?
   content     String
   tags        String[]  @default([])
@@ -116,6 +117,20 @@ model Note {
 
   @@index([workspaceId])
   @@index([workspaceId, groupId, order])
+}
+
+model NoteCollabDocument {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  note          Note     @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  noteId        String   @unique @db.ObjectId
+  workspaceId   String   @db.ObjectId
+  state         Bytes
+  schemaVersion Int      @default(1)
+  initialized   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([workspaceId])
 }
 
 model NoteGroup {

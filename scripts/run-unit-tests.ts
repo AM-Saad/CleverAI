@@ -38,6 +38,12 @@ import {
 } from "../app/features/notes/composables/notesLayoutController";
 import { createNotesSyncCoordinator } from "../app/features/notes/composables/notesSyncCoordinator";
 import { createNotesSyncRuntime } from "../app/features/notes/composables/notesSyncRuntime";
+import {
+  buildNoteCollabRoomName,
+  parseNoteCollabRoomName,
+  signNoteCollabToken,
+  verifyNoteCollabToken,
+} from "../server/modules/notes/collab/noteCollab";
 import { createNotesConflictResolver } from "../app/features/notes/composables/notesConflictResolver";
 import { createNotesCommandService } from "../app/features/notes/composables/notesCommandService";
 import { createNotesContentQueue } from "../app/features/notes/composables/notesContentQueue";
@@ -138,6 +144,7 @@ function fakePrismaForReview() {
 
 function fakeNotesPrisma() {
 	  const notes = new Map<string, any>();
+	  const noteCollabDocuments = new Map<string, any>();
 	  const noteGroups = new Map<string, any>([
 	    ["group-1", { id: "group-1", workspaceId: "workspace-1", title: "Group 1", order: 0 }],
 	  ]);
@@ -146,6 +153,7 @@ function fakeNotesPrisma() {
 
   return {
     notes,
+    noteCollabDocuments,
     noteGroups,
     prisma: {
       workspace: {
@@ -237,6 +245,9 @@ function fakeNotesPrisma() {
           notes.delete(where.id);
           return existing;
         },
+      },
+      noteCollabDocument: {
+        findUnique: async ({ where }: any) => noteCollabDocuments.get(where.noteId) ?? null,
       },
       $transaction: async <T>(fn: (tx: any) => Promise<T>) =>
         fn({
@@ -770,6 +781,47 @@ test("workspace note sync treats missing deletes as applied", async () => {
   assert.deepEqual(result.conflicts, []);
 });
 
+test("workspace note sync reports delete conflicts for newer collaborative body edits", async () => {
+  const { notes, noteCollabDocuments, prisma } = fakeNotesPrisma();
+  notes.set("note-1", {
+    id: "note-1",
+    workspaceId: "workspace-1",
+    groupId: null,
+    title: "Server note",
+    content: "Server body",
+    tags: [],
+    noteType: "TEXT",
+    metadata: null,
+    version: 1,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  });
+  noteCollabDocuments.set("note-1", {
+    noteId: "note-1",
+    workspaceId: "workspace-1",
+    updatedAt: new Date("2026-01-03T00:00:00.000Z"),
+  });
+
+  const result = await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request: {
+      changes: [
+        {
+          id: "note-1",
+          operation: "delete",
+          updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+          localVersion: 1,
+          serverVersion: 1,
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(result.applied, []);
+  assert.equal(result.conflicts[0]?.reason, "DELETE_REMOTE_BODY_EDIT");
+  assert.equal(notes.has("note-1"), true);
+});
+
 test("workspace note sync reports server-newer conflicts", async () => {
   const { notes, prisma } = fakeNotesPrisma();
   notes.set("note-1", {
@@ -953,7 +1005,7 @@ test("notes sync coordinator stores fresh applied note versions locally", async 
   assert.equal(saved.get("note-1")?.version, 2);
 });
 
-test("notes sync coordinator rebases version conflicts for retry", async () => {
+test("notes sync coordinator leaves version conflicts to resolver", async () => {
   const notes = ref(new Map<string, any>([
     ["note-1", {
       id: "note-1",
@@ -1035,9 +1087,9 @@ test("notes sync coordinator rebases version conflicts for retry", async () => {
     layoutConflict: false,
   });
 
-  assert.equal(notes.value.get("note-1")?.version, 2);
-  assert.equal(saved.get("note-1")?.version, 2);
-  assert.equal(pending.get("note-1")?.serverVersion, 2);
+  assert.equal(notes.value.get("note-1")?.version, 1);
+  assert.equal(saved.has("note-1"), false);
+  assert.equal(pending.get("note-1")?.serverVersion, 1);
   assert.equal(notes.value.get("note-1")?.isDirty, true);
 });
 
@@ -1072,10 +1124,12 @@ test("notes conflict resolver stores local and server snapshots and blocks resen
     }],
   ]);
   const conflicts = new Map<string, any>();
+  const conflictState = ref(new Map<string, any>());
   const saved = new Map<string, any>();
   const resolver = createNotesConflictResolver({
     workspaceId: "workspace-1",
     notes,
+    conflicts: conflictState,
     conflictRepository: {
       save: async (conflict: any) => {
         conflicts.set(conflict.id, conflict);
@@ -1131,9 +1185,174 @@ test("notes conflict resolver stores local and server snapshots and blocks resen
 
   assert.equal(recorded, 1);
   assert.equal(conflicts.size, 1);
+  assert.equal(conflictState.value.get("note-1")?.serverVersion, 2);
   assert.equal(pending.get("note-1")?.conflicted, true);
   assert.equal(notes.value.get("note-1")?.error?.includes("Sync conflict detected"), true);
   assert.equal(saved.get("note-1")?.version, 2);
+});
+
+test("notes conflict resolver keep-local queues overwrite against latest server version", async () => {
+  const notes = ref(new Map<string, any>([
+    ["note-1", {
+      id: "note-1",
+      workspaceId: "workspace-1",
+      title: "Local",
+      content: "<h1>Local</h1>",
+      tags: [],
+      order: 0,
+      noteType: "TEXT",
+      metadata: null,
+      version: 2,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+      isDirty: true,
+      isLoading: false,
+      error: "Sync conflict detected. Resolve local and server versions before syncing this note.",
+    }],
+  ]));
+  const pending = new Map<string, any>([
+    ["note-1", {
+      id: "note-1",
+      operation: "upsert",
+      updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+      localVersion: 1,
+      serverVersion: 2,
+      workspaceId: "workspace-1",
+      title: "Local",
+      content: "<h1>Local</h1>",
+      conflicted: true,
+    }],
+  ]);
+  const storedConflicts = new Map<string, any>([
+    ["workspace-1:content:note-1", {
+      id: "workspace-1:content:note-1",
+      workspaceId: "workspace-1",
+      scope: "content",
+      entityId: "note-1",
+      reason: "VERSION_MISMATCH",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      localSnapshot: pending.get("note-1"),
+      serverSnapshot: { id: "note-1", workspaceId: "workspace-1", content: "<h1>Server</h1>", version: 2 },
+      serverVersion: 2,
+      clientServerVersion: 1,
+    }],
+  ]);
+  const conflictState = ref(new Map<string, any>([
+    ["note-1", storedConflicts.get("workspace-1:content:note-1")],
+  ]));
+  const saved = new Map<string, any>();
+  const resolver = createNotesConflictResolver({
+    workspaceId: "workspace-1",
+    notes,
+    conflicts: conflictState,
+    conflictRepository: {
+      save: async (conflict: any) => storedConflicts.set(conflict.id, conflict),
+      load: async () => Array.from(storedConflicts.values()),
+      remove: async (ids: string[]) => ids.forEach((id) => storedConflicts.delete(id)),
+    } as any,
+    pendingQueue: {
+      add: async (change: any) => pending.set(change.id, change),
+      load: async () => Array.from(pending.values()),
+      remove: async (ids: string[]) => ids.forEach((id) => pending.delete(id)),
+      registerBackgroundSync: async () => {},
+    } as any,
+    localRepository: {
+      save: async (note: any) => saved.set(note.id, note),
+      saveMany: async () => {},
+      delete: async () => {},
+      loadByWorkspace: async () => [],
+    } as any,
+  });
+
+  const resolved = await resolver.resolveContentConflict("note-1", "keep-local");
+
+  assert.equal(resolved, true);
+  assert.equal(pending.get("note-1")?.conflicted, false);
+  assert.equal(pending.get("note-1")?.serverVersion, 2);
+  assert.equal(pending.get("note-1")?.content, "<h1>Local</h1>");
+  assert.equal(conflictState.value.has("note-1"), false);
+  assert.equal(storedConflicts.size, 0);
+  assert.equal(saved.get("note-1")?.error, null);
+});
+
+test("notes conflict resolver keep-server drops pending local change", async () => {
+  const notes = ref(new Map<string, any>([
+    ["note-1", {
+      id: "note-1",
+      workspaceId: "workspace-1",
+      title: "Local",
+      content: "<h1>Local</h1>",
+      tags: [],
+      order: 0,
+      noteType: "TEXT",
+      metadata: null,
+      version: 1,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+      isDirty: true,
+      isLoading: false,
+      error: "Sync conflict detected. Resolve local and server versions before syncing this note.",
+    }],
+  ]));
+  const pending = new Map<string, any>([
+    ["note-1", { id: "note-1", operation: "upsert", workspaceId: "workspace-1", conflicted: true }],
+  ]);
+  const conflictRecord = {
+    id: "workspace-1:content:note-1",
+    workspaceId: "workspace-1",
+    scope: "content",
+    entityId: "note-1",
+    reason: "VERSION_MISMATCH",
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    localSnapshot: pending.get("note-1"),
+    serverSnapshot: {
+      id: "note-1",
+      workspaceId: "workspace-1",
+      title: "Server",
+      content: "<h1>Server</h1>",
+      tags: ["remote"],
+      version: 3,
+      updatedAt: "2026-01-03T00:00:00.000Z",
+    },
+    serverVersion: 3,
+    clientServerVersion: 1,
+  };
+  const storedConflicts = new Map<string, any>([[conflictRecord.id, conflictRecord]]);
+  const conflictState = ref(new Map<string, any>([["note-1", conflictRecord]]));
+  const saved = new Map<string, any>();
+  const resolver = createNotesConflictResolver({
+    workspaceId: "workspace-1",
+    notes,
+    conflicts: conflictState,
+    conflictRepository: {
+      save: async (conflict: any) => storedConflicts.set(conflict.id, conflict),
+      load: async () => Array.from(storedConflicts.values()),
+      remove: async (ids: string[]) => ids.forEach((id) => storedConflicts.delete(id)),
+    } as any,
+    pendingQueue: {
+      add: async (change: any) => pending.set(change.id, change),
+      load: async () => Array.from(pending.values()),
+      remove: async (ids: string[]) => ids.forEach((id) => pending.delete(id)),
+      registerBackgroundSync: async () => {},
+    } as any,
+    localRepository: {
+      save: async (note: any) => saved.set(note.id, note),
+      saveMany: async () => {},
+      delete: async () => {},
+      loadByWorkspace: async () => [],
+    } as any,
+  });
+
+  const resolved = await resolver.resolveContentConflict("note-1", "keep-server");
+
+  assert.equal(resolved, true);
+  assert.equal(pending.has("note-1"), false);
+  assert.equal(notes.value.get("note-1")?.content, "<h1>Server</h1>");
+  assert.equal(notes.value.get("note-1")?.isDirty, false);
+  assert.equal(conflictState.value.has("note-1"), false);
+  assert.equal(saved.get("note-1")?.version, 3);
 });
 
 test("workspace note normalization uses the default empty template", () => {
@@ -2318,6 +2537,7 @@ test("notes sync runtime drains queues in deterministic order", async () => {
     },
     conflictResolver: {
       hasConflicts: async () => false,
+      getConflict: () => null,
       hydrateConflictState: async () => {},
       recordContentConflicts: async () => {
         events.push("record-conflicts");
@@ -2380,6 +2600,114 @@ test("notes sync runtime drains queues in deterministic order", async () => {
   ]);
   assert.equal(layoutStatus.value, "synced");
   assert.equal(layoutPendingCount.value, 0);
+});
+
+test("notes sync runtime repairs dirty notes missing pending queue rows", async () => {
+  const repaired: any[] = [];
+  let syncPayload: any = null;
+  const notes = ref(new Map<string, any>([
+    ["note-1", {
+      id: "note-1",
+      workspaceId: "workspace-1",
+      groupId: null,
+      title: "Offline title",
+      content: "<h1>Offline title</h1><p>Desktop edit</p>",
+      tags: ["local"],
+      order: 0,
+      noteType: "TEXT",
+      metadata: null,
+      version: 4,
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+      isDirty: true,
+      isLoading: false,
+      error: null,
+    }],
+  ]));
+
+  const runtime = createNotesSyncRuntime({
+    workspaceId: "workspace-1",
+    notes: notes as any,
+    loadingStates: ref(new Map()),
+    lastSync: ref(null),
+    layoutPendingCount: ref(0),
+    layoutStatus: ref<any>("idle"),
+    noteIdAliases: ref(new Map()),
+    localRepository: {
+      save: async () => {},
+      saveMany: async () => {},
+      loadByWorkspace: async () => [],
+      delete: async () => {},
+    } as any,
+    pendingQueue: {
+      add: async (change: any) => {
+        repaired.push(change);
+      },
+      load: async () => [],
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    },
+    groupQueue: {
+      add: async () => {},
+      load: async () => [],
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    },
+    layoutQueue: {
+      save: async () => {},
+      load: async () => null,
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    },
+    syncCoordinator: {
+      hydrateFromLocalState: async () => {},
+      applySyncResult: async () => {},
+    },
+    conflictResolver: {
+      hasConflicts: async () => false,
+      getConflict: () => null,
+      hydrateConflictState: async () => {},
+      recordContentConflicts: async () => 0,
+    },
+    networkMonitor: {
+      isVerifiedOnline: ref(true),
+    },
+    notesApi: {
+      getByWorkspace: async () => ({ success: true, data: [] }),
+      sync: async (payload: any) => {
+        syncPayload = payload;
+        return {
+          success: true,
+          data: {
+            applied: ["note-1"],
+            appliedNotes: [],
+            conflicts: [],
+            idMap: {},
+            noteIdMap: {},
+            groupApplied: [],
+            groupConflicts: [],
+            groupIdMap: {},
+            errors: [],
+            layoutApplied: false,
+            layoutConflict: false,
+          },
+        };
+      },
+    },
+    flushDrafts: async () => {},
+    resetSyncRetry: () => {},
+    scheduleSyncRetry: () => {},
+    hydrateLocalGroups: async () => {},
+  });
+
+  const synced = await runtime.syncPendingChanges("manual");
+
+  assert.equal(synced, true);
+  assert.equal(repaired.length, 1);
+  assert.equal(repaired[0]?.id, "note-1");
+  assert.equal(repaired[0]?.serverVersion, 4);
+  assert.equal(repaired[0]?.content, "<h1>Offline title</h1><p>Desktop edit</p>");
+  assert.equal(syncPayload.changes.length, 1);
 });
 
 test("notes temp IDs are unique for fast repeated note and group creation", () => {
@@ -3413,6 +3741,41 @@ test("language runtime mutates word-bank memory after enroll and delete", async 
 
   await runtime.deleteWord("word-1");
   assert.deepEqual(runtime.words.value, []);
+});
+
+test("notes collaboration room names round-trip workspace and note ids", () => {
+  const roomName = buildNoteCollabRoomName({
+    workspaceId: "workspace-1",
+    noteId: "note-1",
+  });
+
+  assert.equal(roomName, "workspace:workspace-1:note:note-1:body");
+  assert.deepEqual(parseNoteCollabRoomName(roomName), {
+    workspaceId: "workspace-1",
+    noteId: "note-1",
+  });
+  assert.equal(parseNoteCollabRoomName("workspace:workspace-1:note:note-1:title"), null);
+});
+
+test("notes collaboration tokens verify the expected room payload", () => {
+  process.env.COLLAB_JWT_SECRET = "unit-test-collab-secret";
+  const roomName = buildNoteCollabRoomName({
+    workspaceId: "workspace-1",
+    noteId: "note-1",
+  });
+
+  const token = signNoteCollabToken({
+    userId: "user-1",
+    workspaceId: "workspace-1",
+    noteId: "note-1",
+    roomName,
+  });
+  const verified = verifyNoteCollabToken(token);
+
+  assert.equal(verified.userId, "user-1");
+  assert.equal(verified.workspaceId, "workspace-1");
+  assert.equal(verified.noteId, "note-1");
+  assert.equal(verified.roomName, roomName);
 });
 
 let failed = 0;

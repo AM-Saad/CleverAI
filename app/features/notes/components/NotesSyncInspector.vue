@@ -9,6 +9,7 @@ import { useNetworkStatus } from "~/composables/shared/useNetworkStatus";
 import { createIndexedDbNotesGroupQueue } from "../composables/notesGroupQueue";
 import { createIndexedDbNotesLayoutQueue } from "../composables/notesLayoutQueue";
 import { createIndexedDbNotesPendingQueue } from "../composables/notesPendingQueue";
+import { useNotesCollaborationStatus } from "../composables/notesCollaborationStatus";
 import { useNoteGroupsStore } from "../composables/useNoteGroupsStore";
 import { useNotesStore } from "../composables/useNotesStore";
 
@@ -22,6 +23,8 @@ const networkStatus = useNetworkStatus();
 const pendingQueue = createIndexedDbNotesPendingQueue();
 const groupQueue = createIndexedDbNotesGroupQueue();
 const layoutQueue = createIndexedDbNotesLayoutQueue();
+const collaborationStatus = useNotesCollaborationStatus();
+const collabStatuses = collaborationStatus.byWorkspace(props.workspaceId);
 
 const contentChanges = ref<PendingNoteChange[]>([]);
 const groupChanges = ref<PendingNoteGroupChange[]>([]);
@@ -41,6 +44,12 @@ const layoutSummary = computed(() => {
   if (!layoutChange.value) return "none";
   return `${layoutChange.value.notes.length} notes, ${layoutChange.value.groups.length} groups, v${layoutChange.value.localVersion ?? 0}`;
 });
+const collabPendingCount = computed(() =>
+  collabStatuses.value.filter((status) =>
+    status.enabled &&
+    (!status.connected || !status.synced || status.unsyncedChanges > 0 || Boolean(status.error)),
+  ).length,
+);
 
 async function refreshQueues() {
   isRefreshing.value = true;
@@ -112,12 +121,13 @@ onUnmounted(() => {
       <div>layout: <span class="font-medium text-content-on-surface">{{ layoutSummary }}</span></div>
       <div>layout status: <span class="font-medium text-content-on-surface">{{ notesStore.layoutStatus.value }}</span></div>
       <div>dirty notes: <span class="font-medium text-content-on-surface">{{ dirtyNotes.length }}</span></div>
+      <div>collab pending: <span class="font-medium text-content-on-surface">{{ collabPendingCount }}</span></div>
       <div>errored notes: <span class="font-medium text-content-on-surface">{{ erroredNotes.length }}</span></div>
       <div>local notes: <span class="font-medium text-content-on-surface">{{ notesStore.notes.value.size }}</span></div>
       <div>local groups: <span class="font-medium text-content-on-surface">{{ noteGroupsStore.groups.value.size }}</span></div>
     </div>
 
-    <details v-if="contentChanges.length || groupChanges.length || layoutChange" class="mt-2">
+    <details v-if="contentChanges.length || groupChanges.length || layoutChange || collabStatuses.length" class="mt-2">
       <summary class="cursor-pointer text-content-on-surface">Queue detail</summary>
       <pre class="mt-1 max-h-48 overflow-auto rounded bg-surface p-2 text-[11px] leading-relaxed">{{ JSON.stringify({
         contentChanges: contentChanges.map((change) => ({
@@ -134,6 +144,7 @@ onUnmounted(() => {
           groupOrders: change.groupOrders,
         })),
         layoutChange,
+        collabStatuses,
       }, null, 2) }}</pre>
     </details>
 

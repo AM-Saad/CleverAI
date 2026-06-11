@@ -32,7 +32,9 @@ Feature internals should import local components and composables explicitly inst
 - Initial load hydrates IndexedDB notes and groups first so the drawer/editor can render immediately; server refresh and pending sync run in the background when the network is verified online.
 - Groups are local-first in v1 for create/rename/delete/reorder. Group commands are queued locally, then drained by the notes sync engine.
 - Deleting a group moves notes back to the virtual `Ungrouped` section (`groupId: null`).
-- Version conflicts use an explicit v1 policy: retry keeps the local edit and overwrites the newer server note. The server returns `VERSION_MISMATCH` with `RETRY_LOCAL_WINS`; the client updates the pending queue to the latest server version before retrying.
+- Version conflicts use explicit resolution. The server returns `VERSION_MISMATCH` with a server snapshot; the client stores local/server snapshots in IndexedDB, freezes normal editing for that note, and lets the user keep local, use server, or unlock the local draft as a manual merge against the latest server version.
+- When `NUXT_PUBLIC_NOTES_COLLAB_ENABLED=true`, existing non-temp `TEXT` note bodies use Yjs/Tiptap collaboration over the self-hosted Hocuspocus server. `note.content` and `note.title` become debounced read/search projections, while the Yjs document is authoritative for rich-text body edits.
+- Collaborative body edits are not written to `pendingNotes`; IndexedDB-backed Yjs state and the Hocuspocus websocket own body sync. `pendingNotes`, group queues, layout queues, and explicit conflicts still own metadata, deletes, non-text notes, groups, and layout.
 - Layout changes are applied atomically on the server. A failed reorder/move should remain pending locally rather than partially persisting.
 
 ## Interaction Invariants
@@ -56,3 +58,4 @@ Feature internals should import local components and composables explicitly inst
 5. Create, rename, collapse, reorder, and delete groups while online.
 6. Move notes within and across groups and confirm only the sync bar shows layout pending.
 7. Create a note offline, move it into a group, reconnect, and confirm the temp ID is remapped before the layout applies.
+8. With notes collaboration enabled and `yarn collab:dev` running, open the same text note in two clients, edit the body in both, and confirm the body merges while `pendingNotes` remains empty.

@@ -101,7 +101,7 @@
     </div>
 
     <!-- Drawing surface -->
-    <svg ref="canvasRef" class="paper-canvas"
+    <svg ref="canvasRef" class="paper-canvas" :style="{ height: `${H}px` }"
       :class="[`paper-grid--${gridType}`, activeTool === 'eraser' ? 'paper-canvas--eraser' : '']"
       :viewBox="`0 0 ${W} ${H}`" preserveAspectRatio="xMidYMid meet" @mousedown="onPointerDown" @mouseup="onPointerUp"
       @mouseleave="onPointerUp" @touchstart.prevent="onPointerDown" @touchend="onPointerUp" @touchcancel="onPointerUp">
@@ -124,6 +124,11 @@
         <circle cx="11" cy="11" r="2" />
       </svg>
       <span>Click and drag to sketch</span>
+    </div>
+
+    <!-- Resize handle -->
+    <div class="paper-resize-handle" @mousedown="onResizeStart" @touchstart.prevent="onResizeStart">
+      <div class="paper-resize-grip" />
     </div>
   </NodeViewWrapper>
 </template>
@@ -148,7 +153,7 @@ const props = defineProps(nodeViewProps);
 
 // ─── Constants ──────────────────────────────────────────────────
 const W = 600;
-const H = 280;
+const H = computed(() => props.node.attrs.height ?? 280);
 const presetColors = ["#6366f1", "#f43f5e", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#8b5cf6", "#1e293b"];
 
 const tools = [
@@ -208,7 +213,7 @@ function svgCoords(event: MouseEvent | TouchEvent): [number, number] | null {
   const rect = canvasRef.value.getBoundingClientRect();
   const cx = "touches" in event ? event.touches[0]?.clientX ?? 0 : event.clientX;
   const cy = "touches" in event ? event.touches[0]?.clientY ?? 0 : event.clientY;
-  return [((cx - rect.left) / rect.width) * W, ((cy - rect.top) / rect.height) * H];
+  return [((cx - rect.left) / rect.width) * W, ((cy - rect.top) / rect.height) * H.value];
 }
 
 function onPointerDown(event: MouseEvent | TouchEvent) {
@@ -224,6 +229,12 @@ function onPointerDown(event: MouseEvent | TouchEvent) {
 
 function onPointerMove(event: MouseEvent | TouchEvent) {
   if (!isDrawing.value) return;
+  
+  if ("touches" in event && event.touches.length > 1) {
+    onPointerUp();
+    return;
+  }
+  
   event.preventDefault();
   const pos = svgCoords(event);
   if (pos) {
@@ -238,11 +249,23 @@ function onPointerUp() {
   activePath.value = null;
   canvasRef.value?.removeEventListener("mousemove", onPointerMove);
   canvasRef.value?.removeEventListener("touchmove", onPointerMove);
-  if (points.length < 2) return;
+  
+  if (points.length === 0) return;
 
   pushUndo();
+  let pathStr = "";
+  if (points.length === 1) {
+    const pt = points[0];
+    if (pt) {
+      const [x, y] = pt;
+      pathStr = `M ${x} ${y} L ${x + 0.1} ${y}`;
+    }
+  } else {
+    pathStr = buildPath(points);
+  }
+
   props.updateAttributes({
-    lines: [...currentLines.value, { id: currentId, color: color.value, size: size.value, path: buildPath(points) }],
+    lines: [...currentLines.value, { id: currentId, color: color.value, size: size.value, path: pathStr }],
   });
   points = [];
 }
@@ -279,7 +302,7 @@ function exportPng() {
   img.onload = () => {
     const canvas = document.createElement("canvas");
     canvas.width = W * 2;
-    canvas.height = H * 2;
+    canvas.height = H.value * 2;
     const ctx = canvas.getContext("2d")!;
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -298,9 +321,38 @@ function exportPng() {
   img.src = url;
 }
 
+// ─── Resizing Canvas height ──────────────────────────────────────
+let dragStartY = 0;
+let dragStartHeight = 280;
+
+function onResizeStart(event: MouseEvent | TouchEvent) {
+  dragStartY = "touches" in event ? event.touches[0]?.clientY ?? 0 : event.clientY;
+  dragStartHeight = props.node.attrs.height ?? 280;
+  
+  window.addEventListener("mousemove", onResizeMove);
+  window.addEventListener("mouseup", onResizeEnd);
+  window.addEventListener("touchmove", onResizeMove, { passive: false });
+  window.addEventListener("touchend", onResizeEnd);
+}
+
+function onResizeMove(event: MouseEvent | TouchEvent) {
+  const cy = "touches" in event ? event.touches[0]?.clientY ?? 0 : event.clientY;
+  const diffY = cy - dragStartY;
+  const newHeight = Math.max(150, Math.min(600, dragStartHeight + diffY));
+  props.updateAttributes({ height: newHeight });
+}
+
+function onResizeEnd() {
+  window.removeEventListener("mousemove", onResizeMove);
+  window.removeEventListener("mouseup", onResizeEnd);
+  window.removeEventListener("touchmove", onResizeMove);
+  window.removeEventListener("touchend", onResizeEnd);
+}
+
 onBeforeUnmount(() => {
   canvasRef.value?.removeEventListener("mousemove", onPointerMove);
   canvasRef.value?.removeEventListener("touchmove", onPointerMove);
+  onResizeEnd();
 });
 </script>
 
@@ -577,5 +629,42 @@ onBeforeUnmount(() => {
 
 .dark .paper-block-wrapper {
   border-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Resize handle styling */
+.paper-resize-handle {
+  height: 9px;
+  background: var(--color-surface-subtle, #f8fafc);
+  border-top: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.06));
+  cursor: ns-resize;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.paper-resize-handle:hover {
+  background: var(--color-surface-strong, rgba(0, 0, 0, 0.05));
+}
+
+.paper-resize-grip {
+  width: 24px;
+  height: 3px;
+  border-radius: 1.5px;
+  background-color: var(--color-content-disabled, #cbd5e1);
+}
+
+.dark .paper-resize-handle {
+  background: #1e2030;
+  border-top-color: rgba(255, 255, 255, 0.06);
+}
+
+.dark .paper-resize-handle:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dark .paper-resize-grip {
+  background-color: rgba(255, 255, 255, 0.2);
 }
 </style>

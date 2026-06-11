@@ -1,5 +1,26 @@
 <template>
   <SharedNoteToolbarControls :controls="toolbarControls" />
+
+  <shared-dialog-modal :show="showImageModal" title="Add Image from URL" @close="showImageModal = false">
+    <template #body>
+      <div class="space-y-4 pt-2">
+        <UiLabel tag="label" for="image-url-input">Image URL</UiLabel>
+        <u-input
+          id="image-url-input"
+          v-model="imageUrlInput"
+          placeholder="https://example.com/image.png"
+          class="w-full mt-1.5"
+          @keyup.enter="confirmAddImage"
+        />
+      </div>
+    </template>
+    <template #footer>
+      <div class="flex justify-end gap-2">
+        <u-button variant="ghost" color="neutral" @click="showImageModal = false">Cancel</u-button>
+        <u-button color="primary" :disabled="!imageUrlInput.trim()" @click="confirmAddImage">Add Image</u-button>
+      </div>
+    </template>
+  </shared-dialog-modal>
 </template>
 
 <script setup lang="ts">
@@ -17,6 +38,9 @@ const props = defineProps<{
 }>();
 
 const currentColor = ref<string | undefined>(undefined);
+const currentCellBgColor = ref<string | undefined>(undefined);
+const showImageModal = ref(false);
+const imageUrlInput = ref("");
 
 function updateColor() {
   if (props.editor) {
@@ -24,11 +48,31 @@ function updateColor() {
   }
 }
 
+function updateCellBgColor() {
+  if (props.editor && props.editor.isActive('table')) {
+    const { state } = props.editor;
+    const { selection } = state;
+    let color = undefined;
+    state.doc.nodesBetween(selection.from, selection.to, (node) => {
+      if (node.type.name === 'tableCell' || node.type.name === 'tableHeader') {
+        color = node.attrs.backgroundColor;
+        return false;
+      }
+    });
+    currentCellBgColor.value = color || undefined;
+  } else {
+    currentCellBgColor.value = undefined;
+  }
+}
+
 onMounted(() => {
   if (props.editor) {
     props.editor.on('transaction', updateColor);
     props.editor.on('selectionUpdate', updateColor);
+    props.editor.on('transaction', updateCellBgColor);
+    props.editor.on('selectionUpdate', updateCellBgColor);
     updateColor();
+    updateCellBgColor();
   }
 });
 
@@ -36,22 +80,30 @@ onUnmounted(() => {
   if (props.editor) {
     props.editor.off('transaction', updateColor);
     props.editor.off('selectionUpdate', updateColor);
+    props.editor.off('transaction', updateCellBgColor);
+    props.editor.off('selectionUpdate', updateCellBgColor);
   }
 });
 
 function addImage(): void {
-  const url = window.prompt("URL");
+  imageUrlInput.value = "";
+  showImageModal.value = true;
+}
+
+function confirmAddImage(): void {
+  const url = imageUrlInput.value.trim();
   if (url) {
     props.editor.chain().focus().setImage({ src: url }).run();
+    showImageModal.value = false;
   }
 }
 
 function addTaskItem(): void {
-  props.editor
-    .chain()
-    .focus()
-    .insertContent('<li data-type="taskItem" data-checked="false"><p></p></li>')
-    .run();
+  if (props.editor.isActive("taskList")) {
+    props.editor.chain().focus().splitListItem("taskItem").run();
+  } else {
+    props.editor.chain().focus().toggleTaskList().run();
+  }
 }
 
 function toggleTaskItem(): void {
@@ -286,6 +338,16 @@ const toolbarControls = computed<NoteToolbarControl[]>(() => [
     iconOnly: true,
     modelValue: currentColor.value,
     onUpdate: (value) => setTextColor(props.editor, value),
+  },
+  {
+    type: "color",
+    id: "cell-bg-color",
+    title: "Cell Background",
+    icon: "color-bucket",
+    iconOnly: true,
+    disabled: !props.editor.isActive("table"),
+    modelValue: currentCellBgColor.value,
+    onUpdate: (value) => props.editor.chain().focus().setCellAttribute('backgroundColor', value).run(),
   },
   {
     type: "separator",

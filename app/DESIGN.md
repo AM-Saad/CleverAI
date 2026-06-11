@@ -1,5 +1,8 @@
 # CleverAI Design System
 
+> Source of truth: raw token values now live in `app/design-system/tokens/index.cjs`.
+> `app/design-system/tokens.generated.css` and `app/design-system/tokens.generated.ts` are generated outputs. Do not edit generated token files by hand.
+
 ## Overview
 
 A focused, intelligent interface for an AI-powered learning platform. The aesthetic is calm and trustworthy — clear information hierarchy, generous whitespace, and purposeful use of the brand navy. The mood is academic confidence: precise without being cold, engaging without being playful. Every surface and spacing decision reinforces the product's core promise — structured thinking and effortless review.
@@ -152,7 +155,7 @@ Pill shape (`rounded-full`) is reserved for: avatars, tier badge pills, and stat
 | `gap-12 / p-12` | 48px | Page section spacing |
 | `gap-16 / p-16` | 64px | Hero and feature section gaps |
 
-In `<style>` blocks, use the `--space-*` CSS variable tokens. In templates, use Tailwind utilities directly.
+In `<style>` blocks, use the `--space-*` CSS variable tokens. In templates, prefer semantic Tailwind utilities generated from tokens. For migrated shared primitives, raw palette classes, raw hex/rgb values, unmanaged shadows, and unmanaged radius utilities are blocked by `yarn design:check`.
 
 Never use `p-5` (20px), `m-7` (28px), `gap-5`, or other non-grid values unless a specific design requires it.
 

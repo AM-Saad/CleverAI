@@ -4490,6 +4490,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           return;
         }
         const pending = await loadPendingNoteChanges();
+        const syncablePending = pending.filter((change) => !change.conflicted);
         const pendingGroups = await loadPendingNoteGroupChanges();
         const pendingLayouts = await loadPendingNoteLayoutChanges();
         clients.forEach(
@@ -4497,12 +4498,20 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
             type: SW_MESSAGE_TYPES.NOTES_SYNC_STARTED,
             data: {
               message: "Syncing notes\u2026",
-              pendingCount: pending.length + pendingGroups.length + pendingLayouts.length,
+              pendingCount: syncablePending.length + pendingGroups.length + pendingLayouts.length,
               mode
             }
           })
         );
-        if (!pending.length && !pendingGroups.length && !pendingLayouts.length) {
+        if (!syncablePending.length && !pendingGroups.length && !pendingLayouts.length) {
+          if (pending.some((change) => change.conflicted)) {
+            clients.forEach(
+              (c) => c.postMessage({
+                type: SW_MESSAGE_TYPES.NOTES_SYNC_CONFLICTS,
+                data: { conflictsCount: pending.filter((change) => change.conflicted).length, mode }
+              })
+            );
+          }
           clients.forEach(
             (c) => c.postMessage({
               type: SW_MESSAGE_TYPES.NOTES_SYNCED,
@@ -4511,6 +4520,41 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           );
           return;
         }
+        const persistContentConflicts = async (results) => {
+          var _a2, _b, _c, _d;
+          const contentConflicts = results.flatMap((result) => {
+            var _a3;
+            return ((_a3 = result.data) == null ? void 0 : _a3.conflicts) || [];
+          });
+          if (!contentConflicts.length) return;
+          const database = await openUnifiedDB();
+          const now = Date.now();
+          for (const conflict of contentConflicts) {
+            const original = pending.find((change) => change.id === conflict.id);
+            const workspaceId = (original == null ? void 0 : original.workspaceId) || (typeof ((_a2 = conflict.serverSnapshot) == null ? void 0 : _a2.workspaceId) === "string" ? conflict.serverSnapshot.workspaceId : void 0);
+            if (!workspaceId) continue;
+            if (original) {
+              await putRecord(database, DB_CONFIG.STORES.PENDING_NOTES, {
+                ...original,
+                conflicted: true,
+                serverVersion: (_b = conflict.serverVersion) != null ? _b : original.serverVersion
+              });
+            }
+            await putRecord(database, DB_CONFIG.STORES.NOTE_SYNC_CONFLICTS, {
+              id: `${workspaceId}:content:${conflict.id}`,
+              workspaceId,
+              scope: "content",
+              entityId: conflict.id,
+              reason: (_c = conflict.reason) != null ? _c : "SYNC_CONFLICT",
+              createdAt: now,
+              updatedAt: now,
+              localSnapshot: original != null ? original : null,
+              serverSnapshot: (_d = conflict.serverSnapshot) != null ? _d : null,
+              serverVersion: conflict.serverVersion,
+              clientServerVersion: conflict.clientServerVersion
+            });
+          }
+        };
         const postNotesSync = async (payload) => {
           const resp = await fetch("/api/notes/sync", {
             method: "POST",
@@ -4527,7 +4571,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         const [firstLayout, ...remainingLayouts] = pendingLayouts;
         syncResults.push({
           result: await postNotesSync({
-            changes: pending,
+            changes: syncablePending,
             groupChanges: pendingGroups,
             ...firstLayout && { layoutChange: firstLayout }
           }),
@@ -4583,6 +4627,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           var _a2;
           return Boolean((_a2 = result.data) == null ? void 0 : _a2.layoutConflict);
         });
+        await persistContentConflicts(syncResults.map(({ result }) => result));
         if (Object.keys(idMap).length) {
           try {
             const db2 = await openUnifiedDB();

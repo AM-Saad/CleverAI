@@ -16,7 +16,11 @@ import {
   type NoteState,
 } from "./noteTransforms";
 import { createIndexedDbNotesConflictRepository } from "./notesConflictRepository";
-import { createNotesConflictResolver } from "./notesConflictResolver";
+import {
+  createNotesConflictResolver,
+  type NotesConflictResolution,
+} from "./notesConflictResolver";
+import type { NoteSyncConflictRecord } from "~/utils/idb";
 import { createNotesErrorPolicy } from "./notesErrorPolicy";
 import { createNotesMemoryStore } from "./notesMemoryStore";
 import { createNotesCommandService } from "./notesCommandService";
@@ -59,6 +63,8 @@ interface NotesStore {
   refreshLayoutPendingCount: () => Promise<void>;
   retryFailedNote: (id: string) => Promise<boolean>;
   clearNoteError: (id: string) => void;
+  getConflict: (id: string) => NoteSyncConflictRecord | null;
+  resolveNoteConflict: (id: string, resolution: NotesConflictResolution) => Promise<boolean>;
   isNoteLoading: (id: string) => boolean;
   isNoteDirty: (id: string) => boolean;
   getNote: (id: string) => NoteState | null;
@@ -98,6 +104,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
   const lastSync = ref<Date | null>(null);
   const filteredNoteIds = ref<Set<string> | null>(null);
   const noteIdAliases = ref<Map<string, string>>(new Map());
+  const conflicts = ref<Map<string, NoteSyncConflictRecord>>(new Map());
   const noteValues = computed(() => Array.from(notes.value.values()));
   const memoryStore = createNotesMemoryStore(notes);
   const dirtyCount = computed(() => noteValues.value.filter((note) => note.isDirty).length);
@@ -124,6 +131,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
   const conflictResolver = createNotesConflictResolver({
     workspaceId,
     notes,
+    conflicts,
     conflictRepository,
     pendingQueue,
     localRepository,
@@ -258,6 +266,14 @@ export function useNotesStore(workspaceId: string): NotesStore {
     id: string,
     updatedNote: NoteState
   ): Promise<boolean> => {
+    if (conflictResolver.getConflict(id)) {
+      toast.add({
+        title: "Resolve conflict first",
+        description: "Choose local, server, or merge before saving new edits.",
+        color: "warning",
+      });
+      return false;
+    }
     return commandService.updateNoteContent({
       id,
       note: updatedNote,
@@ -377,6 +393,20 @@ export function useNotesStore(workspaceId: string): NotesStore {
     }
   };
 
+  const getConflict = (id: string): NoteSyncConflictRecord | null =>
+    conflictResolver.getConflict(id);
+
+  const resolveNoteConflict = async (
+    id: string,
+    resolution: NotesConflictResolution,
+  ): Promise<boolean> => {
+    const resolved = await conflictResolver.resolveContentConflict(id, resolution);
+    if (resolved && resolution === "keep-local" && networkMonitor.isVerifiedOnline.value) {
+      void syncPendingChanges();
+    }
+    return resolved;
+  };
+
   const getNote = (id: string): NoteState => {
     return notes.value.get(id)!;
   };
@@ -428,6 +458,8 @@ export function useNotesStore(workspaceId: string): NotesStore {
     refreshLayoutPendingCount,
     retryFailedNote,
     clearNoteError,
+    getConflict,
+    resolveNoteConflict,
     isNoteLoading,
     isNoteDirty,
     setNotes,

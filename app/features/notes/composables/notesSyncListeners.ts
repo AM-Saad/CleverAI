@@ -39,7 +39,13 @@ export function registerNotesSyncListenersOnce(
     },
     onSyncDirect: async () => {
       const activeStore = activeWorkspaceId ? stores.get(activeWorkspaceId) : null;
-      if (activeStore) await activeStore.syncPendingChanges();
+      const orderedStores = [
+        ...(activeStore ? [activeStore] : []),
+        ...Array.from(stores.entries())
+          .filter(([workspaceId]) => workspaceId !== activeWorkspaceId)
+          .map(([, store]) => store),
+      ];
+      await Promise.all(orderedStores.map((store) => store.syncPendingChanges()));
     },
   });
 

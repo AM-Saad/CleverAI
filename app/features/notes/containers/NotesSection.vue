@@ -290,6 +290,13 @@ const handleRetry = (id: string) => {
   notesStore.retryFailedNote(id);
 };
 
+const handleResolveConflict = async (
+  id: string,
+  resolution: "keep-local" | "keep-server" | "manual-merge",
+) => {
+  await notesStore.resolveNoteConflict(id, resolution);
+};
+
 const syncNotesNow = async () => {
   error.value = null;
   await notesStore.syncWithServer();
@@ -685,7 +692,8 @@ function handleContainerScroll(e: Event) {
               @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(currentNoteId!, meta)"
               @toggle-fullscreen="fullscreen.toggle(currentNoteId!)" @delete="deleteNote(currentNoteId!)" />
             <TextNote v-else-if="currentNote" :note="currentNote" :delete-note="deleteNote" size="lg"
-              @update="handleUpdateNote" @draft-update="handleDraftUpdate" @retry="handleRetry"
+              :conflict="notesStore.getConflict(currentNote.id)" @update="handleUpdateNote"
+              @draft-update="handleDraftUpdate" @retry="handleRetry" @resolve-conflict="handleResolveConflict"
               @toggle-fullscreen="fullscreen.toggle" placeholder="Double-click to add your note..."
               @add-to-material="emit('add-to-material', $event)" />
           </div>
@@ -738,8 +746,10 @@ function handleContainerScroll(e: Event) {
                         @toggle-fullscreen="fullscreen.toggle(splitNotes.leftNoteId.value!)"
                         @delete="deleteNote(splitNotes.leftNoteId.value!)" />
                       <TextNote v-else :key="`split-left-text-${splitNotes.leftNoteId.value}`" :note="leftSplitNote"
-                        :delete-note="deleteNote" :readonly="!isLeftActive" size="lg" @update="handleUpdateNote"
-                        @draft-update="handleDraftUpdate" @retry="handleRetry" @toggle-fullscreen="fullscreen.toggle"
+                        :delete-note="deleteNote" :readonly="!isLeftActive"
+                        :conflict="notesStore.getConflict(leftSplitNote.id)" size="lg" @update="handleUpdateNote"
+                        @draft-update="handleDraftUpdate" @retry="handleRetry"
+                        @resolve-conflict="handleResolveConflict" @toggle-fullscreen="fullscreen.toggle"
                         @add-to-material="emit('add-to-material', $event)" />
                     </div>
                   </div>
@@ -789,8 +799,10 @@ function handleContainerScroll(e: Event) {
                         @toggle-fullscreen="fullscreen.toggle(splitNotes.rightNoteId.value!)"
                         @delete="deleteNote(splitNotes.rightNoteId.value!)" />
                       <TextNote v-else :key="`split-right-text-${splitNotes.rightNoteId.value}`" :note="rightSplitNote"
-                        :delete-note="deleteNote" :readonly="!isRightActive" size="lg" @update="handleUpdateNote"
-                        @draft-update="handleDraftUpdate" @retry="handleRetry" @toggle-fullscreen="fullscreen.toggle"
+                        :delete-note="deleteNote" :readonly="!isRightActive"
+                        :conflict="notesStore.getConflict(rightSplitNote.id)" size="lg" @update="handleUpdateNote"
+                        @draft-update="handleDraftUpdate" @retry="handleRetry"
+                        @resolve-conflict="handleResolveConflict" @toggle-fullscreen="fullscreen.toggle"
                         @add-to-material="emit('add-to-material', $event)" />
                     </div>
                   </div>
@@ -823,7 +835,8 @@ function handleContainerScroll(e: Event) {
           @update="(meta: CanvasNoteMetadata) => handleCanvasUpdate(currentFullscreenNote!.id, meta)"
           @toggle-fullscreen="fullscreen.close" @delete="deleteNote(currentFullscreenNote!.id)" />
         <TextNote v-else :note="currentFullscreenNote" :delete-note="deleteNote" :is-fullscreen="true" size="lg"
-          @update="handleUpdateNote" @draft-update="handleDraftUpdate" @retry="handleRetry"
+          :conflict="notesStore.getConflict(currentFullscreenNote.id)" @update="handleUpdateNote"
+          @draft-update="handleDraftUpdate" @retry="handleRetry" @resolve-conflict="handleResolveConflict"
           @toggle-fullscreen="fullscreen.close" placeholder="Double-click to add your note..."
           @add-to-material="emit('add-to-material', $event)" />
       </template>
@@ -866,8 +879,10 @@ function handleContainerScroll(e: Event) {
                     @toggle-fullscreen="fullscreen.close" @delete="deleteNote(splitNotes.leftNoteId.value!)" />
                   <TextNote v-else :key="`fs-split-left-text-${splitNotes.leftNoteId.value}`" :note="leftSplitNote"
                     :delete-note="deleteNote" :is-fullscreen="true" :readonly="!isLeftActive" size="lg"
-                    @update="handleUpdateNote" @draft-update="handleDraftUpdate" @retry="handleRetry"
-                    @toggle-fullscreen="fullscreen.close" @add-to-material="emit('add-to-material', $event)" />
+                    :conflict="notesStore.getConflict(leftSplitNote.id)" @update="handleUpdateNote"
+                    @draft-update="handleDraftUpdate" @retry="handleRetry"
+                    @resolve-conflict="handleResolveConflict" @toggle-fullscreen="fullscreen.close"
+                    @add-to-material="emit('add-to-material', $event)" />
                 </div>
               </div>
             </div>
@@ -906,8 +921,10 @@ function handleContainerScroll(e: Event) {
                     @toggle-fullscreen="fullscreen.close" @delete="deleteNote(splitNotes.rightNoteId.value!)" />
                   <TextNote v-else :key="`fs-split-right-text-${splitNotes.rightNoteId.value}`" :note="rightSplitNote"
                     :delete-note="deleteNote" :is-fullscreen="true" :readonly="!isRightActive" size="lg"
-                    @update="handleUpdateNote" @draft-update="handleDraftUpdate" @retry="handleRetry"
-                    @toggle-fullscreen="fullscreen.close" @add-to-material="emit('add-to-material', $event)" />
+                    :conflict="notesStore.getConflict(rightSplitNote.id)" @update="handleUpdateNote"
+                    @draft-update="handleDraftUpdate" @retry="handleRetry"
+                    @resolve-conflict="handleResolveConflict" @toggle-fullscreen="fullscreen.close"
+                    @add-to-material="emit('add-to-material', $event)" />
                 </div>
               </div>
             </div>

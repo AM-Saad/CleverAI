@@ -69,13 +69,31 @@ export const stripJsonCodeFence = (rawText: string) =>
     .trim();
 
 export function parseLexicalEntry(rawText: string, fallbackWord: string) {
-  const parsed = JSON.parse(stripJsonCodeFence(rawText)) as ParsedLexicalEntry;
+  let cleaned = rawText.trim();
+  
+  // Extract JSON block if it's wrapped in conversational text
+  const startIdx = cleaned.indexOf('{');
+  const endIdx = cleaned.lastIndexOf('}');
+  if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+    cleaned = cleaned.slice(startIdx, endIdx + 1);
+  } else {
+    cleaned = stripJsonCodeFence(cleaned);
+  }
+
+  let parsed: ParsedLexicalEntry;
+  try {
+    parsed = JSON.parse(cleaned) as ParsedLexicalEntry;
+  } catch (err) {
+    console.error("[parseLexicalEntry] Failed to parse JSON. Raw text:", rawText);
+    throw err;
+  }
+
   const meanings = normalizeMeanings(parsed.meanings);
   const examples = normalizeExamples(parsed.examples);
   const translation =
     asString(parsed.translation) ||
     meanings.find((meaning) => meaning.translation)?.translation ||
-    "";
+    fallbackWord;
 
   return {
     translation,

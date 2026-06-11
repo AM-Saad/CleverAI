@@ -1187,6 +1187,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       }
 
       const pending = await loadPendingNoteChanges();
+      const syncablePending = pending.filter((change: any) => !change.conflicted);
       const pendingGroups = await loadPendingNoteGroupChanges();
       const pendingLayouts = await loadPendingNoteLayoutChanges();
 
@@ -1195,13 +1196,21 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
           type: SW_MESSAGE_TYPES.NOTES_SYNC_STARTED,
           data: {
             message: "Syncing notes…",
-            pendingCount: pending.length + pendingGroups.length + pendingLayouts.length,
+            pendingCount: syncablePending.length + pendingGroups.length + pendingLayouts.length,
             mode,
           },
         })
       );
 
-      if (!pending.length && !pendingGroups.length && !pendingLayouts.length) {
+      if (!syncablePending.length && !pendingGroups.length && !pendingLayouts.length) {
+        if (pending.some((change: any) => change.conflicted)) {
+          clients.forEach((c) =>
+            c.postMessage({
+              type: SW_MESSAGE_TYPES.NOTES_SYNC_CONFLICTS,
+              data: { conflictsCount: pending.filter((change: any) => change.conflicted).length, mode },
+            })
+          );
+        }
         clients.forEach((c) =>
           c.postMessage({
             type: SW_MESSAGE_TYPES.NOTES_SYNCED,
@@ -1220,7 +1229,13 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         success?: boolean;
         data?: {
           applied?: string[];
-          conflicts?: Array<{ id: string }>;
+          conflicts?: Array<{
+            id: string;
+            reason?: string;
+            serverVersion?: number;
+            clientServerVersion?: number;
+            serverSnapshot?: Record<string, unknown> | null;
+          }>;
           idMap?: Record<string, string>;
           groupApplied?: string[];
           groupConflicts?: Array<{ id: string }>;
@@ -1228,6 +1243,45 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
           layoutApplied?: boolean;
           layoutConflict?: boolean;
         };
+      };
+
+      const persistContentConflicts = async (results: NotesSyncResult[]) => {
+        const contentConflicts = results.flatMap((result) => result.data?.conflicts || []);
+        if (!contentConflicts.length) return;
+
+        const database = await openUnifiedDB();
+        const now = Date.now();
+        for (const conflict of contentConflicts) {
+          const original = pending.find((change: any) => change.id === conflict.id);
+          const workspaceId =
+            original?.workspaceId ||
+            (typeof conflict.serverSnapshot?.workspaceId === "string"
+              ? conflict.serverSnapshot.workspaceId
+              : undefined);
+          if (!workspaceId) continue;
+
+          if (original) {
+            await putRecord(database, DB_CONFIG.STORES.PENDING_NOTES as any, {
+              ...original,
+              conflicted: true,
+              serverVersion: conflict.serverVersion ?? original.serverVersion,
+            });
+          }
+
+          await putRecord(database, DB_CONFIG.STORES.NOTE_SYNC_CONFLICTS as any, {
+            id: `${workspaceId}:content:${conflict.id}`,
+            workspaceId,
+            scope: "content",
+            entityId: conflict.id,
+            reason: conflict.reason ?? "SYNC_CONFLICT",
+            createdAt: now,
+            updatedAt: now,
+            localSnapshot: original ?? null,
+            serverSnapshot: conflict.serverSnapshot ?? null,
+            serverVersion: conflict.serverVersion,
+            clientServerVersion: conflict.clientServerVersion,
+          });
+        }
       };
 
       const postNotesSync = async (payload: NotesSyncPayload): Promise<NotesSyncResult> => {
@@ -1252,7 +1306,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       const [firstLayout, ...remainingLayouts] = pendingLayouts;
       syncResults.push({
         result: await postNotesSync({
-          changes: pending,
+          changes: syncablePending,
           groupChanges: pendingGroups,
           ...(firstLayout && { layoutChange: firstLayout }),
         }),
@@ -1292,6 +1346,8 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         .filter(({ result, layout }) => result.data?.layoutApplied && layout)
         .map(({ layout }) => layout!);
       const layoutConflict = syncResults.some(({ result }) => Boolean(result.data?.layoutConflict));
+
+      await persistContentConflicts(syncResults.map(({ result }) => result));
 
       if (Object.keys(idMap).length) {
         try {

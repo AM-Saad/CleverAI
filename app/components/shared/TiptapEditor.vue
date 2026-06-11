@@ -3,7 +3,7 @@
     class="container relative flex flex-col p-1 h-full min-h-0 w-full overflow-y-auto">
 
     <div class="flex flex-col w-full min-w-0">
-      <UContextMenu :items="props.readonly ? [] : contextMenuItems">
+      <UContextMenu :items="contextMenuItems">
         <EditorContent :editor="editor" class="flex-1 min-w-0 w-full pt-6" />
       </UContextMenu>
     </div>
@@ -46,13 +46,17 @@ import Placeholder from "@tiptap/extension-placeholder";
 import { Color, TextStyle } from "@tiptap/extension-text-style";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
-import { Extension } from "@tiptap/core";
+import { Extension, type AnyExtension } from "@tiptap/core";
 import { Table, TableRow, TableHeader, TableCell } from "@tiptap/extension-table";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
 // note: explicit Drop cursor intentionally omitted to avoid duplicate warnings
 import { Editor, EditorContent, VueNodeViewRenderer } from "@tiptap/vue-3";
-import { initCollaboration } from "@/utils/";
+import Collaboration from "@tiptap/extension-collaboration";
+import CollaborationCaret from "@tiptap/extension-collaboration-caret";
+import { HocuspocusProvider } from "@hocuspocus/provider";
+import { IndexeddbPersistence } from "y-indexeddb";
+import * as Y from "yjs";
 import { normalizeWorkspaceNoteContent } from "@@/shared/utils/workspaceNote";
 import { useTextSummarization } from '~/composables/ai/useTextSummarization';
 import { usePredictionaryInput } from '~/composables/usePredictionaryInput';
@@ -74,13 +78,28 @@ const lowlight = createLowlight(common);
 
 // ---------- Types ----------
 type CollaborationHandle = {
-  ydoc?: unknown;
-  provider?: { destroy?: () => void; disconnect?: () => void };
+  ydoc?: Y.Doc;
+  provider?: { destroy?: () => void; disconnect?: () => void; on?: (event: string, fn: Function) => void };
+  indexedDbProvider?: { destroy?: () => void; on?: (event: string, fn: Function) => void; whenSynced?: Promise<unknown> };
   collaborationExtension?: unknown;
   cursorExtension?: unknown;
   cleanup?: () => Promise<void>;
   [k: string]: any;
 } | null;
+
+type CollaborationConfig = {
+  enabled: boolean;
+  workspaceId?: string;
+  noteId?: string;
+  roomName?: string;
+  token?: string;
+  websocketUrl?: string;
+  userName?: string;
+  userColor?: string;
+  bootstrapContent?: string;
+};
+
+const NOTE_COLLAB_FIELD = "body";
 
 // ---------- Custom nodes ----------
 const CustomDocument = Document.extend({
@@ -155,6 +174,13 @@ const emit = defineEmits<{
   (e: "update:modelValue", value: string): void;
   (e: "addToMaterial", value: string): void;
   (e: "blur"): void;
+  (e: "collaboration-status", value: {
+    connected?: boolean;
+    synced?: boolean;
+    indexedDbSynced?: boolean;
+    unsyncedChanges?: number;
+    error?: string | null;
+  }): void;
 }>();
 const collaborationHandle = ref<CollaborationHandle>(null);
 const props = withDefaults(defineProps<{
@@ -164,8 +190,10 @@ const props = withDefaults(defineProps<{
   /** When true, editor is not editable (passive split-pane mode) */
   readonly?: boolean;
   documentMode?: "default" | "workspace-note";
+  collaboration?: CollaborationConfig | null;
 }>(), {
   documentMode: "default",
+  collaboration: null,
 });
 const activeDocumentId = ref<string | null>(props.id ?? null);
 
@@ -283,7 +311,7 @@ function updateAutoState() {
     closeSuggestions();
     return;
   }
-  // Position dropdown below current cursor
+  // Position dropdown below current cursor, or flip above if overflowing bottom
   try {
     const { from } = editor.value.state.selection;
     const coords = editor.value.view.coordsAtPos(from);
@@ -291,9 +319,18 @@ function updateAutoState() {
     const scrollTop = editorContainerRef.value?.scrollTop ?? 0;
     if (containerRect) {
       const dropdownWidth = 160;
+      const dropdownHeight = autoSuggestions.value.length * 32 + 8;
       const gutter = 8;
+
+      let top = coords.bottom - containerRect.top + scrollTop + 4;
+      const absoluteBottom = coords.bottom - containerRect.top + dropdownHeight;
+
+      if (absoluteBottom > containerRect.height) {
+        top = coords.top - containerRect.top + scrollTop - dropdownHeight - 4;
+      }
+
       autoPosition.value = {
-        top: coords.bottom - containerRect.top + scrollTop + 4,
+        top,
         left: Math.max(
           gutter,
           Math.min(
@@ -456,7 +493,6 @@ function handleBubbleAiAction(actionId: string) {
 
 // ─── Dynamic Context Menu ────────────────────────────────────────
 const contextMenuItems = computed(() => {
-  if (props.readonly) return [];
   const ctx = editorContext.value;
   const ed = editor.value;
   if (!ed) return [];
@@ -468,36 +504,39 @@ const contextMenuItems = computed(() => {
     onSelect: () => void;
   }>> = [];
 
-  // ── Group 1: Context-specific actions ──────────────────────
-  // Table actions (when cursor is inside a table)
-  if (ctx.isInTable) {
-    const tableActions = getActionsForCategory(registeredActions, 'table', ctx);
-    if (tableActions.length) {
-      groups.push(toMenuItems(tableActions, ed));
+  // Editing actions are only active if not readonly
+  if (!props.readonly) {
+    // ── Group 1: Context-specific actions ──────────────────────
+    // Table actions (when cursor is inside a table)
+    if (ctx.isInTable) {
+      const tableActions = getActionsForCategory(registeredActions, 'table', ctx);
+      if (tableActions.length) {
+        groups.push(toMenuItems(tableActions, ed));
+      }
     }
-  }
 
-  // Task actions (when cursor is inside a task item)
-  if (ctx.isInTaskItem) {
-    const taskActions = getActionsForCategory(registeredActions, 'task', ctx);
-    if (taskActions.length) {
-      groups.push(toMenuItems(taskActions, ed));
+    // Task actions (when cursor is inside a task item)
+    if (ctx.isInTaskItem) {
+      const taskActions = getActionsForCategory(registeredActions, 'task', ctx);
+      if (taskActions.length) {
+        groups.push(toMenuItems(taskActions, ed));
+      }
     }
-  }
 
-  // ── Group 2: Formatting (when text is selected, not in code block)
-  if (ctx.hasSelection && !ctx.isInCodeBlock) {
-    const formatActions = getActionsForCategory(registeredActions, 'formatting', ctx);
-    if (formatActions.length) {
-      groups.push(toMenuItems(formatActions, ed));
+    // ── Group 2: Formatting (when text is selected, not in code block)
+    if (ctx.hasSelection && !ctx.isInCodeBlock) {
+      const formatActions = getActionsForCategory(registeredActions, 'formatting', ctx);
+      if (formatActions.length) {
+        groups.push(toMenuItems(formatActions, ed));
+      }
     }
-  }
 
-  // ── Group 3: Insert actions (when no selection or general use)
-  if (!ctx.isInCodeBlock && !ctx.isInTable) {
-    const insertActions = getActionsForCategory(registeredActions, 'insert', ctx);
-    if (insertActions.length) {
-      groups.push(toMenuItems(insertActions, ed));
+    // ── Group 3: Insert actions (when no selection or general use)
+    if (!ctx.isInCodeBlock && !ctx.isInTable) {
+      const insertActions = getActionsForCategory(registeredActions, 'insert', ctx);
+      if (insertActions.length) {
+        groups.push(toMenuItems(insertActions, ed));
+      }
     }
   }
 
@@ -512,17 +551,19 @@ const contextMenuItems = computed(() => {
     onSelect: () => void;
   }> = [];
 
-  // Add to Material
-  aiAndCustomActions.push({
-    label: 'Add To Material',
-    icon: 'i-lucide-book-marked',
-    disabled: !hasSelection,
-    onSelect: () => {
-      if (selectedText) {
-        emit('addToMaterial', selectedText);
-      }
-    },
-  });
+  // Add to Material (only if not readonly)
+  if (!props.readonly) {
+    aiAndCustomActions.push({
+      label: 'Add To Material',
+      icon: 'i-lucide-book-marked',
+      disabled: !hasSelection,
+      onSelect: () => {
+        if (selectedText) {
+          emit('addToMaterial', selectedText);
+        }
+      },
+    });
+  }
 
   // Read Aloud
   aiAndCustomActions.push({
@@ -548,7 +589,68 @@ const contextMenuItems = computed(() => {
     onSelect: handleSummarize,
   });
 
-  groups.push(aiAndCustomActions);
+  if (aiAndCustomActions.length > 0) {
+    groups.push(aiAndCustomActions);
+  }
+
+  // ── Group 5: Clipboard actions ───────────────────────────
+  const clipboardActions: Array<{
+    label: string;
+    icon: string;
+    disabled?: boolean;
+    onSelect: () => void;
+  }> = [];
+
+  if (!props.readonly) {
+    clipboardActions.push({
+      label: 'Select All',
+      icon: 'i-lucide-check-square',
+      onSelect: () => {
+        ed.commands.selectAll();
+      },
+    });
+  }
+
+  clipboardActions.push({
+    label: 'Copy',
+    icon: 'i-lucide-copy',
+    disabled: !hasSelection,
+    onSelect: () => {
+      document.execCommand('copy');
+    },
+  });
+
+  if (!props.readonly) {
+    clipboardActions.push({
+      label: 'Cut',
+      icon: 'i-lucide-scissors',
+      disabled: !hasSelection,
+      onSelect: () => {
+        document.execCommand('cut');
+      },
+    });
+
+    clipboardActions.push({
+      label: 'Paste',
+      icon: 'i-lucide-clipboard',
+      onSelect: async () => {
+        try {
+          if (navigator.clipboard && navigator.clipboard.readText) {
+            const text = await navigator.clipboard.readText();
+            ed.commands.insertContent(text);
+          } else {
+            document.execCommand('paste');
+          }
+        } catch {
+          document.execCommand('paste');
+        }
+      },
+    });
+  }
+
+  if (clipboardActions.length > 0) {
+    groups.push(clipboardActions);
+  }
 
   return groups;
 });
@@ -557,6 +659,7 @@ watch(
   [() => props.id, () => props.modelValue],
   ([id, value]) => {
     if (!editor.value) return;
+    if (isCollaborationEnabled.value) return;
 
     const nextDocumentId = id ?? null;
     const switchedDocument = nextDocumentId !== activeDocumentId.value;
@@ -592,6 +695,11 @@ onBeforeUnmount(async () => {
     window.speechSynthesis.cancel();
   }
 
+  // Remove scroll sync listener
+  if (editorContainerRef.value && handleScroll) {
+    editorContainerRef.value.removeEventListener("scroll", handleScroll);
+  }
+
   if (collaborationHandle.value?.cleanup) {
     try {
       await collaborationHandle.value.cleanup();
@@ -613,8 +721,164 @@ onBeforeUnmount(async () => {
   }
 });
 
+// Define scroll synchronization callback
+const handleScroll = () => {
+  if (autoPosition.value) {
+    updateAutoState();
+  }
+};
+
+function isBodyEmpty(ed: any): boolean {
+  if (!ed) return true;
+  let hasTextOrLeaf = false;
+  ed.state.doc.descendants((node: any) => {
+    if (props.documentMode === "workspace-note" && node.type.name === "heading") {
+      return;
+    }
+    if (node.isText && node.text && node.text.trim().length > 0) {
+      hasTextOrLeaf = true;
+    }
+    if (node.isLeaf && !node.isText) {
+      hasTextOrLeaf = true;
+    }
+  });
+  return !hasTextOrLeaf;
+}
+
+const CustomTableCell = TableCell.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      backgroundColor: {
+        default: null,
+        parseHTML: element => element.style.backgroundColor || null,
+        renderHTML: attributes => {
+          if (!attributes.backgroundColor) {
+            return {};
+          }
+          return {
+            style: `background-color: ${attributes.backgroundColor}`,
+          };
+        },
+      },
+    };
+  },
+});
+
+const CustomTableHeader = TableHeader.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      backgroundColor: {
+        default: null,
+        parseHTML: element => element.style.backgroundColor || null,
+        renderHTML: attributes => {
+          if (!attributes.backgroundColor) {
+            return {};
+          }
+          return {
+            style: `background-color: ${attributes.backgroundColor}`,
+          };
+        },
+      },
+    };
+  },
+});
+
+const isCollaborationEnabled = computed(() =>
+  Boolean(
+    props.collaboration?.enabled &&
+    props.collaboration.noteId &&
+    props.collaboration.workspaceId &&
+    props.collaboration.roomName &&
+    props.collaboration.token &&
+    props.collaboration.websocketUrl,
+  ),
+);
+
+const createCollaborationHandle = async (): Promise<{
+  handle: CollaborationHandle;
+  extensions: AnyExtension[];
+}> => {
+  if (!isCollaborationEnabled.value || !props.collaboration) {
+    return { handle: null, extensions: [] };
+  }
+
+  const config = props.collaboration;
+  const ydoc = new Y.Doc();
+  const field = NOTE_COLLAB_FIELD;
+  const localDocName = `notes:${config.workspaceId}:${config.noteId}:${field}`;
+  const indexedDbProvider = new IndexeddbPersistence(localDocName, ydoc);
+  indexedDbProvider.on("synced", () => {
+    emit("collaboration-status", { indexedDbSynced: true });
+  });
+
+  const provider = new HocuspocusProvider({
+    url: config.websocketUrl!,
+    name: config.roomName!,
+    token: config.token!,
+    document: ydoc,
+  });
+
+  provider.on("status", ({ status }: { status: string }) => {
+    emit("collaboration-status", {
+      connected: status === "connected",
+      error: null,
+    });
+  });
+  provider.on("synced", ({ state }: { state: boolean }) => {
+    emit("collaboration-status", { synced: state });
+  });
+  provider.on("unsyncedChanges", ({ number }: { number: number }) => {
+    emit("collaboration-status", { unsyncedChanges: number });
+  });
+  provider.on("authenticationFailed", ({ reason }: { reason: string }) => {
+    emit("collaboration-status", {
+      connected: false,
+      error: reason || "Collaboration authentication failed",
+    });
+  });
+
+  const extensions: AnyExtension[] = [
+    Collaboration.configure({
+      document: ydoc,
+      field,
+      provider,
+    }),
+    CollaborationCaret.configure({
+      provider,
+      user: {
+        name: config.userName || "You",
+        color: config.userColor || "#10b981",
+      },
+    }),
+  ];
+
+  const cleanup = async () => {
+    try {
+      provider.destroy();
+    } finally {
+      indexedDbProvider.destroy();
+      ydoc.destroy();
+    }
+  };
+
+  return {
+    handle: {
+      ydoc,
+      provider,
+      indexedDbProvider,
+      cleanup,
+    },
+    extensions,
+  };
+};
+
 // ---------- mount and initialization ----------
 onMounted(async () => {
+  // Add scroll synchronization listener
+  editorContainerRef.value?.addEventListener("scroll", handleScroll);
+
   // create editor instance
   // Autocomplete Tiptap extension — handles Tab / Arrow / Escape while dropdown is open
   const AutocompleteExtension = Extension.create({
@@ -622,6 +886,7 @@ onMounted(async () => {
     addKeyboardShortcuts() {
       return {
         Tab: () => {
+          if (!autoPosition.value) return false;
           const activeSuggestion = autoSuggestions.value[autoActiveIndex.value];
           if (activeSuggestion) {
             acceptSuggestion(activeSuggestion);
@@ -653,24 +918,69 @@ onMounted(async () => {
           }
           return false;
         },
+        Enter: () => {
+          if (autoPosition.value && autoSuggestions.value.length > 0) {
+            const activeSuggestion = autoSuggestions.value[autoActiveIndex.value];
+            if (activeSuggestion) {
+              acceptSuggestion(activeSuggestion);
+              return true;
+            }
+          }
+          return false;
+        },
       };
     },
   });
 
+  const GenericPlaceholder = Placeholder.configure({
+    emptyNodeClass: "is-editor-node-empty",
+    placeholder: ({ node, pos, editor: ed }) => {
+      if (props.documentMode === "workspace-note" && node.type.name === "heading" && pos === 0) {
+        return "What's the title?";
+      }
+      if (node.type.name === "paragraph" && isBodyEmpty(ed)) {
+        return "Start writing...";
+      }
+      return "";
+    },
+    showOnlyCurrent: true,
+    includeChildren: false,
+    showOnlyWhenEditable: true,
+  });
+
+  let collaborationSetup: Awaited<ReturnType<typeof createCollaborationHandle>> = {
+    handle: null,
+    extensions: [],
+  };
+  try {
+    collaborationSetup = await createCollaborationHandle();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    emit("collaboration-status", { error: message, connected: false });
+  }
+  collaborationHandle.value = collaborationSetup.handle;
+  const collaborationExtensions = collaborationSetup.extensions;
+
   editor.value = new Editor({
     extensions: [
       // disable StarterKit document + codeBlock to avoid duplicate names
-      StarterKit.configure({ document: false, codeBlock: false }),
+      StarterKit.configure({
+        document: false,
+        codeBlock: false,
+        undoRedo: collaborationExtensions.length ? false : undefined,
+      }),
       props.documentMode === "workspace-note" ? WorkspaceNoteDocument : CustomDocument,
-      ...(props.documentMode === "workspace-note" ? [WorkspaceNotePlaceholder, WorkspaceNoteBehavior] : []),
+      GenericPlaceholder,
+      ...(props.documentMode === "workspace-note" ? [WorkspaceNoteBehavior] : []),
+      ...collaborationExtensions,
       Color.configure({ types: [TextStyle.name, ListItem.name] }),
       TextStyle,
       Image,
       // drop cursor intentionally omitted
-      Table.configure({ resizable: false }),
+      Table.configure({ resizable: true }),
       TableRow,
-      TableHeader,
-      TableCell,
+      CustomTableHeader,
+      CustomTableCell,
       TaskList,
       CustomTaskItem,
       AutocompleteExtension,
@@ -686,11 +996,36 @@ onMounted(async () => {
       }),
       Paper,
     ],
-    content: normalizeEditorContent(props.modelValue),
+    content: collaborationExtensions.length ? undefined : normalizeEditorContent(props.modelValue),
     editable: !props.readonly,
   });
   const editorInstance = editor.value;
   if (!editorInstance) return;
+
+  const bootstrapCollaborationContent = () => {
+    const handle = collaborationHandle.value;
+    if (!handle?.ydoc || !isCollaborationEnabled.value) return;
+    const fragment = handle.ydoc.getXmlFragment(NOTE_COLLAB_FIELD);
+    if (fragment.length > 0) return;
+    const initialContent = normalizeEditorContent(
+      props.collaboration?.bootstrapContent ?? props.modelValue,
+    );
+    if (!initialContent.trim()) return;
+    isApplyingExternalValue.value = true;
+    try {
+      editorInstance.commands.setContent(initialContent);
+    } finally {
+      isApplyingExternalValue.value = false;
+    }
+  };
+
+  if (collaborationHandle.value?.indexedDbProvider?.whenSynced) {
+    void collaborationHandle.value.indexedDbProvider.whenSynced
+      .then(() => bootstrapCollaborationContent())
+      .catch(() => bootstrapCollaborationContent());
+  } else {
+    bootstrapCollaborationContent();
+  }
 
   // Emit updates for v-model
   editorInstance.on("update", () => {
@@ -730,18 +1065,6 @@ onMounted(async () => {
 
   // ensure view is mounted
   await nextTick();
-
-  // init collaboration defensively (disabled for now)
-  // try {
-  //   const result = await initCollaboration(editor.value!, { roomName: 'my-doc' })
-  //   if (result.ok) {
-  //     collaborationHandle.value = result as CollaborationHandle
-  //   } else {
-  //     console.warn('Collab init skipped', result)
-  //   }
-  // } catch (err) {
-  //   console.warn('Collab init error', err)
-  // }
 });
 
 // ---------- selection helpers ----------
@@ -835,7 +1158,8 @@ function getSelectedText(): string | null {
   outline: none;
 }
 
-.tiptap .is-workspace-note-node-empty:not([data-placeholder=""])::before {
+.tiptap .is-workspace-note-node-empty:not([data-placeholder=""])::before,
+.tiptap .is-editor-node-empty:not([data-placeholder=""])::before {
   color: var(--color-content-disabled, #9ca3af);
   content: attr(data-placeholder);
   float: left;
@@ -912,6 +1236,31 @@ function getSelectedText(): string | null {
   bottom: 0;
   background: var(--color-primary-50, rgba(59, 130, 246, 0.1));
   pointer-events: none;
+}
+
+.tiptap .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background-color: var(--color-primary, #6366f1);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.tiptap th:hover .column-resize-handle,
+.tiptap td:hover .column-resize-handle {
+  opacity: 0.4;
+}
+
+.tiptap .column-resize-handle:hover {
+  opacity: 1 !important;
+}
+
+.tiptap .resize-cursor {
+  cursor: col-resize;
 }
 
 .tiptap h3 {

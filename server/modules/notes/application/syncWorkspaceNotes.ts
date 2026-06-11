@@ -217,6 +217,23 @@ export async function syncWorkspaceNotes(input: {
           continue;
         }
 
+        const collabDocument = await prisma.noteCollabDocument.findUnique({
+          where: { noteId: change.id },
+        });
+        if (
+          collabDocument?.updatedAt &&
+          new Date(collabDocument.updatedAt).getTime() > change.updatedAt
+        ) {
+          conflicts.push({
+            id: change.id,
+            reason: "DELETE_REMOTE_BODY_EDIT",
+            serverVersion: note.version,
+            clientServerVersion: change.serverVersion,
+            serverSnapshot: toServerSnapshot(note),
+          });
+          continue;
+        }
+
         await prisma.note.delete({ where: { id: change.id } });
         applied.push(change.id);
         continue;

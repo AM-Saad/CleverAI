@@ -91,7 +91,7 @@ export function normalizeError(err: unknown): AppFailure {
         success: false,
         error: {
           code: "UNHANDLED_ERROR",
-          message: e.statusMessage || "Unexpected error",
+          message: e.statusMessage || (e as any).message || "Unexpected error",
           statusCode: e.statusCode || 500,
           details: e.data,
         },

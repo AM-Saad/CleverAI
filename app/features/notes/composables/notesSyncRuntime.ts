@@ -85,11 +85,12 @@ export function createNotesSyncRuntime(input: {
     }
   };
 
-  const buildPendingCreateFromLocalNote = (note: NoteState): PendingNoteChange => ({
+  const buildPendingUpsertFromLocalNote = (note: NoteState): PendingNoteChange => ({
     id: note.id,
     operation: "upsert",
     updatedAt: Date.now(),
-    localVersion: 1,
+    localVersion: note.localVersion ? note.localVersion + 1 : 1,
+    ...(!note.id.startsWith("temp-") && { serverVersion: note.version }),
     workspaceId: note.workspaceId,
     groupId: note.groupId ?? null,
     title: note.title,
@@ -115,7 +116,7 @@ export function createNotesSyncRuntime(input: {
 
       const localNote = notes.value.get(layoutNote.id);
       if (localNote) {
-        const repairedChange = buildPendingCreateFromLocalNote(localNote);
+        const repairedChange = buildPendingUpsertFromLocalNote(localNote);
         await pendingQueue.add(repairedChange);
         nextChanges.push(repairedChange);
         pendingById.add(layoutNote.id);
@@ -146,6 +147,30 @@ export function createNotesSyncRuntime(input: {
     return { pendingChanges: nextChanges, pendingLayout: nextLayout };
   };
 
+  const repairDirtyNotesWithoutPending = async (
+    pendingChanges: PendingNoteChange[],
+  ): Promise<PendingNoteChange[]> => {
+    const pendingById = new Set(pendingChanges.map((change) => change.id));
+    const nextChanges = pendingChanges.slice();
+
+    for (const note of notes.value.values()) {
+      if (!note.isDirty || note.error || pendingById.has(note.id)) continue;
+      if (conflictResolver.getConflict(note.id)) continue;
+
+      const repairedChange = buildPendingUpsertFromLocalNote(note);
+      await pendingQueue.add(repairedChange);
+      nextChanges.push(repairedChange);
+      pendingById.add(note.id);
+      logNotesOperation("content-queued", {
+        workspaceId,
+        id: note.id,
+        reason: "repair-dirty-note-without-pending-change",
+      });
+    }
+
+    return nextChanges;
+  };
+
   const drainWorkspace = async (): Promise<boolean> => {
     await flushDrafts();
 
@@ -158,6 +183,7 @@ export function createNotesSyncRuntime(input: {
     let pendingChanges = (await pendingQueue.load(workspaceId)).filter(
       (change) => !change.conflicted,
     );
+    pendingChanges = await repairDirtyNotesWithoutPending(pendingChanges);
     const pendingGroupChanges = await groupQueue.load(workspaceId);
     let pendingLayout = await layoutQueue.load(workspaceId);
     ({ pendingChanges, pendingLayout } = await preparePendingLayoutForSync(pendingChanges, pendingLayout));

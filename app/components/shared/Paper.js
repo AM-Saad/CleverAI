@@ -14,6 +14,9 @@ export default Node.create({
       lines: {
         default: [],
       },
+      height: {
+        default: 280,
+      },
     }
   },
 
@@ -25,9 +28,10 @@ export default Node.create({
           try {
             return {
               lines: JSON.parse(dom.getAttribute('data-lines') || '[]'),
+              height: parseInt(dom.getAttribute('data-height') || '280', 10),
             }
           } catch {
-            return { lines: [] }
+            return { lines: [], height: 280 }
           }
         },
       },
@@ -35,12 +39,13 @@ export default Node.create({
   },
 
   renderHTML({ HTMLAttributes }) {
-    const { lines, ...rest } = HTMLAttributes
+    const { lines, height, ...rest } = HTMLAttributes
     return [
       'div',
       mergeAttributes(rest, {
         'data-type': 'paper',
         'data-lines': JSON.stringify(lines || []),
+        'data-height': String(height || 280),
       }),
     ]
   },

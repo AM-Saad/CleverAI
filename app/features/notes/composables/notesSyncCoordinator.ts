@@ -34,7 +34,6 @@ export function createNotesSyncCoordinator(input: {
     const appliedNoteMetadata = new Map(
       (response.appliedNotes ?? []).map((note) => [note.id, note]),
     );
-    const conflicts = response.conflicts ?? [];
     const idMap = response.idMap ?? {};
     const groupIdMap = response.groupIdMap ?? {};
     const now = new Date();
@@ -104,34 +103,6 @@ export function createNotesSyncCoordinator(input: {
       if (affectedNotes.length) {
         await localRepository.saveMany(affectedNotes);
       }
-    }
-
-    for (const conflict of conflicts) {
-      const note = notes.value.get(conflict.id);
-      if (!note) continue;
-      const pendingChanges = conflict.reason === "VERSION_MISMATCH" && conflict.serverVersion !== undefined
-        ? await pendingQueue.load(workspaceId)
-        : [];
-      const pendingChange = pendingChanges.find((change) => change.id === conflict.id);
-
-      if (pendingChange) {
-        await pendingQueue.add({
-          ...pendingChange,
-          serverVersion: conflict.serverVersion,
-        });
-      }
-
-      const nextNote: NoteState = normalizeLocalNote({
-        ...note,
-        version: conflict.serverVersion ?? note.version,
-        isLoading: false,
-        isDirty: true,
-        error: conflict.reason === "VERSION_MISMATCH"
-          ? "Server version refreshed. Retry will keep your local changes."
-          : "Sync conflict detected. Review this note and retry.",
-      });
-      notes.value.set(conflict.id, nextNote);
-      await localRepository.save(nextNote);
     }
   };
 

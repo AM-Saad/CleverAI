@@ -153,7 +153,7 @@ export function setupOnlineListener(options: OnlineListenerOptions): () => void 
         );
         pendingCount += pending.length;
       }
-      if (!pendingCount) return;
+      if (!pendingCount && !options.onSyncDirect) return;
 
       // Step 3: Trigger sync — prefer direct client-side sync to avoid
       // dual-sync race with SW. Fall back to SW postMessage only if no

@@ -4,47 +4,23 @@
       <!-- ── Backdrop ──────────────────────────────────────────────────────── -->
       <motion.div v-if="show" key="qcm-bd" :initial="{ opacity: 0 }" :animate="{ opacity: 1 }" :exit="{ opacity: 0 }"
         :transition="{ duration: 0.2 }"
-        class="fixed inset-0 z-48 bg-black/10 pb-3   overflow-hidden bg-surface-container backdrop-blur-glass rounded-2xl shadow-glass border border-secondary flex flex-col w-full flex-1 min-h-0"
+        class="fixed inset-0 z-48 bg-black/60 backdrop-blur-[2px]"
         :class="{ 'cursor-not-allowed': isLocked }" @click="onBackdropClick" />
       <!-- ── Panel ─────────────────────────────────────────────────────────── -->
       <motion.div v-if="show" ref="panelEl" key="qcm-panel" role="dialog" aria-modal="true" aria-labelledby="qcm-title"
         tabindex="-1" @keydown="onKeydown" :initial="{ opacity: 0, y: 24, scale: 0.96 }"
         :animate="{ opacity: 1, y: 0, scale: 1 }" :exit="{ opacity: 0, y: 16, scale: 0.97 }"
         :transition="{ type: 'spring', stiffness: 480, damping: 38 }"
-        class="fixed inset-x-0 bottom-[10vh] z-50 mx-auto flex md:w-2/3 lg:w-1/3 w-11/12 rounded-2xl px-4 overflow-hidden bg-surface  shadow-glass border border-secondary flex-col flex-1 min-h-0"
+        class="fixed inset-x-0 bottom-4 md:bottom-auto md:top-[12vh] z-50 mx-auto flex md:w-[480px] w-[92%] rounded-2xl px-5 pb-5 overflow-hidden bg-surface shadow-2xl border border-secondary flex-col min-h-0"
         style="
           max-height: 82svh;
           box-shadow:
-            0 24px 64px -8px rgba(0, 0, 0, 0.22),
-            0 4px 20px -4px rgba(0, 0, 0, 0.12),
-            0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+            0 24px 64px -8px rgba(0, 0, 0, 0.25),
+            0 4px 20px -4px rgba(0, 0, 0, 0.15),
+            0 0 0 1px rgba(255, 255, 255, 0.05) inset;
         ">
         <!-- Gradient top stripe -->
-        <!-- <div
-          class="absolute inset-x-0 top-0 h-px rounded-t-2xl bg-linear-to-r from-transparent via-primary/90 to-transparent" /> -->
-        <svg class="absolute pointer-events-none" style="
-            inset: 0px;
-            width: 100%;
-            height: 100%;
-            z-index: 50;
-            filter: drop-shadow(rgba(168, 85, 247, 0.3) 0px 0px 8px);
-            overflow: visible;
-          ">
-          <defs>
-            <linearGradient id="agent-panel-glow-grad" x1="0" y1="1" x2="1" y2="0" gradientUnits="objectBoundingBox">
-              <stop offset="0%" stop-color="#40D9C6" stop-opacity="1"></stop>
-              <stop offset="25%" stop-color="#4285F4" stop-opacity="1"></stop>
-              <stop offset="50%" stop-color="#6056F0" stop-opacity="1"></stop>
-              <stop offset="70%" stop-color="#9154E7" stop-opacity="1"></stop>
-              <stop offset="85%" stop-color="#9154E7" stop-opacity="0.2"></stop>
-              <stop offset="100%" stop-color="#6056F0" stop-opacity="0"></stop>
-              <animateTransform attributeName="gradientTransform" type="rotate" from="0 0.5 0.5" to="360 0.5 0.5"
-                dur="6s" repeatCount="indefinite"></animateTransform>
-            </linearGradient>
-          </defs>
-          <rect x="1" y="1" rx="10" ry="10" fill="none" stroke="url(#agent-panel-glow-grad)" stroke-width="3"
-            style="width: calc(100% - 2px); height: calc(100% - 2px)"></rect>
-        </svg>
+        <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#40D9C6] via-[#4285F4] to-[#9154E7]" />
 
         <!-- Header -->
         <div class="flex items-center justify-between pt-5 pb-4 shrink-0">
@@ -81,83 +57,104 @@
               :initial="{ opacity: 0, y: stateDirection * -20 }" :animate="{ opacity: 1, y: 0 }"
               :exit="{ opacity: 0, y: stateDirection * 20 }" :transition="{ duration: 0.18, ease: 'easeInOut' }">
               <div class="space-y-4">
-                <div ref="inputContainerRef">
-                  <shared-autocomplete-input v-model="wordInput" size="lg" placeholder="Type a word or phrase…"
-                    :suggestions="wordSuggestionsArr" class="w-full" @query="handleWordQuery" @accept="handleWordAccept"
-                    @keyup.enter="handleCapture" />
-                  <!-- Live interim speech transcript -->
+                <!-- Unified Input Row: Mic + Input + Send in one line -->
+                <div class="flex items-center gap-2 bg-surface-strong rounded-full border p-1.5 transition-all duration-200"
+                  :class="isInputFocused ? 'ring-2 ring-primary/50 border-primary shadow-sm' : 'border-secondary'">
+                  <!-- Mic Button (compact icon-only) -->
+                  <button
+                    type="button"
+                    :disabled="isProcessing"
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    :class="[
+                      !isListening && !isProcessing
+                        ? 'text-content-secondary hover:bg-surface active:scale-95'
+                        : isListening
+                          ? 'bg-error text-white animate-pulse'
+                          : 'cursor-not-allowed text-content-disabled opacity-40'
+                    ]"
+                    @click="handleMicClick"
+                    :title="micLabel"
+                  >
+                    <Icon :name="micIcon" class="h-4.5 w-4.5 shrink-0"
+                      :class="isProcessing ? 'animate-spin text-primary' : ''" />
+                  </button>
+
+                  <!-- Autocomplete Input -->
+                  <div ref="inputContainerRef" class="flex-1 min-w-0" @focusin="isInputFocused = true" @focusout="isInputFocused = false">
+                    <shared-autocomplete-input
+                      v-model="wordInput"
+                      variant="none"
+                      size="md"
+                      placeholder="Type a word or phrase…"
+                      :suggestions="wordSuggestionsArr"
+                      class="w-full border-0 bg-transparent p-0 focus:ring-0 shadow-none"
+                      @query="handleWordQuery"
+                      @accept="handleWordAccept"
+                      @keyup.enter="handleCapture"
+                    />
+                  </div>
+
+                  <!-- Translate/Send Button -->
+                  <button
+                    type="button"
+                    :disabled="!wordInput.trim() || isCapturing"
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-all disabled:opacity-40 disabled:scale-100 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                    @click="handleCapture"
+                    title="Translate"
+                  >
+                    <Icon v-slot="{ className }" name="i-lucide-arrow-right" class="h-4.5 w-4.5" />
+                  </button>
+                </div>
+
+                <!-- Live interim speech transcript & Fallbacks -->
+                <div class="space-y-1 text-center">
                   <Transition name="ctx">
                     <p v-if="isListening && !usingFallback && interimTranscript"
-                      class="mt-2 text-sm text-primary text-center italic select-none animate-pulse">
+                      class="text-sm text-primary italic select-none animate-pulse">
                       “{{ interimTranscript }}”
                     </p>
                   </Transition>
-                </div>
-
-                <!-- Mic -->
-                <div class="flex flex-col items-center gap-1.5">
-                  <button type="button" :disabled="isProcessing" :class="[
-                    'flex min-w-40 items-center justify-center gap-2 rounded-full border-2 px-5 py-2.5 text-sm font-medium transition-all duration-200 select-none',
-                    !isListening && !isProcessing
-                      ? 'border-secondary bg-surface-strong text-content-secondary hover:border-primary/50 active:scale-95'
-                      : isListening
-                        ? 'border-error bg-error/10 text-error'
-                        : 'cursor-not-allowed border-primary/20 bg-primary/10 opacity-60 text-content-secondary',
-                  ]" @click="handleMicClick">
-                    <Icon :name="micIcon" class="h-4 w-4 shrink-0"
-                      :class="isProcessing ? 'animate-spin text-primary' : ''" />
-                    {{ micLabel }}
-                  </button>
-                  <!-- Fallback indicator -->
                   <Transition name="ctx">
                     <span v-if="usingFallback && (isListening || isProcessing)"
-                      class="text-[11px] text-content-secondary flex items-center gap-1">
+                      class="text-[11px] text-content-secondary flex items-center justify-center gap-1">
                       <Icon name="i-lucide-cpu" class="h-3 w-3" />
                       Using local AI
                     </span>
                   </Transition>
-                  <!-- Mic error -->
                   <Transition name="ctx">
-                    <p v-if="micError" class="text-xs text-error text-center">
+                    <p v-if="micError" class="text-xs text-error">
                       {{ micError }}
                     </p>
                   </Transition>
                 </div>
 
-                <!-- Optional context -->
-                <div>
-                  <button type="button"
-                    class="flex items-center gap-1 text-xs text-content-secondary transition-colors hover:text-content-on-surface"
-                    @click="showContext = !showContext">
-                    <Icon :name="showContext
-                      ? 'i-lucide-chevron-up'
-                      : 'i-lucide-chevron-down'
-                      " class="h-3 w-3" />
-                    Add context (optional)
-                  </button>
+                <!-- Optional Context Accordion and Target Language settings compacted -->
+                <div class="flex flex-col gap-2 border-t border-secondary pt-3">
+                  <div class="flex items-center justify-between gap-x-4">
+                    <!-- Optional context toggle button -->
+                    <button type="button"
+                      class="flex items-center gap-1 text-xs text-content-secondary transition-colors hover:text-content-on-surface"
+                      @click="showContext = !showContext">
+                      <Icon :name="showContext ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="h-3 w-3" />
+                      Add context (optional)
+                    </button>
+
+                    <!-- Translate language check -->
+                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                      <input v-model="includeTranslation" type="checkbox"
+                        class="h-3.5 w-3.5 rounded border-secondary text-primary focus:ring-primary" />
+                      <span class="text-xs text-content-secondary">
+                        Translate to {{ translationLanguage }}
+                      </span>
+                    </label>
+                  </div>
+
                   <Transition name="ctx">
-                    <u-input v-if="showContext" v-model="contextInput" placeholder="Surrounding sentence…"
-                      class="mt-2 w-full" />
+                    <div v-if="showContext" class="mt-2">
+                      <u-input v-model="contextInput" placeholder="Surrounding sentence context..." class="w-full" size="sm" />
+                    </div>
                   </Transition>
                 </div>
-
-                <label class="flex items-center gap-3 rounded-lg border border-secondary bg-surface-subtle px-3 py-2.5">
-                  <input v-model="includeTranslation" type="checkbox"
-                    class="h-4 w-4 rounded border-secondary text-primary focus:ring-primary" />
-                  <span class="min-w-0">
-                    <span class="block text-sm font-medium text-content-on-surface">
-                      Translate to {{ translationLanguage }}
-                    </span>
-                    <span class="block text-xs text-content-secondary">
-                      Keep meanings and examples either way
-                    </span>
-                  </span>
-                </label>
-
-                <u-button size="sm" :disabled="!wordInput.trim()" :loading="isCapturing" @click="handleCapture">
-                  <Icon name="i-lucide-send" class="mr-1.5 h-4 w-4" />
-                  Translate
-                </u-button>
               </div>
             </motion.div>
 
@@ -177,8 +174,8 @@
               :initial="{ opacity: 0, x: stateDirection * -20 }" :animate="{ opacity: 1, x: 0 }"
               :exit="{ opacity: 0, x: stateDirection * 20 }" :transition="{ duration: 0.18, ease: 'easeInOut' }">
               <div class="space-y-4">
-                <!-- Word card — uses primary gradient treatment -->
-                <div class="relative overflow-hidden rounded-xl border border-primary/15 bg-primary/5 p-5">
+                <!-- Word card — uses primary glassmorphism gradient treatment -->
+                <div class="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/8 via-primary/[0.01] to-transparent p-5 shadow-xs">
                   <div class="relative flex items-start justify-between gap-3">
                     <div class="min-w-0">
                       <p class="text-2xl font-semibold leading-tight text-content-on-surface">
@@ -217,7 +214,7 @@
                 </div>
 
                 <div v-if="captureResult.meanings?.length"
-                  class="space-y-2 rounded-xl border border-secondary bg-surface-strong p-3.5">
+                  class="space-y-3 rounded-2xl border border-secondary bg-surface-subtle p-4">
                   <div class="flex items-center gap-2">
                     <Icon name="i-lucide-list-tree" class="h-4 w-4 text-primary" />
                     <span class="text-sm font-semibold text-content-on-surface">
@@ -248,7 +245,7 @@
                 </div>
 
                 <div v-if="captureResult.examples?.length"
-                  class="rounded-xl border border-secondary bg-surface-strong p-3.5">
+                  class="rounded-2xl border border-secondary bg-surface-subtle p-4">
                   <div class="mb-2 flex items-center gap-2">
                     <Icon name="i-lucide-message-square-quote" class="h-4 w-4 text-primary" />
                     <span class="text-sm font-semibold text-content-on-surface">
@@ -435,6 +432,7 @@ const { onKeydown } = useFocusTrap(computed(() => props.show), panelEl, {
 const wordInput = ref("");
 const contextInput = ref("");
 const includeTranslation = ref(true);
+const isInputFocused = ref(false);
 
 // ── Autocomplete ──────────────────────────────────────────────────────────────
 const {
@@ -556,11 +554,18 @@ watch(
   () => props.show,
   (v) => {
     if (v) {
+      document.body.style.overflow = "hidden";
       loadPreferences();
       nextTick(() => inputContainerRef.value?.querySelector("input")?.focus());
+    } else {
+      document.body.style.overflow = "";
     }
   },
 );
+
+onBeforeUnmount(() => {
+  document.body.style.overflow = "";
+});
 </script>
 
 <style scoped>
