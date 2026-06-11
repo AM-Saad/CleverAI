@@ -24,8 +24,8 @@ ENV HUSKY=0
 RUN apt-get update -qq && \
     apt-get install --no-install-recommends -y build-essential node-gyp openssl pkg-config python-is-python3
 
-# Install node modules. postinstall runs Prisma generate and Nuxt prepare, so
-# copy the minimum app/config/schema files it needs before yarn install.
+# Install node modules. Skip package postinstall in Docker: this stage runs
+# Prisma generate explicitly below, and Nuxt build prepares Nuxt later.
 COPY package.json yarn.lock ./
 COPY nuxt.config.ts tsconfig.json prisma.config.ts types.d.ts ./
 COPY app ./app
@@ -36,7 +36,7 @@ COPY server ./server
 COPY shared ./shared
 COPY sw-src ./sw-src
 COPY types ./types
-RUN yarn install --frozen-lockfile --production=false
+RUN yarn install --frozen-lockfile --production=false --ignore-scripts
 
 # Generate Prisma Client
 RUN npx prisma generate --schema=prisma/schema.prisma

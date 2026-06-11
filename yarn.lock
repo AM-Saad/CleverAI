@@ -1756,32 +1756,34 @@
   resolved "https://registry.yarnpkg.com/@hexagon/base64/-/base64-1.1.28.tgz#7d306a97f1423829be5b27c9d388fe50e3099d48"
   integrity sha512-lhqDEAvWixy3bZ+UOYbPwUbBkwBq5C1LAJ/xPC8Oi+lL54oyakv/npbA0aU2hgCsx/1NUd4IBvV03+aUBWxerw==
 
-"@hocuspocus/common@^4.1.1":
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/@hocuspocus/common/-/common-4.1.1.tgz#771e0439b64d7c3e0b877c406041f9de92ce838f"
-  integrity sha512-7jvCti57eYp6Yf7MHzPI4QI75o4zHg4G2f2HC3jbAdpTb+aKxAEPpnDxxpl2Lj4XzyDcisZfwB0Rvf7lbPXAog==
+"@hocuspocus/common@^3.4.4":
+  version "3.4.4"
+  resolved "https://registry.yarnpkg.com/@hocuspocus/common/-/common-3.4.4.tgz#a888fbd6dff2f0b8947c76b7841bddb89eb4d795"
+  integrity sha512-RykIJ0tsHHMP4Xk+4UCbc7SO5LgGxGUSTdbh6anJEsaALAyqinf1Nn5HYuMjLPolAmsar1v++m9zufR09NLpXA==
   dependencies:
     lib0 "^0.2.87"
 
-"@hocuspocus/provider@^4.1.1":
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/@hocuspocus/provider/-/provider-4.1.1.tgz#9d38e1d4523c84ca1b272ffefaa9f20a528c4388"
-  integrity sha512-LSbr50a1+1yoyO7tiWBkBxZZQzSRkW6xQRfEx6phNhQDzn5E4lL24mvfkUIyVFrr+TzPDGMFz5CBx6cXSaFYzw==
+"@hocuspocus/provider@3.4.4":
+  version "3.4.4"
+  resolved "https://registry.yarnpkg.com/@hocuspocus/provider/-/provider-3.4.4.tgz#ab4ff0b55f9faf848ddbc5775956afee440a4e97"
+  integrity sha512-KbsMAfdYcIJD8eMU/5QnpXcSOvIWAcCNI33FSRSaKCIpYBFtAwkYIwWnZJmPZ8a1BMAtqQc+uvy9+UQf7GHnGQ==
   dependencies:
-    "@hocuspocus/common" "^4.1.1"
+    "@hocuspocus/common" "^3.4.4"
     "@lifeomic/attempt" "^3.0.2"
     lib0 "^0.2.87"
+    ws "^8.17.1"
 
-"@hocuspocus/server@^4.1.1":
-  version "4.1.1"
-  resolved "https://registry.yarnpkg.com/@hocuspocus/server/-/server-4.1.1.tgz#d94fc70a17ac0df9a98c6bfb92d0fc8cfb094952"
-  integrity sha512-16Xje9a5Of3V3gr3m07mScxRd/5ci2W86yaAoNVCDM0buEQOfxXSqiim3KjTTLqqjMCzWvNmXCNoHJM6M6xwrQ==
+"@hocuspocus/server@3.4.4":
+  version "3.4.4"
+  resolved "https://registry.yarnpkg.com/@hocuspocus/server/-/server-3.4.4.tgz#b44ad0aea9bdcc32d166e598278a4d5609cf03e9"
+  integrity sha512-UV+oaONAejOzeYgUygNcgsc8RdZvSokVvAxluZJIisLACpRO/VsseQ5lWKDRwLd7Fn6+rHWDH3hGuQ1fdX1Ycg==
   dependencies:
-    "@hocuspocus/common" "^4.1.1"
+    "@hocuspocus/common" "^3.4.4"
+    async-lock "^1.3.1"
     async-mutex "^0.5.0"
-    crossws "^0.4.4"
     kleur "^4.1.4"
     lib0 "^0.2.47"
+    ws "^8.5.0"
 
 "@huggingface/jinja@^0.5.3":
   version "0.5.6"
@@ -4442,6 +4444,13 @@
     "@tiptap/extension-bubble-menu" "^3.14.0"
     "@tiptap/extension-floating-menu" "^3.14.0"
 
+"@tiptap/y-tiptap@3.0.5":
+  version "3.0.5"
+  resolved "https://registry.yarnpkg.com/@tiptap/y-tiptap/-/y-tiptap-3.0.5.tgz#771644c5b058f58bf27bf864cb18be85a8923564"
+  integrity sha512-WoK5z3jMW+9nzumcWAxEDRCSC7yQmdq4NN0157MaxQBl9dGWwjxJx3+11mb+WAqR37oDeAMKMmSNy+/hm2XGlA==
+  dependencies:
+    lib0 "^0.2.100"
+
 "@trysound/sax@0.2.0":
   version "0.2.0"
   resolved "https://registry.yarnpkg.com/@trysound/sax/-/sax-0.2.0.tgz#cccaab758af56761eb7bf37af6f03f326dd798ad"
@@ -5965,6 +5974,11 @@ async-function@^1.0.0:
   resolved "https://registry.yarnpkg.com/async-function/-/async-function-1.0.0.tgz#509c9fca60eaf85034c6829838188e4e4c8ffb2b"
   integrity sha512-hsU18Ae8CDTR6Kgu9DYf0EbCr/a5iGL0rytQDobUcdpYOKokk8LEjVphnXkDkgpi0wYVsqrXuP0bZxJaTqdgoA==
 
+async-lock@^1.3.1:
+  version "1.4.1"
+  resolved "https://registry.yarnpkg.com/async-lock/-/async-lock-1.4.1.tgz#56b8718915a9b68b10fce2f2a9a3dddf765ef53f"
+  integrity sha512-Az2ZTpuytrtqENulXwO3GGv1Bztugx6TT37NIo7imr/Qo0gsYiGtSdBa2B6fsXhTpVZDNfu1Qn3pk531e3q+nQ==
+
 async-mutex@^0.5.0:
   version "0.5.0"
   resolved "https://registry.yarnpkg.com/async-mutex/-/async-mutex-0.5.0.tgz#353c69a0b9e75250971a64ac203b0ebfddd75482"
@@ -6898,11 +6912,6 @@ cross-spawn@^7.0.3, cross-spawn@^7.0.6:
   integrity sha512-ojKiDvcmByhwa8YYqbQI/hg7MEU0NC03+pSdEq4ZUnZR9xXpwk7E43SMNGkn+JxJGPFtNvQ48+vV2p+P1ml5PA==
   dependencies:
     uncrypto "^0.1.3"
-
-crossws@^0.4.4:
-  version "0.4.6"
-  resolved "https://registry.yarnpkg.com/crossws/-/crossws-0.4.6.tgz#3785f451c2054ae9a21e00db5545a162d58947f8"
-  integrity sha512-/Wxe9Z007EbJ496j88nToZEvyPZ8PY/wjZJ18Agh/GCA9cYHyLbxtrpdFlFzAw3TV20F0SUYGl0g6PzChbwUrg==
 
 crypto-js@^3.3.0:
   version "3.3.0"
@@ -10290,17 +10299,17 @@ levn@^0.4.1:
     prelude-ls "^1.2.1"
     type-check "~0.4.0"
 
+lib0@^0.2.100, lib0@^0.2.47, lib0@^0.2.74, lib0@^0.2.87:
+  version "0.2.117"
+  resolved "https://registry.yarnpkg.com/lib0/-/lib0-0.2.117.tgz#6c3f926475d28904af05b590703cbbbc29475716"
+  integrity sha512-DeXj9X5xDCjgKLU/7RR+/HQEVzuuEUiwldwOGsHK/sfAfELGWEyTcf0x+uOvCvK3O2zPmZePXWL85vtia6GyZw==
+  dependencies:
+    isomorphic.js "^0.2.4"
+
 lib0@^0.2.102, lib0@^0.2.109, lib0@^0.2.85, lib0@^0.2.99:
   version "0.2.115"
   resolved "https://registry.yarnpkg.com/lib0/-/lib0-0.2.115.tgz#1e991e8e8f024bbfaecd8efb52b21f9dc2e60f68"
   integrity sha512-noaW4yNp6hCjOgDnWWxW0vGXE3kZQI5Kqiwz+jIWXavI9J9WyfJ9zjsbQlQlgjIbHBrvlA/x3TSIXBUJj+0L6g==
-  dependencies:
-    isomorphic.js "^0.2.4"
-
-lib0@^0.2.47, lib0@^0.2.74, lib0@^0.2.87:
-  version "0.2.117"
-  resolved "https://registry.yarnpkg.com/lib0/-/lib0-0.2.117.tgz#6c3f926475d28904af05b590703cbbbc29475716"
-  integrity sha512-DeXj9X5xDCjgKLU/7RR+/HQEVzuuEUiwldwOGsHK/sfAfELGWEyTcf0x+uOvCvK3O2zPmZePXWL85vtia6GyZw==
   dependencies:
     isomorphic.js "^0.2.4"
 
@@ -15534,6 +15543,11 @@ wrappy@1:
   resolved "https://registry.yarnpkg.com/wrappy/-/wrappy-1.0.2.tgz#b5243d8f3ec1aa35f1364605bc0d1036e30ab69f"
   integrity sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==
 
+ws@^8.17.1, ws@^8.5.0:
+  version "8.21.0"
+  resolved "https://registry.yarnpkg.com/ws/-/ws-8.21.0.tgz#012e413fc07429945121b0c153158c4343086951"
+  integrity sha512-Vsp28b7DRcimFQvrqu2Wek3z1iYxDCWqHYB8Qsnk/S4RfaCQzPGPyBNuVjJV3cd6UiKtUtp6sNM77gWvzcCH+g==
+
 ws@^8.18.3:
   version "8.18.3"
   resolved "https://registry.yarnpkg.com/ws/-/ws-8.18.3.tgz#b56b88abffde62791c639170400c93dcb0c95472"
@@ -15591,7 +15605,7 @@ y-prosemirror@^1.3.7:
   dependencies:
     lib0 "^0.2.109"
 
-y-protocols@^1.0.5:
+y-protocols@1.0.7, y-protocols@^1.0.5:
   version "1.0.7"
   resolved "https://registry.yarnpkg.com/y-protocols/-/y-protocols-1.0.7.tgz#6631c492e75b78b3a61353a60067e6f8a4c38d5f"
   integrity sha512-YSVsLoXxO67J6eE/nV4AtFtT3QEotZf5sK5BHxFBXso7VDUT3Tx07IfA6hsu5Q5OmBdMkQVmFZ9QOA7fikWvnw==
