@@ -8,7 +8,7 @@ const props = defineProps<Props>()
 <template>
   <transition name="fade" mode="out-in">
     <div v-if="props.seconds > 0 && (props.attempts !== null && props.attempts <= 0)"
-      class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-[var(--radius-md)] bg-error text-white shadow-lg text-sm"
+      class="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-[var(--radius-md)] bg-error text-white shadow-[var(--shadow-modal)] text-sm"
       role="status" aria-live="polite" aria-atomic="true">
       Resend blocked — wait {{ props.seconds }}s
     </div>

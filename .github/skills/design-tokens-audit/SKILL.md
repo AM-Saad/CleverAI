@@ -17,14 +17,13 @@ Finds and replaces raw hex colors, hardcoded pixel values, and inline styles tha
 
 ## Design Token Reference
 
-**Source of truth:** [app/assets/css/main.css](../../app/assets/css/main.css) and [app/DESIGN.md](../../app/DESIGN.md)
+**Source of truth:** [app/design-system/tokens/index.cjs](../../app/design-system/tokens/index.cjs) (edit tokens here, then `yarn design:tokens` to regenerate). Reference: [app/DESIGN.md](../../app/DESIGN.md) and [docs/DESIGN_SYSTEM.md](../../docs/DESIGN_SYSTEM.md). Enforcement: `yarn design:check`.
 
 ### Color Tokens
 
 | CSS Variable | Value | Usage |
 |---|---|---|
 | `--color-primary` | `#384998` | CTAs, active states, links |
-| `--color-primary-light` | `#4a5db8` | Hover on primary |
 | `--color-success` | `#10b981` | Positive feedback, completed states |
 | `--color-warning` | `#f59e0b` | Caution states |
 | `--color-error` | `#ef4444` | Errors, destructive actions |
@@ -38,7 +37,9 @@ Finds and replaces raw hex colors, hardcoded pixel values, and inline styles tha
 | `--color-content-secondary` | — | helper/subtitle text |
 | `--color-content-disabled` | — | Disabled text |
 
-**In Tailwind classes:** use `bg-[var(--color-surface)]`, `text-[var(--color-content-secondary)]`, `border-[var(--color-primary)]`
+Plus an **accent palette** (`--color-accent-{blue,indigo,purple,pink,rose,teal,cyan,orange}`) for decorative gradients/hero and user-pickable swatches — not interactive-state colors — and a scoped **`--syntax-*`** group for the code-editor highlight theme.
+
+**In Tailwind classes:** prefer the generated utilities (`bg-surface`, `text-content-secondary`, `border-primary`, `bg-accent-blue`); use the `var()` form (`bg-[var(--color-surface)]`) only where a utility doesn't exist.
 
 ### Spacing Tokens (4px grid)
 
@@ -82,20 +83,22 @@ Shadows are **only for interactive/elevated elements** — never apply to static
 
 ### 1. Scan for Violations
 
-Run the audit commands for the target file or directory:
+Use the automated scanner (preferred over ad-hoc grep):
 
 ```bash
-# Raw hex colors in Tailwind class strings
-grep -rn '#[0-9a-fA-F]\{3,8\}' app/components/ app/pages/ --include="*.vue" -l
+# Full component → value map + rollups in docs/design-audit/
+yarn design:audit
+#   audit.md    per-file map, every value tagged ok/violation/review/legacy
+#   summary.md  top offenders + distinct raw-value histogram with target tokens
 
-# Detailed matches with line numbers
+# Pass/fail gate (hex, palette classes, built-in radius/shadow). Exit 1 on any.
+yarn design:check
+```
+
+For a single file, find its section in `docs/design-audit/audit.md` (search the path) — it lists each violation and the suggested token. Fall back to grep only for quick spot checks:
+
+```bash
 grep -rn '#[0-9a-fA-F]\{3,8\}' app/components/ app/pages/ --include="*.vue"
-
-# rgb() / rgba() raw values
-grep -rn 'rgb(' app/components/ app/pages/ --include="*.vue"
-
-# Inline style with hardcoded colors
-grep -rn ':style.*color.*#' app/components/ app/pages/ --include="*.vue"
 
 # Hardcoded border-radius (not using var())
 grep -rn 'border-radius:[^v]' app/assets/css/ app/components/ app/pages/ --include="*.vue" --include="*.css"

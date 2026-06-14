@@ -37,7 +37,10 @@
     "typecheck": "nuxt typecheck",
     "generate:api": "tsx scripts/codegen/api-client-generator.ts",
     "design:tokens": "node scripts/generate-design-tokens.cjs",
-    "design:check": "node scripts/check-design-tokens.cjs"
+    "design:check": "node scripts/check-design-tokens.cjs",
+    "design:audit": "node scripts/audit-design-usage.cjs",
+    "design:components": "node scripts/audit-components.cjs",
+    "design:contrast": "node scripts/check-contrast.cjs"
   },
   "dependencies": {
     "@formkit/drag-and-drop": "^0.5.3",
@@ -122,6 +125,7 @@
     "stripe": "^21.0.1",
     "superjson": "^1.12.2",
     "tailwind-merge": "^3.3.1",
+    "tailwind-variants": "^3.2.2",
     "tailwindcss": "^4.1.11",
     "tiktoken": "^1.0.22",
     "tw-animate-css": "^1.3.6",

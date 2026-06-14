@@ -39,15 +39,15 @@ const viewerComponent = computed(() => {
   <Teleport to="body">
     <!-- Backdrop -->
     <Transition name="fade">
-      <div v-if="isOpen" class="fixed inset-0 bg-black/50 z-40" @click="emit('close')" />
+      <div v-if="isOpen" class="fixed inset-0 bg-[var(--ds-backdrop-dim)] z-40" @click="emit('close')" />
     </Transition>
 
     <!-- Slide-Over Panel -->
     <Transition name="slide">
       <div v-if="isOpen"
-        class="fixed inset-y-0 right-0 w-full md:w-1/2 lg:w-2/5 bg-surface-100 dark:bg-dark shadow-xl z-50 flex flex-col">
+        class="fixed inset-y-0 right-0 w-full md:w-1/2 lg:w-2/5 bg-surface-100 dark:bg-dark shadow-[var(--shadow-modal)] z-50 flex flex-col">
         <!-- Header -->
-        <div class="flex items-center justify-between p-4 border-b border-muted dark:border-neutral">
+        <div class="flex items-center justify-between p-4 border-b border-muted dark:border-secondary">
           <div class="flex items-center gap-2">
             <u-icon v-if="preview?.type === 'NOTE'" name="i-lucide-file-text" :size="UI_CONFIG.ICON_SIZE"
               class="text-primary" />
@@ -57,9 +57,9 @@ const viewerComponent = computed(() => {
               {{ preview?.type === 'NOTE' ? 'Note Context' : 'PDF Context' }}
             </ui-subtitle>
           </div>
-          <u-button variant="soft" size="sm" color="neutral" @click="emit('close')" aria-label="Close context preview">
+          <ui-button variant="soft" size="sm" color="neutral" @click="emit('close')" aria-label="Close context preview">
             <u-icon name="i-lucide-x" :size="UI_CONFIG.ICON_SIZE" />
-          </u-button>
+          </ui-button>
         </div>
 
         <!-- Content Area -->

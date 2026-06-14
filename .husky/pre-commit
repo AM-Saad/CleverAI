@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+# Block raw design values (hex, palette classes, built-in radius/shadow) before
+# they land. Fast (<1s) whole-tree scan. See docs/DESIGN_SYSTEM.md; use a
+# `design-allow` comment on a line for a justified exception.
+yarn design:check

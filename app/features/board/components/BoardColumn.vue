@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import BoardItemCard from "./BoardItemCard.vue";
+import BoardItemCard from "~/features/board/components/BoardItemCard.vue";
 import { useBoardItemsStore } from "../composables/useBoardItemsStore";
 import type { BoardItemState } from "../composables/useBoardItemsStore";
 import type { BoardColumnState } from "../composables/useBoardColumnsStore";
@@ -198,7 +198,7 @@ const handleMoveItem = async (itemId: string, targetId: string | null) => {
 
 <template>
   <div
-    class="shrink-0 flex flex-col h-full min-h-0 bg-linear-to-b from-white to-surface/80 rounded-xl border border-t-0 border-surface-subtle shadow-xs transition-shadow w-72 max-w-full ">
+    class="shrink-0 flex flex-col h-full min-h-0 bg-linear-to-b from-white to-surface/80 rounded-[var(--radius-xl)] border border-t-0 border-surface-subtle shadow-xs transition-shadow w-72 max-w-full ">
     <!-- Column Header - This is the drag handle on desktop -->
     <div
       class="flex items-center justify-between p-3 border-b border-secondary bg-white rounded-t-xl group/header shrink-0 column-drag-handle"
@@ -213,7 +213,7 @@ const handleMoveItem = async (itemId: string, targetId: string | null) => {
           <Icon name="heroicons:bars-2" class="w-4 h-4" />
         </div>
 
-        <div v-if="icon" class="flex items-center justify-center w-6 h-6 rounded bg-surface"
+        <div v-if="icon" class="flex items-center justify-center w-6 h-6 rounded-[var(--radius-md)] bg-surface"
           :style="{ color: color || 'currentColor' }">
           <Icon :name="icon" class="w-4 h-4" />
         </div>
@@ -231,10 +231,10 @@ const handleMoveItem = async (itemId: string, targetId: string | null) => {
 
       <div v-else class="flex items-center gap-2 flex-1 pointer-events-auto" @click.stop @mousedown.stop
         @pointerdown.stop>
-        <UInput v-model="editName" size="xs" class="flex-1" data-no-drag
+        <UiInput v-model="editName" size="xs" class="flex-1" data-no-drag
           :ref="(el: unknown) => setEditInputRef((el as any)?.$el || (el as any) || null)" @keyup.enter="saveName"
           @keyup.escape="cancelEditing" @blur="handleEditBlur" @click.stop @mousedown.stop @pointerdown.stop />
-        <UButton size="xs" color="primary" variant="solid" icon="heroicons:check" data-no-drag @click.stop="saveName" />
+        <UiButton size="xs" color="primary" variant="solid" icon="heroicons:check" data-no-drag @click.stop="saveName" />
       </div>
 
       <div
@@ -242,7 +242,7 @@ const handleMoveItem = async (itemId: string, targetId: string | null) => {
         @pointerdown.stop>
         <UDropdownMenu v-if="!isDefault && columnActions.length > 0" :items="columnActions"
           :content="{ align: 'end', side: 'bottom', sideOffset: 4 }">
-          <UButton size="xs" color="neutral" variant="subtle" icon="heroicons:ellipsis-vertical" data-no-drag
+          <UiButton size="xs" color="neutral" variant="subtle" icon="heroicons:ellipsis-vertical" data-no-drag
             @click.stop @pointerdown.stop />
         </UDropdownMenu>
       </div>
@@ -280,11 +280,11 @@ const handleMoveItem = async (itemId: string, targetId: string | null) => {
 
     <!-- Add item button -->
     <div class="shrink-0 p-2.5 bg-white rounded-b-xl border-t border-secondary pointer-events-auto">
-      <UButton size="sm" color="neutral" variant="ghost"
+      <UiButton size="sm" color="neutral" variant="ghost"
         class="w-full justify-start text-xs tracking-wide hover:bg-surface-subtle" icon="heroicons:plus-circle"
         @click="createItem">
         New Item
-      </UButton>
+      </UiButton>
     </div>
 
     <!-- Delete confirmation modal -->

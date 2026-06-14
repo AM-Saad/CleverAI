@@ -187,7 +187,7 @@ const CardItem = {
 
       const renderDemoCard = () => [
         h('img', { src: props.item.src, alt: props.item.label, class: 'w-full h-full object-cover block pointer-events-none -webkit-user-drag-none' }),
-        h('div', { class: 'absolute inset-x-0 bottom-0 p-5 pt-16 bg-gradient-to-t from-black/80 to-transparent font-serif text-xl tracking-tight text-white' }, props.item.label),
+        h('div', { class: 'absolute inset-x-0 bottom-0 p-4 pt-16 bg-gradient-to-t from-[var(--color-content-on-background)]/80 to-transparent font-serif text-xl tracking-tight text-white' }, props.item.label),
         h(motion.div, { class: 'absolute top-5 right-5 px-4 py-1.5 rounded-[var(--radius-lg)] text-[0.8rem] font-bold tracking-widest uppercase border text-success border-success rotate-[8deg] pointer-events-none', style: { opacity: likeOpacity } }, 'Next'),
         h(motion.div, { class: 'absolute top-5 left-5 px-4 py-1.5 rounded-[var(--radius-lg)] text-[0.8rem] font-bold tracking-widest uppercase border text-error border-error -rotate-[8deg] pointer-events-none', style: { opacity: nopeOpacity } }, 'Prev'),
       ]
@@ -197,8 +197,8 @@ const CardItem = {
       // The base wrapper container style
       const motionProps: any = {
         class: isTop
-          ? 'absolute inset-0 rounded-2xl overflow-hidden shadow-xl will-change-transform touch-none select-none bg-clip-padding backdrop-filter backdrop-blur-sm bg-opacity-10  border border-surface-subtle'
-          : 'absolute inset-0 rounded-2xl overflow-hidden shadow-md will-change-transform touch-none select-none bg-clip-padding backdrop-filter backdrop-blur-sm bg-opacity-10  border border-surface-subtle',
+          ? 'absolute inset-0 rounded-[var(--radius-2xl)] overflow-hidden shadow-[var(--shadow-card-hover)] will-change-transform touch-none select-none bg-clip-padding backdrop-filter backdrop-blur-sm bg-opacity-10  border border-surface-subtle'
+          : 'absolute inset-0 rounded-[var(--radius-2xl)] overflow-hidden shadow-[var(--shadow-dropdown)] will-change-transform touch-none select-none bg-clip-padding backdrop-filter backdrop-blur-sm bg-opacity-10  border border-surface-subtle',
         style: { zIndex, x, y, rotate },
         onClickCapture
       }
@@ -246,7 +246,7 @@ const CardItem = {
     <!-- Controls -->
     <div v-if="deck.length > 0" class="flex items-center gap-8 mt-4 relative z-10">
       <button
-        class="w-6 h-6 rounded-full border border-surface-subtle bg-white text-content-secondary active:scale-90 transition-all flex items-center justify-center shadow-sm"
+        class="w-6 h-6 rounded-full border border-surface-subtle bg-white text-content-secondary active:scale-90 transition-all flex items-center justify-center shadow-[var(--shadow-dropdown)]"
         title="Previous" @click="swipeLeft">
         <Icon class="text-content-secondary" name="i-lucide-arrow-left" :size="UI_CONFIG.ICON_SIZE" />
       </button>
@@ -259,7 +259,7 @@ const CardItem = {
       </div>
 
       <button
-        class="w-6 h-6 rounded-full border border-surface-subtle bg-white text-content-secondary active:scale-90 transition-all flex items-center justify-center shadow-sm"
+        class="w-6 h-6 rounded-full border border-surface-subtle bg-white text-content-secondary active:scale-90 transition-all flex items-center justify-center shadow-[var(--shadow-dropdown)]"
         title="Next" @click="swipeRight">
         <Icon class="text-content-secondary" name="i-lucide-arrow-right" :size="UI_CONFIG.ICON_SIZE" />
       </button>

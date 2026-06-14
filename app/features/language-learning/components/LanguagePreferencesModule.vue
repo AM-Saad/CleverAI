@@ -15,7 +15,7 @@
               Shows a language button in the corner of every page
             </ui-paragraph>
           </div>
-          <u-switch v-model="form.enabled" />
+          <ui-switch v-model="form.enabled" />
         </div>
       </ui-card>
 
@@ -24,7 +24,7 @@
         <div class="grid gap-4 sm:grid-cols-2">
           <div class="space-y-1.5">
             <UiLabel tag="label">Target language</UiLabel>
-            <USelect
+            <UiSelect
               v-model="form.targetLanguage"
               :items="languageOptions"
               value-key="value"
@@ -37,7 +37,7 @@
           </div>
           <div class="space-y-1.5">
             <UiLabel tag="label">Native language</UiLabel>
-            <USelect
+            <UiSelect
               v-model="form.nativeLanguage"
               :items="languageOptions"
               value-key="value"
@@ -65,7 +65,7 @@
           </div>
           <div class="space-y-1.5">
             <UiLabel tag="label">Cards per session</UiLabel>
-            <u-input
+            <ui-input
               v-model.number="form.sessionCardLimit"
               type="number"
               min="5"
@@ -77,10 +77,10 @@
       </ui-card>
 
       <div class="flex justify-end">
-        <u-button :loading="isSaving" @click="handleSave">
+        <ui-button :loading="isSaving" @click="handleSave">
           <Icon name="i-lucide-save" class="w-4 h-4 mr-1" />
           Save preferences
-        </u-button>
+        </ui-button>
       </div>
 
       <shared-error-message v-if="saveError" :error="saveError" />

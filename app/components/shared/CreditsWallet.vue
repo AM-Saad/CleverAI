@@ -164,13 +164,13 @@ function invokeAd() {
     <div class="flex flex-col gap-6 px-2 pb-6">
       <!-- Hero Section -->
       <div
-        class="relative overflow-hidden rounded-[var(--radius-2xl)] bg-gradient-to-br from-primary/50 to-primary/10 border-primary/20 p-8 text-center mt-2 shadow-sm">
-        <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/90 rounded-full blur-3xl"></div>
-        <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-blue-500/90 rounded-full blur-3xl"></div>
+        class="relative overflow-hidden rounded-[var(--radius-2xl)] bg-gradient-to-br from-primary/50 to-primary/10 border-primary/20 p-8 text-center mt-2 shadow-[var(--shadow-dropdown)]">
+        <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/90 rounded-[var(--radius-2xl)] blur-3xl"></div>
+        <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-accent-blue/90 rounded-[var(--radius-2xl)] blur-3xl"></div>
 
         <p class="font-medium mb-2 relative text-white text-xl z-10">Current Balance</p>
         <div
-          class="text-6xl font-bold bg-gradient-to-r from-primary to-blue-500 bg-clip-text text-transparent z-10 relative flex items-center justify-center gap-2">
+          class="text-6xl font-bold bg-gradient-to-r from-primary to-accent-blue bg-clip-text text-transparent z-10 relative flex items-center justify-center gap-2">
           <UIcon name="i-heroicons-sparkles" class="w-10 h-10 text-primary" />
           {{ balance }}
         </div>
@@ -179,12 +179,12 @@ function invokeAd() {
       <!-- AppLixir Section -->
       <div class="flex flex-col gap-3">
         <h3 class="text-sm font-semibold uppercase tracking-wider">Earn Free Credits</h3>
-        <UButton @click="invokeAd"
-          class="w-full flex items-center justify-center gap-2 hover:bg-black transition-colors">
+        <UiButton @click="invokeAd"
+          class="w-full flex items-center justify-center gap-2 hover:bg-dark transition-colors">
           <UIcon v-if="adLoading" name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin" />
           <UIcon v-else name="i-heroicons-play-circle" class="w-5 h-5" />
           Watch Video (+1 Credit)
-        </UButton>
+        </UiButton>
         <p class="text-xs text-content-secondary text-center">Support us by watching a short ad.</p>
 
         <!-- AppLixir Hidden Divs -->
@@ -200,23 +200,23 @@ function invokeAd() {
         <h3 class="text-sm font-semibold uppercase tracking-wider mb-4">Top Up Credits</h3>
 
         <div v-if="clientSecret"
-          class="bg-white rounded-[var(--radius-2xl)] p-4 border border-secondary shadow-sm relative focus-within:ring-2 focus-within:ring-primary/50">
+          class="bg-white rounded-[var(--radius-2xl)] p-4 border border-secondary shadow-[var(--shadow-dropdown)] relative focus-within:ring-2 focus-within:ring-primary/50">
           <button v-if="!isPaymentProcessing"
-            class="absolute top-2 right-2 z-10 text-content-secondary hover:text-content-on-surface bg-secondary hover:bg-surface-strong p-1.5 rounded-full transition-colors"
+            class="absolute top-2 right-2 z-10 text-content-secondary hover:text-content-on-surface bg-secondary hover:bg-surface-strong p-1.5 rounded-[var(--radius-md)] transition-colors"
             @click="clientSecret = null">
             <UIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
           </button>
 
           <div id="payment-element" class="mb-4 min-h-[250px]"></div>
 
-          <UButton class="w-full py-3 rounded-[var(--radius-xl)] flex items-center justify-center"
+          <UiButton class="w-full py-3 rounded-[var(--radius-xl)] flex items-center justify-center"
             @click="submitPayment">
             <span v-if="isPaymentProcessing" class="flex items-center gap-2">
               <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
               Processing...
             </span>
             <span v-else>Pay Now</span>
-          </UButton>
+          </UiButton>
           <div v-if="paymentError"
             class="text-error text-sm mt-3 text-center bg-error/10 p-2 rounded-[var(--radius-md)]">
             {{
@@ -232,7 +232,7 @@ function invokeAd() {
 
           <button v-for="pack in packs" :key="pack.id" type="button"
             :aria-label="`Select ${pack.credits} credits pack for ${pack.displayPrice}`" :disabled="!!checkoutLoading"
-            class="relative flex items-center justify-between w-full p-4 rounded-2xl bg-white border border-transparent hover:border-primary/50 hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none cursor-pointer transition-all shadow-sm hover:shadow-md group text-left"
+            class="relative flex items-center justify-between w-full p-4 rounded-[var(--radius-2xl)] bg-white border border-transparent hover:border-primary/50 hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none cursor-pointer transition-all shadow-[var(--shadow-dropdown)] hover:shadow-[var(--shadow-card-hover)] group text-left"
             @click="initCheckout(pack.id)">
             <div class="flex flex-col">
               <UiSubtitle class="flex items-center gap-1.5">

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ReviewStatusCard from "~/features/review/components/ReviewStatusCard.vue";
 const toast = useToast();
 const show = ref(false);
 const listView = ref<'grid' | 'list'>('grid');
@@ -81,14 +82,14 @@ onMounted(() => {
         <!-- Future filter options can go here -->
         <div class="basis-2/4 md:basis-3/4">
           <UiLabel for="search">Search</UiLabel>
-          <u-input id="search" type="text" placeholder="Search workspaces..." class="mt-1 w-full" />
+          <ui-input id="search" type="text" placeholder="Search workspaces..." class="mt-1 w-full" />
         </div>
         <div class="flex gap-2 items-center place-self-end">
-          <u-button @click="show = true" size="sm">Create Workspace</u-button>
-          <u-button variant="subtle" @click="toggleView">
+          <ui-button @click="show = true" size="sm">Create Workspace</ui-button>
+          <ui-button variant="subtle" @click="toggleView">
             <icon v-if="listView === 'grid'" name="i-lucide-list" class="inline-block" />
             <icon v-else name="i-lucide-grid" class="inline-block" />
-          </u-button>
+          </ui-button>
         </div>
 
       </div>

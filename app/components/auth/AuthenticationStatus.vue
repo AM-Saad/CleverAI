@@ -15,7 +15,7 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-5xl rounded-t bg-white px-5 py-4 shadow-xl">
+  <div class="mx-auto w-full max-w-5xl rounded-t bg-white px-5 py-4 shadow-[var(--shadow-modal)]">
     <div class="flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <img v-if="status === 'authenticated' && data?.user?.image" class="h-12 w-12 rounded-full"

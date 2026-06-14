@@ -16,7 +16,7 @@
     <Transition name="auto-suggestions">
       <div v-if="autoPosition && autoSuggestions.length"
         :style="{ top: autoPosition.top + 'px', left: autoPosition.left + 'px' }"
-        class="absolute z-50 min-w-36 bg-surface border border-secondary rounded-xl shadow-lg overflow-hidden"
+        class="absolute z-50 min-w-36 bg-surface border border-secondary rounded-[var(--radius-xl)] shadow-[var(--shadow-dropdown)] overflow-hidden"
         role="listbox" aria-label="Suggestions">
         <button v-for="(item, i) in autoSuggestions" :key="item" type="button" role="option"
           :aria-selected="i === autoActiveIndex" :class="[
@@ -27,7 +27,7 @@
           ]" @mousedown.prevent="acceptSuggestion(item)">
           <span>{{ item }}</span>
           <kbd v-if="i === 0"
-            class="shrink-0 hidden sm:inline-flex items-center rounded border border-secondary px-1 py-0.5 text-[10px] font-mono text-content-secondary">Tab</kbd>
+            class="shrink-0 hidden sm:inline-flex items-center rounded-[var(--radius-md)] border border-secondary px-1 py-0.5 text-[10px] font-mono text-content-secondary">Tab</kbd>
         </button>
       </div>
     </Transition>
@@ -36,6 +36,7 @@
 
 <script setup lang="ts">
 import { ref, shallowRef, nextTick, onBeforeUnmount, onMounted, watch, computed } from "vue";
+import { designTokenValues } from "~/design-system/tokens.generated";
 import type { NavigationMenuItem } from "@nuxt/ui";
 import type {
   Selection as PMSelection,
@@ -849,7 +850,7 @@ const createCollaborationHandle = async (): Promise<{
       provider,
       user: {
         name: config.userName || "You",
-        color: config.userColor || "#10b981",
+        color: config.userColor || designTokenValues["--color-success"],
       },
     }),
   ];
@@ -1160,7 +1161,7 @@ function getSelectedText(): string | null {
 
 .tiptap .is-workspace-note-node-empty:not([data-placeholder=""])::before,
 .tiptap .is-editor-node-empty:not([data-placeholder=""])::before {
-  color: var(--color-content-disabled, #9ca3af);
+  color: var(--color-content-disabled);
   content: attr(data-placeholder);
   float: left;
   height: 0;
@@ -1213,7 +1214,7 @@ function getSelectedText(): string | null {
 .tiptap table td,
 .tiptap table th {
   min-width: 1em;
-  border: 1px solid var(--color-border-secondary, #e2e8f0);
+  border: 1px solid var(--color-secondary);
   padding: 4px 8px;
   vertical-align: top;
   box-sizing: border-box;
@@ -1223,7 +1224,7 @@ function getSelectedText(): string | null {
 
 .tiptap table th {
   font-weight: 600;
-  background-color: var(--color-surface-strong, #f8fafc);
+  background-color: var(--color-surface-strong);
 }
 
 .tiptap table .selectedCell:after {
@@ -1234,7 +1235,7 @@ function getSelectedText(): string | null {
   right: 0;
   top: 0;
   bottom: 0;
-  background: var(--color-primary-50, rgba(59, 130, 246, 0.1));
+  background: var(--color-primary-50);
   pointer-events: none;
 }
 
@@ -1244,7 +1245,7 @@ function getSelectedText(): string | null {
   top: 0;
   bottom: -2px;
   width: 4px;
-  background-color: var(--color-primary, #6366f1);
+  background-color: var(--color-primary);
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.15s ease;
@@ -1275,9 +1276,9 @@ function getSelectedText(): string | null {
 
 /* ======= Inline code ======= */
 .tiptap code {
-  background-color: var(--purple-light, rgba(139, 92, 246, 0.12));
+  background-color: color-mix(in srgb, var(--color-accent-purple) 12%, transparent);
   border-radius: 0.35rem;
-  color: var(--color-primary, #a78bfa);
+  color: var(--color-primary);
   font-size: 0.82rem;
   font-family: "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace;
   padding: 0.2em 0.4em;
@@ -1287,19 +1288,13 @@ function getSelectedText(): string | null {
 /* ======= Code Block Wrapper (NodeView) ======= */
 .code-block-wrapper {
   margin: 1.25rem 0;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-xl);
   overflow: hidden;
-  /* border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow:
-    0 2px 8px rgba(0, 0, 0, 0.15),
-    0 1px 3px rgba(0, 0, 0, 0.1); */
   transition: box-shadow 0.2s ease;
 }
 
 .code-block-wrapper:hover {
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.2),
-    0 2px 6px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-card-hover);
 }
 
 /* --- Header bar --- */
@@ -1308,8 +1303,8 @@ function getSelectedText(): string | null {
   align-items: center;
   justify-content: space-between;
   padding: 0.35rem 0.75rem;
-  background: #1e2030;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--syntax-bg);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-white) 6%, transparent);
   user-select: none;
 }
 
@@ -1322,10 +1317,10 @@ function getSelectedText(): string | null {
 
 .code-block-lang-select {
   appearance: none;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: color-mix(in srgb, var(--color-white) 6%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-white) 8%, transparent);
   border-radius: 0.375rem;
-  color: #8b92a8;
+  color: var(--syntax-muted);
   font-size: 0.7rem;
   font-family: "Inter", sans-serif;
   font-weight: 500;
@@ -1337,22 +1332,22 @@ function getSelectedText(): string | null {
 }
 
 .code-block-lang-select:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.15);
-  color: #c0c8e0;
+  background: color-mix(in srgb, var(--color-white) 10%, transparent);
+  border-color: color-mix(in srgb, var(--color-white) 15%, transparent);
+  color: var(--syntax-text);
 }
 
 .code-block-lang-select:focus {
   outline: none;
-  border-color: rgba(139, 92, 246, 0.5);
-  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15);
+  border-color: color-mix(in srgb, var(--color-accent-purple) 50%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent-purple) 15%, transparent);
 }
 
 .code-block-lang-icon {
   position: absolute;
   right: 0.4rem;
   pointer-events: none;
-  color: #8b92a8;
+  color: var(--syntax-muted);
   display: flex;
   align-items: center;
 }
@@ -1367,15 +1362,15 @@ function getSelectedText(): string | null {
   border-radius: 0.375rem;
   background: transparent;
   border: 1px solid transparent;
-  color: #8b92a8;
+  color: var(--syntax-muted);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .code-block-copy-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #c0c8e0;
+  background: color-mix(in srgb, var(--color-white) 8%, transparent);
+  border-color: color-mix(in srgb, var(--color-white) 10%, transparent);
+  color: var(--syntax-text);
 }
 
 .code-block-copy-btn:active {
@@ -1388,7 +1383,7 @@ function getSelectedText(): string | null {
   padding: 1rem 1.25rem !important;
   overflow-x: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: color-mix(in srgb, var(--color-white) 10%, transparent) transparent;
 }
 
 .code-block-wrapper pre::-webkit-scrollbar {
@@ -1400,7 +1395,7 @@ function getSelectedText(): string | null {
 }
 
 .code-block-wrapper pre::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--color-white) 10%, transparent);
   border-radius: 3px;
 }
 
@@ -1408,7 +1403,7 @@ function getSelectedText(): string | null {
   background: none !important;
   padding: 0 !important;
   border-radius: 0 !important;
-  color: #c0c8e0;
+  color: var(--syntax-text);
   font-family: "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace;
   font-size: 0.8rem;
   line-height: 1.65;
@@ -1418,8 +1413,8 @@ function getSelectedText(): string | null {
 
 /* ======= Fallback pre (non-NodeView) ======= */
 .tiptap pre {
-  background: #1f1e24;
-  color: #c0c8e0;
+  background: var(--syntax-bg-inline);
+  color: var(--syntax-text);
   font-family: "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace;
   margin: 1.25rem 0;
   padding: 1rem 1.25rem;
@@ -1433,14 +1428,14 @@ function getSelectedText(): string | null {
 .hljs-selector-tag,
 .hljs-built_in,
 .hljs-name {
-  color: #c792ea;
+  color: var(--syntax-keyword);
 }
 
 /* Strings */
 .hljs-string,
 .hljs-attr,
 .hljs-selector-id {
-  color: #c3e88d;
+  color: var(--syntax-string);
 }
 
 /* Numbers & literals */
@@ -1448,13 +1443,13 @@ function getSelectedText(): string | null {
 .hljs-literal,
 .hljs-variable.constant_,
 .hljs-selector-class {
-  color: #f78c6c;
+  color: var(--syntax-number);
 }
 
 /* Comments */
 .hljs-comment,
 .hljs-quote {
-  color: #636d83;
+  color: var(--syntax-comment);
   font-style: italic;
 }
 
@@ -1462,81 +1457,81 @@ function getSelectedText(): string | null {
 .hljs-title,
 .hljs-title.function_,
 .hljs-title.class_ {
-  color: #82aaff;
+  color: var(--syntax-function);
 }
 
 /* Types & class names */
 .hljs-type,
 .hljs-template-tag,
 .hljs-template-variable {
-  color: #ffcb6b;
+  color: var(--syntax-type);
 }
 
 /* HTML/XML tags */
 .hljs-tag {
-  color: #89ddff;
+  color: var(--syntax-tag);
 }
 
 /* Attributes */
 .hljs-attribute {
-  color: #c792ea;
+  color: var(--syntax-keyword);
 }
 
 /* Symbols, operators */
 .hljs-symbol,
 .hljs-bullet,
 .hljs-link {
-  color: #89ddff;
+  color: var(--syntax-tag);
 }
 
 /* Regex */
 .hljs-regexp {
-  color: #89ddff;
+  color: var(--syntax-tag);
 }
 
 /* Deletion/Addition in diffs */
 .hljs-deletion {
-  color: #ff5370;
-  background: rgba(255, 83, 112, 0.1);
+  color: var(--syntax-deletion);
+  background: color-mix(in srgb, var(--syntax-deletion) 10%, transparent);
 }
 
 .hljs-addition {
-  color: #c3e88d;
-  background: rgba(195, 232, 141, 0.1);
+  color: var(--syntax-string);
+  background: color-mix(in srgb, var(--syntax-string) 10%, transparent);
 }
 
 /* Meta, preprocessor */
 .hljs-meta {
-  color: #89ddff;
+  color: var(--syntax-tag);
 }
 
 .hljs-meta .hljs-keyword {
-  color: #ff5370;
+  color: var(--syntax-deletion);
 }
 
 .hljs-meta .hljs-string {
-  color: #c3e88d;
+  color: var(--syntax-string);
 }
 
 /* Section headings (markdown etc.) */
 .hljs-section {
-  color: #82aaff;
+  color: var(--syntax-function);
   font-weight: 700;
 }
 
 /* Params */
 .hljs-params {
-  color: #c0c8e0;
+  color: var(--syntax-text);
 }
 
 /* Property */
 .hljs-property {
-  color: #f07178;
+  color: var(--syntax-invalid);
 }
 
 /* Punctuation */
 .hljs-punctuation {
-  color: #89ddff;
+  color: var(--syntax-tag);
 }
 
 /* Emphasis & strong */
@@ -1550,12 +1545,12 @@ function getSelectedText(): string | null {
 
 /* Subst (template expressions) */
 .hljs-subst {
-  color: #c0c8e0;
+  color: var(--syntax-text);
 }
 
 /* blockquote & hr */
 /* div:has(> blockquote) {
-  background-color: #ededed;
+  background-color: var(--color-surface-strong);
   margin: 10px auto;
   padding: 15px;
   border-radius: 5px;

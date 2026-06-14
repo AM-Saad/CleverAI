@@ -55,7 +55,7 @@ const submitForm = async (): Promise<void> => {
         <shared-error-message v-if="error" :error="error" />
         <shared-success-message v-if="success" :message="success" />
 
-        <div class="mb-2 mt-2 rounded-md relative transition duration-10 00 text-xs">
+        <div class="mb-2 mt-2 rounded-[var(--radius-md)] relative transition duration-10 00 text-xs">
           <ui-input-field id="verify-email-client" v-model="credentials.email!" :type="'email'" name="email"
             label="Email Address" title="Please enter your email address" tabindex="2" :styles="{
               inputField: `${emailSent ? ' rounded-b-none border-b' : ''}`,

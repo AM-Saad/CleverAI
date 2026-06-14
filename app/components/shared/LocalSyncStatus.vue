@@ -134,9 +134,9 @@ function formatSyncTime(value: Date | string) {
       </div>
     </div>
 
-    <UButton v-if="status !== 'synced'" size="xs" variant="ghost" color="neutral" class="shrink-0"
+    <UiButton v-if="status !== 'synced'" size="xs" variant="ghost" color="neutral" class="shrink-0"
       :disabled="actionDisabled" @click="emit('action')">
       {{ actionLabel }}
-    </UButton>
+    </UiButton>
   </div>
 </template>

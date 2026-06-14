@@ -86,7 +86,7 @@ const closeModal = (): void => {
       <template #body>
         <u-form :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
           <u-form-field label="Name" name="name" required>
-            <u-input v-model="state.name" placeholder="Your name" autofocus class="w-full" />
+            <ui-input v-model="state.name" placeholder="Your name" autofocus class="w-full" />
           </u-form-field>
 
           <u-form-field label="Gender" name="gender">
@@ -95,12 +95,12 @@ const closeModal = (): void => {
           </u-form-field>
 
           <div class="flex justify-end gap-3 pt-2">
-            <u-button variant="ghost" @click="closeModal" type="button">
+            <ui-button variant="ghost" @click="closeModal" type="button">
               Cancel
-            </u-button>
-            <u-button type="submit" :disabled="!canSubmit">
+            </ui-button>
+            <ui-button type="submit" :disabled="!canSubmit">
               Update Profile
-            </u-button>
+            </ui-button>
           </div>
         </u-form>
       </template>

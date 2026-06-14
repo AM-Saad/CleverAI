@@ -31,16 +31,16 @@ const gotit = (): void => {
         <div class="title text-xl font-bold">
           Get {{ needGuide }} Permission
         </div>
-        <div class="desc my-2 text-sm text-gray-500">
+        <div class="desc my-2 text-sm text-content-secondary">
           Please click the lock button in the browser address bar to set
           permissions.
         </div>
       </template>
 
       <template #body>
-        <video v-if="needGuide === 'Microphone'" class="m-auto block w-11/12 rounded shadow" :src="allowMicVideo" muted
+        <video v-if="needGuide === 'Microphone'" class="m-auto block w-11/12 rounded-[var(--radius-md)] shadow" :src="allowMicVideo" muted
           autoplay loop />
-        <video v-if="needGuide === 'Webcam'" class="m-auto block w-11/12 rounded shadow" :src="allowCamVideo" muted
+        <video v-if="needGuide === 'Webcam'" class="m-auto block w-11/12 rounded-[var(--radius-md)] shadow" :src="allowCamVideo" muted
           autoplay loop />
       </template>
     </shared-dialog-modal>

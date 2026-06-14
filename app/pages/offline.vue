@@ -2,13 +2,13 @@
 
 <template>
   <div data-testid="offline-page"
-    class="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
+    class="min-h-screen bg-gradient-to-br from-content-on-background via-accent-purple to-content-on-background flex items-center justify-center p-4">
     <div class="text-center max-w-md">
       <!-- Network Status Icon -->
       <div class="mb-8 flex justify-center">
         <div class="relative">
-          <div class="w-24 h-24 bg-gray-700 rounded-full flex items-center justify-center border-4 border-gray-600">
-            <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div class="w-24 h-24 bg-content-secondary rounded-full flex items-center justify-center border-4 border-secondary">
+            <svg class="w-12 h-12 text-content-disabled" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M18.364 5.636l-12.728 12.728m0-12.728l12.728 12.728M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
             </svg>
@@ -20,7 +20,7 @@
 
       <!-- Main Message -->
       <h1 class="text-4xl font-bold text-white mb-4">You're Offline</h1>
-      <p class="text-gray-300 text-lg mb-8">
+      <p class="text-content-disabled text-lg mb-8">
         It looks like you've lost your internet connection. Don't worry - some
         content might still be available.
       </p>
@@ -28,7 +28,7 @@
       <!-- Action Buttons -->
       <div class="space-y-4">
         <!-- Retry Connection -->
-        <UButton class="w-full font-semibold py-3 px-6 flex items-center justify-center" color="primary"
+        <UiButton class="w-full font-semibold py-3 px-6 flex items-center justify-center" color="primary"
           :disabled="isChecking" @click="checkConnection">
           <svg v-if="isChecking" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
@@ -36,22 +36,22 @@
               d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
           </svg>
           {{ isChecking ? "Checking..." : "Try Again" }}
-        </UButton>
+        </UiButton>
 
         <!-- Go to Home -->
-        <UButton class="w-full font-semibold py-3 px-6" color="neutral" variant="solid" @click="goHome">
+        <UiButton class="w-full font-semibold py-3 px-6" color="neutral" variant="solid" @click="goHome">
           Go to Homepage
-        </UButton>
+        </UiButton>
 
         <!-- View Cached Content -->
-        <UButton class="w-full font-semibold py-3 px-6" color="primary" variant="outline"
+        <UiButton class="w-full font-semibold py-3 px-6" color="primary" variant="outline"
           @click="showCachedContent = !showCachedContent">
           {{ showCachedContent ? "Hide" : "View" }} Available Content
-        </UButton>
+        </UiButton>
       </div>
 
       <!-- Cached Content Section -->
-      <div v-if="showCachedContent" class="mt-8 p-4 bg-gray-800/50 rounded-[var(--radius-lg)]">
+      <div v-if="showCachedContent" class="mt-8 p-4 bg-content-on-background/50 rounded-[var(--radius-lg)]">
         <h3 class="text-lg font-semibold text-white mb-3">Available Offline</h3>
         <div class="space-y-2">
           <NuxtLink v-for="page in availablePages" :key="page.path" :to="page.path"
@@ -59,7 +59,7 @@
             {{ page.title }}
           </NuxtLink>
         </div>
-        <p v-if="availablePages.length === 0" class="text-gray-400 text-sm">
+        <p v-if="availablePages.length === 0" class="text-content-disabled text-sm">
           No cached pages available. Content will be cached as you browse.
         </p>
       </div>

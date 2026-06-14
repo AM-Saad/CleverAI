@@ -9,26 +9,26 @@
             </template>
             <div class="space-y-4">
                 <UFormField label="Default Cards per Session" help="How many cards to review in a single session">
-                    <UInput v-model.number="studySettings.defaultSessionSize" type="number" min="5" max="100"
+                    <UiInput v-model.number="studySettings.defaultSessionSize" type="number" min="5" max="100"
                         placeholder="20" :ui="{
                             root: 'w-full',
                         }" />
                 </UFormField>
 
                 <UFormField label="Auto-advance after grading" help="Automatically move to next card after grading">
-                    <USwitch v-model="studySettings.autoAdvance" />
+                    <UiSwitch v-model="studySettings.autoAdvance" />
                 </UFormField>
 
                 <UFormField label="Show answer immediately" help="Reveal answer without requiring a click">
-                    <USwitch v-model="studySettings.showAnswerImmediately" />
+                    <UiSwitch v-model="studySettings.showAnswerImmediately" />
                 </UFormField>
             </div>
 
             <template #footer>
                 <div class="flex justify-end">
-                    <UButton @click="saveSettings">
+                    <UiButton @click="saveSettings">
                         Save Changes
-                    </UButton>
+                    </UiButton>
                 </div>
             </template>
         </ui-card>

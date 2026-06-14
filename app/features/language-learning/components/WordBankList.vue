@@ -241,32 +241,32 @@ defineExpose({ refresh: fetchWords });
 <template>
   <div class="space-y-4">
     <div class="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
-      <u-input v-model="searchQuery" icon="i-lucide-search" placeholder="Search word bank" class="w-full" />
+      <ui-input v-model="searchQuery" icon="i-lucide-search" placeholder="Search word bank" class="w-full" />
       <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <u-button v-for="tab in tabs" :key="tab.value" :variant="activeTab === tab.value ? 'soft' : 'ghost'"
+        <ui-button v-for="tab in tabs" :key="tab.value" :variant="activeTab === tab.value ? 'soft' : 'ghost'"
           color="neutral" size="xs" class="shrink-0" @click="activeTab = tab.value">
           {{ tab.label }}
-          <u-badge v-if="tab.count > 0" variant="soft" color="neutral" class="ml-1 text-xs">
+          <ui-badge v-if="tab.count > 0" variant="soft" color="neutral" class="ml-1 text-xs">
             {{ tab.count }}
-          </u-badge>
-        </u-button>
+          </ui-badge>
+        </ui-button>
       </div>
     </div>
 
     <div class="flex flex-wrap gap-2">
-      <u-button size="xs" :variant="selectedCategory === 'all' ? 'soft' : 'ghost'" color="neutral"
+      <ui-button size="xs" :variant="selectedCategory === 'all' ? 'soft' : 'ghost'" color="neutral"
         @click="selectedCategory = 'all'">
         All categories
-      </u-button>
-      <u-button v-for="category in categories" :key="category" size="xs"
+      </ui-button>
+      <ui-button v-for="category in categories" :key="category" size="xs"
         :variant="selectedCategory === category ? 'soft' : 'ghost'" color="neutral"
         @click="selectedCategory = category">
         {{ category }}
-      </u-button>
-      <u-button size="xs" :variant="storyFilter === 'with' ? 'soft' : 'ghost'" color="neutral"
+      </ui-button>
+      <ui-button size="xs" :variant="storyFilter === 'with' ? 'soft' : 'ghost'" color="neutral"
         @click="storyFilter = storyFilter === 'with' ? 'all' : 'with'">
         Has story
-      </u-button>
+      </ui-button>
     </div>
 
     <ui-loader v-if="isLoading" :is-fetching="true" />
@@ -287,12 +287,12 @@ defineExpose({ refresh: fetchWords });
               <h3 class="truncate text-base font-semibold text-content-on-surface">
                 {{ word.word }}
               </h3>
-              <u-badge variant="soft" :color="statusColor(word.status)" class="text-xs">
+              <ui-badge variant="soft" :color="statusColor(word.status)" class="text-xs">
                 {{ statusLabel(word.status) }}
-              </u-badge>
-              <u-badge v-if="word.category" variant="soft" color="neutral" class="text-xs">
+              </ui-badge>
+              <ui-badge v-if="word.category" variant="soft" color="neutral" class="text-xs">
                 {{ word.category }}
-              </u-badge>
+              </ui-badge>
             </div>
             <div class="mt-1 flex flex-wrap items-center gap-2">
               <span v-if="word.phonetic" class="text-xs text-content-secondary">
@@ -310,22 +310,22 @@ defineExpose({ refresh: fetchWords });
           </div>
 
           <div class="flex shrink-0 items-center gap-1">
-            <u-button variant="ghost" color="neutral" size="xs" title="Hear word" :loading="speakingId === word.id"
+            <ui-button variant="ghost" color="neutral" size="xs" title="Hear word" :loading="speakingId === word.id"
               @click="handleSpeak(word)">
               <Icon name="i-lucide-volume-2" class="w-3.5 h-3.5" />
-            </u-button>
-            <u-button v-if="word.status !== 'mastered'" variant="ghost" color="primary" size="xs" :title="wordHasStory(word) ? 'Regenerate story' : 'Generate story'
+            </ui-button>
+            <ui-button v-if="word.status !== 'mastered'" variant="ghost" color="primary" size="xs" :title="wordHasStory(word) ? 'Regenerate story' : 'Generate story'
               " :loading="generatingStoryId === word.id" @click="handleGenerateStory(word)">
               <Icon name="i-lucide-sparkles" class="w-3.5 h-3.5" />
-            </u-button>
-            <u-button v-if="canEnroll(word)" variant="ghost" color="primary" size="xs" title="Add to review deck"
+            </ui-button>
+            <ui-button v-if="canEnroll(word)" variant="ghost" color="primary" size="xs" title="Add to review deck"
               :loading="enrollingId === word.id" @click="handleEnroll(word)">
               <Icon name="i-lucide-book-plus" class="w-3.5 h-3.5" />
-            </u-button>
-            <u-button variant="ghost" color="error" size="xs" title="Delete word" :loading="deletingId === word.id"
+            </ui-button>
+            <ui-button variant="ghost" color="error" size="xs" title="Delete word" :loading="deletingId === word.id"
               @click="confirmDelete(word)">
               <Icon name="i-lucide-trash-2" class="w-3.5 h-3.5" />
-            </u-button>
+            </ui-button>
           </div>
         </div>
 
@@ -351,11 +351,11 @@ defineExpose({ refresh: fetchWords });
           </button>
           <div v-if="expandedStoryIds.has(word.id)" class="border-t border-secondary px-3 py-3">
             <div class="mb-2 flex justify-end">
-              <u-button variant="ghost" color="neutral" size="xs" :loading="speakingId === `${word.id}:story`"
+              <ui-button variant="ghost" color="neutral" size="xs" :loading="speakingId === `${word.id}:story`"
                 @click="handleSpeakStory(word)">
                 <Icon name="i-lucide-book-audio" class="h-3.5 w-3.5" />
                 Hear story
-              </u-button>
+              </ui-button>
             </div>
             <p class="text-sm leading-7 text-content-on-surface">
               {{ cleanStoryText(storyFor(word)?.storyText) }}
@@ -365,9 +365,9 @@ defineExpose({ refresh: fetchWords });
       </ui-card>
 
       <div v-if="hasMore" class="flex justify-center pt-2">
-        <u-button variant="ghost" color="neutral" size="sm" :loading="isLoadingMore" @click="() => void loadMore()">
+        <ui-button variant="ghost" color="neutral" size="sm" :loading="isLoadingMore" @click="() => void loadMore()">
           Load more
-        </u-button>
+        </ui-button>
       </div>
     </div>
 
@@ -383,8 +383,8 @@ defineExpose({ refresh: fetchWords });
 
       <template #footer>
         <div class="flex gap-2 justify-end">
-          <u-button variant="ghost" color="neutral" @click="pendingDelete = null">Cancel</u-button>
-          <u-button color="error" :loading="!!deletingId" @click="executeDelete">Delete</u-button>
+          <ui-button variant="ghost" color="neutral" @click="pendingDelete = null">Cancel</ui-button>
+          <ui-button color="error" :loading="!!deletingId" @click="executeDelete">Delete</ui-button>
         </div>
       </template>
     </shared-dialog-modal>

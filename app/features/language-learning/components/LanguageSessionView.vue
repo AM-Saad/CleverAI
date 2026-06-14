@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import StoryCard from "~/features/language-learning/components/StoryCard.vue";
 const {
   currentCard,
   currentIndex,
@@ -68,7 +69,7 @@ onMounted(() => fetchQueue());
       class="flex flex-col items-center justify-center flex-1 gap-4 p-6"
     >
       <shared-error-message :error="fetchError" />
-      <u-button @click="() => void fetchQueue()">Try again</u-button>
+      <ui-button @click="() => void fetchQueue()">Try again</ui-button>
     </div>
 
     <!-- Session complete -->
@@ -91,14 +92,14 @@ onMounted(() => fetchQueue());
         </ui-paragraph>
       </div>
       <div class="flex flex-col sm:flex-row gap-3">
-        <u-button @click="() => void handleRestart()">
+        <ui-button @click="() => void handleRestart()">
           <Icon name="i-lucide-refresh-cw" class="w-4 h-4 mr-1" />
           Review Again
-        </u-button>
-        <u-button variant="ghost" color="neutral" to="/language">
+        </ui-button>
+        <ui-button variant="ghost" color="neutral" to="/language">
           <Icon name="i-lucide-arrow-left" class="w-4 h-4 mr-1" />
           Back to Overview
-        </u-button>
+        </ui-button>
       </div>
     </div>
 
@@ -131,7 +132,7 @@ onMounted(() => fetchQueue());
       <div
         class="flex-1 flex items-start justify-center px-4 py-4 overflow-y-auto"
       >
-        <language-story-card
+        <StoryCard
           :card="currentCard"
           :show-answer="showAnswer"
           :is-grading="isGrading"
@@ -144,7 +145,7 @@ onMounted(() => fetchQueue());
 
       <!-- Bottom nav (go back) -->
       <div class="shrink-0 px-4 pb-4 flex items-center justify-between">
-        <u-button
+        <ui-button
           variant="ghost"
           color="neutral"
           size="sm"
@@ -153,8 +154,8 @@ onMounted(() => fetchQueue());
         >
           <Icon name="i-lucide-arrow-left" class="w-4 h-4 mr-1" />
           Previous
-        </u-button>
-        <u-button
+        </ui-button>
+        <ui-button
           variant="ghost"
           color="neutral"
           size="sm"
@@ -163,7 +164,7 @@ onMounted(() => fetchQueue());
         >
           Skip
           <Icon name="i-lucide-arrow-right" class="w-4 h-4 ml-1" />
-        </u-button>
+        </ui-button>
       </div>
     </template>
   </div>

@@ -21,7 +21,7 @@ onUnmounted(() => {
     leave: 1700,
   }">
     <div v-if="show">
-      <div class="z-40 rounded-[var(--radius-xl)] p-3 shadow-lg mt-2">
+      <div class="z-40 rounded-[var(--radius-xl)] p-3 shadow-[var(--shadow-modal)] mt-2">
         <div class="flex justify-between">
           <slot name="header">default header</slot>
           <button class="modal-default-button place-self-start text-content-secondary" @click="$emit('close')">

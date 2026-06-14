@@ -21,7 +21,7 @@ const SettingsAccountTab = defineAsyncComponent(
   () => import("~/components/settings/AccountTab.vue"),
 );
 const SettingsNotificationPreferences = defineAsyncComponent(
-  () => import("~/components/settings/NotificationPreferences.vue"),
+  () => import("~/features/notifications/components/NotificationPreferences.vue"),
 );
 const SettingsStudyTab = defineAsyncComponent(
   () => import("~/components/settings/StudyTab.vue"),

@@ -55,7 +55,7 @@ const gotit = (): void => {
   margin: auto;
   display: block;
   max-width: 90%;
-  box-shadow: 0 0 6px -1px #999;
+  box-shadow: var(--shadow-dropdown);
   padding: 12px;
   border-radius: 10px;
 }

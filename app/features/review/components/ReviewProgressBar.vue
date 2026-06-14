@@ -1,6 +1,6 @@
 <template>
   <div
-    class="w-32 bg-gray-200 rounded-full h-2 dark:bg-gray-700"
+    class="w-32 bg-surface-subtle rounded-full h-2 dark:bg-surface"
     role="progressbar"
     :aria-valuenow="progress"
     aria-valuemin="0"
@@ -8,7 +8,7 @@
     :aria-label="`Review progress: ${progress}% complete`"
   >
     <div
-      class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+      class="bg-primary h-2 rounded-full transition-all duration-300"
       :style="{ width: `${progress}%` }"
     />
   </div>

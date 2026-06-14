@@ -7,9 +7,9 @@
       </ui-paragraph>
       <div class="mt-4">
         <router-link to="/auth/signin">
-          <u-button>
+          <ui-button>
             Sign In Again
-          </u-button>
+          </ui-button>
         </router-link>
       </div>
     </div>

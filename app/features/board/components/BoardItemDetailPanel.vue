@@ -3,6 +3,7 @@ import TextNote from "~/features/notes/components/TextNote.vue";
 import { useBoardItemsStore } from "../composables/useBoardItemsStore";
 import type { BoardItemState } from "../composables/useBoardItemsStore";
 import type { Attachment } from "~/shared/utils/boardItem.contract";
+import type { BoardItemExternalRef } from "@@/shared/utils/boardIntegration.contract";
 
 const props = defineProps<{
   item: BoardItemState;
@@ -25,7 +26,7 @@ const itemsStore = useBoardItemsStore(props.workspaceId);
 const { $api } = useNuxtApp();
 
 // ─── Tabs ──────────────────────────────────────────────────────────────────
-const activeTab = ref<"content" | "details" | "links" | "comments">("content");
+const activeTab = ref<"content" | "details" | "links" | "comments" | "integrations">("content");
 
 // ─── Tags ──────────────────────────────────────────────────────────────────
 const noteTags = computed(() =>
@@ -252,6 +253,46 @@ function formatCommentDate(date: string | Date) {
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
+// ─── Integrations ─────────────────────────────────────────────────────────
+const externalRefs = ref<BoardItemExternalRef[]>([]);
+const externalRefsLoading = ref(false);
+const externalRefsError = ref<string | null>(null);
+
+async function loadExternalRefs() {
+  externalRefsLoading.value = true;
+  externalRefsError.value = null;
+  try {
+    const result = await $api.boardIntegrations.getItemRefs(props.item.id);
+    if (result.success) {
+      externalRefs.value = result.data;
+    } else {
+      externalRefsError.value = result.error?.message || "Could not load integrations";
+    }
+  } catch {
+    externalRefsError.value = "Could not load integrations";
+  } finally {
+    externalRefsLoading.value = false;
+  }
+}
+
+function providerLabel(provider: BoardItemExternalRef["provider"]) {
+  return provider === "jira" ? "Jira" : "Notion";
+}
+
+function providerIcon(provider: BoardItemExternalRef["provider"]) {
+  return provider === "jira" ? "heroicons:bolt" : "heroicons:squares-2x2";
+}
+
+function formatSyncDate(date?: string | Date | null) {
+  if (!date) return "Never synced";
+  return new Date(date).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 // ─── Load relational data when tab is opened ───────────────────────────────
 watch(activeTab, async (tab) => {
   if (tab === "links" && !props.item.links) {
@@ -260,12 +301,16 @@ watch(activeTab, async (tab) => {
   if (tab === "comments" && !props.item.comments) {
     await itemsStore.loadItemComments(props.item.id);
   }
+  if (tab === "integrations" && externalRefs.value.length === 0) {
+    await loadExternalRefs();
+  }
 });
 
 // Also load when item changes
 watch(() => props.item.id, async () => {
   if (activeTab.value === "links") await itemsStore.loadItemLinks(props.item.id);
   if (activeTab.value === "comments") await itemsStore.loadItemComments(props.item.id);
+  if (activeTab.value === "integrations") await loadExternalRefs();
 }, { immediate: false });
 </script>
 
@@ -276,25 +321,25 @@ watch(() => props.item.id, async () => {
     <div class="flex items-center justify-between px-4 py-3 border-b border-secondary shrink-0">
       <div class="flex items-center gap-2">
         <!-- Back / close (mobile) -->
-        <UButton variant="ghost" color="neutral" icon="heroicons:chevron-left" @click="emit('close')" />
+        <UiButton variant="ghost" color="neutral" icon="heroicons:chevron-left" @click="emit('close')" />
         <span class="text-xs font-bold uppercase tracking-widest text-content-secondary">
           Item Details
         </span>
         <!-- Dirty / saving indicator -->
-        <span v-if="item.isDirty && !item.isLoading" class="text-[10px] text-amber-500 font-medium">Unsaved</span>
+        <span v-if="item.isDirty && !item.isLoading" class="text-[10px] text-warning font-medium">Unsaved</span>
         <Icon v-if="item.isLoading" name="svg-spinners:ring-resize" class="w-3.5 h-3.5 text-primary" />
       </div>
       <div class="flex items-center gap-1">
-        <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:arrows-pointing-out" title="Fullscreen"
+        <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:arrows-pointing-out" title="Fullscreen"
           @click="emit('toggle-fullscreen')" />
-        <UButton size="xs" color="error" variant="ghost" icon="heroicons:trash" title="Delete item"
+        <UiButton size="xs" color="error" variant="ghost" icon="heroicons:trash" title="Delete item"
           @click="emit('delete', item.id)" />
       </div>
     </div>
 
     <!-- ─── Tab Navigation ────────────────────────────────────────────── -->
     <div class="flex items-center gap-0.5 px-4 pt-2 shrink-0 border-b border-secondary">
-      <button v-for="tab in (['content', 'details', 'links', 'comments'] as const)" :key="tab"
+      <button v-for="tab in (['content', 'details', 'links', 'comments', 'integrations'] as const)" :key="tab"
         class="px-3 py-1.5 text-xs font-medium rounded-t-lg transition-colors relative" :class="activeTab === tab
           ? 'text-primary bg-primary/10'
           : 'text-content-secondary hover:text-content-on-surface'" @click="activeTab = tab">
@@ -307,6 +352,10 @@ watch(() => props.item.id, async () => {
         <span v-if="tab === 'comments' && comments.length > 0"
           class="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-secondary text-content-secondary text-[9px] font-bold">
           {{ comments.length }}
+        </span>
+        <span v-if="tab === 'integrations' && externalRefs.length > 0"
+          class="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary/10 text-primary text-[9px] font-bold">
+          {{ externalRefs.length }}
         </span>
       </button>
     </div>
@@ -322,7 +371,7 @@ watch(() => props.item.id, async () => {
           class="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] bg-error/10 text-error text-sm">
           <Icon name="heroicons:exclamation-circle" class="w-4 h-4 shrink-0" />
           <span>{{ item.error }}</span>
-          <UButton size="xs" variant="ghost" color="error" @click="emit('retry', item.id)">Retry</UButton>
+          <UiButton size="xs" variant="ghost" color="error" @click="emit('retry', item.id)">Retry</UiButton>
         </div>
 
         <!-- Tags: inline chip-input, auto-saves on every change -->
@@ -349,7 +398,7 @@ watch(() => props.item.id, async () => {
             <span class="text-xs font-medium text-content-secondary uppercase tracking-widest flex items-center gap-1">
               <Icon name="heroicons:calendar-days" class="w-3.5 h-3.5" /> Due Date
             </span>
-            <UButton v-if="item.dueDate" size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
+            <UiButton v-if="item.dueDate" size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
               title="Clear due date" @click="clearDueDate" />
           </div>
 
@@ -372,25 +421,25 @@ watch(() => props.item.id, async () => {
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-medium text-content-secondary uppercase tracking-widest flex items-center gap-1">
               <Icon name="heroicons:paper-clip" class="w-3.5 h-3.5" /> Attachments
-              <UBadge v-if="attachments.length > 0" size="xs" color="neutral" variant="soft">
+              <UiBadge v-if="attachments.length > 0" size="xs" color="neutral" variant="soft">
                 {{ attachments.length }}
-              </UBadge>
+              </UiBadge>
             </span>
-            <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:plus"
-              @click="showAddAttachment = !showAddAttachment">Add</UButton>
+            <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:plus"
+              @click="showAddAttachment = !showAddAttachment">Add</UiButton>
           </div>
 
           <!-- Add attachment form -->
           <div v-if="showAddAttachment"
             class="mb-3 p-3 rounded-[var(--radius-xl)] border border-dashed border-secondary bg-surface-subtle space-y-2">
-            <UInput v-model="newAttachmentUrl" placeholder="https://..." size="sm" label="URL" />
-            <UInput v-model="newAttachmentName" placeholder="Display name (optional)" size="sm" />
+            <UiInput v-model="newAttachmentUrl" placeholder="https://..." size="sm" label="URL" />
+            <UiInput v-model="newAttachmentName" placeholder="Display name (optional)" size="sm" />
             <div class="flex gap-2">
-              <UButton size="sm" color="primary" @click="addAttachment">Add Link</UButton>
-              <UButton size="sm" color="neutral" variant="ghost"
+              <UiButton size="sm" color="primary" @click="addAttachment">Add Link</UiButton>
+              <UiButton size="sm" color="neutral" variant="ghost"
                 @click="showAddAttachment = false; newAttachmentUrl = ''; newAttachmentName = ''">
                 Cancel
-              </UButton>
+              </UiButton>
             </div>
           </div>
 
@@ -403,7 +452,7 @@ watch(() => props.item.id, async () => {
                 class="flex-1 text-sm text-primary truncate hover:underline" @click.stop>
                 {{ att.name }}
               </a>
-              <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
+              <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
                 class="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                 @click="removeAttachment(att.id)" />
             </div>
@@ -416,24 +465,24 @@ watch(() => props.item.id, async () => {
       <div v-else-if="activeTab === 'links'" class="p-4 space-y-4">
         <div class="flex items-center justify-between">
           <span class="text-xs font-medium text-content-secondary uppercase tracking-widest">Item Links</span>
-          <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:plus" @click="showAddLink = !showAddLink">
-            Link item</UButton>
+          <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:plus" @click="showAddLink = !showAddLink">
+            Link item</UiButton>
         </div>
 
         <!-- Add link form -->
         <div v-if="showAddLink"
           class="p-3 rounded-[var(--radius-xl)] border border-dashed border-secondary bg-surface-subtle space-y-2">
           <label class="text-xs text-content-secondary font-medium">Target item</label>
-          <USelect v-model="newLinkTargetId" :items="linkableItems" value-key="value" label-key="label"
+          <UiSelect v-model="newLinkTargetId" :items="linkableItems" value-key="value" label-key="label"
             placeholder="Select an item..." size="sm" />
           <label class="text-xs text-content-secondary font-medium">Relationship type</label>
-          <USelect v-model="newLinkType"
+          <UiSelect v-model="newLinkType"
             :items="(['PARENT', 'CHILD', 'RELATED', 'BLOCKS', 'BLOCKED_BY', 'DUPLICATE'] as const).map(t => ({ label: LINK_TYPE_LABELS[t], value: t }))"
             value-key="value" label-key="label" size="sm" />
           <div class="flex gap-2">
-            <UButton size="sm" color="primary" :loading="addingLink" @click="addLink">Add Link</UButton>
-            <UButton size="sm" color="neutral" variant="ghost" @click="showAddLink = false; newLinkTargetId = ''">Cancel
-            </UButton>
+            <UiButton size="sm" color="primary" :loading="addingLink" @click="addLink">Add Link</UiButton>
+            <UiButton size="sm" color="neutral" variant="ghost" @click="showAddLink = false; newLinkTargetId = ''">Cancel
+            </UiButton>
           </div>
         </div>
 
@@ -454,9 +503,9 @@ watch(() => props.item.id, async () => {
             class="flex items-start gap-2 px-3 py-2 rounded-[var(--radius-lg)] border border-secondary bg-white dark:bg-surface/50 group">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-1.5 flex-wrap mb-0.5">
-                <UBadge size="xs" color="neutral" variant="soft" class="shrink-0">
+                <UiBadge size="xs" color="neutral" variant="soft" class="shrink-0">
                   {{ LINK_TYPE_LABELS[linked.linkType] ?? linked.linkType }}
-                </UBadge>
+                </UiBadge>
                 <span class="text-[10px] text-content-secondary">
                   {{ linked.direction === "sent" ? "→" : "←" }}
                 </span>
@@ -465,9 +514,98 @@ watch(() => props.item.id, async () => {
                 {{ linked.item?.content.replace(/<[^>]*>/g, "").slice(0, 80) || "Unknown item" }}
               </p>
             </div>
-            <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
+            <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
               class="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5"
               @click="deleteLink(linked.linkId)" />
+          </div>
+        </div>
+      </div>
+
+      <!-- ── INTEGRATIONS TAB ────────────────────────────────────────── -->
+      <div v-else-if="activeTab === 'integrations'" class="p-4 space-y-4">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-content-secondary uppercase tracking-widest">External Sources</span>
+          <UiButton
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            icon="heroicons:arrow-path"
+            :loading="externalRefsLoading"
+            @click="loadExternalRefs"
+          >
+            Refresh
+          </UiButton>
+        </div>
+
+        <div v-if="externalRefsLoading" class="flex items-center gap-2 text-sm text-content-secondary">
+          <Icon name="svg-spinners:ring-resize" class="w-4 h-4" />
+          Loading sources...
+        </div>
+
+        <div
+          v-else-if="externalRefsError"
+          class="flex items-start gap-2 px-3 py-2 rounded-[var(--radius-lg)] bg-error/10 text-error text-sm"
+        >
+          <Icon name="heroicons:exclamation-circle" class="w-4 h-4 shrink-0 mt-0.5" />
+          <span>{{ externalRefsError }}</span>
+        </div>
+
+        <div v-else-if="externalRefs.length === 0" class="rounded-[var(--radius-xl)] border border-dashed border-secondary p-4">
+          <p class="text-sm font-medium text-content-on-surface">No external source linked</p>
+          <p class="text-xs text-content-secondary mt-1">
+            Imported Jira issues and Notion pages will appear here.
+          </p>
+        </div>
+
+        <div v-else class="space-y-2">
+          <div
+            v-for="ref in externalRefs"
+            :key="ref.id"
+            class="rounded-[var(--radius-xl)] border border-secondary bg-white dark:bg-surface/50 p-3 space-y-2"
+          >
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-start gap-2 min-w-0">
+                <div class="w-8 h-8 rounded-[var(--radius-lg)] bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                  <Icon :name="providerIcon(ref.provider)" class="w-4 h-4" />
+                </div>
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-content-on-surface truncate">
+                    {{ ref.externalKey || providerLabel(ref.provider) }}
+                  </p>
+                  <p class="text-xs text-content-secondary">
+                    {{ providerLabel(ref.provider) }} · {{ formatSyncDate(ref.lastSyncedAt) }}
+                  </p>
+                </div>
+              </div>
+              <UiBadge
+                size="xs"
+                :color="ref.syncStatus === 'CONFLICT' || ref.syncStatus === 'ERROR' ? 'error' : ref.syncStatus === 'PENDING' ? 'warning' : 'success'"
+                variant="soft"
+              >
+                {{ ref.syncStatus.toLowerCase() }}
+              </UiBadge>
+            </div>
+
+            <p v-if="ref.lastError" class="text-xs text-error bg-error/10 rounded-[var(--radius-lg)] px-2 py-1">
+              {{ ref.lastError }}
+            </p>
+
+            <div class="flex items-center justify-between gap-2 pt-1">
+              <p class="text-[10px] text-content-secondary truncate">
+                External updated {{ formatSyncDate(ref.externalUpdatedAt) }}
+              </p>
+              <UiButton
+                v-if="ref.externalUrl"
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                icon="heroicons:arrow-top-right-on-square"
+                :to="ref.externalUrl"
+                target="_blank"
+              >
+                Open
+              </UiButton>
+            </div>
           </div>
         </div>
       </div>
@@ -505,12 +643,12 @@ watch(() => props.item.id, async () => {
 
         <!-- New comment input (pinned to bottom) -->
         <div class="shrink-0 space-y-2 border-t border-secondary pt-3">
-          <UTextarea v-model="newCommentContent" placeholder="Add a comment…" :rows="2" size="sm"
+          <UiTextarea v-model="newCommentContent" placeholder="Add a comment…" :rows="2" size="sm"
             class="w-full resize-none" />
-          <UButton size="sm" color="primary" :loading="addingComment" :disabled="!newCommentContent.trim()"
+          <UiButton size="sm" color="primary" :loading="addingComment" :disabled="!newCommentContent.trim()"
             @click="addComment">
             Post Comment
-          </UButton>
+          </UiButton>
         </div>
       </div>
 

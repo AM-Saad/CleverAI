@@ -4,18 +4,20 @@
       <ui-subtitle color="content-on-background">
         Review Session
       </ui-subtitle>
-      <div class="text-sm text-gray-600 dark:text-gray-400">
+      <div class="text-sm text-content-secondary">
         {{ currentIndex + 1 }} of {{ totalCards }}
       </div>
       <!-- Study Session Timer -->
       <ReviewProgressBar :progress="progress" />
     </div>
 
-    <ReviewSessionTimer :session-time="sessionTime" />
+    <SessionTimer :session-time="sessionTime" />
   </div>
 </template>
 
 <script setup lang="ts">
+import ReviewProgressBar from "~/features/review/components/ReviewProgressBar.vue";
+import SessionTimer from "~/features/review/components/SessionTimer.vue";
 interface Props {
   currentIndex: number
   totalCards: number

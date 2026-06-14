@@ -1,29 +1,29 @@
 <template>
-  <div class="  space-y-6 p-2 rounded outline-primary" tabindex="0" role="application"
+  <div class="  space-y-6 p-2 rounded-[var(--radius-md)] outline-primary" tabindex="0" role="application"
     aria-label="Spaced repetition card review interface" @keydown="handleKeydown">
     <!-- Analytics Summary -->
     <ReviewAnalytics :show="showAnalytics" :workspace-id="workspaceId" @close="showAnalytics = false" />
 
     <!-- Keyboard Shortcuts Help -->
-    <review-keyboard-shortcuts :show="showShortcuts" @close="showShortcuts = false" />
+    <KeyboardShortcuts :show="showShortcuts" @close="showShortcuts = false" />
 
     <!-- Debug Panel (Dev Only) -->
     <dev-only>
       <div v-if="showDebugPanel"
-        class="bg-yellow-50 dark:bg-yellow-900 p-4 rounded-lg border border-yellow-200 dark:border-yellow-700">
+        class="bg-warning/10 dark:bg-warning/20 p-4 rounded-[var(--radius-lg)] border border-warning/20 dark:border-warning/30">
         <div class="flex justify-between items-center mb-4">
-          <h3 class="font-semibold text-yellow-900 dark:text-yellow-100">Debug Panel</h3>
-          <button @click="showDebugPanel = false" class="text-yellow-600 hover:text-yellow-800">
+          <h3 class="font-semibold text-warning">Debug Panel</h3>
+          <button @click="showDebugPanel = false" class="text-warning hover:text-warning/80">
             ✕
           </button>
         </div>
-        <div class="space-y-2 text-sm text-yellow-800 dark:text-yellow-200">
+        <div class="space-y-2 text-sm text-warning">
           <div><strong>Queue Length:</strong> {{ reviewQueue.length }}</div>
           <div><strong>Current Index:</strong> {{ currentCardIndex }}</div>
           <div><strong>Is Loading:</strong> {{ isLoading }}</div>
           <div><strong>Has Error:</strong> {{ error ? 'Yes' : 'No' }}</div>
           <template v-if="currentCard">
-            <div class="border-t border-yellow-300 dark:border-yellow-700 pt-2 mt-2">
+            <div class="border-t border-warning/30 pt-2 mt-2">
               <div><strong>Card ID:</strong> {{ currentCard.cardId }}</div>
               <div><strong>Resource Type:</strong> {{ currentCard.resourceType }}</div>
               <div><strong>Review State:</strong></div>
@@ -35,7 +35,7 @@
               </ul>
             </div>
           </template>
-          <div v-else class="text-yellow-600 dark:text-yellow-300 italic">
+          <div v-else class="text-warning italic">
             No current card (queue is empty)
           </div>
         </div>
@@ -78,11 +78,11 @@
     <review-states-error-state v-if="error && !isLoading" :error="error" @clear-error="clearError" />
 
     <!-- Session Summary Modal/Overlay (Minimal Implementation) -->
-    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+    <div class="fixed inset-0 bg-content-on-background/50 flex items-center justify-center z-50"
       v-if="showSummaryModal && sessionSummary" role="dialog" aria-modal="true" aria-labelledby="session-summary-title">
       >
       <div
-        class="bg-white p-8 rounded-[var(--radius-2xl)] shadow-2xl max-w-md w-full space-y-6 text-center border border-secondary">
+        class="bg-white p-8 rounded-[var(--radius-2xl)] shadow-[var(--shadow-modal)] max-w-md w-full space-y-6 text-center border border-secondary">
         <h2 class="text-2xl font-bold text-content-on-surface-strong">Session Complete!</h2>
 
         <div class="space-y-4">
@@ -114,16 +114,20 @@
 
         </div>
 
-        <u-button @click="showSummaryModal = false" size="lg"
+        <ui-button @click="showSummaryModal = false" size="lg"
           class="w-full text-center justify-center transition-opacity">
           Continue
-        </u-button>
+        </ui-button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import ReviewHeader from "~/features/review/components/ReviewHeader.vue";
+import ReviewAnalytics from "~/features/review/components/ReviewAnalytics.vue";
+import ReviewStats from "~/features/review/components/ReviewStats.vue";
+import KeyboardShortcuts from "~/features/review/components/KeyboardShortcuts.vue";
 import type { ReviewGrade } from '~/shared/utils/review.contract'
 
 import confettiData from '~/assets/confetti-background.json';

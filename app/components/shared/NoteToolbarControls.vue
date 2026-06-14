@@ -130,7 +130,7 @@ function updateNumberInput(control: Extract<NoteToolbarControl, { type: "number-
       <template #content>
         <div class="w-40 space-y-2 p-3">
           <ui-label size="sm">{{ control.label }}</ui-label>
-          <UInput
+          <UiInput
             :model-value="control.inputValue"
             type="number"
             size="sm"

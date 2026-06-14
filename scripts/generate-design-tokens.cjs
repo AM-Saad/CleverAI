@@ -7,6 +7,7 @@ const {
   legacyAliasTokens,
   rootTokens,
   themeTokens,
+  darkTokens = [],
 } = require("../app/design-system/tokens/index.cjs");
 
 const root = process.cwd();
@@ -26,6 +27,14 @@ ${[...themeTokens, ...legacyAliasTokens].map(renderToken).join("\n")}
 
 :root {
 ${rootTokens.map(renderToken).join("\n")}
+}
+
+/* Dark theme: same token names, overridden when an ancestor carries .dark
+   (global toggle on <html>, or a scoped wrapper). Token utilities (bg-surface,
+   text-content-*, ...) flip automatically. */
+html.dark,
+.dark {
+${darkTokens.map(renderToken).join("\n")}
 }
 `;
 

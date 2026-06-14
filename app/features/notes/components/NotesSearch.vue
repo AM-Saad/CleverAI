@@ -1,6 +1,6 @@
 <template>
   <div class="sticky top-0 z-10 flex items-center gap-4">
-    <u-input v-model="search" placeholder="Search in notes" type="text" class="w-full" :ui="{
+    <ui-input v-model="search" placeholder="Search in notes" type="text" class="w-full" :ui="{
       base: 'border-0 ring-0 rounded-none ',
     }" @focus="onFocus && onFocus()" @blur="onBlur && onBlur()" />
   </div>

@@ -6,18 +6,18 @@
       </template>
       <div class="space-y-4">
         <div>
-          <UButton color="primary" variant="outline" @click="exportData">
+          <UiButton color="primary" variant="outline" @click="exportData">
             Export My Data
-          </UButton>
+          </UiButton>
           <p class="text-xs text-content-secondary mt-2">
             Download all your data in JSON format
           </p>
         </div>
 
         <div>
-          <UButton color="primary" variant="outline" @click="importData">
+          <UiButton color="primary" variant="outline" @click="importData">
             Import Data
-          </UButton>
+          </UiButton>
           <p class="text-xs text-content-secondary mt-2">
             Import your data from a backup file
           </p>
@@ -41,9 +41,9 @@
 
       <template #footer>
         <div class="flex justify-end">
-          <UButton @click="savePrivacySettings">
+          <UiButton @click="savePrivacySettings">
             Save Changes
-          </UButton>
+          </UiButton>
         </div>
       </template>
     </ui-card>

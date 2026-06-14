@@ -3,7 +3,7 @@
  * NoteContentArea — shared content area wrapper used by all note editors.
  *
  * Enforces the gold-standard styling from MathNoteEditor:
- *   rounded corners, token border, inset shadow, token background, mx-2 spacing.
+ *   token corner radius, token border, inset shadow, token background, mx-2 spacing.
  *
  * Usage:
  *   <SharedNoteContentArea>
@@ -19,7 +19,7 @@ defineExpose({ get el() { return rootEl.value } })
 </script>
 
 <template>
-  <div ref="rootEl" class="relative shadow-inner overflow-hidden transition-shadow duration-200 flex-1 min-h-[300px]">
+  <div ref="rootEl" class="relative shadow-[var(--shadow-dropdown)] overflow-hidden transition-shadow duration-200 flex-1 min-h-[300px]">
     <slot />
   </div>
 </template>

@@ -9,9 +9,9 @@
             </template>
             <div class="space-y-4">
                 <UiSubtitle size="lg">Password Management</UiSubtitle>
-                <UButton color="primary" variant="outline" class="mt-3" @click="showChangePasswordModal = true">
+                <UiButton color="primary" variant="outline" class="mt-3" @click="showChangePasswordModal = true">
                     Change Password
-                </UButton>
+                </UiButton>
 
                 <div class="border-t border-muted pt-4 space-y-4">
                     <UiSubtitle size="xl" color="danger" weight="bold">
@@ -20,9 +20,9 @@
                     <UiParagraph color="content-secondary">
                         Permanently delete your account and all data
                     </UiParagraph>
-                    <UButton color="error" variant="outline" @click="showDeleteModal = true">
+                    <UiButton color="error" variant="outline" @click="showDeleteModal = true">
                         Delete Account
-                    </UButton>
+                    </UiButton>
                 </div>
             </div>
         </ui-card>

@@ -48,28 +48,28 @@ const gradeOptions: GradeOption[] = [
     label: 'Again',
     description: 'Complete blackout',
     colorClass:
-      'border-red-500 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 focus:ring-red-500',
+      'border-error text-error hover:bg-error/10 dark:hover:bg-error/20 focus:ring-error',
   },
   {
     value: '1',
     label: 'Hard',
     description: 'Incorrect, easy to recall',
     colorClass:
-      'border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 focus:ring-orange-500',
+      'border-warning text-warning hover:bg-warning/10 dark:hover:bg-warning/20 focus:ring-warning',
   },
   {
     value: '2',
     label: 'Hard',
     description: 'Incorrect, difficult to recall',
     colorClass:
-      'border-orange-400 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-900/20 focus:ring-orange-500',
+      'border-warning text-warning hover:bg-warning/10 dark:hover:bg-warning/20 focus:ring-warning',
   },
   {
     value: '3',
     label: 'Good',
     description: 'Correct, difficult recall',
     colorClass:
-      'border-yellow-500 text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 focus:ring-yellow-500',
+      'border-warning text-warning hover:bg-warning/10 dark:hover:bg-warning/20 focus:ring-warning',
   },
   {
     value: '4',
@@ -83,7 +83,7 @@ const gradeOptions: GradeOption[] = [
     label: 'Easy',
     description: 'Perfect response',
     colorClass:
-      'border-green-500 text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 focus:ring-green-500',
+      'border-success text-success hover:bg-success/10 dark:hover:bg-success/20 focus:ring-success',
   },
 ]
 </script>

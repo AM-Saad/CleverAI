@@ -118,28 +118,28 @@ async function bulkEnrollDrafts() {
     <!-- Header with Add button -->
     <div class="flex justify-between items-center mb-2">
       <!-- Bulk Enroll Button -->
-      <u-button v-if="draftCards.length > 0" size="sm" variant="soft" color="primary" @click="bulkEnrollDrafts"
+      <ui-button v-if="draftCards.length > 0" size="sm" variant="soft" color="primary" @click="bulkEnrollDrafts"
         :loading="bulkEnrolling">
         <Icon name="i-lucide-check-circle" class="w-4 h-4 mr-1" />
         Enroll {{ draftCards.length }} Draft{{ draftCards.length > 1 ? 's' : '' }}
-      </u-button>
+      </ui-button>
       <div v-else></div>
 
-      <u-button v-if="cardsToShow && cardsToShow.length > 0" size="sm" variant="ghost" color="primary"
+      <ui-button v-if="cardsToShow && cardsToShow.length > 0" size="sm" variant="ghost" color="primary"
         @click="showCreateModal = true">
         <Icon name="i-lucide-plus" class="w-4 h-4 mr-1" />
         Add Card
-      </u-button>
+      </ui-button>
     </div>
 
     <!-- Empty state -->
     <shared-empty-state v-if="!cardsToShow || cardsToShow.length === 0" title="No Flashcards"
       description="Create flashcards manually or generate them from your materials." container-class="text-xs grow">
       <template #actions>
-        <u-button size="sm" color="primary" @click="showCreateModal = true">
+        <ui-button size="sm" color="primary" @click="showCreateModal = true">
           <Icon name="i-lucide-plus" class="w-4 h-4 mr-1" />
           Create Flashcard
-        </u-button>
+        </ui-button>
       </template>
     </shared-empty-state>
 
@@ -154,9 +154,9 @@ async function bulkEnrollDrafts() {
 
             <div class="absolute top-2 right-2 flex items-center gap-2 ">
               <!-- Draft badge -->
-              <u-badge v-if="card.status === 'DRAFT'" color="secondary" size="xs" class="text-xs">
+              <ui-badge v-if="card.status === 'DRAFT'" color="secondary" size="xs" class="text-xs">
                 Draft
-              </u-badge>
+              </ui-badge>
               <!-- Enrolled badge -->
               <span v-else-if="'id' in card && card.id && props.enrolledIds.has(card.id)"
                 class="inline-flex items-center justify-center h-5 w-5 rounded-full text-xs font-light bg-primary  text-on-primary"
@@ -165,22 +165,22 @@ async function bulkEnrollDrafts() {
               </span>
               <div class="flex justify-between bg-primary/10 rounded-full overflow-hidden">
                 <!-- Context button -->
-                <u-button v-if="card.sourceRef" size="sm" variant="ghost"
+                <ui-button v-if="card.sourceRef" size="sm" variant="ghost"
                   @click.stop="contextBridge.locateSource(card, id)" title="View source context"
                   :disabled="props.isEnrollingLoading">
                   <shared-icon name="external-link" />
-                </u-button>
+                </ui-button>
 
                 <!-- Edit button -->
-                <u-button v-if="'id' in card && card.id" size="sm" variant="ghost" @click.stop="openEditModal(card)"
+                <ui-button v-if="'id' in card && card.id" size="sm" variant="ghost" @click.stop="openEditModal(card)"
                   title="Edit flashcard" :disabled="props.isEnrollingLoading">
                   <shared-icon name="pencil" class=" disabled:opacity-50 disabled:cursor-not-allowed" />
-                </u-button>
+                </ui-button>
                 <!-- Delete button -->
-                <u-button v-if="'id' in card && card.id" size="sm" variant="ghost" color="error"
+                <ui-button v-if="'id' in card && card.id" size="sm" variant="ghost" color="error"
                   @click.stop="openDeleteModal(card)" title="Delete flashcard" :disabled="props.isEnrollingLoading">
                   <shared-icon name="delete" class=" disabled:opacity-50 disabled:cursor-not-allowed" />
-                </u-button>
+                </ui-button>
               </div>
             </div>
           </template>

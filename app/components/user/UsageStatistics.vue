@@ -138,14 +138,14 @@ onMounted(async () => {
 
         <div class="flex flex-col sm:flex-row items-start sm:items-end gap-4">
           <fieldset class="flex flex-col">
-            <u-input type="date" v-model="startDate" />
+            <ui-input type="date" v-model="startDate" />
           </fieldset>
 
           <fieldset class="flex flex-col">
-            <u-input type="date" v-model="endDate" />
+            <ui-input type="date" v-model="endDate" />
           </fieldset>
-          <u-button :disabled="isDateRangeInvalid" @click="fetchLlmUsage" variant="subtle" size="sm">Apply</u-button>
-          <p v-if="isDateRangeInvalid" class="text-sm text-red-500">
+          <ui-button :disabled="isDateRangeInvalid" @click="fetchLlmUsage" variant="subtle" size="sm">Apply</ui-button>
+          <p v-if="isDateRangeInvalid" class="text-sm text-error">
             From date must be on or before To date
           </p>
         </div>
@@ -188,7 +188,7 @@ onMounted(async () => {
           <!-- Usage by Feature -->
           <ui-card class="mb-4" size="sm" variant="ghost">
             <template #header>Usage by Feature</template>
-            <div class="max-w-full overflow-x-auto mt-2  border border-secondary rounded">
+            <div class="max-w-full overflow-x-auto mt-2  border border-secondary rounded-[var(--radius-md)]">
               <table class="w-full text-left text-sm bg-surface">
 
                 <thead class="dark:text-light">
@@ -228,7 +228,7 @@ onMounted(async () => {
           <ui-card class="mb-4" size="sm" variant="ghost">
 
             <template #header>Usage by Model</template>
-            <div class="overflow-x-auto mt-2  border border-secondary rounded">
+            <div class="overflow-x-auto mt-2  border border-secondary rounded-[var(--radius-md)]">
               <table class="w-full text-left text-sm bg-surface">
 
                 <thead class="dark:text-light">
@@ -267,7 +267,7 @@ onMounted(async () => {
           <!-- Recent Usage -->
           <ui-card class="mb-4" size="sm" variant="ghost">
             <template #header>Recent Usage</template>
-            <div class="overflow-x-auto mt-2  border border-secondary rounded">
+            <div class="overflow-x-auto mt-2  border border-secondary rounded-[var(--radius-md)]">
               <table class="w-full text-left text-sm bg-surface">
 
                 <thead class="dark:text-light">
@@ -294,7 +294,7 @@ onMounted(async () => {
                   </tr>
 
                   <tr v-if="llmUsage.recentUsage.length === 0">
-                    <td colspan="5" class="py-2 px-4 text-center text-gray-500">No Recent Usage</td>
+                    <td colspan="5" class="py-2 px-4 text-center text-content-secondary">No Recent Usage</td>
                   </tr>
 
                 </tbody>
@@ -304,7 +304,7 @@ onMounted(async () => {
           </ui-card>
         </div>
 
-        <div v-else class="text-center py-8 text-gray-500">
+        <div v-else class="text-center py-8 text-content-secondary">
           <p>No AI usage data available.</p>
         </div>
       </div>

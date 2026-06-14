@@ -286,7 +286,7 @@ defineExpose({ toggleLeft, toggleRight, collapsedSide, isResizing });
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  background-color: var(--color-white, #fff);
+  background-color: var(--color-white);
   padding: 0.5rem;
   /* space for handle */
   /* background-color: var(--color-surface-subtle);
@@ -329,8 +329,8 @@ defineExpose({ toggleLeft, toggleRight, collapsedSide, isResizing });
   min-height: 0;
   overflow: hidden;
   padding: 2px;
-  background: #fff;
-  border-radius: .2rem;
+  background: var(--color-white);
+  border-radius: var(--radius-md);
 }
 
 /* ── Collapsed strip ─────────────────────────────────────────────── */
@@ -339,9 +339,9 @@ defineExpose({ toggleLeft, toggleRight, collapsedSide, isResizing });
   align-items: center;
   justify-content: space-between;
   cursor: pointer;
-  background: var(--ui-bg, #fff);
-  border: 1px solid var(--ui-border, #e2e8f0);
-  border-radius: 12px;
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius-2xl);
   transition: background 0.2s ease, border-color 0.2s ease;
   flex-shrink: 0;
   gap: 6px;
@@ -364,21 +364,21 @@ defineExpose({ toggleLeft, toggleRight, collapsedSide, isResizing });
 }
 
 .spl-collapsed-strip:hover {
-  background: var(--ui-bg-accented, #f1f5f9);
-  border-color: var(--color-primary, #6366f1);
+  background: var(--ui-bg-accented);
+  border-color: var(--color-primary);
 }
 
 .spl-strip-icon {
   width: 16px;
   height: 16px;
-  color: var(--color-content-secondary, #6b7280);
+  color: var(--color-content-secondary);
   flex-shrink: 0;
 }
 
 .spl-strip-label {
   font-size: 11px;
   font-weight: 500;
-  color: var(--color-content-secondary, #6b7280);
+  color: var(--color-content-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -393,7 +393,7 @@ defineExpose({ toggleLeft, toggleRight, collapsedSide, isResizing });
 .spl-strip-expand {
   width: 14px;
   height: 14px;
-  color: var(--color-content-tertiary, #9ca3af);
+  color: var(--color-content-disabled);
   flex-shrink: 0;
 }
 
@@ -428,7 +428,7 @@ defineExpose({ toggleLeft, toggleRight, collapsedSide, isResizing });
 }
 
 .spl-handle:hover {
-  background: color-mix(in srgb, var(--color-primary, #6366f1) 12%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 .spl-handle--disabled {
@@ -462,12 +462,12 @@ defineExpose({ toggleLeft, toggleRight, collapsedSide, isResizing });
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: var(--color-primary, #6366f1);
+  background: var(--color-primary);
 }
 
 /* Active resize */
 .spl-layout--resizing .spl-handle {
-  background: color-mix(in srgb, var(--color-primary, #6366f1) 20%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 .spl-layout--resizing .spl-handle .spl-handle-grip {

@@ -7,7 +7,7 @@ import type { NoteRowIntent } from "../composables/noteRowIntents";
 import { logNotesOperation } from "../composables/notesOperationLog";
 import DeleteConfirmationModal from "~/components/shared/DeleteConfirmationModal.vue";
 import NoteGroupSection from "./NoteGroupSection.vue";
-import NotesSearch from "./NotesSearch.vue";
+import NotesSearch from "~/features/notes/components/NotesSearch.vue";
 
 const props = defineProps<{
   workspaceId: string;
@@ -350,28 +350,28 @@ function handleSectionNotesReordered(groupId: string | null, noteIds: string[]) 
 </script>
 
 <template>
-  <div class="notes-drawer flex h-full min-h-0 flex-col rounded border border-secondary bg-light">
+  <div class="notes-drawer flex h-full min-h-0 flex-col rounded-[var(--radius-md)] border border-secondary bg-light">
     <div class="border-b border-secondary p-2 bg-white">
       <NotesSearch :workspace-id="workspaceId" />
       <div class="mt-2 flex items-center justify-between gap-2">
         <p class="text-xs text-content-secondary">
           {{ notes.length }} notes
         </p>
-        <u-button size="xs" color="neutral" variant="soft" :disabled="groupActionsDisabled" title="Create group"
+        <ui-button size="xs" color="neutral" variant="soft" :disabled="groupActionsDisabled" title="Create group"
           @click="startCreateGroup">
           <icon name="i-lucide-folder-plus" class="h-3.5 w-3.5" />
           Group
-        </u-button>
+        </ui-button>
       </div>
       <form v-if="isCreatingGroup" class="mt-2 flex items-center gap-1" @submit.prevent="submitCreateGroup">
-        <UInput v-model="createGroupTitle" data-note-group-create-input size="xs" placeholder="Group name"
+        <UiInput v-model="createGroupTitle" data-note-group-create-input size="xs" placeholder="Group name"
           class="min-w-0 flex-1" @keydown.esc.prevent="cancelCreateGroup" />
-        <u-button size="xs" color="primary" variant="solid" type="submit" :disabled="!createGroupTitle.trim()">
+        <ui-button size="xs" color="primary" variant="solid" type="submit" :disabled="!createGroupTitle.trim()">
           Add
-        </u-button>
-        <u-button size="xs" color="neutral" variant="ghost" type="button" @click="cancelCreateGroup">
+        </ui-button>
+        <ui-button size="xs" color="neutral" variant="ghost" type="button" @click="cancelCreateGroup">
           Cancel
-        </u-button>
+        </ui-button>
       </form>
       <p v-if="isOffline" class="mt-1 text-[11px] text-content-secondary">
         Group changes save locally and sync when you are back online.

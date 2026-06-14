@@ -34,7 +34,7 @@ const emit = defineEmits<{
     :class="{ 'opacity-65 pointer-events-none': props.readonly }">
     <!-- Left/Primary Area: Note-type specific tools -->
     <div
-      class="flex flex-1 flex-nowrap gap-1.5 items-center min-w-0 no-scrollbar overflow-x-auto rounded-lg scroll-smooth shadow-inner px-1.5 py-1">
+      class="flex flex-1 flex-nowrap gap-1.5 items-center min-w-0 no-scrollbar overflow-x-auto rounded-[var(--radius-lg)] scroll-smooth shadow-[var(--shadow-dropdown)] px-1.5 py-1">
       <slot name="default"></slot>
     </div>
 

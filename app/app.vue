@@ -3,8 +3,32 @@
         <Html lang="en" />
         <Link rel="manifest" href="/manifest.webmanifest" />
         <NuxtErrorBoundary @error="ErrorLogger">
+            <template #error="{ error, clearError }">
+                <div class="min-h-screen bg-white text-content-on-surface flex items-center justify-center px-6">
+                    <div class="w-full  rounded-[var(--radius-xl)] border border-secondary p-6 shadow-[var(--shadow-dropdown)]">
+                        <p class="text-xs font-bold uppercase tracking-widest text-content-secondary">Application Error
+                        </p>
+                        <h1 class="mt-2 text-xl font-semibold">Something went wrong</h1>
+                        <p class="mt-2 text-sm text-content-secondary break-words">
+                            {{ error?.message || 'The app hit an unexpected rendering error.' }}
+                        </p>
+                        <div class="mt-5 flex gap-2">
+                            <button type="button"
+                                class="rounded-[var(--radius-md)] bg-primary px-3 py-2 text-sm font-medium text-white"
+                                @click="() => { clearError(); reloadApp(); }">
+                                Reload
+                            </button>
+                            <button type="button"
+                                class="rounded-[var(--radius-md)] border border-secondary px-3 py-2 text-sm font-medium"
+                                @click="() => { clearError(); goHome(); }">
+                                Home
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </template>
 
-            <NuxtLoadingIndicator :color="'#fe9548'" :duration="10000" :throttle="6000" :reset-delay="5000" />
+            <NuxtLoadingIndicator color="var(--color-accent-orange)" :duration="10000" :throttle="6000" :reset-delay="5000" />
             <UApp>
 
                 <NuxtLayout>
@@ -18,7 +42,7 @@
                 <!-- Notification Subscription Modal -->
                 <ClientOnly>
                     <Teleport to="body">
-                        <ModalsNotificationSubscriptionModal :show="showNotificationModal"
+                        <NotificationSubscriptionModal :show="showNotificationModal"
                             @close="handleNotificationModalClose" @subscribed="handleNotificationSubscribed"
                             @dismissed="handleNotificationDismissed" />
                     </Teleport>
@@ -35,7 +59,7 @@
 </template>
 
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import NotificationSubscriptionModal from '~/features/notifications/components/NotificationSubscriptionModal.vue'
 import { onErrorCaptured } from 'vue'
 
 type WindowControlsOverlay = {
@@ -60,8 +84,6 @@ colorMode.preference = 'light'
 // same as set(0, { force: true })
 // set the progress to 0, and show loading immediately
 // start({ force: true })
-const router = useRouter()
-
 // Notification modal state
 const showNotificationModal = ref(false)
 
@@ -104,13 +126,15 @@ onMounted(() => {
 })
 
 const ErrorLogger = (error: unknown): void => {
-    console.error('🚨 [APP.VUE] Error logged, redirecting to error page', error)
-    router.replace({
-        name: 'error',
-        params: {
-            error: error instanceof Error ? error.message : String(error)
-        }
-    })
+    console.error('🚨 [APP.VUE] Error captured by boundary', error)
+}
+
+const reloadApp = () => {
+    if (import.meta.client) window.location.reload()
+}
+
+const goHome = () => {
+    if (import.meta.client) window.location.href = '/'
 }
 
 // Notification modal handlers

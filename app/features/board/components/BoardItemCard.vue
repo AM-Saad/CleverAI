@@ -125,17 +125,17 @@ const formattedDate = computed(() => {
       </ui-paragraph>
 
       <!-- Tags -->
-      <UBadge v-for="tag in noteTags" :key="tag.id" :style="{ backgroundColor: tag.color, color: '#ffffff' }"
+      <UiBadge v-for="tag in noteTags" :key="tag.id" :style="{ backgroundColor: tag.color, color: 'var(--color-on-primary)' }"
         variant="solid" size="sm" class="rounded-full px-2.5 mr-0.5">
         {{ tag.name }}
-      </UBadge>
+      </UiBadge>
 
       <!-- Due date + attachments row -->
       <div v-if="dueDateInfo || attachmentCount > 0" class="flex items-center gap-2 flex-wrap mt-0.5">
         <span v-if="dueDateInfo" :class="['inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5',
           dueDateInfo.isOverdue
             ? 'bg-error/10 text-error dark:bg-error/20'
-            : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-900/20']">
+            : 'bg-success/10 text-success dark:bg-success/20']">
           <Icon name="heroicons:calendar-days" class="w-3 h-3" />
           {{ dueDateInfo.label }}
         </span>
@@ -155,11 +155,11 @@ const formattedDate = computed(() => {
         <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
           <!-- Move to column -->
           <UDropdownMenu :items="columnOptions" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-            <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:arrows-right-left"
+            <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:arrows-right-left"
               aria-label="Move to column" title="Move to column" class="hover:bg-primary/10" @click.stop />
           </UDropdownMenu>
 
-          <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:trash" @click.stop="emit('delete')"
+          <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:trash" @click.stop="emit('delete')"
             aria-label="Delete note" class="hover:bg-error/10 hover:text-error" />
         </div>
       </div>
@@ -167,10 +167,10 @@ const formattedDate = computed(() => {
 
   <!-- Dirty indicator -->
   <div v-if="item.isDirty && !item.error"
-      class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full border-2 border-white shadow-sm"
+      class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-warning rounded-full border-2 border-white shadow-[var(--shadow-dropdown)]"
       title="Unsaved changes" />
   <div v-else-if="item.error"
-      class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-error rounded-full border-2 border-white shadow-sm"
+      class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-error rounded-full border-2 border-white shadow-[var(--shadow-dropdown)]"
       title="Sync failed. Open item details to retry." />
   </div>
 </template>

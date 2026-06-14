@@ -27,7 +27,7 @@ const { handleSubmit, credentials, fieldTypes, error, success, loading } =
       </UiParagraph>
       <shared-server-error v-if="error" :typed-error="error" :loading="loading" />
       <shared-success-message :message="success ? `${success}` : undefined" />
-      <div class="flex flex-col gap-2  mb-2 mt-2 rounded-md relative transition duration-10 00 text-xs">
+      <div class="flex flex-col gap-2  mb-2 mt-2 rounded-[var(--radius-md)] relative transition duration-10 00 text-xs">
         <ui-input-field id="register-name-client" v-model="credentials.name!" :type="fieldTypes.name" name="name"
           label="Name" title="Please enter your name" tabindex="1" />
         <ui-input-field id="register-email-client" v-model="credentials.email!" :type="fieldTypes.email" name="email"
@@ -49,20 +49,20 @@ const { handleSubmit, credentials, fieldTypes, error, success, loading } =
             Login
           </router-link>
         </UiParagraph>
-        <UButton :disabled="loading" size="lg" tabindex="5" @click.prevent="handleSubmit">
+        <UiButton :disabled="loading" size="lg" tabindex="5" @click.prevent="handleSubmit">
           Sign up
-        </UButton>
+        </UiButton>
       </div>
     </form>
     <div v-if="mappedProviders.length" class="flex flex-col justify-center mt-4 gap-y-2">
       <UiParagraph size="sm" color="content-secondary">
         Or sign up with a social account below 👇
       </UiParagraph>
-      <u-button v-for="provider in mappedProviders" :key="provider?.id"
-        class="border border-[#eb4034] justify-center disabled:opacity-50 dark:ring-white " :disabled="loading"
+      <ui-button v-for="provider in mappedProviders" :key="provider?.id"
+        class="border border-error justify-center disabled:opacity-50 dark:ring-white " :disabled="loading"
         variant="ghost" color="error" type="button" tabindex="5" @click="signIn(provider?.id)">
         Sign in with {{ provider?.name }}
-      </u-button>
+      </ui-button>
     </div>
   </div>
 </template>

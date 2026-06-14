@@ -11,17 +11,34 @@ const themeTokens = [
   { name: "--color-surface", value: "#f0f0f2", comment: "Raised surfaces" },
   { name: "--color-surface-subtle", value: "#f4f5f7", comment: "Subtle rows and hover surfaces" },
   { name: "--color-surface-strong", value: "#dddfe5", comment: "Selected and pressed surfaces" },
-  { name: "--color-surface-container", value: "var(--color-surface)", comment: "Compatibility surface alias" },
   { name: "--color-content-on-background", value: "#333333", comment: "Text on page background" },
   { name: "--color-content-on-surface", value: "#575252", comment: "Text on card/panel surfaces" },
   { name: "--color-content-on-surface-strong", value: "#333333", comment: "Strong text on surfaces" },
-  { name: "--color-content-secondary", value: "#6b7280", comment: "Metadata and secondary text" },
+  { name: "--color-content-secondary", value: "#606771", comment: "Metadata and secondary text (AA on surface)" },
   { name: "--color-content-disabled", value: "#9ca3af", comment: "Disabled and placeholder text" },
   { name: "--color-white", value: "#ffffff", comment: "Compatibility white token" },
   { name: "--color-dark", value: "#1f2937", comment: "Compatibility dark text token" },
   { name: "--color-border", value: "var(--color-secondary)", comment: "Default border" },
-  { name: "--color-border-secondary", value: "var(--color-secondary)", comment: "Compatibility border alias" },
   { name: "--color-primary-50", value: "color-mix(in srgb, var(--color-primary) 10%, transparent)", comment: "Primary subtle fill" },
+  // Interactive-state derivatives (hover/active) for the brand action color.
+  { name: "--color-primary-hover", value: "color-mix(in srgb, black 10%, var(--color-primary))", comment: "Primary hover" },
+  { name: "--color-primary-active", value: "color-mix(in srgb, black 18%, var(--color-primary))", comment: "Primary pressed" },
+  // On-tone text — readable foreground for each solid tone fill (validated by yarn design:contrast).
+  { name: "--color-on-success", value: "#043a28", comment: "Text on success fill (dark — emerald+white fails AA)" },
+  { name: "--color-on-warning", value: "#1f2937", comment: "Text on warning fill (amber needs dark text)" },
+  { name: "--color-on-error", value: "#ffffff", comment: "Text on error fill" },
+  { name: "--color-on-info", value: "#06323a", comment: "Text on info fill (cyan needs dark text)" },
+  { name: "--color-border-strong", value: "#c7cbd2", comment: "Emphasized borders / dividers" },
+  // Accent palette — decorative gradients/hero and user-pickable note/board swatches.
+  // Not interactive-state colors; use semantic tokens (primary/success/...) for those.
+  { name: "--color-accent-blue", value: "#3b82f6", comment: "Accent blue — gradients, note swatch" },
+  { name: "--color-accent-indigo", value: "#6366f1", comment: "Accent indigo — gradients, highlights" },
+  { name: "--color-accent-purple", value: "#8b5cf6", comment: "Accent purple — gradients, note swatch" },
+  { name: "--color-accent-pink", value: "#ec4899", comment: "Accent pink — gradients, note swatch" },
+  { name: "--color-accent-rose", value: "#f43f5e", comment: "Accent rose — gradients" },
+  { name: "--color-accent-teal", value: "#06b6d4", comment: "Accent teal — gradients, note swatch" },
+  { name: "--color-accent-cyan", value: "#00e2ff", comment: "Accent cyan — gradients, glow" },
+  { name: "--color-accent-orange", value: "#f97316", comment: "Accent orange — gradients, note swatch" },
   { name: "--radius-sm", value: "0.125rem", comment: "2px" },
   { name: "--radius-md", value: "0.25rem", comment: "4px" },
   { name: "--radius-lg", value: "0.375rem", comment: "6px" },
@@ -42,7 +59,6 @@ const themeTokens = [
   { name: "--shadow-dropdown", value: "0 4px 16px rgb(0 0 0 / 0.12)" },
   { name: "--shadow-modal", value: "0 20px 60px rgb(0 0 0 / 0.15)" },
   { name: "--shadow-primary-glow", value: "0 4px 12px rgb(56 73 152 / 0.25)" },
-  { name: "--shadow-glass", value: "0 24px 64px -8px rgb(0 0 0 / 0.18)", comment: "Compatibility glass panel shadow" },
   { name: "--space-1", value: "0.25rem", comment: "4px" },
   { name: "--space-2", value: "0.5rem", comment: "8px" },
   { name: "--space-3", value: "0.75rem", comment: "12px" },
@@ -64,6 +80,7 @@ const rootTokens = [
   { name: "--ui-border", value: "var(--color-secondary)" },
   { name: "--ds-brand-gradient", value: "linear-gradient(90deg, rgb(49 165 217) 0%, rgb(248 54 145) 46%, rgb(255 184 0) 100%)" },
   { name: "--ds-focus-outline-color", value: "var(--color-info)" },
+  { name: "--ds-focus-ring", value: "0 0 0 2px color-mix(in srgb, var(--color-primary) 40%, transparent)", comment: "Standard keyboard focus ring (box-shadow)" },
   { name: "--ds-backdrop-strong", value: "rgb(2 6 23 / 0.8)" },
   { name: "--ds-backdrop-dim", value: "rgb(0 0 0 / 0.4)" },
   { name: "--component-card-radius", value: "var(--radius-2xl)" },
@@ -75,26 +92,48 @@ const rootTokens = [
   { name: "--component-toast-shadow", value: "var(--shadow-modal)" },
   { name: "--component-drawer-shadow", value: "var(--shadow-dropdown)" },
   { name: "--component-dialog-shadow", value: "var(--shadow-modal)" },
+  // Code-editor syntax theme (Material Palenight family). Scoped to the rich-text /
+  // code editor only — referenced via var(--syntax-*) in component <style> blocks.
+  { name: "--syntax-bg", value: "#1e2030", comment: "Code block background" },
+  { name: "--syntax-bg-inline", value: "#1f1e24", comment: "Inline code background" },
+  { name: "--syntax-text", value: "#c0c8e0", comment: "Default code text" },
+  { name: "--syntax-muted", value: "#8b92a8", comment: "Line numbers, gutters" },
+  { name: "--syntax-comment", value: "#636d83", comment: "Comments and quotes" },
+  { name: "--syntax-keyword", value: "#c792ea", comment: "Keywords, tags, attributes" },
+  { name: "--syntax-string", value: "#c3e88d", comment: "Strings, additions" },
+  { name: "--syntax-number", value: "#f78c6c", comment: "Numbers, literals, constants" },
+  { name: "--syntax-function", value: "#82aaff", comment: "Titles, functions, classes" },
+  { name: "--syntax-type", value: "#ffcb6b", comment: "Types, template tags" },
+  { name: "--syntax-tag", value: "#89ddff", comment: "Tags, symbols, links, regexp" },
+  { name: "--syntax-deletion", value: "#ff5370", comment: "Deletions, errors" },
+  { name: "--syntax-invalid", value: "#f07178", comment: "Invalid / selection accent" },
 ];
 
-const legacyAliasTokens = [
-  { name: "--margin-xs", value: "var(--space-1)" },
-  { name: "--margin-sm", value: "var(--space-2)" },
-  { name: "--margin-md", value: "var(--space-4)" },
-  { name: "--margin-lg", value: "var(--space-6)" },
-  { name: "--margin-xl", value: "var(--space-8)" },
-  { name: "--margin-2xl", value: "calc(var(--space-8) + var(--space-4))" },
-  { name: "--padding-xs", value: "var(--space-1)" },
-  { name: "--padding-sm", value: "var(--space-2)" },
-  { name: "--padding-md", value: "var(--space-4)" },
-  { name: "--padding-lg", value: "var(--space-6)" },
-  { name: "--padding-xl", value: "var(--space-8)" },
-  { name: "--padding-2xl", value: "calc(var(--space-8) + var(--space-4))" },
-  { name: "--spacing-xs", value: "var(--space-1)" },
-  { name: "--spacing-sm", value: "var(--space-2)" },
-  { name: "--spacing-md", value: "var(--space-4)" },
-  { name: "--spacing-lg", value: "var(--space-6)" },
-  { name: "--spacing-xl", value: "var(--space-8)" },
+// Legacy --margin-*/--padding-*/--spacing-* aliases were retired after the
+// token migration (all usage moved to --space-*). Kept as an empty list so the
+// generator contract is unchanged; re-add an entry only as a temporary bridge.
+const legacyAliasTokens = [];
+
+// Dark theme — semantic overrides applied under `.dark` (global toggle on <html>
+// or a scoped wrapper). Only tokens that must change; everything else inherits
+// the light value. Token utilities (bg-surface, text-content-*, ...) flip
+// automatically. Contrast is validated by `yarn design:contrast`.
+const darkTokens = [
+  { name: "--color-background", value: "#0f1216", comment: "Dark page background" },
+  { name: "--color-surface", value: "#171b21", comment: "Dark raised surface" },
+  { name: "--color-surface-subtle", value: "#1e232b", comment: "Dark subtle/hover surface" },
+  { name: "--color-surface-strong", value: "#2b313b", comment: "Dark selected/pressed surface" },
+  { name: "--color-content-on-background", value: "#e9ebef", comment: "Text on dark background" },
+  { name: "--color-content-on-surface", value: "#c2c7d0", comment: "Text on dark surface" },
+  { name: "--color-content-on-surface-strong", value: "#f3f5f8", comment: "Strong text on dark surface" },
+  { name: "--color-content-secondary", value: "#99a1ad", comment: "Dark metadata text" },
+  { name: "--color-content-disabled", value: "#5e6671", comment: "Dark disabled text" },
+  { name: "--color-secondary", value: "#2b313b", comment: "Dark borders/dividers" },
+  { name: "--color-border-strong", value: "#3a4250", comment: "Dark emphasized borders" },
+  { name: "--color-primary", value: "#7c8cff", comment: "Lighter brand action for dark bg" },
+  { name: "--color-primary-hover", value: "color-mix(in srgb, white 10%, var(--color-primary))", comment: "Dark primary hover (lighten)" },
+  { name: "--color-primary-active", value: "color-mix(in srgb, white 18%, var(--color-primary))", comment: "Dark primary pressed (lighten)" },
+  { name: "--color-on-primary", value: "#0f1216", comment: "Dark text on the lighter primary" },
 ];
 
 const componentTokenNames = [
@@ -114,4 +153,5 @@ module.exports = {
   legacyAliasTokens,
   rootTokens,
   themeTokens,
+  darkTokens,
 };

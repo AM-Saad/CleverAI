@@ -195,8 +195,8 @@ defineExpose({
 }
 
 .collapsed-strip:hover {
-  background: var(--ui-bg-elevated, #f8f9fa);
-  border-color: var(--color-primary, #6366f1);
+  background: var(--ui-bg-elevated);
+  border-color: var(--color-primary);
 }
 
 .collapsed-strip-content {
@@ -211,7 +211,7 @@ defineExpose({
   width: 20px;
   height: 20px;
   opacity: 0.7;
-  color: var(--color-primary, #6366f1);
+  color: var(--color-primary);
 }
 
 .collapsed-label {
@@ -221,7 +221,7 @@ defineExpose({
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-  color: var(--ui-text-dimmed, #64748b);
+  color: var(--ui-text-dimmed);
   white-space: nowrap;
 }
 
@@ -234,7 +234,7 @@ defineExpose({
 
 .collapsed-strip:hover .collapsed-expand-icon {
   opacity: 1;
-  color: var(--color-primary, #6366f1);
+  color: var(--color-primary);
 }
 
 /* ─── Collapse Button ───────────────────────────────────────────── */
@@ -249,9 +249,9 @@ defineExpose({
   width: 22px;
   height: 22px;
   border-radius: 6px;
-  background: var(--ui-bg, #fff);
-  border: 1px solid var(--ui-border, #e2e8f0);
-  color: var(--ui-text-dimmed, #94a3b8);
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border);
+  color: var(--ui-text-dimmed);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.2s ease, background 0.15s ease, color 0.15s ease, transform 0.15s ease;
@@ -263,9 +263,9 @@ defineExpose({
 }
 
 .collapse-btn:hover {
-  background: var(--color-primary, #6366f1);
+  background: var(--color-primary);
   color: white;
-  border-color: var(--color-primary, #6366f1);
+  border-color: var(--color-primary);
   transform: scale(1.1);
 }
 
@@ -305,7 +305,7 @@ defineExpose({
 }
 
 .resize-handle:hover {
-  background: color-mix(in srgb, var(--color-primary, #6366f1) 12%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
 }
 
 .resize-handle.handle-disabled {
@@ -335,12 +335,12 @@ defineExpose({
   width: 4px;
   height: 4px;
   border-radius: 50%;
-  background: var(--color-primary, #6366f1);
+  background: var(--color-primary);
 }
 
 /* Active resize visual feedback */
 .workspace-layout-desktop.is-resizing .resize-handle {
-  background: color-mix(in srgb, var(--color-primary, #6366f1) 20%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -362,9 +362,9 @@ defineExpose({
   display: flex;
   align-items: stretch;
   flex-shrink: 0;
-  background: var(--ui-bg, #fff);
-  border: 1px solid var(--ui-border, #e2e8f0);
-  border-radius: var(--radius-xl, 12px);
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border);
+  border-radius: var(--radius-xl);
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
@@ -381,17 +381,17 @@ defineExpose({
   cursor: pointer;
   background: transparent;
   border: none;
-  color: var(--ui-text-dimmed, #94a3b8);
+  color: var(--ui-text-dimmed);
   transition: color 0.15s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
 .mobile-tab-btn:active {
-  background: color-mix(in srgb, var(--color-primary, #6366f1) 6%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
 }
 
 .mobile-tab-btn.is-active {
-  color: var(--color-primary, #6366f1);
+  color: var(--color-primary);
 }
 
 /* Active indicator line at the top of each tab */
@@ -403,7 +403,7 @@ defineExpose({
   width: 0;
   height: 2px;
   border-radius: 0 0 3px 3px;
-  background: var(--color-primary, #6366f1);
+  background: var(--color-primary);
   transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

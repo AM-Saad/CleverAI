@@ -1,19 +1,19 @@
 <template>
   <div class="flex justify-between pt-4">
-    <UButton @click="$emit('previous')" :disabled="isFirstCard || isSubmitting" color="neutral" variant="soft"
+    <UiButton @click="$emit('previous')" :disabled="isFirstCard || isSubmitting" color="neutral" variant="soft"
       icon="i-heroicons-arrow-left" aria-label="Go to previous card">
       Previous
-    </UButton>
+    </UiButton>
 
-    <UButton @click="$emit('skip')" :disabled="isSubmitting" color="warning" variant="soft" icon="i-heroicons-forward"
+    <UiButton @click="$emit('skip')" :disabled="isSubmitting" color="warning" variant="soft" icon="i-heroicons-forward"
       aria-label="Skip this card without grading">
       Skip <span class="text-sm opacity-75">(S)</span>
-    </UButton>
+    </UiButton>
 
-    <UButton @click="$emit('next')" :disabled="isLastCard || isSubmitting" color="neutral" variant="soft"
+    <UiButton @click="$emit('next')" :disabled="isLastCard || isSubmitting" color="neutral" variant="soft"
       trailing-icon="i-heroicons-arrow-right" aria-label="Go to next card">
       Next
-    </UButton>
+    </UiButton>
   </div>
 </template>
 

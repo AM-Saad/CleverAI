@@ -39,10 +39,10 @@ const { onKeydown } = useFocusTrap(computed(() => props.show), panelEl, {
                 </ui-paragraph>
               </div>
             </slot>
-            <u-button type="button" variant="ghost" size="xs" color="neutral" aria-label="Close dialog"
+            <ui-button type="button" variant="ghost" size="xs" color="neutral" aria-label="Close dialog"
               class="modal-default-button place-self-start cursor-pointer" @click="$emit('close')">
               <u-icon name="mdi:close"></u-icon>
-            </u-button>
+            </ui-button>
           </div>
 
           <div class="modal-body p-3">

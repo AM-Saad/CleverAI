@@ -3,8 +3,9 @@ import { ReorderGroup, ReorderItem, useDragControls } from "motion-v";
 import { useReorderableList } from "~/composables/shared";
 import type { BoardColumnState } from "~/features/board/composables/useBoardColumnsStore";
 import type { BoardItemState } from "~/features/board/composables/useBoardItemsStore";
-import BoardColumn from "./BoardColumn.vue";
+import BoardColumn from "~/features/board/components/BoardColumn.vue";
 import { useBoardColumnsStore } from "../composables/useBoardColumnsStore";
+import { designTokenValues } from "~/design-system/tokens.generated";
 
 const props = defineProps<{
   itemsByColumn: Map<string | null, BoardItemState[]>;
@@ -225,7 +226,7 @@ const expandedColumnData = computed(() => {
         items: uncategorizedItems.value,
         allItems: allUncategorizedItems.value,
         icon: 'heroicons:inbox',
-        color: '#94a3b8'
+        color: designTokenValues['--color-content-secondary']
       };
     }
   }
@@ -287,7 +288,7 @@ watch([localColumns, uncategorizedItems], () => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full min-h-0 min-w-0 bg-surface rounded-xl shadow-inner overflow-hidden">
+  <div class="flex flex-col h-full min-h-0 min-w-0 bg-surface rounded-[var(--radius-xl)] shadow-[var(--shadow-dropdown)] overflow-hidden">
 
     <!-- Mobile Header with Column Navigation -->
     <div class="lg:hidden shrink-0">
@@ -359,9 +360,9 @@ watch([localColumns, uncategorizedItems], () => {
       <!-- Uncategorized column (always first) -->
       <BoardColumn v-if="uncategorizedItems.length > 0 || orderedColumns.length === 0" id="column-uncategorized"
         :column-id="null" column-name="Uncategorized" :items="uncategorizedItems"
-        :all-column-items="allUncategorizedItems" :is-default="true" icon="heroicons:inbox" color="#94a3b8"
+        :all-column-items="allUncategorizedItems" :is-default="true" icon="heroicons:inbox" :color="designTokenValues['--color-content-secondary']"
         :selected-item-id="selectedItemId" :item-drag-disabled="itemReorderLocked"
-        class="snap-center lg:snap-align-none shadow-sm w-[85vw] lg:w-80 shrink-0 h-full"
+        class="snap-center lg:snap-align-none shadow-[var(--shadow-dropdown)] w-[85vw] lg:w-80 shrink-0 h-full"
         @select-item="(id) => emit('select-item', id)" @delete-item="(id) => emit('delete-item', id)"
         @item-dragging="handleItemDraggingChange" />
 
@@ -379,7 +380,7 @@ watch([localColumns, uncategorizedItems], () => {
                   :color="getColumnColor ? getColumnColor(index) : undefined"
                   :icon="getColumnIcon ? getColumnIcon(column.name) : undefined" :is-dragging="isDragging"
                   :selected-item-id="selectedItemId" :item-drag-disabled="itemReorderLocked"
-                  class="snap-center lg:snap-align-none shadow-sm w-[85vw] lg:w-80 shrink-0 h-full"
+                  class="snap-center lg:snap-align-none shadow-[var(--shadow-dropdown)] w-[85vw] lg:w-80 shrink-0 h-full"
                   :class="{ 'ring-2 ring-primary ring-offset-2': isDragging }"
                   @rename="(name) => columnsStore.updateColumn(column.id, name)"
                   @delete="columnsStore.deleteColumn(column.id)" @select-item="(id) => emit('select-item', id)"
@@ -394,7 +395,7 @@ watch([localColumns, uncategorizedItems], () => {
       <!-- Add column button -->
       <div class="shrink-0 w-[85vw] lg:w-80 snap-center lg:snap-align-none h-full" style="height: 100%;">
         <div v-if="!showNewColumnInput"
-          class="h-full min-h-50 border-2 border-dashed border-surface-strong rounded-xl flex items-center justify-center cursor-pointer hover:border-primary transition-all group"
+          class="h-full min-h-50 border-2 border-dashed border-surface-strong rounded-[var(--radius-xl)] flex items-center justify-center cursor-pointer hover:border-primary transition-all group"
           @click="showNewColumnInput = true">
           <div class="flex flex-col items-center gap-2 text-content-secondary group-hover:text-primary">
             <Icon name="heroicons:plus" class="w-8 h-8" />
@@ -402,18 +403,18 @@ watch([localColumns, uncategorizedItems], () => {
           </div>
         </div>
 
-        <div v-else class="bg-white rounded-xl p-4 shadow-lg">
+        <div v-else class="bg-white rounded-[var(--radius-xl)] p-4 shadow-[var(--shadow-modal)]">
           <UiSubtitle class="mb-3" size="sm">New Column</UiSubtitle>
-          <UInput v-model="newColumnName" placeholder="Enter title..." size="md" class="my-3 w-full" autofocus
+          <UiInput v-model="newColumnName" placeholder="Enter title..." size="md" class="my-3 w-full" autofocus
             @keyup.enter="createColumn" @keyup.escape="cancelNewColumn" />
           <div class="flex justify-end gap-2 w-full">
-            <UButton size="sm" color="neutral" variant="ghost" @click="cancelNewColumn">
+            <UiButton size="sm" color="neutral" variant="ghost" @click="cancelNewColumn">
               Cancel
-            </UButton>
-            <UButton size="sm" color="primary" :loading="isCreatingColumn" :disabled="!newColumnName.trim()"
+            </UiButton>
+            <UiButton size="sm" color="primary" :loading="isCreatingColumn" :disabled="!newColumnName.trim()"
               @click="createColumn">
               Create
-            </UButton>
+            </UiButton>
 
           </div>
         </div>
@@ -430,11 +431,11 @@ watch([localColumns, uncategorizedItems], () => {
 
         <div class="space-y-2 max-h-[60vh] overflow-y-auto">
           <div v-for="(column, index) in reorderingColumns" :key="column.id"
-            class="flex items-center gap-3 rounded-xl border border-secondary bg-surface-subtle p-3">
+            class="flex items-center gap-3 rounded-[var(--radius-xl)] border border-secondary bg-surface-subtle p-3">
             <div class="flex flex-col gap-1">
-              <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:chevron-up" :disabled="index === 0"
+              <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:chevron-up" :disabled="index === 0"
                 :aria-label="`Move ${column.name} up`" @click="moveColumnInModal(index, 'up')" />
-              <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:chevron-down"
+              <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:chevron-down"
                 :disabled="index === reorderingColumns.length - 1" :aria-label="`Move ${column.name} down`"
                 @click="moveColumnInModal(index, 'down')" />
             </div>
@@ -456,12 +457,12 @@ watch([localColumns, uncategorizedItems], () => {
 
       <template #footer>
         <div class="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-          <UButton color="neutral" variant="outline" @click="showColumnReorderModal = false">
+          <UiButton color="neutral" variant="outline" @click="showColumnReorderModal = false">
             Cancel
-          </UButton>
-          <UButton color="primary" :loading="isReorderingColumns" @click="saveColumnReorder">
+          </UiButton>
+          <UiButton color="primary" :loading="isReorderingColumns" @click="saveColumnReorder">
             Save Order
-          </UButton>
+          </UiButton>
         </div>
       </template>
     </shared-dialog-modal>

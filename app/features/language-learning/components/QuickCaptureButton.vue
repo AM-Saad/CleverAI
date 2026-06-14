@@ -3,18 +3,19 @@
     <template v-if="enabled">
       <Transition name="fab">
         <button type="button" title="Quick translate"
-          class="fixed bottom-6 right-6 z-30 w-12 h-12 rounded-full bg-primary text-white shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+          class="fixed bottom-6 right-6 z-30 w-12 h-12 rounded-full bg-primary text-white shadow-[var(--shadow-card-hover)] flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
           @click="_isOpen = true">
           <shared-icon name="translation" color="white" />
         </button>
       </Transition>
 
-      <language-quick-capture-modal :show="_isOpen" @close="_isOpen = false" />
+      <QuickCaptureModal :show="_isOpen" @close="_isOpen = false" />
     </template>
   </Teleport>
 </template>
 
 <script setup lang="ts">
+import QuickCaptureModal from "~/features/language-learning/components/QuickCaptureModal.vue";
 const { preferences, loadPreferences } = useLanguageCapture();
 const { _isOpen } = useQuickCaptureModal();
 

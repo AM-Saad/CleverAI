@@ -99,7 +99,7 @@ function getStatusLabel(model: { isDownloading: boolean; isLoading: boolean; isR
     leave-active-class="transition-all duration-300 ease-in" leave-from-class="transform translate-y-0 opacity-100"
     leave-to-class="transform translate-y-full opacity-0">
     <div v-if="showPanel" id="ai-download-panel"
-      class="ai-dl-panel fixed bottom-0 right-4 w-80 max-sm:left-4 max-sm:right-4 max-sm:w-auto z-[999] rounded-t-xl overflow-hidden">
+      class="ai-dl-panel fixed bottom-0 right-4 w-80 max-sm:left-4 max-sm:right-4 max-sm:w-auto z-[999] rounded-[var(--radius-xl)] overflow-hidden">
       <!-- Header -->
       <header class="ai-dl-header flex items-center justify-between cursor-pointer px-4 h-10 select-none" tabindex="0"
         @click="toggleCollapsed" aria-label="AI Model Download Status">
@@ -137,7 +137,7 @@ function getStatusLabel(model: { isDownloading: boolean; isLoading: boolean; isR
             <span class="text-xs font-medium text-white/90 truncate" :title="model.modelId">
               {{ getFriendlyName(model.modelId) }}
             </span>
-            <span class="text-[10px] font-semibold uppercase tracking-wider shrink-0 px-1.5 py-0.5 rounded-full" :class="{
+            <span class="text-[10px] font-semibold uppercase tracking-wider shrink-0 px-1.5 py-0.5 rounded-[var(--radius-md)]" :class="{
               'ai-dl-badge-downloading': model.isDownloading,
               'ai-dl-badge-loading': model.isLoading && !model.isDownloading,
               'ai-dl-badge-ready': model.isReady && !model.isDownloading && !model.isLoading,
@@ -163,7 +163,7 @@ function getStatusLabel(model: { isDownloading: boolean; isLoading: boolean; isR
           </div>
 
           <!-- Loading shimmer (post-download, preparing model) -->
-          <div v-if="model.isLoading && !model.isDownloading" class="ai-dl-shimmer rounded-full h-1" />
+          <div v-if="model.isLoading && !model.isDownloading" class="ai-dl-shimmer rounded-[var(--radius-sm)] h-1" />
         </div>
       </div>
     </div>
@@ -188,7 +188,7 @@ function getStatusLabel(model: { isDownloading: boolean; isLoading: boolean; isR
 }
 
 .ai-dl-icon-wrap {
-  color: #60a5fa;
+  color: var(--color-accent-blue);
   animation: ai-icon-pulse 2s ease-in-out infinite;
 }
 
@@ -216,19 +216,19 @@ function getStatusLabel(model: { isDownloading: boolean; isLoading: boolean; isR
 
 /* Badges */
 .ai-dl-badge-downloading {
-  background: rgba(96, 165, 250, 0.15);
-  color: #93bbfd;
+  background: color-mix(in srgb, var(--color-accent-blue) 15%, transparent);
+  color: var(--color-accent-blue);
 }
 
 .ai-dl-badge-loading {
-  background: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
+  background: color-mix(in srgb, var(--color-warning) 15%, transparent);
+  color: var(--color-warning);
   animation: ai-badge-blink 1.4s ease-in-out infinite;
 }
 
 .ai-dl-badge-ready {
-  background: rgba(52, 211, 153, 0.15);
-  color: #34d399;
+  background: color-mix(in srgb, var(--color-success) 15%, transparent);
+  color: var(--color-success);
 }
 
 @keyframes ai-badge-blink {
@@ -255,7 +255,10 @@ function getStatusLabel(model: { isDownloading: boolean; isLoading: boolean; isR
 .ai-dl-progress-fill {
   height: 100%;
   border-radius: 9999px;
-  background: linear-gradient(90deg, #3b82f6, #60a5fa, #93c5fd);
+  background: linear-gradient(90deg,
+      var(--color-accent-blue),
+      color-mix(in srgb, var(--color-accent-blue) 75%, white),
+      color-mix(in srgb, var(--color-accent-blue) 50%, white));
   transition: width 0.3s ease;
   position: relative;
 }

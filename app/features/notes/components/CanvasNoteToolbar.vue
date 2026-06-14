@@ -2,6 +2,7 @@
 import type { IconName } from "#imports";
 import type { NoteToolbarControl } from "~/components/shared/NoteToolbarControls.vue";
 import { computed } from "vue";
+import { designTokenValues } from "~/design-system/tokens.generated";
 
 interface Props {
   isFullscreen?: boolean;
@@ -61,9 +62,20 @@ const shapeTools: Tool[] = [
   { id: "star", label: "Star", icon: "star", menuIcon: "i-lucide-star" },
 ];
 
+// Swatch paint colors resolved from design tokens (canvas needs literal color
+// strings, not CSS custom properties). Colors snap to the reconciled tokens.
 const colorPresets = [
-  "transparent", "#1e293b", "#64748b", "#ef4444", "#f97316", "#eab308",
-  "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899", "#ffffff",
+  "transparent",
+  designTokenValues["--color-content-on-background"],
+  designTokenValues["--color-content-secondary"],
+  designTokenValues["--color-error"],
+  designTokenValues["--color-accent-orange"],
+  designTokenValues["--color-warning"],
+  designTokenValues["--color-success"],
+  designTokenValues["--color-accent-blue"],
+  designTokenValues["--color-accent-purple"],
+  designTokenValues["--color-accent-pink"],
+  designTokenValues["--color-white"],
 ];
 
 const borderStyles = [

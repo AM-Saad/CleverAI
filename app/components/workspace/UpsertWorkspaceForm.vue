@@ -97,19 +97,19 @@ watch(
         <shared-error-message :error="typedError || updateTypedError" />
         <u-form :schema="CreateWorkspaceDTO" :state="state" class="space-y-2" @submit="onSubmit">
           <u-form-field label="Title" name="title" required>
-            <u-input v-model="state.title" autofocus class="w-full" />
+            <ui-input v-model="state.title" autofocus class="w-full" />
           </u-form-field>
 
           <u-form-field label="Description" name="description">
-            <u-input v-model="state.description" class="w-full" />
+            <ui-input v-model="state.description" class="w-full" />
           </u-form-field>
           <div class="flex gap-3 justify-end pt-2">
-            <u-button variant="ghost" @click="closeModel" :disabled="creating || updating">
+            <ui-button variant="ghost" @click="closeModel" :disabled="creating || updating">
               Cancel
-            </u-button>
-            <u-button type="submit" :loading="creating || updating" :disabled="!canSubmit">
+            </ui-button>
+            <ui-button type="submit" :loading="creating || updating" :disabled="!canSubmit">
               {{ props.workspace ? "Update" : "Create" }}
-            </u-button>
+            </ui-button>
 
           </div>
         </u-form>

@@ -89,8 +89,8 @@ const cardVariants = {
   position: absolute;
   width: 100%;
   padding: 16px;
-  background: #fff;
-  border: 1px solid #ccc;
+  background: var(--color-surface);
+  border: 1px solid var(--color-secondary);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 }

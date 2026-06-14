@@ -10,7 +10,7 @@
       </div>
 
       <!-- Real input -->
-      <u-input ref="inputRef" :model-value="modelValue" v-bind="$attrs"
+      <ui-input ref="inputRef" :model-value="modelValue" v-bind="$attrs"
         :class="['w-full', ghostSuffix ? 'caret-primary' : '']" autocomplete="off" autocorrect="off" spellcheck="false"
         @update:model-value="handleInput" @keydown="handleKeydown" @focus="onFocus" @blur="onBlur" />
     </div>
@@ -18,7 +18,7 @@
     <!-- Dropdown suggestion list -->
     <!-- <Transition name="suggestions">
       <div v-if="showDropdown"
-        class="absolute z-50 left-0 right-0 top-full mt-1 bg-surface border border-secondary rounded-xl shadow-lg overflow-hidden max-h-52 overflow-y-auto"
+        class="absolute z-50 left-0 right-0 top-full mt-1 bg-surface border border-secondary rounded-[var(--radius-xl)] shadow-[var(--shadow-dropdown)] overflow-hidden max-h-52 overflow-y-auto"
         role="listbox" :aria-label="dropdownLabel">
         <button v-for="(item, i) in suggestions" :key="item" type="button" role="option"
           :aria-selected="i === activeIndex" :class="[
@@ -29,7 +29,7 @@
           ]" @mousedown.prevent="selectItem(item)">
           <span>{{ item }}</span>
           <kbd v-if="i === 0"
-            class="shrink-0 hidden sm:inline-flex items-center gap-0.5 rounded border border-secondary px-1 py-0.5 text-[10px] font-mono text-content-secondary">Tab</kbd>
+            class="shrink-0 hidden sm:inline-flex items-center gap-0.5 rounded-[var(--radius-md)] border border-secondary px-1 py-0.5 text-[10px] font-mono text-content-secondary">Tab</kbd>
         </button>
       </div>
     </Transition> -->

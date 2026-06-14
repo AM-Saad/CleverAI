@@ -18,7 +18,7 @@
             📚 Card Due Notifications
             <ui-paragraph>Get notified when you have cards ready for review</ui-paragraph>
           </div>
-          <USwitch v-model="preferences.cardDueEnabled" :loading="loading" @change="updatePreferences" />
+          <UiSwitch v-model="preferences.cardDueEnabled" :loading="loading" @change="updatePreferences" />
         </template>
 
         <!-- Card Due Settings -->
@@ -26,7 +26,7 @@
           <!-- <UForm label="Notification Time" help="What time would you like to be notified?">
             <div class="flex items-center gap-2">
               <u-icon name="i-heroicons-clock" :size="UI_CONFIG.ICON_SIZE" class="text-content-secondary" />
-              <u-input v-model="preferences.cardDueTime" type="time"
+              <ui-input v-model="preferences.cardDueTime" type="time"
                 :disabled="loading || preferences.sendAnytimeOutsideQuietHours" @change="updatePreferences" :ui="{
                   base: 'w-full',
                 }" />
@@ -87,7 +87,7 @@
                         Custom
                       </h4>
                       <div v-if="isCustomThreshold" class="flex items-center gap-2">
-                        <UInput v-model.number="customThresholdValue" type="number" min="1" max="100" class="w-20"
+                        <UiInput v-model.number="customThresholdValue" type="number" min="1" max="100" class="w-20"
                           size="sm" :loading="loading" @input="updateCustomThreshold" />
                         <span class="text-xs text-content-secondary">cards</span>
                       </div>
@@ -120,7 +120,7 @@
             📅 Daily Study Reminders
             <ui-paragraph>Get reminded to study at a specific time each day</ui-paragraph>
           </div>
-          <USwitch v-model="preferences.dailyReminderEnabled" :loading="loading" @change="updatePreferences" />
+          <UiSwitch v-model="preferences.dailyReminderEnabled" :loading="loading" @change="updatePreferences" />
         </template>
 
         <!-- Daily Reminder Settings -->
@@ -148,7 +148,7 @@
               No notifications during these hours
             </ui-paragraph>
           </div>
-          <USwitch v-model="preferences.quietHoursEnabled" :loading="loading" @change="updatePreferences" />
+          <UiSwitch v-model="preferences.quietHoursEnabled" :loading="loading" @change="updatePreferences" />
         </template>
 
         <!-- Quiet Hours Settings -->
@@ -196,7 +196,7 @@
               once your due-card threshold is met.
             </ui-paragraph>
           </div>
-          <USwitch v-model="preferences.sendAnytimeOutsideQuietHours" :loading="loading" @change="updatePreferences" />
+          <UiSwitch v-model="preferences.sendAnytimeOutsideQuietHours" :loading="loading" @change="updatePreferences" />
         </template>
 
         <div class="text-xs text-content-secondary flex items-center gap-1">
@@ -221,7 +221,7 @@
               hours).
             </ui-paragraph>
           </div>
-          <USwitch v-model="preferences.activeHoursEnabled" :loading="loading" @change="updatePreferences" />
+          <UiSwitch v-model="preferences.activeHoursEnabled" :loading="loading" @change="updatePreferences" />
         </template>
 
         <div v-if="preferences.activeHoursEnabled" class="space-y-3 pl-4 border-l-2 border-secondary">

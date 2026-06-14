@@ -18,9 +18,9 @@
           { label: 'Download as PDF', icon: 'i-heroicons-document', onSelect: () => exportContent('Note', note.content, 'pdf') }
         ]
       ]">
-        <u-button variant="outline" color="primary" size="sm">
+        <ui-button variant="outline" color="primary" size="sm">
           <shared-icon name="download" class="w-4 h-4" />
-        </u-button>
+        </ui-button>
       </UDropdownMenu>
     </SharedNoteToolbar>
 
@@ -33,34 +33,34 @@
             d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <span class="text-sm font-medium text-center">{{ note.error }}</span>
-        <UButton v-if="!isConflictError" variant="ghost" color="error" size="xs" class="mt-2 underline" @click="retry">
+        <UiButton v-if="!isConflictError" variant="ghost" color="error" size="xs" class="mt-2 underline" @click="retry">
           Try again
-        </UButton>
-        <div v-else class="mt-4 w-full max-w-2xl rounded border border-warning/30 bg-warning/5 p-3 text-content-on-surface">
+        </UiButton>
+        <div v-else class="mt-4 w-full max-w-2xl rounded-[var(--radius-lg)] border border-warning/30 bg-warning/5 p-3 text-content-on-surface">
           <div class="grid gap-3 md:grid-cols-2">
             <div class="min-w-0">
               <div class="mb-1 text-xs font-semibold text-warning">Local draft</div>
-              <div class="max-h-32 overflow-auto rounded bg-surface p-2 text-xs text-content-secondary">
+              <div class="max-h-32 overflow-auto rounded-[var(--radius-md)] bg-surface p-2 text-xs text-content-secondary">
                 {{ localConflictPreview }}
               </div>
             </div>
             <div class="min-w-0">
               <div class="mb-1 text-xs font-semibold text-warning">Server version</div>
-              <div class="max-h-32 overflow-auto rounded bg-surface p-2 text-xs text-content-secondary">
+              <div class="max-h-32 overflow-auto rounded-[var(--radius-md)] bg-surface p-2 text-xs text-content-secondary">
                 {{ serverConflictPreview }}
               </div>
             </div>
           </div>
           <div class="mt-3 flex flex-wrap justify-center gap-2">
-            <UButton size="xs" color="warning" variant="soft" @click="resolveConflict('keep-local')">
+            <UiButton size="xs" color="warning" variant="soft" @click="resolveConflict('keep-local')">
               Keep mine
-            </UButton>
-            <UButton size="xs" color="neutral" variant="soft" @click="resolveConflict('keep-server')">
+            </UiButton>
+            <UiButton size="xs" color="neutral" variant="soft" @click="resolveConflict('keep-server')">
               Use server
-            </UButton>
-            <UButton size="xs" color="primary" variant="soft" @click="resolveConflict('manual-merge')">
+            </UiButton>
+            <UiButton size="xs" color="primary" variant="soft" @click="resolveConflict('manual-merge')">
               Edit local copy
-            </UButton>
+            </UiButton>
           </div>
         </div>
       </div>

@@ -67,11 +67,11 @@ const selectedTags = computed(() => {
 <template>
   <UPopover v-model:open="isOpen">
     <template #default="{ open }">
-      <UButton size="sm" :icon="selectedCount > 0 ? 'heroicons:funnel-solid' : 'heroicons:funnel'"
+      <UiButton size="sm" :icon="selectedCount > 0 ? 'heroicons:funnel-solid' : 'heroicons:funnel'"
         trailing-icon="heroicons:chevron-down-20-solid">
         <span v-if="selectedCount === 0">Filter</span>
         <span v-else>{{ selectedCount }} tag{{ selectedCount === 1 ? '' : 's' }}</span>
-      </UButton>
+      </UiButton>
     </template>
 
     <template #content>
@@ -82,12 +82,12 @@ const selectedTags = computed(() => {
             Filter
           </span>
           <div class="flex gap-1">
-            <UButton v-if="selectedCount > 0" size="xs" color="neutral" variant="ghost" @click="clearAll">
+            <UiButton v-if="selectedCount > 0" size="xs" color="neutral" variant="ghost" @click="clearAll">
               Clear
-            </UButton>
-            <UButton v-if="selectedCount < allTags.length" size="xs" color="neutral" variant="ghost" @click="selectAll">
+            </UiButton>
+            <UiButton v-if="selectedCount < allTags.length" size="xs" color="neutral" variant="ghost" @click="selectAll">
               All
-            </UButton>
+            </UiButton>
           </div>
         </div>
 
@@ -105,9 +105,9 @@ const selectedTags = computed(() => {
                   ? 'text-primary'
                   : 'text-content-disabled',
               ]" />
-            <UBadge :color="(tag.color as any)" variant="subtle" size="sm" class="flex-1 justify-start">
+            <UiBadge :color="(tag.color as any)" variant="subtle" size="sm" class="flex-1 justify-start">
               {{ tag.name }}
-            </UBadge>
+            </UiBadge>
           </button>
         </div>
 
@@ -119,10 +119,10 @@ const selectedTags = computed(() => {
         <!-- Selected tags preview (when closed) -->
         <div v-if="selectedTags.length > 0" class="mt-2 pt-2 border-t border-secondary">
           <div class="flex flex-wrap gap-1">
-            <UBadge v-for="tag in selectedTags.slice(0, 3)" :key="tag.id" :color="(tag.color as any)" variant="subtle"
+            <UiBadge v-for="tag in selectedTags.slice(0, 3)" :key="tag.id" :color="(tag.color as any)" variant="subtle"
               size="xs">
               {{ tag.name }}
-            </UBadge>
+            </UiBadge>
             <span v-if="selectedTags.length > 3" class="text-xs text-content-secondary">
               +{{ selectedTags.length - 3 }} more
             </span>

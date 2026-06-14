@@ -1,6 +1,6 @@
 <template>
   <div
-    class="relative flex h-5 w-5 rotate-90 items-center justify-center dark:fill-slate-50"
+    class="relative flex h-5 w-5 rotate-90 items-center justify-center dark:fill-[var(--color-surface-subtle)]"
   >
     <svg
       id="Layer_1"

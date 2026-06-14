@@ -10,7 +10,7 @@ const Questions = defineAsyncComponent(
   () => import("~/components/workspace/hub/Questions.vue")
 );
 const MaterialsList = defineAsyncComponent(
-  () => import("~/components/workspace/hub/materials/MaterialsList.vue")
+  () => import("~/features/materials/components/MaterialsList.vue")
 );
 
 interface Props {
@@ -74,10 +74,10 @@ function select(index: number) {
 
           </u-tooltip>
         </div>
-        <u-button variant="outline" size="xs" :aria-expanded="showUpload" aria-controls="upload-materials"
+        <ui-button variant="outline" size="xs" :aria-expanded="showUpload" aria-controls="upload-materials"
           @click="$emit('toggle-upload')" title="Create New Study Material">
           New Material
-        </u-button>
+        </ui-button>
       </template>
 
       <template #default>

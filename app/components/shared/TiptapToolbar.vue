@@ -5,7 +5,7 @@
     <template #body>
       <div class="space-y-4 pt-2">
         <UiLabel tag="label" for="image-url-input">Image URL</UiLabel>
-        <u-input
+        <ui-input
           id="image-url-input"
           v-model="imageUrlInput"
           placeholder="https://example.com/image.png"
@@ -16,8 +16,8 @@
     </template>
     <template #footer>
       <div class="flex justify-end gap-2">
-        <u-button variant="ghost" color="neutral" @click="showImageModal = false">Cancel</u-button>
-        <u-button color="primary" :disabled="!imageUrlInput.trim()" @click="confirmAddImage">Add Image</u-button>
+        <ui-button variant="ghost" color="neutral" @click="showImageModal = false">Cancel</ui-button>
+        <ui-button color="primary" :disabled="!imageUrlInput.trim()" @click="confirmAddImage">Add Image</ui-button>
       </div>
     </template>
   </shared-dialog-modal>

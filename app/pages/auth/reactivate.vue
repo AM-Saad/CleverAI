@@ -1,6 +1,6 @@
 <template>
   <div class="flex items-center justify-center min-h-screen bg-background">
-    <div class="w-full max-w-md p-8 bg-white rounded-[var(--radius-2xl)] shadow-lg">
+    <div class="w-full max-w-md p-8 bg-white rounded-[var(--radius-2xl)] shadow-[var(--shadow-card-hover)]">
       <div class="text-center mb-6">
         <icon name="mdi:account-reactivate" class="text-primary mx-auto mb-4" size="64"></icon>
         <h1 class="text-2xl font-bold text-content-on-surface-strong">
@@ -48,9 +48,9 @@
         <p class="text-sm text-content-secondary">
           Click the button below to reactivate your account and restore access to all your data.
         </p>
-        <UButton color="primary" class="w-full justify-center" :disabled="pending" @click="handleReactivate">
+        <UiButton color="primary" class="w-full justify-center" :disabled="pending" @click="handleReactivate">
           {{ pending ? "Reactivating..." : "Reactivate Account" }}
-        </UButton>
+        </UiButton>
 
         <div class="text-center">
           <NuxtLink to="/auth/signIn" class="text-sm text-primary hover:underline">

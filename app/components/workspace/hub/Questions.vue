@@ -2,10 +2,10 @@
   <div class="w-full h-full overflow-auto grow flex flex-col">
     <!-- Bulk Enroll Button -->
     <div v-if="draftQuestions.length > 0" class="mb-3 flex justify-start">
-      <u-button size="sm" variant="soft" color="primary" @click="bulkEnrollDrafts" :loading="bulkEnrolling">
+      <ui-button size="sm" variant="soft" color="primary" @click="bulkEnrollDrafts" :loading="bulkEnrolling">
         <Icon name="i-lucide-check-circle" class="w-4 h-4 mr-1" />
         Enroll {{ draftQuestions.length }} Draft{{ draftQuestions.length > 1 ? 's' : '' }}
-      </u-button>
+      </ui-button>
     </div>
 
     <shared-empty-state v-if="(!questionsToShow || questionsToShow.length === 0)"
@@ -18,9 +18,9 @@
         <!-- Draft/Enrollment status indicators -->
         <div class="absolute top-1 right-2 flex items-center gap-2">
           <!-- Draft badge -->
-          <u-badge v-if="q.status === 'DRAFT'" color="secondary" variant="subtle" size="xs">
+          <ui-badge v-if="q.status === 'DRAFT'" color="secondary" variant="subtle" size="xs">
             Draft
-          </u-badge>
+          </ui-badge>
           <!-- Enrolled badge -->
           <div v-else-if="'id' in q && q.id && props.enrolledIds.has(q.id)"
             class="inline-flex items-center justify-center h-6 w-8 rounded-full text-xs font-medium bg-primary border border-secondary text-on-primary"
@@ -28,10 +28,10 @@
             <span>✓</span>
           </div>
           <!-- Context button -->
-          <u-button v-if="q.sourceRef" size="xs" variant="ghost" @click.stop="contextBridge.locateSource(q, id)"
+          <ui-button v-if="q.sourceRef" size="xs" variant="ghost" @click.stop="contextBridge.locateSource(q, id)"
             title="View source context">
             <Icon name="i-lucide-external-link" class="w-3 h-3" />
-          </u-button>
+          </ui-button>
         </div>
 
         <u-collapsible class="flex flex-col min-h-0">
@@ -48,7 +48,7 @@
             </ul>
             <!-- Enroll Button -->
             <div class="mt-2 pt-3" v-if="'id' in q && q.id && !props.enrolledIds.has(q.id)">
-              <ReviewEnrollButton :resource-type="'question'" :resource-id="q.id"
+              <EnrollButton :resource-type="'question'" :resource-id="q.id"
                 :is-enrolled="props.enrolledIds.has(q.id)" @enrolled="handleQuestionEnrolled"
                 @error="handleEnrollError" />
 
@@ -77,6 +77,7 @@
 import { useRoute } from "vue-router";
 import { computed, ref } from "vue";
 import type { EnrollCardResponse } from "~/shared/utils/review.contract";
+import EnrollButton from "~/features/review/components/EnrollButton.vue";
 
 const route = useRoute();
 const id = route.params.id as string;

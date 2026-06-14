@@ -1,10 +1,10 @@
 <template>
-  <div class="bg-white rounded-[var(--radius-xl)] shadow-lg p-6 mb-6 animate-fade-in">
+  <div class="bg-white rounded-[var(--radius-xl)] shadow-[var(--shadow-card-hover)] p-6 mb-6 animate-fade-in">
     <div class="flex justify-between items-start mb-6">
       <h2 class="text-xl font-bold text-content-on-surface-strong">
         Review Analytics
       </h2>
-      <button class="text-content-secondary hover:text-content-on-surface p-1 rounded" @click="$emit('close')">
+      <button class="text-content-secondary hover:text-content-on-surface p-1 rounded-[var(--radius-md)]" @click="$emit('close')">
         <Icon name="heroicons:x-mark" class="w-5 h-5" />
       </button>
     </div>
@@ -155,14 +155,14 @@ defineEmits<{
 
 const getGradeColor = (grade: string) => {
   const colors: Record<string, string> = {
-    "0": "bg-red-500",
-    "1": "bg-orange-500",
-    "2": "bg-orange-400",
-    "3": "bg-yellow-500",
+    "0": "bg-error",
+    "1": "bg-warning",
+    "2": "bg-warning",
+    "3": "bg-warning",
     "4": "bg-primary",
-    "5": "bg-green-500",
+    "5": "bg-success",
   };
-  return colors[grade] || "bg-gray-500";
+  return colors[grade] || "bg-content-secondary";
 };
 
 const getGradeLabel = (grade: string) => {

@@ -38,7 +38,7 @@ function handleClose() {
         </p>
 
         <!-- Warning if enrolled -->
-        <div v-if="isEnrolled" class="flex items-start gap-3 p-3 rounded-lg bg-warning/10 border border-warning/20">
+        <div v-if="isEnrolled" class="flex items-start gap-3 p-3 rounded-[var(--radius-lg)] bg-warning/10 border border-warning/20">
           <UIcon name="i-lucide-alert-triangle" class="w-5 h-5 text-warning shrink-0 mt-0.5" />
           <div class="text-sm">
             <p class="font-medium text-warning">{{ enrollmentWarning }}</p>
@@ -53,14 +53,14 @@ function handleClose() {
 
     <template #footer>
       <div class="flex gap-3 justify-end pt-2">
-        <u-button variant="soft" color="neutral" @click="handleClose" :disabled="loading">
+        <ui-button variant="soft" color="neutral" @click="handleClose" :disabled="loading">
           Cancel
-        </u-button>
-        <u-button :color="isDestructive ? 'error' : 'primary'" @click="$emit('confirm')" :loading="loading"
+        </ui-button>
+        <ui-button :color="isDestructive ? 'error' : 'primary'" @click="$emit('confirm')" :loading="loading"
           :disabled="loading">
           <Icon v-if="isDestructive" name="delete" class="w-4 h-4 mr-1" />
           {{ confirmText }}
-        </u-button>
+        </ui-button>
       </div>
     </template>
   </shared-dialog-modal>

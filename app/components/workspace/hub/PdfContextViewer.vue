@@ -83,9 +83,9 @@ watch(
             class="page-content mb-8 pb-8 border-b border-muted last:border-b-0">
             <!-- Page Number Badge -->
             <div class="flex items-center gap-2 mb-4">
-              <u-badge color="primary" variant="subtle" size="sm">
+              <ui-badge color="primary" variant="subtle" size="sm">
                 Page {{ index + 1 }}
-              </u-badge>
+              </ui-badge>
             </div>
             <!-- Page Content -->
             <div class="prose dark:prose-invert max-w-none text-sm whitespace-pre-wrap">

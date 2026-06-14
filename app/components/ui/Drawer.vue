@@ -1,11 +1,4 @@
 <script setup lang="ts">
-import { Motion } from "motion-v";
-
-interface DragInfo {
-  offset: { x: number; y: number };
-  velocity: { x: number; y: number };
-}
-
 interface DrawerProps {
   show: boolean;
   side?: "right" | "left";
@@ -46,7 +39,6 @@ const props = withDefaults(defineProps<DrawerProps>(), {
   closeOnBackdrop: true,
 });
 
-const formRef = ref<HTMLElement>();
 const panelEl = ref<HTMLElement | null>(null);
 
 const mq = useMediaQuery(props.breakpoint);
@@ -99,7 +91,6 @@ const mode = computed(() => {
 });
 
 const targetPos = ref(props.show ? mode.value.open : mode.value.closed);
-const startPos = ref(0);
 const suspendDrag = ref(false);
 const isReady = ref(false);
 
@@ -231,29 +222,20 @@ const { onKeydown } = useFocusTrap(
   }
 );
 
-const transitionProps = {
-  type: "spring" as const,
-  stiffness: 600,
-  damping: 70,
-};
+const panelTransform = computed(() =>
+  mode.value.axis === "y"
+    ? `translate3d(0, ${targetPos.value}px, 0)`
+    : `translate3d(${targetPos.value}px, 0, 0)`,
+);
 
-function handleDragStart() {
-  startPos.value = targetPos.value;
-}
-
-function handleDragEnd(_: Event, info: DragInfo) {
-  const axis = mode.value.axis;
-  const offset = axis === "y" ? info.offset.y : info.offset.x;
-  const velocity = axis === "y" ? info.velocity.y : info.velocity.x;
-  const decision = isMobile.value
-    ? sheet.decide(offset, velocity, startPos.value)
-    : drawer.decide(offset, velocity, startPos.value);
-  if (decision === "open") snapTo(mode.value.open);
-  else {
-    snapTo(mode.value.closed);
-    emit("closed");
-  }
-}
+const panelStyle = computed(() => ({
+  ...mode.value.style,
+  transform: panelTransform.value,
+  transition: isReady.value
+    ? "transform 220ms cubic-bezier(0.22, 1, 0.36, 1)"
+    : "none",
+  ...(!isReady.value ? { visibility: "hidden" as const, opacity: 0 } : {}),
+}));
 </script>
 
 <template>
@@ -268,15 +250,10 @@ function handleDragEnd(_: Event, info: DragInfo) {
             }
           }
         "></div>
-      <Motion ref="formRef" as="div"
-        :initial="mode.axis === 'y' ? { y: props.show ? mode.open : mode.closed, x: 0 } : { x: props.show ? mode.open : mode.closed, y: 0 }"
-        :animate="mode.axis === 'y' ? { y: targetPos, x: 0 } : { x: targetPos, y: 0 }"
-        :transition="isReady ? transitionProps : { duration: 0 }" :drag="suspendDrag ? false : mode.axis"
-        :drag-constraints="mode.constraints" :drag-elastic="0" :drag-snap-to-origin="false" :drag-momentum="false"
-        :on-drag-start="handleDragStart" :on-drag-end="handleDragEnd" :class="[
-          positionClass, 'cursor-grab active:cursor-grabbing overflow-hidden bg-[var(--color-white)] shadow-[var(--component-drawer-shadow)] z-50 focus-visible:border border-primary',
+      <div :class="[
+          positionClass, 'overflow-hidden bg-[var(--color-white)] shadow-[var(--component-drawer-shadow)] z-50 focus-visible:border border-primary',
           mode.containerClass,
-        ]" :style="{ ...mode.style, ...(!isReady ? { visibility: 'hidden', opacity: 0 } : {}) }" role="dialog"
+        ]" :style="panelStyle" role="dialog"
         aria-modal="true" :aria-labelledby="'drawer-title'" :aria-hidden="!props.show">
         <div ref="panelEl" tabindex="-1" :inert="!props.show" :class="[
           'relative h-full focus-visible:outline-none',
@@ -317,7 +294,7 @@ function handleDragEnd(_: Event, info: DragInfo) {
             <u-icon name="i-lucide-x" class="w-4 h-4" />
           </u-button>
         </div>
-      </Motion>
+      </div>
     </div>
   </Teleport>
 </template>

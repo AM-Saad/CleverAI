@@ -408,7 +408,7 @@ const handleSetSelectedColor = (color: string | null) => {
   inset: 0;
   width: 100%;
   height: 100%;
-  background-color: #0b1011;
+  background-color: var(--color-content-on-background);
   border-radius: 50%;
   z-index: 1;
 }

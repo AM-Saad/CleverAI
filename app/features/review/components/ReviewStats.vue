@@ -3,7 +3,7 @@
     <!-- Debug Toggle (Development Only) -->
     <DevOnly>
       <button @click="$emit('toggleDebug')"
-        class="text-yellow-500 hover:text-yellow-700 dark:text-yellow-400 dark:hover:text-yellow-200 rounded-lg transition-colors"
+        class="text-warning hover:text-warning/80 dark:text-warning dark:hover:text-warning/70 rounded-[var(--radius-lg)] transition-colors"
         aria-label="Toggle debug panel" title="Debug Controls">
         <Icon name="heroicons:cog-6-tooth" class="w-5 h-5" />
       </button>

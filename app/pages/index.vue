@@ -29,7 +29,7 @@
             delay: 1.7,
           }">
           <router-link to="/auth/signup">
-            <UButton size="lg">Try for free</UButton>
+            <UiButton size="lg">Try for free</UiButton>
           </router-link>
         </motion.div>
 
@@ -105,7 +105,7 @@
       <div class="container relative z-10 mx-auto px-4 md:px-6">
         <blur-reveal :delay="0.2" class="mx-auto max-w-4xl space-y-8 text-center">
           <h2
-            class="font-headline text-5xl font-black tracking-tighter sm:text-6xl md:text-7xl bg-clip-text text-transparent bg-gradient-to-br from-dark via-slate-700 to-slate-500 pb-2">
+            class="font-headline text-5xl font-black tracking-tighter sm:text-6xl md:text-7xl bg-clip-text text-transparent bg-gradient-to-br from-dark via-content-on-background to-content-secondary pb-2">
             Ready to close the loop?
           </h2>
           <p class="text-xl text-muted-foreground md:text-2xl font-light max-w-2xl mx-auto leading-relaxed">
@@ -113,14 +113,14 @@
             required.
           </p>
           <div class="flex justify-center pt-8">
-            <u-button size="xl"
-              class="group px-8 py-4 relative overflow-hidden transition-all hover:scale-105 hover:shadow-xl hover:shadow-primary/20">
+            <ui-button size="xl"
+              class="group px-8 py-4 relative overflow-hidden transition-all hover:scale-105 hover:shadow-[var(--shadow-card-hover)] hover:shadow-primary/20">
               <router-link to="/auth/signup" class="flex items-center gap-3 text-lg">
                 Start Your First Loop
                 <u-icon name="heroicons:arrow-right-20-solid"
                   class="w-6 h-6 transition-transform group-hover:translate-x-1" />
               </router-link>
-            </u-button>
+            </ui-button>
           </div>
         </blur-reveal>
       </div>
@@ -271,7 +271,7 @@ console.log("🏠 [INDEX.VUE] Page script setup completed");
 
 <style scoped>
 body {
-  background-color: #fff !important;
+  background-color: var(--color-white) !important;
 }
 </style>
 import { getServiceWorkerReadyRegistration } from "~/utils/serviceWorkerRuntime";

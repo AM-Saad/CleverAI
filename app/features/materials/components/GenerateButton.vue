@@ -96,10 +96,10 @@ watch(genError, (error) => {
 <template>
   <div class="flex items-center">
     <!-- Rate limit badge -->
-    <u-badge v-if="rateLimitRemaining !== null && subscriptionInfo.tier === 'FREE'"
+    <ui-badge v-if="rateLimitRemaining !== null && subscriptionInfo.tier === 'FREE'"
       :color="rateLimitRemaining >= 10 ? 'success' : rateLimitRemaining >= 3 ? 'warning' : 'error'" class="mr-2">
       {{ rateLimitRemaining }} left
-    </u-badge>
+    </ui-badge>
 
     <!-- Generate dropdown button -->
     <UDropdownMenu :items="dropdownItems" :content="{ align: 'end', side: 'bottom', sideOffset: 4 }"
@@ -107,14 +107,14 @@ watch(genError, (error) => {
       <u-tooltip
         :text="isQuotaExceeded ? 'Quota Exceeded, Upgrade your plan or create manual question/cards' : !hasContent ? 'Material has no content, add content then try again' : 'Generate Question or Flashcards'">
 
-        <u-button color="primary" size="sm" :loading="generating" :disabled="disabled || isQuotaExceeded || !hasContent"
+        <ui-button color="primary" size="sm" :loading="generating" :disabled="disabled || isQuotaExceeded || !hasContent"
           aria-label="Generate Study Tools" variant='subtle'>
           <span v-if="!generating">Generate</span>
           <span v-else>Generating…</span>
           <template #trailing>
             <icon name="i-lucide-chevron-down" size="14" />
           </template>
-        </u-button>
+        </ui-button>
       </u-tooltip>
 
     </UDropdownMenu>
@@ -141,7 +141,7 @@ watch(genError, (error) => {
           material's content. This action cannot be undone.
         </p>
         <div class="flex items-center gap-2">
-          <UCheckbox v-model="replaceExisting" />
+          <UiCheckbox v-model="replaceExisting" />
           <span class="text-sm text-muted">Replace existing items (delete old items + reviews)</span>
         </div>
       </div>

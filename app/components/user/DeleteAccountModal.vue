@@ -68,17 +68,17 @@ const closeModal = (): void => {
           <u-form-field name="confirmationText" required>
             <template #label>
               <label class="block text-sm font-medium text-content-on-surface">
-                Type <span class="font-bold text-red-600 dark:text-red-400">DELETE</span> to confirm
+                Type <span class="font-bold text-error">DELETE</span> to confirm
               </label>
             </template>
-            <u-input v-model="state.confirmationText" placeholder="DELETE" :ui="{
+            <ui-input v-model="state.confirmationText" placeholder="DELETE" :ui="{
               root: 'w-full',
             }" autofocus />
           </u-form-field>
 
           <div class="flex items-start space-x-3">
             <input v-model="state.permanentDelete" type="checkbox" id="permanent-delete"
-              class="mt-1 h-4 w-4 accent-error focus:ring-error/30 border-secondary rounded cursor-pointer" />
+              class="mt-1 h-4 w-4 accent-error focus:ring-error/30 border-secondary rounded-[var(--radius-md)] cursor-pointer" />
             <div class="flex-1">
               <label for="permanent-delete" class="text-sm font-medium text-content-on-surface cursor-pointer">
                 Delete immediately and permanently
@@ -89,7 +89,7 @@ const closeModal = (): void => {
                   in before
                   then.
                 </span>
-                <span v-else class="text-red-600 dark:text-red-400 font-medium">
+                <span v-else class="text-error font-medium">
                   Your account will be deleted immediately and cannot be recovered.
                 </span>
               </p>
@@ -97,12 +97,12 @@ const closeModal = (): void => {
           </div>
 
           <div class="flex justify-end gap-3 pt-2">
-            <u-button variant="soft" color="neutral" @click="closeModal" type="button">
+            <ui-button variant="soft" color="neutral" @click="closeModal" type="button">
               Cancel
-            </u-button>
-            <u-button color="error" type="submit" :disabled="!canSubmit">
+            </ui-button>
+            <ui-button color="error" type="submit" :disabled="!canSubmit">
               {{ state.permanentDelete ? "Delete Permanently" : "Schedule Deletion" }}
-            </u-button>
+            </ui-button>
           </div>
         </u-form>
       </template>

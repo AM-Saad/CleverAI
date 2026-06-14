@@ -8,3 +8,7 @@
     </div>
   </shared-page-wrapper>
 </template>
+
+<script setup lang="ts">
+import LanguagePreferencesModule from "~/features/language-learning/components/LanguagePreferencesModule.vue";
+</script>

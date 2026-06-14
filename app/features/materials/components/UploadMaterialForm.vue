@@ -377,21 +377,21 @@ watch(
           </template>
           <u-form :schema="schema" :state="state" class="space-y-2" @submit="onSubmit">
             <u-form-field label="Material Title" name="materialTitle">
-              <u-input v-model="state.materialTitle" placeholder="Enter material title" :ui="{
+              <ui-input v-model="state.materialTitle" placeholder="Enter material title" :ui="{
                 root: 'w-full',
               }" />
             </u-form-field>
 
 
             <u-form-field label="Material Content" name="materialContent">
-              <u-textarea v-model="state.materialContent" placeholder="Enter your material content here..." :ui="{
+              <ui-textarea v-model="state.materialContent" placeholder="Enter your material content here..." :ui="{
                 root: 'w-full',
               }" />
             </u-form-field>
 
             <div class="flex gap-3 justify-end pt-2">
-              <u-button variant="ghost" @click="emit('close')">Cancel</u-button>
-              <u-button type="submit">Submit</u-button>
+              <ui-button variant="ghost" @click="emit('close')">Cancel</ui-button>
+              <ui-button type="submit">Submit</ui-button>
             </div>
           </u-form>
         </ui-card>
@@ -409,7 +409,7 @@ watch(
 
             <!-- Generate toggle -->
             <div class="mt-4 flex items-center gap-3">
-              <USwitch v-model="generateAfterUpload" />
+              <UiSwitch v-model="generateAfterUpload" />
               <ui-label>Generate flashcards/quiz after upload</ui-label>
             </div>
 
@@ -418,15 +418,15 @@ watch(
               <div class="flex items-center gap-3">
                 <label class="text-sm font-medium">Generate:</label>
                 <UButtonGroup>
-                  <UButton size="sm" :color="generationType === 'flashcards' ? 'primary' : 'neutral'"
+                  <UiButton size="sm" :color="generationType === 'flashcards' ? 'primary' : 'neutral'"
                     :variant="generationType === 'flashcards' ? 'solid' : 'ghost'"
                     @click="generationType = 'flashcards'">
                     Flashcards
-                  </UButton>
-                  <UButton size="sm" :color="generationType === 'quiz' ? 'primary' : 'neutral'"
+                  </UiButton>
+                  <UiButton size="sm" :color="generationType === 'quiz' ? 'primary' : 'neutral'"
                     :variant="generationType === 'quiz' ? 'solid' : 'ghost'" @click="generationType = 'quiz'">
                     Quiz
-                  </UButton>
+                  </UiButton>
                 </UButtonGroup>
               </div>
 
@@ -452,7 +452,7 @@ watch(
             <div class="flex items-center justify-between text-sm">
               <span>Uploading and extracting text...</span>
             </div>
-            <UProgress :value="100" animation="carousel" />
+            <UiProgress :value="100" animation="carousel" />
           </div>
 
           <!-- Document Info (after upload, if generating) -->
@@ -496,14 +496,14 @@ watch(
 
           <!-- Footer buttons for file upload -->
           <div class="flex gap-3 justify-end pt-2">
-            <UButton variant="ghost" @click="emit('close')">Cancel</UButton>
-            <UButton v-if="!uploadedMaterial" :loading="uploading" :disabled="!selectedFile || uploading"
+            <UiButton variant="ghost" @click="emit('close')">Cancel</UiButton>
+            <UiButton v-if="!uploadedMaterial" :loading="uploading" :disabled="!selectedFile || uploading"
               @click="handleUpload">
               {{ generateAfterUpload ? 'Upload & Continue' : 'Upload' }}
-            </UButton>
-            <UButton v-else-if="generateAfterUpload" :loading="generating" @click="handleGenerate">
+            </UiButton>
+            <UiButton v-else-if="generateAfterUpload" :loading="generating" @click="handleGenerate">
               Generate {{ generationType === 'flashcards' ? 'Flashcards' : 'Questions' }}
-            </UButton>
+            </UiButton>
           </div>
         </div>
 

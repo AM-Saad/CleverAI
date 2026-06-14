@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import BoardItemCard from "./BoardItemCard.vue";
+import BoardItemCard from "~/features/board/components/BoardItemCard.vue";
 import { useBoardColumnsStore } from "../composables/useBoardColumnsStore";
 import { useBoardItemsStore } from "../composables/useBoardItemsStore";
 import type { BoardItemState } from "../composables/useBoardItemsStore";
@@ -142,7 +142,7 @@ const getColumnActions = (columnId: string) => {
   <div class="flex flex-col flex-1 min-h-0 overflow-y-auto gap-4 pr-1">
     <!-- Uncategorized section -->
     <div v-if="uncategorizedItems.length > 0 || orderedColumns.length === 0"
-      class="bg-white dark:bg-surface/40 rounded-xl border border-secondary dark:border-secondary shadow-sm overflow-hidden">
+      class="bg-white dark:bg-surface/40 rounded-[var(--radius-xl)] border border-secondary dark:border-secondary shadow-[var(--shadow-dropdown)] overflow-hidden">
       <button class="w-full flex items-center justify-between px-4 py-3 bg-surface-subtle dark:bg-surface/60"
         @click="toggleSection('uncategorized')">
         <div class="flex items-center gap-2 text-left">
@@ -151,9 +151,9 @@ const getColumnActions = (columnId: string) => {
           <span class="font-semibold text-content-on-surface-strong dark:text-content-on-surface">Uncategorized</span>
           <span class="text-xs text-content-secondary">({{ uncategorizedItems.length }})</span>
         </div>
-        <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:plus" @click.stop="createItem">
+        <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:plus" @click.stop="createItem">
           Add
-        </UButton>
+        </UiButton>
       </button>
       <div v-if="!collapsedSections.has('uncategorized')" class="p-3 space-y-2">
         <BoardItemCard v-for="item in uncategorizedItems" :key="item.id" :item="item"
@@ -167,7 +167,7 @@ const getColumnActions = (columnId: string) => {
 
     <!-- Column sections -->
     <div v-for="column in orderedColumns" :key="column.id"
-      class="bg-white dark:bg-surface/40 rounded-xl border border-secondary dark:border-secondary shadow-sm overflow-hidden">
+      class="bg-white dark:bg-surface/40 rounded-[var(--radius-xl)] border border-secondary dark:border-secondary shadow-[var(--shadow-dropdown)] overflow-hidden">
       <div class="flex items-center justify-between px-4 py-3 bg-surface-subtle dark:bg-surface/60 group/header">
         <button v-if="isEditingColumn !== column.id" class="flex items-center gap-2 flex-1 text-left"
           @click="toggleSection(column.id)">
@@ -178,19 +178,19 @@ const getColumnActions = (columnId: string) => {
           <span class="text-xs text-content-secondary">({{ getColumnItems(column.id).length }})</span>
         </button>
         <div v-else class="flex items-center gap-2 flex-1" data-editing @click.stop @mousedown.stop>
-          <UInput v-model="editColumnName" size="xs" class="flex-1"
+          <UiInput v-model="editColumnName" size="xs" class="flex-1"
             :ref="(el: unknown) => setEditInputRef(column.id, (el as any)?.$el || (el as any) || null)"
             @keyup.enter="saveColumnName(column.id)" @keyup.escape="isEditingColumn = null"
             @blur="saveColumnName(column.id)" @click.stop @mousedown.stop />
         </div>
         <div class="flex items-center gap-1">
-          <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:plus"
+          <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:plus"
             @click.stop="handleCreateInColumn(column.id)">
             Add
-          </UButton>
+          </UiButton>
           <UDropdownMenu :items="getColumnActions(column.id)"
             :content="{ align: 'end', side: 'bottom', sideOffset: 4 }">
-            <UButton size="xs" color="neutral" variant="ghost" icon="heroicons:ellipsis-vertical" @click.stop />
+            <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:ellipsis-vertical" @click.stop />
           </UDropdownMenu>
         </div>
       </div>

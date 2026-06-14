@@ -57,10 +57,10 @@ function clearStaged() {
     </template>
     <div class="w-full flex justify-between items-center mb-1">
 
-      <span v-if="isRecording" class="text-xs font-medium text-rose-500 animate-pulse flex items-center gap-1.5">
+      <span v-if="isRecording" class="text-xs font-medium text-error animate-pulse flex items-center gap-1.5">
         <span class="relative flex h-2 w-2">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2 w-2 bg-rose-500"></span>
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-error/80 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2 w-2 bg-error"></span>
         </span>
         Recording
       </span>
@@ -78,21 +78,21 @@ function clearStaged() {
 
     <!-- Step 1: Record / Upload buttons (only when no audio is staged) -->
     <div v-if="!stagedAudio" class="flex flex-col sm:flex-row items-stretch gap-3 w-full">
-      <UButton v-if="!isRecording" color="error" variant="soft" icon="i-heroicons-microphone"
+      <UiButton v-if="!isRecording" color="error" variant="soft" icon="i-heroicons-microphone"
         class="flex-1 justify-center transition-all active:scale-[0.98]" @click="startRecording" size="md">
         Record Voice
-      </UButton>
-      <UButton v-else color="error" variant="solid" icon="i-heroicons-stop-circle"
-        class="flex-1 justify-center transition-all shadow-md active:scale-[0.98]" @click="stopRecording" size="md">
+      </UiButton>
+      <UiButton v-else color="error" variant="solid" icon="i-heroicons-stop-circle"
+        class="flex-1 justify-center transition-all shadow-[var(--shadow-dropdown)] active:scale-[0.98]" @click="stopRecording" size="md">
         Stop Recording
-      </UButton>
+      </UiButton>
 
       <div class="relative flex-1 flex flex-col">
-        <UButton color="neutral" variant="soft" icon="i-heroicons-arrow-up-tray"
+        <UiButton color="neutral" variant="soft" icon="i-heroicons-arrow-up-tray"
           class="flex-1 justify-center transition-all active:scale-[0.98]" :disabled="isRecording"
           @click="() => fileInput?.click()" size="md">
           Upload Audio
-        </UButton>
+        </UiButton>
         <input type="file" ref="fileInput" accept="audio/*" class="hidden" @change="handleFileUpload" />
       </div>
     </div>
@@ -100,23 +100,23 @@ function clearStaged() {
     <!-- Step 2: Audio staged — confirm transcription -->
     <div v-if="stagedAudio" class="w-full space-y-3">
       <div class="bg-surface-subtle p-3 rounded-[var(--radius-xl)] flex items-center gap-3">
-        <icon name="i-lucide-audio-lines" class="w-5 h-5 text-rose-500 shrink-0" />
+        <icon name="i-lucide-audio-lines" class="w-5 h-5 text-error shrink-0" />
         <div class="flex-1 min-w-0">
           <p class="text-sm font-medium text-content-on-surface truncate">{{ stagedAudio.label }}</p>
           <p class="text-xs text-content-secondary">Ready to transcribe</p>
         </div>
-        <UButton size="xs" color="neutral" variant="ghost" icon="i-heroicons-x-mark" @click="clearStaged"
+        <UiButton size="xs" color="neutral" variant="ghost" icon="i-heroicons-x-mark" @click="clearStaged"
           aria-label="Remove" />
       </div>
 
       <!-- Title input -->
-      <UInput v-model="materialTitle" placeholder="Material title (optional)" :ui="{ root: 'w-full' }" size="sm" />
+      <UiInput v-model="materialTitle" placeholder="Material title (optional)" :ui="{ root: 'w-full' }" size="sm" />
 
       <div class="flex gap-2 justify-end">
-        <UButton variant="ghost" size="sm" @click="clearStaged">Cancel</UButton>
-        <UButton color="primary" size="sm" icon="i-heroicons-sparkles" @click="confirmTranscribe">
+        <UiButton variant="ghost" size="sm" @click="clearStaged">Cancel</UiButton>
+        <UiButton color="primary" size="sm" icon="i-heroicons-sparkles" @click="confirmTranscribe">
           Transcribe
-        </UButton>
+        </UiButton>
       </div>
     </div>
   </ui-card>

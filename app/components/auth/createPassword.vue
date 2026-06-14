@@ -74,14 +74,14 @@ const handleSubmit = async (): Promise<void> => {
 
 <template>
   <div class="flex items-center justify-center flex-col w-full max-w-xl mx-auto">
-    <form ref="login" method="post" class="form w-full focus:bg-gray-100" autocomplete="test" @submit="handleSubmit">
+    <form ref="login" method="post" class="form w-full focus:bg-surface-subtle" autocomplete="test" @submit="handleSubmit">
       <ui-title>Create Password</ui-title>
       <ui-paragraph size="sm" color="content-secondary" class="mb-4">
         This page will expire in 15 minutes
       </ui-paragraph>
       <shared-error-message v-if="error" :error="error.message" />
       <shared-success-message v-if="success" :message="success" />
-      <div class="my-2 rounded-md relative transition duration-10 00 text-xs">
+      <div class="my-2 rounded-[var(--radius-md)] relative transition duration-10 00 text-xs">
 
         <div class="form-group mb-2">
           <ui-input-field id="login-email-client" v-model="credentials.password!" type="password" name="password"
@@ -89,7 +89,7 @@ const handleSubmit = async (): Promise<void> => {
             tabindex="1" label="Password" />
           <div v-if="strengthScore !== null" class="mt-1">
             <div class="h-1 w-full bg-secondary rounded-[var(--radius-sm)]">
-              <div class="h-1 rounded transition-all" :style="{
+              <div class="h-1 rounded-[var(--radius-md)] transition-all" :style="{
                 width: `${((strengthScore ?? 0) + 1) * 20}%`,
                 backgroundColor: strengthScore! >= 3 ? 'var(--color-success)' : strengthScore! >= 2 ? 'var(--color-warning)' : 'var(--color-error)'
               }" />
@@ -122,10 +122,10 @@ const handleSubmit = async (): Promise<void> => {
         </div>
       </div>
       <div>
-        <u-button type="submit" :disabled="loading || (strengthScore !== null && strengthScore < 3)" tabindex="3"
+        <ui-button type="submit" :disabled="loading || (strengthScore !== null && strengthScore < 3)" tabindex="3"
           @click.prevent="handleSubmit" :loading="loading">
           Create
-        </u-button>
+        </ui-button>
       </div>
     </form>
   </div>

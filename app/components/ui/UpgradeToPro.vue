@@ -102,11 +102,9 @@ const handleUpgrade = async () => {
 }
 
 .upgrade-card {
-  background-color: white;
-  border-radius: 0.75rem;
-  box-shadow:
-    0 10px 25px -5px rgba(0, 0, 0, 0.1),
-    0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  background-color: var(--color-white);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-card-hover);
   padding: 2rem;
   width: 100%;
   max-width: 32rem;
@@ -114,8 +112,8 @@ const handleUpgrade = async () => {
 }
 
 .upgrade-icon {
-  background-color: #f0f9ff;
-  color: #0ea5e9;
+  background-color: var(--color-surface-subtle);
+  color: var(--color-accent-blue);
   width: 64px;
   height: 64px;
   border-radius: 50%;
@@ -129,11 +127,11 @@ const handleUpgrade = async () => {
   font-size: 1.5rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
-  color: #1e293b;
+  color: var(--color-content-on-background);
 }
 
 .upgrade-description {
-  color: #64748b;
+  color: var(--color-content-secondary);
   margin-bottom: 1.5rem;
 }
 
@@ -143,26 +141,26 @@ const handleUpgrade = async () => {
 
 .upgrade-progress {
   height: 12px;
-  background-color: #e2e8f0;
-  border-radius: 6px;
+  background-color: var(--color-secondary);
+  border-radius: var(--radius-lg);
   overflow: hidden;
   margin-bottom: 0.5rem;
 }
 
 .upgrade-progress-bar {
   height: 100%;
-  background-color: #0ea5e9;
+  background-color: var(--color-accent-blue);
 }
 
 .upgrade-stats {
-  color: #64748b;
+  color: var(--color-content-secondary);
   font-size: 0.875rem;
 }
 
 .upgrade-features {
   text-align: left;
   margin-bottom: 1.5rem;
-  border-top: 1px solid #e2e8f0;
+  border-top: 1px solid var(--color-secondary);
   padding-top: 1.5rem;
 }
 
@@ -181,21 +179,21 @@ const handleUpgrade = async () => {
   display: flex;
   align-items: center;
   margin-bottom: 0.75rem;
-  color: #334155;
+  color: var(--color-content-on-background);
 }
 
 .upgrade-features li svg {
-  color: #10b981;
+  color: var(--color-success);
   margin-right: 0.5rem;
   flex-shrink: 0;
 }
 
 .upgrade-button {
-  background-color: #0ea5e9;
-  color: white;
+  background-color: var(--color-accent-blue);
+  color: var(--color-on-primary);
   font-weight: 600;
   padding: 0.75rem 1.5rem;
-  border-radius: 0.375rem;
+  border-radius: var(--radius-lg);
   border: none;
   width: 100%;
   cursor: pointer;
@@ -203,11 +201,11 @@ const handleUpgrade = async () => {
 }
 
 .upgrade-button:hover {
-  background-color: #0284c7;
+  background-color: color-mix(in srgb, var(--color-accent-blue) 80%, black);
 }
 
 .upgrade-button:disabled {
-  background-color: #93c5fd;
+  background-color: color-mix(in srgb, var(--color-accent-blue) 50%, white);
   cursor: not-allowed;
 }
 

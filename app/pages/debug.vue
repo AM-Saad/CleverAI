@@ -26,18 +26,18 @@
           <div class="space-y-2">
             <div class="flex justify-between">
               <span>Permission:</span>
-              <UBadge :color="notificationStatus.permission === 'granted'
+              <UiBadge :color="notificationStatus.permission === 'granted'
                 ? 'success'
                 : 'error'
                 " variant="subtle">
                 {{ notificationStatus.permission }}
-              </UBadge>
+              </UiBadge>
             </div>
             <div class="flex justify-between">
               <span>Subscribed:</span>
-              <UBadge :color="notificationStatus.subscribed ? 'success' : 'error'" variant="subtle">
+              <UiBadge :color="notificationStatus.subscribed ? 'success' : 'error'" variant="subtle">
                 {{ notificationStatus.subscribed ? "Yes" : "No" }}
-              </UBadge>
+              </UiBadge>
             </div>
           </div>
         </UCard>
@@ -52,15 +52,15 @@
           <div class="space-y-2">
             <div class="flex justify-between">
               <span>Status:</span>
-              <UBadge :color="swStatus.registered ? 'success' : 'error'" variant="subtle">
+              <UiBadge :color="swStatus.registered ? 'success' : 'error'" variant="subtle">
                 {{ swStatus.state || "Not Registered" }}
-              </UBadge>
+              </UiBadge>
             </div>
             <div class="flex justify-between">
               <span>Debug Mode:</span>
-              <UBadge :color="swStatus.debugEnabled ? 'success' : 'neutral'" variant="subtle">
+              <UiBadge :color="swStatus.debugEnabled ? 'success' : 'neutral'" variant="subtle">
                 {{ swStatus.debugEnabled ? "Enabled" : "Disabled" }}
-              </UBadge>
+              </UiBadge>
             </div>
           </div>
         </UCard>
@@ -75,9 +75,9 @@
           <div class="space-y-2">
             <div class="flex justify-between">
               <span>Status:</span>
-              <UBadge :color="cronStatus.running ? 'success' : 'neutral'" variant="subtle">
+              <UiBadge :color="cronStatus.running ? 'success' : 'neutral'" variant="subtle">
                 {{ cronStatus.running ? "Running" : "Stopped" }}
-              </UBadge>
+              </UiBadge>
             </div>
             <div class="flex justify-between">
               <span>Last Run:</span>
@@ -95,18 +95,18 @@
             <h3 class="text-lg font-semibold">🔔 Permission Management</h3>
           </template>
           <div class="space-y-4">
-            <UButton color="primary" :loading="loading.permission" @click="checkPermission">
+            <UiButton color="primary" :loading="loading.permission" @click="checkPermission">
               Check Permission
-            </UButton>
-            <UButton color="success" :loading="loading.request" @click="requestPermission">
+            </UiButton>
+            <UiButton color="success" :loading="loading.request" @click="requestPermission">
               Request Permission
-            </UButton>
-            <UButton color="success" :loading="loading.direct" @click="testDirectNotification">
+            </UiButton>
+            <UiButton color="success" :loading="loading.direct" @click="testDirectNotification">
               Test Direct Notification
-            </UButton>
-            <UButton color="primary" :loading="loading.test" @click="sendTestNotification">
+            </UiButton>
+            <UiButton color="primary" :loading="loading.test" @click="sendTestNotification">
               Send API Test Notification
-            </UButton>
+            </UiButton>
           </div>
         </UCard>
 
@@ -117,15 +117,15 @@
           </template>
           <div class="space-y-4">
             <UFormGroup label="Title">
-              <UInput v-model="testNotification.title" placeholder="Notification title" />
+              <UiInput v-model="testNotification.title" placeholder="Notification title" />
             </UFormGroup>
             <UFormGroup label="Message">
-              <UTextarea v-model="testNotification.message" placeholder="Notification message" />
+              <UiTextarea v-model="testNotification.message" placeholder="Notification message" />
             </UFormGroup>
             <UFormGroup label="URL">
-              <UInput v-model="testNotification.url" placeholder="/review" />
+              <UiInput v-model="testNotification.url" placeholder="/review" />
             </UFormGroup>
-            <UCheckbox v-model="testNotification.requireInteraction" label="Require Interaction" />
+            <UiCheckbox v-model="testNotification.requireInteraction" label="Require Interaction" />
           </div>
         </UCard>
       </div>
@@ -145,18 +145,18 @@
                 </h3>
               </template>
               <div class="space-y-4">
-                <UButton color="primary" :loading="loading.swCheck" @click="checkServiceWorker">
+                <UiButton color="primary" :loading="loading.swCheck" @click="checkServiceWorker">
                   Check Service Worker
-                </UButton>
-                <UButton color="primary" :loading="loading.swDebug" @click="enableSWDebugMode">
+                </UiButton>
+                <UiButton color="primary" :loading="loading.swDebug" @click="enableSWDebugMode">
                   Enable Debug Mode
-                </UButton>
-                <UButton color="warning" :loading="loading.swUpdate" @click="forceServiceWorkerUpdate">
+                </UiButton>
+                <UiButton color="warning" :loading="loading.swUpdate" @click="forceServiceWorkerUpdate">
                   Force Update
-                </UButton>
-                <UButton color="success" :loading="loading.swMessage" @click="testServiceWorkerMessage">
+                </UiButton>
+                <UiButton color="success" :loading="loading.swMessage" @click="testServiceWorkerMessage">
                   Test SW Message
-                </UButton>
+                </UiButton>
               </div>
             </UCard>
 
@@ -166,15 +166,15 @@
                 <h3 class="text-lg font-semibold">📡 Push Subscription</h3>
               </template>
               <div class="space-y-4">
-                <UButton color="primary" :loading="loading.subscription" @click="checkSubscription">
+                <UiButton color="primary" :loading="loading.subscription" @click="checkSubscription">
                   Check Subscription
-                </UButton>
-                <UButton color="warning" :loading="loading.refresh" @click="refreshSubscription">
+                </UiButton>
+                <UiButton color="warning" :loading="loading.refresh" @click="refreshSubscription">
                   Refresh Subscription
-                </UButton>
-                <UButton color="error" :loading="loading.unsubscribe" @click="unsubscribe">
+                </UiButton>
+                <UiButton color="error" :loading="loading.unsubscribe" @click="unsubscribe">
                   Unsubscribe
-                </UButton>
+                </UiButton>
 
                 <div v-if="subscriptionInfo" class="mt-4 p-3 bg-gray-100 dark:bg-gray-800 rounded">
                   <p class="text-sm font-mono break-all">
@@ -195,18 +195,18 @@
                 <h3 class="text-lg font-semibold">🕒 Cron Testing</h3>
               </template>
               <div class="space-y-4">
-                <UButton color="primary" :loading="loading.cron" @click="triggerCronCheck">
+                <UiButton color="primary" :loading="loading.cron" @click="triggerCronCheck">
                   Trigger Cron Check
-                </UButton>
-                <UButton color="error" :loading="loading.cooldown" @click="clearCooldown">
+                </UiButton>
+                <UiButton color="error" :loading="loading.cooldown" @click="clearCooldown">
                   Clear Cooldown
-                </UButton>
-                <UButton color="primary" :loading="loading.timing" @click="checkTimingGates">
+                </UiButton>
+                <UiButton color="primary" :loading="loading.timing" @click="checkTimingGates">
                   Check Timing Gates
-                </UButton>
-                <UButton color="warning" :loading="loading.bypass" @click="bypassAllGates">
+                </UiButton>
+                <UiButton color="warning" :loading="loading.bypass" @click="bypassAllGates">
                   Bypass All Gates
-                </UButton>
+                </UiButton>
               </div>
             </UCard>
 
@@ -218,21 +218,21 @@
               <div class="space-y-3">
                 <div class="flex justify-between items-center">
                   <span>Active Hours:</span>
-                  <UBadge :color="timingGates.inActiveHours ? 'success' : 'error'" variant="subtle">
+                  <UiBadge :color="timingGates.inActiveHours ? 'success' : 'error'" variant="subtle">
                     {{ timingGates.inActiveHours ? "Inside" : "Outside" }}
-                  </UBadge>
+                  </UiBadge>
                 </div>
                 <div class="flex justify-between items-center">
                   <span>Quiet Hours:</span>
-                  <UBadge :color="timingGates.inQuietHours ? 'error' : 'success'" variant="subtle">
+                  <UiBadge :color="timingGates.inQuietHours ? 'error' : 'success'" variant="subtle">
                     {{ timingGates.inQuietHours ? "In Quiet" : "Not Quiet" }}
-                  </UBadge>
+                  </UiBadge>
                 </div>
                 <div class="flex justify-between items-center">
                   <span>Send Anytime:</span>
-                  <UBadge :color="timingGates.sendAnytime ? 'success' : 'neutral'" variant="subtle">
+                  <UiBadge :color="timingGates.sendAnytime ? 'success' : 'neutral'" variant="subtle">
                     {{ timingGates.sendAnytime ? "Enabled" : "Disabled" }}
-                  </UBadge>
+                  </UiBadge>
                 </div>
                 <div class="flex justify-between items-center">
                   <span>Current Time:</span>
@@ -255,9 +255,9 @@
               <template #header>
                 <div class="flex items-center justify-between">
                   <h3 class="text-lg font-semibold">📝 Action Logs</h3>
-                  <UButton color="success" size="xs" :disabled="logMonitoring" @click="startLogMonitoring">
+                  <UiButton color="success" size="xs" :disabled="logMonitoring" @click="startLogMonitoring">
                     {{ logMonitoring ? "Monitoring..." : "Start Monitoring" }}
-                  </UButton>
+                  </UiButton>
                 </div>
               </template>
               <div ref="logsContainer"
@@ -304,9 +304,9 @@
           </div>
           <div class="flex justify-between">
             <span class="font-medium">Success:</span>
-            <UBadge :color="lastResult.success ? 'success' : 'error'" variant="subtle">
+            <UiBadge :color="lastResult.success ? 'success' : 'error'" variant="subtle">
               {{ lastResult.success ? "Success" : "Failed" }}
-            </UBadge>
+            </UiBadge>
           </div>
           <div class="flex justify-between">
             <span class="font-medium">Time:</span>

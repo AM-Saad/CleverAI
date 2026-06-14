@@ -12,7 +12,7 @@
       <button
         type="button"
         data-note-drag-handle
-        class="shrink-0 cursor-grab rounded p-1 text-content-secondary opacity-60 hover:opacity-100 active:cursor-grabbing"
+        class="shrink-0 cursor-grab rounded-[var(--radius-md)] p-1 text-content-secondary opacity-60 hover:opacity-100 active:cursor-grabbing"
         :aria-label="`Reorder or move ${displayTitle}`"
         @pointerdown.stop="emitIntent({ type: 'START_REORDER', noteId: note.id })"
         @click.stop
@@ -43,14 +43,14 @@
     <div class="flex items-center gap-1 shrink-0">
       <span
         v-if="note.error"
-        class="inline-flex items-center rounded-full bg-error/10 px-1.5 py-0.5 text-[10px] font-medium text-error"
+        class="inline-flex items-center rounded-[var(--radius-md)] bg-error/10 px-1.5 py-0.5 text-[10px] font-medium text-error"
         title="Sync failed. Open the note to retry."
       >
         Retry
       </span>
       <span
         v-else-if="note.isDirty"
-        class="inline-flex items-center rounded-full bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning"
+        class="inline-flex items-center rounded-[var(--radius-md)] bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning"
         title="Saved locally and waiting to sync."
       >
         Local
@@ -75,7 +75,7 @@
 
       <slot name="actions" :note="note" :display-title="displayTitle">
         <UDropdownMenu :modal="false" :items="menuItems">
-          <u-button
+          <ui-button
             data-no-drag
             size="xs"
             color="neutral"
@@ -85,7 +85,7 @@
             @click.stop
           >
             <icon name="i-lucide-more-horizontal" class="h-3.5 w-3.5" />
-          </u-button>
+          </ui-button>
         </UDropdownMenu>
       </slot>
     </div>
@@ -166,10 +166,10 @@ const menuItems = computed(() => [
 
 <style scoped>
 .split-indicator-primary {
-  border-left: 2px solid var(--color-primary, #3b82f6);
+  border-left: 2px solid var(--color-primary);
 }
 
 .split-indicator-secondary {
-  border-left: 2px solid var(--color-success, #22c55e);
+  border-left: 2px solid var(--color-success);
 }
 </style>

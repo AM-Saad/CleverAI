@@ -24,7 +24,7 @@
         :exit="{ opacity: 0, scale: 0.9, y: 12 }"
         :transition="{ type: 'spring', stiffness: 500, damping: 42 }"
         :style="{ transformOrigin: 'bottom right' }"
-        class="fixed right-6 bottom-24 z-45 flex flex-col w-[calc(100vw-3rem)] max-w-sm max-h-[calc(100svh-8rem)] rounded-2xl bg-surface border border-secondary overflow-hidden"
+        class="fixed right-6 bottom-24 z-45 flex flex-col w-[calc(100vw-3rem)] max-w-sm max-h-[calc(100svh-8rem)] rounded-[var(--radius-2xl)] bg-surface border border-secondary overflow-hidden"
         style="
           box-shadow:
             0 20px 60px -10px rgba(0, 0, 0, 0.18),
@@ -74,7 +74,7 @@
           <template v-if="internalState === 'idle'">
             <div class="space-y-3">
               <div ref="inputContainerRef">
-                <u-input
+                <ui-input
                   v-model="wordInput"
                   placeholder="Type a word or phrase…"
                   class="w-full"
@@ -129,7 +129,7 @@
                   Add context (optional)
                 </button>
                 <Transition name="slide">
-                  <u-input
+                  <ui-input
                     v-if="showContext"
                     v-model="contextInput"
                     placeholder="Surrounding sentence or phrase…"
@@ -138,7 +138,7 @@
                 </Transition>
               </div>
 
-              <u-button
+              <ui-button
                 class="w-full"
                 :disabled="!wordInput.trim()"
                 :loading="isCapturing"
@@ -146,7 +146,7 @@
               >
                 <Icon name="i-lucide-send" class="w-4 h-4 mr-1.5" />
                 Translate
-              </u-button>
+              </ui-button>
             </div>
           </template>
 
@@ -172,7 +172,7 @@
             <div class="space-y-3">
               <!-- Word card — elevated premium treatment -->
               <div
-                class="rounded-xl bg-linear-to-br from-primary/5 to-primary/2 border border-primary/15 p-4 space-y-3"
+                class="rounded-[var(--radius-xl)] bg-linear-to-br from-primary/5 to-primary/2 border border-primary/15 p-4 space-y-3"
               >
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
@@ -188,13 +188,13 @@
                       {{ captureResult.phonetic }}
                     </p>
                   </div>
-                  <u-badge
+                  <ui-badge
                     variant="soft"
                     color="neutral"
                     class="text-xs shrink-0 mt-0.5"
                   >
                     {{ captureResult.partOfSpeech }}
-                  </u-badge>
+                  </ui-badge>
                 </div>
                 <div class="border-t border-primary/10 pt-3 space-y-1">
                   <p class="text-lg font-semibold text-primary leading-snug">
@@ -207,21 +207,21 @@
                       {{ captureResult.detectedLang }} →
                       {{ translationLanguage }}
                     </p>
-                    <u-badge
+                    <ui-badge
                       v-if="captureResult.cached"
                       variant="soft"
                       color="success"
                       class="text-xs"
                     >
                       Already saved
-                    </u-badge>
+                    </ui-badge>
                   </div>
                 </div>
               </div>
 
               <!-- Actions -->
               <div class="flex flex-col gap-2">
-                <u-button
+                <ui-button
                   class="w-full"
                   :loading="isGeneratingStory"
                   @click="handleGenerateStory"
@@ -232,8 +232,8 @@
                       ? "Add to Deck + Generate Story"
                       : "Save to Deck + Generate Story"
                   }}
-                </u-button>
-                <u-button
+                </ui-button>
+                <ui-button
                   variant="ghost"
                   color="neutral"
                   class="w-full"
@@ -241,7 +241,7 @@
                 >
                   <Icon name="i-lucide-rotate-ccw" class="w-3.5 h-3.5 mr-1.5" />
                   Translate another
-                </u-button>
+                </ui-button>
               </div>
             </div>
           </template>
@@ -282,7 +282,7 @@
           <!-- ── STORY READY STATE ── -->
           <template v-else-if="internalState === 'story-ready' && storyResult">
             <div class="space-y-3">
-              <div class="flex items-center gap-2 p-3 rounded-lg bg-success/10">
+              <div class="flex items-center gap-2 p-3 rounded-[var(--radius-lg)] bg-success/10">
                 <Icon
                   name="i-lucide-check-circle"
                   class="w-4 h-4 text-success shrink-0"
@@ -296,7 +296,7 @@
                 <div
                   v-for="(sentence, i) in storyResult.sentences"
                   :key="i"
-                  class="p-2.5 rounded-lg bg-surface-strong text-sm text-content-on-surface leading-relaxed"
+                  class="p-2.5 rounded-[var(--radius-lg)] bg-surface-strong text-sm text-content-on-surface leading-relaxed"
                 >
                   <span class="text-content-disabled text-xs mr-1.5"
                     >{{ i + 1 }}.</span
@@ -308,15 +308,15 @@
               </div>
 
               <div class="flex flex-col gap-2">
-                <u-button
+                <ui-button
                   class="w-full"
                   to="/language/review"
                   @click="handleClose"
                 >
                   <Icon name="i-lucide-play" class="w-4 h-4 mr-1.5" />
                   Start Reviewing
-                </u-button>
-                <u-button
+                </ui-button>
+                <ui-button
                   variant="ghost"
                   color="neutral"
                   class="w-full"
@@ -324,7 +324,7 @@
                 >
                   <Icon name="i-lucide-rotate-ccw" class="w-3.5 h-3.5 mr-1.5" />
                   Translate another
-                </u-button>
+                </ui-button>
               </div>
             </div>
           </template>
@@ -339,7 +339,7 @@
   </Teleport>
 
   <!-- Consent sheet — z-50 renders above panel (z-45) -->
-  <language-consent-sheet
+  <ConsentSheet
     :show="showConsentSheet"
     @confirm="confirmCapture"
     @decline="declineCapture"
@@ -350,6 +350,7 @@
 import { AnimatePresence, motion } from "motion-v";
 import { useSanitize } from "~/composables/shared/useSanitize";
 import { useSpeechCapture } from "../composables/useSpeechCapture";
+import ConsentSheet from "~/features/language-learning/components/ConsentSheet.vue";
 
 const props = defineProps<{ show: boolean }>();
 const emit = defineEmits<{ (e: "close"): void }>();
@@ -462,7 +463,7 @@ const highlightCloze = (text: string, clozeWord: string) => {
   return sanitizeHtml(
     text.replace(
       new RegExp(`\\b${escaped}\\b`, "gi"),
-      `<mark class="bg-primary/20 text-primary rounded px-0.5">$&</mark>`,
+      `<mark class="bg-primary/20 text-primary rounded-[var(--radius-md)] px-0.5">$&</mark>`,
     ),
   );
 };

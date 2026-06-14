@@ -36,7 +36,8 @@ export default defineNuxtConfig({
   // Use the existing `app/` workspace as Nuxt source directory
   srcDir: "app",
 
-  // Force light mode app-wide — dark mode will be planned and implemented properly later
+  // Light by default; users switch via UiColorModeToggle (light/dark/system).
+  // Dark tokens live in app/design-system/tokens/index.cjs and flip under .dark.
   colorMode: {
     preference: "light",
     fallback: "light",
@@ -332,6 +333,11 @@ export default defineNuxtConfig({
         process.env.NEXTAUTH_SECRET,
     },
     googleClientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    jiraClientId: process.env.JIRA_CLIENT_ID,
+    jiraClientSecret: process.env.JIRA_CLIENT_SECRET,
+    notionClientId: process.env.NOTION_CLIENT_ID,
+    notionClientSecret: process.env.NOTION_CLIENT_SECRET,
+    integrationTokenSecret: process.env.INTEGRATION_TOKEN_SECRET,
 
     VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
 

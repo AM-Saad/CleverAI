@@ -8,6 +8,7 @@ const emit = defineEmits<{
   generated: [result: { type: GenerationType; savedCount?: number }];
 }>();
 import { useExportContent } from "~/composables/shared/useExportContent";
+import GenerateButton from "~/features/materials/components/GenerateButton.vue";
 
 const route = useRoute();
 const id = route.params.id;
@@ -128,11 +129,11 @@ const doConfirmRemove = async () => {
         :class="['my-1 rounded-none! border-b border-muted opacity-80']">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2 flex-1 min-w-0">
-            <icon name="i-lucide-mic" class="w-4 h-4 text-rose-500 shrink-0 animate-pulse" />
+            <icon name="i-lucide-mic" class="w-4 h-4 text-error shrink-0 animate-pulse" />
             <ui-subtitle weight="normal" size="xs" class="truncate" color="content-on-surface">{{ pt.title
               }}</ui-subtitle>
             <span
-              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-800 shrink-0">
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-warning/15 text-warning shrink-0">
               <icon name="i-lucide-loader" class="w-3 h-3 animate-spin" />
               {{ pt.status === 'transcribing' ? 'Transcribing...' : 'Saving...' }}
             </span>
@@ -170,7 +171,7 @@ const doConfirmRemove = async () => {
 
           <div class="flex shrink-0 gap-2 items-center">
             <!-- Generate button -->
-            <workspace-hub-materials-generate-button v-if="currentMaterial" :material-id="currentMaterial.id"
+            <GenerateButton v-if="currentMaterial" :material-id="currentMaterial.id"
               :material-content="currentMaterial.content" @generated="handleGenerated" @error="handleGenerateError" />
 
             <UDropdownMenu v-if="currentMaterial" :items="[
@@ -180,20 +181,20 @@ const doConfirmRemove = async () => {
                 { label: 'Download as PDF', icon: 'i-heroicons-document', onSelect: () => exportContent(currentMaterial!.title, currentMaterial!.content, 'pdf') }
               ]
             ]">
-              <u-button variant="outline" color="primary" size="sm">
+              <ui-button variant="outline" color="primary" size="sm">
                 <icon name="i-heroicons-arrow-down-tray" class="w-4 h-4 mr-1" />
                 Download
-              </u-button>
+              </ui-button>
             </UDropdownMenu>
 
-            <u-button color="error" size="sm" variant="outline"
+            <ui-button color="error" size="sm" variant="outline"
               @click="() => { if (currentMaterial) confirmRemoval(currentMaterial.id) }">
               Remove
-            </u-button>
-            <u-button variant="subtle" color="primary" size="sm" @click="fullscreen.close"
+            </ui-button>
+            <ui-button variant="subtle" color="primary" size="sm" @click="fullscreen.close"
               aria-label="Close fullscreen">
               <icon name="i-heroicons-arrows-pointing-in" class="w-3 h-3" />
-            </u-button>
+            </ui-button>
           </div>
         </div>
 

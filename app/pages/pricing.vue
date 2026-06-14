@@ -235,7 +235,7 @@ h1 {
   display: flex;
   justify-content: center;
   margin-bottom: 2rem;
-  background-color: #f1f5f9;
+  background-color: var(--color-surface-subtle);
   max-width: 220px;
   margin-left: auto;
   margin-right: auto;

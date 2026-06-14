@@ -351,7 +351,7 @@ const isExpressionsCollapsed = ref(true);
             {{ isDownloading ? "Fetching local AI model..." : "Recognising locally..." }}
           </span>
         </div>
-        <div v-if="isDownloading && progress > 0" class="w-48 h-1.5 bg-secondary rounded-full overflow-hidden">
+        <div v-if="isDownloading && progress > 0" class="w-48 h-1.5 bg-secondary rounded-[var(--radius-sm)] overflow-hidden">
           <div class="h-full bg-primary transition-all duration-300" :style="{ width: `${progress}%` }"></div>
         </div>
       </div>

@@ -16,7 +16,7 @@ const isVisible = ref(true)
         Watch us
       </span>
       <div
-        class="w-10 h-10 rounded-full border dark:border-light flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer">
+        class="w-10 h-10 rounded-full border dark:border-light flex items-center justify-center hover:bg-surface-subtle dark:hover:bg-[var(--color-content-on-background)] cursor-pointer">
         <u-icon name="mdi:play" class="m-auto dark:text-light" />
       </div>
     </motion.button>
@@ -35,7 +35,7 @@ const isVisible = ref(true)
 .box {
   width: 100px;
   height: 100px;
-  background-color: #0cdcf7;
+  background-color: var(--color-accent-cyan);
   border-radius: 10px;
 }
 

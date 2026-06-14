@@ -39,7 +39,7 @@
         </div>
 
         <!-- Review State Info -->
-        <ReviewCardReviewState :review-state="card.reviewState" />
+        <CardReviewState :review-state="card.reviewState" />
       </div>
     </div>
   </div>
@@ -48,6 +48,7 @@
 <script setup lang="ts">
 import type { ReviewCard } from '~/shared/utils/review.contract'
 import type { DeepReadonly } from 'vue'
+import CardReviewState from "~/features/review/components/CardReviewState.vue";
 
 interface Props {
   card: ReviewCard | DeepReadonly<ReviewCard>

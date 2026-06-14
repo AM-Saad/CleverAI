@@ -9,7 +9,7 @@
             d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.268 16.5c-.77.833.192 2.5 1.732 2.5z" />
         </svg>
         <span>{{ message }}</span>
-        <button v-if="showRetry" class="ml-2 px-2 py-1 bg-white/20 rounded text-xs hover:bg-white/30 transition-colors"
+        <button v-if="showRetry" class="ml-2 px-2 py-1 bg-white/20 rounded-[var(--radius-md)] text-xs hover:bg-white/30 transition-colors"
           @click="handleRetry">
           Retry
         </button>

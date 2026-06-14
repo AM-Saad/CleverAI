@@ -52,10 +52,10 @@
 
       <!-- Reveal -->
       <div class="flex justify-center pt-2">
-        <u-button size="lg" class="px-8" @click="emit('reveal')">
+        <ui-button size="lg" class="px-8" @click="emit('reveal')">
           <Icon name="i-lucide-eye" class="w-4 h-4 mr-1" />
           Show Answer
-        </u-button>
+        </ui-button>
       </div>
     </div>
 
@@ -106,7 +106,7 @@
 
       <!-- TTS -->
       <div class="flex flex-wrap justify-center gap-2">
-        <u-button
+        <ui-button
           variant="ghost"
           color="neutral"
           size="sm"
@@ -115,8 +115,8 @@
         >
           <Icon name="i-lucide-volume-2" class="w-4 h-4 mr-1" />
           Hear it
-        </u-button>
-        <u-button
+        </ui-button>
+        <ui-button
           v-if="card.storyText"
           variant="ghost"
           color="neutral"
@@ -126,7 +126,7 @@
         >
           <Icon name="i-lucide-book-audio" class="w-4 h-4 mr-1" />
           Hear story
-        </u-button>
+        </ui-button>
       </div>
 
       <!-- Grade buttons -->
@@ -139,7 +139,7 @@
             type="button"
             :class="[
               'transition-colors',
-              hoverStar >= star ? 'text-yellow-400' : 'text-content-disabled',
+              hoverStar >= star ? 'text-warning' : 'text-content-disabled',
             ]"
             @mouseenter="hoverStar = star"
             @mouseleave="hoverStar = 0"
@@ -148,14 +148,14 @@
             <Icon
               name="i-lucide-star"
               class="w-6 h-6"
-              :class="hoverStar >= star ? 'fill-yellow-400' : ''"
+              :class="hoverStar >= star ? 'fill-warning' : ''"
             />
           </button>
         </div>
 
         <!-- Explicit grade buttons (SM-2: 0–5) -->
         <div class="grid grid-cols-3 gap-2">
-          <u-button
+          <ui-button
             v-for="btn in gradeButtons"
             :key="btn.value"
             :variant="btn.variant"
@@ -166,7 +166,7 @@
             @click="emit('grade', btn.value)"
           >
             {{ btn.label }}
-          </u-button>
+          </ui-button>
         </div>
       </div>
     </div>
@@ -258,7 +258,7 @@ const highlightCloze = (text: string, clozeWord: string) => {
   return sanitizeHtml(
     text.replace(
       new RegExp(`\\b${escaped}\\b`, "gi"),
-      `<mark class="bg-primary/20 text-primary rounded px-0.5 font-semibold">$&</mark>`,
+      `<mark class="bg-primary/20 text-primary rounded-[var(--radius-md)] px-0.5 font-semibold">$&</mark>`,
     ),
   );
 };

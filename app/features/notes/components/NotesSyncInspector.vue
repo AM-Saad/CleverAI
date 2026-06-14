@@ -96,22 +96,22 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="mx-4 my-2 rounded border border-secondary bg-white p-2 text-xs text-content-secondary">
+  <section class="mx-4 my-2 rounded-[var(--radius-xl)] border border-secondary bg-white p-2 text-xs text-content-secondary">
     <div class="flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center gap-2">
         <icon name="i-lucide-activity" class="h-3.5 w-3.5 text-primary" />
         <span class="font-semibold text-content-on-surface">Notes sync inspector</span>
-        <span class="rounded bg-surface-strong px-1.5 py-0.5">
+        <span class="rounded-[var(--radius-md)] bg-surface-strong px-1.5 py-0.5">
           {{ networkStatus.isVerifiedOnline.value ? "online" : "offline" }}
         </span>
       </div>
       <div class="flex items-center gap-1">
-        <u-button size="xs" color="neutral" variant="ghost" :loading="isRefreshing" @click="refreshQueues">
+        <ui-button size="xs" color="neutral" variant="ghost" :loading="isRefreshing" @click="refreshQueues">
           Refresh
-        </u-button>
-        <u-button size="xs" color="primary" variant="soft" :loading="isSyncing" @click="syncNow">
+        </ui-button>
+        <ui-button size="xs" color="primary" variant="soft" :loading="isSyncing" @click="syncNow">
           Sync
-        </u-button>
+        </ui-button>
       </div>
     </div>
 
@@ -129,7 +129,7 @@ onUnmounted(() => {
 
     <details v-if="contentChanges.length || groupChanges.length || layoutChange || collabStatuses.length" class="mt-2">
       <summary class="cursor-pointer text-content-on-surface">Queue detail</summary>
-      <pre class="mt-1 max-h-48 overflow-auto rounded bg-surface p-2 text-[11px] leading-relaxed">{{ JSON.stringify({
+      <pre class="mt-1 max-h-48 overflow-auto rounded-[var(--radius-md)] bg-surface p-2 text-[11px] leading-relaxed">{{ JSON.stringify({
         contentChanges: contentChanges.map((change) => ({
           id: change.id,
           operation: change.operation,

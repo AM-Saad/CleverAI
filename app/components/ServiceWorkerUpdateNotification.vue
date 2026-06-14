@@ -7,7 +7,7 @@
       leave-active-class="transition-all duration-300 ease-in" leave-from-class="transform translate-y-0 opacity-100"
       leave-to-class="transform -translate-y-full opacity-0">
       <div v-if="showBanner && updateAvailable"
-        class="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg">
+        class="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-accent-blue to-accent-purple text-white shadow-[var(--shadow-modal)]">
         <div class="container mx-auto px-4 py-3">
           <div class="flex items-center justify-between">
             <div class="flex items-center space-x-3">
@@ -25,13 +25,13 @@
 
             <!-- Actions -->
             <div v-if="!isUpdating" class="flex items-center space-x-2">
-              <UButton size="xs" variant="solid" color="primary" :loading="isUpdating" @click="handleUpdate">
+              <UiButton size="xs" variant="solid" color="primary" :loading="isUpdating" @click="handleUpdate">
                 Update Now
-              </UButton>
+              </UiButton>
 
-              <UButton size="xs" variant="ghost" color="neutral" @click="handleDismiss">
+              <UiButton size="xs" variant="ghost" color="neutral" @click="handleDismiss">
                 Later
-              </UButton>
+              </UiButton>
             </div>
 
             <!-- Loading indicator -->
@@ -62,23 +62,23 @@
     <div v-if="showDebugPanel && isDev" class="sw-debug-panel">
 
       <div
-        class="bg-white/95 dark:bg-gray-900/95 backdrop-blur border rounded-[var(--radius-lg)] p-4 text-sm space-y-3 shadow-lg">
+        class="bg-white/95 dark:bg-[var(--color-content-on-background)]/95 backdrop-blur border rounded-[var(--radius-lg)] p-4 text-sm space-y-3 shadow-[var(--shadow-modal)]">
         <header class="flex items-center justify-between">
           <h3 class="font-semibold flex items-center gap-2">
             <Icon name="heroicons:cloud" class="w-4 h-4 text-primary" />
             Service Worker
           </h3>
           <div class="flex items-center gap-2">
-            <UBadge :color="updateAvailable ? 'warning' : (isControlling ? 'success' : 'neutral')" variant="subtle"
+            <UiBadge :color="updateAvailable ? 'warning' : (isControlling ? 'success' : 'neutral')" variant="subtle"
               size="xs">
               {{ swStateBadge }}
-            </UBadge>
-            <UBadge v-if="version" color="neutral" variant="outline" size="xs">
+            </UiBadge>
+            <UiBadge v-if="version" color="neutral" variant="outline" size="xs">
               v{{ version }}
-            </UBadge>
-            <UButton size="xs" variant="ghost" @click="toggleDebugPanel">
+            </UiBadge>
+            <UiButton size="xs" variant="ghost" @click="toggleDebugPanel">
               <Icon name="heroicons:x-mark" class="w-3 h-3" />
-            </UButton>
+            </UiButton>
           </div>
         </header>
 
@@ -118,32 +118,32 @@
             Debug Controls
           </h4>
           <div class="flex flex-wrap gap-2">
-            <UButton size="xs" @click="forceServiceWorkerUpdate" variant="outline">
+            <UiButton size="xs" @click="forceServiceWorkerUpdate" variant="outline">
               Force SW Update
-            </UButton>
-            <UButton size="xs" @click="forceServiceWorkerControl" variant="outline">
+            </UiButton>
+            <UiButton size="xs" @click="forceServiceWorkerControl" variant="outline">
               Claim Control
-            </UButton>
-            <UButton size="xs" @click="simulateUpdateAvailable" variant="outline">
+            </UiButton>
+            <UiButton size="xs" @click="simulateUpdateAvailable" variant="outline">
               Simulate Update
-            </UButton>
-            <UButton size="xs" @click="debugServiceWorker" variant="outline">
+            </UiButton>
+            <UiButton size="xs" @click="debugServiceWorker" variant="outline">
               Debug SW
-            </UButton>
-            <UButton size="xs" @click="manualRefresh" variant="outline">
+            </UiButton>
+            <UiButton size="xs" @click="manualRefresh" variant="outline">
               Manual Refresh
-            </UButton>
-            <UButton size="xs" @click="resetUpdateState" variant="outline" color="error">
+            </UiButton>
+            <UiButton size="xs" @click="resetUpdateState" variant="outline" color="error">
               Reset State
-            </UButton>
+            </UiButton>
           </div>
         </div>
 
-        <footer class="flex items-center justify-between pt-2 border-t text-xs text-gray-500">
-          <button @click="showModal = true" class="underline hover:text-gray-700">
+        <footer class="flex items-center justify-between pt-2 border-t text-xs text-content-secondary">
+          <button @click="showModal = true" class="underline hover:text-content-on-background">
             Open Panel
           </button>
-          <button @click="toggleCollapsed" class="underline hover:text-gray-700">
+          <button @click="toggleCollapsed" class="underline hover:text-content-on-background">
             {{ collapsed ? "Expand" : "Collapse" }}
           </button>
         </footer>
@@ -355,7 +355,7 @@ if (isDev) {
 
 /* Progress bar improvements */
 .progress-bar {
-  background: linear-gradient(90deg, #3b82f6, #6366f1);
+  background: linear-gradient(90deg, var(--color-accent-blue), var(--color-accent-indigo));
   animation: progress-shimmer 2s ease-in-out infinite;
 }
 
@@ -373,24 +373,24 @@ if (isDev) {
 
 /* Upload progress styling */
 .upload-progress {
-  background: linear-gradient(90deg, #10b981, #059669);
+  background: linear-gradient(90deg, var(--color-success), var(--color-success));
   transition: width 0.3s ease;
 }
 
 /* Error state */
 .error-banner {
-  background: linear-gradient(90deg, #ef4444, #dc2626);
+  background: linear-gradient(90deg, var(--color-error), var(--color-error));
 }
 
 /* Success state */
 .success-banner {
-  background: linear-gradient(90deg, #10b981, #059669);
+  background: linear-gradient(90deg, var(--color-success), var(--color-success));
 }
 
 /* Modal backdrop blur */
 .modal-backdrop {
   backdrop-filter: blur(4px);
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--ds-backdrop-dim);
 }
 
 /* Debug panel collapsed state */
@@ -422,15 +422,15 @@ if (isDev) {
 
 /* Status indicators */
 .status-online {
-  color: #10b981;
+  color: var(--color-success);
 }
 
 .status-offline {
-  color: #ef4444;
+  color: var(--color-error);
 }
 
 .status-updating {
-  color: #f59e0b;
+  color: var(--color-warning);
 }
 
 /* Smooth transitions for all interactive elements */
@@ -442,22 +442,14 @@ button,
 
 /* Focus states for accessibility */
 button:focus {
-  outline: 2px solid #3b82f6;
+  outline: 2px solid var(--color-accent-blue);
   outline-offset: 2px;
 }
 
 /* Dark mode specific adjustments */
 @media (prefers-color-scheme: dark) {
-  .sw-debug-panel .bg-gray-50 {
-    background: rgba(31, 41, 55, 0.9);
-  }
-
-  .sw-debug-panel .text-gray-900 {
-    color: rgb(243, 244, 246);
-  }
-
   .sw-debug-panel .border {
-    border-color: rgba(75, 85, 99, 0.3);
+    border-color: color-mix(in srgb, var(--color-content-secondary) 30%, transparent);
   }
 }
 </style>

@@ -34,23 +34,23 @@
           <ui-subtitle>Account Settings</ui-subtitle>
 
           <div class="flex flex-wrap gap-4 mt-4">
-            <u-button size="sm" variant="subtle" @click="navigateToChangePassword">
+            <ui-button size="sm" variant="subtle" @click="navigateToChangePassword">
               Change Password
-            </u-button>
+            </ui-button>
 
-            <u-button size="sm" variant="subtle" color="primary" @click="navigateToSettings">
+            <ui-button size="sm" variant="subtle" color="primary" @click="navigateToSettings">
               Update Profile
-            </u-button>
+            </ui-button>
           </div>
         </ui-card> -->
 
         <ui-card variant="default" v-if="isProfileLoading">
-          <USkeleton class="h-4 bg-neutral/50 dark:bg-neutral/10 my-0.5" />
-          <USkeleton class="h-4 bg-neutral/50 dark:bg-neutral/10 my-0.5" />
+          <USkeleton class="h-4 bg-surface-subtle dark:bg-surface my-0.5" />
+          <USkeleton class="h-4 bg-surface-subtle dark:bg-surface my-0.5" />
         </ui-card>
         <ui-card variant="default" class-name="mt-1.5" v-if="isProfileLoading">
-          <USkeleton class="h-4 bg-neutral/50 dark:bg-neutral/10 my-0.5" />
-          <USkeleton class="h-4 bg-neutral/50 dark:bg-neutral/10 my-0.5" />
+          <USkeleton class="h-4 bg-surface-subtle dark:bg-surface my-0.5" />
+          <USkeleton class="h-4 bg-surface-subtle dark:bg-surface my-0.5" />
         </ui-card>
 
 
@@ -63,24 +63,24 @@
             </div>
             <div v-else-if="isNotificationSubscribed" class="flex items-center justify-between">
               <span class="text-sm text-success">✓ Notifications enabled</span>
-              <u-button size="sm" variant="subtle" color="error" @click="handleUnsubscribe"
+              <ui-button size="sm" variant="subtle" color="error" @click="handleUnsubscribe"
                 :loading="notificationsLoading">
                 Disable
-              </u-button>
+              </ui-button>
             </div>
             <div v-else class="flex items-center justify-between">
               <span class="text-sm text-content-secondary">Notifications are disabled</span>
-              <u-button size="sm" variant="subtle" color="primary" @click="handleResubscribe"
+              <ui-button size="sm" variant="subtle" color="primary" @click="handleResubscribe"
                 :loading="notificationsLoading">
                 Enable Notifications
-              </u-button>
+              </ui-button>
             </div>
             <p v-if="notificationError" class="text-sm text-error mt-2">{{ notificationError }}</p>
           </div>
         </ui-card>
         <ui-card variant="default" class-name="mt-1.5" size="sm" v-if="notificationsLoading || isProfileLoading">
-          <USkeleton class="h-4 bg-neutral/50 dark:bg-neutral/10 my-0.5" />
-          <USkeleton class="h-4 bg-neutral/50 dark:bg-neutral/10 my-0.5" />
+          <USkeleton class="h-4 bg-surface-subtle dark:bg-surface my-0.5" />
+          <USkeleton class="h-4 bg-surface-subtle dark:bg-surface my-0.5" />
         </ui-card>
       </div>
 
@@ -105,8 +105,8 @@
             </div>
 
             <div v-if="subscriptionInfo.tier === 'FREE'" class="mt-2">
-              <u-button size="xl" class="w-full text-center justify-center" variant="subtle" @click="navigateToUpgrade">
-                Upgrade to Pro</u-button>
+              <ui-button size="xl" class="w-full text-center justify-center" variant="subtle" @click="navigateToUpgrade">
+                Upgrade to Pro</ui-button>
             </div>
           </div>
 
@@ -148,9 +148,9 @@
 
     <div v-else class="flex flex-col items-center justify-center min-h-[400px]">
       <p class="text-xl mb-4">Please sign in to view your profile</p>
-      <u-button @click="navigateToLogin">
+      <ui-button @click="navigateToLogin">
         Sign In
-      </u-button>
+      </ui-button>
     </div>
 
 

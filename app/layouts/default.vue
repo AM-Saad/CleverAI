@@ -11,23 +11,23 @@
               <g id="CleverLogo">
                 <path id="Holder"
                   d="M15.8359 9.34961H57.6641C62.7666 9.34984 66.9871 13.3228 67.2959 18.416L68.5078 38.416C68.8441 43.9648 64.4349 48.6502 58.876 48.6504H14.624C9.06508 48.6502 4.65592 43.9648 4.99219 38.416L6.2041 18.416C6.51289 13.3228 10.7334 9.34984 15.8359 9.34961Z"
-                  fill="#F1F1F1" stroke="#333333" stroke-width="0.7" />
+                  fill="var(--color-surface-subtle)" stroke="var(--color-content-on-background)" stroke-width="0.7" />
                 <g id="Workspaces">
                   <path id="Workspace3"
                     d="M15.9053 6.34961H57.8867C63.1118 6.34975 67.3881 10.5093 67.5332 15.7324L68.0439 34.1211C68.1946 39.5532 63.8317 44.039 58.3975 44.0391H15.3945C9.96035 44.0388 5.59838 39.5532 5.74902 34.1211L6.25977 15.7324C6.40485 10.5094 10.6803 6.34986 15.9053 6.34961Z"
-                    fill="white" stroke="#333333" stroke-width="0.7" />
+                    fill="white" stroke="var(--color-content-on-background)" stroke-width="0.7" />
                   <path id="Workspace2"
                     d="M15.8967 6.35608H52.9368C58.1824 6.35615 62.4672 10.5473 62.5842 15.7916L62.9944 34.1735C63.1151 39.5858 58.7606 44.0386 53.3469 44.0387H15.4866C10.0728 44.0387 5.71843 39.5859 5.83911 34.1735L6.24927 15.7916C6.36626 10.5472 10.651 6.35608 15.8967 6.35608Z"
-                    fill="white" stroke="#333333" stroke-width="0.7" />
+                    fill="white" stroke="var(--color-content-on-background)" stroke-width="0.7" />
                   <path id="Workspace1"
                     d="M15.6985 6.35608H46.4915C51.7631 6.35613 56.0588 10.587 56.1399 15.858L56.4231 34.2399C56.506 39.6267 52.162 44.0384 46.7747 44.0387H15.4163C10.0286 44.0387 5.68397 39.6268 5.76685 34.2399L6.05005 15.858C6.13114 10.5871 10.427 6.35626 15.6985 6.35608Z"
-                    fill="white" fill-opacity="0.1" stroke="#333333" stroke-width="0.7" />
+                    fill="white" fill-opacity="0.1" stroke="var(--color-content-on-background)" stroke-width="0.7" />
                 </g>
                 <g id="Confirm">
                   <path id="circle"
                     d="M14 33.2998C15.4912 33.2998 16.7002 34.5088 16.7002 36C16.7002 37.4912 15.4912 38.7002 14 38.7002C12.5088 38.7002 11.2998 37.4912 11.2998 36C11.2998 34.5088 12.5088 33.2998 14 33.2998Z"
-                    stroke="#333333" stroke-width="0.6" />
-                  <path id="correct" d="M13 36.1546L13.5942 37L15 35" stroke="#333333" stroke-width="0.6"
+                    stroke="var(--color-content-on-background)" stroke-width="0.6" />
+                  <path id="correct" d="M13 36.1546L13.5942 37L15 35" stroke="var(--color-content-on-background)" stroke-width="0.6"
                     stroke-linecap="round" stroke-linejoin="round" />
                 </g>
               </g>
@@ -48,22 +48,24 @@
 
         <div v-if="status === 'authenticated'" class="flex gap-5 items-center">
           <NuxtLink to="/language">
-            <u-button variant="ghost" size="sm" title="Language">
+            <ui-button variant="ghost" size="sm" title="Language">
               <shared-icon name="translation" class="w-4 h-4" />
-            </u-button>
+            </ui-button>
           </NuxtLink>
           <SharedCreditsPill />
+          <UiColorModeToggle />
           <ui-dropdown-menu />
         </div>
-        <div v-else-if="status === 'unauthenticated'" class="flex gap-5">
+        <div v-else-if="status === 'unauthenticated'" class="flex gap-5 items-center">
+          <UiColorModeToggle />
           <router-link to="/about">
-            <u-button variant="ghost">About</u-button>
+            <ui-button variant="ghost">About</ui-button>
           </router-link>
           <router-link to="/auth/signIn">
-            <u-button variant="ghost">Login</u-button>
+            <ui-button variant="ghost">Login</ui-button>
           </router-link>
           <router-link to="/auth/signup">
-            <u-button>Signup</u-button>
+            <ui-button>Signup</ui-button>
           </router-link>
         </div>
         <div v-else>
@@ -79,13 +81,13 @@
       <ServiceWorkerUpdateNotification mode="banner" />
       <SharedAIModalStatus />
       <slot />
-      <language-quick-capture-button v-if="status === 'authenticated'" />
+      <QuickCaptureButton v-if="status === 'authenticated'" />
       <!-- Single global CreditsWallet — opened via creditsStore.openWallet() from anywhere in the app -->
       <shared-credits-wallet v-if="status === 'authenticated'" :is-open="creditsStore.isWalletOpen"
         @close="creditsStore.closeWallet()" />
     </div>
     <footer v-if="!route.fullPath.startsWith('/workspaces') && !route.fullPath.startsWith('/user')"
-      class="xl:container mx-auto rounded-sm  h-10 dark:bg-transparent" style="flex: 0 0 auto;">
+      class="xl:container mx-auto rounded-[var(--radius-sm)]  h-10 dark:bg-transparent" style="flex: 0 0 auto;">
       <div class="footer-wrapper grid">
         <div class="footer-social">
           <ul>
@@ -113,6 +115,7 @@
 <script setup lang="ts">
 
 import { computed, watch } from "vue";
+import QuickCaptureButton from "~/features/language-learning/components/QuickCaptureButton.vue";
 
 const { status } = useAuth();
 

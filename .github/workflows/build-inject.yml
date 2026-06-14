@@ -7,6 +7,30 @@ on:
     branches: [ main ]
 
 jobs:
+  design-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Regenerate design tokens (must match committed output)
+        run: |
+          yarn design:tokens
+          git diff --exit-code app/design-system/tokens.generated.css app/design-system/tokens.generated.ts \
+            || (echo "::error::tokens.generated.* is stale — run 'yarn design:tokens' and commit." && exit 1)
+
+      - name: Enforce design-system tokens
+        run: yarn design:check
+
   build:
     runs-on: ubuntu-latest
     steps:

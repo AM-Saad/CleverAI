@@ -1,5 +1,5 @@
 <template>
-  <div class="mt-6 grid grid-cols-3 gap-4 text-center text-sm text-gray-500 dark:text-gray-400" role="region"
+  <div class="mt-6 grid grid-cols-3 gap-4 text-center text-sm text-content-secondary" role="region"
     aria-label="Card review state metrics">
     <div>
       <div class="font-medium">

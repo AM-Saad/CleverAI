@@ -1,7 +1,7 @@
 <template>
   <div v-if="show">
     <ReviewAnalyticsSummary v-if="analytics" :analytics="analytics" @close="handleClose" />
-    <div v-else-if="isLoading" class="bg-surface rounded-[var(--radius-lg)] shadow-lg p-6 mb-6 text-center">
+    <div v-else-if="isLoading" class="bg-surface rounded-[var(--radius-lg)] shadow-[var(--shadow-card-hover)] p-6 mb-6 text-center">
       <Loading />
       <p class="text-content-secondary mt-4">
         Loading analytics...
@@ -11,6 +11,7 @@
 </template>
 
 <script setup lang="ts">
+import ReviewAnalyticsSummary from "~/features/review/components/ReviewAnalyticsSummary.vue";
 interface AnalyticsData {
   totalCards: number
   totalReviews: number

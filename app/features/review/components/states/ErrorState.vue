@@ -4,9 +4,9 @@
       <Icon name="heroicons:exclamation-triangle" class="w-8 h-8 mx-auto mb-2" />
       {{ error }}
     </div>
-    <UButton @click="$emit('clearError')" color="error" variant="solid">
+    <UiButton @click="$emit('clearError')" color="error" variant="solid">
       Clear Error
-    </UButton>
+    </UiButton>
   </div>
 </template>
 

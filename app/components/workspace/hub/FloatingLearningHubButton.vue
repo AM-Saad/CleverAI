@@ -17,7 +17,7 @@
       </div>
 
       <!-- Animated Border / Pulse -->
-      <!-- <div class="absolute inset-0 border border-white/40 rounded-lg outline-0"></div> -->
+      <!-- <div class="absolute inset-0 border border-white/40 rounded-[var(--radius-lg)] outline-0"></div> -->
 
       <!-- Content -->
       <div class="relative flex items-center gap-2.5">

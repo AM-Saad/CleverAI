@@ -3,7 +3,7 @@
     :shortcuts="shortcuts">
     <button type="button" :class="[
       'inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-md)] text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20',
-      active ? 'bg-primary/10 text-primary shadow-sm' : colorClasses,
+      active ? 'bg-primary/10 text-primary shadow-[var(--shadow-dropdown)]' : colorClasses,
       disabled ? 'opacity-50 cursor-not-allowed' : '',
       (($slots.default && !iconOnly) || label) ? 'px-2.5 py-1.5' : 'w-8 h-8'
     ]" :aria-label="title || label" :disabled="disabled" @click="emit('click', $event)">

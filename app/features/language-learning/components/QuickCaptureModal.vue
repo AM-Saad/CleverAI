@@ -4,14 +4,14 @@
       <!-- ── Backdrop ──────────────────────────────────────────────────────── -->
       <motion.div v-if="show" key="qcm-bd" :initial="{ opacity: 0 }" :animate="{ opacity: 1 }" :exit="{ opacity: 0 }"
         :transition="{ duration: 0.2 }"
-        class="fixed inset-0 z-48 bg-black/60 backdrop-blur-[2px]"
+        class="fixed inset-0 z-48 bg-[var(--ds-backdrop-dim)] backdrop-blur-[2px]"
         :class="{ 'cursor-not-allowed': isLocked }" @click="onBackdropClick" />
       <!-- ── Panel ─────────────────────────────────────────────────────────── -->
       <motion.div v-if="show" ref="panelEl" key="qcm-panel" role="dialog" aria-modal="true" aria-labelledby="qcm-title"
         tabindex="-1" @keydown="onKeydown" :initial="{ opacity: 0, y: 24, scale: 0.96 }"
         :animate="{ opacity: 1, y: 0, scale: 1 }" :exit="{ opacity: 0, y: 16, scale: 0.97 }"
         :transition="{ type: 'spring', stiffness: 480, damping: 38 }"
-        class="fixed inset-x-0 bottom-4 md:bottom-auto md:top-[12vh] z-50 mx-auto flex md:w-[480px] w-[92%] rounded-2xl px-5 pb-5 overflow-hidden bg-surface shadow-2xl border border-secondary flex-col min-h-0"
+        class="fixed inset-x-0 bottom-4 md:bottom-auto md:top-[12vh] z-50 mx-auto flex md:w-[480px] w-[92%] rounded-[var(--radius-2xl)] px-5 pb-5 overflow-hidden bg-surface shadow-[var(--shadow-modal)] border border-secondary flex-col min-h-0"
         style="
           max-height: 82svh;
           box-shadow:
@@ -20,7 +20,7 @@
             0 0 0 1px rgba(255, 255, 255, 0.05) inset;
         ">
         <!-- Gradient top stripe -->
-        <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#40D9C6] via-[#4285F4] to-[#9154E7]" />
+        <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-accent-teal via-accent-blue to-accent-purple" />
 
         <!-- Header -->
         <div class="flex items-center justify-between pt-5 pb-4 shrink-0">
@@ -59,7 +59,7 @@
               <div class="space-y-4">
                 <!-- Unified Input Row: Mic + Input + Send in one line -->
                 <div class="flex items-center gap-2 bg-surface-strong rounded-full border p-1.5 transition-all duration-200"
-                  :class="isInputFocused ? 'ring-2 ring-primary/50 border-primary shadow-sm' : 'border-secondary'">
+                  :class="isInputFocused ? 'ring-2 ring-primary/50 border-primary shadow-[var(--shadow-dropdown)]' : 'border-secondary'">
                   <!-- Mic Button (compact icon-only) -->
                   <button
                     type="button"
@@ -142,7 +142,7 @@
                     <!-- Translate language check -->
                     <label class="flex items-center gap-2 cursor-pointer select-none">
                       <input v-model="includeTranslation" type="checkbox"
-                        class="h-3.5 w-3.5 rounded border-secondary text-primary focus:ring-primary" />
+                        class="h-3.5 w-3.5 rounded-[var(--radius-md)] border-secondary text-primary focus:ring-primary" />
                       <span class="text-xs text-content-secondary">
                         Translate to {{ translationLanguage }}
                       </span>
@@ -151,7 +151,7 @@
 
                   <Transition name="ctx">
                     <div v-if="showContext" class="mt-2">
-                      <u-input v-model="contextInput" placeholder="Surrounding sentence context..." class="w-full" size="sm" />
+                      <ui-input v-model="contextInput" placeholder="Surrounding sentence context..." class="w-full" size="sm" />
                     </div>
                   </Transition>
                 </div>
@@ -175,7 +175,7 @@
               :exit="{ opacity: 0, x: stateDirection * 20 }" :transition="{ duration: 0.18, ease: 'easeInOut' }">
               <div class="space-y-4">
                 <!-- Word card — uses primary glassmorphism gradient treatment -->
-                <div class="relative overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/8 via-primary/[0.01] to-transparent p-5 shadow-xs">
+                <div class="relative overflow-hidden rounded-[var(--radius-2xl)] border border-primary/20 bg-gradient-to-br from-primary/8 via-primary/[0.01] to-transparent p-5 shadow-xs">
                   <div class="relative flex items-start justify-between gap-3">
                     <div class="min-w-0">
                       <p class="text-2xl font-semibold leading-tight text-content-on-surface">
@@ -185,17 +185,17 @@
                         {{ captureResult.phonetic }}
                       </p>
                       <div class="mt-2 flex flex-wrap gap-1.5">
-                        <u-badge v-if="captureResult.category" variant="soft" color="neutral" class="text-xs">
+                        <ui-badge v-if="captureResult.category" variant="soft" color="neutral" class="text-xs">
                           {{ captureResult.category }}
-                        </u-badge>
-                        <u-badge v-if="captureResult.difficulty" variant="soft" color="neutral" class="text-xs">
+                        </ui-badge>
+                        <ui-badge v-if="captureResult.difficulty" variant="soft" color="neutral" class="text-xs">
                           {{ captureResult.difficulty }}
-                        </u-badge>
+                        </ui-badge>
                       </div>
                     </div>
-                    <u-badge variant="soft" color="neutral" class="mt-1 shrink-0 text-xs">
+                    <ui-badge variant="soft" color="neutral" class="mt-1 shrink-0 text-xs">
                       {{ captureResult.partOfSpeech }}
-                    </u-badge>
+                    </ui-badge>
                   </div>
                   <div v-if="captureResult.translation" class="relative mt-4 border-t border-primary/15 pt-4">
                     <p class="text-xl font-semibold leading-snug text-primary">
@@ -206,15 +206,15 @@
                         {{ captureResult.detectedLang }} →
                         {{ translationLanguage }}
                       </span>
-                      <u-badge v-if="captureResult.cached" variant="soft" color="success" class="text-xs">
+                      <ui-badge v-if="captureResult.cached" variant="soft" color="success" class="text-xs">
                         Already saved
-                      </u-badge>
+                      </ui-badge>
                     </div>
                   </div>
                 </div>
 
                 <div v-if="captureResult.meanings?.length"
-                  class="space-y-3 rounded-2xl border border-secondary bg-surface-subtle p-4">
+                  class="space-y-3 rounded-[var(--radius-2xl)] border border-secondary bg-surface-subtle p-4">
                   <div class="flex items-center gap-2">
                     <Icon name="i-lucide-list-tree" class="h-4 w-4 text-primary" />
                     <span class="text-sm font-semibold text-content-on-surface">
@@ -223,7 +223,7 @@
                   </div>
                   <div class="space-y-2">
                     <div v-for="(meaning, index) in captureResult.meanings" :key="`${meaning.definition}-${index}`"
-                      class="rounded-lg bg-surface px-3 py-2">
+                      class="rounded-[var(--radius-lg)] bg-surface px-3 py-2">
                       <div class="flex items-start gap-2">
                         <span class="mt-0.5 text-xs text-content-disabled">
                           {{ index + 1 }}.
@@ -245,7 +245,7 @@
                 </div>
 
                 <div v-if="captureResult.examples?.length"
-                  class="rounded-2xl border border-secondary bg-surface-subtle p-4">
+                  class="rounded-[var(--radius-2xl)] border border-secondary bg-surface-subtle p-4">
                   <div class="mb-2 flex items-center gap-2">
                     <Icon name="i-lucide-message-square-quote" class="h-4 w-4 text-primary" />
                     <span class="text-sm font-semibold text-content-on-surface">
@@ -261,23 +261,23 @@
                 </div>
 
                 <div class="flex flex-col gap-2">
-                  <u-button v-if="!captureResult.saved" variant="soft" color="neutral" class="w-full"
+                  <ui-button v-if="!captureResult.saved" variant="soft" color="neutral" class="w-full"
                     :loading="isCapturing" @click="handleSaveOnly">
                     <Icon name="i-lucide-book-plus" class="mr-1.5 h-4 w-4" />
                     Save to Word Bank
-                  </u-button>
-                  <u-button class="w-full" :loading="isGeneratingStory" @click="handleGenerateStory">
+                  </ui-button>
+                  <ui-button class="w-full" :loading="isGeneratingStory" @click="handleGenerateStory">
                     <Icon name="i-lucide-sparkles" class="mr-1.5 h-4 w-4" />
                     {{
                       captureResult.saved
                         ? "Generate Story"
                         : "Save to Deck + Generate Story"
                     }}
-                  </u-button>
-                  <u-button variant="ghost" color="neutral" class="w-full" @click="resetToIdle">
+                  </ui-button>
+                  <ui-button variant="ghost" color="neutral" class="w-full" @click="resetToIdle">
                     <Icon name="i-lucide-rotate-ccw" class="mr-1.5 h-3.5 w-3.5" />
                     Translate another
-                  </u-button>
+                  </ui-button>
                 </div>
               </div>
             </motion.div>
@@ -307,7 +307,7 @@
               :initial="{ opacity: 0, x: stateDirection * -20 }" :animate="{ opacity: 1, x: 0 }"
               :exit="{ opacity: 0, x: stateDirection * 20 }" :transition="{ duration: 0.18, ease: 'easeInOut' }">
               <div class="space-y-4">
-                <div class="flex items-center gap-2.5 rounded-xl border border-success/20 bg-success/8 p-3.5">
+                <div class="flex items-center gap-2.5 rounded-[var(--radius-xl)] border border-success/20 bg-success/8 p-3.5">
                   <Icon name="i-lucide-check-circle-2" class="h-4 w-4 shrink-0 text-success" />
                   <UiParagraph size="sm" color="success">
                     Story generated — added to your language deck.
@@ -316,21 +316,21 @@
 
                 <div class="space-y-2">
                   <div v-for="(sentence, i) in storyResult.sentences" :key="i"
-                    class="rounded-lg bg-surface-strong p-3 text-sm leading-relaxed text-content-on-surface">
+                    class="rounded-[var(--radius-lg)] bg-surface-strong p-3 text-sm leading-relaxed text-content-on-surface">
                     <span class="mr-1.5 text-xs text-content-disabled">{{ i + 1 }}.</span>
                     <span v-html="highlightCloze(sentence.text, sentence.clozeWord)" />
                   </div>
                 </div>
 
                 <div class="flex flex-col gap-2">
-                  <u-button class="w-full" to="/language/review" @click="handleClose">
+                  <ui-button class="w-full" to="/language/review" @click="handleClose">
                     <Icon name="i-lucide-play" class="mr-1.5 h-4 w-4" />
                     Start Reviewing
-                  </u-button>
-                  <u-button variant="ghost" color="neutral" class="w-full" @click="resetToIdle">
+                  </ui-button>
+                  <ui-button variant="ghost" color="neutral" class="w-full" @click="resetToIdle">
                     <Icon name="i-lucide-rotate-ccw" class="mr-1.5 h-3.5 w-3.5" />
                     Translate another
-                  </u-button>
+                  </ui-button>
                 </div>
               </div>
             </motion.div>
@@ -346,7 +346,7 @@
   </Teleport>
 
   <!-- Consent sheet — z-50, always above the modal -->
-  <language-consent-sheet :show="showConsentSheet" @confirm="confirmCapture" @decline="declineCapture" />
+  <ConsentSheet :show="showConsentSheet" @confirm="confirmCapture" @decline="declineCapture" />
 </template>
 
 <script setup lang="ts">
@@ -354,6 +354,7 @@ import { AnimatePresence, motion } from "motion-v";
 import { useSanitize } from "~/composables/shared/useSanitize";
 import { usePredictionaryInput } from "~/composables/usePredictionaryInput";
 import { useSpeechCapture } from "../composables/useSpeechCapture";
+import ConsentSheet from "~/features/language-learning/components/ConsentSheet.vue";
 
 const props = defineProps<{ show: boolean }>();
 const emit = defineEmits<{ (e: "close"): void }>();
@@ -545,7 +546,7 @@ const highlightCloze = (text: string, clozeWord: string) => {
   return sanitizeHtml(
     text.replace(
       new RegExp(`\\b${esc}\\b`, "gi"),
-      `<mark class="bg-primary/20 text-primary rounded px-0.5">$&</mark>`,
+      `<mark class="bg-primary/20 text-primary rounded-[var(--radius-md)] px-0.5">$&</mark>`,
     ),
   );
 };

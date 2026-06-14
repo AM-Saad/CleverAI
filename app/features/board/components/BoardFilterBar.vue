@@ -79,12 +79,12 @@ const DUE_DATE_OPTIONS: Array<{ label: string; value: BoardFilterState["dueDate"
 <template>
   <UPopover v-model:open="isOpen">
     <!-- Trigger button -->
-    <UButton size="xs" :icon="activeCount > 0 ? 'heroicons:funnel-solid' : 'heroicons:funnel'"
+    <UiButton size="xs" :icon="activeCount > 0 ? 'heroicons:funnel-solid' : 'heroicons:funnel'"
       trailing-icon="heroicons:chevron-down-20-solid" :color="activeCount > 0 ? 'primary' : 'neutral'"
       :variant="activeCount > 0 ? 'soft' : 'ghost'">
       <span v-if="activeCount === 0">Filters</span>
       <span v-else>{{ activeCount }} filter{{ activeCount === 1 ? "" : "s" }}</span>
-    </UButton>
+    </UiButton>
 
     <template #content>
       <div class="w-80 space-y-4 p-3">
@@ -92,10 +92,10 @@ const DUE_DATE_OPTIONS: Array<{ label: string; value: BoardFilterState["dueDate"
         <!-- Header -->
         <div class="flex items-center justify-between">
           <span class="text-xs font-bold uppercase tracking-widest text-content-secondary">Filters</span>
-          <UButton v-if="activeCount > 0" size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
+          <UiButton v-if="activeCount > 0" size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
             @click="clearAll">
             Clear all
-          </UButton>
+          </UiButton>
         </div>
 
         <!-- ── Tags ──────────────────────────────────────────────────── -->
@@ -107,10 +107,10 @@ const DUE_DATE_OPTIONS: Array<{ label: string; value: BoardFilterState["dueDate"
               <button v-for="tag in allTags" :key="tag.id" type="button" :class="[
                 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all border',
                 modelValue.tags.includes(tag.name)
-                  ? 'border-transparent shadow-sm scale-105'
+                  ? 'border-transparent shadow-[var(--shadow-dropdown)] scale-105'
                   : 'border-secondary bg-white text-content-on-surface hover:border-secondary/70'
               ]" :style="modelValue.tags.includes(tag.name)
-                ? { backgroundColor: tag.color, color: '#fff' }
+                ? { backgroundColor: tag.color, color: 'var(--color-on-primary)' }
                 : {}" @click="toggleTag(tag.name)">
                 <Icon v-if="modelValue.tags.includes(tag.name)" name="heroicons:check-20-solid" class="w-3 h-3" />
                 {{ tag.name }}
@@ -126,7 +126,7 @@ const DUE_DATE_OPTIONS: Array<{ label: string; value: BoardFilterState["dueDate"
               <button v-for="opt in DUE_DATE_OPTIONS" :key="opt.value" type="button" :class="[
                 'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all min-w-fit',
                 modelValue.dueDate === opt.value
-                  ? 'bg-primary text-on-primary border-primary shadow-sm'
+                  ? 'bg-primary text-on-primary border-primary shadow-[var(--shadow-dropdown)]'
                   : 'border-secondary bg-white text-content-on-surface hover:border-secondary/70',
               ]" @click="patch({ dueDate: opt.value })">
                 <Icon :name="opt.icon" class="w-3 h-3" />

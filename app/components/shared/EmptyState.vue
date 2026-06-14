@@ -14,17 +14,17 @@
     </ui-paragraph>
 
     <u-tooltip v-if="buttonText && isBlocked && blockedTooltip" :text="blockedTooltip" :popper="{ placement: 'top' }">
-      <u-button color="primary" size="sm" :loading="buttonLoading" :disabled="true">
+      <ui-button color="primary" size="sm" :loading="buttonLoading" :disabled="true">
         <u-icon v-if="buttonIcon" :name="buttonIcon" />
         {{ buttonText }}
-      </u-button>
+      </ui-button>
     </u-tooltip>
 
-    <u-button v-else-if="buttonText" color="primary" size="sm" :loading="buttonLoading" :disabled="buttonDisabled"
+    <ui-button v-else-if="buttonText" color="primary" size="sm" :loading="buttonLoading" :disabled="buttonDisabled"
       @click="$emit('action')">
       <u-icon v-if="buttonIcon" :name="buttonIcon" />
       {{ buttonText }}
-    </u-button>
+    </ui-button>
 
     <!-- Optional additional actions slot -->
     <slot name="actions" />

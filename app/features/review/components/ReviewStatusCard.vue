@@ -7,10 +7,10 @@
     <template #header v-if="!minimal">
       <div class="flex items-center justify-between w-full">
         Review Status
-        <u-button v-if="showRefresh" size="xs" variant="ghost" :is-loading="isLoading" @click="refresh">
+        <ui-button v-if="showRefresh" size="xs" variant="ghost" :is-loading="isLoading" @click="refresh">
           <!-- <Icon name="heroicons:arrow-path" :class="['w-4 h-4', isLoading ? 'animate-spin' : '']" /> -->
           <shared-icon :name="'reload'" />
-        </u-button>
+        </ui-button>
       </div>
     </template>
     <ui-loader v-if="isLoading" :is-fetching="isLoading" />
@@ -42,45 +42,45 @@
         </div>
         <!-- Action Button -->
         <div v-if="showAction && hasDueCards">
-          <u-button :to="reviewLink" size="sm">
+          <ui-button :to="reviewLink" size="sm">
             <!-- <Icon name="heroicons:play" class="w-4 h-4" /> -->
             Start Review
             <span v-if="stats?.due" class=" opacity-75">({{ stats.due }})</span>
-          </u-button>
+          </ui-button>
         </div>
 
       </div>
 
       <!-- Stats Grid - Full variant for default/outline -->
       <div v-if="!minimal" class="flex md:justify-end justify-start gap-1 text-center w-full overflow-auto">
-        <u-badge class="flex grid-1" variant="soft" color="error">
+        <ui-badge class="flex grid-1" variant="soft" color="error">
           <div class="text-error">Due</div>
 
           <div class="text-error">
             {{ stats?.due ?? 0 }}
           </div>
-        </u-badge>
-        <u-badge class="flex grid-1" variant="soft" color="primary">
+        </ui-badge>
+        <ui-badge class="flex grid-1" variant="soft" color="primary">
           <div class="text-info">New</div>
 
           <div class="text-info">
             {{ stats?.new ?? 0 }}
           </div>
-        </u-badge>
-        <u-badge class="flex grid-1" variant="soft" color="warning">
+        </ui-badge>
+        <ui-badge class="flex grid-1" variant="soft" color="warning">
           <div class="text-warning">Learning</div>
 
           <div class="text-warning">
             {{ stats?.learning ?? 0 }}
           </div>
-        </u-badge>
-        <u-badge class="flex grid-1" variant="soft" color="success">
+        </ui-badge>
+        <ui-badge class="flex grid-1" variant="soft" color="success">
           <div class="text-success">Mature</div>
 
           <div class="text-success">
             {{ stats?.mature ?? 0 }}
           </div>
-        </u-badge>
+        </ui-badge>
       </div>
 
 
@@ -168,20 +168,20 @@ const isOnline = computed(() => navigator.onLine);
 const urgencyIndicatorClass = computed(() => {
   switch (urgencyLevel.value) {
     case "high":
-      return "bg-red-500 animate-pulse";
+      return "bg-error animate-pulse";
     case "medium":
-      return "bg-orange-500";
+      return "bg-warning";
     case "low":
       return "bg-info";
     default:
-      return "bg-green-500";
+      return "bg-success";
   }
 });
 
 // Computed: Card styling based on urgency
 const cardClasses = computed(() => {
   // if (urgencyLevel.value === "high") {
-  //   return "border-red-200 dark:border-red-600";
+  //   return "border-error/20 dark:border-error";
   // }
   return "";
 });

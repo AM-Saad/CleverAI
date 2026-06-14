@@ -10,7 +10,7 @@
           <Icon name="i-lucide-languages" class="w-4 h-4 text-primary" />
           Language Review
         </div>
-        <u-button
+        <ui-button
           size="xs"
           variant="ghost"
           :is-loading="isLoading"
@@ -20,7 +20,7 @@
             name="heroicons:arrow-path"
             :class="['w-4 h-4', isLoading ? 'animate-spin' : '']"
           />
-        </u-button>
+        </ui-button>
       </div>
     </template>
 
@@ -60,27 +60,27 @@
             }}
           </ui-paragraph>
         </div>
-        <u-button v-if="hasDueCards" to="/language/review" size="sm">
+        <ui-button v-if="hasDueCards" to="/language/review" size="sm">
           <Icon name="i-lucide-play" class="w-3.5 h-3.5 mr-1" />
           Start Session
           <span class="opacity-75 ml-1">({{ stats!.due }})</span>
-        </u-button>
+        </ui-button>
       </div>
 
       <div v-if="!minimal" class="flex gap-1.5 flex-wrap">
-        <u-badge variant="soft" color="error">
+        <ui-badge variant="soft" color="error">
           <span class="text-error text-xs">Due: {{ stats?.due ?? 0 }}</span>
-        </u-badge>
-        <u-badge variant="soft" color="primary">
+        </ui-badge>
+        <ui-badge variant="soft" color="primary">
           <span class="text-primary text-xs"
             >Enrolled: {{ stats?.enrolled ?? 0 }}</span
           >
-        </u-badge>
-        <u-badge variant="soft" color="success">
+        </ui-badge>
+        <ui-badge variant="soft" color="success">
           <span class="text-success text-xs"
             >Mastered: {{ stats?.mastered ?? 0 }}</span
           >
-        </u-badge>
+        </ui-badge>
       </div>
     </div>
   </ui-card>

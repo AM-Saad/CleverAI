@@ -7,14 +7,14 @@
         v-if="!isUngrouped"
         type="button"
         data-group-drag-handle
-        class="shrink-0 cursor-grab rounded p-1 text-content-secondary opacity-70 hover:opacity-100 active:cursor-grabbing"
+        class="shrink-0 cursor-grab rounded-[var(--radius-md)] p-1 text-content-secondary opacity-70 hover:opacity-100 active:cursor-grabbing"
         :aria-label="`Reorder group ${title}`"
         @click.stop
       >
         <icon name="i-lucide-grip-vertical" class="h-3.5 w-3.5" />
       </button>
 
-      <u-button
+      <ui-button
         size="xs"
         color="neutral"
         variant="ghost"
@@ -22,7 +22,7 @@
         @click="$emit('toggle-collapse', groupId)"
       >
         <icon :name="collapsed ? 'i-lucide-chevron-right' : 'i-lucide-chevron-down'" class="h-3.5 w-3.5" />
-      </u-button>
+      </ui-button>
 
       <button
         v-if="!editing"
@@ -39,7 +39,7 @@
         class="flex min-w-0 flex-1 items-center gap-1"
         @submit.prevent="groupId && $emit('submit-rename-group', groupId)"
       >
-        <UInput
+        <UiInput
           :model-value="editingTitle"
           :data-note-group-rename-input="groupId"
           size="xs"
@@ -47,7 +47,7 @@
           @update:model-value="$emit('update:editing-title', String($event ?? ''))"
           @keydown.esc.prevent="$emit('cancel-rename-group')"
         />
-        <u-button
+        <ui-button
           size="xs"
           color="primary"
           variant="solid"
@@ -55,8 +55,8 @@
           :disabled="!editingTitle.trim()"
         >
           Save
-        </u-button>
-        <u-button
+        </ui-button>
+        <ui-button
           size="xs"
           color="neutral"
           variant="ghost"
@@ -64,10 +64,10 @@
           @click="$emit('cancel-rename-group')"
         >
           Cancel
-        </u-button>
+        </ui-button>
       </form>
 
-      <u-button
+      <ui-button
         v-if="!editing"
         size="xs"
         color="neutral"
@@ -76,10 +76,10 @@
         @click.stop="$emit('create-note', groupId)"
       >
         <icon name="i-lucide-plus" class="h-3.5 w-3.5" />
-      </u-button>
+      </ui-button>
 
       <UDropdownMenu v-if="!isUngrouped && !editing" :modal="false" :items="groupMenuItems">
-        <u-button
+        <ui-button
           size="xs"
           color="neutral"
           variant="ghost"
@@ -87,7 +87,7 @@
           :aria-label="`Actions for group ${title}`"
         >
           <icon name="i-lucide-more-horizontal" class="h-3.5 w-3.5" />
-        </u-button>
+        </ui-button>
       </UDropdownMenu>
     </div>
 
@@ -261,27 +261,27 @@ function handleRowIntent(intent: NoteRowIntent) {
 }
 
 .notes-drop-list--empty {
-  border: 1px dashed rgba(99, 102, 241, 0.25);
+  border: 1px dashed color-mix(in srgb, var(--color-accent-indigo) 25%, transparent);
 }
 
 :deep(.notes-drop-list--target) {
-  background: rgba(238, 242, 255, 0.75);
-  outline: 1px dashed rgba(99, 102, 241, 0.7);
+  background: color-mix(in srgb, var(--color-accent-indigo) 10%, var(--color-surface));
+  outline: 1px dashed color-mix(in srgb, var(--color-accent-indigo) 70%, transparent);
   outline-offset: -2px;
 }
 
 :deep(.note-row--dragging) {
-  box-shadow: 0 10px 30px rgb(15 23 42 / 0.16);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--color-content-on-background) 16%, transparent);
   opacity: 0.92;
   transform: scale(1.01);
 }
 
 :deep(.note-row--placeholder) {
-  background: rgba(238, 242, 255, 0.9);
-  border: 1px dashed rgba(99, 102, 241, 0.75);
+  background: color-mix(in srgb, var(--color-accent-indigo) 12%, var(--color-surface));
+  border: 1px dashed color-mix(in srgb, var(--color-accent-indigo) 75%, transparent);
 }
 
 :deep(.note-row--drop-target) {
-  border-top: 2px solid rgb(99 102 241);
+  border-top: 2px solid var(--color-accent-indigo);
 }
 </style>

@@ -6,7 +6,7 @@
       <section id="about" class="min-h-[40vh] flex flex-col justify-center">
         <blur-reveal :delay="0.2" class="space-y-8">
           <ui-title size="5xl" tag="h1"
-            class="leading-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-slate-600 ">
+            class="leading-tight bg-clip-text text-transparent bg-gradient-to-r from-primary to-content-on-background ">
             Cognilo — AI‑Powered Spaced Repetition Learning Platform
           </ui-title>
 
@@ -93,7 +93,7 @@
 
       <!-- Who It's For -->
       <section id="who-it-s-for"
-        class="bg-neutral-100 dark:bg-neutral-900 rounded-3xl p-8 md:p-12 relative overflow-hidden">
+        class="bg-surface-subtle dark:bg-content-on-background rounded-[var(--radius-2xl)] p-8 md:p-12 relative overflow-hidden">
         <div class="relative z-10">
           <ui-subtitle tag="h2" size="2xl" weight="bold" class="mb-8 text-center text-3xl md:text-4xl">
             Built for Every Learner
@@ -101,7 +101,7 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div v-for="(person, idx) in targetAudience" :key="idx"
-              class="text-center p-4 rounded-[var(--radius-xl)] bg-white dark:bg-surface shadow-sm">
+              class="text-center p-4 rounded-[var(--radius-xl)] bg-white dark:bg-surface shadow-[var(--shadow-dropdown)]">
               <span class="text-lg font-medium text-dark dark:text-light">{{ person }}</span>
             </div>
           </div>

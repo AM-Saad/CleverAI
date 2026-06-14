@@ -134,8 +134,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { NodeViewWrapper, nodeViewProps } from "@tiptap/vue-3";
+import { designTokenValues, type DesignTokenName } from "~/design-system/tokens.generated";
 // @ts-ignore — d3 has no bundled type declarations
 import * as d3 from "d3";
 
@@ -154,7 +155,34 @@ const props = defineProps(nodeViewProps);
 // ─── Constants ──────────────────────────────────────────────────
 const W = 600;
 const H = computed(() => props.node.attrs.height ?? 280);
-const presetColors = ["#6366f1", "#f43f5e", "#f97316", "#eab308", "#22c55e", "#06b6d4", "#8b5cf6", "#1e293b"];
+
+// Stroke colors must be resolved (non-`var`) values: they are written to the
+// SVG `stroke` attribute and serialized into a detached <img> for PNG export,
+// where CSS custom properties would not resolve. We resolve the design-system
+// tokens at runtime, falling back to the generated token values so no raw hex
+// lives in this file.
+const SWATCH_TOKENS: DesignTokenName[] = [
+  "--color-accent-indigo",
+  "--color-accent-rose",
+  "--color-accent-orange",
+  "--color-warning",
+  "--color-success",
+  "--color-accent-teal",
+  "--color-accent-purple",
+  "--color-content-on-background",
+];
+
+function resolveToken(name: DesignTokenName): string {
+  const fallback = designTokenValues[name];
+  if (typeof window === "undefined") return fallback;
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
+}
+
+const presetColors = ref<string[]>([]);
+function loadSwatches() {
+  presetColors.value = SWATCH_TOKENS.map((t) => resolveToken(t));
+}
 
 const tools = [
   { id: "pen" as Tool, label: "Pen", svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>' },
@@ -163,7 +191,7 @@ const tools = [
 
 // ─── State ──────────────────────────────────────────────────────
 const activeTool = ref<Tool>("pen");
-const color = ref("#6366f1");
+const color = ref(designTokenValues["--color-accent-indigo"]); // resolved against the live theme at mount
 const size = ref(3);
 const gridType = ref<GridType>("none");
 const isDrawing = ref(false);
@@ -304,7 +332,8 @@ function exportPng() {
     canvas.width = W * 2;
     canvas.height = H.value * 2;
     const ctx = canvas.getContext("2d")!;
-    ctx.fillStyle = "#ffffff";
+    // Resolved white background for the exported PNG (functional, not styling).
+    ctx.fillStyle = resolveToken("--color-white");
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     URL.revokeObjectURL(url);
@@ -349,6 +378,11 @@ function onResizeEnd() {
   window.removeEventListener("touchend", onResizeEnd);
 }
 
+onMounted(() => {
+  loadSwatches();
+  color.value = resolveToken("--color-accent-indigo");
+});
+
 onBeforeUnmount(() => {
   canvasRef.value?.removeEventListener("mousemove", onPointerMove);
   canvasRef.value?.removeEventListener("touchmove", onPointerMove);
@@ -359,16 +393,16 @@ onBeforeUnmount(() => {
 <style>
 .paper-block-wrapper {
   margin: 1.25rem 0;
-  border-radius: 0.75rem;
+  border-radius: var(--radius-2xl);
   overflow: hidden;
-  /* border: 1px solid var(--color-border-secondary, rgba(0,0,0,0.08)); */
+  /* border: 1px solid var(--color-secondary, rgba(0,0,0,0.08)); */
   /* box-shadow: 0 2px 8px rgba(0,0,0,0.06); */
   /* transition: box-shadow 0.2s ease; */
   position: relative;
 }
 
 .paper-block-wrapper:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-dropdown);
 }
 
 /* ─── Header ───────────────────────────────────────────────────── */
@@ -378,8 +412,8 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.35rem 0.75rem;
-  background: var(--color-surface-subtle, #f8fafc);
-  border-bottom: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.06));
+  background: var(--color-surface-subtle);
+  border-bottom: 1px solid var(--color-secondary);
   user-select: none;
   flex-wrap: wrap;
 }
@@ -409,23 +443,23 @@ onBeforeUnmount(() => {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
   border: none;
   background: transparent;
-  color: var(--color-content-secondary, #64748b);
+  color: var(--color-content-secondary);
   cursor: pointer;
   transition: all 0.12s ease;
 }
 
 .paper-tool-btn:hover {
-  background: var(--color-surface-strong, rgba(0, 0, 0, 0.05));
-  color: var(--color-content-on-surface, #1e293b);
+  background: var(--color-surface-strong);
+  color: var(--color-content-on-surface);
 }
 
 .paper-tool-btn--active {
-  background: var(--color-primary, #6366f1) !important;
-  color: #fff !important;
-  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.3);
+  background: var(--color-primary) !important;
+  color: var(--color-on-primary) !important;
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .paper-tool-icon {
@@ -437,7 +471,7 @@ onBeforeUnmount(() => {
 .paper-sep {
   width: 1px;
   height: 18px;
-  background: var(--color-border-secondary, rgba(0, 0, 0, 0.08));
+  background: var(--color-secondary);
   margin: 0 2px;
   flex-shrink: 0;
 }
@@ -451,8 +485,8 @@ onBeforeUnmount(() => {
 .paper-color-swatch {
   width: 20px;
   height: 20px;
-  border-radius: 5px;
-  border: 2px solid rgba(0, 0, 0, 0.1);
+  border-radius: var(--radius-lg);
+  border: 2px solid color-mix(in srgb, var(--color-content-on-background) 10%, transparent);
   cursor: pointer;
 }
 
@@ -485,15 +519,15 @@ onBeforeUnmount(() => {
 }
 
 .paper-preset-btn--active {
-  border-color: var(--color-primary, #6366f1);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 /* Range + labels */
 .paper-range {
   width: 50px;
   height: 4px;
-  accent-color: var(--color-primary, #6366f1);
+  accent-color: var(--color-primary);
   cursor: pointer;
 }
 
@@ -520,13 +554,13 @@ onBeforeUnmount(() => {
   border-radius: 5px;
   border: none;
   background: transparent;
-  color: var(--color-content-secondary, #64748b);
+  color: var(--color-content-secondary);
   cursor: pointer;
   transition: all 0.12s;
 }
 
 .paper-action-btn:hover {
-  background: var(--color-surface-strong, rgba(0, 0, 0, 0.05));
+  background: var(--color-surface-strong);
   color: var(--color-content-on-surface);
 }
 
@@ -536,19 +570,19 @@ onBeforeUnmount(() => {
 }
 
 .paper-action-btn--toggled {
-  color: var(--color-primary, #6366f1);
+  color: var(--color-primary);
 }
 
 .paper-action-btn--danger:hover {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  background: color-mix(in srgb, var(--color-error) 10%, transparent);
+  color: var(--color-error);
 }
 
 /* ─── Canvas ───────────────────────────────────────────────────── */
 .paper-canvas {
   display: block;
   width: 100%;
-  background: var(--color-background, #fff);
+  background: var(--color-background);
   cursor: crosshair;
   touch-action: none;
   min-height: 180px;
@@ -597,18 +631,18 @@ onBeforeUnmount(() => {
   justify-content: center;
   gap: 0.5rem;
   pointer-events: none;
-  color: var(--color-content-disabled, #94a3b8);
+  color: var(--color-content-disabled);
   font-size: 0.75rem;
 }
 
 /* ─── Dark Mode ────────────────────────────────────────────────── */
 .dark .paper-block-header {
-  background: #1e2030;
+  background: color-mix(in srgb, var(--color-dark) 80%, black);
   border-bottom-color: rgba(255, 255, 255, 0.06);
 }
 
 .dark .paper-canvas {
-  background: #191b28;
+  background: color-mix(in srgb, var(--color-dark) 68%, black);
 }
 
 .dark .paper-grid--dots {
@@ -634,8 +668,8 @@ onBeforeUnmount(() => {
 /* Resize handle styling */
 .paper-resize-handle {
   height: 9px;
-  background: var(--color-surface-subtle, #f8fafc);
-  border-top: 1px solid var(--color-border-secondary, rgba(0, 0, 0, 0.06));
+  background: var(--color-surface-subtle);
+  border-top: 1px solid var(--color-secondary);
   cursor: ns-resize;
   display: flex;
   align-items: center;
@@ -652,11 +686,11 @@ onBeforeUnmount(() => {
   width: 24px;
   height: 3px;
   border-radius: 1.5px;
-  background-color: var(--color-content-disabled, #cbd5e1);
+  background-color: var(--color-content-disabled);
 }
 
 .dark .paper-resize-handle {
-  background: #1e2030;
+  background: color-mix(in srgb, var(--color-dark) 80%, black);
   border-top-color: rgba(255, 255, 255, 0.06);
 }
 

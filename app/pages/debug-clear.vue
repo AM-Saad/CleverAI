@@ -29,22 +29,22 @@
         </div>
 
         <div class="flex gap-2">
-          <UButton
+          <UiButton
             color="error"
             :loading="clearing"
             @click="clearAll"
           >
             Clear Everything
-          </UButton>
+          </UiButton>
 
-          <UButton
+          <UiButton
             color="warning"
             variant="outline"
             :loading="clearing"
             @click="clearWorkboxOnly"
           >
             Clear Workbox Only
-          </UButton>
+          </UiButton>
         </div>
 
         <div v-if="details.length > 0" class="mt-4">

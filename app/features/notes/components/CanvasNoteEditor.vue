@@ -1,10 +1,19 @@
 <script setup lang="ts">
-import CanvasNoteToolbar from "./CanvasNoteToolbar.vue";
+import CanvasNoteToolbar from "~/features/notes/components/CanvasNoteToolbar.vue";
 import type { CanvasShape, CanvasNoteMetadata } from "@@/shared/utils/note.contract";
 import {
   clampNumber,
   type BoundsRect,
 } from "~/utils/canvas/geometry";
+import { designTokenValues } from "~/design-system/tokens.generated";
+
+// Canvas paint colors are resolved from design tokens (Konva needs literal
+// color strings, not CSS custom properties).
+const PAINT_PRIMARY = designTokenValues["--color-primary"];
+const PAINT_ON_PRIMARY = designTokenValues["--color-on-primary"];
+const PAINT_FILL_DEFAULT = designTokenValues["--color-accent-blue"];
+const PAINT_STROKE_DEFAULT = designTokenValues["--color-content-on-background"];
+const PAINT_SELECTION_FILL = "rgba(56, 73, 152, 0.12)"; // primary @ 12%
 
 /**
  * CanvasNoteEditor — Full-featured Konva canvas editor.
@@ -58,8 +67,8 @@ const SNAP_GUIDE_PADDING = 48;
 const shapes = shallowRef<CanvasShape[]>(
   JSON.parse(JSON.stringify(props.initialMetadata?.shapes ?? []))
 );
-const fillColor = ref("#3b82f6");
-const strokeColor = ref("#1e293b");
+const fillColor = ref(PAINT_FILL_DEFAULT);
+const strokeColor = ref(PAINT_STROKE_DEFAULT);
 const strokeWidthState = ref(2);
 const strokeDashState = ref<number[] | undefined>(undefined);
 const strokeWidthInput = ref(String(strokeWidthState.value));
@@ -510,9 +519,9 @@ const transformerConfig = computed(() => ({
   ignoreStroke: true,
   padding: 8,
   anchorSize: 10,
-  borderStroke: "#384998",
-  anchorFill: "#ffffff",
-  anchorStroke: "#384998",
+  borderStroke: PAINT_PRIMARY,
+  anchorFill: PAINT_ON_PRIMARY,
+  anchorStroke: PAINT_PRIMARY,
   anchorStrokeWidth: 1.25,
   boundBoxFunc: (oldBox: { width: number; height: number }, newBox: { width: number; height: number }) => {
     if (Math.abs(newBox.width) < 12 || Math.abs(newBox.height) < 12) {
@@ -582,14 +591,14 @@ const interactionHint = computed(() => {
 
           <v-layer :config="{ listening: false }">
             <v-line v-for="guide in snapGuides" :key="guide.id"
-              :config="{ points: guide.points, stroke: '#384998', strokeWidth: 1, dash: [6, 4], listening: false }" />
+              :config="{ points: guide.points, stroke: PAINT_PRIMARY, strokeWidth: 1, dash: [6, 4], listening: false }" />
             <v-rect v-if="selectionRect.visible" :config="{
               x: selectionRect.x,
               y: selectionRect.y,
               width: selectionRect.width,
               height: selectionRect.height,
-              fill: 'rgba(56, 73, 152, 0.12)',
-              stroke: '#384998',
+              fill: PAINT_SELECTION_FILL,
+              stroke: PAINT_PRIMARY,
               strokeWidth: 1,
               dash: [4, 4],
               listening: false,
@@ -609,14 +618,14 @@ const interactionHint = computed(() => {
       </div>
 
       <button v-if="isMinimapCollapsed" type="button"
-        class="absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 rounded-[var(--radius-lg)] border border-secondary bg-surface/95 px-2 py-1.5 text-xs font-medium text-content-on-surface shadow-lg backdrop-blur-sm active:scale-90"
+        class="absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 rounded-[var(--radius-lg)] border border-secondary bg-surface/95 px-2 py-1.5 text-xs font-medium text-content-on-surface shadow-[var(--shadow-dropdown)] backdrop-blur-sm active:scale-90"
         @click.stop="toggleMinimap">
         <UIcon name="i-lucide-map" class="w-3.5 h-3.5" />
         <span>Map</span>
       </button>
 
       <div v-else ref="minimapRef"
-        class="absolute bottom-2 right-2 z-10 rounded-[var(--radius-xl)] border border-secondary bg-surface/95 p-2 shadow-lg backdrop-blur-sm">
+        class="absolute bottom-2 right-2 z-10 rounded-[var(--radius-xl)] border border-secondary bg-surface/95 p-2 shadow-[var(--shadow-dropdown)] backdrop-blur-sm">
         <div
           class="mb-1 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-content-secondary">
           <span>Minimap</span>
@@ -626,20 +635,20 @@ const interactionHint = computed(() => {
               Focus
             </button>
             <button type="button"
-              class="text-content-secondary hover:text-content-on-surface cursor-pointer bg-surface-strong flex h-3 w-3 items-center justify-center rounded-xs opacity-80 hover:opacity-100"
+              class="text-content-secondary hover:text-content-on-surface cursor-pointer bg-surface-strong flex h-3 w-3 items-center justify-center rounded-[var(--radius-sm)] opacity-80 hover:opacity-100"
               aria-label="Minimize minimap" @pointerdown.stop @click.stop="toggleMinimap">
               <UIcon name="i-lucide-minus" />
             </button>
           </div>
         </div>
 
-        <div class="relative overflow-hidden shadow-inner bg-background" :style="{
+        <div class="relative overflow-hidden shadow-[inset_0_2px_8px_color-mix(in_srgb,var(--color-content-on-background)_8%,transparent)] bg-background" :style="{
           width: `${MINIMAP_WIDTH}px`,
           height: `${MINIMAP_HEIGHT}px`,
           backgroundImage: 'linear-gradient(to right, color-mix(in srgb, var(--color-secondary) 65%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--color-secondary) 65%, transparent) 1px, transparent 1px)',
           backgroundSize: '16px 16px'
         }" @pointerdown.prevent="handleMinimapPointer" @pointermove.prevent="handleMinimapDrag">
-          <div class="absolute inset-0 shadow-inner rounded-[inherit] border border-primary/10" />
+          <div class="absolute inset-0 shadow-[inset_0_2px_8px_color-mix(in_srgb,var(--color-content-on-background)_8%,transparent)] rounded-[var(--radius-sm)] border border-primary/10" />
 
           <div v-for="(shape, index) in minimapShapes" :key="`minimap-${index}`"
             class="absolute rounded-[var(--radius-sm)]" :style="{
@@ -652,7 +661,7 @@ const interactionHint = computed(() => {
               opacity: shape.outlined ? 0.9 : 0.65
             }" />
 
-          <div class="absolute rounded-[var(--radius-sm)] border-2 border-primary bg-primary/10 shadow-sm" :style="{
+          <div class="absolute rounded-[var(--radius-sm)] border-2 border-primary bg-primary/10 shadow-[var(--shadow-dropdown)]" :style="{
             left: `${minimapViewport.left}px`,
             top: `${minimapViewport.top}px`,
             width: `${minimapViewport.width}px`,
@@ -665,7 +674,7 @@ const interactionHint = computed(() => {
     <!-- Context Menu (teleported to body) -->
     <Teleport to="body">
       <div v-if="contextMenu.visible"
-        class="fixed z-[9999] min-w-[160px] rounded-[var(--radius-xl)] border border-secondary bg-surface shadow-xl py-1 animate-in fade-in zoom-in-95 duration-100"
+        class="fixed z-[9999] min-w-[160px] rounded-[var(--radius-xl)] border border-secondary bg-surface shadow-[var(--shadow-modal)] py-1 animate-in fade-in zoom-in-95 duration-100"
         :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }">
         <button
           class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-content-on-surface hover:bg-surface-subtle"

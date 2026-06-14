@@ -51,10 +51,10 @@
           <div class="flex items-start gap-2">
             <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-error mt-0.5 flex-shrink-0" />
             <div>
-              <div class="text-sm font-medium text-error dark:text-red-200">
+              <div class="text-sm font-medium text-error">
                 Notifications Blocked
               </div>
-              <div class="text-xs text-error/80 dark:text-red-300 mt-1">
+              <div class="text-xs text-error/80 mt-1">
                 Please click the lock icon in your browser's address bar and
                 allow notifications for this site.
               </div>
@@ -64,7 +64,7 @@
 
         <!-- Error Message -->
         <div v-if="error" class="mb-4 p-3 bg-error/10 border border-error/20 rounded-[var(--radius-xl)]">
-          <div class="text-sm text-error dark:text-red-200">
+          <div class="text-sm text-error">
             {{ error }}
           </div>
         </div>
@@ -72,7 +72,7 @@
       <!-- Action Buttons -->
       <template #footer>
         <div class="space-y-3">
-          <UButton :loading="isLoading" :disabled="permissionStatus === 'denied'" color="primary" size="lg" block
+          <UiButton :loading="isLoading" :disabled="permissionStatus === 'denied'" color="primary" size="lg" block
             @click="handleEnableNotifications">
             <template v-if="isLoading">
               <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin mr-2" />
@@ -82,15 +82,15 @@
               <UIcon name="i-heroicons-bell" class="w-4 h-4 mr-2" />
               Enable Smart Notifications
             </template>
-          </UButton>
+          </UiButton>
 
-          <UButton color="neutral" variant="ghost" size="lg" block @click="handleMaybeLater">
+          <UiButton color="neutral" variant="ghost" size="lg" block @click="handleMaybeLater">
             Maybe Later
-          </UButton>
+          </UiButton>
 
           <!-- Don't ask again option -->
           <div class="flex items-center justify-center gap-2 pt-2">
-            <UCheckbox v-model="dontAskAgain" :disabled="isLoading" />
+            <UiCheckbox v-model="dontAskAgain" :disabled="isLoading" />
             <label for="dontAskAgain" class="text-xs text-content-secondary dark:text-content-secondary cursor-pointer"
               @click="dontAskAgain = !dontAskAgain">
               Don't ask me again

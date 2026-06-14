@@ -7,11 +7,11 @@
       <Transition enter-active-class="transition-opacity duration-300 ease-out" enter-from-class="opacity-0"
         enter-to-class="opacity-100" leave-active-class="transition-opacity duration-200 ease-in"
         leave-from-class="opacity-100" leave-to-class="opacity-0" appear>
-        <div v-if="show" class="absolute inset-0 bg-black/60 backdrop-blur-md" @click="handleClose"></div>
+        <div v-if="show" class="absolute inset-0 bg-[var(--ds-backdrop-dim)] backdrop-blur-md" @click="handleClose"></div>
       </Transition>
       <!-- Close Button - Premium Glass Style -->
       <button @click="handleClose"
-        class="absolute top-4 right-6 z-20 h-8 w-8 flex items-center justify-center rounded-[var(--radius-xl)] bg-white/10 dark:bg-black/20 backdrop-blur-xl border border-white/20 dark:border-white/5 shadow-lg active:scale-90 transition-all cursor-pointer"
+        class="absolute top-4 right-6 z-20 h-8 w-8 flex items-center justify-center rounded-[var(--radius-xl)] bg-white/10 dark:bg-[var(--color-content-on-background)]/20 backdrop-blur-xl border border-white/20 dark:border-white/5 shadow-[var(--shadow-modal)] active:scale-90 transition-all cursor-pointer"
         aria-label="Close Learning Hub">
         <icon name="i-lucide-x" :size="20" class="text-light" />
       </button>
@@ -27,7 +27,7 @@
 
           <!-- Drag Handle / Indicator -->
           <!-- <div class="w-full h-8 flex items-center justify-center shrink-0 cursor-grab active:cursor-grabbing">
-            <div class="w-12 h-1.5 rounded-full bg-neutral-200 dark:bg-neutral-800 shadow-inner"></div>
+            <div class="w-12 h-1.5 rounded-full bg-secondary dark:bg-[var(--color-content-on-background)] shadow-[var(--shadow-dropdown)]"></div>
           </div> -->
 
 

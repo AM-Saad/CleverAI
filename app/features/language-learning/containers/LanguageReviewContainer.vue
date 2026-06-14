@@ -12,3 +12,7 @@
     <language-session-view class="flex-1 min-h-0" />
   </div>
 </template>
+
+<script setup lang="ts">
+import LanguageSessionView from "~/features/language-learning/components/LanguageSessionView.vue";
+</script>

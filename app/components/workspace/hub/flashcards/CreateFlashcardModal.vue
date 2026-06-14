@@ -116,13 +116,13 @@ function handleClose() {
       <u-form :schema="schema" :state="state" class="space-y-2" @submit="handleSubmit">
         <!-- Front (Question) -->
         <u-form-field label="Front" name="front">
-          <u-textarea v-model="state.front" placeholder="Enter the question or prompt..." :rows="4" autoresize
+          <ui-textarea v-model="state.front" placeholder="Enter the question or prompt..." :rows="4" autoresize
             :disabled="isLoading" class="w-full" />
         </u-form-field>
 
         <!-- Back (Answer) -->
         <u-form-field label="Back" name="back">
-          <u-textarea v-model="state.back" placeholder="Enter the answer or explanation..." :rows="4" autoresize
+          <ui-textarea v-model="state.back" placeholder="Enter the answer or explanation..." :rows="4" autoresize
             :disabled="isLoading" class="w-full" />
         </u-form-field>
       </u-form>
@@ -130,14 +130,14 @@ function handleClose() {
 
     <template #footer>
       <div class="flex gap-3 justify-end pt-2">
-        <u-button variant="ghost" @click="handleClose" :disabled="isLoading">
+        <ui-button variant="ghost" @click="handleClose" :disabled="isLoading">
           Cancel
-        </u-button>
-        <u-button color="primary" @click="handleSubmit" :loading="isLoading"
+        </ui-button>
+        <ui-button color="primary" @click="handleSubmit" :loading="isLoading"
           :disabled="!isValid || isLoading || (isEditMode && !hasChanges)">
           <Icon :name="isEditMode ? 'i-lucide-check' : 'i-lucide-plus'" class="w-4 h-4 mr-1" />
           {{ isEditMode ? 'Save Changes' : 'Create Flashcard' }}
-        </u-button>
+        </ui-button>
       </div>
     </template>
   </shared-dialog-modal>

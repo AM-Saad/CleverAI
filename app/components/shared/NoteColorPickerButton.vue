@@ -12,7 +12,11 @@
 <script setup lang="ts">
 import type { IconName } from '#imports';
 import { computed } from 'vue';
+import { designTokenValues } from '~/design-system/tokens.generated';
 
+// Native `<input type="color">` requires a resolved `#rrggbb` value (CSS custom
+// properties do not resolve there), so we read the resolved token value rather
+// than hardcoding hex. `withDefaults` may reference module-level imports.
 const props = withDefaults(defineProps<{
   modelValue: string | undefined | null;
   icon: IconName;
@@ -21,7 +25,7 @@ const props = withDefaults(defineProps<{
   iconOnly?: boolean;
   fallbackColor?: string;
 }>(), {
-  fallbackColor: '#000000'
+  fallbackColor: () => designTokenValues['--color-content-on-background']
 });
 
 const emit = defineEmits<{

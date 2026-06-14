@@ -19,7 +19,7 @@ const options = [
       class="flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-md)] text-sm font-medium transition-colors"
       :class="[
         modelValue === option.value
-          ? 'bg-background text-content-on-background shadow-sm'
+          ? 'bg-background text-content-on-background shadow-[var(--shadow-dropdown)]'
           : 'text-content-secondary hover:text-content-on-surface'
       ]" @click="emit('update:modelValue', option.value)">
       <Icon :name="option.icon" class="w-4 h-4" />

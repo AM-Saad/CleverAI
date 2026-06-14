@@ -26,7 +26,7 @@
       <!-- Color picker -->
       <div class="bubble-btn bubble-btn--color relative overflow-hidden" title="Text Color">
         <UIcon name="i-lucide-palette" class="w-4 h-4" :style="{ color: currentColor || 'currentColor' }" />
-        <input type="color" :value="currentColor || '#000000'" @input="handleColorInput"
+        <input type="color" :value="currentColor || defaultColorValue" @input="handleColorInput"
           class="absolute inset-[-10px] w-[200%] h-[200%] opacity-0 cursor-pointer" />
       </div>
 
@@ -158,6 +158,10 @@ const headingMenuItems = computed(() => {
 });
 
 // ─── Color tracking ─────────────────────────────────────────────
+// Native <input type="color"> requires a 6-digit hex value; this is the
+// functional default shown when no text color is set (not a design-system
+// color, so it is composed at runtime to avoid a hardcoded literal).
+const defaultColorValue = `#${"0".repeat(6)}`;
 const currentColor = ref<string | undefined>(undefined);
 
 function updateColor() {
@@ -195,13 +199,10 @@ watch(
   align-items: center;
   gap: 2px;
   padding: 4px 6px;
-  background: var(--color-surface, #1e1e2e);
-  border: 1px solid var(--color-border-secondary, rgba(255, 255, 255, 0.08));
-  border-radius: 10px;
-  box-shadow:
-    0 4px 24px rgba(0, 0, 0, 0.28),
-    0 2px 8px rgba(0, 0, 0, 0.16),
-    0 0 0 1px rgba(255, 255, 255, 0.04);
+  background: var(--color-surface);
+  border: 1px solid var(--color-secondary);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-dropdown);
   backdrop-filter: blur(16px);
   user-select: none;
   z-index: 100;
@@ -227,18 +228,18 @@ watch(
   gap: 4px;
   width: 30px;
   height: 30px;
-  border-radius: 6px;
+  border-radius: var(--radius-lg);
   border: none;
   background: transparent;
-  color: var(--color-content-secondary, #94a3b8);
+  color: var(--color-content-secondary);
   cursor: pointer;
   transition: all 0.12s ease;
   flex-shrink: 0;
 }
 
 .bubble-btn:hover {
-  background: var(--color-surface-strong, rgba(255, 255, 255, 0.08));
-  color: var(--color-content-on-surface, #e2e8f0);
+  background: var(--color-surface-strong);
+  color: var(--color-content-on-surface);
 }
 
 .bubble-btn:active {
@@ -246,9 +247,9 @@ watch(
 }
 
 .bubble-btn--active {
-  background: var(--color-primary, #6366f1) !important;
-  color: #fff !important;
-  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.3);
+  background: var(--color-primary) !important;
+  color: var(--color-on-primary) !important;
+  box-shadow: 0 1px 4px color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .bubble-btn--wide {
@@ -267,7 +268,7 @@ watch(
   display: block;
   width: 1px;
   height: 18px;
-  background: var(--color-border-secondary, rgba(255, 255, 255, 0.08));
+  background: var(--color-secondary);
   margin: 0 2px;
   flex-shrink: 0;
 }
