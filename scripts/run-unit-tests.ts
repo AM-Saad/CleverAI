@@ -16,6 +16,11 @@ import { quotaHeaders } from "../server/modules/subscription/infrastructure/http
 import { mergePendingBoardItems } from "../app/features/board/composables/mergePendingBoardItems";
 import { BoardItemsSyncRequestSchema } from "../shared/utils/boardItem.contract";
 import {
+  WorkspaceExternalRefSchema,
+  WorkspaceImportMappingSummarySchema,
+} from "../shared/utils/workspaceIntegration.contract";
+import { isDuplicateKeyError } from "../server/modules/integrations/infrastructure/integrationRepository";
+import {
   CreateNoteDTO,
   ReorderNotesDTO,
   UpdateNoteDTO,
@@ -75,6 +80,7 @@ import { normalizeShapeTransform } from "../app/utils/canvas/geometry";
 import { parseLexicalEntry } from "../server/modules/language-learning/domain/lexicalEntry";
 import { parseLanguageStoryResponse } from "../server/modules/language-learning/domain/storyResponse";
 import { listLanguageWords } from "../server/modules/language-learning/application/listLanguageWords";
+import { maybeAutoEnrollLanguageWord } from "../server/modules/language-learning/application/autoEnrollLanguageWord";
 import { createLanguageLearningRuntime } from "../app/features/language-learning/composables/languageLearningRuntime";
 import type {
   ReviewCardRecord,
@@ -3272,6 +3278,56 @@ test("mergePendingBoardItems ignores stale pending updates", () => {
   assert.deepEqual(item.tags, ["local"]);
 });
 
+test("workspace integration refs support local-change sync status", () => {
+  const parsed = WorkspaceExternalRefSchema.parse({
+    id: "ref-1",
+    workspaceId: "workspace-1",
+    accountId: "account-1",
+    mappingId: "mapping-1",
+    targetType: "NOTE",
+    targetId: "note-1",
+    provider: "notion",
+    externalId: "page-1",
+    syncStatus: "LOCAL_CHANGED",
+    lastError: "Local edits preserved",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  assert.equal(parsed.syncStatus, "LOCAL_CHANGED");
+});
+
+test("workspace integration mapping summaries count local changes and conflicts", () => {
+  const parsed = WorkspaceImportMappingSummarySchema.parse({
+    id: "mapping-1",
+    workspaceId: "workspace-1",
+    accountId: "account-1",
+    provider: "jira",
+    externalSourceId: "project-1",
+    sourceKind: "TASK",
+    targetType: "BOARD_ITEM",
+    name: "Project",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    refCounts: {
+      total: 4,
+      synced: 1,
+      localChanged: 1,
+      conflicted: 1,
+      error: 1,
+    },
+  });
+
+  assert.equal(parsed.refCounts.localChanged, 1);
+  assert.equal(parsed.refCounts.conflicted, 1);
+});
+
+test("integration repository recognizes duplicate key errors", () => {
+  assert.equal(isDuplicateKeyError({ code: 11000 }), true);
+  assert.equal(isDuplicateKeyError({ message: "E11000 duplicate key error collection" }), true);
+  assert.equal(isDuplicateKeyError({ code: 42, message: "other" }), false);
+});
+
 test("generation quota spends a credit after free quota is exhausted", async () => {
   const { subscriptions, creditTransactions, prisma } = fakeSubscriptionPrisma();
   subscriptions.set("user-1", {
@@ -3628,6 +3684,67 @@ test("language words listing paginates after hasStory filtering", async () => {
     ["word-with-story"],
   );
   assert.equal(result.nextCursor, "2026-01-02T00:00:00.000Z");
+});
+
+test("language capture auto-enroll creates a due review card", async () => {
+  const writes: any[] = [];
+  const tx = {
+    languageCardReview: {
+      upsert: async (input: any) => {
+        writes.push({ model: "languageCardReview", input });
+      },
+    },
+    languageWord: {
+      update: async (input: any) => {
+        writes.push({ model: "languageWord", input });
+      },
+    },
+  };
+  const prisma = {
+    $transaction: async (callback: any) => callback(tx),
+  };
+
+  const status = await maybeAutoEnrollLanguageWord({
+    prisma,
+    userId: "user-1",
+    wordId: "word-1",
+    currentStatus: "captured",
+    autoEnroll: true,
+  });
+
+  assert.equal(status, "enrolled");
+  assert.equal(writes[0]?.model, "languageCardReview");
+  assert.equal(writes[0]?.input.where.userId_wordId.userId, "user-1");
+  assert.equal(writes[0]?.input.where.userId_wordId.wordId, "word-1");
+  assert.equal(writes[0]?.input.create.repetitions, 0);
+  assert.ok(writes[0]?.input.create.nextReviewAt instanceof Date);
+  assert.deepEqual(writes[1], {
+    model: "languageWord",
+    input: {
+      where: { id: "word-1" },
+      data: { status: "enrolled" },
+    },
+  });
+});
+
+test("language capture auto-enroll preserves mastered words", async () => {
+  let transactionCalled = false;
+  const prisma = {
+    $transaction: async () => {
+      transactionCalled = true;
+    },
+  };
+
+  const status = await maybeAutoEnrollLanguageWord({
+    prisma,
+    userId: "user-1",
+    wordId: "word-1",
+    currentStatus: "mastered",
+    autoEnroll: true,
+  });
+
+  assert.equal(status, "mastered");
+  assert.equal(transactionCalled, false);
 });
 
 test("language runtime owns word-bank fetch filters and language scoping", async () => {

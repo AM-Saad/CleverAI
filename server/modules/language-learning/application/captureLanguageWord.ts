@@ -9,6 +9,7 @@ import {
 import { translationPrompt } from "@server/utils/llm/languagePrompts";
 import { parseLexicalEntry } from "../domain/lexicalEntry";
 import type { QuotaPort } from "@server/modules/subscription/ports/QuotaPort";
+import { maybeAutoEnrollLanguageWord } from "./autoEnrollLanguageWord";
 
 const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
 
@@ -83,6 +84,13 @@ export async function captureLanguageWord(input: {
   const normalizedWord = data.word.trim().toLowerCase();
   const explicitSourceLang =
     data.sourceLang && data.sourceLang !== "auto" ? data.sourceLang : undefined;
+  const preferences = data.translateOnly
+    ? null
+    : await prisma.userLanguagePreferences.findUnique({
+        where: { userId: user.id },
+        select: { autoEnroll: true },
+      });
+  const autoEnroll = data.translateOnly ? false : (preferences?.autoEnroll ?? true);
 
   if (!data.forceRetranslate) {
     const existing = await prisma.languageWord.findFirst({
@@ -96,7 +104,14 @@ export async function captureLanguageWord(input: {
     });
 
     if (existing) {
-      return serializeWord(existing, true);
+      const status = await maybeAutoEnrollLanguageWord({
+        prisma,
+        userId: user.id,
+        wordId: existing.id,
+        currentStatus: existing.status,
+        autoEnroll,
+      });
+      return serializeWord({ ...existing, status }, true);
     }
 
     const sharedTranslation = await prisma.languageTranslation.findFirst({
@@ -157,7 +172,15 @@ export async function captureLanguageWord(input: {
         },
       });
 
-      return serializeWord(languageWord, true, true);
+      const status = await maybeAutoEnrollLanguageWord({
+        prisma,
+        userId: user.id,
+        wordId: languageWord.id,
+        currentStatus: languageWord.status,
+        autoEnroll,
+      });
+
+      return serializeWord({ ...languageWord, status }, true, true);
     }
   }
 
@@ -278,6 +301,13 @@ export async function captureLanguageWord(input: {
         status: "captured",
       },
     });
+    const status = await maybeAutoEnrollLanguageWord({
+      prisma,
+      userId: user.id,
+      wordId: languageWord.id,
+      currentStatus: languageWord.status,
+      autoEnroll,
+    });
 
     return {
       wordId: languageWord.id,
@@ -294,7 +324,7 @@ export async function captureLanguageWord(input: {
       isPhrase: entry.isPhrase,
       metadata,
       saved: true,
-      status: languageWord.status,
+      status,
       cached: false,
     };
   } catch (err) {

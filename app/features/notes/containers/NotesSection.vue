@@ -10,12 +10,12 @@ import {
 } from "@@/shared/utils/workspaceNote";
 import LocalSyncStatus from "~/components/shared/LocalSyncStatus.vue";
 import type { NoteState } from "~/features/notes/composables/useNotesStore";
-import CanvasNoteEditor from "../components/CanvasNoteEditor.vue";
-import MathNoteEditor from "../components/MathNoteEditor.vue";
+import CanvasNoteEditor from "~/features/notes/components/CanvasNoteEditor.vue";
+import MathNoteEditor from "~/features/notes/components/MathNoteEditor.vue";
 import NotesDrawer from "../components/NotesDrawer.vue";
-import NotesSplitDropZone from "../components/NotesSplitDropZone.vue";
+import NotesSplitDropZone from "~/features/notes/components/NotesSplitDropZone.vue";
 import NotesSyncInspector from "../components/NotesSyncInspector.vue";
-import TextNote from "../components/TextNote.vue";
+import TextNote from "~/features/notes/components/TextNote.vue";
 import { createNotesSplitInteractionController } from "../composables/notesSplitInteractionController";
 import { useNoteGroupsStore } from "../composables/useNoteGroupsStore";
 import { useNotesStore } from "../composables/useNotesStore";
@@ -590,30 +590,29 @@ function handleContainerScroll(e: Event) {
 
         <div class="toolbar-actions">
           <UDropdownMenu :items="newNoteDropdownItems" :content="{ align: 'end', side: 'bottom', sideOffset: 4 }">
-            <u-button size="sm" color="primary" variant="ghost"
+            <ui-button size="sm" color="primary" variant="ghost"
               :trailing-icon="showLabels ? 'i-heroicons-chevron-down' : ''">
               <shared-icon name="plus" />
               <span v-if="showLabels" class="toolbar-label">New Note</span>
-            </u-button>
+            </ui-button>
           </UDropdownMenu>
-
 
           <Transition name="toolbar-fade">
             <div v-if="notes?.length >= 2">
-              <u-button size="sm" :color="splitNotes.isSplit.value ? 'primary' : 'neutral'" variant="link"
+              <ui-button size="sm" :color="splitNotes.isSplit.value ? 'primary' : 'neutral'" variant="link"
                 :aria-label="splitNotes.isSplit.value ? 'Close split view' : 'Open split view'"
                 :aria-pressed="splitNotes.isSplit.value" @click="toggleSplitView">
                 <shared-icon name="split" class="w-4 h-4" />
-              </u-button>
+              </ui-button>
             </div>
           </Transition>
 
           <Transition name="toolbar-fade">
             <div v-if="notes?.length">
-              <u-button size="sm" color="neutral" variant="link" @click="isDrawerOpen = !isDrawerOpen"
+              <ui-button size="sm" color="neutral" variant="link" @click="isDrawerOpen = !isDrawerOpen"
                 :aria-label="isDrawerOpen ? 'Close notes list' : 'Open notes list'">
                 <shared-icon :name="isDrawerOpen ? 'panel-left-close' : 'panel-left-open'" class="w-4 h-4" />
-              </u-button>
+              </ui-button>
             </div>
           </Transition>
         </div>
@@ -631,11 +630,11 @@ function handleContainerScroll(e: Event) {
         :last-sync="notesStore.lastSync.value" :action-label="failedNotesCount > 0 ? 'Retry failed' : 'Sync now'"
         :action-disabled="isFetching" @action="handleSyncStatusAction" />
       <div v-if="isDev" class="mx-4 mb-1 flex justify-end">
-        <u-button size="xs" color="neutral" variant="ghost"
+        <ui-button size="xs" color="neutral" variant="ghost"
           @click="isDevSyncInspectorVisible = !isDevSyncInspectorVisible">
           <icon name="i-lucide-bug" class="h-3.5 w-3.5" />
           {{ isDevSyncInspectorVisible ? "Hide sync debug" : "Show sync debug" }}
-        </u-button>
+        </ui-button>
       </div>
       <NotesSyncInspector v-if="isDev && isDevSyncInspectorVisible" :workspace-id="workspaceId" />
 
@@ -714,18 +713,18 @@ function handleContainerScroll(e: Event) {
                       {{ getNoteDisplayTitle(leftSplitNote, 28) }}
                     </span>
                     <div class="flex items-center gap-1 shrink-0">
-                      <u-button size="xs" color="neutral" variant="ghost" aria-label="Minimize left pane"
+                      <ui-button size="xs" color="neutral" variant="ghost" aria-label="Minimize left pane"
                         @click.stop="splitPaneLayoutRef?.toggleLeft()">
                         <shared-icon name="panel-left-close" class="w-3.5 h-3.5" />
-                      </u-button>
-                      <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
+                      </ui-button>
+                      <ui-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
                         @click.stop="splitNotes.swapPanes()">
                         <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
-                      </u-button>
-                      <u-button size="xs" color="neutral" variant="ghost" aria-label="Close left pane"
+                      </ui-button>
+                      <ui-button size="xs" color="neutral" variant="ghost" aria-label="Close left pane"
                         @click.stop="closeVisualPane('left')">
                         <icon name="i-lucide-x" class="w-3.5 h-3.5" />
-                      </u-button>
+                      </ui-button>
                     </div>
                   </div>
                   <!-- Left editor -->
@@ -766,18 +765,18 @@ function handleContainerScroll(e: Event) {
                       {{ getNoteDisplayTitle(rightSplitNote, 28) }}
                     </span>
                     <div class="flex items-center gap-1 shrink-0">
-                      <u-button size="xs" color="neutral" variant="ghost" aria-label="Minimize right pane"
+                      <ui-button size="xs" color="neutral" variant="ghost" aria-label="Minimize right pane"
                         @click.stop="splitPaneLayoutRef?.toggleRight()">
                         <icon name="i-lucide-panel-right-close" class="w-3.5 h-3.5" />
-                      </u-button>
-                      <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
+                      </ui-button>
+                      <ui-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
                         @click.stop="splitNotes.swapPanes()">
                         <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
-                      </u-button>
-                      <u-button size="xs" color="neutral" variant="ghost" aria-label="Close right pane"
+                      </ui-button>
+                      <ui-button size="xs" color="neutral" variant="ghost" aria-label="Close right pane"
                         @click.stop="closeVisualPane('right')">
                         <icon name="i-lucide-x" class="w-3.5 h-3.5" />
-                      </u-button>
+                      </ui-button>
                     </div>
                   </div>
                   <!-- Right editor -->
@@ -854,14 +853,14 @@ function handleContainerScroll(e: Event) {
                 <span class="split-pane-title truncate">
                   {{ getNoteDisplayTitle(leftSplitNote, 28) }}
                 </span>
-                <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
+                <ui-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
                   @click.stop="splitNotes.swapPanes()">
                   <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
-                </u-button>
-                <u-button size="xs" color="neutral" variant="ghost" aria-label="Close left pane"
+                </ui-button>
+                <ui-button size="xs" color="neutral" variant="ghost" aria-label="Close left pane"
                   @click.stop="closeVisualPane('left')">
                   <icon name="i-lucide-x" class="w-3.5 h-3.5" />
-                </u-button>
+                </ui-button>
               </div>
               <div class="split-pane-editor" :class="{ 'split-pane-editor--passive': !isLeftActive }">
                 <div v-if="splitNotes.leftNoteId.value && leftSplitNote" class="flex flex-col flex-1 min-h-0">
@@ -895,14 +894,14 @@ function handleContainerScroll(e: Event) {
                 <span class="split-pane-title truncate">
                   {{ getNoteDisplayTitle(rightSplitNote, 28) }}
                 </span>
-                <u-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
+                <ui-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
                   @click.stop="splitNotes.swapPanes()">
                   <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
-                </u-button>
-                <u-button size="xs" color="neutral" variant="ghost" aria-label="Close right pane"
+                </ui-button>
+                <ui-button size="xs" color="neutral" variant="ghost" aria-label="Close right pane"
                   @click.stop="closeVisualPane('right')">
                   <icon name="i-lucide-x" class="w-3.5 h-3.5" />
-                </u-button>
+                </ui-button>
               </div>
               <div class="split-pane-editor" :class="{ 'split-pane-editor--passive': !isRightActive }">
                 <div v-if="splitNotes.rightNoteId.value && rightSplitNote" class="flex flex-col flex-1 min-h-0">
@@ -961,9 +960,9 @@ function handleContainerScroll(e: Event) {
   transition: opacity 0.2s ease;
   position: relative;
   background-color: var(--color-white);
-  border-radius: 0.375rem;
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid var(--color-border-secondary, #e5e7eb);
+  border: 1px solid var(--color-secondary);
 }
 
 .split-pane--active {
@@ -981,27 +980,27 @@ function handleContainerScroll(e: Event) {
   justify-content: space-between;
   gap: 4px;
   padding: 4px 8px;
-  border-bottom: 1px solid var(--color-border-secondary, #e5e7eb);
-  background: var(--color-surface, #fff);
+  border-bottom: 1px solid var(--color-secondary);
+  background: var(--color-surface);
   min-height: 32px;
   flex-shrink: 0;
   z-index: 1;
 }
 
 .split-pane--active .split-pane-header {
-  /* border-bottom-color: var(--color-primary, #3b82f6); */
-  background-color: #38499814;
+  /* border-bottom-color: var(--color-primary); */
+  background-color: color-mix(in srgb, var(--color-primary) 8%, transparent);
 }
 
 .split-pane-title {
   font-size: 11px;
   font-weight: 500;
-  color: var(--color-content-secondary, #6b7280);
+  color: var(--color-content-secondary);
   max-width: calc(100% - 60px);
 }
 
 .split-pane--active .split-pane-title {
-  color: var(--color-primary, #3b82f6);
+  color: var(--color-primary);
 }
 
 .split-pane-editor {
@@ -1015,11 +1014,11 @@ function handleContainerScroll(e: Event) {
 
 /* Split indicators in drawer */
 .split-indicator-primary {
-  border-left: 2px solid var(--color-primary, #3b82f6);
+  border-left: 2px solid var(--color-primary);
 }
 
 .split-indicator-secondary {
-  border-left: 2px solid var(--color-success, #22c55e);
+  border-left: 2px solid var(--color-success);
 }
 
 /* ─── Adaptive Toolbar ───────────────────────────────────────────── */

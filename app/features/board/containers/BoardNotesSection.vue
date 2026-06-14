@@ -4,25 +4,26 @@ import { UI_CONFIG } from "~/utils/constants/ui";
 import { APIError } from "~/services/FetchFactory";
 import LocalSyncStatus from "~/components/shared/LocalSyncStatus.vue";
 import type { BoardItemState } from "~/features/board/composables/useBoardItemsStore";
-import BoardFilterBar from "../components/BoardFilterBar.vue";
-import BoardItemDetailPanel from "../components/BoardItemDetailPanel.vue";
-import BoardKanbanView from "../components/BoardKanbanView.vue";
-import BoardListView from "../components/BoardListView.vue";
-import BoardViewToggle from "../components/BoardViewToggle.vue";
+import BoardItemDetailPanel from "~/features/board/components/BoardItemDetailPanel.vue";
+import BoardFilterBar from "~/features/board/components/BoardFilterBar.vue";
+import BoardListView from "~/features/board/components/BoardListView.vue";
+import BoardViewToggle from "~/features/board/components/BoardViewToggle.vue";
+import BoardKanbanView from "~/features/board/components/BoardKanbanView.vue";
 import { useBoardColumnsStore } from "../composables/useBoardColumnsStore";
 import { useBoardItemsStore } from "../composables/useBoardItemsStore";
+import { designTokenValues } from "~/design-system/tokens.generated";
 
 
 
 const route = useRoute();
 const id = route.params.id;
+const boardWorkspaceId = id as string;
 // Stores
-const itemsStore = useBoardItemsStore(id as string);
-const columnsStore = useBoardColumnsStore(id as string);
-const tagsStore = useUserTagsStore(id as string);
+const itemsStore = useBoardItemsStore(boardWorkspaceId);
+const columnsStore = useBoardColumnsStore(boardWorkspaceId);
+const tagsStore = useUserTagsStore(boardWorkspaceId);
 const fullscreen = useFullscreenModal<string>();
 const { isXl } = useResponsive();
-const boardWorkspaceId = `${id}`;
 const networkStatus = useNetworkStatus();
 
 // View mode state (persisted to localStorage)
@@ -71,15 +72,15 @@ const filterState = ref<BoardFilterState>({
 
 // Column colors & icons
 const COLUMN_COLORS = [
-  '#3b82f6', // blue
-  '#10b981', // emerald
-  '#f59e0b', // amber
-  '#ef4444', // red
-  '#8b5cf6', // violet
-  '#ec4899', // pink
+  designTokenValues['--color-accent-blue'], // blue
+  designTokenValues['--color-success'], // emerald
+  designTokenValues['--color-warning'], // amber
+  designTokenValues['--color-error'], // red
+  designTokenValues['--color-accent-purple'], // violet
+  designTokenValues['--color-accent-pink'], // pink
 ];
 
-const getColumnColor = (index: number): string => COLUMN_COLORS[index % COLUMN_COLORS.length] || '#94a3b8';
+const getColumnColor = (index: number): string => COLUMN_COLORS[index % COLUMN_COLORS.length] || designTokenValues['--color-content-secondary'];
 
 const getColumnIcon = (name: string): string => {
   const n = (name || '').toLowerCase();
@@ -506,10 +507,10 @@ const overflowMenuItems = computed(() => [
         <!-- Actions -->
         <div class="toolbar-actions flex items-center gap-2 flex-nowrap overflow-hidden justify-end">
           <!-- Primary: New Item (always visible) -->
-          <UButton size="xs" color="primary" variant="outline" @click="createNewItem">
+          <UiButton size="xs" color="primary" variant="outline" @click="createNewItem">
             <Icon name="heroicons:plus" />
             <span v-if="showLabels" class="toolbar-label">New Item</span>
-          </UButton>
+          </UiButton>
 
           <!-- Secondary: View toggle (wide + compact) -->
           <!-- <Transition name="toolbar-fade">
@@ -524,32 +525,32 @@ const overflowMenuItems = computed(() => [
           </Transition>
           <!-- Secondary: Search (inline in wide, popover in compact) -->
           <Transition name="toolbar-fade">
-            <UInput v-if="showLabels" v-model="searchQuery" icon="heroicons:magnifying-glass" placeholder="Search..."
+            <UiInput v-if="showLabels" v-model="searchQuery" icon="heroicons:magnifying-glass" placeholder="Search..."
               size="sm" class="toolbar-search" />
           </Transition>
           <UPopover v-if="!showLabels && showSecondaryActions" v-model:open="showSearchPopover">
-            <UButton size="sm" color="neutral" variant="ghost" icon="heroicons:magnifying-glass"
+            <UiButton size="sm" color="neutral" variant="ghost" icon="heroicons:magnifying-glass"
               :class="{ 'text-primary': searchQuery.length > 0 }" />
             <template #content>
               <div class="p-2 w-64">
-                <UInput v-model="searchQuery" icon="heroicons:magnifying-glass" placeholder="Search notes..." size="sm"
+                <UiInput v-model="searchQuery" icon="heroicons:magnifying-glass" placeholder="Search notes..." size="sm"
                   autofocus class="w-full" />
               </div>
             </template>
           </UPopover>
           <!-- Clear filters (wide + compact, only if active) -->
           <Transition name="toolbar-fade">
-            <UButton v-if="showSecondaryActions" size="sm" color="neutral" variant="ghost" icon="heroicons:x-mark"
+            <UiButton v-if="showSecondaryActions" size="sm" color="neutral" variant="ghost" icon="heroicons:x-mark"
               @click="clearFilters">
               <span v-if="showLabels" class="toolbar-label">Clear</span>
-            </UButton>
+            </UiButton>
           </Transition>
 
           <!-- Overflow menu (collapsed tier only) -->
           <UDropdownMenu v-if="isOverflowing" :items="overflowMenuItems">
-            <UButton size="sm" color="neutral" variant="ghost" icon="heroicons:ellipsis-vertical">
+            <UiButton size="sm" color="neutral" variant="ghost" icon="heroicons:ellipsis-vertical">
               <span v-if="hasActiveFilters" class="overflow-indicator" />
-            </UButton>
+            </UiButton>
           </UDropdownMenu>
         </div>
       </div>
@@ -587,10 +588,10 @@ const overflowMenuItems = computed(() => [
           <p class="text-sm text-content-secondary mt-1">{{ (error as any)?.message || 'An unexpected error occurred' }}
           </p>
         </div>
-        <UButton size="sm" color="primary" variant="soft" icon="heroicons:arrow-path"
+        <UiButton size="sm" color="primary" variant="soft" icon="heroicons:arrow-path"
           @click="() => { error = null; itemsStore.syncWithServer(); columnsStore.syncWithServer(); }">
           Retry
-        </UButton>
+        </UiButton>
       </div>
 
       <!-- Empty state: first load done, no items at all -->
@@ -610,7 +611,7 @@ const overflowMenuItems = computed(() => [
           enter-to-class="opacity-100" leave-active-class="transition duration-200" leave-from-class="opacity-100"
           leave-to-class="opacity-0">
           <div v-if="isFetching"
-            class="absolute top-2 right-2 z-10 flex items-center gap-1.5 text-[10px] font-medium text-primary bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-sm border border-primary/20">
+            class="absolute top-2 right-2 z-10 flex items-center gap-1.5 text-[10px] font-medium text-primary bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-[var(--shadow-dropdown)] border border-primary/20">
             <Icon name="svg-spinners:ring-resize" class="w-3 h-3" />
             Syncing
           </div>
@@ -652,7 +653,7 @@ const overflowMenuItems = computed(() => [
               :style="{ width: `${panelWidth}px` }">
               <!-- Resizer handle -->
               <div
-                class="absolute -left-0.5 top-0 h-full w-1 cursor-col-resize hover:bg-primary/40 transition-colors z-10 rounded-2xl"
+                class="absolute -left-0.5 top-0 h-full w-1 cursor-col-resize hover:bg-primary/40 transition-colors z-10 rounded-[var(--radius-2xl)]"
                 @mousedown="startResizing"></div>
               <BoardItemDetailPanel :item="currentItem" :workspace-id="boardWorkspaceId" @update="handleUpdateItem"
                 @update-meta="handleUpdateItemMeta" @delete="deleteItem" @retry="handleRetry"
@@ -683,9 +684,9 @@ const overflowMenuItems = computed(() => [
     <template #header>
       <div class="flex items-center justify-between w-full">
         <span class="font-medium text-content-on-surface-strong">Board Item</span>
-        <UButton variant="outline" color="neutral" size="xs" aria-label="Close fullscreen" @click="fullscreen.close()">
+        <UiButton variant="outline" color="neutral" size="xs" aria-label="Close fullscreen" @click="fullscreen.close()">
           <Icon name="i-heroicons-x-mark" :size="UI_CONFIG.ICON_SIZE" />
-        </UButton>
+        </UiButton>
       </div>
     </template>
 

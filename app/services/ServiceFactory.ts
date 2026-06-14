@@ -6,6 +6,8 @@ import { NoteService } from "./Note";
 import { NoteGroupService } from "./NoteGroup";
 import { BoardItemService } from "./BoardItem";
 import { BoardColumnService } from "./BoardColumn";
+import { BoardIntegrationService } from "~/features/board/services/boardIntegrationService";
+import { WorkspaceIntegrationService } from "~/features/integrations/services/workspaceIntegrationService";
 import { ReviewService } from "./ReviewService";
 import AuthModule from "./AuthService";
 import { UserService } from "./UserService";
@@ -26,6 +28,8 @@ export class ServiceFactory {
   create(service: "noteGroups"): NoteGroupService;
   create(service: "boardItems"): BoardItemService;
   create(service: "boardColumns"): BoardColumnService;
+  create(service: "boardIntegrations"): BoardIntegrationService;
+  create(service: "workspaceIntegrations"): WorkspaceIntegrationService;
   create(service: "review"): ReviewService;
   create(service: "auth"): AuthModule;
   create(service: "user"): UserService;
@@ -47,6 +51,10 @@ export class ServiceFactory {
         return new BoardItemService(this.$fetch);
       case "boardColumns":
         return new BoardColumnService(this.$fetch);
+      case "boardIntegrations":
+        return new BoardIntegrationService(this.$fetch);
+      case "workspaceIntegrations":
+        return new WorkspaceIntegrationService(this.$fetch);
       case "review":
         return new ReviewService(this.$fetch);
       case "auth":

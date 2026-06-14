@@ -28,6 +28,11 @@ model User {
   boardColumns              BoardColumn[]                @relation("UserBoardColumns")
   boardItemLinks            BoardItemLink[]              @relation("UserBoardItemLinks")
   boardItemComments         BoardItemComment[]           @relation("UserBoardItemComments")
+  integrationAccounts       IntegrationAccount[]         @relation("UserIntegrationAccounts")
+  externalBoardMappings     ExternalBoardMapping[]       @relation("UserExternalBoardMappings")
+  boardItemExternalRefs     BoardItemExternalRef[]       @relation("UserBoardItemExternalRefs")
+  externalWorkspaceMappings ExternalWorkspaceMapping[]   @relation("UserExternalWorkspaceMappings")
+  workspaceExternalRefs     WorkspaceExternalRef[]       @relation("UserWorkspaceExternalRefs")
   subscription              UserSubscription?
   notificationSubscriptions NotificationSubscription[]
   scheduledNotifications    ScheduledNotification[]
@@ -77,6 +82,9 @@ model Workspace {
   llmGatewayLogs LlmGatewayLog[]
   boardColumns   BoardColumn[]
   boardItems     BoardItem[]
+  externalBoardMappings ExternalBoardMapping[]
+  externalWorkspaceMappings ExternalWorkspaceMapping[]
+  workspaceExternalRefs WorkspaceExternalRef[]
 
   @@unique([userId, order])
 }
@@ -168,10 +176,149 @@ model BoardItem {
   linksReceived BoardItemLink[]    @relation("ItemLinkTargets")
   // comments (future collaboration)
   comments      BoardItemComment[]
+  externalRefs  BoardItemExternalRef[]
 
   @@index([userId, order])
   @@index([columnId, order])
   @@index([workspaceId])
+}
+
+model IntegrationAccount {
+  id                     String                 @id @default(auto()) @map("_id") @db.ObjectId
+  user                   User                   @relation("UserIntegrationAccounts", fields: [userId], references: [id], onDelete: Cascade)
+  userId                 String                 @db.ObjectId
+  provider               String
+  externalAccountId      String
+  displayName            String
+  accountUrl             String?
+  accessTokenCiphertext  String
+  refreshTokenCiphertext String?
+  tokenExpiresAt         DateTime?
+  scopes                 String[]               @default([])
+  metadata               Json                   @default("{}")
+  mappings               ExternalBoardMapping[]
+  itemRefs               BoardItemExternalRef[]
+  workspaceMappings      ExternalWorkspaceMapping[]
+  workspaceRefs          WorkspaceExternalRef[]
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+
+  @@unique([userId, provider, externalAccountId])
+  @@index([userId, provider])
+}
+
+model ExternalBoardMapping {
+  id                  String                 @id @default(auto()) @map("_id") @db.ObjectId
+  user                User                   @relation("UserExternalBoardMappings", fields: [userId], references: [id], onDelete: Cascade)
+  userId              String                 @db.ObjectId
+  workspace           Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId         String                 @db.ObjectId
+  account             IntegrationAccount     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId           String                 @db.ObjectId
+  provider            String
+  externalContainerId String
+  externalContainerKey String?
+  name                String
+  syncDirection       String                 @default("IMPORT_ONLY")
+  fieldMapping        Json                   @default("{}")
+  status              String                 @default("ACTIVE")
+  lastSyncedAt        DateTime?
+  lastError           String?
+  itemRefs            BoardItemExternalRef[]
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  @@unique([workspaceId, provider, externalContainerId])
+  @@index([userId, workspaceId])
+  @@index([accountId])
+}
+
+model BoardItemExternalRef {
+  id                String              @id @default(auto()) @map("_id") @db.ObjectId
+  item              BoardItem           @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId            String              @db.ObjectId
+  user              User                @relation("UserBoardItemExternalRefs", fields: [userId], references: [id], onDelete: Cascade)
+  userId            String              @db.ObjectId
+  account           IntegrationAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId         String              @db.ObjectId
+  mapping           ExternalBoardMapping? @relation(fields: [mappingId], references: [id], onDelete: SetNull)
+  mappingId         String?             @db.ObjectId
+  provider          String
+  externalId        String
+  externalKey       String?
+  externalUrl       String?
+  externalUpdatedAt DateTime?
+  syncStatus        String              @default("SYNCED")
+  lastSyncedAt      DateTime?
+  lastError         String?
+  raw               Json?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@unique([userId, provider, externalId])
+  @@index([itemId])
+  @@index([accountId])
+  @@index([mappingId])
+}
+
+model ExternalWorkspaceMapping {
+  id                String                 @id @default(auto()) @map("_id") @db.ObjectId
+  user              User                   @relation("UserExternalWorkspaceMappings", fields: [userId], references: [id], onDelete: Cascade)
+  userId            String                 @db.ObjectId
+  workspace         Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId       String                 @db.ObjectId
+  account           IntegrationAccount     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId         String                 @db.ObjectId
+  provider          String
+  externalSourceId  String
+  externalSourceKey String?
+  sourceKind        String
+  targetType        String
+  targetGroupId     String?                @db.ObjectId
+  name              String
+  fieldMapping      Json                   @default("{}")
+  importOptions     Json                   @default("{}")
+  status            String                 @default("ACTIVE")
+  lastSyncedAt      DateTime?
+  lastError         String?
+  refs              WorkspaceExternalRef[]
+  createdAt         DateTime               @default(now())
+  updatedAt         DateTime               @updatedAt
+
+  @@unique([workspaceId, accountId, provider, externalSourceId, targetType])
+  @@index([userId, workspaceId])
+  @@index([accountId])
+}
+
+model WorkspaceExternalRef {
+  id                String                    @id @default(auto()) @map("_id") @db.ObjectId
+  user              User                      @relation("UserWorkspaceExternalRefs", fields: [userId], references: [id], onDelete: Cascade)
+  userId            String                    @db.ObjectId
+  workspace         Workspace                 @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId       String                    @db.ObjectId
+  account           IntegrationAccount        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId         String                    @db.ObjectId
+  mapping           ExternalWorkspaceMapping? @relation(fields: [mappingId], references: [id], onDelete: SetNull)
+  mappingId         String?                   @db.ObjectId
+  targetType        String
+  targetId          String                    @db.ObjectId
+  provider          String
+  externalId        String
+  externalKey       String?
+  externalUrl       String?
+  externalUpdatedAt DateTime?
+  syncStatus        String                    @default("SYNCED")
+  lastSyncedAt      DateTime?
+  lastError         String?
+  raw               Json?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+
+  @@unique([userId, workspaceId, accountId, provider, externalId, targetType])
+  @@index([workspaceId])
+  @@index([targetType, targetId])
+  @@index([accountId])
+  @@index([mappingId])
 }
 
 model BoardItemLink {

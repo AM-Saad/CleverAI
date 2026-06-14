@@ -1,9 +1,17 @@
 <script setup lang="ts">
+import BoardNotesSection from "~/features/board/containers/BoardNotesSection.vue";
+import NotesSection from "~/features/notes/containers/NotesSection.vue";
+import ReviewStatusCard from "~/features/review/components/ReviewStatusCard.vue";
+import WorkspaceImportDialog from "~/features/integrations/components/WorkspaceImportDialog.vue";
 import { useRoute } from "vue-router";
 import { defineAsyncComponent, onMounted, onBeforeUnmount } from "vue";
 import { useWorkspace } from "~/composables/workspaces/useWorkspaces";
 import type { EnrollCardResponse } from "~/shared/utils/review.contract";
 import { cleanupNotesStore } from "~/features/notes/composables/useNotesStore";
+import { useBoardColumnsStore } from "~/features/board/composables/useBoardColumnsStore";
+import { useBoardItemsStore } from "~/features/board/composables/useBoardItemsStore";
+import { useNoteGroupsStore } from "~/features/notes/composables/useNoteGroupsStore";
+import { useNotesStore } from "~/features/notes/composables/useNotesStore";
 
 const ContextSlideOver = defineAsyncComponent(
   () => import("~/components/workspace/hub/ContextSlideOver.vue")
@@ -14,15 +22,20 @@ const LearningHubContent = defineAsyncComponent(
 );
 
 const WorkspaceUploadMaterialForm = defineAsyncComponent(
-  () => import("~/components/workspace/hub/materials/UploadMaterialForm.vue")
+  () => import("~/features/materials/components/UploadMaterialForm.vue")
 );
 
 const route = useRoute();
 const id = route.params.id;
+const workspaceId = `${id as string}`;
 const toast = useToast();
 const { data: authData } = useAuth();
 const showUpload = ref(false);
 const { workspace, loading, error, refresh } = useWorkspace(id! as string);
+const boardColumnsStore = useBoardColumnsStore(workspaceId);
+const boardItemsStore = useBoardItemsStore(workspaceId);
+const notesStore = useNotesStore(workspaceId);
+const noteGroupsStore = useNoteGroupsStore(workspaceId);
 
 // Context Bridge integration
 const contextBridge = useContextBridge();
@@ -41,6 +54,30 @@ const {
 } = useWorkspaceEnrollment(id as string, workspace);
 
 const { handleOfflineSubmit } = useOffline();
+
+const integrationStatusToColumnId = computed(() => {
+  const columns = boardColumnsStore.getOrderedColumns();
+  const findColumn = (...needles: string[]) =>
+    columns.find((column) => {
+      const name = column.name.toLowerCase();
+      return needles.some((needle) => name.includes(needle));
+    })?.id ?? null;
+
+  return {
+    "To Do": findColumn("todo", "to do", "backlog", "task"),
+    "In Progress": findColumn("progress", "doing"),
+    Done: findColumn("done", "complete"),
+  };
+});
+
+async function handleWorkspaceImportSynced() {
+  await Promise.allSettled([
+    boardItemsStore.syncWithServer(),
+    boardColumnsStore.syncWithServer(),
+    noteGroupsStore.syncWithServer(),
+    notesStore.refreshFromServer(),
+  ]);
+}
 
 function toggleUploadForm() {
   console.log("toggleUploadForm");
@@ -145,6 +182,14 @@ onBeforeUnmount(() => {
 
     <template #actions>
       <div class="flex flex-col items-end gap-2">
+        <WorkspaceImportDialog
+          :workspace-id="workspaceId"
+          default-target="NOTE"
+          trigger-label="Apps"
+          trigger-size="sm"
+          :status-to-column-id="integrationStatusToColumnId"
+          @imported="handleWorkspaceImportSynced"
+        />
         <!-- Workspace-specific Review Status -->
         <review-status-card :workspace-id="`${id as string}`" :show-context="false" :show-refresh="false"
           :minimal="true" variant="ghost" :empty-message="'You have no cards to review, enroll some or just chill.'" />
@@ -165,7 +210,7 @@ onBeforeUnmount(() => {
 
         <!-- Notes Panel -->
         <template #notes>
-          <workspace-notes-section @add-to-material="handleAddToMaterial" />
+          <NotesSection @add-to-material="handleAddToMaterial" />
         </template>
 
         <!-- Board Panel -->

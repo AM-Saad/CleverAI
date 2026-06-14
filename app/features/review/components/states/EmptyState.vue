@@ -1,51 +1,48 @@
 <template>
-  <div class="text-center py-12 animate-fade-in">
-    <div class="text-6xl mb-4">🎉</div>
-    <UiTitle size="2xl" weight="bold" class="mb-2">All caught up!</UiTitle>
-    <UiParagraph color="content-secondary" class="mb-6">
-      No cards are due for review right now. Great job!
-      <span v-if="studySessionReviews && studySessionReviews > 0">
-        You reviewed {{ studySessionReviews }} cards this session.
-      </span>
-    </UiParagraph>
-    <div class="flex justify-center space-x-4">
-      <UButton @click="$emit('refresh')" color="primary" variant="solid" icon="i-heroicons-arrow-path">
-        Check Again
-      </UButton>
-      <UButton @click="$emit('showAnalytics')" color="neutral" variant="solid" icon="i-heroicons-chart-bar">
-        View Analytics
-      </UButton>
+  <div class="mx-auto flex max-w-md flex-col items-center justify-center py-12 text-center">
+    <div class="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-[var(--radius-xl)] bg-surface-subtle ring-1 ring-secondary">
+      <Icon name="i-lucide-inbox" class="h-6 w-6 text-content-secondary" />
+    </div>
+    <h3 class="text-base font-semibold text-content-on-surface">
+      No review cards due
+    </h3>
+    <p class="mt-1 text-sm text-content-secondary">
+      {{ emptyMessage }}
+    </p>
+    <div class="mt-4 flex flex-wrap items-center justify-center gap-2">
+      <UiButton size="sm" tone="neutral" variant="outline" @click="$emit('refresh')">
+        <Icon name="i-lucide-refresh-cw" class="h-4 w-4" />
+        Refresh
+      </UiButton>
+      <UiButton
+        v-if="studySessionReviews > 0"
+        size="sm"
+        tone="neutral"
+        variant="ghost"
+        @click="$emit('showAnalytics')"
+      >
+        <Icon name="i-lucide-chart-no-axes-column" class="h-4 w-4" />
+        View analytics
+      </UiButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-interface Props {
-  studySessionReviews?: number
-}
-
-defineProps<Props>()
+const props = withDefaults(defineProps<{
+  studySessionReviews?: number;
+}>(), {
+  studySessionReviews: 0,
+});
 
 defineEmits<{
-  refresh: []
-  showAnalytics: []
-}>()
+  refresh: [];
+  showAnalytics: [];
+}>();
+
+const emptyMessage = computed(() =>
+  props.studySessionReviews > 0
+    ? "You finished the available cards for this session."
+    : "Enroll flashcards, questions, or materials, then refresh when they are due.",
+);
 </script>
-
-<style scoped>
-.animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-</style>
