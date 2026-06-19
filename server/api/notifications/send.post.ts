@@ -3,14 +3,9 @@ import { z } from "zod";
 import webPush from "web-push";
 import { SendNotificationDTO } from "@@/shared/utils/notification.contract";
 import { Errors, success } from "@server/utils/error";
+import { requireAuth } from "@server/utils/auth";
 
 export default defineEventHandler(async (event) => {
-  // Rate limiting check (simple in-memory implementation)
-  const clientIP =
-    getHeader(event, "x-forwarded-for") ||
-    getHeader(event, "x-real-ip") ||
-    "unknown";
-  console.log('clientIP', clientIP);
   // TODO: Implement proper rate limiting with Redis or similar
 
   webPush.setVapidDetails(
@@ -31,25 +26,24 @@ export default defineEventHandler(async (event) => {
       throw Errors.badRequest("Invalid request data");
     }
 
-    // Check for authorization - allow internal cron calls with secret token
+    // ── Authorization ────────────────────────────────────────────────────
+    // Two legitimate callers:
+    //   1. Internal cron jobs (x-cron-secret) — may target any users.
+    //   2. Authenticated users — may only target THEMSELVES. A logged-in user
+    //      must not be able to push notifications to other users' devices, nor
+    //      broadcast to everyone by omitting targetUsers. ADMINs may target
+    //      anyone.
     const cronToken = getHeader(event, "x-cron-secret");
+    const isInternalCronCall =
+      !!process.env.CRON_SECRET_TOKEN &&
+      cronToken === process.env.CRON_SECRET_TOKEN;
 
-    // Allow internal cron calls with valid secret token
-    const isInternalCronCall = cronToken === process.env.CRON_SECRET_TOKEN;
-
-    // Allow authenticated users (check for session cookie)
-    const sessionCookie =
-      getCookie(event, "next-auth.session-token") ||
-      getCookie(event, "__Secure-next-auth.session-token");
-    const isAuthenticatedUser = !!sessionCookie;
-
-    if (
-      process.env.NODE_ENV === "production" &&
-      !isInternalCronCall &&
-      !isAuthenticatedUser
-    ) {
-      // In production, require some form of authorization for non-cron calls
-      throw Errors.unauthorized("Authorization required");
+    if (!isInternalCronCall) {
+      const requester = await requireAuth(event); // throws 401 if unauthenticated
+      if (requester.role !== "ADMIN") {
+        // Force self-scope regardless of the requested targetUsers.
+        message.targetUsers = [requester.id];
+      }
     }
 
     // Get active subscriptions only

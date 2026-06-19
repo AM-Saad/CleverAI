@@ -205,8 +205,6 @@ export async function checkDueCards() {
         }
 
         // Check if we already sent a notification recently (within the last 6 hours)
-        // TODO: For testing, you can temporarily reduce this to 10 minutes: 10 * 60 * 1000
-        // TEMP: Reduced to 1 minute for testing
         const recentNotification = await prisma.scheduledNotification.findFirst(
           {
             where: {
@@ -222,7 +220,6 @@ export async function checkDueCards() {
             },
           }
         );
-        console.log("Recent notification:", recentNotification);
         if (recentNotification) {
           console.log(
             `⏰ Skipping user ${userPref.userId} - already notified recently`
