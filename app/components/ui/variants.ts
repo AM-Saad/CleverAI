@@ -23,53 +23,14 @@ export type Size = (typeof SIZES)[number];
 export const TONES = ["primary", "neutral", "success", "warning", "error", "info"] as const;
 export type Tone = (typeof TONES)[number];
 
-/** Token-based text color per tone. */
-export const toneText: Record<Tone, string> = {
-  primary: "text-primary",
-  neutral: "text-content-secondary",
-  success: "text-success-text",
-  warning: "text-warning-text",
-  error: "text-error-text",
-  info: "text-info-text",
-};
-
-/** Token-based solid background per tone (pairs with the readable on-tone text). */
-export const toneBgSolid: Record<Tone, string> = {
-  primary: "bg-primary text-on-primary",
-  neutral: "bg-surface-strong text-content-on-surface-strong",
-  success: "bg-success text-on-success",
-  warning: "bg-warning text-on-warning",
-  error: "bg-error text-on-error",
-  info: "bg-info text-on-info",
-};
-
-/** Token-based subtle/tinted background per tone. */
-export const toneBgSoft: Record<Tone, string> = {
-  primary: "bg-primary/10 text-primary",
-  neutral: "bg-surface-strong text-content-on-surface",
-  success: "bg-success/10 text-success-text",
-  warning: "bg-warning/10 text-warning-text",
-  error: "bg-error/10 text-error-text",
-  info: "bg-info/10 text-info-text",
-};
-
-/** Token-based border per tone. */
-export const toneBorder: Record<Tone, string> = {
-  primary: "border-primary",
-  neutral: "border-secondary",
-  success: "border-success",
-  warning: "border-warning",
-  error: "border-error",
-  info: "border-info",
-};
+// Tone → color is owned by the Nuxt UI theme in app/app.config.ts — the single
+// source for button/field tone classes (with hover/active states). Custom
+// primitives that need a tone fill compose tokens directly (bg-success/10,
+// text-success-text, …); there is intentionally no second tone map here.
 
 /** Tokenized focus ring — primitives compose this for keyboard focus. */
 export const focusRing =
   "focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]";
-
-/** Tokenized input focus — used when a native/third-party control needs ring classes. */
-export const inputFocusRing =
-  "focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[var(--ds-focus-outline-color)]";
 
 /** Canonical interactive motion. Keep hover/active feedback subtle and consistent. */
 export const interactiveTransition =
@@ -81,6 +42,3 @@ export const pressedScale = "active:scale-[0.98]";
 /** Canonical disabled treatment for native or custom interactive controls. */
 export const disabledState =
   "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 aria-disabled:pointer-events-none aria-disabled:cursor-not-allowed aria-disabled:opacity-60";
-
-/** Neutral hover state for secondary low-emphasis actions. */
-export const neutralHover = "hover:bg-surface-subtle hover:text-content-on-surface";
