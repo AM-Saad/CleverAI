@@ -79,6 +79,7 @@ export default defineNuxtPlugin((_nuxtApp) => {
     userTags: apiServiceFactory.create("userTags"),
     gateway: apiServiceFactory.create("gateway"),
     language: apiServiceFactory.create("language"),
+    notifications: apiServiceFactory.create("notifications"),
   };
 
   // Phase 4: Wire FetchFactory to report failures to the network monitor

@@ -1,12 +1,12 @@
 <template>
   <div v-if="show">
     <ReviewAnalyticsSummary v-if="analytics" :analytics="analytics" @close="handleClose" />
-    <div v-else-if="isLoading" class="bg-surface rounded-[var(--radius-lg)] shadow-[var(--shadow-card-hover)] p-6 mb-6 text-center">
+    <UiPanel v-else-if="isLoading" variant="surface" size="lg" class-name="mb-6 shadow-[var(--shadow-card-hover)]" content-class="text-center">
       <Loading />
       <p class="text-content-secondary mt-4">
         Loading analytics...
       </p>
-    </div>
+    </UiPanel>
   </div>
 </template>
 

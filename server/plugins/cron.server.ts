@@ -1,6 +1,5 @@
 import { cronManager } from "../services/CronManager";
 import { checkDueCards } from "../tasks/check-due-cards";
-import { processNotifications } from "../tasks/process-notifications";
 
 export default defineNitroPlugin(async (nitroApp) => {
   // Only initialize cron jobs on the server side and not in development API routes
@@ -16,10 +15,6 @@ export default defineNitroPlugin(async (nitroApp) => {
         await checkDueCards();
       });
 
-      cronManager.registerTask("process-notifications", async () => {
-        await processNotifications();
-      });
-
       // Add jobs with configuration from environment
       const jobConfigs = [
         {
@@ -27,13 +22,6 @@ export default defineNitroPlugin(async (nitroApp) => {
           schedule: process.env.CRON_CHECK_DUE_CARDS_SCHEDULE || "0 */4 * * *", // Every 4 hours
           taskName: "check-due-cards" as const,
           timezone: process.env.CRON_CHECK_DUE_CARDS_TIMEZONE || "UTC",
-          enabled: true,
-        },
-        {
-          name: "process-notifications",
-          schedule: process.env.CRON_PROCESS_NOTIFICATIONS_SCHEDULE || "*/15 * * * *", // Every 15 minutes
-          taskName: "process-notifications" as const,
-          timezone: process.env.CRON_PROCESS_NOTIFICATIONS_TIMEZONE || "UTC",
           enabled: true,
         },
       ];

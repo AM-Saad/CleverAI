@@ -4,7 +4,7 @@
     <shared-error-message v-else-if="fetchError" :error="fetchError" />
 
     <template v-else-if="form">
-      <ui-card size="sm">
+      <UiPanel size="sm" variant="surface">
         <template #header>Quick Capture</template>
         <div class="flex items-center justify-between gap-4">
           <div>
@@ -15,16 +15,17 @@
               Shows a language button in the corner of every page
             </ui-paragraph>
           </div>
-          <ui-switch v-model="form.enabled" />
+          <ui-switch v-model="form.enabled" aria-label="Enable floating translate button" />
         </div>
-      </ui-card>
+      </UiPanel>
 
-      <ui-card size="sm">
+      <UiPanel size="sm" variant="surface">
         <template #header>Languages</template>
         <div class="grid gap-4 sm:grid-cols-2">
           <div class="space-y-1.5">
-            <UiLabel tag="label">Target language</UiLabel>
+            <UiLabel tag="label" for="language-target-language">Target language</UiLabel>
             <UiSelect
+              id="language-target-language"
               v-model="form.targetLanguage"
               :items="languageOptions"
               value-key="value"
@@ -36,8 +37,9 @@
             </ui-paragraph>
           </div>
           <div class="space-y-1.5">
-            <UiLabel tag="label">Native language</UiLabel>
+            <UiLabel tag="label" for="language-native-language">Native language</UiLabel>
             <UiSelect
+              id="language-native-language"
               v-model="form.nativeLanguage"
               :items="languageOptions"
               value-key="value"
@@ -49,9 +51,9 @@
             </ui-paragraph>
           </div>
         </div>
-      </ui-card>
+      </UiPanel>
 
-      <ui-card size="sm">
+      <UiPanel size="sm" variant="surface">
         <template #header>Review</template>
         <div class="space-y-4">
           <div class="flex items-center justify-between gap-4">
@@ -61,11 +63,12 @@
                 Add generated stories to the review queue
               </ui-paragraph>
             </div>
-            <u-toggle v-model="form.autoEnroll" />
+            <ui-switch v-model="form.autoEnroll" aria-label="Auto-enroll new words" />
           </div>
           <div class="space-y-1.5">
-            <UiLabel tag="label">Cards per session</UiLabel>
+            <UiLabel tag="label" for="language-session-card-limit">Cards per session</UiLabel>
             <ui-input
+              id="language-session-card-limit"
               v-model.number="form.sessionCardLimit"
               type="number"
               min="5"
@@ -74,7 +77,7 @@
             />
           </div>
         </div>
-      </ui-card>
+      </UiPanel>
 
       <div class="flex justify-end">
         <ui-button :loading="isSaving" @click="handleSave">

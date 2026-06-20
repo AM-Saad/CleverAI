@@ -43,7 +43,7 @@ onMounted(() => {
 
     <!-- Error -->
     <div v-else-if="error" class="flex flex-col items-center justify-center p-8 gap-3">
-      <u-icon name="i-lucide-alert-circle" class="w-8 h-8 text-error" />
+      <u-icon name="i-lucide-alert-circle" class="w-8 h-8 text-error-text" />
       <ui-paragraph size="sm" color="content-secondary">
         Failed to load note content
       </ui-paragraph>

@@ -6,6 +6,8 @@ import type {
 
 export interface SaveGeneratedArtifactsInput {
   prisma: any;
+  /** Owner — generated cards are auto-enrolled into this user's review queue. */
+  userId: string;
   task: "flashcards" | "quiz";
   workspaceId: string;
   materialId?: string;
@@ -25,6 +27,7 @@ export async function saveGeneratedArtifacts(
 ): Promise<SaveGeneratedArtifactsResult> {
   const {
     prisma,
+    userId,
     task,
     workspaceId,
     materialId,
@@ -32,6 +35,26 @@ export async function saveGeneratedArtifacts(
     loadedMaterialType,
     result,
   } = input;
+
+  // Auto-enroll helper: create CardReview rows so freshly generated cards are
+  // immediately reviewable (the review queue reads CardReview, not the
+  // Flashcard/Question status flag). Same SR defaults as the manual enroll path.
+  const enrollCards = async (
+    tx: any,
+    cardIds: string[],
+    resourceType: "flashcard" | "question",
+  ) => {
+    if (cardIds.length === 0) return;
+    await tx.cardReview.createMany({
+      data: cardIds.map((cardId) => ({
+        userId,
+        workspaceId,
+        cardId,
+        resourceType,
+        nextReviewAt: new Date(),
+      })),
+    });
+  };
 
   let savedCount = 0;
   let deletedCount: number | undefined;
@@ -69,24 +92,32 @@ export async function saveGeneratedArtifacts(
         return;
       }
 
-      const created = await tx.flashcard.createMany({
-        data: (result as FlashcardDTO[]).map((flashcard) => ({
-          workspaceId,
-          materialId: materialId || null,
-          front: flashcard.front,
-          back: flashcard.back,
-          sourceRef:
-            materialId && flashcard.sourceMetadata
-              ? (extractSourceRef(
-                  flashcard.sourceMetadata,
-                  loadedMaterialType === "pdf" ? "PDF" : "NOTE",
-                  materialId
-                ) as any)
-              : null,
-          status: "DRAFT",
-        })),
-      });
-      savedCount = created.count;
+      // Create individually so we capture ids (MongoDB createMany returns none),
+      // then auto-enroll the new cards into the review queue.
+      const createdIds: string[] = [];
+      for (const flashcard of result as FlashcardDTO[]) {
+        const created = await tx.flashcard.create({
+          data: {
+            workspaceId,
+            materialId: materialId || null,
+            front: flashcard.front,
+            back: flashcard.back,
+            sourceRef:
+              materialId && flashcard.sourceMetadata
+                ? (extractSourceRef(
+                    flashcard.sourceMetadata,
+                    loadedMaterialType === "pdf" ? "PDF" : "NOTE",
+                    materialId
+                  ) as any)
+                : null,
+            status: "ENROLLED",
+          },
+          select: { id: true },
+        });
+        createdIds.push(created.id);
+      }
+      savedCount = createdIds.length;
+      await enrollCards(tx, createdIds, "flashcard");
       return;
     }
 
@@ -120,25 +151,31 @@ export async function saveGeneratedArtifacts(
       return;
     }
 
-    const created = await tx.question.createMany({
-      data: (result as QuizQuestionDTO[]).map((question) => ({
-        workspaceId,
-        materialId: materialId || null,
-        question: question.question,
-        choices: question.choices,
-        answerIndex: question.answerIndex,
-        sourceRef:
-          materialId && question.sourceMetadata
-            ? (extractSourceRef(
-                question.sourceMetadata,
-                loadedMaterialType === "pdf" ? "PDF" : "NOTE",
-                materialId
-              ) as any)
-            : null,
-        status: "DRAFT",
-      })),
-    });
-    savedCount = created.count;
+    const createdIds: string[] = [];
+    for (const question of result as QuizQuestionDTO[]) {
+      const created = await tx.question.create({
+        data: {
+          workspaceId,
+          materialId: materialId || null,
+          question: question.question,
+          choices: question.choices,
+          answerIndex: question.answerIndex,
+          sourceRef:
+            materialId && question.sourceMetadata
+              ? (extractSourceRef(
+                  question.sourceMetadata,
+                  loadedMaterialType === "pdf" ? "PDF" : "NOTE",
+                  materialId
+                ) as any)
+              : null,
+          status: "ENROLLED",
+        },
+        select: { id: true },
+      });
+      createdIds.push(created.id);
+    }
+    savedCount = createdIds.length;
+    await enrollCards(tx, createdIds, "question");
   });
 
   return { savedCount, deletedCount, deletedReviewsCount };

@@ -1,4 +1,8 @@
 <script setup lang="ts">
+// design-allow-file: word-bank list intentionally uses native <button> for the
+// segmented status tabs (role="tab" / aria-selected semantics) and the story
+// disclosure toggle, plus a self-contained filter panel. Revisit and migrate to
+// Ui* primitives when this WIP layout is finalized.
 import { useTextToSpeechWorker } from "~/composables/ai/useTextToSpeechWorker";
 import type { LanguageWord } from "~/shared/utils/language.contract";
 import { useLanguageLearningRuntime } from "../composables/languageLearningRuntime";
@@ -9,59 +13,91 @@ const { generateStory: generateStoryCapture } = useLanguageCapture();
 const ttsWorker = useTextToSpeechWorker();
 const languageRuntime = useLanguageLearningRuntime();
 
-const words = languageRuntime.words;
-const hasMore = languageRuntime.hasMore;
-const activeTab = ref("all");
+const STATUS_FILTERS = [
+  { value: "all", label: "All", icon: "i-lucide-library" },
+  { value: "captured", label: "Captured", icon: "i-lucide-bookmark" },
+  { value: "story_ready", label: "Stories", icon: "i-lucide-book-open" },
+  { value: "enrolled", label: "Review", icon: "i-lucide-layers-3" },
+  { value: "mastered", label: "Mastered", icon: "i-lucide-check-circle-2" },
+] as const;
+
+type StatusFilter = (typeof STATUS_FILTERS)[number]["value"];
+
+const words = computed<LanguageWord[]>(() => languageRuntime.words?.value ?? []);
+const totalWords = computed(() => languageRuntime.totalWords?.value ?? words.value.length);
+const statusCounts = computed<Record<string, number>>(
+  () => languageRuntime.statusCounts?.value ?? {},
+);
+const hasMore = computed(() => Boolean(languageRuntime.hasMore?.value));
+const activeTab = ref<StatusFilter>("all");
 const selectedCategory = ref("all");
 const storyFilter = ref<"all" | "with">("all");
 const searchQuery = ref("");
 const expandedStoryIds = ref(new Set<string>());
 
-const isLoading = readonly(languageRuntime.isFetchingWords);
-const isLoadingMore = readonly(languageRuntime.isLoadingMoreWords);
-const error = readonly(languageRuntime.wordBankError);
+const isLoading = computed(() => Boolean(languageRuntime.isFetchingWords?.value));
+const isLoadingMore = computed(() => Boolean(languageRuntime.isLoadingMoreWords?.value));
+const error = computed(() => languageRuntime.wordBankError?.value ?? null);
 
 const enrollingId = ref<string | null>(null);
 const generatingStoryId = ref<string | null>(null);
 const speakingId = ref<string | null>(null);
 let activeAudio: HTMLAudioElement | null = null;
 
-const tabs = computed(() => {
-  const counts: Record<string, number> = {};
-  for (const word of words.value) {
-    counts[word.status] = (counts[word.status] ?? 0) + 1;
+const tabs = computed(() =>
+  STATUS_FILTERS.map((tab) => ({
+    ...tab,
+    count:
+      tab.value === "all"
+        ? totalWords.value
+        : (statusCounts.value[tab.value] ?? 0),
+  })),
+);
+
+const categories = computed(() => (languageRuntime.categories?.value ?? []).slice(0, 12));
+const categoryOptions = computed(() => [
+  { label: "All categories", value: "all" },
+  ...categories.value.map((category) => ({
+    label: category,
+    value: category,
+  })),
+]);
+
+const filteredWords = computed(() => words.value);
+
+const hasActiveFilters = computed(
+  () =>
+    activeTab.value !== "all" ||
+    selectedCategory.value !== "all" ||
+    storyFilter.value !== "all" ||
+    !!searchQuery.value.trim(),
+);
+
+const activeFilterCount = computed(
+  () =>
+    Number(activeTab.value !== "all") +
+    Number(selectedCategory.value !== "all") +
+    Number(storyFilter.value !== "all") +
+    Number(!!searchQuery.value.trim()),
+);
+
+const resultSummary = computed(() => {
+  if (isLoading.value) return "Loading words";
+  if (totalWords.value === 0) return "No saved words";
+
+  const visible = filteredWords.value.length;
+  const noun = visible === 1 ? "word" : "words";
+  if (hasActiveFilters.value) {
+    return `${visible} matching ${noun} of ${totalWords.value}`;
   }
-  return [
-    { value: "all", label: "All", count: words.value.length },
-    { value: "captured", label: "Captured", count: counts.captured ?? 0 },
-    { value: "story_ready", label: "Stories", count: counts.story_ready ?? 0 },
-    { value: "enrolled", label: "Enrolled", count: counts.enrolled ?? 0 },
-    { value: "mastered", label: "Mastered", count: counts.mastered ?? 0 },
-  ].filter((tab) => tab.value === "all" || tab.count > 0);
-});
 
-const categories = computed(() => languageRuntime.categories.value.slice(0, 12));
-
-const filteredWords = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase();
-  return words.value.filter((word) => {
-    const matchesStatus =
-      activeTab.value === "all" || word.status === activeTab.value;
-    const matchesCategory =
-      selectedCategory.value === "all" ||
-      word.category === selectedCategory.value;
-    const matchesStory = storyFilter.value === "all" || wordHasStory(word);
-    const matchesSearch =
-      !query ||
-      [word.word, word.translation, word.category, word.partOfSpeech]
-        .filter(Boolean)
-        .some((value) => value!.toLowerCase().includes(query));
-    return matchesStatus && matchesCategory && matchesStory && matchesSearch;
-  });
+  return hasMore.value
+    ? `${visible}+ saved ${noun}`
+    : `${visible} saved ${noun}`;
 });
 
 const emptyMessage = computed(() =>
-  words.value.length === 0
+  totalWords.value === 0
     ? "No words captured yet."
     : "No words match these filters.",
 );
@@ -177,9 +213,15 @@ const statusColor = (status: string) => {
   return map[status] ?? "neutral";
 };
 
+const normalizeStatusFilter = (value: unknown): StatusFilter => {
+  const candidate = typeof value === "string" ? value : "all";
+  return STATUS_FILTERS.some((item) => item.value === candidate)
+    ? (candidate as StatusFilter)
+    : "all";
+};
+
 const syncFiltersFromRoute = () => {
-  activeTab.value =
-    typeof route.query.status === "string" ? route.query.status : "all";
+  activeTab.value = normalizeStatusFilter(route.query.status);
   selectedCategory.value =
     typeof route.query.category === "string" ? route.query.category : "all";
   storyFilter.value = route.query.hasStory === "true" ? "with" : "all";
@@ -200,6 +242,14 @@ const writeFiltersToRoute = () => {
   router.replace({ query });
 };
 
+const clearFilters = () => {
+  activeTab.value = "all";
+  selectedCategory.value = "all";
+  storyFilter.value = "all";
+  searchQuery.value = "";
+  writeFiltersToRoute();
+};
+
 let didReadInitialRoute = false;
 const { debouncedFunc: scheduleFilterRouteWrite, cancel: cancelFilterRouteWrite } =
   useDebounce(writeFiltersToRoute, 250);
@@ -217,7 +267,7 @@ watch([activeTab, selectedCategory, storyFilter, searchQuery], () => {
   scheduleFilterRouteWrite();
 });
 
-watch(languageRuntime.wordBankRevision, () => {
+watch(languageRuntime.wordBankRevision ?? ref(0), () => {
   if (didReadInitialRoute) void fetchWords();
 });
 
@@ -240,34 +290,66 @@ defineExpose({ refresh: fetchWords });
 
 <template>
   <div class="space-y-4">
-    <div class="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
-      <ui-input v-model="searchQuery" icon="i-lucide-search" placeholder="Search word bank" class="w-full" />
-      <div class="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
-        <ui-button v-for="tab in tabs" :key="tab.value" :variant="activeTab === tab.value ? 'soft' : 'ghost'"
-          color="neutral" size="xs" class="shrink-0" @click="activeTab = tab.value">
-          {{ tab.label }}
-          <ui-badge v-if="tab.count > 0" variant="soft" color="neutral" class="ml-1 text-xs">
-            {{ tab.count }}
-          </ui-badge>
-        </ui-button>
-      </div>
-    </div>
+    <UiPanel variant="surface" size="sm" class-name="shadow-[var(--shadow-card)]">
+      <div class="flex flex-col gap-3">
+        <div class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+          <UiInput v-model="searchQuery" type="search" icon="i-lucide-search" placeholder="Search word bank" size="sm"
+            class="w-full" aria-label="Search word bank" />
 
-    <div class="flex flex-wrap gap-2">
-      <ui-button size="xs" :variant="selectedCategory === 'all' ? 'soft' : 'ghost'" color="neutral"
-        @click="selectedCategory = 'all'">
-        All categories
-      </ui-button>
-      <ui-button v-for="category in categories" :key="category" size="xs"
-        :variant="selectedCategory === category ? 'soft' : 'ghost'" color="neutral"
-        @click="selectedCategory = category">
-        {{ category }}
-      </ui-button>
-      <ui-button size="xs" :variant="storyFilter === 'with' ? 'soft' : 'ghost'" color="neutral"
-        @click="storyFilter = storyFilter === 'with' ? 'all' : 'with'">
-        Has story
-      </ui-button>
-    </div>
+          <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <UiSelect v-model="selectedCategory" :items="categoryOptions" value-key="value" label-key="label" size="sm"
+              class="w-full sm:w-52" aria-label="Filter word bank by category" />
+            <UiButton size="sm" :variant="storyFilter === 'with' ? 'soft' : 'ghost'" tone="neutral"
+              leading-icon="i-lucide-book-open-check" class="justify-center"
+              :aria-pressed="storyFilter === 'with'"
+              aria-label="Show only words with stories"
+              @click="storyFilter = storyFilter === 'with' ? 'all' : 'with'">
+              Stories
+            </UiButton>
+            <UiButton v-if="hasActiveFilters" size="sm" variant="ghost" tone="neutral" leading-icon="i-lucide-x"
+              class="justify-center" @click="clearFilters">
+              Clear {{ activeFilterCount }}
+            </UiButton>
+          </div>
+        </div>
+
+        <div class="flex gap-1 overflow-x-auto pb-1 scrollbar-none" role="tablist" aria-label="Word status">
+          <button v-for="tab in tabs" :key="tab.value" type="button" role="tab" :aria-selected="activeTab === tab.value"
+            class="flex min-h-[var(--target-touch)] shrink-0 items-center gap-1.5 rounded-[var(--radius-md)] px-2.5 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)]"
+            :class="activeTab === tab.value
+              ? 'bg-primary/10 text-primary ring-1 ring-primary/20'
+              : 'text-content-secondary hover:bg-surface-subtle hover:text-content-on-surface'"
+            @click="activeTab = tab.value">
+            <Icon :name="tab.icon" class="h-3.5 w-3.5" />
+            <span>{{ tab.label }}</span>
+            <span
+              class="min-w-5 rounded-[var(--radius-sm)] bg-content-on-background/5 px-1.5 py-0.5 text-center text-[11px] font-semibold text-content-secondary">
+              {{ tab.count }}
+            </span>
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-2 border-t border-secondary pt-2">
+          <span class="text-xs font-medium text-content-secondary">
+            {{ resultSummary }}
+          </span>
+          <div v-if="hasActiveFilters" class="flex flex-wrap gap-1.5">
+            <UiBadge v-if="activeTab !== 'all'" size="xs" variant="soft" tone="neutral">
+              {{ statusLabel(activeTab) }}
+            </UiBadge>
+            <UiBadge v-if="selectedCategory !== 'all'" size="xs" variant="soft" tone="neutral">
+              {{ selectedCategory }}
+            </UiBadge>
+            <UiBadge v-if="storyFilter === 'with'" size="xs" variant="soft" tone="neutral">
+              Stories
+            </UiBadge>
+            <UiBadge v-if="searchQuery.trim()" size="xs" variant="soft" tone="neutral">
+              Search
+            </UiBadge>
+          </div>
+        </div>
+      </div>
+    </UiPanel>
 
     <ui-loader v-if="isLoading" :is-fetching="true" />
     <shared-error-message v-else-if="error" :error="error" />
@@ -280,7 +362,7 @@ defineExpose({ refresh: fetchWords });
     </div>
 
     <div v-else class="space-y-3">
-      <ui-card v-for="word in filteredWords" :key="word.id" variant="default">
+      <UiCard v-for="word in filteredWords" :key="word.id" variant="default">
         <div class="flex items-start justify-between gap-3">
           <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-2">
@@ -311,18 +393,22 @@ defineExpose({ refresh: fetchWords });
 
           <div class="flex shrink-0 items-center gap-1">
             <ui-button variant="ghost" color="neutral" size="xs" title="Hear word" :loading="speakingId === word.id"
+              :aria-label="`Hear ${word.word}`"
               @click="handleSpeak(word)">
               <Icon name="i-lucide-volume-2" class="w-3.5 h-3.5" />
             </ui-button>
             <ui-button v-if="word.status !== 'mastered'" variant="ghost" color="primary" size="xs" :title="wordHasStory(word) ? 'Regenerate story' : 'Generate story'
-              " :loading="generatingStoryId === word.id" @click="handleGenerateStory(word)">
+              " :aria-label="wordHasStory(word) ? `Regenerate story for ${word.word}` : `Generate story for ${word.word}`"
+              :loading="generatingStoryId === word.id" @click="handleGenerateStory(word)">
               <Icon name="i-lucide-sparkles" class="w-3.5 h-3.5" />
             </ui-button>
             <ui-button v-if="canEnroll(word)" variant="ghost" color="primary" size="xs" title="Add to review deck"
+              :aria-label="`Add ${word.word} to review deck`"
               :loading="enrollingId === word.id" @click="handleEnroll(word)">
               <Icon name="i-lucide-book-plus" class="w-3.5 h-3.5" />
             </ui-button>
             <ui-button variant="ghost" color="error" size="xs" title="Delete word" :loading="deletingId === word.id"
+              :aria-label="`Delete ${word.word}`"
               @click="confirmDelete(word)">
               <Icon name="i-lucide-trash-2" class="w-3.5 h-3.5" />
             </ui-button>
@@ -337,8 +423,10 @@ defineExpose({ refresh: fetchWords });
           </p>
         </div>
 
-        <ui-card v-if="storyFor(word)" class="mt-3" variant="surface-strong" size="xs">
-          <button type="button" class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left"
+        <UiPanel v-if="storyFor(word)" class-name="mt-3" variant="subtle" size="xs" content-class="p-0">
+          <button type="button" class="flex min-h-[var(--target-touch)] w-full items-center justify-between gap-3 px-3 py-2 text-left"
+            :aria-expanded="expandedStoryIds.has(word.id)"
+            :aria-label="`${expandedStoryIds.has(word.id) ? 'Hide' : 'Show'} story for ${word.word}`"
             @click="toggleStory(word.id)">
             <span class="flex items-center gap-2 text-sm font-medium">
               <Icon name="i-lucide-book-open" class="h-4 w-4 text-primary" />
@@ -361,8 +449,8 @@ defineExpose({ refresh: fetchWords });
               {{ cleanStoryText(storyFor(word)?.storyText) }}
             </p>
           </div>
-        </ui-card>
-      </ui-card>
+        </UiPanel>
+      </UiCard>
 
       <div v-if="hasMore" class="flex justify-center pt-2">
         <ui-button variant="ghost" color="neutral" size="sm" :loading="isLoadingMore" @click="() => void loadMore()">
@@ -371,8 +459,7 @@ defineExpose({ refresh: fetchWords });
       </div>
     </div>
 
-    <shared-dialog-modal :show="!!pendingDelete" title="Delete word?" icon="delete"
-      @close="pendingDelete = null">
+    <shared-dialog-modal :show="!!pendingDelete" title="Delete word?" icon="delete" @close="pendingDelete = null">
       <template #body>
         <ui-paragraph size="sm" color="content-secondary">
           Remove "<strong>{{ pendingDelete?.word }}</strong>" from your language deck? This also deletes its story and

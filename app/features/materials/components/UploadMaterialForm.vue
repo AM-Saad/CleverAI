@@ -368,7 +368,7 @@ watch(
         </div>
 
         <!-- TEXT FORM -->
-        <ui-card v-if="sourceType === 'text'" variant="surface" size="sm">
+        <UiPanel v-if="sourceType === 'text'" variant="subtle" size="sm">
           <template #header>
             <div class="flex items-center gap-2">
               <shared-icon name="document" class="w-5 h-5" />
@@ -394,7 +394,7 @@ watch(
               <ui-button type="submit">Submit</ui-button>
             </div>
           </u-form>
-        </ui-card>
+        </UiPanel>
 
         <!-- FILE UPLOAD -->
         <div v-if="sourceType === 'file'" class="space-y-4">
@@ -414,7 +414,7 @@ watch(
             </div>
 
             <!-- Generation options (when enabled) -->
-            <div v-if="generateAfterUpload" class="mt-3 p-3 bg-surface rounded-[var(--radius-md)] space-y-3">
+            <UiPanel v-if="generateAfterUpload" variant="surface" size="sm" class-name="mt-3" content-class="space-y-3">
               <div class="flex items-center gap-3">
                 <label class="text-sm font-medium">Generate:</label>
                 <UButtonGroup>
@@ -433,18 +433,21 @@ watch(
               <div>
                 <label class="block text-sm font-medium mb-2">Depth</label>
                 <div class="grid grid-cols-3 gap-2">
-                  <button v-for="option in depthOptions" :key="option.value" :class="[
-                    'px-3 py-2 rounded-[var(--radius-md)] border-2 transition-colors text-xs',
-                    selectedDepth === option.value
-                      ? 'border-primary bg-primary/10'
-                      : 'border-secondary hover:border-primary/40',
-                  ]" @click="selectedDepth = option.value">
+                  <UiInteractiveCard
+                    v-for="option in depthOptions"
+                    :key="option.value"
+                    size="xs"
+                    variant="outline"
+                    selectable
+                    :selected="selectedDepth === option.value"
+                    content-class="text-xs"
+                    @click="selectedDepth = option.value">
                     <div class="font-medium">{{ option.label }}</div>
                     <div class="text-content-secondary">{{ option.description }}</div>
-                  </button>
+                  </UiInteractiveCard>
                 </div>
               </div>
-            </div>
+            </UiPanel>
           </div>
 
           <!-- Upload Progress -->
@@ -457,7 +460,7 @@ watch(
 
           <!-- Document Info (after upload, if generating) -->
           <div v-if="uploadedMaterial && generateAfterUpload" class="space-y-4">
-            <div class="bg-surface p-4 rounded-[var(--radius-md)] space-y-2">
+            <UiPanel variant="surface" size="md" content-class="space-y-2">
               <div class="flex justify-between text-sm">
                 <span class="font-medium">Title:</span>
                 <span>{{ uploadedMaterial.title }}</span>
@@ -470,10 +473,10 @@ watch(
                 <span class="font-medium">Estimated Tokens:</span>
                 <span>{{ uploadedMaterial.tokenEstimate.toLocaleString() }}</span>
               </div>
-            </div>
+            </UiPanel>
 
             <!-- Estimated Output -->
-            <div class="bg-primary/10 p-4 rounded-[var(--radius-md)]">
+            <UiPanel variant="subtle" size="md" class-name="border-primary/20 bg-primary/10">
               <div class="text-sm space-y-1">
                 <div class="font-medium">Estimated Output:</div>
                 <div class="text-content-on-surface">
@@ -486,13 +489,13 @@ watch(
                   </UTooltip>
                 </div>
               </div>
-            </div>
+            </UiPanel>
           </div>
 
           <!-- Error -->
-          <div v-if="genError" class="bg-error/10 text-error p-3 rounded-[var(--radius-md)] text-sm">
+          <UiPanel v-if="genError" variant="subtle" size="sm" role="alert" class-name="border-error/20 bg-error/10" content-class="text-sm text-error-text">
             {{ genError }}
-          </div>
+          </UiPanel>
 
           <!-- Footer buttons for file upload -->
           <div class="flex gap-3 justify-end pt-2">

@@ -12,7 +12,7 @@
       description="Generate questions from your materials using the Generate button on each material card." />
 
     <div v-if="questionsToShow?.length" class="space-y-4 overflow-auto">
-      <ui-card variant="ghost" v-for="(q, idx) in questionsToShow" :key="'id' in q ? q.id : idx" :class="['relative pb-3 border-b border-secondary  rounded-none!', { 'draft-question': q.status === 'DRAFT' }, {
+      <UiCard variant="ghost" v-for="(q, idx) in questionsToShow" :key="'id' in q ? q.id : idx" :class="['relative pb-3 border-b border-secondary  rounded-none!', { 'draft-question': q.status === 'DRAFT' }, {
         'border-b-0': idx === questionsToShow.length - 1
       }]" size="xs">
         <!-- Draft/Enrollment status indicators -->
@@ -55,7 +55,7 @@
             </div>
           </template>
         </u-collapsible>
-      </ui-card>
+      </UiCard>
     </div>
   </div>
 </template>

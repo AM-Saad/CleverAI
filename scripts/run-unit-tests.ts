@@ -135,16 +135,27 @@ class FakeXpPort implements XpPort {
 }
 
 function fakePrismaForReview() {
+  // Models the GradeRequest.requestId unique constraint so idempotency can be
+  // exercised: the key is claimed via create() BEFORE the mutation transaction,
+  // and a duplicate claim throws a Prisma P2002 the way the real client does.
+  const claimedRequestIds = new Set<string>();
   return {
     gradeRequest: {
-      findUnique: async () => null,
+      create: async ({ data }: any) => {
+        if (claimedRequestIds.has(data.requestId)) {
+          throw Object.assign(new Error("Unique constraint failed"), {
+            code: "P2002",
+          });
+        }
+        claimedRequestIds.add(data.requestId);
+        return { id: `gr-${claimedRequestIds.size}`, ...data };
+      },
+      deleteMany: async ({ where }: any) => {
+        const removed = claimedRequestIds.delete(where.requestId);
+        return { count: removed ? 1 : 0 };
+      },
     },
-    $transaction: async <T>(fn: (tx: any) => Promise<T>) =>
-      fn({
-        gradeRequest: {
-          create: async () => ({}),
-        },
-      }),
+    $transaction: async <T>(fn: (tx: any) => Promise<T>) => fn({}),
   };
 }
 
@@ -623,6 +634,13 @@ function fakeGenerationSavePrisma() {
               for (const item of toDelete) flashcards.delete(item.id);
               return { count: toDelete.length };
             },
+            create: async ({ data, select }: any) => {
+              const id = `flashcard-${flashcardSequence++}`;
+              const record = { id, ...data };
+              flashcards.set(id, record);
+              if (select?.id) return { id };
+              return record;
+            },
             createMany: async ({ data }: any) => {
               for (const item of data) {
                 const id = `flashcard-${flashcardSequence++}`;
@@ -643,6 +661,13 @@ function fakeGenerationSavePrisma() {
               for (const item of toDelete) questions.delete(item.id);
               return { count: toDelete.length };
             },
+            create: async ({ data, select }: any) => {
+              const id = `question-${questionSequence++}`;
+              const record = { id, ...data };
+              questions.set(id, record);
+              if (select?.id) return { id };
+              return record;
+            },
             createMany: async ({ data }: any) => {
               for (const item of data) {
                 const id = `question-${questionSequence++}`;
@@ -661,6 +686,10 @@ function fakeGenerationSavePrisma() {
               );
               reviews.splice(0, reviews.length, ...filtered);
               return { count: before - reviews.length };
+            },
+            createMany: async ({ data }: any) => {
+              reviews.push(...data);
+              return { count: data.length };
             },
           },
         }),
@@ -730,6 +759,40 @@ test("shared review grading updates card state and awards XP", async () => {
   assert.equal(result.xpEarned, 7);
   assert.equal(repository.record?.repetitions, 1);
   assert.equal(repository.record?.streak, 1);
+});
+
+test("shared review grading is idempotent for a repeated requestId", async () => {
+  const repository = new FakeReviewRepository({
+    id: "review-1",
+    userId: "user-1",
+    resourceId: "card-1",
+    easeFactor: 2.5,
+    intervalDays: 0,
+    repetitions: 0,
+    nextReviewAt: new Date("2026-01-01T00:00:00.000Z"),
+    streak: 0,
+  });
+  const prisma = fakePrismaForReview();
+  const args = {
+    prisma,
+    repository,
+    xpPort: new FakeXpPort(),
+    userId: "user-1",
+    cardId: "review-1",
+    grade: 4,
+    requestId: "request-1",
+    xpSource: "review",
+  } as const;
+
+  const first = await gradeReviewCard({ ...args });
+  const second = await gradeReviewCard({ ...args });
+
+  // First call applies the grade and awards XP.
+  assert.equal(first.xpEarned, 7);
+  // Replay returns persisted state with no extra XP...
+  assert.equal(second.xpEarned, 0);
+  // ...and the SM-2 mutation ran exactly once (repetitions did not advance twice).
+  assert.equal(repository.record?.repetitions, 1);
 });
 
 test("workspace note sync maps temp IDs to server IDs", async () => {
@@ -3457,6 +3520,7 @@ test("generated flashcards save through shared ai-generation service", async () 
 
   const result = await saveGeneratedArtifacts({
     prisma,
+    userId: "user-1",
     task: "flashcards",
     workspaceId: "workspace-1",
     materialId: "material-1",
@@ -3479,6 +3543,11 @@ test("generated flashcards save through shared ai-generation service", async () 
   assert.equal(result.deletedCount, 1);
   assert.equal(result.deletedReviewsCount, 1);
   assert.equal(flashcards.size, 2);
+  assert.equal(reviews.length, 2);
+  assert.deepEqual(
+    reviews.map((review) => review.resourceType),
+    ["flashcard", "flashcard"]
+  );
 });
 
 test("gateway cache hit consumes quota and returns cached payload metadata", async () => {
@@ -3747,7 +3816,7 @@ test("language capture auto-enroll preserves mastered words", async () => {
   assert.equal(transactionCalled, false);
 });
 
-test("language runtime owns word-bank fetch filters and language scoping", async () => {
+test("language runtime owns unscoped word-bank filters", async () => {
   const calls: any[] = [];
   const runtime = createLanguageLearningRuntime({
     api: {
@@ -3807,14 +3876,113 @@ test("language runtime owns word-bank fetch filters and language scoping", async
 
   await runtime.fetchWords();
 
-  assert.equal(calls[0].targetLanguage, "es");
-  assert.equal(calls[0].nativeLanguage, "en");
+  assert.equal(calls[0].targetLanguage, undefined);
+  assert.equal(calls[0].nativeLanguage, undefined);
   assert.equal(calls[0].status, "captured");
   assert.equal(calls[0].category, "greeting");
   assert.equal(calls[0].hasStory, true);
   assert.equal(runtime.words.value[0]?.word, "hola");
   assert.deepEqual(runtime.categories.value, ["greeting"]);
   assert.equal(runtime.hasMore.value, true);
+});
+
+test("language runtime loads preferences before unscoped word and scoped stats requests", async () => {
+  const calls: any[] = [];
+  const runtime = createLanguageLearningRuntime({
+    api: {
+      getPreferences: async () => ({
+        success: true,
+        data: {
+          id: "prefs-1",
+          userId: "user-1",
+          enabled: true,
+          targetLanguage: "fr",
+          nativeLanguage: "en",
+          autoEnroll: true,
+          sessionCardLimit: 12,
+          showConsent: false,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+      }),
+      getWords: async (params: any) => {
+        calls.push({ type: "words", params });
+        return { success: true, data: { words: [], nextCursor: null, categories: [] } };
+      },
+      deleteWord: async () => ({ success: true, data: { message: "ok" } }),
+      enrollWord: async (id: string) => ({
+        success: true,
+        data: { wordId: id, status: "enrolled" },
+      }),
+      getStats: async (params: any) => {
+        calls.push({ type: "stats", params });
+        return { success: true, data: { total: 0, due: 0, enrolled: 0, mastered: 0 } };
+      },
+    },
+  });
+
+  await runtime.fetchWords();
+  await runtime.refreshStats();
+
+  assert.equal(calls[0]?.type, "words");
+  assert.equal(calls[0]?.params.targetLanguage, undefined);
+  assert.equal(calls[0]?.params.nativeLanguage, undefined);
+  assert.equal(calls[1]?.type, "stats");
+  assert.equal(calls[1]?.params.targetLanguage, "fr");
+  assert.equal(calls[1]?.params.nativeLanguage, "en");
+});
+
+test("language runtime ignores stale word-bank responses", async () => {
+  let releaseSlow: (() => void) | null = null;
+  const slow = new Promise<void>((resolve) => {
+    releaseSlow = resolve;
+  });
+  let callIndex = 0;
+  const runtime = createLanguageLearningRuntime({
+    api: {
+      getWords: async () => {
+        callIndex += 1;
+        const currentCall = callIndex;
+        if (currentCall === 1) await slow;
+        return {
+          success: true,
+          data: {
+            words: [
+              {
+                id: `word-${currentCall}`,
+                word: currentCall === 1 ? "stale" : "fresh",
+                translation: "hello",
+                translationLang: "en",
+                sourceLang: "es",
+                sourceType: "manual",
+                status: "captured",
+                createdAt: new Date(),
+                updatedAt: new Date(),
+              },
+            ],
+            nextCursor: null,
+            categories: [],
+          },
+        };
+      },
+      deleteWord: async () => ({ success: true, data: { message: "ok" } }),
+      enrollWord: async (id: string) => ({
+        success: true,
+        data: { wordId: id, status: "enrolled" },
+      }),
+      getStats: async () => ({
+        success: true,
+        data: { total: 0, due: 0, enrolled: 0, mastered: 0 },
+      }),
+    },
+  });
+
+  const firstFetch = runtime.fetchWords();
+  await runtime.fetchWords();
+  releaseSlow?.();
+  await firstFetch;
+
+  assert.equal(runtime.words.value[0]?.word, "fresh");
 });
 
 test("language runtime mutates word-bank memory after enroll and delete", async () => {

@@ -1,7 +1,7 @@
 import { CronJob } from 'cron'
 
 // Available tasks for cron jobs
-export type TaskName = 'check-due-cards' | 'process-notifications'
+export type TaskName = 'check-due-cards'
 
 // Configuration for a cron job
 export interface CronConfig {

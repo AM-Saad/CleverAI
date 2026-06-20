@@ -1,6 +1,6 @@
 <template>
   <div class="flex items-center justify-center min-h-screen bg-background">
-    <div class="w-full max-w-md p-8 bg-white rounded-[var(--radius-2xl)] shadow-[var(--shadow-card-hover)]">
+    <UiPanel variant="surface" size="lg" class-name="w-full max-w-md rounded-[var(--radius-2xl)] shadow-[var(--shadow-card-hover)]">
       <div class="text-center mb-6">
         <icon name="mdi:account-reactivate" class="text-primary mx-auto mb-4" size="64"></icon>
         <h1 class="text-2xl font-bold text-content-on-surface-strong">
@@ -12,31 +12,31 @@
       </div>
 
       <!-- Success message -->
-      <div v-if="successMessage" class="mb-4 p-4 bg-success/10 border border-success/20 rounded-[var(--radius-lg)]">
+      <UiPanel v-if="successMessage" variant="subtle" size="md" class-name="mb-4 border-success/20 bg-success/10">
         <div class="flex items-start">
-          <icon name="mdi:check-circle" class="text-success mr-3 mt-0.5" size="20"></icon>
+          <icon name="mdi:check-circle" class="text-success-text mr-3 mt-0.5" size="20"></icon>
           <div>
-            <p class="text-sm text-success">
+            <p class="text-sm text-success-text">
               {{ successMessage }}
             </p>
-            <p class="text-sm text-success/80 mt-2">
+            <p class="text-sm text-success-text/80 mt-2">
               <NuxtLink to="/auth/signIn" class="font-semibold underline">
                 Click here to sign in
               </NuxtLink>
             </p>
           </div>
         </div>
-      </div>
+      </UiPanel>
 
       <!-- Error message -->
-      <div v-if="errorMessage" class="mb-4 p-4 bg-error/10 border border-error/20 rounded-[var(--radius-lg)]">
+      <UiPanel v-if="errorMessage" variant="subtle" size="md" role="alert" class-name="mb-4 border-error/20 bg-error/10">
         <div class="flex items-start">
-          <icon name="mdi:alert-circle" class="text-error mr-3 mt-0.5" size="20"></icon>
-          <p class="text-sm text-error">
+          <icon name="mdi:alert-circle" class="text-error-text mr-3 mt-0.5" size="20"></icon>
+          <p class="text-sm text-error-text">
             {{ errorMessage }}
           </p>
         </div>
-      </div>
+      </UiPanel>
 
       <!-- Loading state -->
       <div v-if="loading" class="flex justify-center py-8">
@@ -58,7 +58,7 @@
           </NuxtLink>
         </div>
       </div>
-    </div>
+    </UiPanel>
   </div>
 </template>
 

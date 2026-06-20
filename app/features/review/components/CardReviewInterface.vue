@@ -1,151 +1,139 @@
 <template>
-  <div class="  space-y-6 p-2 rounded-[var(--radius-md)] outline-primary" tabindex="0" role="application"
-    aria-label="Spaced repetition card review interface" @keydown="handleKeydown">
-    <!-- Analytics Summary -->
-    <ReviewAnalytics :show="showAnalytics" :workspace-id="workspaceId" @close="showAnalytics = false" />
+  <div>
+    <review-kit-shell
+      header-label="Review session"
+      :loading="isLoading"
+      :error="error"
+      :is-complete="sessionComplete"
+      :card-key="currentCard?.cardId ?? null"
+      :index="currentCardIndex"
+      :total="reviewQueue.length"
+      :progress="progress"
+      :submitting="isSubmitting"
+      :can-previous="!isFirstCard"
+      @grade="gradeCard"
+      @previous="previousCard"
+      @skip="skipCard"
+      @restart="restartSession"
+      @refresh="restartSession"
+    >
+      <template #stats>
+        <review-stats
+          :queue-stats="queueStats"
+          @toggle-analytics="showAnalytics = !showAnalytics"
+          @toggle-debug="showDebugPanel = !showDebugPanel"
+        />
+      </template>
 
-    <!-- Keyboard Shortcuts Help -->
-    <KeyboardShortcuts :show="showShortcuts" @close="showShortcuts = false" />
+      <template #card="{ showAnswer }">
+        <review-card-display
+          v-if="currentCard"
+          :card="currentCard"
+          :show-answer="showAnswer"
+        />
+      </template>
 
-    <!-- Debug Panel (Dev Only) -->
-    <dev-only>
-      <div v-if="showDebugPanel"
-        class="bg-warning/10 dark:bg-warning/20 p-4 rounded-[var(--radius-lg)] border border-warning/20 dark:border-warning/30">
-        <div class="flex justify-between items-center mb-4">
-          <h3 class="font-semibold text-warning">Debug Panel</h3>
-          <button @click="showDebugPanel = false" class="text-warning hover:text-warning/80">
-            ✕
-          </button>
+      <template #complete>
+        <div
+          class="flex h-16 w-16 items-center justify-center rounded-full bg-success/10"
+        >
+          <Icon name="i-lucide-party-popper" class="h-8 w-8 text-success-text" />
         </div>
-        <div class="space-y-2 text-sm text-warning">
-          <div><strong>Queue Length:</strong> {{ reviewQueue.length }}</div>
-          <div><strong>Current Index:</strong> {{ currentCardIndex }}</div>
-          <div><strong>Is Loading:</strong> {{ isLoading }}</div>
-          <div><strong>Has Error:</strong> {{ error ? 'Yes' : 'No' }}</div>
-          <template v-if="currentCard">
-            <div class="border-t border-warning/30 pt-2 mt-2">
-              <div><strong>Card ID:</strong> {{ currentCard.cardId }}</div>
-              <div><strong>Resource Type:</strong> {{ currentCard.resourceType }}</div>
-              <div><strong>Review State:</strong></div>
-              <ul class="ml-4 space-y-1">
-                <li>Repetitions: {{ currentCard.reviewState.repetitions }}</li>
-                <li>Ease Factor: {{ currentCard.reviewState.easeFactor }}</li>
-                <li>Interval: {{ currentCard.reviewState.intervalDays }} days</li>
-                <li>Next Review: {{ new Date(currentCard.reviewState.nextReviewAt).toLocaleString() }}</li>
-              </ul>
-            </div>
-          </template>
-          <div v-else class="text-warning italic">
-            No current card (queue is empty)
-          </div>
+        <div class="space-y-1">
+          <ui-subtitle size="xl" color="content-on-surface"
+            >Session complete</ui-subtitle
+          >
+          <ui-paragraph size="sm" class="text-content-secondary">
+            Great work — you cleared your due cards.
+          </ui-paragraph>
         </div>
-      </div>
-    </dev-only>
-
-    <!-- Header with Progress -->
-    <div class="flex flex-wrap justify-between items-center gap-4">
-      <review-header :current-index="currentCardIndex" :total-cards="reviewQueue.length" :progress="progress"
-        :session-time="sessionTime" />
-
-      <review-stats :queue-stats="queueStats" @toggle-analytics="showAnalytics = !showAnalytics"
-        @toggle-debug="showDebugPanel = !showDebugPanel" />
-    </div>
-
-    <!-- Card Display -->
-    <review-card-display v-if="currentCard && !isLoading && !error" :card="currentCard" :show-answer="showAnswer" />
-
-    <!-- Action Buttons -->
-    <div v-if="currentCard && !isLoading && !error">
-      <!-- Show Answer Button -->
-      <review-answer-reveal-button v-if="!showAnswer" :is-submitting="isSubmitting" @reveal="revealAnswer" />
-
-      <!-- Grade & Navigation -->
-      <div v-else class="space-y-4  w-4xl max-w-full mx-auto">
-        <review-grade-buttons :is-submitting="isSubmitting" @grade="gradeCard" />
-        <review-navigation-controls :is-first-card="isFirstCard" :is-last-card="isLastCard"
-          :is-submitting="isSubmitting" @previous="previousCard" @next="nextCard" @skip="skipCard" />
-      </div>
-    </div>
-
-    <!-- Empty State - only show when not loading, no error, and no cards -->
-    <review-states-empty-state v-else-if="!isLoading && !error && !currentCard" :study-session-reviews="reviewCount"
-      @refresh="$emit('refresh')" @show-analytics="showAnalytics = true" />
-
-    <!-- Loading State -->
-    <review-states-loading-state v-if="isLoading" />
-
-    <!-- Error State -->
-    <review-states-error-state v-if="error && !isLoading" :error="error" @clear-error="clearError" />
-
-    <!-- Session Summary Modal/Overlay (Minimal Implementation) -->
-    <div class="fixed inset-0 bg-content-on-background/50 flex items-center justify-center z-50"
-      v-if="showSummaryModal && sessionSummary" role="dialog" aria-modal="true" aria-labelledby="session-summary-title">
-      >
-      <div
-        class="bg-white p-8 rounded-[var(--radius-2xl)] shadow-[var(--shadow-modal)] max-w-md w-full space-y-6 text-center border border-secondary">
-        <h2 class="text-2xl font-bold text-content-on-surface-strong">Session Complete!</h2>
-
-        <div class="space-y-4">
-          <div class="p-4 bg-surface-subtle rounded-[var(--radius-lg)]">
-            <div class="text-sm text-content-secondary">XP Gained</div>
-            <div class="text-3xl font-bold text-primary">+{{ sessionSummary.xpGained }}</div>
-          </div>
-
-          <div v-if="sessionSummary.leveledUp"
-            class="p-4 bg-warning/10 border border-warning/20 rounded-[var(--radius-lg)] animate-pulse">
-            <div class="text-lg font-bold text-warning">🎉 Level Up!</div>
-            <div class="text-sm text-warning/80">
-              Level {{ sessionSummary.levelBefore }} → <span class="font-meduim">{{ sessionSummary.levelAfter }}</span>
+        <div v-if="sessionSummary" class="w-full max-w-xs space-y-3">
+          <UiPanel variant="subtle" size="md">
+            <div class="text-sm text-content-secondary">XP gained</div>
+            <div class="text-3xl font-medium text-primary">
+              +{{ sessionSummary.xpGained }}
             </div>
-          </div>
-          <div v-if="sessionSummary.leveledUp" class="fixed top-0 left-0">
-
-            <landing-lottie-animation :animation-data="confettiAnimation" :loop="false" :autoplay="true"
-              class="mb-4 z-10 " />
-          </div>
-          <div v-if="sessionSummary.stageUnlocked"
-            class="p-4 bg-primary/10 border border-primary/20 rounded-[var(--radius-lg)] animate-pulse">
-            <div class="text-lg font-bold text-primary">🌟 New Stage Unlocked!</div>
+          </UiPanel>
+          <UiPanel
+            v-if="sessionSummary.leveledUp"
+            variant="subtle"
+            size="md"
+            class-name="border-warning/20 bg-warning/10"
+          >
+            <div class="font-medium text-warning-text">Level up</div>
+            <div class="text-sm text-warning-text">
+              Level {{ sessionSummary.levelBefore }} →
+              {{ sessionSummary.levelAfter }}
+            </div>
+          </UiPanel>
+          <UiPanel
+            v-if="sessionSummary.stageUnlocked"
+            variant="subtle"
+            size="md"
+            class-name="border-primary/20 bg-primary/10"
+          >
+            <div class="font-medium text-primary">New stage unlocked</div>
             <div class="text-sm text-primary/80">
               {{ sessionSummary.stageAfter }}
             </div>
-          </div>
-
-
+          </UiPanel>
         </div>
+      </template>
+    </review-kit-shell>
 
-        <ui-button @click="showSummaryModal = false" size="lg"
-          class="w-full text-center justify-center transition-opacity">
-          Continue
-        </ui-button>
-      </div>
-    </div>
+    <!-- Auxiliary overlays -->
+    <ReviewAnalytics
+      :show="showAnalytics"
+      :workspace-id="workspaceId"
+      @close="showAnalytics = false"
+    />
+
+    <dev-only>
+      <UiPanel
+        v-if="showDebugPanel"
+        variant="subtle"
+        size="md"
+        class-name="mt-4 border-warning/20 bg-warning/10"
+        content-class="text-sm text-warning-text"
+      >
+        <div class="mb-2 flex items-center justify-between">
+          <span class="font-medium">Debug</span>
+          <UiButton
+            size="xs"
+            tone="warning"
+            variant="ghost"
+            @click="showDebugPanel = false"
+            >Close</UiButton
+          >
+        </div>
+        <div>Queue length: {{ reviewQueue.length }}</div>
+        <div>Current index: {{ currentCardIndex }}</div>
+        <div>Loading: {{ isLoading }}</div>
+        <div v-if="currentCard">
+          Card: {{ currentCard.cardId }} ({{ currentCard.resourceType }})
+        </div>
+      </UiPanel>
+    </dev-only>
   </div>
 </template>
 
 <script setup lang="ts">
-import ReviewHeader from "~/features/review/components/ReviewHeader.vue";
 import ReviewAnalytics from "~/features/review/components/ReviewAnalytics.vue";
 import ReviewStats from "~/features/review/components/ReviewStats.vue";
-import KeyboardShortcuts from "~/features/review/components/KeyboardShortcuts.vue";
-import type { ReviewGrade } from '~/shared/utils/review.contract'
+import ReviewCardDisplay from "~/features/review/components/CardDisplay.vue";
+import type { ReviewGrade } from "~/shared/utils/review.contract";
 
-import confettiData from '~/assets/confetti-background.json';
-
-
-const confettiAnimation = confettiData;
 interface Props {
-  workspaceId?: string
+  workspaceId?: string;
 }
 
-const props = defineProps<Props>()
+const props = defineProps<Props>();
 
 const emit = defineEmits<{
-  refresh: []
-  cardGraded: [cardId: string, grade: ReviewGrade]
-}>()
+  refresh: [];
+  cardGraded: [cardId: string, grade: ReviewGrade];
+}>();
 
-// Core review composable
 const {
   reviewQueue,
   currentCard,
@@ -155,130 +143,55 @@ const {
   isSubmitting,
   error,
   isFirstCard,
-  isLastCard,
   progress,
   grade,
   fetchQueue,
   nextCard: goToNextCardInQueue,
   previousCard: goToPreviousCardInQueue,
-  clearError,
-} = useCardReview()
+} = useCardReview();
 
-// Session timer composable
-const { sessionTime, reviewCount, incrementReviews, reset: resetSession } = useSessionTimer()
+const { incrementReviews, reset: resetSession } = useSessionTimer();
+const { startSession, endSession, summary: sessionSummary } = useSessionSummary();
 
-// Session summary composable
-const { startSession, endSession, summary: sessionSummary } = useSessionSummary()
-
-// Local UI state
-const showAnswer = ref(false)
-const showAnalytics = ref(false)
-const showShortcuts = ref(false)
-const showDebugPanel = ref(false)
-const showSummaryModal = ref(false)
-
-// Keyboard shortcuts composable
-const { handleKeydown: handleKey } = useKeyboardShortcuts({
-  onRevealAnswer: () => {
-    if (!showAnswer.value && currentCard.value) {
-      revealAnswer()
-    }
-  },
-  onGrade: (gradeValue: string) => {
-    if (showAnswer.value && currentCard.value) {
-      gradeCard(gradeValue as ReviewGrade)
-    }
-  },
-  onNavigatePrevious: () => previousCard(),
-  onNavigateNext: () => nextCard(),
-  onSkip: () => skipCard(),
-  onToggleShortcuts: () => {
-    showShortcuts.value = !showShortcuts.value
-  },
-  onToggleAnalytics: () => {
-    showAnalytics.value = !showAnalytics.value
-  },
-  onCloseAll: () => {
-    showShortcuts.value = false
-    showAnalytics.value = false
-    showDebugPanel.value = false
-    showSummaryModal.value = false
-  },
-})
-
-// Methods
-const revealAnswer = () => {
-  showAnswer.value = true
-}
+const showAnalytics = ref(false);
+const showDebugPanel = ref(false);
+const sessionComplete = ref(false);
 
 const gradeCard = async (gradeValue: ReviewGrade) => {
-  if (!currentCard.value) return
-
+  if (!currentCard.value) return;
   try {
-    console.log(currentCard.value)
-    emit('cardGraded', currentCard.value.cardId, gradeValue)
-    await grade(currentCard.value.cardId, gradeValue)
-
-    // Track session stats
-    incrementReviews()
-
-    // Reset for next card
-    showAnswer.value = false
-
-    // If no more cards, emit refresh AND end session
+    emit("cardGraded", currentCard.value.cardId, gradeValue);
+    await grade(currentCard.value.cardId, gradeValue);
+    incrementReviews();
     if (reviewQueue.value.length === 0) {
-      await endSession()
-      showSummaryModal.value = true
-      emit('refresh')
+      await endSession();
+      sessionComplete.value = true;
+      emit("refresh");
     }
   } catch (err) {
-    console.error('Failed to grade card:', err)
+    console.error("Failed to grade card:", err);
   }
-}
+};
 
-const nextCard = () => {
-  showAnswer.value = false
-  goToNextCardInQueue()
-}
+const previousCard = () => goToPreviousCardInQueue();
+const skipCard = () => goToNextCardInQueue();
 
-const previousCard = () => {
-  showAnswer.value = false
-  goToPreviousCardInQueue()
-}
+const restartSession = async () => {
+  sessionComplete.value = false;
+  resetSession();
+  startSession();
+  await fetchQueue(props.workspaceId);
+  emit("refresh");
+};
 
-const skipCard = () => {
-  showAnswer.value = false
-  nextCard()
-}
-
-const handleKeydown = (event: KeyboardEvent) => {
-  handleKey(event)
-}
-
-// Watch for prop changes
 watch(
   () => props.workspaceId,
   () => {
-    fetchQueue(props.workspaceId)
-    resetSession()
-    startSession()
+    sessionComplete.value = false;
+    fetchQueue(props.workspaceId);
+    resetSession();
+    startSession();
   },
-  { immediate: true }
-)
-
-// Reset answer visibility when card changes
-watch(currentCard, () => {
-  showAnswer.value = false
-})
-watch(sessionSummary, () => {
-  console.log('Session summary:', sessionSummary.value)
-})
-
-// Focus management for accessibility
-onMounted(() => {
-  nextTick(() => {
-    const container = document.querySelector('[role="application"]') as HTMLElement
-    container?.focus()
-  })
-})
+  { immediate: true },
+);
 </script>

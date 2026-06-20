@@ -8,7 +8,6 @@ import {
 import { gradeReviewCard } from "@server/modules/review/application/gradeReviewCard";
 import { PrismaCardReviewRepository } from "@server/modules/review/infrastructure/PrismaCardReviewRepository";
 import { PrismaXpPort } from "@server/modules/review/infrastructure/PrismaXpPort";
-import { PrismaNotificationPort } from "@server/modules/notifications/infrastructure/PrismaNotificationPort";
 
 export default defineEventHandler(async (event) => {
   // Parse & validate body
@@ -32,13 +31,11 @@ export default defineEventHandler(async (event) => {
     prisma,
     repository: new PrismaCardReviewRepository(),
     xpPort: new PrismaXpPort(),
-    notificationPort: new PrismaNotificationPort(),
     userId: user.id,
     cardId: validatedBody.cardId,
     grade: parseInt(validatedBody.grade),
     requestId: validatedBody.requestId,
     xpSource: "review",
-    scheduleNotification: true,
   });
 
   const payload = GradeCardResponseSchema.parse({

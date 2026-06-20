@@ -1,6 +1,6 @@
 <template>
   <div class="space-y-6">
-    <ui-card size="md" variant="default">
+    <UiPanel size="md" variant="surface">
       <template #header>
         Data Management
       </template>
@@ -23,41 +23,25 @@
           </p>
         </div>
       </div>
-    </ui-card>
+    </UiPanel>
 
-    <ui-card size="md" variant="default">
+    <UiPanel size="md" variant="surface">
       <template #header>
         Privacy Settings
       </template>
-      <div class="space-y-4">
-        <UFormGroup label="Analytics" help="Help improve the app by sharing anonymous usage data">
-          <UToggle v-model="privacySettings.analytics" />
-        </UFormGroup>
-
-        <UFormGroup label="Error Reporting" help="Automatically report errors to help fix bugs">
-          <UToggle v-model="privacySettings.errorReporting" />
-        </UFormGroup>
-      </div>
-
-      <template #footer>
-        <div class="flex justify-end">
-          <UiButton @click="savePrivacySettings">
-            Save Changes
-          </UiButton>
-        </div>
-      </template>
-    </ui-card>
+      <UiAlert
+        tone="info"
+        variant="soft"
+        title="Privacy controls are not available yet"
+      >
+        Analytics and error-reporting preferences will appear here once they are connected to account settings.
+      </UiAlert>
+    </UiPanel>
   </div>
 </template>
 
 <script setup lang="ts">
 const toast = useToast();
-
-// Privacy settings
-const privacySettings = ref({
-  analytics: true,
-  errorReporting: true,
-});
 
 // Export data
 const exportData = () => {
@@ -79,18 +63,4 @@ const importData = () => {
   });
 };
 
-// Save privacy settings
-const savePrivacySettings = () => {
-  // TODO: Implement API call to save privacy settings
-  toast.add({
-    title: "Success",
-    description: "Privacy settings saved",
-    color: "success",
-  });
-};
-
-// Load settings on mount
-onMounted(() => {
-  // TODO: Load actual privacy settings from API
-});
 </script>

@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import CanvasNoteToolbar from "~/features/notes/components/CanvasNoteToolbar.vue";
-import type { CanvasShape, CanvasNoteMetadata } from "@@/shared/utils/note.contract";
-import {
-  clampNumber,
-  type BoundsRect,
-} from "~/utils/canvas/geometry";
+import type {
+  CanvasShape,
+  CanvasNoteMetadata,
+} from "@@/shared/utils/note.contract";
+import { clampNumber, type BoundsRect } from "~/utils/canvas/geometry";
 import { designTokenValues } from "~/design-system/tokens.generated";
 
 // Canvas paint colors are resolved from design tokens (Konva needs literal
@@ -65,10 +65,10 @@ const SNAP_GUIDE_PADDING = 48;
 // ── State ──
 // Use JSON.parse(JSON.stringify) to strip Vue proxies to prevent DataCloneError on structuredClone
 const shapes = shallowRef<CanvasShape[]>(
-  JSON.parse(JSON.stringify(props.initialMetadata?.shapes ?? []))
+  JSON.parse(JSON.stringify(props.initialMetadata?.shapes ?? [])),
 );
-const fillColor = ref(PAINT_FILL_DEFAULT);
-const strokeColor = ref(PAINT_STROKE_DEFAULT);
+const fillColor = ref<string>(PAINT_FILL_DEFAULT);
+const strokeColor = ref<string>(PAINT_STROKE_DEFAULT);
 const strokeWidthState = ref(2);
 const strokeDashState = ref<number[] | undefined>(undefined);
 const strokeWidthInput = ref(String(strokeWidthState.value));
@@ -81,9 +81,14 @@ const isCanvasFocused = ref(false);
 const isAspectRatioLocked = ref(false);
 
 // ── History ──
-const { canUndo, canRedo, pushState, undo, redo, reset: resetHistory } = useCanvasHistory(
-  props.initialMetadata?.shapes ?? []
-);
+const {
+  canUndo,
+  canRedo,
+  pushState,
+  undo,
+  redo,
+  reset: resetHistory,
+} = useCanvasHistory(props.initialMetadata?.shapes ?? []);
 
 // ── Auto-save ──
 const SAVE_TIMEOUT_MS = 1500;
@@ -237,17 +242,26 @@ function applyStrokeWidthInput() {
     return;
   }
 
-  const next = Math.round(clampNumber(parsed, STROKE_WIDTH_MIN, STROKE_WIDTH_MAX) * 10) / 10;
+  const next =
+    Math.round(clampNumber(parsed, STROKE_WIDTH_MIN, STROKE_WIDTH_MAX) * 10) /
+    10;
   setStrokeWidth(next);
 }
 
-watch(strokeWidthState, (value) => {
-  syncStrokeWidthInput(value);
-}, { immediate: true });
+watch(
+  strokeWidthState,
+  (value) => {
+    syncStrokeWidthInput(value);
+  },
+  { immediate: true },
+);
 
-const selectedShapes = computed(() => shapes.value.filter((shape) => selectedShapeIds.value.includes(shape.id)));
+const selectedShapes = computed(() =>
+  shapes.value.filter((shape) => selectedShapeIds.value.includes(shape.id)),
+);
 const transformerEnabledAnchors = computed(() => {
-  const singleSelectedShape = selectedShapes.value.length === 1 ? selectedShapes.value[0] : null;
+  const singleSelectedShape =
+    selectedShapes.value.length === 1 ? selectedShapes.value[0] : null;
   if (!singleSelectedShape) {
     return [
       "top-left",
@@ -336,7 +350,10 @@ function isEditableTarget(target: EventTarget | null) {
     return false;
   }
 
-  return target.isContentEditable || ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName);
+  return (
+    target.isContentEditable ||
+    ["INPUT", "TEXTAREA", "SELECT", "BUTTON"].includes(target.tagName)
+  );
 }
 
 function handleCanvasKeydown(event: KeyboardEvent) {
@@ -453,9 +470,10 @@ function getShapeConfig(shape: CanvasShape): Record<string, any> {
     dash: shape.dash,
     opacity: shape.opacity,
     draggable:
-      activeTool.value === "select"
-      && shape.draggable
-      && (inputMode.value !== "touch" || selectedShapeIds.value.includes(shape.id)),
+      activeTool.value === "select" &&
+      shape.draggable &&
+      (inputMode.value !== "touch" ||
+        selectedShapeIds.value.includes(shape.id)),
   };
 
   switch (shape.type) {
@@ -523,7 +541,10 @@ const transformerConfig = computed(() => ({
   anchorFill: PAINT_ON_PRIMARY,
   anchorStroke: PAINT_PRIMARY,
   anchorStrokeWidth: 1.25,
-  boundBoxFunc: (oldBox: { width: number; height: number }, newBox: { width: number; height: number }) => {
+  boundBoxFunc: (
+    oldBox: { width: number; height: number },
+    newBox: { width: number; height: number },
+  ) => {
     if (Math.abs(newBox.width) < 12 || Math.abs(newBox.height) < 12) {
       return oldBox;
     }
@@ -534,15 +555,23 @@ const transformerConfig = computed(() => ({
 
 function konvaComponent(type: CanvasShape["type"]): string {
   switch (type) {
-    case "rect": return "v-rect";
-    case "circle": return "v-circle";
-    case "ellipse": return "v-ellipse";
+    case "rect":
+      return "v-rect";
+    case "circle":
+      return "v-circle";
+    case "ellipse":
+      return "v-ellipse";
     case "line":
-    case "freedraw": return "v-line";
-    case "arrow": return "v-arrow";
-    case "text": return "v-text";
-    case "star": return "v-star";
-    default: return "v-rect";
+    case "freedraw":
+      return "v-line";
+    case "arrow":
+      return "v-arrow";
+    case "text":
+      return "v-text";
+    case "star":
+      return "v-star";
+    default:
+      return "v-rect";
   }
 }
 
@@ -557,52 +586,110 @@ const interactionHint = computed(() => {
 
   return "Hand mode pans | Snap guides align nearby shapes";
 });
-
 </script>
 
 <template>
-  <div class="canvas-note-editor flex flex-col h-full w-full" @click="closeContextMenu">
-    <CanvasNoteToolbar :is-fullscreen="isFullscreen" :readonly="props.readonly" :snap-enabled="snapEnabled"
-      :active-tool="activeTool" :fill-color="fillColor" :stroke-color="strokeColor" :stroke-width="strokeWidthState"
-      v-model:stroke-width-input="strokeWidthInput" :stroke-width-min="STROKE_WIDTH_MIN"
-      :stroke-width-max="STROKE_WIDTH_MAX" :can-undo="canUndo" :can-redo="canRedo"
-      :has-selection="selectedShapeIds.length > 0" @toggle-fullscreen="emit('toggle-fullscreen')"
-      @delete-note="emit('delete')" @toggle-snap="snapEnabled = !snapEnabled" @focus-canvas-home="focusCanvasHome"
-      @select-tool="selectTool" @set-fill-color="setFillColor" @set-stroke-color="setStrokeColor"
-      @apply-stroke-width-input="applyStrokeWidthInput" @set-border-style="setStrokeDash" @undo="handleUndo"
-      @redo="handleRedo" @delete-selected="deleteSelected" @duplicate-selection="duplicateShape" />
+  <div
+    class="canvas-note-editor flex flex-col h-full w-full"
+    @click="closeContextMenu"
+  >
+    <CanvasNoteToolbar
+      :is-fullscreen="isFullscreen"
+      :readonly="props.readonly"
+      :snap-enabled="snapEnabled"
+      :active-tool="activeTool"
+      :fill-color="fillColor"
+      :stroke-color="strokeColor"
+      :stroke-width="strokeWidthState"
+      v-model:stroke-width-input="strokeWidthInput"
+      :stroke-width-min="STROKE_WIDTH_MIN"
+      :stroke-width-max="STROKE_WIDTH_MAX"
+      :can-undo="canUndo"
+      :can-redo="canRedo"
+      :has-selection="selectedShapeIds.length > 0"
+      @toggle-fullscreen="emit('toggle-fullscreen')"
+      @delete-note="emit('delete')"
+      @toggle-snap="snapEnabled = !snapEnabled"
+      @focus-canvas-home="focusCanvasHome"
+      @select-tool="selectTool"
+      @set-fill-color="setFillColor"
+      @set-stroke-color="setStrokeColor"
+      @apply-stroke-width-input="applyStrokeWidthInput"
+      @set-border-style="setStrokeDash"
+      @undo="handleUndo"
+      @redo="handleRedo"
+      @delete-selected="deleteSelected"
+      @duplicate-selection="duplicateShape"
+    />
 
     <!-- Konva Stage Space -->
-    <SharedNoteContentArea ref="containerRef" class="min-h-[400px] cursor-crosshair" tabindex="0" role="application"
-      aria-label="Canvas editor" :class="{ 'cursor-grab': activeTool === 'hand' }"
-      @pointerdown.capture="focusCanvasSurface" @focus="handleCanvasFocus" @blur="handleCanvasBlur"
-      @keydown="handleCanvasKeydown" @keyup="handleCanvasKeyup">
+    <SharedNoteContentArea
+      ref="containerRef"
+      class="min-h-[400px] cursor-crosshair"
+      tabindex="0"
+      role="application"
+      aria-label="Canvas editor"
+      :class="{ 'cursor-grab': activeTool === 'hand' }"
+      @pointerdown.capture="focusCanvasSurface"
+      @focus="handleCanvasFocus"
+      @blur="handleCanvasBlur"
+      @keydown="handleCanvasKeydown"
+      @keyup="handleCanvasKeyup"
+    >
       <ClientOnly>
-        <v-stage ref="stageRef" :config="stageConfig" @mousedown="handleStageMouseDown"
-          @touchstart="handleStageMouseDown" @mousemove="handleStageMouseMove" @touchmove="handleStageMouseMove"
-          @mouseup="handleStageMouseUp" @touchend="handleStageMouseUp" @wheel="handleStageWheel"
-          @dragend="handleStageDragEnd">
+        <v-stage
+          ref="stageRef"
+          :config="stageConfig"
+          @mousedown="handleStageMouseDown"
+          @touchstart="handleStageMouseDown"
+          @mousemove="handleStageMouseMove"
+          @touchmove="handleStageMouseMove"
+          @mouseup="handleStageMouseUp"
+          @touchend="handleStageMouseUp"
+          @wheel="handleStageWheel"
+          @dragend="handleStageDragEnd"
+        >
           <v-layer>
-            <component v-for="shape in shapes" :is="konvaComponent(shape.type)" :key="shape.id"
-              :config="getShapeConfig(shape)" @dragstart="handleShapeDragStart" @dragmove="handleShapeDragMove"
-              @dragend="handleShapeDragEnd" @transformend="handleTransformEnd" @contextmenu="handleContextMenu"
-              @dblclick="handleDblClick" />
+            <component
+              v-for="shape in shapes"
+              :is="konvaComponent(shape.type)"
+              :key="shape.id"
+              :config="getShapeConfig(shape)"
+              @dragstart="handleShapeDragStart"
+              @dragmove="handleShapeDragMove"
+              @dragend="handleShapeDragEnd"
+              @transformend="handleTransformEnd"
+              @contextmenu="handleContextMenu"
+              @dblclick="handleDblClick"
+            />
           </v-layer>
 
           <v-layer :config="{ listening: false }">
-            <v-line v-for="guide in snapGuides" :key="guide.id"
-              :config="{ points: guide.points, stroke: PAINT_PRIMARY, strokeWidth: 1, dash: [6, 4], listening: false }" />
-            <v-rect v-if="selectionRect.visible" :config="{
-              x: selectionRect.x,
-              y: selectionRect.y,
-              width: selectionRect.width,
-              height: selectionRect.height,
-              fill: PAINT_SELECTION_FILL,
-              stroke: PAINT_PRIMARY,
-              strokeWidth: 1,
-              dash: [4, 4],
-              listening: false,
-            }" />
+            <v-line
+              v-for="guide in snapGuides"
+              :key="guide.id"
+              :config="{
+                points: guide.points,
+                stroke: PAINT_PRIMARY,
+                strokeWidth: 1,
+                dash: [6, 4],
+                listening: false,
+              }"
+            />
+            <v-rect
+              v-if="selectionRect.visible"
+              :config="{
+                x: selectionRect.x,
+                y: selectionRect.y,
+                width: selectionRect.width,
+                height: selectionRect.height,
+                fill: PAINT_SELECTION_FILL,
+                stroke: PAINT_PRIMARY,
+                strokeWidth: 1,
+                dash: [4, 4],
+                listening: false,
+              }"
+            />
           </v-layer>
 
           <v-layer>
@@ -613,99 +700,170 @@ const interactionHint = computed(() => {
 
       <!-- Zoom map / info corner -->
       <div
-        class="absolute bottom-2 left-2 px-2 py-1 bg-background/80 rounded-[var(--radius-md)] text-xs font-medium text-content-on-surface pointer-events-none select-none backdrop-blur-sm">
+        class="absolute bottom-2 left-2 px-2 py-1 bg-background/80 rounded-[var(--radius-md)] text-xs font-medium text-content-on-surface pointer-events-none select-none backdrop-blur-sm"
+      >
         {{ Math.round(stageScale * 100) }}% | {{ interactionHint }}
       </div>
 
-      <button v-if="isMinimapCollapsed" type="button"
-        class="absolute bottom-2 right-2 z-10 inline-flex items-center gap-1 rounded-[var(--radius-lg)] border border-secondary bg-surface/95 px-2 py-1.5 text-xs font-medium text-content-on-surface shadow-[var(--shadow-dropdown)] backdrop-blur-sm active:scale-90"
-        @click.stop="toggleMinimap">
+      <UiButton
+        v-if="isMinimapCollapsed"
+        type="button"
+        tone="neutral"
+        variant="outline"
+        size="xs"
+        class="absolute bottom-2 right-2 z-10 bg-surface/95 shadow-[var(--shadow-dropdown)] backdrop-blur-sm active:scale-[0.98]"
+        @click.stop="toggleMinimap"
+      >
         <UIcon name="i-lucide-map" class="w-3.5 h-3.5" />
         <span>Map</span>
-      </button>
+      </UiButton>
 
-      <div v-else ref="minimapRef"
-        class="absolute bottom-2 right-2 z-10 rounded-[var(--radius-xl)] border border-secondary bg-surface/95 p-2 shadow-[var(--shadow-dropdown)] backdrop-blur-sm">
+      <div
+        v-else
+        ref="minimapRef"
+        class="absolute bottom-2 right-2 z-10 rounded-[var(--radius-xl)] border border-secondary bg-surface/95 p-2 shadow-[var(--shadow-dropdown)] backdrop-blur-sm"
+      >
         <div
-          class="mb-1 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-content-secondary">
+          class="mb-1 flex items-center justify-between gap-2 text-[10px] font-semibold uppercase tracking-[0.08em] text-content-secondary"
+        >
           <span>Minimap</span>
           <div class="flex items-center gap-2">
-            <button type="button" class="text-primary hover:text-primary/80" @pointerdown.stop
-              @click.stop="focusCanvasHome">
+            <UiButton
+              type="button"
+              tone="primary"
+              variant="link"
+              size="xs"
+              class="px-0"
+              @pointerdown.stop
+              @click.stop="focusCanvasHome"
+            >
               Focus
-            </button>
-            <button type="button"
-              class="text-content-secondary hover:text-content-on-surface cursor-pointer bg-surface-strong flex h-3 w-3 items-center justify-center rounded-[var(--radius-sm)] opacity-80 hover:opacity-100"
-              aria-label="Minimize minimap" @pointerdown.stop @click.stop="toggleMinimap">
-              <UIcon name="i-lucide-minus" />
-            </button>
+            </UiButton>
+            <UiIconButton
+              icon="i-lucide-minus"
+              label="Minimize minimap"
+              tone="neutral"
+              variant="ghost"
+              size="xs"
+              class="opacity-80 hover:opacity-100"
+              @pointerdown.stop
+              @click.stop="toggleMinimap"
+            />
           </div>
         </div>
 
-        <div class="relative overflow-hidden shadow-[inset_0_2px_8px_color-mix(in_srgb,var(--color-content-on-background)_8%,transparent)] bg-background" :style="{
-          width: `${MINIMAP_WIDTH}px`,
-          height: `${MINIMAP_HEIGHT}px`,
-          backgroundImage: 'linear-gradient(to right, color-mix(in srgb, var(--color-secondary) 65%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--color-secondary) 65%, transparent) 1px, transparent 1px)',
-          backgroundSize: '16px 16px'
-        }" @pointerdown.prevent="handleMinimapPointer" @pointermove.prevent="handleMinimapDrag">
-          <div class="absolute inset-0 shadow-[inset_0_2px_8px_color-mix(in_srgb,var(--color-content-on-background)_8%,transparent)] rounded-[var(--radius-sm)] border border-primary/10" />
+        <div
+          class="relative overflow-hidden shadow-[inset_0_2px_8px_color-mix(in_srgb,var(--color-content-on-background)_8%,transparent)] bg-background"
+          :style="{
+            width: `${MINIMAP_WIDTH}px`,
+            height: `${MINIMAP_HEIGHT}px`,
+            backgroundImage:
+              'linear-gradient(to right, color-mix(in srgb, var(--color-secondary) 65%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in srgb, var(--color-secondary) 65%, transparent) 1px, transparent 1px)',
+            backgroundSize: '16px 16px',
+          }"
+          @pointerdown.prevent="handleMinimapPointer"
+          @pointermove.prevent="handleMinimapDrag"
+        >
+          <div
+            class="absolute inset-0 shadow-[inset_0_2px_8px_color-mix(in_srgb,var(--color-content-on-background)_8%,transparent)] rounded-[var(--radius-sm)] border border-primary/10"
+          />
 
-          <div v-for="(shape, index) in minimapShapes" :key="`minimap-${index}`"
-            class="absolute rounded-[var(--radius-sm)]" :style="{
+          <div
+            v-for="(shape, index) in minimapShapes"
+            :key="`minimap-${index}`"
+            class="absolute rounded-[var(--radius-sm)]"
+            :style="{
               left: `${shape.left}px`,
               top: `${shape.top}px`,
               width: `${shape.width}px`,
               height: `${shape.height}px`,
               backgroundColor: shape.outlined ? 'transparent' : shape.color,
               border: `1px solid ${shape.color}`,
-              opacity: shape.outlined ? 0.9 : 0.65
-            }" />
+              opacity: shape.outlined ? 0.9 : 0.65,
+            }"
+          />
 
-          <div class="absolute rounded-[var(--radius-sm)] border-2 border-primary bg-primary/10 shadow-[var(--shadow-dropdown)]" :style="{
-            left: `${minimapViewport.left}px`,
-            top: `${minimapViewport.top}px`,
-            width: `${minimapViewport.width}px`,
-            height: `${minimapViewport.height}px`
-          }" />
+          <div
+            class="absolute rounded-[var(--radius-sm)] border-2 border-primary bg-primary/10 shadow-[var(--shadow-dropdown)]"
+            :style="{
+              left: `${minimapViewport.left}px`,
+              top: `${minimapViewport.top}px`,
+              width: `${minimapViewport.width}px`,
+              height: `${minimapViewport.height}px`,
+            }"
+          />
         </div>
       </div>
     </SharedNoteContentArea>
 
     <!-- Context Menu (teleported to body) -->
     <Teleport to="body">
-      <div v-if="contextMenu.visible"
+      <div
+        v-if="contextMenu.visible"
         class="fixed z-[9999] min-w-[160px] rounded-[var(--radius-xl)] border border-secondary bg-surface shadow-[var(--shadow-modal)] py-1 animate-in fade-in zoom-in-95 duration-100"
-        :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }">
-        <button
-          class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-content-on-surface hover:bg-surface-subtle"
-          @click="bringToFront">
-          <UIcon name="i-heroicons-arrow-up" class="w-4 h-4" /> Bring to Front
-        </button>
-        <button
-          class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-content-on-surface hover:bg-surface-subtle"
-          @click="bringForward">
-          <UIcon name="i-heroicons-chevron-up" class="w-4 h-4" /> Bring Forward
-        </button>
-        <button
-          class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-content-on-surface hover:bg-surface-subtle"
-          @click="sendBackward">
-          <UIcon name="i-heroicons-chevron-down" class="w-4 h-4" /> Send Backward
-        </button>
-        <button
-          class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-content-on-surface hover:bg-surface-subtle"
-          @click="sendToBack">
-          <UIcon name="i-heroicons-arrow-down" class="w-4 h-4" /> Send to Back
-        </button>
+        :style="{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }"
+      >
+        <UiButton
+          tone="neutral"
+          variant="ghost"
+          size="sm"
+          class="w-full justify-start"
+          leading-icon="i-heroicons-arrow-up"
+          @click="bringToFront"
+        >
+          Bring to Front
+        </UiButton>
+        <UiButton
+          tone="neutral"
+          variant="ghost"
+          size="sm"
+          class="w-full justify-start"
+          leading-icon="i-heroicons-chevron-up"
+          @click="bringForward"
+        >
+          Bring Forward
+        </UiButton>
+        <UiButton
+          tone="neutral"
+          variant="ghost"
+          size="sm"
+          class="w-full justify-start"
+          leading-icon="i-heroicons-chevron-down"
+          @click="sendBackward"
+        >
+          Send Backward
+        </UiButton>
+        <UiButton
+          tone="neutral"
+          variant="ghost"
+          size="sm"
+          class="w-full justify-start"
+          leading-icon="i-heroicons-arrow-down"
+          @click="sendToBack"
+        >
+          Send to Back
+        </UiButton>
         <div class="my-1 h-px bg-secondary" />
-        <button
-          class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-content-on-surface hover:bg-surface-subtle"
-          @click="duplicateShape">
-          <UIcon name="i-heroicons-document-duplicate" class="w-4 h-4" /> Duplicate
-        </button>
-        <button class="flex w-full items-center gap-2 px-3 py-1.5 text-sm text-error hover:bg-error/10"
-          @click="deleteSelected">
-          <UIcon name="i-heroicons-trash" class="w-4 h-4" /> Delete
-        </button>
+        <UiButton
+          tone="neutral"
+          variant="ghost"
+          size="sm"
+          class="w-full justify-start"
+          leading-icon="i-heroicons-document-duplicate"
+          @click="duplicateShape"
+        >
+          Duplicate
+        </UiButton>
+        <UiButton
+          tone="error"
+          variant="ghost"
+          size="sm"
+          class="w-full justify-start"
+          leading-icon="i-heroicons-trash"
+          @click="deleteSelected"
+        >
+          Delete
+        </UiButton>
       </div>
     </Teleport>
   </div>

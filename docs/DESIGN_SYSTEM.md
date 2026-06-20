@@ -25,7 +25,8 @@ Do not edit generated files manually.
 
 ## Usage Rules
 
-- Use classes such as `bg-surface`, `text-content-on-surface`, `border-secondary`, and `text-error` in templates.
+- Use classes such as `bg-surface`, `text-content-on-surface`, `border-secondary`, and `text-error-text` in templates.
+- Use vivid status fills/borders (`bg-error`, `border-warning`) for UI accents; use semantic status text tokens (`text-success-text`, `text-warning-text`, `text-error-text`, `text-info-text`) for readable text and icons.
 - Use CSS variables such as `var(--radius-lg)`, `var(--shadow-dropdown)`, and `var(--space-4)` in style blocks.
 - Do not add raw hex, `rgb(...)`, Tailwind palette classes, built-in shadow utilities, or built-in radius utilities to migrated files.
 - `rounded-full` is reserved for avatars, status dots, and true pills.
@@ -42,6 +43,31 @@ Every shared component should define:
 - keyboard focus styling through tokenized focus rings.
 - text roles through existing typography primitives where practical.
 
+## Interactive State Convention
+
+Use the shared helpers from [app/components/ui/variants.ts](../app/components/ui/variants.ts) for primitive or raw-control work: `focusRing`, `inputFocusRing`, `interactiveTransition`, `pressedScale`, `disabledState`, and `neutralHover`.
+
+| State | Convention |
+|---|---|
+| Default | Semantic surface/content/border tokens only. No raw palette classes. |
+| Hover | Neutral secondary actions use `hover:bg-surface-subtle hover:text-content-on-surface`; primary/destructive actions use their semantic hover intent. Hover should clarify affordance without competing with selected/focus states. |
+| Focus | Use one visible indicator per control. Fields replace their normal inset ring with `focus:ring-2 focus:ring-inset focus:ring-[var(--ds-focus-outline-color)]`. Buttons and button-like controls suppress framework rings and use a separated 2px tokenized outline. A global outline applies only to native controls without an explicit focus treatment. |
+| Pressed | Button-like controls use `active:scale-[0.98]` with tokenized fast motion. Drag handles use cursor feedback (`active:cursor-grabbing`) instead of scale. |
+| Selected / active | Use state semantics first: `aria-selected` for tabs, `aria-pressed` for toggles/tool buttons, `aria-current` for navigation. Soft selected visuals may use primary emphasis (`bg-primary/10`, `text-primary`, soft primary ring/border) but must not replace the focus ring. |
+| Disabled | Native disabled/custom aria-disabled controls use `disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60` and the aria-disabled equivalents. Computed disabled-looking branches also use `opacity-60`. |
+| Loading / busy | Buttons use their `loading` prop. Loading collections expose `aria-busy` and skeleton/empty/error states where practical. |
+
+## Surface Taxonomy
+
+| Surface | Use for | Avoid |
+|---|---|---|
+| `UiCard` | Discrete content objects: workspace cards, note cards, review cards, stat cards. | Structural app regions or large workspace panes. |
+| `UiPanel` | Structural regions: settings groups, side panels, filter regions, workspace/board panes. | Clickable/selectable cards. |
+| `UiInteractiveCard` | A single clickable/selectable content object with native keyboard behavior. | Nesting buttons/links inside; use row actions outside or an action menu pattern. |
+| `UiOverlaySurface` | Visual shell for modal/drawer/popover/menu/toast/tooltip surfaces. | Creating overlay behavior; pair it with `UiModal`, `UiPopover`, `UiActionMenu`, drawer, or toast primitives. |
+
+This distinction keeps hierarchy predictable: cards compete for content attention, panels structure the application, interactive cards are the one focus target, and overlays sit above the page in a z-index layer.
+
 ## Migration Order
 
 1. Token source and generated outputs.
@@ -56,6 +82,8 @@ Every shared component should define:
 - `yarn design:audit` scans every product `.vue` file ([scripts/audit-design-usage.cjs](../scripts/audit-design-usage.cjs)) and writes `docs/design-audit/{audit.json,audit.md,summary.md}`.
   - `audit.md` — full component → value map (one section per file, every color/spacing/radius/shadow/typography value tagged ✅ ok / ❌ violation / ⚠️ review / 🕒 legacy).
   - `summary.md` — rollups by category + top offenders + a distinct raw-value histogram with suggested target tokens.
+- `yarn design:states` enforces high-risk interactive-state drift: tokenized focus rings, `active:scale-[0.98]` pressed feedback, and `opacity-60` disabled treatment.
+- `yarn design:primitives` verifies the complete interactive contract: 36 button tone/variant combinations, five field variants, wrapper state APIs, and the living catalog matrices.
 - Excluded from the audit: `*.old.vue`, `*.refactored.vue`, `pages/demo/**`, `pages/debug*`, `components/{debug,examples,landing}/**`.
 - The scanner masks token references (`var(--…)`, token utility classes, `--token` identifiers in JS like `designTokenValues["--color-accent-blue"]`) before scanning for raw values, and does not flag `rounded-full` / `rounded-[var(…)]`. Code that needs literal color values at runtime (canvas swatches, `<input type=color>`) should read them from `designTokenValues` (generated TS), not hardcode hex.
 - True baseline (220 files): **~324 violations**; after the proof-slice migration below, **226 across 67 files**.
@@ -73,6 +101,10 @@ Every shared component should define:
 **Adding a swatch/data color in `<script>`:** import `{ designTokenValues }` (and `type DesignTokenName`) from `~/design-system/tokens.generated` and index it — e.g. `designTokenValues['--color-accent-blue']`. Do not hardcode hex or compose it from channels, and never reference a locally-declared `const` inside `defineProps`/`withDefaults` (it won't compile — reference the import directly).
 
 **Enforcement (`yarn design:check`):** fails on hard violations — raw hex, Tailwind palette classes (`text-gray-500`), raw `black`/`white` classes, and built-in `rounded-*`/`shadow-*` — across every product `.vue` plus `app.config.ts` and `main.css`. It shares its detection with the audit ([scripts/audit-design-usage.cjs](../scripts/audit-design-usage.cjs)), so the two never drift. Runs in the `design-check` CI job (PRs to `main`, which also fails if `tokens.generated.*` is stale) and as a Husky `pre-commit` hook.
+
+**Interactive-state enforcement (`yarn design:states`):** fails on old translucent focus rings (`focus:ring-primary/30`, `focus:ring-error/30`, etc.), positive focus-ring offsets that make controls look over-framed, non-canonical pressed scales (`active:scale-95`, `active:scale-90`, etc.), and disabled opacity values other than `60`. It intentionally does not ban soft selected/hover primary rings, because those are not keyboard focus indicators. This runs in the Husky pre-commit hook alongside `design:check` and `design:boundaries`.
+
+**Primitive coverage (`yarn design:primitives`):** fails if a supported Button tone/variant combination loses its explicit theme entry, a form primitive drops a required state prop, or the `/design-system` catalog loses a state matrix. This keeps “wrapped by Ui*” from being mistaken for fully governed behavior.
 
 **Escape hatch:** for a justified exception (a brand logo's exact hex, a third-party widget), add a `design-allow` comment on the offending line, or `design-allow-file` anywhere in the file to exempt it. Use sparingly, with a reason.
 

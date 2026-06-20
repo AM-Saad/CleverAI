@@ -204,3 +204,31 @@ export const ReviewStatsQuerySchema = z.object({
   workspaceId: z.string().min(1).optional(),
 });
 export type ReviewStatsQuery = z.infer<typeof ReviewStatsQuerySchema>;
+
+// ============================================
+// Batch Review Stats (per-workspace, for the workspaces list)
+// ============================================
+
+/** Per-workspace stats returned by the batch endpoint. */
+export const ReviewWorkspaceStatsSchema = z.object({
+  total: z.number(),
+  new: z.number(),
+  learning: z.number(),
+  due: z.number(),
+  mature: z.number(),
+  /** Most recent review across the workspace's cards (ISO string), null if never reviewed. */
+  lastReviewedAt: z.string().nullable().optional(),
+});
+export type ReviewWorkspaceStats = z.infer<typeof ReviewWorkspaceStatsSchema>;
+
+/** Request: the workspace ids to fetch stats for in one round trip. */
+export const ReviewStatsBatchRequestSchema = z.object({
+  workspaceIds: z.array(z.string().min(1)).min(1).max(200),
+});
+export type ReviewStatsBatchRequest = z.infer<typeof ReviewStatsBatchRequestSchema>;
+
+/** Response: stats keyed by workspace id (every requested id is present). */
+export const ReviewStatsBatchResponseSchema = z.object({
+  stats: z.record(z.string(), ReviewWorkspaceStatsSchema),
+});
+export type ReviewStatsBatchResponse = z.infer<typeof ReviewStatsBatchResponseSchema>;

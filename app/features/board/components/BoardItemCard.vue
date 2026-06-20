@@ -23,16 +23,15 @@ const columnsStore = useBoardColumnsStore(id as string);
 // Column options for movement
 const columnOptions = computed(() => {
   const options = [
-    [
-      { label: "Uncategorized", onSelect: () => emit('move', null) }
-    ]
+    [{ label: "Uncategorized", onSelect: () => emit("move", null) }],
   ];
 
-  const columnItems = columnsStore.getOrderedColumns()
-    .filter(col => col.id !== props.item.columnId)
-    .map(col => ({
+  const columnItems = columnsStore
+    .getOrderedColumns()
+    .filter((col) => col.id !== props.item.columnId)
+    .map((col) => ({
       label: col.name,
-      onSelect: () => emit('move', col.id)
+      onSelect: () => emit("move", col.id),
     }));
 
   if (columnItems.length > 0) {
@@ -49,9 +48,11 @@ const plainContent = computed(() => {
 
 // Get tag objects for display
 const noteTags = computed(() => {
-  return props.item.tags
-    ?.map((name) => tagsStore.getTagByName(name))
-    .filter((tag) => tag !== null) || [];
+  return (
+    props.item.tags
+      ?.map((name) => tagsStore.getTagByName(name))
+      .filter((tag) => tag !== null) || []
+  );
 });
 
 // Due date display
@@ -60,7 +61,10 @@ const dueDateInfo = computed(() => {
   const d = new Date(props.item.dueDate as string);
   const now = new Date();
   const isOverdue = d < now;
-  const label = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const label = d.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
   return { label, isOverdue };
 });
 
@@ -84,21 +88,32 @@ const formattedDate = computed(() => {
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 7) return `${diffDays}d ago`;
 
-  return noteDate.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return noteDate.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  });
 });
 </script>
 
 <template>
-  <div :class="[
-    'group relative p-2 rounded-[var(--radius-xl)] border cursor-pointer transition-all duration-200',
-    'hover:shadow-xs hover:-translate-y-0.5',
-    isSelected
-      ? 'border-primary bg-primary/5 shadow-xs ring-1 ring-primary/30'
-      : 'border-surface-subtle bg-white hover:border-surface-strong',
-    item.isLoading && 'opacity-60 pointer-events-none grayscale',
-    item.error && 'border-error/30 bg-error/5 ',
-  ]" @click="emit('select')">
-
+  <div
+    :class="[
+      'group relative',
+      item.isLoading && 'opacity-60 pointer-events-none grayscale',
+    ]"
+  >
+    <UiInteractiveCard
+      :selected="isSelected"
+      selectable
+      variant="outline"
+      size="xs"
+      :disabled="item.isLoading"
+      :class-name="[
+        'relative cursor-pointer transition-all duration-200 hover:-translate-y-0.5',
+        item.error && 'border-error/30 bg-error/5',
+      ].filter(Boolean).join(' ')"
+      @click="emit('select')"
+    >
     <!-- Drag Handle (Mobile/Tablet Friendly) -->
     <div
       class="lg:opacity-0 lg:group-hover:opacity-100 absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-6 flex flex-col justify-center items-center gap-0.5 text-content-disabled cursor-grab active:cursor-grabbing transition-opacity"
@@ -113,29 +128,33 @@ const formattedDate = computed(() => {
       <Icon name="svg-spinners:ring-resize" class="w-4 h-4" />
     </div>
 
-    <div v-if="item.error" class="absolute top-3 right-3 text-error" :title="item.error">
+    <div v-if="item.error" class="absolute top-3 right-3 text-error-text" :title="item.error">
       <Icon name="heroicons:exclamation-circle" class="w-4 h-4" />
     </div>
 
     <!-- Item content preview -->
     <div class="space-y-3">
       <!-- Content -->
-      <ui-paragraph class=" line-clamp-3 leading-relaxed">
+      <UiParagraph class="line-clamp-3 leading-relaxed">
         {{ plainContent.slice(0, 40) }}
-      </ui-paragraph>
+      </UiParagraph>
 
       <!-- Tags -->
-      <UiBadge v-for="tag in noteTags" :key="tag.id" :style="{ backgroundColor: tag.color, color: 'var(--color-on-primary)' }"
-        variant="solid" size="sm" class="rounded-full px-2.5 mr-0.5">
+      <UiBadge v-for="tag in noteTags" :key="tag.id" :style="{
+        backgroundColor: tag.color,
+        color: 'var(--color-on-primary)',
+      }" variant="solid" size="sm" class="rounded-full px-2.5 mr-0.5">
         {{ tag.name }}
       </UiBadge>
 
       <!-- Due date + attachments row -->
       <div v-if="dueDateInfo || attachmentCount > 0" class="flex items-center gap-2 flex-wrap mt-0.5">
-        <span v-if="dueDateInfo" :class="['inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5',
+        <span v-if="dueDateInfo" :class="[
+          'inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5',
           dueDateInfo.isOverdue
-            ? 'bg-error/10 text-error dark:bg-error/20'
-            : 'bg-success/10 text-success dark:bg-success/20']">
+            ? 'bg-error/10 text-error-text dark:bg-error/20'
+            : 'bg-success/10 text-success-text dark:bg-success/20',
+        ]">
           <Icon name="heroicons:calendar-days" class="w-3 h-3" />
           {{ dueDateInfo.label }}
         </span>
@@ -148,28 +167,28 @@ const formattedDate = computed(() => {
 
       <!-- Footer: Date + Actions -->
       <div
-        class="flex items-center justify-between text-[10px] font-semibold text-content-secondary  uppercase pt-2 border-t border-secondary">
+        class="flex items-center justify-between text-[10px] font-semibold text-content-secondary uppercase pt-2 border-t border-secondary">
         <span class="truncate">{{ formattedDate }}</span>
-
-        <!-- Actions (visible on hover) -->
-        <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <!-- Move to column -->
-          <UDropdownMenu :items="columnOptions" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-            <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:arrows-right-left"
-              aria-label="Move to column" title="Move to column" class="hover:bg-primary/10" @click.stop />
-          </UDropdownMenu>
-
-          <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:trash" @click.stop="emit('delete')"
-            aria-label="Delete note" class="hover:bg-error/10 hover:text-error" />
-        </div>
       </div>
     </div>
+    </UiInteractiveCard>
 
-  <!-- Dirty indicator -->
-  <div v-if="item.isDirty && !item.error"
+    <!-- Secondary actions are siblings, not nested inside the clickable card target. -->
+    <div class="absolute bottom-2 right-2 z-10 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+      <UiActionMenu :items="columnOptions" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
+        <UiIconButton icon="heroicons:arrows-right-left" label="Move to column" size="xs" variant="ghost"
+          class="hover:bg-primary/10" />
+      </UiActionMenu>
+
+      <UiIconButton icon="heroicons:trash" label="Delete note" size="xs" variant="ghost"
+        class="hover:bg-error/10 hover:text-error-text" @click.stop="emit('delete')" />
+    </div>
+
+    <!-- Dirty indicator -->
+    <div v-if="item.isDirty && !item.error"
       class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-warning rounded-full border-2 border-white shadow-[var(--shadow-dropdown)]"
       title="Unsaved changes" />
-  <div v-else-if="item.error"
+    <div v-else-if="item.error"
       class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-error rounded-full border-2 border-white shadow-[var(--shadow-dropdown)]"
       title="Sync failed. Open item details to retry." />
   </div>

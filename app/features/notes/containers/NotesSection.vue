@@ -578,8 +578,11 @@ function handleContainerScroll(e: Event) {
 
 
 <template>
-  <ui-card variant="default" size="sm" shadow="none"
-    class="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden z-10 relative!" contentClasses="flex flex-col p-0!">
+  <UiPanel
+    variant="surface"
+    size="sm"
+    class-name="flex flex-1 min-h-0 min-w-0 overflow-hidden z-10 relative!"
+    content-class="flex flex-col p-0!">
     <!-- Header -->
     <template v-slot:header>
       <div ref="toolbarRef" class="adaptive-toolbar w-full">
@@ -588,34 +591,42 @@ function handleContainerScroll(e: Event) {
           <ui-label v-if="notes?.length"> ( {{ notes.length }} ) </ui-label>
         </div>
 
-        <div class="toolbar-actions">
-          <UDropdownMenu :items="newNoteDropdownItems" :content="{ align: 'end', side: 'bottom', sideOffset: 4 }">
-            <ui-button size="sm" color="primary" variant="ghost"
+        <UiToolbar class-name="toolbar-actions border-0 bg-transparent p-0" label="Notes actions">
+          <UiActionMenu :items="newNoteDropdownItems" :content="{ align: 'end', side: 'bottom', sideOffset: 4 }">
+            <UiButton size="sm" tone="primary" variant="ghost"
               :trailing-icon="showLabels ? 'i-heroicons-chevron-down' : ''">
               <shared-icon name="plus" />
               <span v-if="showLabels" class="toolbar-label">New Note</span>
-            </ui-button>
-          </UDropdownMenu>
+            </UiButton>
+          </UiActionMenu>
 
           <Transition name="toolbar-fade">
             <div v-if="notes?.length >= 2">
-              <ui-button size="sm" :color="splitNotes.isSplit.value ? 'primary' : 'neutral'" variant="link"
-                :aria-label="splitNotes.isSplit.value ? 'Close split view' : 'Open split view'"
-                :aria-pressed="splitNotes.isSplit.value" @click="toggleSplitView">
-                <shared-icon name="split" class="w-4 h-4" />
-              </ui-button>
+              <UiToolbarButton
+                icon="i-lucide-columns-2"
+                :tone="splitNotes.isSplit.value ? 'primary' : 'neutral'"
+                variant="link"
+                size="sm"
+                :label="splitNotes.isSplit.value ? 'Close split view' : 'Open split view'"
+                :active="splitNotes.isSplit.value"
+                @click="toggleSplitView"
+              />
             </div>
           </Transition>
 
           <Transition name="toolbar-fade">
             <div v-if="notes?.length">
-              <ui-button size="sm" color="neutral" variant="link" @click="isDrawerOpen = !isDrawerOpen"
-                :aria-label="isDrawerOpen ? 'Close notes list' : 'Open notes list'">
-                <shared-icon :name="isDrawerOpen ? 'panel-left-close' : 'panel-left-open'" class="w-4 h-4" />
-              </ui-button>
+              <UiToolbarButton
+                :icon="isDrawerOpen ? 'i-lucide-panel-left-close' : 'i-lucide-panel-left-open'"
+                tone="neutral"
+                variant="link"
+                size="sm"
+                :label="isDrawerOpen ? 'Close notes list' : 'Open notes list'"
+                @click="isDrawerOpen = !isDrawerOpen"
+              />
             </div>
           </Transition>
-        </div>
+        </UiToolbar>
       </div>
     </template>
     <template #default>
@@ -630,11 +641,11 @@ function handleContainerScroll(e: Event) {
         :last-sync="notesStore.lastSync.value" :action-label="failedNotesCount > 0 ? 'Retry failed' : 'Sync now'"
         :action-disabled="isFetching" @action="handleSyncStatusAction" />
       <div v-if="isDev" class="mx-4 mb-1 flex justify-end">
-        <ui-button size="xs" color="neutral" variant="ghost"
+        <UiButton size="xs" tone="neutral" variant="ghost"
           @click="isDevSyncInspectorVisible = !isDevSyncInspectorVisible">
           <icon name="i-lucide-bug" class="h-3.5 w-3.5" />
           {{ isDevSyncInspectorVisible ? "Hide sync debug" : "Show sync debug" }}
-        </ui-button>
+        </UiButton>
       </div>
       <NotesSyncInspector v-if="isDev && isDevSyncInspectorVisible" :workspace-id="workspaceId" />
 
@@ -713,18 +724,9 @@ function handleContainerScroll(e: Event) {
                       {{ getNoteDisplayTitle(leftSplitNote, 28) }}
                     </span>
                     <div class="flex items-center gap-1 shrink-0">
-                      <ui-button size="xs" color="neutral" variant="ghost" aria-label="Minimize left pane"
-                        @click.stop="splitPaneLayoutRef?.toggleLeft()">
-                        <shared-icon name="panel-left-close" class="w-3.5 h-3.5" />
-                      </ui-button>
-                      <ui-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
-                        @click.stop="splitNotes.swapPanes()">
-                        <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
-                      </ui-button>
-                      <ui-button size="xs" color="neutral" variant="ghost" aria-label="Close left pane"
-                        @click.stop="closeVisualPane('left')">
-                        <icon name="i-lucide-x" class="w-3.5 h-3.5" />
-                      </ui-button>
+                      <UiIconButton size="xs" tone="neutral" variant="ghost" icon="i-lucide-panel-left-close" label="Minimize left pane" @click.stop="splitPaneLayoutRef?.toggleLeft()" />
+                      <UiIconButton size="xs" tone="neutral" variant="ghost" icon="i-lucide-arrow-left-right" label="Swap panes" @click.stop="splitNotes.swapPanes()" />
+                      <UiIconButton size="xs" tone="neutral" variant="ghost" icon="i-lucide-x" label="Close left pane" @click.stop="closeVisualPane('left')" />
                     </div>
                   </div>
                   <!-- Left editor -->
@@ -765,18 +767,9 @@ function handleContainerScroll(e: Event) {
                       {{ getNoteDisplayTitle(rightSplitNote, 28) }}
                     </span>
                     <div class="flex items-center gap-1 shrink-0">
-                      <ui-button size="xs" color="neutral" variant="ghost" aria-label="Minimize right pane"
-                        @click.stop="splitPaneLayoutRef?.toggleRight()">
-                        <icon name="i-lucide-panel-right-close" class="w-3.5 h-3.5" />
-                      </ui-button>
-                      <ui-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
-                        @click.stop="splitNotes.swapPanes()">
-                        <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
-                      </ui-button>
-                      <ui-button size="xs" color="neutral" variant="ghost" aria-label="Close right pane"
-                        @click.stop="closeVisualPane('right')">
-                        <icon name="i-lucide-x" class="w-3.5 h-3.5" />
-                      </ui-button>
+                      <UiIconButton size="xs" tone="neutral" variant="ghost" icon="i-lucide-panel-right-close" label="Minimize right pane" @click.stop="splitPaneLayoutRef?.toggleRight()" />
+                      <UiIconButton size="xs" tone="neutral" variant="ghost" icon="i-lucide-arrow-left-right" label="Swap panes" @click.stop="splitNotes.swapPanes()" />
+                      <UiIconButton size="xs" tone="neutral" variant="ghost" icon="i-lucide-x" label="Close right pane" @click.stop="closeVisualPane('right')" />
                     </div>
                   </div>
                   <!-- Right editor -->
@@ -813,7 +806,7 @@ function handleContainerScroll(e: Event) {
 
       </div>
     </template>
-  </ui-card>
+  </UiPanel>
 
   <!-- Fullscreen Note View -->
   <shared-fullscreen-wrapper :is-open="fullscreen.isOpen.value" aria-label="Note fullscreen view"
@@ -853,14 +846,8 @@ function handleContainerScroll(e: Event) {
                 <span class="split-pane-title truncate">
                   {{ getNoteDisplayTitle(leftSplitNote, 28) }}
                 </span>
-                <ui-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
-                  @click.stop="splitNotes.swapPanes()">
-                  <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
-                </ui-button>
-                <ui-button size="xs" color="neutral" variant="ghost" aria-label="Close left pane"
-                  @click.stop="closeVisualPane('left')">
-                  <icon name="i-lucide-x" class="w-3.5 h-3.5" />
-                </ui-button>
+                <UiIconButton size="xs" tone="neutral" variant="ghost" icon="i-lucide-arrow-left-right" label="Swap panes" @click.stop="splitNotes.swapPanes()" />
+                <UiIconButton size="xs" tone="neutral" variant="ghost" icon="i-lucide-x" label="Close left pane" @click.stop="closeVisualPane('left')" />
               </div>
               <div class="split-pane-editor" :class="{ 'split-pane-editor--passive': !isLeftActive }">
                 <div v-if="splitNotes.leftNoteId.value && leftSplitNote" class="flex flex-col flex-1 min-h-0">
@@ -894,14 +881,8 @@ function handleContainerScroll(e: Event) {
                 <span class="split-pane-title truncate">
                   {{ getNoteDisplayTitle(rightSplitNote, 28) }}
                 </span>
-                <ui-button size="xs" color="neutral" variant="ghost" aria-label="Swap panes"
-                  @click.stop="splitNotes.swapPanes()">
-                  <icon name="i-lucide-arrow-left-right" class="w-3.5 h-3.5" />
-                </ui-button>
-                <ui-button size="xs" color="neutral" variant="ghost" aria-label="Close right pane"
-                  @click.stop="closeVisualPane('right')">
-                  <icon name="i-lucide-x" class="w-3.5 h-3.5" />
-                </ui-button>
+                <UiIconButton size="xs" tone="neutral" variant="ghost" icon="i-lucide-arrow-left-right" label="Swap panes" @click.stop="splitNotes.swapPanes()" />
+                <UiIconButton size="xs" tone="neutral" variant="ghost" icon="i-lucide-x" label="Close right pane" @click.stop="closeVisualPane('right')" />
               </div>
               <div class="split-pane-editor" :class="{ 'split-pane-editor--passive': !isRightActive }">
                 <div v-if="splitNotes.rightNoteId.value && rightSplitNote" class="flex flex-col flex-1 min-h-0">

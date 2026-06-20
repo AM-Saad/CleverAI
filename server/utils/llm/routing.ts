@@ -12,6 +12,7 @@ export interface RoutingContext {
   estimatedOutputTokens?: number
   userTier?: 'FREE' | 'PRO' | 'ENTERPRISE'
   preferredModelId?: string
+  providerAllowlist?: readonly string[]
 }
 
 export interface ScoredModel {
@@ -86,6 +87,10 @@ export async function selectBestModel(
   const inputTokens = estimateTokensFromText(ctx.inputText)
   const outputTokens = ctx.estimatedOutputTokens ?? Math.ceil(inputTokens * 0.6)
 
+  const providerAllowed = (provider: string) =>
+    !ctx.providerAllowlist?.length ||
+    ctx.providerAllowlist.includes(provider.toLowerCase())
+
   // If preferred model specified and valid, use it
   if (ctx.preferredModelId) {
     const [baseModelId, suffixPart] = ctx.preferredModelId.split(':')
@@ -98,7 +103,12 @@ export async function selectBestModel(
       },
     })
 
-    if (preferred && preferred.enabled && preferred.healthStatus !== 'down') {
+    if (
+      preferred &&
+      preferred.enabled &&
+      preferred.healthStatus !== 'down' &&
+      providerAllowed(preferred.provider)
+    ) {
       // Clone and re-apply suffix so the original Prisma entity is not mutated
       const routedModel = suffix
         ? { ...preferred, modelId: `${preferred.modelId}${suffix}` }
@@ -128,6 +138,8 @@ export async function selectBestModel(
       preferredModelId: ctx.preferredModelId,
       enabled: preferred?.enabled,
       healthStatus: preferred?.healthStatus,
+      provider: preferred?.provider,
+      providerAllowlist: ctx.providerAllowlist,
     })
   }
 
@@ -138,6 +150,9 @@ export async function selectBestModel(
       healthStatus: { in: ['healthy', 'degraded'] },
       ...(ctx.requiredCapability && {
         capabilities: { has: ctx.requiredCapability },
+      }),
+      ...(ctx.providerAllowlist?.length && {
+        provider: { in: [...ctx.providerAllowlist] },
       }),
     },
     orderBy: { priority: 'asc' },

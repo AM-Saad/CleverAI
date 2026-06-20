@@ -163,8 +163,11 @@ function invokeAd() {
 
     <div class="flex flex-col gap-6 px-2 pb-6">
       <!-- Hero Section -->
-      <div
-        class="relative overflow-hidden rounded-[var(--radius-2xl)] bg-gradient-to-br from-primary/50 to-primary/10 border-primary/20 p-8 text-center mt-2 shadow-[var(--shadow-dropdown)]">
+      <UiPanel
+        variant="subtle"
+        size="lg"
+        class-name="relative mt-2 rounded-[var(--radius-2xl)] border-primary/20 bg-gradient-to-br from-primary/50 to-primary/10 shadow-[var(--shadow-dropdown)]"
+        content-class="relative overflow-hidden text-center">
         <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/90 rounded-[var(--radius-2xl)] blur-3xl"></div>
         <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-accent-blue/90 rounded-[var(--radius-2xl)] blur-3xl"></div>
 
@@ -174,7 +177,7 @@ function invokeAd() {
           <UIcon name="i-heroicons-sparkles" class="w-10 h-10 text-primary" />
           {{ balance }}
         </div>
-      </div>
+      </UiPanel>
 
       <!-- AppLixir Section -->
       <div class="flex flex-col gap-3">
@@ -199,13 +202,17 @@ function invokeAd() {
       <div>
         <h3 class="text-sm font-semibold uppercase tracking-wider mb-4">Top Up Credits</h3>
 
-        <div v-if="clientSecret"
-          class="bg-white rounded-[var(--radius-2xl)] p-4 border border-secondary shadow-[var(--shadow-dropdown)] relative focus-within:ring-2 focus-within:ring-primary/50">
-          <button v-if="!isPaymentProcessing"
-            class="absolute top-2 right-2 z-10 text-content-secondary hover:text-content-on-surface bg-secondary hover:bg-surface-strong p-1.5 rounded-[var(--radius-md)] transition-colors"
-            @click="clientSecret = null">
-            <UIcon name="i-heroicons-arrow-left" class="w-4 h-4" />
-          </button>
+        <UiPanel v-if="clientSecret"
+          variant="surface"
+          size="md"
+          class-name="relative rounded-[var(--radius-2xl)] shadow-[var(--shadow-dropdown)] focus-within:ring-2 focus-within:ring-[var(--ds-focus-outline-color)]">
+          <UiIconButton v-if="!isPaymentProcessing"
+            icon="i-heroicons-arrow-left"
+            label="Back to credit packs"
+            size="xs"
+            variant="subtle"
+            class="absolute top-2 right-2 z-10"
+            @click="clientSecret = null" />
 
           <div id="payment-element" class="mb-4 min-h-[250px]"></div>
 
@@ -217,22 +224,23 @@ function invokeAd() {
             </span>
             <span v-else>Pay Now</span>
           </UiButton>
-          <div v-if="paymentError"
-            class="text-error text-sm mt-3 text-center bg-error/10 p-2 rounded-[var(--radius-md)]">
+          <UiPanel v-if="paymentError" variant="subtle" size="xs" role="alert" class-name="mt-3 border-error/20 bg-error/10" content-class="text-center text-sm text-error-text">
             {{
               paymentError }}
-          </div>
-        </div>
+          </UiPanel>
+        </UiPanel>
 
         <div v-else class="grid grid-cols-1 gap-3">
-          <div v-if="paymentError && !clientSecret"
-            class="mb-2 p-3 text-sm text-error bg-error/10 border border-error/20 rounded-[var(--radius-md)]">
+          <UiPanel v-if="paymentError && !clientSecret" variant="subtle" size="sm" role="alert" class-name="mb-2 border-error/20 bg-error/10" content-class="text-sm text-error-text">
             {{ paymentError }}
-          </div>
+          </UiPanel>
 
-          <button v-for="pack in packs" :key="pack.id" type="button"
+          <UiInteractiveCard v-for="pack in packs" :key="pack.id" type="button"
             :aria-label="`Select ${pack.credits} credits pack for ${pack.displayPrice}`" :disabled="!!checkoutLoading"
-            class="relative flex items-center justify-between w-full p-4 rounded-[var(--radius-2xl)] bg-white border border-transparent hover:border-primary/50 hover:bg-surface-subtle focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none cursor-pointer transition-all shadow-[var(--shadow-dropdown)] hover:shadow-[var(--shadow-card-hover)] group text-left"
+            variant="default"
+            size="md"
+            class-name="relative rounded-[var(--radius-2xl)] border-transparent shadow-[var(--shadow-dropdown)] hover:border-primary/50 hover:shadow-[var(--shadow-card-hover)]"
+            content-class="flex items-center justify-between"
             @click="initCheckout(pack.id)">
             <div class="flex flex-col">
               <UiSubtitle class="flex items-center gap-1.5">
@@ -249,7 +257,7 @@ function invokeAd() {
               class="absolute inset-0 bg-white/60 backdrop-blur-sm rounded-[var(--radius-2xl)] flex items-center justify-center">
               <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-primary" />
             </div>
-          </button>
+          </UiInteractiveCard>
         </div>
       </div>
     </div>

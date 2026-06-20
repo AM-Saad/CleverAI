@@ -1,6 +1,10 @@
 <template>
-  <div v-if="card"
-    class="bg-surface-subtle rounded-[var(--radius-xl)] shadow overflow-hidden transition-all duration-300  w-4xl max-w-full mx-auto">
+  <UiCard v-if="card"
+    variant="surface"
+    shadow="md"
+    size="md"
+    class-name="w-4xl max-w-full mx-auto transition-[box-shadow,transform] duration-300"
+    content-classes="p-0">
     <!-- Resource Type Badge -->
     <div class="p-4">
       <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium" :class="resourceTypeBadgeClass">
@@ -27,22 +31,22 @@
         </div>
 
         <!-- Hint if available -->
-        <div v-if="resourceHint" class="mt-4 p-4 bg-warning/10 dark:bg-warning/5 rounded-[var(--radius-lg)]"
+        <UiPanel v-if="resourceHint" class-name="mt-4 border-warning/20 bg-warning/10 dark:bg-warning/5" variant="subtle" size="md"
           role="complementary" aria-label="Hint">
-          <div class="text-sm font-medium text-warning mb-1">
-            <Icon name="heroicons:light-bulb" class="w-4 h-4 inline mr-1" />
+          <div class="text-sm font-medium text-warning-text mb-1">
+            <Icon name="i-lucide-lightbulb" class="w-4 h-4 inline mr-1" />
             Hint:
           </div>
-          <div class="text-warning/80">
+          <div class="text-warning-text">
             {{ resourceHint }}
           </div>
-        </div>
+        </UiPanel>
 
         <!-- Review State Info -->
         <CardReviewState :review-state="card.reviewState" />
       </div>
     </div>
-  </div>
+  </UiCard>
 </template>
 
 <script setup lang="ts">

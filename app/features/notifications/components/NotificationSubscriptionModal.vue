@@ -8,7 +8,7 @@
         <!-- Benefits -->
         <div class="space-y-3 mb-6">
           <div class="flex items-start gap-3">
-            <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-success mt-0.5 shrink-0" />
+            <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-success-text mt-0.5 shrink-0" />
             <div>
               <div class="text-sm font-medium text-content-on-surface-strong dark:text-content-on-surface">
                 Perfect Timing
@@ -21,7 +21,7 @@
           </div>
 
           <div class="flex items-start gap-3">
-            <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
+            <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-success-text mt-0.5 flex-shrink-0" />
             <div>
               <div class="text-sm font-medium text-content-on-surface-strong dark:text-content-on-surface">
                 Customizable Schedule
@@ -33,7 +33,7 @@
           </div>
 
           <div class="flex items-start gap-3">
-            <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-success mt-0.5 flex-shrink-0" />
+            <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-success-text mt-0.5 flex-shrink-0" />
             <div>
               <div class="text-sm font-medium text-content-on-surface-strong dark:text-content-on-surface">
                 Respect Your Time
@@ -46,28 +46,31 @@
         </div>
 
         <!-- Permission Status -->
-        <div v-if="permissionStatus === 'denied'"
-          class="mb-4 p-3 bg-error/10 border border-error/30 rounded-[var(--radius-xl)]">
+        <UiPanel v-if="permissionStatus === 'denied'"
+          variant="subtle"
+          size="sm"
+          role="alert"
+          class-name="mb-4 border-error/30 bg-error/10">
           <div class="flex items-start gap-2">
-            <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-error mt-0.5 flex-shrink-0" />
+            <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-error-text mt-0.5 flex-shrink-0" />
             <div>
-              <div class="text-sm font-medium text-error">
+              <div class="text-sm font-medium text-error-text">
                 Notifications Blocked
               </div>
-              <div class="text-xs text-error/80 mt-1">
+              <div class="text-xs text-error-text/80 mt-1">
                 Please click the lock icon in your browser's address bar and
                 allow notifications for this site.
               </div>
             </div>
           </div>
-        </div>
+        </UiPanel>
 
         <!-- Error Message -->
-        <div v-if="error" class="mb-4 p-3 bg-error/10 border border-error/20 rounded-[var(--radius-xl)]">
-          <div class="text-sm text-error">
+        <UiPanel v-if="error" variant="subtle" size="sm" role="alert" class-name="mb-4 border-error/20 bg-error/10">
+          <div class="text-sm text-error-text">
             {{ error }}
           </div>
-        </div>
+        </UiPanel>
       </template>
       <!-- Action Buttons -->
       <template #footer>
@@ -99,13 +102,13 @@
         </div>
 
         <!-- Privacy Note -->
-        <div class="mt-4 p-3 bg-surface-subtle dark:bg-surface/50 rounded-[var(--radius-xl)]">
+        <UiPanel variant="subtle" size="sm" class-name="mt-4">
           <div class="text-xs text-content-secondary dark:text-content-secondary">
             <UIcon name="i-heroicons-shield-check" class="w-4 h-4 inline mr-1" />
             Your notification preferences are stored locally and can be changed
             anytime in Settings.
           </div>
-        </div>
+        </UiPanel>
       </template>
     </shared-dialog-modal>
   </Teleport>
@@ -166,7 +169,11 @@ const checkCurrentPermission = async () => {
 // Handle enable notifications
 const handleEnableNotifications = async () => {
   try {
-    await registerNotification();
+    const enabled = await registerNotification();
+    if (!enabled) {
+      permissionStatus.value = await checkPermission();
+      return;
+    }
 
     // Success feedback
     toast.add({

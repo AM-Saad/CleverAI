@@ -13,8 +13,45 @@ import { GeminiStrategy } from './GeminiStrategy';
 import { DeepSeekStrategy } from './DeepSeekStrategy';
 import { GroqStrategy } from './GroqStrategy';
 import { OpenRouterStrategy } from './OpenRouterStrategy';
+import { resolveOpenRouterModelName } from './openRouterModelAliases';
 import type { LlmMeasured } from '../llmCost';
 import { logLlmUsage } from '../llmCost';
+
+type UsageLogContext = {
+  userId?: string;
+  workspaceId?: string;
+  feature?: string;
+};
+
+const withRegistryModelMeta = (
+  measured: LlmMeasured,
+  registryModelId?: string,
+): LlmMeasured =>
+  registryModelId
+    ? {
+        ...measured,
+        meta: {
+          ...(measured.meta ?? {}),
+          registryModelId,
+        },
+      }
+    : measured;
+
+const logLlmUsageSafely = (
+  m: LlmMeasured,
+  ctx: UsageLogContext,
+  registryModelId?: string,
+) => {
+  const measured = withRegistryModelMeta(m, registryModelId);
+  void logLlmUsage(measured, ctx).catch((error: unknown) => {
+    console.warn("[llmUsage] Failed to persist usage", {
+      provider: measured.provider,
+      model: measured.model,
+      requestId: measured.requestId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  });
+};
 
 /**
  * @deprecated Use `getLLMStrategyFromRegistry()` instead.
@@ -38,7 +75,7 @@ export const getLLMStrategy = (
   switch (model) {
     case "gpt-3.5":
       return new OpenAIStrategy("gpt-3.5-turbo", (m: LlmMeasured) => {
-        logLlmUsage(m, {
+        logLlmUsageSafely(m, {
           userId: ctx?.userId,
           workspaceId: ctx?.workspaceId,
           feature: ctx?.feature,
@@ -46,7 +83,7 @@ export const getLLMStrategy = (
       });
     case "gemini":
       return new GeminiStrategy("gemini-2.0-flash-lite", (m: LlmMeasured) => {
-        logLlmUsage(m, {
+        logLlmUsageSafely(m, {
           userId: ctx?.userId,
           workspaceId: ctx?.workspaceId,
           feature: ctx?.feature,
@@ -54,7 +91,7 @@ export const getLLMStrategy = (
       });
     case "deepseek":
       return new DeepSeekStrategy("deepseek-chat", (m: LlmMeasured) => {
-        logLlmUsage(m, {
+        logLlmUsageSafely(m, {
           userId: ctx?.userId,
           workspaceId: ctx?.workspaceId,
           feature: ctx?.feature,
@@ -112,59 +149,60 @@ export async function getLLMStrategyFromRegistry(
     case 'openai':
       // All OpenAI models use OpenAIStrategy (gpt-3.5-turbo, gpt-4o-mini, gpt-4o)
       return new OpenAIStrategy(model.modelId, (m: LlmMeasured) => {
-        logLlmUsage(m, {
+        logLlmUsageSafely(m, {
           userId: ctx?.userId,
           workspaceId: ctx?.workspaceId,
           feature: ctx?.feature,
-        });
+        }, model.modelId);
         onMeasureCapture?.(m);
       });
 
     case 'google':
       // All Google models use GeminiStrategy (gemini-1.5-flash-8b, gemini-2.0-flash-exp)
       return new GeminiStrategy(model.modelId, (m: LlmMeasured) => {
-        logLlmUsage(m, {
+        logLlmUsageSafely(m, {
           userId: ctx?.userId,
           workspaceId: ctx?.workspaceId,
           feature: ctx?.feature,
-        });
+        }, model.modelId);
         onMeasureCapture?.(m);
       });
 
     case 'deepseek':
       // DeepSeek models (deepseek-chat, deepseek-reasoner)
       return new DeepSeekStrategy(model.modelId, (m: LlmMeasured) => {
-        logLlmUsage(m, {
+        logLlmUsageSafely(m, {
           userId: ctx?.userId,
           workspaceId: ctx?.workspaceId,
           feature: ctx?.feature,
-        });
+        }, model.modelId);
         onMeasureCapture?.(m);
       });
 
     case 'groq':
       // Groq models (llama-3.1-8b-instant, qwen-qwq-32b, llama-4-scout-17b, llama-4-maverick-17b)
       return new GroqStrategy(model.modelId, (m: LlmMeasured) => {
-        logLlmUsage(m, {
+        logLlmUsageSafely(m, {
           userId: ctx?.userId,
           workspaceId: ctx?.workspaceId,
           feature: ctx?.feature,
-        });
+        }, model.modelId);
         onMeasureCapture?.(m);
       });
 
     case 'openrouter': {
       // OpenRouter models — re-apply any suffix (like :nitro, :free, :floor)
-      const orModelName = `${model.modelName || model.modelId}${suffix}`;
+      const configuredModelName = `${model.modelName || model.modelId}${suffix}`;
+      const orModelName = resolveOpenRouterModelName(configuredModelName);
       const includeReasoning = model.capabilities.includes('reasoning');
       return new OpenRouterStrategy(
         orModelName,
         (m: LlmMeasured) => {
-          logLlmUsage(m, {
+          logLlmUsageSafely(m, {
             userId: ctx?.userId,
             workspaceId: ctx?.workspaceId,
             feature: ctx?.feature,
-          });
+          }, model.modelId);
           onMeasureCapture?.(m);
         },
         {

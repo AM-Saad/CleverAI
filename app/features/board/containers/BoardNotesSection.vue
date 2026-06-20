@@ -492,8 +492,11 @@ const overflowMenuItems = computed(() => [
 </script>
 
 <template>
-  <ui-card size="sm" variant="default" shadow="none"
-    class="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden z-10 relative!" header>
+  <UiPanel
+    size="sm"
+    variant="surface"
+    class-name="flex flex-1 min-h-0 min-w-0 overflow-hidden z-10 relative!"
+    content-class="flex flex-col p-0!">
     <!-- Header -->
     <template #header>
       <div ref="toolbarRef" class="adaptive-toolbar flex items-center justify-between gap-2 w-full relative">
@@ -581,7 +584,7 @@ const overflowMenuItems = computed(() => [
       <div v-if="error && items.length === 0"
         class="flex flex-col items-center justify-center flex-1 gap-3 py-12 text-center px-6">
         <div class="w-12 h-12 rounded-full bg-error/10 flex items-center justify-center">
-          <Icon name="heroicons:exclamation-triangle" class="w-6 h-6 text-error" />
+          <Icon name="heroicons:exclamation-triangle" class="w-6 h-6 text-error-text" />
         </div>
         <div>
           <p class="font-semibold text-content-on-surface-strong">Failed to load board</p>
@@ -610,11 +613,15 @@ const overflowMenuItems = computed(() => [
         <Transition enter-active-class="transition duration-200" enter-from-class="opacity-0"
           enter-to-class="opacity-100" leave-active-class="transition duration-200" leave-from-class="opacity-100"
           leave-to-class="opacity-0">
-          <div v-if="isFetching"
-            class="absolute top-2 right-2 z-10 flex items-center gap-1.5 text-[10px] font-medium text-primary bg-white/90 backdrop-blur-sm px-2.5 py-1 rounded-full shadow-[var(--shadow-dropdown)] border border-primary/20">
+          <UiPanel
+            v-if="isFetching"
+            variant="surface"
+            size="xs"
+            class-name="absolute top-2 right-2 z-10 rounded-full border-primary/20 bg-surface/90 shadow-[var(--shadow-dropdown)] backdrop-blur-sm"
+            content-class="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-medium text-primary">
             <Icon name="svg-spinners:ring-resize" class="w-3 h-3" />
             Syncing
-          </div>
+          </UiPanel>
         </Transition>
 
         <!-- No results after filtering -->
@@ -647,9 +654,13 @@ const overflowMenuItems = computed(() => [
           <Transition enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-0 translate-x-2"
             enter-to-class="opacity-100 translate-x-0" leave-active-class="transition duration-200 ease-in"
             leave-from-class="opacity-100 translate-x-0" leave-to-class="opacity-0 translate-x-2">
-            <div v-if="currentItem && isXl" ref="desktopDetailPanelEl" tabindex="-1"
+            <UiPanel v-if="currentItem && isXl" ref="desktopDetailPanelEl" tabindex="-1"
               @keydown="onDesktopDetailPanelKeydown"
-              class="hidden xl:flex flex-col border-l border-secondary bg-white dark:bg-surface transition-all shrink-0 relative"
+              tag="aside"
+              variant="surface"
+              size="xs"
+              class-name="hidden xl:flex rounded-none border-y-0 border-r-0 border-l border-secondary transition-all shrink-0 relative"
+              content-class="flex h-full min-h-0 flex-col p-0"
               :style="{ width: `${panelWidth}px` }">
               <!-- Resizer handle -->
               <div
@@ -658,25 +669,34 @@ const overflowMenuItems = computed(() => [
               <BoardItemDetailPanel :item="currentItem" :workspace-id="boardWorkspaceId" @update="handleUpdateItem"
                 @update-meta="handleUpdateItemMeta" @delete="deleteItem" @retry="handleRetry"
                 @toggle-fullscreen="toggleCurrentItemFullscreen" @close="currentItemId = null" />
-            </div>
+            </UiPanel>
           </Transition>
 
           <Teleport v-if="currentItem && !isXl" to="body">
             <Transition enter-active-class="transition duration-300 ease-out" enter-from-class="translate-x-full"
               enter-to-class="translate-x-0" leave-active-class="transition duration-200 ease-in"
               leave-from-class="translate-x-0" leave-to-class="translate-x-full">
-              <div ref="mobileDetailPanelEl" tabindex="-1" @keydown="onMobileDetailPanelKeydown"
-                class="xl:hidden fixed inset-0 z-200 flex flex-col bg-white dark:bg-surface overflow-hidden">
+              <UiOverlaySurface
+                ref="mobileDetailPanelEl"
+                tabindex="-1"
+                tag="aside"
+                role="dialog"
+                aria-label="Board item details"
+                kind="drawer"
+                layer="drawer"
+                size="xs"
+                class-name="xl:hidden fixed inset-0 z-[var(--z-drawer)] flex flex-col rounded-none border-0 p-0"
+                @keydown="onMobileDetailPanelKeydown">
                 <BoardItemDetailPanel :item="currentItem" :workspace-id="boardWorkspaceId" @update="handleUpdateItem"
                   @update-meta="handleUpdateItemMeta" @delete="deleteItem" @retry="handleRetry"
                   @toggle-fullscreen="toggleCurrentItemFullscreen" @close="currentItemId = null" />
-              </div>
+              </UiOverlaySurface>
             </Transition>
           </Teleport>
         </div>
       </div>
     </template>
-  </ui-card>
+  </UiPanel>
 
   <!-- Fullscreen Item View (Desktop) -->
   <shared-fullscreen-wrapper :is-open="isFullscreenOpen" aria-label="Item fullscreen view" max-width="960px"

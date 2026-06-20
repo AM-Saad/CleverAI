@@ -6,14 +6,14 @@
           v-if="currentWorkspace"
           class="flex items-center gap-2 text-sm text-content-secondary"
         >
-          <Icon name="heroicons:workspace" class="w-4 h-4" />
+          <Icon name="i-lucide-folder" class="w-4 h-4" />
           <span>{{ currentWorkspace.title }}</span>
           <NuxtLink
             to="/user/review"
             class="text-primary hover:text-primary/70"
             title="Review all workspaces"
           >
-            <Icon name="heroicons:x-mark" class="w-4 h-4" />
+            <Icon name="i-lucide-x" class="w-4 h-4" />
           </NuxtLink>
         </div>
 
@@ -33,9 +33,12 @@
     </template>
 
     <!-- Language review notification banner -->
-    <div
+    <UiPanel
       v-if="languageDueCount > 0"
-      class="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-[var(--radius-xl)] border border-primary/20 bg-primary/5 p-4"
+      variant="subtle"
+      size="md"
+      class-name="mb-6 border-primary/20 bg-primary/5"
+      content-class="flex flex-col sm:flex-row sm:items-center justify-between gap-4"
     >
       <div class="flex items-center gap-2.5 text-sm text-content-on-surface">
         <Icon name="i-lucide-languages" class="w-5 h-5 text-primary shrink-0 animate-pulse" />
@@ -44,7 +47,7 @@
       <ui-button size="xs" variant="soft" to="/language/review" class="w-fit">
         Switch to Language Review
       </ui-button>
-    </div>
+    </UiPanel>
 
     <ReviewCardReviewInterface
       :workspace-id="workspaceId"

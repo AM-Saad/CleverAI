@@ -1,6 +1,6 @@
 <template>
   <!-- eslint-disable vue/max-attributes-per-line, vue/attributes-order -->
-  <ui-card size="md" variant="ghost">
+  <UiPanel size="md" variant="transparent">
 
     <template #header>
       <div class="flex items-center gap-2">
@@ -11,8 +11,148 @@
 
     <div class="space-y-6">
 
+      <UiPanel variant="surface" size="sm">
+        <template #header>
+          <div class="flex w-full items-start justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2">
+                <UIcon name="i-heroicons-device-phone-mobile" class="h-5 w-5" />
+                Browser delivery
+              </div>
+              <ui-paragraph>
+                Manage this browser and other saved push-notification devices.
+              </ui-paragraph>
+            </div>
+            <span
+              class="rounded-full px-2.5 py-1 text-xs font-medium"
+              :class="currentDeviceStatusClass"
+            >
+              {{ currentDeviceStatusLabel }}
+            </span>
+          </div>
+        </template>
+
+        <div class="space-y-4">
+          <ui-paragraph size="sm" color="content-secondary">
+            {{ currentDeviceStatusHint }}
+          </ui-paragraph>
+
+          <div class="flex flex-wrap gap-2">
+            <ui-button
+              v-if="!currentDeviceConnected"
+              size="sm"
+              :loading="subscriptionLoading"
+              icon="i-heroicons-bell"
+              @click="enableCurrentDevice"
+            >
+              {{ needsDeviceRepair ? "Reconnect this device" : "Enable this device" }}
+            </ui-button>
+            <ui-button
+              v-else
+              size="sm"
+              variant="outline"
+              :loading="subscriptionLoading"
+              icon="i-heroicons-bell-slash"
+              @click="disableCurrentDevice"
+            >
+              Disable this device
+            </ui-button>
+            <ui-button
+              size="sm"
+              variant="ghost"
+              :loading="subscriptionsLoading"
+              icon="i-heroicons-arrow-path"
+              @click="loadDeviceDeliveryState"
+            >
+              Refresh
+            </ui-button>
+          </div>
+
+          <UiPanel
+            v-if="permissionStatus === 'denied'"
+            variant="subtle"
+            size="sm"
+            role="alert"
+            class-name="border-error/30 bg-error/10"
+          >
+            <ui-paragraph size="sm" color="danger">
+              Notifications are blocked by this browser. Allow them from the
+              site permissions, then reconnect this device.
+            </ui-paragraph>
+          </UiPanel>
+
+          <div class="border-t border-secondary pt-4">
+            <div class="mb-3 flex items-center justify-between">
+              <ui-label weight="semibold">Saved devices</ui-label>
+              <ui-paragraph size="xs" color="content-secondary">
+                {{ savedSubscriptions.length }} registered
+              </ui-paragraph>
+            </div>
+
+            <div v-if="subscriptionsLoading" class="py-4 text-center">
+              <UIcon
+                name="i-heroicons-arrow-path"
+                class="mx-auto h-5 w-5 animate-spin text-primary"
+              />
+            </div>
+
+            <UiPanel
+              v-else-if="savedSubscriptions.length === 0"
+              variant="subtle"
+              size="md"
+            >
+              <ui-paragraph size="sm" color="content-secondary">
+                No browser devices are registered. In-app notifications will
+                still remain available in the header inbox.
+              </ui-paragraph>
+            </UiPanel>
+
+            <div v-else class="space-y-2">
+              <UiPanel
+                v-for="subscription in savedSubscriptions"
+                :key="subscription.id"
+                variant="surface"
+                size="sm"
+                content-class="flex items-start justify-between gap-3"
+              >
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <ui-label>{{ formatUserAgent(subscription.userAgent) }}</ui-label>
+                    <span
+                      v-if="subscription.isCurrentDevice"
+                      class="rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success-text"
+                    >
+                      This device
+                    </span>
+                    <span
+                      v-if="!subscription.isActive"
+                      class="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning-text"
+                    >
+                      Inactive
+                    </span>
+                  </div>
+                  <ui-paragraph size="xs" color="content-secondary" class="mt-1 truncate">
+                    Last connected {{ formatDate(subscription.lastSeen || subscription.createdAt) }}
+                  </ui-paragraph>
+                </div>
+                <ui-button
+                  size="xs"
+                  variant="ghost"
+                  tone="error"
+                  square
+                  icon="i-heroicons-trash"
+                  :loading="removingSubscriptionId === subscription.id"
+                  aria-label="Remove saved notification device"
+                  @click="removeSavedSubscription(subscription.id, subscription.isCurrentDevice)"
+                />
+              </UiPanel>
+            </div>
+          </div>
+        </div>
+      </UiPanel>
+
       <!-- Card Due Notifications -->
-      <ui-card class="" variant="default" size="sm">
+      <UiPanel variant="surface" size="sm">
         <template #header>
           <div>
             📚 Card Due Notifications
@@ -43,12 +183,14 @@
             <div class="space-y-3">
               <!-- Threshold Selection -->
               <div class="grid grid-cols-1 gap-3">
-                <ui-card v-for="option in thresholdOptions" :key="option.value" :class="[
-                  'relative border rounded-[var(--radius-xl)] cursor-pointer transition-all',
-                  preferences.cardDueThreshold === option.value
-                    ? 'border-primary bg-background!'
-                    : 'border-secondary hover:bg-background!',
-                ]" @click="selectThreshold(option.value)">
+                <UiInteractiveCard
+                  v-for="option in thresholdOptions"
+                  :key="option.value"
+                  variant="outline"
+                  size="sm"
+                  selectable
+                  :selected="preferences.cardDueThreshold === option.value"
+                  @click="selectThreshold(option.value)">
                   <div class="flex items-start gap-3">
                     <div class="text-xl">{{ option.emoji }}</div>
                     <div class="flex-1">
@@ -69,16 +211,15 @@
                       <UIcon name="i-heroicons-check-circle" class="w-5 h-5" />
                     </div>
                   </div>
-                </ui-card>
+                </UiInteractiveCard>
               </div>
 
               <!-- Custom Threshold Option -->
-              <div :class="[
-                'relative border rounded-[var(--radius-xl)] p-4 cursor-pointer transition-all',
-                isCustomThreshold
-                  ? 'border-primary bg-background!'
-                  : 'border-secondary hover:bg-background!',
-              ]" @click="selectCustomThreshold">
+              <UiPanel
+                variant="surface"
+                size="md"
+                :class-name="isCustomThreshold ? 'border-primary bg-primary/10' : 'hover:bg-surface-subtle'"
+                @click="selectCustomThreshold">
                 <div class="flex items-start gap-3">
                   <div class="text-2xl">⚙️</div>
                   <div class="flex-1">
@@ -100,11 +241,11 @@
                     <UIcon name="i-heroicons-check-circle" class="w-5 h-5" />
                   </div>
                 </div>
-              </div>
+              </UiPanel>
             </div>
           </UFormField>
         </div>
-      </ui-card>
+      </UiPanel>
 
 
 
@@ -113,7 +254,7 @@
 
 
       <!-- Daily Study Reminders -->
-      <ui-card variant="default">
+      <UiPanel variant="surface">
 
         <template #header>
           <div>
@@ -134,13 +275,13 @@
             </div>
           </UFormGroup>
         </div>
-      </ui-card>
+      </UiPanel>
 
 
 
 
       <!-- Quiet Hours -->
-      <ui-card variant="default" class="">
+      <UiPanel variant="surface">
         <template #header>
           <div>
             🤫 Quiet Hours
@@ -180,14 +321,14 @@
             </span>
           </div>
         </div>
-      </ui-card>
+      </UiPanel>
 
 
 
 
 
       <!-- Send Anytime (outside quiet hours) -->
-      <ui-card variant="default" class="">
+      <UiPanel variant="surface">
         <template #header>
           <div>
             🚀 Send Anytime (Outside Quiet Hours)
@@ -205,14 +346,14 @@
             When disabled, notifications only send near your Card Due Time.
           </span>
         </div>
-      </ui-card>
+      </UiPanel>
 
 
 
 
 
       <!-- Active Hours -->
-      <ui-card variant="default" class="">
+      <UiPanel variant="surface">
         <template #header>
           <div>
             🕘 Active Hours
@@ -249,13 +390,13 @@
             <span> Midnight crossover is supported (e.g., 22:00–06:00). </span>
           </div>
         </div>
-      </ui-card>
+      </UiPanel>
 
 
 
 
       <!-- Timezone Settings -->
-      <ui-card class="">
+      <UiPanel variant="surface">
         <template #header>
           <div>
             🌍 Timezone
@@ -285,7 +426,7 @@
             Current time in your timezone: {{ getCurrentUserTime() }}
           </span>
         </div>
-      </ui-card>
+      </UiPanel>
 
 
     </div>
@@ -293,17 +434,19 @@
     <!-- Save Status -->
     <template v-if="lastSaved" #footer>
       <div class="flex items-center gap-2 text-sm text-content-secondary">
-        <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-success" />
+        <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-success-text" />
         <span>Settings saved {{ formatRelativeTime(lastSaved) }}</span>
       </div>
     </template>
-  </ui-card>
+  </UiPanel>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
 import { useDebounceFn } from "@vueuse/core";
 import { useToast } from "#imports";
+import type { NotificationSubscriptionsResponse } from "@@/shared/utils/notification.contract";
+import { useNotifications } from "../composables/useNotifications";
 
 interface NotificationPreferences {
   cardDueEnabled: boolean;
@@ -322,8 +465,87 @@ interface NotificationPreferences {
 }
 
 const toast = useToast();
+const { $api } = useNuxtApp();
+type NotificationsApi = {
+  getSubscriptions?: (currentEndpointHash?: string | null) => Promise<{
+    success: boolean;
+    data: NotificationSubscriptionsResponse;
+    error?: { message?: string };
+  }>;
+  unsubscribe?: (payload: { endpoint?: string; subscriptionId?: string }) => Promise<{
+    success: boolean;
+    error?: { message?: string };
+  }>;
+};
+const getNotificationsApi = () =>
+  ($api as unknown as { notifications?: NotificationsApi }).notifications;
+const {
+  checkPermission,
+  checkSubscriptionStatus,
+  currentEndpointHash,
+  isLoading: subscriptionLoading,
+  isSubscribed,
+  registerNotification,
+  unsubscribe,
+} = useNotifications();
 const loading = ref(false);
 const lastSaved = ref<Date | null>(null);
+const permissionStatus = ref<NotificationPermission | "unsupported">("default");
+const subscriptionsLoading = ref(false);
+const removingSubscriptionId = ref<string | null>(null);
+const savedSubscriptions = ref<NotificationSubscriptionsResponse["subscriptions"]>([]);
+
+const currentServerSubscription = computed(() =>
+  savedSubscriptions.value.find((subscription) => subscription.isCurrentDevice),
+);
+const currentDeviceConnected = computed(
+  () =>
+    permissionStatus.value === "granted" &&
+    isSubscribed.value &&
+    Boolean(currentServerSubscription.value),
+);
+const needsDeviceRepair = computed(
+  () =>
+    permissionStatus.value === "granted" &&
+    (isSubscribed.value || savedSubscriptions.value.length > 0) &&
+    !currentDeviceConnected.value,
+);
+const currentDeviceStatusLabel = computed(() => {
+  if (permissionStatus.value === "unsupported") return "Not supported";
+  if (permissionStatus.value === "denied") return "Blocked";
+  if (currentDeviceConnected.value) return "Connected";
+  if (needsDeviceRepair.value) return "Needs reconnect";
+  if (permissionStatus.value === "granted") return "Not connected";
+  return "Not enabled";
+});
+const currentDeviceStatusClass = computed(() => {
+  if (currentDeviceConnected.value) return "bg-success/10 text-success-text";
+  if (
+    permissionStatus.value === "denied" ||
+    permissionStatus.value === "unsupported"
+  ) {
+    return "bg-error/10 text-error-text";
+  }
+  if (needsDeviceRepair.value || permissionStatus.value === "granted") {
+    return "bg-warning/10 text-warning-text";
+  }
+  return "bg-surface-subtle text-content-secondary";
+});
+const currentDeviceStatusHint = computed(() => {
+  if (permissionStatus.value === "unsupported") {
+    return "This browser does not support push notifications.";
+  }
+  if (permissionStatus.value === "denied") {
+    return "Browser permission is blocked. The in-app inbox still works.";
+  }
+  if (currentDeviceConnected.value) {
+    return "This browser is allowed, subscribed, and registered on the server.";
+  }
+  if (needsDeviceRepair.value) {
+    return "The browser and server subscription are out of sync. Reconnect to repair delivery.";
+  }
+  return "Push is optional. In-app notifications remain available without it.";
+});
 
 // Threshold options with engaging categories
 const thresholdOptions = [
@@ -454,7 +676,7 @@ const preferences = ref<NotificationPreferences>({
 
 // Load preferences on mount
 onMounted(async () => {
-  await loadPreferences();
+  await Promise.all([loadPreferences(), loadDeviceDeliveryState()]);
   // After loading server preferences, detect browser timezone and apply sensible defaults
   try {
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -471,6 +693,134 @@ onMounted(async () => {
     console.warn("Could not detect browser timezone:", e);
   }
 });
+
+const refreshCurrentDeviceState = async () => {
+  try {
+    permissionStatus.value = await checkPermission();
+  } catch {
+    permissionStatus.value = "unsupported";
+  }
+  await checkSubscriptionStatus();
+};
+
+const loadSubscriptions = async () => {
+  subscriptionsLoading.value = true;
+  try {
+    const notificationsApi = getNotificationsApi();
+    if (!notificationsApi?.getSubscriptions) {
+      savedSubscriptions.value = [];
+      console.warn("[notifications] Subscription API is unavailable");
+      return;
+    }
+
+    const result = await notificationsApi.getSubscriptions(currentEndpointHash.value);
+    if (!result.success) {
+      toast.add({
+        title: "Could not load devices",
+        description: result.error?.message ?? "The notification device list is unavailable.",
+        color: "error",
+      });
+      return;
+    }
+    savedSubscriptions.value = result.data.subscriptions;
+  } finally {
+    subscriptionsLoading.value = false;
+  }
+};
+
+async function loadDeviceDeliveryState() {
+  await refreshCurrentDeviceState();
+  await loadSubscriptions();
+}
+
+async function enableCurrentDevice() {
+  const enabled = await registerNotification();
+  await loadDeviceDeliveryState();
+  toast.add({
+    title: enabled ? "Notifications enabled" : "Could not enable notifications",
+    description: enabled
+      ? "This browser is connected for push reminders."
+      : "Check browser permission and try again. The in-app inbox still works.",
+    color: enabled ? "success" : "error",
+  });
+}
+
+async function disableCurrentDevice() {
+  const disabled = await unsubscribe();
+  await loadDeviceDeliveryState();
+  toast.add({
+    title: disabled ? "Device disabled" : "Could not disable device",
+    description: disabled
+      ? "This browser will stop receiving push reminders."
+      : "The device state could not be changed. Try again shortly.",
+    color: disabled ? "success" : "error",
+  });
+}
+
+async function removeSavedSubscription(
+  subscriptionId: string,
+  isCurrentDevice: boolean,
+) {
+  if (isCurrentDevice) {
+    await disableCurrentDevice();
+    return;
+  }
+
+  removingSubscriptionId.value = subscriptionId;
+  try {
+    const notificationsApi = getNotificationsApi();
+    if (!notificationsApi?.unsubscribe) {
+      toast.add({
+        title: "Could not remove device",
+        description: "The notification device API is unavailable.",
+        color: "error",
+      });
+      return;
+    }
+
+    const result = await notificationsApi.unsubscribe({ subscriptionId });
+    if (!result.success) {
+      toast.add({
+        title: "Could not remove device",
+        description: result.error?.message ?? "The notification device could not be removed.",
+        color: "error",
+      });
+      return;
+    }
+    savedSubscriptions.value = savedSubscriptions.value.filter(
+      (subscription) => subscription.id !== subscriptionId,
+    );
+    toast.add({
+      title: "Device removed",
+      description: "That browser will no longer receive push reminders.",
+      color: "success",
+    });
+  } finally {
+    removingSubscriptionId.value = null;
+  }
+}
+
+function formatDate(value: string | Date | null | undefined) {
+  if (!value) return "unknown";
+  const date = value instanceof Date ? value : new Date(value);
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(date);
+}
+
+function formatUserAgent(userAgent: string | null | undefined) {
+  if (!userAgent) return "Browser device";
+  if (userAgent.includes("iPhone")) return "iPhone browser";
+  if (userAgent.includes("iPad")) return "iPad browser";
+  if (userAgent.includes("Android")) return "Android browser";
+  if (userAgent.includes("Mac OS X")) return "Mac browser";
+  if (userAgent.includes("Windows")) return "Windows browser";
+  return "Browser device";
+}
 
 // Load preferences from API
 const loadPreferences = async () => {

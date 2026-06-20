@@ -155,6 +155,7 @@ export async function completeGatewayGeneration(
     try {
       const saveResult = await saveGeneratedArtifacts({
         prisma,
+        userId: ctx.user.id,
         task,
         workspaceId,
         materialId,

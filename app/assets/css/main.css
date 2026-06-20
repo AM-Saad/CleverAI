@@ -35,7 +35,7 @@ input:-webkit-autofill:focus {
 
   padding-left: 5px !important;
 
-  -webkit-box-shadow: 0 0 0px 1000px var(--color-white) inset !important;
+  -webkit-box-shadow: 0 0 0px 1000px var(--color-surface) inset !important;
   -webkit-text-fill-color: var(--color-content-on-background) !important;
   transition: background-color 5000s ease-in-out 0s;
 }
@@ -50,7 +50,8 @@ body {
   /* font-family: "Sen", sans-serif; */
   font-family: "Saira", sans-serif;
   font-optical-sizing: auto;
-  color: unset;
+  color: var(--color-content-on-background);
+  background: var(--color-background);
 }
 
 .header-brand-name-gradient {
@@ -60,14 +61,20 @@ body {
   text-decoration: none !important;
 }
 
-a {
-  outline: none;
+:where(a, button, input, textarea, select, [tabindex]):focus-visible:not([class*="focus-visible:ring-"]):not([class*="focus-visible:outline-"]):not([class*="focus:ring-"]):not([class*="focus:outline-"]) {
+  outline: 2px solid var(--ds-focus-outline-color);
+  outline-offset: 2px;
 }
 
-a:not(.btn):focus-visible {
-  outline: 2px solid var(--ds-focus-outline-color);
-  -moz-outline-radius: 8px;
-  outline-style: ridge;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .blur {

@@ -14,6 +14,7 @@ import { UserService } from "./UserService";
 import { UserTagService } from "./UserTagService";
 import GatewayService from "./GatewayService";
 import { LanguageService } from "./LanguageService";
+import { NotificationsService } from "./Notifications";
 
 export class ServiceFactory {
   private $fetch: $Fetch;
@@ -36,6 +37,7 @@ export class ServiceFactory {
   create(service: "userTags"): UserTagService;
   create(service: "gateway"): GatewayService;
   create(service: "language"): LanguageService;
+  create(service: "notifications"): NotificationsService;
   create(service: string): FetchFactory;
   create(service: string): FetchFactory {
     switch (service) {
@@ -67,6 +69,8 @@ export class ServiceFactory {
         return new GatewayService(this.$fetch);
       case "language":
         return new LanguageService(this.$fetch);
+      case "notifications":
+        return new NotificationsService(this.$fetch);
       default:
         throw new Error(`Unknown service: ${service}`);
     }

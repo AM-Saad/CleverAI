@@ -14,9 +14,12 @@
 
     <!-- Autocomplete floating dropdown -->
     <Transition name="auto-suggestions">
-      <div v-if="autoPosition && autoSuggestions.length"
+      <UiOverlaySurface v-if="autoPosition && autoSuggestions.length"
         :style="{ top: autoPosition.top + 'px', left: autoPosition.left + 'px' }"
-        class="absolute z-50 min-w-36 bg-surface border border-secondary rounded-[var(--radius-xl)] shadow-[var(--shadow-dropdown)] overflow-hidden"
+        kind="popover"
+        layer="popover"
+        size="xs"
+        class-name="absolute min-w-36 overflow-hidden p-0"
         role="listbox" aria-label="Suggestions">
         <button v-for="(item, i) in autoSuggestions" :key="item" type="button" role="option"
           :aria-selected="i === autoActiveIndex" :class="[
@@ -29,7 +32,7 @@
           <kbd v-if="i === 0"
             class="shrink-0 hidden sm:inline-flex items-center rounded-[var(--radius-md)] border border-secondary px-1 py-0.5 text-[10px] font-mono text-content-secondary">Tab</kbd>
         </button>
-      </div>
+      </UiOverlaySurface>
     </Transition>
   </div>
 </template>
@@ -1178,7 +1181,7 @@ function getSelectedText(): string | null {
 .tiptap ol {
   padding: 0 1rem;
   margin: 1.25rem 1rem 1.25rem 0.4rem;
-  list-style: unset;
+  list-style: circle;
   /* taskList is custom, remove bullets */
 }
 

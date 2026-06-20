@@ -1,18 +1,18 @@
 <template>
   <shared-page-wrapper title="My Profile" subtitle="View and manage your profile information">
 
-    <div v-if="status === 'authenticated'" class="grid md:grid-cols-3 gap-4 mt-4 max-w-full overflow-x-hidden">
+    <div v-if="status === 'authenticated'" class="grid min-w-0 max-w-full grid-cols-1 gap-4 overflow-x-hidden md:grid-cols-3 mt-4">
       <!-- User Profile Card -->
       <div class="md:col-span-1">
 
-        <ui-card variant="default" v-if="!isProfileLoading && profileData" size="sm">
+        <UiCard variant="default" v-if="!isProfileLoading && profileData" size="sm">
           <div class="flex items-start gap-4">
-            <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white text-xl mb-2">
+            <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary text-xl mb-2">
               {{ userInitials }}
             </div>
-            <div>
+            <div class="min-w-0">
               <ui-subtitle> {{ profileData?.name || "User" }} </ui-subtitle>
-              <ui-paragraph>{{ profileData?.email || "...." }}</ui-paragraph>
+              <ui-paragraph class="break-words">{{ profileData?.email || "...." }}</ui-paragraph>
             </div>
           </div>
 
@@ -28,9 +28,9 @@
               }}</span>
             </ui-label>
           </div>
-        </ui-card>
+        </UiCard>
 
-        <!-- <ui-card variant="default" class-name="mt-1.5" size="sm" v-if="!isProfileLoading && profileData">
+        <!-- <UiCard variant="default" class-name="mt-1.5" size="sm" v-if="!isProfileLoading && profileData">
           <ui-subtitle>Account Settings</ui-subtitle>
 
           <div class="flex flex-wrap gap-4 mt-4">
@@ -42,27 +42,27 @@
               Update Profile
             </ui-button>
           </div>
-        </ui-card> -->
+        </UiCard> -->
 
-        <ui-card variant="default" v-if="isProfileLoading">
+        <UiCard variant="default" v-if="isProfileLoading">
           <USkeleton class="h-4 bg-surface-subtle dark:bg-surface my-0.5" />
           <USkeleton class="h-4 bg-surface-subtle dark:bg-surface my-0.5" />
-        </ui-card>
-        <ui-card variant="default" class-name="mt-1.5" v-if="isProfileLoading">
+        </UiCard>
+        <UiCard variant="default" class-name="mt-1.5" v-if="isProfileLoading">
           <USkeleton class="h-4 bg-surface-subtle dark:bg-surface my-0.5" />
           <USkeleton class="h-4 bg-surface-subtle dark:bg-surface my-0.5" />
-        </ui-card>
+        </UiCard>
 
 
         <!-- Push Notification Settings -->
-        <ui-card variant="default" class-name="mt-1.5" size="sm" v-if="!notificationsLoading">
+        <UiCard variant="default" class-name="mt-1.5" size="sm" v-if="!notificationsLoading">
           <ui-subtitle>Push Notifications</ui-subtitle>
           <div class="mt-4">
             <div v-if="notificationsLoading" class="text-sm text-content-secondary">
               Checking status...
             </div>
             <div v-else-if="isNotificationSubscribed" class="flex items-center justify-between">
-              <span class="text-sm text-success">✓ Notifications enabled</span>
+              <span class="text-sm text-success-text">✓ Notifications enabled</span>
               <ui-button size="sm" variant="subtle" color="error" @click="handleUnsubscribe"
                 :loading="notificationsLoading">
                 Disable
@@ -75,18 +75,18 @@
                 Enable Notifications
               </ui-button>
             </div>
-            <p v-if="notificationError" class="text-sm text-error mt-2">{{ notificationError }}</p>
+            <p v-if="notificationError" class="text-sm text-error-text mt-2">{{ notificationError }}</p>
           </div>
-        </ui-card>
-        <ui-card variant="default" class-name="mt-1.5" size="sm" v-if="notificationsLoading || isProfileLoading">
+        </UiCard>
+        <UiCard variant="default" class-name="mt-1.5" size="sm" v-if="notificationsLoading || isProfileLoading">
           <USkeleton class="h-4 bg-surface-subtle dark:bg-surface my-0.5" />
           <USkeleton class="h-4 bg-surface-subtle dark:bg-surface my-0.5" />
-        </ui-card>
+        </UiCard>
       </div>
 
       <!-- Subscription Information -->
       <div class="md:col-span-2 space-y-4">
-        <ui-card variant="default" size="sm">
+        <UiCard variant="default" size="sm">
           <template #header>Subscription</template>
 
           <div class="mb-6">
@@ -97,7 +97,7 @@
                   subscriptionInfo.tier === 'PRO',
                 'bg-secondary text-content-on-surface':
                   subscriptionInfo.tier === 'FREE',
-                'bg-info/15 text-info':
+                'bg-info/15 text-info-text':
                   subscriptionInfo.tier === 'ENTERPRISE',
               }" class="px-3 py-1 rounded-full text-xs font-semibold">
                 {{ subscriptionInfo.tier }}
@@ -129,10 +129,10 @@
               <span v-if="subscriptionInfo.remaining > 0">
                 {{ subscriptionInfo.remaining }} generations remaining
               </span>
-              <span v-else class="text-error">Quota exceeded</span>
+              <span v-else class="text-error-text">Quota exceeded</span>
             </p>
           </div>
-        </ui-card>
+        </UiCard>
 
 
       </div>

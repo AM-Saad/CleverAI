@@ -36,14 +36,14 @@
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <ui-card v-for="(item, idx) in whyChooseItems" :key="idx" hover="lift" shadow="sm" variant="default">
+          <UiCard v-for="(item, idx) in whyChooseItems" :key="idx" hover="lift" shadow="sm" variant="default">
             <div class="p-6 space-y-3">
               <ui-subtitle>{{ item.title }}</ui-subtitle>
               <ui-paragraph size="sm" color="content-on-surface" class="text-wrap">
                 {{ item.description }}
               </ui-paragraph>
             </div>
-          </ui-card>
+          </UiCard>
         </div>
       </section>
 
@@ -80,37 +80,42 @@
           </ui-paragraph>
 
           <div class="space-y-6">
-            <ui-card v-for="(item, idx) in coreFeatures" :key="idx" variant="default">
+            <UiCard v-for="(item, idx) in coreFeatures" :key="idx" variant="default">
               <div class="p-4">
                 <ui-subtitle>{{ item.title }}</ui-subtitle>
                 <ui-paragraph size="sm" color="content-on-surface" class="text-wrap">{{ item.description
                   }}</ui-paragraph>
               </div>
-            </ui-card>
+            </UiCard>
           </div>
         </section>
       </div>
 
       <!-- Who It's For -->
-      <section id="who-it-s-for"
-        class="bg-surface-subtle dark:bg-content-on-background rounded-[var(--radius-2xl)] p-8 md:p-12 relative overflow-hidden">
+      <UiPanel
+        id="who-it-s-for"
+        tag="section"
+        variant="subtle"
+        size="lg"
+        class-name="rounded-[var(--radius-2xl)] relative overflow-hidden"
+        content-class="p-8 md:p-12">
         <div class="relative z-10">
           <ui-subtitle tag="h2" size="2xl" weight="bold" class="mb-8 text-center text-3xl md:text-4xl">
             Built for Every Learner
           </ui-subtitle>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div v-for="(person, idx) in targetAudience" :key="idx"
-              class="text-center p-4 rounded-[var(--radius-xl)] bg-white dark:bg-surface shadow-[var(--shadow-dropdown)]">
+            <UiCard v-for="(person, idx) in targetAudience" :key="idx"
+              variant="default" shadow="sm" size="sm" class-name="text-center">
               <span class="text-lg font-medium text-dark dark:text-light">{{ person }}</span>
-            </div>
+            </UiCard>
           </div>
 
           <ui-paragraph class="mt-10 text-center max-w-2xl mx-auto" size="base" color="content-on-surface">
             Cognilo adapts to how you learn — not the other way around. Focus on learning, not memorization.
           </ui-paragraph>
         </div>
-      </section>
+      </UiPanel>
 
     </div>
   </shared-page-wrapper>

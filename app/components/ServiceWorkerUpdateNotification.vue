@@ -61,8 +61,11 @@
     leave-to-class="transform translate-y-full opacity-0">
     <div v-if="showDebugPanel && isDev" class="sw-debug-panel">
 
-      <div
-        class="bg-white/95 dark:bg-[var(--color-content-on-background)]/95 backdrop-blur border rounded-[var(--radius-lg)] p-4 text-sm space-y-3 shadow-[var(--shadow-modal)]">
+      <UiPanel
+        variant="surface"
+        size="md"
+        class-name="bg-surface/95 backdrop-blur shadow-[var(--shadow-modal)]"
+        content-class="text-sm space-y-3">
         <header class="flex items-center justify-between">
           <h3 class="font-semibold flex items-center gap-2">
             <Icon name="heroicons:cloud" class="w-4 h-4 text-primary" />
@@ -112,8 +115,8 @@
           </div>
         </section>
         <!-- Debug Controls (Development Mode) -->
-        <div class="mb-4 p-4 bg-warning/10 border border-warning/20 rounded-[var(--radius-lg)]">
-          <h4 class="font-medium text-warning mb-2 flex items-center gap-2">
+        <UiPanel variant="subtle" size="md" class-name="mb-4 border-warning/20 bg-warning/10">
+          <h4 class="font-medium text-warning-text mb-2 flex items-center gap-2">
             <Icon name="heroicons:wrench-screwdriver" class="w-4 h-4" />
             Debug Controls
           </h4>
@@ -137,7 +140,7 @@
               Reset State
             </UiButton>
           </div>
-        </div>
+        </UiPanel>
 
         <footer class="flex items-center justify-between pt-2 border-t text-xs text-content-secondary">
           <button @click="showModal = true" class="underline hover:text-content-on-background">
@@ -147,7 +150,7 @@
             {{ collapsed ? "Expand" : "Collapse" }}
           </button>
         </footer>
-      </div>
+      </UiPanel>
     </div>
   </Transition>
 </template>

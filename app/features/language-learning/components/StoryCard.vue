@@ -15,9 +15,11 @@
       </div>
 
       <!-- Cloze sentence -->
-      <div
+      <UiPanel
         v-if="clozeSentence"
-        class="p-5 rounded-[var(--radius-xl)] bg-surface-strong text-center text-lg leading-relaxed text-content-on-surface"
+        variant="subtle"
+        size="lg"
+        content-class="text-center text-lg leading-relaxed text-content-on-surface"
       >
         {{
           clozeSentence.text.replace(
@@ -25,13 +27,15 @@
             clozeSentence.clozeBlank,
           )
         }}
-      </div>
-      <div
+      </UiPanel>
+      <UiPanel
         v-else
-        class="p-5 rounded-[var(--radius-xl)] bg-surface-strong text-center text-content-secondary italic"
+        variant="subtle"
+        size="lg"
+        content-class="text-center text-content-secondary italic"
       >
         What does "{{ card.word }}" mean?
-      </div>
+      </UiPanel>
 
       <!-- Translation hint toggle -->
       <div class="flex justify-center">
@@ -49,14 +53,6 @@
           {{ card.translation }}
         </div>
       </Transition>
-
-      <!-- Reveal -->
-      <div class="flex justify-center pt-2">
-        <ui-button size="lg" class="px-8" @click="emit('reveal')">
-          <Icon name="i-lucide-eye" class="w-4 h-4 mr-1" />
-          Show Answer
-        </ui-button>
-      </div>
     </div>
 
     <!-- Back face (full answer) -->
@@ -76,14 +72,16 @@
       </div>
 
       <!-- Full story with highlighted cloze word -->
-      <div
+      <UiPanel
         v-if="clozeSentence"
-        class="p-5 rounded-[var(--radius-xl)] bg-surface-strong text-lg leading-relaxed"
+        variant="subtle"
+        size="lg"
+        content-class="text-lg leading-relaxed"
       >
         <span
           v-html="highlightCloze(clozeSentence.text, clozeSentence.clozeWord)"
         />
-      </div>
+      </UiPanel>
 
       <!-- Other sentences (dimmed context) -->
       <div v-if="!clozeSentence" class="text-center">
@@ -93,15 +91,16 @@
       </div>
 
       <div v-if="otherSentences.length" class="space-y-2">
-        <div
+        <UiPanel
           v-for="(s, i) in otherSentences"
           :key="i"
-          class="px-4 py-2 rounded-[var(--radius-md)] bg-surface border border-secondary"
+          variant="surface"
+          size="xs"
         >
           <UiParagraph size="sm" color="content-secondary">{{
             s.text
           }}</UiParagraph>
-        </div>
+        </UiPanel>
       </div>
 
       <!-- TTS -->
@@ -128,47 +127,6 @@
           Hear story
         </ui-button>
       </div>
-
-      <!-- Grade buttons -->
-      <div class="space-y-3">
-        <!-- Star rating (visual only, maps to grade) -->
-        <div class="flex justify-center gap-2">
-          <button
-            v-for="star in 3"
-            :key="star"
-            type="button"
-            :class="[
-              'transition-colors',
-              hoverStar >= star ? 'text-warning' : 'text-content-disabled',
-            ]"
-            @mouseenter="hoverStar = star"
-            @mouseleave="hoverStar = 0"
-            @click="gradeFromStar(star)"
-          >
-            <Icon
-              name="i-lucide-star"
-              class="w-6 h-6"
-              :class="hoverStar >= star ? 'fill-warning' : ''"
-            />
-          </button>
-        </div>
-
-        <!-- Explicit grade buttons (SM-2: 0–5) -->
-        <div class="grid grid-cols-3 gap-2">
-          <ui-button
-            v-for="btn in gradeButtons"
-            :key="btn.value"
-            :variant="btn.variant"
-            :color="btn.color"
-            size="sm"
-            class="text-xs"
-            :loading="isGrading"
-            @click="emit('grade', btn.value)"
-          >
-            {{ btn.label }}
-          </ui-button>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -180,18 +138,14 @@ import { useSanitize } from "~/composables/shared/useSanitize";
 const props = defineProps<{
   card: LanguageQueueCard;
   showAnswer: boolean;
-  isGrading?: boolean;
   isSpeaking?: boolean;
 }>();
 
 const emit = defineEmits<{
-  (e: "reveal"): void;
-  (e: "grade", value: "0" | "1" | "2" | "3" | "4" | "5"): void;
   (e: "speak", word: string): void;
 }>();
 
 const showHint = ref(false);
-const hoverStar = ref(0);
 const { sanitizeHtml } = useSanitize();
 
 // Pick the first sentence (index 0) as the cloze sentence
@@ -206,52 +160,6 @@ const otherSentences = computed(() => {
   if (!sents || sents.length <= 1) return [];
   return sents.slice(1);
 });
-
-const gradeButtons = [
-  {
-    value: "0" as const,
-    label: "Blackout",
-    variant: "soft" as const,
-    color: "error" as const,
-  },
-  {
-    value: "1" as const,
-    label: "Wrong",
-    variant: "soft" as const,
-    color: "error" as const,
-  },
-  {
-    value: "2" as const,
-    label: "Hard recall",
-    variant: "soft" as const,
-    color: "warning" as const,
-  },
-  {
-    value: "3" as const,
-    label: "Correct (effort)",
-    variant: "soft" as const,
-    color: "warning" as const,
-  },
-  {
-    value: "4" as const,
-    label: "Correct",
-    variant: "soft" as const,
-    color: "success" as const,
-  },
-  {
-    value: "5" as const,
-    label: "Easy",
-    variant: "soft" as const,
-    color: "success" as const,
-  },
-];
-
-const gradeFromStar = (star: number) => {
-  // 1 star → grade 2, 2 stars → grade 3, 3 stars → grade 5
-  if (star === 1) emit("grade", "2");
-  else if (star === 2) emit("grade", "3");
-  else if (star === 3) emit("grade", "5");
-};
 
 const highlightCloze = (text: string, clozeWord: string) => {
   const escaped = clozeWord.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -268,7 +176,6 @@ watch(
   () => props.card.cardId,
   () => {
     showHint.value = false;
-    hoverStar.value = 0;
   },
 );
 </script>

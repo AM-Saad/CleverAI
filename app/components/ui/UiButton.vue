@@ -7,7 +7,11 @@
     :leading-icon="leadingIcon"
     :trailing-icon="trailingIcon"
     :loading="loading"
+    :loading-auto="loadingAuto"
     :disabled="disabled"
+    :active="active"
+    :active-color="activeColor"
+    :active-variant="activeVariant"
     :block="block"
     :square="square"
     v-bind="$attrs"
@@ -29,20 +33,29 @@
 import { computed } from "vue";
 import type { Size, Tone } from "./variants";
 
+type LegacyTone = Tone | "secondary";
+
 const {
   tone = "primary",
+  color: legacyColor,
   variant = "solid",
   size = "md",
   icon,
   leadingIcon,
   trailingIcon,
   loading = false,
+  loadingAuto = false,
   disabled = false,
+  active,
+  activeColor,
+  activeVariant,
   block = false,
   square = false,
 } = defineProps<{
   /** Semantic color role. */
   tone?: Tone;
+  /** @deprecated Use `tone`. Kept as a migration bridge for legacy call sites. */
+  color?: LegacyTone;
   /** Visual style. */
   variant?: "solid" | "outline" | "soft" | "subtle" | "ghost" | "link";
   size?: Size;
@@ -50,7 +63,11 @@ const {
   leadingIcon?: string;
   trailingIcon?: string;
   loading?: boolean;
+  loadingAuto?: boolean;
   disabled?: boolean;
+  active?: boolean;
+  activeColor?: LegacyTone;
+  activeVariant?: "solid" | "outline" | "soft" | "subtle" | "ghost" | "link";
   block?: boolean;
   square?: boolean;
 }>();
@@ -59,5 +76,7 @@ defineOptions({ inheritAttrs: false });
 
 // `tone` maps 1:1 to Nuxt UI color names (neutral is aliased to `secondary`
 // in app.config.ts).
-const color = computed(() => tone);
+const color = computed(() =>
+  legacyColor === "secondary" ? "neutral" : (legacyColor ?? tone),
+);
 </script>

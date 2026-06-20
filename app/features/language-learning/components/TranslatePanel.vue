@@ -24,14 +24,14 @@
         :exit="{ opacity: 0, scale: 0.9, y: 12 }"
         :transition="{ type: 'spring', stiffness: 500, damping: 42 }"
         :style="{ transformOrigin: 'bottom right' }"
-        class="fixed right-6 bottom-24 z-45 flex flex-col w-[calc(100vw-3rem)] max-w-sm max-h-[calc(100svh-8rem)] rounded-[var(--radius-2xl)] bg-surface border border-secondary overflow-hidden"
-        style="
-          box-shadow:
-            0 20px 60px -10px rgba(0, 0, 0, 0.18),
-            0 4px 16px -4px rgba(0, 0, 0, 0.1),
-            0 0 0 1px rgba(255, 255, 255, 0.06) inset;
-        "
+        class="fixed right-6 bottom-24 z-[var(--z-popover)] w-[calc(100vw-3rem)] max-w-sm max-h-[calc(100svh-8rem)]"
       >
+        <UiOverlaySurface
+          kind="popover"
+          layer="popover"
+          size="xs"
+          class-name="flex max-h-[calc(100svh-8rem)] flex-col overflow-hidden rounded-[var(--radius-2xl)] p-0"
+        >
         <!-- Premium gradient accent stripe -->
         <div
           class="h-0.5 bg-linear-to-r from-primary/40 via-primary to-primary/40 shrink-0"
@@ -53,14 +53,13 @@
               >Quick Translate</span
             >
           </div>
-          <button
-            type="button"
-            aria-label="Close translate panel"
-            class="w-7 h-7 flex items-center justify-center rounded-full hover:bg-surface-strong text-content-secondary hover:text-content-on-surface transition-colors focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
+          <UiIconButton
+            icon="i-lucide-x"
+            label="Close translate panel"
+            size="xs"
+            variant="ghost"
             @click="handleClose"
-          >
-            <Icon name="i-lucide-x" class="w-4 h-4" />
-          </button>
+          />
         </div>
 
         <div class="h-px bg-secondary mx-4 shrink-0" />
@@ -89,12 +88,12 @@
                   type="button"
                   :disabled="recordingState === 'transcribing'"
                   :class="[
-                    'flex items-center gap-2 px-5 py-2.5 rounded-full border-2 min-w-36 justify-center transition-all duration-200 select-none text-sm font-medium',
+                    'flex items-center gap-2 px-5 py-2.5 rounded-full border-2 min-w-36 justify-center transition-all duration-[var(--duration-fast)] select-none text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60',
                     recordingState === 'idle'
-                      ? 'bg-surface-strong border-secondary hover:border-primary/50 active:scale-95 text-content-secondary'
+                      ? 'bg-surface-strong border-secondary hover:border-primary/50 active:scale-[0.98] text-content-secondary'
                       : recordingState === 'recording'
-                        ? 'bg-error/10 border-error text-error'
-                        : 'bg-primary/10 border-primary/20 cursor-not-allowed opacity-70 text-content-secondary',
+                        ? 'bg-error/10 border-error text-error-text'
+                        : 'bg-primary/10 border-primary/20 text-content-secondary',
                   ]"
                   @click="handleMicClick"
                 >
@@ -171,8 +170,11 @@
           <template v-else-if="internalState === 'result' && captureResult">
             <div class="space-y-3">
               <!-- Word card — elevated premium treatment -->
-              <div
-                class="rounded-[var(--radius-xl)] bg-linear-to-br from-primary/5 to-primary/2 border border-primary/15 p-4 space-y-3"
+              <UiPanel
+                variant="subtle"
+                size="md"
+                class-name="border-primary/15 bg-linear-to-br from-primary/5 to-primary/2"
+                content-class="space-y-3"
               >
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
@@ -217,7 +219,7 @@
                     </ui-badge>
                   </div>
                 </div>
-              </div>
+              </UiPanel>
 
               <!-- Actions -->
               <div class="flex flex-col gap-2">
@@ -282,21 +284,23 @@
           <!-- ── STORY READY STATE ── -->
           <template v-else-if="internalState === 'story-ready' && storyResult">
             <div class="space-y-3">
-              <div class="flex items-center gap-2 p-3 rounded-[var(--radius-lg)] bg-success/10">
+              <UiPanel variant="subtle" size="sm" class-name="border-success/20 bg-success/10" content-class="flex items-center gap-2">
                 <Icon
                   name="i-lucide-check-circle"
-                  class="w-4 h-4 text-success shrink-0"
+                  class="w-4 h-4 text-success-text shrink-0"
                 />
                 <UiParagraph size="sm" color="success"
                   >Added to your language deck.</UiParagraph
                 >
-              </div>
+              </UiPanel>
 
               <div class="space-y-1.5">
-                <div
+                <UiPanel
                   v-for="(sentence, i) in storyResult.sentences"
                   :key="i"
-                  class="p-2.5 rounded-[var(--radius-lg)] bg-surface-strong text-sm text-content-on-surface leading-relaxed"
+                  variant="subtle"
+                  size="xs"
+                  content-class="text-sm text-content-on-surface leading-relaxed"
                 >
                   <span class="text-content-disabled text-xs mr-1.5"
                     >{{ i + 1 }}.</span
@@ -304,7 +308,7 @@
                   <span
                     v-html="highlightCloze(sentence.text, sentence.clozeWord)"
                   />
-                </div>
+                </UiPanel>
               </div>
 
               <div class="flex flex-col gap-2">
@@ -334,6 +338,7 @@
             <shared-error-message :error="captureError || storyError" />
           </div>
         </div>
+        </UiOverlaySurface>
       </motion.div>
     </AnimatePresence>
   </Teleport>

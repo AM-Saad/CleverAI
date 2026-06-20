@@ -13,7 +13,6 @@ export async function requireAuth(event: any): Promise<any> {
     if (!session || !session.user || !session.user.email) {
       throw Errors.unauthorized("Authentication required");
     }
-    console.log("session", session);
     const email = session.user.email;
     const prisma = event.context.prisma;
     const user = await prisma.user.findUnique({ where: { email } });
@@ -34,7 +33,6 @@ export type UserRole = "USER" | "ADMIN";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function requireRole(event: any, roles: UserRole[]): Promise<any> {
   const user = event.context.user || (await requireAuth(event));
-  console.log("User role:", user.role);
   if (!roles.includes(user.role)) {
     throw Errors.forbidden("User does not have the required role");
   }

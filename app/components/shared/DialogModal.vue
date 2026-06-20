@@ -26,7 +26,8 @@ const { onKeydown } = useFocusTrap(computed(() => props.show), panelEl, {
       <div v-if="props.show" class="modal-mask">
         <div ref="panelEl" role="dialog" aria-modal="true" :aria-label="ariaLabel" :aria-hidden="!props.show"
           :inert="!props.show" tabindex="-1" @keydown="onKeydown"
-          class="inner bg-surface absolute left-[50%] top-[50%] md:w-2/3 lg:w-1/3 w-11/12 -translate-x-1/2 -translate-y-1/2 transform rounded-[var(--radius-2xl)] shadow-[var(--component-dialog-shadow)] z-50 overflow-auto">
+          class="absolute left-[50%] top-[50%] z-[var(--z-modal)] w-11/12 -translate-x-1/2 -translate-y-1/2 transform md:w-2/3 lg:w-1/3">
+          <UiOverlaySurface kind="modal" layer="modal" size="xs" class-name="inner max-h-[90dvh] overflow-auto p-0">
           <div
             class="modal-header flex items-center justify-between font-medium text-content-on-surface border-b border-secondary bg-surface p-3.5 pb-2">
             <slot name="header">
@@ -39,10 +40,14 @@ const { onKeydown } = useFocusTrap(computed(() => props.show), panelEl, {
                 </ui-paragraph>
               </div>
             </slot>
-            <ui-button type="button" variant="ghost" size="xs" color="neutral" aria-label="Close dialog"
-              class="modal-default-button place-self-start cursor-pointer" @click="$emit('close')">
-              <u-icon name="mdi:close"></u-icon>
-            </ui-button>
+            <UiIconButton
+              icon="i-lucide-x"
+              label="Close dialog"
+              size="xs"
+              variant="ghost"
+              class="modal-default-button place-self-start"
+              @click="$emit('close')"
+            />
           </div>
 
           <div class="modal-body p-3">
@@ -54,6 +59,7 @@ const { onKeydown } = useFocusTrap(computed(() => props.show), panelEl, {
               <!-- <button class="btn btn-small" @click="$emit('close')">Close</button> -->
             </slot>
           </div>
+          </UiOverlaySurface>
         </div>
       </div>
     </Transition>

@@ -3,3 +3,6 @@
 # they land. Fast (<1s) whole-tree scan. See docs/DESIGN_SYSTEM.md; use a
 # `design-allow` comment on a line for a justified exception.
 yarn design:check
+yarn design:states
+yarn design:primitives
+yarn design:boundaries

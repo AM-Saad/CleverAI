@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { useWorkspaceLayout, type PanelId } from "~/composables/ui/useWorkspaceLayout";
 import { useResponsive } from "~/composables/ui/useResponsive";
+import QuickCaptureModal from "~/features/language-learning/components/QuickCaptureModal.vue";
 
 const props = defineProps<{
   workspaceId: string;
 }>();
 
 const { isDesktop } = useResponsive();
+const { preferences: quickCapturePreferences, loadPreferences: loadQuickCapturePreferences } = useLanguageCapture();
+const { _isOpen: isQuickCaptureOpen } = useQuickCaptureModal();
+const quickCaptureEnabled = computed(() => quickCapturePreferences.value?.enabled ?? false);
 
 const {
   PANELS,
@@ -21,6 +25,7 @@ const {
   toggleCollapse,
   isCollapsed,
   startResize,
+  resizeAdjacentPanels,
   setActiveTab,
 } = useWorkspaceLayout(props.workspaceId);
 
@@ -29,10 +34,46 @@ const activePanelIndex = computed(() => {
   const index = PANELS.findIndex((panel) => panel.id === activeTab.value);
   return index === -1 ? 0 : index;
 });
+const mobileTabItems = computed(() =>
+  PANELS.map((panel) => ({
+    key: panel.id,
+    name: panel.label,
+    icon: panel.icon,
+    panelId: panelDomId(panel.id),
+  })),
+);
 
 function scrollToTab(tab: PanelId) {
   setActiveTab(tab);
 }
+
+function selectPanelByIndex(index: number) {
+  const panel = PANELS[index];
+  if (panel) setActiveTab(panel.id);
+}
+
+function panelDomId(panelId: PanelId) {
+  return `workspace-panel-${panelId}`;
+}
+
+function panelTabId(panelId: PanelId) {
+  return `workspace-tabs-tab-${panelId}`;
+}
+
+function onResizeHandleKeydown(index: 0 | 1, event: KeyboardEvent) {
+  if (event.key === "ArrowLeft") {
+    event.preventDefault();
+    resizeAdjacentPanels(index, -5);
+  }
+  if (event.key === "ArrowRight") {
+    event.preventDefault();
+    resizeAdjacentPanels(index, 5);
+  }
+}
+
+onMounted(() => {
+  void loadQuickCapturePreferences();
+});
 
 // ─── Desktop: Collapse button helpers ───────────────────────────
 function getCollapseIcon(panelId: PanelId): string {
@@ -74,18 +115,25 @@ defineExpose({
         { 'is-collapsed': isCollapsed(panel.id) },
       ]" :style="panelStyles[index]">
         <!-- Collapsed strip -->
-        <div v-if="isCollapsed(panel.id)" class="collapsed-strip" @click="toggleCollapse(panel.id)">
+        <button data-design-allow="custom vertical collapsed panel strip needs native button semantics with bespoke layout"
+          v-if="isCollapsed(panel.id)"
+          type="button"
+          class="collapsed-strip"
+          :aria-label="`Expand ${panel.label}`"
+          @click="toggleCollapse(panel.id)"
+        >
           <div class="collapsed-strip-content">
             <u-icon :name="getPanelIcon(panel.id)" class="collapsed-icon" />
             <span class="collapsed-label">{{ getPanelLabel(panel.id) }}</span>
           </div>
           <u-icon :name="getCollapseIcon(panel.id)" class="collapsed-expand-icon" />
-        </div>
+        </button>
 
         <!-- Panel content (visible when not collapsed) -->
         <div v-else class="workspace-panel-inner">
           <!-- Collapse button overlay -->
           <button class="collapse-btn" :class="`collapse-btn-${panel.id}`" :title="`Collapse ${panel.label}`"
+            :aria-label="`Collapse ${panel.label}`"
             @click="toggleCollapse(panel.id)">
             <u-icon :name="getCollapseIcon(panel.id)" class="w-3.5 h-3.5" />
           </button>
@@ -98,7 +146,16 @@ defineExpose({
       <!-- Resize handle (between panels, not after the last one) -->
       <div v-if="index < PANELS.length - 1" class="resize-handle" :class="{
         'handle-disabled': isCollapsed(PANELS[index]!.id) || isCollapsed(PANELS[index + 1]!.id),
-      }" @mousedown="
+      }"
+        role="separator"
+        aria-orientation="vertical"
+        :aria-label="`Resize ${PANELS[index]!.label} and ${PANELS[index + 1]!.label} panels`"
+        :aria-valuenow="Math.round(panelSizes[index] ?? 0)"
+        aria-valuemin="20"
+        aria-valuemax="80"
+        :tabindex="isCollapsed(PANELS[index]!.id) || isCollapsed(PANELS[index + 1]!.id) ? -1 : 0"
+        @keydown="onResizeHandleKeydown(index as 0 | 1, $event)"
+        @mousedown="
         !isCollapsed(PANELS[index]!.id) && !isCollapsed(PANELS[index + 1]!.id)
           ? startResize(index as 0 | 1, $event)
           : undefined
@@ -121,21 +178,42 @@ defineExpose({
     <!-- Tab-controlled panel container -->
     <div class="mobile-panels-container">
       <div class="mobile-panels-track" :style="{ transform: `translateX(-${activePanelIndex * 100}%)` }">
-        <div v-for="panel in PANELS" :key="panel.id" class="mobile-panel" :data-panel-id="panel.id"
+        <div v-for="panel in PANELS" :id="panelDomId(panel.id)" :key="panel.id" class="mobile-panel"
+          :data-panel-id="panel.id" role="tabpanel" :aria-labelledby="panelTabId(panel.id)"
           :aria-hidden="activeTab !== panel.id" :inert="activeTab !== panel.id">
           <slot :name="panel.id" />
         </div>
       </div>
     </div>
     <!-- Tab bar -->
-    <nav class="mobile-tab-bar" aria-label="Workspace sections">
-      <button v-for="panel in PANELS" :key="panel.id" type="button" :aria-selected="activeTab === panel.id"
-        :class="['mobile-tab-btn', activeTab === panel.id && 'is-active']" @click="scrollToTab(panel.id)">
-        <span class="mobile-tab-indicator" aria-hidden="true" />
-        <u-icon :name="panel.icon" class="mobile-tab-icon" />
-        <span class="mobile-tab-label">{{ panel.label }}</span>
-      </button>
-    </nav>
+    <div class="mobile-bottom-bar">
+      <UiTabs
+        id-prefix="workspace-tabs"
+        class="mobile-tab-bar"
+        :model-value="activePanelIndex"
+        :items="mobileTabItems"
+        aria-label="Workspace sections"
+        direction="row"
+        activation-mode="automatic"
+        active-class="text-primary"
+        inactive-class="text-content-secondary hover:text-content-on-surface"
+        button-base-class="flex min-h-[52px] flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] px-2 text-[10px] font-medium tracking-[0.02em] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)]"
+        @select="selectPanelByIndex"
+      />
+      <UiButton
+        v-if="quickCaptureEnabled"
+        type="button"
+        tone="primary"
+        variant="solid"
+        square
+        class="mobile-quick-capture"
+        aria-label="Open quick translate"
+        @click="isQuickCaptureOpen = true"
+      >
+        <shared-icon name="translation" />
+      </UiButton>
+    </div>
+    <QuickCaptureModal :show="isQuickCaptureOpen" @close="isQuickCaptureOpen = false" />
   </div>
 </template>
 
@@ -185,12 +263,14 @@ defineExpose({
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   height: 100%;
   padding: 12px 0;
   cursor: pointer;
   background: var(--ui-bg);
   border: 1px solid var(--ui-border);
   border-radius: 12px;
+  text-align: center;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
 
@@ -358,14 +438,43 @@ defineExpose({
 
 /* ─── Tab Bar ───────────────────────────────────────────────────── */
 
+.mobile-bottom-bar {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  flex-shrink: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
 .mobile-tab-bar {
   display: flex;
   align-items: stretch;
   flex-shrink: 0;
+  width: 100%;
   background: var(--ui-bg);
-  border: 1px solid var(--ui-border);
+  /* border: 1px solid var(--ui-border); */
   border-radius: var(--radius-xl);
-  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+.mobile-tab-bar :deep(nav) {
+  flex: 1;
+}
+
+.mobile-quick-capture {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--target-touch);
+  min-height: 52px;
+  border-radius: var(--radius-xl);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  box-shadow: var(--shadow-dropdown);
+  transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
+}
+
+.mobile-quick-capture:active {
+  transform: scale(0.97);
 }
 
 .mobile-tab-btn {
@@ -424,7 +533,7 @@ defineExpose({
 
 .mobile-tab-label {
   font-size: 10px;
-  font-weight: 600;
+  /* font-weight: 600; */
   letter-spacing: 0.02em;
   line-height: 1;
   white-space: nowrap;

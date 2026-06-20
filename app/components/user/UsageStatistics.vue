@@ -129,23 +129,25 @@ onMounted(async () => {
 
 
 <template>
-  <div class="md:col-span-3 mt-6 overflow-y-hidden h-fit  ">
-    <ui-card class-name="flex flex-col" size="xl" variant="ghost">
+  <div class="md:col-span-3 mt-6 h-fit min-w-0 max-w-full overflow-y-hidden">
+    <UiPanel class-name="flex flex-col" size="lg" variant="transparent">
       <template #header>
         AI Usage Statistics (Last 30 Days)
 
         <!-- Date range selector -->
 
-        <div class="flex flex-col sm:flex-row items-start sm:items-end gap-4">
-          <fieldset class="flex flex-col">
-            <ui-input type="date" v-model="startDate" />
+        <div class="mt-3 flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:items-end sm:gap-4">
+          <fieldset class="flex min-w-0 flex-col gap-1">
+            <UiLabel tag="label" for="llm-usage-start-date" size="sm">From</UiLabel>
+            <ui-input id="llm-usage-start-date" type="date" v-model="startDate" aria-label="Usage start date" />
           </fieldset>
 
-          <fieldset class="flex flex-col">
-            <ui-input type="date" v-model="endDate" />
+          <fieldset class="flex min-w-0 flex-col gap-1">
+            <UiLabel tag="label" for="llm-usage-end-date" size="sm">To</UiLabel>
+            <ui-input id="llm-usage-end-date" type="date" v-model="endDate" aria-label="Usage end date" />
           </fieldset>
           <ui-button :disabled="isDateRangeInvalid" @click="fetchLlmUsage" variant="subtle" size="sm">Apply</ui-button>
-          <p v-if="isDateRangeInvalid" class="text-sm text-error">
+          <p v-if="isDateRangeInvalid" class="text-sm text-error-text">
             From date must be on or before To date
           </p>
         </div>
@@ -153,10 +155,10 @@ onMounted(async () => {
       <div class="flex flex-col gap-6">
         <ui-loader v-if="isLlmUsageLoading" :is-fetching="isLlmUsageLoading" />
         <div v-else-if="llmUsageError" class="text-center py-8">
-          <p class="text-error">{{ llmUsageError }}</p>
-          <button class="mt-4 btn bg-primary text-white" @click="fetchLlmUsage">
+          <p class="text-error-text">{{ llmUsageError }}</p>
+          <ui-button class="mt-4" @click="fetchLlmUsage">
             Try Again
-          </button>
+          </ui-button>
 
         </div>
 
@@ -164,31 +166,31 @@ onMounted(async () => {
 
           <!-- Usage Summary -->
           <!-- <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <ui-card shadow="sm" variant="default">
+            <UiCard shadow="sm" variant="default">
               <ui-label> Total AI Calls </ui-label>
               <p>
                 {{ llmUsage.summary.totalCalls }}
               </p>
-            </ui-card>
-            <ui-card shadow="sm" variant="default">
+            </UiCard>
+            <UiCard shadow="sm" variant="default">
               <ui-label>Total Tokens</ui-label>
               <p>{{ formatNumber(llmUsage.summary.totalTokens) }}</p>
-            </ui-card>
-            <ui-card shadow="sm" variant="default">
+            </UiCard>
+            <UiCard shadow="sm" variant="default">
               <ui-label>Input Tokens</ui-label>
               <p>{{ formatNumber(llmUsage.summary.totalPromptTokens) }}</p>
-            </ui-card>
-            <ui-card shadow="sm" variant="default">
+            </UiCard>
+            <UiCard shadow="sm" variant="default">
               <ui-label>Output Tokens</ui-label>
               <p>{{ formatNumber(llmUsage.summary.totalCompletionTokens) }}</p>
-            </ui-card>
+            </UiCard>
           </div> -->
 
 
           <!-- Usage by Feature -->
-          <ui-card class="mb-4" size="sm" variant="ghost">
+          <UiPanel class-name="mb-4" size="sm" variant="transparent">
             <template #header>Usage by Feature</template>
-            <div class="max-w-full overflow-x-auto mt-2  border border-secondary rounded-[var(--radius-md)]">
+            <div class="max-w-full overflow-x-auto mt-2 border border-secondary rounded-[var(--radius-md)]" tabindex="0" aria-label="Usage by feature table">
               <table class="w-full text-left text-sm bg-surface">
 
                 <thead class="dark:text-light">
@@ -222,13 +224,13 @@ onMounted(async () => {
 
               </table>
             </div>
-          </ui-card>
+          </UiPanel>
 
           <!-- Usage by Model -->
-          <ui-card class="mb-4" size="sm" variant="ghost">
+          <UiPanel class-name="mb-4" size="sm" variant="transparent">
 
             <template #header>Usage by Model</template>
-            <div class="overflow-x-auto mt-2  border border-secondary rounded-[var(--radius-md)]">
+            <div class="max-w-full overflow-x-auto mt-2 border border-secondary rounded-[var(--radius-md)]" tabindex="0" aria-label="Usage by model table">
               <table class="w-full text-left text-sm bg-surface">
 
                 <thead class="dark:text-light">
@@ -262,12 +264,12 @@ onMounted(async () => {
 
               </table>
             </div>
-          </ui-card>
+          </UiPanel>
 
           <!-- Recent Usage -->
-          <ui-card class="mb-4" size="sm" variant="ghost">
+          <UiPanel class-name="mb-4" size="sm" variant="transparent">
             <template #header>Recent Usage</template>
-            <div class="overflow-x-auto mt-2  border border-secondary rounded-[var(--radius-md)]">
+            <div class="max-w-full overflow-x-auto mt-2 border border-secondary rounded-[var(--radius-md)]" tabindex="0" aria-label="Recent AI usage table">
               <table class="w-full text-left text-sm bg-surface">
 
                 <thead class="dark:text-light">
@@ -301,13 +303,13 @@ onMounted(async () => {
 
               </table>
             </div>
-          </ui-card>
+          </UiPanel>
         </div>
 
         <div v-else class="text-center py-8 text-content-secondary">
           <p>No AI usage data available.</p>
         </div>
       </div>
-    </ui-card>
+    </UiPanel>
   </div>
 </template>

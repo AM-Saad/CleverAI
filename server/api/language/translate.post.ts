@@ -8,10 +8,15 @@ import {
   setQuotaHeaders,
   throwQuotaExceeded,
 } from "@server/modules/subscription/infrastructure/http/quotaHttp";
+import { enforceLlmRateLimit } from "@server/utils/llm/rateLimit";
 
 const quotaPort = new PrismaQuotaPort();
 
 async function billSharedTranslationHit(event: any, userId: string) {
+  // Shared-translation cache hits count against the same per-user/IP throttle
+  // as fresh translations (15/40 per 60s) so cached lookups can't be hammered.
+  await enforceLlmRateLimit(event, userId, { userMax: 15, ipMax: 40 });
+
   const quota = await quotaPort.checkGenerationQuota(userId);
   setQuotaHeaders(event, quota.subscription);
   if (!quota.canGenerate) {

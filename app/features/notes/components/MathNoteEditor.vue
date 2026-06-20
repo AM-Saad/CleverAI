@@ -329,7 +329,7 @@ const isExpressionsCollapsed = ref(true);
     </SharedNoteToolbar>
 
     <!-- Error banner -->
-    <div v-if="recognitionError" class="rounded-[var(--radius-md)] bg-error/10 px-3 py-2 text-sm text-error mx-2">
+    <div v-if="recognitionError" class="rounded-[var(--radius-md)] bg-error/10 px-3 py-2 text-sm text-error-text mx-2">
       {{ recognitionError.message }}
     </div>
 
@@ -364,8 +364,8 @@ const isExpressionsCollapsed = ref(true);
             left: `${worldToScreen(overlay.box.minX, Math.max(0, overlay.box.minY - 28)).x}px`,
             top: `${worldToScreen(overlay.box.minX, Math.max(0, overlay.box.minY - 28)).y}px`,
           }">
-          <span class="text-success" v-html="renderLatex(overlay.latex)" />
-          <span v-if="overlay.result !== null" class="ml-1 font-bold text-success">
+          <span class="text-success-text" v-html="renderLatex(overlay.latex)" />
+          <span v-if="overlay.result !== null" class="ml-1 font-bold text-success-text">
             = {{ overlay.result }}
           </span>
         </div>
@@ -374,12 +374,17 @@ const isExpressionsCollapsed = ref(true);
 
     <!-- Recognised lines (KaTeX preview) - Collapsible via motion-v -->
     <div v-if="lines.length" class="space-y-2 mx-2">
-      <button @click="isExpressionsCollapsed = !isExpressionsCollapsed"
-        class="flex w-full items-center justify-between rounded-[var(--radius-md)] bg-surface-subtle hover:bg-surface-strong px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-secondary transition-colors">
+      <UiButton
+        tone="neutral"
+        variant="ghost"
+        size="sm"
+        class="w-full justify-between bg-surface-subtle px-3 py-2 text-xs font-semibold uppercase tracking-wide text-content-secondary hover:bg-surface-strong"
+        @click="isExpressionsCollapsed = !isExpressionsCollapsed"
+      >
         <span>Recognised expressions ({{ lines.length }})</span>
         <UIcon :name="isExpressionsCollapsed ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-up'"
           class="h-4 w-4 transition-transform duration-200" />
-      </button>
+      </UiButton>
 
       <!-- Motion container -->
       <motion.div :animate="isExpressionsCollapsed ? 'collapsed' : 'open'" :variants="{
@@ -391,7 +396,7 @@ const isExpressionsCollapsed = ref(true);
             class="flex items-baseline gap-3 rounded-[var(--radius-md)] border border-secondary bg-surface px-3 py-2 font-mono text-sm">
             <!-- LaTeX preview rendered via KaTeX -->
             <span class="flex-1 text-content-on-surface" v-html="renderLatex(line.latex)" />
-            <span v-if="line.result !== null" class="font-bold text-success">
+            <span v-if="line.result !== null" class="font-bold text-success-text">
               = {{ line.result }}
             </span>
           </div>

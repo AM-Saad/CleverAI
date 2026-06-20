@@ -13,41 +13,29 @@ paralleling the canonical `features/<feature>/components/`. Pick one, delete the
 _none_
 
 
-## card/panel — 55 components → `UiCard`
+## card/panel — 39 components → `UiCard`
 
 | Component | tier | signals |
 |---|---|---|
-| `ServiceWorkerUpdateNotification` | component | card-chrome, btn×2 |
-| `DeleteAccountModal` | component | card-chrome |
 | `CreateFlashcardModal` | component | — |
 | `DeleteFlashcardModal` | component | — |
 | `FloatingLearningHubButton` | component | card-chrome, btn×1 |
-| `LearningHubModal` | component | overlay, card-chrome, btn×1 |
 | `BoardColumn` | feature | card-chrome |
-| `BoardFilterBar` | feature | card-chrome, btn×5, input×2 |
-| `BoardItemCard` | feature | card-chrome |
+| `BoardItemCard` | feature | — |
 | `BoardItemDetailPanel` | feature | card-chrome, btn×1, input×1 |
-| `BoardKanbanView` | feature | card-chrome, btn×6 |
-| `BoardListView` | feature | card-chrome, btn×2 |
-| `WorkspaceImportDialog` | feature | overlay, card-chrome, btn×4, input×3 |
 | `LanguageStatusCard` | feature | — |
-| `QuickCaptureModal` | feature | overlay, card-chrome, btn×4, input×1 |
-| `StoryCard` | feature | card-chrome, btn×2 |
-| `TranslatePanel` | feature | card-chrome, btn×3 |
-| `MaterialsList` | feature | card-chrome |
-| `CanvasNoteEditor` | feature | card-chrome, btn×9 |
-| `MathNoteEditor` | feature | card-chrome, btn×1 |
-| `NoteGroupSection` | feature | card-chrome, btn×2 |
+| `QuickCaptureModal` | feature | overlay, card-chrome, btn×3, input×1 |
+| `StoryCard` | feature | btn×1 |
+| `TranslatePanel` | feature | card-chrome, btn×2 |
+| `WordBankList` | feature | card-chrome, btn×2 |
+| `CanvasNoteEditor` | feature | card-chrome |
+| `MathNoteEditor` | feature | card-chrome |
+| `NoteGroupSection` | feature | card-chrome |
 | `NotesDrawer` | feature | card-chrome |
-| `NotesSyncInspector` | feature | card-chrome |
 | `TextNote` | feature | card-chrome |
-| `NotificationSubscriptionModal` | feature | card-chrome |
-| `CardDisplay` | feature | card-chrome |
-| `CardReviewInterface` | feature | card-chrome, btn×1 |
+| `CardDisplay` | feature | — |
+| `CardReviewInterface` | feature | — |
 | `CardReviewState` | feature | — |
-| `GradeButtons` | feature | card-chrome, btn×1 |
-| `KeyboardShortcuts` | feature | card-chrome, btn×1 |
-| `ReviewAnalyticsSummary` | feature | card-chrome, btn×1 |
 | `ReviewStatusCard` | feature | — |
 | `default` | layout | card-chrome |
 | `app` | other | card-chrome, btn×2 |
@@ -55,68 +43,63 @@ _none_
 | `reactivate` | page | card-chrome |
 | `signin` | page | card-chrome, btn×1 |
 | `design-system` | page | card-chrome |
-| `error` | page | card-chrome |
 | `index` | page | card-chrome |
-| `offline` | page | card-chrome |
 | `CardStack` | primitive | btn×2 |
 | `FlipCard` | primitive | — |
-| `InputField` | primitive | card-chrome, input×1 |
 | `UiCard` | primitive | — |
-| `AutocompleteInput` | shared | card-chrome, btn×1 |
-| `DeleteConfirmationModal` | shared | card-chrome |
-| `DialogModal` | shared | card-chrome, btn×1 |
-| `ErrorMessage` | shared | card-chrome |
+| `UiColorModeToggle` | primitive | card-chrome, btn×1 |
+| `UiInteractiveCard` | primitive | — |
+| `UiPanel` | primitive | — |
+| `InAppNotificationsPanel` | shared | — |
 | `LocalSyncStatus` | shared | card-chrome |
 | `NoteToolbar` | shared | card-chrome |
 | `SplitPaneLayout` | shared | — |
-| `SuccessMessage` | shared | card-chrome |
-| `TagInput` | shared | card-chrome, btn×3, input×1 |
+| `TagInput` | shared | card-chrome, input×1 |
 | `TiptapEditor` | shared | card-chrome, btn×1 |
 
-## modal/dialog/drawer — 18 components → `UiModal / UiConfirmDialog / UiDrawer`
+## modal/dialog/drawer — 19 components → `UiModal / UiConfirmDialog / UiDrawer`
 
 | Component | tier | signals |
 |---|---|---|
-| `DeleteAccountModal` | component | card-chrome |
+| `DeleteAccountModal` | component | — |
 | `UpdateProfileModal` | component | — |
 | `ContextSlideOver` | component | overlay |
 | `CreateFlashcardModal` | component | — |
 | `DeleteFlashcardModal` | component | — |
-| `LearningHubModal` | component | overlay, card-chrome, btn×1 |
-| `WorkspaceImportDialog` | feature | overlay, card-chrome, btn×4, input×3 |
+| `LearningHubModal` | component | overlay |
+| `WorkspaceImportDialog` | feature | — |
 | `ConsentSheet` | feature | overlay |
-| `QuickCaptureModal` | feature | overlay, card-chrome, btn×4, input×1 |
+| `QuickCaptureModal` | feature | overlay, card-chrome, btn×3, input×1 |
 | `NotesDrawer` | feature | card-chrome |
-| `NotificationSubscriptionModal` | feature | card-chrome |
+| `NotificationSubscriptionModal` | feature | — |
 | `Drawer` | primitive | — |
 | `UiConfirmDialog` | primitive | — |
 | `UiModal` | primitive | — |
+| `UiOverlaySurface` | primitive | — |
 | `AIModalStatus` | shared | — |
-| `DeleteConfirmationModal` | shared | card-chrome |
-| `DialogModal` | shared | card-chrome, btn×1 |
+| `DeleteConfirmationModal` | shared | — |
+| `DialogModal` | shared | btn×1 |
 | `GuideDialog` | shared-modal | — |
 
-## input/form field — 17 components → `UiFormField (label+error+UInput)`
+## input/form field — 15 components → `UiFormField (label+error+UInput)`
 
 | Component | tier | signals |
 |---|---|---|
 | `UpsertWorkspaceForm` | component | — |
-| `BoardFilterBar` | feature | card-chrome, btn×5, input×2 |
 | `BoardItemDetailPanel` | feature | card-chrome, btn×1, input×1 |
-| `WorkspaceImportDialog` | feature | overlay, card-chrome, btn×4, input×3 |
-| `QuickCaptureModal` | feature | overlay, card-chrome, btn×4, input×1 |
+| `QuickCaptureModal` | feature | overlay, card-chrome, btn×3, input×1 |
 | `UploadMaterialForm` | feature | — |
-| `InputField` | primitive | card-chrome, input×1 |
+| `InputField` | primitive | input×1 |
 | `UiFormField` | primitive | — |
 | `UiInput` | primitive | — |
 | `UiSelect` | primitive | — |
 | `UiTextarea` | primitive | — |
-| `AutocompleteInput` | shared | card-chrome, btn×1 |
+| `AutocompleteInput` | shared | — |
 | `CodeBlockNode` | shared | btn×1 |
 | `NoteColorPickerButton` | shared | input×1 |
 | `PaperComponent` | shared | btn×2, input×2 |
-| `TagInput` | shared | card-chrome, btn×3, input×1 |
-| `TiptapBubbleMenu` | shared | btn×3, input×1 |
+| `TagInput` | shared | card-chrome, input×1 |
+| `TiptapBubbleMenu` | shared | input×1 |
 
 ## icon/toolbar button — 9 components → `UiButton / UiIconButton`
 
@@ -125,20 +108,19 @@ _none_
 | `FloatingLearningHubButton` | component | card-chrome, btn×1 |
 | `QuickCaptureButton` | feature | btn×1 |
 | `GenerateButton` | feature | — |
-| `AnswerRevealButton` | feature | — |
 | `EnrollButton` | feature | — |
 | `UiButton` | primitive | — |
 | `UiIconButton` | primitive | — |
+| `UiToolbarButton` | primitive | — |
 | `NoteColorPickerButton` | shared | input×1 |
-| `NoteToolbarButton` | shared | btn×1 |
+| `NoteToolbarButton` | shared | — |
 
-## skeleton/loading — 5 components → `UiSkeleton`
+## skeleton/loading — 4 components → `UiSkeleton`
 
 | Component | tier | signals |
 |---|---|---|
 | `Loading` | component | — |
 | `SpaLoading` | component | — |
-| `LoadingState` | feature | — |
 | `Loader` | primitive | — |
 | `UiSkeleton` | primitive | — |
 
@@ -149,10 +131,11 @@ _none_
 | `BoardTagFilter` | feature | — |
 | `UiBadge` | primitive | — |
 | `CreditsPill` | shared | btn×1 |
-| `TagInput` | shared | card-chrome, btn×3, input×1 |
+| `TagInput` | shared | card-chrome, input×1 |
 
-## empty-state — 1 components → `UiEmptyState`
+## empty-state — 2 components → `UiEmptyState`
 
 | Component | tier | signals |
 |---|---|---|
 | `UiEmptyState` | primitive | — |
+| `EmptyState` | shared | — |

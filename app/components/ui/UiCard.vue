@@ -56,7 +56,7 @@ const card = tv({
   },
   variants: {
     variant: {
-      default: { root: "bg-surface border border-surface-strong", header: "dark:bg-transparent border-b border-secondary" },
+      default: { root: "bg-surface border border-secondary", header: "dark:bg-transparent border-b border-secondary" },
       outline: { root: "bg-transparent border border-secondary", header: "border-b border-secondary" },
       ghost: { root: "border-0", header: "border-0" },
       surface: { root: "bg-surface-subtle border border-surface-strong", header: "border-b border-surface-strong" },
@@ -91,7 +91,7 @@ const ui = computed(() => card({ variant, size, shadow, hover }));
 <style scoped>
 .ui-card {
   border-radius: var(--component-card-radius);
-  transition: all 0.2s ease-in-out;
+  transition: background-color var(--duration-normal) var(--ease-standard), border-color var(--duration-normal) var(--ease-standard), box-shadow var(--duration-normal) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
   display: flex;
   flex-direction: column;
 }

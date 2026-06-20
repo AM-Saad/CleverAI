@@ -46,12 +46,6 @@ export async function checkDueCards() {
       },
       include: {
         notificationPreferences: true,
-        notificationSubscriptions: {
-          where: {
-            isActive: true,
-            failureCount: { lt: 5 }, // Skip users with too many failures
-          },
-        },
       },
     });
     console.log(`🔍 Found ${users.length} users with card due notifications enabled`);
@@ -72,13 +66,6 @@ export async function checkDueCards() {
     for (const userPref of usersWithPref) {
       try {
         results.processed++;
-
-        // Skip if user has no active push subscriptions
-        if (userPref.user.notificationSubscriptions.length === 0) {
-          console.log(`⚠️ Skipping user ${userPref.userId} - no active push subscriptions`);
-          results.skipped++;
-          continue;
-        }
 
         // Check if user has snoozed notifications
         if (userPref.snoozedUntil && userPref.snoozedUntil > now) {
@@ -205,8 +192,6 @@ export async function checkDueCards() {
         }
 
         // Check if we already sent a notification recently (within the last 6 hours)
-        // TODO: For testing, you can temporarily reduce this to 10 minutes: 10 * 60 * 1000
-        // TEMP: Reduced to 1 minute for testing
         const recentNotification = await prisma.scheduledNotification.findFirst(
           {
             where: {
@@ -222,7 +207,6 @@ export async function checkDueCards() {
             },
           }
         );
-        console.log("Recent notification:", recentNotification);
         if (recentNotification) {
           console.log(
             `⏰ Skipping user ${userPref.userId} - already notified recently`
@@ -362,12 +346,15 @@ async function sendCardDueNotification(
       },
       body: {
         title,
-        message: body, // API expects 'message' not 'body'
+        message: body,
         targetUsers: [userId],
         url: redirectUrl,
         tag: "card-due",
+        type: "CARD_DUE",
         requireInteraction: true,
         icon: "/icons/192x192.png",
+        persistInApp: true,
+        metadata: data,
       },
     });
 
@@ -414,8 +401,11 @@ async function sendDailyReminder(
         targetUsers: [userId],
         url: "/user/review",
         tag: "daily-reminder",
+        type: "DAILY_REMINDER",
         requireInteraction: false,
         icon: "/icons/192x192.png",
+        persistInApp: true,
+        metadata: { dueCardCount },
       },
     });
 

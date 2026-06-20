@@ -12,10 +12,15 @@
       :aria-checked="colorMode.preference === opt.value"
       :aria-label="opt.label"
       :title="opt.label"
-      class="inline-flex items-center justify-center w-7 h-7 rounded-[var(--radius-md)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-      :class="colorMode.preference === opt.value
-        ? 'bg-primary text-on-primary'
-        : 'text-content-secondary hover:bg-surface-strong'"
+      :class="[
+        'inline-flex items-center justify-center w-7 h-7 rounded-[var(--radius-md)] cursor-pointer',
+        interactiveTransition,
+        pressedScale,
+        focusRing,
+        colorMode.preference === opt.value
+          ? 'bg-primary text-on-primary'
+          : 'text-content-secondary hover:bg-surface-strong',
+      ]"
       @click="colorMode.preference = opt.value"
     >
       <Icon :name="opt.icon" class="w-4 h-4" />
@@ -24,6 +29,8 @@
 </template>
 
 <script setup lang="ts">
+import { focusRing, interactiveTransition, pressedScale } from "./variants";
+
 /**
  * UiColorModeToggle — three-way Light / Dark / System theme switch. Drives the
  * global color mode (adds `.dark` to <html>, which flips the design tokens).

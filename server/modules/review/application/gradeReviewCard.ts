@@ -5,21 +5,26 @@ import {
   calculateNextStreak,
   calculateSM2,
 } from "../domain/sm2";
-import type { NotificationPort } from "../../notifications/ports/NotificationPort";
 import type { ReviewRepository } from "../ports/ReviewRepository";
 import type { XpPort } from "../ports/XpPort";
+
+function isUniqueConstraintViolation(err: unknown): boolean {
+  return (
+    !!err &&
+    typeof err === "object" &&
+    (err as { code?: string }).code === "P2002"
+  );
+}
 
 export interface GradeReviewCardInput {
   prisma: any;
   repository: ReviewRepository;
   xpPort: XpPort;
-  notificationPort?: NotificationPort;
   userId: string;
   cardId: string;
   grade: number;
   requestId?: string;
   xpSource: string;
-  scheduleNotification?: boolean;
 }
 
 export interface GradeReviewCardResult {
@@ -34,31 +39,54 @@ export interface GradeReviewCardResult {
 export async function gradeReviewCard(
   input: GradeReviewCardInput
 ): Promise<GradeReviewCardResult> {
+  const now = new Date();
+
+  const readPersistedState = async (): Promise<GradeReviewCardResult> => {
+    const record = await input.repository.findByIdForUser(
+      input.prisma,
+      input.cardId,
+      input.userId
+    );
+    if (!record) {
+      throw Errors.notFound("card");
+    }
+    return {
+      reviewId: record.id,
+      resourceId: record.resourceId,
+      nextReviewAt: record.nextReviewAt,
+      intervalDays: record.intervalDays,
+      easeFactor: record.easeFactor,
+      xpEarned: 0,
+    };
+  };
+
+  // Idempotency: claim the requestId BEFORE mutating. The unique constraint on
+  // GradeRequest.requestId makes a concurrent/duplicate retry fail at this
+  // create, so the SM-2 + XP mutation below runs at most once per requestId.
+  // (Claiming outside the transaction avoids MongoDB's in-transaction
+  // duplicate-key abort, which would otherwise poison the whole grade.)
   if (input.requestId) {
-    const existing = await input.prisma.gradeRequest.findUnique({
-      where: { requestId: input.requestId },
-    });
-    if (existing) {
-      const record = await input.repository.findByIdForUser(
-        input.prisma,
-        input.cardId,
-        input.userId
-      );
-      if (record) {
-        return {
-          reviewId: record.id,
-          resourceId: record.resourceId,
-          nextReviewAt: record.nextReviewAt,
-          intervalDays: record.intervalDays,
-          easeFactor: record.easeFactor,
-          xpEarned: 0,
-        };
+    try {
+      await input.prisma.gradeRequest.create({
+        data: {
+          requestId: input.requestId,
+          userId: input.userId,
+          cardId: input.cardId,
+          grade: input.grade,
+        },
+      });
+    } catch (err) {
+      if (isUniqueConstraintViolation(err)) {
+        // Already graded under this requestId — return persisted state, no XP.
+        return readPersistedState();
       }
+      throw err;
     }
   }
 
-  const now = new Date();
-  const result = await input.prisma.$transaction(async (tx: any) => {
+  let result: GradeReviewCardResult;
+  try {
+    result = await input.prisma.$transaction(async (tx: any) => {
     const record = await input.repository.findByIdForUser(
       tx,
       input.cardId,
@@ -106,19 +134,6 @@ export async function gradeReviewCard(
       await input.repository.markMastered(tx, updated);
     }
 
-    if (input.requestId) {
-      await tx.gradeRequest
-        .create({
-          data: {
-            requestId: input.requestId,
-            userId: input.userId,
-            cardId: input.cardId,
-            grade: input.grade,
-          },
-        })
-        .catch(() => undefined);
-    }
-
     return {
       reviewId: updated.id,
       resourceId: updated.resourceId,
@@ -127,7 +142,18 @@ export async function gradeReviewCard(
       easeFactor: updated.easeFactor,
       xpEarned,
     };
-  });
+    });
+  } catch (err) {
+    // The mutation failed after we claimed the idempotency key. Release it so a
+    // later retry with the same requestId can re-attempt instead of being
+    // treated as an already-applied replay.
+    if (input.requestId) {
+      await input.prisma.gradeRequest
+        .deleteMany({ where: { requestId: input.requestId } })
+        .catch(() => undefined);
+    }
+    throw err;
+  }
 
   await domainEventBus.publish({
     type: "ReviewCardGraded",
@@ -141,18 +167,6 @@ export async function gradeReviewCard(
       xpEarned: result.xpEarned,
     },
   });
-
-  if (input.scheduleNotification && input.notificationPort) {
-    await input.notificationPort.scheduleReviewDue({
-      userId: input.userId,
-      reviewId: result.reviewId,
-      resourceId: result.resourceId,
-      scheduledFor: result.nextReviewAt,
-      title: "Card Review Due",
-      body: "You have a card ready for review!",
-      tag: `card-due-${result.reviewId}`,
-    });
-  }
 
   return result;
 }

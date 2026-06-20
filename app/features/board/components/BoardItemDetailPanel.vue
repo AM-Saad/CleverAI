@@ -315,7 +315,12 @@ watch(() => props.item.id, async () => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full min-h-0 bg-white dark:bg-surface">
+  <UiPanel
+    tag="aside"
+    variant="surface"
+    size="xs"
+    class-name="flex h-full min-h-0 rounded-none border-0"
+    content-class="flex h-full min-h-0 flex-col p-0">
 
     <!-- ─── Header ────────────────────────────────────────────────────── -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-secondary shrink-0">
@@ -326,7 +331,7 @@ watch(() => props.item.id, async () => {
           Item Details
         </span>
         <!-- Dirty / saving indicator -->
-        <span v-if="item.isDirty && !item.isLoading" class="text-[10px] text-warning font-medium">Unsaved</span>
+        <span v-if="item.isDirty && !item.isLoading" class="text-[10px] text-warning-text font-medium">Unsaved</span>
         <Icon v-if="item.isLoading" name="svg-spinners:ring-resize" class="w-3.5 h-3.5 text-primary" />
       </div>
       <div class="flex items-center gap-1">
@@ -367,12 +372,17 @@ watch(() => props.item.id, async () => {
       <div v-if="activeTab === 'content'" class="p-4 h-full flex flex-col gap-4">
 
         <!-- Error state -->
-        <div v-if="item.error"
-          class="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] bg-error/10 text-error text-sm">
+        <UiPanel
+          v-if="item.error"
+          variant="subtle"
+          size="sm"
+          role="alert"
+          class-name="border-error/20 bg-error/10"
+          content-class="flex items-center gap-2 text-error-text text-sm">
           <Icon name="heroicons:exclamation-circle" class="w-4 h-4 shrink-0" />
           <span>{{ item.error }}</span>
           <UiButton size="xs" variant="ghost" color="error" @click="emit('retry', item.id)">Retry</UiButton>
-        </div>
+        </UiPanel>
 
         <!-- Tags: inline chip-input, auto-saves on every change -->
         <div class="space-y-1.5">
@@ -403,17 +413,16 @@ watch(() => props.item.id, async () => {
           </div>
 
           <!-- Due date banner -->
-          <div v-if="dueDateLabel" :class="['flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] text-sm font-medium mb-2',
-            dueDateLabel.isOverdue
-              ? 'bg-error/10 text-error border border-error/20'
-              : 'bg-success/10 text-success border border-success/20']">
+          <UiPanel v-if="dueDateLabel" variant="subtle" size="sm" :class-name="dueDateLabel.isOverdue
+            ? 'mb-2 bg-error/10 text-error-text border-error/20'
+            : 'mb-2 bg-success/10 text-success-text border-success/20'" content-class="flex items-center gap-2 text-sm font-medium">
             <Icon :name="dueDateLabel.isOverdue ? 'heroicons:exclamation-triangle' : 'heroicons:clock'"
               class="w-4 h-4 shrink-0" />
             <span>{{ dueDateLabel.isOverdue ? "Overdue · " : "" }}{{ dueDateLabel.label }}</span>
-          </div>
+          </UiPanel>
 
           <input v-model="dueDateInput" type="datetime-local"
-            class="w-full px-3 py-2 rounded-[var(--radius-lg)] border border-secondary bg-white dark:bg-surface text-sm text-content-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            class="w-full px-3 py-2 rounded-[var(--radius-lg)] border border-secondary bg-surface text-sm text-content-on-surface focus:outline-none focus:ring-2 focus:ring-[var(--ds-focus-outline-color)]" />
         </section>
 
         <!-- Attachments -->
@@ -430,8 +439,12 @@ watch(() => props.item.id, async () => {
           </div>
 
           <!-- Add attachment form -->
-          <div v-if="showAddAttachment"
-            class="mb-3 p-3 rounded-[var(--radius-xl)] border border-dashed border-secondary bg-surface-subtle space-y-2">
+          <UiPanel
+            v-if="showAddAttachment"
+            variant="subtle"
+            size="sm"
+            class-name="mb-3 border-dashed"
+            content-class="space-y-2">
             <UiInput v-model="newAttachmentUrl" placeholder="https://..." size="sm" label="URL" />
             <UiInput v-model="newAttachmentName" placeholder="Display name (optional)" size="sm" />
             <div class="flex gap-2">
@@ -441,12 +454,16 @@ watch(() => props.item.id, async () => {
                 Cancel
               </UiButton>
             </div>
-          </div>
+          </UiPanel>
 
           <!-- Attachment list -->
           <div v-if="attachments.length > 0" class="space-y-2">
-            <div v-for="att in attachments" :key="att.id"
-              class="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] border border-secondary bg-white dark:bg-surface/50 group">
+            <UiPanel
+              v-for="att in attachments"
+              :key="att.id"
+              variant="surface"
+              size="xs"
+              content-class="flex items-center gap-2 group">
               <Icon :name="getAttachmentIcon(att.type)" class="w-4 h-4 text-content-secondary shrink-0" />
               <a :href="att.url" target="_blank" rel="noopener noreferrer"
                 class="flex-1 text-sm text-primary truncate hover:underline" @click.stop>
@@ -455,7 +472,7 @@ watch(() => props.item.id, async () => {
               <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
                 class="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                 @click="removeAttachment(att.id)" />
-            </div>
+            </UiPanel>
           </div>
           <p v-else-if="!showAddAttachment" class="text-xs text-content-secondary italic">No attachments yet</p>
         </section>
@@ -470,8 +487,12 @@ watch(() => props.item.id, async () => {
         </div>
 
         <!-- Add link form -->
-        <div v-if="showAddLink"
-          class="p-3 rounded-[var(--radius-xl)] border border-dashed border-secondary bg-surface-subtle space-y-2">
+        <UiPanel
+          v-if="showAddLink"
+          variant="subtle"
+          size="sm"
+          class-name="border-dashed"
+          content-class="space-y-2">
           <label class="text-xs text-content-secondary font-medium">Target item</label>
           <UiSelect v-model="newLinkTargetId" :items="linkableItems" value-key="value" label-key="label"
             placeholder="Select an item..." size="sm" />
@@ -484,7 +505,7 @@ watch(() => props.item.id, async () => {
             <UiButton size="sm" color="neutral" variant="ghost" @click="showAddLink = false; newLinkTargetId = ''">Cancel
             </UiButton>
           </div>
-        </div>
+        </UiPanel>
 
         <!-- Loading -->
         <div v-if="linksLoading" class="flex items-center gap-2 text-sm text-content-secondary">
@@ -499,8 +520,12 @@ watch(() => props.item.id, async () => {
 
         <!-- Link list -->
         <div v-else class="space-y-2">
-          <div v-for="linked in linkedItems" :key="linked.linkId"
-            class="flex items-start gap-2 px-3 py-2 rounded-[var(--radius-lg)] border border-secondary bg-white dark:bg-surface/50 group">
+          <UiPanel
+            v-for="linked in linkedItems"
+            :key="linked.linkId"
+            variant="surface"
+            size="xs"
+            content-class="flex items-start gap-2 group">
             <div class="flex-1 min-w-0">
               <div class="flex items-center gap-1.5 flex-wrap mb-0.5">
                 <UiBadge size="xs" color="neutral" variant="soft" class="shrink-0">
@@ -517,7 +542,7 @@ watch(() => props.item.id, async () => {
             <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
               class="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5"
               @click="deleteLink(linked.linkId)" />
-          </div>
+          </UiPanel>
         </div>
       </div>
 
@@ -542,26 +567,32 @@ watch(() => props.item.id, async () => {
           Loading sources...
         </div>
 
-        <div
+        <UiPanel
           v-else-if="externalRefsError"
-          class="flex items-start gap-2 px-3 py-2 rounded-[var(--radius-lg)] bg-error/10 text-error text-sm"
+          variant="subtle"
+          size="sm"
+          role="alert"
+          class-name="border-error/20 bg-error/10"
+          content-class="flex items-start gap-2 text-error-text text-sm"
         >
           <Icon name="heroicons:exclamation-circle" class="w-4 h-4 shrink-0 mt-0.5" />
           <span>{{ externalRefsError }}</span>
-        </div>
+        </UiPanel>
 
-        <div v-else-if="externalRefs.length === 0" class="rounded-[var(--radius-xl)] border border-dashed border-secondary p-4">
+        <UiPanel v-else-if="externalRefs.length === 0" variant="transparent" size="md" class-name="border-dashed">
           <p class="text-sm font-medium text-content-on-surface">No external source linked</p>
           <p class="text-xs text-content-secondary mt-1">
             Imported Jira issues and Notion pages will appear here.
           </p>
-        </div>
+        </UiPanel>
 
         <div v-else class="space-y-2">
-          <div
+          <UiPanel
             v-for="ref in externalRefs"
             :key="ref.id"
-            class="rounded-[var(--radius-xl)] border border-secondary bg-white dark:bg-surface/50 p-3 space-y-2"
+            variant="surface"
+            size="sm"
+            content-class="space-y-2"
           >
             <div class="flex items-start justify-between gap-3">
               <div class="flex items-start gap-2 min-w-0">
@@ -586,7 +617,7 @@ watch(() => props.item.id, async () => {
               </UiBadge>
             </div>
 
-            <p v-if="ref.lastError" class="text-xs text-error bg-error/10 rounded-[var(--radius-lg)] px-2 py-1">
+            <p v-if="ref.lastError" class="text-xs text-error-text bg-error/10 rounded-[var(--radius-lg)] px-2 py-1">
               {{ ref.lastError }}
             </p>
 
@@ -606,7 +637,7 @@ watch(() => props.item.id, async () => {
                 Open
               </UiButton>
             </div>
-          </div>
+          </UiPanel>
         </div>
       </div>
 
@@ -627,8 +658,7 @@ watch(() => props.item.id, async () => {
             <span class="text-xs mt-1 block">Comments from collaborators will appear here in a future update.</span>
           </div>
 
-          <div v-for="comment in comments" :key="comment.id"
-            class="rounded-[var(--radius-xl)] border border-secondary bg-white dark:bg-surface/50 p-3 space-y-1">
+          <UiPanel v-for="comment in comments" :key="comment.id" variant="surface" size="sm" content-class="space-y-1">
             <div class="flex items-center justify-between">
               <span class="text-xs font-semibold text-content-on-surface">
                 {{ comment.author?.name || comment.author?.email || "You" }}
@@ -638,7 +668,7 @@ watch(() => props.item.id, async () => {
             <p class="text-sm text-content-on-surface whitespace-pre-wrap leading-relaxed">
               {{ comment.content }}
             </p>
-          </div>
+          </UiPanel>
         </div>
 
         <!-- New comment input (pinned to bottom) -->
@@ -653,5 +683,5 @@ watch(() => props.item.id, async () => {
       </div>
 
     </div>
-  </div>
+  </UiPanel>
 </template>

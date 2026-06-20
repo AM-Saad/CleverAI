@@ -84,6 +84,57 @@ export async function logGatewayRequest(data: GatewayLogData): Promise<void> {
 }
 
 /**
+ * Log a semantic-cache hit.
+ * A cache hit serves a previously-generated result, so it consumes no new
+ * tokens and costs nothing — but it still belongs in LlmGatewayLog so hit-rate
+ * analytics (getCacheHitStats) aren't blind to cached traffic. The full model
+ * registry isn't needed here since there are no tokens to price.
+ */
+export async function logGatewayCacheHit(data: {
+  requestId: string
+  userId: string
+  workspaceId?: string
+  modelId: string
+  provider: string
+  task: string
+  latencyMs: number
+  itemCount?: number
+  tokenEstimate?: number
+  depth?: 'quick' | 'balanced' | 'deep'
+}): Promise<void> {
+  try {
+    await prisma.llmGatewayLog.create({
+      data: {
+        requestId: data.requestId,
+        userId: data.userId,
+        workspaceId: data.workspaceId,
+        selectedModelId: data.modelId,
+        provider: data.provider,
+        task: data.task,
+        inputTokens: 0,
+        outputTokens: 0,
+        totalTokens: 0,
+        inputCostUsdMicros: BigInt(0),
+        outputCostUsdMicros: BigInt(0),
+        totalCostUsdMicros: BigInt(0),
+        latencyMs: data.latencyMs,
+        cached: true,
+        cacheHit: true,
+        status: 'success',
+        itemCount: data.itemCount,
+        tokenEstimate: data.tokenEstimate,
+        depth: data.depth,
+      },
+    })
+  } catch (err) {
+    console.error('[gatewayLogger] Failed to log cache hit:', {
+      requestId: data.requestId,
+      error: err,
+    })
+  }
+}
+
+/**
  * Log failed gateway request
  * Used when request fails before token counting
  */

@@ -1,5 +1,5 @@
 <template>
-  <ui-card :class="[
+  <UiCard :class="[
     'transition-all duration-200 shrink-0',
     cardClasses,
   ]" :variant="minimal ? 'ghost' : 'default'" :size="minimal ? 'xs' : 'sm'">
@@ -22,7 +22,7 @@
 
     <!-- Empty State (no cards enrolled) -->
     <div v-if="isEmpty && !isLoading && !error" :class="`text-center ${minimal ? 'flex items-center gap-2' : ''}`">
-      <Icon name="heroicons:academic-cap" class="text-content-disabled" :size="UI_CONFIG.ICON_SIZE" />
+      <Icon name="i-lucide-graduation-cap" class="text-content-disabled" :size="UI_CONFIG.ICON_SIZE" />
       <ui-paragraph size="xs">
         {{ emptyMessage }}
       </ui-paragraph>
@@ -54,30 +54,30 @@
       <!-- Stats Grid - Full variant for default/outline -->
       <div v-if="!minimal" class="flex md:justify-end justify-start gap-1 text-center w-full overflow-auto">
         <ui-badge class="flex grid-1" variant="soft" color="error">
-          <div class="text-error">Due</div>
+          <div class="text-error-text">Due</div>
 
-          <div class="text-error">
+          <div class="text-error-text">
             {{ stats?.due ?? 0 }}
           </div>
         </ui-badge>
         <ui-badge class="flex grid-1" variant="soft" color="primary">
-          <div class="text-info">New</div>
+          <div class="text-info-text">New</div>
 
-          <div class="text-info">
+          <div class="text-info-text">
             {{ stats?.new ?? 0 }}
           </div>
         </ui-badge>
         <ui-badge class="flex grid-1" variant="soft" color="warning">
-          <div class="text-warning">Learning</div>
+          <div class="text-warning-text">Learning</div>
 
-          <div class="text-warning">
+          <div class="text-warning-text">
             {{ stats?.learning ?? 0 }}
           </div>
         </ui-badge>
         <ui-badge class="flex grid-1" variant="soft" color="success">
-          <div class="text-success">Mature</div>
+          <div class="text-success-text">Mature</div>
 
-          <div class="text-success">
+          <div class="text-success-text">
             {{ stats?.mature ?? 0 }}
           </div>
         </ui-badge>
@@ -87,12 +87,12 @@
       <!-- Context info (workspace name) if available -->
       <div v-if="stats?.context?.workspaceTitle && showContext" class="mt-3 pt-3 border-t border-secondary">
         <div class="flex items-center text-sm text-content-secondary">
-          <Icon name="heroicons:workspace" class="w-4 h-4 mr-1" />
+          <Icon name="i-lucide-folder" class="w-4 h-4 mr-1" />
           {{ stats.context.workspaceTitle }}
         </div>
       </div>
     </div>
-  </ui-card>
+  </UiCard>
 </template>
 
 <script setup lang="ts">

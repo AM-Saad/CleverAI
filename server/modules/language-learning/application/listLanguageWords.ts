@@ -31,6 +31,10 @@ const matchesStoryFilter = (
   (hasStory ? word.stories.length > 0 : word.stories.length === 0);
 
 export async function listLanguageWords(input: ListLanguageWordsInput) {
+  const search = input.search?.trim();
+  const searchFilter = search
+    ? { contains: search, mode: "insensitive" as const }
+    : null;
   const where: Record<string, unknown> = {
     userId: input.userId,
     ...(input.status ? { status: input.status } : {}),
@@ -38,13 +42,13 @@ export async function listLanguageWords(input: ListLanguageWordsInput) {
     ...(input.nativeLanguage ? { translationLang: input.nativeLanguage } : {}),
     ...(input.targetLanguage ? { sourceLang: input.targetLanguage } : {}),
     ...(input.cursor ? { createdAt: { lt: new Date(input.cursor) } } : {}),
-    ...(input.search
+    ...(searchFilter
       ? {
           OR: [
-            { word: { contains: input.search } },
-            { translation: { contains: input.search } },
-            { category: { contains: input.search } },
-            { partOfSpeech: { contains: input.search } },
+            { word: searchFilter },
+            { translation: searchFilter },
+            { category: searchFilter },
+            { partOfSpeech: searchFilter },
           ],
         }
       : {}),
@@ -88,17 +92,33 @@ export async function listLanguageWords(input: ListLanguageWordsInput) {
     hasMoreScannable = batch.length >= Math.min(Math.max(input.limit * 2, input.limit), 100);
   }
 
-  const categoryRows = await input.prisma.languageWord.findMany({
-    where: {
-      userId: input.userId,
-      category: { not: null },
-      ...(input.nativeLanguage ? { translationLang: input.nativeLanguage } : {}),
-      ...(input.targetLanguage ? { sourceLang: input.targetLanguage } : {}),
+  const [categoryRows, statusRows] = await Promise.all([
+    input.prisma.languageWord.findMany({
+      where: {
+        userId: input.userId,
+        category: { not: null },
+        ...(input.nativeLanguage ? { translationLang: input.nativeLanguage } : {}),
+        ...(input.targetLanguage ? { sourceLang: input.targetLanguage } : {}),
+      },
+      distinct: ["category"],
+      orderBy: { category: "asc" },
+      select: { category: true },
+    }),
+    input.prisma.languageWord.findMany({
+      where: { userId: input.userId },
+      select: { status: true },
+    }),
+  ]);
+
+  const totalWords = statusRows.length;
+  const statusCounts = statusRows.reduce(
+    (acc: Record<string, number>, row: { status?: unknown }) => {
+      if (typeof row.status !== "string") return acc;
+      acc[row.status] = (acc[row.status] ?? 0) + 1;
+      return acc;
     },
-    distinct: ["category"],
-    orderBy: { category: "asc" },
-    select: { category: true },
-  });
+    {},
+  );
 
   return {
     words,
@@ -109,5 +129,7 @@ export async function listLanguageWords(input: ListLanguageWordsInput) {
     categories: categoryRows
       .map((row: { category: string | null }) => row.category)
       .filter((item: string | null): item is string => !!item),
+    totalWords,
+    statusCounts,
   };
 }

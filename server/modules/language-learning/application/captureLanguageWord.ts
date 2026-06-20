@@ -198,8 +198,6 @@ export async function captureLanguageWord(input: {
     quotaPort: input.quotaPort,
     task: "language_translate",
     inputText: prompt,
-    estimatedOutputTokens: 450,
-    pinnedModelId: "gemini-2.0-flash-lite",
     checkQuota: true,
     incrementQuota: true,
     rateLimitMax: 15,

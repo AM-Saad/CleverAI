@@ -1,9 +1,14 @@
+import { randomUUID } from "crypto";
 import type { H3Event } from "h3";
 import { Errors } from "../../../utils/error";
 import { computeAdaptiveItemCount } from "../../../utils/llm/adaptiveCount";
+import { logGatewayCacheHit } from "../../../utils/llm/gatewayLogger";
 import type { LlmPipelineContext } from "../../../utils/llm/llmRequestPipeline";
 import { PrismaQuotaPort } from "../../subscription/infrastructure/PrismaQuotaPort";
-import { quotaHeaders } from "../../subscription/infrastructure/http/quotaHttp";
+import {
+  quotaHeaders,
+  throwQuotaExceeded,
+} from "../../subscription/infrastructure/http/quotaHttp";
 import type { QuotaPort } from "../../subscription/ports/QuotaPort";
 import { SemanticGenerationCachePort } from "../infrastructure/SemanticGenerationCachePort";
 import type { GenerationCachePort } from "../ports/GenerationCachePort";
@@ -64,6 +69,7 @@ export async function runGatewayGeneration(
     save,
     replace,
     requiredCapability,
+    preferredModelId,
     text: originalText,
     generationConfig,
   } = request;
@@ -97,30 +103,22 @@ export async function runGatewayGeneration(
     textLength: text.length,
   });
 
-  const { llmRequestPipeline } = await import(
-    "../../../utils/llm/llmRequestPipeline"
-  );
-  const ctx: LlmPipelineContext = await llmRequestPipeline(event, {
-    quotaPort,
-    task,
-    inputText: text,
-    estimatedOutputTokens: task === "flashcards" ? 500 : 800,
-    requiredCapability,
-    checkQuota: true,
-    incrementQuota: true,
-    user,
-  });
+  // Quota gate up-front: cache hits are billed too, so over-quota users are
+  // blocked before any lookup. Doing it here also lets a cache hit short-circuit
+  // WITHOUT paying for rate limiting, model scoring, or strategy instantiation
+  // (all of which live in llmRequestPipeline on the miss path below).
+  const preQuota = await quotaPort.checkGenerationQuota(user.id);
+  if (!preQuota.canGenerate) {
+    throwQuotaExceeded(
+      event,
+      preQuota.subscription,
+      "Quota exceeded. Please upgrade to continue generating content.",
+    );
+  }
 
-  await publishGenerationRequested({
-    userId: user.id,
-    requestId: ctx.requestId,
-    task,
-    materialId,
-    workspaceId,
-    tokenEstimate,
-    itemCount,
-  });
+  const effectiveWorkspaceId = saveWorkspaceId || workspaceId;
 
+  // ── Semantic cache lookup (BEFORE model selection) ───────────────────────
   const cacheCheck = await cachePort.checkSemanticCache({
     text,
     task,
@@ -128,16 +126,27 @@ export async function runGatewayGeneration(
   });
 
   if (cacheCheck.hit && cacheCheck.value) {
+    const requestId = randomUUID();
     console.info("[llm.gateway] Cache hit:", {
-      requestId: ctx.requestId,
+      requestId,
       task,
       textLength: text.length,
     });
 
+    await publishGenerationRequested({
+      userId: user.id,
+      requestId,
+      task,
+      materialId,
+      workspaceId,
+      tokenEstimate,
+      itemCount,
+    });
+
     const cacheHitResult = await completeGatewayCacheHit({
       quotaPort,
-      userId: ctx.user.id,
-      requestId: ctx.requestId,
+      userId: user.id,
+      requestId,
       task,
       cachedValue: cacheCheck.value,
       itemCount,
@@ -145,9 +154,23 @@ export async function runGatewayGeneration(
       requestStartTime,
     });
 
-    const headers: Record<string, string> = {};
     const response = cacheHitResult.response;
 
+    // #8: record cache hits in LlmGatewayLog (0 new tokens) for hit-rate stats.
+    await logGatewayCacheHit({
+      requestId,
+      userId: user.id,
+      workspaceId: effectiveWorkspaceId,
+      modelId: String(response.selectedModelId),
+      provider: String(response.provider),
+      task,
+      latencyMs: response.latencyMs,
+      itemCount,
+      tokenEstimate,
+      depth,
+    });
+
+    const headers: Record<string, string> = {};
     headers["x-gateway-request-id"] = String(response.requestId);
     headers["x-gateway-model-id"] = String(response.selectedModelId);
     headers["x-gateway-provider"] = String(response.provider);
@@ -166,7 +189,32 @@ export async function runGatewayGeneration(
     return { response, headers };
   }
 
-  const effectiveWorkspaceId = saveWorkspaceId || workspaceId;
+  // ── Cache miss → full pipeline (rate limit, model selection, strategy) ────
+  const { llmRequestPipeline } = await import(
+    "../../../utils/llm/llmRequestPipeline"
+  );
+  const ctx: LlmPipelineContext = await llmRequestPipeline(event, {
+    quotaPort,
+    task,
+    inputText: text,
+    requiredCapability,
+    checkQuota: true,
+    incrementQuota: true,
+    preferredModelId,
+    user,
+    precheckedQuota: preQuota,
+  });
+
+  await publishGenerationRequested({
+    userId: user.id,
+    requestId: ctx.requestId,
+    task,
+    materialId,
+    workspaceId,
+    tokenEstimate,
+    itemCount,
+  });
+
   let result: FlashcardDTO[] | QuizQuestionDTO[];
 
   try {

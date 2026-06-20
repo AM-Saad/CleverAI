@@ -1,7 +1,7 @@
 # Cognilo Architecture
 
 > System design reference for the Cognilo AI-powered learning platform.
-> **Last Updated**: March 2026
+> **Last Updated**: June 2026 (providers, IndexedDB stores reconciled against code)
 
 ---
 
@@ -24,7 +24,7 @@ Cognilo is a **Nuxt 4** application providing AI-powered flashcard generation, q
 
 - **Hybrid SSR/SPA**: Server-side rendering with client-side hydration
 - **Local-First Notes**: IndexedDB persistence with background sync
-- **Strategy Pattern LLM**: Pluggable AI providers (OpenAI, Google Gemini, DeepSeek, Groq)
+- **Strategy Pattern LLM**: Pluggable AI providers (OpenAI, Google Gemini, DeepSeek, Groq, OpenRouter)
 - **PWA-Native**: Full offline support via Workbox service worker
 - **On-Device AI**: Web worker–based math recognition, speech-to-text, summarization
 
@@ -108,6 +108,7 @@ Cognilo is a **Nuxt 4** application providing AI-powered flashcard generation, q
 | Google Gemini | `GeminiStrategy` | gemini-2.0-flash-lite, gemini-1.5-flash-8b |
 | DeepSeek | `DeepSeekStrategy` | deepseek-chat, deepseek-reasoner |
 | Groq | `GroqStrategy` | llama-3.1-8b-instant, qwen-qwq-32b, llama-4-scout-17b |
+| OpenRouter | `OpenRouterStrategy` | (aggregator — routes to many upstream models) |
 
 ### PWA
 | Technology | Purpose |
@@ -538,19 +539,24 @@ server/modules/
 ```typescript
 // Grade: 0-5 (0-2 = fail, 3-5 = pass)
 // Ease Factor: minimum 1.3 (difficulty modifier)
-// Interval: Days until next review
+// Interval: Days until next review (capped at maxIntervalDays = 180)
+// Source of truth: server/modules/review/domain/sm2.ts (calculateSM2)
 
 if (grade >= 3) {
   if (repetitions === 0) interval = 1
   else if (repetitions === 1) interval = 6
   else interval = Math.round(prevInterval * easeFactor)
-
   repetitions++
-  easeFactor = Math.max(1.3, easeFactor + (0.1 - (5 - grade) * 0.08))
 } else {
   repetitions = 0
   interval = 1
 }
+
+// Ease factor is updated on EVERY review (full SuperMemo SM-2 formula),
+// not just on passes:
+easeFactor = easeFactor + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02))
+if (easeFactor < 1.3) easeFactor = 1.3
+if (interval > 180) interval = 180
 ```
 
 **API Endpoints**:
@@ -746,10 +752,16 @@ sw-src/ai-worker.ts → esbuild → public/ai-worker.js (AI web worker)
 | Static assets | CacheFirst | Immutable files |
 | Pages | StaleWhileRevalidate | Balance freshness/speed |
 
-**IndexedDB Stores**:
+**IndexedDB Stores** (`DB_CONFIG`, `app/utils/constants/pwa.ts`, currently `VERSION: 16`):
 - `forms` — Offline form submissions
 - `notes` — Local notes cache
-- `pendingNotes` — Unsaved changes queue
+- `noteGroups` — Local note-group cache
+- `pendingNotes` — Unsaved note changes queue
+- `pendingNoteGroupChanges` — Queued note-group mutations
+- `pendingNoteLayouts` — Queued layout changes
+- `noteSyncConflicts` — Durable local/server conflict snapshots
+- `boardItems` / `pendingBoardItems` / `boardColumns` — Board local-first cache + sync queue
+- `userTags` — Tag cache
 
 **Background Sync Tags**:
 - `form-sync` — Queued form submissions

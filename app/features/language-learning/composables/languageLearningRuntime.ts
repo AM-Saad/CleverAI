@@ -20,9 +20,12 @@ type WordsResult = {
   words: LanguageWord[];
   nextCursor: string | null;
   categories?: string[];
+  totalWords?: number;
+  statusCounts?: Record<string, number>;
 };
 
 type LanguageApiPort = {
+  getPreferences?: () => Promise<Result<UserLanguagePreferences>>;
   getWords: (params?: {
     status?: string;
     category?: string;
@@ -57,9 +60,13 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
   const wordBankRevision = ref(0);
   const latestCapture = ref<CaptureWordResponse | null>(null);
   const latestStory = ref<GenerateStoryResponse | null>(null);
+  const isLoadingPreferences = ref(false);
+  const preferencesError = ref<APIError | null>(null);
 
   const words = ref<LanguageWord[]>([]);
   const categories = ref<string[]>([]);
+  const totalWords = ref(0);
+  const statusCounts = ref<Record<string, number>>({});
   const cursor = ref<string | undefined>(undefined);
   const hasMore = ref(false);
   const wordFilters = ref<WordBankFilters>(defaultFilters());
@@ -70,6 +77,9 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
   const stats = ref<LanguageStats | null>(null);
   const isLoadingStats = ref(false);
   const statsError = ref<APIError | null>(null);
+  let preferencesRequest: Promise<UserLanguagePreferences | null> | null = null;
+  let wordsRequestId = 0;
+  let statsRequestId = 0;
 
   const getApi = () => deps.api ?? useNuxtApp().$api.language;
 
@@ -89,11 +99,38 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
         : wordFilters.value.category,
     hasStory: wordFilters.value.hasStory ? true : undefined,
     search: wordFilters.value.search.trim() || undefined,
-    ...languageParams(),
   });
 
   const setPreferences = (nextPreferences: UserLanguagePreferences | null) => {
     preferences.value = nextPreferences;
+    preferencesError.value = null;
+  };
+
+  const ensurePreferences = async () => {
+    if (preferences.value) return preferences.value;
+    if (preferencesRequest) return preferencesRequest;
+
+    const api = getApi();
+    if (!api.getPreferences) return null;
+
+    isLoadingPreferences.value = true;
+    preferencesError.value = null;
+    preferencesRequest = api
+      .getPreferences()
+      .then((result) => {
+        if (!result.success) {
+          preferencesError.value = result.error;
+          return null;
+        }
+        preferences.value = result.data;
+        return result.data;
+      })
+      .finally(() => {
+        isLoadingPreferences.value = false;
+        preferencesRequest = null;
+      });
+
+    return preferencesRequest;
   };
 
   const setWordFilters = (nextFilters: Partial<WordBankFilters>) => {
@@ -113,42 +150,58 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
   };
 
   const fetchWords = async () => {
+    const requestId = ++wordsRequestId;
     isFetchingWords.value = true;
     wordBankError.value = null;
     cursor.value = undefined;
 
-    const result = await getApi().getWords(toWordQuery(false));
-    isFetchingWords.value = false;
+    try {
+      await ensurePreferences();
+      const result = await getApi().getWords(toWordQuery(false));
+      if (requestId !== wordsRequestId) return null;
 
-    if (!result.success) {
-      wordBankError.value = result.error;
-      return null;
+      if (!result.success) {
+        wordBankError.value = result.error;
+        return null;
+      }
+
+      words.value = result.data.words ?? [];
+      categories.value = result.data.categories ?? [];
+      totalWords.value = result.data.totalWords ?? words.value.length;
+      statusCounts.value = result.data.statusCounts ?? {};
+      cursor.value = result.data.nextCursor ?? undefined;
+      hasMore.value = !!result.data.nextCursor;
+      return result.data;
+    } finally {
+      if (requestId === wordsRequestId) isFetchingWords.value = false;
     }
-
-    words.value = result.data.words ?? [];
-    categories.value = result.data.categories ?? [];
-    cursor.value = result.data.nextCursor ?? undefined;
-    hasMore.value = !!result.data.nextCursor;
-    return result.data;
   };
 
   const loadMoreWords = async () => {
     if (!cursor.value) return null;
+    const requestId = ++wordsRequestId;
     isLoadingMoreWords.value = true;
     wordBankError.value = null;
 
-    const result = await getApi().getWords(toWordQuery(true));
-    isLoadingMoreWords.value = false;
+    try {
+      await ensurePreferences();
+      const result = await getApi().getWords(toWordQuery(true));
+      if (requestId !== wordsRequestId) return null;
 
-    if (!result.success) {
-      wordBankError.value = result.error;
-      return null;
+      if (!result.success) {
+        wordBankError.value = result.error;
+        return null;
+      }
+
+      words.value = [...words.value, ...(result.data.words ?? [])];
+      totalWords.value = result.data.totalWords ?? totalWords.value;
+      statusCounts.value = result.data.statusCounts ?? statusCounts.value;
+      cursor.value = result.data.nextCursor ?? undefined;
+      hasMore.value = !!result.data.nextCursor;
+      return result.data;
+    } finally {
+      if (requestId === wordsRequestId) isLoadingMoreWords.value = false;
     }
-
-    words.value = [...words.value, ...(result.data.words ?? [])];
-    cursor.value = result.data.nextCursor ?? undefined;
-    hasMore.value = !!result.data.nextCursor;
-    return result.data;
   };
 
   const deleteWord = async (id: string) => {
@@ -178,24 +231,32 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
   };
 
   const refreshStats = async () => {
+    const requestId = ++statsRequestId;
     isLoadingStats.value = true;
     statsError.value = null;
 
-    const result = await getApi().getStats(languageParams());
-    isLoadingStats.value = false;
+    try {
+      await ensurePreferences();
+      const result = await getApi().getStats(languageParams());
+      if (requestId !== statsRequestId) return null;
 
-    if (!result.success) {
-      statsError.value = result.error;
-      return null;
+      if (!result.success) {
+        statsError.value = result.error;
+        return null;
+      }
+
+      stats.value = result.data;
+      return result.data;
+    } finally {
+      if (requestId === statsRequestId) isLoadingStats.value = false;
     }
-
-    stats.value = result.data;
-    return result.data;
   };
 
   const resetWordBank = () => {
     words.value = [];
     categories.value = [];
+    totalWords.value = 0;
+    statusCounts.value = {};
     cursor.value = undefined;
     hasMore.value = false;
     wordBankError.value = null;
@@ -204,11 +265,15 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
 
   return {
     preferences,
+    isLoadingPreferences,
+    preferencesError,
     wordBankRevision,
     latestCapture,
     latestStory,
     words,
     categories,
+    totalWords,
+    statusCounts,
     cursor,
     hasMore,
     wordFilters,
@@ -219,6 +284,7 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
     isLoadingStats,
     statsError,
     setPreferences,
+    ensurePreferences,
     setWordFilters,
     setLatestCapture,
     setLatestStory,

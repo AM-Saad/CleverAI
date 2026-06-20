@@ -7,21 +7,34 @@ const props = defineProps<{
 }>();
 
 const errorMessage = computed(() => {
-  if (!props.error) return '';
-  if (typeof props.error === 'string') {
+  if (!props.error) return "";
+  if (typeof props.error === "string") {
     return props.error;
   }
-  return props.error?.message || 'An error occurred';
+  return props.error?.message || "An error occurred";
 });
 </script>
 
 <template>
-  <div v-if="error"
-    class="bg-error/20 border border-error/40 dark:border-error my-2 p-3 rounded-[var(--radius-md)] dark:text-error text-error font-medium text-sm">
+  <UiPanel
+    v-if="error"
+    variant="subtle"
+    size="sm"
+    role="alert"
+    class-name="my-2 rounded-[var(--radius-md)] border-error/40 bg-error/20 dark:border-error"
+    content-class="text-sm font-medium text-error-text"
+  >
     <p v-handle-internal-links v-html="errorMessage"></p>
 
-    <UiButton size="sm" color="error" variant="subtle" class="mt-3" @click="() => refresh?.()" v-if="refresh">
+    <UiButton
+      v-if="refresh"
+      size="sm"
+      tone="error"
+      variant="subtle"
+      class="mt-3"
+      @click="() => refresh?.()"
+    >
       Try Again
     </UiButton>
-  </div>
+  </UiPanel>
 </template>

@@ -102,10 +102,10 @@ export const useCardDisplay = (
    * Get icon name based on resource type
    */
   const resourceTypeIcon = computed(() => {
-    if (!card.value) return "heroicons:document";
+    if (!card.value) return "i-lucide-file-text";
     return card.value.resourceType === "flashcard"
-      ? "heroicons:rectangle-stack"
-      : "heroicons:document-text";
+      ? "i-lucide-layers"
+      : "i-lucide-file-text";
   });
 
   /**

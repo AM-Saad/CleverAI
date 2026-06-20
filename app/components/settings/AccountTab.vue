@@ -1,6 +1,6 @@
 <template>
     <div class="space-y-6 block min-h-full">
-        <ui-card size="md" variant="default">
+        <UiPanel size="md" variant="surface">
 
             <template #header>
                 <div class="flex items-center gap-2">
@@ -41,7 +41,7 @@
                 </div>
             </template>
 
-        </ui-card>
+        </UiPanel>
 
         <!-- Update Profile Modal -->
         <user-update-profile-modal v-if="profile" :show="showUpdateModal" :current-profile="{

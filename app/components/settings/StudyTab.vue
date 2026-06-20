@@ -1,6 +1,6 @@
 <template>
     <div class="space-y-6">
-        <ui-card size="md" variant="default">
+        <UiPanel size="md" variant="surface">
             <template #header>
                 <div class="flex items-center gap-2">
                     <UIcon name="i-heroicons-book-open" class="w-5 h-5" />
@@ -31,7 +31,7 @@
                     </UiButton>
                 </div>
             </template>
-        </ui-card>
+        </UiPanel>
     </div>
 </template>
 

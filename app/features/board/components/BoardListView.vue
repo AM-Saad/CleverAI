@@ -141,20 +141,25 @@ const getColumnActions = (columnId: string) => {
 <template>
   <div class="flex flex-col flex-1 min-h-0 overflow-y-auto gap-4 pr-1">
     <!-- Uncategorized section -->
-    <div v-if="uncategorizedItems.length > 0 || orderedColumns.length === 0"
-      class="bg-white dark:bg-surface/40 rounded-[var(--radius-xl)] border border-secondary dark:border-secondary shadow-[var(--shadow-dropdown)] overflow-hidden">
-      <button class="w-full flex items-center justify-between px-4 py-3 bg-surface-subtle dark:bg-surface/60"
-        @click="toggleSection('uncategorized')">
-        <div class="flex items-center gap-2 text-left">
+    <UiPanel
+      v-if="uncategorizedItems.length > 0 || orderedColumns.length === 0"
+      tag="section"
+      variant="surface"
+      size="xs"
+      class-name="shadow-[var(--shadow-dropdown)]"
+      content-class="p-0">
+      <div class="flex items-center justify-between gap-3 px-4 py-3 bg-surface-subtle group/header">
+        <button class="flex min-w-0 flex-1 items-center gap-2 text-left"
+          @click="toggleSection('uncategorized')">
           <Icon :name="collapsedSections.has('uncategorized') ? 'heroicons:chevron-right' : 'heroicons:chevron-down'"
             class="w-4 h-4 text-content-secondary" />
           <span class="font-semibold text-content-on-surface-strong dark:text-content-on-surface">Uncategorized</span>
           <span class="text-xs text-content-secondary">({{ uncategorizedItems.length }})</span>
-        </div>
+        </button>
         <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:plus" @click.stop="createItem">
           Add
         </UiButton>
-      </button>
+      </div>
       <div v-if="!collapsedSections.has('uncategorized')" class="p-3 space-y-2">
         <BoardItemCard v-for="item in uncategorizedItems" :key="item.id" :item="item"
           :is-selected="props.selectedItemId === item.id" @select="emit('select-item', item.id)"
@@ -163,12 +168,18 @@ const getColumnActions = (columnId: string) => {
           No items yet
         </div>
       </div>
-    </div>
+    </UiPanel>
 
     <!-- Column sections -->
-    <div v-for="column in orderedColumns" :key="column.id"
-      class="bg-white dark:bg-surface/40 rounded-[var(--radius-xl)] border border-secondary dark:border-secondary shadow-[var(--shadow-dropdown)] overflow-hidden">
-      <div class="flex items-center justify-between px-4 py-3 bg-surface-subtle dark:bg-surface/60 group/header">
+    <UiPanel
+      v-for="column in orderedColumns"
+      :key="column.id"
+      tag="section"
+      variant="surface"
+      size="xs"
+      class-name="shadow-[var(--shadow-dropdown)]"
+      content-class="p-0">
+      <div class="flex items-center justify-between px-4 py-3 bg-surface-subtle group/header">
         <button v-if="isEditingColumn !== column.id" class="flex items-center gap-2 flex-1 text-left"
           @click="toggleSection(column.id)">
           <Icon :name="collapsedSections.has(column.id) ? 'heroicons:chevron-right' : 'heroicons:chevron-down'"
@@ -202,7 +213,7 @@ const getColumnActions = (columnId: string) => {
           No items yet
         </div>
       </div>
-    </div>
+    </UiPanel>
 
     <!-- Delete confirmation modal -->
     <shared-delete-confirmation-modal :show="showDeleteConfirm" title="Delete Column" @close="showDeleteConfirm = false"

@@ -24,7 +24,9 @@ onMounted(() => {
 
 // All available tags sorted by order
 const availableTags = computed(() => {
-  return Array.from(tagsStore.tags.value.values()).sort((a, b) => a.order - b.order);
+  return Array.from(tagsStore.tags.value.values()).sort(
+    (a, b) => a.order - b.order,
+  );
 });
 
 // Filter suggestions based on input
@@ -73,7 +75,7 @@ const addTag = async (tagName: string) => {
 const removeTag = (tagName: string) => {
   emit(
     "update:modelValue",
-    props.modelValue.filter((t) => t !== tagName)
+    props.modelValue.filter((t) => t !== tagName),
   );
 };
 
@@ -86,7 +88,11 @@ const handleKeydown = (e: KeyboardEvent) => {
     } else {
       addTag(inputValue.value);
     }
-  } else if (e.key === "Backspace" && !inputValue.value && props.modelValue.length > 0) {
+  } else if (
+    e.key === "Backspace" &&
+    !inputValue.value &&
+    props.modelValue.length > 0
+  ) {
     const lastTag = props.modelValue[props.modelValue.length - 1];
     if (lastTag) {
       removeTag(lastTag);
@@ -110,47 +116,94 @@ const handleBlur = () => {
 <template>
   <div class="relative">
     <!-- Selected Tags + Input -->
-    <div
-      class="flex flex-wrap gap-1.5 p-2 border rounded-[var(--radius-lg)] bg-white dark:bg-surface border-secondary focus-within:ring-2 focus-within:ring-primary/30 focus-within:border-primary">
+    <UiPanel
+      variant="surface"
+      size="xs"
+      class-name="focus-within:ring-2 focus-within:ring-[var(--ds-focus-outline-color)] focus-within:border-primary"
+      content-class="flex flex-wrap gap-1.5"
+    >
       <!-- Selected Tags -->
-      <UiBadge v-for="tag in selectedTags" :key="tag.id"
-        :style="{ backgroundColor: tag.color, color: 'var(--color-on-primary) !important' }" variant="subtle" size="sm"
-        class="rounded-[var(--radius-md)] px-2.5 mr-0.5">
+      <UiBadge
+        v-for="tag in selectedTags"
+        :key="tag.id"
+        :style="{
+          backgroundColor: tag.color,
+          color: 'var(--color-on-primary) !important',
+        }"
+        variant="subtle"
+        size="sm"
+        class="rounded-[var(--radius-md)] px-2.5 mr-0.5"
+      >
         {{ tag.name }}
-        <button type="button" @click="removeTag(tag.name)"
-          class="hover:bg-content-on-surface/10 dark:hover:bg-white/10 rounded-[var(--radius-sm)] p-0.5">
+        <UiButton
+          type="button"
+          tone="neutral"
+          variant="ghost"
+          size="xs"
+          square
+          @click="removeTag(tag.name)"
+        >
           <Icon name="heroicons:x-mark-20-solid" class="w-3 h-3" />
-        </button>
+        </UiButton>
       </UiBadge>
 
       <!-- Input -->
-      <input v-model="inputValue" type="text"
-        :placeholder="selectedTags.length === 0 ? (placeholder || 'Add tags...') : ''"
-        class="flex-1 min-w-30 outline-none bg-transparent text-sm" @keydown="handleKeydown" @focus="handleFocus"
-        @blur="handleBlur" />
+      <!-- design-allow native input is required inside the tokenized multi-tag input composition. -->
+      <input
+        v-model="inputValue"
+        type="text"
+        :placeholder="
+          selectedTags.length === 0 ? placeholder || 'Add tags...' : ''
+        "
+        class="flex-1 min-w-30 outline-none bg-transparent text-sm"
+        @keydown="handleKeydown"
+        @focus="handleFocus"
+        @blur="handleBlur"
+      />
 
       <!-- Loading indicator -->
-      <Icon v-if="isCreating" name="svg-spinners:ring-resize" class="w-4 h-4 text-content-secondary" />
-    </div>
+      <Icon
+        v-if="isCreating"
+        name="svg-spinners:ring-resize"
+        class="w-4 h-4 text-content-secondary"
+      />
+    </UiPanel>
 
     <!-- Suggestions Dropdown -->
-    <div v-if="showSuggestions && (suggestions.length > 0 || !!inputValue.trim())"
-      class="absolute z-10 w-full mt-1 bg-white dark:bg-surface border border-secondary rounded-[var(--radius-xl)] shadow-[var(--shadow-dropdown)] max-h-48 overflow-y-auto">
+    <UiOverlaySurface
+      v-if="showSuggestions && (suggestions.length > 0 || !!inputValue.trim())"
+      kind="popover"
+      layer="popover"
+      size="xs"
+      class-name="absolute mt-1 w-full max-h-48 overflow-y-auto p-0"
+    >
       <!-- Existing tag suggestions -->
-      <button v-for="tag in suggestions" :key="tag.id" type="button"
-        class="w-full px-3 py-2 text-left hover:bg-surface-subtle flex items-center gap-2 cursor-pointer"
-        @click="addTag(tag.name)">
-
+      <UiButton
+        v-for="tag in suggestions"
+        :key="tag.id"
+        type="button"
+        block
+        tone="neutral"
+        variant="ghost"
+        class="justify-start"
+        @click="addTag(tag.name)"
+      >
         {{ tag.name }}
-      </button>
+      </UiButton>
 
       <!-- Create new tag option -->
-      <button v-if="inputValue.trim() && !tagsStore.getTagByName(inputValue.trim())" type="button"
-        class="w-full px-3 py-2 text-left hover:bg-surface-subtle flex items-center gap-2 border-t border-secondary"
-        @click="addTag(inputValue)">
-        <Icon name="heroicons:plus-circle" class="w-4 h-4 text-primary-500" />
+      <UiButton
+        v-if="inputValue.trim() && !tagsStore.getTagByName(inputValue.trim())"
+        type="button"
+        block
+        tone="neutral"
+        variant="ghost"
+        class="justify-start border-t border-secondary"
+        @click="addTag(inputValue)"
+      >
+        <Icon name="heroicons:plus-circle" class="w-4 h-4 text-primary" />
         <span class="text-sm">Create "{{ inputValue.trim() }}"</span>
-      </button>
-    </div>
+      </UiButton>
+    </UiOverlaySurface>
   </div>
 </template>

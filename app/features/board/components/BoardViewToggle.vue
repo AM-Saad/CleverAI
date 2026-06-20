@@ -14,16 +14,15 @@ const options = [
 </script>
 
 <template>
-  <div class="flex items-center gap-1 bg-surface rounded-[var(--radius-lg)] p-1">
-    <button v-for="option in options" :key="option.value"
-      class="flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-md)] text-sm font-medium transition-colors"
-      :class="[
-        modelValue === option.value
-          ? 'bg-background text-content-on-background shadow-[var(--shadow-dropdown)]'
-          : 'text-content-secondary hover:text-content-on-surface'
-      ]" @click="emit('update:modelValue', option.value)">
-      <Icon :name="option.icon" class="w-4 h-4" />
-      <!-- <span>{{ option.label }}</span> -->
-    </button>
-  </div>
+  <UiToolbar size="sm">
+    <UiToolbarButton
+      v-for="option in options"
+      :key="option.value"
+      :icon="option.icon"
+      :label="option.label"
+      :active="modelValue === option.value"
+      size="xs"
+      @click="emit('update:modelValue', option.value)"
+    />
+  </UiToolbar>
 </template>

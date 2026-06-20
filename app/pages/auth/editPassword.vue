@@ -91,7 +91,7 @@ const submitForm = async (): Promise<void> => {
                 Code</button>.
             </span>
           </div>
-          <span v-if="inlineHintVisible" class="block mt-1 text-error">Resend limit reached. Please wait for
+          <span v-if="inlineHintVisible" class="block mt-1 text-error-text">Resend limit reached. Please wait for
             cooldown.</span>
         </UiParagraph>
       </form>

@@ -12,10 +12,10 @@
  * aren't a plain hex (color-mix/rgb/transparent) are reported as skipped.
  */
 
-const { themeTokens, darkTokens } = require("../app/design-system/tokens/index.cjs");
+const { themeTokens, rootTokens, darkTokens } = require("../app/design-system/tokens/index.cjs");
 
 // name -> raw value, per theme.
-const light = Object.fromEntries(themeTokens.map((t) => [t.name, t.value]));
+const light = Object.fromEntries([...themeTokens, ...rootTokens].map((t) => [t.name, t.value]));
 const dark = { ...light, ...Object.fromEntries(darkTokens.map((t) => [t.name, t.value])) };
 
 function resolveHex(map, value, depth = 0) {
@@ -52,6 +52,16 @@ const PAIRS = [
   ["--color-content-on-surface-strong", "--color-surface-strong", 4.5, "strong text on strong surface"],
   ["--color-content-secondary", "--color-surface", 4.5, "metadata on surface"],
   ["--color-content-secondary", "--color-background", 4.5, "metadata on background"],
+  ["--color-content-disabled", "--color-surface", 3.0, "disabled-looking text on surface (UI)"],
+  ["--color-content-disabled", "--color-background", 3.0, "disabled-looking text on background (UI)"],
+  ["--color-success-text", "--color-surface", 4.5, "success text on surface"],
+  ["--color-success-text", "--color-background", 4.5, "success text on background"],
+  ["--color-warning-text", "--color-surface", 4.5, "warning text on surface"],
+  ["--color-warning-text", "--color-background", 4.5, "warning text on background"],
+  ["--color-error-text", "--color-surface", 4.5, "error text on surface"],
+  ["--color-error-text", "--color-background", 4.5, "error text on background"],
+  ["--color-info-text", "--color-surface", 4.5, "info text on surface"],
+  ["--color-info-text", "--color-background", 4.5, "info text on background"],
   // Solid-fill control labels are UI-component text — WCAG AA threshold 3.0.
   ["--color-on-primary", "--color-primary", 3.0, "text on primary fill (UI)"],
   ["--color-on-success", "--color-success", 3.0, "text on success fill (UI)"],
@@ -60,6 +70,8 @@ const PAIRS = [
   ["--color-on-info", "--color-info", 3.0, "text on info fill (UI)"],
   ["--color-primary", "--color-background", 3.0, "primary as UI/link on background"],
   ["--color-primary", "--color-surface", 3.0, "primary as UI/link on surface"],
+  ["--ds-focus-outline-color", "--color-background", 3.0, "focus indicator on background"],
+  ["--ds-focus-outline-color", "--color-surface", 3.0, "focus indicator on surface"],
 ];
 
 const failures = [];

@@ -350,8 +350,13 @@ function handleSectionNotesReordered(groupId: string | null, noteIds: string[]) 
 </script>
 
 <template>
-  <div class="notes-drawer flex h-full min-h-0 flex-col rounded-[var(--radius-md)] border border-secondary bg-light">
-    <div class="border-b border-secondary p-2 bg-white">
+  <UiPanel
+    tag="aside"
+    variant="surface"
+    size="xs"
+    class-name="notes-drawer flex h-full min-h-0 rounded-[var(--radius-md)]"
+    content-class="flex h-full min-h-0 flex-col p-0">
+    <div class="border-b border-secondary p-2 bg-surface">
       <NotesSearch :workspace-id="workspaceId" />
       <div class="mt-2 flex items-center justify-between gap-2">
         <p class="text-xs text-content-secondary">
@@ -408,7 +413,7 @@ function handleSectionNotesReordered(groupId: string | null, noteIds: string[]) 
       :loading="groupPendingAction === 'delete'" @close="closeDeleteGroup" @confirm="confirmDeleteGroup">
       Delete "{{ deletingGroup?.title ?? 'group' }}"? Its notes will stay safe and move to Ungrouped.
     </DeleteConfirmationModal>
-  </div>
+  </UiPanel>
 </template>
 
 

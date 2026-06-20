@@ -46,7 +46,7 @@ interface PersistedLayout {
 
 export function useWorkspaceLayout(workspaceId: string) {
   // ─── Core State ───────────────────────────────────────────────────
-  const panelSizes = ref<[number, number, number]>([33, 34, 33]);
+  const panelSizes = ref<[number, number, number]>([24, 52, 24]);
   const collapsedPanels = ref<Set<PanelId>>(new Set());
   const activeTab = ref<PanelId>("notes"); // mobile active tab
   const isAnimating = ref(false);
@@ -224,6 +224,35 @@ export function useWorkspaceLayout(workspaceId: string) {
     saveLayout();
   }
 
+  function resizeAdjacentPanels(handleIndex: 0 | 1, deltaPct: number) {
+    const leftPanelIdx = handleIndex;
+    const rightPanelIdx = handleIndex + 1;
+    const leftPanel = PANELS[leftPanelIdx]!;
+    const rightPanel = PANELS[rightPanelIdx]!;
+
+    if (
+      collapsedPanels.value.has(leftPanel.id) ||
+      collapsedPanels.value.has(rightPanel.id)
+    ) {
+      return;
+    }
+
+    const combined =
+      panelSizes.value[leftPanelIdx]! + panelSizes.value[rightPanelIdx]!;
+    const nextLeft = Math.max(
+      20,
+      Math.min(combined - 20, panelSizes.value[leftPanelIdx]! + deltaPct),
+    );
+    const nextRight = combined - nextLeft;
+    if (nextRight < 20) return;
+
+    const newSizes: [number, number, number] = [...panelSizes.value];
+    newSizes[leftPanelIdx] = nextLeft;
+    newSizes[rightPanelIdx] = nextRight;
+    panelSizes.value = newSizes;
+    saveLayout();
+  }
+
   // ─── Mobile Tab ───────────────────────────────────────────────────
   function setActiveTab(tab: PanelId) {
     activeTab.value = tab;
@@ -300,6 +329,7 @@ export function useWorkspaceLayout(workspaceId: string) {
     toggleCollapse,
     isCollapsed,
     startResize,
+    resizeAdjacentPanels,
     setActiveTab,
     saveLayout,
 

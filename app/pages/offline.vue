@@ -51,7 +51,7 @@
       </div>
 
       <!-- Cached Content Section -->
-      <div v-if="showCachedContent" class="mt-8 p-4 bg-content-on-background/50 rounded-[var(--radius-lg)]">
+      <UiPanel v-if="showCachedContent" variant="subtle" size="md" class-name="mt-8 bg-content-on-background/50">
         <h3 class="text-lg font-semibold text-white mb-3">Available Offline</h3>
         <div class="space-y-2">
           <NuxtLink v-for="page in availablePages" :key="page.path" :to="page.path"
@@ -62,18 +62,18 @@
         <p v-if="availablePages.length === 0" class="text-content-disabled text-sm">
           No cached pages available. Content will be cached as you browse.
         </p>
-      </div>
+      </UiPanel>
 
       <!-- Network Status -->
-      <div class="mt-8 p-4 bg-error/20 border border-error/50 rounded-[var(--radius-lg)]">
+      <UiPanel variant="subtle" size="md" class-name="mt-8 border-error/50 bg-error/20">
         <div class="flex items-center justify-center space-x-2">
           <div class="w-3 h-3 bg-error rounded-full animate-pulse" />
-          <span class="text-error text-sm">Network unavailable</span>
+          <span class="text-error-text text-sm">Network unavailable</span>
         </div>
-        <p class="text-error text-xs mt-2">
+        <p class="text-error-text text-xs mt-2">
           Last checked: {{ lastChecked || "Never" }}
         </p>
-      </div>
+      </UiPanel>
     </div>
   </div>
 </template>

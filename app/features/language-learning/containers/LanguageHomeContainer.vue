@@ -10,10 +10,10 @@
             size="sm"
             variant="ghost"
             color="neutral"
-            @click="showPreferences = !showPreferences"
+            to="/language/settings"
           >
             <Icon name="i-lucide-sliders-horizontal" class="w-3.5 h-3.5 mr-1" />
-            Preferences
+            Settings
           </ui-button>
           <ui-button size="sm" variant="soft" @click="openCapture">
             <Icon name="i-lucide-plus" class="w-3.5 h-3.5 mr-1" />
@@ -22,22 +22,14 @@
         </div>
       </div>
 
-      <language-preferences-module
-        v-if="showPreferences"
-        compact
-        @saved="showPreferences = false"
-      />
-
       <WordBankList ref="wordBankRef" />
     </div>
   </shared-page-wrapper>
 </template>
 
 <script setup lang="ts">
-import LanguagePreferencesModule from "~/features/language-learning/components/LanguagePreferencesModule.vue";
 import LanguageStatusCard from "~/features/language-learning/components/LanguageStatusCard.vue";
 import WordBankList from "~/features/language-learning/components/WordBankList.vue";
 const { open: openCapture } = useQuickCaptureModal();
 const wordBankRef = ref<unknown>(null);
-const showPreferences = ref(false);
 </script>

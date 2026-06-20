@@ -174,12 +174,12 @@ async function bulkEnrollDrafts() {
                 <!-- Edit button -->
                 <ui-button v-if="'id' in card && card.id" size="sm" variant="ghost" @click.stop="openEditModal(card)"
                   title="Edit flashcard" :disabled="props.isEnrollingLoading">
-                  <shared-icon name="pencil" class=" disabled:opacity-50 disabled:cursor-not-allowed" />
+                  <shared-icon name="pencil" aria-hidden="true" />
                 </ui-button>
                 <!-- Delete button -->
                 <ui-button v-if="'id' in card && card.id" size="sm" variant="ghost" color="error"
                   @click.stop="openDeleteModal(card)" title="Delete flashcard" :disabled="props.isEnrollingLoading">
-                  <shared-icon name="delete" class=" disabled:opacity-50 disabled:cursor-not-allowed" />
+                  <shared-icon name="delete" aria-hidden="true" />
                 </ui-button>
               </div>
             </div>

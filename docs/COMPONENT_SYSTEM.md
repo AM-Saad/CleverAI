@@ -22,6 +22,17 @@
 - Nuxt auto-imports `app/components/**`. Feature code under `app/features/**` is imported explicitly (pages import `~/features/<f>/containers/...`).
 - **Policy: feature/page/pattern code uses `Ui*`, not Nuxt UI `U*` directly.** Primitives are the only place that wraps `U*`. This keeps theming and API decisions in one layer (enforced — see below).
 
+## Surface taxonomy
+
+| Primitive | Role | Rule of thumb |
+|---|---|---|
+| `UiCard` | Discrete content object | Use when the object itself is the content: note, workspace, stat, review item. |
+| `UiPanel` | Structural region | Use when the surface organizes app UI: settings section, side pane, filter panel. |
+| `UiInteractiveCard` | Clickable/selectable object | Use instead of wrapping `UiCard` in a link/button. It owns keyboard and ARIA state. |
+| `UiOverlaySurface` | Floating surface shell | Use inside overlay primitives for modal, drawer, popover, menu, toast, tooltip chrome. |
+
+Do not nest independent interactive controls inside `UiInteractiveCard`. If an object needs secondary actions, place a `UiActionMenu` beside the card or use a non-interactive `UiCard` with explicit child controls.
+
 ## Primitive contract
 
 Every primitive should:
@@ -60,7 +71,7 @@ Multi-part components use `slots` (see `UiCard`). Reuse `toneText`/`toneBgSolid`
 
 - `yarn design:components` — inventory + duplication report (`docs/component-audit/`).
 - `yarn design:check` — token-level gate (already wired to CI + pre-commit).
-- *(Planned)* a component gate failing on **new** raw `<button>`/`<dialog>`/`<input>` or ad-hoc modal overlays in app code, and on feature code importing `U*` where a `Ui*` wrapper exists — with a `design-allow` escape hatch.
+- `yarn design:boundaries` — component-boundary regression gate (wired to pre-commit). It fails on **new** raw `<button>`/`<dialog>`/`<input>`/`<select>`/`<textarea>`, ad-hoc modal overlays, hand-rolled card chrome, or direct Nuxt UI `U*` usage beyond the current `docs/component-audit/components.json` baseline. Use `design-allow` on legitimate native/editor/canvas exceptions.
 
 ## The catalog
 

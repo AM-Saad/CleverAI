@@ -1,39 +1,89 @@
 <template>
   <shared-page-wrapper title="Settings" subtitle="Manage your account preferences and application settings">
-    <div class="flex flex-col md:flex-row gap-8 h-screen w-full mt-8">
-      <ui-card className=" h-full" variant="ghost" size="xs">
-        <ui-tabs v-model="activeIndex" :items="tabs" @select="select" :direction="{ base: 'row', md: 'column' }" />
-      </ui-card>
+    <div class="mt-8 flex w-full min-w-0 flex-col gap-4">
+      <UiPanel variant="transparent" size="xs" class-name="min-w-0">
+        <ui-tabs
+          id-prefix="settings-tabs"
+          v-model="activeIndex"
+          :items="tabItems"
+          aria-label="Settings sections"
+          direction="row"
+          activation-mode="manual"
+          @select="select"
+        />
+      </UiPanel>
+
       <!-- Tab Content -->
-      <div class="w-full min-h-full">
-        <component :is="currentTab?.component" />
-      </div>
+      <section
+        v-if="currentTab"
+        :id="panelId(currentTab.key)"
+        class="w-full min-w-0"
+        role="tabpanel"
+        tabindex="0"
+        :aria-labelledby="tabId(currentTab.key)"
+      >
+        <component :is="currentTab.component" :key="currentTab.key" />
+      </section>
     </div>
 
   </shared-page-wrapper>
 </template>
 
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref, type Component } from "vue";
+import { computed, defineAsyncComponent, defineComponent, h, ref, resolveComponent } from "vue";
 import type { IconName } from "~/utils/icons.generated";
 
-const SettingsAccountTab = defineAsyncComponent(
+const AsyncTabLoading = defineComponent({
+  name: "SettingsTabLoading",
+  setup() {
+    const UiPanel = resolveComponent("UiPanel");
+    return () =>
+      h(UiPanel, { variant: "surface", size: "lg", contentClass: "text-sm text-content-secondary" }, () => "Loading settings…");
+  },
+});
+
+const AsyncTabError = defineComponent({
+  name: "SettingsTabError",
+  setup() {
+    const UiPanel = resolveComponent("UiPanel");
+    return () =>
+      h(UiPanel, {
+        variant: "subtle",
+        size: "lg",
+        role: "alert",
+        className:
+          "border-error/30 bg-error/10",
+        contentClass: "text-sm text-error-text",
+      }, "This settings section could not load. Try refreshing the page.");
+  },
+});
+
+const settingsTab = (loader: () => Promise<unknown>) =>
+  defineAsyncComponent({
+    loader: loader as any,
+    loadingComponent: AsyncTabLoading,
+    errorComponent: AsyncTabError,
+    delay: 150,
+    timeout: 12000,
+  });
+
+const SettingsAccountTab = settingsTab(
   () => import("~/components/settings/AccountTab.vue"),
 );
-const SettingsNotificationPreferences = defineAsyncComponent(
+const SettingsNotificationPreferences = settingsTab(
   () => import("~/features/notifications/components/NotificationPreferences.vue"),
 );
-const SettingsStudyTab = defineAsyncComponent(
+const SettingsStudyTab = settingsTab(
   () => import("~/components/settings/StudyTab.vue"),
 );
-const SettingsSecurityTab = defineAsyncComponent(
+const SettingsSecurityTab = settingsTab(
   () => import("~/components/settings/SecurityTab.vue"),
 );
-const SettingsDataPrivacyTab = defineAsyncComponent(
+const SettingsDataPrivacyTab = settingsTab(
   () => import("~/components/settings/DataPrivacyTab.vue"),
 );
-const SettingsLanguagePreferences = defineAsyncComponent(
-  () => import("~/pages/language/settings.vue"),
+const SettingsLanguagePreferences = settingsTab(
+  () => import("~/components/settings/LanguageSettingsTab.vue"),
 );
 
 // Tab configuration
@@ -85,8 +135,22 @@ const tabs: SettingsTab[] = [
 
 const activeIndex = ref(0);
 const currentTab = computed(() => tabs[activeIndex.value]);
+const tabItems = computed(() =>
+  tabs.map((tab) => ({
+    key: tab.key,
+    name: tab.name,
+    icon: tab.icon,
+    panelId: panelId(tab.key),
+  })),
+);
 
+function panelId(key: string) {
+  return `settings-tabs-panel-${key}`;
+}
 
+function tabId(key: string) {
+  return `settings-tabs-tab-${key}`;
+}
 
 function select(index: number) {
   activeIndex.value = index;

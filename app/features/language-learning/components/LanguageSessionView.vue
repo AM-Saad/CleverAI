@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import StoryCard from "~/features/language-learning/components/StoryCard.vue";
+import type { ReviewGrade } from "~/shared/utils/review.contract";
+
 const {
   currentCard,
   currentIndex,
@@ -19,17 +21,12 @@ const {
   speakWord,
 } = useLanguageReview();
 
-const showAnswer = ref(false);
+const lastXp = ref<number | null>(null);
 
-const handleGrade = async (value: "0" | "1" | "2" | "3" | "4" | "5") => {
+const onGrade = async (value: ReviewGrade) => {
   if (!currentCard.value) return;
-  await grade(currentCard.value.cardId, value);
-  showAnswer.value = false;
-};
-
-const handleSkip = () => {
-  nextCard();
-  showAnswer.value = false;
+  const result = await grade(currentCard.value.cardId, value);
+  if (result) lastXp.value = result.xpEarned;
 };
 
 const handleSpeak = (text?: string) => {
@@ -37,135 +34,58 @@ const handleSpeak = (text?: string) => {
   void speakWord(text || currentCard.value.word, currentCard.value.sourceLang);
 };
 
-const handleRestart = async () => {
-  showAnswer.value = false;
-  await fetchQueue();
-};
-
-// Watch card changes to reset answer state
-watch(currentCard, () => {
-  showAnswer.value = false;
-});
+const onRefresh = () => void fetchQueue();
 
 onMounted(() => fetchQueue());
 </script>
 
 <template>
-  <div class="flex flex-col h-full min-h-0">
-    <!-- Loading -->
-    <div
-      v-if="isLoading"
-      class="flex flex-col items-center justify-center flex-1 gap-4"
-    >
-      <ui-loader :is-fetching="true" />
-      <ui-paragraph size="sm" class="text-content-secondary"
-        >Loading your language cards...</ui-paragraph
-      >
-    </div>
+  <review-kit-shell
+    header-label="Language review"
+    empty-message="Capture and enroll words, then come back when they're due."
+    :loading="isLoading"
+    :error="fetchError"
+    :grade-error="gradeError"
+    :is-complete="isComplete"
+    :card-key="currentCard?.cardId ?? null"
+    :index="currentIndex"
+    :total="totalCards"
+    :remaining="remainingCards"
+    :progress="progress"
+    :submitting="isGrading"
+    :can-previous="currentIndex > 0"
+    :xp-gained="lastXp"
+    @grade="onGrade"
+    @previous="previousCard"
+    @skip="nextCard"
+    @restart="onRefresh"
+    @refresh="onRefresh"
+  >
+    <template #card="{ showAnswer }">
+      <StoryCard
+        v-if="currentCard"
+        :card="currentCard"
+        :show-answer="showAnswer"
+        :is-speaking="isSpeaking"
+        @speak="handleSpeak"
+      />
+    </template>
 
-    <!-- Fetch error -->
-    <div
-      v-else-if="fetchError"
-      class="flex flex-col items-center justify-center flex-1 gap-4 p-6"
-    >
-      <shared-error-message :error="fetchError" />
-      <ui-button @click="() => void fetchQueue()">Try again</ui-button>
-    </div>
-
-    <!-- Session complete -->
-    <div
-      v-else-if="isComplete"
-      class="flex flex-col items-center justify-center flex-1 gap-6 p-6 text-center"
-    >
+    <template #complete>
       <div
-        class="w-16 h-16 rounded-full bg-success/10 flex items-center justify-center"
+        class="flex h-16 w-16 items-center justify-center rounded-full bg-success/10"
       >
-        <Icon name="i-lucide-check-circle" class="w-8 h-8 text-success" />
+        <Icon name="i-lucide-check" class="h-8 w-8 text-success-text" />
       </div>
       <div class="space-y-1">
         <ui-subtitle size="xl" color="content-on-surface"
-          >Session Complete!</ui-subtitle
+          >Session complete</ui-subtitle
         >
         <ui-paragraph size="sm" class="text-content-secondary">
           You reviewed {{ totalCards }} word{{ totalCards === 1 ? "" : "s" }}.
           Great work!
         </ui-paragraph>
       </div>
-      <div class="flex flex-col sm:flex-row gap-3">
-        <ui-button @click="() => void handleRestart()">
-          <Icon name="i-lucide-refresh-cw" class="w-4 h-4 mr-1" />
-          Review Again
-        </ui-button>
-        <ui-button variant="ghost" color="neutral" to="/language">
-          <Icon name="i-lucide-arrow-left" class="w-4 h-4 mr-1" />
-          Back to Overview
-        </ui-button>
-      </div>
-    </div>
-
-    <!-- Active session -->
-    <template v-else-if="currentCard">
-      <!-- Progress bar + header -->
-      <div class="shrink-0 px-4 pt-4 pb-2 space-y-3">
-        <div
-          class="flex items-center justify-between text-sm text-content-secondary"
-        >
-          <span>{{ currentIndex + 1 }} / {{ totalCards }}</span>
-          <span>{{ remainingCards }} remaining</span>
-        </div>
-        <div
-          class="w-full h-1.5 rounded-[var(--radius-sm)] bg-surface-strong overflow-hidden"
-        >
-          <div
-            class="h-full bg-primary rounded-[var(--radius-sm)] transition-all duration-300"
-            :style="{ width: `${progress}%` }"
-          />
-        </div>
-      </div>
-
-      <!-- Grade error -->
-      <div v-if="gradeError" class="mx-4">
-        <shared-error-message :error="gradeError" />
-      </div>
-
-      <!-- Card -->
-      <div
-        class="flex-1 flex items-start justify-center px-4 py-4 overflow-y-auto"
-      >
-        <StoryCard
-          :card="currentCard"
-          :show-answer="showAnswer"
-          :is-grading="isGrading"
-          :is-speaking="isSpeaking"
-          @reveal="showAnswer = true"
-          @grade="handleGrade"
-          @speak="handleSpeak"
-        />
-      </div>
-
-      <!-- Bottom nav (go back) -->
-      <div class="shrink-0 px-4 pb-4 flex items-center justify-between">
-        <ui-button
-          variant="ghost"
-          color="neutral"
-          size="sm"
-          :disabled="currentIndex === 0"
-          @click="previousCard"
-        >
-          <Icon name="i-lucide-arrow-left" class="w-4 h-4 mr-1" />
-          Previous
-        </ui-button>
-        <ui-button
-          variant="ghost"
-          color="neutral"
-          size="sm"
-          :disabled="!showAnswer"
-          @click="handleSkip"
-        >
-          Skip
-          <Icon name="i-lucide-arrow-right" class="w-4 h-4 ml-1" />
-        </ui-button>
-      </div>
     </template>
-  </div>
+  </review-kit-shell>
 </template>

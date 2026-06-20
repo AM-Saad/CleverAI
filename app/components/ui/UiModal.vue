@@ -1,5 +1,11 @@
 <template>
-  <DialogModal :show="open" :title="title" :description="description" :icon="icon" @close="open = false">
+  <DialogModal
+    :show="open"
+    :title="title"
+    :description="description"
+    :icon="icon"
+    @close="open = false"
+  >
     <template v-if="$slots.header" #header><slot name="header" /></template>
     <template #body><slot /></template>
     <template v-if="$slots.footer" #footer><slot name="footer" /></template>
@@ -13,11 +19,12 @@
  * slot, optional `header`/`footer` slots.
  */
 import DialogModal from "~/components/shared/DialogModal.vue";
+import type { IconName } from "~/utils/icons.generated";
 
 const open = defineModel<boolean>("open", { default: false });
 const { title, description, icon } = defineProps<{
   title?: string;
   description?: string;
-  icon?: string;
+  icon?: IconName;
 }>();
 </script>

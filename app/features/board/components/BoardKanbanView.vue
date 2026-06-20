@@ -288,7 +288,12 @@ watch([localColumns, uncategorizedItems], () => {
 </script>
 
 <template>
-  <div class="flex flex-col h-full min-h-0 min-w-0 bg-surface rounded-[var(--radius-xl)] shadow-[var(--shadow-dropdown)] overflow-hidden">
+  <UiPanel
+    tag="section"
+    variant="surface"
+    size="xs"
+    class-name="flex h-full min-h-0 min-w-0 shadow-[var(--shadow-dropdown)]"
+    content-class="flex h-full min-h-0 min-w-0 flex-col p-0">
 
     <!-- Mobile Header with Column Navigation -->
     <div class="lg:hidden shrink-0">
@@ -303,7 +308,7 @@ watch([localColumns, uncategorizedItems], () => {
             'px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0',
             activeColumnId === null
               ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
-              : 'bg-surface-strong text-content-secondary hover:text-content-on-surface hover:bg-secondary'
+              : 'bg-secondary text-content-secondary hover:text-content-on-surface hover:bg-surface-subtle'
           ]">
           <span class="flex items-center gap-1.5">
             <Icon name="heroicons:inbox" class="w-4 h-4" />
@@ -316,7 +321,7 @@ watch([localColumns, uncategorizedItems], () => {
           'px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0',
           activeColumnId === column.id
             ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
-            : 'bg-surface-strong text-content-secondary hover:text-content-on-surface hover:bg-secondary'
+            : 'bg-secondary text-content-secondary hover:text-content-on-surface hover:bg-surface-subtle'
         ]">
           <Icon v-if="getColumnIcon" :name="getColumnIcon(column.name)" class="w-4 h-4" />
           {{ column.name }}
@@ -325,13 +330,13 @@ watch([localColumns, uncategorizedItems], () => {
 
         <!-- Navigation arrows integrated into pills bar -->
         <button @click="navigateColumn('prev')"
-          class="p-2 rounded-full text-content-secondary hover:text-content-on-surface hover:bg-surface-strong transition-colors disabled:opacity-30 shrink-0"
+          class="p-2 rounded-full text-content-secondary hover:text-content-on-surface hover:bg-surface-strong transition-colors disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 shrink-0"
           :disabled="activeColumnId === null && uncategorizedItems.length > 0">
           <Icon name="heroicons:chevron-left" class="w-4 h-4" />
         </button>
 
         <button @click="navigateColumn('next')"
-          class="p-2 rounded-full text-content-secondary hover:text-content-on-surface hover:bg-surface-strong transition-colors disabled:opacity-30 shrink-0"
+          class="p-2 rounded-full text-content-secondary hover:text-content-on-surface hover:bg-surface-strong transition-colors disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 shrink-0"
           :disabled="activeColumnId === localColumns[localColumns.length - 1]?.id">
           <Icon name="heroicons:chevron-right" class="w-4 h-4" />
         </button>
@@ -355,13 +360,14 @@ watch([localColumns, uncategorizedItems], () => {
 
     <!-- Kanban board -->
     <div v-else ref="boardContainer"
-      class="flex items-stretch gap-4 p-4 overflow-x-auto overflow-y-hidden pb-6 flex-1 min-h-0 h-full w-full scroll-smooth snap-x snap-mandatory lg:snap-none kanban-scroll-container">
+      class="flex items-stretch gap-4 p-4 overflow-x-auto overflow-y-hidden flex-1 min-h-0 h-full w-full scroll-smooth snap-x snap-mandatory lg:snap-none kanban-scroll-container">
 
       <!-- Uncategorized column (always first) -->
       <BoardColumn v-if="uncategorizedItems.length > 0 || orderedColumns.length === 0" id="column-uncategorized"
         :column-id="null" column-name="Uncategorized" :items="uncategorizedItems"
-        :all-column-items="allUncategorizedItems" :is-default="true" icon="heroicons:inbox" :color="designTokenValues['--color-content-secondary']"
-        :selected-item-id="selectedItemId" :item-drag-disabled="itemReorderLocked"
+        :all-column-items="allUncategorizedItems" :is-default="true" icon="heroicons:inbox"
+        :color="designTokenValues['--color-content-secondary']" :selected-item-id="selectedItemId"
+        :item-drag-disabled="itemReorderLocked"
         class="snap-center lg:snap-align-none shadow-[var(--shadow-dropdown)] w-[85vw] lg:w-80 shrink-0 h-full"
         @select-item="(id) => emit('select-item', id)" @delete-item="(id) => emit('delete-item', id)"
         @item-dragging="handleItemDraggingChange" />
@@ -394,16 +400,20 @@ watch([localColumns, uncategorizedItems], () => {
 
       <!-- Add column button -->
       <div class="shrink-0 w-[85vw] lg:w-80 snap-center lg:snap-align-none h-full" style="height: 100%;">
-        <div v-if="!showNewColumnInput"
-          class="h-full min-h-50 border-2 border-dashed border-surface-strong rounded-[var(--radius-xl)] flex items-center justify-center cursor-pointer hover:border-primary transition-all group"
+        <UiInteractiveCard
+          v-if="!showNewColumnInput"
+          variant="outline"
+          size="md"
+          class-name="h-full min-h-50 border-2 border-dashed border-surface-strong hover:border-primary"
+          content-class="flex h-full items-center justify-center"
           @click="showNewColumnInput = true">
           <div class="flex flex-col items-center gap-2 text-content-secondary group-hover:text-primary">
             <Icon name="heroicons:plus" class="w-8 h-8" />
             <span class="text-sm font-semibold uppercase tracking-wider">Add Column</span>
           </div>
-        </div>
+        </UiInteractiveCard>
 
-        <div v-else class="bg-white rounded-[var(--radius-xl)] p-4 shadow-[var(--shadow-modal)]">
+        <UiPanel v-else variant="surface" size="md" class-name="shadow-[var(--shadow-modal)]">
           <UiSubtitle class="mb-3" size="sm">New Column</UiSubtitle>
           <UiInput v-model="newColumnName" placeholder="Enter title..." size="md" class="my-3 w-full" autofocus
             @keyup.enter="createColumn" @keyup.escape="cancelNewColumn" />
@@ -417,7 +427,7 @@ watch([localColumns, uncategorizedItems], () => {
             </UiButton>
 
           </div>
-        </div>
+        </UiPanel>
       </div>
     </div>
 
@@ -430,8 +440,12 @@ watch([localColumns, uncategorizedItems], () => {
         </ui-paragraph>
 
         <div class="space-y-2 max-h-[60vh] overflow-y-auto">
-          <div v-for="(column, index) in reorderingColumns" :key="column.id"
-            class="flex items-center gap-3 rounded-[var(--radius-xl)] border border-secondary bg-surface-subtle p-3">
+          <UiPanel
+            v-for="(column, index) in reorderingColumns"
+            :key="column.id"
+            variant="subtle"
+            size="sm"
+            content-class="flex items-center gap-3">
             <div class="flex flex-col gap-1">
               <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:chevron-up" :disabled="index === 0"
                 :aria-label="`Move ${column.name} up`" @click="moveColumnInModal(index, 'up')" />
@@ -451,7 +465,7 @@ watch([localColumns, uncategorizedItems], () => {
             <ui-paragraph size="xs" color="content-secondary" class="shrink-0 font-medium">
               {{ index + 1 }}
             </ui-paragraph>
-          </div>
+          </UiPanel>
         </div>
       </template>
 
@@ -466,7 +480,7 @@ watch([localColumns, uncategorizedItems], () => {
         </div>
       </template>
     </shared-dialog-modal>
-  </div>
+  </UiPanel>
 </template>
 
 <style scoped>
