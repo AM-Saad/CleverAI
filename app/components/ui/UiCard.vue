@@ -71,7 +71,7 @@ const card = tv({
     },
     shadow: {
       none: { root: "shadow-none!" },
-      sm: { root: "shadow-[var(--shadow-dropdown)]" },
+      sm: { root: "shadow-[var(--shadow-card)]" },
       md: { root: "shadow-[var(--shadow-dropdown)]" },
       lg: { root: "shadow-[var(--shadow-card-hover)]" },
       xl: { root: "shadow-[var(--shadow-modal)]" },
