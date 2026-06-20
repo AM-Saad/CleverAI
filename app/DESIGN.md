@@ -123,12 +123,27 @@ Border: `1px solid var(--color-secondary)`. Radius: `var(--radius-2xl)` (12px).
 Use `#header` slot for card titles. Header slot auto-applies bottom border divider.
 Card content area background is **transparent** — the card's own surface color comes from its `variant`.
 
-### `<UButton>` (Nuxt UI) — All interactive buttons
-Variants: `solid` (primary CTA), `outline` (secondary), `ghost` (tertiary/icon), `soft` (subtle tinted), `link`.
-Colors: `primary`, `error`, `neutral`, `success`.
-Radius: `var(--radius-lg)` (6px) — set globally in `app.config.ts`.
-Primary solid hover gains `--shadow-primary-glow`. All buttons shift 1px up (`-translate-y-px`) on hover.
-Never place more than one `solid primary` button in the same view section.
+### `<UiButton>` — All interactive buttons (wraps Nuxt UI `UButton`)
+A **4-variant emphasis ladder** — one style per importance tier, so a button's weight is always unambiguous:
+
+| Variant | Emphasis | Use for |
+|---------|----------|---------|
+| `solid` | High | The one primary action / CTA in a section |
+| `soft` | Medium | Secondary actions (tonal fill) |
+| `ghost` | Low | Tertiary, toolbar, and icon actions |
+| `link` | Inline | A text action inside prose |
+
+> `outline` and `subtle` are **deprecated** — they now render as `soft`. Prefer `soft`.
+
+**Tones — buttons are *actions*, so 4:** `primary` (default brand action), `neutral` (utility/cancel), `error` (destructive), `success` (positive confirm — sparingly). `warning`/`info` are **status** colors → use on `UiBadge`/`UiAlert`, not buttons. Set via the **`tone`** prop (canonical); `color` is a legacy bridge.
+
+**Sizes:** `xs / sm / md / lg / xl`. **Defaults:** `tone="primary"`, `variant="solid"`, `size="md"`.
+
+**States:** hover/active shift the fill (or `underline` for `link`); press adds `active:scale-[0.98]`; focus is a keyboard-only 2px outline (`--ds-focus-outline-color`); `disabled`/`loading` dim to 60% and block pointer events. Radius `var(--radius-lg)` (6px), set globally in `app.config.ts` — the single source for the matrix (rendered live at `/design-system`).
+
+**Conventions:**
+- Never place more than one `solid` button in the same view section.
+- Icon-only → `<UiIconButton>`; toolbar → `<UiToolbarButton>`.
 
 ### `<Input>` / `<UInput>` — Text inputs
 Ring at rest: `border-secondary`. Focus ring: `ring-primary/90`. Radius: `var(--radius-lg)`.

@@ -126,7 +126,7 @@
         <div class="flex flex-col gap-3">
           <div v-for="variant in buttonVariants" :key="variant" class="flex flex-wrap items-center gap-2">
             <span class="w-16 text-xs text-content-secondary">{{ variant }}</span>
-            <UiButton v-for="tone in tones" :key="tone" :tone="tone" :variant="variant">{{ tone }}</UiButton>
+            <UiButton v-for="tone in buttonTones" :key="tone" :tone="tone" :variant="variant">{{ tone }}</UiButton>
           </div>
           <div class="flex flex-wrap items-center gap-2">
             <span class="w-16 text-xs text-content-secondary">sizes</span>
@@ -437,7 +437,10 @@ const targetTokens = pick("--target-");
 
 const tones: Tone[] = ["primary", "neutral", "success", "warning", "error", "info"];
 const sizes: Size[] = ["xs", "sm", "md", "lg", "xl"];
-const buttonVariants = ["solid", "outline", "soft", "subtle", "ghost", "link"] as const;
+// Canonical 4-variant emphasis ladder (outline/subtle are deprecated aliases of soft).
+const buttonVariants = ["solid", "soft", "ghost", "link"] as const;
+// Buttons are actions → 4 tones. warning/info are status colors (badges/alerts).
+const buttonTones: Tone[] = ["primary", "neutral", "error", "success"];
 const fieldVariants = ["outline", "soft", "subtle", "ghost", "none"] as const;
 const badgeVariants = ["solid", "outline", "soft", "subtle"] as const;
 const cardVariants = ["default", "outline", "ghost", "surface", "surface-strong"] as const;

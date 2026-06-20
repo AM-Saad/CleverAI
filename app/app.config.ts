@@ -1,31 +1,36 @@
 const buttonStateVariants = [
   { color: "primary", variant: "solid", class: "bg-primary! text-on-primary! hover:bg-primary-hover! active:bg-primary-active!" },
-  { color: "neutral", variant: "solid", class: "bg-surface-strong! text-content-on-surface! hover:bg-secondary! active:bg-secondary!" },
+  { color: "neutral", variant: "solid", class: "bg-surface-strong! text-content-on-surface-strong! hover:bg-border-strong! active:bg-border-strong!" },
   { color: "success", variant: "solid", class: "bg-success! text-on-success! hover:bg-success/85! active:bg-success/75!" },
   { color: "warning", variant: "solid", class: "bg-warning! text-on-warning! hover:bg-warning/85! active:bg-warning/75!" },
   { color: "error", variant: "solid", class: "bg-error! text-on-error! hover:bg-error/85! active:bg-error/75!" },
   { color: "info", variant: "solid", class: "bg-info! text-on-info! hover:bg-info/85! active:bg-info/75!" },
 
-  { color: "primary", variant: "outline", class: "bg-transparent! text-primary! ring-1! ring-inset ring-primary/50! hover:bg-primary/10! active:bg-primary/15!" },
-  { color: "neutral", variant: "outline", class: "bg-transparent! text-content-on-surface! ring-1! ring-inset ring-secondary! hover:bg-surface-subtle! active:bg-surface-strong!" },
-  { color: "success", variant: "outline", class: "bg-transparent! text-success-text! ring-1! ring-inset ring-success/50! hover:bg-success/10! active:bg-success/15!" },
-  { color: "warning", variant: "outline", class: "bg-transparent! text-warning-text! ring-1! ring-inset ring-warning/50! hover:bg-warning/10! active:bg-warning/15!" },
-  { color: "error", variant: "outline", class: "bg-transparent! text-error-text! ring-1! ring-inset ring-error/50! hover:bg-error/10! active:bg-error/15!" },
-  { color: "info", variant: "outline", class: "bg-transparent! text-info-text! ring-1! ring-inset ring-info/50! hover:bg-info/10! active:bg-info/15!" },
+  // `outline` is a DEPRECATED alias of `soft` — kept so existing usages keep
+  // working while the system standardizes on the 4-variant emphasis ladder
+  // (solid / soft / ghost / link). New code should use `soft`.
+  { color: "primary", variant: "outline", class: "bg-primary/10! text-primary! hover:bg-primary/15! active:bg-primary/20!" },
+  { color: "neutral", variant: "outline", class: "bg-surface-subtle! text-content-on-surface! hover:bg-surface-strong! active:bg-border-strong!" },
+  { color: "success", variant: "outline", class: "bg-success/10! text-success-text! hover:bg-success/15! active:bg-success/20!" },
+  { color: "warning", variant: "outline", class: "bg-warning/10! text-warning-text! hover:bg-warning/15! active:bg-warning/20!" },
+  { color: "error", variant: "outline", class: "bg-error/10! text-error-text! hover:bg-error/15! active:bg-error/20!" },
+  { color: "info", variant: "outline", class: "bg-info/10! text-info-text! hover:bg-info/15! active:bg-info/20!" },
 
   { color: "primary", variant: "soft", class: "bg-primary/10! text-primary! hover:bg-primary/15! active:bg-primary/20!" },
-  { color: "neutral", variant: "soft", class: "bg-surface-strong! text-content-on-surface! hover:bg-secondary! active:bg-secondary!" },
+  { color: "neutral", variant: "soft", class: "bg-surface-subtle! text-content-on-surface! hover:bg-surface-strong! active:bg-border-strong!" },
   { color: "success", variant: "soft", class: "bg-success/10! text-success-text! hover:bg-success/15! active:bg-success/20!" },
   { color: "warning", variant: "soft", class: "bg-warning/10! text-warning-text! hover:bg-warning/15! active:bg-warning/20!" },
   { color: "error", variant: "soft", class: "bg-error/10! text-error-text! hover:bg-error/15! active:bg-error/20!" },
   { color: "info", variant: "soft", class: "bg-info/10! text-info-text! hover:bg-info/15! active:bg-info/20!" },
 
-  { color: "primary", variant: "subtle", class: "bg-primary/10! text-primary! ring-1! ring-inset ring-primary/25! hover:bg-primary/15! active:bg-primary/20!" },
-  { color: "neutral", variant: "subtle", class: "bg-surface-subtle! text-content-on-surface! ring-1! ring-inset ring-secondary! hover:bg-surface-strong! active:bg-secondary!" },
-  { color: "success", variant: "subtle", class: "bg-success/10! text-success-text! ring-1! ring-inset ring-success/25! hover:bg-success/15! active:bg-success/20!" },
-  { color: "warning", variant: "subtle", class: "bg-warning/10! text-warning-text! ring-1! ring-inset ring-warning/25! hover:bg-warning/15! active:bg-warning/20!" },
-  { color: "error", variant: "subtle", class: "bg-error/10! text-error-text! ring-1! ring-inset ring-error/25! hover:bg-error/15! active:bg-error/20!" },
-  { color: "info", variant: "subtle", class: "bg-info/10! text-info-text! ring-1! ring-inset ring-info/25! hover:bg-info/15! active:bg-info/20!" },
+  // `subtle` is a DEPRECATED alias of `soft` (it was soft + a faint ring). Use
+  // `soft`; kept here so existing usages keep rendering correctly.
+  { color: "primary", variant: "subtle", class: "bg-primary/10! text-primary! hover:bg-primary/15! active:bg-primary/20!" },
+  { color: "neutral", variant: "subtle", class: "bg-surface-subtle! text-content-on-surface! hover:bg-surface-strong! active:bg-border-strong!" },
+  { color: "success", variant: "subtle", class: "bg-success/10! text-success-text! hover:bg-success/15! active:bg-success/20!" },
+  { color: "warning", variant: "subtle", class: "bg-warning/10! text-warning-text! hover:bg-warning/15! active:bg-warning/20!" },
+  { color: "error", variant: "subtle", class: "bg-error/10! text-error-text! hover:bg-error/15! active:bg-error/20!" },
+  { color: "info", variant: "subtle", class: "bg-info/10! text-info-text! hover:bg-info/15! active:bg-info/20!" },
 
   { color: "primary", variant: "ghost", class: "bg-transparent! text-primary! hover:bg-primary/10! active:bg-primary/15!" },
   { color: "neutral", variant: "ghost", class: "bg-transparent! text-content-secondary! hover:bg-surface-subtle! hover:text-content-on-surface! active:bg-surface-strong!" },
@@ -34,12 +39,12 @@ const buttonStateVariants = [
   { color: "error", variant: "ghost", class: "bg-transparent! text-error-text! hover:bg-error/10! active:bg-error/15!" },
   { color: "info", variant: "ghost", class: "bg-transparent! text-info-text! hover:bg-info/10! active:bg-info/15!" },
 
-  { color: "primary", variant: "link", class: "bg-transparent! p-0! text-primary! hover:text-primary-hover! active:text-primary-active!" },
-  { color: "neutral", variant: "link", class: "bg-transparent! p-0! text-content-secondary! hover:text-content-on-surface! active:text-content-on-surface-strong!" },
-  { color: "success", variant: "link", class: "bg-transparent! p-0! text-success-text! hover:opacity-80! active:opacity-70!" },
-  { color: "warning", variant: "link", class: "bg-transparent! p-0! text-warning-text! hover:opacity-80! active:opacity-70!" },
-  { color: "error", variant: "link", class: "bg-transparent! p-0! text-error-text! hover:opacity-80! active:opacity-70!" },
-  { color: "info", variant: "link", class: "bg-transparent! p-0! text-info-text! hover:opacity-80! active:opacity-70!" },
+  { color: "primary", variant: "link", class: "bg-transparent! p-0! text-primary! hover:underline! active:opacity-70!" },
+  { color: "neutral", variant: "link", class: "bg-transparent! p-0! text-content-secondary! hover:underline! active:opacity-70!" },
+  { color: "success", variant: "link", class: "bg-transparent! p-0! text-success-text! hover:underline! active:opacity-70!" },
+  { color: "warning", variant: "link", class: "bg-transparent! p-0! text-warning-text! hover:underline! active:opacity-70!" },
+  { color: "error", variant: "link", class: "bg-transparent! p-0! text-error-text! hover:underline! active:opacity-70!" },
+  { color: "info", variant: "link", class: "bg-transparent! p-0! text-info-text! hover:underline! active:opacity-70!" },
 ] as const;
 
 const fieldHighlightVariants = [
@@ -218,7 +223,7 @@ export default defineAppConfig({
     },
     button: {
       slots: {
-        base: 'rounded-[var(--radius-sm)] cursor-pointer focus-visible:ring-0! focus-visible:outline-2! focus-visible:outline-offset-2! focus-visible:outline-[var(--ds-focus-outline-color)]! disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60! aria-disabled:pointer-events-none aria-disabled:cursor-not-allowed aria-disabled:opacity-60! active:scale-[0.98] transition-[background-color,border-color,color,box-shadow,transform,opacity] duration-[var(--duration-fast)] ease-[var(--ease-standard)]',
+        base: 'rounded-[var(--radius-lg)] cursor-pointer focus-visible:ring-0! focus-visible:outline-2! focus-visible:outline-offset-2! focus-visible:outline-[var(--ds-focus-outline-color)]! disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60! aria-disabled:pointer-events-none aria-disabled:cursor-not-allowed aria-disabled:opacity-60! active:scale-[0.98] transition-[background-color,border-color,color,box-shadow,transform,opacity] duration-[var(--duration-fast)] ease-[var(--ease-standard)]',
       },
       compoundVariants: [...buttonStateVariants],
     },

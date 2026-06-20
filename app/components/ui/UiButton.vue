@@ -56,8 +56,13 @@ const {
   tone?: Tone;
   /** @deprecated Use `tone`. Kept as a migration bridge for legacy call sites. */
   color?: LegacyTone;
-  /** Visual style. */
-  variant?: "solid" | "outline" | "soft" | "subtle" | "ghost" | "link";
+  /**
+   * Emphasis level — the system uses a 4-variant ladder:
+   * `solid` (primary) → `soft` (secondary) → `ghost` (tertiary) → `link` (inline).
+   * `outline` and `subtle` are deprecated aliases that now render as `soft`;
+   * prefer `soft`.
+   */
+  variant?: "solid" | "soft" | "ghost" | "link" | "outline" | "subtle";
   size?: Size;
   icon?: string;
   leadingIcon?: string;
