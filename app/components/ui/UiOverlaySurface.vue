@@ -49,28 +49,33 @@ const overlaySurface = tv({
       "min-w-0 rounded-[var(--radius-xl)] border text-content-on-surface outline-none",
   },
   variants: {
+    // NOTE: with a named slot (`root`), tailwind-variants only applies variant
+    // values that are slot-keyed objects — bare strings are silently dropped.
+    // Every value here MUST be `{ root: "…" }` or the surface loses its
+    // background/shadow/z-index (transparent overlays).
     kind: {
-      modal: "border-secondary bg-surface shadow-[var(--shadow-modal)]",
-      drawer: "border-secondary bg-surface shadow-[var(--component-drawer-shadow)]",
-      popover: "border-secondary bg-surface shadow-[var(--shadow-dropdown)]",
-      menu: "border-secondary bg-surface shadow-[var(--shadow-dropdown)]",
-      toast: "border-secondary bg-surface shadow-[var(--component-toast-shadow)]",
-      tooltip:
-        "border-secondary bg-content-on-background text-background shadow-[var(--shadow-dropdown)]",
+      modal: { root: "border-secondary bg-surface shadow-[var(--shadow-modal)]" },
+      drawer: { root: "border-secondary bg-surface shadow-[var(--component-drawer-shadow)]" },
+      popover: { root: "border-secondary bg-surface shadow-[var(--shadow-dropdown)]" },
+      menu: { root: "border-secondary bg-surface shadow-[var(--shadow-dropdown)]" },
+      toast: { root: "border-secondary bg-surface shadow-[var(--component-toast-shadow)]" },
+      tooltip: {
+        root: "border-secondary bg-content-on-background text-background shadow-[var(--shadow-dropdown)]",
+      },
     },
     size: {
-      xs: "p-2 text-xs",
-      sm: "p-3 text-sm",
-      md: "p-4 text-sm",
-      lg: "p-6",
+      xs: { root: "p-2 text-xs" },
+      sm: { root: "p-3 text-sm" },
+      md: { root: "p-4 text-sm" },
+      lg: { root: "p-6" },
     },
     layer: {
-      none: "",
-      drawer: "z-[var(--z-drawer)]",
-      modal: "z-[var(--z-modal)]",
-      popover: "z-[var(--z-popover)]",
-      toast: "z-[var(--z-toast)]",
-      tooltip: "z-[var(--z-tooltip)]",
+      none: { root: "" },
+      drawer: { root: "z-[var(--z-drawer)]" },
+      modal: { root: "z-[var(--z-modal)]" },
+      popover: { root: "z-[var(--z-popover)]" },
+      toast: { root: "z-[var(--z-toast)]" },
+      tooltip: { root: "z-[var(--z-tooltip)]" },
     },
   },
 });
