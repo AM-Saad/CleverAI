@@ -123,12 +123,15 @@ Border: `1px solid var(--color-secondary)`. Radius: `var(--radius-2xl)` (12px).
 Use `#header` slot for card titles. Header slot auto-applies bottom border divider.
 Card content area background is **transparent** — the card's own surface color comes from its `variant`.
 
-### `<UButton>` (Nuxt UI) — All interactive buttons
-Variants: `solid` (primary CTA), `outline` (secondary), `ghost` (tertiary/icon), `soft` (subtle tinted), `link`.
-Colors: `primary`, `error`, `neutral`, `success`.
-Radius: `var(--radius-lg)` (6px) — set globally in `app.config.ts`.
-Primary solid hover gains `--shadow-primary-glow`. All buttons shift 1px up (`-translate-y-px`) on hover.
-Never place more than one `solid primary` button in the same view section.
+### `<UiButton>` — All interactive buttons (wraps Nuxt UI `UButton`)
+**Variants** (emphasis high → low): `solid` (primary CTA), `outline` (secondary, ringed), `subtle` (tinted fill **+** ring), `soft` (tinted fill, no ring), `ghost` (transparent — tertiary/toolbar), `link` (inline text action).
+**Tones:** `primary`, `neutral`, `success`, `warning`, `error`, `info` — via the **`tone`** prop (canonical). `color` is a legacy bridge kept for migration; prefer `tone`.
+**Sizes:** `xs / sm / md / lg / xl`. **Defaults:** `tone="primary"`, `variant="solid"`, `size="md"`.
+**States:** hover/active shift the fill (or `underline` for `link`); press adds `active:scale-[0.98]`; focus is a keyboard-only 2px outline (`--ds-focus-outline-color`); `disabled`/`loading` dim to 60% and block pointer events. Radius `var(--radius-lg)` (6px), set globally in `app.config.ts` — the single source for the full 6×6 matrix (rendered live at `/design-system`).
+**Conventions:**
+- Never place more than one `solid primary` in the same view section.
+- `ghost`/`soft` for low-emphasis and toolbar actions; `subtle` for a tinted action that still needs a defined edge.
+- Icon-only → `<UiIconButton>`; toolbar → `<UiToolbarButton>`.
 
 ### `<Input>` / `<UInput>` — Text inputs
 Ring at rest: `border-secondary`. Focus ring: `ring-primary/90`. Radius: `var(--radius-lg)`.

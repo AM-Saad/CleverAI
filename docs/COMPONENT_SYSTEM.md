@@ -65,7 +65,7 @@ const button = tv({
 export type ButtonVariants = VariantProps<typeof button>
 ```
 
-Multi-part components use `slots` (see `UiCard`). Reuse `toneText`/`toneBgSolid`/`toneBgSoft`/`toneBorder` from `variants.ts` for token-correct color sets.
+Multi-part components use `slots` (see `UiCard`). The tone → color matrix (button/field colors + hover/active states) is owned by the Nuxt UI theme in `app/app.config.ts` — the single source. Custom primitives that need a tone fill compose tokens directly (`bg-success/10`, `text-success-text`, …).
 
 ## Enforcement
 
