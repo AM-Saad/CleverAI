@@ -60,9 +60,11 @@ function select(index: number) {
 <template>
   <div class="flex flex-col relative overflow-hidden h-full">
     <!-- <ui-gradient-bg /> -->
-    <ui-card variant="default" size="sm"
-      class="relative  m-[2px] dark:m-px  flex-1 shrink min-h-0 overflow-hidden w-full mx-auto"
-      content-classes="h-full flex flex-col p-0">
+    <UiPanel
+      variant="surface"
+      size="sm"
+      class-name="relative m-[2px] dark:m-px flex-1 shrink min-h-0 overflow-hidden w-full mx-auto"
+      content-class="h-full flex flex-col p-0">
       <template #header>
         <div class="flex items-center gap-1">
           <!-- <icons-stars-generative /> -->
@@ -83,8 +85,8 @@ function select(index: number) {
       <template #default>
         <div class="flex-1 flex flex-col min-h-0 overflow-hidden gap-4">
           <!-- Materials List Section -->
-          <ui-card class="shrink-0 max-h-[30%]" size="sm" variant="outline"
-            content-classes="flex flex-col min-h-0 overflow-hidden">
+          <UiPanel class-name="shrink-0 max-h-[30%]" size="sm" variant="transparent"
+            content-class="flex flex-col min-h-0 overflow-hidden">
             <u-collapsible class="flex flex-col min-h-0" :default-open="true">
               <ui-subtitle class="flex items-center gap-1 select-none cursor-pointer " size="sm"
                 color="content-on-background">
@@ -100,10 +102,10 @@ function select(index: number) {
                 </div>
               </template>
             </u-collapsible>
-          </ui-card>
+          </UiPanel>
 
           <!-- Tabs and Interactive Content -->
-          <ui-card class="flex-1 min-h-0" content-classes="h-full flex flex-col overflow-hidden" variant="outline"
+          <UiPanel class-name="flex-1 min-h-0" content-class="h-full flex flex-col overflow-hidden" variant="transparent"
             size="md">
             <template #header>
               <ui-tabs v-model="activeIndex" :items="items" @select="select" direction="row" class="shrink-0" />
@@ -116,9 +118,9 @@ function select(index: number) {
                   @enrolled="$emit('enrolled', $event)" />
               </div>
             </template>
-          </ui-card>
+          </UiPanel>
         </div>
       </template>
-    </ui-card>
+    </UiPanel>
   </div>
 </template>

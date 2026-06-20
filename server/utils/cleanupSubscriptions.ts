@@ -37,21 +37,6 @@ export async function cleanupExpiredSubscriptions() {
       `🗑️ Deleted ${expiredResult.count} expired/failed subscriptions`
     );
 
-    // Update old subscriptions that haven't been seen in 7 days to inactive
-    const inactiveResult = await prisma.notificationSubscription.updateMany({
-      where: {
-        lastSeen: {
-          lt: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000),
-        },
-        isActive: true,
-      },
-      data: {
-        isActive: false,
-      },
-    });
-
-    console.log(`😴 Marked ${inactiveResult.count} subscriptions as inactive`);
-
     // Get statistics
     const stats = await prisma.notificationSubscription.groupBy({
       by: ["isActive"],
@@ -63,7 +48,7 @@ export async function cleanupExpiredSubscriptions() {
 
     return {
       deleted: expiredResult.count,
-      deactivated: inactiveResult.count,
+      deactivated: 0,
       stats,
     };
   } catch (error) {

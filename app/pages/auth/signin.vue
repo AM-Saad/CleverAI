@@ -39,8 +39,8 @@ const isValidPassword = computed(() => {
             inputField: `rounded-t-none  ${!isValidEmail ? ' -translate-y-full -z-10 hidden' : ''}`,
           }" />
         <button :class="`w-8 h-8 absolute right-2 bottom-2 border border-secondary rounded-full text-center grid place-items-center cursor-pointer hover:opacity-90 bg-primary 
-          focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary
-          hover:shadow ${isValidEmail && isValidPassword ? ' ' : 'opacity-75'}`" type="submit"
+          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)]
+          disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 hover:shadow`" type="submit"
           :disabled="!isValidEmail || !isValidPassword || loading" @click.prevent="handleSubmit"
           title="Submit Login Form" tabindex="3">
           <icon v-if="!loading" name="i-heroicons-arrow-right" class="w-4 h-4 text-white dark:text-dark" />
@@ -68,7 +68,7 @@ const isValidPassword = computed(() => {
         Or sign in with a social account below 👇
       </p>
       <ui-button v-for="provider in mappedProviders" :key="provider?.id"
-        class="border border-error justify-center disabled:opacity-50 dark:ring-white " :disabled="loading"
+        class="border border-error justify-center" :disabled="loading"
         variant="ghost" color="error" type="button" tabindex="5" @click="signIn(provider?.id)">
         Sign in with {{ provider?.name }}
       </ui-button>

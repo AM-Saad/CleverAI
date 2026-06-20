@@ -1,5 +1,11 @@
 <template>
-  <UBadge :color="color" :variant="variant" :size="size" :icon="icon" v-bind="$attrs">
+  <UBadge
+    :color="color"
+    :variant="variant"
+    :size="size"
+    :icon="icon"
+    v-bind="$attrs"
+  >
     <template v-for="(_, name) in $slots" #[name]="slotProps">
       <slot :name="name" v-bind="slotProps ?? {}" />
     </template>
@@ -15,14 +21,19 @@
 import { computed } from "vue";
 import type { Tone } from "./variants";
 
+type LegacyTone = Tone | "secondary";
+
 const {
   tone = "neutral",
+  color: legacyColor,
   variant = "soft",
   size = "sm",
   icon,
 } = defineProps<{
   /** Semantic color role. */
   tone?: Tone;
+  /** @deprecated Use `tone`. Kept as a migration bridge for legacy call sites. */
+  color?: LegacyTone;
   variant?: "solid" | "outline" | "soft" | "subtle";
   size?: "xs" | "sm" | "md" | "lg";
   icon?: string;
@@ -30,5 +41,7 @@ const {
 
 defineOptions({ inheritAttrs: false });
 
-const color = computed(() => tone);
+const color = computed(() =>
+  legacyColor === "secondary" ? "neutral" : (legacyColor ?? tone),
+);
 </script>

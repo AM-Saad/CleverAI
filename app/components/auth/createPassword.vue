@@ -105,19 +105,19 @@ const handleSubmit = async (): Promise<void> => {
         </div>
         <div class="mt-2 space-y-1 text-xs">
           <div
-            :class="{ 'text-success': /[A-Z]/.test(credentials.password || ''), 'text-content-disabled': !/[A-Z]/.test(credentials.password || '') }">
+            :class="{ 'text-success-text': /[A-Z]/.test(credentials.password || ''), 'text-content-disabled': !/[A-Z]/.test(credentials.password || '') }">
             • Uppercase letter</div>
           <div
-            :class="{ 'text-success': /[a-z]/.test(credentials.password || ''), 'text-content-disabled': !/[a-z]/.test(credentials.password || '') }">
+            :class="{ 'text-success-text': /[a-z]/.test(credentials.password || ''), 'text-content-disabled': !/[a-z]/.test(credentials.password || '') }">
             • Lowercase letter</div>
           <div
-            :class="{ 'text-success': /\d/.test(credentials.password || ''), 'text-content-disabled': !/\d/.test(credentials.password || '') }">
+            :class="{ 'text-success-text': /\d/.test(credentials.password || ''), 'text-content-disabled': !/\d/.test(credentials.password || '') }">
             • Number</div>
           <div
-            :class="{ 'text-success': /[^A-Za-z0-9]/.test(credentials.password || ''), 'text-content-disabled': !/[^A-Za-z0-9]/.test(credentials.password || '') }">
+            :class="{ 'text-success-text': /[^A-Za-z0-9]/.test(credentials.password || ''), 'text-content-disabled': !/[^A-Za-z0-9]/.test(credentials.password || '') }">
             • Symbol</div>
           <div
-            :class="{ 'text-success': (credentials.password || '').length >= 8, 'text-content-disabled': (credentials.password || '').length < 8 }">
+            :class="{ 'text-success-text': (credentials.password || '').length >= 8, 'text-content-disabled': (credentials.password || '').length < 8 }">
             • At least 8 characters</div>
         </div>
       </div>

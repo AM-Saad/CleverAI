@@ -1,12 +1,10 @@
 <template>
-  <div class="bg-white rounded-[var(--radius-xl)] shadow-[var(--shadow-card-hover)] p-6 mb-6 animate-fade-in">
+  <UiPanel variant="surface" size="lg" class-name="mb-6 animate-fade-in shadow-[var(--shadow-card-hover)]">
     <div class="flex justify-between items-start mb-6">
       <h2 class="text-xl font-bold text-content-on-surface-strong">
         Review Analytics
       </h2>
-      <button class="text-content-secondary hover:text-content-on-surface p-1 rounded-[var(--radius-md)]" @click="$emit('close')">
-        <Icon name="heroicons:x-mark" class="w-5 h-5" />
-      </button>
+      <UiIconButton icon="i-lucide-x" label="Close analytics" size="sm" variant="ghost" @click="$emit('close')" />
     </div>
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-6 mb-6">
@@ -20,7 +18,7 @@
 
       <!-- Total Reviews -->
       <div class="text-center">
-        <div class="text-3xl font-bold text-success">
+        <div class="text-3xl font-bold text-success-text">
           {{ analytics.totalReviews }}
         </div>
         <div class="text-sm text-content-secondary">Reviews Done</div>
@@ -28,7 +26,7 @@
 
       <!-- Current Streak -->
       <div class="text-center">
-        <div class="text-3xl font-bold text-warning">
+        <div class="text-3xl font-bold text-warning-text">
           {{ analytics.currentStreak }}
         </div>
         <div class="text-sm text-content-secondary">
@@ -38,7 +36,7 @@
 
       <!-- Retention Rate -->
       <div class="text-center">
-        <div class="text-3xl font-bold text-info">
+        <div class="text-3xl font-bold text-info-text">
           {{ Math.round(analytics.retentionRate * 100) }}%
         </div>
         <div class="text-sm text-content-secondary">
@@ -96,35 +94,35 @@
         Card Categories
       </h3>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="text-center p-3 bg-primary/10 rounded-[var(--radius-lg)]">
+        <UiPanel variant="subtle" size="sm" class-name="bg-primary/10" content-class="text-center">
           <div class="text-xl font-bold text-primary">
             {{ analytics.performanceMetrics.newCards }}
           </div>
           <div class="text-xs text-primary">New</div>
-        </div>
-        <div class="text-center p-3 bg-warning/10 rounded-[var(--radius-lg)]">
-          <div class="text-xl font-bold text-warning">
+        </UiPanel>
+        <UiPanel variant="subtle" size="sm" class-name="bg-warning/10" content-class="text-center">
+          <div class="text-xl font-bold text-warning-text">
             {{ analytics.performanceMetrics.learningCards }}
           </div>
-          <div class="text-xs text-warning">
+          <div class="text-xs text-warning-text">
             Learning
           </div>
-        </div>
-        <div class="text-center p-3 bg-error/10 rounded-[var(--radius-lg)]">
-          <div class="text-xl font-bold text-error">
+        </UiPanel>
+        <UiPanel variant="subtle" size="sm" class-name="bg-error/10" content-class="text-center">
+          <div class="text-xl font-bold text-error-text">
             {{ analytics.performanceMetrics.dueCards }}
           </div>
-          <div class="text-xs text-error">Due</div>
-        </div>
-        <div class="text-center p-3 bg-success/10 rounded-[var(--radius-lg)]">
-          <div class="text-xl font-bold text-success">
+          <div class="text-xs text-error-text">Due</div>
+        </UiPanel>
+        <UiPanel variant="subtle" size="sm" class-name="bg-success/10" content-class="text-center">
+          <div class="text-xl font-bold text-success-text">
             {{ analytics.performanceMetrics.masteredCards }}
           </div>
-          <div class="text-xs text-success">Mastered</div>
-        </div>
+          <div class="text-xs text-success-text">Mastered</div>
+        </UiPanel>
       </div>
     </div>
-  </div>
+  </UiPanel>
 </template>
 
 <script setup lang="ts">

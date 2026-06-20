@@ -48,7 +48,7 @@ function clearStaged() {
 
 
 <template>
-  <ui-card class="speech-recorder  transition-all" variant="surface" size="sm">
+  <UiPanel class-name="speech-recorder transition-all" variant="subtle" size="sm">
     <template #header>
       <div class="flex items-center gap-2">
         <shared-icon name="mic" class="w-5 h-5" />
@@ -57,7 +57,7 @@ function clearStaged() {
     </template>
     <div class="w-full flex justify-between items-center mb-1">
 
-      <span v-if="isRecording" class="text-xs font-medium text-error animate-pulse flex items-center gap-1.5">
+      <span v-if="isRecording" class="text-xs font-medium text-error-text animate-pulse flex items-center gap-1.5">
         <span class="relative flex h-2 w-2">
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-error/80 opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2 w-2 bg-error"></span>
@@ -70,11 +70,16 @@ function clearStaged() {
     </div>
 
     <!-- Error state -->
-    <div v-show="errorMsg"
-      class="w-full p-3 bg-error/10 text-error text-sm rounded-[var(--radius-xl)] flex items-start gap-2 border border-error/20">
+    <UiPanel
+      v-show="errorMsg"
+      variant="subtle"
+      size="sm"
+      role="alert"
+      class-name="w-full border-error/20 bg-error/10"
+      content-class="flex items-start gap-2 text-sm text-error-text">
       <UIcon name="i-heroicons-exclamation-circle" class="w-5 h-5 flex-shrink-0 mt-0.5" />
       <span>{{ errorMsg }}</span>
-    </div>
+    </UiPanel>
 
     <!-- Step 1: Record / Upload buttons (only when no audio is staged) -->
     <div v-if="!stagedAudio" class="flex flex-col sm:flex-row items-stretch gap-3 w-full">
@@ -99,15 +104,15 @@ function clearStaged() {
 
     <!-- Step 2: Audio staged — confirm transcription -->
     <div v-if="stagedAudio" class="w-full space-y-3">
-      <div class="bg-surface-subtle p-3 rounded-[var(--radius-xl)] flex items-center gap-3">
-        <icon name="i-lucide-audio-lines" class="w-5 h-5 text-error shrink-0" />
+      <UiPanel variant="surface" size="sm" content-class="flex items-center gap-3">
+        <icon name="i-lucide-audio-lines" class="w-5 h-5 text-error-text shrink-0" />
         <div class="flex-1 min-w-0">
           <p class="text-sm font-medium text-content-on-surface truncate">{{ stagedAudio.label }}</p>
           <p class="text-xs text-content-secondary">Ready to transcribe</p>
         </div>
         <UiButton size="xs" color="neutral" variant="ghost" icon="i-heroicons-x-mark" @click="clearStaged"
           aria-label="Remove" />
-      </div>
+      </UiPanel>
 
       <!-- Title input -->
       <UiInput v-model="materialTitle" placeholder="Material title (optional)" :ui="{ root: 'w-full' }" size="sm" />
@@ -119,5 +124,5 @@ function clearStaged() {
         </UiButton>
       </div>
     </div>
-  </ui-card>
+  </UiPanel>
 </template>

@@ -1,11 +1,5 @@
 <template>
-  <component :is="tag" :class="[
-    'ui-title',
-    sizeClasses[size],
-    weightClasses[weight],
-    colorClasses[color],
-    center ? 'text-center' : '',
-  ]">
+  <component :is="tag" :class="ui">
     <slot />
   </component>
 </template>
@@ -27,13 +21,24 @@ interface Props {
   /**
    * Text color variant
    */
-  color?: "primary" | "content-on-surface" | "content-on-surface-strong" | "content-on-background" | "white" | "danger" | "success" | "disabled";
+  color?:
+    | "primary"
+    | "content-on-surface"
+    | "content-on-surface-strong"
+    | "content-on-background"
+    | "white"
+    | "danger"
+    | "success"
+    | "disabled";
 
   /**
    * Center alignment
    */
   center?: boolean;
 }
+
+import { computed } from "vue";
+import { tv } from "./variants";
 
 const {
   tag = "h2",
@@ -43,35 +48,43 @@ const {
   center = false,
 } = defineProps<Props>();
 
-const sizeClasses = {
-  xs: "text-xs leading-tight",
-  sm: "text-sm leading-tight",
-  base: "text-base leading-tight",
-  lg: "text-lg leading-tight",
-  xl: "text-xl leading-tight",
-  "2xl": "text-2xl leading-tight tracking-tight",
-  "3xl": "text-3xl leading-tight tracking-tight",
-  "4xl": "text-4xl leading-tight tracking-tighter",
-  "5xl": "text-5xl leading-tight tracking-tighter",
-};
+const title = tv({
+  base: "ui-title m-0 tracking-normal",
+  variants: {
+    size: {
+      xs: "text-xs leading-tight",
+      sm: "text-sm leading-tight",
+      base: "text-base leading-tight",
+      lg: "text-lg leading-tight",
+      xl: "text-xl leading-tight",
+      "2xl": "text-2xl leading-tight",
+      "3xl": "text-3xl leading-tight",
+      "4xl": "text-4xl leading-tight",
+      "5xl": "text-5xl leading-tight",
+    },
+    weight: {
+      light: "font-light",
+      normal: "font-normal",
+      medium: "font-medium",
+      semibold: "font-semibold",
+      bold: "font-bold",
+    },
+    color: {
+      primary: "text-primary",
+      "content-on-surface": "text-content-on-surface",
+      "content-on-surface-strong": "text-content-on-surface-strong",
+      "content-on-background": "text-content-on-background",
+      white: "text-white",
+      danger: "text-error-text",
+      success: "text-success-text",
+      disabled: "text-content-disabled",
+    },
+  },
+});
 
-const weightClasses = {
-  light: "font-light",
-  normal: "font-normal",
-  medium: "font-medium",
-  semibold: "font-semibold",
-  bold: "font-bold",
-};
-const colorClasses = {
-  primary: "text-[color:var(--color-primary)]",
-  "content-on-surface": "text-content-on-surface",
-  "content-on-surface-strong": "text-content-on-surface-strong",
-  "content-on-background": "text-content-on-background",
-  white: "text-white",
-  danger: "text-[color:var(--color-error)]",
-  success: "text-success",
-  disabled: "text-[color:var(--color-content-disabled)]",
-};
+const ui = computed(() =>
+  title({ size, weight, color, class: center ? "text-center" : "" }),
+);
 </script>
 
 <style scoped>

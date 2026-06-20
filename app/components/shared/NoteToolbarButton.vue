@@ -1,22 +1,39 @@
 <template>
-  <UTooltip :text="title" :disabled="!title" :delay-duration="200" :content="{ side: 'top', sideOffset: 6 }"
-    :shortcuts="shortcuts">
-    <button type="button" :class="[
-      'inline-flex items-center justify-center gap-1.5 rounded-[var(--radius-md)] text-sm font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20',
-      active ? 'bg-primary/10 text-primary shadow-[var(--shadow-dropdown)]' : colorClasses,
-      disabled ? 'opacity-50 cursor-not-allowed' : '',
-      (($slots.default && !iconOnly) || label) ? 'px-2.5 py-1.5' : 'w-8 h-8'
-    ]" :aria-label="title || label" :disabled="disabled" @click="emit('click', $event)">
-      <shared-icon v-if="icon" :name="icon" class="w-[18px] h-[18px] shrink-0" />
-      <span v-if="label" :class="{ 'hidden sm:inline': hideLabelOnMobile }">{{ label }}</span>
+  <UiTooltip
+    :text="title || ''"
+    :disabled="!title"
+    :delay-duration="200"
+    :content="{ side: 'top', sideOffset: 6 }"
+    :shortcuts="shortcuts"
+  >
+    <UiButton
+      type="button"
+      :tone="buttonTone"
+      :variant="buttonVariant"
+      size="xs"
+      :aria-label="title || label"
+      :disabled="disabled"
+      :class="[
+        active ? 'shadow-[var(--shadow-dropdown)]' : '',
+        ($slots.default && !iconOnly) || label ? '' : 'h-8 w-8',
+      ]"
+      @click="emit('click', $event)"
+    >
+      <shared-icon
+        v-if="icon"
+        :name="icon"
+        class="w-[18px] h-[18px] shrink-0"
+      />
+      <span v-if="label" :class="{ 'hidden sm:inline': hideLabelOnMobile }">{{
+        label
+      }}</span>
       <slot />
-    </button>
-  </UTooltip>
+    </UiButton>
+  </UiTooltip>
 </template>
 
 <script setup lang="ts">
-import type { IconName } from '#imports';
-import { computed } from 'vue';
+import type { IconName } from "#imports";
 
 const props = defineProps<{
   icon?: IconName;
@@ -26,21 +43,23 @@ const props = defineProps<{
   disabled?: boolean;
   hideLabelOnMobile?: boolean;
   iconOnly?: boolean;
-  variant?: 'default' | 'danger' | 'primary';
+  variant?: "default" | "danger" | "primary";
   shortcuts?: string[];
 }>();
 
 const emit = defineEmits<{
-  (e: 'click', event: MouseEvent): void;
+  (e: "click", event: MouseEvent): void;
 }>();
 
-const colorClasses = computed(() => {
-  if (props.variant === 'danger') {
-    return 'text-error hover:bg-error/10';
-  } else if (props.variant === 'primary') {
-    return 'bg-primary text-on-primary hover:bg-primary/90';
-  }
-  // Default variant
-  return 'text-content-on-surface hover:bg-surface-strong hover:text-content-on-surface-strong';
+const buttonTone = computed(() => {
+  if (props.variant === "danger") return "error";
+  if (props.variant === "primary" || props.active) return "primary";
+  return "neutral";
+});
+
+const buttonVariant = computed(() => {
+  if (props.variant === "primary") return "solid";
+  if (props.active) return "soft";
+  return "ghost";
 });
 </script>

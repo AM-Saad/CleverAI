@@ -40,6 +40,7 @@ export function useLanguageReview() {
     queue.value = [];
     gradedCardIds.value = new Set();
     requestIdsByCard.clear();
+    await languageRuntime.ensurePreferences();
 
     const result = await fetchOperation.execute(() =>
       $api.language.getQueue({

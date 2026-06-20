@@ -634,6 +634,13 @@ function fakeGenerationSavePrisma() {
               for (const item of toDelete) flashcards.delete(item.id);
               return { count: toDelete.length };
             },
+            create: async ({ data, select }: any) => {
+              const id = `flashcard-${flashcardSequence++}`;
+              const record = { id, ...data };
+              flashcards.set(id, record);
+              if (select?.id) return { id };
+              return record;
+            },
             createMany: async ({ data }: any) => {
               for (const item of data) {
                 const id = `flashcard-${flashcardSequence++}`;
@@ -654,6 +661,13 @@ function fakeGenerationSavePrisma() {
               for (const item of toDelete) questions.delete(item.id);
               return { count: toDelete.length };
             },
+            create: async ({ data, select }: any) => {
+              const id = `question-${questionSequence++}`;
+              const record = { id, ...data };
+              questions.set(id, record);
+              if (select?.id) return { id };
+              return record;
+            },
             createMany: async ({ data }: any) => {
               for (const item of data) {
                 const id = `question-${questionSequence++}`;
@@ -672,6 +686,10 @@ function fakeGenerationSavePrisma() {
               );
               reviews.splice(0, reviews.length, ...filtered);
               return { count: before - reviews.length };
+            },
+            createMany: async ({ data }: any) => {
+              reviews.push(...data);
+              return { count: data.length };
             },
           },
         }),
@@ -3502,6 +3520,7 @@ test("generated flashcards save through shared ai-generation service", async () 
 
   const result = await saveGeneratedArtifacts({
     prisma,
+    userId: "user-1",
     task: "flashcards",
     workspaceId: "workspace-1",
     materialId: "material-1",
@@ -3524,6 +3543,11 @@ test("generated flashcards save through shared ai-generation service", async () 
   assert.equal(result.deletedCount, 1);
   assert.equal(result.deletedReviewsCount, 1);
   assert.equal(flashcards.size, 2);
+  assert.equal(reviews.length, 2);
+  assert.deepEqual(
+    reviews.map((review) => review.resourceType),
+    ["flashcard", "flashcard"]
+  );
 });
 
 test("gateway cache hit consumes quota and returns cached payload metadata", async () => {

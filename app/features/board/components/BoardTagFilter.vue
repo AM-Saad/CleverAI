@@ -24,7 +24,9 @@ onMounted(() => {
 
 // All tags sorted by order
 const allTags = computed(() => {
-  return Array.from(tagsStore.tags.value.values()).sort((a, b) => a.order - b.order);
+  return Array.from(tagsStore.tags.value.values()).sort(
+    (a, b) => a.order - b.order,
+  );
 });
 
 // Toggle tag selection
@@ -33,7 +35,7 @@ const toggleTag = (tagName: string) => {
   if (isSelected) {
     emit(
       "update:modelValue",
-      props.modelValue.filter((t) => t !== tagName)
+      props.modelValue.filter((t) => t !== tagName),
     );
   } else {
     emit("update:modelValue", [...props.modelValue, tagName]);
@@ -44,7 +46,7 @@ const toggleTag = (tagName: string) => {
 const selectAll = () => {
   emit(
     "update:modelValue",
-    allTags.value.map((t) => t.name)
+    allTags.value.map((t) => t.name),
   );
 };
 
@@ -65,14 +67,17 @@ const selectedTags = computed(() => {
 </script>
 
 <template>
-  <UPopover v-model:open="isOpen">
-    <template #default="{ open }">
-      <UiButton size="sm" :icon="selectedCount > 0 ? 'heroicons:funnel-solid' : 'heroicons:funnel'"
-        trailing-icon="heroicons:chevron-down-20-solid">
-        <span v-if="selectedCount === 0">Filter</span>
-        <span v-else>{{ selectedCount }} tag{{ selectedCount === 1 ? '' : 's' }}</span>
-      </UiButton>
-    </template>
+  <UiPopover v-model:open="isOpen">
+    <UiButton
+      size="sm"
+      :icon="selectedCount > 0 ? 'heroicons:funnel-solid' : 'heroicons:funnel'"
+      trailing-icon="heroicons:chevron-down-20-solid"
+    >
+      <span v-if="selectedCount === 0">Filter</span>
+      <span v-else
+        >{{ selectedCount }} tag{{ selectedCount === 1 ? "" : "s" }}</span
+      >
+    </UiButton>
 
     <template #content>
       <div class="w-64 p-2">
@@ -82,53 +87,104 @@ const selectedTags = computed(() => {
             Filter
           </span>
           <div class="flex gap-1">
-            <UiButton v-if="selectedCount > 0" size="xs" color="neutral" variant="ghost" @click="clearAll">
+            <UiButton
+              v-if="selectedCount > 0"
+              size="xs"
+              tone="neutral"
+              variant="ghost"
+              @click="clearAll"
+            >
               Clear
             </UiButton>
-            <UiButton v-if="selectedCount < allTags.length" size="xs" color="neutral" variant="ghost" @click="selectAll">
+            <UiButton
+              v-if="selectedCount < allTags.length"
+              size="xs"
+              tone="neutral"
+              variant="ghost"
+              @click="selectAll"
+            >
               All
             </UiButton>
           </div>
         </div>
 
         <!-- Tag list -->
-        <div v-if="allTags.length > 0" class="max-h-64 overflow-y-auto space-y-1">
-          <button v-for="tag in allTags" :key="tag.id" type="button"
-            class="w-full px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-surface-subtle flex items-center gap-2"
-            @click="toggleTag(tag.name)">
-            <Icon :name="modelValue.includes(tag.name)
-              ? 'heroicons:check-circle-solid'
-              : 'heroicons:circle'
-              " :class="[
+        <div
+          v-if="allTags.length > 0"
+          class="max-h-64 overflow-y-auto space-y-1"
+        >
+          <UiButton
+            v-for="tag in allTags"
+            :key="tag.id"
+            block
+            tone="neutral"
+            variant="ghost"
+            size="xs"
+            class="justify-start"
+            @click="toggleTag(tag.name)"
+          >
+            <Icon
+              :name="
+                modelValue.includes(tag.name)
+                  ? 'heroicons:check-circle-solid'
+                  : 'heroicons:circle'
+              "
+              :class="[
                 'w-4 h-4',
                 modelValue.includes(tag.name)
                   ? 'text-primary'
                   : 'text-content-disabled',
-              ]" />
-            <UiBadge :color="(tag.color as any)" variant="subtle" size="sm" class="flex-1 justify-start">
+              ]"
+            />
+            <UiBadge
+              variant="subtle"
+              size="sm"
+              class="flex-1 justify-start"
+              :style="{
+                backgroundColor: tag.color,
+                color: 'var(--color-content-on-surface)',
+              }"
+            >
               {{ tag.name }}
             </UiBadge>
-          </button>
+          </UiButton>
         </div>
 
         <!-- Empty state -->
-        <div v-else class="px-2 py-8 text-center text-sm text-content-secondary">
+        <div
+          v-else
+          class="px-2 py-8 text-center text-sm text-content-secondary"
+        >
           No tags yet. Create tags while adding notes.
         </div>
 
         <!-- Selected tags preview (when closed) -->
-        <div v-if="selectedTags.length > 0" class="mt-2 pt-2 border-t border-secondary">
+        <div
+          v-if="selectedTags.length > 0"
+          class="mt-2 pt-2 border-t border-secondary"
+        >
           <div class="flex flex-wrap gap-1">
-            <UiBadge v-for="tag in selectedTags.slice(0, 3)" :key="tag.id" :color="(tag.color as any)" variant="subtle"
-              size="xs">
+            <UiBadge
+              v-for="tag in selectedTags.slice(0, 3)"
+              :key="tag.id"
+              variant="subtle"
+              size="xs"
+              :style="{
+                backgroundColor: tag.color,
+                color: 'var(--color-content-on-surface)',
+              }"
+            >
               {{ tag.name }}
             </UiBadge>
-            <span v-if="selectedTags.length > 3" class="text-xs text-content-secondary">
+            <span
+              v-if="selectedTags.length > 3"
+              class="text-xs text-content-secondary"
+            >
               +{{ selectedTags.length - 3 }} more
             </span>
           </div>
         </div>
       </div>
     </template>
-  </UPopover>
+  </UiPopover>
 </template>

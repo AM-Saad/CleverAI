@@ -132,6 +132,8 @@ export class LanguageService extends FetchFactory {
       words: LanguageWord[];
       nextCursor: string | null;
       categories?: string[];
+      totalWords?: number;
+      statusCounts?: Record<string, number>;
     }>
   > {
     const query = new URLSearchParams();

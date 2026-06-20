@@ -175,29 +175,44 @@ export async function updateModelHealth(
  * Uses 80% old, 20% new for smoothing
  */
 export async function updateModelLatency(modelId: string, latencyMs: number): Promise<void> {
-  
-  
-  try {
-    const model = await prisma.llmModelRegistry.findUnique({
-      where: { modelId },
-    })
-    
-    if (!model) {
-      console.warn(`[modelRegistry] Model ${modelId} not found for latency update`)
+  const isRetryableWriteConflict = (err: unknown) => {
+    const error = err as { code?: string; message?: string };
+    return (
+      error?.code === "P2034" ||
+      /write conflict|deadlock/i.test(error?.message ?? "")
+    );
+  };
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const model = await prisma.llmModelRegistry.findUnique({
+        where: { modelId },
+      })
+
+      if (!model) {
+        console.warn(`[modelRegistry] Model ${modelId} not found for latency update`)
+        return
+      }
+
+      // Rolling average: 80% old, 20% new
+      const newAvg = model.avgLatencyMs
+        ? Math.round(model.avgLatencyMs * 0.8 + latencyMs * 0.2)
+        : latencyMs
+
+      await prisma.llmModelRegistry.update({
+        where: { modelId },
+        data: { avgLatencyMs: newAvg },
+      })
+      return
+    } catch (err) {
+      if (attempt < 3 && isRetryableWriteConflict(err)) {
+        await new Promise((resolve) => setTimeout(resolve, attempt * 25))
+        continue
+      }
+
+      console.error(`[modelRegistry] Failed to update latency for ${modelId}:`, err)
       return
     }
-    
-    // Rolling average: 80% old, 20% new
-    const newAvg = model.avgLatencyMs
-      ? Math.round(model.avgLatencyMs * 0.8 + latencyMs * 0.2)
-      : latencyMs
-    
-    await prisma.llmModelRegistry.update({
-      where: { modelId },
-      data: { avgLatencyMs: newAvg },
-    })
-  } catch (err) {
-    console.error(`[modelRegistry] Failed to update latency for ${modelId}:`, err)
   }
 }
 

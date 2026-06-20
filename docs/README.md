@@ -6,18 +6,32 @@
 
 ## 📚 Documentation
 
+### Core
 | Document | Description |
 |----------|-------------|
 | **[📖 Project README](../README.md)** | Project overview, setup, tech stack, features |
 | **[🏗️ ARCHITECTURE.md](./ARCHITECTURE.md)** | System design, data model, module architecture, design patterns |
-| **[🎯 FEATURES.md](./FEATURES.md)** | Detailed feature documentation (Notes, SR, LLM, Board, AI, PWA, Auth) |
-| **[🔄 LLM_GENERATION_FLOW.md](./LLM_GENERATION_FLOW.md)** | End-to-end LLM generation trace |
+| **[🎯 FEATURES.md](./FEATURES.md)** | Detailed feature docs (Notes, Spaced Repetition, LLM, Board, AI, PWA, Auth, Notifications) |
 | **[🔧 DEVELOPMENT.md](./DEVELOPMENT.md)** | Setup, commands, debugging, testing |
 | **[🔧 MAINTENANCE.md](./MAINTENANCE.md)** | Known issues, tech debt, operations, roadmap |
-| **[📱 PWA.md](./PWA.md)** | PWA implementation, service worker, caching strategy |
-| **[📚 SPACED_REPETITION.md](./SPACED_REPETITION.md)** | SM-2 algorithm details, debug controls |
-| **[🔔 NOTIFICATIONS.md](./NOTIFICATIONS.md)** | Push notifications, preferences, MongoDB integration |
-| **[⏰ CRON_TIMING.md](./CRON_TIMING.md)** | Timezone-aware cron system, scheduling |
+
+### Design system
+| Document | Description |
+|----------|-------------|
+| **[🎨 DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md)** | Code-first design tokens, generation pipeline, enforcement |
+| **[🧩 COMPONENT_SYSTEM.md](./COMPONENT_SYSTEM.md)** | Component taxonomy, `Ui*` wrapper policy, contracts |
+| **[📐 app/DESIGN.md](../app/DESIGN.md)** | Visual language spec — breakpoints, typography, component checklist |
+
+### LLM & AI worker
+| Document | Description |
+|----------|-------------|
+| **[🔄 LLM_GENERATION_FLOW.md](./LLM_GENERATION_FLOW.md)** | End-to-end LLM generation trace |
+| **[🤖 AI_WORKER_ARCHITECTURE.md](./AI_WORKER_ARCHITECTURE.md)** | On-device AI web worker — design, message flow, build |
+| **[⬇️ AI_MODEL_DOWNLOADS.md](./AI_MODEL_DOWNLOADS.md)** | Model-download Pinia store — API, usage, troubleshooting |
+| **[⚡ SW_AI_WORKER_QUICK_REFERENCE.md](./SW_AI_WORKER_QUICK_REFERENCE.md)** | Service-worker / AI-worker cheat-sheet — message flows, file org, patterns |
+| **[🧭 MODULE_SYSTEM_DIAGRAMS.md](./MODULE_SYSTEM_DIAGRAMS.md)** | Server module-system diagrams |
+
+> **Operations history:** [DEPLOYMENT_BUGS_FIXES.md](./DEPLOYMENT_BUGS_FIXES.md) records resolved Railway/auth deployment issues.
 
 ---
 

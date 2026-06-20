@@ -8,6 +8,10 @@
   --color-warning: #f59e0b; /* Caution and due-soon states */
   --color-error: #ef4444; /* Destructive and failed states */
   --color-info: #00c7e4; /* Informational states */
+  --color-success-text: #047857; /* AA text/icon success on light surfaces */
+  --color-warning-text: #92400e; /* AA text/icon warning on light surfaces */
+  --color-error-text: #b91c1c; /* AA text/icon error on light surfaces */
+  --color-info-text: #0369a1; /* AA text/icon info on light surfaces */
   --color-secondary: #e7e9ec; /* Borders, dividers, neutral chips */
   --color-background: #fafafa; /* Page background */
   --color-surface: #f0f0f2; /* Raised surfaces */
@@ -17,7 +21,7 @@
   --color-content-on-surface: #575252; /* Text on card/panel surfaces */
   --color-content-on-surface-strong: #333333; /* Strong text on surfaces */
   --color-content-secondary: #606771; /* Metadata and secondary text (AA on surface) */
-  --color-content-disabled: #9ca3af; /* Disabled and placeholder text */
+  --color-content-disabled: #6b7280; /* Disabled and placeholder text */
   --color-white: #ffffff; /* Compatibility white token */
   --color-dark: #1f2937; /* Compatibility dark text token */
   --color-border: var(--color-secondary); /* Default border */
@@ -46,6 +50,11 @@
   --tracking-tight: -0.025em;
   --tracking-normal: 0em;
   --tracking-wide: 0.025em;
+  --font-size-display: clamp(2rem, 4vw, 3.5rem); /* Hero/display headings */
+  --font-size-page-title: clamp(1.75rem, 2.5vw, 2.5rem); /* Page-level h1 */
+  --font-size-section-title: 1.25rem; /* Section h2/h3 */
+  --font-size-body: 1rem; /* Default body copy */
+  --font-size-caption: 0.8125rem; /* Metadata and captions */
   --leading-tight: 1.25;
   --leading-snug: 1.375;
   --leading-normal: 1.5;
@@ -57,6 +66,21 @@
   --shadow-dropdown: 0 4px 16px rgb(0 0 0 / 0.12);
   --shadow-modal: 0 20px 60px rgb(0 0 0 / 0.15);
   --shadow-primary-glow: 0 4px 12px rgb(56 73 152 / 0.25);
+  --duration-fast: 120ms; /* Small state changes */
+  --duration-normal: 200ms; /* Default interaction motion */
+  --duration-slow: 320ms; /* Overlays and larger transitions */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1); /* Default easing */
+  --ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2); /* Small emphasized entrance */
+  --target-min: 1.5rem; /* WCAG 2.2 minimum target size (24px) */
+  --target-compact: 2rem; /* Compact desktop controls (32px) */
+  --target-default: 2.5rem; /* Default controls (40px) */
+  --target-touch: 2.75rem; /* Preferred touch controls (44px) */
+  --z-header: 20; /* Global header */
+  --z-drawer: 40; /* Drawers and slideovers */
+  --z-modal: 50; /* Modal dialogs */
+  --z-popover: 60; /* Menus and popovers */
+  --z-toast: 70; /* Toasts and app notifications */
+  --z-tooltip: 80; /* Tooltips and skip links */
   --space-1: 0.25rem; /* 4px */
   --space-2: 0.5rem; /* 8px */
   --space-3: 0.75rem; /* 12px */
@@ -77,8 +101,8 @@
   --ui-text-muted: var(--color-content-secondary);
   --ui-border: var(--color-secondary);
   --ds-brand-gradient: linear-gradient(90deg, rgb(49 165 217) 0%, rgb(248 54 145) 46%, rgb(255 184 0) 100%);
-  --ds-focus-outline-color: var(--color-info);
-  --ds-focus-ring: 0 0 0 2px color-mix(in srgb, var(--color-primary) 40%, transparent); /* Standard keyboard focus ring (box-shadow) */
+  --ds-focus-outline-color: var(--color-primary); /* Opaque keyboard focus indicator (≥3:1 against app surfaces) */
+  --ds-focus-ring: 0 0 0 2px var(--ds-focus-outline-color); /* Compact keyboard focus ring (box-shadow) */
   --ds-backdrop-strong: rgb(2 6 23 / 0.8);
   --ds-backdrop-dim: rgb(0 0 0 / 0.4);
   --component-card-radius: var(--radius-2xl);
@@ -118,11 +142,15 @@ html.dark,
   --color-content-on-surface: #c2c7d0; /* Text on dark surface */
   --color-content-on-surface-strong: #f3f5f8; /* Strong text on dark surface */
   --color-content-secondary: #99a1ad; /* Dark metadata text */
-  --color-content-disabled: #5e6671; /* Dark disabled text */
+  --color-content-disabled: #8b95a1; /* Dark disabled text */
   --color-secondary: #2b313b; /* Dark borders/dividers */
   --color-border-strong: #3a4250; /* Dark emphasized borders */
   --color-primary: #7c8cff; /* Lighter brand action for dark bg */
   --color-primary-hover: color-mix(in srgb, white 10%, var(--color-primary)); /* Dark primary hover (lighten) */
   --color-primary-active: color-mix(in srgb, white 18%, var(--color-primary)); /* Dark primary pressed (lighten) */
   --color-on-primary: #0f1216; /* Dark text on the lighter primary */
+  --color-success-text: #34d399; /* AA success text/icon on dark surfaces */
+  --color-warning-text: #fbbf24; /* AA warning text/icon on dark surfaces */
+  --color-error-text: #f87171; /* AA error text/icon on dark surfaces */
+  --color-info-text: #38bdf8; /* AA info text/icon on dark surfaces */
 }

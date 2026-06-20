@@ -3,36 +3,39 @@
     <div
       class="flex items-center gap-2 bg-surface-subtle px-2 py-1.5"
     >
-      <button
+      <UiIconButton
         v-if="!isUngrouped"
-        type="button"
         data-group-drag-handle
-        class="shrink-0 cursor-grab rounded-[var(--radius-md)] p-1 text-content-secondary opacity-70 hover:opacity-100 active:cursor-grabbing"
-        :aria-label="`Reorder group ${title}`"
-        @click.stop
-      >
-        <icon name="i-lucide-grip-vertical" class="h-3.5 w-3.5" />
-      </button>
-
-      <ui-button
+        icon="i-lucide-grip-vertical"
+        :label="`Reorder group ${title}`"
         size="xs"
-        color="neutral"
         variant="ghost"
-        :aria-label="collapsed ? `Expand ${title}` : `Collapse ${title}`"
-        @click="$emit('toggle-collapse', groupId)"
-      >
-        <icon :name="collapsed ? 'i-lucide-chevron-right' : 'i-lucide-chevron-down'" class="h-3.5 w-3.5" />
-      </ui-button>
+        tone="neutral"
+        class="shrink-0 cursor-grab rounded-[var(--radius-md)] p-1 text-content-secondary opacity-70 hover:opacity-100 active:cursor-grabbing"
+        @click.stop
+      />
 
-      <button
+      <UiIconButton
+        size="xs"
+        tone="neutral"
+        variant="ghost"
+        :icon="collapsed ? 'i-lucide-chevron-right' : 'i-lucide-chevron-down'"
+        :label="collapsed ? `Expand ${title}` : `Collapse ${title}`"
+        @click="$emit('toggle-collapse', groupId)"
+      />
+
+      <UiButton
         v-if="!editing"
         type="button"
+        variant="link"
+        tone="neutral"
+        size="xs"
         class="min-w-0 flex-1 truncate text-left text-xs font-semibold text-content-secondary"
         @click="$emit('toggle-collapse', groupId)"
       >
         {{ title }}
         <span class="font-normal opacity-70">({{ notes.length }})</span>
-      </button>
+      </UiButton>
 
       <form
         v-else
@@ -47,48 +50,44 @@
           @update:model-value="$emit('update:editing-title', String($event ?? ''))"
           @keydown.esc.prevent="$emit('cancel-rename-group')"
         />
-        <ui-button
+        <UiButton
           size="xs"
-          color="primary"
+          tone="primary"
           variant="solid"
           type="submit"
           :disabled="!editingTitle.trim()"
         >
           Save
-        </ui-button>
-        <ui-button
+        </UiButton>
+        <UiButton
           size="xs"
-          color="neutral"
+          tone="neutral"
           variant="ghost"
           type="button"
           @click="$emit('cancel-rename-group')"
         >
           Cancel
-        </ui-button>
+        </UiButton>
       </form>
 
-      <ui-button
+      <UiIconButton
         v-if="!editing"
         size="xs"
-        color="neutral"
+        tone="neutral"
         variant="ghost"
-        :aria-label="`Create note in ${title}`"
+        icon="i-lucide-plus"
+        :label="`Create note in ${title}`"
         @click.stop="$emit('create-note', groupId)"
-      >
-        <icon name="i-lucide-plus" class="h-3.5 w-3.5" />
-      </ui-button>
+      />
 
-      <UDropdownMenu v-if="!isUngrouped && !editing" :modal="false" :items="groupMenuItems">
-        <ui-button
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          :disabled="groupActionsDisabled"
-          :aria-label="`Actions for group ${title}`"
-        >
-          <icon name="i-lucide-more-horizontal" class="h-3.5 w-3.5" />
-        </ui-button>
-      </UDropdownMenu>
+      <UiActionMenu
+        v-if="!isUngrouped && !editing"
+        :modal="false"
+        :items="groupMenuItems"
+        size="xs"
+        :disabled="groupActionsDisabled"
+        :label="`Actions for group ${title}`"
+      />
     </div>
 
     <div v-show="!collapsed" class="relative">

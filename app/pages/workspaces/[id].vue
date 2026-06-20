@@ -172,7 +172,12 @@ onBeforeUnmount(() => {
 
 
 <template>
-  <shared-page-wrapper id="workspace-page" :title="`${workspace?.title || '....'}`" :is-page-loading="loading">
+  <shared-page-wrapper
+    id="workspace-page"
+    :title="`${workspace?.title || '....'}`"
+    :is-page-loading="loading"
+    fixed-height
+  >
     <template #header-info-leading>
       <NuxtLink to="/workspaces" class="text-xs text-content-on-background flex items-center gap-1">
         <u-icon name="i-heroicons-chevron-left" class="-ml-1" />

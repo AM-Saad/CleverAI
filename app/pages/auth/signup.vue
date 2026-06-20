@@ -59,7 +59,7 @@ const { handleSubmit, credentials, fieldTypes, error, success, loading } =
         Or sign up with a social account below 👇
       </UiParagraph>
       <ui-button v-for="provider in mappedProviders" :key="provider?.id"
-        class="border border-error justify-center disabled:opacity-50 dark:ring-white " :disabled="loading"
+        class="border border-error justify-center" :disabled="loading"
         variant="ghost" color="error" type="button" tabindex="5" @click="signIn(provider?.id)">
         Sign in with {{ provider?.name }}
       </ui-button>

@@ -11,13 +11,17 @@ const isVisible = ref(true)
         :exit="{ opacity: 0, scale: 0 }" class="box" key="box" />
     </AnimatePresence>
 
-    <motion.button class="button" @click="isVisible = !isVisible" :whilePress="{ y: 1 }">
-      <span class="font-light text-sm text-dark dark:text-light">
+    <motion.button
+      class="button rounded-[var(--radius-md)] focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]"
+      @click="isVisible = !isVisible"
+      :whilePress="{ y: 1 }"
+    >
+      <span class="font-light text-sm text-content-on-background">
         Watch us
       </span>
       <div
-        class="w-10 h-10 rounded-full border dark:border-light flex items-center justify-center hover:bg-surface-subtle dark:hover:bg-[var(--color-content-on-background)] cursor-pointer">
-        <u-icon name="mdi:play" class="m-auto dark:text-light" />
+        class="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-secondary transition-colors hover:bg-surface-subtle">
+        <u-icon name="mdi:play" class="m-auto text-content-on-background" />
       </div>
     </motion.button>
   </div>
@@ -36,7 +40,7 @@ const isVisible = ref(true)
   width: 100px;
   height: 100px;
   background-color: var(--color-accent-cyan);
-  border-radius: 10px;
+  border-radius: var(--radius-lg);
 }
 
 .button {

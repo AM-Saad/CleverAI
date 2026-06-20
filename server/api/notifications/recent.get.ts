@@ -1,49 +1,45 @@
-import type { ScheduledNotification } from "@prisma/client";
-import { defineEventHandler } from "h3";
-import { Errors, success } from "@server/utils/error";
+import { RecentNotificationsResponseSchema } from "@@/shared/utils/notification.contract";
 import { requireRole } from "~~/server/utils/auth";
+import { success } from "@server/utils/error";
 
 export default defineEventHandler(async (event) => {
-  try {
-    const prisma = event.context.prisma;
-    const user = await requireRole(event, ["USER"]);
+  const prisma = event.context.prisma;
+  const user = await requireRole(event, ["USER"]);
+  const query = getQuery(event);
+  const limit = Math.min(
+    20,
+    Math.max(1, Number.parseInt(String(query.limit || "8"), 10) || 8),
+  );
 
-    // Check for recent CARD_DUE notifications within 6 hours
-    const recentNotifications = await prisma.scheduledNotification.findMany({
+  const [notifications, unreadCount] = await Promise.all([
+    prisma.notification.findMany({
+      where: { userId: user.id },
+      orderBy: { sentAt: "desc" },
+      take: limit,
+      select: {
+        id: true,
+        type: true,
+        title: true,
+        content: true,
+        url: true,
+        isRead: true,
+        readAt: true,
+        pushStatus: true,
+        sentAt: true,
+      },
+    }),
+    prisma.notification.count({
       where: {
         userId: user.id,
-        type: "CARD_DUE",
-        scheduledFor: {
-          gte: new Date(Date.now() - 6 * 60 * 60 * 1000), // Last 6 hours
-        },
-        sent: true,
+        isRead: false,
       },
-      orderBy: {
-        scheduledFor: "desc",
-      },
-      take: 10,
-    });
+    }),
+  ]);
 
-    const count = recentNotifications.length;
-    const lastSent = recentNotifications[0]?.scheduledFor ?? null;
-
-    return success({
-      count,
-      lastSent,
-      notifications: recentNotifications.map(
-        (notification: ScheduledNotification) => ({
-          id: notification.id,
-          scheduledFor: notification.scheduledFor,
-          sent: notification.sent,
-          sentAt: notification.sentAt,
-        }),
-      ),
-    });
-  } catch (error) {
-    console.error("[API] Recent notifications check error:", error);
-    if (error && typeof error === "object" && "statusCode" in error) {
-      throw error;
-    }
-    throw Errors.server("Failed to check recent notifications");
-  }
+  return success(
+    RecentNotificationsResponseSchema.parse({
+      notifications,
+      unreadCount,
+    }),
+  );
 });

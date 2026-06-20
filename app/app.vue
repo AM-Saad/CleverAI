@@ -4,7 +4,7 @@
         <Link rel="manifest" href="/manifest.webmanifest" />
         <NuxtErrorBoundary @error="ErrorLogger">
             <template #error="{ error, clearError }">
-                <div class="min-h-screen bg-white text-content-on-surface flex items-center justify-center px-6">
+                <div class="min-h-screen bg-background text-content-on-surface flex items-center justify-center px-6">
                     <div class="w-full  rounded-[var(--radius-xl)] border border-secondary p-6 shadow-[var(--shadow-dropdown)]">
                         <p class="text-xs font-bold uppercase tracking-widest text-content-secondary">Application Error
                         </p>
@@ -14,12 +14,12 @@
                         </p>
                         <div class="mt-5 flex gap-2">
                             <button type="button"
-                                class="rounded-[var(--radius-md)] bg-primary px-3 py-2 text-sm font-medium text-white"
+                                class="rounded-[var(--radius-md)] bg-primary px-3 py-2 text-sm font-medium text-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)]"
                                 @click="() => { clearError(); reloadApp(); }">
                                 Reload
                             </button>
                             <button type="button"
-                                class="rounded-[var(--radius-md)] border border-secondary px-3 py-2 text-sm font-medium"
+                                class="rounded-[var(--radius-md)] border border-secondary px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)]"
                                 @click="() => { clearError(); goHome(); }">
                                 Home
                             </button>
@@ -48,11 +48,6 @@
                     </Teleport>
                 </ClientOnly>
 
-                <!-- AI Model Download Toast -->
-                <ClientOnly>
-                    <ai-model-download-toast />
-                </ClientOnly>
-
             </UApp>
         </NuxtErrorBoundary>
     </div>
@@ -78,9 +73,10 @@ const { isLoading: isIndicatorLoading } = useLoadingIndicator({
     // estimatedProgress: (duration, elapsed) => (2 / Math.PI * 100) * Math.atan(elapsed / duration * 100 / 50),
 })
 
-// Force light mode — dark mode will be planned and implemented properly later
 const colorMode = useColorMode()
-colorMode.preference = 'light'
+if (import.meta.client && !colorMode.preference) {
+    colorMode.preference = 'system'
+}
 // same as set(0, { force: true })
 // set the progress to 0, and show loading immediately
 // start({ force: true })

@@ -251,7 +251,7 @@ const panelStyle = computed(() => ({
           }
         "></div>
       <div :class="[
-          positionClass, 'overflow-hidden bg-[var(--color-white)] shadow-[var(--component-drawer-shadow)] z-50 focus-visible:border border-primary',
+          positionClass, 'z-[var(--z-drawer)] overflow-hidden border border-secondary bg-surface shadow-[var(--component-drawer-shadow)]',
           mode.containerClass,
         ]" :style="panelStyle" role="dialog"
         aria-modal="true" :aria-labelledby="'drawer-title'" :aria-hidden="!props.show">

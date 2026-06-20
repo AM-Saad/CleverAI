@@ -8,7 +8,14 @@
     :name="name"
     v-bind="$attrs"
   >
-    <slot />
+    <template #default="{ error: fieldError }">
+      <slot :error="fieldError" />
+    </template>
+    <template v-if="$slots.label" #label="slotProps"><slot name="label" v-bind="slotProps" /></template>
+    <template v-if="$slots.description" #description="slotProps"><slot name="description" v-bind="slotProps" /></template>
+    <template v-if="$slots.hint" #hint="slotProps"><slot name="hint" v-bind="slotProps" /></template>
+    <template v-if="$slots.error" #error="slotProps"><slot name="error" v-bind="slotProps" /></template>
+    <template v-if="$slots.help" #help="slotProps"><slot name="help" v-bind="slotProps" /></template>
   </UFormField>
 </template>
 

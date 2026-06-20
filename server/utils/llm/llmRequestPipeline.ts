@@ -6,7 +6,7 @@
  *   - Authentication (requireRole)
  *   - Quota gate (checkUserQuota)       — optional per call
  *   - Rate limiting (user + IP)
- *   - Model selection via routing OR a pinned model ID
+ *   - Central task model policy + routing OR a pinned model ID
  *   - Dev-model override (development env)
  *   - LLM strategy instantiation with onMeasure token capture
  *   - Post-generation: latency update, quota increment, LlmGatewayLog write
@@ -36,13 +36,12 @@ import type {
   QuotaPort,
   QuotaStatus,
 } from "@server/modules/subscription/ports/QuotaPort";
-import {
-  applyLimit,
-  getClientIp,
-  setRateLimitHeaders,
-  type MemCounter,
-} from "./rateLimit";
+import { enforceLlmRateLimit } from "./rateLimit";
 import { selectBestModel } from "./routing";
+import {
+  getDevLlmModelOverride,
+  getTaskModelPolicy,
+} from "./taskModelPolicy";
 import { getLLMStrategyFromRegistry } from "./LLMFactory";
 import { updateModelLatency } from "./modelRegistry";
 import { logGatewayRequest, logGatewayFailure } from "./gatewayLogger";
@@ -52,11 +51,10 @@ import type { LlmModelRegistry } from "@prisma/client";
 import type { LlmMeasured } from "../llmCost";
 import type { LLMStrategy } from "./LLMStrategy";
 
-// ─── Module-level singletons ───────────────────────────────────────────────
-// Shared across ALL endpoints that use this pipeline (gateway + language).
-// A user cannot bypass gateway rate limits by hammering language endpoints.
-const _userRateLimitMap: MemCounter = new Map();
-const _ipRateLimitMap: MemCounter = new Map();
+// Rate-limit buckets live in ./rateLimit (enforceLlmRateLimit) so they are
+// shared across ALL LLM entrypoints — gateway, language fresh translation, and
+// language shared-translation cache hits alike. A user cannot bypass one
+// endpoint's limit by hammering another.
 
 // ─── Public types ──────────────────────────────────────────────────────────
 
@@ -71,6 +69,10 @@ export interface LlmPipelineOptions {
   estimatedOutputTokens?: number;
   /** Required model capability filter passed to selectBestModel. */
   requiredCapability?: string;
+  /** Restrict routing and overrides to providers implemented by this server. */
+  providerAllowlist?: readonly string[];
+  /** Preferred model passed into routing. Falls back to normal routing if unavailable. */
+  preferredModelId?: string;
   /**
    * Bypass selectBestModel and use this exact model ID.
    * The model must exist, be enabled, and not be health-status "down".
@@ -99,6 +101,13 @@ export interface LlmPipelineOptions {
    * called requireRole for a DB lookup before invoking the pipeline.
    */
   user?: { id: string; [key: string]: any };
+  /**
+   * Quota status the caller already fetched (e.g. the gateway checks quota
+   * before its semantic-cache lookup). When provided with checkQuota=true, the
+   * pipeline reuses it instead of issuing a second checkGenerationQuota read,
+   * while still enforcing the canGenerate gate and exposing quota headers.
+   */
+  precheckedQuota?: QuotaStatus;
 }
 
 export interface LlmFinalizeOptions {
@@ -160,8 +169,10 @@ export async function llmRequestPipeline(
   const {
     task,
     inputText,
-    estimatedOutputTokens = 400,
-    requiredCapability,
+    estimatedOutputTokens: optionEstimatedOutputTokens,
+    requiredCapability: optionRequiredCapability,
+    providerAllowlist: optionProviderAllowlist,
+    preferredModelId,
     pinnedModelId,
     quotaPort,
     checkQuota = true,
@@ -169,6 +180,16 @@ export async function llmRequestPipeline(
     rateLimitMax = 5,
     ipRateLimitMax = 20,
   } = options;
+  const taskModelPolicy = getTaskModelPolicy(task);
+  const estimatedOutputTokens =
+    optionEstimatedOutputTokens ?? taskModelPolicy.estimatedOutputTokens;
+  const requiredCapability =
+    optionRequiredCapability ?? taskModelPolicy.requiredCapability;
+  const providerAllowlist =
+    optionProviderAllowlist ?? taskModelPolicy.providerAllowlist;
+  const isProviderAllowed = (provider: string) =>
+    !providerAllowlist?.length ||
+    providerAllowlist.includes(provider.toLowerCase());
 
   // ── Auth ────────────────────────────────────────────────────────────────
   // requireRole caches the user on event.context.user, so calling it twice
@@ -180,7 +201,9 @@ export async function llmRequestPipeline(
     | QuotaStatus
     | undefined;
   if (checkQuota) {
-    quotaCheck = await quotaPort.checkGenerationQuota(user.id);
+    quotaCheck =
+      options.precheckedQuota ??
+      (await quotaPort.checkGenerationQuota(user.id));
     if (!quotaCheck.canGenerate) {
       throwQuotaExceeded(
         event,
@@ -193,40 +216,17 @@ export async function llmRequestPipeline(
   }
 
   // ── Rate limiting ────────────────────────────────────────────────────────
-  const now = Date.now();
-  const windowMs = 60_000;
-  const userRemaining = await applyLimit(
-    `rl:user:${user.id}`,
-    rateLimitMax,
-    _userRateLimitMap,
-    now,
-    windowMs,
-  );
-  const clientIp = getClientIp(event);
-  const ipRemaining = await applyLimit(
-    `rl:ip:${clientIp}`,
-    ipRateLimitMax,
-    _ipRateLimitMap,
-    now,
-    windowMs,
-  );
-  setRateLimitHeaders(
-    event,
-    Math.min(userRemaining, ipRemaining),
-    userRemaining,
-    ipRemaining,
-    now,
-  );
+  await enforceLlmRateLimit(event, user.id, {
+    userMax: rateLimitMax,
+    ipMax: ipRateLimitMax,
+  });
 
   // ── Model selection ──────────────────────────────────────────────────────
   let selectedModel: LlmModelRegistry | undefined;
 
   // Development-only model override (env: DEV_LLM_MODEL_OVERRIDE)
   const config = useRuntimeConfig();
-  const devModelOverride =
-    process.env.NODE_ENV === "development"
-      ? ((config as any).devLlmModelOverride as string | undefined)
-      : undefined;
+  const devModelOverride = getDevLlmModelOverride(config);
 
   if (devModelOverride) {
     const overrideModel = await prisma.llmModelRegistry.findUnique({
@@ -236,16 +236,30 @@ export async function llmRequestPipeline(
       requestId,
       overrideModelId: devModelOverride,
     });
-    if (overrideModel) {
+    if (
+      overrideModel &&
+      overrideModel.enabled &&
+      overrideModel.healthStatus !== "down" &&
+      isProviderAllowed(overrideModel.provider)
+    ) {
       selectedModel = overrideModel;
       console.info("[pipeline] DEV override model:", {
         requestId,
         modelId: selectedModel.modelId,
+        provider: selectedModel.provider,
         task,
       });
     } else {
       console.warn(
-        `[pipeline] DEV_LLM_MODEL_OVERRIDE "${devModelOverride}" not found in registry`,
+        "[pipeline] DEV_LLM_MODEL_OVERRIDE unavailable; falling back to task policy",
+        {
+          requestId,
+          overrideModelId: devModelOverride,
+          enabled: overrideModel?.enabled,
+          healthStatus: overrideModel?.healthStatus,
+          provider: overrideModel?.provider,
+          providerAllowlist,
+        },
       );
     }
   }
@@ -257,6 +271,9 @@ export async function llmRequestPipeline(
         requestId,
         task,
         pinnedModelId,
+        preferredModelId,
+        requiredCapability,
+        providerAllowlist,
       },
     );
     if (pinnedModelId) {
@@ -264,7 +281,12 @@ export async function llmRequestPipeline(
       const pinned = await prisma.llmModelRegistry.findUnique({
         where: { modelId: pinnedModelId },
       });
-      if (!pinned || !pinned.enabled || pinned.healthStatus === "down") {
+      if (
+        !pinned ||
+        !pinned.enabled ||
+        pinned.healthStatus === "down" ||
+        !isProviderAllowed(pinned.provider)
+      ) {
         await logGatewayFailure(
           requestId,
           user.id,
@@ -290,6 +312,8 @@ export async function llmRequestPipeline(
             | "PRO"
             | "ENTERPRISE",
           requiredCapability,
+          preferredModelId,
+          providerAllowlist,
         });
         selectedModel = scored.model;
         console.info("[pipeline] Model selected:", {

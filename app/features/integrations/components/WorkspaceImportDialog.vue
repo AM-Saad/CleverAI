@@ -90,6 +90,17 @@ const sourceOptions = computed(() =>
     value: source.id,
   })),
 );
+const sourceCards = computed(() =>
+  sources.value.map((source) => ({
+    ...source,
+    isSelected: source.id === selectedSourceId.value,
+    kindLabel: source.supportedKinds.includes("TASK") && source.supportedKinds.includes("DOCUMENT")
+      ? "Tasks + docs"
+      : source.supportedKinds.includes("TASK")
+        ? "Tasks"
+        : "Docs",
+  })),
+);
 const selectedContentKinds = computed(() =>
   targetType.value === "NOTE" ? ["DOCUMENT" as const] : ["TASK" as const],
 );
@@ -99,6 +110,28 @@ const previewCountLabel = computed(() => {
   const docCount = preview.value.documents.length;
   if (targetType.value === "NOTE") return `${docCount} document${docCount === 1 ? "" : "s"} ready`;
   return `${taskCount} task${taskCount === 1 ? "" : "s"} ready`;
+});
+const previewItems = computed(() =>
+  preview.value
+    ? targetType.value === "NOTE"
+      ? preview.value.documents
+      : preview.value.tasks
+    : [],
+);
+const importActionLabel = computed(() => {
+  if (isImporting.value) return targetType.value === "NOTE" ? "Importing docs" : "Importing tasks";
+  return targetType.value === "NOTE" ? "Import docs" : "Import tasks";
+});
+const canPreview = computed(() => Boolean(selectedAccount.value && selectedSource.value) && !isPreviewing.value);
+const canRunImport = computed(() => Boolean(selectedAccount.value && selectedSource.value) && !isImporting.value);
+const resultStats = computed(() => {
+  if (!result.value) return [];
+  return [
+    { label: "Created", value: result.value.created, tone: "success" as const },
+    { label: "Updated", value: result.value.updated, tone: "info" as const },
+    { label: "Skipped", value: result.value.skipped, tone: "neutral" as const },
+    { label: "Conflicts", value: result.value.conflicted, tone: result.value.conflicted ? "warning" as const : "neutral" as const },
+  ];
 });
 
 function openDialog() {
@@ -118,6 +151,15 @@ function providerName(provider?: string | null) {
 function resetPreview() {
   preview.value = null;
   result.value = null;
+}
+
+function selectSource(source: ExternalSource) {
+  selectedSourceId.value = source.id;
+}
+
+function updateLimit(value: string | number | null | undefined) {
+  const nextValue = Number(value);
+  limit.value = Number.isFinite(nextValue) ? nextValue : 50;
 }
 
 function applySourceDefaults(source: ExternalSource | null) {
@@ -344,15 +386,19 @@ watch(targetType, resetPreview);
           role="presentation"
           @click.self="closeDialog"
         >
-          <section
-            class="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-[var(--radius-xl)] border border-secondary bg-surface shadow-[var(--shadow-modal)]"
+          <UiOverlaySurface
+            tag="section"
+            kind="modal"
+            layer="modal"
+            size="xs"
+            class-name="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden p-0"
             role="dialog"
             aria-modal="true"
             aria-labelledby="workspace-apps-title"
           >
             <header class="flex items-start justify-between gap-4 border-b border-secondary bg-surface px-5 py-4">
               <div class="flex min-w-0 items-start gap-3">
-                <span class="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-white ring-1 ring-secondary">
+                <span class="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface ring-1 ring-secondary">
                   <IntegrationAppsIcon class="h-6 w-6" />
                 </span>
                 <div class="min-w-0">
@@ -375,16 +421,18 @@ watch(targetType, resetPreview);
 
             <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-5">
               <div class="grid gap-3 sm:grid-cols-2">
-                <button
+                <UiInteractiveCard
                   v-for="card in providerCards"
                   :key="card.provider"
-                  type="button"
-                  class="group flex min-h-24 items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-secondary bg-white p-4 text-left transition hover:border-primary/60 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                  variant="outline"
+                  size="sm"
+                  class-name="group min-h-24"
+                  content-class="flex min-w-0 items-center justify-between gap-3"
                   @click="connect(card.provider)"
                 >
                   <span class="flex min-w-0 items-center gap-3">
-                    <span class="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-subtle text-primary ring-1 ring-secondary transition group-hover:bg-primary/10 group-hover:ring-primary/30">
-                      <IntegrationProviderLogo :provider="card.provider" class="h-5 w-5" />
+                    <span class="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface text-primary ring-1 ring-secondary transition group-hover:bg-primary/10 group-hover:ring-primary/30">
+                      <IntegrationProviderLogo :provider="card.provider" class="h-7 w-7" />
                     </span>
                     <span class="min-w-0">
                       <span class="block truncate text-sm font-semibold text-content-on-surface">{{ card.name }}</span>
@@ -395,10 +443,10 @@ watch(targetType, resetPreview);
                     </span>
                   </span>
                   <Icon name="i-heroicons-arrow-top-right-on-square" class="h-4 w-4 shrink-0 text-content-secondary transition group-hover:text-primary" />
-                </button>
+                </UiInteractiveCard>
               </div>
 
-              <div class="space-y-4 rounded-[var(--radius-lg)] border border-secondary bg-surface-subtle p-4">
+              <UiPanel variant="subtle" size="md" content-class="space-y-4">
                 <div class="flex items-center justify-between gap-3 border-b border-secondary pb-3">
                   <div class="min-w-0">
                     <p class="truncate text-sm font-semibold text-content-on-surface">Source and destination</p>
@@ -419,39 +467,68 @@ watch(targetType, resetPreview);
                 <div class="grid gap-3 md:grid-cols-2">
                   <label class="space-y-1.5">
                     <span class="text-xs font-semibold text-content-secondary">Connected account</span>
-                    <select
+                    <UiSelect
                       v-model="selectedAccountId"
-                      class="h-10 w-full rounded-[var(--radius-md)] border border-secondary bg-white px-3 text-sm text-content-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
-                    >
-                      <option value="">{{ isLoadingAccounts ? "Loading accounts..." : "Select an account" }}</option>
-                      <option v-for="account in accountOptions" :key="account.value" :value="account.value">
-                        {{ account.label }}
-                      </option>
-                    </select>
+                      :items="accountOptions"
+                      value-key="value"
+                      label-key="label"
+                      size="sm"
+                      :placeholder="isLoadingAccounts ? 'Loading accounts...' : 'Select an account'"
+                    />
                   </label>
 
                   <label class="space-y-1.5">
                     <span class="text-xs font-semibold text-content-secondary">External source</span>
-                    <select
+                    <UiSelect
                       v-model="selectedSourceId"
-                      class="h-10 w-full rounded-[var(--radius-md)] border border-secondary bg-white px-3 text-sm text-content-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30 disabled:cursor-not-allowed disabled:bg-surface-strong disabled:text-content-secondary"
+                      :items="sourceOptions"
+                      value-key="value"
+                      label-key="label"
+                      size="sm"
+                      :placeholder="isLoadingSources ? 'Loading sources...' : 'Select a source'"
                       :disabled="isLoadingSources || sourceOptions.length === 0"
-                    >
-                      <option value="">
-                        {{ isLoadingSources ? "Loading sources..." : "Select a source" }}
-                      </option>
-                      <option v-for="source in sourceOptions" :key="source.value" :value="source.value">
-                        {{ source.label }}
-                      </option>
-                    </select>
+                    />
                   </label>
                 </div>
 
+                <div v-if="sourceCards.length" class="grid gap-2 md:grid-cols-2">
+                  <UiInteractiveCard
+                    v-for="source in sourceCards"
+                    :key="source.id"
+                    :selected="source.isSelected"
+                    selectable
+                    variant="outline"
+                    size="xs"
+                    content-class="flex min-w-0 items-center gap-3"
+                    @click="selectSource(source)"
+                  >
+                    <span class="flex min-w-0 items-center gap-3">
+                      <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface-subtle ring-1 ring-secondary">
+                        <IntegrationProviderLogo :provider="source.provider" class="h-5 w-5" />
+                      </span>
+                      <span class="min-w-0">
+                        <span class="block truncate text-sm font-semibold text-content-on-surface">{{ source.name }}</span>
+                        <span class="mt-0.5 flex flex-wrap items-center gap-1.5 text-xs text-content-secondary">
+                          <span v-if="source.key">{{ source.key }}</span>
+                          <UiBadge tone="neutral" variant="soft" size="xs">{{ source.kindLabel }}</UiBadge>
+                        </span>
+                      </span>
+                    </span>
+                  </UiInteractiveCard>
+                </div>
+                <UiPanel v-else-if="selectedAccountId && !isLoadingSources" variant="subtle" class-name="p-3">
+                  <p class="text-sm font-medium text-content-on-surface">No sources found</p>
+                  <p class="mt-1 text-xs text-content-secondary">Reconnect with workspace/page access, then refresh accounts.</p>
+                </UiPanel>
+
                 <div class="grid gap-3 md:grid-cols-2">
-                  <button
+                  <UiInteractiveCard
                     type="button"
-                    class="flex items-center gap-3 rounded-[var(--radius-md)] border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                    :class="targetType === 'BOARD_ITEM' ? 'border-primary bg-primary/5' : 'border-secondary bg-white'"
+                    :selected="targetType === 'BOARD_ITEM'"
+                    selectable
+                    variant="outline"
+                    size="xs"
+                    content-class="flex min-w-0 items-center gap-3"
                     :disabled="!canImportTasks"
                     @click="targetType = 'BOARD_ITEM'"
                   >
@@ -460,12 +537,15 @@ watch(targetType, resetPreview);
                       <span class="block text-sm font-semibold text-content-on-surface">Board tasks</span>
                       <span class="block text-xs text-content-secondary">Jira issues or task-like Notion rows</span>
                     </span>
-                  </button>
+                  </UiInteractiveCard>
 
-                  <button
+                  <UiInteractiveCard
                     type="button"
-                    class="flex items-center gap-3 rounded-[var(--radius-md)] border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
-                    :class="targetType === 'NOTE' ? 'border-primary bg-primary/5' : 'border-secondary bg-white'"
+                    :selected="targetType === 'NOTE'"
+                    selectable
+                    variant="outline"
+                    size="xs"
+                    content-class="flex min-w-0 items-center gap-3"
                     :disabled="!canImportDocuments"
                     @click="targetType = 'NOTE'"
                   >
@@ -474,58 +554,62 @@ watch(targetType, resetPreview);
                       <span class="block text-sm font-semibold text-content-on-surface">Notes documents</span>
                       <span class="block text-xs text-content-secondary">Notion pages into a note group</span>
                     </span>
-                  </button>
+                  </UiInteractiveCard>
                 </div>
 
-                <button
+                <UiButton
                   type="button"
-                  class="flex w-full items-center justify-between rounded-[var(--radius-md)] px-1 py-1 text-sm font-medium text-content-secondary hover:text-content-on-surface"
+                  tone="neutral"
+                  variant="link"
+                  size="sm"
+                  class="w-full justify-between px-1"
                   @click="showAdvanced = !showAdvanced"
                 >
                   <span>Advanced configuration</span>
                   <Icon :name="showAdvanced ? 'i-heroicons-chevron-up' : 'i-heroicons-chevron-down'" class="h-4 w-4" />
-                </button>
+                </UiButton>
 
                 <div v-if="showAdvanced" class="grid gap-3 md:grid-cols-2">
                   <label class="space-y-1.5">
                     <span class="text-xs font-semibold text-content-secondary">Limit</span>
-                    <input
-                      v-model.number="limit"
+                    <UiInput
+                      :model-value="limit"
                       type="number"
+                      size="sm"
                       min="1"
                       max="100"
-                      class="h-10 w-full rounded-[var(--radius-md)] border border-secondary bg-white px-3 text-sm text-content-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
-                    >
+                      @update:model-value="updateLimit"
+                    />
                   </label>
 
                   <label v-if="targetType === 'NOTE'" class="space-y-1.5">
                     <span class="text-xs font-semibold text-content-secondary">Notes group</span>
-                    <input
+                    <UiInput
                       v-model="noteGroupTitle"
                       type="text"
-                      class="h-10 w-full rounded-[var(--radius-md)] border border-secondary bg-white px-3 text-sm text-content-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
+                      size="sm"
                       placeholder="Imported from Notion"
-                    >
+                    />
                   </label>
 
                   <label v-if="selectedAccount?.provider === 'jira'" class="space-y-1.5 md:col-span-2">
                     <span class="text-xs font-semibold text-content-secondary">JQL override</span>
-                    <input
+                    <UiInput
                       v-model="jql"
                       type="text"
-                      class="h-10 w-full rounded-[var(--radius-md)] border border-secondary bg-white px-3 text-sm text-content-on-surface outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/30"
+                      size="sm"
                       placeholder="project = ABC ORDER BY updated DESC"
-                    >
+                    />
                   </label>
                 </div>
 
-                <div v-if="error" class="flex items-start gap-2 rounded-[var(--radius-md)] border border-error/20 bg-error/10 p-3 text-sm text-error">
+                <UiPanel v-if="error" variant="subtle" size="sm" class-name="border-error/20 bg-error/10" content-class="flex items-start gap-2 text-error-text">
                   <Icon name="i-heroicons-exclamation-circle" class="mt-0.5 h-4 w-4 shrink-0" />
                   <span>{{ error }}</span>
-                </div>
-              </div>
+                </UiPanel>
+              </UiPanel>
 
-              <div class="rounded-[var(--radius-lg)] border border-secondary bg-white p-4">
+              <UiPanel variant="surface" size="md">
                 <div class="flex items-center justify-between gap-3">
                   <div>
                     <p class="text-sm font-semibold text-content-on-surface">Saved imports</p>
@@ -544,13 +628,15 @@ watch(targetType, resetPreview);
                 </div>
 
                 <div v-if="mappings.length" class="mt-4 space-y-2">
-                  <div
+                  <UiPanel
                     v-for="mapping in mappings"
                     :key="mapping.id"
-                    class="flex flex-col gap-3 rounded-[var(--radius-md)] border border-secondary bg-surface-subtle p-3 sm:flex-row sm:items-center sm:justify-between"
+                    variant="subtle"
+                    size="sm"
+                    content-class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div class="flex min-w-0 items-start gap-3">
-                      <span class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-white ring-1 ring-secondary">
+                      <span class="mt-0.5 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-surface ring-1 ring-secondary">
                         <IntegrationProviderLogo :provider="mapping.provider" class="h-4 w-4" />
                       </span>
                       <div class="min-w-0">
@@ -587,11 +673,11 @@ watch(targetType, resetPreview);
                     >
                       Refresh
                     </UiButton>
-                  </div>
+                  </UiPanel>
                 </div>
-              </div>
+              </UiPanel>
 
-              <div class="rounded-[var(--radius-lg)] border border-secondary bg-white p-4">
+              <UiPanel variant="surface" size="md">
                 <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p class="text-sm font-semibold text-content-on-surface">Preview</p>
@@ -602,7 +688,7 @@ watch(targetType, resetPreview);
                     tone="neutral"
                     variant="outline"
                     :loading="isPreviewing"
-                    :disabled="!selectedSource || isPreviewing"
+                    :disabled="!canPreview"
                     leading-icon="i-heroicons-eye"
                     @click="previewSelectedSource"
                   >
@@ -610,25 +696,45 @@ watch(targetType, resetPreview);
                   </UiButton>
                 </div>
 
-                <div v-if="preview" class="mt-4 space-y-3">
-                  <div
-                    v-for="item in targetType === 'NOTE' ? preview.documents : preview.tasks"
+                <div v-if="isPreviewing" class="mt-4 grid gap-2">
+                  <UiSkeleton v-for="index in 3" :key="index" class="h-14 rounded-[var(--radius-md)]" />
+                </div>
+
+                <div v-else-if="preview" class="mt-4 space-y-3">
+                  <UiPanel
+                    v-for="item in previewItems"
                     :key="item.externalId"
-                    class="rounded-[var(--radius-md)] border border-secondary bg-surface-subtle p-3"
+                    variant="subtle"
+                    size="sm"
                   >
                     <p class="truncate text-sm font-medium text-content-on-surface">{{ item.title }}</p>
                     <p v-if="'status' in item && item.status" class="mt-1 text-xs text-content-secondary">{{ item.status }}</p>
                     <p v-if="'excerpt' in item && item.excerpt" class="mt-1 line-clamp-2 text-xs text-content-secondary">{{ item.excerpt }}</p>
-                  </div>
-                  <div v-if="preview.warnings.length" class="rounded-[var(--radius-md)] border border-warning/20 bg-warning/10 p-3 text-xs text-warning">
+                  </UiPanel>
+                  <UiPanel v-if="preview.warnings.length" variant="subtle" size="sm" class-name="border-warning/20 bg-warning/10" content-class="text-xs text-warning-text">
                     <p v-for="warning in preview.warnings" :key="warning">{{ warning }}</p>
-                  </div>
+                  </UiPanel>
                 </div>
-              </div>
+                <UiPanel v-else variant="subtle" class-name="mt-4 p-3">
+                  <p class="text-sm font-medium text-content-on-surface">Preview before import</p>
+                  <p class="mt-1 text-xs text-content-secondary">Check sample rows, permissions, and warnings before writing to Board or Notes.</p>
+                </UiPanel>
+              </UiPanel>
 
-              <div v-if="result" class="rounded-[var(--radius-lg)] border border-success/20 bg-success/10 p-4 text-sm text-success">
-                {{ result.created }} created, {{ result.updated }} updated, {{ result.skipped }} skipped, {{ result.conflicted }} conflicts.
-              </div>
+              <UiPanel v-if="result" variant="subtle" size="md" class-name="border-success/20 bg-success/10">
+                <p class="text-sm font-semibold text-success-text">Import complete</p>
+                <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <UiPanel
+                    v-for="stat in resultStats"
+                    :key="stat.label"
+                    variant="surface"
+                    size="xs"
+                  >
+                    <p class="text-lg font-semibold text-content-on-surface">{{ stat.value }}</p>
+                    <UiBadge :tone="stat.tone" size="xs" variant="soft">{{ stat.label }}</UiBadge>
+                  </UiPanel>
+                </div>
+              </UiPanel>
             </div>
 
             <footer class="flex flex-col gap-3 border-t border-secondary bg-surface px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -644,15 +750,15 @@ watch(targetType, resetPreview);
                   tone="primary"
                   variant="solid"
                   :loading="isImporting"
-                  :disabled="!selectedSource || isImporting"
+                  :disabled="!canRunImport"
                   leading-icon="i-heroicons-arrow-down-tray"
                   @click="importSelectedSource"
                 >
-                  Import
+                  {{ importActionLabel }}
                 </UiButton>
               </div>
             </footer>
-          </section>
+          </UiOverlaySurface>
         </div>
       </Transition>
     </Teleport>

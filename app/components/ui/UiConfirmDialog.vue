@@ -1,10 +1,23 @@
 <template>
-  <UiModal v-model:open="open" :title="title" :description="description" :icon="icon">
+  <UiModal
+    v-model:open="open"
+    :title="title"
+    :description="description"
+    :icon="icon"
+  >
     <slot />
     <template #footer>
       <div class="flex items-center justify-end gap-2">
-        <UiButton tone="neutral" variant="ghost" :disabled="loading" @click="cancel">{{ cancelLabel }}</UiButton>
-        <UiButton :tone="tone" :loading="loading" @click="$emit('confirm')">{{ confirmLabel }}</UiButton>
+        <UiButton
+          tone="neutral"
+          variant="ghost"
+          :disabled="loading"
+          @click="cancel"
+          >{{ cancelLabel }}</UiButton
+        >
+        <UiButton :tone="tone" :loading="loading" @click="$emit('confirm')">{{
+          confirmLabel
+        }}</UiButton>
       </div>
     </template>
   </UiModal>
@@ -17,6 +30,7 @@
  * various DeleteConfirmationModal-style components). Control with `v-model:open`.
  */
 import type { Tone } from "./variants";
+import type { IconName } from "~/utils/icons.generated";
 
 const open = defineModel<boolean>("open", { default: false });
 const {
@@ -30,7 +44,7 @@ const {
 } = defineProps<{
   title?: string;
   description?: string;
-  icon?: string;
+  icon?: IconName;
   confirmLabel?: string;
   cancelLabel?: string;
   /** Tone of the confirm button (error for destructive, primary otherwise). */

@@ -1,33 +1,54 @@
 import { ref } from "vue";
-import { useRuntimeConfig } from "#app";
-import { useAuth } from "#imports";
 import {
   canUseServiceWorker,
   getServiceWorkerReadyRegistration,
 } from "~/utils/serviceWorkerRuntime";
 
-// Utility function to convert VAPID key
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
-
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);
 
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
+  for (let index = 0; index < rawData.length; index += 1) {
+    outputArray[index] = rawData.charCodeAt(index);
   }
+
   return outputArray;
+}
+
+function encodeSubscriptionKey(key: ArrayBuffer | null): string {
+  if (!key) return "";
+  return btoa(String.fromCharCode(...new Uint8Array(key)));
+}
+
+function serializeSubscription(subscription: PushSubscription) {
+  return {
+    endpoint: subscription.endpoint,
+    keys: {
+      auth: encodeSubscriptionKey(subscription.getKey("auth")),
+      p256dh: encodeSubscriptionKey(subscription.getKey("p256dh")),
+    },
+    userAgent: navigator.userAgent,
+    expirationTime: subscription.expirationTime,
+  };
+}
+
+async function hashEndpoint(endpoint: string): Promise<string> {
+  const bytes = new TextEncoder().encode(endpoint);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export function useNotifications() {
   const isLoading = ref(false);
   const error = ref<string | null>(null);
   const isSubscribed = ref(false);
+  const currentEndpointHash = ref<string | null>(null);
   const config = useRuntimeConfig();
-  const { data } = useAuth();
-  // @ts-expect-error - auth user might have id property
-  const userId = data.value?.user?.id;
+  const { $api } = useNuxtApp();
 
   const checkPermission = async (): Promise<NotificationPermission> => {
     if (!("Notification" in window)) {
@@ -50,224 +71,210 @@ export function useNotifications() {
     }
   };
 
-  const encodeSubscriptionKey = (key: ArrayBuffer | null): string => {
-    if (!key) return "";
-
-    return btoa(String.fromCharCode(...new Uint8Array(key)));
+  const getCurrentSubscription = async (): Promise<PushSubscription | null> => {
+    await checkServiceWorkerSupport();
+    const registration = await getServiceWorkerReadyRegistration();
+    if (!registration) {
+      throw new Error("Service Worker is not ready yet");
+    }
+    return registration.pushManager.getSubscription();
   };
 
-  const toSubscriptionPayload = (subscription: PushSubscription) => ({
-    endpoint: subscription.endpoint,
-    keys: {
-      auth: encodeSubscriptionKey(subscription.getKey("auth")),
-      p256dh: encodeSubscriptionKey(subscription.getKey("p256dh")),
-    },
-    userId,
-    userAgent: navigator.userAgent,
-    expirationTime: subscription.expirationTime,
-  });
+  const updateCurrentSubscriptionState = async (
+    subscription?: PushSubscription | null,
+  ) => {
+    const activeSubscription =
+      subscription === undefined ? await getCurrentSubscription() : subscription;
+    isSubscribed.value = Boolean(activeSubscription);
+    currentEndpointHash.value = activeSubscription
+      ? await hashEndpoint(activeSubscription.endpoint)
+      : null;
+    return activeSubscription;
+  };
 
   const syncSubscriptionToServer = async (
     subscription: PushSubscription,
   ): Promise<void> => {
-    const subscriptionData = toSubscriptionPayload(subscription);
-    console.log("Sending subscription data:", subscriptionData);
+    const result = await $api.notifications.subscribe(
+      serializeSubscription(subscription),
+    );
 
-    await $fetch("/api/notifications/subscribe", {
-      method: "POST",
-      body: subscriptionData,
-    });
+    if (!result.success) {
+      throw result.error;
+    }
   };
 
-  const registerNotification = async (): Promise<void> => {
-    console.log("Registering notification...");
+  const getVapidPublicKey = async () => {
+    let vapidKey = config.public.VAPID_PUBLIC_KEY as string | undefined;
+    if (vapidKey && vapidKey.length >= 50) return vapidKey;
+
+    const response = await $fetch<{
+      success: boolean;
+      data?: { vapidPublicKey?: string | null };
+    }>("/api/notifications/vapid-key");
+    vapidKey = response.data?.vapidPublicKey || undefined;
+
+    if (!vapidKey || vapidKey.length < 50) {
+      throw new Error(
+        "Notifications are not configured. VAPID_PUBLIC_KEY is missing.",
+      );
+    }
+
+    return vapidKey;
+  };
+
+  const isSubscriptionOwnershipConflict = (err: unknown) => {
+    const message = err instanceof Error ? err.message.toLowerCase() : "";
+    return (
+      message.includes("another account") ||
+      message.includes("already linked") ||
+      message.includes("conflict")
+    );
+  };
+
+  const registerNotification = async (): Promise<boolean> => {
+    isLoading.value = true;
+    error.value = null;
+
     try {
-      error.value = null;
       await checkServiceWorkerSupport();
 
       let permission = await checkPermission();
-
       if (permission === "default") {
         permission = await Notification.requestPermission();
       }
-      console.log("Notification permission status:", permission);
+
       if (permission === "denied") {
         throw new Error(
-          "Notification permission denied. Please enable notifications in your browser settings.",
+          "Notification permission denied. Enable it in your browser settings.",
         );
       }
 
       if (permission !== "granted") {
-        throw new Error(`Notification permission ${permission}`);
+        throw new Error(`Notification permission is ${permission}`);
       }
-
-      console.log("Notification permission granted");
 
       const registration = await getServiceWorkerReadyRegistration();
       if (!registration) {
         throw new Error("Service Worker is not ready yet");
       }
 
-      // Check if already subscribed
       const existingSubscription =
         await registration.pushManager.getSubscription();
-      console.log("Existing subscription:", existingSubscription);
       if (existingSubscription) {
-        isLoading.value = true;
-        await syncSubscriptionToServer(existingSubscription);
-        isSubscribed.value = true;
-        console.log("Existing push notification subscription refreshed");
-        return;
-      }
-
-      isLoading.value = true;
-      console.log("Notification permission granted");
-
-      // Try to get VAPID key from API (runtime) first, fallback to config (build-time)
-      let vapidKey = config.public.VAPID_PUBLIC_KEY as string;
-
-      if (!vapidKey || vapidKey.length < 50) {
-        console.log("🔑 VAPID key not in config, fetching from API...");
         try {
-          const response = await $fetch<{
-            success: boolean;
-            data: { vapidPublicKey: string | null };
-          }>("/api/notifications/vapid-key");
-          if (response.success && response.data.vapidPublicKey) {
-            vapidKey = response.data.vapidPublicKey;
-            console.log("🔑 VAPID key fetched from API successfully");
+          await syncSubscriptionToServer(existingSubscription);
+          await updateCurrentSubscriptionState(existingSubscription);
+          return true;
+        } catch (syncError) {
+          if (!isSubscriptionOwnershipConflict(syncError)) {
+            throw syncError;
           }
-        } catch (fetchError) {
-          console.error("Failed to fetch VAPID key from API:", fetchError);
+          await existingSubscription.unsubscribe().catch(() => undefined);
         }
       }
 
-      console.log(
-        "🔑 VAPID Key being used:",
-        vapidKey ? `${vapidKey.substring(0, 20)}...` : "UNDEFINED/EMPTY",
-      );
-      console.log("🔑 VAPID Key length:", vapidKey?.length);
-
-      if (!vapidKey || vapidKey.length < 50) {
-        throw new Error(
-          `Invalid VAPID key. Check your VAPID_PUBLIC_KEY environment variable on the server.`,
-        );
-      }
-
-      const subscription = await registration.pushManager.subscribe({
+      const vapidKey = await getVapidPublicKey();
+      const createdSubscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
       });
 
-      await syncSubscriptionToServer(subscription);
-      // If request didn't throw, consider it successful under unified contract
-      isSubscribed.value = true;
-      console.log("Subscription successful");
+      try {
+        await syncSubscriptionToServer(createdSubscription);
+        await updateCurrentSubscriptionState(createdSubscription);
+        return true;
+      } catch (syncError) {
+        await createdSubscription.unsubscribe().catch(() => undefined);
+        await updateCurrentSubscriptionState(null);
+        throw syncError;
+      }
     } catch (err: unknown) {
-      const errorMessage =
+      error.value =
         err instanceof Error ? err.message : "Failed to register notifications";
-      error.value = errorMessage;
+      isSubscribed.value = false;
       console.error("Notification registration error:", err);
+      return false;
     } finally {
       isLoading.value = false;
     }
   };
 
-  const unsubscribe = async (): Promise<void> => {
+  const unsubscribe = async (): Promise<boolean> => {
+    isLoading.value = true;
+    error.value = null;
+
     try {
-      const registration = await getServiceWorkerReadyRegistration();
-      if (!registration) return;
-      const subscription = await registration.pushManager.getSubscription();
-
-      if (subscription) {
-        // First unsubscribe from browser
-        await subscription.unsubscribe();
-
-        // Then notify server to remove from database
-        try {
-          await $fetch("/api/notifications/unsubscribe", {
-            method: "POST",
-            body: { endpoint: subscription.endpoint },
-          });
-        } catch (serverError) {
-          console.warn(
-            "Failed to remove subscription from server:",
-            serverError,
-          );
-          // Continue anyway since browser unsubscription succeeded
-        }
-
-        isSubscribed.value = false;
-        console.log("Unsubscribed from push notifications");
+      const subscription = await getCurrentSubscription();
+      if (!subscription) {
+        await updateCurrentSubscriptionState(null);
+        return true;
       }
-    } catch (err) {
-      console.error("Error unsubscribing:", err);
+
+      const result = await $api.notifications.unsubscribe({
+        endpoint: subscription.endpoint,
+      });
+      if (!result.success) {
+        throw result.error;
+      }
+
+      const browserRemoved = await subscription.unsubscribe();
+      if (!browserRemoved) {
+        throw new Error("Browser did not remove the push subscription");
+      }
+
+      await updateCurrentSubscriptionState(null);
+      return true;
+    } catch (err: unknown) {
       error.value =
         err instanceof Error ? err.message : "Failed to unsubscribe";
+      console.error("Error unsubscribing:", err);
+      return false;
+    } finally {
+      isLoading.value = false;
     }
   };
 
   const checkSubscriptionStatus = async (): Promise<void> => {
     try {
-      const registration = await getServiceWorkerReadyRegistration();
-      if (!registration) return;
-      const subscription = await registration.pushManager.getSubscription();
-      isSubscribed.value = !!subscription;
-    } catch (err) {
-      console.error("Error checking subscription status:", err);
+      await updateCurrentSubscriptionState();
+    } catch {
+      isSubscribed.value = false;
+      currentEndpointHash.value = null;
     }
   };
 
-  const refreshSubscription = async (): Promise<void> => {
-    console.log("🔄 Refreshing push notification subscription...");
+  const refreshSubscription = async (): Promise<boolean> => {
+    isLoading.value = true;
+    error.value = null;
+
     try {
-      error.value = null;
-      isLoading.value = true;
-
-      // First unsubscribe if there's an existing subscription
-      const registration = await getServiceWorkerReadyRegistration();
-      if (!registration) {
-        throw new Error("Service Worker is not ready yet");
-      }
-      const existingSubscription =
-        await registration.pushManager.getSubscription();
-
+      const existingSubscription = await getCurrentSubscription();
       if (existingSubscription) {
-        console.log("🗑️ Removing existing subscription...");
+        const result = await $api.notifications.unsubscribe({
+          endpoint: existingSubscription.endpoint,
+        });
+        if (!result.success) throw result.error;
         await existingSubscription.unsubscribe();
-
-        // Remove from server database
-        try {
-          await $fetch("/api/notifications/unsubscribe", {
-            method: "POST",
-            body: { endpoint: existingSubscription.endpoint },
-          });
-          console.log("✅ Existing subscription removed from server");
-        } catch (serverError) {
-          console.warn(
-            "⚠️ Failed to remove old subscription from server:",
-            serverError,
-          );
-        }
       }
 
-      // Now create a fresh subscription
-      await registerNotification();
-      console.log("✅ Fresh subscription created!");
-    } catch (err) {
-      const errorMessage =
+      await updateCurrentSubscriptionState(null);
+    } catch (err: unknown) {
+      error.value =
         err instanceof Error ? err.message : "Failed to refresh subscription";
-      error.value = errorMessage;
-      console.error("❌ Subscription refresh error:", err);
-    } finally {
       isLoading.value = false;
+      return false;
     }
+
+    isLoading.value = false;
+    return registerNotification();
   };
 
   return {
     isLoading,
     error,
     isSubscribed,
+    currentEndpointHash,
     registerNotification,
     unsubscribe,
     checkPermission,

@@ -8,6 +8,28 @@ import type { LLMGenerationOptions, LLMStrategy } from "./LLMStrategy";
 import type { LlmMeasured } from "../llmCost";
 import { flashcardPrompt, quizPrompt } from "./prompts";
 
+const pickOpenRouterErrorMessage = (error: any): string => {
+  const body = error?.body;
+  if (body && typeof body === "object") {
+    const bodyError = (body as { error?: { message?: unknown }; message?: unknown }).error;
+    if (typeof bodyError?.message === "string") return bodyError.message;
+    if (typeof (body as { message?: unknown }).message === "string") {
+      return String((body as { message?: unknown }).message);
+    }
+  }
+
+  return typeof error?.message === "string"
+    ? error.message
+    : "OpenRouter request failed";
+};
+
+const pickOpenRouterErrorCode = (error: any): string | undefined => {
+  const body = error?.body;
+  if (!body || typeof body !== "object") return undefined;
+  const bodyError = (body as { error?: { code?: unknown } }).error;
+  return typeof bodyError?.code === "string" ? bodyError.code : undefined;
+};
+
 // Small helper to avoid hard crashes on imperfect LLM JSON
 function safeParseJSON<T>(text: string, fallback: T): T {
   try {
@@ -117,7 +139,6 @@ export class OpenRouterStrategy implements LLMStrategy {
       const content = res.choices?.[0]?.message?.content?.trim() ?? "[]";
       const outputChars = typeof content === "string" ? content.length : 0;
 
-      console.log(res)
       // Reasoning tokens (SDK uses camelCase)
       const reasoningTokens =
         (res.usage as any)?.completionTokensDetails?.reasoningTokens ?? 0;
@@ -154,14 +175,32 @@ export class OpenRouterStrategy implements LLMStrategy {
 
       return content;
     } catch (error: any) {
-      console.error("OpenRouter error", error.status, error.message);
+      const upstreamStatusCode = Number(
+        error?.statusCode ?? error?.status ?? error?.response?.status ?? 502,
+      );
+      const upstreamMessage = pickOpenRouterErrorMessage(error);
+      const upstreamCode = pickOpenRouterErrorCode(error);
+      const passThroughStatuses = new Set([400, 401, 402, 403, 408, 413, 422, 429]);
+      const statusCode = passThroughStatuses.has(upstreamStatusCode)
+        ? upstreamStatusCode
+        : 502;
 
-      const isRateLimit = error.status === 429;
-      const statusCode = isRateLimit ? 429 : 502;
+      console.error("OpenRouter error", {
+        statusCode: upstreamStatusCode,
+        code: upstreamCode,
+        model: this.modelName,
+        message: upstreamMessage,
+      });
 
       throw createError({
         statusCode,
-        statusMessage: `OpenRouter error: ${error.status} ${error.message}`,
+        statusMessage: `OpenRouter error: ${upstreamMessage}`,
+        data: {
+          provider: "openrouter",
+          model: this.modelName,
+          upstreamStatusCode,
+          upstreamCode,
+        },
       });
     }
   }

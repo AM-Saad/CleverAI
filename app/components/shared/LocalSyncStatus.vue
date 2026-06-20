@@ -117,7 +117,7 @@ const ambientTitle = computed(() => {
   <!-- Failed sync: the only state loud enough to interrupt, with a retry. -->
   <div
     v-if="status === 'error'"
-    class="flex h-7 items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-error/30 px-2.5 text-error"
+    class="flex h-7 items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-error/30 px-2.5 text-error-text"
   >
     <div class="flex min-w-0 items-center gap-2">
       <Icon name="i-lucide-alert-triangle" class="h-3.5 w-3.5 shrink-0" />

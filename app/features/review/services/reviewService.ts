@@ -5,6 +5,7 @@ import {
   EnrollCardResponseSchema,
   GradeCardResponseSchema,
   ReviewQueueResponseSchema,
+  ReviewStatsBatchResponseSchema,
   ReviewSummaryStatsSchema,
 } from "@shared/utils/review.contract";
 import type {
@@ -13,6 +14,7 @@ import type {
   GradeCardRequest,
   GradeCardResponse,
   ReviewQueueResponse,
+  ReviewStatsBatchResponse,
   ReviewSummaryStats,
 } from "@shared/utils/review.contract";
 
@@ -90,5 +92,18 @@ export class ReviewService extends FetchFactory {
       : `${this.RESOURCE}/stats`;
 
     return this.call("GET", url, undefined, {}, ReviewSummaryStatsSchema);
+  }
+
+  /** Per-workspace stats for the workspaces list in one round trip. */
+  async getStatsBatch(
+    workspaceIds: string[],
+  ): Promise<Result<ReviewStatsBatchResponse>> {
+    return this.call(
+      "POST",
+      `${this.RESOURCE}/stats-batch`,
+      { workspaceIds },
+      {},
+      ReviewStatsBatchResponseSchema,
+    );
   }
 }

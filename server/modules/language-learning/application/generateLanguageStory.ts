@@ -77,7 +77,6 @@ export async function generateLanguageStory(input: {
     quotaPort: input.quotaPort,
     task: "language_story",
     inputText: prompt,
-    estimatedOutputTokens: 300,
     checkQuota: true,
     incrementQuota: true,
     user,

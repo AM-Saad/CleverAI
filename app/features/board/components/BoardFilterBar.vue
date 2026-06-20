@@ -27,7 +27,7 @@ onMounted(() => {
 });
 
 const allTags = computed(() =>
-  Array.from(tagsStore.tags.value.values()).sort((a, b) => a.order - b.order)
+  Array.from(tagsStore.tags.value.values()).sort((a, b) => a.order - b.order),
 );
 
 // ── helpers ─────────────────────────────────────────────────────────────────
@@ -64,12 +64,32 @@ const activeCount = computed(() => {
 const selectedTagObjects = computed<UserTag[]>(() =>
   props.modelValue.tags
     .map((name) => tagsStore.getTagByName(name))
-    .filter((t): t is UserTag => t !== null)
+    .filter((t): t is UserTag => t !== null),
 );
 
-const DUE_DATE_OPTIONS: Array<{ label: string; value: BoardFilterState["dueDate"]; icon: string }> = [
+const createdAfterValue = computed({
+  get: () => props.modelValue.createdAfter ?? "",
+  set: (value: string | number | null) =>
+    patch({ createdAfter: value ? String(value) : null }),
+});
+
+const createdBeforeValue = computed({
+  get: () => props.modelValue.createdBefore ?? "",
+  set: (value: string | number | null) =>
+    patch({ createdBefore: value ? String(value) : null }),
+});
+
+const DUE_DATE_OPTIONS: Array<{
+  label: string;
+  value: BoardFilterState["dueDate"];
+  icon: string;
+}> = [
   { label: "Any", value: "any", icon: "heroicons:minus" },
-  { label: "Overdue", value: "overdue", icon: "heroicons:exclamation-triangle" },
+  {
+    label: "Overdue",
+    value: "overdue",
+    icon: "heroicons:exclamation-triangle",
+  },
   { label: "Today", value: "today", icon: "heroicons:sun" },
   { label: "This week", value: "this-week", icon: "heroicons:calendar-days" },
   { label: "Has date", value: "has-date", icon: "heroicons:clock" },
@@ -77,113 +97,207 @@ const DUE_DATE_OPTIONS: Array<{ label: string; value: BoardFilterState["dueDate"
 </script>
 
 <template>
-  <UPopover v-model:open="isOpen">
+  <UiPopover v-model:open="isOpen">
     <!-- Trigger button -->
-    <UiButton size="xs" :icon="activeCount > 0 ? 'heroicons:funnel-solid' : 'heroicons:funnel'"
-      trailing-icon="heroicons:chevron-down-20-solid" :color="activeCount > 0 ? 'primary' : 'neutral'"
-      :variant="activeCount > 0 ? 'soft' : 'ghost'">
+    <UiButton
+      size="xs"
+      :icon="activeCount > 0 ? 'heroicons:funnel-solid' : 'heroicons:funnel'"
+      trailing-icon="heroicons:chevron-down-20-solid"
+      :tone="activeCount > 0 ? 'primary' : 'neutral'"
+      :variant="activeCount > 0 ? 'soft' : 'ghost'"
+    >
       <span v-if="activeCount === 0">Filters</span>
-      <span v-else>{{ activeCount }} filter{{ activeCount === 1 ? "" : "s" }}</span>
+      <span v-else
+        >{{ activeCount }} filter{{ activeCount === 1 ? "" : "s" }}</span
+      >
     </UiButton>
 
     <template #content>
       <div class="w-80 space-y-4 p-3">
-
         <!-- Header -->
         <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-widest text-content-secondary">Filters</span>
-          <UiButton v-if="activeCount > 0" size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
-            @click="clearAll">
+          <span
+            class="text-xs font-bold uppercase tracking-widest text-content-secondary"
+            >Filters</span
+          >
+          <UiButton
+            v-if="activeCount > 0"
+            size="xs"
+            tone="neutral"
+            variant="ghost"
+            icon="heroicons:x-mark"
+            @click="clearAll"
+          >
             Clear all
           </UiButton>
         </div>
 
         <!-- ── Tags ──────────────────────────────────────────────────── -->
-        <ui-card size="sm" variant="default" :contentClasses="`flex flex-col gap-4`">
+        <UiPanel
+          tag="div"
+          size="sm"
+          variant="surface"
+          content-class="flex flex-col gap-4"
+        >
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-widest text-content-secondary mb-2">Tags</p>
+            <p
+              class="text-[10px] font-bold uppercase tracking-widest text-content-secondary mb-2"
+            >
+              Tags
+            </p>
 
-            <div v-if="allTags.length > 0" class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1">
-              <button v-for="tag in allTags" :key="tag.id" type="button" :class="[
-                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all border',
-                modelValue.tags.includes(tag.name)
-                  ? 'border-transparent shadow-[var(--shadow-dropdown)] scale-105'
-                  : 'border-secondary bg-white text-content-on-surface hover:border-secondary/70'
-              ]" :style="modelValue.tags.includes(tag.name)
-                ? { backgroundColor: tag.color, color: 'var(--color-on-primary)' }
-                : {}" @click="toggleTag(tag.name)">
-                <Icon v-if="modelValue.tags.includes(tag.name)" name="heroicons:check-20-solid" class="w-3 h-3" />
+            <div
+              v-if="allTags.length > 0"
+              class="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto pr-1"
+            >
+              <UiButton
+                v-for="tag in allTags"
+                :key="tag.id"
+                size="xs"
+                tone="neutral"
+                :variant="
+                  modelValue.tags.includes(tag.name) ? 'solid' : 'outline'
+                "
+                class="rounded-full"
+                :class="
+                  modelValue.tags.includes(tag.name)
+                    ? 'shadow-[var(--shadow-dropdown)]'
+                    : ''
+                "
+                :style="
+                  modelValue.tags.includes(tag.name)
+                    ? {
+                        backgroundColor: tag.color,
+                        color: 'var(--color-on-primary)',
+                        borderColor: tag.color,
+                      }
+                    : {}
+                "
+                @click="toggleTag(tag.name)"
+              >
+                <Icon
+                  v-if="modelValue.tags.includes(tag.name)"
+                  name="heroicons:check-20-solid"
+                  class="w-3 h-3"
+                />
                 {{ tag.name }}
-              </button>
+              </UiButton>
             </div>
 
-            <p v-else class="text-xs text-content-secondary italic py-2">No tags created yet</p>
+            <p v-else class="text-xs text-content-secondary italic py-2">
+              No tags created yet
+            </p>
           </div>
           <!-- ── Due Date ───────────────────────────────────────────────── -->
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-widest text-content-secondary mb-2">Due Date</p>
+            <p
+              class="text-[10px] font-bold uppercase tracking-widest text-content-secondary mb-2"
+            >
+              Due Date
+            </p>
             <div class="flex min-w-full overflow-x-auto gap-1.5">
-              <button v-for="opt in DUE_DATE_OPTIONS" :key="opt.value" type="button" :class="[
-                'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-all min-w-fit',
-                modelValue.dueDate === opt.value
-                  ? 'bg-primary text-on-primary border-primary shadow-[var(--shadow-dropdown)]'
-                  : 'border-secondary bg-white text-content-on-surface hover:border-secondary/70',
-              ]" @click="patch({ dueDate: opt.value })">
-                <Icon :name="opt.icon" class="w-3 h-3" />
+              <UiButton
+                v-for="opt in DUE_DATE_OPTIONS"
+                :key="opt.value"
+                size="xs"
+                :tone="modelValue.dueDate === opt.value ? 'primary' : 'neutral'"
+                :variant="
+                  modelValue.dueDate === opt.value ? 'solid' : 'outline'
+                "
+                :icon="opt.icon"
+                class="min-w-fit rounded-full"
+                @click="patch({ dueDate: opt.value })"
+              >
                 {{ opt.label }}
-              </button>
+              </UiButton>
             </div>
           </div>
 
           <!-- ── Created At ─────────────────────────────────────────────── -->
           <div>
-            <p class="text-[10px] font-bold uppercase tracking-widest text-content-secondary mb-2">Created</p>
+            <p
+              class="text-[10px] font-bold uppercase tracking-widest text-content-secondary mb-2"
+            >
+              Created
+            </p>
             <div class="grid grid-cols-2 gap-2">
               <div>
-                <label class="text-[10px] text-content-secondary mb-1 block">From</label>
-                <input type="date" :value="modelValue.createdAfter ?? ''"
-                  class="w-full px-2 py-1.5 rounded-[var(--radius-lg)] border border-secondary bg-white text-xs text-content-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  @input="patch({ createdAfter: ($event.target as HTMLInputElement).value || null })" />
+                <label class="text-[10px] text-content-secondary mb-1 block"
+                  >From</label
+                >
+                <UiInput v-model="createdAfterValue" type="date" size="xs" />
               </div>
               <div>
-                <label class="text-[10px] text-content-secondary mb-1 block">To</label>
-                <input type="date" :value="modelValue.createdBefore ?? ''"
-                  class="w-full px-2 py-1.5 rounded-[var(--radius-lg)] border border-secondary bg-white text-xs text-content-on-surface focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  @input="patch({ createdBefore: ($event.target as HTMLInputElement).value || null })" />
+                <label class="text-[10px] text-content-secondary mb-1 block"
+                  >To</label
+                >
+                <UiInput v-model="createdBeforeValue" type="date" size="xs" />
               </div>
             </div>
           </div>
-        </ui-card>
+        </UiPanel>
 
         <!-- ── Active filter chips ───────────────────────────────────── -->
-        <div v-if="activeCount > 0" class="pt-2 border-t border-secondary flex flex-wrap gap-1.5">
-          <span v-for="tag in selectedTagObjects.slice(0, 4)" :key="tag.id"
+        <div
+          v-if="activeCount > 0"
+          class="pt-2 border-t border-secondary flex flex-wrap gap-1.5"
+        >
+          <span
+            v-for="tag in selectedTagObjects.slice(0, 4)"
+            :key="tag.id"
             class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium text-white"
-            :style="{ backgroundColor: tag.color }">
+            :style="{ backgroundColor: tag.color }"
+          >
             {{ tag.name }}
-            <button type="button" class="hover:opacity-70" @click="toggleTag(tag.name)">
-              <Icon name="heroicons:x-mark-20-solid" class="w-3 h-3" />
-            </button>
+            <UiIconButton
+              icon="heroicons:x-mark-20-solid"
+              :label="`Remove ${tag.name} filter`"
+              size="xs"
+              variant="ghost"
+              class="h-3 w-3 min-h-3 min-w-3 text-white hover:opacity-70"
+              @click="toggleTag(tag.name)"
+            />
           </span>
-          <span v-if="selectedTagObjects.length > 4" class="text-[10px] text-content-secondary self-center">
+          <span
+            v-if="selectedTagObjects.length > 4"
+            class="text-[10px] text-content-secondary self-center"
+          >
             +{{ selectedTagObjects.length - 4 }} more
           </span>
-          <span v-if="modelValue.dueDate !== 'any'"
-            class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-primary/10 text-primary">
-            {{DUE_DATE_OPTIONS.find((o) => o.value === modelValue.dueDate)?.label}}
-            <button type="button" class="hover:opacity-70" @click="patch({ dueDate: 'any' })">
-              <Icon name="heroicons:x-mark-20-solid" class="w-3 h-3" />
-            </button>
+          <span
+            v-if="modelValue.dueDate !== 'any'"
+            class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-primary/10 text-primary"
+          >
+            {{
+              DUE_DATE_OPTIONS.find((o) => o.value === modelValue.dueDate)
+                ?.label
+            }}
+            <UiIconButton
+              icon="heroicons:x-mark-20-solid"
+              label="Clear due date filter"
+              size="xs"
+              variant="ghost"
+              class="h-3 w-3 min-h-3 min-w-3 hover:opacity-70"
+              @click="patch({ dueDate: 'any' })"
+            />
           </span>
-          <span v-if="modelValue.createdAfter || modelValue.createdBefore"
-            class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-secondary text-content-on-surface">
-            Created: {{ modelValue.createdAfter ?? "–" }} → {{ modelValue.createdBefore ?? "now" }}
-            <button type="button" class="hover:opacity-70" @click="patch({ createdAfter: null, createdBefore: null })">
-              <Icon name="heroicons:x-mark-20-solid" class="w-3 h-3" />
-            </button>
+          <span
+            v-if="modelValue.createdAfter || modelValue.createdBefore"
+            class="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-medium bg-secondary text-content-on-surface"
+          >
+            Created: {{ modelValue.createdAfter ?? "–" }} →
+            {{ modelValue.createdBefore ?? "now" }}
+            <UiIconButton
+              icon="heroicons:x-mark-20-solid"
+              label="Clear created date filter"
+              size="xs"
+              variant="ghost"
+              class="h-3 w-3 min-h-3 min-w-3 hover:opacity-70"
+              @click="patch({ createdAfter: null, createdBefore: null })"
+            />
           </span>
         </div>
       </div>
     </template>
-  </UPopover>
+  </UiPopover>
 </template>

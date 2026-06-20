@@ -42,6 +42,36 @@ export const UnsubscribeDTO = z
   });
 export type UnsubscribeDTO = z.infer<typeof UnsubscribeDTO>;
 
+export const NotificationSubscriptionMutationResponseSchema = z.object({
+  message: z.string().optional(),
+  deletedCount: z.number().int().nonnegative().optional(),
+  subscription: z.unknown().optional(),
+});
+export type NotificationSubscriptionMutationResponse = z.infer<
+  typeof NotificationSubscriptionMutationResponseSchema
+>;
+
+export const NotificationSubscriptionListItemSchema = z.object({
+  id: z.string(),
+  endpoint: z.string(),
+  endpointHash: z.string(),
+  createdAt: z.union([z.string(), z.date()]),
+  expiresAt: z.union([z.string(), z.date()]).nullable().optional(),
+  isActive: z.boolean(),
+  failureCount: z.number().int().nonnegative(),
+  lastSeen: z.union([z.string(), z.date()]).nullable().optional(),
+  userAgent: z.string().nullable().optional(),
+  deviceInfo: z.unknown().nullable().optional(),
+  isCurrentDevice: z.boolean(),
+});
+
+export const NotificationSubscriptionsResponseSchema = z.object({
+  subscriptions: z.array(NotificationSubscriptionListItemSchema),
+});
+export type NotificationSubscriptionsResponse = z.infer<
+  typeof NotificationSubscriptionsResponseSchema
+>;
+
 // ==========================================
 // Notification Preferences DTO
 // ==========================================
@@ -84,8 +114,62 @@ export const SendNotificationDTO = z.object({
   requireInteraction: z.boolean().optional(),
   targetUsers: z.array(z.string()).optional(),
   url: z.string().optional(),
+  type: z.string().optional().default("SYSTEM"),
+  persistInApp: z.boolean().optional().default(true),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 export type SendNotificationDTO = z.infer<typeof SendNotificationDTO>;
+
+// ==========================================
+// Durable in-app notifications
+// ==========================================
+
+export const NotificationItemSchema = z.object({
+  id: z.string(),
+  type: z.string(),
+  title: z.string(),
+  content: z.string(),
+  url: z.string().nullable().optional(),
+  isRead: z.boolean(),
+  readAt: z.union([z.string(), z.date()]).nullable().optional(),
+  pushStatus: z.string().nullable().optional(),
+  sentAt: z.union([z.string(), z.date()]),
+});
+export type NotificationItem = z.infer<typeof NotificationItemSchema>;
+
+export const RecentNotificationsResponseSchema = z.object({
+  notifications: z.array(NotificationItemSchema),
+  unreadCount: z.number().int().nonnegative(),
+});
+export type RecentNotificationsResponse = z.infer<
+  typeof RecentNotificationsResponseSchema
+>;
+
+export const MarkNotificationReadResponseSchema = z.object({
+  notificationId: z.string(),
+  unreadCount: z.number().int().nonnegative(),
+});
+export type MarkNotificationReadResponse = z.infer<
+  typeof MarkNotificationReadResponseSchema
+>;
+
+export const MarkAllNotificationsReadResponseSchema = z.object({
+  updatedCount: z.number().int().nonnegative(),
+  unreadCount: z.number().int().nonnegative(),
+});
+export type MarkAllNotificationsReadResponse = z.infer<
+  typeof MarkAllNotificationsReadResponseSchema
+>;
+
+export const NotificationDeliveryResponseSchema = z.object({
+  sent: z.number().int().nonnegative(),
+  failed: z.number().int().nonnegative(),
+  total: z.number().int().nonnegative(),
+  noSubscription: z.number().int().nonnegative(),
+});
+export type NotificationDeliveryResponse = z.infer<
+  typeof NotificationDeliveryResponseSchema
+>;
 
 // ==========================================
 // Test Notification DTO

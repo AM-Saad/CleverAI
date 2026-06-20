@@ -24,7 +24,8 @@ Always consult these files before adding any classes:
 | [app/DESIGN.md](../../app/DESIGN.md) | **Authoritative spec** — breakpoints, tokens, typography rules, do/don'ts |
 | [app/assets/css/main.css](../../app/assets/css/main.css) | CSS variable definitions (`--color-*`, `--space-*`, `--radius-*`, `--shadow-*`) |
 | [app/composables/ui/useResponsive.ts](../../app/composables/ui/useResponsive.ts) | `isMobile`, `isTablet`, `isDesktop`, `isSm`…`is2Xl` helpers |
-| [STYLEGUIDE.md](../../STYLEGUIDE.md) | Nuxt UI theming & Tailwind v4 patterns |
+| [docs/DESIGN_SYSTEM.md](../../docs/DESIGN_SYSTEM.md) | Design tokens, Nuxt UI theming & Tailwind v4 patterns |
+| [docs/COMPONENT_SYSTEM.md](../../docs/COMPONENT_SYSTEM.md) | `Ui*` wrapper policy — feature/page UI uses `Ui*`, not raw Nuxt UI `U*` |
 
 **Breakpoints (Tailwind defaults):**
 
@@ -98,8 +99,8 @@ const { isMobile, isDesktop } = useResponsive()
 </script>
 
 <template>
-  <!-- Mobile: sheet drawer -->
-  <USheet v-if="isMobile" v-model="open">...</USheet>
+  <!-- Mobile: drawer (use the Ui* wrapper, not raw Nuxt UI) -->
+  <UiDrawer v-if="isMobile" v-model="open">...</UiDrawer>
 
   <!-- Desktop: inline sidebar -->
   <aside v-else class="hidden lg:block w-64 shrink-0">...</aside>
@@ -138,10 +139,11 @@ Run through this before marking done:
 - [ ] Images use `sizes` attribute if responsive: `sizes="(max-width: 768px) 100vw, 50vw"`
 - [ ] No `v-if` on layout wrappers that causes DOM flicker on resize — prefer `class` toggling
 
-#### Design tokens
-- [ ] Colors use CSS variables (`bg-[var(--color-surface)]`) not raw hex values
-- [ ] Border radius uses `rounded-[var(--radius-lg)]` (cards use `--radius-2xl`)
+#### Design tokens (enforced by `yarn design:check`)
+- [ ] Colors use token utilities (`bg-surface`, `text-content-secondary`) — never raw hex or Tailwind palette classes (`text-gray-500`)
+- [ ] Border radius uses `rounded-[var(--radius-lg)]` (cards use `--radius-2xl`); no built-in `rounded-*`/`shadow-*`
 - [ ] Shadows only on interactive/elevated elements — never static surfaces
+- [ ] UI uses `Ui*` wrappers (`UiButton`, `UiModal`, `UiCard`…), **not** raw Nuxt UI `U*` (enforced by `yarn design:boundaries`)
 
 ### 6. Cross-Screen Smoke Test
 
@@ -166,7 +168,7 @@ In the browser devtools:
 ```vue
 <!-- Grade buttons: stack on mobile, row on desktop -->
 <div class="flex flex-wrap gap-2 md:flex-nowrap md:gap-4">
-  <button class="flex-1 min-w-[80px] min-h-[44px] ...">Grade</button>
+  <UiButton class="flex-1 min-w-[80px] min-h-[44px] ...">Grade</UiButton>
 </div>
 ```
 
@@ -179,7 +181,7 @@ In the browser devtools:
 
 **Modal size:**
 ```vue
-<UModal :ui="{ container: 'w-full max-w-sm md:max-w-2xl' }">
+<UiModal :ui="{ container: 'w-full max-w-sm md:max-w-2xl' }">
 ```
 
 **Section layout (page):**
@@ -192,12 +194,12 @@ In the browser devtools:
 
 | Pattern | Reference file |
 |---------|---------------|
-| ✅ Mobile-to-desktop paradigm shift | [app/components/board/BoardKanbanView.vue](../../app/components/board/BoardKanbanView.vue) |
+| ✅ Mobile-to-desktop paradigm shift | [app/features/board/components/BoardKanbanView.vue](../../app/features/board/components/BoardKanbanView.vue) |
 | ✅ Fluid hero layout | [app/pages/index.vue](../../app/pages/index.vue) |
 | ✅ Responsive grid | [app/pages/about.vue](../../app/pages/about.vue) |
-| ✅ Mobile session UI | [app/components/language/LanguageSessionView.vue](../../app/components/language/LanguageSessionView.vue) |
-| ❌ Needs mobile treatment | [app/components/review/CardReviewInterface.vue](../../app/components/review/CardReviewInterface.vue) |
-| ❌ Needs mobile treatment | [app/components/review/ReviewHeader.vue](../../app/components/review/ReviewHeader.vue) |
+| ✅ Mobile session UI | [app/features/language-learning/components/LanguageSessionView.vue](../../app/features/language-learning/components/LanguageSessionView.vue) |
+| ❌ Needs mobile treatment | [app/features/review/components/CardReviewInterface.vue](../../app/features/review/components/CardReviewInterface.vue) |
+| ❌ Needs mobile treatment | [app/features/review/components/ReviewHeader.vue](../../app/features/review/components/ReviewHeader.vue) |
 
 ## Anti-Patterns to Avoid
 

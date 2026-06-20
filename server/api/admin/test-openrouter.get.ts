@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
     // 2. Pricing Lookup (The "Suffix Hazard" Check)
     const { totalUsdMicros: costMicros } = await estimateCostMicros({
       provider: "openrouter",
-      model: "google/gemini-2.0-flash-lite-001", // OR slug, not registry ID
+      model: "google/gemini-2.5-flash-lite", // OR slug, not registry ID
       promptTokens: 100,
       completionTokens: 50,
     });

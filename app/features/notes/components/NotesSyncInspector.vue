@@ -96,7 +96,12 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="mx-4 my-2 rounded-[var(--radius-xl)] border border-secondary bg-white p-2 text-xs text-content-secondary">
+  <UiPanel
+    tag="section"
+    variant="surface"
+    size="xs"
+    class-name="mx-4 my-2"
+    content-class="text-xs text-content-secondary">
     <div class="flex flex-wrap items-center justify-between gap-2">
       <div class="flex items-center gap-2">
         <icon name="i-lucide-activity" class="h-3.5 w-3.5 text-primary" />
@@ -148,8 +153,8 @@ onUnmounted(() => {
       }, null, 2) }}</pre>
     </details>
 
-    <p v-if="errorMessage" class="mt-2 text-error">
+    <p v-if="errorMessage" class="mt-2 text-error-text">
       {{ errorMessage }}
     </p>
-  </section>
+  </UiPanel>
 </template>

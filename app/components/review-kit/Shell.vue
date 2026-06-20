@@ -32,7 +32,7 @@
         <div
           class="flex h-16 w-16 items-center justify-center rounded-full bg-success/10"
         >
-          <Icon name="i-lucide-check" class="h-8 w-8 text-success" />
+          <Icon name="i-lucide-check" class="h-8 w-8 text-success-text" />
         </div>
         <div class="space-y-1">
           <ui-subtitle size="xl" color="content-on-surface"
@@ -139,7 +139,8 @@
         <div v-if="!showAnswer" class="flex justify-center">
           <UiButton
             size="lg"
-            class="px-8 transition-transform active:scale-[0.97]"
+            class="px-8 transition-transform duration-[var(--duration-fast)] active:scale-[0.98]"
+            aria-label="Show answer for this review card"
             @click="reveal"
           >
             <Icon name="i-lucide-eye" class="mr-1 h-4 w-4" />
@@ -148,7 +149,7 @@
         </div>
         <review-kit-grade-bar v-else :loading="submitting" @grade="onGrade" />
 
-        <div class="flex items-center justify-between">
+        <div class="flex items-center justify-center gap-3">
           <UiButton
             tone="neutral"
             variant="ghost"
@@ -307,13 +308,13 @@ watch(
 const xpToneClass = computed(() => {
   switch (lastTone.value) {
     case "error":
-      return "text-error";
+      return "text-error-text";
     case "warning":
-      return "text-warning";
+      return "text-warning-text";
     case "success":
-      return "text-success";
+      return "text-success-text";
     default:
-      return "text-info";
+      return "text-info-text";
   }
 });
 

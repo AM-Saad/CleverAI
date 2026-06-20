@@ -5,8 +5,15 @@ const props = defineProps<{
 </script>
 
 <template>
-  <div v-if="props.message">
-    <p class="bg-success/10 border dark:border-success/30 my-2 px-3 py-2 rounded-[var(--radius-md)] text-success text-sm"
+  <UiPanel
+    v-if="props.message"
+    variant="subtle"
+    size="sm"
+    role="status"
+    class-name="my-2 rounded-[var(--radius-md)] border-success/30 bg-success/10"
+    content-class="text-success-text text-sm"
+  >
+    <p
       v-html="props.message" />
-  </div>
+  </UiPanel>
 </template>

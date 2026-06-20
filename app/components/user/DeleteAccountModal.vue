@@ -50,25 +50,25 @@ const closeModal = (): void => {
       <template #body>
         <u-form :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
           <!-- Warning Banner -->
-          <div class="bg-error/10 border border-error/20 rounded-[var(--radius-lg)] p-4">
+          <UiPanel variant="subtle" size="md" role="alert" class-name="border-error/20 bg-error/10">
             <div class="flex">
-              <UIcon name="i-lucide-alert-circle" class="text-error mr-3 mt-0.5" size="20"></UIcon>
+              <UIcon name="i-lucide-alert-circle" class="text-error-text mr-3 mt-0.5" size="20"></UIcon>
               <div>
-                <h4 class="text-sm font-medium text-error mb-1">
+                <h4 class="text-sm font-medium text-error-text mb-1">
                   Warning: This action cannot be undone
                 </h4>
-                <p class="text-sm text-error/80">
+                <p class="text-sm text-error-text/80">
                   Deleting your account will remove all your data including workspaces, materials, flashcards, and
                   progress.
                 </p>
               </div>
             </div>
-          </div>
+          </UiPanel>
 
           <u-form-field name="confirmationText" required>
             <template #label>
               <label class="block text-sm font-medium text-content-on-surface">
-                Type <span class="font-bold text-error">DELETE</span> to confirm
+                Type <span class="font-bold text-error-text">DELETE</span> to confirm
               </label>
             </template>
             <ui-input v-model="state.confirmationText" placeholder="DELETE" :ui="{
@@ -78,7 +78,7 @@ const closeModal = (): void => {
 
           <div class="flex items-start space-x-3">
             <input v-model="state.permanentDelete" type="checkbox" id="permanent-delete"
-              class="mt-1 h-4 w-4 accent-error focus:ring-error/30 border-secondary rounded-[var(--radius-md)] cursor-pointer" />
+              class="mt-1 h-4 w-4 accent-error focus:ring-2 focus:ring-[var(--ds-focus-outline-color)] border-secondary rounded-[var(--radius-md)] cursor-pointer" />
             <div class="flex-1">
               <label for="permanent-delete" class="text-sm font-medium text-content-on-surface cursor-pointer">
                 Delete immediately and permanently
@@ -89,7 +89,7 @@ const closeModal = (): void => {
                   in before
                   then.
                 </span>
-                <span v-else class="text-error font-medium">
+                <span v-else class="text-error-text font-medium">
                   Your account will be deleted immediately and cannot be recovered.
                 </span>
               </p>

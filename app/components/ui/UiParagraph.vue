@@ -1,18 +1,13 @@
 <template>
-  <component :is="tag" :class="[
-    'ui-paragraph',
-    sizeClasses[size],
-    weightClasses[weight],
-
-    colorClasses[color],
-    center ? 'text-center' : '',
-    className,
-  ]">
+  <component :is="tag" :class="ui">
     <slot />
   </component>
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
+import { tv } from "./variants";
+
 interface Props {
   /**
    * HTML tag to render
@@ -25,10 +20,19 @@ interface Props {
   /**
    * Text color variant
    */
-  color?: "primary" | "content-on-surface" | 'content-on-surface-strong' | "content-on-background" | "content-secondary" | 'disabled' | "white" | "danger" | "success";
+  color?:
+    | "primary"
+    | "content-on-surface"
+    | "content-on-surface-strong"
+    | "content-on-background"
+    | "content-secondary"
+    | "disabled"
+    | "white"
+    | "danger"
+    | "success";
   /**
-  * Font weight
-  */
+   * Font weight
+   */
   weight?: "light" | "normal" | "medium" | "semibold" | "bold";
   /**
    * Center alignment
@@ -49,32 +53,44 @@ const {
   className = "",
 } = defineProps<Props>();
 
-const sizeClasses = {
-  xs: "text-xs leading-normal",
-  sm: "text-sm leading-relaxed",
-  base: "text-base leading-relaxed",
-  lg: "text-lg leading-relaxed",
-};
-const weightClasses = {
-  light: "font-light",
-  normal: "font-normal",
-  medium: "font-medium",
-  semibold: "font-semibold",
-  bold: "font-bold",
-};
+const paragraph = tv({
+  base: "ui-paragraph",
+  variants: {
+    size: {
+      xs: "text-xs leading-normal",
+      sm: "text-sm leading-relaxed",
+      base: "text-base leading-relaxed",
+      lg: "text-lg leading-relaxed",
+    },
+    weight: {
+      light: "font-light",
+      normal: "font-normal",
+      medium: "font-medium",
+      semibold: "font-semibold",
+      bold: "font-bold",
+    },
+    color: {
+      primary: "text-primary",
+      "content-on-surface": "text-content-on-surface",
+      "content-on-surface-strong": "text-content-on-surface-strong",
+      "content-on-background": "text-content-on-background",
+      "content-secondary": "text-content-secondary",
+      white: "text-white",
+      danger: "text-error-text",
+      success: "text-success-text",
+      disabled: "text-content-disabled",
+    },
+  },
+});
 
-
-const colorClasses = {
-  primary: "text-[color:var(--color-primary)]",
-  "content-on-surface": "text-content-on-surface",
-  "content-on-surface-strong": "text-content-on-surface-strong",
-  "content-on-background": "text-content-on-background",
-  "content-secondary": "text-content-secondary",
-  white: "text-white",
-  danger: "text-[color:var(--color-error)]",
-  success: "text-success",
-  disabled: "text-[color:var(--color-content-disabled)]",
-};
+const ui = computed(() =>
+  paragraph({
+    size,
+    weight,
+    color,
+    class: [center ? "text-center" : "", className],
+  }),
+);
 </script>
 
 <style scoped>

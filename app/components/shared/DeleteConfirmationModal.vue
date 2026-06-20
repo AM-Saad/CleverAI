@@ -19,6 +19,16 @@ const emit = defineEmits<{
   (event: "confirm"): void;
 }>();
 
+const open = computed({
+  get: () => props.show,
+  set: (value: boolean) => {
+    if (!value) handleClose();
+  },
+});
+
+const confirmTone = computed(() => (props.isDestructive ? "error" : "primary"));
+const dialogIcon = computed(() => (props.isDestructive ? "delete" : "info"));
+
 function handleClose() {
   if (!props.loading) {
     emit("close");
@@ -27,41 +37,41 @@ function handleClose() {
 </script>
 
 <template>
-  <shared-dialog-modal :show="show" @close="handleClose" :title="title"
-    :icon="isDestructive ? 'delete' : 'info'">
+  <UiConfirmDialog
+    v-model:open="open"
+    :title="title"
+    :icon="dialogIcon"
+    :confirm-label="confirmText"
+    cancel-label="Cancel"
+    :tone="confirmTone"
+    :loading="loading"
+    @cancel="handleClose"
+    @confirm="$emit('confirm')"
+  >
+    <div class="space-y-4">
+      <UiParagraph size="sm" color="content-secondary">
+        <slot>Are you sure? This action cannot be undone.</slot>
+      </UiParagraph>
 
-
-    <template #body>
-      <div class="space-y-4">
-        <p class="text-sm text-muted">
-          <slot>Are you sure? This action cannot be undone.</slot>
-        </p>
-
-        <!-- Warning if enrolled -->
-        <div v-if="isEnrolled" class="flex items-start gap-3 p-3 rounded-[var(--radius-lg)] bg-warning/10 border border-warning/20">
-          <UIcon name="i-lucide-alert-triangle" class="w-5 h-5 text-warning shrink-0 mt-0.5" />
-          <div class="text-sm">
-            <p class="font-medium text-warning">{{ enrollmentWarning }}</p>
-            <p class="text-muted mt-1">
-              Deleting this will also remove all your study progress, including spaced repetition data and review
-              history.
-            </p>
-          </div>
+      <UiPanel
+        v-if="isEnrolled"
+        variant="subtle"
+        size="sm"
+        class-name="border-warning/20 bg-warning/10"
+        content-class="flex items-start gap-3"
+      >
+        <Icon
+          name="i-lucide-alert-triangle"
+          class="mt-0.5 h-5 w-5 shrink-0 text-warning-text"
+        />
+        <div class="text-sm">
+          <p class="font-medium text-warning-text">{{ enrollmentWarning }}</p>
+          <p class="mt-1 text-content-secondary">
+            Deleting this will also remove all your study progress, including
+            spaced repetition data and review history.
+          </p>
         </div>
-      </div>
-    </template>
-
-    <template #footer>
-      <div class="flex gap-3 justify-end pt-2">
-        <ui-button variant="soft" color="neutral" @click="handleClose" :disabled="loading">
-          Cancel
-        </ui-button>
-        <ui-button :color="isDestructive ? 'error' : 'primary'" @click="$emit('confirm')" :loading="loading"
-          :disabled="loading">
-          <Icon v-if="isDestructive" name="delete" class="w-4 h-4 mr-1" />
-          {{ confirmText }}
-        </ui-button>
-      </div>
-    </template>
-  </shared-dialog-modal>
+      </UiPanel>
+    </div>
+  </UiConfirmDialog>
 </template>

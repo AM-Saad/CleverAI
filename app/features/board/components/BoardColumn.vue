@@ -32,10 +32,11 @@ const emit = defineEmits<{
 const route = useRoute();
 const id = route.params.id;
 const itemsStore = useBoardItemsStore(id as string);
-const isItemPositionLocked = computed(() =>
-  props.itemDragDisabled ||
-  isDragDisabled.value ||
-  itemsStore.isPositionMutationPending.value
+const isItemPositionLocked = computed(
+  () =>
+    props.itemDragDisabled ||
+    isDragDisabled.value ||
+    itemsStore.isPositionMutationPending.value,
 );
 const canDragItems = computed(() => !isItemPositionLocked.value);
 
@@ -47,39 +48,51 @@ const {
   isDragDisabled,
   DragTracker,
   syncFromSource,
-  shouldSuppressInteraction
+  shouldSuppressInteraction,
 } = useReorderableList<BoardItemState>({
   onReorder: async (newOrder) => {
     const allItems = props.allColumnItems || newOrder;
     const reorderedItems = newOrder.map((item, index) => ({
-      ...allItems.find(i => i.id === item.id) || item,
-      order: index
+      ...(allItems.find((i) => i.id === item.id) || item),
+      order: index,
     }));
-    const hiddenItems = allItems.filter(item => !newOrder.some(n => n.id === item.id));
+    const hiddenItems = allItems.filter(
+      (item) => !newOrder.some((n) => n.id === item.id),
+    );
     const completeOrder = [...reorderedItems, ...hiddenItems];
     return itemsStore.reorderItemsInColumn(props.columnId, completeOrder);
   },
-  onDragStateChange: (isDragging) => emit('item-dragging', isDragging),
-  idKey: 'itemId',
+  onDragStateChange: (isDragging) => emit("item-dragging", isDragging),
+  idKey: "itemId",
   reorderDebounceMs: 250,
   clickSuppressMs: 220,
 });
 
 // Sync local items with props
-watch(() => props.items, (items) => syncFromSource(items), { immediate: true });
+watch(
+  () => props.items,
+  (items) => syncFromSource(items),
+  { immediate: true },
+);
 
 // Handle cross-column moves (when items are dragged between columns)
 watch(isAnyDragging, async (isDragging, wasDragging) => {
   if (wasDragging && !isDragging) {
-    const itemsNotInColumn = localItems.value.filter(item => item.columnId !== props.columnId);
+    const itemsNotInColumn = localItems.value.filter(
+      (item) => item.columnId !== props.columnId,
+    );
 
     if (itemsNotInColumn.length > 0) {
       const previousOrder = [...localItems.value];
 
       try {
         for (const item of itemsNotInColumn) {
-          const newOrder = localItems.value.findIndex(i => i.id === item.id);
-          const success = await itemsStore.moveItemToColumn(item.id, props.columnId, newOrder);
+          const newOrder = localItems.value.findIndex((i) => i.id === item.id);
+          const success = await itemsStore.moveItemToColumn(
+            item.id,
+            props.columnId,
+            newOrder,
+          );
           if (!success) {
             localItems.value = previousOrder;
             return;
@@ -103,7 +116,7 @@ const setEditInputRef = (el: HTMLElement | null) => {
     editInputRef.value = null;
     return;
   }
-  const inputEl = el.querySelector('input') as HTMLInputElement | null;
+  const inputEl = el.querySelector("input") as HTMLInputElement | null;
   editInputRef.value = inputEl;
 };
 
@@ -170,9 +183,19 @@ const columnActions = computed(() => {
   if (props.isDefault) return [];
   return [
     [
-      { label: "Rename", icon: "heroicons:pencil", onSelect: () => startEditing() },
-      { label: "Delete", icon: "heroicons:trash", onSelect: () => { showDeleteConfirm.value = true; } },
-    ]
+      {
+        label: "Rename",
+        icon: "heroicons:pencil",
+        onSelect: () => startEditing(),
+      },
+      {
+        label: "Delete",
+        icon: "heroicons:trash",
+        onSelect: () => {
+          showDeleteConfirm.value = true;
+        },
+      },
+    ],
   ];
 });
 
@@ -197,14 +220,18 @@ const handleMoveItem = async (itemId: string, targetId: string | null) => {
 </script>
 
 <template>
-  <div
-    class="shrink-0 flex flex-col h-full min-h-0 bg-linear-to-b from-white to-surface/80 rounded-[var(--radius-xl)] border border-t-0 border-surface-subtle shadow-xs transition-shadow w-72 max-w-full ">
+  <UiPanel
+    tag="section"
+    variant="surface"
+    size="xs"
+    class-name="shrink-0 flex h-full min-h-0 w-72 max-w-full rounded-[var(--radius-md)] border-t-0 border-surface-subtle bg-linear-to-b from-surface to-surface/80 shadow-xs transition-shadow"
+    content-class="flex h-full min-h-0 flex-col p-0">
     <!-- Column Header - This is the drag handle on desktop -->
     <div
-      class="flex items-center justify-between p-3 border-b border-secondary bg-white rounded-t-xl group/header shrink-0 column-drag-handle"
+      class="flex items-center justify-between p-2 border-b border-secondary bg-surface rounded-t-md group/header shrink-0 column-drag-handle"
       @pointerdown="handleHeaderPointerDown" :class="{
         'lg:cursor-grab lg:active:cursor-grabbing': !isDefault && !isEditing,
-        'lg:cursor-grabbing': isDragging
+        'lg:cursor-grabbing': isDragging,
       }" :style="{ borderTop: color ? `2px solid ${color}` : undefined }">
       <div v-if="!isEditing" class="flex items-center gap-2.5 flex-1 min-w-0">
         <!-- Drag handle icon (desktop only) -->
@@ -218,9 +245,9 @@ const handleMoveItem = async (itemId: string, targetId: string | null) => {
           <Icon :name="icon" class="w-4 h-4" />
         </div>
 
-        <ui-subtitle size="sm" @dblclick.stop="startEditing" class="select-none">
+        <UiSubtitle size="sm" @dblclick.stop="startEditing" class="select-none">
           {{ columnName }}
-        </ui-subtitle>
+        </UiSubtitle>
         <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-secondary text-content-secondary">
           {{ items.length }}
         </span>
@@ -231,20 +258,21 @@ const handleMoveItem = async (itemId: string, targetId: string | null) => {
 
       <div v-else class="flex items-center gap-2 flex-1 pointer-events-auto" @click.stop @mousedown.stop
         @pointerdown.stop>
-        <UiInput v-model="editName" size="xs" class="flex-1" data-no-drag
-          :ref="(el: unknown) => setEditInputRef((el as any)?.$el || (el as any) || null)" @keyup.enter="saveName"
-          @keyup.escape="cancelEditing" @blur="handleEditBlur" @click.stop @mousedown.stop @pointerdown.stop />
-        <UiButton size="xs" color="primary" variant="solid" icon="heroicons:check" data-no-drag @click.stop="saveName" />
+        <UiInput v-model="editName" size="xs" class="flex-1" data-no-drag :ref="(el: unknown) =>
+          setEditInputRef((el as any)?.$el || (el as any) || null)
+          " @keyup.enter="saveName" @keyup.escape="cancelEditing" @blur="handleEditBlur" @click.stop @mousedown.stop
+          @pointerdown.stop />
+        <UiButton size="xs" tone="primary" variant="solid" icon="heroicons:check" data-no-drag @click.stop="saveName" />
       </div>
 
       <div
         class="flex items-center opacity-100 lg:opacity-0 lg:group-hover/header:opacity-100 transition-opacity pointer-events-auto"
         @pointerdown.stop>
-        <UDropdownMenu v-if="!isDefault && columnActions.length > 0" :items="columnActions"
+        <UiActionMenu v-if="!isDefault && columnActions.length > 0" :items="columnActions"
           :content="{ align: 'end', side: 'bottom', sideOffset: 4 }">
-          <UiButton size="xs" color="neutral" variant="subtle" icon="heroicons:ellipsis-vertical" data-no-drag
-            @click.stop @pointerdown.stop />
-        </UDropdownMenu>
+          <UiIconButton icon="heroicons:ellipsis-vertical" label="Column actions" size="xs" variant="subtle"
+            data-no-drag @click.stop @pointerdown.stop />
+        </UiActionMenu>
       </div>
     </div>
 
@@ -279,8 +307,8 @@ const handleMoveItem = async (itemId: string, targetId: string | null) => {
     </div>
 
     <!-- Add item button -->
-    <div class="shrink-0 p-2.5 bg-white rounded-b-xl border-t border-secondary pointer-events-auto">
-      <UiButton size="sm" color="neutral" variant="ghost"
+    <div class="shrink-0 p-2 bg-surface rounded-b-xl border-t border-secondary pointer-events-auto">
+      <UiButton size="sm" tone="neutral" variant="ghost"
         class="w-full justify-start text-xs tracking-wide hover:bg-surface-subtle" icon="heroicons:plus-circle"
         @click="createItem">
         New Item
@@ -290,7 +318,8 @@ const handleMoveItem = async (itemId: string, targetId: string | null) => {
     <!-- Delete confirmation modal -->
     <shared-delete-confirmation-modal :show="showDeleteConfirm" title="Delete Column" @close="showDeleteConfirm = false"
       @confirm="confirmDelete">
-      Are you sure you want to delete this column? Items in this column will be moved to Uncategorized.
+      Are you sure you want to delete this column? Items in this column will be
+      moved to Uncategorized.
     </shared-delete-confirmation-modal>
-  </div>
+  </UiPanel>
 </template>

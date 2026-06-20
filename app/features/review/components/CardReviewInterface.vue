@@ -37,7 +37,7 @@
         <div
           class="flex h-16 w-16 items-center justify-center rounded-full bg-success/10"
         >
-          <Icon name="i-lucide-party-popper" class="h-8 w-8 text-success" />
+          <Icon name="i-lucide-party-popper" class="h-8 w-8 text-success-text" />
         </div>
         <div class="space-y-1">
           <ui-subtitle size="xl" color="content-on-surface"
@@ -48,31 +48,35 @@
           </ui-paragraph>
         </div>
         <div v-if="sessionSummary" class="w-full max-w-xs space-y-3">
-          <div class="rounded-[var(--radius-lg)] bg-surface-subtle p-4">
+          <UiPanel variant="subtle" size="md">
             <div class="text-sm text-content-secondary">XP gained</div>
             <div class="text-3xl font-medium text-primary">
               +{{ sessionSummary.xpGained }}
             </div>
-          </div>
-          <div
+          </UiPanel>
+          <UiPanel
             v-if="sessionSummary.leveledUp"
-            class="rounded-[var(--radius-lg)] border border-warning/20 bg-warning/10 p-4"
+            variant="subtle"
+            size="md"
+            class-name="border-warning/20 bg-warning/10"
           >
-            <div class="font-medium text-warning">Level up</div>
-            <div class="text-sm text-warning/80">
+            <div class="font-medium text-warning-text">Level up</div>
+            <div class="text-sm text-warning-text">
               Level {{ sessionSummary.levelBefore }} →
               {{ sessionSummary.levelAfter }}
             </div>
-          </div>
-          <div
+          </UiPanel>
+          <UiPanel
             v-if="sessionSummary.stageUnlocked"
-            class="rounded-[var(--radius-lg)] border border-primary/20 bg-primary/10 p-4"
+            variant="subtle"
+            size="md"
+            class-name="border-primary/20 bg-primary/10"
           >
             <div class="font-medium text-primary">New stage unlocked</div>
             <div class="text-sm text-primary/80">
               {{ sessionSummary.stageAfter }}
             </div>
-          </div>
+          </UiPanel>
         </div>
       </template>
     </review-kit-shell>
@@ -85,9 +89,12 @@
     />
 
     <dev-only>
-      <div
+      <UiPanel
         v-if="showDebugPanel"
-        class="mt-4 rounded-[var(--radius-lg)] border border-warning/20 bg-warning/10 p-4 text-sm text-warning"
+        variant="subtle"
+        size="md"
+        class-name="mt-4 border-warning/20 bg-warning/10"
+        content-class="text-sm text-warning-text"
       >
         <div class="mb-2 flex items-center justify-between">
           <span class="font-medium">Debug</span>
@@ -105,7 +112,7 @@
         <div v-if="currentCard">
           Card: {{ currentCard.cardId }} ({{ currentCard.resourceType }})
         </div>
-      </div>
+      </UiPanel>
     </dev-only>
   </div>
 </template>

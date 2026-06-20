@@ -5,8 +5,15 @@
       <div class="paper-block-controls">
         <!-- Tool selector -->
         <div class="paper-tool-group">
-          <button v-for="t in tools" :key="t.id" type="button" class="paper-tool-btn"
-            :class="{ 'paper-tool-btn--active': activeTool === t.id }" :title="t.label" @click="activeTool = t.id">
+          <button
+            v-for="t in tools"
+            :key="t.id"
+            type="button"
+            class="paper-tool-btn"
+            :class="{ 'paper-tool-btn--active': activeTool === t.id }"
+            :title="t.label"
+            @click="activeTool = t.id"
+          >
             <span class="paper-tool-icon" v-html="t.svg" />
           </button>
         </div>
@@ -16,17 +23,39 @@
         <!-- Color (only for pen) -->
         <template v-if="activeTool === 'pen'">
           <div class="paper-color-swatch-wrapper">
-            <span class="paper-color-swatch" :style="{ backgroundColor: color }" />
-            <input type="color" v-model="color" class="paper-color-input" title="Stroke color" />
+            <span
+              class="paper-color-swatch"
+              :style="{ backgroundColor: color }"
+            />
+            <input
+              type="color"
+              v-model="color"
+              class="paper-color-input"
+              title="Stroke color"
+            />
           </div>
           <div class="paper-presets">
-            <button v-for="c in presetColors" :key="c" type="button" class="paper-preset-btn"
-              :class="{ 'paper-preset-btn--active': color === c }" :style="{ backgroundColor: c }" @click="color = c" />
+            <button
+              v-for="c in presetColors"
+              :key="c"
+              type="button"
+              class="paper-preset-btn"
+              :class="{ 'paper-preset-btn--active': color === c }"
+              :style="{ backgroundColor: c }"
+              @click="color = c"
+            />
           </div>
 
           <span class="paper-sep" />
 
-          <input type="range" min="1" max="12" v-model.number="size" class="paper-range" title="Stroke width" />
+          <input
+            type="range"
+            min="1"
+            max="12"
+            v-model.number="size"
+            class="paper-range"
+            title="Stroke width"
+          />
           <span class="paper-size-label">{{ size }}px</span>
         </template>
 
@@ -37,16 +66,44 @@
 
       <div class="paper-block-actions">
         <!-- Undo / Redo -->
-        <button type="button" class="paper-action-btn" title="Undo (⌘Z)" :disabled="!canUndo" @click="undo">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
+        <button
+          type="button"
+          class="paper-action-btn"
+          title="Undo (⌘Z)"
+          :disabled="!canUndo"
+          @click="undo"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <polyline points="9 14 4 9 9 4" />
             <path d="M20 20v-7a4 4 0 0 0-4-4H4" />
           </svg>
         </button>
-        <button type="button" class="paper-action-btn" title="Redo (⌘⇧Z)" :disabled="!canRedo" @click="redo">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
+        <button
+          type="button"
+          class="paper-action-btn"
+          title="Redo (⌘⇧Z)"
+          :disabled="!canRedo"
+          @click="redo"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <polyline points="15 14 20 9 15 4" />
             <path d="M4 20v-7a4 4 0 0 1 4-4h12" />
           </svg>
@@ -55,10 +112,23 @@
         <span class="paper-sep" />
 
         <!-- Grid toggle -->
-        <button type="button" class="paper-action-btn" :class="{ 'paper-action-btn--toggled': gridType !== 'none' }"
-          title="Toggle grid" @click="cycleGrid">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
+        <button
+          type="button"
+          class="paper-action-btn"
+          :class="{ 'paper-action-btn--toggled': gridType !== 'none' }"
+          title="Toggle grid"
+          @click="cycleGrid"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
             <line x1="3" y1="9" x2="21" y2="9" />
             <line x1="3" y1="15" x2="21" y2="15" />
@@ -68,9 +138,22 @@
         </button>
 
         <!-- Download PNG -->
-        <button type="button" class="paper-action-btn" title="Export as PNG" @click="exportPng">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
+        <button
+          type="button"
+          class="paper-action-btn"
+          title="Export as PNG"
+          @click="exportPng"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
             <polyline points="7 10 12 15 17 10" />
             <line x1="12" y1="15" x2="12" y2="3" />
@@ -80,19 +163,44 @@
         <span class="paper-sep" />
 
         <!-- Clear -->
-        <button type="button" class="paper-action-btn" title="Clear all" @click="clearDrawing">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
+        <button
+          type="button"
+          class="paper-action-btn"
+          title="Clear all"
+          @click="clearDrawing"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <path d="M3 6h18" />
             <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
             <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
           </svg>
         </button>
         <!-- Delete block -->
-        <button type="button" class="paper-action-btn paper-action-btn--danger" title="Delete sketch"
-          @click="props.deleteNode()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
+        <button
+          type="button"
+          class="paper-action-btn paper-action-btn--danger"
+          title="Delete sketch"
+          @click="props.deleteNode()"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
@@ -101,23 +209,67 @@
     </div>
 
     <!-- Drawing surface -->
-    <svg ref="canvasRef" class="paper-canvas" :style="{ height: `${H}px` }"
-      :class="[`paper-grid--${gridType}`, activeTool === 'eraser' ? 'paper-canvas--eraser' : '']"
-      :viewBox="`0 0 ${W} ${H}`" preserveAspectRatio="xMidYMid meet" @mousedown="onPointerDown" @mouseup="onPointerUp"
-      @mouseleave="onPointerUp" @touchstart.prevent="onPointerDown" @touchend="onPointerUp" @touchcancel="onPointerUp">
+    <svg
+      ref="canvasRef"
+      class="paper-canvas"
+      :style="{ height: `${H}px` }"
+      :class="[
+        `paper-grid--${gridType}`,
+        activeTool === 'eraser' ? 'paper-canvas--eraser' : '',
+      ]"
+      :viewBox="`0 0 ${W} ${H}`"
+      preserveAspectRatio="xMidYMid meet"
+      @mousedown="onPointerDown"
+      @mouseup="onPointerUp"
+      @mouseleave="onPointerUp"
+      @touchstart.prevent="onPointerDown"
+      @touchend="onPointerUp"
+      @touchcancel="onPointerUp"
+    >
       <!-- Existing strokes (clickable for eraser) -->
-      <path v-for="line in currentLines" :key="line.id" :d="line.path" :stroke="line.color" :stroke-width="line.size"
-        fill="none" stroke-linecap="round" stroke-linejoin="round"
-        :class="{ 'paper-stroke--erasable': activeTool === 'eraser' }" @click="eraseLine(line.id)" />
+      <path
+        v-for="line in currentLines"
+        :key="line.id"
+        :d="line.path"
+        :stroke="line.color"
+        :stroke-width="line.size"
+        fill="none"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        :class="{ 'paper-stroke--erasable': activeTool === 'eraser' }"
+        @click="eraseLine(line.id)"
+      />
       <!-- Active stroke preview -->
-      <path v-if="activePath" :d="activePath" :stroke="color" :stroke-width="size" fill="none" stroke-linecap="round"
-        stroke-linejoin="round" opacity="0.7" />
+      <path
+        v-if="activePath"
+        :d="activePath"
+        :stroke="color"
+        :stroke-width="size"
+        fill="none"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        opacity="0.7"
+      />
     </svg>
 
     <!-- Empty hint -->
-    <div v-if="!currentLines.length && !isDrawing" class="paper-empty-hint" contenteditable="false">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-        stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.4">
+    <div
+      v-if="!currentLines.length && !isDrawing"
+      class="paper-empty-hint"
+      contenteditable="false"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="1.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        opacity="0.4"
+      >
         <path d="m12 19 7-7 3 3-7 7-3-3z" />
         <path d="m18 13-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" />
         <path d="m2 2 7.586 7.586" />
@@ -127,7 +279,11 @@
     </div>
 
     <!-- Resize handle -->
-    <div class="paper-resize-handle" @mousedown="onResizeStart" @touchstart.prevent="onResizeStart">
+    <div
+      class="paper-resize-handle"
+      @mousedown="onResizeStart"
+      @touchstart.prevent="onResizeStart"
+    >
       <div class="paper-resize-grip" />
     </div>
   </NodeViewWrapper>
@@ -136,7 +292,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { NodeViewWrapper, nodeViewProps } from "@tiptap/vue-3";
-import { designTokenValues, type DesignTokenName } from "~/design-system/tokens.generated";
+import {
+  designTokenValues,
+  type DesignTokenName,
+} from "~/design-system/tokens.generated";
 // @ts-ignore — d3 has no bundled type declarations
 import * as d3 from "d3";
 
@@ -175,7 +334,9 @@ const SWATCH_TOKENS: DesignTokenName[] = [
 function resolveToken(name: DesignTokenName): string {
   const fallback = designTokenValues[name];
   if (typeof window === "undefined") return fallback;
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  const v = getComputedStyle(document.documentElement)
+    .getPropertyValue(name)
+    .trim();
   return v || fallback;
 }
 
@@ -185,13 +346,21 @@ function loadSwatches() {
 }
 
 const tools = [
-  { id: "pen" as Tool, label: "Pen", svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>' },
-  { id: "eraser" as Tool, label: "Eraser", svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>' },
+  {
+    id: "pen" as Tool,
+    label: "Pen",
+    svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>',
+  },
+  {
+    id: "eraser" as Tool,
+    label: "Eraser",
+    svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>',
+  },
 ];
 
 // ─── State ──────────────────────────────────────────────────────
 const activeTool = ref<Tool>("pen");
-const color = ref(designTokenValues["--color-accent-indigo"]); // resolved against the live theme at mount
+const color = ref<string>(designTokenValues["--color-accent-indigo"]); // resolved against the live theme at mount
 const size = ref(3);
 const gridType = ref<GridType>("none");
 const isDrawing = ref(false);
@@ -239,9 +408,14 @@ let currentId = crypto.randomUUID();
 function svgCoords(event: MouseEvent | TouchEvent): [number, number] | null {
   if (!canvasRef.value) return null;
   const rect = canvasRef.value.getBoundingClientRect();
-  const cx = "touches" in event ? event.touches[0]?.clientX ?? 0 : event.clientX;
-  const cy = "touches" in event ? event.touches[0]?.clientY ?? 0 : event.clientY;
-  return [((cx - rect.left) / rect.width) * W, ((cy - rect.top) / rect.height) * H.value];
+  const cx =
+    "touches" in event ? (event.touches[0]?.clientX ?? 0) : event.clientX;
+  const cy =
+    "touches" in event ? (event.touches[0]?.clientY ?? 0) : event.clientY;
+  return [
+    ((cx - rect.left) / rect.width) * W,
+    ((cy - rect.top) / rect.height) * H.value,
+  ];
 }
 
 function onPointerDown(event: MouseEvent | TouchEvent) {
@@ -252,17 +426,19 @@ function onPointerDown(event: MouseEvent | TouchEvent) {
   const pos = svgCoords(event);
   if (pos) points.push(pos);
   canvasRef.value?.addEventListener("mousemove", onPointerMove);
-  canvasRef.value?.addEventListener("touchmove", onPointerMove, { passive: false });
+  canvasRef.value?.addEventListener("touchmove", onPointerMove, {
+    passive: false,
+  });
 }
 
 function onPointerMove(event: MouseEvent | TouchEvent) {
   if (!isDrawing.value) return;
-  
+
   if ("touches" in event && event.touches.length > 1) {
     onPointerUp();
     return;
   }
-  
+
   event.preventDefault();
   const pos = svgCoords(event);
   if (pos) {
@@ -277,7 +453,7 @@ function onPointerUp() {
   activePath.value = null;
   canvasRef.value?.removeEventListener("mousemove", onPointerMove);
   canvasRef.value?.removeEventListener("touchmove", onPointerMove);
-  
+
   if (points.length === 0) return;
 
   pushUndo();
@@ -293,7 +469,10 @@ function onPointerUp() {
   }
 
   props.updateAttributes({
-    lines: [...currentLines.value, { id: currentId, color: color.value, size: size.value, path: pathStr }],
+    lines: [
+      ...currentLines.value,
+      { id: currentId, color: color.value, size: size.value, path: pathStr },
+    ],
   });
   points = [];
 }
@@ -307,7 +486,9 @@ function buildPath(pts: [number, number][]): string {
 function eraseLine(id: string) {
   if (activeTool.value !== "eraser") return;
   pushUndo();
-  props.updateAttributes({ lines: currentLines.value.filter((l: StrokeLine) => l.id !== id) });
+  props.updateAttributes({
+    lines: currentLines.value.filter((l: StrokeLine) => l.id !== id),
+  });
 }
 
 // ─── Clear ──────────────────────────────────────────────────────
@@ -355,9 +536,10 @@ let dragStartY = 0;
 let dragStartHeight = 280;
 
 function onResizeStart(event: MouseEvent | TouchEvent) {
-  dragStartY = "touches" in event ? event.touches[0]?.clientY ?? 0 : event.clientY;
+  dragStartY =
+    "touches" in event ? (event.touches[0]?.clientY ?? 0) : event.clientY;
   dragStartHeight = props.node.attrs.height ?? 280;
-  
+
   window.addEventListener("mousemove", onResizeMove);
   window.addEventListener("mouseup", onResizeEnd);
   window.addEventListener("touchmove", onResizeMove, { passive: false });
@@ -365,7 +547,8 @@ function onResizeStart(event: MouseEvent | TouchEvent) {
 }
 
 function onResizeMove(event: MouseEvent | TouchEvent) {
-  const cy = "touches" in event ? event.touches[0]?.clientY ?? 0 : event.clientY;
+  const cy =
+    "touches" in event ? (event.touches[0]?.clientY ?? 0) : event.clientY;
   const diffY = cy - dragStartY;
   const newHeight = Math.max(150, Math.min(600, dragStartHeight + diffY));
   props.updateAttributes({ height: newHeight });
@@ -459,7 +642,8 @@ onBeforeUnmount(() => {
 .paper-tool-btn--active {
   background: var(--color-primary) !important;
   color: var(--color-on-primary) !important;
-  box-shadow: 0 1px 4px color-mix(in srgb, var(--color-primary) 30%, transparent);
+  box-shadow: 0 1px 4px
+    color-mix(in srgb, var(--color-primary) 30%, transparent);
 }
 
 .paper-tool-icon {
@@ -486,7 +670,8 @@ onBeforeUnmount(() => {
   width: 20px;
   height: 20px;
   border-radius: var(--radius-lg);
-  border: 2px solid color-mix(in srgb, var(--color-content-on-background) 10%, transparent);
+  border: 2px solid
+    color-mix(in srgb, var(--color-content-on-background) 10%, transparent);
   cursor: pointer;
 }
 
@@ -520,7 +705,8 @@ onBeforeUnmount(() => {
 
 .paper-preset-btn--active {
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 20%, transparent);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--color-primary) 20%, transparent);
 }
 
 /* Range + labels */
@@ -594,17 +780,28 @@ onBeforeUnmount(() => {
 
 /* Grid backgrounds */
 .paper-grid--dots {
-  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
+  background-image: radial-gradient(
+    circle,
+    rgba(0, 0, 0, 0.1) 1px,
+    transparent 1px
+  );
   background-size: 20px 20px;
 }
 
 .paper-grid--lines {
-  background-image: repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(0, 0, 0, 0.06) 20px);
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 19px,
+    rgba(0, 0, 0, 0.06) 20px
+  );
   background-size: 100% 20px;
 }
 
 .paper-grid--graph {
-  background-image: linear-gradient(rgba(0, 0, 0, 0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.06) 1px, transparent 1px);
   background-size: 20px 20px;
 }
 
@@ -646,15 +843,26 @@ onBeforeUnmount(() => {
 }
 
 .dark .paper-grid--dots {
-  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+  background-image: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.08) 1px,
+    transparent 1px
+  );
 }
 
 .dark .paper-grid--lines {
-  background-image: repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(255, 255, 255, 0.05) 20px);
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 19px,
+    rgba(255, 255, 255, 0.05) 20px
+  );
 }
 
 .dark .paper-grid--graph {
-  background-image: linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
 }
 
 .dark .paper-color-swatch {

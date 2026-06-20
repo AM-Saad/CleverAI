@@ -17,7 +17,7 @@
         block
         :loading="loading"
         :aria-label="`${g.label} — ${g.hint} (key ${g.key})`"
-        class="!h-auto !py-2.5 transition-transform duration-100 active:scale-[0.96]"
+        class="!h-auto !py-2.5 transition-transform duration-[var(--duration-fast)] active:scale-[0.98]"
         @click="emit('grade', g.value)"
       >
         <span class="flex flex-col items-center leading-tight">

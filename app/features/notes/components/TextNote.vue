@@ -11,58 +11,58 @@
         {{ saveStateText }}
       </span>
 
-      <UDropdownMenu :modal="false" :items="[
+      <UiActionMenu :modal="false" :items="[
         [
           { label: 'Download as TXT', icon: 'i-heroicons-document-text', onSelect: () => exportContent('Note', note.content, 'txt') },
           { label: 'Download as DOC', icon: 'i-heroicons-document', onSelect: () => exportContent('Note', note.content, 'doc') },
           { label: 'Download as PDF', icon: 'i-heroicons-document', onSelect: () => exportContent('Note', note.content, 'pdf') }
         ]
       ]">
-        <ui-button variant="outline" color="primary" size="sm">
+        <UiButton variant="outline" tone="primary" size="sm" aria-label="Download note">
           <shared-icon name="download" class="w-4 h-4" />
-        </ui-button>
-      </UDropdownMenu>
+        </UiButton>
+      </UiActionMenu>
     </SharedNoteToolbar>
 
     <!-- Content area — styled via shared NoteContentArea component -->
     <SharedNoteContentArea :class="{ 'flex-col': true }">
       <!-- Error state -->
-      <div v-if="note.error" class="flex flex-col items-center justify-center h-full text-error p-4">
+      <div v-if="note.error" class="flex flex-col items-center justify-center h-full text-error-text p-4">
         <svg class="w-6 h-6 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
             d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <span class="text-sm font-medium text-center">{{ note.error }}</span>
-        <UiButton v-if="!isConflictError" variant="ghost" color="error" size="xs" class="mt-2 underline" @click="retry">
+        <UiButton v-if="!isConflictError" variant="ghost" tone="error" size="xs" class="mt-2 underline" @click="retry">
           Try again
         </UiButton>
-        <div v-else class="mt-4 w-full max-w-2xl rounded-[var(--radius-lg)] border border-warning/30 bg-warning/5 p-3 text-content-on-surface">
+        <UiPanel v-else variant="subtle" size="sm" class-name="mt-4 w-full max-w-2xl border-warning/30 bg-warning/5" content-class="text-content-on-surface">
           <div class="grid gap-3 md:grid-cols-2">
             <div class="min-w-0">
-              <div class="mb-1 text-xs font-semibold text-warning">Local draft</div>
+              <div class="mb-1 text-xs font-semibold text-warning-text">Local draft</div>
               <div class="max-h-32 overflow-auto rounded-[var(--radius-md)] bg-surface p-2 text-xs text-content-secondary">
                 {{ localConflictPreview }}
               </div>
             </div>
             <div class="min-w-0">
-              <div class="mb-1 text-xs font-semibold text-warning">Server version</div>
+              <div class="mb-1 text-xs font-semibold text-warning-text">Server version</div>
               <div class="max-h-32 overflow-auto rounded-[var(--radius-md)] bg-surface p-2 text-xs text-content-secondary">
                 {{ serverConflictPreview }}
               </div>
             </div>
           </div>
           <div class="mt-3 flex flex-wrap justify-center gap-2">
-            <UiButton size="xs" color="warning" variant="soft" @click="resolveConflict('keep-local')">
+            <UiButton size="xs" tone="warning" variant="soft" @click="resolveConflict('keep-local')">
               Keep mine
             </UiButton>
-            <UiButton size="xs" color="neutral" variant="soft" @click="resolveConflict('keep-server')">
+            <UiButton size="xs" tone="neutral" variant="soft" @click="resolveConflict('keep-server')">
               Use server
             </UiButton>
-            <UiButton size="xs" color="primary" variant="soft" @click="resolveConflict('manual-merge')">
+            <UiButton size="xs" tone="primary" variant="soft" @click="resolveConflict('manual-merge')">
               Edit local copy
             </UiButton>
           </div>
-        </div>
+        </UiPanel>
       </div>
 
       <!-- Editor -->

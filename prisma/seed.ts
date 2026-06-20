@@ -47,7 +47,7 @@ async function main() {
     { provider: "groq", model: "qwen/qwen3-32b", in: 290n, out: 590n }, // $0.29 / $0.59 [7, 10];
 
     // --- OPENROUTER MODELS (verified from openrouter.ai/models) ---
-    { provider: "openrouter", model: "google/gemini-2.0-flash-lite-001", in: 75n, out: 300n },      // $0.075 / $0.30
+    { provider: "openrouter", model: "google/gemini-2.5-flash-lite", in: 100n, out: 400n },          // $0.10 / $0.40
     { provider: "openrouter", model: "google/gemini-2.5-flash", in: 300n, out: 2500n },              // $0.30 / $2.50 (reasoning)
     { provider: "openrouter", model: "google/gemini-3.1-flash-lite-preview", in: 250n, out: 1500n }, // $0.25 / $1.50
     { provider: "openrouter", model: "deepseek/deepseek-chat-v3-0324", in: 200n, out: 770n },        // $0.20 / $0.77
@@ -55,7 +55,6 @@ async function main() {
     { provider: "openrouter", model: "meta-llama/llama-3.1-8b-instruct", in: 20n, out: 50n },        // $0.02 / $0.05
     { provider: "openrouter", model: "openrouter/auto", in: 0n, out: 0n },                           // Dynamic — uses rawCost from response
     // Free variants (zero cost)
-    { provider: "openrouter", model: "google/gemini-2.0-flash-lite-001:free", in: 0n, out: 0n },
     { provider: "openrouter", model: "deepseek/deepseek-chat-v3-0324:free", in: 0n, out: 0n },
   ];
   for (const p of pricingData) {
@@ -156,9 +155,9 @@ async function main() {
     {
       modelId: "openrouter-gemini-flash-lite",
       provider: "openrouter",
-      modelName: "google/gemini-2.0-flash-lite-001",
-      inCost: 0.075,
-      outCost: 0.30,
+      modelName: "google/gemini-2.5-flash-lite",
+      inCost: 0.10,
+      outCost: 0.40,
       cap: ["text", "multimodal"],
       priority: 1,
     },
@@ -218,15 +217,6 @@ async function main() {
     },
     // --- FREE VARIANTS (for FREE tier users / dev testing) ---
     {
-      modelId: "openrouter-gemini-flash-lite-free",
-      provider: "openrouter",
-      modelName: "google/gemini-2.0-flash-lite-001:free",
-      inCost: 0,
-      outCost: 0,
-      cap: ["text", "multimodal"],
-      priority: 1,
-    },
-    {
       modelId: "openrouter-deepseek-v3-free",
       provider: "openrouter",
       modelName: "deepseek/deepseek-chat-v3-0324:free",
@@ -241,8 +231,13 @@ async function main() {
     await prisma.llmModelRegistry.upsert({
       where: { modelId: item.modelId },
       update: {
+        provider: item.provider,
+        modelName: item.modelName || item.modelId,
         inputCostPer1M: item.inCost,
         outputCostPer1M: item.outCost,
+        capabilities: item.cap,
+        maxTokens: 128000,
+        healthStatus: "healthy",
         priority: item.priority,
         enabled: true,
       },

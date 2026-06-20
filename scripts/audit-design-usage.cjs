@@ -90,13 +90,17 @@ const RE = {
     `\\b(?:${colorUtilPrefixes})-(?:${colorTokenNames.join("|")})(?:\\/\\d{1,3})?\\b`,
     "g"
   ),
+  // Status fills/borders (`bg-error`, `border-warning`, …) remain valid
+  // semantic UI accents. Text must use the darker AA text tokens instead:
+  // `text-error-text`, `text-warning-text`, etc.
+  rawStatusTextClass: /\btext-(?:success|warning|error|info)(?!-text)(?:\/\d{1,3})?\b/g,
   colorVar: /var\(--(?:color|ui|ds|syntax)-[a-z0-9-]+\)/g,
   // Bare `rounded` and built-in sizes, but NOT `rounded-full` (allowed pill) or
   // `rounded-[var(...)]` (token). The trailing (?!-) stops the bare-`rounded`
   // alternative from matching the `rounded` inside `rounded-full`/`rounded-[`.
   builtinRadius: /\brounded(?:-(?:sm|md|lg|xl|2xl|3xl))?\b(?!-)/g,
   roundedFull: /\brounded-full\b/g,
-  arbitraryRadiusRaw: /\brounded(?:-[a-z]+)?-\[(?!var\(--radius-)[^\]]+\]/g,
+  arbitraryRadiusRaw: /\brounded(?:-[a-z]+)?-\[(?!var\(--(?:radius|component)-)[^\]]+\]/g,
   tokenRadius: /\brounded(?:-[a-z]+)?-\[var\(--(?:radius|component)-[a-z0-9-]+\)\]/g,
   builtinShadow: /\bshadow-(?:sm|md|lg|xl|2xl|inner)\b/g,
   tokenShadow: /\bshadow-\[var\(--(?:shadow|component)-[a-z0-9-]+\)\]/g,
@@ -117,6 +121,10 @@ function uniqCount(matches) {
 
 function lineOf(source, index) {
   return source.slice(0, index).split("\n").length;
+}
+
+function isRawStatusTextClass(value) {
+  return /^text-(?:success|warning|error|info)(?!-text)(?:\/\d{1,3})?$/.test(value);
 }
 
 // Blank out valid token references (var(--…), token utility classes, and bare
@@ -144,6 +152,7 @@ function scanViolations(source) {
       out.push({ category, value: m[0], line: lineOf(target, m.index ?? 0), label });
     }
   };
+  run(RE.rawStatusTextClass, source, "color", "raw status text color");
   run(RE.hex, masked, "color", "raw hex");
   run(RE.paletteClass, masked, "color", "palette class");
   run(RE.blackWhiteClass, masked, "color", "raw black/white class");
@@ -166,7 +175,9 @@ function analyze(source) {
   // as raw violations — e.g. `var(--color-accent-purple)` contains the substring
   // `accent-purple`, and `color-mix(... var(--syntax-string) ...)` contains a
   // `rgb`-free token. Masking makes color detection non-overlapping.)
-  const okColorClasses = source.match(RE.tokenColorClass) || [];
+  const okColorClasses = (source.match(RE.tokenColorClass) || []).filter(
+    (value) => !isRawStatusTextClass(value)
+  );
   const colorVars = source.match(RE.colorVar) || [];
   for (const { value, count } of uniqCount(okColorClasses)) {
     push(value, "color", "ok", note("", count));
@@ -185,6 +196,9 @@ function analyze(source) {
   scratch = scratch.replace(/--[a-z][a-z0-9-]*/g, (m) => " ".repeat(m.length));
 
   // Colors — violations (scanned on the masked copy)
+  for (const { value, count } of uniqCount(source.match(RE.rawStatusTextClass) || [])) {
+    push(value, "color", "violation", note("use text-*-text semantic token", count));
+  }
   for (const { value, count } of uniqCount(scratch.match(RE.hex) || [])) {
     const full = expandHex(value);
     const token = hexToToken[full] ? hexToToken[full].join(" / ") : "";

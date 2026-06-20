@@ -9,16 +9,17 @@
     ]"
   >
     <slot name="drag" :note="note" :display-title="displayTitle">
-      <button
-        type="button"
+      <UiIconButton
         data-note-drag-handle
+        icon="i-lucide-grip-vertical"
+        :label="`Reorder or move ${displayTitle}`"
+        size="xs"
+        variant="ghost"
+        tone="neutral"
         class="shrink-0 cursor-grab rounded-[var(--radius-md)] p-1 text-content-secondary opacity-60 hover:opacity-100 active:cursor-grabbing"
-        :aria-label="`Reorder or move ${displayTitle}`"
         @pointerdown.stop="emitIntent({ type: 'START_REORDER', noteId: note.id })"
         @click.stop
-      >
-        <icon name="i-lucide-grip-vertical" class="h-3.5 w-3.5" />
-      </button>
+      />
     </slot>
 
     <div v-if="note.isLoading" class="flex items-center gap-1 text-primary">
@@ -26,67 +27,67 @@
     </div>
 
     <slot name="title" :note="note" :display-title="displayTitle">
-      <button
+      <UiButton
         type="button"
+        variant="link"
+        tone="neutral"
+        size="xs"
         class="min-w-0 flex-1 cursor-pointer truncate text-left"
         :aria-label="`Open ${displayTitle}`"
         @click.stop="emitIntent({ type: 'OPEN_NOTE', noteId: note.id })"
       >
         <ui-paragraph size="xs" class="truncate">
-          <span v-if="note.noteType === 'CANVAS'" class="mr-1 text-warning">Canvas</span>
+          <span v-if="note.noteType === 'CANVAS'" class="mr-1 text-warning-text">Canvas</span>
           <span v-else-if="note.noteType === 'MATH'" class="mr-1 text-primary">Math</span>
           {{ displayTitle }}
         </ui-paragraph>
-      </button>
+      </UiButton>
     </slot>
 
     <div class="flex items-center gap-1 shrink-0">
       <span
         v-if="note.error"
-        class="inline-flex items-center rounded-[var(--radius-md)] bg-error/10 px-1.5 py-0.5 text-[10px] font-medium text-error"
+        class="inline-flex items-center rounded-[var(--radius-md)] bg-error/10 px-1.5 py-0.5 text-[10px] font-medium text-error-text"
         title="Sync failed. Open the note to retry."
       >
         Retry
       </span>
       <span
         v-else-if="note.isDirty"
-        class="inline-flex items-center rounded-[var(--radius-md)] bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning"
+        class="inline-flex items-center rounded-[var(--radius-md)] bg-warning/10 px-1.5 py-0.5 text-[10px] font-medium text-warning-text"
         title="Saved locally and waiting to sync."
       >
         Local
       </span>
 
       <slot name="split" :note="note" :display-title="displayTitle">
-        <button
+        <UiIconButton
           v-if="canSplit"
-          type="button"
           data-no-drag
+          icon="i-lucide-columns-2"
+          :label="`Open ${displayTitle} in split view`"
+          size="xs"
+          variant="ghost"
+          tone="neutral"
           draggable="true"
           class="inline-flex h-7 w-7 items-center justify-center rounded-[var(--radius-lg)] text-content-secondary hover:bg-secondary hover:text-content-on-surface"
-          :aria-label="`Open ${displayTitle} in split view`"
           @pointerdown.stop
           @dragstart.stop="handleSplitDragStart"
           @dragend.stop="handleSplitDragEnd"
           @click.stop="handleSplitClick"
-        >
-          <shared-icon name="split" class="h-3.5 w-3.5" />
-        </button>
+        />
       </slot>
 
       <slot name="actions" :note="note" :display-title="displayTitle">
-        <UDropdownMenu :modal="false" :items="menuItems">
-          <ui-button
-            data-no-drag
-            size="xs"
-            color="neutral"
-            variant="ghost"
-            :aria-label="`More actions for ${displayTitle}`"
-            @pointerdown.stop
-            @click.stop
-          >
-            <icon name="i-lucide-more-horizontal" class="h-3.5 w-3.5" />
-          </ui-button>
-        </UDropdownMenu>
+        <UiActionMenu
+          data-no-drag
+          :modal="false"
+          :items="menuItems"
+          size="xs"
+          :label="`More actions for ${displayTitle}`"
+          @pointerdown.stop
+          @click.stop
+        />
       </slot>
     </div>
   </div>

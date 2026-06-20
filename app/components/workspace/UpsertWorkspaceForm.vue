@@ -24,6 +24,18 @@ const state = reactive<Partial<CreateWorkspaceDTO>>({
   description: props.workspace?.description || '',
 });
 
+// Create-from-source: seed a new workspace with pasted notes / a topic as its
+// first material. The new row then surfaces the "Generate" coverage-gap action.
+const mode = ref<"blank" | "content">("blank");
+const materialContent = ref("");
+
+const resetForm = (): void => {
+  state.title = "";
+  state.description = "";
+  materialContent.value = "";
+  mode.value = "blank";
+};
+
 async function onSubmit(event: FormSubmitEvent<any>) {
   event.preventDefault();
   if (!canSubmit.value || !state.title) return;
@@ -42,19 +54,36 @@ async function onSubmit(event: FormSubmitEvent<any>) {
         title: state.title.trim(),
         description: state.description || '',
       });
+
+      // Attach pasted content as the workspace's first material (reuses the
+      // same materialContent update path the detail page uses).
+      const content = materialContent.value.trim();
+      const newId = (result as any)?.id;
+      if (result && mode.value === "content" && content && newId) {
+        await updateWorkspace({
+          id: newId,
+          materialTitle: state.title.trim(),
+          materialContent: content,
+          materialType: "text",
+        });
+      }
     }
 
     if (result) {
+      const seeded = !props.workspace && mode.value === "content" && !!materialContent.value.trim();
       toast.add({
         title: props.workspace ? "Workspace updated" : "Workspace created",
-        description: props.workspace ? "Your workspace has been updated." : "Your workspace is ready.",
+        description: props.workspace
+          ? "Your workspace has been updated."
+          : seeded
+            ? "Seeded with your content — use Generate to turn it into cards."
+            : "Your workspace is ready.",
         color: "success",
       });
 
       emit("cancel");
       emit("created");
-      state.title = "";
-      state.description = "";
+      resetForm();
     }
 
   } catch (err) {
@@ -66,8 +95,7 @@ async function onSubmit(event: FormSubmitEvent<any>) {
 }
 
 const closeModel = (): void => {
-  state.title = "";
-  state.description = "";
+  resetForm();
   props.workspace ? resetUpdate() : resetCreate();
   emit("cancel");
 };
@@ -76,8 +104,7 @@ watch(
   () => props.workspace,
   (newWorkspace) => {
     if (!newWorkspace) {
-      state.title = "";
-      state.description = "";
+      resetForm();
       return;
     }
     state.title = newWorkspace?.title;
@@ -96,6 +123,17 @@ watch(
       <template #body>
         <shared-error-message :error="typedError || updateTypedError" />
         <u-form :schema="CreateWorkspaceDTO" :state="state" class="space-y-2" @submit="onSubmit">
+          <div v-if="!props.workspace" class="flex items-center gap-1" role="group" aria-label="Create mode">
+            <ui-button type="button" size="xs" :variant="mode === 'blank' ? 'soft' : 'ghost'" tone="neutral"
+              :aria-pressed="mode === 'blank'" @click="mode = 'blank'">
+              Blank
+            </ui-button>
+            <ui-button type="button" size="xs" :variant="mode === 'content' ? 'soft' : 'ghost'" tone="neutral"
+              leading-icon="i-lucide-sparkles" :aria-pressed="mode === 'content'" @click="mode = 'content'">
+              From a topic / paste
+            </ui-button>
+          </div>
+
           <u-form-field label="Title" name="title" required>
             <ui-input v-model="state.title" autofocus class="w-full" />
           </u-form-field>
@@ -103,6 +141,13 @@ watch(
           <u-form-field label="Description" name="description">
             <ui-input v-model="state.description" class="w-full" />
           </u-form-field>
+
+          <u-form-field v-if="!props.workspace && mode === 'content'" label="Content" name="materialContent"
+            help="Pasted notes become this workspace's first material — then turn it into cards from the list.">
+            <ui-textarea v-model="materialContent" :rows="6" class="w-full"
+              placeholder="Paste notes, an article, or a topic to seed this workspace…" />
+          </u-form-field>
+
           <div class="flex gap-3 justify-end pt-2">
             <ui-button variant="ghost" @click="closeModel" :disabled="creating || updating">
               Cancel

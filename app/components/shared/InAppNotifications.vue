@@ -21,15 +21,13 @@ onUnmounted(() => {
     leave: 1700,
   }">
     <div v-if="show">
-      <div class="z-40 rounded-[var(--radius-xl)] p-3 shadow-[var(--shadow-modal)] mt-2">
+      <UiOverlaySurface kind="popover" layer="popover" size="sm" class-name="mt-2">
         <div class="flex justify-between">
           <slot name="header">default header</slot>
-          <button class="modal-default-button place-self-start text-content-secondary" @click="$emit('close')">
-            X
-          </button>
+          <UiIconButton icon="i-lucide-x" label="Close notifications" size="xs" variant="ghost" @click="$emit('close')" />
         </div>
         <slot name="body"> default body </slot>
-      </div>
+      </UiOverlaySurface>
     </div>
   </Transition>
 </template>

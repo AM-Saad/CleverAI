@@ -2,24 +2,29 @@
   <BubbleMenu v-if="editor" :editor="editor" :should-show="(shouldShow as any)" :options="bubbleOptions">
     <div class="bubble-menu" role="toolbar" aria-label="Text formatting">
       <!-- Formatting marks -->
-      <button v-for="action in formattingActions" :key="action.id" type="button"
-        class="bubble-btn" :class="{ 'bubble-btn--active': action.isActive?.(editor!) }"
-        :aria-label="action.label" :title="action.shortcutLabel ? `${action.label} (${action.shortcutLabel})` : action.label"
-        @mousedown.prevent @click="action.execute(editor!)">
-        <UIcon :name="action.icon" class="w-4 h-4" />
-      </button>
+      <UiToolbarButton
+        v-for="action in formattingActions"
+        :key="action.id"
+        :icon="action.icon"
+        :label="action.label"
+        :tooltip="action.shortcutLabel ? `${action.label} (${action.shortcutLabel})` : action.label"
+        :active="action.isActive?.(editor!)"
+        size="sm"
+        @mousedown.prevent
+        @click="action.execute(editor!)"
+      />
 
       <span class="bubble-sep" />
 
       <!-- Heading dropdown -->
-      <UDropdownMenu :items="headingMenuItems" :modal="false"
+      <UiActionMenu :items="headingMenuItems" :modal="false"
         :content="{ align: 'start', side: 'bottom', sideOffset: 8 }">
-        <button type="button" class="bubble-btn bubble-btn--wide" :aria-label="currentBlockLabel"
+        <UiButton type="button" variant="ghost" tone="neutral" size="sm" :aria-label="currentBlockLabel"
           @mousedown.prevent>
           <span class="text-xs font-medium">{{ currentBlockLabel }}</span>
           <UIcon name="i-lucide-chevron-down" class="w-3 h-3 opacity-60" />
-        </button>
-      </UDropdownMenu>
+        </UiButton>
+      </UiActionMenu>
 
       <span class="bubble-sep" />
 
@@ -33,10 +38,16 @@
       <template v-if="showAiActions">
         <span class="bubble-sep" />
         <!-- AI actions -->
-        <button v-for="action in aiActions" :key="action.id" type="button" class="bubble-btn"
-          :aria-label="action.label" :title="action.label" @mousedown.prevent @click="$emit('ai-action', action.id)">
-          <UIcon :name="action.icon" class="w-4 h-4" />
-        </button>
+        <UiToolbarButton
+          v-for="action in aiActions"
+          :key="action.id"
+          :icon="action.icon"
+          :label="action.label"
+          :tooltip="action.label"
+          size="sm"
+          @mousedown.prevent
+          @click="$emit('ai-action', action.id)"
+        />
       </template>
     </div>
   </BubbleMenu>

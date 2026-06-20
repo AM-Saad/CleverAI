@@ -36,10 +36,10 @@ export default defineNuxtConfig({
   // Use the existing `app/` workspace as Nuxt source directory
   srcDir: "app",
 
-  // Light by default; users switch via UiColorModeToggle (light/dark/system).
+  // System by default; users switch via UiColorModeToggle (light/dark/system).
   // Dark tokens live in app/design-system/tokens/index.cjs and flip under .dark.
   colorMode: {
-    preference: "light",
+    preference: "system",
     fallback: "light",
   },
 

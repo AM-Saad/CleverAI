@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <div v-if="show" class="fixed inset-0 z-20 flex items-center p-4 justify-center overflow-hidden" role="dialog"
+    <div v-if="show" class="fixed inset-0 z-[var(--z-modal)] flex items-center p-4 justify-center overflow-hidden" role="dialog"
       aria-modal="true" aria-labelledby="learning-hub-modal-title">
 
       <!-- Backdrop with independent opacity transition -->
@@ -10,19 +10,26 @@
         <div v-if="show" class="absolute inset-0 bg-[var(--ds-backdrop-dim)] backdrop-blur-md" @click="handleClose"></div>
       </Transition>
       <!-- Close Button - Premium Glass Style -->
-      <button @click="handleClose"
-        class="absolute top-4 right-6 z-20 h-8 w-8 flex items-center justify-center rounded-[var(--radius-xl)] bg-white/10 dark:bg-[var(--color-content-on-background)]/20 backdrop-blur-xl border border-white/20 dark:border-white/5 shadow-[var(--shadow-modal)] active:scale-90 transition-all cursor-pointer"
-        aria-label="Close Learning Hub">
-        <icon name="i-lucide-x" :size="20" class="text-light" />
-      </button>
+      <UiIconButton
+        icon="i-lucide-x"
+        label="Close Learning Hub"
+        size="sm"
+        variant="soft"
+        class="absolute top-4 right-6 z-20 backdrop-blur-xl active:scale-[0.98]"
+        @click="handleClose"
+      />
 
       <!-- Modal Content with spring-like transition and GPU acceleration -->
       <Transition enter-active-class="transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1)"
         enter-from-class="translate-y-full" enter-to-class="translate-y-0"
         leave-active-class="transition-transform duration-300 ease-in" leave-from-class="translate-y-0"
         leave-to-class="translate-y-full" appear>
-        <div v-if="show"
-          class="relative w-full h-[85dvh]  flex flex-col  border-white/20 dark:border-white/5 will-change-transform"
+        <UiOverlaySurface
+          v-if="show"
+          kind="modal"
+          layer="modal"
+          size="xs"
+          class-name="relative flex h-[85dvh] w-full flex-col border-white/20 dark:border-white/5 will-change-transform p-0"
           @click.stop>
 
           <!-- Drag Handle / Indicator -->
@@ -38,7 +45,7 @@
               :enrolled-question-ids="enrolledQuestionIds" :updating="updating" :show-upload="showUpload"
               @enrolled="handleEnrolled" @toggle-upload="toggleUploadForm" />
           </div>
-        </div>
+        </UiOverlaySurface>
       </Transition>
     </div>
   </Teleport>

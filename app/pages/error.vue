@@ -16,8 +16,8 @@ const message = computed(() =>
 </script>
 
 <template>
-  <main class="min-h-screen bg-white text-content-on-surface flex items-center justify-center px-6">
-    <section class="w-full rounded-[var(--radius-xl)] border border-secondary p-6 shadow-[var(--shadow-dropdown)]">
+  <main class="min-h-screen bg-background text-content-on-background flex items-center justify-center px-6">
+    <UiPanel tag="section" variant="surface" size="lg" class-name="w-full shadow-[var(--shadow-dropdown)]">
       <p class="text-xs font-bold uppercase tracking-widest text-content-secondary">Error</p>
       <h1 class="mt-2 text-2xl font-semibold">Something went wrong</h1>
       <p class="mt-3 text-sm text-content-secondary break-words">{{ message }}</p>
@@ -26,6 +26,6 @@ const message = computed(() =>
         to="/">
         Home
       </NuxtLink>
-    </section>
+    </UiPanel>
   </main>
 </template>

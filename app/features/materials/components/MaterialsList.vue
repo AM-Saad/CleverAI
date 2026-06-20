@@ -125,39 +125,41 @@ const doConfirmRemove = async () => {
 
     <ul v-if="!loading && (materials.length > 0 || pendingTranscriptions.length > 0)" class="">
       <!-- Pending Transcription Rows -->
-      <ui-card v-for="pt in pendingTranscriptions" :key="pt.id" tag="li" variant="ghost" size="sm" shadow="none"
-        :class="['my-1 rounded-none! border-b border-muted opacity-80']">
+      <UiPanel v-for="pt in pendingTranscriptions" :key="pt.id" tag="li" variant="transparent" size="sm"
+        class-name="my-1 rounded-none! border-x-0 border-t-0 opacity-80">
         <div class="flex items-center justify-between gap-2">
           <div class="flex items-center gap-2 flex-1 min-w-0">
-            <icon name="i-lucide-mic" class="w-4 h-4 text-error shrink-0 animate-pulse" />
+            <icon name="i-lucide-mic" class="w-4 h-4 text-error-text shrink-0 animate-pulse" />
             <ui-subtitle weight="normal" size="xs" class="truncate" color="content-on-surface">{{ pt.title
               }}</ui-subtitle>
             <span
-              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-warning/15 text-warning shrink-0">
+              class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-warning/15 text-warning-text shrink-0">
               <icon name="i-lucide-loader" class="w-3 h-3 animate-spin" />
               {{ pt.status === 'transcribing' ? 'Transcribing...' : 'Saving...' }}
             </span>
           </div>
         </div>
-      </ui-card>
+      </UiPanel>
 
       <!-- Actual Materials -->
-      <ui-card v-for="(m, idx) in materials" :key="m.id" tag="li" size="sm" variant="surface" :class="['cursor-pointer group my-1 rounded-[var(--radius-md)]!',
-        getMaterialTypeColor(m.type!)
-      ]" @click="() => fullscreen.open(m.id)">
-        <div class="flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2 flex-1 min-w-0">
-            <shared-icon :name="getMaterialTypeIcon(m.type!)" :size="UI_CONFIG.ICON_SIZE" />
-            <ui-subtitle weight="normal" size="xs" class="truncate" color="content-on-background">
-              {{ m.title }}</ui-subtitle>
-            <span v-if="enrolledMaterials.has(m.id)"
-              class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success/15 text-success shrink-0">
-              <icon name="i-lucide-check-circle" class="w-3 h-3 mr-1" />
-              Enrolled
-            </span>
+      <li v-for="(m, idx) in materials" :key="m.id" class="my-1">
+        <UiInteractiveCard size="sm" variant="surface" :class-name="['group',
+          getMaterialTypeColor(m.type!)
+        ].join(' ')" @click="() => fullscreen.open(m.id)">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center gap-2 flex-1 min-w-0">
+              <shared-icon :name="getMaterialTypeIcon(m.type!)" :size="UI_CONFIG.ICON_SIZE" />
+              <ui-subtitle weight="normal" size="xs" class="truncate" color="content-on-background">
+                {{ m.title }}</ui-subtitle>
+              <span v-if="enrolledMaterials.has(m.id)"
+                class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success/15 text-success-text shrink-0">
+                <icon name="i-lucide-check-circle" class="w-3 h-3 mr-1" />
+                Enrolled
+              </span>
+            </div>
           </div>
-        </div>
-      </ui-card>
+        </UiInteractiveCard>
+      </li>
     </ul>
 
 
@@ -199,15 +201,15 @@ const doConfirmRemove = async () => {
         </div>
 
         <span v-if="currentMaterial && enrolledMaterials.has(currentMaterial.id)"
-          class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success/15 text-success mt-2">
+          class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success/15 text-success-text mt-2">
           <icon name="i-lucide-check-circle" class="w-3 h-3 mr-1" />
           Enrolled
         </span>
       </template>
 
-      <ui-card tag="article" variant="ghost">
+      <UiCard tag="article" variant="ghost">
         <ui-paragraph class="whitespace-pre-wrap" size="lg">{{ currentMaterial?.content }}</ui-paragraph>
-      </ui-card>
+      </UiCard>
     </shared-fullscreen-wrapper>
   </div>
 

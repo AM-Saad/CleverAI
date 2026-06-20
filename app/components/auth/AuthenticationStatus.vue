@@ -15,7 +15,7 @@ const handleLogout = async () => {
 </script>
 
 <template>
-  <div class="mx-auto w-full max-w-5xl rounded-t bg-white px-5 py-4 shadow-[var(--shadow-modal)]">
+  <UiPanel variant="surface" size="md" class-name="mx-auto w-full max-w-5xl rounded-t shadow-[var(--shadow-modal)]">
     <div class="flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <img v-if="status === 'authenticated' && data?.user?.image" class="h-12 w-12 rounded-full"
@@ -25,17 +25,19 @@ const handleLogout = async () => {
         </h1>
         <h1 v-else>Not logged in</h1>
       </div>
-      <button v-if="status === 'authenticated'"
-        class="flex items-center justify-center space-x-2 rounded-[var(--radius-lg)] bg-error px-3 py-2 text-lg text-white"
+      <UiButton v-if="status === 'authenticated'"
+        tone="error"
+        size="md"
         @click="signOut({ callbackUrl: '/logout' })">
         <span>Logout</span>
-      </button>
-      <button v-else
-        class="flex items-center justify-center space-x-2 rounded-[var(--radius-lg)] bg-success px-3 py-2 text-lg text-white"
+      </UiButton>
+      <UiButton v-else
+        tone="success"
+        size="md"
         @click="signIn('')">
         <i class="fa fa-right-to-bracket pt-0.5" />
         <span>Login</span>
-      </button>
+      </UiButton>
     </div>
-  </div>
+  </UiPanel>
 </template>

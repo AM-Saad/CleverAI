@@ -36,13 +36,13 @@ All technical documentation has been consolidated into 4 comprehensive documents
 
 ## High-Level Overview
 
-Cognilo is a **Nuxt 3** application providing AI-powered flashcard generation and spaced repetition learning.
+Cognilo is a **Nuxt 4** application providing AI-powered flashcard generation and spaced repetition learning.
 
 ### Tech Stack
-- **Frontend**: Nuxt 3, Vue 3, TypeScript, TailwindCSS, Pinia
+- **Frontend**: Nuxt 4 (`compatibilityVersion: 4`, `srcDir: app/`), Vue 3.5, TypeScript, Tailwind CSS v4 + Nuxt UI v4, Pinia
 - **Backend**: Nitro, Prisma, MongoDB, Redis (optional)
-- **AI**: OpenAI GPT-3.5, Google Gemini
-- **PWA**: Workbox, IndexedDB, Web Push
+- **AI**: OpenAI, Google Gemini, DeepSeek, Groq, OpenRouter (pluggable strategy pattern)
+- **PWA**: Workbox/custom SW, IndexedDB, Web Push
 
 ### Key Architecture Patterns
 - **Strategy Pattern**: Pluggable LLM providers
@@ -62,6 +62,8 @@ docs/          # Consolidated documentation
 For detailed information, see the documentation files linked above.
 
 ---
+
+> ⚠️ **Older illustrative appendix (sections 6–20).** The material below predates the `docs/` consolidation and is kept for conceptual reference. Code snippets here are illustrative, not verbatim — some names drifted (e.g. the LLM factory is `getLLMStrategy()`/`getLLMStrategyFromRegistry()` in `server/utils/llm/LLMFactory.ts`, not `selectStrategy()`; there are 5 providers, not 2; IndexedDB is at a higher `DB_CONFIG.VERSION` than shown). **Treat [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md) as authoritative** for current detail.
 
 ## 6) Service Layer (Frontend)
 

@@ -89,7 +89,7 @@ const {
           <button class="underline cursor-pointer" :disabled="!canResend" @click.prevent="handleSendEmail">Resend
             Code</button>
         </span>
-        <span v-if="inlineHintVisible" class="block mt-1 text-error">Resend limit reached. Please wait for
+        <span v-if="inlineHintVisible" class="block mt-1 text-error-text">Resend limit reached. Please wait for
           cooldown.</span>
       </UiParagraph>
 

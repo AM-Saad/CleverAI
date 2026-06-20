@@ -44,30 +44,42 @@ const viewerComponent = computed(() => {
 
     <!-- Slide-Over Panel -->
     <Transition name="slide">
-      <div v-if="isOpen"
-        class="fixed inset-y-0 right-0 w-full md:w-1/2 lg:w-2/5 bg-surface-100 dark:bg-dark shadow-[var(--shadow-modal)] z-50 flex flex-col">
+      <UiOverlaySurface
+        v-if="isOpen"
+        tag="aside"
+        role="dialog"
+        aria-label="Context preview"
+        kind="drawer"
+        layer="drawer"
+        size="xs"
+        class-name="fixed inset-y-0 right-0 flex w-full flex-col overflow-hidden rounded-none border-y-0 border-r-0 p-0 md:w-1/2 lg:w-2/5"
+      >
         <!-- Header -->
-        <div class="flex items-center justify-between p-4 border-b border-muted dark:border-secondary">
+        <div class="flex items-center justify-between p-4 border-b border-secondary">
           <div class="flex items-center gap-2">
-            <u-icon v-if="preview?.type === 'NOTE'" name="i-lucide-file-text" :size="UI_CONFIG.ICON_SIZE"
+            <Icon v-if="preview?.type === 'NOTE'" name="i-lucide-file-text" :size="UI_CONFIG.ICON_SIZE"
               class="text-primary" />
-            <u-icon v-else-if="preview?.type === 'PDF'" name="i-lucide-file" :size="UI_CONFIG.ICON_SIZE"
+            <Icon v-else-if="preview?.type === 'PDF'" name="i-lucide-file" :size="UI_CONFIG.ICON_SIZE"
               class="text-primary" />
             <ui-subtitle size="base" weight="semibold">
               {{ preview?.type === 'NOTE' ? 'Note Context' : 'PDF Context' }}
             </ui-subtitle>
           </div>
-          <ui-button variant="soft" size="sm" color="neutral" @click="emit('close')" aria-label="Close context preview">
-            <u-icon name="i-lucide-x" :size="UI_CONFIG.ICON_SIZE" />
-          </ui-button>
+          <UiIconButton
+            icon="i-lucide-x"
+            label="Close context preview"
+            variant="soft"
+            size="sm"
+            @click="emit('close')"
+          />
         </div>
 
         <!-- Content Area -->
-        <div class="flex-1 overflow-hidden bg-white dark:bg-dark-surface">
+        <div class="flex-1 overflow-hidden bg-surface">
           <!-- Loading State -->
           <div v-if="isLoading" class="flex items-center justify-center h-full">
             <div class="flex flex-col items-center gap-3">
-              <u-icon name="i-lucide-loader" class="w-8 h-8 animate-spin text-primary" />
+              <Icon name="i-lucide-loader" class="w-8 h-8 animate-spin text-primary" />
               <ui-paragraph size="sm" color="content-secondary">Loading context...</ui-paragraph>
             </div>
           </div>
@@ -81,7 +93,7 @@ const viewerComponent = computed(() => {
             <ui-paragraph size="sm" color="content-secondary">No context available</ui-paragraph>
           </div>
         </div>
-      </div>
+      </UiOverlaySurface>
     </Transition>
   </Teleport>
 </template>

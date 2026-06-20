@@ -9,8 +9,23 @@ export const WINDOW_SEC = 60;
 
 // Optional Redis-backed limiter (preferred in production)
 let redisClient: Redis | null = null;
+let redisUnavailableUntil = 0;
+const REDIS_RETRY_COOLDOWN_MS = 60_000;
+
+function markRedisUnavailable(error: unknown) {
+  const now = Date.now();
+  const message = (error as any)?.message || error;
+  if (now >= redisUnavailableUntil) {
+    console.warn("[rateLimit] Redis unavailable, using memory limiter:", message);
+  }
+  redisUnavailableUntil = now + REDIS_RETRY_COOLDOWN_MS;
+  redisClient?.disconnect();
+  redisClient = null;
+}
+
 export function getRedisClient(): Redis | null {
   try {
+    if (Date.now() < redisUnavailableUntil) return null;
     if (redisClient) return redisClient;
     const url = (useRuntimeConfig() as any)?.redisUrl || process.env.REDIS_URL;
     if (!url) return null;
@@ -27,14 +42,14 @@ export function getRedisClient(): Redis | null {
       },
       // TLS automatically enabled by rediss://
     });
-    // basic error logging to avoid 'Unhandled error event'
+    // Keep the listener so ioredis does not emit unhandled error events, but
+    // cool down after DNS/network failures so local dev logs stay readable.
     redisClient.on("error", (err: any) => {
-      console.error("[rateLimit][redis] error:", err?.message || err);
+      markRedisUnavailable(err);
     });
     return redisClient;
   } catch (e) {
-    console.error("[rateLimit] Redis init failed, falling back to memory:", e);
-    redisClient = null;
+    markRedisUnavailable(e);
     return null;
   }
 }
@@ -52,6 +67,7 @@ export async function checkRedisLimit(
         await client.connect();
       } catch (e) {
         // Not ready; fall back to memory without throwing
+        markRedisUnavailable(e);
         return { used: false };
       }
       if ((client as any).status !== "ready") return { used: false };
@@ -66,10 +82,7 @@ export async function checkRedisLimit(
     return { used: true, remaining: Math.max(0, max - count) };
   } catch (e) {
     // Fall back to in-memory limiter on any Redis error
-    console.warn(
-      "[rateLimit] Redis unavailable, falling back to memory:",
-      (e as any)?.message || e
-    );
+    markRedisUnavailable(e);
     return { used: false };
   }
 }
@@ -125,4 +138,47 @@ export function setRateLimitHeaders(
   event.node.res.setHeader("X-RateLimit-Reset", String(resetSeconds));
   if (overallRemaining === 0)
     event.node.res.setHeader("Retry-After", String(resetSeconds));
+}
+
+// ── Shared LLM rate-limit buckets ───────────────────────────────────────────
+// Module-level singletons so EVERY LLM entrypoint (gateway, language fresh
+// translation, AND language shared-translation cache hits) shares the same
+// user/IP buckets. With Redis these share via the `rl:user:`/`rl:ip:` keys; the
+// in-memory maps keep that sharing intact in the Redis-down fallback too.
+const _llmUserRateLimitMap: MemCounter = new Map();
+const _llmIpRateLimitMap: MemCounter = new Map();
+
+/**
+ * Apply the per-user + per-IP LLM rate limit for a 60s window and write the
+ * X-RateLimit-* headers. Throws a 429 when either limit is exceeded.
+ */
+export async function enforceLlmRateLimit(
+  event: any,
+  userId: string,
+  options: { userMax: number; ipMax: number }
+): Promise<void> {
+  const now = Date.now();
+  const windowMs = WINDOW_SEC * 1000;
+  const userRemaining = await applyLimit(
+    `rl:user:${userId}`,
+    options.userMax,
+    _llmUserRateLimitMap,
+    now,
+    windowMs
+  );
+  const clientIp = getClientIp(event);
+  const ipRemaining = await applyLimit(
+    `rl:ip:${clientIp}`,
+    options.ipMax,
+    _llmIpRateLimitMap,
+    now,
+    windowMs
+  );
+  setRateLimitHeaders(
+    event,
+    Math.min(userRemaining, ipRemaining),
+    userRemaining,
+    ipRemaining,
+    now
+  );
 }

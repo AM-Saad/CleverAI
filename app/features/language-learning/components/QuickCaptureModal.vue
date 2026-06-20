@@ -11,14 +11,13 @@
         tabindex="-1" @keydown="onKeydown" :initial="{ opacity: 0, y: 24, scale: 0.96 }"
         :animate="{ opacity: 1, y: 0, scale: 1 }" :exit="{ opacity: 0, y: 16, scale: 0.97 }"
         :transition="{ type: 'spring', stiffness: 480, damping: 38 }"
-        class="fixed inset-x-0 bottom-4 md:bottom-auto md:top-[12vh] z-50 mx-auto flex md:w-[480px] w-[92%] rounded-[var(--radius-2xl)] px-5 pb-5 overflow-hidden bg-surface shadow-[var(--shadow-modal)] border border-secondary flex-col min-h-0"
-        style="
-          max-height: 82svh;
-          box-shadow:
-            0 24px 64px -8px rgba(0, 0, 0, 0.25),
-            0 4px 20px -4px rgba(0, 0, 0, 0.15),
-            0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-        ">
+        class="fixed inset-x-0 bottom-4 z-50 mx-auto w-[92%] min-h-0 md:bottom-auto md:top-[12vh] md:w-[480px]">
+        <UiOverlaySurface
+          kind="modal"
+          layer="modal"
+          size="xs"
+          class-name="relative flex max-h-[82svh] min-h-0 flex-col overflow-hidden rounded-[var(--radius-2xl)] px-5 pb-5 pt-0"
+        >
         <!-- Gradient top stripe -->
         <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-accent-teal via-accent-blue to-accent-purple" />
 
@@ -40,11 +39,15 @@
               </motion.span>
             </AnimatePresence>
           </div>
-          <button type="button" aria-label="Close" :disabled="isLocked"
-            class="flex h-8 w-8 items-center justify-center rounded-full text-content-secondary transition-colors hover:bg-surface-strong hover:text-content-on-surface focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary disabled:opacity-40 active:scale-95"
-            @click="handleClose">
-            <Icon name="i-lucide-x" class="h-4 w-4" />
-          </button>
+          <UiIconButton
+            icon="i-lucide-x"
+            label="Close quick translate"
+            size="sm"
+            variant="ghost"
+            :disabled="isLocked"
+            class="rounded-full active:scale-[0.98]"
+            @click="handleClose"
+          />
         </div>
 
         <div class="h-px bg-secondary shrink-0" />
@@ -58,19 +61,19 @@
               :exit="{ opacity: 0, y: stateDirection * 20 }" :transition="{ duration: 0.18, ease: 'easeInOut' }">
               <div class="space-y-4">
                 <!-- Unified Input Row: Mic + Input + Send in one line -->
-                <div class="flex items-center gap-2 bg-surface-strong rounded-full border p-1.5 transition-all duration-200"
-                  :class="isInputFocused ? 'ring-2 ring-primary/50 border-primary shadow-[var(--shadow-dropdown)]' : 'border-secondary'">
+                <div class="flex items-center gap-2 bg-surface-strong rounded-full border p-1.5 transition-all duration-[var(--duration-fast)]"
+                  :class="isInputFocused ? 'ring-2 ring-[var(--ds-focus-outline-color)] border-primary shadow-[var(--shadow-dropdown)]' : 'border-secondary'">
                   <!-- Mic Button (compact icon-only) -->
                   <button
                     type="button"
                     :disabled="isProcessing"
-                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-200 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-[var(--duration-fast)] select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60"
                     :class="[
                       !isListening && !isProcessing
-                        ? 'text-content-secondary hover:bg-surface active:scale-95'
+                        ? 'text-content-secondary hover:bg-surface active:scale-[0.98]'
                         : isListening
                           ? 'bg-error text-white animate-pulse'
-                          : 'cursor-not-allowed text-content-disabled opacity-40'
+                          : 'cursor-not-allowed text-content-disabled opacity-60'
                     ]"
                     @click="handleMicClick"
                     :title="micLabel"
@@ -98,7 +101,7 @@
                   <button
                     type="button"
                     :disabled="!wordInput.trim() || isCapturing"
-                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-white transition-all disabled:opacity-40 disabled:scale-100 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary transition-all duration-[var(--duration-fast)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)]"
                     @click="handleCapture"
                     title="Translate"
                   >
@@ -122,7 +125,7 @@
                     </span>
                   </Transition>
                   <Transition name="ctx">
-                    <p v-if="micError" class="text-xs text-error">
+                    <p v-if="micError" class="text-xs text-error-text">
                       {{ micError }}
                     </p>
                   </Transition>
@@ -142,7 +145,7 @@
                     <!-- Translate language check -->
                     <label class="flex items-center gap-2 cursor-pointer select-none">
                       <input v-model="includeTranslation" type="checkbox"
-                        class="h-3.5 w-3.5 rounded-[var(--radius-md)] border-secondary text-primary focus:ring-primary" />
+                        class="h-3.5 w-3.5 rounded-[var(--radius-md)] border-secondary text-primary focus:ring-2 focus:ring-[var(--ds-focus-outline-color)]" />
                       <span class="text-xs text-content-secondary">
                         Translate to {{ translationLanguage }}
                       </span>
@@ -175,7 +178,7 @@
               :exit="{ opacity: 0, x: stateDirection * 20 }" :transition="{ duration: 0.18, ease: 'easeInOut' }">
               <div class="space-y-4">
                 <!-- Word card — uses primary glassmorphism gradient treatment -->
-                <div class="relative overflow-hidden rounded-[var(--radius-2xl)] border border-primary/20 bg-gradient-to-br from-primary/8 via-primary/[0.01] to-transparent p-5 shadow-xs">
+                <UiPanel variant="surface" size="lg" class-name="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/8 via-primary/[0.01] to-transparent">
                   <div class="relative flex items-start justify-between gap-3">
                     <div class="min-w-0">
                       <p class="text-2xl font-semibold leading-tight text-content-on-surface">
@@ -211,10 +214,10 @@
                       </ui-badge>
                     </div>
                   </div>
-                </div>
+                </UiPanel>
 
-                <div v-if="captureResult.meanings?.length"
-                  class="space-y-3 rounded-[var(--radius-2xl)] border border-secondary bg-surface-subtle p-4">
+                <UiPanel v-if="captureResult.meanings?.length"
+                  variant="subtle" size="md" content-class="space-y-3">
                   <div class="flex items-center gap-2">
                     <Icon name="i-lucide-list-tree" class="h-4 w-4 text-primary" />
                     <span class="text-sm font-semibold text-content-on-surface">
@@ -242,10 +245,10 @@
                       </div>
                     </div>
                   </div>
-                </div>
+                </UiPanel>
 
-                <div v-if="captureResult.examples?.length"
-                  class="rounded-[var(--radius-2xl)] border border-secondary bg-surface-subtle p-4">
+                <UiPanel v-if="captureResult.examples?.length"
+                  variant="subtle" size="md">
                   <div class="mb-2 flex items-center gap-2">
                     <Icon name="i-lucide-message-square-quote" class="h-4 w-4 text-primary" />
                     <span class="text-sm font-semibold text-content-on-surface">
@@ -258,7 +261,7 @@
                   <p v-if="captureResult.examples[0]?.translation" class="mt-1 text-xs text-content-secondary">
                     {{ captureResult.examples[0]?.translation }}
                   </p>
-                </div>
+                </UiPanel>
 
                 <div class="flex flex-col gap-2">
                   <ui-button v-if="!captureResult.saved" variant="soft" color="neutral" class="w-full"
@@ -307,12 +310,12 @@
               :initial="{ opacity: 0, x: stateDirection * -20 }" :animate="{ opacity: 1, x: 0 }"
               :exit="{ opacity: 0, x: stateDirection * 20 }" :transition="{ duration: 0.18, ease: 'easeInOut' }">
               <div class="space-y-4">
-                <div class="flex items-center gap-2.5 rounded-[var(--radius-xl)] border border-success/20 bg-success/8 p-3.5">
-                  <Icon name="i-lucide-check-circle-2" class="h-4 w-4 shrink-0 text-success" />
+                <UiPanel variant="subtle" size="sm" class-name="border-success/20 bg-success/8" content-class="flex items-center gap-2.5">
+                  <Icon name="i-lucide-check-circle-2" class="h-4 w-4 shrink-0 text-success-text" />
                   <UiParagraph size="sm" color="success">
                     Story generated — added to your language deck.
                   </UiParagraph>
-                </div>
+                </UiPanel>
 
                 <div class="space-y-2">
                   <div v-for="(sentence, i) in storyResult.sentences" :key="i"
@@ -341,6 +344,7 @@
             <shared-error-message :error="captureError || storyError" />
           </div>
         </div>
+        </UiOverlaySurface>
       </motion.div>
     </AnimatePresence>
   </Teleport>
