@@ -95,7 +95,7 @@
           class="h-1.5 w-full overflow-hidden rounded-[var(--radius-sm)] bg-surface-strong"
         >
           <div
-            class="h-full rounded-[var(--radius-sm)] bg-primary transition-[width] duration-500 ease-out"
+            class="h-full rounded-[var(--radius-sm)] bg-primary transition-[width] duration-[var(--duration-slow)] ease-[var(--ease-standard)]"
             :style="{ width: clampedProgress + '%' }"
           />
         </div>
@@ -113,10 +113,10 @@
           <motion.div
             :key="cardKey"
             class="w-full"
-            :initial="{ opacity: 0, x: 28 }"
+            :initial="cardInitial"
             :animate="{ opacity: 1, x: 0 }"
-            :exit="exitVariant"
-            :transition="{ type: 'spring', stiffness: 380, damping: 34 }"
+            :exit="cardExit"
+            :transition="cardTransition"
           >
             <slot name="card" :show-answer="showAnswer" />
           </motion.div>
@@ -276,6 +276,22 @@ const toneExit: Record<ReviewGradeTone, Record<string, number>> = {
 const exitVariant = ref<Record<string, number>>({ opacity: 0, x: -28 });
 const lastTone = ref<ReviewGradeTone | null>(null);
 
+// Respect the OS reduced-motion preference for motion-v. The global CSS reset in
+// main.css only neutralizes CSS transitions/animations, not JS-driven motion, so
+// the card spring/slide is gated here — reduced motion collapses to instant swaps.
+const prefersReducedMotion = ref(false);
+const cardInitial = computed(() =>
+  prefersReducedMotion.value ? { opacity: 0 } : { opacity: 0, x: 28 },
+);
+const cardTransition = computed(() =>
+  prefersReducedMotion.value
+    ? ({ duration: 0 } as const)
+    : ({ type: "spring", stiffness: 380, damping: 34 } as const),
+);
+const cardExit = computed(() =>
+  prefersReducedMotion.value ? { opacity: 0 } : exitVariant.value,
+);
+
 function reveal() {
   if (showAnswer.value) return;
   showAnswer.value = true;
@@ -355,9 +371,19 @@ function onKey(event: KeyboardEvent) {
     }
   }
 }
-onMounted(() => window.addEventListener("keydown", onKey));
+let motionMql: MediaQueryList | null = null;
+const syncReducedMotion = () => {
+  prefersReducedMotion.value = motionMql?.matches ?? false;
+};
+onMounted(() => {
+  window.addEventListener("keydown", onKey);
+  motionMql = window.matchMedia("(prefers-reduced-motion: reduce)");
+  syncReducedMotion();
+  motionMql.addEventListener("change", syncReducedMotion);
+});
 onBeforeUnmount(() => {
   window.removeEventListener("keydown", onKey);
+  motionMql?.removeEventListener("change", syncReducedMotion);
   if (xpTimer) clearTimeout(xpTimer);
 });
 </script>
