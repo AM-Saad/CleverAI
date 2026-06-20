@@ -124,13 +124,25 @@ Use `#header` slot for card titles. Header slot auto-applies bottom border divid
 Card content area background is **transparent** — the card's own surface color comes from its `variant`.
 
 ### `<UiButton>` — All interactive buttons (wraps Nuxt UI `UButton`)
-**Variants** (emphasis high → low): `solid` (primary CTA), `outline` (secondary, ringed), `subtle` (tinted fill **+** ring), `soft` (tinted fill, no ring), `ghost` (transparent — tertiary/toolbar), `link` (inline text action).
-**Tones:** `primary`, `neutral`, `success`, `warning`, `error`, `info` — via the **`tone`** prop (canonical). `color` is a legacy bridge kept for migration; prefer `tone`.
+A **4-variant emphasis ladder** — one style per importance tier, so a button's weight is always unambiguous:
+
+| Variant | Emphasis | Use for |
+|---------|----------|---------|
+| `solid` | High | The one primary action / CTA in a section |
+| `soft` | Medium | Secondary actions (tonal fill) |
+| `ghost` | Low | Tertiary, toolbar, and icon actions |
+| `link` | Inline | A text action inside prose |
+
+> `outline` and `subtle` are **deprecated** — they now render as `soft`. Prefer `soft`.
+
+**Tones — buttons are *actions*, so 4:** `primary` (default brand action), `neutral` (utility/cancel), `error` (destructive), `success` (positive confirm — sparingly). `warning`/`info` are **status** colors → use on `UiBadge`/`UiAlert`, not buttons. Set via the **`tone`** prop (canonical); `color` is a legacy bridge.
+
 **Sizes:** `xs / sm / md / lg / xl`. **Defaults:** `tone="primary"`, `variant="solid"`, `size="md"`.
-**States:** hover/active shift the fill (or `underline` for `link`); press adds `active:scale-[0.98]`; focus is a keyboard-only 2px outline (`--ds-focus-outline-color`); `disabled`/`loading` dim to 60% and block pointer events. Radius `var(--radius-lg)` (6px), set globally in `app.config.ts` — the single source for the full 6×6 matrix (rendered live at `/design-system`).
+
+**States:** hover/active shift the fill (or `underline` for `link`); press adds `active:scale-[0.98]`; focus is a keyboard-only 2px outline (`--ds-focus-outline-color`); `disabled`/`loading` dim to 60% and block pointer events. Radius `var(--radius-lg)` (6px), set globally in `app.config.ts` — the single source for the matrix (rendered live at `/design-system`).
+
 **Conventions:**
-- Never place more than one `solid primary` in the same view section.
-- `ghost`/`soft` for low-emphasis and toolbar actions; `subtle` for a tinted action that still needs a defined edge.
+- Never place more than one `solid` button in the same view section.
 - Icon-only → `<UiIconButton>`; toolbar → `<UiToolbarButton>`.
 
 ### `<Input>` / `<UInput>` — Text inputs
