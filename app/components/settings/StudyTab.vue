@@ -3,25 +3,25 @@
         <UiPanel size="md" variant="surface">
             <template #header>
                 <div class="flex items-center gap-2">
-                    <UIcon name="i-heroicons-book-open" class="w-5 h-5" />
+                    <UiIcon name="i-lucide-book-open" class="w-5 h-5" />
                     Study Preferences
                 </div>
             </template>
             <div class="space-y-4">
-                <UFormField label="Default Cards per Session" help="How many cards to review in a single session">
+                <UiFormField label="Default Cards per Session" help="How many cards to review in a single session">
                     <UiInput v-model.number="studySettings.defaultSessionSize" type="number" min="5" max="100"
                         placeholder="20" :ui="{
                             root: 'w-full',
                         }" />
-                </UFormField>
+                </UiFormField>
 
-                <UFormField label="Auto-advance after grading" help="Automatically move to next card after grading">
+                <UiFormField label="Auto-advance after grading" help="Automatically move to next card after grading">
                     <UiSwitch v-model="studySettings.autoAdvance" />
-                </UFormField>
+                </UiFormField>
 
-                <UFormField label="Show answer immediately" help="Reveal answer without requiring a click">
+                <UiFormField label="Show answer immediately" help="Reveal answer without requiring a click">
                     <UiSwitch v-model="studySettings.showAnswerImmediately" />
-                </UFormField>
+                </UiFormField>
             </div>
 
             <template #footer>

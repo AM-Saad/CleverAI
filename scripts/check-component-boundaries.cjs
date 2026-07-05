@@ -45,7 +45,12 @@ function tierOf(rel) {
 }
 
 function sectionBetween(source, tag) {
-  const match = source.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "i"));
+  // Greedy: a root-level <template> may itself contain nested control-flow
+  // <template v-if>/<template #slot> blocks, whose earlier closing tags a
+  // non-greedy match would stop at. The real root closing tag is the last
+  // </tag> in the file (verified file-wide: no SFC has stray "</template>"
+  // text in its script/style sections).
+  const match = source.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*)</${tag}>`, "i"));
   return match ? match[1] : source;
 }
 
@@ -56,18 +61,31 @@ function stripAllowedLines(source) {
     .join("\n");
 }
 
+// Dead/commented-out markup (e.g. `<!-- <UForm>...</UForm> -->`) shouldn't
+// register as live usage. Leaves `design-allow` comments intact so
+// stripAllowedLines' line-based filter still finds and removes them.
+function stripHtmlComments(source) {
+  return source.replace(/<!--[\s\S]*?-->/g, (comment) =>
+    comment.includes("design-allow") ? comment : "",
+  );
+}
+
 function count(re, source) {
   return (source.match(re) || []).length;
 }
 
 function nuxtUiTags(template) {
   const set = new Set();
+  // PascalCase (<UButton>) and kebab-case (<u-button>) both resolve to the
+  // same Nuxt UI component at runtime — kebab-case must NOT match the design
+  // system's own `<ui-*>` wrappers, hence the dash directly after `u`.
   for (const match of template.matchAll(/<(U[A-Z][A-Za-z0-9]*)/g)) set.add(match[1]);
+  for (const match of template.matchAll(/<(u-[a-z][a-z0-9-]*)/g)) set.add(match[1]);
   return [...set].sort();
 }
 
 function signals(source) {
-  const clean = stripAllowedLines(source);
+  const clean = stripAllowedLines(stripHtmlComments(source));
   const template = sectionBetween(clean, "template");
   const hasFixedInset = /\bfixed\b[^"'`]*\binset-0\b|\binset-0\b[^"'`]*\bfixed\b/.test(template);
   const hasZ = /\bz-(?:\d{1,4}|\[)/.test(template);
@@ -79,6 +97,7 @@ function signals(source) {
     rawSelect: count(/<select[\s>]/g, template),
     rawTextarea: count(/<textarea[\s>]/g, template),
     rawDialog: count(/<dialog[\s>]/g, template),
+    rawHeading: count(/<h[1-6][\s>]/g, template),
     overlayScaffold: hasFixedInset && hasZ && hasBackdrop,
     cardChrome: /\bborder\b/.test(template) && /rounded-\[var\(--radius-/.test(template) && /\bp[xytrbl]?-\d/.test(template),
     nuxtUi: nuxtUiTags(template),
@@ -93,6 +112,7 @@ function baselineLimits(record) {
     rawSelect: s.rawSelect || 0,
     rawTextarea: s.rawTextarea || 0,
     rawDialog: s.rawDialog || 0,
+    rawHeading: s.rawHeading || 0,
     overlayScaffold: !!s.overlayScaffold,
     cardChrome: !!s.cardChrome,
     nuxtUi: new Set(record?.nuxtUi || []),
@@ -122,6 +142,7 @@ for (const full of walk(SRC, [])) {
   reportIfIncreased(violations, rel, "raw <select>", current.rawSelect, allowed.rawSelect);
   reportIfIncreased(violations, rel, "raw <textarea>", current.rawTextarea, allowed.rawTextarea);
   reportIfIncreased(violations, rel, "raw <dialog>", current.rawDialog, allowed.rawDialog);
+  reportIfIncreased(violations, rel, "raw <h1-6>", current.rawHeading, allowed.rawHeading);
 
   if (current.overlayScaffold && !allowed.overlayScaffold) {
     violations.push(`${rel}: new ad-hoc overlay scaffold`);

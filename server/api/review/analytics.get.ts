@@ -15,6 +15,10 @@ const ReviewAnalyticsSchema = z.object({
   longestStreak: z.number(),
   averageGrade: z.number(),
   retentionRate: z.number(),
+  dailyReviewCounts: z.array(z.object({
+    date: z.string(),
+    count: z.number(),
+  })),
   performanceMetrics: z.object({
     averageEaseFactor: z.number(),
     averageInterval: z.number(),
@@ -55,19 +59,76 @@ export default defineEventHandler(async (event) => {
   }
   const prisma = event.context.prisma;
 
-  const { workspaceId } = query;
+  const { workspaceId, days } = query;
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const rangeStart = new Date(today);
+  rangeStart.setUTCDate(today.getUTCDate() - days + 1);
 
   let cardReviews: CardReview[];
+  let reviewEvents: Array<{ cardId: string | null; createdAt: Date }>;
   try {
-    cardReviews = await prisma.cardReview.findMany({
-      where: { userId: user.id, ...(workspaceId ? { workspaceId } : {}) },
-    });
+    [cardReviews, reviewEvents] = await Promise.all([
+      prisma.cardReview.findMany({
+        where: { userId: user.id, ...(workspaceId ? { workspaceId } : {}) },
+      }),
+      prisma.xpEvent.findMany({
+        where: {
+          userId: user.id,
+          source: "review",
+          createdAt: { gte: rangeStart },
+        },
+        select: {
+          cardId: true,
+          createdAt: true,
+        },
+      }),
+    ]);
   } catch {
     throw Errors.server("Failed to fetch review analytics");
   }
 
+  const scopedCardIds = new Set(cardReviews.map((cardReview) => cardReview.cardId));
+  const scopedReviewEvents = workspaceId
+    ? reviewEvents.filter((event) => event.cardId && scopedCardIds.has(event.cardId))
+    : reviewEvents;
+
+  const dailyCounts = new Map<string, number>();
+  for (let offset = 0; offset < days; offset++) {
+    const date = new Date(rangeStart);
+    date.setUTCDate(rangeStart.getUTCDate() + offset);
+    dailyCounts.set(date.toISOString().slice(0, 10), 0);
+  }
+  for (const event of scopedReviewEvents) {
+    const key = event.createdAt.toISOString().slice(0, 10);
+    if (!dailyCounts.has(key)) continue;
+    dailyCounts.set(key, (dailyCounts.get(key) ?? 0) + 1);
+  }
+  const dailyReviewCounts = Array.from(dailyCounts.entries()).map(([date, count]) => ({
+    date,
+    count,
+  }));
+  const reviewDays = dailyReviewCounts.filter((entry) => entry.count > 0).map((entry) => entry.date);
+  const reviewDaySet = new Set(reviewDays);
+  let currentStreak = 0;
+  for (let cursor = new Date(today); ; cursor.setUTCDate(cursor.getUTCDate() - 1)) {
+    const key = cursor.toISOString().slice(0, 10);
+    if (!reviewDaySet.has(key)) break;
+    currentStreak++;
+  }
+  let longestStreak = 0;
+  let runningStreak = 0;
+  for (const entry of dailyReviewCounts) {
+    if (entry.count > 0) {
+      runningStreak++;
+      longestStreak = Math.max(longestStreak, runningStreak);
+    } else {
+      runningStreak = 0;
+    }
+  }
+
   const totalCards = cardReviews.length;
-  const totalReviews = cardReviews.filter((cardReview) => cardReview.repetitions > 0).length;
+  const totalReviews = scopedReviewEvents.length;
   const validGrades = cardReviews.filter(
     (cardReview) => cardReview.lastGrade !== null && cardReview.lastGrade !== undefined
   );
@@ -88,10 +149,7 @@ export default defineEventHandler(async (event) => {
     "4": grades.filter((g: number) => g === 4).length,
     "5": grades.filter((g: number) => g === 5).length,
   };
-  const allStreaks = cardReviews.map((cardReview) => cardReview.streak);
-  const currentStreak = Math.max(...allStreaks, 0);
-  const longestStreak = currentStreak;
-  const totalReviewDays = cardReviews.filter((cardReview) => cardReview.lastReviewedAt).length;
+  const totalReviewDays = reviewDays.length;
   const averageEaseFactor =
     cardReviews.length > 0
       ? cardReviews.reduce((sum, cardReview) => sum + cardReview.easeFactor, 0) /
@@ -120,6 +178,7 @@ export default defineEventHandler(async (event) => {
     longestStreak,
     averageGrade: Math.round(averageGrade * 100) / 100,
     retentionRate: Math.round(retentionRate * 100) / 100,
+    dailyReviewCounts,
     performanceMetrics: {
       averageEaseFactor: Math.round(averageEaseFactor * 100) / 100,
       averageInterval: Math.round(averageInterval * 100) / 100,

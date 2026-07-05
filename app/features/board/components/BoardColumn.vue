@@ -170,14 +170,6 @@ const handleHeaderPointerDown = (event: PointerEvent) => {
   emit("header-pointerdown", event);
 };
 
-// Delete confirmation
-const showDeleteConfirm = ref(false);
-
-const confirmDelete = () => {
-  emit("delete");
-  showDeleteConfirm.value = false;
-};
-
 // Column dropdown items
 const columnActions = computed(() => {
   if (props.isDefault) return [];
@@ -185,15 +177,16 @@ const columnActions = computed(() => {
     [
       {
         label: "Rename",
-        icon: "heroicons:pencil",
+        icon: "i-lucide-pencil",
         onSelect: () => startEditing(),
       },
       {
+        id: `delete-column-${props.columnId}`,
         label: "Delete",
-        icon: "heroicons:trash",
-        onSelect: () => {
-          showDeleteConfirm.value = true;
-        },
+        icon: "i-lucide-trash-2",
+        requiresDoubleTap: true,
+        confirmLabel: "Tap again to delete",
+        onSelect: () => emit("delete"),
       },
     ],
   ];
@@ -225,101 +218,171 @@ const handleMoveItem = async (itemId: string, targetId: string | null) => {
     variant="surface"
     size="xs"
     class-name="shrink-0 flex h-full min-h-0 w-72 max-w-full rounded-[var(--radius-md)] border-t-0 border-surface-subtle bg-linear-to-b from-surface to-surface/80 shadow-xs transition-shadow"
-    content-class="flex h-full min-h-0 flex-col p-0">
+    content-class="flex h-full min-h-0 flex-col p-0"
+  >
     <!-- Column Header - This is the drag handle on desktop -->
     <div
       class="flex items-center justify-between p-2 border-b border-secondary bg-surface rounded-t-md group/header shrink-0 column-drag-handle"
-      @pointerdown="handleHeaderPointerDown" :class="{
+      @pointerdown="handleHeaderPointerDown"
+      :class="{
         'lg:cursor-grab lg:active:cursor-grabbing': !isDefault && !isEditing,
         'lg:cursor-grabbing': isDragging,
-      }" :style="{ borderTop: color ? `2px solid ${color}` : undefined }">
+      }"
+      :style="{ borderTop: color ? `2px solid ${color}` : undefined }"
+    >
       <div v-if="!isEditing" class="flex items-center gap-2.5 flex-1 min-w-0">
         <!-- Drag handle icon (desktop only) -->
-        <div v-if="!isDefault"
-          class="hidden lg:flex items-center text-content-disabled opacity-0 group-hover/header:opacity-100 transition-opacity">
-          <Icon name="heroicons:bars-2" class="w-4 h-4" />
+        <div
+          v-if="!isDefault"
+          class="hidden lg:flex items-center text-content-disabled opacity-0 group-hover/header:opacity-100 transition-opacity"
+        >
+          <Icon name="i-lucide-grip-vertical" class="w-4 h-4" />
         </div>
 
-        <div v-if="icon" class="flex items-center justify-center w-6 h-6 rounded-[var(--radius-md)] bg-surface"
-          :style="{ color: color || 'currentColor' }">
+        <div
+          v-if="icon"
+          class="flex items-center justify-center w-6 h-6 rounded-[var(--radius-md)] bg-surface"
+          :style="{ color: color || 'currentColor' }"
+        >
           <Icon :name="icon" class="w-4 h-4" />
         </div>
 
         <UiSubtitle size="sm" @dblclick.stop="startEditing" class="select-none">
           {{ columnName }}
         </UiSubtitle>
-        <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full bg-secondary text-content-secondary">
-          {{ items.length }}
-        </span>
+        <UiPill
+          size="sm"
+          :label="items.length"
+          color="var(--color-content-secondary)"
+          max-width="52px"
+          class-name="font-black"
+        />
 
         <!-- Loading indicator -->
-        <Icon v-if="isReordering" name="svg-spinners:ring-resize" class="w-3.5 h-3.5 text-primary" />
+        <Icon
+          v-if="isReordering"
+          name="svg-spinners:ring-resize"
+          class="w-3.5 h-3.5 text-primary"
+        />
       </div>
 
-      <div v-else class="flex items-center gap-2 flex-1 pointer-events-auto" @click.stop @mousedown.stop
-        @pointerdown.stop>
-        <UiInput v-model="editName" size="xs" class="flex-1" data-no-drag :ref="(el: unknown) =>
-          setEditInputRef((el as any)?.$el || (el as any) || null)
-          " @keyup.enter="saveName" @keyup.escape="cancelEditing" @blur="handleEditBlur" @click.stop @mousedown.stop
-          @pointerdown.stop />
-        <UiButton size="xs" tone="primary" variant="solid" icon="heroicons:check" data-no-drag @click.stop="saveName" />
+      <div
+        v-else
+        class="flex items-center gap-2 flex-1 pointer-events-auto"
+        @click.stop
+        @mousedown.stop
+        @pointerdown.stop
+      >
+        <UiInput
+          v-model="editName"
+          size="xs"
+          class="flex-1"
+          data-no-drag
+          :ref="
+            (el: unknown) =>
+              setEditInputRef((el as any)?.$el || (el as any) || null)
+          "
+          @keyup.enter="saveName"
+          @keyup.escape="cancelEditing"
+          @blur="handleEditBlur"
+          @click.stop
+          @mousedown.stop
+          @pointerdown.stop
+        />
+        <UiButton
+          size="xs"
+          tone="primary"
+          variant="solid"
+          icon="i-lucide-check"
+          data-no-drag
+          @click.stop="saveName"
+        />
       </div>
 
       <div
         class="flex items-center opacity-100 lg:opacity-0 lg:group-hover/header:opacity-100 transition-opacity pointer-events-auto"
-        @pointerdown.stop>
-        <UiActionMenu v-if="!isDefault && columnActions.length > 0" :items="columnActions"
-          :content="{ align: 'end', side: 'bottom', sideOffset: 4 }">
-          <UiIconButton icon="heroicons:ellipsis-vertical" label="Column actions" size="xs" variant="subtle"
-            data-no-drag @click.stop @pointerdown.stop />
+        @pointerdown.stop
+      >
+        <UiActionMenu
+          v-if="!isDefault && columnActions.length > 0"
+          :items="columnActions"
+          :content="{ align: 'end', side: 'bottom', sideOffset: 4 }"
+        >
+          <UiIconButton
+            icon="i-lucide-ellipsis-vertical"
+            label="Column actions"
+            size="xs"
+            variant="soft"
+            data-no-drag
+            @click.stop
+            @pointerdown.stop
+          />
         </UiActionMenu>
       </div>
     </div>
 
     <!-- Items list - pointer-events enabled for item interactions -->
-    <div class="flex-1 min-h-0 overflow-y-auto p-3 space-y-3 bg-surface/30" :class="{
-      'pointer-events-auto': !isItemPositionLocked,
-      'pointer-events-none opacity-60': isItemPositionLocked,
-    }">
+    <div
+      class="flex-1 min-h-0 overflow-y-auto p-3 space-y-3 bg-surface/30"
+      :class="{
+        'pointer-events-auto': !isItemPositionLocked,
+        'pointer-events-none opacity-60': isItemPositionLocked,
+      }"
+    >
       <div>
         <ReorderGroup v-model:values="localItems" class="flex flex-col gap-3">
-          <ReorderItem v-for="item in localItems" :key="item.id" :value="item" :drag="canDragItems ? 'y' : false"
-            v-slot="{ isDragging: itemDragging }">
+          <ReorderItem
+            v-for="item in localItems"
+            :key="item.id"
+            :value="item"
+            :drag="canDragItems ? 'y' : false"
+            v-slot="{ isDragging: itemDragging }"
+          >
             <div>
               <DragTracker :item-id="item.id" :is-dragging="itemDragging" />
-              <BoardItemCard :item="item" :is-selected="props.selectedItemId === item.id"
-                @select="handleSelectItem(item.id)" @delete="emit('delete-item', item.id)"
-                @move="(targetId) => handleMoveItem(item.id, targetId)" />
+              <BoardItemCard
+                :item="item"
+                :is-selected="props.selectedItemId === item.id"
+                @select="handleSelectItem(item.id)"
+                @delete="emit('delete-item', item.id)"
+                @move="(targetId) => handleMoveItem(item.id, targetId)"
+              />
             </div>
           </ReorderItem>
         </ReorderGroup>
       </div>
 
       <!-- Empty state -->
-      <div v-if="items.length === 0"
-        class="flex flex-col items-center justify-center py-10 opacity-40 grayscale group/empty">
-        <Icon name="heroicons:sparkles"
-          class="w-8 h-8 text-content-disabled dark:text-content-disabled mb-2 transition-transform group-hover/empty:scale-110" />
-        <p class="text-[11px] font-semibold text-content-secondary uppercase tracking-widest text-center px-4">
+      <div
+        v-if="items.length === 0"
+        class="flex flex-col items-center justify-center py-10 opacity-40 grayscale group/empty"
+      >
+        <Icon
+          name="i-lucide-sparkles"
+          class="w-8 h-8 text-content-disabled dark:text-content-disabled mb-2 transition-transform group-hover/empty:scale-110"
+        />
+        <p
+          class="text-[11px] font-semibold text-content-secondary uppercase tracking-widest text-center px-4"
+        >
           Empty Column
         </p>
       </div>
     </div>
 
     <!-- Add item button -->
-    <div class="shrink-0 p-2 bg-surface rounded-b-xl border-t border-secondary pointer-events-auto">
-      <UiButton size="sm" tone="neutral" variant="ghost"
-        class="w-full justify-start text-xs tracking-wide hover:bg-surface-subtle" icon="heroicons:plus-circle"
-        @click="createItem">
+    <div
+      class="shrink-0 p-2 bg-surface rounded-b-xl border-t border-secondary pointer-events-auto"
+    >
+      <UiButton
+        size="sm"
+        tone="neutral"
+        variant="ghost"
+        class="w-full justify-start text-xs tracking-wide hover:bg-surface-subtle"
+        icon="i-lucide-circle-plus"
+        @click="createItem"
+      >
         New Item
       </UiButton>
     </div>
-
-    <!-- Delete confirmation modal -->
-    <shared-delete-confirmation-modal :show="showDeleteConfirm" title="Delete Column" @close="showDeleteConfirm = false"
-      @confirm="confirmDelete">
-      Are you sure you want to delete this column? Items in this column will be
-      moved to Uncategorized.
-    </shared-delete-confirmation-modal>
   </UiPanel>
 </template>

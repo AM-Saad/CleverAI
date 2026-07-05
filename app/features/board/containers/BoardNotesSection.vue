@@ -13,8 +13,6 @@ import { useBoardColumnsStore } from "../composables/useBoardColumnsStore";
 import { useBoardItemsStore } from "../composables/useBoardItemsStore";
 import { designTokenValues } from "~/design-system/tokens.generated";
 
-
-
 const route = useRoute();
 const id = route.params.id;
 const boardWorkspaceId = id as string;
@@ -59,8 +57,6 @@ interface BoardFilterState {
 
 // Local state
 const currentItemId = ref<string | null>(null);
-const showDeleteConfirm = ref(false);
-const itemToDelete = ref<string | null>(null);
 const error = ref<Error | null>(null);
 const searchQuery = ref("");
 const filterState = ref<BoardFilterState>({
@@ -72,23 +68,28 @@ const filterState = ref<BoardFilterState>({
 
 // Column colors & icons
 const COLUMN_COLORS = [
-  designTokenValues['--color-accent-blue'], // blue
-  designTokenValues['--color-success'], // emerald
-  designTokenValues['--color-warning'], // amber
-  designTokenValues['--color-error'], // red
-  designTokenValues['--color-accent-purple'], // violet
-  designTokenValues['--color-accent-pink'], // pink
+  designTokenValues["--color-accent-blue"], // blue
+  designTokenValues["--color-success"], // emerald
+  designTokenValues["--color-warning"], // amber
+  designTokenValues["--color-error"], // red
+  designTokenValues["--color-accent-purple"], // violet
+  designTokenValues["--color-accent-pink"], // pink
 ];
 
-const getColumnColor = (index: number): string => COLUMN_COLORS[index % COLUMN_COLORS.length] || designTokenValues['--color-content-secondary'];
+const getColumnColor = (index: number): string =>
+  COLUMN_COLORS[index % COLUMN_COLORS.length] ||
+  designTokenValues["--color-content-secondary"];
 
 const getColumnIcon = (name: string): string => {
-  const n = (name || '').toLowerCase();
-  if (n.includes('todo') || n.includes('task')) return 'heroicons:clipboard-document-list';
-  if (n.includes('progress') || n.includes('doing')) return 'heroicons:arrow-path';
-  if (n.includes('done') || n.includes('complete')) return 'heroicons:check-circle';
-  if (n.includes('idea') || n.includes('note')) return 'heroicons:light-bulb';
-  return 'heroicons:tag';
+  const n = (name || "").toLowerCase();
+  if (n.includes("todo") || n.includes("task"))
+    return "i-lucide-clipboard-list";
+  if (n.includes("progress") || n.includes("doing"))
+    return "i-lucide-refresh-cw";
+  if (n.includes("done") || n.includes("complete"))
+    return "i-lucide-circle-check";
+  if (n.includes("idea") || n.includes("note")) return "i-lucide-lightbulb";
+  return "i-lucide-tag";
 };
 
 const sortItemsByOrder = (a: BoardItemState, b: BoardItemState) =>
@@ -116,8 +117,7 @@ const groupItemsByColumn = (boardItems: BoardItemState[]) => {
 
 // All items from store - sorted by order for consistent rendering
 const items = computed(() => {
-  return Array.from(itemsStore.items.value.values())
-    .sort(sortItemsByOrder);
+  return Array.from(itemsStore.items.value.values()).sort(sortItemsByOrder);
 });
 
 // Fuzzy search setup
@@ -136,23 +136,32 @@ const filteredItems = computed(() => {
   // Tag filter (AND logic — item must have ALL selected tags)
   if (filterState.value.tags.length > 0) {
     filtered = filtered.filter((item) =>
-      filterState.value.tags.every((tag) => item.tags?.includes(tag))
+      filterState.value.tags.every((tag) => item.tags?.includes(tag)),
     );
   }
 
   // Due date filter
   if (filterState.value.dueDate !== "any") {
     const now = new Date();
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
     const weekEnd = new Date(todayStart);
     weekEnd.setDate(weekEnd.getDate() + 7);
 
     filtered = filtered.filter((item) => {
       const dd = item.dueDate ? new Date(item.dueDate as string) : null;
       if (filterState.value.dueDate === "has-date") return dd !== null;
-      if (filterState.value.dueDate === "overdue") return dd !== null && dd < now;
+      if (filterState.value.dueDate === "overdue")
+        return dd !== null && dd < now;
       if (filterState.value.dueDate === "today")
-        return dd !== null && dd >= todayStart && dd < new Date(todayStart.getTime() + 86400000);
+        return (
+          dd !== null &&
+          dd >= todayStart &&
+          dd < new Date(todayStart.getTime() + 86400000)
+        );
       if (filterState.value.dueDate === "this-week")
         return dd !== null && dd >= todayStart && dd <= weekEnd;
       return true;
@@ -162,19 +171,25 @@ const filteredItems = computed(() => {
   // Created-at range filter
   if (filterState.value.createdAfter) {
     const from = new Date(filterState.value.createdAfter);
-    filtered = filtered.filter((item) => item.createdAt && new Date(item.createdAt as string) >= from);
+    filtered = filtered.filter(
+      (item) => item.createdAt && new Date(item.createdAt as string) >= from,
+    );
   }
   if (filterState.value.createdBefore) {
     const to = new Date(filterState.value.createdBefore);
     to.setHours(23, 59, 59, 999);
-    filtered = filtered.filter((item) => item.createdAt && new Date(item.createdAt as string) <= to);
+    filtered = filtered.filter(
+      (item) => item.createdAt && new Date(item.createdAt as string) <= to,
+    );
   }
 
   return filtered;
 });
 
 const allItemsByColumn = computed(() => groupItemsByColumn(items.value));
-const filteredItemsByColumn = computed(() => groupItemsByColumn(filteredItems.value));
+const filteredItemsByColumn = computed(() =>
+  groupItemsByColumn(filteredItems.value),
+);
 
 // Get current note (for editing)
 const currentItem = computed(() => {
@@ -190,12 +205,17 @@ const currentFullscreenItem = computed(() => {
 
 const desktopDetailPanelEl = ref<HTMLElement | null>(null);
 const mobileDetailPanelEl = ref<HTMLElement | null>(null);
-const isDesktopDetailPanelOpen = computed(() => Boolean(currentItem.value && isXl.value));
-const isMobileDetailPanelOpen = computed(() => Boolean(currentItem.value && !isXl.value));
+const isDesktopDetailPanelOpen = computed(() =>
+  Boolean(currentItem.value && isXl.value),
+);
+const isMobileDetailPanelOpen = computed(() =>
+  Boolean(currentItem.value && !isXl.value),
+);
 
 const { onKeydown: onDesktopDetailPanelKeydown } = useFocusTrap(
   isDesktopDetailPanelOpen,
   desktopDetailPanelEl,
+  { documentTrap: false },
 );
 const { onKeydown: onMobileDetailPanelKeydown } = useFocusTrap(
   isMobileDetailPanelOpen,
@@ -208,25 +228,40 @@ const toggleCurrentItemFullscreen = () => {
 };
 
 // Is fetching (both items store and columns store use "global" key)
-const isFetching = computed(() =>
-  (itemsStore.loadingStates.value.get("global") ?? false) ||
-  (columnsStore.loadingStates.value.get("global") ?? false)
+const isFetching = computed(
+  () =>
+    (itemsStore.loadingStates.value.get("global") ?? false) ||
+    (columnsStore.loadingStates.value.get("global") ?? false),
 );
-const dirtyBoardItemCount = computed(() =>
-  Array.from(itemsStore.items.value.values()).filter((item) => item.isDirty).length,
+const dirtyBoardItemCount = computed(
+  () =>
+    Array.from(itemsStore.items.value.values()).filter((item) => item.isDirty)
+      .length,
 );
-const failedBoardItemCount = computed(() =>
-  Array.from(itemsStore.items.value.values()).filter((item) => Boolean(item.error)).length,
+const failedBoardItemCount = computed(
+  () =>
+    Array.from(itemsStore.items.value.values()).filter((item) =>
+      Boolean(item.error),
+    ).length,
 );
-const failedBoardColumnCount = computed(() =>
-  Array.from(columnsStore.columns.value.values()).filter((column) => Boolean(column.error)).length,
+const failedBoardColumnCount = computed(
+  () =>
+    Array.from(columnsStore.columns.value.values()).filter((column) =>
+      Boolean(column.error),
+    ).length,
 );
 const boardPendingCount = computed(() => dirtyBoardItemCount.value);
-const boardFailedCount = computed(() => failedBoardItemCount.value + failedBoardColumnCount.value);
+const boardFailedCount = computed(
+  () => failedBoardItemCount.value + failedBoardColumnCount.value,
+);
 const boardLastSync = computed(() => {
-  const times = [itemsStore.lastSync.value, columnsStore.lastSync.value].filter(Boolean) as Date[];
+  const times = [itemsStore.lastSync.value, columnsStore.lastSync.value].filter(
+    Boolean,
+  ) as Date[];
   if (!times.length) return null;
-  return times.reduce((latest, current) => (current > latest ? current : latest));
+  return times.reduce((latest, current) =>
+    current > latest ? current : latest,
+  );
 });
 
 // --- Desktop UX Enhancements ---
@@ -237,8 +272,8 @@ const isResizing = ref(false);
 
 const startResizing = (e: MouseEvent) => {
   isResizing.value = true;
-  document.addEventListener('mousemove', handleResizing);
-  document.addEventListener('mouseup', stopResizing);
+  document.addEventListener("mousemove", handleResizing);
+  document.addEventListener("mouseup", stopResizing);
 };
 
 const handleResizing = (e: MouseEvent) => {
@@ -251,39 +286,50 @@ const handleResizing = (e: MouseEvent) => {
 
 const stopResizing = () => {
   isResizing.value = false;
-  document.removeEventListener('mousemove', handleResizing);
-  document.removeEventListener('mouseup', stopResizing);
-  localStorage.setItem('boardPanelWidth', panelWidth.value.toString());
+  document.removeEventListener("mousemove", handleResizing);
+  document.removeEventListener("mouseup", stopResizing);
+  localStorage.setItem("boardPanelWidth", panelWidth.value.toString());
 };
 
 // Keyboard shortcuts
 const { n, v, escape: esc } = useMagicKeys();
 
 const isInputFocused = () => {
-  return ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName || '') ||
-    document.activeElement?.getAttribute('contenteditable') === 'true';
+  return (
+    ["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName || "") ||
+    document.activeElement?.getAttribute("contenteditable") === "true"
+  );
 };
 
-watch(() => n?.value, (val) => {
-  if (val && !isInputFocused() && !currentItemId.value) {
-    createNewItem();
-  }
-});
+watch(
+  () => n?.value,
+  (val) => {
+    if (val && !isInputFocused() && !currentItemId.value) {
+      createNewItem();
+    }
+  },
+);
 
-watch(() => v?.value, (val) => {
-  if (val && !isInputFocused()) {
-    viewMode.value = viewMode.value === 'board' ? 'list' : 'board';
-  }
-});
+watch(
+  () => v?.value,
+  (val) => {
+    if (val && !isInputFocused()) {
+      viewMode.value = viewMode.value === "board" ? "list" : "board";
+    }
+  },
+);
 
-watch(() => esc?.value, (val) => {
-  if (val) {
-    currentItemId.value = null;
-  }
-});
+watch(
+  () => esc?.value,
+  (val) => {
+    if (val) {
+      currentItemId.value = null;
+    }
+  },
+);
 
 onMounted(() => {
-  const savedWidth = localStorage.getItem('boardPanelWidth');
+  const savedWidth = localStorage.getItem("boardPanelWidth");
   if (savedWidth) panelWidth.value = parseInt(savedWidth);
 });
 
@@ -314,14 +360,17 @@ onMounted(async () => {
 
     // Load tags, notes and columns in parallel
     const loaders: Promise<void>[] = [
-      (tagsStore.tags.value.size === 0 ? tagsStore.loadTags() : Promise.resolve()) as Promise<void>,
+      (tagsStore.tags.value.size === 0
+        ? tagsStore.loadTags()
+        : Promise.resolve()) as Promise<void>,
       ...(shouldSyncItems ? [itemsStore.syncWithServer()] : []),
-      ...(shouldSyncColumns ? [columnsStore.syncWithServer()] : [])
+      ...(shouldSyncColumns ? [columnsStore.syncWithServer()] : []),
     ];
     await Promise.all(loaders);
   } catch (e: unknown) {
     console.error("Failed to load board notes or tags:", e);
-    error.value = e instanceof APIError ? e : new APIError("Failed to load board notes");
+    error.value =
+      e instanceof APIError ? e : new APIError("Failed to load board notes");
   }
 });
 
@@ -330,7 +379,7 @@ const createNewItem = async () => {
   // Wait for columns to load if they're still loading
   const isColumnsLoading = columnsStore.loadingStates.value.get("global");
   if (isColumnsLoading) {
-    await new Promise(resolve => {
+    await new Promise((resolve) => {
       const unwatch = watch(
         () => columnsStore.loadingStates.value.get("global"),
         (loading) => {
@@ -339,14 +388,14 @@ const createNewItem = async () => {
             resolve(true);
           }
         },
-        { immediate: true }
+        { immediate: true },
       );
     });
   }
 
   // Use first column if available, otherwise default to Uncategorized (null)
   const columns = columnsStore.getOrderedColumns();
-  const columnId = columns.length > 0 ? columns[0]?.id ?? null : null;
+  const columnId = columns.length > 0 ? (columns[0]?.id ?? null) : null;
 
   const noteId = await itemsStore.createItem("", [], columnId);
 
@@ -377,34 +426,39 @@ const handleUpdateItem = async (id: string, text: string) => {
 const handleUpdateItemTags = async (noteId: string, tags: string[]) => {
   const note = itemsStore.getItem(noteId);
   if (!note) return;
-  await itemsStore.updateItem(noteId, { ...note, tags, isDirty: true, updatedAt: new Date() });
+  await itemsStore.updateItem(noteId, {
+    ...note,
+    tags,
+    isDirty: true,
+    updatedAt: new Date(),
+  });
 };
 
 // Meta update from detail panel (tags, dueDate, attachments)
-const handleUpdateItemMeta = async (id: string, patch: Partial<Pick<BoardItemState, "tags" | "dueDate" | "attachments">>) => {
+const handleUpdateItemMeta = async (
+  id: string,
+  patch: Partial<Pick<BoardItemState, "tags" | "dueDate" | "attachments">>,
+) => {
   const note = itemsStore.getItem(id);
   if (!note) return;
-  await itemsStore.updateItem(id, { ...note, ...patch, isDirty: true, updatedAt: new Date() });
+  await itemsStore.updateItem(id, {
+    ...note,
+    ...patch,
+    isDirty: true,
+    updatedAt: new Date(),
+  });
 };
 
-// Delete note
-const deleteItem = (id: string) => {
-  itemToDelete.value = id;
-  showDeleteConfirm.value = true;
-};
-
-const confirmDeleteItem = async () => {
-  if (itemToDelete.value) {
-    // If deleting current note, select another
-    if (itemToDelete.value === currentItemId.value) {
-      const remaining = items.value.filter((n) => n.id !== itemToDelete.value);
-      currentItemId.value = remaining.length > 0 ? remaining[0]?.id ?? null : null;
-    }
-
-    await itemsStore.deleteItem(itemToDelete.value);
-    itemToDelete.value = null;
+// Delete item after the source control has confirmed the destructive intent.
+const deleteItem = async (id: string) => {
+  // If deleting current note, select another
+  if (id === currentItemId.value) {
+    const remaining = items.value.filter((n) => n.id !== id);
+    currentItemId.value =
+      remaining.length > 0 ? (remaining[0]?.id ?? null) : null;
   }
-  showDeleteConfirm.value = false;
+
+  await itemsStore.deleteItem(id);
 };
 
 // Retry failed note
@@ -415,7 +469,12 @@ const handleRetry = (id: string) => {
 // Clear filters
 const clearFilters = () => {
   searchQuery.value = "";
-  filterState.value = { tags: [], dueDate: "any", createdAfter: null, createdBefore: null };
+  filterState.value = {
+    tags: [],
+    dueDate: "any",
+    createdAfter: null,
+    createdBefore: null,
+  };
 };
 
 const syncBoardNow = async () => {
@@ -427,7 +486,9 @@ const syncBoardNow = async () => {
 };
 
 const retryFailedBoardChanges = async () => {
-  const failedItems = Array.from(itemsStore.items.value.values()).filter((item) => item.error);
+  const failedItems = Array.from(itemsStore.items.value.values()).filter(
+    (item) => item.error,
+  );
   for (const item of failedItems) {
     await itemsStore.retryFailedItem(item.id);
   }
@@ -447,16 +508,23 @@ const handleSyncStatusAction = async () => {
 };
 
 // ─── Adaptive Toolbar ─────────────────────────────────────────────
-const { containerRef: toolbarRef, tier, showLabels, showSecondaryActions, isOverflowing } = useAdaptiveToolbar();
+const {
+  containerRef: toolbarRef,
+  tier,
+  showLabels,
+  showSecondaryActions,
+  isOverflowing,
+} = useAdaptiveToolbar();
 const showSearchPopover = ref(false);
 
 // Has active filters (for badge indicator)
-const hasActiveFilters = computed(() =>
-  searchQuery.value.length > 0 ||
-  filterState.value.tags.length > 0 ||
-  filterState.value.dueDate !== "any" ||
-  filterState.value.createdAfter !== null ||
-  filterState.value.createdBefore !== null
+const hasActiveFilters = computed(
+  () =>
+    searchQuery.value.length > 0 ||
+    filterState.value.tags.length > 0 ||
+    filterState.value.dueDate !== "any" ||
+    filterState.value.createdAfter !== null ||
+    filterState.value.createdBefore !== null,
 );
 
 const activeFilterCount = computed(() => {
@@ -468,26 +536,46 @@ const activeFilterCount = computed(() => {
 
 // Overflow menu items for collapsed tier
 const overflowMenuItems = computed(() => [
-  [{
-    label: viewMode.value === 'board' ? 'Switch to List' : 'Switch to Board',
-    icon: viewMode.value === 'board' ? 'heroicons:list-bullet' : 'heroicons:view-columns',
-    onSelect: () => { viewMode.value = viewMode.value === 'board' ? 'list' : 'board'; },
-  },
-  {
-    label: 'Search',
-    icon: 'heroicons:magnifying-glass',
-    onSelect: () => { showSearchPopover.value = true; },
-  },
-  {
-    label: `Filters${activeFilterCount.value > 0 ? ` (${activeFilterCount.value})` : ''}`,
-    icon: activeFilterCount.value > 0 ? 'heroicons:funnel-solid' : 'heroicons:funnel',
-    onSelect: () => { /* filter is a popover, handled separately */ },
-  }],
-  ...(hasActiveFilters.value ? [[{
-    label: 'Clear filters',
-    icon: 'heroicons:x-mark',
-    onSelect: clearFilters,
-  }]] : []),
+  [
+    {
+      label: viewMode.value === "board" ? "Switch to List" : "Switch to Board",
+      icon:
+        viewMode.value === "board"
+          ? "i-lucide-list"
+          : "i-lucide-columns-3",
+      onSelect: () => {
+        viewMode.value = viewMode.value === "board" ? "list" : "board";
+      },
+    },
+    {
+      label: "Search",
+      icon: "i-lucide-search",
+      onSelect: () => {
+        showSearchPopover.value = true;
+      },
+    },
+    {
+      label: `Filters${activeFilterCount.value > 0 ? ` (${activeFilterCount.value})` : ""}`,
+      icon:
+        activeFilterCount.value > 0
+          ? "i-lucide-list-filter"
+          : "i-lucide-list-filter",
+      onSelect: () => {
+        /* filter is a popover, handled separately */
+      },
+    },
+  ],
+  ...(hasActiveFilters.value
+    ? [
+        [
+          {
+            label: "Clear filters",
+            icon: "i-lucide-x",
+            onSelect: clearFilters,
+          },
+        ],
+      ]
+    : []),
 ]);
 </script>
 
@@ -496,22 +584,33 @@ const overflowMenuItems = computed(() => [
     size="sm"
     variant="surface"
     class-name="flex flex-1 min-h-0 min-w-0 overflow-hidden z-10 relative!"
-    content-class="flex flex-col p-0!">
+    content-class="flex flex-col p-0!"
+  >
     <!-- Header -->
     <template #header>
-      <div ref="toolbarRef" class="adaptive-toolbar flex items-center justify-between gap-2 w-full relative">
+      <div
+        ref="toolbarRef"
+        class="adaptive-toolbar flex items-center justify-between gap-2 w-full relative"
+      >
         <!-- Title (always visible) -->
         <div class="toolbar-title flex items-center gap-2 shrink-0">
-          <Icon name="heroicons:bookmark" class="w-4 h-4 shrink-0" />
+          <Icon name="i-lucide-bookmark" class="w-4 h-4 shrink-0" />
           <span class="">Board</span>
           <ui-label v-if="items.length"> ({{ items.length }}) </ui-label>
         </div>
 
         <!-- Actions -->
-        <div class="toolbar-actions flex items-center gap-2 flex-nowrap overflow-hidden justify-end">
+        <div
+          class="toolbar-actions flex items-center gap-2 flex-nowrap overflow-hidden justify-end"
+        >
           <!-- Primary: New Item (always visible) -->
-          <UiButton size="xs" color="primary" variant="outline" @click="createNewItem">
-            <Icon name="heroicons:plus" />
+          <UiButton
+            size="xs"
+            color="primary"
+            variant="soft"
+            @click="createNewItem"
+          >
+            <Icon name="i-lucide-plus" />
             <span v-if="showLabels" class="toolbar-label">New Item</span>
           </UiButton>
 
@@ -520,41 +619,70 @@ const overflowMenuItems = computed(() => [
             <BoardViewToggle v-if="showSecondaryActions" v-model="viewMode" />
           </Transition> -->
 
-
-
           <!-- Secondary: Filter panel (wide + compact) -->
           <Transition name="toolbar-fade">
             <BoardFilterBar v-if="showSecondaryActions" v-model="filterState" />
           </Transition>
           <!-- Secondary: Search (inline in wide, popover in compact) -->
           <Transition name="toolbar-fade">
-            <UiInput v-if="showLabels" v-model="searchQuery" icon="heroicons:magnifying-glass" placeholder="Search..."
-              size="sm" class="toolbar-search" />
+            <UiInput
+              v-if="showLabels"
+              v-model="searchQuery"
+              icon="i-lucide-search"
+              placeholder="Search..."
+              size="sm"
+              class="toolbar-search"
+            />
           </Transition>
-          <UPopover v-if="!showLabels && showSecondaryActions" v-model:open="showSearchPopover">
-            <UiButton size="sm" color="neutral" variant="ghost" icon="heroicons:magnifying-glass"
-              :class="{ 'text-primary': searchQuery.length > 0 }" />
+          <UiPopover
+            v-if="!showLabels && showSecondaryActions"
+            v-model:open="showSearchPopover"
+          >
+            <UiButton
+              size="sm"
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-search"
+              :class="{ 'text-primary': searchQuery.length > 0 }"
+            />
             <template #content>
               <div class="p-2 w-64">
-                <UiInput v-model="searchQuery" icon="heroicons:magnifying-glass" placeholder="Search notes..." size="sm"
-                  autofocus class="w-full" />
+                <UiInput
+                  v-model="searchQuery"
+                  icon="i-lucide-search"
+                  placeholder="Search notes..."
+                  size="sm"
+                  autofocus
+                  class="w-full"
+                />
               </div>
             </template>
-          </UPopover>
+          </UiPopover>
           <!-- Clear filters (wide + compact, only if active) -->
           <Transition name="toolbar-fade">
-            <UiButton v-if="showSecondaryActions" size="sm" color="neutral" variant="ghost" icon="heroicons:x-mark"
-              @click="clearFilters">
+            <UiButton
+              v-if="showSecondaryActions"
+              size="sm"
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-x"
+              @click="clearFilters"
+            >
               <span v-if="showLabels" class="toolbar-label">Clear</span>
             </UiButton>
           </Transition>
 
           <!-- Overflow menu (collapsed tier only) -->
-          <UDropdownMenu v-if="isOverflowing" :items="overflowMenuItems">
-            <UiButton size="sm" color="neutral" variant="ghost" icon="heroicons:ellipsis-vertical">
+          <UiActionMenu v-if="isOverflowing" :items="overflowMenuItems">
+            <UiButton
+              size="sm"
+              color="neutral"
+              variant="ghost"
+              icon="i-lucide-ellipsis-vertical"
+            >
               <span v-if="hasActiveFilters" class="overflow-indicator" />
             </UiButton>
-          </UDropdownMenu>
+          </UiActionMenu>
         </div>
       </div>
     </template>
@@ -562,7 +690,11 @@ const overflowMenuItems = computed(() => [
     <!-- Content -->
     <template #default>
       <!-- Full-page loader: only when no cached items exist yet -->
-      <ui-loader v-if="isFetching && items.length === 0" :is-fetching="true" label="Loading board..." />
+      <ui-loader
+        v-if="isFetching && items.length === 0"
+        :is-fetching="true"
+        label="Loading board..."
+      />
 
       <LocalSyncStatus
         v-if="!error && items.length > 0"
@@ -581,25 +713,51 @@ const overflowMenuItems = computed(() => [
       />
 
       <!-- Error state -->
-      <div v-if="error && items.length === 0"
-        class="flex flex-col items-center justify-center flex-1 gap-3 py-12 text-center px-6">
-        <div class="w-12 h-12 rounded-full bg-error/10 flex items-center justify-center">
-          <Icon name="heroicons:exclamation-triangle" class="w-6 h-6 text-error-text" />
+      <div
+        v-if="error && items.length === 0"
+        class="flex flex-col items-center justify-center flex-1 gap-3 py-12 text-center px-6"
+      >
+        <div
+          class="w-12 h-12 rounded-full bg-error/10 flex items-center justify-center"
+        >
+          <Icon
+            name="i-lucide-triangle-alert"
+            class="w-6 h-6 text-error-text"
+          />
         </div>
         <div>
-          <p class="font-semibold text-content-on-surface-strong">Failed to load board</p>
-          <p class="text-sm text-content-secondary mt-1">{{ (error as any)?.message || 'An unexpected error occurred' }}
+          <p class="font-semibold text-content-on-surface-strong">
+            Failed to load board
+          </p>
+          <p class="text-sm text-content-secondary mt-1">
+            {{ (error as any)?.message || "An unexpected error occurred" }}
           </p>
         </div>
-        <UiButton size="sm" color="primary" variant="soft" icon="heroicons:arrow-path"
-          @click="() => { error = null; itemsStore.syncWithServer(); columnsStore.syncWithServer(); }">
+        <UiButton
+          size="sm"
+          color="primary"
+          variant="soft"
+          icon="i-lucide-refresh-cw"
+          @click="
+            () => {
+              error = null;
+              itemsStore.syncWithServer();
+              columnsStore.syncWithServer();
+            }
+          "
+        >
           Retry
         </UiButton>
       </div>
 
       <!-- Empty state: first load done, no items at all -->
-      <shared-empty-state v-if="!isFetching && !error && items.length === 0" title="No Board Items"
-        button-text="Create First Item" :center-description="true" @action="createNewItem">
+      <shared-empty-state
+        v-if="!isFetching && !error && items.length === 0"
+        title="No Board Items"
+        button-text="Create First Item"
+        :center-description="true"
+        @action="createNewItem"
+      >
         <template #description>
           Add your first board item to get started.<br />
           Use columns, tags, and due dates to stay organised.
@@ -607,26 +765,39 @@ const overflowMenuItems = computed(() => [
       </shared-empty-state>
 
       <!-- Items grid with editor (show even while refreshing in background) -->
-      <div v-if="!error && items.length > 0" class="flex flex-col flex-1 min-h-0 overflow-hidden relative">
-
+      <div
+        v-if="!error && items.length > 0"
+        class="flex flex-col flex-1 min-h-0 overflow-hidden relative"
+      >
         <!-- Subtle background sync indicator -->
-        <Transition enter-active-class="transition duration-200" enter-from-class="opacity-0"
-          enter-to-class="opacity-100" leave-active-class="transition duration-200" leave-from-class="opacity-100"
-          leave-to-class="opacity-0">
+        <Transition
+          enter-active-class="transition duration-200"
+          enter-from-class="opacity-0"
+          enter-to-class="opacity-100"
+          leave-active-class="transition duration-200"
+          leave-from-class="opacity-100"
+          leave-to-class="opacity-0"
+        >
           <UiPanel
             v-if="isFetching"
             variant="surface"
             size="xs"
             class-name="absolute top-2 right-2 z-10 rounded-full border-primary/20 bg-surface/90 shadow-[var(--shadow-dropdown)] backdrop-blur-sm"
-            content-class="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-medium text-primary">
+            content-class="flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-medium text-primary"
+          >
             <Icon name="svg-spinners:ring-resize" class="w-3 h-3" />
             Syncing
           </UiPanel>
         </Transition>
 
         <!-- No results after filtering -->
-        <shared-empty-state v-if="filteredItems.length === 0" title="No matching items" button-text="Clear Filters"
-          :center-description="true" @action="clearFilters">
+        <shared-empty-state
+          v-if="filteredItems.length === 0"
+          title="No matching items"
+          button-text="Clear Filters"
+          :center-description="true"
+          @action="clearFilters"
+        >
           <template #description>
             Try adjusting your search or filters.
           </template>
@@ -634,16 +805,28 @@ const overflowMenuItems = computed(() => [
 
         <div v-else class="flex flex-1 min-h-0 overflow-hidden">
           <!-- Kanban View -->
-          <BoardKanbanView v-if="viewMode === 'board'" class="flex-1 min-w-0 h-full min-h-0"
-            :items-by-column="filteredItemsByColumn" :all-items-by-column="allItemsByColumn"
-            :item-reorder-locked="hasActiveFilters" :selected-item-id="currentItemId ?? undefined"
-            :get-column-color="getColumnColor" :get-column-icon="getColumnIcon"
-            @select-item="(id) => currentItemId = id" @delete-item="deleteItem" />
+          <BoardKanbanView
+            v-if="viewMode === 'board'"
+            class="flex-1 min-w-0 h-full min-h-0"
+            :items-by-column="filteredItemsByColumn"
+            :all-items-by-column="allItemsByColumn"
+            :item-reorder-locked="hasActiveFilters"
+            :selected-item-id="currentItemId ?? undefined"
+            :get-column-color="getColumnColor"
+            :get-column-icon="getColumnIcon"
+            @select-item="(id) => (currentItemId = id)"
+            @delete-item="deleteItem"
+          />
 
           <!-- List View -->
-          <BoardListView v-else class="flex-1 min-w-0 min-h-0 overflow-y-auto" :items-by-column="filteredItemsByColumn"
-            :selected-item-id="currentItemId ?? undefined" @select-item="(id) => currentItemId = id"
-            @delete-item="deleteItem" />
+          <BoardListView
+            v-else
+            class="flex-1 min-w-0 min-h-0 overflow-y-auto"
+            :items-by-column="filteredItemsByColumn"
+            :selected-item-id="currentItemId ?? undefined"
+            @select-item="(id) => (currentItemId = id)"
+            @delete-item="deleteItem"
+          />
 
           <!-- Item editor:
              - xl+ (≥1280px): right-side panel inline (shares row with board/list)
@@ -651,31 +834,53 @@ const overflowMenuItems = computed(() => [
         -->
 
           <!-- Desktop inline panel (xl+) -->
-          <Transition enter-active-class="transition duration-300 ease-out" enter-from-class="opacity-0 translate-x-2"
-            enter-to-class="opacity-100 translate-x-0" leave-active-class="transition duration-200 ease-in"
-            leave-from-class="opacity-100 translate-x-0" leave-to-class="opacity-0 translate-x-2">
-            <UiPanel v-if="currentItem && isXl" ref="desktopDetailPanelEl" tabindex="-1"
+          <Transition
+            enter-active-class="transition duration-300 ease-out"
+            enter-from-class="opacity-0 translate-x-2"
+            enter-to-class="opacity-100 translate-x-0"
+            leave-active-class="transition duration-200 ease-in"
+            leave-from-class="opacity-100 translate-x-0"
+            leave-to-class="opacity-0 translate-x-2"
+          >
+            <UiPanel
+              v-if="currentItem && isXl"
+              ref="desktopDetailPanelEl"
+              tabindex="-1"
               @keydown="onDesktopDetailPanelKeydown"
               tag="aside"
               variant="surface"
               size="xs"
               class-name="hidden xl:flex rounded-none border-y-0 border-r-0 border-l border-secondary transition-all shrink-0 relative"
               content-class="flex h-full min-h-0 flex-col p-0"
-              :style="{ width: `${panelWidth}px` }">
+              :style="{ width: `${panelWidth}px` }"
+            >
               <!-- Resizer handle -->
               <div
                 class="absolute -left-0.5 top-0 h-full w-1 cursor-col-resize hover:bg-primary/40 transition-colors z-10 rounded-[var(--radius-2xl)]"
-                @mousedown="startResizing"></div>
-              <BoardItemDetailPanel :item="currentItem" :workspace-id="boardWorkspaceId" @update="handleUpdateItem"
-                @update-meta="handleUpdateItemMeta" @delete="deleteItem" @retry="handleRetry"
-                @toggle-fullscreen="toggleCurrentItemFullscreen" @close="currentItemId = null" />
+                @mousedown="startResizing"
+              ></div>
+              <BoardItemDetailPanel
+                :item="currentItem"
+                :workspace-id="boardWorkspaceId"
+                @update="handleUpdateItem"
+                @update-meta="handleUpdateItemMeta"
+                @delete="deleteItem"
+                @retry="handleRetry"
+                @toggle-fullscreen="toggleCurrentItemFullscreen"
+                @close="currentItemId = null"
+              />
             </UiPanel>
           </Transition>
 
           <Teleport v-if="currentItem && !isXl" to="body">
-            <Transition enter-active-class="transition duration-300 ease-out" enter-from-class="translate-x-full"
-              enter-to-class="translate-x-0" leave-active-class="transition duration-200 ease-in"
-              leave-from-class="translate-x-0" leave-to-class="translate-x-full">
+            <Transition
+              enter-active-class="transition duration-300 ease-out"
+              enter-from-class="translate-x-full"
+              enter-to-class="translate-x-0"
+              leave-active-class="transition duration-200 ease-in"
+              leave-from-class="translate-x-0"
+              leave-to-class="translate-x-full"
+            >
               <UiOverlaySurface
                 ref="mobileDetailPanelEl"
                 tabindex="-1"
@@ -686,10 +891,18 @@ const overflowMenuItems = computed(() => [
                 layer="drawer"
                 size="xs"
                 class-name="xl:hidden fixed inset-0 z-[var(--z-drawer)] flex flex-col rounded-none border-0 p-0"
-                @keydown="onMobileDetailPanelKeydown">
-                <BoardItemDetailPanel :item="currentItem" :workspace-id="boardWorkspaceId" @update="handleUpdateItem"
-                  @update-meta="handleUpdateItemMeta" @delete="deleteItem" @retry="handleRetry"
-                  @toggle-fullscreen="toggleCurrentItemFullscreen" @close="currentItemId = null" />
+                @keydown="onMobileDetailPanelKeydown"
+              >
+                <BoardItemDetailPanel
+                  :item="currentItem"
+                  :workspace-id="boardWorkspaceId"
+                  @update="handleUpdateItem"
+                  @update-meta="handleUpdateItemMeta"
+                  @delete="deleteItem"
+                  @retry="handleRetry"
+                  @toggle-fullscreen="toggleCurrentItemFullscreen"
+                  @close="currentItemId = null"
+                />
               </UiOverlaySurface>
             </Transition>
           </Teleport>
@@ -699,29 +912,43 @@ const overflowMenuItems = computed(() => [
   </UiPanel>
 
   <!-- Fullscreen Item View (Desktop) -->
-  <shared-fullscreen-wrapper :is-open="isFullscreenOpen" aria-label="Item fullscreen view" max-width="960px"
-    max-height="90vh" @close="fullscreen.close">
+  <shared-fullscreen-wrapper
+    :is-open="isFullscreenOpen"
+    aria-label="Item fullscreen view"
+    max-width="960px"
+    max-height="90vh"
+    @close="fullscreen.close"
+  >
     <template #header>
       <div class="flex items-center justify-between w-full">
-        <span class="font-medium text-content-on-surface-strong">Board Item</span>
-        <UiButton variant="outline" color="neutral" size="xs" aria-label="Close fullscreen" @click="fullscreen.close()">
-          <Icon name="i-heroicons-x-mark" :size="UI_CONFIG.ICON_SIZE" />
+        <span class="font-medium text-content-on-surface-strong"
+          >Board Item</span
+        >
+        <UiButton
+          variant="soft"
+          color="neutral"
+          size="xs"
+          aria-label="Close fullscreen"
+          @click="fullscreen.close()"
+        >
+          <Icon name="i-lucide-x" :size="UI_CONFIG.ICON_SIZE" />
         </UiButton>
       </div>
     </template>
 
     <div v-if="currentFullscreenItem" class="h-full overflow-hidden">
-      <BoardItemDetailPanel :item="currentFullscreenItem" :workspace-id="boardWorkspaceId" @update="handleUpdateItem"
-        @update-meta="handleUpdateItemMeta" @delete="deleteItem" @retry="handleRetry"
-        @toggle-fullscreen="fullscreen.close" @close="fullscreen.close" />
+      <BoardItemDetailPanel
+        :item="currentFullscreenItem"
+        :workspace-id="boardWorkspaceId"
+        @update="handleUpdateItem"
+        @update-meta="handleUpdateItemMeta"
+        @delete="deleteItem"
+        @retry="handleRetry"
+        @toggle-fullscreen="fullscreen.close"
+        @close="fullscreen.close"
+      />
     </div>
   </shared-fullscreen-wrapper>
-
-  <!-- Delete confirmation -->
-  <shared-delete-confirmation-modal :show="showDeleteConfirm" title="Delete Item" @close="showDeleteConfirm = false"
-    @confirm="confirmDeleteItem">
-    Are you sure you want to delete this note? This action cannot be undone.
-  </shared-delete-confirmation-modal>
 </template>
 
 <style scoped>
@@ -748,7 +975,10 @@ const overflowMenuItems = computed(() => [
 /* Transitions for fading items in/out smoothly */
 .toolbar-fade-enter-active,
 .toolbar-fade-leave-active {
-  transition: opacity 0.25s ease, max-width 0.25s ease, margin 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    max-width 0.25s ease,
+    margin 0.25s ease;
   overflow: hidden;
 }
 

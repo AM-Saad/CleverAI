@@ -18,7 +18,7 @@
         pressedScale,
         focusRing,
         colorMode.preference === opt.value
-          ? 'bg-primary text-on-primary'
+          ? 'bg-primary text-on-primary scale-110'
           : 'text-content-secondary hover:bg-surface-strong',
       ]"
       @click="colorMode.preference = opt.value"

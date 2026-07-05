@@ -3,6 +3,7 @@ import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { ReorderBoardItemsDTO, BoardItemSchema } from "@@/shared/utils/boardItem.contract";
+import { persistBoardItemOrders } from "@server/modules/board/application/persistBoardItemOrders";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -37,16 +38,15 @@ export default defineEventHandler(async (event) => {
       throw Errors.badRequest("Some board items do not belong to this user");
     }
 
-    // Update all item orders in a transaction
-    await prisma.$transaction(async (tx: any) => {
-      await Promise.all(
-        data.itemOrders.map((itemOrder) =>
-          tx.boardItem.update({
-            where: { id: itemOrder.id },
-            data: { order: itemOrder.order },
-          })
-        )
-      );
+    // Reorder is idempotent and frequently retried/coalesced by the client.
+    // Avoid interactive Prisma transactions here because rapid Mongo writes can
+    // surface as "Transaction already closed" and mask otherwise valid orders.
+    await persistBoardItemOrders({
+      prisma,
+      userId: user.id,
+      itemOrders: data.itemOrders,
+      missingItemError: () =>
+        Errors.badRequest("Some board items do not belong to this user"),
     });
 
     // Fetch updated items for verification
@@ -66,6 +66,7 @@ export default defineEventHandler(async (event) => {
   } catch (error: any) {
     console.error("💥 [API /board-items/reorder] Unhandled error:", error);
     console.error("Stack trace:", error.stack);
+    if (error.statusCode) throw error;
     throw Errors.server(
       `Failed to reorder board items: ${error.message || "Unknown error"}`
     );

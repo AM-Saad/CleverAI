@@ -84,15 +84,15 @@ const closeModal = (): void => {
       description="Update your profile information">
 
       <template #body>
-        <u-form :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
-          <u-form-field label="Name" name="name" required>
+        <UiForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+          <UiFormField label="Name" name="name" required>
             <ui-input v-model="state.name" placeholder="Your name" autofocus class="w-full" />
-          </u-form-field>
+          </UiFormField>
 
-          <u-form-field label="Gender" name="gender">
-            <u-select-menu v-model="state.gender" :options="genderOptions" option-attribute="label"
+          <UiFormField label="Gender" name="gender">
+            <UiSelectMenu v-model="state.gender" :options="genderOptions" option-attribute="label"
               value-attribute="value" color="neutral" variant="subtle" class="w-full" />
-          </u-form-field>
+          </UiFormField>
 
           <div class="flex justify-end gap-3 pt-2">
             <ui-button variant="ghost" @click="closeModal" type="button">
@@ -102,7 +102,7 @@ const closeModal = (): void => {
               Update Profile
             </ui-button>
           </div>
-        </u-form>
+        </UiForm>
       </template>
     </shared-dialog-modal>
   </Teleport>

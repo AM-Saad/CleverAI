@@ -91,7 +91,7 @@ function updateNumberInput(control: Extract<NoteToolbarControl, { type: "number-
       :icon="control.icon"
       @click="control.onSelect"
     >
-      <UIcon v-if="control.trailingIcon" :name="control.trailingIcon" class="h-3.5 w-3.5 opacity-60" />
+      <UiIcon v-if="control.trailingIcon" :name="control.trailingIcon" class="h-3.5 w-3.5 opacity-60" />
     </shared-note-toolbar-button>
 
     <UiActionMenu
@@ -108,7 +108,7 @@ function updateNumberInput(control: Extract<NoteToolbarControl, { type: "number-
         :disabled="control.disabled"
         :icon="control.icon"
       >
-        <UIcon v-if="control.trailingIcon" :name="control.trailingIcon" class="h-3.5 w-3.5 opacity-60" />
+        <UiIcon v-if="control.trailingIcon" :name="control.trailingIcon" class="h-3.5 w-3.5 opacity-60" />
       </shared-note-toolbar-button>
     </UiActionMenu>
 
@@ -124,7 +124,7 @@ function updateNumberInput(control: Extract<NoteToolbarControl, { type: "number-
 
     <UiPopover v-else-if="control.type === 'number-popover'" :arrow="true" :modal="false">
       <shared-note-toolbar-button :title="control.title">
-        <UIcon v-if="control.icon" :name="control.icon" class="h-4.5 w-4.5 shrink-0" />
+        <UiIcon v-if="control.icon" :name="control.icon" class="h-4.5 w-4.5 shrink-0" />
         <span v-if="control.valueLabel !== undefined" class="hidden sm:inline">{{ control.valueLabel }}</span>
       </shared-note-toolbar-button>
       <template #content>

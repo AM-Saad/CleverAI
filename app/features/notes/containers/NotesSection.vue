@@ -65,8 +65,6 @@ const notes = computed(() => {
 });
 
 const isReordering = ref(false);
-const showDeleteConfirm = ref(false);
-const noteToDelete = ref<string | null>(null);
 
 // Initialize currentNoteId - will be set when notes load
 const currentNoteId = ref<string | null>(null);
@@ -268,20 +266,11 @@ const handleCanvasUpdate = async (id: string, metadata: CanvasNoteMetadata) => {
   await notesStore.updateNote(id, updatedNote);
 };
 
-// Delete a note (optimistic with rollback on failure)
-const deleteNote = (id: string) => {
-  noteToDelete.value = id;
-  showDeleteConfirm.value = true;
-};
-
-const confirmDeleteNote = async () => {
-  if (noteToDelete.value) {
-    const nextVisibleNoteId = splitNotes.handleNoteDeleted(noteToDelete.value);
-    syncVisibleNoteAfterSplitChange(nextVisibleNoteId);
-    await notesStore.deleteNote(noteToDelete.value);
-    noteToDelete.value = null;
-  }
-  showDeleteConfirm.value = false;
+// Delete a note after the source control has confirmed the destructive intent.
+const deleteNote = async (id: string) => {
+  const nextVisibleNoteId = splitNotes.handleNoteDeleted(id);
+  syncVisibleNoteAfterSplitChange(nextVisibleNoteId);
+  await notesStore.deleteNote(id);
 };
 
 // Handle retry for failed operations
@@ -405,15 +394,15 @@ onMounted(async () => {
 const newNoteDropdownItems = [
   [{
     label: 'Text Note',
-    icon: 'i-heroicons-document-text',
+    icon: 'i-lucide-file-text',
     onSelect: () => createNewNote('TEXT')
   }, {
     label: 'Math Note',
-    icon: 'i-heroicons-calculator',
+    icon: 'i-lucide-calculator',
     onSelect: () => createNewNote('MATH')
   }, {
     label: 'Canvas',
-    icon: 'i-heroicons-paint-brush',
+    icon: 'i-lucide-paintbrush',
     onSelect: () => createNewNote('CANVAS')
   }]
 ];
@@ -594,7 +583,7 @@ function handleContainerScroll(e: Event) {
         <UiToolbar class-name="toolbar-actions border-0 bg-transparent p-0" label="Notes actions">
           <UiActionMenu :items="newNoteDropdownItems" :content="{ align: 'end', side: 'bottom', sideOffset: 4 }">
             <UiButton size="sm" tone="primary" variant="ghost"
-              :trailing-icon="showLabels ? 'i-heroicons-chevron-down' : ''">
+              :trailing-icon="showLabels ? 'i-lucide-chevron-down' : ''">
               <shared-icon name="plus" />
               <span v-if="showLabels" class="toolbar-label">New Note</span>
             </UiButton>
@@ -914,11 +903,6 @@ function handleContainerScroll(e: Event) {
 
     </div>
   </shared-fullscreen-wrapper>
-
-  <shared-delete-confirmation-modal :show="showDeleteConfirm" title="Delete Note" @close="showDeleteConfirm = false"
-    @confirm="confirmDeleteNote">
-    Are you sure you want to delete this note? This action cannot be undone.
-  </shared-delete-confirmation-modal>
 </template>
 
 

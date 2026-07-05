@@ -709,12 +709,12 @@ const interactionHint = computed(() => {
         v-if="isMinimapCollapsed"
         type="button"
         tone="neutral"
-        variant="outline"
+        variant="soft"
         size="xs"
         class="absolute bottom-2 right-2 z-10 bg-surface/95 shadow-[var(--shadow-dropdown)] backdrop-blur-sm active:scale-[0.98]"
         @click.stop="toggleMinimap"
       >
-        <UIcon name="i-lucide-map" class="w-3.5 h-3.5" />
+        <UiIcon name="i-lucide-map" class="w-3.5 h-3.5" />
         <span>Map</span>
       </UiButton>
 
@@ -808,7 +808,7 @@ const interactionHint = computed(() => {
           variant="ghost"
           size="sm"
           class="w-full justify-start"
-          leading-icon="i-heroicons-arrow-up"
+          leading-icon="i-lucide-arrow-up"
           @click="bringToFront"
         >
           Bring to Front
@@ -818,7 +818,7 @@ const interactionHint = computed(() => {
           variant="ghost"
           size="sm"
           class="w-full justify-start"
-          leading-icon="i-heroicons-chevron-up"
+          leading-icon="i-lucide-chevron-up"
           @click="bringForward"
         >
           Bring Forward
@@ -828,7 +828,7 @@ const interactionHint = computed(() => {
           variant="ghost"
           size="sm"
           class="w-full justify-start"
-          leading-icon="i-heroicons-chevron-down"
+          leading-icon="i-lucide-chevron-down"
           @click="sendBackward"
         >
           Send Backward
@@ -838,7 +838,7 @@ const interactionHint = computed(() => {
           variant="ghost"
           size="sm"
           class="w-full justify-start"
-          leading-icon="i-heroicons-arrow-down"
+          leading-icon="i-lucide-arrow-down"
           @click="sendToBack"
         >
           Send to Back
@@ -849,7 +849,7 @@ const interactionHint = computed(() => {
           variant="ghost"
           size="sm"
           class="w-full justify-start"
-          leading-icon="i-heroicons-document-duplicate"
+          leading-icon="i-lucide-copy"
           @click="duplicateShape"
         >
           Duplicate
@@ -859,7 +859,7 @@ const interactionHint = computed(() => {
           variant="ghost"
           size="sm"
           class="w-full justify-start"
-          leading-icon="i-heroicons-trash"
+          leading-icon="i-lucide-trash-2"
           @click="deleteSelected"
         >
           Delete

@@ -1,7 +1,7 @@
 <template>
   <div class="flex flex-col gap-2 items-center justify-center flex-1" :class="containerClass">
     <div v-if="title" class="flex items-center gap-2 mb-0">
-      <u-icon :name="icon" class="w-12 h-12 text-muted dark:text-light" />
+      <UiIcon :name="icon" class="w-12 h-12 text-muted dark:text-light" />
       <ui-subtitle size="sm">
         {{ title }}
       </ui-subtitle>
@@ -13,16 +13,16 @@
       </slot>
     </ui-paragraph>
 
-    <u-tooltip v-if="buttonText && isBlocked && blockedTooltip" :text="blockedTooltip" :popper="{ placement: 'top' }">
+    <UiTooltip v-if="buttonText && isBlocked && blockedTooltip" :text="blockedTooltip" :popper="{ placement: 'top' }">
       <ui-button color="primary" size="sm" :loading="buttonLoading" :disabled="true">
-        <u-icon v-if="buttonIcon" :name="buttonIcon" />
+        <UiIcon v-if="buttonIcon" :name="buttonIcon" />
         {{ buttonText }}
       </ui-button>
-    </u-tooltip>
+    </UiTooltip>
 
     <ui-button v-else-if="buttonText" color="primary" size="sm" :loading="buttonLoading" :disabled="buttonDisabled"
       @click="$emit('action')">
-      <u-icon v-if="buttonIcon" :name="buttonIcon" />
+      <UiIcon v-if="buttonIcon" :name="buttonIcon" />
       {{ buttonText }}
     </ui-button>
 
@@ -33,7 +33,7 @@
 
 <script setup lang="ts">
 interface Props {
-  /** The icon to display (heroicons name) */
+  /** The icon to display (lucide name, e.g. i-lucide-inbox) */
   icon?: string;
   /** The main title text */
   title?: string;
@@ -43,7 +43,7 @@ interface Props {
   centerDescription?: boolean;
   /** The button text (if not provided, no button is shown) */
   buttonText?: string;
-  /** The button icon (heroicons name) */
+  /** The button icon (lucide name, e.g. i-lucide-plus) */
   buttonIcon?: string;
   /** Whether the button is in a loading state */
   buttonLoading?: boolean;
@@ -58,9 +58,9 @@ interface Props {
 }
 
 withDefaults(defineProps<Props>(), {
-  icon: 'i-heroicons-document-text',
+  icon: 'i-lucide-file-text',
   centerDescription: false,
-  buttonIcon: 'i-heroicons-plus',
+  buttonIcon: 'i-lucide-plus',
   buttonLoading: false,
   buttonDisabled: false,
   isBlocked: false,

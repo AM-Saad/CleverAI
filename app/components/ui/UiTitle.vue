@@ -17,7 +17,7 @@ interface Props {
   /**
    * Font weight
    */
-  weight?: "light" | "normal" | "medium" | "semibold" | "bold";
+  weight?: "light" | "normal" | "medium" | "semibold" | "bold" | "extrabold";
   /**
    * Text color variant
    */
@@ -28,7 +28,9 @@ interface Props {
     | "content-on-background"
     | "white"
     | "danger"
+    | "warning"
     | "success"
+    | "info"
     | "disabled";
 
   /**
@@ -68,6 +70,7 @@ const title = tv({
       medium: "font-medium",
       semibold: "font-semibold",
       bold: "font-bold",
+      extrabold: "font-extrabold",
     },
     color: {
       primary: "text-primary",
@@ -76,7 +79,9 @@ const title = tv({
       "content-on-background": "text-content-on-background",
       white: "text-white",
       danger: "text-error-text",
+      warning: "text-warning-text",
       success: "text-success-text",
+      info: "text-info-text",
       disabled: "text-content-disabled",
     },
   },

@@ -3,20 +3,38 @@
   <Teleport to="body">
     <!-- Backdrop -->
     <Transition name="fs-backdrop">
-      <div v-if="isOpen" class="fullscreen-backdrop" role="presentation" aria-hidden="true" @click="$emit('close')" />
+      <div
+        v-if="isOpen"
+        class="fullscreen-backdrop"
+        role="presentation"
+        aria-hidden="true"
+        @click="$emit('close')"
+      />
     </Transition>
 
     <!-- Fullscreen container -->
     <Transition :name="disableAnimation ? '' : 'fs-card'">
-      <div v-if="isOpen" ref="containerRef" class="fullscreen-container" role="dialog" aria-modal="true"
-        :aria-label="ariaLabel" :style="containerStyle">
+      <div
+        v-if="isOpen"
+        ref="containerRef"
+        class="fullscreen-container"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="ariaLabel"
+        tabindex="-1"
+        :style="containerStyle"
+        @keydown="onKeydown"
+      >
         <!-- Sticky header -->
         <header v-if="$slots.header" class="fullscreen-header">
           <slot name="header" />
         </header>
 
         <!-- Scrollable content -->
-        <div class="fullscreen-content" :class="{ 'fullscreen-content--static': !contentScrollable }">
+        <div
+          class="fullscreen-content"
+          :class="{ 'fullscreen-content--static': !contentScrollable }"
+        >
           <slot />
         </div>
 
@@ -53,11 +71,18 @@ const props = withDefaults(defineProps<Props>(), {
   contentScrollable: true,
 });
 
-defineEmits<{
+const emit = defineEmits<{
   close: [];
 }>();
 
 const containerRef = ref<HTMLElement | null>(null);
+const { onKeydown } = useFocusTrap(
+  computed(() => props.isOpen),
+  containerRef,
+  {
+    onEscape: () => emit("close"),
+  },
+);
 
 // Apply custom dimensions via CSS custom properties
 const containerStyle = computed(() => ({
@@ -150,7 +175,7 @@ defineExpose({
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: .5rem;
+  padding: 0.5rem;
 
   /* Custom scrollbar */
   scrollbar-width: thin;
@@ -207,7 +232,7 @@ defineExpose({
     width: 97vw;
     height: 100vh;
     border-radius: 4px;
-    max-height: 98vh
+    max-height: 98vh;
   }
 
   .fullscreen-header,
@@ -222,7 +247,6 @@ defineExpose({
 
 /* ===== Reduced Motion ===== */
 @media (prefers-reduced-motion: reduce) {
-
   .fullscreen-backdrop,
   .fullscreen-container {
     transition: none !important;

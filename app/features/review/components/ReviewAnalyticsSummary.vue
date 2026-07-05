@@ -1,9 +1,9 @@
 <template>
   <UiPanel variant="surface" size="lg" class-name="mb-6 animate-fade-in shadow-[var(--shadow-card-hover)]">
     <div class="flex justify-between items-start mb-6">
-      <h2 class="text-xl font-bold text-content-on-surface-strong">
+      <ui-title tag="h2" size="xl" weight="bold" color="content-on-surface-strong">
         Review Analytics
-      </h2>
+      </ui-title>
       <UiIconButton icon="i-lucide-x" label="Close analytics" size="sm" variant="ghost" @click="$emit('close')" />
     </div>
 
@@ -49,9 +49,9 @@
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <!-- Grade Distribution -->
       <div>
-        <h3 class="text-lg font-medium text-content-on-surface-strong mb-4">
+        <ui-title tag="h3" size="lg" weight="medium" color="content-on-surface-strong" class="mb-4">
           Grade Distribution
-        </h3>
+        </ui-title>
         <div class="space-y-2">
           <div v-for="(count, grade) in analytics.gradeDistribution" :key="grade"
             class="flex items-center justify-between">
@@ -66,9 +66,9 @@
 
       <!-- Performance Summary -->
       <div>
-        <h3 class="text-lg font-medium text-content-on-surface-strong mb-4">
+        <ui-title tag="h3" size="lg" weight="medium" color="content-on-surface-strong" class="mb-4">
           Performance Summary
-        </h3>
+        </ui-title>
         <div class="space-y-3">
           <div class="flex justify-between">
             <span class="text-sm text-content-secondary">Average Grade:</span>
@@ -90,9 +90,9 @@
 
     <!-- Card Categories -->
     <div class="mt-6 pt-6 border-t border-secondary">
-      <h3 class="text-lg font-medium text-content-on-surface-strong mb-4">
+      <ui-title tag="h3" size="lg" weight="medium" color="content-on-surface-strong" class="mb-4">
         Card Categories
-      </h3>
+      </ui-title>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <UiPanel variant="subtle" size="sm" class-name="bg-primary/10" content-class="text-center">
           <div class="text-xl font-bold text-primary">

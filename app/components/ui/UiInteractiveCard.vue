@@ -55,7 +55,7 @@ const props = withDefaults(
     selected?: boolean;
     selectable?: boolean;
     disabled?: boolean;
-    variant?: "default" | "outline" | "ghost" | "surface" | "surface-strong";
+    variant?: "default" | "outline" | "ghost" | "surface";
     size?: "xs" | "sm" | "md" | "lg";
     className?: string;
     contentClass?: string;
@@ -119,10 +119,6 @@ const interactiveCard = tv({
           "border-surface-strong bg-surface-subtle hover:border-border-strong",
         header: "border-surface-strong",
       },
-      "surface-strong": {
-        root: "border-surface-strong bg-surface-strong hover:border-border-strong",
-        header: "border-surface-strong",
-      },
     },
     size: {
       xs: { header: "p-2 text-xs", content: "p-2 text-sm", footer: "p-2 text-xs" },
@@ -133,7 +129,7 @@ const interactiveCard = tv({
     selected: {
       true: {
         root:
-          "border-primary bg-primary/10 shadow-[var(--shadow-primary-glow)]",
+          "border-2 border-primary bg-primary/10 shadow-[var(--shadow-primary-glow)]",
       },
       false: {},
     },

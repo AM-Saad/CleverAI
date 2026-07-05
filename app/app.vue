@@ -8,21 +8,17 @@
                     <div class="w-full  rounded-[var(--radius-xl)] border border-secondary p-6 shadow-[var(--shadow-dropdown)]">
                         <p class="text-xs font-bold uppercase tracking-widest text-content-secondary">Application Error
                         </p>
-                        <h1 class="mt-2 text-xl font-semibold">Something went wrong</h1>
+                        <ui-title tag="h1" size="xl" weight="semibold" class="mt-2">Something went wrong</ui-title>
                         <p class="mt-2 text-sm text-content-secondary break-words">
                             {{ error?.message || 'The app hit an unexpected rendering error.' }}
                         </p>
                         <div class="mt-5 flex gap-2">
-                            <button type="button"
-                                class="rounded-[var(--radius-md)] bg-primary px-3 py-2 text-sm font-medium text-on-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)]"
-                                @click="() => { clearError(); reloadApp(); }">
+                            <ui-button tone="primary" @click="() => { clearError(); reloadApp(); }">
                                 Reload
-                            </button>
-                            <button type="button"
-                                class="rounded-[var(--radius-md)] border border-secondary px-3 py-2 text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)]"
-                                @click="() => { clearError(); goHome(); }">
+                            </ui-button>
+                            <ui-button tone="neutral" variant="soft" @click="() => { clearError(); goHome(); }">
                                 Home
-                            </button>
+                            </ui-button>
                         </div>
                     </div>
                 </div>
@@ -46,6 +42,14 @@
                             @close="handleNotificationModalClose" @subscribed="handleNotificationSubscribed"
                             @dismissed="handleNotificationDismissed" />
                     </Teleport>
+                </ClientOnly>
+
+                <!-- Global credits wallet — opened via creditsStore.openWallet() from
+                     anywhere (quota/upgrade flows). Mounted here so it survives the
+                     mobile shell, not the retired header layout. -->
+                <ClientOnly>
+                    <shared-credits-wallet v-if="status === 'authenticated'" :is-open="creditsStore.isWalletOpen"
+                        @close="creditsStore.closeWallet()" />
                 </ClientOnly>
 
             </UApp>
@@ -77,6 +81,10 @@ const colorMode = useColorMode()
 if (import.meta.client && !colorMode.preference) {
     colorMode.preference = 'system'
 }
+
+// Auth + credits for the global wallet mount (quota/upgrade flows trigger it).
+const { status } = useAuth()
+const creditsStore = useCreditsStore()
 // same as set(0, { force: true })
 // set the progress to 0, and show loading immediately
 // start({ force: true })
@@ -98,7 +106,7 @@ onMounted(() => {
                 title: "You are offline",
                 description: "You can continue working. Changes will sync when you reconnect.",
                 color: "warning",
-                icon: "heroicons:wifi",
+                icon: "i-lucide-wifi",
                 duration: 5000,
             })
             // Remove the online toast if it's showing
@@ -111,7 +119,7 @@ onMounted(() => {
                 title: "Back online",
                 description: "Connection restored.",
                 color: "success",
-                icon: "heroicons:wifi-solid",
+                icon: "i-lucide-wifi",
                 duration: 3000,
             })
             // Remove the offline toast if it's showing

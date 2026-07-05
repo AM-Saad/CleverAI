@@ -2,12 +2,10 @@
   <Teleport to="body">
     <template v-if="enabled">
       <Transition name="fab">
-        <button type="button" title="Quick translate" aria-label="Open quick translate"
-          class="fixed right-6 z-[var(--z-popover)] flex h-12 w-12 items-center justify-center rounded-full bg-primary text-on-primary shadow-[var(--shadow-card-hover)] transition-[background-color,transform] duration-[var(--duration-fast)] hover:bg-primary-hover active:scale-[0.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)]"
+        <UiIconButton icon="i-lucide-languages" label="Open quick translate" tone="primary" variant="solid"
+          class="fixed right-6 z-[var(--z-popover)] h-12 w-12 rounded-full shadow-[var(--shadow-card-hover)] active:scale-[0.98]"
           style="bottom: calc(env(safe-area-inset-bottom, 0px) + var(--space-6));"
-          @click="_isOpen = true">
-          <shared-icon name="translation" />
-        </button>
+          @click="_isOpen = true" />
       </Transition>
 
       <QuickCaptureModal :show="_isOpen" @close="_isOpen = false" />

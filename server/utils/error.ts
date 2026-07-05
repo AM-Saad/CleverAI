@@ -12,7 +12,7 @@ export function apiError(
   code: string,
   message: string,
   statusCode = 400,
-  details?: unknown
+  details?: unknown,
 ) {
   const error = createError<APIErrorPayload>({
     statusCode,
@@ -38,6 +38,8 @@ export const Errors = {
   conflict: (message = "Conflict") => apiError("CONFLICT", message, 409),
   rateLimit: (message = "Too many requests") =>
     apiError("RATE_LIMIT", message, 429),
+  serviceUnavailable: (message = "Service unavailable", details?: unknown) =>
+    apiError("SERVICE_UNAVAILABLE", message, 503, details),
   server: (message = "Internal server error", details?: unknown) =>
     apiError("INTERNAL_SERVER_ERROR", message, 500, details),
 } as const;
@@ -52,7 +54,7 @@ export type AppResponse<T> = AppSuccess<T> | AppFailure;
 
 export function success<T>(
   data: T,
-  meta?: Record<string, unknown>
+  meta?: Record<string, unknown>,
 ): AppSuccess<T> {
   return { success: true, data, meta };
 }
@@ -86,7 +88,7 @@ export function normalizeError(err: unknown): AppFailure {
           },
         };
       }
-      console.log(e)
+      console.log(e);
       return {
         success: false,
         error: {

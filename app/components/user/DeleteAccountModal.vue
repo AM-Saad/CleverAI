@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { reactive, computed } from "vue";
 import * as z from "zod";
-import type { FormSubmitEvent } from "@nuxt/ui";
 
 const props = defineProps<{ show: boolean }>();
 const emit = defineEmits<{
@@ -25,7 +24,12 @@ const state = reactive<Partial<Schema>>({
 
 const canSubmit = computed(() => state.confirmationText?.trim() === "DELETE");
 
-async function onSubmit(event: FormSubmitEvent<Schema>) {
+function onSubmit() {
+  // Pressing Enter in the text field must not bypass the guarded destructive
+  // button. The actual confirmation is emitted only by UiDoubleTapDeleteButton.
+}
+
+function confirmDelete() {
   if (!canSubmit.value) return;
 
   emit("confirm", {
@@ -48,15 +52,15 @@ const closeModal = (): void => {
       description="This action will remove all your data">
 
       <template #body>
-        <u-form :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
+        <UiForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
           <!-- Warning Banner -->
           <UiPanel variant="subtle" size="md" role="alert" class-name="border-error/20 bg-error/10">
             <div class="flex">
-              <UIcon name="i-lucide-alert-circle" class="text-error-text mr-3 mt-0.5" size="20"></UIcon>
+              <UiIcon name="i-lucide-alert-circle" class="text-error-text mr-3 mt-0.5" size="20"></UiIcon>
               <div>
-                <h4 class="text-sm font-medium text-error-text mb-1">
+                <ui-title tag="h4" size="sm" weight="medium" color="danger" class="mb-1">
                   Warning: This action cannot be undone
-                </h4>
+                </ui-title>
                 <p class="text-sm text-error-text/80">
                   Deleting your account will remove all your data including workspaces, materials, flashcards, and
                   progress.
@@ -65,7 +69,7 @@ const closeModal = (): void => {
             </div>
           </UiPanel>
 
-          <u-form-field name="confirmationText" required>
+          <UiFormField name="confirmationText" required>
             <template #label>
               <label class="block text-sm font-medium text-content-on-surface">
                 Type <span class="font-bold text-error-text">DELETE</span> to confirm
@@ -74,15 +78,12 @@ const closeModal = (): void => {
             <ui-input v-model="state.confirmationText" placeholder="DELETE" :ui="{
               root: 'w-full',
             }" autofocus />
-          </u-form-field>
+          </UiFormField>
 
           <div class="flex items-start space-x-3">
-            <input v-model="state.permanentDelete" type="checkbox" id="permanent-delete"
-              class="mt-1 h-4 w-4 accent-error focus:ring-2 focus:ring-[var(--ds-focus-outline-color)] border-secondary rounded-[var(--radius-md)] cursor-pointer" />
+            <UiCheckbox v-model="state.permanentDelete" tone="error" indicator="start"
+              label="Delete immediately and permanently" />
             <div class="flex-1">
-              <label for="permanent-delete" class="text-sm font-medium text-content-on-surface cursor-pointer">
-                Delete immediately and permanently
-              </label>
               <p class="text-xs text-content-secondary mt-1">
                 <span v-if="!state.permanentDelete">
                   By default, your account will be scheduled for deletion in 30 days. You can reactivate it by signing
@@ -100,11 +101,15 @@ const closeModal = (): void => {
             <ui-button variant="soft" color="neutral" @click="closeModal" type="button">
               Cancel
             </ui-button>
-            <ui-button color="error" type="submit" :disabled="!canSubmit">
-              {{ state.permanentDelete ? "Delete Permanently" : "Schedule Deletion" }}
-            </ui-button>
+            <UiDoubleTapDeleteButton
+              type="button"
+              :label="state.permanentDelete ? 'Delete Permanently' : 'Schedule Deletion'"
+              :armed-label="state.permanentDelete ? 'Tap again to delete permanently' : 'Tap again to schedule deletion'"
+              :disabled="!canSubmit"
+              @confirm="confirmDelete"
+            />
           </div>
-        </u-form>
+        </UiForm>
       </template>
     </shared-dialog-modal>
   </Teleport>

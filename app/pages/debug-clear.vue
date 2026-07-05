@@ -39,7 +39,7 @@
 
           <UiButton
             color="warning"
-            variant="outline"
+            variant="soft"
             :loading="clearing"
             @click="clearWorkboxOnly"
           >

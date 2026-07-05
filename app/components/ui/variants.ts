@@ -28,9 +28,20 @@ export type Tone = (typeof TONES)[number];
 // primitives that need a tone fill compose tokens directly (bg-success/10,
 // text-success-text, …); there is intentionally no second tone map here.
 
-/** Tokenized focus ring — primitives compose this for keyboard focus. */
+/**
+ * Tokenized focus ring — primitives compose this for keyboard focus.
+ *
+ * `focus-visible:[outline-style:solid]!` is required, not `focus-visible:outline!`.
+ * In Tailwind v4 the bare `outline` utility resolves through a CSS custom
+ * property (`outline-style: var(--tw-outline-style)`), and any component that
+ * also has an unconditional `outline-none` base reset permanently sets that
+ * *variable* to `none` on the element — `!important` on the `var()`-based
+ * read can't fix it, since nothing re-defines the variable itself. The
+ * arbitrary-property utility below sets a literal value with no variable
+ * indirection, so it isn't affected by that poisoning.
+ */
 export const focusRing =
-  "focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]";
+  "focus-visible:ring-0! focus-visible:[outline-style:solid]! focus-visible:outline-2! focus-visible:outline-offset-2! focus-visible:outline-[var(--ds-focus-outline-color)]!";
 
 /** Canonical interactive motion. Keep hover/active feedback subtle and consistent. */
 export const interactiveTransition =

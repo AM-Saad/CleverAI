@@ -26,7 +26,7 @@ function requireText(rel, source, text, label = text) {
 const configRel = "app/app.config.ts";
 const config = read(configRel);
 const tones = ["primary", "neutral", "success", "warning", "error", "info"];
-const buttonVariants = ["solid", "outline", "soft", "subtle", "ghost", "link"];
+const buttonVariants = ["solid", "soft", "ghost", "link"];
 const fieldVariants = ["outline", "soft", "subtle", "ghost", "none"];
 
 for (const tone of tones) {

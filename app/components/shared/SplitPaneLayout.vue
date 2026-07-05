@@ -233,10 +233,10 @@ defineExpose({ toggleLeft, toggleRight, collapsedSide, isResizing });
       <div v-if="collapsedSide === 'left'" class="spl-collapsed-strip" role="button" tabindex="0"
         :aria-label="`Expand ${leftLabel ?? 'left panel'}`" @click="toggleLeft" @keydown.enter="toggleLeft">
         <slot name="left-strip">
-          <u-icon v-if="leftIcon" :name="leftIcon" class="spl-strip-icon" />
+          <UiIcon v-if="leftIcon" :name="leftIcon" class="spl-strip-icon" />
           <span v-if="leftLabel" class="spl-strip-label">{{ leftLabel }}</span>
         </slot>
-        <u-icon :name="leftCollapseIcon" class="spl-strip-expand" />
+        <UiIcon :name="leftCollapseIcon" class="spl-strip-expand" />
       </div>
 
       <!-- Panel content — <div> instead of <template> to provide a stable
@@ -262,9 +262,9 @@ defineExpose({ toggleLeft, toggleRight, collapsedSide, isResizing });
       <!-- Collapsed strip -->
       <div v-if="collapsedSide === 'right'" class="spl-collapsed-strip" role="button" tabindex="0"
         :aria-label="`Expand ${rightLabel ?? 'right panel'}`" @click="toggleRight" @keydown.enter="toggleRight">
-        <u-icon :name="rightCollapseIcon" class="spl-strip-expand" />
+        <UiIcon :name="rightCollapseIcon" class="spl-strip-expand" />
         <slot name="right-strip">
-          <u-icon v-if="rightIcon" :name="rightIcon" class="spl-strip-icon" />
+          <UiIcon v-if="rightIcon" :name="rightIcon" class="spl-strip-icon" />
           <span v-if="rightLabel" class="spl-strip-label">{{ rightLabel }}</span>
         </slot>
       </div>

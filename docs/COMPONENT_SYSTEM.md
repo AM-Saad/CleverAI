@@ -28,10 +28,12 @@
 |---|---|---|
 | `UiCard` | Discrete content object | Use when the object itself is the content: note, workspace, stat, review item. |
 | `UiPanel` | Structural region | Use when the surface organizes app UI: settings section, side pane, filter panel. |
-| `UiInteractiveCard` | Clickable/selectable object | Use instead of wrapping `UiCard` in a link/button. It owns keyboard and ARIA state. |
-| `UiOverlaySurface` | Floating surface shell | Use inside overlay primitives for modal, drawer, popover, menu, toast, tooltip chrome. |
+| `UiInteractiveCard` | Clickable/selectable object, bare anatomy | Use instead of wrapping `UiCard` in a link/button. It owns keyboard and ARIA state but has no built-in content structure — only header/default/footer slots. Use for tiles/pickers (upload dropzone, OAuth provider choice, credit pack) where each consumer lays out its own content. |
+| `UiItemCard` | Structured content row/tile | Use for repeated list items that share a fixed anatomy: leading icon, kicker, title, badges, actions (board cards, word-bank rows, note rows). Prefer over `UiCard` when the row needs that anatomy for free instead of hand-rolling it each time. |
+| `UiListCard` | Compact linear row | Use for simple leading+title+description+trailing rows in a list (settings-adjacent lists, switchers, material lists). Lighter than `UiItemCard` — no kicker/badges anatomy. |
+| `UiOverlaySurface` | Floating surface shell | Internal building block consumed by other overlay primitives (`DialogModal`, `TiptapEditor`, `TagInput`, sheets) for modal, drawer, popover, menu, toast, tooltip chrome. Not meant to be reached for directly by feature code — use `UiModal`/`UiSheet`/`UiPopover`/`UiActionMenu` instead. |
 
-Do not nest independent interactive controls inside `UiInteractiveCard`. If an object needs secondary actions, place a `UiActionMenu` beside the card or use a non-interactive `UiCard` with explicit child controls.
+Do not nest independent interactive controls inside `UiInteractiveCard`. If an object needs secondary actions, place a `UiActionMenu` beside the card or use a non-interactive `UiCard`/`UiItemCard` with explicit child controls.
 
 ## Primitive contract
 

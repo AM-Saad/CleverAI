@@ -101,18 +101,6 @@ const saveColumnName = async (columnId: string) => {
   isEditingColumn.value = null;
 };
 
-// Delete confirmation
-const columnToDelete = ref<string | null>(null);
-const showDeleteConfirm = ref(false);
-
-const confirmDeleteColumn = async () => {
-  if (columnToDelete.value) {
-    await columnsStore.deleteColumn(columnToDelete.value);
-    columnToDelete.value = null;
-  }
-  showDeleteConfirm.value = false;
-};
-
 // Column actions dropdown
 const getColumnActions = (columnId: string) => {
   const column = columnsStore.getColumn(columnId);
@@ -122,16 +110,16 @@ const getColumnActions = (columnId: string) => {
     [
       {
         label: "Rename",
-        icon: "heroicons:pencil",
+        icon: "i-lucide-pencil",
         onSelect: () => startEditingColumn(columnId, column.name),
       },
       {
+        id: `delete-column-${columnId}`,
         label: "Delete",
-        icon: "heroicons:trash",
-        onSelect: () => {
-          columnToDelete.value = columnId;
-          showDeleteConfirm.value = true;
-        },
+        icon: "i-lucide-trash-2",
+        requiresDoubleTap: true,
+        confirmLabel: "Tap again to delete",
+        onSelect: () => columnsStore.deleteColumn(columnId),
       },
     ]
   ];
@@ -149,14 +137,14 @@ const getColumnActions = (columnId: string) => {
       class-name="shadow-[var(--shadow-dropdown)]"
       content-class="p-0">
       <div class="flex items-center justify-between gap-3 px-4 py-3 bg-surface-subtle group/header">
-        <button class="flex min-w-0 flex-1 items-center gap-2 text-left"
+        <UiButton variant="link" tone="neutral" class="flex min-w-0 flex-1 items-center gap-2 text-left justify-start no-underline"
           @click="toggleSection('uncategorized')">
-          <Icon :name="collapsedSections.has('uncategorized') ? 'heroicons:chevron-right' : 'heroicons:chevron-down'"
+          <Icon :name="collapsedSections.has('uncategorized') ? 'i-lucide-chevron-right' : 'i-lucide-chevron-down'"
             class="w-4 h-4 text-content-secondary" />
           <span class="font-semibold text-content-on-surface-strong dark:text-content-on-surface">Uncategorized</span>
           <span class="text-xs text-content-secondary">({{ uncategorizedItems.length }})</span>
-        </button>
-        <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:plus" @click.stop="createItem">
+        </UiButton>
+        <UiButton size="xs" color="neutral" variant="ghost" icon="i-lucide-plus" @click.stop="createItem">
           Add
         </UiButton>
       </div>
@@ -180,29 +168,29 @@ const getColumnActions = (columnId: string) => {
       class-name="shadow-[var(--shadow-dropdown)]"
       content-class="p-0">
       <div class="flex items-center justify-between px-4 py-3 bg-surface-subtle group/header">
-        <button v-if="isEditingColumn !== column.id" class="flex items-center gap-2 flex-1 text-left"
+        <UiButton v-if="isEditingColumn !== column.id" variant="link" tone="neutral" class="flex items-center gap-2 flex-1 text-left justify-start no-underline"
           @click="toggleSection(column.id)">
-          <Icon :name="collapsedSections.has(column.id) ? 'heroicons:chevron-right' : 'heroicons:chevron-down'"
+          <Icon :name="collapsedSections.has(column.id) ? 'i-lucide-chevron-right' : 'i-lucide-chevron-down'"
             class="w-4 h-4 text-content-secondary" />
-          <span class="font-semibold text-content-on-surface-strong dark:text-content-on-surface">{{ column.name
+          <span class="font-semibold text-content-on-surface-strong dark:text-content-on-surface" dir="auto">{{ column.name
             }}</span>
           <span class="text-xs text-content-secondary">({{ getColumnItems(column.id).length }})</span>
-        </button>
+        </UiButton>
         <div v-else class="flex items-center gap-2 flex-1" data-editing @click.stop @mousedown.stop>
-          <UiInput v-model="editColumnName" size="xs" class="flex-1"
+          <UiInput v-model="editColumnName" size="xs" class="flex-1" dir="auto"
             :ref="(el: unknown) => setEditInputRef(column.id, (el as any)?.$el || (el as any) || null)"
             @keyup.enter="saveColumnName(column.id)" @keyup.escape="isEditingColumn = null"
             @blur="saveColumnName(column.id)" @click.stop @mousedown.stop />
         </div>
         <div class="flex items-center gap-1">
-          <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:plus"
+          <UiButton size="xs" color="neutral" variant="ghost" icon="i-lucide-plus"
             @click.stop="handleCreateInColumn(column.id)">
             Add
           </UiButton>
-          <UDropdownMenu :items="getColumnActions(column.id)"
+          <UiActionMenu :items="getColumnActions(column.id)"
             :content="{ align: 'end', side: 'bottom', sideOffset: 4 }">
-            <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:ellipsis-vertical" @click.stop />
-          </UDropdownMenu>
+            <UiButton size="xs" color="neutral" variant="ghost" icon="i-lucide-ellipsis-vertical" @click.stop />
+          </UiActionMenu>
         </div>
       </div>
       <div v-if="!collapsedSections.has(column.id)" class="p-3 space-y-2">
@@ -214,11 +202,5 @@ const getColumnActions = (columnId: string) => {
         </div>
       </div>
     </UiPanel>
-
-    <!-- Delete confirmation modal -->
-    <shared-delete-confirmation-modal :show="showDeleteConfirm" title="Delete Column" @close="showDeleteConfirm = false"
-      @confirm="confirmDeleteColumn">
-      Are you sure you want to delete this column? Items in this column will be moved to Uncategorized.
-    </shared-delete-confirmation-modal>
   </div>
 </template>

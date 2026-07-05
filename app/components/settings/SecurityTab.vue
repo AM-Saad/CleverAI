@@ -3,13 +3,13 @@
         <UiPanel size="md" variant="surface">
             <template #header>
                 <div class="flex items-center gap-2">
-                    <UIcon name="i-heroicons-shield-check" class="w-5 h-5" />
+                    <UiIcon name="i-lucide-shield-check" class="w-5 h-5" />
                     Security Settings
                 </div>
             </template>
             <div class="space-y-4">
                 <UiSubtitle size="lg">Password Management</UiSubtitle>
-                <UiButton color="primary" variant="outline" class="mt-3" @click="showChangePasswordModal = true">
+                <UiButton color="primary" variant="soft" class="mt-3" @click="showChangePasswordModal = true">
                     Change Password
                 </UiButton>
 
@@ -20,7 +20,7 @@
                     <UiParagraph color="content-secondary">
                         Permanently delete your account and all data
                     </UiParagraph>
-                    <UiButton color="error" variant="outline" @click="showDeleteModal = true">
+                    <UiButton color="error" variant="soft" @click="showDeleteModal = true">
                         Delete Account
                     </UiButton>
                 </div>

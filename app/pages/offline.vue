@@ -19,7 +19,7 @@
       </div>
 
       <!-- Main Message -->
-      <h1 class="text-4xl font-bold text-white mb-4">You're Offline</h1>
+      <ui-title tag="h1" size="4xl" weight="bold" color="white" class="mb-4">You're Offline</ui-title>
       <p class="text-content-disabled text-lg mb-8">
         It looks like you've lost your internet connection. Don't worry - some
         content might still be available.
@@ -44,7 +44,7 @@
         </UiButton>
 
         <!-- View Cached Content -->
-        <UiButton class="w-full font-semibold py-3 px-6" color="primary" variant="outline"
+        <UiButton class="w-full font-semibold py-3 px-6" color="primary" variant="soft"
           @click="showCachedContent = !showCachedContent">
           {{ showCachedContent ? "Hide" : "View" }} Available Content
         </UiButton>
@@ -52,7 +52,7 @@
 
       <!-- Cached Content Section -->
       <UiPanel v-if="showCachedContent" variant="subtle" size="md" class-name="mt-8 bg-content-on-background/50">
-        <h3 class="text-lg font-semibold text-white mb-3">Available Offline</h3>
+        <ui-title tag="h3" size="lg" weight="semibold" color="white" class="mb-3">Available Offline</ui-title>
         <div class="space-y-2">
           <NuxtLink v-for="page in availablePages" :key="page.path" :to="page.path"
             class="block text-primary/80 hover:text-primary transition-colors text-left">

@@ -143,22 +143,25 @@ const menuItems = computed(() => [
   [
     {
       label: "Download as TXT",
-      icon: "i-heroicons-document-text",
+      icon: "i-lucide-file-text",
       onSelect: () => emitIntent({ type: "ACTION", noteId: props.note.id, action: "download-txt" }),
     },
     {
       label: "Download as DOC",
-      icon: "i-heroicons-document",
+      icon: "i-lucide-file",
       onSelect: () => emitIntent({ type: "ACTION", noteId: props.note.id, action: "download-doc" }),
     },
     {
       label: "Download as PDF",
-      icon: "i-heroicons-document",
+      icon: "i-lucide-file",
       onSelect: () => emitIntent({ type: "ACTION", noteId: props.note.id, action: "download-pdf" }),
     },
     {
+      id: `delete-${props.note.id}`,
       label: "Delete",
       icon: "i-lucide-trash-2",
+      requiresDoubleTap: true,
+      confirmLabel: "Tap again to delete",
       onSelect: () => emitIntent({ type: "ACTION", noteId: props.note.id, action: "delete" }),
     },
   ],

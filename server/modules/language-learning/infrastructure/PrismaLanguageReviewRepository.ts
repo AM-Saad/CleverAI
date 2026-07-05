@@ -2,14 +2,14 @@ import type {
   ReviewCardRecord,
   ReviewRepository,
   UpdateReviewCardInput,
-} from "@server/modules/review/ports/ReviewRepository";
-import { isMasteredByInterval } from "@server/modules/review/domain/sm2";
+} from "../../review/ports/ReviewRepository";
+import { isMasteredByInterval } from "../../review/domain/sm2";
 
 export class PrismaLanguageReviewRepository implements ReviewRepository {
   async findByIdForUser(
     tx: any,
     id: string,
-    userId: string
+    userId: string,
   ): Promise<ReviewCardRecord | null> {
     const record = await tx.languageCardReview.findFirst({
       where: { id, userId },
@@ -29,7 +29,7 @@ export class PrismaLanguageReviewRepository implements ReviewRepository {
 
   async updateAfterGrade(
     tx: any,
-    input: UpdateReviewCardInput
+    input: UpdateReviewCardInput,
   ): Promise<ReviewCardRecord> {
     const updated = await tx.languageCardReview.update({
       where: { id: input.id },
@@ -57,10 +57,13 @@ export class PrismaLanguageReviewRepository implements ReviewRepository {
   }
 
   async markMastered(tx: any, record: ReviewCardRecord): Promise<void> {
-    if (!isMasteredByInterval(record.intervalDays)) return;
     await tx.languageWord.update({
       where: { id: record.resourceId },
-      data: { status: "mastered" },
+      data: {
+        status: isMasteredByInterval(record.intervalDays)
+          ? "mastered"
+          : "enrolled",
+      },
     });
   }
 }

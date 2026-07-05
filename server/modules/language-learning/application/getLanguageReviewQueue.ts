@@ -37,7 +37,9 @@ type LanguageQueueRow = Prisma.LanguageCardReviewGetPayload<{
   };
 }>;
 
-export async function getLanguageReviewQueue(input: GetLanguageReviewQueueInput) {
+export async function getLanguageReviewQueue(
+  input: GetLanguageReviewQueueInput,
+) {
   const prefs = await input.prisma.userLanguagePreferences.findUnique({
     where: { userId: input.userId },
   });
@@ -52,7 +54,9 @@ export async function getLanguageReviewQueue(input: GetLanguageReviewQueueInput)
   };
 
   const wordLangFilter = {
-    ...(targetLanguage ? { sourceLang: targetLanguage } : {}),
+    ...(targetLanguage && targetLanguage !== nativeLanguage
+      ? { sourceLang: targetLanguage }
+      : {}),
     ...(nativeLanguage ? { translationLang: nativeLanguage } : {}),
   };
   const hasLangFilter = Object.keys(wordLangFilter).length > 0;
@@ -88,7 +92,10 @@ export async function getLanguageReviewQueue(input: GetLanguageReviewQueueInput)
   // user's due cards so review is never mysteriously empty.
   let cardReviews: LanguageQueueRow[] =
     await input.prisma.languageCardReview.findMany(
-      queryArgs({ ...baseWhere, ...(hasLangFilter ? { word: wordLangFilter } : {}) }),
+      queryArgs({
+        ...baseWhere,
+        ...(hasLangFilter ? { word: wordLangFilter } : {}),
+      }),
     );
 
   if (cardReviews.length === 0 && hasLangFilter) {

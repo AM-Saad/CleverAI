@@ -4,7 +4,7 @@
     <button v-if="!showPanel"
       class="bg-purple-600 hover:bg-purple-700 text-white p-3 rounded-full shadow-lg transition-all duration-200 transform hover:scale-110"
       title="Open Testing Dashboard" @click="showPanel = true">
-      <UIcon name="i-heroicons-beaker" class="w-6 h-6" />
+      <UIcon name="i-lucide-flask-conical" class="w-6 h-6" />
     </button>
 
     <!-- Dashboard Panel -->
@@ -13,11 +13,11 @@
       <!-- Header -->
       <div class="flex justify-between items-center mb-4">
         <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100 flex items-center">
-          <UIcon name="i-heroicons-beaker" class="w-5 h-5 mr-2 text-purple-600" />
+          <UIcon name="i-lucide-flask-conical" class="w-5 h-5 mr-2 text-purple-600" />
           🧪 Testing Dashboard
         </h2>
         <button @click="showPanel = false" class="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
-          <UIcon name="i-heroicons-x-mark" class="w-5 h-5" />
+          <UIcon name="i-lucide-x" class="w-5 h-5" />
         </button>
       </div>
 
@@ -56,7 +56,7 @@
           <div class="space-y-2">
             <button @click="triggerCron" :disabled="isTriggering"
               class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-lg transition-colors flex items-center justify-center">
-              <UIcon v-if="isTriggering" name="i-heroicons-arrow-path" class="w-4 h-4 mr-2 animate-spin" />
+              <UIcon v-if="isTriggering" name="i-lucide-refresh-cw" class="w-4 h-4 mr-2 animate-spin" />
               {{ isTriggering ? "Triggering..." : "🚀 Trigger Cron Now" }}
             </button>
 

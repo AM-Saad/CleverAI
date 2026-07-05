@@ -4,7 +4,7 @@ import { loadStripe } from '@stripe/stripe-js'
 import { useCreditsStore } from '~/composables/useCreditsStore'
 import { storeToRefs } from 'pinia'
 import { useRuntimeConfig } from '#app'
-import UiDrawer from '~/components/ui/Drawer.vue'
+import UiDrawer from '~/components/ui/UiDrawer.vue'
 
 const props = defineProps<{ isOpen: boolean }>()
 const emit = defineEmits<{ (e: 'close'): void }>()
@@ -156,7 +156,7 @@ function invokeAd() {
     widthClasses="w-full sm:w-[28rem] max-w-[90vw]" title="Credits Wallet" :backdrop="true" :handleVisible="0">
     <template #header>
       <div class="flex items-center gap-2 px-2 py-1">
-        <UIcon name="i-heroicons-wallet" class="w-6 h-6 text-primary" />
+        <UiIcon name="i-lucide-wallet" class="w-6 h-6 text-primary" />
         Wallet
       </div>
     </template>
@@ -174,18 +174,18 @@ function invokeAd() {
         <p class="font-medium mb-2 relative text-white text-xl z-10">Current Balance</p>
         <div
           class="text-6xl font-bold bg-gradient-to-r from-primary to-accent-blue bg-clip-text text-transparent z-10 relative flex items-center justify-center gap-2">
-          <UIcon name="i-heroicons-sparkles" class="w-10 h-10 text-primary" />
+          <UiIcon name="i-lucide-sparkles" class="w-10 h-10 text-primary" />
           {{ balance }}
         </div>
       </UiPanel>
 
       <!-- AppLixir Section -->
       <div class="flex flex-col gap-3">
-        <h3 class="text-sm font-semibold uppercase tracking-wider">Earn Free Credits</h3>
+        <ui-title tag="h3" class="text-sm font-semibold uppercase tracking-wider">Earn Free Credits</ui-title>
         <UiButton @click="invokeAd"
           class="w-full flex items-center justify-center gap-2 hover:bg-dark transition-colors">
-          <UIcon v-if="adLoading" name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin" />
-          <UIcon v-else name="i-heroicons-play-circle" class="w-5 h-5" />
+          <UiIcon v-if="adLoading" name="i-lucide-refresh-cw" class="w-5 h-5 animate-spin" />
+          <UiIcon v-else name="i-lucide-circle-play" class="w-5 h-5" />
           Watch Video (+1 Credit)
         </UiButton>
         <p class="text-xs text-content-secondary text-center">Support us by watching a short ad.</p>
@@ -200,17 +200,17 @@ function invokeAd() {
 
       <!-- Stripe Top-up Section -->
       <div>
-        <h3 class="text-sm font-semibold uppercase tracking-wider mb-4">Top Up Credits</h3>
+        <ui-title tag="h3" class="text-sm font-semibold uppercase tracking-wider mb-4">Top Up Credits</ui-title>
 
         <UiPanel v-if="clientSecret"
           variant="surface"
           size="md"
           class-name="relative rounded-[var(--radius-2xl)] shadow-[var(--shadow-dropdown)] focus-within:ring-2 focus-within:ring-[var(--ds-focus-outline-color)]">
           <UiIconButton v-if="!isPaymentProcessing"
-            icon="i-heroicons-arrow-left"
+            icon="i-lucide-arrow-left"
             label="Back to credit packs"
             size="xs"
-            variant="subtle"
+            variant="soft"
             class="absolute top-2 right-2 z-10"
             @click="clientSecret = null" />
 
@@ -219,7 +219,7 @@ function invokeAd() {
           <UiButton class="w-full py-3 rounded-[var(--radius-xl)] flex items-center justify-center"
             @click="submitPayment">
             <span v-if="isPaymentProcessing" class="flex items-center gap-2">
-              <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin" />
+              <UiIcon name="i-lucide-refresh-cw" class="w-4 h-4 animate-spin" />
               Processing...
             </span>
             <span v-else>Pay Now</span>
@@ -255,7 +255,7 @@ function invokeAd() {
 
             <div v-if="checkoutLoading === pack.id"
               class="absolute inset-0 bg-white/60 backdrop-blur-sm rounded-[var(--radius-2xl)] flex items-center justify-center">
-              <UIcon name="i-heroicons-arrow-path" class="w-6 h-6 animate-spin text-primary" />
+              <UiIcon name="i-lucide-refresh-cw" class="w-6 h-6 animate-spin text-primary" />
             </div>
           </UiInteractiveCard>
         </div>

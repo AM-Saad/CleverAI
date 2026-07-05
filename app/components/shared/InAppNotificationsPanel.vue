@@ -45,7 +45,7 @@ function formatTime(value: string | Date) {
           v-if="unreadCount > 0"
           variant="ghost"
           size="xs"
-          icon="i-heroicons-check"
+          icon="i-lucide-check"
           @click="$emit('markAllRead')"
         >
           Mark all
@@ -54,7 +54,7 @@ function formatTime(value: string | Date) {
           variant="ghost"
           size="xs"
           square
-          icon="i-heroicons-x-mark"
+          icon="i-lucide-x"
           aria-label="Close notifications"
           @click="$emit('close')"
         />
@@ -64,7 +64,7 @@ function formatTime(value: string | Date) {
 
     <div v-if="loading" class="px-4 py-8 text-center">
       <Icon
-        name="i-heroicons-arrow-path"
+        name="i-lucide-refresh-cw"
         class="mx-auto h-6 w-6 animate-spin text-primary"
       />
       <ui-paragraph size="sm" color="content-secondary" class="mt-2">
@@ -74,7 +74,7 @@ function formatTime(value: string | Date) {
 
     <div v-else-if="notifications.length === 0" class="px-4 py-8 text-center">
       <Icon
-        name="i-heroicons-bell-slash"
+        name="i-lucide-bell-off"
         class="mx-auto h-7 w-7 text-content-disabled"
       />
       <ui-paragraph size="sm" color="content-secondary" class="mt-2">

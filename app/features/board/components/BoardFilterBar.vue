@@ -84,15 +84,15 @@ const DUE_DATE_OPTIONS: Array<{
   value: BoardFilterState["dueDate"];
   icon: string;
 }> = [
-  { label: "Any", value: "any", icon: "heroicons:minus" },
+  { label: "Any", value: "any", icon: "i-lucide-minus" },
   {
     label: "Overdue",
     value: "overdue",
-    icon: "heroicons:exclamation-triangle",
+    icon: "i-lucide-triangle-alert",
   },
-  { label: "Today", value: "today", icon: "heroicons:sun" },
-  { label: "This week", value: "this-week", icon: "heroicons:calendar-days" },
-  { label: "Has date", value: "has-date", icon: "heroicons:clock" },
+  { label: "Today", value: "today", icon: "i-lucide-sun" },
+  { label: "This week", value: "this-week", icon: "i-lucide-calendar-days" },
+  { label: "Has date", value: "has-date", icon: "i-lucide-clock" },
 ];
 </script>
 
@@ -101,8 +101,8 @@ const DUE_DATE_OPTIONS: Array<{
     <!-- Trigger button -->
     <UiButton
       size="xs"
-      :icon="activeCount > 0 ? 'heroicons:funnel-solid' : 'heroicons:funnel'"
-      trailing-icon="heroicons:chevron-down-20-solid"
+      :icon="activeCount > 0 ? 'i-lucide-list-filter' : 'i-lucide-list-filter'"
+      trailing-icon="i-lucide-chevron-down"
       :tone="activeCount > 0 ? 'primary' : 'neutral'"
       :variant="activeCount > 0 ? 'soft' : 'ghost'"
     >
@@ -125,7 +125,7 @@ const DUE_DATE_OPTIONS: Array<{
             size="xs"
             tone="neutral"
             variant="ghost"
-            icon="heroicons:x-mark"
+            icon="i-lucide-x"
             @click="clearAll"
           >
             Clear all
@@ -156,7 +156,7 @@ const DUE_DATE_OPTIONS: Array<{
                 size="xs"
                 tone="neutral"
                 :variant="
-                  modelValue.tags.includes(tag.name) ? 'solid' : 'outline'
+                  modelValue.tags.includes(tag.name) ? 'solid' : 'soft'
                 "
                 class="rounded-full"
                 :class="
@@ -177,7 +177,7 @@ const DUE_DATE_OPTIONS: Array<{
               >
                 <Icon
                   v-if="modelValue.tags.includes(tag.name)"
-                  name="heroicons:check-20-solid"
+                  name="i-lucide-check"
                   class="w-3 h-3"
                 />
                 {{ tag.name }}
@@ -202,7 +202,7 @@ const DUE_DATE_OPTIONS: Array<{
                 size="xs"
                 :tone="modelValue.dueDate === opt.value ? 'primary' : 'neutral'"
                 :variant="
-                  modelValue.dueDate === opt.value ? 'solid' : 'outline'
+                  modelValue.dueDate === opt.value ? 'solid' : 'soft'
                 "
                 :icon="opt.icon"
                 class="min-w-fit rounded-full"
@@ -250,7 +250,7 @@ const DUE_DATE_OPTIONS: Array<{
           >
             {{ tag.name }}
             <UiIconButton
-              icon="heroicons:x-mark-20-solid"
+              icon="i-lucide-x"
               :label="`Remove ${tag.name} filter`"
               size="xs"
               variant="ghost"
@@ -273,7 +273,7 @@ const DUE_DATE_OPTIONS: Array<{
                 ?.label
             }}
             <UiIconButton
-              icon="heroicons:x-mark-20-solid"
+              icon="i-lucide-x"
               label="Clear due date filter"
               size="xs"
               variant="ghost"
@@ -288,7 +288,7 @@ const DUE_DATE_OPTIONS: Array<{
             Created: {{ modelValue.createdAfter ?? "–" }} →
             {{ modelValue.createdBefore ?? "now" }}
             <UiIconButton
-              icon="heroicons:x-mark-20-solid"
+              icon="i-lucide-x"
               label="Clear created date filter"
               size="xs"
               variant="ghost"

@@ -1,48 +1,5 @@
 <template>
-  <div class="loading-container">
-    <div class="loading-content">
-      <h2>🚀 SPA Loading...</h2>
-      <p>JavaScript is hydrating the app...</p>
-      <div class="spinner" />
-    </div>
+  <div class="flex items-center justify-center py-6">
+    <UiIcon name="i-lucide-loader-circle" class="w-8 h-8 animate-spin text-primary" />
   </div>
 </template>
-
-<style scoped>
-.loading-container {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-}
-
-.loading-content {
-  text-align: center;
-}
-
-.spinner {
-  margin: 20px auto;
-  width: 40px;
-  height: 40px;
-  border: 4px solid var(--color-surface-subtle);
-  border-top: 4px solid var(--color-accent-blue);
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  100% {
-    transform: rotate(360deg);
-  }
-}
-</style>

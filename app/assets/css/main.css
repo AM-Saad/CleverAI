@@ -54,6 +54,20 @@ body {
   background: var(--color-background);
 }
 
+/* Save-local ripple — one pulse per IndexedDB persist (module 09). Global so any
+   sync dot (badges, editor header) can reuse it. */
+.ds-save-pulse {
+  animation: ds-save-pulse var(--duration-slow) var(--ease-standard);
+}
+@keyframes ds-save-pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-success) 60%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+
 .header-brand-name-gradient {
   background-image: var(--ds-brand-gradient);
   color: transparent;

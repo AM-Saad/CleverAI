@@ -11,3 +11,4 @@ export * from "./useReorderableList";
 export * from "./useExportContent";
 export * from "./useNotificationPrompt";
 export * from "./useInAppNotifications";
+export * from "./useDoubleTapConfirm";

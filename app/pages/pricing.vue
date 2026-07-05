@@ -112,24 +112,24 @@ const handleSubscribe = async () => {
   <main class="upgrade-page overflow-auto">
     <div class="container">
       <header>
-        <h1 id="pricing-title">Upgrade to Cognilo Pro</h1>
+        <ui-title tag="h1" id="pricing-title">Upgrade to Cognilo Pro</ui-title>
         <p class="subtitle">Get unlimited access to AI-powered study tools</p>
       </header>
 
       <section class="plans-container" aria-labelledby="pricing-title">
         <div class="plan-toggle">
-          <button :class="{ active: selectedPlan === 'monthly' }" @click="selectedPlan = 'monthly'">
+          <UiButton variant="ghost" tone="neutral" :class="{ active: selectedPlan === 'monthly' }" @click="selectedPlan = 'monthly'">
             Monthly
-          </button>
-          <button :class="{ active: selectedPlan === 'yearly' }" @click="selectedPlan = 'yearly'">
+          </UiButton>
+          <UiButton variant="ghost" tone="neutral" :class="{ active: selectedPlan === 'yearly' }" @click="selectedPlan = 'yearly'">
             Yearly <span class="save-badge">Save 16%</span>
-          </button>
+          </UiButton>
         </div>
 
         <div class="plan-cards">
           <div v-for="plan in plans" :key="plan.id" class="plan-card" :class="{ active: selectedPlan === plan.id }">
             <div class="plan-header">
-              <h3>{{ plan.name }}</h3>
+              <ui-title tag="h3">{{ plan.name }}</ui-title>
               <div class="plan-price">
                 <span class="amount">{{ plan.price }}</span>
                 <span class="period">/ {{ plan.period }}</span>
@@ -146,17 +146,10 @@ const handleSubscribe = async () => {
                 </li>
               </ul>
             </div>
-            <button v-if="selectedPlan === plan.id" :disabled="upgrading" class="subscribe-button"
+            <UiButton v-if="selectedPlan === plan.id" :disabled="upgrading" :loading="upgrading" class="subscribe-button"
               @click="handleSubscribe">
-              <span v-if="upgrading">
-                <svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
-                  fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                </svg>
-                Processing...
-              </span>
-              <span v-else>Subscribe Now</span>
-            </button>
+              {{ upgrading ? "Processing..." : "Subscribe Now" }}
+            </UiButton>
           </div>
         </div>
       </section>
@@ -168,7 +161,7 @@ const handleSubscribe = async () => {
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
           </svg>
           <div>
-            <h4>Secure Payments</h4>
+            <ui-title tag="h4">Secure Payments</ui-title>
             <p>All transactions are secure and encrypted</p>
           </div>
         </div>
@@ -179,7 +172,7 @@ const handleSubscribe = async () => {
             <rect x="8" y="2" width="8" height="4" rx="1" ry="1" />
           </svg>
           <div>
-            <h4>Cancel Anytime</h4>
+            <ui-title tag="h4">Cancel Anytime</ui-title>
             <p>No long-term contracts, cancel when you want</p>
           </div>
         </div>
@@ -192,7 +185,7 @@ const handleSubscribe = async () => {
             <line x1="15" y1="9" x2="15.01" y2="9" />
           </svg>
           <div>
-            <h4>14-Day Money Back</h4>
+            <ui-title tag="h4">14-Day Money Back</ui-title>
             <p>Not satisfied? Get a full refund</p>
           </div>
         </div>

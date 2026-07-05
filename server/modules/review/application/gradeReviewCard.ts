@@ -16,6 +16,37 @@ function isUniqueConstraintViolation(err: unknown): boolean {
   );
 }
 
+export function isRetryableReviewGradeError(err: unknown): boolean {
+  if (
+    err &&
+    typeof err === "object" &&
+    typeof (err as { statusCode?: unknown }).statusCode === "number"
+  ) {
+    return false;
+  }
+
+  const message = String(
+    err && typeof err === "object"
+      ? ((err as { message?: unknown; statusMessage?: unknown }).message ??
+          (err as { statusMessage?: unknown }).statusMessage ??
+          "")
+      : "",
+  );
+  const code =
+    err && typeof err === "object"
+      ? String((err as { code?: unknown }).code ?? "")
+      : "";
+
+  return (
+    code === "P2028" ||
+    /write conflict|deadlock|transaction already closed|transient transaction|timed out|timeout/i.test(
+      message,
+    )
+  );
+}
+
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export interface GradeReviewCardInput {
   prisma: any;
   repository: ReviewRepository;
@@ -25,6 +56,7 @@ export interface GradeReviewCardInput {
   grade: number;
   requestId?: string;
   xpSource: string;
+  attempts?: number;
 }
 
 export interface GradeReviewCardResult {
@@ -37,15 +69,16 @@ export interface GradeReviewCardResult {
 }
 
 export async function gradeReviewCard(
-  input: GradeReviewCardInput
+  input: GradeReviewCardInput,
 ): Promise<GradeReviewCardResult> {
   const now = new Date();
+  const attempts = Math.max(1, input.attempts ?? 3);
 
   const readPersistedState = async (): Promise<GradeReviewCardResult> => {
     const record = await input.repository.findByIdForUser(
       input.prisma,
       input.cardId,
-      input.userId
+      input.userId,
     );
     if (!record) {
       throw Errors.notFound("card");
@@ -60,12 +93,8 @@ export async function gradeReviewCard(
     };
   };
 
-  // Idempotency: claim the requestId BEFORE mutating. The unique constraint on
-  // GradeRequest.requestId makes a concurrent/duplicate retry fail at this
-  // create, so the SM-2 + XP mutation below runs at most once per requestId.
-  // (Claiming outside the transaction avoids MongoDB's in-transaction
-  // duplicate-key abort, which would otherwise poison the whole grade.)
-  if (input.requestId) {
+  const claimRequest = async (): Promise<"claimed" | "replayed"> => {
+    if (!input.requestId) return "claimed";
     try {
       await input.prisma.gradeRequest.create({
         data: {
@@ -75,84 +104,122 @@ export async function gradeReviewCard(
           grade: input.grade,
         },
       });
+      return "claimed";
     } catch (err) {
       if (isUniqueConstraintViolation(err)) {
-        // Already graded under this requestId — return persisted state, no XP.
-        return readPersistedState();
+        return "replayed";
       }
       throw err;
     }
-  }
+  };
 
-  let result: GradeReviewCardResult;
-  try {
-    result = await input.prisma.$transaction(async (tx: any) => {
-    const record = await input.repository.findByIdForUser(
-      tx,
-      input.cardId,
-      input.userId
+  const releaseRequestClaim = async () => {
+    if (!input.requestId) return;
+    await input.prisma.gradeRequest
+      .deleteMany({ where: { requestId: input.requestId } })
+      .catch(() => undefined);
+  };
+
+  const runMutation = async (): Promise<GradeReviewCardResult> =>
+    input.prisma.$transaction(
+      async (tx: any) => {
+        const record = await input.repository.findByIdForUser(
+          tx,
+          input.cardId,
+          input.userId,
+        );
+
+        if (!record) {
+          throw Errors.notFound("card");
+        }
+
+        const next = calculateSM2({
+          currentEF: record.easeFactor,
+          currentInterval: record.intervalDays,
+          currentRepetitions: record.repetitions,
+          grade: input.grade,
+        });
+
+        const nextReviewAt = calculateNextReviewDate(next.intervalDays, now);
+        const streak = calculateNextStreak(record.streak, input.grade);
+
+        const xpEarned = await input.xpPort.awardReviewXp({
+          tx,
+          userId: input.userId,
+          resourceId: record.resourceId,
+          source: input.xpSource,
+          easeFactor: record.easeFactor,
+          intervalDays: record.intervalDays,
+          grade: input.grade,
+          now,
+          nextReviewAt: record.nextReviewAt,
+        });
+
+        const updated = await input.repository.updateAfterGrade(tx, {
+          id: record.id,
+          easeFactor: next.easeFactor,
+          intervalDays: next.intervalDays,
+          repetitions: next.repetitions,
+          nextReviewAt,
+          lastReviewedAt: now,
+          lastGrade: input.grade,
+          streak,
+        });
+
+        if (input.repository.markMastered) {
+          await input.repository.markMastered(tx, updated);
+        }
+
+        return {
+          reviewId: updated.id,
+          resourceId: updated.resourceId,
+          nextReviewAt: updated.nextReviewAt,
+          intervalDays: updated.intervalDays,
+          easeFactor: updated.easeFactor,
+          xpEarned,
+        };
+      },
+      { maxWait: 5000, timeout: 10000 },
     );
 
-    if (!record) {
-      throw Errors.notFound("card");
+  let result: GradeReviewCardResult | null = null;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    const claimStatus = await claimRequest();
+    if (claimStatus === "replayed") {
+      return readPersistedState();
     }
 
-    const next = calculateSM2({
-      currentEF: record.easeFactor,
-      currentInterval: record.intervalDays,
-      currentRepetitions: record.repetitions,
-      grade: input.grade,
-    });
+    try {
+      result = await runMutation();
+      break;
+    } catch (err) {
+      await releaseRequestClaim();
+      lastError = err;
 
-    const nextReviewAt = calculateNextReviewDate(next.intervalDays, now);
-    const streak = calculateNextStreak(record.streak, input.grade);
+      const retryable = isRetryableReviewGradeError(err);
+      if (!retryable) {
+        throw err;
+      }
+      if (attempt === attempts - 1) {
+        throw Errors.serviceUnavailable(
+          "Review grade could not be saved. Please retry.",
+          { cause: String((err as { message?: unknown })?.message ?? err) },
+        );
+      }
 
-    const xpEarned = await input.xpPort.awardReviewXp({
-      tx,
-      userId: input.userId,
-      resourceId: record.resourceId,
-      source: input.xpSource,
-      easeFactor: record.easeFactor,
-      intervalDays: record.intervalDays,
-      grade: input.grade,
-      now,
-      nextReviewAt: record.nextReviewAt,
-    });
-
-    const updated = await input.repository.updateAfterGrade(tx, {
-      id: record.id,
-      easeFactor: next.easeFactor,
-      intervalDays: next.intervalDays,
-      repetitions: next.repetitions,
-      nextReviewAt,
-      lastReviewedAt: now,
-      lastGrade: input.grade,
-      streak,
-    });
-
-    if (input.repository.markMastered) {
-      await input.repository.markMastered(tx, updated);
+      await sleep(50 * Math.pow(2, attempt) + Math.floor(Math.random() * 30));
     }
+  }
 
-    return {
-      reviewId: updated.id,
-      resourceId: updated.resourceId,
-      nextReviewAt: updated.nextReviewAt,
-      intervalDays: updated.intervalDays,
-      easeFactor: updated.easeFactor,
-      xpEarned,
-    };
-    });
-  } catch (err) {
-    // The mutation failed after we claimed the idempotency key. Release it so a
-    // later retry with the same requestId can re-attempt instead of being
-    // treated as an already-applied replay.
-    if (input.requestId) {
-      await input.prisma.gradeRequest
-        .deleteMany({ where: { requestId: input.requestId } })
-        .catch(() => undefined);
-    }
-    throw err;
+  if (!result) {
+    throw (
+      lastError ??
+      Errors.serviceUnavailable(
+        "Review grade could not be saved. Please retry.",
+      )
+    );
   }
 
   await domainEventBus.publish({

@@ -1,28 +1,43 @@
 <template>
   <Teleport to="body">
     <Transition name="sheet">
-      <div v-if="show"
+      <div
+        v-if="show"
         class="fixed inset-0 z-50 flex items-end justify-center sm:items-center bg-[var(--ds-backdrop-dim)] backdrop-blur-sm p-4"
-        @click.self="emit('decline')">
+        @click.self="emit('decline')"
+      >
         <UiOverlaySurface
+          ref="panelEl"
           kind="modal"
           layer="modal"
           size="lg"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="language-consent-title"
+          tabindex="-1"
+          @keydown="onKeydown"
           class-name="relative w-full max-w-md rounded-t-[var(--radius-2xl)] sm:rounded-[var(--radius-2xl)] space-y-5"
         >
           <!-- Icon -->
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
+            <div
+              class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0"
+            >
               <Icon name="i-lucide-languages" class="w-5 h-5" />
             </div>
-            <ui-subtitle size="lg" color="content-on-surface">Build your vocabulary</ui-subtitle>
+            <ui-subtitle
+              id="language-consent-title"
+              size="lg"
+              color="content-on-surface"
+              >Build your vocabulary</ui-subtitle
+            >
           </div>
 
           <!-- Explanation -->
           <ui-paragraph size="sm">
-            Save this word to your personal language deck. Cognilo will generate a short story to help you remember
-            it,
-            and schedule it for spaced repetition review — so it actually sticks.
+            Save this word to your personal language deck. Cognilo will generate
+            a short story to help you remember it, and schedule it for spaced
+            repetition review — so it actually sticks.
           </ui-paragraph>
 
           <!-- Actions -->
@@ -31,7 +46,13 @@
               <Icon name="i-lucide-bookmark-plus" class="w-4 h-4 mr-1" />
               Add to Language Deck
             </ui-button>
-            <ui-button variant="ghost" color="neutral" size="md" class="w-full" @click="emit('decline')">
+            <ui-button
+              variant="ghost"
+              color="neutral"
+              size="md"
+              class="w-full"
+              @click="emit('decline')"
+            >
               Just translate, don't save
             </ui-button>
           </div>
@@ -50,6 +71,15 @@ const emit = defineEmits<{
   (e: "confirm"): void;
   (e: "decline"): void;
 }>();
+
+const panelEl = ref<HTMLElement | null>(null);
+const { onKeydown } = useFocusTrap(
+  computed(() => props.show),
+  panelEl,
+  {
+    onEscape: () => emit("decline"),
+  },
+);
 </script>
 
 <style scoped>

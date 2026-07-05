@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { usePasswordResetVerification } from "@/composables/auth/usePasswordResetVerification";
+
 // Remember to disable the middleware protection from your page!
 definePageMeta({
   auth: { unauthenticatedOnly: true, navigateAuthenticatedTo: "/" },
@@ -8,8 +10,6 @@ const route = useRoute();
 // Check if we are creating a new password or resetting an existing one
 const createNewPassword = ref(route.query.newPassword);
 
-// Use the composable for all password reset logic
-import { usePasswordResetVerification } from '@/composables/auth/usePasswordResetVerification'
 const {
   credentials,
   emailSent,
@@ -23,10 +23,27 @@ const {
   canResend,
   inlineHintVisible,
   progressPercent,
-  showToast,
   sendResetEmail,
   verifyResetCode,
-} = usePasswordResetVerification('reset-throttle')
+} = usePasswordResetVerification("reset-throttle");
+
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const isValidEmail = computed(() => {
+  return EMAIL_PATTERN.test((credentials.value.email ?? "").trim());
+});
+
+const isVerificationCodeReady = computed(() => {
+  return Boolean(credentials.value.verification?.trim());
+});
+
+const canSubmitCurrentStep = computed(() => {
+  return emailSent.value ? isVerificationCodeReady.value : isValidEmail.value;
+});
+
+const submitLabel = computed(() => {
+  return emailSent.value ? "Verify reset code" : "Send reset code";
+});
 
 /**
  * Handle form submission
@@ -34,6 +51,8 @@ const {
  * - If email sent: verify the code
  */
 const submitForm = async (): Promise<void> => {
+  if (!canSubmitCurrentStep.value || loading.value) return;
+
   if (!emailSent.value) {
     await sendResetEmail();
   } else {
@@ -44,59 +63,101 @@ const submitForm = async (): Promise<void> => {
 
 <template>
   <div>
-    <div v-if="!verified" class="flex items-center justify-center flex-col w-full max-w-2xl mx-auto mt-8">
-
-      <form ref="forgetpassword" method="post" class="form w-full focus:bg-surface-subtle" autocomplete="test"
-        @submit.prevent="submitForm">
-        <UiTitle> {{ createNewPassword ? "Create" : "Reset" }} Password</UiTitle>
+    <div
+      v-if="!verified"
+      class="mx-auto mt-8 flex w-full max-w-2xl flex-col items-center justify-center"
+    >
+      <form
+        ref="forgetpassword"
+        method="post"
+        class="form w-full focus:bg-surface-subtle"
+        autocomplete="on"
+        @submit.prevent="submitForm"
+      >
+        <UiTitle>
+          {{ createNewPassword ? "Create" : "Reset" }} Password</UiTitle
+        >
         <UiParagraph size="sm" color="content-secondary">
           Enter your email to receive a verification code
         </UiParagraph>
         <shared-error-message v-if="error" :error="error" />
         <shared-success-message v-if="success" :message="success" />
 
-        <div class="mb-2 mt-2 rounded-[var(--radius-md)] relative transition duration-10 00 text-xs">
-          <ui-input-field id="verify-email-client" v-model="credentials.email!" :type="'email'" name="email"
-            label="Email Address" title="Please enter your email address" tabindex="2" :styles="{
-              inputField: `${emailSent ? ' rounded-b-none border-b' : ''}`,
-            }" />
-          <ui-input-field id="verify-code-client" v-model="credentials.verification!" type="text" name="verification"
-            label="Verification Code" title="Please enter the verification code" tabindex="2" :styles="{
-              // input: `${isValidPassword ? 'pt-8' : ''}`,
-              inputField: `rounded-t-none  ${!emailSent ? ' -translate-y-full -z-10 hidden' : ''}`,
-            }" />
-          <button
-            :class="`w-8 h-8 absolute right-2 bottom-2 border border-secondary rounded-full text-center grid place-items-center cursor-pointer hover:opacity-90 bg-primary hover:shadow`"
-            type="submit" :disabled="loading" @click.prevent="submitForm">
-            <icon v-if="!loading" name="i-heroicons-arrow-right" class="w-4 h-4 text-white dark:text-dark" />
-            <icon v-else name="uil:redo" class="w-4 h-4 animate-spin text-white dark:text-dark" />
-          </button>
-        </div>
+        <AuthStepFieldStack
+          class="mb-2 mt-2 text-xs"
+          :reveal="emailSent"
+          :first-complete="emailSent || isValidEmail"
+          :loading="loading"
+          :submit-disabled="!canSubmitCurrentStep"
+          :submit-label="submitLabel"
+          :status-visible="emailSent"
+          :progress-visible="emailSent && countDown > 0"
+          :progress="progressPercent"
+          progress-label="Reset code resend cooldown"
+        >
+          <template #first>
+            <ui-input-field
+              id="verify-email-client"
+              v-model="credentials.email!"
+              type="email"
+              name="email"
+              label="Email Address"
+              title="Please enter your email address"
+              autocomplete="email"
+              tabindex="2"
+              :styles="{
+                input: 'pr-12',
+                inputField: emailSent
+                  ? 'rounded-b-none border-b border-secondary'
+                  : '',
+              }"
+            />
+          </template>
 
-        <UiParagraph v-if="emailSent" size="sm" color="content-secondary" class="mt-2 flex justify-end items-center">
-          <div class="flex items-center gap-2">
-            <span v-if="remainingAttempts !== null"> Attempts left: {{ remainingAttempts }}.</span>
-            <span v-if="countDown > 0"> Resend in: {{ countDown }}s</span>
-            <div v-if="countDown > 0" class="mt-2 flex items-center gap-2">
-              <div class="relative h-5 w-5" aria-hidden="true">
-                <div class="absolute inset-0 rounded-full bg-secondary"></div>
-                <div class="absolute inset-0 rounded-full"
-                  :style="{ background: `conic-gradient(var(--color-primary) ${progressPercent}%, var(--color-secondary) ${progressPercent}%)` }">
-                </div>
-                <div class="absolute inset-0.5 rounded-full bg-background"></div>
-              </div>
-            </div>
-            <span v-else>
-              <button class="underline cursor-pointer" :disabled="!canResend" @click.prevent="sendResetEmail">Resend
-                Code</button>.
+          <template #second>
+            <ui-input-field
+              id="verify-code-client"
+              v-model="credentials.verification!"
+              type="text"
+              name="verification"
+              label="Verification Code"
+              title="Please enter the verification code"
+              autocomplete="one-time-code"
+              inputmode="numeric"
+              tabindex="2"
+              :styles="{
+                input: 'pr-12',
+                inputField: 'rounded-t-none',
+              }"
+            />
+          </template>
+
+          <template #status>
+            <span v-if="remainingAttempts !== null">
+              Attempts left: {{ remainingAttempts }}.
             </span>
-          </div>
-          <span v-if="inlineHintVisible" class="block mt-1 text-error-text">Resend limit reached. Please wait for
-            cooldown.</span>
-        </UiParagraph>
+            <span v-if="countDown > 0">Resend in: {{ countDown }}s</span>
+            <UiButton
+              v-else
+              variant="link"
+              size="xs"
+              type="button"
+              :disabled="!canResend"
+              @click.prevent="sendResetEmail"
+            >
+              Resend Code
+            </UiButton>
+            <span v-if="inlineHintVisible" class="text-error-text">
+              Resend limit reached. Please wait for cooldown.
+            </span>
+          </template>
+        </AuthStepFieldStack>
       </form>
     </div>
     <auth-create-password v-else :token="token" />
-    <auth-resend-blocked-toast :seconds="countDown" :attempts="remainingAttempts" />
+    <auth-resend-blocked-toast
+      :seconds="countDown"
+      :attempts="remainingAttempts"
+    />
   </div>
 </template>

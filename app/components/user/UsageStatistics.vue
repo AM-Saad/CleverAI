@@ -146,7 +146,7 @@ onMounted(async () => {
             <UiLabel tag="label" for="llm-usage-end-date" size="sm">To</UiLabel>
             <ui-input id="llm-usage-end-date" type="date" v-model="endDate" aria-label="Usage end date" />
           </fieldset>
-          <ui-button :disabled="isDateRangeInvalid" @click="fetchLlmUsage" variant="subtle" size="sm">Apply</ui-button>
+          <ui-button :disabled="isDateRangeInvalid" @click="fetchLlmUsage" variant="soft" size="sm">Apply</ui-button>
           <p v-if="isDateRangeInvalid" class="text-sm text-error-text">
             From date must be on or before To date
           </p>

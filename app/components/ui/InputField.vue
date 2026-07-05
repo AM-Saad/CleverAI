@@ -1,13 +1,14 @@
 <template>
   <div
     :class="[
-      'form-group relative h-14 min-w-full overflow-hidden rounded-[var(--radius-md)] bg-surface ring-1 ring-inset ring-secondary has-focus-within:ring-2 has-focus-within:ring-inset has-focus-within:ring-[var(--ds-focus-outline-color)]',
+      'form-group relative h-14 min-w-full overflow-hidden rounded-[var(--radius-md)] bg-surface ring-1 ring-inset ring-secondary transition-[background-color,box-shadow,opacity,transform] duration-[var(--duration-fast)] ease-[var(--ease-standard)] has-focus-within:ring-2 has-focus-within:ring-inset has-focus-within:ring-[var(--ds-focus-outline-color)]',
       error && 'ring-error',
       disabled && 'cursor-not-allowed opacity-60',
       props.styles?.inputField,
     ]"
   >
     <input
+      ref="inputRef"
       :id="props.id"
       v-model="model"
       :type="props.type"
@@ -20,6 +21,7 @@
       :tabindex="props.tabindex"
       placeholder=""
       :autocomplete="props.autocomplete"
+      :inputmode="props.inputmode"
       :pattern="props.pattern"
       :title="props.title"
       :disabled="disabled"
@@ -30,7 +32,7 @@
     <label
       :for="props.id"
       :class="[
-        'pointer-events-none absolute left-2 text-sm text-content-secondary transition-all duration-[var(--duration-fast)] ease-[var(--ease-standard)]',
+        'pointer-events-none absolute left-2 text-sm text-content-secondary transition-[top,font-size,color] duration-[var(--duration-fast)] ease-[var(--ease-standard)]',
         model ? 'top-2 text-xs' : 'top-4 peer-focus:top-2 peer-focus:text-xs',
         error && 'text-error-text',
         props.styles?.label,
@@ -56,6 +58,15 @@ interface InputFieldProps {
   pattern?: string | undefined;
   tabindex?: string | number;
   autocomplete?: string;
+  inputmode?:
+    | "none"
+    | "text"
+    | "decimal"
+    | "numeric"
+    | "tel"
+    | "search"
+    | "email"
+    | "url";
   disabled?: boolean;
   readonly?: boolean;
   required?: boolean;
@@ -63,6 +74,7 @@ interface InputFieldProps {
   styles?: InputStyles;
 }
 const model = defineModel({ type: String, required: true });
+const inputRef = ref<HTMLInputElement | null>(null);
 
 const props = withDefaults(defineProps<InputFieldProps>(), {
   id: "id",
@@ -73,10 +85,16 @@ const props = withDefaults(defineProps<InputFieldProps>(), {
   pattern: undefined,
   tabindex: 1,
   autocomplete: "off",
+  inputmode: undefined,
   disabled: false,
   readonly: false,
   required: false,
   error: false,
   styles: undefined,
+});
+
+defineExpose({
+  focus: () => inputRef.value?.focus(),
+  blur: () => inputRef.value?.blur(),
 });
 </script>

@@ -4,6 +4,7 @@ import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { ReorderItemsInColumnDTO } from "@@/shared/utils/boardColumn.contract";
 import { BoardItemSchema } from "@@/shared/utils/boardItem.contract";
+import { persistBoardItemOrders } from "@server/modules/board/application/persistBoardItemOrders";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -52,18 +53,18 @@ export default defineEventHandler(async (event) => {
       );
     }
 
-    // OPTIMIZED: Use parallel updateMany operations instead of sequential updates
-    // This reduces N database round-trips to a single batch operation
-    await prisma.$transaction(async (tx: any) => {
-      await Promise.all(
-        data.itemOrders.map((itemOrder) =>
-          tx.boardItem.update({
-            where: { id: itemOrder.id },
-            data: { order: itemOrder.order },
-            select: { id: true, order: true },
-          })
-        )
-      );
+    // Reorder requests arrive in rapid bursts while dragging. Prisma's
+    // interactive transactions are fragile with concurrent Mongo writes here
+    // ("Transaction already closed"), so persist the idempotent rank updates in
+    // a deterministic sequence with retryable transient-write handling.
+    await persistBoardItemOrders({
+      prisma,
+      userId: user.id,
+      itemOrders: data.itemOrders,
+      missingItemError: () =>
+        Errors.badRequest(
+          "Some board items do not belong to this user or were not found"
+        ),
     });
 
     // Return minimal success response - client already has the data

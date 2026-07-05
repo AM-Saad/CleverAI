@@ -1,4 +1,5 @@
 export * from "./useWorkspaces";
+export * from "./useActiveWorkspace";
 export * from "./useWorkspaceGenerate";
 export * from "./useMaterials";
 export * from "./useNotesStore";

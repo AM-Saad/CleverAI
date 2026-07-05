@@ -3,6 +3,7 @@
     <shared-icon :name="icon" class="w-[18px] h-[18px] shrink-0"
       :style="{ color: isValidColor ? modelValue : fallbackColor }" />
     <span v-if="!iconOnly && label" class="hidden sm:inline">{{ label }}</span>
+    <!-- design-allow: native color picker — no Ui primitive wraps type=color -->
     <input type="color" :value="isValidColor ? modelValue : fallbackColor" @input="handleInput"
       class="absolute inset-[-10px] w-[200%] h-[200%] opacity-0 cursor-pointer" />
     <slot />

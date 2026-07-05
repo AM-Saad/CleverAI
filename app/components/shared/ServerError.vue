@@ -2,8 +2,8 @@
   <UiCard v-if="typedError && !loading" class=" mx-auto text-center" variant="outline" shadow="none" size="sm">
     <div class="flex items-center gap-2">
       <div v-if="typedError.status" class="text-white mt-1">
-        <u-icon v-if="typedError.status < 500" name="i-heroicons-bell" :size="UI_CONFIG.ICON_SIZE" />
-        <u-icon v-else name="i-heroicons-bell-slash" :size="UI_CONFIG.ICON_SIZE" />
+        <UiIcon v-if="typedError.status < 500" name="i-lucide-bell" :size="UI_CONFIG.ICON_SIZE" />
+        <UiIcon v-else name="i-lucide-bell-off" :size="UI_CONFIG.ICON_SIZE" />
       </div>
       <ui-subtitle size="sm" v-if="errorDetails">
         {{ errorDetails.data?.message }}.

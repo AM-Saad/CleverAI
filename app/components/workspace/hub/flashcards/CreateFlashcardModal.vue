@@ -113,19 +113,19 @@ function handleClose() {
     :icon="isEditMode ? 'pen' : 'pencil'">
 
     <template #body>
-      <u-form :schema="schema" :state="state" class="space-y-2" @submit="handleSubmit">
+      <UiForm :schema="schema" :state="state" class="space-y-2" @submit="handleSubmit">
         <!-- Front (Question) -->
-        <u-form-field label="Front" name="front">
+        <UiFormField label="Front" name="front">
           <ui-textarea v-model="state.front" placeholder="Enter the question or prompt..." :rows="4" autoresize
             :disabled="isLoading" class="w-full" />
-        </u-form-field>
+        </UiFormField>
 
         <!-- Back (Answer) -->
-        <u-form-field label="Back" name="back">
+        <UiFormField label="Back" name="back">
           <ui-textarea v-model="state.back" placeholder="Enter the answer or explanation..." :rows="4" autoresize
             :disabled="isLoading" class="w-full" />
-        </u-form-field>
-      </u-form>
+        </UiFormField>
+      </UiForm>
     </template>
 
     <template #footer>

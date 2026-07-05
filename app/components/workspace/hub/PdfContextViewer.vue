@@ -54,12 +54,12 @@ watch(
   <div class="h-full flex flex-col">
     <!-- Loading -->
     <div v-if="pending" class="flex items-center justify-center p-8">
-      <u-icon name="i-lucide-loader" class="w-6 h-6 animate-spin text-primary" />
+      <UiIcon name="i-lucide-loader" class="w-6 h-6 animate-spin text-primary" />
     </div>
 
     <!-- Error -->
     <div v-else-if="error" class="flex flex-col items-center justify-center p-8 gap-3">
-      <u-icon name="i-lucide-alert-circle" class="w-8 h-8 text-error-text" />
+      <UiIcon name="i-lucide-alert-circle" class="w-8 h-8 text-error-text" />
       <ui-paragraph size="sm" color="content-secondary">
         Failed to load PDF content
       </ui-paragraph>
@@ -96,7 +96,7 @@ watch(
 
         <!-- Fallback if no content -->
         <div v-else class="flex flex-col items-center justify-center p-8 gap-3">
-          <u-icon name="i-lucide-file-text" class="w-8 h-8 text-muted" />
+          <UiIcon name="i-lucide-file-text" class="w-8 h-8 text-muted" />
           <ui-paragraph size="sm" color="content-secondary">
             No content available for this PDF
           </ui-paragraph>

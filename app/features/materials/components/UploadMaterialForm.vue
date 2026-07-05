@@ -375,25 +375,25 @@ watch(
               Text Material
             </div>
           </template>
-          <u-form :schema="schema" :state="state" class="space-y-2" @submit="onSubmit">
-            <u-form-field label="Material Title" name="materialTitle">
+          <UiForm :schema="schema" :state="state" class="space-y-2" @submit="onSubmit">
+            <UiFormField label="Material Title" name="materialTitle">
               <ui-input v-model="state.materialTitle" placeholder="Enter material title" :ui="{
                 root: 'w-full',
               }" />
-            </u-form-field>
+            </UiFormField>
 
 
-            <u-form-field label="Material Content" name="materialContent">
+            <UiFormField label="Material Content" name="materialContent">
               <ui-textarea v-model="state.materialContent" placeholder="Enter your material content here..." :ui="{
                 root: 'w-full',
               }" />
-            </u-form-field>
+            </UiFormField>
 
             <div class="flex gap-3 justify-end pt-2">
               <ui-button variant="ghost" @click="emit('close')">Cancel</ui-button>
               <ui-button type="submit">Submit</ui-button>
             </div>
-          </u-form>
+          </UiForm>
         </UiPanel>
 
         <!-- FILE UPLOAD -->
@@ -401,6 +401,7 @@ watch(
           <!-- File Input (before upload) -->
           <div v-if="!uploadedMaterial" class="py-3">
 
+            <!-- design-allow: native file picker — no Ui primitive wraps type=file -->
             <input type="file" accept=".pdf,.docx,.txt" @change="onFileChange"
               class="block w-full text-sm text-content-secondary file:mr-4 file:py-2 file:px-4 file:rounded-[var(--radius-md)] file:border-0 file:text-sm file:font-semibold file:text-primary hover:file:bg-primary/10" />
             <p class="mt-2 text-xs text-content-secondary">
@@ -417,7 +418,7 @@ watch(
             <UiPanel v-if="generateAfterUpload" variant="surface" size="sm" class-name="mt-3" content-class="space-y-3">
               <div class="flex items-center gap-3">
                 <label class="text-sm font-medium">Generate:</label>
-                <UButtonGroup>
+                <UiButtonGroup>
                   <UiButton size="sm" :color="generationType === 'flashcards' ? 'primary' : 'neutral'"
                     :variant="generationType === 'flashcards' ? 'solid' : 'ghost'"
                     @click="generationType = 'flashcards'">
@@ -427,7 +428,7 @@ watch(
                     :variant="generationType === 'quiz' ? 'solid' : 'ghost'" @click="generationType = 'quiz'">
                     Quiz
                   </UiButton>
-                </UButtonGroup>
+                </UiButtonGroup>
               </div>
 
               <div>
@@ -484,9 +485,9 @@ watch(
                 </div>
                 <div class="text-xs text-content-secondary mt-2 flex items-center gap-1">
                   <span>Estimated cost (approximate): ${{ estimatedCost.toFixed(4) }}</span>
-                  <UTooltip text="Final cost depends on model selection and output length.">
+                  <UiTooltip text="Final cost depends on model selection and output length.">
                     <shared-icon name="info" class="w-4 h-4 cursor-help" />
-                  </UTooltip>
+                  </UiTooltip>
                 </div>
               </div>
             </UiPanel>

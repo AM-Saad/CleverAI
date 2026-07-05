@@ -1,6 +1,6 @@
 <template>
   <div>
-    <h1>Authentication Error</h1>
+    <ui-title tag="h1">Authentication Error</ui-title>
     <p>{{ errorMessage }}</p>
   </div>
 </template>

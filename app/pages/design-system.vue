@@ -12,7 +12,7 @@
         <UiButton
           :icon="isDark ? 'i-lucide-sun' : 'i-lucide-moon'"
           tone="neutral"
-          variant="outline"
+          variant="soft"
           size="sm"
           @click="isDark = !isDark"
         >
@@ -56,7 +56,7 @@
               <p class="mt-1 text-xs font-mono text-content-secondary">{{ t.value }}</p>
             </div>
           </div>
-          <UiButton class="w-fit" tone="neutral" variant="outline">
+          <UiButton class="w-fit" tone="neutral" variant="soft">
             Focusable sample
           </UiButton>
         </div>
@@ -147,6 +147,51 @@
           <div v-for="variant in badgeVariants" :key="variant" class="flex flex-wrap items-center gap-2">
             <span class="w-16 text-xs text-content-secondary">{{ variant }}</span>
             <UiBadge v-for="tone in tones" :key="tone" :tone="tone" :variant="variant">{{ tone }}</UiBadge>
+          </div>
+        </div>
+      </section>
+
+      <section class="flex flex-col gap-4">
+        <UiSubtitle size="lg" weight="semibold">UiPill</UiSubtitle>
+        <UiParagraph size="xs" color="content-secondary">
+          Three-part anatomy (indicator / label / icon), presentational or a button/link. Workspace switcher, note status, tags, filters.
+        </UiParagraph>
+        <div class="flex flex-col gap-3">
+          <div v-for="variant in pillVariants" :key="variant" class="flex flex-wrap items-center gap-2">
+            <span class="w-16 text-xs text-content-secondary">{{ variant }}</span>
+            <UiPill :variant="variant" label="Default" color="var(--color-primary)" />
+            <UiPill :variant="variant" label="Active" color="var(--color-primary)" active />
+            <UiPill :variant="variant" label="Clickable" color="var(--color-primary)" clickable />
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-16 text-xs text-content-secondary">sizes</span>
+            <UiPill size="md" label="md" color="var(--color-primary)" variant="outline" active />
+            <UiPill size="sm" label="sm" color="var(--color-primary)" variant="outline" active />
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-16 text-xs text-content-secondary">indicator</span>
+            <UiPill label="Workspace" color="var(--color-accent-indigo)" clickable>
+              <template #indicator>
+                <UiPillIndicator color="var(--color-accent-indigo)" />
+              </template>
+            </UiPill>
+            <UiPill label="caught up" color="var(--color-success)" variant="outline" active>
+              <template #icon>
+                <UiPillIcon name="i-lucide-check" size="sm" />
+              </template>
+            </UiPill>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-16 text-xs text-content-secondary">removable</span>
+            <UiPill label="# tag" color="var(--color-primary)" variant="outline" active>
+              <template #icon>
+                <UiPillIcon name="i-lucide-x" button size="sm" label="Remove tag" />
+              </template>
+            </UiPill>
+          </div>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="w-16 text-xs text-content-secondary">truncation</span>
+            <UiPill label="A very long label that gets truncated with an ellipsis once it exceeds the pill's max width" color="var(--color-primary)" variant="outline" />
           </div>
         </div>
       </section>
@@ -366,7 +411,7 @@
             <UiProgress :value="null" />
           </div>
           <UiTooltip text="Tooltip content">
-            <UiButton variant="outline" size="sm">Hover for tooltip</UiButton>
+            <UiButton variant="soft" size="sm">Hover for tooltip</UiButton>
           </UiTooltip>
         </div>
       </section>
@@ -378,7 +423,7 @@
           <UiButton @click="modalOpen = true">Open UiModal</UiButton>
           <UiButton tone="error" @click="confirmOpen = true">Open UiConfirmDialog</UiButton>
           <UiPopover>
-            <UiButton variant="outline">Open UiPopover</UiButton>
+            <UiButton variant="soft">Open UiPopover</UiButton>
             <template #content>
               <UiOverlaySurface kind="popover" size="sm">
                 <UiParagraph size="sm">Popover panel content.</UiParagraph>
@@ -443,7 +488,8 @@ const buttonVariants = ["solid", "soft", "ghost", "link"] as const;
 const buttonTones: Tone[] = ["primary", "neutral", "error", "success"];
 const fieldVariants = ["outline", "soft", "subtle", "ghost", "none"] as const;
 const badgeVariants = ["solid", "outline", "soft", "subtle"] as const;
-const cardVariants = ["default", "outline", "ghost", "surface", "surface-strong"] as const;
+const pillVariants = ["soft", "fill", "outline", "dashed", "ghost"] as const;
+const cardVariants = ["default", "outline", "ghost", "surface"] as const;
 
 // Theme toggle (also drives light/dark visual-regression snapshots).
 const isDark = ref(false);
@@ -469,7 +515,14 @@ const catalogMenuItems = [
     { label: "Disabled", icon: "i-lucide-ban", disabled: true },
   ],
   [
-    { label: "Delete", icon: "i-lucide-trash-2", color: "error" },
+    {
+      id: "catalog-delete",
+      label: "Delete",
+      icon: "i-lucide-trash-2",
+      color: "error",
+      requiresDoubleTap: true,
+      confirmLabel: "Tap again to delete",
+    },
   ],
 ];
 const tabVal = ref(0);

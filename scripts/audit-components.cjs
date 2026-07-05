@@ -57,6 +57,7 @@ function detectSignals(src, template) {
   const rawInput = COUNT(/<input[\s>]/g, template);
   const rawLabel = COUNT(/<label[\s>]/g, template);
   const rawSelect = COUNT(/<select[\s>]/g, template);
+  const rawHeading = COUNT(/<h[1-6][\s>]/g, template);
 
   // Ad-hoc modal overlay: a fixed full-bleed layer with z-index + a backdrop.
   const hasFixedInset = /\bfixed\b[^"'`]*\binset-0\b|\binset-0\b[^"'`]*\bfixed\b/.test(template);
@@ -78,16 +79,27 @@ function detectSignals(src, template) {
     rawInput,
     rawLabel,
     rawSelect,
+    rawHeading,
     overlayScaffold,
     cardChrome,
   };
 }
 
-// Nuxt UI primitives used directly (e.g. <UButton>, <UModal>). PascalCase tags.
+// Nuxt UI primitives used directly (e.g. <UButton>, <UModal>). PascalCase and
+// kebab-case (<u-button>) both resolve to the same component at runtime —
+// kebab-case must NOT match the design system's own `<ui-*>` wrappers, hence
+// the dash directly after `u`.
 function nuxtUiTags(template) {
   const set = new Set();
   for (const m of template.matchAll(/<(U[A-Z][A-Za-z0-9]*)/g)) set.add(m[1]);
+  for (const m of template.matchAll(/<(u-[a-z][a-z0-9-]*)/g)) set.add(m[1]);
   return [...set].sort();
+}
+
+// Dead/commented-out markup (e.g. `<!-- <UForm>...</UForm> -->`) shouldn't
+// register as live usage.
+function stripHtmlComments(source) {
+  return source.replace(/<!--[\s\S]*?-->/g, "");
 }
 
 // Ui* design-system primitives used (PascalCase <UiX> and kebab <ui-x>).
@@ -136,7 +148,10 @@ function clustersOf(name, signals) {
 // Build records.
 // ---------------------------------------------------------------------------
 function sectionBetween(src, tag) {
-  const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, "i");
+  // Greedy: see matching comment in check-component-boundaries.cjs — a root
+  // <template> can contain nested <template v-if>/#slot> blocks whose earlier
+  // closing tags a non-greedy match would stop at.
+  const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*)</${tag}>`, "i");
   const m = src.match(re);
   return m ? m[1] : "";
 }
@@ -147,7 +162,7 @@ const records = [];
 for (const full of files) {
   const rel = path.relative(root, full);
   const src = fs.readFileSync(full, "utf8");
-  const template = sectionBetween(src, "template") || src;
+  const template = stripHtmlComments(sectionBetween(src, "template") || src);
   const script = src;
   const name = componentName(rel);
   const tier = tierOf(rel);
@@ -162,6 +177,7 @@ for (const full of files) {
   if (signals.rawButton) bypass.push(`raw <button> ×${signals.rawButton}`);
   if (signals.rawInput) bypass.push(`raw <input> ×${signals.rawInput}`);
   if (signals.rawDialog) bypass.push(`raw <dialog> ×${signals.rawDialog}`);
+  if (signals.rawHeading) bypass.push(`raw <h1-6> ×${signals.rawHeading}`);
   if (signals.overlayScaffold) bypass.push("ad-hoc overlay");
   if (signals.cardChrome) bypass.push("hand-rolled card chrome");
   if (isAppCode && nuxtUi.length) bypass.push(`direct Nuxt UI: ${nuxtUi.join(",")}`);

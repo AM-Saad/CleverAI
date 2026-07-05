@@ -123,20 +123,24 @@ defineExpose({
           @click="toggleCollapse(panel.id)"
         >
           <div class="collapsed-strip-content">
-            <u-icon :name="getPanelIcon(panel.id)" class="collapsed-icon" />
+            <UiIcon :name="getPanelIcon(panel.id)" class="collapsed-icon" />
             <span class="collapsed-label">{{ getPanelLabel(panel.id) }}</span>
           </div>
-          <u-icon :name="getCollapseIcon(panel.id)" class="collapsed-expand-icon" />
+          <UiIcon :name="getCollapseIcon(panel.id)" class="collapsed-expand-icon" />
         </button>
 
         <!-- Panel content (visible when not collapsed) -->
         <div v-else class="workspace-panel-inner">
           <!-- Collapse button overlay -->
-          <button class="collapse-btn" :class="`collapse-btn-${panel.id}`" :title="`Collapse ${panel.label}`"
-            :aria-label="`Collapse ${panel.label}`"
-            @click="toggleCollapse(panel.id)">
-            <u-icon :name="getCollapseIcon(panel.id)" class="w-3.5 h-3.5" />
-          </button>
+          <UiIconButton
+            :icon="getCollapseIcon(panel.id)"
+            :label="`Collapse ${panel.label}`"
+            variant="ghost"
+            size="xs"
+            class="collapse-btn"
+            :class="`collapse-btn-${panel.id}`"
+            @click="toggleCollapse(panel.id)"
+          />
 
           <!-- Slot content -->
           <slot :name="panel.id" />

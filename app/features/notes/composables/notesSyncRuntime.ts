@@ -16,7 +16,11 @@ import type { NotesPendingQueue } from "./notesPendingQueue";
 import { logNotesOperation } from "./notesOperationLog";
 import { createNotesSyncEngine, type NotesSyncReason } from "./notesSyncEngine";
 import type { NotesSyncCoordinator } from "./notesSyncCoordinator";
-import { normalizeLocalNote, noteStateFromServer, type NoteState } from "./noteTransforms";
+import {
+  normalizeLocalNote,
+  noteStateFromServer,
+  type NoteState,
+} from "./noteTransforms";
 import type { NotesLayoutStatus } from "./notesLayoutController";
 
 export interface NotesSyncRuntime {
@@ -85,7 +89,9 @@ export function createNotesSyncRuntime(input: {
     }
   };
 
-  const buildPendingUpsertFromLocalNote = (note: NoteState): PendingNoteChange => ({
+  const buildPendingUpsertFromLocalNote = (
+    note: NoteState,
+  ): PendingNoteChange => ({
     id: note.id,
     operation: "upsert",
     updatedAt: Date.now(),
@@ -103,16 +109,37 @@ export function createNotesSyncRuntime(input: {
   const preparePendingLayoutForSync = async (
     pendingChanges: PendingNoteChange[],
     pendingLayout: NoteLayoutChange | null,
-  ): Promise<{ pendingChanges: PendingNoteChange[]; pendingLayout: NoteLayoutChange | null }> => {
+  ): Promise<{
+    pendingChanges: PendingNoteChange[];
+    pendingLayout: NoteLayoutChange | null;
+  }> => {
     if (!pendingLayout) return { pendingChanges, pendingLayout };
 
     const pendingById = new Set(pendingChanges.map((change) => change.id));
-    const nextChanges = pendingChanges.slice();
+    const layoutByNoteId = new Map(
+      pendingLayout.notes.map((note) => [note.id, note]),
+    );
+    const nextChanges = pendingChanges.map((change) => {
+      if (change.operation !== "upsert") return change;
+
+      const layoutNote = layoutByNoteId.get(change.id);
+      if (!layoutNote || change.groupId === layoutNote.groupId) return change;
+
+      return {
+        ...change,
+        groupId: layoutNote.groupId,
+        updatedAt: Math.max(change.updatedAt, pendingLayout.updatedAt),
+      };
+    });
     let nextLayout: NoteLayoutChange | null = pendingLayout;
     let layoutChanged = false;
+    const patchedChanges = nextChanges.filter(
+      (change, index) => change !== pendingChanges[index],
+    );
 
     for (const layoutNote of pendingLayout.notes) {
-      if (!layoutNote.id.startsWith("temp-") || pendingById.has(layoutNote.id)) continue;
+      if (!layoutNote.id.startsWith("temp-") || pendingById.has(layoutNote.id))
+        continue;
 
       const localNote = notes.value.get(layoutNote.id);
       if (localNote) {
@@ -142,6 +169,10 @@ export function createNotesSyncRuntime(input: {
         await layoutQueue.remove(workspaceId);
         nextLayout = null;
       }
+    }
+
+    for (const patchedChange of patchedChanges) {
+      await pendingQueue.add(patchedChange);
     }
 
     return { pendingChanges: nextChanges, pendingLayout: nextLayout };
@@ -186,9 +217,16 @@ export function createNotesSyncRuntime(input: {
     pendingChanges = await repairDirtyNotesWithoutPending(pendingChanges);
     const pendingGroupChanges = await groupQueue.load(workspaceId);
     let pendingLayout = await layoutQueue.load(workspaceId);
-    ({ pendingChanges, pendingLayout } = await preparePendingLayoutForSync(pendingChanges, pendingLayout));
+    ({ pendingChanges, pendingLayout } = await preparePendingLayoutForSync(
+      pendingChanges,
+      pendingLayout,
+    ));
 
-    if (!pendingChanges.length && !pendingGroupChanges.length && !pendingLayout) {
+    if (
+      !pendingChanges.length &&
+      !pendingGroupChanges.length &&
+      !pendingLayout
+    ) {
       layoutPendingCount.value = 0;
       layoutStatus.value = "synced";
       resetSyncRetry();
@@ -225,7 +263,9 @@ export function createNotesSyncRuntime(input: {
     resetSyncRetry();
 
     await syncCoordinator.applySyncResult(result.data);
-    const recordedConflicts = await conflictResolver.recordContentConflicts(result.data);
+    const recordedConflicts = await conflictResolver.recordContentConflicts(
+      result.data,
+    );
     await pendingQueue.remove(result.data.applied ?? []);
     await groupQueue.remove(result.data.groupApplied ?? []);
     if (result.data.layoutApplied && pendingLayout) {
@@ -281,28 +321,42 @@ export function createNotesSyncRuntime(input: {
     loadingStates.value.set(workspaceId, true);
 
     try {
-      const hadPendingChanges = (await pendingQueue.load(workspaceId)).length > 0;
+      const pendingBeforeSync = await pendingQueue.load(workspaceId);
+      const pendingDeleteIds = new Set(
+        pendingBeforeSync
+          .filter((change) => change.operation === "delete")
+          .map((change) => change.id),
+      );
+      const hadPendingChanges = pendingBeforeSync.length > 0;
       const hadPendingGroups = (await groupQueue.load(workspaceId)).length > 0;
       const hadPendingLayout = Boolean(await layoutQueue.load(workspaceId));
       const pendingSynced = await syncPendingChanges("refresh");
       const remainingChanges = await pendingQueue.load(workspaceId);
+      remainingChanges
+        .filter((change) => change.operation === "delete")
+        .forEach((change) => pendingDeleteIds.add(change.id));
       const remainingGroups = await groupQueue.load(workspaceId);
       const remainingLayout = await layoutQueue.load(workspaceId);
 
       if (
         (hadPendingChanges || hadPendingGroups || hadPendingLayout) &&
-        (!pendingSynced || remainingChanges.length > 0 || remainingGroups.length > 0 || remainingLayout)
+        (!pendingSynced ||
+          remainingChanges.length > 0 ||
+          remainingGroups.length > 0 ||
+          remainingLayout)
       ) {
         return;
       }
 
-      const pendingAfterSync = new Set(remainingChanges.map((change) => change.id));
+      const pendingAfterSync = new Set(
+        remainingChanges.map((change) => change.id),
+      );
       const result = await notesApi.getByWorkspace(workspaceId);
 
       if (!result.success) return;
 
-      const tempNotes = Array.from(notes.value.values()).filter((note) =>
-        note.id.startsWith("temp-") && pendingAfterSync.has(note.id),
+      const tempNotes = Array.from(notes.value.values()).filter(
+        (note) => note.id.startsWith("temp-") && pendingAfterSync.has(note.id),
       );
       const dirtyNotes = new Map<string, NoteState>();
       for (const [id, note] of notes.value) {
@@ -311,9 +365,9 @@ export function createNotesSyncRuntime(input: {
         }
       }
 
-      const noteStates: NoteState[] = result.data.map((note) =>
-        noteStateFromServer(note),
-      );
+      const noteStates: NoteState[] = result.data
+        .filter((note) => !pendingDeleteIds.has(note.id))
+        .map((note) => noteStateFromServer(note));
 
       notes.value.clear();
       noteStates.forEach((note) => {
@@ -325,7 +379,9 @@ export function createNotesSyncRuntime(input: {
         notes.value.set(tempNote.id, tempNote);
       }
 
-      await localRepository.saveMany(noteStates.filter((note) => !dirtyNotes.has(note.id)));
+      await localRepository.saveMany(
+        noteStates.filter((note) => !dirtyNotes.has(note.id)),
+      );
 
       for (const tempNote of tempNotes) {
         try {
@@ -356,7 +412,9 @@ export function createNotesSyncRuntime(input: {
     }
   };
 
-  const remapGroupIds = async (groupIdMap: Record<string, string>): Promise<void> => {
+  const remapGroupIds = async (
+    groupIdMap: Record<string, string>,
+  ): Promise<void> => {
     if (!Object.keys(groupIdMap).length) return;
     const changedNotes: NoteState[] = [];
     const nextNotes = new Map(notes.value);

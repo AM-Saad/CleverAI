@@ -37,7 +37,9 @@ type LanguageApiPort = {
     cursor?: string;
   }) => Promise<Result<WordsResult>>;
   deleteWord: (id: string) => Promise<Result<{ message: string }>>;
-  enrollWord: (id: string) => Promise<Result<{ wordId: string; status: string }>>;
+  enrollWord: (
+    id: string,
+  ) => Promise<Result<{ wordId: string; status: string }>>;
   getStats: (params?: {
     targetLanguage?: string;
     nativeLanguage?: string;
@@ -83,13 +85,10 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
 
   const getApi = () => deps.api ?? useNuxtApp().$api.language;
 
-  const languageParams = () => ({
-    targetLanguage: preferences.value?.targetLanguage,
-    nativeLanguage: preferences.value?.nativeLanguage,
-  });
-
   const toWordQuery = (append: boolean) => ({
     limit: 50,
+    // Word bank is the full saved library. Language-pair scoping belongs to
+    // capture/review, otherwise preference changes make existing words vanish.
     ...(append && cursor.value ? { cursor: cursor.value } : {}),
     status:
       wordFilters.value.status === "all" ? undefined : wordFilters.value.status,
@@ -237,7 +236,7 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
 
     try {
       await ensurePreferences();
-      const result = await getApi().getStats(languageParams());
+      const result = await getApi().getStats();
       if (requestId !== statsRequestId) return null;
 
       if (!result.success) {

@@ -98,7 +98,7 @@ const CardItem = {
     })
 
     // Listen to stackIndex. When a card is thrown offscreen and moved to the back,
-    // stackIndex quickly grows > 0. We then animate x/y smoothly back to 0 so it flies visually 
+    // stackIndex quickly grows > 0. We then animate x/y smoothly back to 0 so it flies visually
     // behind the newly shifted deck instead of abruptly teleporting!
     watch(() => props.stackIndex, (newVal, oldVal) => {
       if (prefersReducedMotion.value) {
@@ -238,18 +238,21 @@ const CardItem = {
       <!-- Empty State Fallback safely under the deck -->
       <div v-if="!deck.length"
         class="absolute inset-0 flex flex-col items-center justify-center text-content-secondary text-sm">
-        <Icon name="i-lucide-layers" class="w-12 h-12 mb-3 opacity-50" />
+        <UiIcon name="i-lucide-layers" class="w-12 h-12 mb-3 opacity-50" />
         No more cards
       </div>
     </div>
 
     <!-- Controls -->
     <div v-if="deck.length > 0" class="flex items-center gap-8 mt-4 relative z-10">
-      <button
-        class="w-6 h-6 rounded-full border border-surface-subtle bg-surface text-content-secondary active:scale-[0.98] transition-all duration-[var(--duration-fast)] flex items-center justify-center shadow-[var(--shadow-dropdown)] focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]"
-        title="Previous" @click="swipeLeft">
-        <Icon class="text-content-secondary" name="i-lucide-arrow-left" :size="UI_CONFIG.ICON_SIZE" />
-      </button>
+      <UiIconButton
+        icon="i-lucide-arrow-left"
+        label="Previous"
+        variant="soft"
+        size="xs"
+        class="rounded-full shadow-[var(--shadow-dropdown)]"
+        @click="swipeLeft"
+      />
 
       <div class="flex gap-2.5">
         <div v-for="(p, i) in deck.slice(0, 5)" :key="p.id || i" :class="[
@@ -258,11 +261,14 @@ const CardItem = {
         ]" />
       </div>
 
-      <button
-        class="w-6 h-6 rounded-full border border-surface-subtle bg-surface text-content-secondary active:scale-[0.98] transition-all duration-[var(--duration-fast)] flex items-center justify-center shadow-[var(--shadow-dropdown)] focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]"
-        title="Next" @click="swipeRight">
-        <Icon class="text-content-secondary" name="i-lucide-arrow-right" :size="UI_CONFIG.ICON_SIZE" />
-      </button>
+      <UiIconButton
+        icon="i-lucide-arrow-right"
+        label="Next"
+        variant="soft"
+        size="xs"
+        class="rounded-full shadow-[var(--shadow-dropdown)]"
+        @click="swipeRight"
+      />
     </div>
 
   </div>

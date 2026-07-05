@@ -13,43 +13,48 @@ paralleling the canonical `features/<feature>/components/`. Pick one, delete the
 _none_
 
 
-## card/panel — 39 components → `UiCard`
+## card/panel — 44 components → `UiCard`
 
 | Component | tier | signals |
 |---|---|---|
+| `DeleteAccountModal` | component | card-chrome, input×1 |
+| `UsageStatistics` | component | card-chrome |
 | `CreateFlashcardModal` | component | — |
 | `DeleteFlashcardModal` | component | — |
-| `FloatingLearningHubButton` | component | card-chrome, btn×1 |
+| `BoardNotesSection` | container | overlay, card-chrome |
+| `BoardCardSheet` | feature | btn×3, input×1 |
 | `BoardColumn` | feature | card-chrome |
 | `BoardItemCard` | feature | — |
 | `BoardItemDetailPanel` | feature | card-chrome, btn×1, input×1 |
+| `WorkspaceImportDialog` | feature | overlay, card-chrome |
 | `LanguageStatusCard` | feature | — |
 | `QuickCaptureModal` | feature | overlay, card-chrome, btn×3, input×1 |
 | `StoryCard` | feature | btn×1 |
 | `TranslatePanel` | feature | card-chrome, btn×2 |
-| `WordBankList` | feature | card-chrome, btn×2 |
+| `WordBankList` | feature | card-chrome, btn×1 |
+| `UploadMaterialForm` | feature | card-chrome, input×1 |
 | `CanvasNoteEditor` | feature | card-chrome |
 | `MathNoteEditor` | feature | card-chrome |
 | `NoteGroupSection` | feature | card-chrome |
 | `NotesDrawer` | feature | card-chrome |
 | `TextNote` | feature | card-chrome |
+| `NotificationPreferences` | feature | card-chrome, input×5 |
 | `CardDisplay` | feature | — |
 | `CardReviewInterface` | feature | — |
 | `CardReviewState` | feature | — |
+| `ReviewCardView` | feature | btn×1 |
+| `ReviewSessionCard` | feature | — |
 | `ReviewStatusCard` | feature | — |
-| `default` | layout | card-chrome |
 | `app` | other | card-chrome, btn×2 |
-| `editPassword` | page | card-chrome, btn×2 |
 | `reactivate` | page | card-chrome |
-| `signin` | page | card-chrome, btn×1 |
 | `design-system` | page | card-chrome |
-| `index` | page | card-chrome |
-| `CardStack` | primitive | btn×2 |
-| `FlipCard` | primitive | — |
 | `UiCard` | primitive | — |
 | `UiColorModeToggle` | primitive | card-chrome, btn×1 |
 | `UiInteractiveCard` | primitive | — |
+| `UiItemCard` | primitive | — |
+| `UiListCard` | primitive | — |
 | `UiPanel` | primitive | — |
+| `CreditsWallet` | shared | card-chrome |
 | `InAppNotificationsPanel` | shared | — |
 | `LocalSyncStatus` | shared | card-chrome |
 | `NoteToolbar` | shared | card-chrome |
@@ -57,63 +62,103 @@ _none_
 | `TagInput` | shared | card-chrome, input×1 |
 | `TiptapEditor` | shared | card-chrome, btn×1 |
 
-## modal/dialog/drawer — 19 components → `UiModal / UiConfirmDialog / UiDrawer`
+## input/form field — 30 components → `UiFormField (label+error+UInput)`
 
 | Component | tier | signals |
 |---|---|---|
-| `DeleteAccountModal` | component | — |
+| `AuthStepFieldStack` | component | btn×1 |
+| `DeleteAccountModal` | component | card-chrome, input×1 |
+| `UpsertWorkspaceForm` | component | — |
+| `BoardCardSheet` | feature | btn×3, input×1 |
+| `BoardColumnsSheet` | feature | btn×2, input×2 |
+| `BoardItemDetailPanel` | feature | card-chrome, btn×1, input×1 |
+| `QuickCaptureModal` | feature | overlay, card-chrome, btn×3, input×1 |
+| `SpeechRecorder` | feature | input×1 |
+| `UploadMaterialForm` | feature | card-chrome, input×1 |
+| `MobileNoteEditor` | feature | btn×2, input×2 |
+| `NoteGroupsSheet` | feature | btn×3, input×2 |
+| `SelectionAiBubble` | feature | btn×3 |
+| `NotificationPreferences` | feature | card-chrome, input×5 |
+| `[id]` | page | btn×3, input×1 |
+| `index` | page | input×1 |
+| `[id]` | page | btn×5, input×1 |
+| `InputField` | primitive | input×1 |
+| `UiForm` | primitive | — |
+| `UiFormField` | primitive | — |
+| `UiInput` | primitive | — |
+| `UiSelect` | primitive | — |
+| `UiSelectMenu` | primitive | — |
+| `UiTextarea` | primitive | — |
+| `AutocompleteInput` | shared | — |
+| `CodeBlockNode` | shared | btn×1 |
+| `NoteColorPickerButton` | shared | input×1 |
+| `PaperComponent` | shared | btn×8, input×2 |
+| `TagInput` | shared | card-chrome, input×1 |
+| `TiptapBubbleMenu` | shared | input×1 |
+| `GuideDialog` | shared-modal | btn×1, input×1 |
+
+## modal/dialog/drawer — 29 components → `UiModal / UiConfirmDialog / UiDrawer`
+
+| Component | tier | signals |
+|---|---|---|
+| `CaptureSheet` | component | btn×4 |
+| `NotificationsInboxSheet` | component | btn×2 |
+| `WorkspaceSwitcherSheet` | component | — |
+| `ChangePasswordModal` | component | — |
+| `DeleteAccountModal` | component | card-chrome, input×1 |
 | `UpdateProfileModal` | component | — |
 | `ContextSlideOver` | component | overlay |
 | `CreateFlashcardModal` | component | — |
 | `DeleteFlashcardModal` | component | — |
 | `LearningHubModal` | component | overlay |
-| `WorkspaceImportDialog` | feature | — |
+| `BoardNotesSection` | container | overlay, card-chrome |
+| `BoardCardSheet` | feature | btn×3, input×1 |
+| `BoardColumnsSheet` | feature | btn×2, input×2 |
+| `WorkspaceImportDialog` | feature | overlay, card-chrome |
 | `ConsentSheet` | feature | overlay |
 | `QuickCaptureModal` | feature | overlay, card-chrome, btn×3, input×1 |
+| `AiResultSheet` | feature | — |
+| `NoteGroupsSheet` | feature | btn×3, input×2 |
 | `NotesDrawer` | feature | card-chrome |
 | `NotificationSubscriptionModal` | feature | — |
-| `Drawer` | primitive | — |
 | `UiConfirmDialog` | primitive | — |
+| `UiDrawer` | primitive | — |
 | `UiModal` | primitive | — |
 | `UiOverlaySurface` | primitive | — |
+| `UiSheet` | primitive | — |
 | `AIModalStatus` | shared | — |
 | `DeleteConfirmationModal` | shared | — |
-| `DialogModal` | shared | btn×1 |
-| `GuideDialog` | shared-modal | — |
+| `DialogModal` | shared | — |
+| `GuideDialog` | shared-modal | btn×1, input×1 |
 
-## input/form field — 15 components → `UiFormField (label+error+UInput)`
-
-| Component | tier | signals |
-|---|---|---|
-| `UpsertWorkspaceForm` | component | — |
-| `BoardItemDetailPanel` | feature | card-chrome, btn×1, input×1 |
-| `QuickCaptureModal` | feature | overlay, card-chrome, btn×3, input×1 |
-| `UploadMaterialForm` | feature | — |
-| `InputField` | primitive | input×1 |
-| `UiFormField` | primitive | — |
-| `UiInput` | primitive | — |
-| `UiSelect` | primitive | — |
-| `UiTextarea` | primitive | — |
-| `AutocompleteInput` | shared | — |
-| `CodeBlockNode` | shared | btn×1 |
-| `NoteColorPickerButton` | shared | input×1 |
-| `PaperComponent` | shared | btn×2, input×2 |
-| `TagInput` | shared | card-chrome, input×1 |
-| `TiptapBubbleMenu` | shared | input×1 |
-
-## icon/toolbar button — 9 components → `UiButton / UiIconButton`
+## icon/toolbar button — 10 components → `UiButton / UiIconButton`
 
 | Component | tier | signals |
 |---|---|---|
-| `FloatingLearningHubButton` | component | card-chrome, btn×1 |
+| `FloatingLearningHubButton` | component | btn×1 |
 | `QuickCaptureButton` | feature | btn×1 |
 | `GenerateButton` | feature | — |
 | `EnrollButton` | feature | — |
 | `UiButton` | primitive | — |
+| `UiDoubleTapDeleteButton` | primitive | btn×1 |
 | `UiIconButton` | primitive | — |
 | `UiToolbarButton` | primitive | — |
 | `NoteColorPickerButton` | shared | input×1 |
 | `NoteToolbarButton` | shared | — |
+
+## pill/chip/badge/tag — 9 components → `UiBadge / UiChip`
+
+| Component | tier | signals |
+|---|---|---|
+| `SyncBadge` | component | — |
+| `WorkspacePill` | component | — |
+| `BoardTagFilter` | feature | — |
+| `UiBadge` | primitive | — |
+| `UiPill` | primitive | — |
+| `UiPillIcon` | primitive | btn×1 |
+| `UiPillIndicator` | primitive | — |
+| `CreditsPill` | shared | btn×1 |
+| `TagInput` | shared | card-chrome, input×1 |
 
 ## skeleton/loading — 4 components → `UiSkeleton`
 
@@ -121,17 +166,8 @@ _none_
 |---|---|---|
 | `Loading` | component | — |
 | `SpaLoading` | component | — |
-| `Loader` | primitive | — |
+| `AiShimmer` | primitive | — |
 | `UiSkeleton` | primitive | — |
-
-## pill/chip/badge/tag — 4 components → `UiBadge / UiChip`
-
-| Component | tier | signals |
-|---|---|---|
-| `BoardTagFilter` | feature | — |
-| `UiBadge` | primitive | — |
-| `CreditsPill` | shared | btn×1 |
-| `TagInput` | shared | card-chrome, input×1 |
 
 ## empty-state — 2 components → `UiEmptyState`
 

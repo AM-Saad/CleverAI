@@ -4,7 +4,7 @@
 
     <template #header>
       <div class="flex items-center gap-2">
-        <UIcon name="i-heroicons-bell" class="w-5 h-5" />
+        <UiIcon name="i-lucide-bell" class="w-5 h-5" />
         Notification Preferences
       </div>
     </template>
@@ -16,7 +16,7 @@
           <div class="flex w-full items-start justify-between gap-4">
             <div>
               <div class="flex items-center gap-2">
-                <UIcon name="i-heroicons-device-phone-mobile" class="h-5 w-5" />
+                <UiIcon name="i-lucide-smartphone" class="h-5 w-5" />
                 Browser delivery
               </div>
               <ui-paragraph>
@@ -42,7 +42,7 @@
               v-if="!currentDeviceConnected"
               size="sm"
               :loading="subscriptionLoading"
-              icon="i-heroicons-bell"
+              icon="i-lucide-bell"
               @click="enableCurrentDevice"
             >
               {{ needsDeviceRepair ? "Reconnect this device" : "Enable this device" }}
@@ -50,9 +50,9 @@
             <ui-button
               v-else
               size="sm"
-              variant="outline"
+              variant="soft"
               :loading="subscriptionLoading"
-              icon="i-heroicons-bell-slash"
+              icon="i-lucide-bell-off"
               @click="disableCurrentDevice"
             >
               Disable this device
@@ -61,7 +61,7 @@
               size="sm"
               variant="ghost"
               :loading="subscriptionsLoading"
-              icon="i-heroicons-arrow-path"
+              icon="i-lucide-refresh-cw"
               @click="loadDeviceDeliveryState"
             >
               Refresh
@@ -90,8 +90,8 @@
             </div>
 
             <div v-if="subscriptionsLoading" class="py-4 text-center">
-              <UIcon
-                name="i-heroicons-arrow-path"
+              <UiIcon
+                name="i-lucide-refresh-cw"
                 class="mx-auto h-5 w-5 animate-spin text-primary"
               />
             </div>
@@ -135,15 +135,17 @@
                     Last connected {{ formatDate(subscription.lastSeen || subscription.createdAt) }}
                   </ui-paragraph>
                 </div>
-                <ui-button
+                <UiDoubleTapDeleteButton
+                  hide-label
+                  icon="i-lucide-trash-2"
+                  label="Remove saved notification device"
+                  armed-label="Tap again to remove device"
                   size="xs"
                   variant="ghost"
-                  tone="error"
-                  square
-                  icon="i-heroicons-trash"
                   :loading="removingSubscriptionId === subscription.id"
-                  aria-label="Remove saved notification device"
-                  @click="removeSavedSubscription(subscription.id, subscription.isCurrentDevice)"
+                  :disabled="Boolean(removingSubscriptionId && removingSubscriptionId !== subscription.id)"
+                  :reset-key="subscription.id"
+                  @confirm="removeSavedSubscription(subscription.id, subscription.isCurrentDevice)"
                 />
               </UiPanel>
             </div>
@@ -163,22 +165,8 @@
 
         <!-- Card Due Settings -->
         <div v-if="preferences.cardDueEnabled" class="space-y-3">
-          <!-- <UForm label="Notification Time" help="What time would you like to be notified?">
-            <div class="flex items-center gap-2">
-              <u-icon name="i-heroicons-clock" :size="UI_CONFIG.ICON_SIZE" class="text-content-secondary" />
-              <ui-input v-model="preferences.cardDueTime" type="time"
-                :disabled="loading || preferences.sendAnytimeOutsideQuietHours" @change="updatePreferences" :ui="{
-                  base: 'w-full',
-                }" />
-            </div>
-            <div v-if="preferences.sendAnytimeOutsideQuietHours"
-              class="mt-1 text-xs text-content-secondary flex items-center gap-1">
-              <UIcon name="i-heroicons-information-circle" class="w-3 h-3" />
-              <span>Card Due Time is ignored when "Send Anytime" is enabled.</span>
-            </div>
-          </UForm> -->
 
-          <UFormField label="How often would you like to be notified?"
+          <UiFormField label="How often would you like to be notified?"
             help="Choose how often you'd like to be notified about due cards">
             <div class="space-y-3">
               <!-- Threshold Selection -->
@@ -208,7 +196,7 @@
                       </ui-paragraph>
                     </div>
                     <div v-if="preferences.cardDueThreshold === option.value" class="text-primary">
-                      <UIcon name="i-heroicons-check-circle" class="w-5 h-5" />
+                      <UiIcon name="i-lucide-circle-check" class="w-5 h-5" />
                     </div>
                   </div>
                 </UiInteractiveCard>
@@ -224,9 +212,9 @@
                   <div class="text-2xl">⚙️</div>
                   <div class="flex-1">
                     <div class="flex items-center gap-2">
-                      <h4 class="font-medium text-content-on-surface-strong dark:text-content-on-surface">
+                      <ui-title tag="h4" size="base" weight="medium" color="content-on-surface-strong" class="dark:text-content-on-surface">
                         Custom
-                      </h4>
+                      </ui-title>
                       <div v-if="isCustomThreshold" class="flex items-center gap-2">
                         <UiInput v-model.number="customThresholdValue" type="number" min="1" max="100" class="w-20"
                           size="sm" :loading="loading" @input="updateCustomThreshold" />
@@ -238,12 +226,12 @@
                     </p>
                   </div>
                   <div v-if="isCustomThreshold" class="text-primary">
-                    <UIcon name="i-heroicons-check-circle" class="w-5 h-5" />
+                    <UiIcon name="i-lucide-circle-check" class="w-5 h-5" />
                   </div>
                 </div>
               </UiPanel>
             </div>
-          </UFormField>
+          </UiFormField>
         </div>
       </UiPanel>
 
@@ -266,14 +254,15 @@
 
         <!-- Daily Reminder Settings -->
         <div v-if="preferences.dailyReminderEnabled" class="pl-4 border-l-2 border-secondary">
-          <UFormGroup label="Reminder Time" help="What time would you like your daily reminder?">
+          <UiFormField label="Reminder Time" help="What time would you like your daily reminder?">
             <div class="flex items-center gap-2">
-              <UIcon name="i-heroicons-clock" class="w-4 h-4 text-content-secondary" />
+              <UiIcon name="i-lucide-clock" class="w-4 h-4 text-content-secondary" />
+              <!-- design-allow: native time picker — no Ui primitive wraps type=time -->
               <input v-model="preferences.dailyReminderTime" type="time"
-                class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface"
+                class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]"
                 :disabled="loading" @change="updatePreferences" />
             </div>
-          </UFormGroup>
+          </UiFormField>
         </div>
       </UiPanel>
 
@@ -295,27 +284,29 @@
         <!-- Quiet Hours Settings -->
         <div v-if="preferences.quietHoursEnabled" class="space-y-3 pl-4 border-l-2 border-secondary">
           <div class="grid grid-cols-2 gap-4">
-            <UFormGroup label="Start Time">
+            <UiFormField label="Start Time">
               <div class="flex items-center gap-2">
-                <UIcon name="i-heroicons-moon" class="w-4 h-4 text-content-secondary" />
+                <UiIcon name="i-lucide-moon" class="w-4 h-4 text-content-secondary" />
+                <!-- design-allow: native time picker — no Ui primitive wraps type=time -->
                 <input v-model="preferences.quietHoursStart" type="time"
-                  class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface"
+                  class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]"
                   :disabled="loading" @change="updatePreferences" />
               </div>
-            </UFormGroup>
+            </UiFormField>
 
-            <UFormGroup label="End Time">
+            <UiFormField label="End Time">
               <div class="flex items-center gap-2">
-                <UIcon name="i-heroicons-sun" class="w-4 h-4 text-content-secondary" />
+                <UiIcon name="i-lucide-sun" class="w-4 h-4 text-content-secondary" />
+                <!-- design-allow: native time picker — no Ui primitive wraps type=time -->
                 <input v-model="preferences.quietHoursEnd" type="time"
-                  class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface"
+                  class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]"
                   :disabled="loading" @change="updatePreferences" />
               </div>
-            </UFormGroup>
+            </UiFormField>
           </div>
 
           <div class="text-xs text-content-secondary flex items-center gap-1">
-            <UIcon name="i-heroicons-information-circle" class="w-3 h-3" />
+            <UiIcon name="i-lucide-info" class="w-3 h-3" />
             <span>
               Notifications will be delayed until after quiet hours end.
             </span>
@@ -341,7 +332,7 @@
         </template>
 
         <div class="text-xs text-content-secondary flex items-center gap-1">
-          <UIcon name="i-heroicons-information-circle" class="w-3 h-3" />
+          <UiIcon name="i-lucide-info" class="w-3 h-3" />
           <span>
             When disabled, notifications only send near your Card Due Time.
           </span>
@@ -367,26 +358,28 @@
 
         <div v-if="preferences.activeHoursEnabled" class="space-y-3 pl-4 border-l-2 border-secondary">
           <div class="grid grid-cols-2 gap-4">
-            <UFormGroup label="Start">
+            <UiFormField label="Start">
               <div class="flex items-center gap-2">
-                <UIcon name="i-heroicons-play" class="w-4 h-4 text-content-secondary" />
+                <UiIcon name="i-lucide-play" class="w-4 h-4 text-content-secondary" />
+                <!-- design-allow: native time picker — no Ui primitive wraps type=time -->
                 <input v-model="preferences.activeHoursStart" type="time"
-                  class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface"
+                  class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]"
                   :disabled="loading" @change="updatePreferences" />
               </div>
-            </UFormGroup>
+            </UiFormField>
 
-            <UFormGroup label="End">
+            <UiFormField label="End">
               <div class="flex items-center gap-2">
-                <UIcon name="i-heroicons-stop" class="w-4 h-4 text-content-secondary" />
+                <UiIcon name="i-lucide-square" class="w-4 h-4 text-content-secondary" />
+                <!-- design-allow: native time picker — no Ui primitive wraps type=time -->
                 <input v-model="preferences.activeHoursEnd" type="time"
-                  class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface"
+                  class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]"
                   :disabled="loading" @change="updatePreferences" />
               </div>
-            </UFormGroup>
+            </UiFormField>
           </div>
           <div class="text-xs text-content-secondary flex items-center gap-1">
-            <UIcon name="i-heroicons-information-circle" class="w-3 h-3" />
+            <UiIcon name="i-lucide-info" class="w-3 h-3" />
             <span> Midnight crossover is supported (e.g., 22:00–06:00). </span>
           </div>
         </div>
@@ -406,9 +399,9 @@
           </div>
         </template>
 
-        <UFormField label="Your Timezone" help="All notification times will be converted to your local timezone">
+        <UiFormField label="Your Timezone" help="All notification times will be converted to your local timezone">
           <div class="relative inline-flex items-center gap-2">
-            <UIcon name="i-heroicons-globe-alt" class="w-4 h-4 text-content-secondary" />
+            <UiIcon name="i-lucide-globe" class="w-4 h-4 text-content-secondary" />
             <select v-model="preferences.timezone" :disabled="loading"
               class="px-2.5 py-1.5 text-sm rounded-[var(--radius-md)] bg-white dark:bg-surface border border-secondary text-content-on-surface"
               @change="updatePreferences">
@@ -418,10 +411,10 @@
               </option>
             </select>
           </div>
-        </UFormField>
+        </UiFormField>
 
         <div class="text-xs text-content-secondary flex items-center gap-1 my-1">
-          <UIcon name="i-heroicons-information-circle" class="w-3 h-3" />
+          <UiIcon name="i-lucide-info" class="w-3 h-3" />
           <span>
             Current time in your timezone: {{ getCurrentUserTime() }}
           </span>
@@ -434,7 +427,7 @@
     <!-- Save Status -->
     <template v-if="lastSaved" #footer>
       <div class="flex items-center gap-2 text-sm text-content-secondary">
-        <UIcon name="i-heroicons-check-circle" class="w-4 h-4 text-success-text" />
+        <UiIcon name="i-lucide-circle-check" class="w-4 h-4 text-success-text" />
         <span>Settings saved {{ formatRelativeTime(lastSaved) }}</span>
       </div>
     </template>

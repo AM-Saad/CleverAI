@@ -8,7 +8,7 @@
       <div class="flex items-center justify-between w-full">
         Review Status
         <ui-button v-if="showRefresh" size="xs" variant="ghost" :is-loading="isLoading" @click="refresh">
-          <!-- <Icon name="heroicons:arrow-path" :class="['w-4 h-4', isLoading ? 'animate-spin' : '']" /> -->
+          <!-- <Icon name="i-lucide-refresh-cw" :class="['w-4 h-4', isLoading ? 'animate-spin' : '']" /> -->
           <shared-icon :name="'reload'" />
         </ui-button>
       </div>
@@ -43,7 +43,7 @@
         <!-- Action Button -->
         <div v-if="showAction && hasDueCards">
           <ui-button :to="reviewLink" size="sm">
-            <!-- <Icon name="heroicons:play" class="w-4 h-4" /> -->
+            <!-- <Icon name="i-lucide-play" class="w-4 h-4" /> -->
             Start Review
             <span v-if="stats?.due" class=" opacity-75">({{ stats.due }})</span>
           </ui-button>

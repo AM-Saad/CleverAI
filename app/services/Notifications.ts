@@ -5,6 +5,7 @@ import {
   NotificationSubscriptionsResponseSchema,
   RecentNotificationsResponseSchema,
 } from "@@/shared/utils/notification.contract";
+import type { NotificationPreferencesDTO } from "@@/shared/utils/notification.contract";
 import FetchFactory from "./FetchFactory";
 
 export interface SubscribePayload {
@@ -82,6 +83,18 @@ export class NotificationsService extends FetchFactory {
       {},
       {},
       MarkAllNotificationsReadResponseSchema,
+    );
+  }
+
+  async getPreferences() {
+    return this.call<NotificationPreferencesDTO>("GET", `${this.resource}/preferences`);
+  }
+
+  async updatePreferences(payload: Partial<NotificationPreferencesDTO>) {
+    return this.call<NotificationPreferencesDTO>(
+      "PUT",
+      `${this.resource}/preferences`,
+      payload,
     );
   }
 }

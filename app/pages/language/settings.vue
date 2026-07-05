@@ -1,9 +1,8 @@
 <template>
-  <LanguageSettingsContainer />
+  <div />
 </template>
 
 <script setup lang="ts">
-import LanguageSettingsContainer from "~/features/language-learning/containers/LanguageSettingsContainer.vue";
-
 definePageMeta({ middleware: "auth" });
+await navigateTo({ path: "/account/language" }, { replace: true });
 </script>

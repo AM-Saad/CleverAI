@@ -68,6 +68,7 @@
   --shadow-dropdown: 0 4px 16px rgb(0 0 0 / 0.12);
   --shadow-modal: 0 20px 60px rgb(0 0 0 / 0.15);
   --shadow-primary-glow: 0 4px 12px rgb(56 73 152 / 0.25);
+  --shadow-sheet: 0 -10px 40px rgb(0 0 0 / 0.2); /* Bottom-sheet elevation */
   --duration-fast: 120ms; /* Small state changes */
   --duration-normal: 200ms; /* Default interaction motion */
   --duration-slow: 320ms; /* Overlays and larger transitions */
@@ -107,6 +108,11 @@
   --ds-focus-ring: 0 0 0 2px var(--ds-focus-outline-color); /* Compact keyboard focus ring (box-shadow) */
   --ds-backdrop-strong: rgb(2 6 23 / 0.8);
   --ds-backdrop-dim: rgb(0 0 0 / 0.4);
+  --ds-sheet-scrim: rgb(2 6 23 / 0.45); /* Bottom-sheet scrim overlay */
+  --ds-surface-card: var(--color-white); /* Mobile card surface — white on the light page; flips to dark surface under .dark */
+  --ds-gradient-fab: linear-gradient(135deg, #384998, #5566c4); /* Capture/create FAB fill */
+  --ds-gradient-due: linear-gradient(150deg, #384998, #2c3a7d); /* Due-now hero card */
+  --ds-gradient-summary: linear-gradient(165deg, #384998, #222a55); /* Review session summary backdrop */
   --component-card-radius: var(--radius-2xl);
   --component-card-padding-xs: var(--space-1);
   --component-card-padding-sm: var(--space-2);
@@ -155,4 +161,5 @@ html.dark,
   --color-warning-text: #fbbf24; /* AA warning text/icon on dark surfaces */
   --color-error-text: #f87171; /* AA error text/icon on dark surfaces */
   --color-info-text: #38bdf8; /* AA info text/icon on dark surfaces */
+  --ds-surface-card: var(--color-surface); /* Card surface flips to dark raised surface */
 }

@@ -1,20 +1,50 @@
 {
   "generatedFrom": "scripts/audit-components.cjs",
-  "total": 192,
+  "total": 243,
   "tiers": {
-    "component": 30,
+    "component": 42,
     "container": 6,
-    "feature": 45,
+    "feature": 59,
     "icon": 11,
     "layout": 1,
     "other": 1,
-    "page": 24,
-    "primitive": 43,
+    "page": 40,
+    "primitive": 52,
     "shared": 29,
     "shared-modal": 2
   },
-  "bypassCount": 59,
+  "bypassCount": 87,
   "records": [
+    {
+      "file": "app/components/account/AccountPageFrame.vue",
+      "name": "AccountPageFrame",
+      "tier": "component",
+      "props": [
+        "title",
+        "subtitle",
+        "backTo",
+        "backLabel"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiIconButton"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 1,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <h1-6> ×1"
+      ],
+      "clusters": [],
+      "isAppCode": true
+    },
     {
       "file": "app/components/auth/AuthenticationStatus.vue",
       "name": "AuthenticationStatus",
@@ -31,11 +61,50 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 2,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [],
+      "bypass": [
+        "raw <h1-6> ×2"
+      ],
       "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/components/auth/AuthStepFieldStack.vue",
+      "name": "AuthStepFieldStack",
+      "tier": "component",
+      "props": [
+        "reveal",
+        "firstComplete",
+        "loading",
+        "submitDisabled",
+        "submitLabel",
+        "submitIcon",
+        "progress",
+        "progressVisible",
+        "progressLabel",
+        "statusVisible"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 1,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×1"
+      ],
+      "clusters": [
+        "input/form field"
+      ],
       "isAppCode": true
     },
     {
@@ -56,6 +125,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -78,10 +148,37 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/components/home/HomeHub.vue",
+      "name": "HomeHub",
+      "tier": "component",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiIcon",
+        "UiListCard"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 3,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <h1-6> ×3"
+      ],
       "clusters": [],
       "isAppCode": true
     },
@@ -98,10 +195,13 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 1,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [],
+      "bypass": [
+        "raw <h1-6> ×1"
+      ],
       "clusters": [
         "skeleton/loading"
       ],
@@ -120,6 +220,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -148,6 +249,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -189,6 +291,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -213,11 +316,13 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 3,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [
-        "raw <button> ×2"
+        "raw <button> ×2",
+        "raw <h1-6> ×3"
       ],
       "clusters": [],
       "isAppCode": true
@@ -227,12 +332,13 @@
       "name": "AccountTab",
       "tier": "component",
       "props": [],
-      "nuxtUi": [
-        "UIcon"
-      ],
+      "nuxtUi": [],
       "uiPrimitives": [
+        "UiIcon",
+        "UiLabel",
         "UiPanel",
-        "ui-button"
+        "ui-button",
+        "ui-loader"
       ],
       "signals": {
         "rawButton": 0,
@@ -240,12 +346,11 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [
-        "direct Nuxt UI: UIcon"
-      ],
+      "bypass": [],
       "clusters": [],
       "isAppCode": true
     },
@@ -256,6 +361,8 @@
       "props": [],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiAlert",
+        "UiButton",
         "UiPanel"
       ],
       "signals": {
@@ -264,6 +371,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -289,6 +397,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -301,11 +410,13 @@
       "name": "SecurityTab",
       "tier": "component",
       "props": [],
-      "nuxtUi": [
-        "UIcon"
-      ],
+      "nuxtUi": [],
       "uiPrimitives": [
-        "UiPanel"
+        "UiButton",
+        "UiIcon",
+        "UiPanel",
+        "UiParagraph",
+        "UiSubtitle"
       ],
       "signals": {
         "rawButton": 0,
@@ -313,12 +424,11 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [
-        "direct Nuxt UI: UIcon"
-      ],
+      "bypass": [],
       "clusters": [],
       "isAppCode": true
     },
@@ -327,11 +437,14 @@
       "name": "StudyTab",
       "tier": "component",
       "props": [],
-      "nuxtUi": [
-        "UIcon"
-      ],
+      "nuxtUi": [],
       "uiPrimitives": [
-        "UiPanel"
+        "UiButton",
+        "UiFormField",
+        "UiIcon",
+        "UiInput",
+        "UiPanel",
+        "UiSwitch"
       ],
       "signals": {
         "rawButton": 0,
@@ -339,13 +452,236 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/components/shell/CaptureSheet.vue",
+      "name": "CaptureSheet",
+      "tier": "component",
+      "props": [
+        "open"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiIcon",
+        "UiSheet"
+      ],
+      "signals": {
+        "rawButton": 4,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [
-        "direct Nuxt UI: UIcon"
+        "raw <button> ×4"
+      ],
+      "clusters": [
+        "modal/dialog/drawer"
+      ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/components/shell/MobileTabBar.vue",
+      "name": "MobileTabBar",
+      "tier": "component",
+      "props": [
+        "captureOpen"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiIcon",
+        "UiListCard",
+        "UiSheet"
+      ],
+      "signals": {
+        "rawButton": 2,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×2"
       ],
       "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/components/shell/NotificationsInboxSheet.vue",
+      "name": "NotificationsInboxSheet",
+      "tier": "component",
+      "props": [
+        "open"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiIcon",
+        "UiSheet",
+        "UiSkeleton"
+      ],
+      "signals": {
+        "rawButton": 2,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 1,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×2",
+        "raw <h1-6> ×1"
+      ],
+      "clusters": [
+        "modal/dialog/drawer"
+      ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/components/shell/SaveLocalBar.vue",
+      "name": "SaveLocalBar",
+      "tier": "component",
+      "props": [
+        "syncing",
+        "label"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/components/shell/StreakRing.vue",
+      "name": "StreakRing",
+      "tier": "component",
+      "props": [
+        "value"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/components/shell/SyncBadge.vue",
+      "name": "SyncBadge",
+      "tier": "component",
+      "props": [
+        "state"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiPill",
+        "UiPillIndicator"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [
+        "pill/chip/badge/tag"
+      ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/components/shell/WorkspacePill.vue",
+      "name": "WorkspacePill",
+      "tier": "component",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiPill",
+        "UiPillIcon",
+        "UiPillIndicator"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [
+        "pill/chip/badge/tag"
+      ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/components/shell/WorkspaceSwitcherSheet.vue",
+      "name": "WorkspaceSwitcherSheet",
+      "tier": "component",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiIcon",
+        "UiInput",
+        "UiListCard",
+        "UiPill",
+        "UiPillIcon",
+        "UiPillIndicator",
+        "UiSheet"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [
+        "modal/dialog/drawer"
+      ],
       "isAppCode": true
     },
     {
@@ -361,12 +697,45 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 1,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <h1-6> ×1"
+      ],
+      "clusters": [
+        "skeleton/loading"
+      ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/components/user/ChangePasswordModal.vue",
+      "name": "ChangePasswordModal",
+      "tier": "component",
+      "props": [
+        "show",
+        "loading",
+        "error"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiInput"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [],
       "clusters": [
-        "skeleton/loading"
+        "modal/dialog/drawer"
       ],
       "isAppCode": true
     },
@@ -377,26 +746,35 @@
       "props": [
         "show"
       ],
-      "nuxtUi": [
-        "UIcon"
-      ],
+      "nuxtUi": [],
       "uiPrimitives": [
-        "UiPanel"
+        "UiDoubleTapDeleteButton",
+        "UiForm",
+        "UiFormField",
+        "UiIcon",
+        "UiPanel",
+        "ui-button",
+        "ui-input"
       ],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
-        "rawInput": 0,
-        "rawLabel": 1,
+        "rawInput": 1,
+        "rawLabel": 2,
         "rawSelect": 0,
+        "rawHeading": 1,
         "overlayScaffold": false,
-        "cardChrome": false
+        "cardChrome": true
       },
       "bypass": [
-        "direct Nuxt UI: UIcon"
+        "raw <input> ×1",
+        "raw <h1-6> ×1",
+        "hand-rolled card chrome"
       ],
       "clusters": [
-        "modal/dialog/drawer"
+        "modal/dialog/drawer",
+        "card/panel",
+        "input/form field"
       ],
       "isAppCode": true
     },
@@ -410,6 +788,9 @@
       ],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiForm",
+        "UiFormField",
+        "UiSelectMenu",
         "ui-button",
         "ui-input"
       ],
@@ -419,6 +800,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -438,7 +820,8 @@
         "UiLabel",
         "UiPanel",
         "ui-button",
-        "ui-input"
+        "ui-input",
+        "ui-loader"
       ],
       "signals": {
         "rawButton": 0,
@@ -446,11 +829,16 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
-        "cardChrome": false
+        "cardChrome": true
       },
-      "bypass": [],
-      "clusters": [],
+      "bypass": [
+        "hand-rolled card chrome"
+      ],
+      "clusters": [
+        "card/panel"
+      ],
       "isAppCode": true
     },
     {
@@ -466,10 +854,13 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 1,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [],
+      "bypass": [
+        "raw <h1-6> ×1"
+      ],
       "clusters": [],
       "isAppCode": true
     },
@@ -491,6 +882,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": true,
         "cardChrome": false
       },
@@ -509,6 +901,9 @@
       "props": [],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiForm",
+        "UiFormField",
+        "ui-button",
         "ui-textarea"
       ],
       "signals": {
@@ -517,6 +912,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -540,6 +936,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -557,7 +954,11 @@
       "props": [],
       "nuxtUi": [],
       "uiPrimitives": [
-        "ui-button"
+        "ui-badge",
+        "ui-button",
+        "ui-card-stack",
+        "ui-flip-card",
+        "ui-paragraph"
       ],
       "signals": {
         "rawButton": 0,
@@ -565,6 +966,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -585,16 +987,15 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
-        "cardChrome": true
+        "cardChrome": false
       },
       "bypass": [
-        "raw <button> ×1",
-        "hand-rolled card chrome"
+        "raw <button> ×1"
       ],
       "clusters": [
-        "icon/toolbar button",
-        "card/panel"
+        "icon/toolbar button"
       ],
       "isAppCode": true
     },
@@ -605,9 +1006,12 @@
       "props": [],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiCollapsible",
         "UiPanel",
+        "UiTooltip",
         "ui-button",
-        "ui-gradient-bg"
+        "ui-subtitle",
+        "ui-tabs"
       ],
       "signals": {
         "rawButton": 0,
@@ -615,6 +1019,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -638,6 +1043,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": true,
         "cardChrome": false
       },
@@ -656,6 +1062,7 @@
       "props": [],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiIcon",
         "ui-paragraph"
       ],
       "signals": {
@@ -664,6 +1071,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -678,6 +1086,7 @@
       "props": [],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiIcon",
         "ui-badge",
         "ui-paragraph",
         "ui-subtitle"
@@ -688,6 +1097,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -703,6 +1113,7 @@
       "nuxtUi": [],
       "uiPrimitives": [
         "UiCard",
+        "UiCollapsible",
         "ui-badge",
         "ui-button",
         "ui-paragraph"
@@ -713,6 +1124,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -727,6 +1139,8 @@
       "props": [],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiForm",
+        "UiFormField",
         "ui-button",
         "ui-input",
         "ui-textarea"
@@ -737,6 +1151,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -754,13 +1169,18 @@
         "workspaceId"
       ],
       "nuxtUi": [],
-      "uiPrimitives": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiIcon",
+        "UiTabs"
+      ],
       "signals": {
         "rawButton": 2,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -775,14 +1195,16 @@
       "name": "BoardNotesSection",
       "tier": "container",
       "props": [],
-      "nuxtUi": [
-        "UPopover"
-      ],
+      "nuxtUi": [],
       "uiPrimitives": [
+        "UiActionMenu",
         "UiButton",
         "UiInput",
+        "UiOverlaySurface",
         "UiPanel",
-        "ui-label"
+        "UiPopover",
+        "ui-label",
+        "ui-loader"
       ],
       "signals": {
         "rawButton": 0,
@@ -790,13 +1212,18 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
-        "overlayScaffold": false,
-        "cardChrome": false
+        "rawHeading": 0,
+        "overlayScaffold": true,
+        "cardChrome": true
       },
       "bypass": [
-        "direct Nuxt UI: UPopover"
+        "ad-hoc overlay",
+        "hand-rolled card chrome"
       ],
-      "clusters": [],
+      "clusters": [
+        "modal/dialog/drawer",
+        "card/panel"
+      ],
       "isAppCode": true
     },
     {
@@ -815,6 +1242,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -828,15 +1256,14 @@
       "tier": "container",
       "props": [],
       "nuxtUi": [],
-      "uiPrimitives": [
-        "ui-subtitle"
-      ],
+      "uiPrimitives": [],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -857,6 +1284,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -873,10 +1301,13 @@
       "uiPrimitives": [
         "UiActionMenu",
         "UiButton",
+        "UiIconButton",
         "UiPanel",
         "UiToolbar",
         "UiToolbarButton",
-        "ui-label"
+        "ui-drawer",
+        "ui-label",
+        "ui-loader"
       ],
       "signals": {
         "rawButton": 0,
@@ -884,6 +1315,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -897,20 +1329,61 @@
       "tier": "container",
       "props": [],
       "nuxtUi": [],
-      "uiPrimitives": [
-        "ui-button"
-      ],
+      "uiPrimitives": [],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [],
       "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/features/board/components/BoardCardSheet.vue",
+      "name": "BoardCardSheet",
+      "tier": "feature",
+      "props": [
+        "open",
+        "item",
+        "columns",
+        "tags",
+        "defaultColumnId",
+        "createTag"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiDoubleTapDeleteButton",
+        "UiIcon",
+        "UiInput",
+        "UiPill",
+        "UiSheet"
+      ],
+      "signals": {
+        "rawButton": 3,
+        "rawDialog": 0,
+        "rawInput": 1,
+        "rawLabel": 4,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×3",
+        "raw <input> ×1"
+      ],
+      "clusters": [
+        "modal/dialog/drawer",
+        "card/panel",
+        "input/form field"
+      ],
       "isAppCode": true
     },
     {
@@ -937,6 +1410,7 @@
         "UiIconButton",
         "UiInput",
         "UiPanel",
+        "UiPill",
         "UiSubtitle"
       ],
       "signals": {
@@ -945,6 +1419,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": true
       },
@@ -953,6 +1428,42 @@
       ],
       "clusters": [
         "card/panel"
+      ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/features/board/components/BoardColumnsSheet.vue",
+      "name": "BoardColumnsSheet",
+      "tier": "feature",
+      "props": [
+        "open",
+        "columns"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiDoubleTapDeleteButton",
+        "UiIcon",
+        "UiPill",
+        "UiSheet"
+      ],
+      "signals": {
+        "rawButton": 2,
+        "rawDialog": 0,
+        "rawInput": 2,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×2",
+        "raw <input> ×2"
+      ],
+      "clusters": [
+        "modal/dialog/drawer",
+        "input/form field"
       ],
       "isAppCode": true
     },
@@ -977,6 +1488,7 @@
         "rawInput": 0,
         "rawLabel": 2,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -999,6 +1511,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -1017,10 +1530,11 @@
       "nuxtUi": [],
       "uiPrimitives": [
         "UiActionMenu",
-        "UiBadge",
+        "UiDoubleTapDeleteButton",
         "UiIconButton",
-        "UiInteractiveCard",
-        "UiParagraph"
+        "UiItemCard",
+        "UiPill",
+        "UiPillIcon"
       ],
       "signals": {
         "rawButton": 0,
@@ -1028,6 +1542,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -1049,6 +1564,7 @@
       "uiPrimitives": [
         "UiBadge",
         "UiButton",
+        "UiDoubleTapDeleteButton",
         "UiInput",
         "UiPanel",
         "UiSelect",
@@ -1060,6 +1576,7 @@
         "rawInput": 1,
         "rawLabel": 2,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": true
       },
@@ -1089,6 +1606,7 @@
       "nuxtUi": [],
       "uiPrimitives": [
         "UiButton",
+        "UiIconButton",
         "UiInput",
         "UiInteractiveCard",
         "UiPanel",
@@ -1098,16 +1616,17 @@
         "ui-subtitle"
       ],
       "signals": {
-        "rawButton": 6,
+        "rawButton": 2,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [
-        "raw <button> ×6"
+        "raw <button> ×2"
       ],
       "clusters": [],
       "isAppCode": true
@@ -1120,10 +1639,9 @@
         "itemsByColumn",
         "selectedItemId"
       ],
-      "nuxtUi": [
-        "UDropdownMenu"
-      ],
+      "nuxtUi": [],
       "uiPrimitives": [
+        "UiActionMenu",
         "UiButton",
         "UiInput",
         "UiPanel"
@@ -1134,12 +1652,12 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [
-        "raw <button> ×2",
-        "direct Nuxt UI: UDropdownMenu"
+        "raw <button> ×2"
       ],
       "clusters": [],
       "isAppCode": true
@@ -1163,6 +1681,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -1190,6 +1709,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -1210,6 +1730,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -1232,6 +1753,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -1252,20 +1774,34 @@
       ],
       "nuxtUi": [],
       "uiPrimitives": [
-        "UiButton"
+        "UiBadge",
+        "UiButton",
+        "UiIconButton",
+        "UiInput",
+        "UiInteractiveCard",
+        "UiOverlaySurface",
+        "UiPanel",
+        "UiSelect",
+        "UiSkeleton"
       ],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
         "rawInput": 0,
-        "rawLabel": 0,
+        "rawLabel": 5,
         "rawSelect": 0,
-        "overlayScaffold": false,
-        "cardChrome": false
+        "rawHeading": 1,
+        "overlayScaffold": true,
+        "cardChrome": true
       },
-      "bypass": [],
+      "bypass": [
+        "raw <h1-6> ×1",
+        "ad-hoc overlay",
+        "hand-rolled card chrome"
+      ],
       "clusters": [
-        "modal/dialog/drawer"
+        "modal/dialog/drawer",
+        "card/panel"
       ],
       "isAppCode": true
     },
@@ -1289,6 +1825,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": true,
         "cardChrome": false
       },
@@ -1309,8 +1846,14 @@
       ],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiLabel",
         "UiPanel",
-        "ui-loader"
+        "UiSelect",
+        "ui-button",
+        "ui-input",
+        "ui-loader",
+        "ui-paragraph",
+        "ui-switch"
       ],
       "signals": {
         "rawButton": 0,
@@ -1318,6 +1861,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -1338,6 +1882,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -1355,7 +1900,10 @@
       "nuxtUi": [],
       "uiPrimitives": [
         "UiCard",
-        "ui-button"
+        "ui-badge",
+        "ui-button",
+        "ui-loader",
+        "ui-paragraph"
       ],
       "signals": {
         "rawButton": 0,
@@ -1363,6 +1911,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -1385,6 +1934,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -1419,6 +1969,7 @@
         "rawInput": 1,
         "rawLabel": 1,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": true,
         "cardChrome": true
       },
@@ -1457,6 +2008,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -1466,6 +2018,37 @@
       "clusters": [
         "card/panel"
       ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/features/language-learning/components/StoryReader.vue",
+      "name": "StoryReader",
+      "tier": "feature",
+      "props": [
+        "title",
+        "level",
+        "text",
+        "savedWords"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiIcon",
+        "UiIconButton"
+      ],
+      "signals": {
+        "rawButton": 3,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×3"
+      ],
+      "clusters": [],
       "isAppCode": true
     },
     {
@@ -1479,6 +2062,9 @@
       "uiPrimitives": [
         "UiIconButton",
         "UiOverlaySurface",
+        "UiPanel",
+        "UiParagraph",
+        "ui-badge",
         "ui-button",
         "ui-input"
       ],
@@ -1488,6 +2074,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": true
       },
@@ -1507,28 +2094,30 @@
       "props": [],
       "nuxtUi": [],
       "uiPrimitives": [
-        "UiBadge",
         "UiButton",
-        "UiCard",
+        "UiDoubleTapDeleteButton",
         "UiInput",
+        "UiItemCard",
         "UiPanel",
+        "UiPill",
+        "UiPillIcon",
         "UiSelect",
-        "ui-badge",
         "ui-button",
         "ui-loader",
         "ui-paragraph"
       ],
       "signals": {
-        "rawButton": 2,
+        "rawButton": 1,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": true
       },
       "bypass": [
-        "raw <button> ×2",
+        "raw <button> ×1",
         "hand-rolled card chrome"
       ],
       "clusters": [
@@ -1541,10 +2130,11 @@
       "name": "GenerateButton",
       "tier": "feature",
       "props": [],
-      "nuxtUi": [
-        "UDropdownMenu"
-      ],
+      "nuxtUi": [],
       "uiPrimitives": [
+        "UiActionMenu",
+        "UiCheckbox",
+        "UiTooltip",
         "ui-badge",
         "ui-button"
       ],
@@ -1554,12 +2144,11 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [
-        "direct Nuxt UI: UDropdownMenu"
-      ],
+      "bypass": [],
       "clusters": [
         "icon/toolbar button"
       ],
@@ -1570,12 +2159,14 @@
       "name": "MaterialsList",
       "tier": "feature",
       "props": [],
-      "nuxtUi": [
-        "UDropdownMenu"
-      ],
+      "nuxtUi": [],
       "uiPrimitives": [
-        "UiInteractiveCard",
-        "UiPanel",
+        "UiActionMenu",
+        "UiCard",
+        "UiDoubleTapDeleteButton",
+        "UiListCard",
+        "UiPill",
+        "UiPillIcon",
         "ui-button",
         "ui-loader",
         "ui-paragraph",
@@ -1587,12 +2178,11 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [
-        "direct Nuxt UI: UDropdownMenu"
-      ],
+      "bypass": [],
       "clusters": [],
       "isAppCode": true
     },
@@ -1603,19 +2193,27 @@
       "props": [],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiButton",
+        "UiIcon",
+        "UiInput",
         "UiPanel"
       ],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
-        "rawInput": 0,
+        "rawInput": 1,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [],
-      "clusters": [],
+      "bypass": [
+        "raw <input> ×1"
+      ],
+      "clusters": [
+        "input/form field"
+      ],
       "isAppCode": true
     },
     {
@@ -1627,8 +2225,58 @@
       ],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiButton",
+        "UiButtonGroup",
+        "UiForm",
+        "UiFormField",
+        "UiInteractiveCard",
         "UiPanel",
-        "ui-tabs"
+        "UiProgress",
+        "UiSwitch",
+        "UiTooltip",
+        "ui-button",
+        "ui-input",
+        "ui-label",
+        "ui-tabs",
+        "ui-textarea"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 1,
+        "rawLabel": 2,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": true
+      },
+      "bypass": [
+        "raw <input> ×1",
+        "hand-rolled card chrome"
+      ],
+      "clusters": [
+        "card/panel",
+        "input/form field"
+      ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/features/notes/components/AiResultSheet.vue",
+      "name": "AiResultSheet",
+      "tier": "feature",
+      "props": [
+        "open",
+        "loading",
+        "committing",
+        "error",
+        "cards",
+        "sourceLabel"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiIcon",
+        "UiSheet"
       ],
       "signals": {
         "rawButton": 0,
@@ -1636,12 +2284,15 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 1,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [],
+      "bypass": [
+        "raw <h1-6> ×1"
+      ],
       "clusters": [
-        "input/form field"
+        "modal/dialog/drawer"
       ],
       "isAppCode": true
     },
@@ -1655,11 +2306,10 @@
         "isFullscreen",
         "readonly"
       ],
-      "nuxtUi": [
-        "UIcon"
-      ],
+      "nuxtUi": [],
       "uiPrimitives": [
         "UiButton",
+        "UiIcon",
         "UiIconButton"
       ],
       "signals": {
@@ -1668,12 +2318,12 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": true
       },
       "bypass": [
-        "hand-rolled card chrome",
-        "direct Nuxt UI: UIcon"
+        "hand-rolled card chrome"
       ],
       "clusters": [
         "card/panel"
@@ -1693,6 +2343,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -1710,11 +2361,10 @@
         "isFullscreen",
         "readonly"
       ],
-      "nuxtUi": [
-        "UIcon"
-      ],
+      "nuxtUi": [],
       "uiPrimitives": [
-        "UiButton"
+        "UiButton",
+        "UiIcon"
       ],
       "signals": {
         "rawButton": 0,
@@ -1722,15 +2372,54 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": true
       },
       "bypass": [
-        "hand-rolled card chrome",
-        "direct Nuxt UI: UIcon"
+        "hand-rolled card chrome"
       ],
       "clusters": [
         "card/panel"
+      ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/features/notes/components/MobileNoteEditor.vue",
+      "name": "MobileNoteEditor",
+      "tier": "feature",
+      "props": [
+        "noteId",
+        "title",
+        "content",
+        "tags",
+        "syncState",
+        "noteType",
+        "metadata"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiIcon",
+        "UiIconButton",
+        "UiPill",
+        "UiPillIcon"
+      ],
+      "signals": {
+        "rawButton": 2,
+        "rawDialog": 0,
+        "rawInput": 2,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×2",
+        "raw <input> ×2"
+      ],
+      "clusters": [
+        "input/form field"
       ],
       "isAppCode": true
     },
@@ -1767,6 +2456,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": true
       },
@@ -1776,6 +2466,68 @@
       "clusters": [
         "card/panel"
       ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/features/notes/components/NoteGroupsSheet.vue",
+      "name": "NoteGroupsSheet",
+      "tier": "feature",
+      "props": [
+        "open",
+        "groups"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiDoubleTapDeleteButton",
+        "UiIcon",
+        "UiSheet"
+      ],
+      "signals": {
+        "rawButton": 3,
+        "rawDialog": 0,
+        "rawInput": 2,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×3",
+        "raw <input> ×2"
+      ],
+      "clusters": [
+        "modal/dialog/drawer",
+        "input/form field"
+      ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/features/notes/components/NoteListRow.vue",
+      "name": "NoteListRow",
+      "tier": "feature",
+      "props": [
+        "note"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiItemCard",
+        "UiPill",
+        "UiPillIcon"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
       "isAppCode": true
     },
     {
@@ -1804,6 +2556,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -1841,6 +2594,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": true
       },
@@ -1872,6 +2626,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -1895,6 +2650,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -1920,11 +2676,43 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [],
       "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/features/notes/components/SelectionAiBubble.vue",
+      "name": "SelectionAiBubble",
+      "tier": "feature",
+      "props": [
+        "visible",
+        "x",
+        "y"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiIcon"
+      ],
+      "signals": {
+        "rawButton": 3,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×3"
+      ],
+      "clusters": [
+        "input/form field"
+      ],
       "isAppCode": true
     },
     {
@@ -1944,6 +2732,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": true
       },
@@ -1960,25 +2749,38 @@
       "name": "NotificationPreferences",
       "tier": "feature",
       "props": [],
-      "nuxtUi": [
-        "UIcon"
-      ],
+      "nuxtUi": [],
       "uiPrimitives": [
-        "UiPanel"
+        "UiDoubleTapDeleteButton",
+        "UiFormField",
+        "UiIcon",
+        "UiInput",
+        "UiInteractiveCard",
+        "UiPanel",
+        "UiSwitch",
+        "ui-button",
+        "ui-label",
+        "ui-paragraph"
       ],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
-        "rawInput": 0,
+        "rawInput": 5,
         "rawLabel": 0,
-        "rawSelect": 0,
+        "rawSelect": 1,
+        "rawHeading": 1,
         "overlayScaffold": false,
-        "cardChrome": false
+        "cardChrome": true
       },
       "bypass": [
-        "direct Nuxt UI: UIcon"
+        "raw <input> ×5",
+        "raw <h1-6> ×1",
+        "hand-rolled card chrome"
       ],
-      "clusters": [],
+      "clusters": [
+        "card/panel",
+        "input/form field"
+      ],
       "isAppCode": true
     },
     {
@@ -1986,24 +2788,24 @@
       "name": "NotificationSubscriptionModal",
       "tier": "feature",
       "props": [],
-      "nuxtUi": [
-        "UIcon"
-      ],
+      "nuxtUi": [],
       "uiPrimitives": [
+        "UiButton",
+        "UiCheckbox",
+        "UiIcon",
         "UiPanel"
       ],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
         "rawInput": 0,
-        "rawLabel": 0,
+        "rawLabel": 1,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [
-        "direct Nuxt UI: UIcon"
-      ],
+      "bypass": [],
       "clusters": [
         "modal/dialog/drawer"
       ],
@@ -2025,6 +2827,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2040,13 +2843,19 @@
       "tier": "feature",
       "props": [],
       "nuxtUi": [],
-      "uiPrimitives": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiPanel",
+        "ui-paragraph",
+        "ui-subtitle"
+      ],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2069,6 +2878,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2093,6 +2903,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2117,6 +2928,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2140,6 +2952,157 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 4,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <h1-6> ×4"
+      ],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/features/review/components/ReviewCardView.vue",
+      "name": "ReviewCardView",
+      "tier": "feature",
+      "props": [
+        "eyebrow",
+        "question",
+        "answer",
+        "revealed",
+        "swipeEnabled"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiIcon"
+      ],
+      "signals": {
+        "rawButton": 1,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×1"
+      ],
+      "clusters": [
+        "card/panel"
+      ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/features/review/components/ReviewSessionCard.vue",
+      "name": "ReviewSessionCard",
+      "tier": "feature",
+      "props": [
+        "finished",
+        "xp",
+        "reviewedCount",
+        "total",
+        "minutes",
+        "streak",
+        "accuracy",
+        "achievement",
+        "progressPct",
+        "loading",
+        "error",
+        "hasCard",
+        "cardKey",
+        "eyebrow",
+        "question",
+        "answer",
+        "revealed",
+        "state",
+        "disabled",
+        "swipeEnabled",
+        "hint",
+        "emptyTitle",
+        "emptySubtitle",
+        "emptyActionLabel"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [
+        "card/panel"
+      ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/features/review/components/ReviewSessionFrame.vue",
+      "name": "ReviewSessionFrame",
+      "tier": "feature",
+      "props": [
+        "finished",
+        "xp",
+        "reviewedCount",
+        "total",
+        "minutes",
+        "streak",
+        "accuracy",
+        "achievement",
+        "progressPct",
+        "loading",
+        "error",
+        "hasCard",
+        "emptyTitle",
+        "emptySubtitle",
+        "emptyActionLabel"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiIcon",
+        "UiIconButton",
+        "UiSkeleton"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/features/review/components/ReviewSessionView.vue",
+      "name": "ReviewSessionView",
+      "tier": "feature",
+      "props": [
+        "workspaceId",
+        "closeTo",
+        "limit"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2160,6 +3123,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2177,7 +3141,10 @@
       "nuxtUi": [],
       "uiPrimitives": [
         "UiCard",
-        "ui-button"
+        "ui-badge",
+        "ui-button",
+        "ui-loader",
+        "ui-paragraph"
       ],
       "signals": {
         "rawButton": 0,
@@ -2185,6 +3152,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2192,6 +3160,63 @@
       "clusters": [
         "card/panel"
       ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/features/review/components/SessionSummary.vue",
+      "name": "SessionSummary",
+      "tier": "feature",
+      "props": [
+        "xp",
+        "cards",
+        "minutes",
+        "streak",
+        "accuracy",
+        "achievement"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiIcon"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/features/review/components/Sm2GradeBar.vue",
+      "name": "Sm2GradeBar",
+      "tier": "feature",
+      "props": [
+        "state",
+        "disabled"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 1,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×1"
+      ],
+      "clusters": [],
       "isAppCode": true
     },
     {
@@ -2207,6 +3232,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2227,6 +3253,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2247,6 +3274,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2267,6 +3295,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2287,6 +3316,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2307,6 +3337,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2327,6 +3358,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2347,6 +3379,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2367,6 +3400,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2387,6 +3421,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2407,6 +3442,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2419,30 +3455,20 @@
       "name": "default",
       "tier": "layout",
       "props": [],
-      "nuxtUi": [
-        "UToaster"
-      ],
-      "uiPrimitives": [
-        "UiColorModeToggle",
-        "ui-button",
-        "ui-dropdown-menu"
-      ],
+      "nuxtUi": [],
+      "uiPrimitives": [],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
-        "cardChrome": true
+        "cardChrome": false
       },
-      "bypass": [
-        "hand-rolled card chrome",
-        "direct Nuxt UI: UToaster"
-      ],
-      "clusters": [
-        "card/panel"
-      ],
+      "bypass": [],
+      "clusters": [],
       "isAppCode": true
     },
     {
@@ -2450,7 +3476,9 @@
       "name": "app",
       "tier": "other",
       "props": [],
-      "nuxtUi": [],
+      "nuxtUi": [
+        "UApp"
+      ],
       "uiPrimitives": [],
       "signals": {
         "rawButton": 2,
@@ -2458,11 +3486,13 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 1,
         "overlayScaffold": false,
         "cardChrome": true
       },
       "bypass": [
         "raw <button> ×2",
+        "raw <h1-6> ×1",
         "hand-rolled card chrome"
       ],
       "clusters": [
@@ -2483,10 +3513,13 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 1,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [],
+      "bypass": [
+        "raw <h1-6> ×1"
+      ],
       "clusters": [],
       "isAppCode": true
     },
@@ -2509,6 +3542,250 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/account/about.vue",
+      "name": "about",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiIcon",
+        "UiSettingsGroup",
+        "UiSettingsRow"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/account/appearance.vue",
+      "name": "appearance",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiColorModeToggle",
+        "UiIcon",
+        "UiSettingsGroup",
+        "UiSettingsRow"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/account/data.vue",
+      "name": "data",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiIcon",
+        "UiSettingsGroup",
+        "UiSettingsRow"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/account/index.vue",
+      "name": "index",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiIcon",
+        "UiListCard",
+        "UiPill"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 1,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <h1-6> ×1"
+      ],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/account/language.vue",
+      "name": "language",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiIcon",
+        "UiSelect",
+        "UiSettingsGroup",
+        "UiSettingsRow",
+        "UiSettingsStepper",
+        "UiSwitch"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/account/notifications.vue",
+      "name": "notifications",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiDoubleTapDeleteButton",
+        "UiIcon",
+        "UiInput",
+        "UiPill",
+        "UiSelect",
+        "UiSettingsGroup",
+        "UiSettingsRow",
+        "UiSettingsStepper",
+        "UiSwitch"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/account/plan.vue",
+      "name": "plan",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiIcon",
+        "UiSettingsGroup",
+        "UiSettingsRow"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/account/profile.vue",
+      "name": "profile",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiIcon",
+        "UiSettingsGroup",
+        "UiSettingsRow"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/account/security.vue",
+      "name": "security",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiIcon",
+        "UiSettingsGroup",
+        "UiSettingsRow"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2523,26 +3800,23 @@
       "props": [],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiButton",
         "UiParagraph",
         "UiTitle",
         "ui-input-field"
       ],
       "signals": {
-        "rawButton": 2,
+        "rawButton": 0,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
-        "cardChrome": true
+        "cardChrome": false
       },
-      "bypass": [
-        "raw <button> ×2",
-        "hand-rolled card chrome"
-      ],
-      "clusters": [
-        "card/panel"
-      ],
+      "bypass": [],
+      "clusters": [],
       "isAppCode": true
     },
     {
@@ -2558,10 +3832,13 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 1,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [],
+      "bypass": [
+        "raw <h1-6> ×1"
+      ],
       "clusters": [],
       "isAppCode": true
     },
@@ -2581,10 +3858,12 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 1,
         "overlayScaffold": false,
         "cardChrome": true
       },
       "bypass": [
+        "raw <h1-6> ×1",
         "hand-rolled card chrome"
       ],
       "clusters": [
@@ -2605,21 +3884,17 @@
         "ui-input-field"
       ],
       "signals": {
-        "rawButton": 1,
+        "rawButton": 0,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
-        "cardChrome": true
+        "cardChrome": false
       },
-      "bypass": [
-        "raw <button> ×1",
-        "hand-rolled card chrome"
-      ],
-      "clusters": [
-        "card/panel"
-      ],
+      "bypass": [],
+      "clusters": [],
       "isAppCode": true
     },
     {
@@ -2641,6 +3916,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2655,21 +3931,56 @@
       "props": [],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiButton",
         "UiParagraph",
         "UiTitle",
         "ui-input-field"
       ],
       "signals": {
-        "rawButton": 2,
+        "rawButton": 0,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/board.vue",
+      "name": "board",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiIcon",
+        "UiIconButton",
+        "UiInput",
+        "UiItemCard",
+        "UiListCard",
+        "UiPill",
+        "UiPillIcon",
+        "UiPillIndicator",
+        "UiSheet"
+      ],
+      "signals": {
+        "rawButton": 1,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 1,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [
-        "raw <button> ×2"
+        "raw <button> ×1",
+        "raw <h1-6> ×1"
       ],
       "clusters": [],
       "isAppCode": true
@@ -2681,12 +3992,36 @@
       "props": [],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiActionMenu",
+        "UiAlert",
         "UiBadge",
         "UiButton",
         "UiCard",
+        "UiCheckbox",
+        "UiConfirmDialog",
+        "UiEmptyState",
+        "UiFormField",
+        "UiInput",
+        "UiInteractiveCard",
+        "UiModal",
+        "UiOverlaySurface",
+        "UiPanel",
         "UiParagraph",
+        "UiPill",
+        "UiPillIcon",
+        "UiPillIndicator",
+        "UiPopover",
+        "UiProgress",
+        "UiSelect",
+        "UiSkeleton",
         "UiSubtitle",
-        "UiTitle"
+        "UiSwitch",
+        "UiTabs",
+        "UiTextarea",
+        "UiTitle",
+        "UiToolbar",
+        "UiToolbarButton",
+        "UiTooltip"
       ],
       "signals": {
         "rawButton": 0,
@@ -2694,6 +4029,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": true
       },
@@ -2722,43 +4058,18 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 1,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [],
+      "bypass": [
+        "raw <h1-6> ×1"
+      ],
       "clusters": [],
       "isAppCode": true
     },
     {
       "file": "app/pages/index.vue",
-      "name": "index",
-      "tier": "page",
-      "props": [],
-      "nuxtUi": [],
-      "uiPrimitives": [
-        "UiButton",
-        "ui-button",
-        "ui-watch-video"
-      ],
-      "signals": {
-        "rawButton": 0,
-        "rawDialog": 0,
-        "rawInput": 0,
-        "rawLabel": 0,
-        "rawSelect": 0,
-        "overlayScaffold": false,
-        "cardChrome": true
-      },
-      "bypass": [
-        "hand-rolled card chrome"
-      ],
-      "clusters": [
-        "card/panel"
-      ],
-      "isAppCode": true
-    },
-    {
-      "file": "app/pages/language/index.vue",
       "name": "index",
       "tier": "page",
       "props": [],
@@ -2770,10 +4081,43 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/language/index.vue",
+      "name": "index",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiCard",
+        "UiDoubleTapDeleteButton",
+        "UiIcon",
+        "UiInput",
+        "UiPill",
+        "UiSkeleton"
+      ],
+      "signals": {
+        "rawButton": 5,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 2,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×5",
+        "raw <h1-6> ×2"
+      ],
       "clusters": [],
       "isAppCode": true
     },
@@ -2790,6 +4134,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2810,6 +4155,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2830,6 +4176,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2854,6 +4201,152 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/materials/[id].vue",
+      "name": "[id]",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiIcon",
+        "UiIconButton",
+        "UiSheet",
+        "UiSkeleton"
+      ],
+      "signals": {
+        "rawButton": 3,
+        "rawDialog": 0,
+        "rawInput": 1,
+        "rawLabel": 2,
+        "rawSelect": 0,
+        "rawHeading": 1,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×3",
+        "raw <input> ×1",
+        "raw <h1-6> ×1"
+      ],
+      "clusters": [
+        "input/form field"
+      ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/materials/index.vue",
+      "name": "index",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiIcon",
+        "UiListCard",
+        "UiSkeleton"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 1,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 1,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <input> ×1",
+        "raw <h1-6> ×1"
+      ],
+      "clusters": [
+        "input/form field"
+      ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/notes/[id].vue",
+      "name": "[id]",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiDoubleTapDeleteButton",
+        "UiIcon",
+        "UiSheet"
+      ],
+      "signals": {
+        "rawButton": 5,
+        "rawDialog": 0,
+        "rawInput": 1,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×5",
+        "raw <input> ×1"
+      ],
+      "clusters": [
+        "input/form field"
+      ],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/notes/index.vue",
+      "name": "index",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiIcon",
+        "UiIconButton",
+        "UiInput",
+        "UiSkeleton"
+      ],
+      "signals": {
+        "rawButton": 3,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 1,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×3",
+        "raw <h1-6> ×1"
+      ],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/notifications.vue",
+      "name": "notifications",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2877,10 +4370,13 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 2,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [],
+      "bypass": [
+        "raw <h1-6> ×2"
+      ],
       "clusters": [],
       "isAppCode": true
     },
@@ -2897,12 +4393,35 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 5,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [
-        "raw <button> ×3"
+        "raw <button> ×3",
+        "raw <h1-6> ×5"
       ],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/review.vue",
+      "name": "review",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
       "clusters": [],
       "isAppCode": true
     },
@@ -2919,6 +4438,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2931,28 +4451,19 @@
       "name": "profile",
       "tier": "page",
       "props": [],
-      "nuxtUi": [
-        "USkeleton"
-      ],
-      "uiPrimitives": [
-        "UiCard",
-        "ui-button",
-        "ui-label",
-        "ui-paragraph",
-        "ui-subtitle"
-      ],
+      "nuxtUi": [],
+      "uiPrimitives": [],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [
-        "direct Nuxt UI: USkeleton"
-      ],
+      "bypass": [],
       "clusters": [],
       "isAppCode": true
     },
@@ -2969,6 +4480,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -2982,16 +4494,14 @@
       "tier": "page",
       "props": [],
       "nuxtUi": [],
-      "uiPrimitives": [
-        "UiPanel",
-        "ui-tabs"
-      ],
+      "uiPrimitives": [],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3005,17 +4515,27 @@
       "tier": "page",
       "props": [],
       "nuxtUi": [],
-      "uiPrimitives": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiIcon",
+        "UiIconButton",
+        "UiPill",
+        "UiPillIcon",
+        "UiSkeleton"
+      ],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 2,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [],
+      "bypass": [
+        "raw <h1-6> ×2"
+      ],
       "clusters": [],
       "isAppCode": true
     },
@@ -3027,20 +4547,58 @@
       "nuxtUi": [],
       "uiPrimitives": [
         "UiButton",
-        "UiPopover"
+        "UiDoubleTapDeleteButton",
+        "UiIcon",
+        "UiIconButton",
+        "UiInput",
+        "UiListCard",
+        "UiPill",
+        "UiPillIcon",
+        "UiSheet",
+        "UiSkeleton",
+        "UiTextarea"
       ],
+      "signals": {
+        "rawButton": 3,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 2,
+        "rawSelect": 0,
+        "rawHeading": 1,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×3",
+        "raw <h1-6> ×1"
+      ],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/components/ui/AiShimmer.vue",
+      "name": "AiShimmer",
+      "tier": "primitive",
+      "props": [
+        "lines"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [],
-      "clusters": [],
-      "isAppCode": true
+      "clusters": [
+        "skeleton/loading"
+      ],
+      "isAppCode": false
     },
     {
       "file": "app/components/ui/blur-reveal/BlurReveal.vue",
@@ -3055,35 +4613,12 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [],
       "clusters": [],
-      "isAppCode": false
-    },
-    {
-      "file": "app/components/ui/CardStack.vue",
-      "name": "CardStack",
-      "tier": "primitive",
-      "props": [],
-      "nuxtUi": [],
-      "uiPrimitives": [],
-      "signals": {
-        "rawButton": 2,
-        "rawDialog": 0,
-        "rawInput": 0,
-        "rawLabel": 0,
-        "rawSelect": 0,
-        "overlayScaffold": false,
-        "cardChrome": false
-      },
-      "bypass": [
-        "raw <button> ×2"
-      ],
-      "clusters": [
-        "card/panel"
-      ],
       "isAppCode": false
     },
     {
@@ -3099,92 +4634,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
-        "overlayScaffold": false,
-        "cardChrome": false
-      },
-      "bypass": [],
-      "clusters": [],
-      "isAppCode": false
-    },
-    {
-      "file": "app/components/ui/Drawer.vue",
-      "name": "Drawer",
-      "tier": "primitive",
-      "props": [],
-      "nuxtUi": [],
-      "uiPrimitives": [],
-      "signals": {
-        "rawButton": 0,
-        "rawDialog": 0,
-        "rawInput": 0,
-        "rawLabel": 0,
-        "rawSelect": 0,
-        "overlayScaffold": false,
-        "cardChrome": false
-      },
-      "bypass": [],
-      "clusters": [
-        "modal/dialog/drawer"
-      ],
-      "isAppCode": false
-    },
-    {
-      "file": "app/components/ui/DropdownMenu.vue",
-      "name": "DropdownMenu",
-      "tier": "primitive",
-      "props": [],
-      "nuxtUi": [
-        "UIcon"
-      ],
-      "uiPrimitives": [],
-      "signals": {
-        "rawButton": 0,
-        "rawDialog": 0,
-        "rawInput": 0,
-        "rawLabel": 0,
-        "rawSelect": 0,
-        "overlayScaffold": false,
-        "cardChrome": false
-      },
-      "bypass": [],
-      "clusters": [],
-      "isAppCode": false
-    },
-    {
-      "file": "app/components/ui/flip-card/FlipCard.vue",
-      "name": "FlipCard",
-      "tier": "primitive",
-      "props": [],
-      "nuxtUi": [],
-      "uiPrimitives": [],
-      "signals": {
-        "rawButton": 0,
-        "rawDialog": 0,
-        "rawInput": 0,
-        "rawLabel": 0,
-        "rawSelect": 0,
-        "overlayScaffold": false,
-        "cardChrome": false
-      },
-      "bypass": [],
-      "clusters": [
-        "card/panel"
-      ],
-      "isAppCode": false
-    },
-    {
-      "file": "app/components/ui/GradientBg.vue",
-      "name": "GradientBg",
-      "tier": "primitive",
-      "props": [],
-      "nuxtUi": [],
-      "uiPrimitives": [],
-      "signals": {
-        "rawButton": 0,
-        "rawDialog": 0,
-        "rawInput": 0,
-        "rawLabel": 0,
-        "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3205,6 +4655,7 @@
         "rawInput": 1,
         "rawLabel": 1,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3217,34 +4668,14 @@
       "isAppCode": false
     },
     {
-      "file": "app/components/ui/Loader.vue",
-      "name": "Loader",
+      "file": "app/components/ui/RewardGradient.vue",
+      "name": "RewardGradient",
       "tier": "primitive",
-      "props": [],
-      "nuxtUi": [
-        "UIcon"
+      "props": [
+        "tag",
+        "text",
+        "className"
       ],
-      "uiPrimitives": [],
-      "signals": {
-        "rawButton": 0,
-        "rawDialog": 0,
-        "rawInput": 0,
-        "rawLabel": 0,
-        "rawSelect": 0,
-        "overlayScaffold": false,
-        "cardChrome": false
-      },
-      "bypass": [],
-      "clusters": [
-        "skeleton/loading"
-      ],
-      "isAppCode": false
-    },
-    {
-      "file": "app/components/ui/spinning-text/SpinningText.vue",
-      "name": "SpinningText",
-      "tier": "primitive",
-      "props": [],
       "nuxtUi": [],
       "uiPrimitives": [],
       "signals": {
@@ -3253,26 +4684,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
-        "overlayScaffold": false,
-        "cardChrome": false
-      },
-      "bypass": [],
-      "clusters": [],
-      "isAppCode": false
-    },
-    {
-      "file": "app/components/ui/text-highlight/TextHighlight.vue",
-      "name": "TextHighlight",
-      "tier": "primitive",
-      "props": [],
-      "nuxtUi": [],
-      "uiPrimitives": [],
-      "signals": {
-        "rawButton": 0,
-        "rawDialog": 0,
-        "rawInput": 0,
-        "rawLabel": 0,
-        "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3305,6 +4717,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3334,6 +4747,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3362,6 +4776,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3390,7 +4805,8 @@
         "activeColor",
         "activeVariant",
         "block",
-        "square"
+        "square",
+        "pill"
       ],
       "nuxtUi": [
         "UButton"
@@ -3402,6 +4818,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3409,6 +4826,29 @@
       "clusters": [
         "icon/toolbar button"
       ],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiButtonGroup.vue",
+      "name": "UiButtonGroup",
+      "tier": "primitive",
+      "props": [],
+      "nuxtUi": [
+        "UButtonGroup"
+      ],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
       "isAppCode": false
     },
     {
@@ -3424,6 +4864,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3458,6 +4899,30 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiCollapsible.vue",
+      "name": "UiCollapsible",
+      "tier": "primitive",
+      "props": [],
+      "nuxtUi": [
+        "UCollapsible"
+      ],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3478,6 +4943,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": true
       },
@@ -3499,13 +4965,16 @@
         "description",
         "icon",
         "confirmLabel",
+        "confirmArmedLabel",
         "cancelLabel",
         "tone",
-        "loading"
+        "loading",
+        "requiresDoubleTap"
       ],
       "nuxtUi": [],
       "uiPrimitives": [
         "UiButton",
+        "UiDoubleTapDeleteButton",
         "UiModal"
       ],
       "signals": {
@@ -3514,10 +4983,117 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [],
+      "clusters": [
+        "modal/dialog/drawer"
+      ],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiContextMenu.vue",
+      "name": "UiContextMenu",
+      "tier": "primitive",
+      "props": [
+        "items"
+      ],
+      "nuxtUi": [
+        "UContextMenu"
+      ],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiDoubleTapDeleteButton.vue",
+      "name": "UiDoubleTapDeleteButton",
+      "tier": "primitive",
+      "props": [
+        "label",
+        "armedLabel",
+        "announcement",
+        "confirmWindowMs",
+        "resetKey",
+        "disabled",
+        "loading",
+        "unstyled",
+        "stopPropagation",
+        "preventDefault",
+        "tone",
+        "color",
+        "variant",
+        "size",
+        "icon",
+        "armedIcon",
+        "leadingIcon",
+        "armedLeadingIcon",
+        "trailingIcon",
+        "block",
+        "square",
+        "pill",
+        "title",
+        "ariaLabel",
+        "hideLabel"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton"
+      ],
+      "signals": {
+        "rawButton": 1,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×1"
+      ],
+      "clusters": [
+        "icon/toolbar button"
+      ],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiDrawer.vue",
+      "name": "UiDrawer",
+      "tier": "primitive",
+      "props": [],
+      "nuxtUi": [
+        "u-button",
+        "u-icon"
+      ],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 1,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <h1-6> ×1"
+      ],
       "clusters": [
         "modal/dialog/drawer"
       ],
@@ -3548,12 +5124,41 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [],
       "clusters": [
         "empty-state"
+      ],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiForm.vue",
+      "name": "UiForm",
+      "tier": "primitive",
+      "props": [
+        "schema",
+        "state"
+      ],
+      "nuxtUi": [
+        "UForm"
+      ],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [
+        "input/form field"
       ],
       "isAppCode": false
     },
@@ -3579,6 +5184,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3586,6 +5192,31 @@
       "clusters": [
         "input/form field"
       ],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiIcon.vue",
+      "name": "UiIcon",
+      "tier": "primitive",
+      "props": [
+        "name"
+      ],
+      "nuxtUi": [
+        "UIcon"
+      ],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
       "isAppCode": false
     },
     {
@@ -3599,7 +5230,9 @@
         "variant",
         "size",
         "loading",
-        "disabled"
+        "disabled",
+        "active",
+        "pressed"
       ],
       "nuxtUi": [],
       "uiPrimitives": [
@@ -3611,6 +5244,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3648,6 +5282,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3683,10 +5318,52 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [],
+      "clusters": [
+        "card/panel"
+      ],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiItemCard.vue",
+      "name": "UiItemCard",
+      "tier": "primitive",
+      "props": [
+        "as",
+        "title",
+        "subtitle",
+        "variant",
+        "size",
+        "clickable",
+        "selected",
+        "disabled",
+        "showBody",
+        "spine",
+        "className",
+        "headerClass",
+        "titleClass",
+        "bodyClass",
+        "footerClass"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 1,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <h1-6> ×1"
+      ],
       "clusters": [
         "card/panel"
       ],
@@ -3705,11 +5382,58 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [],
       "clusters": [],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiListCard.vue",
+      "name": "UiListCard",
+      "tier": "primitive",
+      "props": [
+        "as",
+        "to",
+        "href",
+        "target",
+        "rel",
+        "type",
+        "clickable",
+        "selected",
+        "selectable",
+        "disabled",
+        "title",
+        "description",
+        "trailingText",
+        "variant",
+        "size",
+        "leadingBackground",
+        "leadingColor",
+        "className",
+        "leadingClass",
+        "contentClass",
+        "trailingClass",
+        "actionClass"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [
+        "card/panel"
+      ],
       "isAppCode": false
     },
     {
@@ -3729,6 +5453,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3760,6 +5485,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3788,6 +5514,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3810,11 +5537,120 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [],
       "clusters": [],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiPill.vue",
+      "name": "UiPill",
+      "tier": "primitive",
+      "props": [
+        "as",
+        "to",
+        "href",
+        "target",
+        "rel",
+        "type",
+        "clickable",
+        "selectable",
+        "active",
+        "disabled",
+        "label",
+        "icon",
+        "color",
+        "fillTextColor",
+        "variant",
+        "size",
+        "maxChars",
+        "maxWidth",
+        "className"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiPillIcon"
+      ],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [
+        "pill/chip/badge/tag"
+      ],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiPillIcon.vue",
+      "name": "UiPillIcon",
+      "tier": "primitive",
+      "props": [
+        "name",
+        "label",
+        "button",
+        "disabled",
+        "size",
+        "className"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiIcon"
+      ],
+      "signals": {
+        "rawButton": 1,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×1"
+      ],
+      "clusters": [
+        "pill/chip/badge/tag"
+      ],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiPillIndicator.vue",
+      "name": "UiPillIndicator",
+      "tier": "primitive",
+      "props": [
+        "color",
+        "label",
+        "size",
+        "hollow",
+        "className"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [
+        "pill/chip/badge/tag"
+      ],
       "isAppCode": false
     },
     {
@@ -3834,6 +5670,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3863,6 +5700,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3900,12 +5738,177 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [],
       "clusters": [
         "input/form field"
+      ],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiSelectMenu.vue",
+      "name": "UiSelectMenu",
+      "tier": "primitive",
+      "props": [
+        "size",
+        "placeholder",
+        "tone",
+        "variant",
+        "disabled",
+        "highlight",
+        "loading",
+        "multiple",
+        "error"
+      ],
+      "nuxtUi": [
+        "USelectMenu"
+      ],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [
+        "input/form field"
+      ],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiSettingsGroup.vue",
+      "name": "UiSettingsGroup",
+      "tier": "primitive",
+      "props": [
+        "id",
+        "tag",
+        "title",
+        "description",
+        "variant",
+        "className",
+        "bodyClass"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiSettingsRow.vue",
+      "name": "UiSettingsRow",
+      "tier": "primitive",
+      "props": [
+        "as",
+        "to",
+        "href",
+        "target",
+        "rel",
+        "type",
+        "clickable",
+        "disabled",
+        "title",
+        "description",
+        "trailingText",
+        "size",
+        "className",
+        "leadingClass",
+        "contentClass",
+        "controlClass"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiSettingsStepper.vue",
+      "name": "UiSettingsStepper",
+      "tier": "primitive",
+      "props": [
+        "min",
+        "max",
+        "step",
+        "disabled",
+        "decrementLabel",
+        "incrementLabel"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiIcon"
+      ],
+      "signals": {
+        "rawButton": 2,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×2"
+      ],
+      "clusters": [],
+      "isAppCode": false
+    },
+    {
+      "file": "app/components/ui/UiSheet.vue",
+      "name": "UiSheet",
+      "tier": "primitive",
+      "props": [
+        "open",
+        "title",
+        "closeOnBackdrop",
+        "dismissThreshold"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 1,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <h1-6> ×1"
+      ],
+      "clusters": [
+        "modal/dialog/drawer"
       ],
       "isAppCode": false
     },
@@ -3926,6 +5929,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3948,6 +5952,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -3981,6 +5986,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4001,6 +6007,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4039,6 +6046,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4061,6 +6069,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4086,6 +6095,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4120,6 +6130,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4147,53 +6158,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
-        "overlayScaffold": false,
-        "cardChrome": false
-      },
-      "bypass": [],
-      "clusters": [],
-      "isAppCode": false
-    },
-    {
-      "file": "app/components/ui/UpgradeToPro.vue",
-      "name": "UpgradeToPro",
-      "tier": "primitive",
-      "props": [
-        "title",
-        "description",
-        "generationsUsed",
-        "generationsQuota"
-      ],
-      "nuxtUi": [],
-      "uiPrimitives": [],
-      "signals": {
-        "rawButton": 1,
-        "rawDialog": 0,
-        "rawInput": 0,
-        "rawLabel": 0,
-        "rawSelect": 0,
-        "overlayScaffold": false,
-        "cardChrome": false
-      },
-      "bypass": [
-        "raw <button> ×1"
-      ],
-      "clusters": [],
-      "isAppCode": false
-    },
-    {
-      "file": "app/components/ui/WatchVideo.vue",
-      "name": "WatchVideo",
-      "tier": "primitive",
-      "props": [],
-      "nuxtUi": [],
-      "uiPrimitives": [],
-      "signals": {
-        "rawButton": 0,
-        "rawDialog": 0,
-        "rawInput": 0,
-        "rawLabel": 0,
-        "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4214,6 +6179,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4243,6 +6209,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4265,6 +6232,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 1,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4289,6 +6257,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4307,11 +6276,15 @@
       "props": [
         "isOpen"
       ],
-      "nuxtUi": [
-        "UIcon"
-      ],
+      "nuxtUi": [],
       "uiPrimitives": [
-        "UiDrawer"
+        "UiButton",
+        "UiDrawer",
+        "UiIcon",
+        "UiIconButton",
+        "UiInteractiveCard",
+        "UiPanel",
+        "UiSubtitle"
       ],
       "signals": {
         "rawButton": 0,
@@ -4319,13 +6292,17 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 2,
         "overlayScaffold": false,
-        "cardChrome": false
+        "cardChrome": true
       },
       "bypass": [
-        "direct Nuxt UI: UIcon"
+        "raw <h1-6> ×2",
+        "hand-rolled card chrome"
       ],
-      "clusters": [],
+      "clusters": [
+        "card/panel"
+      ],
       "isAppCode": true
     },
     {
@@ -4345,6 +6322,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4372,17 +6350,16 @@
         "ui-subtitle"
       ],
       "signals": {
-        "rawButton": 1,
+        "rawButton": 0,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [
-        "raw <button> ×1"
-      ],
+      "bypass": [],
       "clusters": [
         "modal/dialog/drawer"
       ],
@@ -4395,6 +6372,8 @@
       "props": [],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiIcon",
+        "UiTooltip",
         "ui-button",
         "ui-paragraph",
         "ui-subtitle"
@@ -4405,6 +6384,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4433,6 +6413,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4453,6 +6434,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4476,6 +6458,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4501,6 +6484,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4519,6 +6503,7 @@
       ],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiButton",
         "UiPanel",
         "ui-button",
         "ui-label",
@@ -4530,6 +6515,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4566,6 +6552,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": true
       },
@@ -4597,6 +6584,7 @@
         "rawInput": 1,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4622,6 +6610,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4635,13 +6624,17 @@
       "tier": "shared",
       "props": [],
       "nuxtUi": [],
-      "uiPrimitives": [],
+      "uiPrimitives": [
+        "UiDoubleTapDeleteButton",
+        "UiTooltip"
+      ],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": true
       },
@@ -4679,6 +6672,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4695,11 +6689,10 @@
       "props": [
         "controls"
       ],
-      "nuxtUi": [
-        "UIcon"
-      ],
+      "nuxtUi": [],
       "uiPrimitives": [
         "UiActionMenu",
+        "UiIcon",
         "UiInput",
         "UiPopover",
         "ui-label"
@@ -4710,12 +6703,11 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [
-        "direct Nuxt UI: UIcon"
-      ],
+      "bypass": [],
       "clusters": [],
       "isAppCode": true
     },
@@ -4732,6 +6724,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4758,6 +6751,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4773,16 +6767,17 @@
       "nuxtUi": [],
       "uiPrimitives": [],
       "signals": {
-        "rawButton": 2,
+        "rawButton": 8,
         "rawDialog": 0,
         "rawInput": 2,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [
-        "raw <button> ×2",
+        "raw <button> ×8",
         "raw <input> ×2"
       ],
       "clusters": [
@@ -4801,6 +6796,7 @@
       "nuxtUi": [],
       "uiPrimitives": [
         "UiCard",
+        "UiIcon",
         "ui-paragraph",
         "ui-subtitle"
       ],
@@ -4810,6 +6806,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4830,13 +6827,16 @@
         "minPercent"
       ],
       "nuxtUi": [],
-      "uiPrimitives": [],
+      "uiPrimitives": [
+        "UiIcon"
+      ],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4863,6 +6863,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -4891,6 +6892,7 @@
         "rawInput": 1,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": true
       },
@@ -4914,12 +6916,11 @@
         "context",
         "readonly"
       ],
-      "nuxtUi": [
-        "UIcon"
-      ],
+      "nuxtUi": [],
       "uiPrimitives": [
         "UiActionMenu",
         "UiButton",
+        "UiIcon",
         "UiToolbarButton"
       ],
       "signals": {
@@ -4928,12 +6929,12 @@
         "rawInput": 1,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [
-        "raw <input> ×1",
-        "direct Nuxt UI: UIcon"
+        "raw <input> ×1"
       ],
       "clusters": [
         "input/form field"
@@ -4952,10 +6953,9 @@
         "documentMode",
         "collaboration"
       ],
-      "nuxtUi": [
-        "UContextMenu"
-      ],
+      "nuxtUi": [],
       "uiPrimitives": [
+        "UiContextMenu",
         "UiOverlaySurface"
       ],
       "signals": {
@@ -4964,13 +6964,13 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": true
       },
       "bypass": [
         "raw <button> ×1",
-        "hand-rolled card chrome",
-        "direct Nuxt UI: UContextMenu"
+        "hand-rolled card chrome"
       ],
       "clusters": [
         "card/panel"
@@ -4987,6 +6987,7 @@
       "nuxtUi": [],
       "uiPrimitives": [
         "UiLabel",
+        "ui-button",
         "ui-input"
       ],
       "signals": {
@@ -4995,6 +6996,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
@@ -5010,17 +7012,22 @@
       "nuxtUi": [],
       "uiPrimitives": [],
       "signals": {
-        "rawButton": 0,
+        "rawButton": 1,
         "rawDialog": 0,
-        "rawInput": 0,
-        "rawLabel": 0,
+        "rawInput": 1,
+        "rawLabel": 1,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [],
+      "bypass": [
+        "raw <button> ×1",
+        "raw <input> ×1"
+      ],
       "clusters": [
-        "modal/dialog/drawer"
+        "modal/dialog/drawer",
+        "input/form field"
       ],
       "isAppCode": true
     },
@@ -5037,6 +7044,7 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },

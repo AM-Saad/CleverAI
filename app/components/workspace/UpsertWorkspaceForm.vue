@@ -122,7 +122,7 @@ watch(
       :description="props.workspace ? '' : 'Workspace is a container for organizing your content.'">
       <template #body>
         <shared-error-message :error="typedError || updateTypedError" />
-        <u-form :schema="CreateWorkspaceDTO" :state="state" class="space-y-2" @submit="onSubmit">
+        <UiForm :schema="CreateWorkspaceDTO" :state="state" class="space-y-2" @submit="onSubmit">
           <div v-if="!props.workspace" class="flex items-center gap-1" role="group" aria-label="Create mode">
             <ui-button type="button" size="xs" :variant="mode === 'blank' ? 'soft' : 'ghost'" tone="neutral"
               :aria-pressed="mode === 'blank'" @click="mode = 'blank'">
@@ -134,19 +134,19 @@ watch(
             </ui-button>
           </div>
 
-          <u-form-field label="Title" name="title" required>
+          <UiFormField label="Title" name="title" required>
             <ui-input v-model="state.title" autofocus class="w-full" />
-          </u-form-field>
+          </UiFormField>
 
-          <u-form-field label="Description" name="description">
+          <UiFormField label="Description" name="description">
             <ui-input v-model="state.description" class="w-full" />
-          </u-form-field>
+          </UiFormField>
 
-          <u-form-field v-if="!props.workspace && mode === 'content'" label="Content" name="materialContent"
+          <UiFormField v-if="!props.workspace && mode === 'content'" label="Content" name="materialContent"
             help="Pasted notes become this workspace's first material — then turn it into cards from the list.">
             <ui-textarea v-model="materialContent" :rows="6" class="w-full"
               placeholder="Paste notes, an article, or a topic to seed this workspace…" />
-          </u-form-field>
+          </UiFormField>
 
           <div class="flex gap-3 justify-end pt-2">
             <ui-button variant="ghost" @click="closeModel" :disabled="creating || updating">
@@ -157,7 +157,7 @@ watch(
             </ui-button>
 
           </div>
-        </u-form>
+        </UiForm>
       </template>
     </shared-dialog-modal>
   </Teleport>

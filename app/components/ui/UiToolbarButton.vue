@@ -34,7 +34,7 @@ withDefaults(
     label?: string;
     tooltip?: string;
     tone?: Tone;
-    variant?: "solid" | "outline" | "soft" | "subtle" | "ghost" | "link";
+    variant?: "solid" | "soft" | "ghost" | "link";
     size?: Size;
     active?: boolean;
     disabled?: boolean;

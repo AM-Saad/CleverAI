@@ -17,7 +17,7 @@
       class="flex flex-1 flex-col items-center justify-center gap-4 p-6"
     >
       <shared-error-message :error="error" />
-      <UiButton tone="neutral" variant="outline" @click="emit('refresh')">
+      <UiButton tone="neutral" variant="soft" @click="emit('refresh')">
         <Icon name="i-lucide-refresh-cw" class="mr-1 h-4 w-4" />
         Try again
       </UiButton>
@@ -68,7 +68,7 @@
           emptyMessage
         }}</ui-paragraph>
       </div>
-      <UiButton tone="neutral" variant="outline" @click="emit('refresh')">
+      <UiButton tone="neutral" variant="soft" @click="emit('refresh')">
         <Icon name="i-lucide-refresh-cw" class="mr-1 h-4 w-4" />
         Refresh
       </UiButton>

@@ -71,7 +71,7 @@
                 class="w-full py-2.5 bg-primary text-white dark:text-dark text-xs font-bold rounded-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-2 relative overflow-hidden will-change-transform"
                 :animate="step === 'clicking-generate' ? { scale: 0.95 } : { scale: 1 }"
                 :transition="{ duration: 0.15 }">
-                <u-icon name="i-heroicons-sparkles-solid" class="w-4 h-4" />
+                <u-icon name="i-lucide-sparkles" class="w-4 h-4" />
                 Generate Flashcards
 
                 <!-- Click Pulse Indicator -->
@@ -88,7 +88,7 @@
             <div class="relative">
               <div class="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
               <div class="absolute inset-0 flex items-center justify-center">
-                <span class="i-heroicons-sparkles-solid w-5 h-5 text-primary animate-pulse" />
+                <span class="i-lucide-sparkles w-5 h-5 text-primary animate-pulse" />
               </div>
             </div>
             <span class="text-xs font-bold text-primary animate-pulse">Generating Flashcards...</span>
@@ -100,7 +100,7 @@
             <motion.div :initial="{ scale: 0, rotate: -10 }" :animate="{ scale: 1, rotate: 0 }"
               :transition="{ type: 'spring', stiffness: 150, damping: 12, delay: 0.2 }"
               class="p-4 bg-primary/10 rounded-2xl border-2 border-primary/20 text-primary">
-              <u-icon name="i-heroicons-sparkles-solid" class="w-12 h-12" />
+              <u-icon name="i-lucide-sparkles" class="w-12 h-12" />
             </motion.div>
             <motion.div :initial="{ opacity: 0, y: 10 }" :animate="{ opacity: 1, y: 0 }"
               :transition="{ delay: 0.4, duration: 0.5 }" class="text-center">
@@ -117,7 +117,7 @@
               <li
                 class="group flex items-center justify-between text-xs font-bold p-2.5 rounded-lg hover:bg-primary/5 text-dark cursor-pointer transition-all relative overflow-hidden">
                 <span class="flex items-center gap-2">
-                  <span class="i-heroicons-plus-circle w-4 h-4 text-primary" />
+                  <span class="i-lucide-circle-plus w-4 h-4 text-primary" />
                   Add to Material
                 </span>
 

@@ -40,7 +40,9 @@ export type ReorderBoardColumnsDTO = z.infer<typeof ReorderBoardColumnsDTO>;
 export const MoveItemToColumnDTO = z.object({
   itemId: z.string(),
   targetColumnId: z.string().nullable(), // null = uncategorized
-  newOrder: z.number().int().min(0),
+  // Fractional rank (computed client-side from the target neighbours) so a move
+  // is a single-item write rather than rewriting the whole column.
+  rank: z.number(),
 });
 export type MoveItemToColumnDTO = z.infer<typeof MoveItemToColumnDTO>;
 
@@ -57,7 +59,8 @@ export const ReorderItemsInColumnDTO = z.object({
   itemOrders: z.array(
     z.object({
       id: z.string(),
-      order: z.number().int().min(0),
+      // Fractional rank — only the items whose rank actually changed are sent.
+      order: z.number(),
     })
   ),
 });

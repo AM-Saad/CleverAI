@@ -102,27 +102,27 @@ watch(genError, (error) => {
     </ui-badge>
 
     <!-- Generate dropdown button -->
-    <UDropdownMenu :items="dropdownItems" :content="{ align: 'end', side: 'bottom', sideOffset: 4 }"
+    <UiActionMenu :items="dropdownItems" :content="{ align: 'end', side: 'bottom', sideOffset: 4 }"
       :ui="{ content: 'w-40 z-50' }">
-      <u-tooltip
+      <UiTooltip
         :text="isQuotaExceeded ? 'Quota Exceeded, Upgrade your plan or create manual question/cards' : !hasContent ? 'Material has no content, add content then try again' : 'Generate Question or Flashcards'">
 
         <ui-button color="primary" size="sm" :loading="generating" :disabled="disabled || isQuotaExceeded || !hasContent"
-          aria-label="Generate Study Tools" variant='subtle'>
+          aria-label="Generate Study Tools" variant='soft'>
           <span v-if="!generating">Generate</span>
           <span v-else>Generating…</span>
           <template #trailing>
             <icon name="i-lucide-chevron-down" size="14" />
           </template>
         </ui-button>
-      </u-tooltip>
+      </UiTooltip>
 
-    </UDropdownMenu>
+    </UiActionMenu>
 
     <!-- Tooltip for disabled state -->
-    <u-tooltip v-if="!hasContent" text="Add content to this material first" :popper="{ placement: 'top' }">
+    <UiTooltip v-if="!hasContent" text="Add content to this material first" :popper="{ placement: 'top' }">
       <span class="sr-only">No content available</span>
-    </u-tooltip>
+    </UiTooltip>
 
     <!-- Regenerate Confirmation Dialog -->
     <shared-delete-confirmation-modal :show="showConfirmDialog" title="Regenerate Content" confirm-text="Regenerate"

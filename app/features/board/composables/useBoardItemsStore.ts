@@ -11,6 +11,7 @@ import {
 } from "~/utils/sync/offlineSync";
 import { useNetworkStatus } from "~/composables/shared/useNetworkStatus";
 import { mergePendingBoardItems } from "./mergePendingBoardItems";
+import { rankBetween, needsRebalance, rebalancedRanks, RANK_GAP } from "./rank";
 
 type STORES = typeof DB_CONFIG.STORES[keyof typeof DB_CONFIG.STORES];
 
@@ -39,7 +40,6 @@ interface BoardItemsStore {
   loadItemLinks: (id: string) => Promise<void>;
   loadItemComments: (id: string) => Promise<void>;
   deleteItem: (id: string) => Promise<boolean>;
-  reorderItems: (reorderedItems: BoardItemState[]) => Promise<boolean>;
   moveItemToColumn: (itemId: string, columnId: string | null, newOrder?: number) => Promise<boolean>;
   reorderItemsInColumn: (columnId: string | null, orderedItems: BoardItemState[]) => Promise<boolean>;
   getItemsByColumn: (columnId: string | null) => BoardItemState[];
@@ -65,9 +65,6 @@ const boardItemsStores = new Map<string, BoardItemsStoreInternal>();
 // Ensure we only wire one 'online' listener
 let onlineListenerRegistered = false;
 
-// Abort controllers for reorder operations to prevent race conditions
-let reorderAbortController: AbortController | null = null;
-const reorderInColumnAbortControllers = new Map<string, AbortController>();
 
 /**
  * Creates or returns the board items store for the current user
@@ -195,6 +192,36 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       : Date.now(),
   });
 
+  const isTransientNetworkError = (error?: APIError | null): boolean =>
+    error?.code === "FETCH_ERROR" || error?.code === "TIMEOUT" || !networkMonitor.isVerifiedOnline.value;
+
+  const queueBoardItemsForSync = async (
+    boardItems: BoardItemState[],
+  ): Promise<void> => {
+    const queuedAt = new Date();
+
+    for (const item of boardItems) {
+      const current = items.value.get(item.id) ?? item;
+      const nextItem: BoardItemState = {
+        ...current,
+        isLoading: false,
+        isDirty: true,
+        updatedAt: current.updatedAt ?? queuedAt,
+        error: null,
+      };
+      items.value.set(item.id, nextItem);
+      await queueBoardItemChange(
+        buildPendingPayload(
+          nextItem,
+          "upsert",
+          ((nextItem as { localVersion?: number }).localVersion ?? 0) + 1,
+        ),
+      );
+    }
+
+    await registerBoardItemsSync();
+  };
+
   // Sync board item changes to server
   const updateItemToServer = async (
     id: string
@@ -231,7 +258,7 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
 
       // FetchFactory wraps network failures as FETCH_ERROR / TIMEOUT — treat
       // identically to being offline: queue for background sync.
-      if (result.error?.code === "FETCH_ERROR" || result.error?.code === "TIMEOUT" || !networkMonitor.isVerifiedOnline.value) {
+      if (isTransientNetworkError(result.error)) {
         await queueBoardItemChange(buildPendingPayload(item, "upsert", nextVersion));
         await registerBoardItemsSync();
         item.isLoading = false;
@@ -361,13 +388,19 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   ): Promise<string | null> => {
     const tempId = `temp-${Date.now()}`;
 
+    // Append rank: one gap past the column's current max (ranks are per-column
+    // and needn't be contiguous).
+    const columnMaxRank = Array.from(items.value.values())
+      .filter((i) => (i.columnId ?? null) === (columnId ?? null))
+      .reduce((max, i) => Math.max(max, i.order ?? 0), 0);
+
     const optimisticItem: BoardItemState = {
       id: tempId,
       userId: "", // Will be set by server
       columnId,
       content,
       tags,
-      order: items.value.size,
+      order: columnMaxRank + RANK_GAP,
       workspaceId: workspaceId,
       dueDate,
       attachments,
@@ -419,7 +452,7 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       }
       // BUG-9 fix: this block was inside the if(result.success) block due to missing }
       // FetchFactory network error — queue for offline sync silently.
-      if (result.error?.code === "FETCH_ERROR" || result.error?.code === "TIMEOUT" || !networkMonitor.isVerifiedOnline.value) {
+      if (isTransientNetworkError(result.error)) {
         await queueBoardItemChange(buildPendingPayload(optimisticItem, "upsert", 1));
         await registerBoardItemsSync();
         const offlineItem = items.value.get(tempId);
@@ -483,7 +516,7 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       if (result.success) return true;
 
       // FetchFactory network error — queue for background sync.
-      if (result.error?.code === "FETCH_ERROR" || result.error?.code === "TIMEOUT" || !networkMonitor.isVerifiedOnline.value) {
+      if (isTransientNetworkError(result.error)) {
         await queueBoardItemChange({ id, operation: "delete", updatedAt: Date.now(), localVersion: 1 });
         await registerBoardItemsSync();
         return true;
@@ -506,85 +539,6 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     }
   };
 
-  // Reorder board items
-  const reorderItems = async (reorderedItems: BoardItemState[]): Promise<boolean> => {
-    // Abort any pending reorder request
-    if (reorderAbortController) {
-      reorderAbortController.abort();
-    }
-
-    // Create new abort controller for this request
-    reorderAbortController = new AbortController();
-    const signal = reorderAbortController.signal;
-
-    const originalItems = new Map(items.value);
-
-    try {
-      reorderedItems.forEach((item, index) => {
-        item.order = index;
-        items.value.set(item.id, item);
-      });
-
-      const payload = {
-        itemOrders: reorderedItems
-          .filter((item) => !item.id.startsWith("temp-"))
-          .map((item, index) => ({
-            id: item.id,
-            order: index,
-          })),
-      };
-
-      await saveBoardItemsToIndexedDB(Array.from(items.value.values()));
-
-      // Check if aborted before making request
-      if (signal.aborted) {
-        return false;
-      }
-
-      const result = await $api.boardItems.reorder(payload);
-
-      // Check if aborted after request
-      if (signal.aborted) {
-        return false;
-      }
-
-      if (result.success) {
-        items.value.clear();
-        result.data.forEach((item: BoardItem) => {
-          items.value.set(item.id, {
-            ...item,
-            isLoading: false,
-            isDirty: false,
-            lastSaved: new Date(),
-            error: null,
-          });
-        });
-        return true;
-      } else {
-        console.error("Server rejected board item reordering:", result.error);
-        items.value = originalItems;
-
-        await saveBoardItemsToIndexedDB(Array.from(originalItems.values()));
-
-        toast.add({
-          title: "Error",
-          description: "Failed to reorder board items",
-          color: "error",
-        });
-        return false;
-      }
-    } catch (error) {
-      // Ignore abort errors - they're expected when a new request supersedes an old one
-      if (error instanceof Error && error.name === 'AbortError') {
-        return false;
-      }
-
-      console.error("Failed to reorder board items:", error);
-      items.value = originalItems;
-      return false;
-    }
-  };
-
   // Load board items from server with IndexedDB fallback
   const syncWithServer = async (): Promise<void> => {
     loadingStates.value.set("global", true);
@@ -602,10 +556,18 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     }
 
     try {
-      await syncPendingChanges();
-      const pendingAfterSync = new Set(
-        (await loadPendingBoardItemChanges(workspaceId)).map((change) => change.id),
+      const pendingBeforeSync = await loadPendingBoardItemChanges(workspaceId);
+      const pendingDeleteIds = new Set(
+        pendingBeforeSync
+          .filter((change) => change.operation === "delete")
+          .map((change) => change.id),
       );
+      await syncPendingChanges();
+      const pendingBeforeFetch = await loadPendingBoardItemChanges(workspaceId);
+      pendingBeforeFetch
+        .filter((change) => change.operation === "delete")
+        .forEach((change) => pendingDeleteIds.add(change.id));
+      const pendingAfterSync = new Set(pendingBeforeFetch.map((change) => change.id));
       const result = await $api.boardItems.getAll(workspaceId);
 
       if (result.success) {
@@ -621,13 +583,15 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
           }
         }
 
-        const itemStates: BoardItemState[] = result.data.map((item: BoardItem) => ({
-          ...item,
-          isLoading: false,
-          isDirty: false,
-          lastSaved: new Date(),
-          error: null,
-        }));
+        const itemStates: BoardItemState[] = result.data
+          .filter((item: BoardItem) => !pendingDeleteIds.has(item.id))
+          .map((item: BoardItem) => ({
+            ...item,
+            isLoading: false,
+            isDirty: false,
+            lastSaved: new Date(),
+            error: null,
+          }));
 
         items.value.clear();
         itemStates.forEach((is) => {
@@ -805,246 +769,302 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       .sort(sortItemsByOrder);
   };
 
-  const normalizeColumnItems = (
-    columnId: string | null,
-    columnItems: BoardItemState[],
-  ): BoardItemState[] => {
-    return columnItems.map((item, index) => ({
-      ...item,
-      columnId,
-      order: index,
-    }));
+  // Compute the fractional rank for inserting at `insertIndex` of a column,
+  // rebalancing-to-end if the neighbours are too tight to split.
+  const rankForInsert = (
+    targetColumnId: string | null,
+    insertIndex: number,
+    excludeItemId?: string,
+  ): number => {
+    const targetItems = getOrderedColumnItems(targetColumnId, excludeItemId);
+    const idx = Math.min(Math.max(insertIndex, 0), targetItems.length);
+    const before = targetItems[idx - 1]?.order ?? null;
+    const after = targetItems[idx]?.order ?? null;
+    if (before != null && after != null && needsRebalance(before, after)) {
+      return (targetItems[targetItems.length - 1]?.order ?? 0) + RANK_GAP;
+    }
+    return rankBetween(before, after);
   };
 
-  const applyBoardItems = (boardItems: BoardItemState[]) => {
-    boardItems.forEach((item) => {
-      items.value.set(item.id, item);
-    });
-  };
-
-  const restoreBoardItems = async (
-    originalItems: Map<string, BoardItemState>,
-    affectedItemIds: Set<string>,
-  ) => {
-    const rollbackItems = Array.from(affectedItemIds)
-      .map((itemId) => originalItems.get(itemId))
-      .filter((item): item is BoardItemState => Boolean(item));
-
-    applyBoardItems(rollbackItems);
-    await saveBoardItemsToIndexedDB(rollbackItems);
-  };
-
-  // Move item to a different column
+  // Move item to a different column (or reposition) — a SINGLE-item write under
+  // fractional ranking: only the moved item's columnId + rank change.
   const moveItemToColumn = async (
     itemId: string,
     columnId: string | null,
     newOrder?: number,
   ): Promise<boolean> => {
-    if (isPositionMutationPending.value) {
-      return false;
-    }
-
     const originalItem = items.value.get(itemId);
     if (!originalItem) return false;
 
-    const originalItems = new Map(items.value);
-    const sourceColumnId = originalItem.columnId ?? null;
     const targetColumnId = columnId ?? null;
+    const rollback = { ...originalItem };
 
-    const sourceItems = getOrderedColumnItems(sourceColumnId, itemId);
-    const targetItems =
-      sourceColumnId === targetColumnId
-        ? sourceItems
-        : getOrderedColumnItems(targetColumnId, itemId);
+    const targetItems = getOrderedColumnItems(targetColumnId, itemId);
+    const rank = rankForInsert(targetColumnId, newOrder ?? targetItems.length, itemId);
 
-    const insertIndex = Math.min(
-      Math.max(newOrder ?? targetItems.length, 0),
-      targetItems.length,
-    );
-
-    const optimisticMovedItem: BoardItemState = {
+    const movedItem: BoardItemState = {
       ...originalItem,
       columnId: targetColumnId,
-      order: insertIndex,
+      order: rank,
       isDirty: true,
       updatedAt: new Date(),
       error: null,
     };
-
-    const nextTargetItems = [...targetItems];
-    nextTargetItems.splice(insertIndex, 0, optimisticMovedItem);
-
-    const normalizedTargetItems = normalizeColumnItems(
-      targetColumnId,
-      nextTargetItems,
-    );
-    const normalizedSourceItems =
-      sourceColumnId === targetColumnId
-        ? normalizedTargetItems
-        : normalizeColumnItems(sourceColumnId, sourceItems);
-
-    const affectedItemsMap = new Map<string, BoardItemState>();
-    normalizedSourceItems.forEach((item) => {
-      affectedItemsMap.set(item.id, item);
-    });
-    normalizedTargetItems.forEach((item) => {
-      affectedItemsMap.set(item.id, item);
-    });
-
-    const affectedItems = Array.from(affectedItemsMap.values());
-    const affectedItemIds = new Set(affectedItemsMap.keys());
-
-    applyBoardItems(affectedItems);
-    await saveBoardItemsToIndexedDB(affectedItems);
+    items.value.set(itemId, movedItem);
+    await saveBoardItemToIndexedDB(movedItem);
     beginPositionMutation();
 
     try {
-      const result = await $api.boardItems.moveToColumn({
-        itemId,
-        targetColumnId,
-        newOrder: insertIndex,
-      });
+      if (!networkMonitor.isVerifiedOnline.value) {
+        await queueBoardItemsForSync([movedItem]);
+        return true;
+      }
+
+      const result = await $api.boardItems.moveToColumn({ itemId, targetColumnId, rank });
 
       if (result.success) {
-        const lastSaved = new Date();
-        affectedItemIds.forEach((affectedItemId) => {
-          const current = items.value.get(affectedItemId);
-          if (!current) return;
-
-          const nextItem: BoardItemState = {
+        const current = items.value.get(itemId);
+        if (current) {
+          const reconciled: BoardItemState = {
             ...current,
-            ...(affectedItemId === itemId ? result.data : {}),
+            ...result.data,
             isLoading: false,
             isDirty: false,
-            lastSaved,
+            lastSaved: new Date(),
             error: null,
           };
-
-          items.value.set(affectedItemId, nextItem);
-        });
-
-        const persistedItems = Array.from(affectedItemIds)
-          .map((affectedItemId) => items.value.get(affectedItemId))
-          .filter((item): item is BoardItemState => Boolean(item));
-        await saveBoardItemsToIndexedDB(persistedItems);
+          items.value.set(itemId, reconciled);
+          await saveBoardItemToIndexedDB(reconciled);
+        }
+        return true;
+      } else if (isTransientNetworkError(result.error)) {
+        await queueBoardItemsForSync([movedItem]);
         return true;
       } else {
-        await restoreBoardItems(originalItems, affectedItemIds);
-        toast.add({
-          title: "Error",
-          description: "Failed to move item",
-          color: "error",
-        });
+        items.value.set(itemId, rollback);
+        await saveBoardItemToIndexedDB(rollback);
+        toast.add({ title: "Error", description: "Failed to move item", color: "error" });
         return false;
       }
     } catch (error) {
       console.error("Failed to move board item:", error);
-      await restoreBoardItems(originalItems, affectedItemIds);
+      items.value.set(itemId, rollback);
+      await saveBoardItemToIndexedDB(rollback);
       return false;
     } finally {
       endPositionMutation();
     }
   };
 
-  // Reorder items within a column
+  // ── Reorder within a column: single-flight + trailing coalesce ──────────────
+  // Reorder payloads are idempotent "set the final order" operations, so we never
+  // need to send intermediate states and never abort an in-flight request (an
+  // abort can't roll back an already-committed server transaction anyway — it
+  // just loses the response). Instead we keep ONE request in flight per column;
+  // drops that arrive while it's running update `pending`, and when the request
+  // returns we fire exactly one follow-up with the latest desired order. This
+  // converges correctly, never drops a change, and never reorders on the wire.
+  type ColumnReorderState = {
+    inFlight: boolean;
+    /** id → latest fractional rank to persist (coalesced across rapid drops). */
+    pending: Map<string, number> | null;
+    /** Last server-confirmed order, cloned to plain values for safe rollback. */
+    rollback: BoardItemState[] | null;
+    seq: number;
+    debounce: ReturnType<typeof setTimeout> | null;
+  };
+  const columnReorderStates = new Map<string, ColumnReorderState>();
+  const getColumnReorderState = (key: string): ColumnReorderState => {
+    let state = columnReorderStates.get(key);
+    if (!state) {
+      state = { inFlight: false, pending: null, rollback: null, seq: 0, debounce: null };
+      columnReorderStates.set(key, state);
+    }
+    return state;
+  };
+  const getPendingColumnReorderSize = (key: string): number =>
+    columnReorderStates.get(key)?.pending?.size ?? 0;
+
+  const rollbackColumnReorder = (state: ColumnReorderState) => {
+    if (!state.rollback) return;
+    state.rollback.forEach((item) => items.value.set(item.id, { ...item }));
+    void saveBoardItemsToIndexedDB(state.rollback);
+    state.rollback = null;
+  };
+
+  // Indices of the Longest Increasing Subsequence (by rank) — the items already
+  // in the desired relative order, which we keep untouched. O(n²) is ample for a
+  // column.
+  const lisKeptIndices = (ranks: number[]): Set<number> => {
+    const n = ranks.length;
+    const keep = new Set<number>();
+    if (n === 0) return keep;
+    const len = new Array(n).fill(1);
+    const parent = new Array(n).fill(-1);
+    let bestLen = 1;
+    let bestEnd = 0;
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < i; j++) {
+        if (ranks[j]! < ranks[i]! && len[j] + 1 > len[i]) {
+          len[i] = len[j] + 1;
+          parent[i] = j;
+        }
+      }
+      if (len[i] > bestLen) { bestLen = len[i]; bestEnd = i; }
+    }
+    for (let k = bestEnd; k !== -1; k = parent[k]) keep.add(k);
+    return keep;
+  };
+
+  // Minimal relabel for the desired sequence: keep the maximal already-ordered
+  // set (the LIS) and assign a NEW fractional rank only to the items that are
+  // out of place. A single drag move (front, middle, or back) produces exactly
+  // ONE change. If two anchors are too tight to split, rebalance the column.
+  const computeReorderRankChanges = (
+    orderedItems: BoardItemState[],
+  ): { id: string; order: number }[] => {
+    const ranks = orderedItems.map(
+      (item) => items.value.get(item.id)?.order ?? item.order ?? 0,
+    );
+    const keep = lisKeptIndices(ranks);
+
+    const changes: { id: string; order: number }[] = [];
+    let prev: number | null = null;
+    for (let i = 0; i < orderedItems.length; i++) {
+      if (keep.has(i)) { prev = ranks[i]!; continue; }
+      // Next kept anchor after this moved item.
+      let next: number | null = null;
+      for (let j = i + 1; j < orderedItems.length; j++) {
+        if (keep.has(j)) { next = ranks[j]!; break; }
+      }
+      if (prev !== null && next !== null && needsRebalance(prev, next)) {
+        // Precision exhausted — relabel the entire column with fresh spacing.
+        return rebalancedRanks(orderedItems).map((order, idx) => ({
+          id: orderedItems[idx]!.id,
+          order,
+        }));
+      }
+      const newRank = rankBetween(prev, next);
+      changes.push({ id: orderedItems[i]!.id, order: newRank });
+      prev = newRank;
+    }
+    return changes;
+  };
+
+  const flushColumnReorder = async (key: string, columnId: string | null): Promise<void> => {
+    const state = getColumnReorderState(key);
+    if (state.inFlight) return; // single-flight; the finally-block re-runs pending
+    const pending = state.pending;
+    if (!pending || pending.size === 0) { state.pending = null; return; }
+
+    state.pending = null;
+    state.inFlight = true;
+    const mySeq = ++state.seq;
+    beginPositionMutation();
+
+    const itemOrders = Array.from(pending.entries())
+      .filter(([id]) => !id.startsWith("temp-"))
+      .map(([id, order]) => ({ id, order }));
+    const changedItems = Array.from(pending.keys())
+      .map((id) => items.value.get(id))
+      .filter((item): item is BoardItemState => Boolean(item));
+
+    try {
+      if (!networkMonitor.isVerifiedOnline.value) {
+        await queueBoardItemsForSync(changedItems);
+        state.rollback = null; // queued = accepted
+        return;
+      }
+
+      // Nothing persistable (only optimistic temp items moved) — they'll be
+      // ordered correctly once their create resolves.
+      if (itemOrders.length === 0) { state.rollback = null; return; }
+
+      const result = await $api.boardItems.reorderInColumn({ columnId, itemOrders });
+
+      // A newer flush has superseded this one — discard this (stale) response.
+      if (mySeq !== state.seq) return;
+
+      if (result.success) {
+        const lastSaved = new Date();
+        changedItems.forEach((item) => {
+          const current = items.value.get(item.id);
+          if (current) {
+            items.value.set(item.id, {
+              ...current, isLoading: false, isDirty: false, lastSaved, error: null,
+            });
+          }
+        });
+        state.rollback = null; // confirmed
+      } else if (isTransientNetworkError(result.error)) {
+        await queueBoardItemsForSync(changedItems);
+        state.rollback = null;
+      } else {
+        console.error("Server rejected item reordering:", result.error);
+        rollbackColumnReorder(state);
+        toast.add({
+          title: "Couldn't save the new order",
+          description: "Your other changes are safe. Please try again.",
+          color: "error",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to reorder board items in column:", error);
+      try {
+        await queueBoardItemsForSync(changedItems);
+        state.rollback = null;
+      } catch {
+        rollbackColumnReorder(state);
+      }
+    } finally {
+      state.inFlight = false;
+      endPositionMutation();
+      // Coalesced follow-up: a newer order arrived while we were in flight.
+      if (getPendingColumnReorderSize(key) > 0) void flushColumnReorder(key, columnId);
+    }
+  };
+
   const reorderItemsInColumn = async (
     columnId: string | null,
     orderedItems: BoardItemState[]
   ): Promise<boolean> => {
-    if (isPositionMutationPending.value) {
-      return false;
+    const key = columnId ?? "uncategorized";
+    const state = getColumnReorderState(key);
+
+    // At the start of a burst (fully idle), snapshot the last server-confirmed
+    // order as plain clones so a later rollback can't be corrupted by the
+    // optimistic updates we're about to apply.
+    if (!state.inFlight && !state.pending && !state.debounce) {
+      state.rollback = getOrderedColumnItems(columnId).map((item) => ({ ...item }));
     }
 
-    // Use column ID as key (or 'uncategorized' for null)
-    const columnKey = columnId ?? 'uncategorized';
+    // Compute the minimal fractional-rank relabel for the desired sequence
+    // (usually exactly one item — the one that was dragged).
+    const changes = computeReorderRankChanges(orderedItems);
+    const changeMap = new Map(changes.map((c) => [c.id, c.order]));
 
-    // Abort any pending reorder-in-column request for THIS column only
-    if (reorderInColumnAbortControllers.has(columnKey)) {
-      reorderInColumnAbortControllers.get(columnKey)?.abort();
-    }
+    // Optimistic UI immediately — new objects, set columnId + (possibly new) rank.
+    orderedItems.forEach((item) => {
+      const current = items.value.get(item.id) ?? item;
+      const nextRank = changeMap.get(item.id) ?? current.order ?? 0;
+      items.value.set(item.id, { ...current, columnId, order: nextRank });
+    });
+    const optimisticChanged = changes
+      .map((c) => items.value.get(c.id))
+      .filter((item): item is BoardItemState => Boolean(item));
+    void saveBoardItemsToIndexedDB(optimisticChanged);
 
-    // Create new abort controller for this column's request
-    const controller = new AbortController();
-    reorderInColumnAbortControllers.set(columnKey, controller);
-    const signal = controller.signal;
+    // Accumulate changed ranks to persist (coalesce: latest rank per id wins).
+    if (!state.pending) state.pending = new Map();
+    changes.forEach((c) => state.pending!.set(c.id, c.order));
 
-    const originalItems = new Map(items.value);
-    beginPositionMutation();
+    if (state.debounce) clearTimeout(state.debounce);
+    state.debounce = setTimeout(() => {
+      state.debounce = null;
+      void flushColumnReorder(key, columnId);
+    }, 150);
 
-    try {
-      // Optimistic update - update local state immediately
-      orderedItems.forEach((item, index) => {
-        item.order = index;
-        items.value.set(item.id, item);
-      });
-
-      saveBoardItemsToIndexedDB(orderedItems).catch(err => {
-        console.warn('IndexedDB save failed during reorder:', err);
-      });
-
-      const payload = {
-        columnId,
-        itemOrders: orderedItems
-          .filter((item) => !item.id.startsWith("temp-"))
-          .map((item, index) => ({
-            id: item.id,
-            order: index,
-          })),
-      };
-
-      // Check if aborted before making request
-      if (signal.aborted) {
-        return false;
-      }
-
-      const result = await $api.boardItems.reorderInColumn(payload, { signal });
-
-      // Check if aborted after request
-      if (signal.aborted) {
-        return false;
-      }
-
-      if (result.success) {
-        // Server confirmed - items are already in correct state from optimistic update
-        // Just mark them as saved
-        orderedItems.forEach((item) => {
-          const current = items.value.get(item.id);
-          if (current) {
-            items.value.set(item.id, {
-              ...current,
-              isLoading: false,
-              isDirty: false,
-              lastSaved: new Date(),
-              error: null,
-            });
-          }
-        });
-        return true;
-      } else {
-        console.error("Server rejected item reordering:", result.error);
-        items.value = originalItems;
-        // Rollback IndexedDB in parallel
-        saveBoardItemsToIndexedDB(Array.from(originalItems.values()))
-          .catch(err => console.warn('IndexedDB rollback failed:', err));
-        toast.add({
-          title: "Error",
-          description: "Failed to reorder items",
-          color: "error",
-        });
-        return false;
-      }
-    } catch (error) {
-      // Ignore abort errors - they're expected when a new request supersedes an old one
-      if (error instanceof Error && error.name === 'AbortError') {
-        return false;
-      }
-
-      console.error("Failed to reorder board items in column:", error);
-      items.value = originalItems;
-      return false;
-    } finally {
-      endPositionMutation();
-    }
+    return true;
   };
 
   // Get items filtered by column
@@ -1067,7 +1087,6 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     loadItemLinks,
     loadItemComments,
     deleteItem,
-    reorderItems,
     moveItemToColumn,
     reorderItemsInColumn,
     getItemsByColumn,

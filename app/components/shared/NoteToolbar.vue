@@ -50,9 +50,24 @@ const emit = defineEmits<{
         @click="emit('toggleFullscreen')" :icon="isFullscreen ? 'shrink' : 'expand'" />
 
       <!-- Delete -->
-      <shared-note-toolbar-button title="Delete Note" variant="danger" :disabled="isLoading" @click="emit('delete')">
-        <shared-icon name="delete" class="w-4 h-4 group-hover:scale-110 transition-transform" />
-      </shared-note-toolbar-button>
+      <UiTooltip
+        text="Delete Note"
+        :delay-duration="200"
+        :content="{ side: 'top', sideOffset: 6 }"
+      >
+        <UiDoubleTapDeleteButton
+          hide-label
+          label="Delete Note"
+          armed-label="Tap again to delete note"
+          size="xs"
+          variant="ghost"
+          :disabled="isLoading"
+          class="h-8 w-8"
+          @confirm="emit('delete')"
+        >
+          <shared-icon name="delete" class="w-4 h-4 group-hover:scale-110 transition-transform" />
+        </UiDoubleTapDeleteButton>
+      </UiTooltip>
     </div>
   </div>
 </template>

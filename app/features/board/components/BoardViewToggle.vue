@@ -8,8 +8,8 @@ const emit = defineEmits<{
 }>();
 
 const options = [
-  { value: "board" as const, icon: "heroicons:view-columns", label: "Board" },
-  { value: "list" as const, icon: "heroicons:list-bullet", label: "List" },
+  { value: "board" as const, icon: "i-lucide-columns-3", label: "Board" },
+  { value: "list" as const, icon: "i-lucide-list", label: "List" },
 ];
 </script>
 

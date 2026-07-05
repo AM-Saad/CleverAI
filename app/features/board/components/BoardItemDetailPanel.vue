@@ -100,9 +100,9 @@ function removeAttachment(attId: string) {
 }
 
 function getAttachmentIcon(type: string): string {
-  if (type === "pdf") return "heroicons:document-text";
-  if (type === "image") return "heroicons:photo";
-  return "heroicons:link";
+  if (type === "pdf") return "i-lucide-file-text";
+  if (type === "image") return "i-lucide-image";
+  return "i-lucide-link";
 }
 
 // ─── Links ─────────────────────────────────────────────────────────────────
@@ -280,7 +280,7 @@ function providerLabel(provider: BoardItemExternalRef["provider"]) {
 }
 
 function providerIcon(provider: BoardItemExternalRef["provider"]) {
-  return provider === "jira" ? "heroicons:bolt" : "heroicons:squares-2x2";
+  return provider === "jira" ? "i-lucide-zap" : "i-lucide-grid-2x2";
 }
 
 function formatSyncDate(date?: string | Date | null) {
@@ -326,7 +326,7 @@ watch(() => props.item.id, async () => {
     <div class="flex items-center justify-between px-4 py-3 border-b border-secondary shrink-0">
       <div class="flex items-center gap-2">
         <!-- Back / close (mobile) -->
-        <UiButton variant="ghost" color="neutral" icon="heroicons:chevron-left" @click="emit('close')" />
+        <UiButton variant="ghost" color="neutral" icon="i-lucide-chevron-left" @click="emit('close')" />
         <span class="text-xs font-bold uppercase tracking-widest text-content-secondary">
           Item Details
         </span>
@@ -335,17 +335,27 @@ watch(() => props.item.id, async () => {
         <Icon v-if="item.isLoading" name="svg-spinners:ring-resize" class="w-3.5 h-3.5 text-primary" />
       </div>
       <div class="flex items-center gap-1">
-        <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:arrows-pointing-out" title="Fullscreen"
+        <UiButton size="xs" color="neutral" variant="ghost" icon="i-lucide-maximize-2" title="Fullscreen"
           @click="emit('toggle-fullscreen')" />
-        <UiButton size="xs" color="error" variant="ghost" icon="heroicons:trash" title="Delete item"
-          @click="emit('delete', item.id)" />
+        <UiDoubleTapDeleteButton
+          hide-label
+          icon="i-lucide-trash-2"
+          label="Delete item"
+          armed-label="Tap again to delete item"
+          size="xs"
+          variant="ghost"
+          title="Delete item"
+          :reset-key="item.id"
+          @confirm="emit('delete', item.id)"
+        />
       </div>
     </div>
 
     <!-- ─── Tab Navigation ────────────────────────────────────────────── -->
     <div class="flex items-center gap-0.5 px-4 pt-2 shrink-0 border-b border-secondary">
-      <button v-for="tab in (['content', 'details', 'links', 'comments', 'integrations'] as const)" :key="tab"
-        class="px-3 py-1.5 text-xs font-medium rounded-t-lg transition-colors relative" :class="activeTab === tab
+      <UiButton v-for="tab in (['content', 'details', 'links', 'comments', 'integrations'] as const)" :key="tab"
+        type="button" role="tab" :aria-selected="activeTab === tab" variant="ghost" tone="neutral"
+        class="px-3 py-1.5 text-xs font-medium rounded-t-lg rounded-b-none relative" :class="activeTab === tab
           ? 'text-primary bg-primary/10'
           : 'text-content-secondary hover:text-content-on-surface'" @click="activeTab = tab">
         <span class="capitalize">{{ tab }}</span>
@@ -362,7 +372,7 @@ watch(() => props.item.id, async () => {
           class="ml-1 inline-flex items-center justify-center w-4 h-4 rounded-full bg-primary/10 text-primary text-[9px] font-bold">
           {{ externalRefs.length }}
         </span>
-      </button>
+      </UiButton>
     </div>
 
     <!-- ─── Tab Body ──────────────────────────────────────────────────── -->
@@ -379,7 +389,7 @@ watch(() => props.item.id, async () => {
           role="alert"
           class-name="border-error/20 bg-error/10"
           content-class="flex items-center gap-2 text-error-text text-sm">
-          <Icon name="heroicons:exclamation-circle" class="w-4 h-4 shrink-0" />
+          <Icon name="i-lucide-circle-alert" class="w-4 h-4 shrink-0" />
           <span>{{ item.error }}</span>
           <UiButton size="xs" variant="ghost" color="error" @click="emit('retry', item.id)">Retry</UiButton>
         </UiPanel>
@@ -406,9 +416,9 @@ watch(() => props.item.id, async () => {
         <section>
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-medium text-content-secondary uppercase tracking-widest flex items-center gap-1">
-              <Icon name="heroicons:calendar-days" class="w-3.5 h-3.5" /> Due Date
+              <Icon name="i-lucide-calendar-days" class="w-3.5 h-3.5" /> Due Date
             </span>
-            <UiButton v-if="item.dueDate" size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
+            <UiButton v-if="item.dueDate" size="xs" color="neutral" variant="ghost" icon="i-lucide-x"
               title="Clear due date" @click="clearDueDate" />
           </div>
 
@@ -416,25 +426,26 @@ watch(() => props.item.id, async () => {
           <UiPanel v-if="dueDateLabel" variant="subtle" size="sm" :class-name="dueDateLabel.isOverdue
             ? 'mb-2 bg-error/10 text-error-text border-error/20'
             : 'mb-2 bg-success/10 text-success-text border-success/20'" content-class="flex items-center gap-2 text-sm font-medium">
-            <Icon :name="dueDateLabel.isOverdue ? 'heroicons:exclamation-triangle' : 'heroicons:clock'"
+            <Icon :name="dueDateLabel.isOverdue ? 'i-lucide-triangle-alert' : 'i-lucide-clock'"
               class="w-4 h-4 shrink-0" />
             <span>{{ dueDateLabel.isOverdue ? "Overdue · " : "" }}{{ dueDateLabel.label }}</span>
           </UiPanel>
 
+          <!-- design-allow: native datetime picker — no Ui primitive wraps type=datetime-local -->
           <input v-model="dueDateInput" type="datetime-local"
-            class="w-full px-3 py-2 rounded-[var(--radius-lg)] border border-secondary bg-surface text-sm text-content-on-surface focus:outline-none focus:ring-2 focus:ring-[var(--ds-focus-outline-color)]" />
+            class="w-full px-3 py-2 rounded-[var(--radius-lg)] border border-secondary bg-surface text-sm text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]" />
         </section>
 
         <!-- Attachments -->
         <section>
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs font-medium text-content-secondary uppercase tracking-widest flex items-center gap-1">
-              <Icon name="heroicons:paper-clip" class="w-3.5 h-3.5" /> Attachments
+              <Icon name="i-lucide-paperclip" class="w-3.5 h-3.5" /> Attachments
               <UiBadge v-if="attachments.length > 0" size="xs" color="neutral" variant="soft">
                 {{ attachments.length }}
               </UiBadge>
             </span>
-            <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:plus"
+            <UiButton size="xs" color="neutral" variant="ghost" icon="i-lucide-plus"
               @click="showAddAttachment = !showAddAttachment">Add</UiButton>
           </div>
 
@@ -469,9 +480,18 @@ watch(() => props.item.id, async () => {
                 class="flex-1 text-sm text-primary truncate hover:underline" @click.stop>
                 {{ att.name }}
               </a>
-              <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
+              <UiDoubleTapDeleteButton
+                hide-label
+                icon="i-lucide-x"
+                label="Remove attachment"
+                armed-label="Tap again to remove attachment"
+                tone="error"
+                size="xs"
+                variant="ghost"
                 class="opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-                @click="removeAttachment(att.id)" />
+                :reset-key="att.id"
+                @confirm="removeAttachment(att.id)"
+              />
             </UiPanel>
           </div>
           <p v-else-if="!showAddAttachment" class="text-xs text-content-secondary italic">No attachments yet</p>
@@ -482,7 +502,7 @@ watch(() => props.item.id, async () => {
       <div v-else-if="activeTab === 'links'" class="p-4 space-y-4">
         <div class="flex items-center justify-between">
           <span class="text-xs font-medium text-content-secondary uppercase tracking-widest">Item Links</span>
-          <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:plus" @click="showAddLink = !showAddLink">
+          <UiButton size="xs" color="neutral" variant="ghost" icon="i-lucide-plus" @click="showAddLink = !showAddLink">
             Link item</UiButton>
         </div>
 
@@ -539,9 +559,18 @@ watch(() => props.item.id, async () => {
                 {{ linked.item?.content.replace(/<[^>]*>/g, "").slice(0, 80) || "Unknown item" }}
               </p>
             </div>
-            <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:x-mark"
+            <UiDoubleTapDeleteButton
+              hide-label
+              icon="i-lucide-x"
+              label="Remove link"
+              armed-label="Tap again to remove link"
+              tone="error"
+              size="xs"
+              variant="ghost"
               class="opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5"
-              @click="deleteLink(linked.linkId)" />
+              :reset-key="linked.linkId"
+              @confirm="deleteLink(linked.linkId)"
+            />
           </UiPanel>
         </div>
       </div>
@@ -554,7 +583,7 @@ watch(() => props.item.id, async () => {
             size="xs"
             color="neutral"
             variant="ghost"
-            icon="heroicons:arrow-path"
+            icon="i-lucide-refresh-cw"
             :loading="externalRefsLoading"
             @click="loadExternalRefs"
           >
@@ -575,7 +604,7 @@ watch(() => props.item.id, async () => {
           class-name="border-error/20 bg-error/10"
           content-class="flex items-start gap-2 text-error-text text-sm"
         >
-          <Icon name="heroicons:exclamation-circle" class="w-4 h-4 shrink-0 mt-0.5" />
+          <Icon name="i-lucide-circle-alert" class="w-4 h-4 shrink-0 mt-0.5" />
           <span>{{ externalRefsError }}</span>
         </UiPanel>
 
@@ -630,7 +659,7 @@ watch(() => props.item.id, async () => {
                 size="xs"
                 color="neutral"
                 variant="ghost"
-                icon="heroicons:arrow-top-right-on-square"
+                icon="i-lucide-external-link"
                 :to="ref.externalUrl"
                 target="_blank"
               >
@@ -665,7 +694,7 @@ watch(() => props.item.id, async () => {
               </span>
               <span class="text-[10px] text-content-secondary">{{ formatCommentDate(comment.createdAt) }}</span>
             </div>
-            <p class="text-sm text-content-on-surface whitespace-pre-wrap leading-relaxed">
+            <p class="text-sm text-content-on-surface whitespace-pre-wrap leading-relaxed" dir="auto">
               {{ comment.content }}
             </p>
           </UiPanel>
@@ -674,7 +703,7 @@ watch(() => props.item.id, async () => {
         <!-- New comment input (pinned to bottom) -->
         <div class="shrink-0 space-y-2 border-t border-secondary pt-3">
           <UiTextarea v-model="newCommentContent" placeholder="Add a comment…" :rows="2" size="sm"
-            class="w-full resize-none" />
+            dir="auto" class="w-full resize-none" />
           <UiButton size="sm" color="primary" :loading="addingComment" :disabled="!newCommentContent.trim()"
             @click="addComment">
             Post Comment

@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{ -webkit-font-smoothing:antialiased; box-sizing:border-box; }
+  body{ margin:0; }
+  @keyframes cgShimmer{ 0%{ background-position:-150% 0; } 100%{ background-position:150% 0; } }
+  @keyframes cgPulse{ 0%,100%{ transform:scale(1); box-shadow:0 4px 12px rgb(245 158 11 / 0.35); } 50%{ transform:scale(1.07); box-shadow:0 0 0 10px rgb(245 158 11 / 0.12), 0 4px 12px rgb(245 158 11 / 0.35); } }
+  @keyframes cgRing{ from{ stroke-dashoffset:138; } to{ stroke-dashoffset:30; } }
+  @keyframes cgSwipe{ 0%,100%{ transform:translateX(0) rotate(0deg); } 45%{ transform:translateX(46px) rotate(7deg); } 55%{ transform:translateX(46px) rotate(7deg); } }
+  @keyframes cgTrail{ 0%,100%{ opacity:0; } 45%,55%{ opacity:1; } }
+  @keyframes cgFlip{ 0%,42%{ transform:rotateY(0deg); } 58%,100%{ transform:rotateY(180deg); } }
+  @keyframes cgFloat{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-5px); } }
+</style>
+</helmet>
+
+<div style="width:max-content; min-width:100%; min-height:100vh; box-sizing:border-box; padding:48px 56px 80px; background:#e4e5ea; font-family:'Saira',sans-serif; color:#22232b;">
+
+  <!-- ===== Header ===== -->
+  <div style="max-width:1080px; margin-bottom:26px;">
+    <div style="font-size:12px; letter-spacing:3px; color:#8a8f99; text-transform:uppercase; font-weight:600;">Cognilo · Mobile PWA · Hi-Fi</div>
+    <div style="font-weight:800; font-size:50px; line-height:1.0; margin:10px 0 12px; letter-spacing:-1.5px; color:#1b1c24;">The whole app, in one language</div>
+    <div style="font-size:15.5px; color:#575257; max-width:660px; line-height:1.6;">A systematic hi-fi pass across every module — built on Cognilo's real design tokens (Saira, primary <span style="font-weight:600; color:#384998;">#384998</span>, the brand gradient, 12px cards). One system, applied module by module. Each row reads left → right as a flow.</div>
+  </div>
+
+  <!-- ===== Design-system strip ===== -->
+  <div data-screen-label="Design System" style="display:flex; gap:14px; flex-wrap:wrap; max-width:1080px; margin-bottom:44px;">
+    <!-- color -->
+    <div style="background:#fff; border:1px solid #e7e9ec; border-radius:12px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06); padding:16px 18px; min-width:300px;">
+      <div style="font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#8a8f99; font-weight:600; margin-bottom:12px;">Color</div>
+      <div style="display:flex; gap:8px; margin-bottom:10px;">
+        <div style="display:flex; flex-direction:column; gap:5px; align-items:center;"><div style="width:40px; height:40px; border-radius:8px; background:#384998;"></div><span style="font-size:9px; color:#8a8f99;">primary</span></div>
+        <div style="display:flex; flex-direction:column; gap:5px; align-items:center;"><div style="width:40px; height:40px; border-radius:8px; background:#10b981;"></div><span style="font-size:9px; color:#8a8f99;">success</span></div>
+        <div style="display:flex; flex-direction:column; gap:5px; align-items:center;"><div style="width:40px; height:40px; border-radius:8px; background:#f59e0b;"></div><span style="font-size:9px; color:#8a8f99;">warning</span></div>
+        <div style="display:flex; flex-direction:column; gap:5px; align-items:center;"><div style="width:40px; height:40px; border-radius:8px; background:#ef4444;"></div><span style="font-size:9px; color:#8a8f99;">error</span></div>
+        <div style="display:flex; flex-direction:column; gap:5px; align-items:center;"><div style="width:40px; height:40px; border-radius:8px; background:#00c7e4;"></div><span style="font-size:9px; color:#8a8f99;">info</span></div>
+      </div>
+      <div style="height:24px; border-radius:8px; background:linear-gradient(90deg, rgb(49 165 217) 0%, rgb(248 54 145) 46%, rgb(255 184 0) 100%); margin-bottom:4px;"></div>
+      <span style="font-size:9px; color:#8a8f99;">brand gradient · cyan → pink → gold</span>
+    </div>
+    <!-- type -->
+    <div style="background:#fff; border:1px solid #e7e9ec; border-radius:12px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06); padding:16px 18px; min-width:230px;">
+      <div style="font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#8a8f99; font-weight:600; margin-bottom:10px;">Type · Saira</div>
+      <div style="font-weight:800; font-size:28px; letter-spacing:-1px; line-height:1; color:#1b1c24;">Display 800</div>
+      <div style="font-weight:600; font-size:18px; margin-top:6px; color:#22232b;">Section 600</div>
+      <div style="font-weight:400; font-size:14px; margin-top:5px; color:#575257;">Body 400 · the quick brown fox</div>
+      <div style="font-weight:500; font-size:12px; margin-top:5px; color:#8a8f99; letter-spacing:1px;">CAPTION 500</div>
+    </div>
+    <!-- radii + elevation -->
+    <div style="background:#fff; border:1px solid #e7e9ec; border-radius:12px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06); padding:16px 18px; min-width:240px;">
+      <div style="font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#8a8f99; font-weight:600; margin-bottom:12px;">Radius · Elevation</div>
+      <div style="display:flex; gap:8px; align-items:flex-end; margin-bottom:14px;">
+        <div style="display:flex; flex-direction:column; gap:5px; align-items:center;"><div style="width:38px; height:38px; border-radius:4px; background:#f0f0f2; border:1px solid #e7e9ec;"></div><span style="font-size:9px; color:#8a8f99;">4</span></div>
+        <div style="display:flex; flex-direction:column; gap:5px; align-items:center;"><div style="width:38px; height:38px; border-radius:8px; background:#f0f0f2; border:1px solid #e7e9ec;"></div><span style="font-size:9px; color:#8a8f99;">8</span></div>
+        <div style="display:flex; flex-direction:column; gap:5px; align-items:center;"><div style="width:38px; height:38px; border-radius:12px; background:#f0f0f2; border:1px solid #e7e9ec;"></div><span style="font-size:9px; color:#8a8f99;">12</span></div>
+        <div style="display:flex; flex-direction:column; gap:5px; align-items:center;"><div style="width:38px; height:38px; border-radius:9999px; background:#f0f0f2; border:1px solid #e7e9ec;"></div><span style="font-size:9px; color:#8a8f99;">full</span></div>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <div style="width:54px; height:30px; border-radius:8px; background:#fff; box-shadow:0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04);"></div>
+        <div style="width:54px; height:30px; border-radius:8px; background:#fff; box-shadow:0 8px 30px rgb(0 0 0 / 0.08);"></div>
+        <div style="width:54px; height:30px; border-radius:8px; background:#fff; box-shadow:0 4px 12px rgb(56 73 152 / 0.25);"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 01 · SHELL + HOME                                             -->
+  <!-- ============================================================ -->
+  <div data-screen-label="01 Shell + Home" style="margin-bottom:14px; display:flex; align-items:baseline; gap:14px;">
+    <span style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; background:#384998; color:#fff; font-weight:700; font-size:14px;">01</span>
+    <div style="font-weight:700; font-size:26px; letter-spacing:-0.5px; color:#1b1c24;">Shell &amp; Home</div>
+    <div style="font-size:13px; color:#8a8f99;">tab bar with center capture · Today hub driven by what's due</div>
+  </div>
+
+  <div style="display:flex; gap:36px; align-items:flex-start;">
+
+    <!-- HOME -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <!-- notch -->
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <!-- status bar -->
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="display:flex; gap:6px; align-items:center; font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <!-- header -->
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; padding:10px 20px 14px;">
+            <div>
+              <div style="font-size:13px; color:#8a8f99; font-weight:500;">Tuesday, June 20</div>
+              <div style="font-weight:800; font-size:27px; letter-spacing:-0.8px; color:#1b1c24; line-height:1.05;">Evening, Maya</div>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:2px;">
+              <div style="width:46px; height:46px; border-radius:9999px; background:linear-gradient(135deg,#f59e0b,#f97316); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:17px; box-shadow:0 4px 12px rgb(245 158 11 / 0.35);">7</div>
+              <span style="font-size:10px; color:#8a8f99; font-weight:600;">streak</span>
+            </div>
+          </div>
+          <!-- scroll body -->
+          <div style="flex:1; overflow:hidden; padding:0 16px;">
+            <!-- DUE NOW hero -->
+            <div style="border-radius:16px; padding:18px; background:linear-gradient(150deg,#384998,#2c3a7d); box-shadow:0 8px 24px rgb(56 73 152 / 0.3); position:relative; overflow:hidden;">
+              <div style="position:absolute; right:-30px; top:-30px; width:120px; height:120px; border-radius:9999px; background:rgba(255,255,255,0.06);"></div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <span style="font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#c5cdf2; font-weight:600;">Due now</span>
+                <span style="font-size:12px; color:#c5cdf2; font-weight:500;">~6 min</span>
+              </div>
+              <div style="font-weight:800; font-size:30px; color:#fff; letter-spacing:-0.5px; line-height:1;">12 cards</div>
+              <div style="font-size:13px; color:#c5cdf2; margin:6px 0 14px;">across Biology &amp; Spanish</div>
+              <div style="display:inline-flex; align-items:center; gap:8px; background:#fff; color:#384998; font-weight:700; font-size:14px; border-radius:9999px; padding:11px 20px;">Start review <span style="font-size:13px;">▸</span></div>
+            </div>
+            <!-- quick stats row -->
+            <div style="display:flex; gap:10px; margin-top:14px;">
+              <div style="flex:1; background:#fff; border:1px solid #e7e9ec; border-radius:12px; padding:12px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06);">
+                <div style="font-size:11px; color:#8a8f99; font-weight:600; letter-spacing:0.5px;">TODAY</div>
+                <div style="font-weight:800; font-size:22px; color:#1b1c24; margin-top:2px;">+45 <span style="font-size:12px; color:#10b981; font-weight:600;">XP</span></div>
+              </div>
+              <div style="flex:1; background:#fff; border:1px solid #e7e9ec; border-radius:12px; padding:12px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06);">
+                <div style="font-size:11px; color:#8a8f99; font-weight:600; letter-spacing:0.5px;">MASTERED</div>
+                <div style="font-weight:800; font-size:22px; color:#1b1c24; margin-top:2px;">128</div>
+              </div>
+            </div>
+            <!-- jump back in -->
+            <div style="font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:#8a8f99; font-weight:600; margin:18px 4px 10px;">Jump back in</div>
+            <div style="display:flex; flex-direction:column; gap:9px;">
+              <div style="display:flex; align-items:center; gap:12px; background:#fff; border:1px solid #e7e9ec; border-radius:12px; padding:11px 12px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06);">
+                <div style="width:38px; height:38px; border-radius:9px; background:color-mix(in srgb,#6366f1 14%,#fff); display:flex; align-items:center; justify-content:center; color:#6366f1; font-size:16px;">✎</div>
+                <div style="flex:1;"><div style="font-weight:600; font-size:14px; color:#22232b;">Photosynthesis notes</div><div style="font-size:11px; color:#8a8f99;">Biology · edited 2h ago</div></div>
+                <span style="font-size:10px; color:#047857; font-weight:600; background:color-mix(in srgb,#10b981 12%,#fff); padding:3px 8px; border-radius:9999px;">Local</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px; background:#fff; border:1px solid #e7e9ec; border-radius:12px; padding:11px 12px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06);">
+                <div style="width:38px; height:38px; border-radius:9px; background:color-mix(in srgb,#06b6d4 14%,#fff); display:flex; align-items:center; justify-content:center; color:#06b6d4; font-size:16px;">⚯</div>
+                <div style="flex:1;"><div style="font-weight:600; font-size:14px; color:#22232b;">Spanish · word bank</div><div style="font-size:11px; color:#8a8f99;">8 new words to study</div></div>
+              </div>
+            </div>
+          </div>
+          <!-- tab bar -->
+          <div style="position:relative; height:74px; background:#fff; border-top:1px solid #e7e9ec; display:flex; align-items:flex-start; justify-content:space-around; padding:11px 14px 0;">
+            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; color:#384998;"><span style="font-size:18px;">⌂</span><span style="font-size:10px; font-weight:600;">Home</span></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; color:#8a8f99;"><span style="font-size:18px;">▤</span><span style="font-size:10px; font-weight:500;">Notes</span></div>
+            <div style="width:54px;"></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; color:#8a8f99;"><span style="font-size:18px;">◆</span><span style="font-size:10px; font-weight:500;">Review</span></div>
+            <div style="display:flex; flex-direction:column; align-items:center; gap:4px; color:#8a8f99;"><span style="font-size:18px;">▦</span><span style="font-size:10px; font-weight:500;">Board</span></div>
+            <!-- center capture -->
+            <div style="position:absolute; left:50%; top:-14px; transform:translateX(-50%); width:56px; height:56px; border-radius:9999px; background:linear-gradient(135deg,#384998,#5566c4); display:flex; align-items:center; justify-content:center; color:#fff; font-size:28px; font-weight:300; box-shadow:0 6px 18px rgb(56 73 152 / 0.4); border:4px solid #fafafa;">+</div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Home / Today</div></sc-if>
+    </div>
+
+    <!-- CAPTURE SHEET -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <!-- dimmed home behind -->
+          <div style="position:absolute; inset:0; background:#fafafa;"></div>
+          <div style="position:absolute; inset:0; padding:60px 16px 0; opacity:0.5;">
+            <div style="height:120px; border-radius:16px; background:#e7e9ec;"></div>
+          </div>
+          <div style="position:absolute; inset:0; background:rgb(2 6 23 / 0.45);"></div>
+          <!-- sheet -->
+          <div style="position:absolute; left:0; right:0; bottom:0; background:#fff; border-radius:24px 24px 0 0; padding:14px 18px 26px; box-shadow:0 -10px 40px rgba(0,0,0,0.2);">
+            <div style="width:40px; height:5px; border-radius:9999px; background:#dddfe5; margin:0 auto 16px;"></div>
+            <div style="font-weight:700; font-size:19px; color:#1b1c24; margin-bottom:14px;">Capture</div>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:11px;">
+              <div style="border:1px solid #e7e9ec; border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:9px; background:#fafafa;">
+                <div style="width:40px; height:40px; border-radius:10px; background:color-mix(in srgb,#6366f1 14%,#fff); color:#6366f1; display:flex; align-items:center; justify-content:center; font-size:18px;">✎</div>
+                <div><div style="font-weight:600; font-size:14px; color:#22232b;">New note</div><div style="font-size:11px; color:#8a8f99;">Text, math or canvas</div></div>
+              </div>
+              <div style="border:1px solid #e7e9ec; border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:9px; background:#fafafa;">
+                <div style="width:40px; height:40px; border-radius:10px; background:color-mix(in srgb,#06b6d4 14%,#fff); color:#06b6d4; display:flex; align-items:center; justify-content:center; font-size:18px;">⚯</div>
+                <div><div style="font-weight:600; font-size:14px; color:#22232b;">Capture word</div><div style="font-size:11px; color:#8a8f99;">Translate &amp; save</div></div>
+              </div>
+              <div style="border:1px solid #e7e9ec; border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:9px; background:#fafafa;">
+                <div style="width:40px; height:40px; border-radius:10px; background:color-mix(in srgb,#f97316 14%,#fff); color:#f97316; display:flex; align-items:center; justify-content:center; font-size:18px;">⇪</div>
+                <div><div style="font-weight:600; font-size:14px; color:#22232b;">Upload</div><div style="font-size:11px; color:#8a8f99;">PDF, image, URL</div></div>
+              </div>
+              <div style="border:1px solid #e7e9ec; border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:9px; background:#fafafa;">
+                <div style="width:40px; height:40px; border-radius:10px; background:color-mix(in srgb,#384998 12%,#fff); color:#384998; display:flex; align-items:center; justify-content:center; font-size:18px;">✦</div>
+                <div><div style="font-weight:600; font-size:14px; color:#22232b;">Ask AI</div><div style="font-size:11px; color:#8a8f99;">Generate anything</div></div>
+              </div>
+            </div>
+            <div style="margin-top:14px; display:flex; align-items:center; gap:10px; border:1px solid #e7e9ec; border-radius:9999px; padding:12px 16px; background:#f4f5f7;">
+              <span style="color:#8a8f99; font-size:15px;">🎙</span>
+              <span style="font-size:13px; color:#8a8f99; flex:1;">Hold to dictate a quick note…</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Capture sheet (center +)</div></sc-if>
+    </div>
+
+    <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none; width:240px; padding-top:40px;">
+      <div style="border-left:3px solid #384998; padding:4px 0 4px 16px;">
+        <div style="font-weight:700; font-size:15px; color:#1b1c24; margin-bottom:8px;">System notes</div>
+        <div style="font-size:13px; color:#575257; line-height:1.65;">Tab bar keeps the five core modules one tap away; the elevated <span style="color:#384998; font-weight:600;">+</span> makes capture the hero — every creation path (note, word, upload, AI) lives in one sheet. <span style="color:#047857; font-weight:600;">Local</span> badges surface the app's local-first sync state right on Home.</div>
+      </div>
+    </div>
+    </sc-if>
+
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 02 · NOTES                                                    -->
+  <!-- ============================================================ -->
+  <div data-screen-label="02 Notes" style="margin:56px 0 14px; display:flex; align-items:baseline; gap:14px;">
+    <span style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; background:#384998; color:#fff; font-weight:700; font-size:14px;">02</span>
+    <div style="font-weight:700; font-size:26px; letter-spacing:-0.5px; color:#1b1c24;">Notes</div>
+    <div style="font-size:13px; color:#8a8f99;">grouped &amp; local-first · editor with selection-anchored AI · text / math / canvas</div>
+  </div>
+
+  <div style="display:flex; gap:36px; align-items:flex-start;">
+
+    <!-- NOTES LIST -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <!-- header -->
+          <div style="padding:8px 20px 12px; display:flex; align-items:center; justify-content:space-between;">
+            <div style="display:flex; align-items:center; gap:7px;"><span style="font-weight:800; font-size:26px; letter-spacing:-0.7px; color:#1b1c24;">Notes</span><span style="font-size:13px; color:#8a8f99;">▾</span></div>
+            <div style="display:flex; gap:8px;"><div style="width:36px; height:36px; border-radius:9999px; background:#f0f0f2; display:flex; align-items:center; justify-content:center; color:#575257; font-size:15px;">⌕</div></div>
+          </div>
+          <!-- sync bar -->
+          <div style="margin:0 16px 12px; display:flex; align-items:center; gap:8px; background:color-mix(in srgb,#10b981 9%,#fff); border:1px solid color-mix(in srgb,#10b981 22%,#fff); border-radius:9999px; padding:7px 13px;">
+            <span style="width:7px; height:7px; border-radius:9999px; background:#10b981;"></span>
+            <span style="font-size:12px; color:#047857; font-weight:600;">All changes saved locally</span>
+            <span style="margin-left:auto; font-size:11px; color:#8a8f99;">2 syncing</span>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:0 16px;">
+            <!-- group -->
+            <div style="display:flex; align-items:center; gap:7px; margin:2px 2px 9px;"><span style="font-size:12px; color:#8a8f99;">▾</span><span style="font-size:12px; font-weight:700; letter-spacing:0.5px; color:#575257;">BIOLOGY</span><span style="font-size:11px; color:#8a8f99;">4</span></div>
+            <div style="display:flex; flex-direction:column; gap:9px;">
+              <div style="display:flex; align-items:stretch; gap:0; background:#fff; border:1px solid #e7e9ec; border-radius:12px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06); overflow:hidden;">
+                <div style="width:5px; background:#6366f1;"></div>
+                <div style="flex:1; padding:12px 13px;">
+                  <div style="display:flex; align-items:center; justify-content:space-between;"><div style="font-weight:600; font-size:15px; color:#1b1c24;">Light reactions</div><span style="font-size:10px; color:#047857; font-weight:600; background:color-mix(in srgb,#10b981 12%,#fff); padding:2px 7px; border-radius:9999px;">Local</span></div>
+                  <div style="font-size:12px; color:#8a8f99; margin-top:3px; line-height:1.45;">Chlorophyll absorbs photons; electrons excite and…</div>
+                  <div style="display:flex; gap:6px; margin-top:8px;"><span style="font-size:10px; color:#575257; background:#f0f0f2; padding:2px 8px; border-radius:9999px;">12 cards</span><span style="font-size:10px; color:#8a8f99;">edited 2h ago</span></div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:stretch; gap:0; background:#fff; border:1px solid #e7e9ec; border-radius:12px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06); overflow:hidden;">
+                <div style="width:5px; background:#10b981;"></div>
+                <div style="flex:1; padding:12px 13px;">
+                  <div style="font-weight:600; font-size:15px; color:#1b1c24;">The Calvin cycle</div>
+                  <div style="font-size:12px; color:#8a8f99; margin-top:3px; line-height:1.45;">Carbon fixation in the stroma using ATP &amp; NADPH…</div>
+                  <div style="display:flex; gap:6px; margin-top:8px;"><span style="font-size:10px; color:#0369a1; background:color-mix(in srgb,#00c7e4 12%,#fff); padding:2px 8px; border-radius:9999px;">∑ math</span><span style="font-size:10px; color:#8a8f99;">synced</span></div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:stretch; gap:0; background:#fff; border:1px solid #e7e9ec; border-radius:12px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06); overflow:hidden;">
+                <div style="width:5px; background:#f97316;"></div>
+                <div style="flex:1; padding:12px 13px;">
+                  <div style="font-weight:600; font-size:15px; color:#1b1c24;">Electron transport chain</div>
+                  <div style="font-size:12px; color:#8a8f99; margin-top:3px; line-height:1.45;">Sketch of the thylakoid membrane proteins…</div>
+                  <div style="display:flex; gap:6px; margin-top:8px;"><span style="font-size:10px; color:#575257; background:#f0f0f2; padding:2px 8px; border-radius:9999px;">✎ canvas</span><span style="font-size:10px; color:#8a8f99;">edited 1d ago</span></div>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:7px; margin:16px 2px 9px;"><span style="font-size:12px; color:#8a8f99;">▸</span><span style="font-size:12px; font-weight:700; letter-spacing:0.5px; color:#575257;">SPANISH</span><span style="font-size:11px; color:#8a8f99;">2</span></div>
+          </div>
+          <div style="position:absolute; right:18px; bottom:20px; width:54px; height:54px; border-radius:9999px; background:linear-gradient(135deg,#384998,#5566c4); display:flex; align-items:center; justify-content:center; color:#fff; font-size:27px; font-weight:300; box-shadow:0 6px 18px rgb(56 73 152 / 0.4);">+</div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Notes list · grouped</div></sc-if>
+    </div>
+
+    <!-- NOTE EDITOR -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fff; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <!-- editor toolbar -->
+          <div style="display:flex; align-items:center; justify-content:space-between; padding:6px 16px 12px; border-bottom:1px solid #f0f0f2;">
+            <span style="font-size:14px; color:#575257;">‹ Biology</span>
+            <div style="display:flex; gap:14px; align-items:center; color:#575257; font-size:15px;"><span style="font-size:11px; color:#047857; font-weight:600;">● Local</span><span>↗</span><span>⋯</span></div>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:16px 20px;">
+            <div style="font-weight:800; font-size:26px; letter-spacing:-0.6px; color:#1b1c24; line-height:1.1;">Light reactions</div>
+            <div style="display:flex; gap:6px; margin:11px 0 16px;"><span style="font-size:11px; color:#575257; background:#f0f0f2; padding:3px 9px; border-radius:9999px;"># photosynthesis</span><span style="font-size:11px; color:#575257; background:#f0f0f2; padding:3px 9px; border-radius:9999px;"># exam</span></div>
+            <div style="font-size:14.5px; line-height:1.75; color:#333333;">
+              Chlorophyll in the thylakoid membrane absorbs photons, exciting electrons to a higher energy state.
+              <span style="background:color-mix(in srgb,#384998 13%,#fff); border-radius:3px; padding:1px 2px; box-shadow:inset 0 -2px 0 #384998;">These electrons travel down the electron transport chain, pumping protons into the lumen</span>
+              to build a gradient. ATP synthase then uses that gradient to produce ATP.
+            </div>
+            <!-- selection bubble -->
+            <div style="margin-top:14px; display:inline-flex; align-items:center; gap:0; background:#1b1c24; border-radius:10px; overflow:hidden; box-shadow:0 8px 24px rgba(0,0,0,0.28);">
+              <div style="padding:10px 13px; color:#fff; font-size:12.5px; font-weight:600; display:flex; align-items:center; gap:6px;"><span style="color:#9fb0ff;">✦</span> Explain</div>
+              <div style="padding:10px 13px; color:#fff; font-size:12.5px; border-left:1px solid rgba(255,255,255,0.14);">Rewrite</div>
+              <div style="padding:10px 13px; color:#fff; font-size:12.5px; border-left:1px solid rgba(255,255,255,0.14);">→ Cards</div>
+            </div>
+            <div style="font-size:14.5px; line-height:1.75; color:#333333; margin-top:14px;">The light reactions supply the chemical energy that powers the Calvin cycle.</div>
+          </div>
+          <!-- bottom format bar -->
+          <div style="height:52px; border-top:1px solid #f0f0f2; display:flex; align-items:center; justify-content:space-around; padding:0 20px; color:#575257; font-size:15px;">
+            <span style="font-weight:700;">B</span><span style="font-style:italic;">I</span><span style="text-decoration:underline;">U</span><span>∑</span><span>≣</span><span>✎</span><span style="color:#384998;">✦</span>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Editor · select → AI</div></sc-if>
+    </div>
+
+    <!-- AI RESULT SHEET -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fff; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="position:absolute; inset:0; background:#fff;"></div>
+          <div style="position:absolute; inset:0; padding:54px 20px 0; opacity:0.4;"><div style="font-weight:800; font-size:24px; color:#1b1c24;">Light reactions</div><div style="height:8px; width:80%; background:#f0f0f2; border-radius:4px; margin-top:14px;"></div></div>
+          <div style="position:absolute; inset:0; background:rgb(2 6 23 / 0.4);"></div>
+          <div style="position:absolute; left:0; right:0; bottom:0; height:460px; background:#fff; border-radius:24px 24px 0 0; padding:14px 18px; box-shadow:0 -10px 40px rgba(0,0,0,0.2); display:flex; flex-direction:column;">
+            <div style="width:40px; height:5px; border-radius:9999px; background:#dddfe5; margin:0 auto 14px;"></div>
+            <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
+              <span style="width:30px; height:30px; border-radius:8px; background:linear-gradient(135deg,#384998,#5566c4); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px;">✦</span>
+              <span style="font-weight:700; font-size:16px; color:#1b1c24;">AI · Generated cards</span>
+            </div>
+            <div style="font-size:12px; color:#8a8f99; margin-bottom:12px;">From your selected passage · 3 cards</div>
+            <div style="flex:1; display:flex; flex-direction:column; gap:10px; overflow:hidden;">
+              <div style="border:1px solid #e7e9ec; border-radius:12px; padding:13px; background:#fafafa;">
+                <div style="font-size:11px; color:#8a8f99; font-weight:600; margin-bottom:5px;">Q</div>
+                <div style="font-size:14px; font-weight:600; color:#22232b; line-height:1.4;">What builds the proton gradient in the light reactions?</div>
+                <div style="height:1px; background:#e7e9ec; margin:10px 0;"></div>
+                <div style="font-size:13px; color:#575257; line-height:1.5;">Electrons moving down the transport chain pump protons into the thylakoid lumen.</div>
+              </div>
+              <div style="border:1px solid #e7e9ec; border-radius:12px; padding:13px; background:#fafafa;">
+                <div style="font-size:11px; color:#8a8f99; font-weight:600; margin-bottom:5px;">Q</div>
+                <div style="font-size:14px; font-weight:600; color:#22232b; line-height:1.4;">What enzyme produces ATP from the gradient?</div>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px; margin-top:14px;">
+              <div style="flex:1; text-align:center; border:1px solid #c7cbd2; border-radius:9999px; padding:13px; font-size:14px; font-weight:600; color:#575257;">Edit</div>
+              <div style="flex:1.4; text-align:center; background:#384998; color:#fff; border-radius:9999px; padding:13px; font-size:14px; font-weight:700; box-shadow:0 4px 12px rgb(56 73 152 / 0.25);">Add 3 to review</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">AI result · cards from selection</div></sc-if>
+    </div>
+
+    <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none; width:230px; padding-top:40px;">
+      <div style="border-left:3px solid #384998; padding:4px 0 4px 16px;">
+        <div style="font-weight:700; font-size:15px; color:#1b1c24; margin-bottom:8px;">System notes</div>
+        <div style="font-size:13px; color:#575257; line-height:1.65;">The colored note spine encodes type (text / <span style="color:#00c7e4; font-weight:600;">math</span> / canvas) and reuses the accent palette. Sync state is honest everywhere — a persistent <span style="color:#047857; font-weight:600;">Local</span> bar, per-row badges. AI is invoked by <em>selecting text</em>, never a detached chat — output lands as real cards wired into review.</div>
+      </div>
+    </div>
+    </sc-if>
+
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 03 · REVIEW                                                   -->
+  <!-- ============================================================ -->
+  <div data-screen-label="03 Review" style="margin:56px 0 14px; display:flex; align-items:baseline; gap:14px;">
+    <span style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; background:#384998; color:#fff; font-weight:700; font-size:14px;">03</span>
+    <div style="font-weight:700; font-size:26px; letter-spacing:-0.5px; color:#1b1c24;">Review</div>
+    <div style="font-size:13px; color:#8a8f99;">SM-2 spaced repetition · swipe or tap to grade · streak &amp; XP payoff</div>
+  </div>
+
+  <div style="display:flex; gap:36px; align-items:flex-start;">
+
+    <!-- CARD FRONT -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <!-- progress -->
+          <div style="display:flex; align-items:center; gap:11px; padding:8px 20px 16px;">
+            <span style="font-size:18px; color:#8a8f99;">✕</span>
+            <div style="flex:1; height:6px; border-radius:9999px; background:#e7e9ec; overflow:hidden;"><div style="width:33%; height:100%; background:#384998; border-radius:9999px;"></div></div>
+            <span style="font-size:12px; color:#575257; font-weight:600;">4 / 12</span>
+          </div>
+          <!-- card -->
+          <div style="flex:1; margin:6px 18px 18px; border-radius:18px; background:#fff; border:1px solid #e7e9ec; box-shadow:0 8px 30px rgb(0 0 0 / 0.08); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:26px; position:relative;">
+            <div style="position:absolute; top:16px; left:16px; font-size:11px; letter-spacing:1.5px; color:#8a8f99; font-weight:600;">FLASHCARD · BIOLOGY</div>
+            <div style="font-weight:700; font-size:25px; text-align:center; line-height:1.25; color:#1b1c24; letter-spacing:-0.3px;">What drives the Calvin cycle?</div>
+            <div style="position:absolute; bottom:20px; font-size:12px; color:#8a8f99; border:1px solid #e7e9ec; border-radius:9999px; padding:8px 16px; background:#fafafa; font-weight:500;">Tap to reveal answer</div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Card front</div></sc-if>
+    </div>
+
+    <!-- CARD BACK + GRADE -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <div style="display:flex; align-items:center; gap:11px; padding:8px 20px 14px;">
+            <span style="font-size:18px; color:#8a8f99;">✕</span>
+            <div style="flex:1; height:6px; border-radius:9999px; background:#e7e9ec; overflow:hidden;"><div style="width:33%; height:100%; background:#384998; border-radius:9999px;"></div></div>
+            <span style="font-size:12px; color:#575257; font-weight:600;">4 / 12</span>
+          </div>
+          <!-- card revealed -->
+          <div style="flex:1; margin:6px 18px 14px; border-radius:18px; background:#fff; border:1px solid #e7e9ec; box-shadow:0 8px 30px rgb(0 0 0 / 0.08); display:flex; flex-direction:column; padding:22px; gap:14px;">
+            <div style="font-size:11px; letter-spacing:1.5px; color:#8a8f99; font-weight:600;">QUESTION</div>
+            <div style="font-weight:600; font-size:18px; color:#575257; line-height:1.25;">What drives the Calvin cycle?</div>
+            <div style="height:1px; background:#e7e9ec;"></div>
+            <div style="font-size:11px; letter-spacing:1.5px; color:#384998; font-weight:600;">ANSWER</div>
+            <div style="font-weight:700; font-size:21px; color:#1b1c24; line-height:1.3; letter-spacing:-0.3px;">ATP and NADPH produced by the light reactions.</div>
+          </div>
+          <!-- grade bar -->
+          <div style="display:flex; gap:8px; padding:0 16px 22px;">
+            <div style="flex:1; border-radius:12px; background:color-mix(in srgb,#ef4444 11%,#fff); border:1px solid color-mix(in srgb,#ef4444 28%,#fff); padding:11px 6px; text-align:center;"><div style="font-weight:700; font-size:13px; color:#b91c1c;">Again</div><div style="font-size:10px; color:#8a8f99; margin-top:2px;">&lt;1m</div></div>
+            <div style="flex:1; border-radius:12px; background:color-mix(in srgb,#f59e0b 13%,#fff); border:1px solid color-mix(in srgb,#f59e0b 30%,#fff); padding:11px 6px; text-align:center;"><div style="font-weight:700; font-size:13px; color:#92400e;">Hard</div><div style="font-size:10px; color:#8a8f99; margin-top:2px;">10m</div></div>
+            <div style="flex:1; border-radius:12px; background:color-mix(in srgb,#10b981 12%,#fff); border:1px solid color-mix(in srgb,#10b981 28%,#fff); padding:11px 6px; text-align:center;"><div style="font-weight:700; font-size:13px; color:#047857;">Good</div><div style="font-size:10px; color:#8a8f99; margin-top:2px;">1d</div></div>
+            <div style="flex:1; border-radius:12px; background:color-mix(in srgb,#384998 10%,#fff); border:1px solid color-mix(in srgb,#384998 26%,#fff); padding:11px 6px; text-align:center;"><div style="font-weight:700; font-size:13px; color:#384998;">Easy</div><div style="font-size:10px; color:#8a8f99; margin-top:2px;">4d</div></div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Reveal &amp; grade · SM-2</div></sc-if>
+    </div>
+
+    <!-- SESSION SUMMARY -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; border-radius:35px; overflow:hidden; display:flex; flex-direction:column; background:linear-gradient(165deg,#384998,#222a55);">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="position:absolute; right:-40px; top:40px; width:180px; height:180px; border-radius:9999px; background:rgba(255,255,255,0.05);"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#fff;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; padding:30px 22px 24px; position:relative;">
+            <div style="font-size:12px; letter-spacing:3px; text-transform:uppercase; color:#c5cdf2; font-weight:600;">Session complete</div>
+            <div style="font-weight:800; font-size:64px; letter-spacing:-2px; color:#fff; line-height:1; margin:14px 0 4px;">+85</div>
+            <div style="font-size:14px; color:#c5cdf2; font-weight:500;">XP earned · 12 cards · 4 min</div>
+            <!-- streak ribbon -->
+            <div style="display:flex; gap:11px; width:100%; margin-top:28px;">
+              <div style="flex:1; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.14); border-radius:14px; padding:14px; backdrop-filter:blur(4px);">
+                <div style="font-size:11px; color:#c5cdf2; font-weight:600; letter-spacing:0.5px;">STREAK</div>
+                <div style="font-weight:800; font-size:30px; color:#fff; margin-top:3px; display:flex; align-items:baseline; gap:5px;">8 <span style="font-size:16px;">days</span></div>
+              </div>
+              <div style="flex:1; background:rgba(255,255,255,0.1); border:1px solid rgba(255,255,255,0.14); border-radius:14px; padding:14px;">
+                <div style="font-size:11px; color:#c5cdf2; font-weight:600; letter-spacing:0.5px;">ACCURACY</div>
+                <div style="font-weight:800; font-size:30px; color:#fff; margin-top:3px;">92%</div>
+              </div>
+            </div>
+            <!-- achievement -->
+            <div style="display:flex; align-items:center; gap:12px; width:100%; margin-top:11px; background:linear-gradient(90deg, rgba(49,165,217,0.22), rgba(248,54,145,0.18), rgba(255,184,0,0.2)); border:1px solid rgba(255,255,255,0.2); border-radius:14px; padding:14px;">
+              <div style="width:42px; height:42px; border-radius:11px; background:linear-gradient(135deg,#f8b500,#f83691); display:flex; align-items:center; justify-content:center; font-size:20px;">🏅</div>
+              <div><div style="font-size:11px; color:#c5cdf2; font-weight:600;">ACHIEVEMENT UNLOCKED</div><div style="font-weight:700; font-size:16px; color:#fff;">Century — 100 cards reviewed</div></div>
+            </div>
+            <div style="width:100%; margin-top:auto; background:#fff; color:#384998; text-align:center; font-weight:700; font-size:15px; border-radius:9999px; padding:14px;">Done</div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Session summary</div></sc-if>
+    </div>
+
+    <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none; width:230px; padding-top:40px;">
+      <div style="border-left:3px solid #384998; padding:4px 0 4px 16px;">
+        <div style="font-weight:700; font-size:15px; color:#1b1c24; margin-bottom:8px;">System notes</div>
+        <div style="font-size:13px; color:#575257; line-height:1.65;">Four grades map to SM-2 quality with real next-interval labels so the algorithm is legible. The summary is the only screen that goes full-brand — gradient field, streak, XP, achievement — to mark the reward moment. Primary stays disciplined everywhere else.</div>
+      </div>
+    </div>
+    </sc-if>
+
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 04 · LANGUAGE                                                 -->
+  <!-- ============================================================ -->
+  <div data-screen-label="04 Language" style="margin:56px 0 14px; display:flex; align-items:baseline; gap:14px;">
+    <span style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; background:#384998; color:#fff; font-weight:700; font-size:14px;">04</span>
+    <div style="font-weight:700; font-size:26px; letter-spacing:-0.5px; color:#1b1c24;">Language</div>
+    <div style="font-size:13px; color:#8a8f99;">capture &amp; translate a word · immersive story reader with saved-word recall</div>
+  </div>
+
+  <div style="display:flex; gap:36px; align-items:flex-start;">
+
+    <!-- CAPTURE / TRANSLATE CARD -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <!-- header -->
+          <div style="padding:8px 20px 14px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-size:14px; color:#575257;">‹ Spanish</span>
+            <span style="font-size:11px; color:#047857; font-weight:600;">● Saved locally</span>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:0 18px;">
+            <!-- search field -->
+            <div style="display:flex; align-items:center; gap:9px; background:#fff; border:1px solid #e7e9ec; border-radius:9999px; padding:11px 15px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06);">
+              <span style="color:#8a8f99; font-size:14px;">⌕</span>
+              <span style="font-size:14px; color:#1b1c24; flex:1; font-weight:500;">aprender</span>
+              <span style="font-size:12px; color:#384998; font-weight:600;">ES→EN</span>
+            </div>
+            <!-- translation card -->
+            <div style="margin-top:14px; border-radius:16px; overflow:hidden; box-shadow:0 8px 30px rgb(0 0 0 / 0.08); background:#fff; border:1px solid #e7e9ec;">
+              <div style="padding:18px 18px 16px;">
+                <div style="display:flex; align-items:baseline; gap:10px;">
+                  <div style="font-weight:800; font-size:28px; letter-spacing:-0.6px; color:#1b1c24;">aprender</div>
+                  <span style="font-size:11px; color:#575257; background:#f0f0f2; padding:3px 8px; border-radius:9999px;">verb</span>
+                </div>
+                <div style="font-size:13px; color:#8a8f99; margin-top:4px; font-family:'Saira',sans-serif;">/a.pɾenˈdeɾ/ · <span style="color:#384998;">◉ play</span></div>
+              </div>
+              <!-- gradient translation -->
+              <div style="padding:16px 18px; background:linear-gradient(90deg, rgb(49 165 217) 0%, rgb(248 54 145) 46%, rgb(255 184 0) 100%);">
+                <div style="font-size:11px; letter-spacing:2px; text-transform:uppercase; color:rgba(255,255,255,0.85); font-weight:600;">English</div>
+                <div style="font-weight:800; font-size:24px; color:#fff; letter-spacing:-0.4px; margin-top:2px;">to learn</div>
+              </div>
+              <div style="padding:15px 18px;">
+                <div style="font-size:11px; letter-spacing:1.5px; color:#8a8f99; font-weight:600; margin-bottom:6px;">EXAMPLE</div>
+                <div style="font-size:14px; color:#333333; line-height:1.55;">Quiero <span style="color:#384998; font-weight:600;">aprender</span> español este año.</div>
+                <div style="font-size:13px; color:#8a8f99; line-height:1.5; margin-top:4px;">I want to learn Spanish this year.</div>
+              </div>
+            </div>
+          </div>
+          <!-- save bar -->
+          <div style="padding:14px 18px 22px; display:flex; gap:10px;">
+            <div style="width:48px; height:48px; border-radius:9999px; border:1px solid #c7cbd2; display:flex; align-items:center; justify-content:center; color:#575257; font-size:18px;">★</div>
+            <div style="flex:1; background:#384998; color:#fff; border-radius:9999px; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:700; font-size:15px; box-shadow:0 4px 12px rgb(56 73 152 / 0.25);">Save to word bank</div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Capture &amp; translate</div></sc-if>
+    </div>
+
+    <!-- IMMERSIVE STORY READER -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fbf8f3; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <!-- reader header -->
+          <div style="padding:8px 20px 12px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-size:14px; color:#575257;">‹</span>
+            <div style="text-align:center;"><div style="font-weight:700; font-size:14px; color:#1b1c24;">El viaje</div><div style="font-size:11px; color:#8a8f99;">Story · A2 · 6 saved words</div></div>
+            <span style="font-size:15px; color:#575257;">Aa</span>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:6px 22px;">
+            <div style="font-size:17px; line-height:2.0; color:#2a2520; font-family:'Saira',sans-serif;">
+              Marta quería <span style="background:color-mix(in srgb,#06b6d4 20%,#fbf8f3); border-radius:4px; padding:1px 3px;">aprender</span> a navegar.
+              Cada mañana iba al <span style="background:color-mix(in srgb,#8b5cf6 20%,#fbf8f3); border-radius:4px; padding:1px 3px;">puerto</span>
+              y observaba los <span style="background:color-mix(in srgb,#f97316 22%,#fbf8f3); border-radius:4px; padding:1px 3px;">barcos</span>.
+              <!-- inline popover anchored on a word -->
+              El viejo marinero le <span style="position:relative; background:color-mix(in srgb,#384998 16%,#fbf8f3); border-radius:4px; padding:1px 3px; box-shadow:inset 0 -2px 0 #384998;">enseñó<span style="position:absolute; left:50%; bottom:140%; transform:translateX(-50%); width:150px; background:#1b1c24; border-radius:12px; padding:11px 13px; box-shadow:0 10px 30px rgba(0,0,0,0.35); z-index:6;"><span style="display:block; font-weight:700; font-size:14px; color:#fff;">enseñó</span><span style="display:block; font-size:12px; color:#9fb0ff; margin:2px 0 7px;">taught · /enseˈɲo/</span><span style="display:flex; gap:6px;"><span style="flex:1; text-align:center; font-size:11px; font-weight:600; color:#1b1c24; background:#fff; border-radius:9999px; padding:5px;">＋ Save</span><span style="flex:1; text-align:center; font-size:11px; font-weight:600; color:#fff; background:rgba(255,255,255,0.16); border-radius:9999px; padding:5px;">◉ Hear</span></span><span style="position:absolute; left:50%; top:100%; transform:translateX(-50%); border:6px solid transparent; border-top-color:#1b1c24;"></span></span></span>
+              a leer el viento y a confiar en el <span style="background:color-mix(in srgb,#ec4899 18%,#fbf8f3); border-radius:4px; padding:1px 3px;">mar</span>.
+            </div>
+          </div>
+          <!-- read-aloud bar -->
+          <div style="margin:0 16px 20px; background:#1b1c24; border-radius:16px; padding:13px 16px; display:flex; align-items:center; gap:13px; box-shadow:0 8px 24px rgba(0,0,0,0.25);">
+            <div style="width:38px; height:38px; border-radius:9999px; background:#fff; color:#1b1c24; display:flex; align-items:center; justify-content:center; font-size:16px;">❚❚</div>
+            <div style="flex:1;">
+              <div style="height:4px; border-radius:9999px; background:rgba(255,255,255,0.18); overflow:hidden;"><div style="width:42%; height:100%; background:linear-gradient(90deg,#31a5d9,#f83691); border-radius:9999px;"></div></div>
+              <div style="display:flex; justify-content:space-between; margin-top:6px;"><span style="font-size:10px; color:#9aa0ad;">Read aloud · 0.9×</span><span style="font-size:10px; color:#9aa0ad;">1:12</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Story reader · word popover</div></sc-if>
+    </div>
+
+    <!-- WORD BANK -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <div style="padding:8px 20px 12px;">
+            <div style="font-weight:800; font-size:24px; letter-spacing:-0.6px; color:#1b1c24;">Word bank</div>
+            <div style="font-size:12px; color:#8a8f99;">Spanish · 8 words due to review</div>
+          </div>
+          <!-- due strip -->
+          <div style="margin:0 16px 14px; border-radius:14px; background:linear-gradient(150deg,#384998,#2c3a7d); padding:14px 16px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 8px 24px rgb(56 73 152 / 0.28);">
+            <div><div style="font-size:11px; letter-spacing:1.5px; color:#c5cdf2; font-weight:600;">DUE NOW</div><div style="font-weight:800; font-size:22px; color:#fff;">8 words</div></div>
+            <div style="background:#fff; color:#384998; font-weight:700; font-size:13px; border-radius:9999px; padding:9px 15px;">Review ▸</div>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:0 16px;">
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <div style="display:flex; align-items:center; gap:11px; background:#fff; border:1px solid #e7e9ec; border-radius:12px; padding:11px 13px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06);">
+                <span style="width:4px; height:34px; border-radius:9999px; background:#06b6d4;"></span>
+                <div style="flex:1;"><div style="font-weight:600; font-size:15px; color:#1b1c24;">aprender</div><div style="font-size:11px; color:#8a8f99;">to learn · verb</div></div>
+                <span style="font-size:10px; color:#047857; font-weight:600; background:color-mix(in srgb,#10b981 12%,#fff); padding:3px 8px; border-radius:9999px;">due</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:11px; background:#fff; border:1px solid #e7e9ec; border-radius:12px; padding:11px 13px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06);">
+                <span style="width:4px; height:34px; border-radius:9999px; background:#8b5cf6;"></span>
+                <div style="flex:1;"><div style="font-weight:600; font-size:15px; color:#1b1c24;">puerto</div><div style="font-size:11px; color:#8a8f99;">port / harbour · noun</div></div>
+                <span style="font-size:10px; color:#8a8f99;">3d</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:11px; background:#fff; border:1px solid #e7e9ec; border-radius:12px; padding:11px 13px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06);">
+                <span style="width:4px; height:34px; border-radius:9999px; background:#f97316;"></span>
+                <div style="flex:1;"><div style="font-weight:600; font-size:15px; color:#1b1c24;">barco</div><div style="font-size:11px; color:#8a8f99;">boat / ship · noun</div></div>
+                <span style="font-size:10px; color:#8a8f99;">1w</span>
+              </div>
+              <div style="display:flex; align-items:center; gap:11px; background:#fff; border:1px solid #e7e9ec; border-radius:12px; padding:11px 13px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06);">
+                <span style="width:4px; height:34px; border-radius:9999px; background:#ec4899;"></span>
+                <div style="flex:1;"><div style="font-weight:600; font-size:15px; color:#1b1c24;">mar</div><div style="font-size:11px; color:#8a8f99;">sea · noun</div></div>
+                <span style="font-size:10px; color:#8a8f99;">mastered</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Word bank · feeds review</div></sc-if>
+    </div>
+
+    <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none; width:230px; padding-top:40px;">
+      <div style="border-left:3px solid #384998; padding:4px 0 4px 16px;">
+        <div style="font-weight:700; font-size:15px; color:#1b1c24; margin-bottom:8px;">System notes</div>
+        <div style="font-size:13px; color:#575257; line-height:1.65;">Saved words carry a <em>stable accent color</em> from capture → story → bank, so a learner builds a visual memory of each word. The brand gradient appears only on the translation reveal — a small reward. Saved words flow straight into the same SM-2 review pipeline as cards.</div>
+      </div>
+    </div>
+    </sc-if>
+
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 05 · MATERIALS                                               -->
+  <!-- ============================================================ -->
+  <div data-screen-label="05 Materials" style="margin:56px 0 14px; display:flex; align-items:baseline; gap:14px;">
+    <span style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; background:#384998; color:#fff; font-weight:700; font-size:14px;">05</span>
+    <div style="font-weight:700; font-size:26px; letter-spacing:-0.5px; color:#1b1c24;">Materials</div>
+    <div style="font-size:13px; color:#8a8f99;">source detail · AI generation sheet with live quota · review before adding</div>
+  </div>
+
+  <div style="display:flex; gap:36px; align-items:flex-start;">
+
+    <!-- MATERIAL DETAIL -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <div style="padding:8px 20px 12px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-size:14px; color:#575257;">‹ Materials</span>
+            <span style="font-size:15px; color:#575257;">⋯</span>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:0 18px;">
+            <!-- source meta -->
+            <div style="display:flex; align-items:center; gap:11px; margin-bottom:14px;">
+              <div style="width:44px; height:44px; border-radius:11px; background:color-mix(in srgb,#ef4444 12%,#fff); color:#b91c1c; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:13px;">PDF</div>
+              <div style="flex:1;"><div style="font-weight:700; font-size:16px; color:#1b1c24; line-height:1.2;">Cell Respiration.pdf</div><div style="font-size:11px; color:#8a8f99;">14 pages · uploaded today</div></div>
+            </div>
+            <!-- source preview -->
+            <div style="border:1px solid #e7e9ec; border-radius:14px; background:#fff; padding:14px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06);">
+              <div style="font-size:11px; letter-spacing:1.5px; color:#8a8f99; font-weight:600; margin-bottom:9px;">SOURCE PREVIEW</div>
+              <div style="font-size:13px; color:#333333; line-height:1.6;">Cellular respiration is the process by which cells convert glucose and oxygen into ATP, releasing carbon dioxide and water…</div>
+              <div style="display:flex; flex-direction:column; gap:6px; margin-top:12px;">
+                <div style="height:7px; background:#f0f0f2; border-radius:4px;"></div>
+                <div style="height:7px; background:#f0f0f2; border-radius:4px; width:90%;"></div>
+                <div style="height:7px; background:#f0f0f2; border-radius:4px; width:70%;"></div>
+              </div>
+            </div>
+            <!-- existing generated -->
+            <div style="display:flex; gap:10px; margin-top:14px;">
+              <div style="flex:1; background:#fff; border:1px solid #e7e9ec; border-radius:12px; padding:12px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06);"><div style="font-size:11px; color:#8a8f99; font-weight:600;">FLASHCARDS</div><div style="font-weight:800; font-size:22px; color:#1b1c24;">18</div></div>
+              <div style="flex:1; background:#fff; border:1px solid #e7e9ec; border-radius:12px; padding:12px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06);"><div style="font-size:11px; color:#8a8f99; font-weight:600;">QUIZ</div><div style="font-weight:800; font-size:22px; color:#1b1c24;">6</div></div>
+            </div>
+          </div>
+          <!-- persistent generate -->
+          <div style="padding:14px 18px 22px;">
+            <div style="background:#384998; color:#fff; border-radius:9999px; display:flex; align-items:center; justify-content:center; gap:9px; font-weight:700; font-size:15px; padding:14px; box-shadow:0 4px 12px rgb(56 73 152 / 0.25);"><span style="font-size:16px;">✦</span> Generate from this</div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Material detail</div></sc-if>
+    </div>
+
+    <!-- GENERATE SHEET -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="position:absolute; inset:0; background:#fafafa;"></div>
+          <div style="position:absolute; inset:0; padding:60px 18px 0; opacity:0.4;"><div style="height:44px; border-radius:11px; background:#e7e9ec; margin-bottom:14px;"></div><div style="height:120px; border-radius:14px; background:#e7e9ec;"></div></div>
+          <div style="position:absolute; inset:0; background:rgb(2 6 23 / 0.45);"></div>
+          <!-- sheet -->
+          <div style="position:absolute; left:0; right:0; bottom:0; background:#fff; border-radius:24px 24px 0 0; padding:14px 18px 24px; box-shadow:0 -10px 40px rgba(0,0,0,0.2);">
+            <div style="width:40px; height:5px; border-radius:9999px; background:#dddfe5; margin:0 auto 16px;"></div>
+            <div style="font-weight:700; font-size:19px; color:#1b1c24; margin-bottom:4px;">Generate</div>
+            <div style="font-size:12px; color:#8a8f99; margin-bottom:16px;">From Cell Respiration.pdf</div>
+            <!-- type toggle -->
+            <div style="display:flex; background:#f0f0f2; border-radius:10px; padding:4px; margin-bottom:16px;">
+              <div style="flex:1; text-align:center; font-size:13px; font-weight:700; color:#fff; background:#384998; border-radius:7px; padding:9px; box-shadow:0 2px 6px rgb(56 73 152 / 0.3);">Flashcards</div>
+              <div style="flex:1; text-align:center; font-size:13px; font-weight:600; color:#575257; padding:9px;">Quiz</div>
+            </div>
+            <!-- count slider -->
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;"><span style="font-size:13px; color:#575257; font-weight:600;">How many</span><span style="font-size:14px; color:#384998; font-weight:700;">12 cards</span></div>
+            <div style="position:relative; height:6px; border-radius:9999px; background:#e7e9ec; margin-bottom:18px;">
+              <div style="position:absolute; left:0; top:0; height:100%; width:55%; background:#384998; border-radius:9999px;"></div>
+              <div style="position:absolute; left:55%; top:50%; transform:translate(-50%,-50%); width:20px; height:20px; border-radius:9999px; background:#fff; border:2px solid #384998; box-shadow:0 2px 6px rgba(0,0,0,0.18);"></div>
+            </div>
+            <!-- difficulty segmented -->
+            <div style="font-size:13px; color:#575257; font-weight:600; margin-bottom:8px;">Difficulty</div>
+            <div style="display:flex; gap:8px; margin-bottom:16px;">
+              <div style="flex:1; text-align:center; font-size:12px; color:#575257; border:1px solid #e7e9ec; border-radius:9999px; padding:9px; background:#fafafa;">Recall</div>
+              <div style="flex:1; text-align:center; font-size:12px; font-weight:700; color:#384998; border:1px solid #384998; border-radius:9999px; padding:9px; background:color-mix(in srgb,#384998 8%,#fff);">Balanced</div>
+              <div style="flex:1; text-align:center; font-size:12px; color:#575257; border:1px solid #e7e9ec; border-radius:9999px; padding:9px; background:#fafafa;">Exam</div>
+            </div>
+            <!-- quota -->
+            <div style="display:flex; align-items:center; gap:8px; background:color-mix(in srgb,#f59e0b 10%,#fff); border:1px solid color-mix(in srgb,#f59e0b 26%,#fff); border-radius:10px; padding:10px 12px; margin-bottom:14px;">
+              <span style="font-size:14px;">⚡</span>
+              <span style="font-size:12px; color:#92400e; font-weight:600;">1 of 8 free generations left</span>
+              <span style="margin-left:auto; font-size:11px; color:#384998; font-weight:700;">Go Pro</span>
+            </div>
+            <div style="background:#384998; color:#fff; border-radius:9999px; text-align:center; font-weight:700; font-size:15px; padding:14px; box-shadow:0 4px 12px rgb(56 73 152 / 0.25);">✦ Generate 12 cards</div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Generate sheet · quota</div></sc-if>
+    </div>
+
+    <!-- GENERATED RESULT -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <div style="padding:8px 20px 12px; display:flex; align-items:center; gap:9px;">
+            <span style="width:30px; height:30px; border-radius:8px; background:linear-gradient(135deg,#384998,#5566c4); color:#fff; display:flex; align-items:center; justify-content:center; font-size:14px;">✦</span>
+            <div><div style="font-weight:700; font-size:16px; color:#1b1c24;">12 cards generated</div><div style="font-size:11px; color:#8a8f99;">Review before adding</div></div>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:0 16px;">
+            <div style="display:flex; flex-direction:column; gap:9px;">
+              <!-- streaming shimmer card (peak) -->
+              <div style="border:1px solid color-mix(in srgb,#384998 20%,#fff); border-radius:12px; padding:13px; background:#fff; box-shadow:0 1px 3px rgb(0 0 0 / 0.06);">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;"><span style="font-size:10px; color:#384998; font-weight:700; letter-spacing:1px;">GENERATING…</span><span style="font-size:11px;">✦</span></div>
+                <div style="height:11px; border-radius:5px; margin-bottom:7px; background:linear-gradient(90deg, rgb(49 165 217) 0%, rgb(248 54 145) 46%, rgb(255 184 0) 100%); background-size:220% 100%; animation:cgShimmer 1.4s linear infinite;"></div>
+                <div style="height:11px; width:70%; border-radius:5px; background:linear-gradient(90deg, rgb(49 165 217) 0%, rgb(248 54 145) 46%, rgb(255 184 0) 100%); background-size:220% 100%; animation:cgShimmer 1.4s linear infinite;"></div>
+              </div>
+              <div style="border:1px solid #e7e9ec; border-radius:12px; padding:13px; background:#fff;">
+                <div style="display:flex; justify-content:space-between;"><span style="font-size:11px; color:#8a8f99; font-weight:600;">Q1</span><span style="font-size:13px; color:#047857;">✓</span></div>
+                <div style="font-size:14px; font-weight:600; color:#22232b; line-height:1.4; margin-top:4px;">What is the net ATP yield of glycolysis?</div>
+                <div style="font-size:13px; color:#575257; margin-top:7px;">2 ATP (net) per glucose molecule.</div>
+              </div>
+              <div style="border:1px solid #e7e9ec; border-radius:12px; padding:13px; background:#fff;">
+                <div style="display:flex; justify-content:space-between;"><span style="font-size:11px; color:#8a8f99; font-weight:600;">Q2</span><span style="font-size:13px; color:#047857;">✓</span></div>
+                <div style="font-size:14px; font-weight:600; color:#22232b; line-height:1.4; margin-top:4px;">Where does the Krebs cycle occur?</div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:12px 16px 22px; display:flex; gap:10px;">
+            <div style="flex:1; text-align:center; border:1px solid #c7cbd2; border-radius:9999px; padding:13px; font-size:14px; font-weight:600; color:#575257;">Discard</div>
+            <div style="flex:1.5; text-align:center; background:#384998; color:#fff; border-radius:9999px; padding:13px; font-size:14px; font-weight:700; box-shadow:0 4px 12px rgb(56 73 152 / 0.25);">Add all to review</div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Result · streaming → review</div></sc-if>
+    </div>
+
+    <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none; width:230px; padding-top:40px;">
+      <div style="border-left:3px solid #384998; padding:4px 0 4px 16px;">
+        <div style="font-weight:700; font-size:15px; color:#1b1c24; margin-bottom:8px;">System notes</div>
+        <div style="font-size:13px; color:#575257; line-height:1.65;">Generation is always one tap from the source, with the FREE-tier <span style="color:#92400e; font-weight:600;">quota</span> shown inline before commitment — no surprise paywall. The brand gradient becomes a <em>streaming shimmer</em> while the model writes, then results are always human-reviewed before they enter the SM-2 queue.</div>
+      </div>
+    </div>
+    </sc-if>
+
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 06 · BOARD                                                   -->
+  <!-- ============================================================ -->
+  <div data-screen-label="06 Board" style="margin:56px 0 14px; display:flex; align-items:baseline; gap:14px;">
+    <span style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; background:#384998; color:#fff; font-weight:700; font-size:14px;">06</span>
+    <div style="font-weight:700; font-size:26px; letter-spacing:-0.5px; color:#1b1c24;">Board</div>
+    <div style="font-size:13px; color:#8a8f99;">kanban for study tasks · color-coded tags · drag between columns · local-first</div>
+  </div>
+
+  <div style="display:flex; gap:36px; align-items:flex-start;">
+
+    <!-- BOARD COLUMN PAGER -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#f4f5f7; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <div style="padding:8px 20px 10px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-weight:800; font-size:24px; letter-spacing:-0.6px; color:#1b1c24;">Board</span>
+            <span style="font-size:11px; color:#047857; font-weight:600;">● Local</span>
+          </div>
+          <!-- column pager tabs -->
+          <div style="display:flex; gap:7px; padding:0 18px 12px;">
+            <span style="font-size:12px; font-weight:700; color:#1b1c24; border-bottom:2px solid #384998; padding:0 2px 6px;">To do <span style="color:#8a8f99;">4</span></span>
+            <span style="font-size:12px; font-weight:600; color:#8a8f99; padding:0 2px 6px;">Doing <span>2</span></span>
+            <span style="font-size:12px; font-weight:600; color:#8a8f99; padding:0 2px 6px;">Done <span>9</span></span>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:0 16px;">
+            <div style="display:flex; flex-direction:column; gap:9px;">
+              <!-- dragging card (peak still) -->
+              <div style="background:#fff; border:1px solid #e7e9ec; border-radius:12px; padding:13px; box-shadow:0 12px 28px rgba(20,22,40,0.18); transform:rotate(-2deg);">
+                <div style="display:flex; gap:6px; margin-bottom:8px;"><span style="font-size:10px; font-weight:600; color:#fff; background:#ef4444; padding:2px 8px; border-radius:9999px;">Exam</span></div>
+                <div style="font-size:14px; font-weight:600; color:#22232b; line-height:1.4;">Finish cell respiration deck</div>
+                <div style="font-size:11px; color:#8a8f99; margin-top:7px;">Biology · 12 cards left</div>
+              </div>
+              <div style="background:#fff; border:1px solid #e7e9ec; border-radius:12px; padding:13px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06);">
+                <div style="display:flex; gap:6px; margin-bottom:8px;"><span style="font-size:10px; font-weight:600; color:#fff; background:#06b6d4; padding:2px 8px; border-radius:9999px;">Spanish</span></div>
+                <div style="font-size:14px; font-weight:600; color:#22232b; line-height:1.4;">Read chapter 2 of El viaje</div>
+              </div>
+              <div style="background:#fff; border:1px solid #e7e9ec; border-radius:12px; padding:13px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06);">
+                <div style="display:flex; gap:6px; margin-bottom:8px;"><span style="font-size:10px; font-weight:600; color:#fff; background:#8b5cf6; padding:2px 8px; border-radius:9999px;">Review</span><span style="font-size:10px; font-weight:600; color:#fff; background:#f59e0b; padding:2px 8px; border-radius:9999px;">Today</span></div>
+                <div style="font-size:14px; font-weight:600; color:#22232b; line-height:1.4;">Clear the 8 due Spanish words</div>
+              </div>
+              <!-- add row -->
+              <div style="border:1.5px dashed #c7cbd2; border-radius:12px; padding:11px; text-align:center; font-size:13px; color:#8a8f99; font-weight:500;">＋ Add a card</div>
+            </div>
+          </div>
+          <!-- mini board map -->
+          <div style="display:flex; gap:5px; padding:12px 18px 20px;">
+            <div style="flex:1; height:5px; border-radius:9999px; background:#384998;"></div>
+            <div style="flex:1; height:5px; border-radius:9999px; background:#dddfe5;"></div>
+            <div style="flex:1; height:5px; border-radius:9999px; background:#dddfe5;"></div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Board · column pager</div></sc-if>
+    </div>
+
+    <!-- MINI BOARD OVERVIEW -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#f4f5f7; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <div style="padding:8px 20px 12px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-weight:800; font-size:24px; letter-spacing:-0.6px; color:#1b1c24;">Board</span>
+            <span style="font-size:13px; color:#384998; font-weight:600;">⤢ Overview</span>
+          </div>
+          <!-- horizontal mini columns -->
+          <div style="flex:1; overflow:hidden; padding:0 12px; display:flex; gap:10px;">
+            <div style="flex:1; background:color-mix(in srgb,#384998 5%,#fff); border-radius:14px; padding:9px 8px;">
+              <div style="font-size:11px; font-weight:700; color:#575257; margin-bottom:8px; padding:0 3px;">To do</div>
+              <div style="display:flex; flex-direction:column; gap:7px;">
+                <div style="background:#fff; border:1px solid #e7e9ec; border-radius:9px; padding:8px; box-shadow:0 1px 2px rgb(0 0 0 / 0.05);"><span style="display:block; width:18px; height:3px; border-radius:9999px; background:#ef4444; margin-bottom:6px;"></span><div style="font-size:11px; color:#22232b; line-height:1.35;">Cell respiration deck</div></div>
+                <div style="background:#fff; border:1px solid #e7e9ec; border-radius:9px; padding:8px; box-shadow:0 1px 2px rgb(0 0 0 / 0.05);"><span style="display:block; width:18px; height:3px; border-radius:9999px; background:#06b6d4; margin-bottom:6px;"></span><div style="font-size:11px; color:#22232b; line-height:1.35;">El viaje ch. 2</div></div>
+              </div>
+            </div>
+            <div style="flex:1; background:color-mix(in srgb,#f59e0b 6%,#fff); border-radius:14px; padding:9px 8px;">
+              <div style="font-size:11px; font-weight:700; color:#575257; margin-bottom:8px; padding:0 3px;">Doing</div>
+              <div style="display:flex; flex-direction:column; gap:7px;">
+                <div style="background:#fff; border:1px solid #e7e9ec; border-radius:9px; padding:8px; box-shadow:0 1px 2px rgb(0 0 0 / 0.05);"><span style="display:block; width:18px; height:3px; border-radius:9999px; background:#8b5cf6; margin-bottom:6px;"></span><div style="font-size:11px; color:#22232b; line-height:1.35;">8 due Spanish words</div></div>
+              </div>
+            </div>
+            <div style="flex:1; background:color-mix(in srgb,#10b981 6%,#fff); border-radius:14px; padding:9px 8px;">
+              <div style="font-size:11px; font-weight:700; color:#575257; margin-bottom:8px; padding:0 3px;">Done</div>
+              <div style="display:flex; flex-direction:column; gap:7px;">
+                <div style="background:#fff; border:1px solid #e7e9ec; border-radius:9px; padding:8px; opacity:0.7;"><div style="font-size:11px; color:#8a8f99; line-height:1.35; text-decoration:line-through;">Light reactions</div></div>
+                <div style="background:#fff; border:1px solid #e7e9ec; border-radius:9px; padding:8px; opacity:0.7;"><div style="font-size:11px; color:#8a8f99; line-height:1.35; text-decoration:line-through;">Calvin cycle quiz</div></div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:14px 18px 20px;"><div style="background:#384998; color:#fff; border-radius:9999px; text-align:center; font-weight:700; font-size:14px; padding:12px; box-shadow:0 4px 12px rgb(56 73 152 / 0.25);">＋ New card</div></div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Board · mini overview</div></sc-if>
+    </div>
+
+    <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none; width:230px; padding-top:40px;">
+      <div style="border-left:3px solid #384998; padding:4px 0 4px 16px;">
+        <div style="font-weight:700; font-size:15px; color:#1b1c24; margin-bottom:8px;">System notes</div>
+        <div style="font-size:13px; color:#575257; line-height:1.65;">A full kanban doesn't fit a phone, so the board has <em>two reads</em>: a focused single-column pager for working a list, and a pinch-to-zoom mini overview for moving cards between columns. Tags reuse the user-tag colors; everything is local-first with no save button.</div>
+      </div>
+    </div>
+    </sc-if>
+
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 07 · NOTIFICATIONS                                           -->
+  <!-- ============================================================ -->
+  <div data-screen-label="07 Notifications" style="margin:56px 0 14px; display:flex; align-items:baseline; gap:14px;">
+    <span style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; background:#384998; color:#fff; font-weight:700; font-size:14px;">07</span>
+    <div style="font-weight:700; font-size:26px; letter-spacing:-0.5px; color:#1b1c24;">Notifications</div>
+    <div style="font-size:13px; color:#8a8f99;">due-card push on lock screen · timezone-aware reminder preferences</div>
+  </div>
+
+  <div style="display:flex; gap:36px; align-items:flex-start;">
+
+    <!-- LOCK SCREEN PUSH -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; border-radius:35px; overflow:hidden; display:flex; flex-direction:column; background:linear-gradient(170deg,#1b2148,#0d1024 60%,#15161b);">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#fff;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <!-- clock -->
+          <div style="text-align:center; padding:30px 0 8px;">
+            <div style="font-size:15px; color:rgba(255,255,255,0.7); font-weight:500;">Tuesday, June 20</div>
+            <div style="font-weight:300; font-size:72px; color:#fff; line-height:1; letter-spacing:-2px;">7:00</div>
+          </div>
+          <div style="flex:1;"></div>
+          <!-- notification -->
+          <div style="margin:0 12px 14px; background:rgba(255,255,255,0.14); backdrop-filter:blur(14px); border:1px solid rgba(255,255,255,0.16); border-radius:18px; padding:14px; box-shadow:0 8px 30px rgba(0,0,0,0.3);">
+            <div style="display:flex; align-items:center; gap:9px; margin-bottom:10px;">
+              <div style="width:26px; height:26px; border-radius:7px; background:linear-gradient(135deg,#384998,#5566c4); display:flex; align-items:center; justify-content:center; color:#fff; font-size:13px; font-weight:800;">C</div>
+              <span style="font-size:12px; color:rgba(255,255,255,0.85); font-weight:600; letter-spacing:0.5px;">COGNILO</span>
+              <span style="margin-left:auto; font-size:11px; color:rgba(255,255,255,0.6);">now</span>
+            </div>
+            <div style="font-size:15px; font-weight:700; color:#fff; line-height:1.3;">12 cards are due 🧠</div>
+            <div style="font-size:13px; color:rgba(255,255,255,0.82); line-height:1.45; margin-top:3px;">Keep your <span style="font-weight:700; color:#fff;">7-day streak</span> alive — a quick 6-minute review across Biology &amp; Spanish.</div>
+            <div style="display:flex; gap:8px; margin-top:12px;">
+              <div style="flex:1; text-align:center; background:#fff; color:#384998; font-weight:700; font-size:13px; border-radius:9999px; padding:9px;">Review now</div>
+              <div style="text-align:center; background:rgba(255,255,255,0.16); color:#fff; font-weight:600; font-size:13px; border-radius:9999px; padding:9px 15px;">Snooze 1h</div>
+            </div>
+          </div>
+          <!-- swipe hint -->
+          <div style="text-align:center; padding:0 0 22px;"><div style="width:120px; height:5px; border-radius:9999px; background:rgba(255,255,255,0.5); margin:0 auto;"></div></div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Lock-screen push</div></sc-if>
+    </div>
+
+    <!-- REMINDER PREFS -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <div style="padding:8px 20px 12px; display:flex; align-items:center; gap:9px;">
+            <span style="font-size:14px; color:#575257;">‹</span>
+            <span style="font-weight:800; font-size:20px; letter-spacing:-0.5px; color:#1b1c24;">Reminders</span>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:0 18px;">
+            <!-- card due toggle -->
+            <div style="background:#fff; border:1px solid #e7e9ec; border-radius:14px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06); overflow:hidden; margin-bottom:14px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:14px;">
+                <div><div style="font-weight:600; font-size:15px; color:#1b1c24;">Cards due</div><div style="font-size:12px; color:#8a8f99;">Daily at 9:00</div></div>
+                <div style="width:44px; height:26px; border-radius:9999px; background:#384998; position:relative;"><span style="position:absolute; top:3px; right:3px; width:20px; height:20px; border-radius:9999px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.25);"></span></div>
+              </div>
+              <div style="height:1px; background:#f0f0f2;"></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 14px;">
+                <span style="font-size:13px; color:#575257;">Notify when</span>
+                <span style="font-size:13px; color:#384998; font-weight:700;">≥ 5 cards due</span>
+              </div>
+              <div style="height:1px; background:#f0f0f2;"></div>
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:13px 14px;">
+                <span style="font-size:13px; color:#575257;">Time</span>
+                <span style="font-size:13px; color:#1b1c24; font-weight:600; background:#f0f0f2; padding:5px 12px; border-radius:8px;">09:00</span>
+              </div>
+            </div>
+            <!-- quiet hours -->
+            <div style="background:#fff; border:1px solid #e7e9ec; border-radius:14px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06); overflow:hidden; margin-bottom:14px;">
+              <div style="display:flex; align-items:center; justify-content:space-between; padding:14px;">
+                <div><div style="font-weight:600; font-size:15px; color:#1b1c24;">Quiet hours</div><div style="font-size:12px; color:#8a8f99;">22:00 – 08:00</div></div>
+                <div style="width:44px; height:26px; border-radius:9999px; background:#384998; position:relative;"><span style="position:absolute; top:3px; right:3px; width:20px; height:20px; border-radius:9999px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.25);"></span></div>
+              </div>
+            </div>
+            <!-- timezone -->
+            <div style="display:flex; align-items:center; gap:9px; background:color-mix(in srgb,#00c7e4 8%,#fff); border:1px solid color-mix(in srgb,#00c7e4 22%,#fff); border-radius:12px; padding:12px 13px;">
+              <span style="font-size:14px;">🌐</span>
+              <span style="font-size:12px; color:#0369a1; line-height:1.4;">Times follow your device timezone · <span style="font-weight:700;">Europe/Madrid</span></span>
+            </div>
+          </div>
+          <div style="padding:14px 18px 22px;"><div style="background:#384998; color:#fff; border-radius:9999px; text-align:center; font-weight:700; font-size:15px; padding:14px; box-shadow:0 4px 12px rgb(56 73 152 / 0.25);">Save preferences</div></div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Reminder preferences</div></sc-if>
+    </div>
+
+    <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none; width:230px; padding-top:40px;">
+      <div style="border-left:3px solid #384998; padding:4px 0 4px 16px;">
+        <div style="font-weight:700; font-size:15px; color:#1b1c24; margin-bottom:8px;">System notes</div>
+        <div style="font-size:13px; color:#575257; line-height:1.65;">Push copy is specific and motivating — exact due count, the streak at stake, expected minutes — and deep-links straight into review. Preferences expose the real backend model: due threshold, time, quiet hours, all <span style="color:#0369a1; font-weight:600;">timezone-aware</span>.</div>
+      </div>
+    </div>
+    </sc-if>
+
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 08 · WORKSPACES                                              -->
+  <!-- ============================================================ -->
+  <div data-screen-label="08 Workspaces" style="margin:56px 0 14px; display:flex; align-items:baseline; gap:14px;">
+    <span style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; background:#384998; color:#fff; font-weight:700; font-size:14px;">08</span>
+    <div style="font-weight:700; font-size:26px; letter-spacing:-0.5px; color:#1b1c24;">Workspaces</div>
+    <div style="font-size:13px; color:#8a8f99;">flat switcher · per-space progress · live collaborative presence · create flow</div>
+  </div>
+
+  <div style="display:flex; gap:36px; align-items:flex-start;">
+
+    <!-- SWITCHER SHEET -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="position:absolute; inset:0; background:#fafafa;"></div>
+          <div style="position:absolute; inset:0; padding:58px 16px 0; opacity:0.4;"><div style="height:90px; border-radius:16px; background:#e7e9ec; margin-bottom:12px;"></div></div>
+          <div style="position:absolute; inset:0; background:rgb(2 6 23 / 0.45);"></div>
+          <div style="position:absolute; left:0; right:0; bottom:0; background:#fff; border-radius:24px 24px 0 0; padding:14px 16px 22px; box-shadow:0 -10px 40px rgba(0,0,0,0.2);">
+            <div style="width:40px; height:5px; border-radius:9999px; background:#dddfe5; margin:0 auto 16px;"></div>
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;"><span style="font-weight:700; font-size:18px; color:#1b1c24;">Workspaces</span><span style="font-size:12px; color:#8a8f99;">3 of 5</span></div>
+            <div style="display:flex; flex-direction:column; gap:9px;">
+              <!-- active -->
+              <div style="display:flex; align-items:center; gap:12px; border:1.5px solid #384998; background:color-mix(in srgb,#384998 6%,#fff); border-radius:14px; padding:12px;">
+                <div style="width:42px; height:42px; border-radius:11px; background:linear-gradient(135deg,#384998,#5566c4); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:17px;">B</div>
+                <div style="flex:1;"><div style="font-weight:700; font-size:15px; color:#1b1c24;">Biology</div><div style="font-size:11px; color:#8a8f99;">128 cards · 12 due</div></div>
+                <span style="color:#384998; font-size:16px;">✓</span>
+              </div>
+              <!-- with collaborators -->
+              <div style="display:flex; align-items:center; gap:12px; border:1px solid #e7e9ec; border-radius:14px; padding:12px;">
+                <div style="width:42px; height:42px; border-radius:11px; background:linear-gradient(135deg,#06b6d4,#3b82f6); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:17px;">S</div>
+                <div style="flex:1;"><div style="font-weight:700; font-size:15px; color:#1b1c24;">Spanish</div><div style="font-size:11px; color:#8a8f99;">54 words · 8 due</div></div>
+                <div style="display:flex;">
+                  <span style="width:24px; height:24px; border-radius:9999px; background:#8b5cf6; border:2px solid #fff; color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center;">M</span>
+                  <span style="width:24px; height:24px; border-radius:9999px; background:#f97316; border:2px solid #fff; color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-left:-8px;">J</span>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:12px; border:1px solid #e7e9ec; border-radius:14px; padding:12px;">
+                <div style="width:42px; height:42px; border-radius:11px; background:linear-gradient(135deg,#f59e0b,#f97316); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:17px;">H</div>
+                <div style="flex:1;"><div style="font-weight:700; font-size:15px; color:#1b1c24;">History</div><div style="font-size:11px; color:#8a8f99;">76 cards · all caught up</div></div>
+                <span style="font-size:11px; color:#047857; font-weight:600; background:color-mix(in srgb,#10b981 12%,#fff); padding:3px 8px; border-radius:9999px;">✓</span>
+              </div>
+            </div>
+            <div style="margin-top:12px; border:1.5px dashed #c7cbd2; border-radius:14px; padding:13px; text-align:center; font-size:14px; color:#384998; font-weight:600;">＋ New workspace</div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Switcher · per-space due</div></sc-if>
+    </div>
+
+    <!-- COLLAB PRESENCE -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <!-- space header -->
+          <div style="padding:8px 20px 14px;">
+            <div style="display:flex; align-items:center; gap:11px;">
+              <div style="width:40px; height:40px; border-radius:11px; background:linear-gradient(135deg,#06b6d4,#3b82f6); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px;">S</div>
+              <div style="flex:1;"><div style="font-weight:800; font-size:20px; letter-spacing:-0.5px; color:#1b1c24;">Spanish</div><div style="font-size:11px; color:#8a8f99;">Shared · 3 members</div></div>
+            </div>
+            <!-- live presence -->
+            <div style="display:flex; align-items:center; gap:9px; margin-top:14px; background:#fff; border:1px solid #e7e9ec; border-radius:12px; padding:10px 12px; box-shadow:0 1px 3px rgb(0 0 0 / 0.06);">
+              <div style="display:flex;">
+                <span style="width:28px; height:28px; border-radius:9999px; background:#384998; border:2px solid #fff; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center;">Me</span>
+                <span style="width:28px; height:28px; border-radius:9999px; background:#8b5cf6; border:2px solid #fff; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-left:-9px;">M</span>
+                <span style="width:28px; height:28px; border-radius:9999px; background:#f97316; border:2px solid #fff; color:#fff; font-size:11px; font-weight:700; display:flex; align-items:center; justify-content:center; margin-left:-9px;">J</span>
+              </div>
+              <span style="font-size:12px; color:#575257; flex:1;"><span style="font-weight:600; color:#1b1c24;">Marco</span> is editing now</span>
+              <span style="width:8px; height:8px; border-radius:9999px; background:#10b981; box-shadow:0 0 0 3px color-mix(in srgb,#10b981 30%,#fff);"></span>
+            </div>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:0 18px;">
+            <div style="font-size:11px; letter-spacing:1.5px; text-transform:uppercase; color:#8a8f99; font-weight:600; margin:2px 2px 10px;">Recent activity</div>
+            <div style="display:flex; flex-direction:column; gap:10px;">
+              <div style="display:flex; gap:11px; align-items:flex-start;">
+                <span style="width:26px; height:26px; border-radius:9999px; background:#8b5cf6; color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; flex:none;">M</span>
+                <div><div style="font-size:13px; color:#22232b; line-height:1.4;"><span style="font-weight:600;">Marco</span> added 6 words from <em>El viaje</em></div><div style="font-size:11px; color:#8a8f99; margin-top:2px;">2 min ago</div></div>
+              </div>
+              <div style="display:flex; gap:11px; align-items:flex-start;">
+                <span style="width:26px; height:26px; border-radius:9999px; background:#f97316; color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; flex:none;">J</span>
+                <div><div style="font-size:13px; color:#22232b; line-height:1.4;"><span style="font-weight:600;">Júlia</span> reviewed 20 cards · 95%</div><div style="font-size:11px; color:#8a8f99; margin-top:2px;">1 h ago</div></div>
+              </div>
+              <div style="display:flex; gap:11px; align-items:flex-start;">
+                <span style="width:26px; height:26px; border-radius:9999px; background:#384998; color:#fff; font-size:10px; font-weight:700; display:flex; align-items:center; justify-content:center; flex:none;">Me</span>
+                <div><div style="font-size:13px; color:#22232b; line-height:1.4;">You generated a quiz from <em>Ch. 1</em></div><div style="font-size:11px; color:#8a8f99; margin-top:2px;">Yesterday</div></div>
+              </div>
+            </div>
+          </div>
+          <div style="padding:12px 18px 22px; display:flex; gap:10px;">
+            <div style="flex:1; text-align:center; border:1px solid #c7cbd2; border-radius:9999px; padding:12px; font-size:14px; font-weight:600; color:#575257;">Invite</div>
+            <div style="flex:1.4; text-align:center; background:#384998; color:#fff; border-radius:9999px; padding:12px; font-size:14px; font-weight:700; box-shadow:0 4px 12px rgb(56 73 152 / 0.25);">Open space</div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Live collab presence</div></sc-if>
+    </div>
+
+    <!-- CREATE WORKSPACE -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <div style="padding:8px 20px 16px; display:flex; align-items:center; justify-content:space-between;">
+            <span style="font-size:14px; color:#8a8f99;">Cancel</span>
+            <span style="font-weight:700; font-size:16px; color:#1b1c24;">New workspace</span>
+            <span style="font-size:14px; color:#c7cbd2; font-weight:600;">Create</span>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:0 18px;">
+            <!-- icon/color picker -->
+            <div style="display:flex; flex-direction:column; align-items:center; gap:12px; margin-bottom:20px;">
+              <div style="width:72px; height:72px; border-radius:18px; background:linear-gradient(135deg,#384998,#5566c4); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:30px; box-shadow:0 8px 24px rgb(56 73 152 / 0.3);">C</div>
+              <div style="display:flex; gap:9px;">
+                <span style="width:24px; height:24px; border-radius:9999px; background:#384998; border:2px solid #fff; box-shadow:0 0 0 2px #384998;"></span>
+                <span style="width:24px; height:24px; border-radius:9999px; background:#06b6d4;"></span>
+                <span style="width:24px; height:24px; border-radius:9999px; background:#8b5cf6;"></span>
+                <span style="width:24px; height:24px; border-radius:9999px; background:#f97316;"></span>
+                <span style="width:24px; height:24px; border-radius:9999px; background:#ec4899;"></span>
+                <span style="width:24px; height:24px; border-radius:9999px; background:#10b981;"></span>
+              </div>
+            </div>
+            <!-- name field -->
+            <div style="font-size:11px; letter-spacing:1.5px; color:#8a8f99; font-weight:600; margin-bottom:7px;">NAME</div>
+            <div style="background:#fff; border:1.5px solid #384998; border-radius:12px; padding:13px 14px; font-size:15px; color:#1b1c24; font-weight:500; box-shadow:0 0 0 3px color-mix(in srgb,#384998 12%,#fff); margin-bottom:16px;">Chemistry<span style="display:inline-block; width:2px; height:18px; background:#384998; margin-left:1px; vertical-align:-3px;"></span></div>
+            <!-- description -->
+            <div style="font-size:11px; letter-spacing:1.5px; color:#8a8f99; font-weight:600; margin-bottom:7px;">DESCRIPTION <span style="color:#c7cbd2;">· optional</span></div>
+            <div style="background:#fff; border:1px solid #e7e9ec; border-radius:12px; padding:13px 14px; font-size:14px; color:#8a8f99; min-height:54px;">Organic reactions for the spring exam…</div>
+            <!-- collab note -->
+            <div style="display:flex; align-items:center; gap:9px; margin-top:16px; background:color-mix(in srgb,#384998 6%,#fff); border-radius:12px; padding:12px 13px;">
+              <span style="font-size:14px;">👥</span>
+              <span style="font-size:12px; color:#575257; line-height:1.4;">Invite collaborators after creating — workspaces are flat &amp; shareable.</span>
+            </div>
+          </div>
+          <div style="padding:12px 18px 22px;"><div style="background:#384998; color:#fff; border-radius:9999px; text-align:center; font-weight:700; font-size:15px; padding:14px; box-shadow:0 4px 12px rgb(56 73 152 / 0.25);">Create workspace</div></div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Create flow</div></sc-if>
+    </div>
+
+    <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+    <div style="flex:none; width:230px; padding-top:40px;">
+      <div style="border-left:3px solid #384998; padding:4px 0 4px 16px;">
+        <div style="font-weight:700; font-size:15px; color:#1b1c24; margin-bottom:8px;">System notes</div>
+        <div style="font-size:13px; color:#575257; line-height:1.65;">Workspaces are <em>flat</em> (no nesting, per the data model) — the switcher is a quick sheet, not a tree. Each space carries its own due/progress so switching is decision-ready. Shared spaces show <span style="color:#047857; font-weight:600;">live presence</span> (Yjs) — overlapping avatars, "editing now", an activity feed — without a separate collab screen.</div>
+      </div>
+    </div>
+    </sc-if>
+
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- 09 · SIGNATURE MICRO-INTERACTIONS                            -->
+  <!-- ============================================================ -->
+  <div data-screen-label="09 Micro-interactions" style="margin:56px 0 14px; display:flex; align-items:baseline; gap:14px;">
+    <span style="display:inline-flex; align-items:center; justify-content:center; width:30px; height:30px; border-radius:8px; background:#384998; color:#fff; font-weight:700; font-size:14px;">09</span>
+    <div style="font-weight:700; font-size:26px; letter-spacing:-0.5px; color:#1b1c24;">Signature moments</div>
+    <div style="font-size:13px; color:#8a8f99;">the peaks · hero interactions animated live · the rest annotated as stills</div>
+  </div>
+
+  <div style="display:flex; gap:36px; align-items:flex-start;">
+
+    <!-- SWIPE TO GRADE (animated) -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <div style="text-align:center; padding:6px 0 4px;"><span style="font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#10b981; font-weight:700;">Swipe → Good</span></div>
+          <!-- stage -->
+          <div style="flex:1; position:relative; margin:6px 18px 18px;">
+            <!-- green ghost trail -->
+            <div style="position:absolute; inset:0; border-radius:18px; background:color-mix(in srgb,#10b981 16%,#fff); border:1px solid color-mix(in srgb,#10b981 30%,#fff); animation:cgTrail 2.6s ease-in-out infinite;"></div>
+            <!-- color edge cues -->
+            <div style="position:absolute; left:-2px; top:50%; transform:translateY(-50%); font-size:11px; color:#b91c1c; font-weight:700; writing-mode:vertical-rl;">AGAIN</div>
+            <div style="position:absolute; right:-2px; top:50%; transform:translateY(-50%); font-size:11px; color:#047857; font-weight:700; writing-mode:vertical-rl;">GOOD</div>
+            <!-- the card -->
+            <div style="position:absolute; inset:0; border-radius:18px; background:#fff; border:1px solid #e7e9ec; box-shadow:0 12px 34px rgba(20,22,40,0.18); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px; transform-origin:bottom center; animation:cgSwipe 2.6s ease-in-out infinite;">
+              <div style="position:absolute; top:16px; right:16px; width:30px; height:30px; border-radius:9999px; background:color-mix(in srgb,#10b981 16%,#fff); color:#047857; display:flex; align-items:center; justify-content:center; font-size:15px; animation:cgTrail 2.6s ease-in-out infinite;">✓</div>
+              <div style="font-size:11px; letter-spacing:1.5px; color:#8a8f99; font-weight:600;">BIOLOGY</div>
+              <div style="font-weight:700; font-size:22px; text-align:center; line-height:1.3; color:#1b1c24; margin-top:12px;">ATP &amp; NADPH power the Calvin cycle.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Swipe-to-grade · color trail</div></sc-if>
+    </div>
+
+    <!-- 3D CARD FLIP (animated) -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <div style="text-align:center; padding:6px 0 4px;"><span style="font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#384998; font-weight:700;">Tap to reveal</span></div>
+          <!-- flip stage -->
+          <div style="flex:1; margin:6px 18px 18px; perspective:1100px;">
+            <div style="position:relative; width:100%; height:100%; transform-style:preserve-3d; animation:cgFlip 3.6s ease-in-out infinite;">
+              <!-- front -->
+              <div style="position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:18px; background:#fff; border:1px solid #e7e9ec; box-shadow:0 8px 30px rgb(0 0 0 / 0.08); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px;">
+                <div style="position:absolute; top:16px; left:16px; font-size:11px; letter-spacing:1.5px; color:#8a8f99; font-weight:600;">FLASHCARD</div>
+                <div style="font-weight:700; font-size:23px; text-align:center; line-height:1.3; color:#1b1c24;">What drives the Calvin cycle?</div>
+              </div>
+              <!-- back -->
+              <div style="position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; transform:rotateY(180deg); border-radius:18px; background:linear-gradient(160deg,#384998,#2c3a7d); box-shadow:0 8px 30px rgb(56 73 152 / 0.3); display:flex; flex-direction:column; align-items:center; justify-content:center; padding:24px;">
+                <div style="position:absolute; top:16px; left:16px; font-size:11px; letter-spacing:1.5px; color:#c5cdf2; font-weight:600;">ANSWER</div>
+                <div style="font-weight:700; font-size:22px; text-align:center; line-height:1.3; color:#fff;">ATP and NADPH from the light reactions.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">3D card flip on reveal</div></sc-if>
+    </div>
+
+    <!-- STREAK RING (animated) -->
+    <div style="flex:none; display:flex; flex-direction:column; gap:14px; align-items:center;">
+      <div style="position:relative; width:300px; background:#15161b; border-radius:46px; padding:11px; box-shadow:0 24px 50px rgba(20,22,40,0.26);">
+        <div style="position:relative; width:278px; height:600px; background:#fafafa; border-radius:35px; overflow:hidden; display:flex; flex-direction:column;">
+          <div style="position:absolute; top:11px; left:50%; transform:translateX(-50%); width:96px; height:24px; background:#15161b; border-radius:9999px; z-index:5;"></div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:15px 24px 8px; font-size:13px; font-weight:600; color:#22232b;"><span>9:41</span><span style="font-size:11px; letter-spacing:1px;">5G ▦ 84%</span></div>
+          <div style="text-align:center; padding:6px 0 4px;"><span style="font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#f59e0b; font-weight:700;">Streak fills on open</span></div>
+          <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;">
+            <div style="position:relative; width:160px; height:160px;">
+              <svg width="160" height="160" viewBox="0 0 160 160" style="transform:rotate(-90deg);">
+                <circle cx="80" cy="80" r="62" fill="none" stroke="#e7e9ec" stroke-width="14"></circle>
+                <circle cx="80" cy="80" r="62" fill="none" stroke="#f59e0b" stroke-width="14" stroke-linecap="round" stroke-dasharray="390" stroke-dashoffset="60" style="animation:cgRing 1.6s cubic-bezier(0.2,0,0,1) forwards;"></circle>
+              </svg>
+              <div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+                <div style="width:62px; height:62px; border-radius:9999px; background:linear-gradient(135deg,#f59e0b,#f97316); display:flex; align-items:center; justify-content:center; color:#fff; font-weight:800; font-size:26px; animation:cgPulse 2.2s ease-in-out infinite;">7</div>
+                <span style="font-size:11px; color:#8a8f99; font-weight:600; margin-top:6px;">DAY STREAK</span>
+              </div>
+            </div>
+            <div style="text-align:center; max-width:200px;"><div style="font-weight:700; font-size:17px; color:#1b1c24;">One more to a new record</div><div style="font-size:13px; color:#8a8f99; margin-top:3px;">Milestone at day 8 pulses gold.</div></div>
+          </div>
+        </div>
+      </div>
+      <sc-if value="{{ showCaptions }}" hint-placeholder-val="{{ true }}"><div style="font-size:12px; color:#8a8f99; font-weight:500;">Streak ring fill + pulse</div></sc-if>
+    </div>
+
+    <!-- ANNOTATED STILLS -->
+    <div style="flex:none; width:260px; padding-top:40px; display:flex; flex-direction:column; gap:18px;">
+      <div style="border-left:3px solid #384998; padding:4px 0 4px 16px;">
+        <div style="font-weight:700; font-size:15px; color:#1b1c24; margin-bottom:8px;">Animated here</div>
+        <div style="font-size:13px; color:#575257; line-height:1.6;">Three hero peaks run live: the <span style="font-weight:600; color:#047857;">swipe-to-grade</span> tilt with a color trail following the thumb, the <span style="font-weight:600; color:#384998;">3D flip</span> on reveal, and the <span style="font-weight:600; color:#92400e;">streak ring</span> filling + milestone pulse on open.</div>
+      </div>
+      <div style="border-left:3px solid #c7cbd2; padding:4px 0 4px 16px;">
+        <div style="font-weight:700; font-size:15px; color:#1b1c24; margin-bottom:10px;">Annotated stills</div>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;"><span style="width:22px; height:22px; border-radius:6px; background:linear-gradient(90deg, rgb(49 165 217), rgb(248 54 145), rgb(255 184 0)); flex:none;"></span><span style="font-size:13px; font-weight:600; color:#22232b;">AI streaming shimmer</span></div>
+            <div style="font-size:12px; color:#8a8f99; line-height:1.5; margin-top:3px;">Gradient sweeps across generating lines instead of a spinner — see module 05.</div>
+          </div>
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;"><span style="width:22px; height:22px; border-radius:9999px; background:linear-gradient(135deg,#384998,#5566c4); color:#fff; font-size:13px; display:flex; align-items:center; justify-content:center; flex:none;">+</span><span style="font-size:13px; font-weight:600; color:#22232b;">Capture FAB morph</span></div>
+            <div style="font-size:12px; color:#8a8f99; line-height:1.5; margin-top:3px;">The center + scales up and its edges melt into the capture sheet's rounded top — shared-element transition.</div>
+          </div>
+          <div>
+            <div style="display:flex; align-items:center; gap:8px;"><span style="width:22px; height:22px; border-radius:6px; background:color-mix(in srgb,#10b981 16%,#fff); color:#047857; font-size:12px; display:flex; align-items:center; justify-content:center; flex:none;">✓</span><span style="font-size:13px; font-weight:600; color:#22232b;">Save-local pulse</span></div>
+            <div style="font-size:12px; color:#8a8f99; line-height:1.5; margin-top:3px;">The green sync dot ripples once each time changes persist to IndexedDB.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- closing footer -->
+  <div style="max-width:1080px; margin-top:60px; padding-top:22px; border-top:1px solid #d4d6dd; display:flex; align-items:center; gap:14px;">
+    <span style="width:34px; height:34px; border-radius:9px; background:linear-gradient(135deg,#384998,#5566c4); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:16px;">C</span>
+    <div style="font-size:13px; color:#8a8f99; line-height:1.5;">Cognilo Mobile · 9 modules on one system — Saira, primary <span style="color:#384998; font-weight:600;">#384998</span>, the brand gradient reserved for reward moments, local-first sync surfaced honestly throughout.</div>
+  </div>
+
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;showCaptions&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot; },
+  &quot;showNotes&quot;: { &quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot; }
+}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      showCaptions: this.props.showCaptions ?? true,
+      showNotes: this.props.showNotes ?? true,
+      dark: this.props.dark ?? false,
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -37,14 +37,11 @@ const gotit = (): void => {
       <template #body>
         <video :src="shareSoundVideo" muted autoplay loop />
         <div class="my-2 flex justify-between gap-3">
-          <div class="flex items-center gap-2">
-            <input id="dontShow" type="checkbox" name="dontshow" @click="dontShow = !dontShow" />
-            <label for="dontShow" class="text-content-on-surface">Don't Show Again</label>
-          </div>
+          <UiCheckbox v-model="dontShow" label="Don't Show Again" />
         </div>
       </template>
       <template #footer>
-        <button class="btn btn-small bg-theme" @click="gotit">Got it</button>
+        <UiButton tone="primary" @click="gotit">Got it</UiButton>
       </template>
     </shared-dialog-modal>
   </Teleport>

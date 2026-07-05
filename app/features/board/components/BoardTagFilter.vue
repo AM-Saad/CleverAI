@@ -70,8 +70,8 @@ const selectedTags = computed(() => {
   <UiPopover v-model:open="isOpen">
     <UiButton
       size="sm"
-      :icon="selectedCount > 0 ? 'heroicons:funnel-solid' : 'heroicons:funnel'"
-      trailing-icon="heroicons:chevron-down-20-solid"
+      :icon="selectedCount > 0 ? 'i-lucide-list-filter' : 'i-lucide-list-filter'"
+      trailing-icon="i-lucide-chevron-down"
     >
       <span v-if="selectedCount === 0">Filter</span>
       <span v-else
@@ -126,8 +126,8 @@ const selectedTags = computed(() => {
             <Icon
               :name="
                 modelValue.includes(tag.name)
-                  ? 'heroicons:check-circle-solid'
-                  : 'heroicons:circle'
+                  ? 'i-lucide-circle-check'
+                  : 'i-lucide-circle'
               "
               :class="[
                 'w-4 h-4',

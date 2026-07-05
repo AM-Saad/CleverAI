@@ -30,17 +30,24 @@ const matchesStoryFilter = (
   hasStory === undefined ||
   (hasStory ? word.stories.length > 0 : word.stories.length === 0);
 
+const wordLanguageWhere = (input: ListLanguageWordsInput) => ({
+  ...(input.targetLanguage && input.targetLanguage !== input.nativeLanguage
+    ? { sourceLang: input.targetLanguage }
+    : {}),
+  ...(input.nativeLanguage ? { translationLang: input.nativeLanguage } : {}),
+});
+
 export async function listLanguageWords(input: ListLanguageWordsInput) {
   const search = input.search?.trim();
   const searchFilter = search
     ? { contains: search, mode: "insensitive" as const }
     : null;
+  const languageWhere = wordLanguageWhere(input);
   const where: Record<string, unknown> = {
     userId: input.userId,
     ...(input.status ? { status: input.status } : {}),
     ...(input.category ? { category: input.category } : {}),
-    ...(input.nativeLanguage ? { translationLang: input.nativeLanguage } : {}),
-    ...(input.targetLanguage ? { sourceLang: input.targetLanguage } : {}),
+    ...languageWhere,
     ...(input.cursor ? { createdAt: { lt: new Date(input.cursor) } } : {}),
     ...(searchFilter
       ? {
@@ -89,7 +96,8 @@ export async function listLanguageWords(input: ListLanguageWordsInput) {
       }
     }
 
-    hasMoreScannable = batch.length >= Math.min(Math.max(input.limit * 2, input.limit), 100);
+    hasMoreScannable =
+      batch.length >= Math.min(Math.max(input.limit * 2, input.limit), 100);
   }
 
   const [categoryRows, statusRows] = await Promise.all([
@@ -97,15 +105,14 @@ export async function listLanguageWords(input: ListLanguageWordsInput) {
       where: {
         userId: input.userId,
         category: { not: null },
-        ...(input.nativeLanguage ? { translationLang: input.nativeLanguage } : {}),
-        ...(input.targetLanguage ? { sourceLang: input.targetLanguage } : {}),
+        ...languageWhere,
       },
       distinct: ["category"],
       orderBy: { category: "asc" },
       select: { category: true },
     }),
     input.prisma.languageWord.findMany({
-      where: { userId: input.userId },
+      where: { userId: input.userId, ...languageWhere },
       select: { status: true },
     }),
   ]);

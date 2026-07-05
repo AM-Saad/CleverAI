@@ -13,12 +13,12 @@
 
       <UiActionMenu :modal="false" :items="[
         [
-          { label: 'Download as TXT', icon: 'i-heroicons-document-text', onSelect: () => exportContent('Note', note.content, 'txt') },
-          { label: 'Download as DOC', icon: 'i-heroicons-document', onSelect: () => exportContent('Note', note.content, 'doc') },
-          { label: 'Download as PDF', icon: 'i-heroicons-document', onSelect: () => exportContent('Note', note.content, 'pdf') }
+          { label: 'Download as TXT', icon: 'i-lucide-file-text', onSelect: () => exportContent('Note', note.content, 'txt') },
+          { label: 'Download as DOC', icon: 'i-lucide-file', onSelect: () => exportContent('Note', note.content, 'doc') },
+          { label: 'Download as PDF', icon: 'i-lucide-file', onSelect: () => exportContent('Note', note.content, 'pdf') }
         ]
       ]">
-        <UiButton variant="outline" tone="primary" size="sm" aria-label="Download note">
+        <UiButton variant="soft" tone="primary" size="sm" aria-label="Download note">
           <shared-icon name="download" class="w-4 h-4" />
         </UiButton>
       </UiActionMenu>

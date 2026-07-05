@@ -16,7 +16,6 @@ const props = defineProps<{
   itemReorderLocked?: boolean;
 }>();
 
-
 const route = useRoute();
 const id = route.params.id;
 // Stores
@@ -35,7 +34,9 @@ const uncategorizedItems = computed(() => getColumnItems(null));
 const allUncategorizedItems = computed(() => getAllColumnItems(null));
 
 // Loading state
-const isLoading = computed(() => columnsStore.loadingStates.value.get("global") ?? false);
+const isLoading = computed(
+  () => columnsStore.loadingStates.value.get("global") ?? false,
+);
 
 const emit = defineEmits<{
   (e: "select-item", itemId: string): void;
@@ -52,22 +53,29 @@ const {
   isAnyDragging: anyColumnDragging,
   isDragDisabled,
   DragTracker,
-  syncFromSource
+  syncFromSource,
 } = useReorderableList<BoardColumnState>({
   onReorder: async (newOrder) => {
-    console.log("🚀 [BoardKanbanView] Executing column reorder for", newOrder.length, "columns");
+    console.log(
+      "🚀 [BoardKanbanView] Executing column reorder for",
+      newOrder.length,
+      "columns",
+    );
     const success = await columnsStore.reorderColumns(newOrder);
     if (!success) {
       console.error("❌ [BoardKanbanView] Column reorder failed");
     }
     return success;
   },
-  idKey: 'id'
+  idKey: "id",
 });
 
 // Disable column dragging when items are being dragged OR columns are being reordered OR on mobile
-const columnDraggingDisabled = computed(() =>
-  anyItemBeingDraggedInColumns.value || isDragDisabled.value || isMobile.value
+const columnDraggingDisabled = computed(
+  () =>
+    anyItemBeingDraggedInColumns.value ||
+    isDragDisabled.value ||
+    isMobile.value,
 );
 
 // Column drag controls for header-only dragging
@@ -113,8 +121,8 @@ const openColumnReorderModal = () => {
   showColumnReorderModal.value = true;
 };
 
-const moveColumnInModal = (index: number, direction: 'up' | 'down') => {
-  const newIndex = direction === 'up' ? index - 1 : index + 1;
+const moveColumnInModal = (index: number, direction: "up" | "down") => {
+  const newIndex = direction === "up" ? index - 1 : index + 1;
   if (newIndex < 0 || newIndex >= reorderingColumns.value.length) return;
 
   const columns = [...reorderingColumns.value];
@@ -161,11 +169,11 @@ const mobileExpandedColumn = ref<string | null>(null); // For full-screen column
 // Check if mobile
 onMounted(() => {
   isMobile.value = window.innerWidth < 1024;
-  window.addEventListener('resize', handleResize);
+  window.addEventListener("resize", handleResize);
 });
 
 onUnmounted(() => {
-  window.removeEventListener('resize', handleResize);
+  window.removeEventListener("resize", handleResize);
 });
 
 const handleResize = () => {
@@ -177,7 +185,11 @@ const handleResize = () => {
 
 // Initialize active column
 onMounted(() => {
-  if (uncategorizedItems.value && uncategorizedItems.value.length === 0 && orderedColumns.value.length > 0) {
+  if (
+    uncategorizedItems.value &&
+    uncategorizedItems.value.length === 0 &&
+    orderedColumns.value.length > 0
+  ) {
     activeColumnId.value = orderedColumns.value[0]?.id ?? null;
   }
 });
@@ -185,24 +197,31 @@ onMounted(() => {
 // Scroll to specific column
 const scrollToColumn = (columnId: string | null) => {
   activeColumnId.value = columnId;
-  const elementId = columnId ? `column-${columnId}` : 'column-uncategorized';
+  const elementId = columnId ? `column-${columnId}` : "column-uncategorized";
   const element = document.getElementById(elementId);
   if (element) {
-    element.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    element.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
   }
 };
 
 // Navigate columns on mobile
-const navigateColumn = (direction: 'prev' | 'next') => {
+const navigateColumn = (direction: "prev" | "next") => {
   const allColumnIds = [
-    ...(uncategorizedItems.value.length > 0 || orderedColumns.value.length === 0 ? [null] : []),
-    ...localColumns.value.map(c => c.id)
+    ...(uncategorizedItems.value.length > 0 || orderedColumns.value.length === 0
+      ? [null]
+      : []),
+    ...localColumns.value.map((c) => c.id),
   ];
   const currentIndex = allColumnIds.indexOf(activeColumnId.value);
 
-  let newIndex = direction === 'next'
-    ? Math.min(currentIndex + 1, allColumnIds.length - 1)
-    : Math.max(currentIndex - 1, 0);
+  let newIndex =
+    direction === "next"
+      ? Math.min(currentIndex + 1, allColumnIds.length - 1)
+      : Math.max(currentIndex - 1, 0);
 
   const newColumnId = allColumnIds[newIndex] ?? null;
   scrollToColumn(newColumnId);
@@ -211,26 +230,32 @@ const navigateColumn = (direction: 'prev' | 'next') => {
 // Expand column to full screen on mobile
 const expandColumn = (columnId: string | null) => {
   if (isMobile.value) {
-    mobileExpandedColumn.value = columnId === mobileExpandedColumn.value ? null : columnId;
+    mobileExpandedColumn.value =
+      columnId === mobileExpandedColumn.value ? null : columnId;
   }
 };
 
 // Get expanded column data
 const expandedColumnData = computed(() => {
-  if (mobileExpandedColumn.value === null && mobileExpandedColumn.value !== 'uncategorized') {
+  if (
+    mobileExpandedColumn.value === null &&
+    mobileExpandedColumn.value !== "uncategorized"
+  ) {
     // Uncategorized
     if (mobileExpandedColumn.value === null) {
       return {
         id: null,
-        name: 'Uncategorized',
+        name: "Uncategorized",
         items: uncategorizedItems.value,
         allItems: allUncategorizedItems.value,
-        icon: 'heroicons:inbox',
-        color: designTokenValues['--color-content-secondary']
+        icon: "i-lucide-inbox",
+        color: designTokenValues["--color-content-secondary"],
       };
     }
   }
-  const column = localColumns.value.find(c => c.id === mobileExpandedColumn.value);
+  const column = localColumns.value.find(
+    (c) => c.id === mobileExpandedColumn.value,
+  );
   if (!column) return null;
   const index = localColumns.value.indexOf(column);
   return {
@@ -239,7 +264,7 @@ const expandedColumnData = computed(() => {
     items: getColumnItems(column.id),
     allItems: getAllColumnItems(column.id),
     icon: props.getColumnIcon?.(column.name),
-    color: props.getColumnColor?.(index)
+    color: props.getColumnColor?.(index),
   };
 });
 
@@ -248,17 +273,17 @@ const setupObserver = () => {
   const options = {
     root: boardContainer.value,
     threshold: 0.6,
-    rootMargin: '0px'
+    rootMargin: "0px",
   };
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach((entry) => {
       if (entry.isIntersecting) {
         const id = entry.target.id;
-        if (id === 'column-uncategorized') {
+        if (id === "column-uncategorized") {
           activeColumnId.value = null;
-        } else if (id.startsWith('column-')) {
-          activeColumnId.value = id.replace('column-', '');
+        } else if (id.startsWith("column-")) {
+          activeColumnId.value = id.replace("column-", "");
         }
       }
     });
@@ -281,10 +306,14 @@ onUnmounted(() => {
   columnObserver?.disconnect();
 });
 
-watch([localColumns, uncategorizedItems], () => {
-  columnObserver?.disconnect();
-  columnObserver = setupObserver();
-}, { deep: true });
+watch(
+  [localColumns, uncategorizedItems],
+  () => {
+    columnObserver?.disconnect();
+    columnObserver = setupObserver();
+  },
+  { deep: true },
+);
 </script>
 
 <template>
@@ -293,105 +322,177 @@ watch([localColumns, uncategorizedItems], () => {
     variant="surface"
     size="xs"
     class-name="flex h-full min-h-0 min-w-0 shadow-[var(--shadow-dropdown)]"
-    content-class="flex h-full min-h-0 min-w-0 flex-col p-0">
-
+    content-class="flex h-full min-h-0 min-w-0 flex-col p-0"
+  >
     <!-- Mobile Header with Column Navigation -->
     <div class="lg:hidden shrink-0">
       <!-- Column Pills Navigation -->
-      <div class="flex items-center gap-2 p-2 overflow-x-auto border-b border-secondary bg-surface scrollbar-hide">
-
+      <div
+        class="flex items-center gap-2 p-2 overflow-x-auto border-b border-secondary bg-surface scrollbar-hide"
+      >
         <!-- Loading indicator for columns -->
-        <Icon v-if="isReorderingColumns" name="svg-spinners:ring-resize" class="w-4 h-4 text-primary shrink-0" />
+        <Icon
+          v-if="isReorderingColumns"
+          name="svg-spinners:ring-resize"
+          class="w-4 h-4 text-primary shrink-0"
+        />
 
-        <button v-if="uncategorizedItems.length > 0 || orderedColumns.length === 0" @click="scrollToColumn(null)"
-          :class="[
-            'px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0',
-            activeColumnId === null
-              ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
-              : 'bg-secondary text-content-secondary hover:text-content-on-surface hover:bg-surface-subtle'
-          ]">
-          <span class="flex items-center gap-1.5">
-            <Icon name="heroicons:inbox" class="w-4 h-4" />
-            Uncategorized
-            <span class="text-xs opacity-70">({{ uncategorizedItems.length }})</span>
-          </span>
-        </button>
+        <UiPill
+          v-if="uncategorizedItems.length > 0 || orderedColumns.length === 0"
+          clickable
+          selectable
+          :active="activeColumnId === null"
+          class-name="shrink-0"
+          @click="scrollToColumn(null)"
+        >
+          <template #icon>
+            <UiIcon name="i-lucide-inbox" class="w-4 h-4" />
+          </template>
+          Uncategorized
+          <span class="text-xs opacity-70">({{ uncategorizedItems.length }})</span>
+        </UiPill>
 
-        <button v-for="(column, index) in localColumns" :key="column.id" @click="scrollToColumn(column.id)" :class="[
-          'px-3 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap flex items-center gap-1.5 shrink-0',
-          activeColumnId === column.id
-            ? 'bg-primary/10 text-primary ring-1 ring-primary/30'
-            : 'bg-secondary text-content-secondary hover:text-content-on-surface hover:bg-surface-subtle'
-        ]">
-          <Icon v-if="getColumnIcon" :name="getColumnIcon(column.name)" class="w-4 h-4" />
-          {{ column.name }}
+        <UiPill
+          v-for="(column, index) in localColumns"
+          :key="column.id"
+          clickable
+          selectable
+          :active="activeColumnId === column.id"
+          class-name="shrink-0"
+          @click="scrollToColumn(column.id)"
+        >
+          <template v-if="getColumnIcon" #icon>
+            <UiIcon :name="getColumnIcon(column.name)" class="w-4 h-4" />
+          </template>
+          <span dir="auto">{{ column.name }}</span>
           <span class="text-xs opacity-70">({{ getColumnItems(column.id).length }})</span>
-        </button>
+        </UiPill>
 
         <!-- Navigation arrows integrated into pills bar -->
-        <button @click="navigateColumn('prev')"
-          class="p-2 rounded-full text-content-secondary hover:text-content-on-surface hover:bg-surface-strong transition-colors disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 shrink-0"
-          :disabled="activeColumnId === null && uncategorizedItems.length > 0">
-          <Icon name="heroicons:chevron-left" class="w-4 h-4" />
-        </button>
+        <UiIconButton
+          icon="i-lucide-chevron-left"
+          label="Previous column"
+          size="xs"
+          class="shrink-0"
+          :disabled="activeColumnId === null && uncategorizedItems.length > 0"
+          @click="navigateColumn('prev')"
+        />
 
-        <button @click="navigateColumn('next')"
-          class="p-2 rounded-full text-content-secondary hover:text-content-on-surface hover:bg-surface-strong transition-colors disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 shrink-0"
-          :disabled="activeColumnId === localColumns[localColumns.length - 1]?.id">
-          <Icon name="heroicons:chevron-right" class="w-4 h-4" />
-        </button>
+        <UiIconButton
+          icon="i-lucide-chevron-right"
+          label="Next column"
+          size="xs"
+          class="shrink-0"
+          :disabled="
+            activeColumnId === localColumns[localColumns.length - 1]?.id
+          "
+          @click="navigateColumn('next')"
+        />
 
         <!-- Reorder columns button (mobile) -->
-        <button v-if="localColumns.length > 1" @click="openColumnReorderModal"
-          class="p-2 rounded-full text-content-secondary hover:text-primary hover:bg-primary/10 transition-all shrink-0"
-          title="Reorder columns">
-          <Icon name="heroicons:arrows-up-down" class="w-5 h-5" />
-        </button>
+        <UiIconButton
+          v-if="localColumns.length > 1"
+          icon="i-lucide-arrow-up-down"
+          label="Reorder columns"
+          size="xs"
+          class="shrink-0"
+          @click="openColumnReorderModal"
+        />
 
-        <button @click="showNewColumnInput = true"
-          class="p-2 rounded-full text-content-secondary hover:text-primary hover:bg-primary/10 transition-all shrink-0">
-          <Icon name="heroicons:plus" class="w-5 h-5" />
-        </button>
+        <UiIconButton
+          icon="i-lucide-plus"
+          label="New column"
+          size="xs"
+          class="shrink-0"
+          @click="showNewColumnInput = true"
+        />
       </div>
     </div>
 
     <!-- Loading state -->
-    <ui-loader v-if="isLoading" :is-fetching="isLoading" label="Loading board..." />
+    <ui-loader
+      v-if="isLoading"
+      :is-fetching="isLoading"
+      label="Loading board..."
+    />
 
     <!-- Kanban board -->
-    <div v-else ref="boardContainer"
-      class="flex items-stretch gap-4 p-4 overflow-x-auto overflow-y-hidden flex-1 min-h-0 h-full w-full scroll-smooth snap-x snap-mandatory lg:snap-none kanban-scroll-container">
-
+    <div
+      v-else
+      ref="boardContainer"
+      class="flex items-stretch gap-4 p-4 overflow-x-auto overflow-y-hidden flex-1 min-h-0 h-full w-full scroll-smooth snap-x snap-mandatory lg:snap-none kanban-scroll-container"
+    >
       <!-- Uncategorized column (always first) -->
-      <BoardColumn v-if="uncategorizedItems.length > 0 || orderedColumns.length === 0" id="column-uncategorized"
-        :column-id="null" column-name="Uncategorized" :items="uncategorizedItems"
-        :all-column-items="allUncategorizedItems" :is-default="true" icon="heroicons:inbox"
-        :color="designTokenValues['--color-content-secondary']" :selected-item-id="selectedItemId"
+      <BoardColumn
+        v-if="uncategorizedItems.length > 0 || orderedColumns.length === 0"
+        id="column-uncategorized"
+        :column-id="null"
+        column-name="Uncategorized"
+        :items="uncategorizedItems"
+        :all-column-items="allUncategorizedItems"
+        :is-default="true"
+        icon="i-lucide-inbox"
+        :color="designTokenValues['--color-content-secondary']"
+        :selected-item-id="selectedItemId"
         :item-drag-disabled="itemReorderLocked"
         class="snap-center lg:snap-align-none shadow-[var(--shadow-dropdown)] w-[85vw] lg:w-80 shrink-0 h-full"
-        @select-item="(id) => emit('select-item', id)" @delete-item="(id) => emit('delete-item', id)"
-        @item-dragging="handleItemDraggingChange" />
+        @select-item="(id) => emit('select-item', id)"
+        @delete-item="(id) => emit('delete-item', id)"
+        @item-dragging="handleItemDraggingChange"
+      />
 
       <!-- Draggable columns (Desktop only drag) -->
-      <div class="flex gap-4 h-full" :class="{ 'opacity-60': isReorderingColumns || anyItemBeingDraggedInColumns }">
-        <div :class="{ 'pointer-events-none': columnDraggingDisabled }" class="flex gap-4 h-full">
-          <ReorderGroup v-model:values="localColumns" axis="x" class="flex gap-4 h-full items-stretch">
-            <ReorderItem v-for="(column, index) in localColumns" :key="column.id" :value="column" :drag-listener="false"
-              :drag-controls="getColumnDragControls(column.id)" v-slot="{ isDragging }">
-              <div class="relative column-drag-wrapper group/column h-full min-h-0">
+      <div
+        class="flex gap-4 h-full"
+        :class="{
+          'opacity-60': isReorderingColumns || anyItemBeingDraggedInColumns,
+        }"
+      >
+        <div
+          :class="{ 'pointer-events-none': columnDraggingDisabled }"
+          class="flex gap-4 h-full"
+        >
+          <ReorderGroup
+            v-model:values="localColumns"
+            axis="x"
+            class="flex gap-4 h-full items-stretch"
+          >
+            <ReorderItem
+              v-for="(column, index) in localColumns"
+              :key="column.id"
+              :value="column"
+              :drag-listener="false"
+              :drag-controls="getColumnDragControls(column.id)"
+              v-slot="{ isDragging }"
+            >
+              <div
+                class="relative column-drag-wrapper group/column h-full min-h-0"
+              >
                 <DragTracker :column-id="column.id" :is-dragging="isDragging" />
 
-                <BoardColumn :id="`column-${column.id}`" :column-id="column.id" :column-name="column.name"
-                  :items="getColumnItems(column.id)" :all-column-items="getAllColumnItems(column.id)" :column="column"
+                <BoardColumn
+                  :id="`column-${column.id}`"
+                  :column-id="column.id"
+                  :column-name="column.name"
+                  :items="getColumnItems(column.id)"
+                  :all-column-items="getAllColumnItems(column.id)"
+                  :column="column"
                   :color="getColumnColor ? getColumnColor(index) : undefined"
-                  :icon="getColumnIcon ? getColumnIcon(column.name) : undefined" :is-dragging="isDragging"
-                  :selected-item-id="selectedItemId" :item-drag-disabled="itemReorderLocked"
+                  :icon="getColumnIcon ? getColumnIcon(column.name) : undefined"
+                  :is-dragging="isDragging"
+                  :selected-item-id="selectedItemId"
+                  :item-drag-disabled="itemReorderLocked"
                   class="snap-center lg:snap-align-none shadow-[var(--shadow-dropdown)] w-[85vw] lg:w-80 shrink-0 h-full"
                   :class="{ 'ring-2 ring-primary ring-offset-2': isDragging }"
                   @rename="(name) => columnsStore.updateColumn(column.id, name)"
-                  @delete="columnsStore.deleteColumn(column.id)" @select-item="(id) => emit('select-item', id)"
-                  @delete-item="(id) => emit('delete-item', id)" @item-dragging="handleItemDraggingChange"
-                  @header-pointerdown="(event) => startColumnDrag(column.id, event)" />
+                  @delete="columnsStore.deleteColumn(column.id)"
+                  @select-item="(id) => emit('select-item', id)"
+                  @delete-item="(id) => emit('delete-item', id)"
+                  @item-dragging="handleItemDraggingChange"
+                  @header-pointerdown="
+                    (event) => startColumnDrag(column.id, event)
+                  "
+                />
               </div>
             </ReorderItem>
           </ReorderGroup>
@@ -399,41 +500,75 @@ watch([localColumns, uncategorizedItems], () => {
       </div>
 
       <!-- Add column button -->
-      <div class="shrink-0 w-[85vw] lg:w-80 snap-center lg:snap-align-none h-full" style="height: 100%;">
+      <div
+        class="shrink-0 w-[85vw] lg:w-80 snap-center lg:snap-align-none h-full"
+        style="height: 100%"
+      >
         <UiInteractiveCard
           v-if="!showNewColumnInput"
           variant="outline"
           size="md"
           class-name="h-full min-h-50 border-2 border-dashed border-surface-strong hover:border-primary"
           content-class="flex h-full items-center justify-center"
-          @click="showNewColumnInput = true">
-          <div class="flex flex-col items-center gap-2 text-content-secondary group-hover:text-primary">
-            <Icon name="heroicons:plus" class="w-8 h-8" />
-            <span class="text-sm font-semibold uppercase tracking-wider">Add Column</span>
+          @click="showNewColumnInput = true"
+        >
+          <div
+            class="flex flex-col items-center gap-2 text-content-secondary group-hover:text-primary"
+          >
+            <Icon name="i-lucide-plus" class="w-8 h-8" />
+            <span class="text-sm font-semibold uppercase tracking-wider"
+              >Add Column</span
+            >
           </div>
         </UiInteractiveCard>
 
-        <UiPanel v-else variant="surface" size="md" class-name="shadow-[var(--shadow-modal)]">
+        <UiPanel
+          v-else
+          variant="surface"
+          size="md"
+          class-name="shadow-[var(--shadow-modal)]"
+        >
           <UiSubtitle class="mb-3" size="sm">New Column</UiSubtitle>
-          <UiInput v-model="newColumnName" placeholder="Enter title..." size="md" class="my-3 w-full" autofocus
-            @keyup.enter="createColumn" @keyup.escape="cancelNewColumn" />
+          <UiInput
+            v-model="newColumnName"
+            placeholder="Enter title..."
+            size="md"
+            dir="auto"
+            class="my-3 w-full"
+            autofocus
+            @keyup.enter="createColumn"
+            @keyup.escape="cancelNewColumn"
+          />
           <div class="flex justify-end gap-2 w-full">
-            <UiButton size="sm" color="neutral" variant="ghost" @click="cancelNewColumn">
+            <UiButton
+              size="sm"
+              color="neutral"
+              variant="ghost"
+              @click="cancelNewColumn"
+            >
               Cancel
             </UiButton>
-            <UiButton size="sm" color="primary" :loading="isCreatingColumn" :disabled="!newColumnName.trim()"
-              @click="createColumn">
+            <UiButton
+              size="sm"
+              color="primary"
+              :loading="isCreatingColumn"
+              :disabled="!newColumnName.trim()"
+              @click="createColumn"
+            >
               Create
             </UiButton>
-
           </div>
         </UiPanel>
       </div>
     </div>
 
     <!-- Mobile Column Reorder Modal -->
-    <shared-dialog-modal :show="showColumnReorderModal" title="Reorder Columns" icon="arrow"
-      @close="showColumnReorderModal = false">
+    <shared-dialog-modal
+      :show="showColumnReorderModal"
+      title="Reorder Columns"
+      icon="arrow"
+      @close="showColumnReorderModal = false"
+    >
       <template #body>
         <ui-paragraph size="sm" color="content-secondary" class="mb-4">
           Adjust the order used in the board tabs and column list on mobile.
@@ -445,24 +580,45 @@ watch([localColumns, uncategorizedItems], () => {
             :key="column.id"
             variant="subtle"
             size="sm"
-            content-class="flex items-center gap-3">
+            content-class="flex items-center gap-3"
+          >
             <div class="flex flex-col gap-1">
-              <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:chevron-up" :disabled="index === 0"
-                :aria-label="`Move ${column.name} up`" @click="moveColumnInModal(index, 'up')" />
-              <UiButton size="xs" color="neutral" variant="ghost" icon="heroicons:chevron-down"
-                :disabled="index === reorderingColumns.length - 1" :aria-label="`Move ${column.name} down`"
-                @click="moveColumnInModal(index, 'down')" />
+              <UiButton
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-chevron-up"
+                :disabled="index === 0"
+                :aria-label="`Move ${column.name} up`"
+                @click="moveColumnInModal(index, 'up')"
+              />
+              <UiButton
+                size="xs"
+                color="neutral"
+                variant="ghost"
+                icon="i-lucide-chevron-down"
+                :disabled="index === reorderingColumns.length - 1"
+                :aria-label="`Move ${column.name} down`"
+                @click="moveColumnInModal(index, 'down')"
+              />
             </div>
 
             <div class="flex min-w-0 flex-1 items-center gap-2">
-              <Icon v-if="getColumnIcon" :name="getColumnIcon(column.name)"
-                class="h-5 w-5 shrink-0 text-content-secondary" />
-              <ui-subtitle size="sm" class="truncate">
+              <Icon
+                v-if="getColumnIcon"
+                :name="getColumnIcon(column.name)"
+                class="h-5 w-5 shrink-0 text-content-secondary"
+              />
+              <ui-subtitle size="sm" class="truncate" dir="auto">
                 {{ column.name }}
               </ui-subtitle>
             </div>
 
-            <ui-paragraph size="xs" color="content-secondary" class="shrink-0 font-medium">
+            <ui-paragraph
+              size="xs"
+              color="content-secondary"
+              class="shrink-0 font-medium"
+            >
               {{ index + 1 }}
             </ui-paragraph>
           </UiPanel>
@@ -470,11 +626,21 @@ watch([localColumns, uncategorizedItems], () => {
       </template>
 
       <template #footer>
-        <div class="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
-          <UiButton color="neutral" variant="outline" @click="showColumnReorderModal = false">
+        <div
+          class="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end"
+        >
+          <UiButton
+            color="neutral"
+            variant="soft"
+            @click="showColumnReorderModal = false"
+          >
             Cancel
           </UiButton>
-          <UiButton color="primary" :loading="isReorderingColumns" @click="saveColumnReorder">
+          <UiButton
+            color="primary"
+            :loading="isReorderingColumns"
+            @click="saveColumnReorder"
+          >
             Save Order
           </UiButton>
         </div>

@@ -14,6 +14,7 @@
     :active-variant="activeVariant"
     :block="block"
     :square="square"
+    :class="pill ? 'rounded-[var(--radius-full)]' : undefined"
     v-bind="$attrs"
   >
     <!-- Forward every slot (default + named leading/trailing) so the wrapper is
@@ -51,6 +52,7 @@ const {
   activeVariant,
   block = false,
   square = false,
+  pill = false,
 } = defineProps<{
   /** Semantic color role. */
   tone?: Tone;
@@ -59,10 +61,8 @@ const {
   /**
    * Emphasis level — the system uses a 4-variant ladder:
    * `solid` (primary) → `soft` (secondary) → `ghost` (tertiary) → `link` (inline).
-   * `outline` and `subtle` are deprecated aliases that now render as `soft`;
-   * prefer `soft`.
    */
-  variant?: "solid" | "soft" | "ghost" | "link" | "outline" | "subtle";
+  variant?: "solid" | "soft" | "ghost" | "link";
   size?: Size;
   icon?: string;
   leadingIcon?: string;
@@ -72,9 +72,11 @@ const {
   disabled?: boolean;
   active?: boolean;
   activeColor?: LegacyTone;
-  activeVariant?: "solid" | "outline" | "soft" | "subtle" | "ghost" | "link";
+  activeVariant?: "solid" | "soft" | "ghost" | "link";
   block?: boolean;
   square?: boolean;
+  /** Pill shape (full-radius) — used for CTAs in the mobile design. */
+  pill?: boolean;
 }>();
 
 defineOptions({ inheritAttrs: false });

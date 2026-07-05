@@ -59,7 +59,6 @@ function select(index: number) {
 
 <template>
   <div class="flex flex-col relative overflow-hidden h-full">
-    <!-- <ui-gradient-bg /> -->
     <UiPanel
       variant="surface"
       size="sm"
@@ -69,14 +68,14 @@ function select(index: number) {
         <div class="flex items-center gap-1">
           <!-- <icons-stars-generative /> -->
           Learning Hub
-          <u-tooltip
+          <UiTooltip
             text="Upload New Material, or select part of the text from your note to create a study material that you can generate flashcard, and question from it to feed the Spaced Repetition Engine">
 
             <shared-icon name="info" color="text-content-on-background" />
 
-          </u-tooltip>
+          </UiTooltip>
         </div>
-        <ui-button variant="outline" size="xs" :aria-expanded="showUpload" aria-controls="upload-materials"
+        <ui-button variant="soft" size="xs" :aria-expanded="showUpload" aria-controls="upload-materials"
           @click="$emit('toggle-upload')" title="Create New Study Material">
           New Material
         </ui-button>
@@ -87,7 +86,7 @@ function select(index: number) {
           <!-- Materials List Section -->
           <UiPanel class-name="shrink-0 max-h-[30%]" size="sm" variant="transparent"
             content-class="flex flex-col min-h-0 overflow-hidden">
-            <u-collapsible class="flex flex-col min-h-0" :default-open="true">
+            <UiCollapsible class="flex flex-col min-h-0" :default-open="true">
               <ui-subtitle class="flex items-center gap-1 select-none cursor-pointer " size="sm"
                 color="content-on-background">
                 <div v-if="updating" class="flex items-center gap-1 text-primary">
@@ -101,7 +100,7 @@ function select(index: number) {
                   <MaterialsList :workspace-id="workspaceId" @removed="() => { }" @error="(e) => console.error(e)" />
                 </div>
               </template>
-            </u-collapsible>
+            </UiCollapsible>
           </UiPanel>
 
           <!-- Tabs and Interactive Content -->

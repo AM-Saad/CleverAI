@@ -1,9 +1,4 @@
 <template>
-  <!-- <div :class="cn(
-    'w-full select-none [perspective:1000px] mb-4 md:mb-0 bg-success flex',
-    props.class,
-  )
-    "> -->
   <div :class="cn(
     ' relative min-w-full h-full rounded-[var(--radius-2xl)] transition-transform duration-500 will-change-transform cursor-pointer text-dark [transform-style:preserve-3d] flex',
   )
@@ -23,9 +18,7 @@
       <slot name="back" />
     </div>
 
-
   </div>
-  <!-- </div> -->
 </template>
 
 <script setup lang="ts">

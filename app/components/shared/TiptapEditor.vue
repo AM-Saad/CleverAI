@@ -3,9 +3,9 @@
     class="container relative flex flex-col p-1 h-full min-h-0 w-full overflow-y-auto">
 
     <div class="flex flex-col w-full min-w-0">
-      <UContextMenu :items="contextMenuItems">
+      <UiContextMenu :items="contextMenuItems">
         <EditorContent :editor="editor" class="flex-1 min-w-0 w-full pt-6" />
-      </UContextMenu>
+      </UiContextMenu>
     </div>
 
     <!-- Bubble Menu (floating toolbar on text selection) -->
@@ -21,6 +21,7 @@
         size="xs"
         class-name="absolute min-w-36 overflow-hidden p-0"
         role="listbox" aria-label="Suggestions">
+        <!-- design-allow: ARIA listbox option, not a standard action button -->
         <button v-for="(item, i) in autoSuggestions" :key="item" type="button" role="option"
           :aria-selected="i === autoActiveIndex" :class="[
             'w-full text-left px-3 py-1.5 text-sm flex items-center justify-between gap-3 transition-colors',
@@ -1002,6 +1003,9 @@ onMounted(async () => {
     ],
     content: collaborationExtensions.length ? undefined : normalizeEditorContent(props.modelValue),
     editable: !props.readonly,
+    editorProps: {
+      attributes: { dir: "auto" },
+    },
   });
   const editorInstance = editor.value;
   if (!editorInstance) return;

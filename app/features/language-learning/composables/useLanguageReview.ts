@@ -2,6 +2,8 @@ import type {
   LanguageQueueCard,
   LanguageGradeRequest,
 } from "@shared/utils/language.contract";
+import type { ReviewGrade } from "@shared/utils/review.contract";
+import type { APIError } from "~/services/FetchFactory";
 import { useTextToSpeechWorker } from "~/composables/ai/useTextToSpeechWorker";
 import { useLanguageLearningRuntime } from "./languageLearningRuntime";
 
@@ -14,31 +16,37 @@ export function useLanguageReview() {
   const isComplete = ref(false);
   const gradedCardIds = ref(new Set<string>());
   const requestIdsByCard = new Map<string, string>();
+  let optimisticGradeId = 0;
+  let sessionEpoch = 0;
 
   const fetchOperation = useOperation<{ cards: LanguageQueueCard[] }>();
-  const gradeOperation = useOperation<{
-    nextReviewAt: string;
-    intervalDays: number;
-    easeFactor: number;
-    xpEarned: number;
-  }>();
+  const gradeError = ref<APIError | null>(null);
+  const pendingGradeIds = ref<Set<string>>(new Set());
 
-  const currentCard = computed(() => queue.value[currentIndex.value] ?? null);
+  const currentCard = computed(() =>
+    isComplete.value ? null : (queue.value[currentIndex.value] ?? null),
+  );
   const totalCards = computed(() => queue.value.length);
-  const remainingCards = computed(
-    () => queue.value.length - currentIndex.value,
+  const remainingCards = computed(() =>
+    isComplete.value ? 0 : Math.max(0, queue.value.length - currentIndex.value),
   );
   const progress = computed(() =>
     totalCards.value > 0
-      ? Math.round((currentIndex.value / totalCards.value) * 100)
+      ? isComplete.value
+        ? 100
+        : Math.round((currentIndex.value / totalCards.value) * 100)
       : 0,
   );
 
   const fetchQueue = async () => {
+    sessionEpoch++;
+    optimisticGradeId++;
     isComplete.value = false;
     currentIndex.value = 0;
     queue.value = [];
     gradedCardIds.value = new Set();
+    pendingGradeIds.value = new Set();
+    gradeError.value = null;
     requestIdsByCard.clear();
     await languageRuntime.ensurePreferences();
 
@@ -57,11 +65,64 @@ export function useLanguageReview() {
     return result;
   };
 
-  const grade = async (
+  const setGradePending = (cardId: string, pending: boolean) => {
+    const next = new Set(pendingGradeIds.value);
+    if (pending) next.add(cardId);
+    else next.delete(cardId);
+    pendingGradeIds.value = next;
+  };
+
+  const removeCardFromQueue = (
     cardId: string,
-    gradeValue: "0" | "1" | "2" | "3" | "4" | "5",
+  ): { card: LanguageQueueCard; index: number } | null => {
+    const cardIndex = queue.value.findIndex((card) => card.cardId === cardId);
+    if (cardIndex === -1) return null;
+
+    const nextQueue = [...queue.value];
+    const [card] = nextQueue.splice(cardIndex, 1);
+    if (!card) return null;
+
+    queue.value = nextQueue;
+    const len = nextQueue.length;
+    if (len === 0) {
+      currentIndex.value = 0;
+      isComplete.value = true;
+    } else if (cardIndex < currentIndex.value) {
+      currentIndex.value = Math.max(0, currentIndex.value - 1);
+      isComplete.value = false;
+    } else if (cardIndex === currentIndex.value) {
+      currentIndex.value = Math.min(cardIndex, len - 1);
+      isComplete.value = false;
+    } else if (currentIndex.value >= len) {
+      currentIndex.value = len - 1;
+      isComplete.value = false;
+    }
+
+    return { card, index: cardIndex };
+  };
+
+  const restoreFailedCard = (
+    removed: { card: LanguageQueueCard; index: number } | null,
+    epoch: number,
   ) => {
-    if (gradeOperation.pending.value || gradedCardIds.value.has(cardId)) {
+    if (!removed || epoch !== sessionEpoch) return;
+    if (queue.value.some((card) => card.cardId === removed.card.cardId)) return;
+
+    const nextQueue = [...queue.value];
+    const insertIndex = currentCard.value
+      ? Math.min(currentIndex.value + 1, nextQueue.length)
+      : Math.min(removed.index, nextQueue.length);
+    nextQueue.splice(insertIndex, 0, removed.card);
+    queue.value = nextQueue;
+    isComplete.value = false;
+
+    if (!currentCard.value) {
+      currentIndex.value = insertIndex;
+    }
+  };
+
+  const grade = async (cardId: string, gradeValue: ReviewGrade) => {
+    if (pendingGradeIds.value.has(cardId) || gradedCardIds.value.has(cardId)) {
       return null;
     }
     if (!requestIdsByCard.has(cardId)) {
@@ -76,18 +137,41 @@ export function useLanguageReview() {
       requestId: requestIdsByCard.get(cardId),
     };
 
-    const result = await gradeOperation.execute(() =>
-      $api.language.gradeCard(payload),
-    );
+    const mutationId = ++optimisticGradeId;
+    const epoch = sessionEpoch;
+    const nextGraded = new Set(gradedCardIds.value);
+    nextGraded.add(cardId);
+    gradedCardIds.value = nextGraded;
+    const removed = removeCardFromQueue(cardId);
+    setGradePending(cardId, true);
+    gradeError.value = null;
 
-    if (result) {
-      const nextGraded = new Set(gradedCardIds.value);
-      nextGraded.add(cardId);
-      gradedCardIds.value = nextGraded;
-      nextCard();
+    try {
+      const result = await $api.language.gradeCard(payload);
+      if (!result.success) {
+        const nextGradedIds = new Set(gradedCardIds.value);
+        nextGradedIds.delete(cardId);
+        gradedCardIds.value = nextGradedIds;
+        gradeError.value = result.error;
+        restoreFailedCard(removed, epoch);
+        return null;
+      }
+
+      requestIdsByCard.delete(cardId);
+      languageRuntime.invalidateWords();
+      void languageRuntime.refreshStats();
+      if (mutationId === optimisticGradeId) gradeError.value = null;
+      return result.data;
+    } catch (err) {
+      const nextGradedIds = new Set(gradedCardIds.value);
+      nextGradedIds.delete(cardId);
+      gradedCardIds.value = nextGradedIds;
+      gradeError.value = err as APIError;
+      restoreFailedCard(removed, epoch);
+      return null;
+    } finally {
+      setGradePending(cardId, false);
     }
-
-    return result;
   };
 
   const nextCard = () => {
@@ -146,8 +230,13 @@ export function useLanguageReview() {
     // Operation state
     isLoading: fetchOperation.pending,
     fetchError: fetchOperation.error,
-    isGrading: gradeOperation.pending,
-    gradeError: gradeOperation.error,
+    isGrading: computed(() =>
+      currentCard.value
+        ? pendingGradeIds.value.has(currentCard.value.cardId)
+        : false,
+    ),
+    hasPendingGrades: computed(() => pendingGradeIds.value.size > 0),
+    gradeError: readonly(gradeError),
 
     // TTS
     ttsAudioUrl: ttsWorker.audioUrl,

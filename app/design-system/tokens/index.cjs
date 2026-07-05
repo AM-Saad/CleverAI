@@ -70,6 +70,7 @@ const themeTokens = [
   { name: "--shadow-dropdown", value: "0 4px 16px rgb(0 0 0 / 0.12)" },
   { name: "--shadow-modal", value: "0 20px 60px rgb(0 0 0 / 0.15)" },
   { name: "--shadow-primary-glow", value: "0 4px 12px rgb(56 73 152 / 0.25)" },
+  { name: "--shadow-sheet", value: "0 -10px 40px rgb(0 0 0 / 0.2)", comment: "Bottom-sheet elevation" },
   { name: "--duration-fast", value: "120ms", comment: "Small state changes" },
   { name: "--duration-normal", value: "200ms", comment: "Default interaction motion" },
   { name: "--duration-slow", value: "320ms", comment: "Overlays and larger transitions" },
@@ -109,6 +110,13 @@ const rootTokens = [
   { name: "--ds-focus-ring", value: "0 0 0 2px var(--ds-focus-outline-color)", comment: "Compact keyboard focus ring (box-shadow)" },
   { name: "--ds-backdrop-strong", value: "rgb(2 6 23 / 0.8)" },
   { name: "--ds-backdrop-dim", value: "rgb(0 0 0 / 0.4)" },
+  { name: "--ds-sheet-scrim", value: "rgb(2 6 23 / 0.45)", comment: "Bottom-sheet scrim overlay" },
+  { name: "--ds-surface-card", value: "var(--color-white)", comment: "Mobile card surface — white on the light page; flips to dark surface under .dark" },
+  // Primary-family gradients (NOT the cyan→pink→gold reward brand gradient).
+  // Free to use anywhere a primary surface needs depth — distinct from --ds-brand-gradient.
+  { name: "--ds-gradient-fab", value: "linear-gradient(135deg, #384998, #5566c4)", comment: "Capture/create FAB fill" },
+  { name: "--ds-gradient-due", value: "linear-gradient(150deg, #384998, #2c3a7d)", comment: "Due-now hero card" },
+  { name: "--ds-gradient-summary", value: "linear-gradient(165deg, #384998, #222a55)", comment: "Review session summary backdrop" },
   { name: "--component-card-radius", value: "var(--radius-2xl)" },
   { name: "--component-card-padding-xs", value: "var(--space-1)" },
   { name: "--component-card-padding-sm", value: "var(--space-2)" },
@@ -164,6 +172,7 @@ const darkTokens = [
   { name: "--color-warning-text", value: "#fbbf24", comment: "AA warning text/icon on dark surfaces" },
   { name: "--color-error-text", value: "#f87171", comment: "AA error text/icon on dark surfaces" },
   { name: "--color-info-text", value: "#38bdf8", comment: "AA info text/icon on dark surfaces" },
+  { name: "--ds-surface-card", value: "var(--color-surface)", comment: "Card surface flips to dark raised surface" },
 ];
 
 const componentTokenNames = [

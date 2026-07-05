@@ -143,7 +143,7 @@ const handleBlur = () => {
           square
           @click="removeTag(tag.name)"
         >
-          <Icon name="heroicons:x-mark-20-solid" class="w-3 h-3" />
+          <Icon name="i-lucide-x" class="w-3 h-3" />
         </UiButton>
       </UiBadge>
 
@@ -201,7 +201,7 @@ const handleBlur = () => {
         class="justify-start border-t border-secondary"
         @click="addTag(inputValue)"
       >
-        <Icon name="heroicons:plus-circle" class="w-4 h-4 text-primary" />
+        <Icon name="i-lucide-circle-plus" class="w-4 h-4 text-primary" />
         <span class="text-sm">Create "{{ inputValue.trim() }}"</span>
       </UiButton>
     </UiOverlaySurface>

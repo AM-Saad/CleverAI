@@ -5,17 +5,14 @@
       <div class="paper-block-controls">
         <!-- Tool selector -->
         <div class="paper-tool-group">
-          <button
+          <UiToolbarButton
             v-for="t in tools"
             :key="t.id"
-            type="button"
-            class="paper-tool-btn"
-            :class="{ 'paper-tool-btn--active': activeTool === t.id }"
-            :title="t.label"
+            :icon="t.icon"
+            :label="t.label"
+            :active="activeTool === t.id"
             @click="activeTool = t.id"
-          >
-            <span class="paper-tool-icon" v-html="t.svg" />
-          </button>
+          />
         </div>
 
         <span class="paper-sep" />
@@ -27,6 +24,7 @@
               class="paper-color-swatch"
               :style="{ backgroundColor: color }"
             />
+            <!-- design-allow: native color picker — no Ui primitive wraps the OS color-picker UX -->
             <input
               type="color"
               v-model="color"
@@ -35,6 +33,7 @@
             />
           </div>
           <div class="paper-presets">
+            <!-- design-allow: 14px color-swatch selectors, no shared style contract with Ui* buttons applies at this scale -->
             <button
               v-for="c in presetColors"
               :key="c"
@@ -42,12 +41,15 @@
               class="paper-preset-btn"
               :class="{ 'paper-preset-btn--active': color === c }"
               :style="{ backgroundColor: c }"
+              :aria-label="`Use color ${c}`"
+              :aria-pressed="color === c"
               @click="color = c"
             />
           </div>
 
           <span class="paper-sep" />
 
+          <!-- design-allow: native range slider — no Ui primitive wraps type=range -->
           <input
             type="range"
             min="1"
@@ -66,145 +68,53 @@
 
       <div class="paper-block-actions">
         <!-- Undo / Redo -->
-        <button
-          type="button"
-          class="paper-action-btn"
-          title="Undo (⌘Z)"
+        <UiToolbarButton
+          icon="i-lucide-undo-2"
+          label="Undo"
+          tooltip="Undo (⌘Z)"
           :disabled="!canUndo"
           @click="undo"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polyline points="9 14 4 9 9 4" />
-            <path d="M20 20v-7a4 4 0 0 0-4-4H4" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          class="paper-action-btn"
-          title="Redo (⌘⇧Z)"
+        />
+        <UiToolbarButton
+          icon="i-lucide-redo-2"
+          label="Redo"
+          tooltip="Redo (⌘⇧Z)"
           :disabled="!canRedo"
           @click="redo"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polyline points="15 14 20 9 15 4" />
-            <path d="M4 20v-7a4 4 0 0 1 4-4h12" />
-          </svg>
-        </button>
+        />
 
         <span class="paper-sep" />
 
         <!-- Grid toggle -->
-        <button
-          type="button"
-          class="paper-action-btn"
-          :class="{ 'paper-action-btn--toggled': gridType !== 'none' }"
-          title="Toggle grid"
+        <UiToolbarButton
+          icon="i-lucide-grid-3x3"
+          label="Toggle grid"
+          :active="gridType !== 'none'"
           @click="cycleGrid"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
-            <line x1="3" y1="9" x2="21" y2="9" />
-            <line x1="3" y1="15" x2="21" y2="15" />
-            <line x1="9" y1="3" x2="9" y2="21" />
-            <line x1="15" y1="3" x2="15" y2="21" />
-          </svg>
-        </button>
+        />
 
         <!-- Download PNG -->
-        <button
-          type="button"
-          class="paper-action-btn"
-          title="Export as PNG"
+        <UiToolbarButton
+          icon="i-lucide-download"
+          label="Export as PNG"
           @click="exportPng"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-            <polyline points="7 10 12 15 17 10" />
-            <line x1="12" y1="15" x2="12" y2="3" />
-          </svg>
-        </button>
+        />
 
         <span class="paper-sep" />
 
         <!-- Clear -->
-        <button
-          type="button"
-          class="paper-action-btn"
-          title="Clear all"
+        <UiToolbarButton
+          icon="i-lucide-eraser"
+          label="Clear all"
           @click="clearDrawing"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M3 6h18" />
-            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-          </svg>
-        </button>
+        />
         <!-- Delete block -->
-        <button
-          type="button"
-          class="paper-action-btn paper-action-btn--danger"
-          title="Delete sketch"
+        <UiToolbarButton
+          icon="i-lucide-trash-2"
+          label="Delete sketch"
+          tone="error"
           @click="props.deleteNode()"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
+        />
       </div>
     </div>
 
@@ -346,16 +256,8 @@ function loadSwatches() {
 }
 
 const tools = [
-  {
-    id: "pen" as Tool,
-    label: "Pen",
-    svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.586 7.586"/><circle cx="11" cy="11" r="2"/></svg>',
-  },
-  {
-    id: "eraser" as Tool,
-    label: "Eraser",
-    svg: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 21-4.3-4.3c-1-1-1-2.5 0-3.4l9.6-9.6c1-1 2.5-1 3.4 0l5.6 5.6c1 1 1 2.5 0 3.4L13 21"/><path d="M22 21H7"/><path d="m5 11 9 9"/></svg>',
-  },
+  { id: "pen" as Tool, label: "Pen", icon: "i-lucide-pencil" },
+  { id: "eraser" as Tool, label: "Eraser", icon: "i-lucide-eraser" },
 ];
 
 // ─── State ──────────────────────────────────────────────────────
@@ -620,37 +522,6 @@ onBeforeUnmount(() => {
   gap: 2px;
 }
 
-.paper-tool-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-lg);
-  border: none;
-  background: transparent;
-  color: var(--color-content-secondary);
-  cursor: pointer;
-  transition: all 0.12s ease;
-}
-
-.paper-tool-btn:hover {
-  background: var(--color-surface-strong);
-  color: var(--color-content-on-surface);
-}
-
-.paper-tool-btn--active {
-  background: var(--color-primary) !important;
-  color: var(--color-on-primary) !important;
-  box-shadow: 0 1px 4px
-    color-mix(in srgb, var(--color-primary) 30%, transparent);
-}
-
-.paper-tool-icon {
-  display: flex;
-  align-items: center;
-}
-
 /* Separator */
 .paper-sep {
   width: 1px;
@@ -728,40 +599,6 @@ onBeforeUnmount(() => {
   font-size: 0.65rem;
   color: var(--color-content-secondary);
   font-style: italic;
-}
-
-/* Action buttons */
-.paper-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 5px;
-  border: none;
-  background: transparent;
-  color: var(--color-content-secondary);
-  cursor: pointer;
-  transition: all 0.12s;
-}
-
-.paper-action-btn:hover {
-  background: var(--color-surface-strong);
-  color: var(--color-content-on-surface);
-}
-
-.paper-action-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-}
-
-.paper-action-btn--toggled {
-  color: var(--color-primary);
-}
-
-.paper-action-btn--danger:hover {
-  background: color-mix(in srgb, var(--color-error) 10%, transparent);
-  color: var(--color-error);
 }
 
 /* ─── Canvas ───────────────────────────────────────────────────── */

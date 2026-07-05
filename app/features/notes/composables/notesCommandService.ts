@@ -91,41 +91,39 @@ export function createNotesCommandService(input: {
     });
 
     memoryStore.upsert(optimisticNote);
-    runBackground(async () => {
-      try {
-        await localRepository.save(optimisticNote);
-        const currentNote = memoryStore.get(tempId) ?? optimisticNote;
-        await pendingQueue.add({
-          id: tempId,
-          operation: "upsert",
-          updatedAt: Date.now(),
-          localVersion: 1,
-          workspaceId,
-          groupId: currentNote.groupId ?? null,
-          title: currentNote.title,
-          content: currentNote.content,
-          tags: currentNote.tags,
-          noteType: currentNote.noteType,
-          metadata: currentNote.metadata,
-        });
-        await registerBackgroundSync();
-        await layoutController.queueNoteLayout(
-          memoryStore.values().map((note) => ({
-            id: note.id,
-            groupId: note.groupId ?? null,
-            order: note.order,
-          })),
-        );
-        requestSync();
-      } catch (error) {
-        memoryStore.upsert({
-          ...optimisticNote,
-          error:
-            "This note is visible in memory, but could not be saved locally. Keep this page open and retry.",
-        });
-        throw error;
-      }
-    });
+    try {
+      await localRepository.save(optimisticNote);
+      const currentNote = memoryStore.get(tempId) ?? optimisticNote;
+      await pendingQueue.add({
+        id: tempId,
+        operation: "upsert",
+        updatedAt: Date.now(),
+        localVersion: 1,
+        workspaceId,
+        groupId: currentNote.groupId ?? null,
+        title: currentNote.title,
+        content: currentNote.content,
+        tags: currentNote.tags,
+        noteType: currentNote.noteType,
+        metadata: currentNote.metadata,
+      });
+      await registerBackgroundSync();
+      await layoutController.queueNoteLayout(
+        memoryStore.values().map((note) => ({
+          id: note.id,
+          groupId: note.groupId ?? null,
+          order: note.order,
+        })),
+      );
+      requestSync();
+    } catch (error) {
+      memoryStore.upsert({
+        ...optimisticNote,
+        error:
+          "This note is visible in memory, but could not be saved locally. Keep this page open and retry.",
+      });
+      console.error("[NotesCommandService] Failed to persist created note", error);
+    }
     return tempId;
   };
 
@@ -166,29 +164,28 @@ export function createNotesCommandService(input: {
 
   const deleteNote: NotesCommandService["deleteNote"] = async ({ id, note }) => {
     memoryStore.remove(id);
-    runBackground(async () => {
-      try {
-        await localRepository.delete(id);
-        await pendingQueue.add({
-          id,
-          operation: "delete",
-          updatedAt: Date.now(),
-          localVersion: 1,
-          serverVersion: note.version,
-          workspaceId: note.workspaceId,
-        });
-        await registerBackgroundSync();
-        requestSync();
-      } catch (error) {
-        memoryStore.upsert({
-          ...note,
-          error:
-            "Delete is visible in memory, but could not be saved locally. Retry before closing this page.",
-        });
-        throw error;
-      }
-    });
-    return true;
+    try {
+      await localRepository.delete(id);
+      await pendingQueue.add({
+        id,
+        operation: "delete",
+        updatedAt: Date.now(),
+        localVersion: 1,
+        serverVersion: note.version,
+        workspaceId: note.workspaceId,
+      });
+      await registerBackgroundSync();
+      requestSync();
+      return true;
+    } catch (error) {
+      memoryStore.upsert({
+        ...note,
+        error:
+          "Delete is visible in memory, but could not be saved locally. Retry before closing this page.",
+      });
+      console.error("[NotesCommandService] Failed to persist delete tombstone", error);
+      return false;
+    }
   };
 
   return {

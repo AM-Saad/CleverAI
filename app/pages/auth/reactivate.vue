@@ -3,9 +3,9 @@
     <UiPanel variant="surface" size="lg" class-name="w-full max-w-md rounded-[var(--radius-2xl)] shadow-[var(--shadow-card-hover)]">
       <div class="text-center mb-6">
         <icon name="mdi:account-reactivate" class="text-primary mx-auto mb-4" size="64"></icon>
-        <h1 class="text-2xl font-bold text-content-on-surface-strong">
+        <ui-title tag="h1" size="2xl" weight="bold" color="content-on-surface-strong">
           Reactivate Your Account
-        </h1>
+        </ui-title>
         <p class="text-content-secondary mt-2">
           Your account is scheduled for deletion. Reactivate it to continue using our services.
         </p>

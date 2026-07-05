@@ -8,7 +8,7 @@
         <!-- Benefits -->
         <div class="space-y-3 mb-6">
           <div class="flex items-start gap-3">
-            <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-success-text mt-0.5 shrink-0" />
+            <UiIcon name="i-lucide-circle-check" class="w-5 h-5 text-success-text mt-0.5 shrink-0" />
             <div>
               <div class="text-sm font-medium text-content-on-surface-strong dark:text-content-on-surface">
                 Perfect Timing
@@ -21,7 +21,7 @@
           </div>
 
           <div class="flex items-start gap-3">
-            <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-success-text mt-0.5 flex-shrink-0" />
+            <UiIcon name="i-lucide-circle-check" class="w-5 h-5 text-success-text mt-0.5 flex-shrink-0" />
             <div>
               <div class="text-sm font-medium text-content-on-surface-strong dark:text-content-on-surface">
                 Customizable Schedule
@@ -33,7 +33,7 @@
           </div>
 
           <div class="flex items-start gap-3">
-            <UIcon name="i-heroicons-check-circle" class="w-5 h-5 text-success-text mt-0.5 flex-shrink-0" />
+            <UiIcon name="i-lucide-circle-check" class="w-5 h-5 text-success-text mt-0.5 flex-shrink-0" />
             <div>
               <div class="text-sm font-medium text-content-on-surface-strong dark:text-content-on-surface">
                 Respect Your Time
@@ -52,7 +52,7 @@
           role="alert"
           class-name="mb-4 border-error/30 bg-error/10">
           <div class="flex items-start gap-2">
-            <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5 text-error-text mt-0.5 flex-shrink-0" />
+            <UiIcon name="i-lucide-triangle-alert" class="w-5 h-5 text-error-text mt-0.5 flex-shrink-0" />
             <div>
               <div class="text-sm font-medium text-error-text">
                 Notifications Blocked
@@ -78,11 +78,11 @@
           <UiButton :loading="isLoading" :disabled="permissionStatus === 'denied'" color="primary" size="lg" block
             @click="handleEnableNotifications">
             <template v-if="isLoading">
-              <UIcon name="i-heroicons-arrow-path" class="w-4 h-4 animate-spin mr-2" />
+              <UiIcon name="i-lucide-refresh-cw" class="w-4 h-4 animate-spin mr-2" />
               Setting up notifications...
             </template>
             <template v-else>
-              <UIcon name="i-heroicons-bell" class="w-4 h-4 mr-2" />
+              <UiIcon name="i-lucide-bell" class="w-4 h-4 mr-2" />
               Enable Smart Notifications
             </template>
           </UiButton>
@@ -104,7 +104,7 @@
         <!-- Privacy Note -->
         <UiPanel variant="subtle" size="sm" class-name="mt-4">
           <div class="text-xs text-content-secondary dark:text-content-secondary">
-            <UIcon name="i-heroicons-shield-check" class="w-4 h-4 inline mr-1" />
+            <UiIcon name="i-lucide-shield-check" class="w-4 h-4 inline mr-1" />
             Your notification preferences are stored locally and can be changed
             anytime in Settings.
           </div>

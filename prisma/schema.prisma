@@ -164,7 +164,7 @@ model BoardItem {
   columnId      String?            @db.ObjectId
   content       String
   tags          String[]           @default([])
-  order         Int                @default(0)
+  order         Float              @default(0) // fractional rank (LexoRank-style)
   dueDate       DateTime?
   attachments   Json               @default("[]")
   createdAt     DateTime           @default(now())

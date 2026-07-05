@@ -135,6 +135,11 @@ const ColorDot = defineComponent({
       },
     }
 
+    const isSelected = computed(() => props.selectedColor === color.value)
+    const activate = () => {
+      props.setSelectedColor?.(isSelected.value ? null : color.value)
+    }
+
     return () => (
       <motion.div
         class="color-dot"
@@ -148,13 +153,17 @@ const ColorDot = defineComponent({
         initial="default"
         whileHover="hover"
         whilePress={{ scale: 1.2 }}
-        onPress={() => {
-          if (selectedColor === color) {
-            props.setSelectedColor?.(null)
-          } else {
-            props.setSelectedColor?.(color.value)
+        onPress={activate}
+        onKeydown={(e: KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault()
+            activate()
           }
         }}
+        tabindex={0}
+        role="button"
+        aria-label={`Select color ${color.value}`}
+        aria-pressed={isSelected.value}
         transition={{
           scale: { type: "spring", damping: 30, stiffness: 200 },
         }}
@@ -431,6 +440,11 @@ const handleSetSelectedColor = (color: string | null) => {
   border-radius: 50%;
   translate: -50% -50%;
   cursor: pointer;
+}
+
+.color-dot:focus-visible {
+  outline: 2px solid var(--ds-focus-outline-color);
+  outline-offset: 2px;
 }
 
 .color-dot-ring {

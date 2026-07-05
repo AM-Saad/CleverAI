@@ -30,7 +30,7 @@ const errorMessage = computed(() => {
       v-if="refresh"
       size="sm"
       tone="error"
-      variant="subtle"
+      variant="soft"
       class="mt-3"
       @click="() => refresh?.()"
     >

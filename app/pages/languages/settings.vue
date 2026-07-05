@@ -4,5 +4,5 @@
 
 <script setup lang="ts">
 definePageMeta({ middleware: "auth" });
-await navigateTo("/language/settings", { replace: true });
+await navigateTo({ path: "/account/language" }, { replace: true });
 </script>

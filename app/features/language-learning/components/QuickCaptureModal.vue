@@ -64,10 +64,14 @@
                 <div class="flex items-center gap-2 bg-surface-strong rounded-full border p-1.5 transition-all duration-[var(--duration-fast)]"
                   :class="isInputFocused ? 'ring-2 ring-[var(--ds-focus-outline-color)] border-primary shadow-[var(--shadow-dropdown)]' : 'border-secondary'">
                   <!-- Mic Button (compact icon-only) -->
-                  <button
-                    type="button"
+                  <UiButton
+                    square
+                    variant="ghost"
+                    tone="neutral"
                     :disabled="isProcessing"
-                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-all duration-[var(--duration-fast)] select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60"
+                    :aria-label="micLabel"
+                    :title="micLabel"
+                    class="h-9 w-9 rounded-full"
                     :class="[
                       !isListening && !isProcessing
                         ? 'text-content-secondary hover:bg-surface active:scale-[0.98]'
@@ -76,11 +80,10 @@
                           : 'cursor-not-allowed text-content-disabled opacity-60'
                     ]"
                     @click="handleMicClick"
-                    :title="micLabel"
                   >
                     <Icon :name="micIcon" class="h-4.5 w-4.5 shrink-0"
                       :class="isProcessing ? 'animate-spin text-primary' : ''" />
-                  </button>
+                  </UiButton>
 
                   <!-- Autocomplete Input -->
                   <div ref="inputContainerRef" class="flex-1 min-w-0" @focusin="isInputFocused = true" @focusout="isInputFocused = false">
@@ -98,15 +101,17 @@
                   </div>
 
                   <!-- Translate/Send Button -->
-                  <button
-                    type="button"
+                  <UiButton
+                    square
+                    tone="primary"
                     :disabled="!wordInput.trim() || isCapturing"
-                    class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary transition-all duration-[var(--duration-fast)] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)]"
-                    @click="handleCapture"
+                    aria-label="Translate"
                     title="Translate"
+                    class="h-9 w-9 rounded-full active:scale-[0.98]"
+                    @click="handleCapture"
                   >
-                    <Icon v-slot="{ className }" name="i-lucide-arrow-right" class="h-4.5 w-4.5" />
-                  </button>
+                    <Icon name="i-lucide-arrow-right" class="h-4.5 w-4.5" />
+                  </UiButton>
                 </div>
 
                 <!-- Live interim speech transcript & Fallbacks -->
@@ -135,21 +140,16 @@
                 <div class="flex flex-col gap-2 border-t border-secondary pt-3">
                   <div class="flex items-center justify-between gap-x-4">
                     <!-- Optional context toggle button -->
-                    <button type="button"
-                      class="flex items-center gap-1 text-xs text-content-secondary transition-colors hover:text-content-on-surface"
+                    <UiButton type="button" tone="neutral" variant="link" size="xs"
+                      class="text-xs text-content-secondary"
                       @click="showContext = !showContext">
                       <Icon :name="showContext ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'" class="h-3 w-3" />
                       Add context (optional)
-                    </button>
+                    </UiButton>
 
                     <!-- Translate language check -->
-                    <label class="flex items-center gap-2 cursor-pointer select-none">
-                      <input v-model="includeTranslation" type="checkbox"
-                        class="h-3.5 w-3.5 rounded-[var(--radius-md)] border-secondary text-primary focus:ring-2 focus:ring-[var(--ds-focus-outline-color)]" />
-                      <span class="text-xs text-content-secondary">
-                        Translate to {{ translationLanguage }}
-                      </span>
-                    </label>
+                    <UiCheckbox v-model="includeTranslation" size="sm"
+                      :label="`Translate to ${translationLanguage}`" />
                   </div>
 
                   <Transition name="ctx">
@@ -181,7 +181,7 @@
                 <UiPanel variant="surface" size="lg" class-name="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/8 via-primary/[0.01] to-transparent">
                   <div class="relative flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                      <p class="text-2xl font-semibold leading-tight text-content-on-surface">
+                      <p class="text-2xl font-semibold leading-tight text-content-on-surface" dir="auto">
                         {{ captureResult.word }}
                       </p>
                       <p v-if="captureResult.phonetic" class="mt-0.5 text-xs text-content-secondary">
@@ -201,7 +201,7 @@
                     </ui-badge>
                   </div>
                   <div v-if="captureResult.translation" class="relative mt-4 border-t border-primary/15 pt-4">
-                    <p class="text-xl font-semibold leading-snug text-primary">
+                    <p class="text-xl font-semibold leading-snug text-primary" dir="auto">
                       {{ captureResult.translation }}
                     </p>
                     <div class="mt-1.5 flex flex-wrap items-center gap-2">
@@ -235,10 +235,10 @@
                           <p class="text-sm text-content-on-surface">
                             {{ meaning.definition }}
                           </p>
-                          <p v-if="meaning.translation" class="mt-0.5 text-xs font-medium text-primary">
+                          <p v-if="meaning.translation" class="mt-0.5 text-xs font-medium text-primary" dir="auto">
                             {{ meaning.translation }}
                           </p>
-                          <p v-if="meaning.example" class="mt-1 text-xs italic text-content-secondary">
+                          <p v-if="meaning.example" class="mt-1 text-xs italic text-content-secondary" dir="auto">
                             {{ meaning.example }}
                           </p>
                         </div>
@@ -255,10 +255,10 @@
                       Example
                     </span>
                   </div>
-                  <p class="text-sm leading-relaxed text-content-on-surface">
+                  <p class="text-sm leading-relaxed text-content-on-surface" dir="auto">
                     {{ captureResult.examples[0]?.text }}
                   </p>
-                  <p v-if="captureResult.examples[0]?.translation" class="mt-1 text-xs text-content-secondary">
+                  <p v-if="captureResult.examples[0]?.translation" class="mt-1 text-xs text-content-secondary" dir="auto">
                     {{ captureResult.examples[0]?.translation }}
                   </p>
                 </UiPanel>

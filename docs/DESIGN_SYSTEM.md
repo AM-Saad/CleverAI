@@ -63,10 +63,12 @@ Use the shared helpers from [app/components/ui/variants.ts](../app/components/ui
 |---|---|---|
 | `UiCard` | Discrete content objects: workspace cards, note cards, review cards, stat cards. | Structural app regions or large workspace panes. |
 | `UiPanel` | Structural regions: settings groups, side panels, filter regions, workspace/board panes. | Clickable/selectable cards. |
-| `UiInteractiveCard` | A single clickable/selectable content object with native keyboard behavior. | Nesting buttons/links inside; use row actions outside or an action menu pattern. |
-| `UiOverlaySurface` | Visual shell for modal/drawer/popover/menu/toast/tooltip surfaces. | Creating overlay behavior; pair it with `UiModal`, `UiPopover`, `UiActionMenu`, drawer, or toast primitives. |
+| `UiInteractiveCard` | A single clickable/selectable object with bare anatomy (header/default/footer slots only) — tiles/pickers where each consumer lays out its own content. | Nesting buttons/links inside; use row actions outside or an action menu pattern. Don't reach for this when the content has a fixed row shape — use `UiItemCard`. |
+| `UiItemCard` | Repeated list items with a fixed anatomy: leading icon, kicker, title, badges, actions (board cards, word-bank rows, note rows). | One-off tiles with custom layouts — use `UiInteractiveCard` or `UiCard` instead. |
+| `UiListCard` | Compact linear rows: leading + title + description + trailing, no kicker/badges. | Content that needs the fuller `UiItemCard` anatomy. |
+| `UiOverlaySurface` | Visual shell for modal/drawer/popover/menu/toast/tooltip surfaces — an internal building block for other overlay primitives, not a direct feature-code dependency. | Creating overlay behavior; pair it with `UiModal`, `UiPopover`, `UiActionMenu`, `UiSheet`, or toast primitives. |
 
-This distinction keeps hierarchy predictable: cards compete for content attention, panels structure the application, interactive cards are the one focus target, and overlays sit above the page in a z-index layer.
+This distinction keeps hierarchy predictable: cards compete for content attention, panels structure the application, interactive cards and item/list cards are the two row-anatomy tiers (bare vs. structured), and overlays sit above the page in a z-index layer.
 
 ## Migration Order
 

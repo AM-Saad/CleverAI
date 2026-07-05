@@ -48,12 +48,14 @@ export async function checkDueCards() {
         notificationPreferences: true,
       },
     });
-    console.log(`🔍 Found ${users.length} users with card due notifications enabled`);
+    console.log(
+      `🔍 Found ${users.length} users with card due notifications enabled`,
+    );
 
     // Map to the same structure as before for compatibility
     const usersWithPref = users
-      .filter(user => user.notificationPreferences !== null)
-      .map(user => ({
+      .filter((user) => user.notificationPreferences !== null)
+      .map((user) => ({
         ...user.notificationPreferences!,
         user: {
           ...user,
@@ -61,7 +63,9 @@ export async function checkDueCards() {
         },
       }));
 
-    console.log(`🔔 Found ${usersWithPref.length} users with card due notifications enabled`);
+    console.log(
+      `🔔 Found ${usersWithPref.length} users with card due notifications enabled`,
+    );
 
     for (const userPref of usersWithPref) {
       try {
@@ -69,7 +73,9 @@ export async function checkDueCards() {
 
         // Check if user has snoozed notifications
         if (userPref.snoozedUntil && userPref.snoozedUntil > now) {
-          console.log(`💤 Skipping user ${userPref.userId} - snoozed until ${userPref.snoozedUntil.toISOString()}`);
+          console.log(
+            `💤 Skipping user ${userPref.userId} - snoozed until ${userPref.snoozedUntil.toISOString()}`,
+          );
           results.skipped++;
           continue;
         }
@@ -80,11 +86,11 @@ export async function checkDueCards() {
           isInQuietHoursTimezone(
             userPref.timezone,
             userPref.quietHoursStart,
-            userPref.quietHoursEnd
+            userPref.quietHoursEnd,
           )
         ) {
           console.log(
-            `🤫 Skipping user ${userPref.userId} - in quiet hours (${userPref.timezone})`
+            `🤫 Skipping user ${userPref.userId} - in quiet hours (${userPref.timezone})`,
           );
           results.skipped++;
           continue;
@@ -97,7 +103,7 @@ export async function checkDueCards() {
           ) {
             const currentUserTime = getUserLocalTimeString(userPref.timezone);
             console.log(
-              `⏰ Skipping user ${userPref.userId} - outside notification window. Current: ${currentUserTime}, Preferred: ${userPref.cardDueTime} (${userPref.timezone})`
+              `⏰ Skipping user ${userPref.userId} - outside notification window. Current: ${currentUserTime}, Preferred: ${userPref.cardDueTime} (${userPref.timezone})`,
             );
             results.skipped++;
             continue;
@@ -110,12 +116,12 @@ export async function checkDueCards() {
             !isWithinHoursRange(
               userPref.timezone,
               userPref.activeHoursStart,
-              userPref.activeHoursEnd
+              userPref.activeHoursEnd,
             )
           ) {
             const currentUserTime = getUserLocalTimeString(userPref.timezone);
             console.log(
-              `🕘 Skipping user ${userPref.userId} - outside active hours. Current: ${currentUserTime}, Active: ${userPref.activeHoursStart}-${userPref.activeHoursEnd} (${userPref.timezone})`
+              `🕘 Skipping user ${userPref.userId} - outside active hours. Current: ${currentUserTime}, Active: ${userPref.activeHoursStart}-${userPref.activeHoursEnd} (${userPref.timezone})`,
             );
             results.skipped++;
             continue;
@@ -150,7 +156,7 @@ export async function checkDueCards() {
         const totalDueCount = dueCards.length + languageDueCount;
 
         console.log(
-          `📚 User ${userPref.userId} has ${dueCards.length} review cards and ${languageDueCount} language cards due`
+          `📚 User ${userPref.userId} has ${dueCards.length} review cards and ${languageDueCount} language cards due`,
         );
 
         // Check if we should send a daily study reminder
@@ -177,7 +183,11 @@ export async function checkDueCards() {
 
           if (!dailyReminderSent) {
             // Send daily reminder
-            await sendDailyReminder(userPref.userId, dueCards.length);
+            await sendDailyReminder(
+              userPref.userId,
+              totalDueCount,
+              languageDueCount,
+            );
             console.log(`📅 Sent daily reminder to user ${userPref.userId}`);
           }
         }
@@ -185,7 +195,7 @@ export async function checkDueCards() {
         // Check if we should send notification based on threshold
         if (totalDueCount < userPref.cardDueThreshold) {
           console.log(
-            `📈 Skipping user ${userPref.userId} - only ${totalDueCount} due cards (threshold: ${userPref.cardDueThreshold})`
+            `📈 Skipping user ${userPref.userId} - only ${totalDueCount} due cards (threshold: ${userPref.cardDueThreshold})`,
           );
           results.skipped++;
           continue;
@@ -205,11 +215,11 @@ export async function checkDueCards() {
             orderBy: {
               scheduledFor: "desc",
             },
-          }
+          },
         );
         if (recentNotification) {
           console.log(
-            `⏰ Skipping user ${userPref.userId} - already notified recently`
+            `⏰ Skipping user ${userPref.userId} - already notified recently`,
           );
           results.skipped++;
           continue;
@@ -221,20 +231,21 @@ export async function checkDueCards() {
             (acc[card.workspaceId] ??= []).push(card);
             return acc;
           },
-          {} as Record<string, typeof dueCards>
+          {} as Record<string, typeof dueCards>,
         );
 
         // Create and send notification
         const notificationData: NotificationData = {
           cardCount: totalDueCount,
           workspaceCount: Object.keys(cardsByWorkspace).length,
-          workspaces: Object.entries(cardsByWorkspace).map(([workspaceId, cards]) => ({
-            workspaceId,
-            cardCount: cards.length,
-          })),
+          workspaces: Object.entries(cardsByWorkspace).map(
+            ([workspaceId, cards]) => ({
+              workspaceId,
+              cardCount: cards.length,
+            }),
+          ),
           languageCardCount: languageDueCount,
         };
-
 
         // Supersede pending individual notifications
         // If we represent the "aggregated" state, individual reminders are redundant.
@@ -249,7 +260,7 @@ export async function checkDueCards() {
 
         if (superseded.count > 0) {
           console.log(
-            `🧹 Superseding ${superseded.count} pending individual notifications for user ${userPref.userId}`
+            `🧹 Superseding ${superseded.count} pending individual notifications for user ${userPref.userId}`,
           );
         }
 
@@ -263,12 +274,16 @@ export async function checkDueCards() {
             metadata: notificationData as object,
           },
         });
-        console.log(`[PID:${process.pid}] Notification created:`, created.id, notificationData);
+        console.log(
+          `[PID:${process.pid}] Notification created:`,
+          created.id,
+          notificationData,
+        );
 
         // Send the actual push notification
         const notificationSent = await sendCardDueNotification(
           userPref.userId,
-          notificationData
+          notificationData,
         );
 
         if (notificationSent) {
@@ -290,13 +305,13 @@ export async function checkDueCards() {
         } else {
           results.errors++;
           console.error(
-            `❌ Failed to send notification to user ${userPref.userId}`
+            `❌ Failed to send notification to user ${userPref.userId}`,
           );
         }
       } catch (userError) {
         console.error(
           `❌ Error processing user ${userPref.userId}:`,
-          userError
+          userError,
         );
         results.errors++;
       }
@@ -317,7 +332,7 @@ export async function checkDueCards() {
 // Helper function to send card due notification
 async function sendCardDueNotification(
   userId: string,
-  data: NotificationData
+  data: NotificationData,
 ): Promise<boolean> {
   try {
     const { cardCount, workspaceCount } = data;
@@ -334,9 +349,12 @@ async function sendCardDueNotification(
           ? `You have cards waiting in 1 workspace${languageSuffix}`
           : `You have cards waiting across ${workspaceCount} workspaces${languageSuffix}`;
 
-    const redirectUrl = workspaceCount === 0 && data.languageCardCount && data.languageCardCount > 0
-      ? "/language/review"
-      : "/user/review";
+    const redirectUrl =
+      workspaceCount === 0 &&
+      data.languageCardCount &&
+      data.languageCardCount > 0
+        ? "/language/review"
+        : "/user/review";
 
     // Use existing notification API with internal cron authorization
     const response = await $fetch("/api/notifications/send", {
@@ -368,15 +386,22 @@ async function sendCardDueNotification(
 // Helper function to send daily study reminder
 async function sendDailyReminder(
   userId: string,
-  dueCardCount: number
+  dueCardCount: number,
+  languageDueCount = 0,
 ): Promise<boolean> {
   try {
     // Create notification content
     const title = `📅 Daily Study Reminder`;
     const body =
       dueCardCount > 0
-        ? `You have ${dueCardCount} cards waiting for review. Keep up the great work!`
+        ? languageDueCount > 0
+          ? `You have ${dueCardCount} cards waiting for review, including ${languageDueCount} language cards. Keep up the great work!`
+          : `You have ${dueCardCount} cards waiting for review. Keep up the great work!`
         : `Time for your daily study session! Check for new content to review.`;
+    const redirectUrl =
+      dueCardCount === languageDueCount && languageDueCount > 0
+        ? "/language/review"
+        : "/user/review";
 
     // Create scheduled notification record
     await prisma.scheduledNotification.create({
@@ -399,7 +424,7 @@ async function sendDailyReminder(
         title,
         message: body,
         targetUsers: [userId],
-        url: "/user/review",
+        url: redirectUrl,
         tag: "daily-reminder",
         type: "DAILY_REMINDER",
         requireInteraction: false,

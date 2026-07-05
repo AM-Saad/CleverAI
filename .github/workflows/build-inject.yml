@@ -31,6 +31,18 @@ jobs:
       - name: Enforce design-system tokens
         run: yarn design:check
 
+      - name: Enforce interactive-state conventions
+        run: yarn design:states
+
+      - name: Enforce primitive state coverage
+        run: yarn design:primitives
+
+      - name: Enforce component boundaries
+        run: yarn design:boundaries
+
+      - name: Enforce WCAG AA contrast
+        run: yarn design:contrast
+
   build:
     runs-on: ubuntu-latest
     steps:

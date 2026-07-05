@@ -113,7 +113,9 @@ export function useNotificationPrompt() {
     try {
       // This is a simplified check - you might want to call a specific API
       // For now, check if user has any workspaces (indicates they're actively using the app)
-      const response = await $fetch<WorkspaceCountResponse>("/api/workspaces/count");
+      const response = await $fetch<WorkspaceCountResponse>(
+        "/api/workspaces/count",
+      );
       const count = response.data?.count ?? response.count ?? 0;
       console.log("has cards due", count);
       return count > 0;
@@ -242,7 +244,7 @@ export function useNotificationPrompt() {
 export const triggerNotificationPromptAfterReview = () => {
   const {
     markReviewSessionCompleted,
-    promptUserForNotifications,
+    shouldPromptUser,
     isGoodTimingForPrompt,
   } = useNotificationPrompt();
 
@@ -251,7 +253,10 @@ export const triggerNotificationPromptAfterReview = () => {
   // Delayed check for good timing
   setTimeout(async () => {
     if (isGoodTimingForPrompt()) {
-      await promptUserForNotifications();
+      const shouldShow = await shouldPromptUser();
+      if (shouldShow) {
+        window.dispatchEvent(new CustomEvent("showNotificationModal"));
+      }
     }
   }, 30 * 1000); // 30 seconds after review completion
 };

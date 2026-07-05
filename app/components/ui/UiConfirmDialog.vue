@@ -15,7 +15,15 @@
           @click="cancel"
           >{{ cancelLabel }}</UiButton
         >
-        <UiButton :tone="tone" :loading="loading" @click="$emit('confirm')">{{
+        <UiDoubleTapDeleteButton
+          v-if="requiresDoubleTap"
+          :tone="tone"
+          :loading="loading"
+          :label="confirmLabel"
+          :armed-label="effectiveConfirmArmedLabel"
+          @confirm="$emit('confirm')"
+        />
+        <UiButton v-else :tone="tone" :loading="loading" @click="$emit('confirm')">{{
           confirmLabel
         }}</UiButton>
       </div>
@@ -31,6 +39,7 @@
  */
 import type { Tone } from "./variants";
 import type { IconName } from "~/utils/icons.generated";
+import { computed } from "vue";
 
 const open = defineModel<boolean>("open", { default: false });
 const {
@@ -38,21 +47,29 @@ const {
   description,
   icon,
   confirmLabel = "Confirm",
+  confirmArmedLabel,
   cancelLabel = "Cancel",
   tone = "error",
   loading = false,
+  requiresDoubleTap = false,
 } = defineProps<{
   title?: string;
   description?: string;
   icon?: IconName;
   confirmLabel?: string;
+  confirmArmedLabel?: string;
   cancelLabel?: string;
   /** Tone of the confirm button (error for destructive, primary otherwise). */
   tone?: Tone;
   loading?: boolean;
+  /** Require two activations on the confirm button before emitting confirm. */
+  requiresDoubleTap?: boolean;
 }>();
 
 const emit = defineEmits<{ confirm: []; cancel: [] }>();
+const effectiveConfirmArmedLabel = computed(
+  () => confirmArmedLabel ?? `Tap again to ${confirmLabel.toLowerCase()}`,
+);
 function cancel() {
   emit("cancel");
   open.value = false;

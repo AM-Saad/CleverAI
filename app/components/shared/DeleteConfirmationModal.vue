@@ -28,6 +28,7 @@ const open = computed({
 
 const confirmTone = computed(() => (props.isDestructive ? "error" : "primary"));
 const dialogIcon = computed(() => (props.isDestructive ? "delete" : "info"));
+const confirmArmedLabel = computed(() => `Tap again to ${props.confirmText.toLowerCase()}`);
 
 function handleClose() {
   if (!props.loading) {
@@ -45,6 +46,8 @@ function handleClose() {
     cancel-label="Cancel"
     :tone="confirmTone"
     :loading="loading"
+    :requires-double-tap="isDestructive"
+    :confirm-armed-label="confirmArmedLabel"
     @cancel="handleClose"
     @confirm="$emit('confirm')"
   >

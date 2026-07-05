@@ -191,7 +191,7 @@ async function triggerRecognition() {
         title: "Low Confidence",
         description: "Could not clearly recognize the math. Please write more clearly or try again.",
         color: "warning",
-        icon: "i-heroicons-exclamation-triangle",
+        icon: "i-lucide-triangle-alert",
       });
       // Allow them to keep drawing, just don't save an empty block
       pendingBounds.value = null;
@@ -346,7 +346,7 @@ const isExpressionsCollapsed = ref(true);
       <div v-if="isRecognizing || isDownloading"
         class="absolute inset-0 flex flex-col items-center justify-center rounded-[var(--radius-lg)] bg-background/70 backdrop-blur-sm dark:bg-surface/90 z-10 transition-opacity">
         <div class="flex items-center gap-2 mb-2">
-          <UIcon name="i-heroicons-sparkles" class="h-5 w-5 text-primary animate-pulse" />
+          <UiIcon name="i-lucide-sparkles" class="h-5 w-5 text-primary animate-pulse" />
           <span class="text-sm font-medium text-content-on-surface">
             {{ isDownloading ? "Fetching local AI model..." : "Recognising locally..." }}
           </span>
@@ -382,7 +382,7 @@ const isExpressionsCollapsed = ref(true);
         @click="isExpressionsCollapsed = !isExpressionsCollapsed"
       >
         <span>Recognised expressions ({{ lines.length }})</span>
-        <UIcon :name="isExpressionsCollapsed ? 'i-heroicons-chevron-down' : 'i-heroicons-chevron-up'"
+        <UiIcon :name="isExpressionsCollapsed ? 'i-lucide-chevron-down' : 'i-lucide-chevron-up'"
           class="h-4 w-4 transition-transform duration-200" />
       </UiButton>
 
@@ -403,7 +403,6 @@ const isExpressionsCollapsed = ref(true);
         </div>
       </motion.div>
     </div>
-    <!-- <WorkspaceEditor /> -->
   </div>
 </template>
 

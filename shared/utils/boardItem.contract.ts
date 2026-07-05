@@ -23,7 +23,8 @@ export const BoardItemSchema = z.object({
   workspaceId: z.string().nullable().optional(),
   content: z.string(),
   tags: z.array(z.string()).default([]),
-  order: z.number().int().default(0),
+  // Fractional rank (see board fractional-ranking). Not an integer.
+  order: z.number().default(0),
   dueDate: z.string().datetime().or(z.date()).nullable().optional(),
   attachments: z.array(AttachmentSchema).default([]),
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
@@ -53,7 +54,7 @@ export const ReorderBoardItemsDTO = z.object({
   itemOrders: z.array(
     z.object({
       id: z.string(),
-      order: z.number().int().min(0),
+      order: z.number(),
     })
   ),
 });
@@ -76,7 +77,7 @@ const BoardItemSyncBaseSchema = z.object({
   userId: z.string().optional(),
   workspaceId: z.string().nullable().optional(),
   columnId: z.string().nullable().optional(),
-  order: z.number().int().optional(),
+  order: z.number().optional(),
   content: z.string().optional(),
   tags: z.array(z.string()).optional(),
   dueDate: z.string().datetime().or(z.date()).nullable().optional(),
@@ -94,7 +95,7 @@ export const BoardItemSyncItemSchema = z.discriminatedUnion("operation", [
     operation: z.literal("upsert"),
     content: z.string().default(""),
     tags: z.array(z.string()).default([]),
-    order: z.number().int().default(0),
+    order: z.number().default(0),
     attachments: z.array(AttachmentSchema).default([]),
     createdAt: SyncTimestampSchema,
   }),

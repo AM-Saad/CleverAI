@@ -30,6 +30,7 @@
         variant="link"
         tone="neutral"
         size="xs"
+        dir="auto"
         class="min-w-0 flex-1 truncate text-left text-xs font-semibold text-content-secondary"
         @click="$emit('toggle-collapse', groupId)"
       >
@@ -46,6 +47,7 @@
           :model-value="editingTitle"
           :data-note-group-rename-input="groupId"
           size="xs"
+          dir="auto"
           class="min-w-0 flex-1"
           @update:model-value="$emit('update:editing-title', String($event ?? ''))"
           @keydown.esc.prevent="$emit('cancel-rename-group')"
@@ -204,9 +206,12 @@ const groupMenuItems = computed(() => [
       onSelect: () => props.groupId && emitRename(props.groupId),
     },
     {
+      id: `delete-group-${props.groupId}`,
       label: "Delete group",
       icon: "i-lucide-trash-2",
       disabled: props.groupActionsDisabled,
+      requiresDoubleTap: true,
+      confirmLabel: "Tap again to delete group",
       onSelect: () => props.groupId && emitDelete(props.groupId),
     },
   ],

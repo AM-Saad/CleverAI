@@ -65,16 +65,38 @@ export function getFocusableElements(root: HTMLElement): HTMLElement[] {
   const nodes = root.querySelectorAll<HTMLElement>(
     [
       "a[href]",
+      "area[href]",
       "button:not([disabled])",
-      "textarea:not([disabled])",
-      "input:not([disabled])",
+      "input:not([disabled]):not([type='hidden'])",
       "select:not([disabled])",
+      "textarea:not([disabled])",
+      "iframe",
+      "object",
+      "embed",
+      "audio[controls]",
+      "video[controls]",
+      "summary",
+      "[contenteditable]:not([contenteditable='false'])",
       '[tabindex]:not([tabindex="-1"])',
     ].join(","),
   );
-  return Array.from(nodes).filter(
-    (el) => !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length),
-  );
+
+  return Array.from(nodes).filter((el) => {
+    if (el.closest("[hidden], [inert], [aria-hidden='true']")) return false;
+    if (el.closest("fieldset[disabled]")) return false;
+    if (el.hasAttribute("disabled")) return false;
+    if (el.getAttribute("aria-disabled") === "true") return false;
+    if (el.tabIndex < 0 && !el.isContentEditable) return false;
+
+    if (typeof window !== "undefined") {
+      const styles = window.getComputedStyle(el);
+      if (styles.display === "none" || styles.visibility === "hidden") {
+        return false;
+      }
+    }
+
+    return !!(el.offsetWidth || el.offsetHeight || el.getClientRects().length);
+  });
 }
 
 export function focusFirst(root: HTMLElement) {

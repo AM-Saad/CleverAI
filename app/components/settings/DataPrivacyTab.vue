@@ -6,7 +6,7 @@
       </template>
       <div class="space-y-4">
         <div>
-          <UiButton color="primary" variant="outline" @click="exportData">
+          <UiButton color="primary" variant="soft" @click="exportData">
             Export My Data
           </UiButton>
           <p class="text-xs text-content-secondary mt-2">
@@ -15,7 +15,7 @@
         </div>
 
         <div>
-          <UiButton color="primary" variant="outline" @click="importData">
+          <UiButton color="primary" variant="soft" @click="importData">
             Import Data
           </UiButton>
           <p class="text-xs text-content-secondary mt-2">

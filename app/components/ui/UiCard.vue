@@ -1,5 +1,10 @@
 <template>
-  <component :is="tag" :class="ui.root({ class: className })">
+  <component
+    :is="tag"
+    :class="ui.root({ class: className })"
+    :style="spine ? { '--ds-card-spine': spine } : undefined"
+    :data-spine="spine ? '' : undefined"
+  >
     <div v-if="$slots.header" :class="ui.header()">
       <slot name="header" />
     </div>
@@ -22,17 +27,22 @@ interface Props {
   /** HTML tag to render */
   tag?: "div" | "article" | "section" | "li";
   /** Card visual variant */
-  variant?: "default" | "outline" | "ghost" | "surface" | "surface-strong";
+  variant?: "default" | "outline" | "ghost" | "surface";
   /** Card size (affects padding) */
   size?: "xs" | "sm" | "md" | "lg" | "xl";
   /** Shadow intensity */
-  shadow?: "none" | "sm" | "md" | "lg" | "xl";
+  shadow?: "none" | "sm" | "md";
   /** Hover effect */
-  hover?: "none" | "lift" | "glow" | "scale";
+  hover?: "none" | "lift";
   /** Extra classes merged onto the root */
   className?: string;
   /** Extra classes merged onto the content area */
   contentClasses?: string;
+  /**
+   * Optional 5px colored left spine (CSS color / `var(--token)`), used to encode
+   * a stable per-entity accent (e.g. note type). See useAccentColor.
+   */
+  spine?: string;
 }
 
 const {
@@ -43,6 +53,7 @@ const {
   hover = "none",
   className = "",
   contentClasses = "",
+  spine = "",
 } = defineProps<Props>();
 
 // Reference variant implementation for all Ui* primitives: declare classes with
@@ -60,7 +71,6 @@ const card = tv({
       outline: { root: "bg-transparent border border-secondary", header: "border-b border-secondary" },
       ghost: { root: "border-0", header: "border-0" },
       surface: { root: "bg-surface-subtle border border-surface-strong", header: "border-b border-surface-strong" },
-      "surface-strong": { root: "bg-surface-strong border border-surface-strong", header: "border-b border-surface-strong" },
     },
     size: {
       xs: { header: "mb-1 p-[var(--component-card-padding-xs)]", content: "p-[var(--component-card-padding-xs)]" },
@@ -73,14 +83,10 @@ const card = tv({
       none: { root: "shadow-none!" },
       sm: { root: "shadow-[var(--shadow-card)]" },
       md: { root: "shadow-[var(--shadow-dropdown)]" },
-      lg: { root: "shadow-[var(--shadow-card-hover)]" },
-      xl: { root: "shadow-[var(--shadow-modal)]" },
     },
     hover: {
       none: {},
       lift: { root: "hover:shadow-[var(--shadow-card-hover)] hover:-translate-y-1" },
-      glow: { root: "hover:shadow-[var(--shadow-primary-glow)]" },
-      scale: { root: "hover:scale-[1.02]" },
     },
   },
 });
@@ -91,11 +97,25 @@ const ui = computed(() => card({ variant, size, shadow, hover }));
 <style scoped>
 .ui-card {
   border-radius: var(--component-card-radius);
+  position: relative;
   transition: background-color var(--duration-normal) var(--ease-standard), border-color var(--duration-normal) var(--ease-standard), box-shadow var(--duration-normal) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
   display: flex;
   flex-direction: column;
 }
 
+
+.ui-card[data-spine] {
+  overflow: hidden;
+}
+.ui-card[data-spine]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  background: var(--ds-card-spine);
+}
 
 .ui-card__content {
   display: flex;

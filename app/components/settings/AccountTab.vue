@@ -4,10 +4,10 @@
 
             <template #header>
                 <div class="flex items-center gap-2">
-                    <UIcon name="i-heroicons-user" class="w-5 h-5" />
+                    <UiIcon name="i-lucide-user" class="w-5 h-5" />
                     Account Information
                 </div>
-                <ui-button size="sm" variant="outline" color="primary" @click="showUpdateModal = true">
+                <ui-button size="sm" variant="soft" color="primary" @click="showUpdateModal = true">
                     Update Profile
                 </ui-button>
             </template>

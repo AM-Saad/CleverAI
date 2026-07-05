@@ -1,16 +1,21 @@
 <template>
-  <shared-page-wrapper title="Language" subtitle="Build your vocabulary word by word">
+  <shared-page-wrapper
+    title="Language"
+    subtitle="Build your vocabulary word by word"
+  >
     <div class="space-y-6 mt-6">
       <LanguageStatusCard />
 
       <div class="flex items-center justify-between">
-        <ui-subtitle size="base" color="content-on-surface">My Word Bank</ui-subtitle>
+        <ui-subtitle size="base" color="content-on-surface"
+          >My Word Bank</ui-subtitle
+        >
         <div class="flex items-center gap-2">
           <ui-button
             size="sm"
             variant="ghost"
             color="neutral"
-            to="/language/settings"
+            to="/account/language"
           >
             <Icon name="i-lucide-sliders-horizontal" class="w-3.5 h-3.5 mr-1" />
             Settings

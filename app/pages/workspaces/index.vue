@@ -1,548 +1,548 @@
+<template>
+  <div class="ws">
+    <header class="ws__header">
+      <UiIconButton
+        class="ws__back"
+        icon="i-lucide-chevron-left"
+        label="Back"
+        @click="goBack"
+      />
+      <div>
+        <ui-title tag="h1" class="ws__title">Workspaces</ui-title>
+        <p class="ws__sub">
+          {{ workspaces.length }} workspace{{
+            workspaces.length === 1 ? "" : "s"
+          }}
+        </p>
+      </div>
+    </header>
+
+    <div v-if="loading && !workspaces.length" class="ws__list">
+      <UiSkeleton
+        v-for="i in 3"
+        :key="i"
+        class="h-[68px] w-full rounded-[var(--radius-2xl)]"
+      />
+    </div>
+
+    <ul v-else class="ws__list">
+      <li
+        v-for="w in workspaces"
+        :key="w.id"
+        class="ws__row"
+        :class="{ 'ws__row--active': w.id === activeId }"
+      >
+        <button type="button" class="ws__row-select" @click="select(w.id)">
+          <!-- design-allow: native selectable workspace row -->
+          <span class="ws__tile" :style="{ background: gradientFor(w) }">{{
+            initial(w.title)
+          }}</span>
+          <span class="ws__row-main">
+            <span class="ws__row-name">{{ w.title }}</span>
+            <span class="ws__row-meta">{{ metaFor(w.id) }}</span>
+          </span>
+        </button>
+        <UiPill
+          v-if="caughtUp(w.id)"
+          size="sm"
+          label="all caught up"
+          color="var(--color-success)"
+          variant="outline"
+          active
+          max-width="132px"
+        >
+          <template #icon>
+            <UiPillIcon name="i-lucide-check" size="sm" />
+          </template>
+        </UiPill>
+        <UiIcon
+          v-if="w.id === activeId"
+          name="i-lucide-circle-check-big"
+          class="ws__active-icon"
+        />
+        <UiIconButton
+          icon="i-lucide-more-vertical"
+          label="Workspace actions"
+          size="sm"
+          @click="openActions(w)"
+        />
+      </li>
+
+      <li>
+        <button type="button" class="ws__new" @click="startCreate">
+          <!-- design-allow: native dashed add control -->
+          <UiIcon name="i-lucide-plus" class="h-4 w-4" />
+          New workspace
+        </button>
+      </li>
+    </ul>
+
+    <!-- workspace actions (⋯) -->
+    <UiSheet
+      v-model:open="actionsOpen"
+      :title="actionTarget?.title ?? 'Workspace'"
+    >
+      <div class="ws-actions">
+        <UiListCard
+          clickable
+          variant="soft"
+          title="Overview"
+          @click="openOverview"
+        >
+          <template #leading>
+            <UiIcon name="i-lucide-layout-dashboard" class="h-5 w-5" />
+          </template>
+        </UiListCard>
+        <UiListCard
+          clickable
+          variant="soft"
+          title="Open space"
+          @click="openSelected"
+        >
+          <template #leading>
+            <UiIcon name="i-lucide-arrow-up-right" class="h-5 w-5" />
+          </template>
+        </UiListCard>
+        <UiListCard clickable variant="soft" title="Edit" @click="startEdit">
+          <template #leading>
+            <UiIcon name="i-lucide-pencil" class="h-5 w-5" />
+          </template>
+        </UiListCard>
+        <UiDoubleTapDeleteButton
+          unstyled
+          class="ws-actions__row ws-actions__row--danger"
+          label="Delete workspace"
+          armed-label="Tap again to delete workspace"
+          :reset-key="actionTarget?.id ?? null"
+          @confirm="onDeleteTap"
+        >
+          <template #default="{ label }">
+            <UiIcon name="i-lucide-trash-2" class="h-5 w-5" />
+            {{ label }}
+          </template>
+        </UiDoubleTapDeleteButton>
+      </div>
+    </UiSheet>
+
+    <!-- create / edit flow -->
+    <UiSheet
+      v-model:open="createOpen"
+      :title="editingId ? 'Edit workspace' : 'New workspace'"
+    >
+      <div class="ws-create">
+        <div
+          class="ws-create__preview"
+          :style="{ background: previewGradient }"
+        >
+          {{ initial(form.title || "W") }}
+        </div>
+
+        <div class="ws-create__swatches">
+          <button
+            v-for="c in accentTokens"
+            :key="c"
+            type="button"
+            class="ws-create__swatch"
+            :class="{ 'ws-create__swatch--on': form.color === c }"
+            :style="{ background: `var(${c})` }"
+            :aria-label="`Color ${c}`"
+            @click="form.color = c"
+          />
+          <!-- design-allow: native color swatch -->
+        </div>
+
+        <label class="ws-create__label">NAME</label>
+        <UiInput v-model="form.title" placeholder="e.g. Biology" autofocus />
+
+        <label class="ws-create__label">DESCRIPTION (optional)</label>
+        <UiTextarea
+          v-model="form.description"
+          placeholder="What's this space for?"
+          :rows="2"
+        />
+
+        <div class="ws-create__info">
+          <UiIcon name="i-lucide-users" class="h-4 w-4" />
+          You can invite collaborators after creating.
+        </div>
+      </div>
+
+      <template #footer>
+        <UiButton
+          pill
+          block
+          tone="primary"
+          size="lg"
+          :loading="creating || updating"
+          :disabled="!form.title.trim()"
+          @click="submit"
+        >
+          {{ editingId ? "Save changes" : "Create workspace" }}
+        </UiButton>
+      </template>
+    </UiSheet>
+  </div>
+</template>
+
 <script setup lang="ts">
-import type { Workspace } from "@@/shared/utils/workspace.contract";
-import { useWorkspaceGenerate } from "~/composables/workspaces/useWorkspaceGenerate";
-import { useWorkspaceReviewStats } from "~/features/review/composables/useWorkspaceReviewStats";
-import IntegrationAppsIcon from "~/features/integrations/components/IntegrationAppsIcon.vue";
-import WorkspaceImportDialog from "~/features/integrations/components/WorkspaceImportDialog.vue";
-import LanguageStatusCard from "~/features/language-learning/components/LanguageStatusCard.vue";
-import QuickCaptureModal from "~/features/language-learning/components/QuickCaptureModal.vue";
-import ReviewStatusCard from "~/features/review/components/ReviewStatusCard.vue";
+import { ref, reactive, computed, onMounted } from "vue";
+import { ACCENT_TOKENS, accentVarFor } from "~/composables/useAccentColor";
+import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace";
+import {
+  useCreateWorkspace,
+  useUpdateWorkspace,
+  useDeleteWorkspace,
+} from "~/composables/workspaces/useWorkspaces";
+import type { Workspace } from "#shared/utils/workspace.contract";
+import type { ReviewWorkspaceStats } from "@shared/utils/review.contract";
 
+const { $api } = useNuxtApp();
+const route = useRoute();
 const toast = useToast();
-const show = ref(false);
-const searchQuery = ref("");
-
-const showDeleteConfirm = ref(false);
-const workspaceToDelete = ref<string | null>(null);
-const editWorkspace = ref<Workspace | null>(null);
 const {
-  isOpen: isQuickCaptureOpen,
-  open: openQuickCapture,
-  close: closeQuickCapture,
-} = useQuickCaptureModal();
-const { workspaces, loading, error, refresh } = useWorkspaces();
-const { deleteWorkspace, deleting: deletingWorkspace } =
-  useDeleteWorkspace(refresh);
-const { generatingId, materialsWithoutCards, generateForWorkspace } =
-  useWorkspaceGenerate(refresh);
+  workspaces: wsList,
+  loading,
+  activeId,
+  setActive,
+  refresh,
+} = useActiveWorkspace();
+const { createWorkspace, creating } = useCreateWorkspace(refresh);
+const { updateWorkspace, updating } = useUpdateWorkspace();
+const { deleteWorkspace } = useDeleteWorkspace(refresh);
 
-const workspaceIds = computed(() => (workspaces.value ?? []).map((w) => w.id));
-const { statsFor, masteryFor } = useWorkspaceReviewStats(workspaceIds);
+const workspaces = computed<Workspace[]>(() => wsList.value ?? []);
+const createOpen = ref(false);
+const accentTokens = ACCENT_TOKENS;
+const statsById = ref<Record<string, ReviewWorkspaceStats>>({});
 
-const STALE_DAYS = 14;
+// Row actions / edit state
+const actionsOpen = ref(false);
+const actionTarget = ref<Workspace | null>(null);
+const editingId = ref<string | null>(null);
 
-type SortKey = "due" | "recent" | "az" | "cards";
-const sortBy = ref<SortKey>("due");
-const sortOptions: { value: SortKey; label: string }[] = [
-  { value: "due", label: "Due first" },
-  { value: "recent", label: "Recent" },
-  { value: "az", label: "A–Z" },
-  { value: "cards", label: "Most cards" },
-];
-
-const filteredWorkspaces = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase();
-  const list = workspaces.value ?? [];
-  if (!query) return list;
-
-  return list.filter((workspace) =>
-    [workspace.title, workspace.description]
-      .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(query)),
-  );
+const form = reactive({
+  title: "",
+  description: "",
+  color: ACCENT_TOKENS[2] as string,
 });
+const previewGradient = computed(() => gradientFromToken(form.color));
 
-const byRecent = (a: Workspace, b: Workspace) =>
-  new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+function initial(name: string) {
+  return (name?.trim()?.[0] ?? "W").toUpperCase();
+}
+function gradientFromToken(token: string) {
+  return `linear-gradient(135deg, var(${token}), color-mix(in srgb, var(${token}) 62%, black))`;
+}
+function gradientFor(w: Workspace) {
+  const meta = w.metadata as Record<string, unknown> | null;
+  const token =
+    typeof meta?.color === "string" && meta.color.startsWith("--")
+      ? meta.color
+      : accentTokenFromVar(accentVarFor(w.id));
+  return gradientFromToken(token);
+}
+function accentTokenFromVar(v: string) {
+  return v.match(/var\((--[a-z-]+)\)/)?.[1] ?? "--color-accent-indigo";
+}
+function metaFor(id: string) {
+  const s = statsById.value[id];
+  if (!s) return "—";
+  return `${s.total} card${s.total === 1 ? "" : "s"} · ${s.due} due`;
+}
+function caughtUp(id: string) {
+  const s = statsById.value[id];
+  return !!s && s.total > 0 && s.due === 0;
+}
 
-const sortedWorkspaces = computed(() => {
-  const list = [...filteredWorkspaces.value];
-  if (sortBy.value === "az") {
-    return list.sort((a, b) => a.title.localeCompare(b.title));
-  }
-  if (sortBy.value === "cards") {
-    return list.sort(
-      (a, b) => (b.flashcards?.length ?? 0) - (a.flashcards?.length ?? 0),
-    );
-  }
-  if (sortBy.value === "due") {
-    return list.sort((a, b) => {
-      const diff = dueCount(b) - dueCount(a);
-      return diff !== 0 ? diff : byRecent(a, b);
+function select(id: string) {
+  setActive(id);
+  navigateTo("/notes");
+}
+function goBack() {
+  navigateTo("/");
+}
+
+async function submit() {
+  if (!form.title.trim()) return;
+  if (editingId.value) {
+    const updated = await updateWorkspace({
+      id: editingId.value,
+      title: form.title.trim(),
+      description: form.description.trim() || undefined,
+      metadata: { color: form.color },
     });
+    if (updated) {
+      createOpen.value = false;
+      editingId.value = null;
+      await refresh();
+    }
+    return;
   }
-  return list.sort(byRecent);
-});
-
-// --- Review-derived signals (populated by the batch stats endpoint) ---
-function dueCount(workspace: Workspace) {
-  return statsFor(workspace.id)?.due ?? 0;
+  const created = await createWorkspace({
+    title: form.title.trim(),
+    description: form.description.trim() || undefined,
+    metadata: { color: form.color },
+  });
+  if (created) {
+    createOpen.value = false;
+    form.title = "";
+    form.description = "";
+    setActive(created.id);
+    await loadStats();
+  }
 }
 
-function isStale(workspace: Workspace) {
-  const stats = statsFor(workspace.id);
-  if (!stats || stats.total === 0 || dueCount(workspace) > 0) return false;
-  if (!stats.lastReviewedAt) return false;
-  const age = Date.now() - new Date(stats.lastReviewedAt).getTime();
-  return age > STALE_DAYS * 86_400_000;
+function startCreate() {
+  editingId.value = null;
+  form.title = "";
+  form.description = "";
+  form.color = ACCENT_TOKENS[2];
+  createOpen.value = true;
 }
 
-// Contextual next-best-action: due cards → review, uncovered materials →
-// generate, long-untouched → refresh, otherwise just open.
-type RowAction = "review" | "generate" | "refresh" | "open";
-function rowAction(workspace: Workspace): RowAction {
-  if (dueCount(workspace) > 0) return "review";
-  if (workspaceGap(workspace) > 0) return "generate";
-  if (isStale(workspace)) return "refresh";
-  return "open";
+// ── Row actions ─────────────────────────────────────────────────────────────
+function openActions(w: Workspace) {
+  actionTarget.value = w;
+  actionsOpen.value = true;
+}
+function openSelected() {
+  if (actionTarget.value) select(actionTarget.value.id);
+  actionsOpen.value = false;
+}
+function openOverview() {
+  const w = actionTarget.value;
+  actionsOpen.value = false;
+  if (w) navigateTo(`/workspaces/${w.id}`);
+}
+function startEdit() {
+  const w = actionTarget.value;
+  if (!w) return;
+  editingId.value = w.id;
+  form.title = w.title;
+  form.description = w.description ?? "";
+  const meta = w.metadata as Record<string, unknown> | null;
+  form.color =
+    typeof meta?.color === "string" && meta.color.startsWith("--")
+      ? meta.color
+      : ACCENT_TOKENS[2];
+  actionsOpen.value = false;
+  createOpen.value = true;
+}
+async function onDeleteTap() {
+  const w = actionTarget.value;
+  if (!w) return;
+  await deleteWorkspace(w.id);
+  actionsOpen.value = false;
+  toast.add({ title: "Workspace deleted", color: "neutral" });
+  await refresh();
+  await loadStats();
 }
 
-// Hero: the workspace with the most cards due right now.
-const continueWorkspace = computed(() => {
-  let best: Workspace | null = null;
-  let bestDue = 0;
-  for (const ws of workspaces.value ?? []) {
-    const due = statsFor(ws.id)?.due ?? 0;
-    if (due > bestDue) {
-      bestDue = due;
-      best = ws;
+async function loadStats() {
+  const ids = workspaces.value.map((w) => w.id);
+  if (!ids.length) return;
+  const res = await $api.review.getStatsBatch(ids);
+  if (res.success) statsById.value = res.data.stats;
+}
+
+onMounted(async () => {
+  await refresh();
+  await loadStats();
+  // Deep-link from the workspace overview's edit button.
+  const editId = route.query.edit as string | undefined;
+  if (editId) {
+    const w = workspaces.value.find((x) => x.id === editId);
+    if (w) {
+      actionTarget.value = w;
+      startEdit();
     }
   }
-  return best ? { workspace: best, due: bestDue } : null;
-});
-
-const totalDue = computed(() =>
-  (workspaces.value ?? []).reduce((sum, ws) => sum + (statsFor(ws.id)?.due ?? 0), 0),
-);
-
-const workspaceTotals = computed(() => {
-  const list = workspaces.value ?? [];
-  return list.reduce(
-    (acc, workspace) => {
-      acc.materials += workspace.materials?.length ?? 0;
-      acc.flashcards += workspace.flashcards?.length ?? 0;
-      acc.questions += workspace.questions?.length ?? 0;
-      return acc;
-    },
-    { materials: 0, flashcards: 0, questions: 0 },
-  );
-});
-
-const hasWorkspaces = computed(() => (workspaces.value?.length ?? 0) > 0);
-const visibleWorkspaceCount = computed(() => filteredWorkspaces.value.length);
-
-const quickSettingsLinks = [
-  {
-    label: "Account",
-    description: "Profile and identity",
-    icon: "i-lucide-user",
-    to: "/user/settings",
-  },
-  {
-    label: "Language",
-    description: "Capture and review preferences",
-    icon: "i-lucide-languages",
-    to: "/language/settings",
-  },
-  {
-    label: "Study",
-    description: "Review session defaults",
-    icon: "i-lucide-graduation-cap",
-    to: "/user/settings",
-  },
-  {
-    label: "Notifications",
-    description: "Reminders and alerts",
-    icon: "i-lucide-bell",
-    to: "/user/settings",
-  },
-];
-
-watch(error, (newError) => {
-  if (newError) {
-    toast.add({
-      title: "Error",
-      description: newError.message,
-    });
-  }
-});
-
-const openCreateWorkspace = () => {
-  editWorkspace.value = null;
-  show.value = true;
-};
-
-const cancelUpsertModal = () => {
-  show.value = false;
-  editWorkspace.value = null;
-};
-
-const requestDeleteWorkspace = (workspaceId: string) => {
-  workspaceToDelete.value = workspaceId;
-  showDeleteConfirm.value = true;
-};
-
-const confirmDeleteWorkspace = async () => {
-  if (!workspaceToDelete.value) return;
-  try {
-    await deleteWorkspace(workspaceToDelete.value);
-    toast.add({
-      title: "Workspace Deleted",
-      description: "The workspace has been successfully deleted.",
-      color: "success",
-    });
-    window.dispatchEvent(new CustomEvent("refresh-review-stats"));
-  } catch (err) {
-    toast.add({
-      title: "Error",
-      description: "An error occurred while deleting the workspace.",
-    });
-  } finally {
-    showDeleteConfirm.value = false;
-    workspaceToDelete.value = null;
-  }
-};
-
-function editWorkspaceRow(workspace: Workspace) {
-  editWorkspace.value = workspace;
-  show.value = true;
-}
-
-function workspaceMenuItems(workspace: Workspace) {
-  return [
-    {
-      label: "Open Workspace",
-      icon: "i-lucide-arrow-up-right",
-      to: `/workspaces/${workspace.id}`,
-    },
-    {
-      label: "Edit Workspace",
-      icon: "i-lucide-edit-3",
-      onSelect: () => editWorkspaceRow(workspace),
-    },
-    {
-      label: "Delete Workspace",
-      icon: "i-lucide-trash-2",
-      disabled: deletingWorkspace.value,
-      onSelect: () => requestDeleteWorkspace(workspace.id),
-    },
-  ];
-}
-
-// A compact, honest "what's inside" line (Phase 1 AI-summary placeholder).
-function workspaceSummary(workspace: Workspace) {
-  const materials = workspace.materials?.length ?? 0;
-  const cards = workspace.flashcards?.length ?? 0;
-  const questions = workspace.questions?.length ?? 0;
-  const parts: string[] = [];
-  if (materials) parts.push(`${materials} material${materials > 1 ? "s" : ""}`);
-  if (cards) parts.push(`${cards} card${cards > 1 ? "s" : ""}`);
-  if (questions) parts.push(`${questions} question${questions > 1 ? "s" : ""}`);
-  return parts.join(" · ") || "Empty workspace";
-}
-
-// Coverage gap = materials this workspace hasn't turned into cards yet.
-function workspaceGap(workspace: Workspace) {
-  return materialsWithoutCards(workspace).length;
-}
-
-function formatUpdatedAt(value: Workspace["updatedAt"]) {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Updated recently";
-
-  return `Updated ${date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-  })}`;
-}
-
-async function handleWorkspaceImportSynced() {
-  await refresh();
-  window.dispatchEvent(new CustomEvent("refresh-review-stats"));
-}
-
-onMounted(() => {
-  if (import.meta.dev) {
-    console.log("[workspaces/index] forcing refresh() onMounted", {
-      timestamp: Date.now(),
-    });
-    refresh();
-  }
+  // Deep-link from the quick-switcher's "New workspace".
+  if (route.query.new) startCreate();
 });
 </script>
 
-<template>
-  <shared-page-wrapper>
-    <div class="space-y-5">
-      <section class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div class="min-w-0">
-          <p class="text-xs font-semibold uppercase tracking-widest text-content-secondary">
-            Workspace hub
-          </p>
-          <div class="mt-1 flex flex-wrap items-end gap-3">
-            <h1 class="text-2xl font-semibold tracking-normal text-content-on-surface">
-              Workspaces
-            </h1>
-            <span class="pb-1 text-sm text-content-secondary">
-              {{ workspaces?.length ?? 0 }} total<span v-if="totalDue > 0"> · {{ totalDue }} due today</span>
-            </span>
-          </div>
-        </div>
+<style scoped>
+.ws {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-4) var(--space-8);
+}
+.ws__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+}
+.ws__back {
+  margin-left: calc(-1 * var(--space-2));
+}
+.ws__title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  color: var(--color-content-on-surface-strong);
+}
+.ws__sub {
+  font-size: 13px;
+  color: var(--color-content-secondary);
+}
+.ws__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.ws__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3);
+  border-radius: var(--radius-2xl);
+  background: var(--ds-surface-card);
+  border: 1px solid var(--color-secondary);
+  box-shadow: var(--shadow-card);
+  text-align: left;
+}
+.ws__row--active {
+  border-width: 1.5px;
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
+}
+.ws__row-select {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  text-align: left;
+}
+.ws-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+}
+.ws-actions__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-xl);
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-content-on-surface-strong);
+  background: var(--color-surface-subtle);
+}
+.ws-actions__row--danger {
+  color: var(--color-error-text);
+  background: color-mix(in srgb, var(--color-error) 10%, transparent);
+}
+.ws__tile {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-xl);
+  color: var(--color-white);
+  font-weight: 800;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.ws__row-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.ws__row-name {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.2px;
+  color: var(--color-content-on-surface-strong);
+}
+.ws__row-meta {
+  font-size: 12.5px;
+  color: var(--color-content-secondary);
+}
+.ws__active-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--color-primary);
+  flex-shrink: 0;
+}
+.ws__new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 13px;
+  border-radius: var(--radius-2xl);
+  border: 1.5px dashed var(--color-border-strong);
+  color: var(--color-primary);
+  font-size: 14px;
+  font-weight: 600;
+}
+.ws__new:active {
+  background: var(--color-surface-subtle);
+}
 
-        <div class="flex flex-wrap items-center gap-2">
-          <UiButton size="sm" variant="soft" tone="neutral" leading-icon="i-lucide-languages" @click="openQuickCapture">
-            Capture
-          </UiButton>
-
-          <UiPopover>
-            <UiButton size="sm" variant="ghost" tone="neutral" leading-icon="i-lucide-settings-2">
-              Settings
-            </UiButton>
-            <template #content>
-              <div class="w-72 space-y-2 p-2">
-                <div class="px-2 py-1">
-                  <p class="text-sm font-semibold text-content-on-surface">
-                    Quick settings
-                  </p>
-                  <p class="mt-0.5 text-xs text-content-secondary">
-                    Jump to focused preferences without leaving your flow.
-                  </p>
-                </div>
-                <NuxtLink v-for="link in quickSettingsLinks" :key="link.label" :to="link.to"
-                  class="flex items-center gap-3 rounded-[var(--radius-md)] px-2 py-2 transition hover:bg-surface-subtle focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)]">
-                  <span
-                    class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-primary/10 text-primary">
-                    <Icon :name="link.icon" class="h-4 w-4" />
-                  </span>
-                  <span class="min-w-0">
-                    <span class="block truncate text-sm font-medium text-content-on-surface">{{ link.label }}</span>
-                    <span class="block truncate text-xs text-content-secondary">{{ link.description }}</span>
-                  </span>
-                </NuxtLink>
-              </div>
-            </template>
-          </UiPopover>
-
-          <UiButton size="sm" leading-icon="i-lucide-plus" @click="openCreateWorkspace">
-            Create
-          </UiButton>
-        </div>
-      </section>
-
-      <UiPanel
-        v-if="continueWorkspace"
-        variant="subtle"
-        size="md"
-        class-name="bg-primary/5"
-        content-class="flex flex-wrap items-center gap-4">
-        <span class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface text-primary">
-          <Icon name="i-lucide-play" class="h-5 w-5" aria-hidden="true" />
-        </span>
-        <div class="min-w-0 flex-1">
-          <p class="text-sm font-semibold text-content-on-surface">
-            Pick up where you left off
-          </p>
-          <p class="mt-0.5 text-sm text-content-secondary">
-            {{ continueWorkspace.due }} card{{ continueWorkspace.due > 1 ? "s" : "" }} due in
-            <span class="font-medium text-content-on-surface">{{ continueWorkspace.workspace.title }}</span>
-          </p>
-        </div>
-        <UiButton size="sm" tone="primary" leading-icon="i-lucide-play"
-          :to="`/user/review?workspaceId=${continueWorkspace.workspace.id}`">
-          Review now
-        </UiButton>
-      </UiPanel>
-
-      <section class="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_18rem]">
-        <ReviewStatusCard minimal :show-context="false"
-          empty-message="Enroll flashcards or materials to start reviewing" />
-        <LanguageStatusCard minimal />
-        <UiPanel variant="surface" size="sm">
-          <div class="flex items-center gap-3">
-            <span
-              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-[var(--radius-md)] bg-white ring-1 ring-secondary">
-              <IntegrationAppsIcon class="h-5 w-5" />
-            </span>
-            <div class="min-w-0">
-              <p class="truncate text-sm font-semibold text-content-on-surface">
-                Apps
-              </p>
-              <p class="truncate text-xs text-content-secondary">
-                Import Jira tasks or Notion pages from any row.
-              </p>
-            </div>
-          </div>
-        </UiPanel>
-      </section>
-
-      <shared-error-message v-if="error" :error="error" :refresh="refresh" />
-
-      <UiPanel tag="section" variant="surface" size="xs" content-class="p-0">
-        <div
-          class="flex flex-col gap-3 border-b border-secondary p-3 md:flex-row md:items-center md:justify-between bg-surface-strong">
-          <div class="min-w-0">
-            <p class="text-sm font-semibold text-content-on-surface">
-              Workspace list
-            </p>
-            <p class="mt-0.5 text-xs text-content-secondary">
-              {{ visibleWorkspaceCount }} shown ·
-              {{ workspaceTotals.materials }} materials ·
-              {{ workspaceTotals.flashcards }} cards ·
-              {{ workspaceTotals.questions }} questions
-            </p>
-          </div>
-          <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <div class="flex items-center gap-1" role="group" aria-label="Sort workspaces">
-              <UiButton v-for="opt in sortOptions" :key="opt.value" size="xs"
-                :variant="sortBy === opt.value ? 'soft' : 'ghost'" tone="neutral" :aria-pressed="sortBy === opt.value"
-                @click="sortBy = opt.value">
-                {{ opt.label }}
-              </UiButton>
-            </div>
-            <UiInput v-model="searchQuery" type="search" placeholder="Search workspaces..." icon="i-lucide-search"
-              aria-label="Search workspaces" />
-          </div>
-        </div>
-
-        <div v-if="loading" class="divide-y divide-secondary">
-          <div v-for="n in 4" :key="n" class="flex items-center gap-3 p-4">
-            <UiSkeleton shape="rect" width="2.5rem" height="2.5rem"
-              class="h-10 w-10 rounded-full bg-muted/50 dark:bg-muted/30" />
-            <div class="min-w-0 flex-1 space-y-2">
-              <UiSkeleton shape="text" width="12rem" class="h-4 w-48 bg-muted/50 dark:bg-muted/30" />
-              <UiSkeleton shape="text" width="18rem" class="h-3 w-72 max-w-full bg-muted/50 dark:bg-muted/30" />
-            </div>
-            <UiSkeleton shape="rect" width="8rem" height="2rem"
-              class="hidden h-8 w-32 bg-muted/50 dark:bg-muted/30 sm:block" />
-          </div>
-        </div>
-
-        <div v-else-if="!hasWorkspaces" class="grid min-h-72 place-items-center p-6 text-center">
-          <div class="max-w-md">
-            <div
-              class="mx-auto flex h-12 w-12 items-center justify-center rounded-[var(--radius-lg)] bg-primary/10 text-primary">
-              <Icon name="i-lucide-folder-plus" class="h-6 w-6" />
-            </div>
-            <h2 class="mt-4 text-lg font-semibold text-content-on-surface">
-              Create your first workspace
-            </h2>
-            <p class="mt-2 text-sm text-content-secondary">
-              Start clean, import from Apps, or capture language as you study.
-            </p>
-            <div class="mt-5 flex flex-wrap justify-center gap-2">
-              <UiButton size="sm" leading-icon="i-lucide-plus" @click="openCreateWorkspace">
-                Create workspace
-              </UiButton>
-              <UiButton size="sm" variant="soft" tone="neutral" leading-icon="i-lucide-languages"
-                @click="openQuickCapture">
-                Capture word
-              </UiButton>
-            </div>
-          </div>
-        </div>
-
-        <div v-else-if="filteredWorkspaces.length === 0" class="grid min-h-56 place-items-center p-6 text-center">
-          <div>
-            <Icon name="i-lucide-search-x" class="mx-auto h-8 w-8 text-content-disabled" />
-            <p class="mt-3 text-sm font-medium text-content-on-surface">
-              No matching workspaces
-            </p>
-            <p class="mt-1 text-xs text-content-secondary">
-              Try a different search term.
-            </p>
-          </div>
-        </div>
-
-        <ul v-else class="divide-y divide-secondary">
-          <li v-for="workspace in sortedWorkspaces" :key="workspace.id"
-            class="group flex flex-col gap-3 p-3 transition hover:bg-surface-subtle/70 md:flex-row md:items-center">
-            <NuxtLink :to="`/workspaces/${workspace.id}`"
-              class="flex min-w-0 flex-1 items-start gap-3 rounded-[var(--radius-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)]">
-              <span
-                class="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                <Icon name="i-lucide-panels-top-left" class="h-5 w-5" />
-              </span>
-              <span class="min-w-0 flex-1">
-                <span class="flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span class="truncate text-sm font-semibold text-content-on-surface">
-                    {{ workspace.title }}
-                  </span>
-                  <span v-if="dueCount(workspace) > 0"
-                    class="inline-flex items-center rounded-full bg-error/10 px-2 py-0.5 text-xs font-medium text-error-text">
-                    {{ dueCount(workspace) }} due
-                  </span>
-                  <span v-else-if="isStale(workspace)"
-                    class="inline-flex items-center rounded-full bg-warning/15 px-2 py-0.5 text-xs font-medium text-warning-text">
-                    going stale
-                  </span>
-                  <span class="text-xs text-content-secondary">
-                    {{ formatUpdatedAt(workspace.updatedAt) }}
-                  </span>
-                </span>
-                <span v-if="workspace.description" class="mt-1 block line-clamp-1 text-sm text-content-secondary">
-                  {{ workspace.description }}
-                </span>
-                <span class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-content-secondary">
-                  <span>{{ workspaceSummary(workspace) }}</span>
-                  <span v-if="workspaceGap(workspace) > 0" class="inline-flex items-center gap-1 text-warning-text">
-                    <Icon name="i-lucide-sparkles" class="h-3 w-3" aria-hidden="true" />
-                    {{ workspaceGap(workspace) }} material{{ workspaceGap(workspace) > 1 ? "s" : "" }} not yet cards
-                  </span>
-                </span>
-                <span v-if="masteryFor(workspace.id) !== null" class="mt-2 flex items-center gap-2">
-                  <span class="h-1.5 w-32 max-w-full overflow-hidden rounded-full bg-surface-strong">
-                    <span class="block h-full rounded-full bg-success"
-                      :style="{ width: masteryFor(workspace.id) + '%' }" />
-                  </span>
-                  <span class="text-xs text-content-secondary">{{ masteryFor(workspace.id) }}% mastered</span>
-                </span>
-              </span>
-            </NuxtLink>
-
-            <div class="flex flex-wrap items-center gap-2 md:justify-end">
-              <UiButton v-if="rowAction(workspace) === 'review'" size="xs" tone="primary" leading-icon="i-lucide-play"
-                :to="`/user/review?workspaceId=${workspace.id}`">
-                Review {{ dueCount(workspace) }}
-              </UiButton>
-              <UiButton v-else-if="rowAction(workspace) === 'generate'" size="xs" variant="soft" tone="primary"
-                leading-icon="i-lucide-sparkles" :loading="generatingId === workspace.id"
-                :disabled="!!generatingId && generatingId !== workspace.id" @click="generateForWorkspace(workspace)">
-                Generate
-              </UiButton>
-              <UiButton v-else-if="rowAction(workspace) === 'refresh'" size="xs" variant="soft" tone="warning"
-                leading-icon="i-lucide-refresh-cw" :to="`/user/review?workspaceId=${workspace.id}`">
-                Refresh
-              </UiButton>
-              <UiButton v-else size="xs" variant="ghost" tone="neutral" :to="`/workspaces/${workspace.id}`"
-                trailing-icon="i-lucide-arrow-up-right">
-                Open
-              </UiButton>
-
-              <WorkspaceImportDialog :workspace-id="workspace.id" trigger-label="Apps" trigger-size="xs"
-                @imported="handleWorkspaceImportSynced" />
-
-              <UiIconButton icon="i-lucide-pencil" label="Edit workspace" size="xs" variant="ghost"
-                @click="editWorkspaceRow(workspace)" />
-
-              <UiActionMenu :items="workspaceMenuItems(workspace)"
-                :content="{ align: 'end', side: 'bottom', sideOffset: 4 }">
-                <UiIconButton icon="i-lucide-more-horizontal" label="Workspace actions" size="xs" variant="ghost" />
-              </UiActionMenu>
-            </div>
-          </li>
-        </ul>
-      </UiPanel>
-    </div>
-
-    <workspace-upsert-workspace-form :show="show" :workspace="editWorkspace" @cancel="cancelUpsertModal"
-      @created="refresh()" />
-
-    <shared-delete-confirmation-modal :show="showDeleteConfirm" title="Delete Workspace" :loading="deletingWorkspace"
-      @close="showDeleteConfirm = false" @confirm="confirmDeleteWorkspace">
-      Are you sure you want to delete this workspace? This action cannot be
-      undone.
-    </shared-delete-confirmation-modal>
-
-    <QuickCaptureModal :show="isQuickCaptureOpen" @close="closeQuickCapture" />
-  </shared-page-wrapper>
-</template>
+.ws-create {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-bottom: var(--space-2);
+}
+.ws-create__preview {
+  display: grid;
+  place-items: center;
+  width: 72px;
+  height: 72px;
+  margin: var(--space-2) auto var(--space-3);
+  border-radius: var(--radius-2xl);
+  color: var(--color-white);
+  font-size: 30px;
+  font-weight: 800;
+}
+.ws-create__swatches {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.ws-create__swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-full);
+  border: 2px solid transparent;
+}
+.ws-create__swatch--on {
+  border-color: var(--color-content-on-surface-strong);
+  transform: scale(1.1);
+}
+.ws-create__label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  color: var(--color-content-secondary);
+  margin-top: var(--space-2);
+}
+.ws-create__info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border-radius: var(--radius-xl);
+  background: var(--color-surface-subtle);
+  color: var(--color-content-secondary);
+  font-size: 12.5px;
+}
+</style>

@@ -77,27 +77,28 @@ function clearStaged() {
       role="alert"
       class-name="w-full border-error/20 bg-error/10"
       content-class="flex items-start gap-2 text-sm text-error-text">
-      <UIcon name="i-heroicons-exclamation-circle" class="w-5 h-5 flex-shrink-0 mt-0.5" />
+      <UiIcon name="i-lucide-circle-alert" class="w-5 h-5 flex-shrink-0 mt-0.5" />
       <span>{{ errorMsg }}</span>
     </UiPanel>
 
     <!-- Step 1: Record / Upload buttons (only when no audio is staged) -->
     <div v-if="!stagedAudio" class="flex flex-col sm:flex-row items-stretch gap-3 w-full">
-      <UiButton v-if="!isRecording" color="error" variant="soft" icon="i-heroicons-microphone"
+      <UiButton v-if="!isRecording" color="error" variant="soft" icon="i-lucide-mic"
         class="flex-1 justify-center transition-all active:scale-[0.98]" @click="startRecording" size="md">
         Record Voice
       </UiButton>
-      <UiButton v-else color="error" variant="solid" icon="i-heroicons-stop-circle"
+      <UiButton v-else color="error" variant="solid" icon="i-lucide-circle-stop"
         class="flex-1 justify-center transition-all shadow-[var(--shadow-dropdown)] active:scale-[0.98]" @click="stopRecording" size="md">
         Stop Recording
       </UiButton>
 
       <div class="relative flex-1 flex flex-col">
-        <UiButton color="neutral" variant="soft" icon="i-heroicons-arrow-up-tray"
+        <UiButton color="neutral" variant="soft" icon="i-lucide-upload"
           class="flex-1 justify-center transition-all active:scale-[0.98]" :disabled="isRecording"
           @click="() => fileInput?.click()" size="md">
           Upload Audio
         </UiButton>
+        <!-- design-allow: native file picker, hidden and triggered by the Upload button -->
         <input type="file" ref="fileInput" accept="audio/*" class="hidden" @change="handleFileUpload" />
       </div>
     </div>
@@ -110,7 +111,7 @@ function clearStaged() {
           <p class="text-sm font-medium text-content-on-surface truncate">{{ stagedAudio.label }}</p>
           <p class="text-xs text-content-secondary">Ready to transcribe</p>
         </div>
-        <UiButton size="xs" color="neutral" variant="ghost" icon="i-heroicons-x-mark" @click="clearStaged"
+        <UiButton size="xs" color="neutral" variant="ghost" icon="i-lucide-x" @click="clearStaged"
           aria-label="Remove" />
       </UiPanel>
 
@@ -119,7 +120,7 @@ function clearStaged() {
 
       <div class="flex gap-2 justify-end">
         <UiButton variant="ghost" size="sm" @click="clearStaged">Cancel</UiButton>
-        <UiButton color="primary" size="sm" icon="i-heroicons-sparkles" @click="confirmTranscribe">
+        <UiButton color="primary" size="sm" icon="i-lucide-sparkles" @click="confirmTranscribe">
           Transcribe
         </UiButton>
       </div>

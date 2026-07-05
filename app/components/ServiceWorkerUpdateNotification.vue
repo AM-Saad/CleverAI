@@ -18,7 +18,7 @@
 
               <!-- Message -->
               <div>
-                <h3 class="font-semibold text-sm">{{ bannerTitle }}</h3>
+                <ui-title tag="h3" size="sm" weight="semibold" color="white">{{ bannerTitle }}</ui-title>
                 <p class="text-xs opacity-90">{{ bannerSubtitle }}</p>
               </div>
             </div>
@@ -67,10 +67,10 @@
         class-name="bg-surface/95 backdrop-blur shadow-[var(--shadow-modal)]"
         content-class="text-sm space-y-3">
         <header class="flex items-center justify-between">
-          <h3 class="font-semibold flex items-center gap-2">
-            <Icon name="heroicons:cloud" class="w-4 h-4 text-primary" />
+          <ui-title tag="h3" size="base" weight="semibold" color="content-on-surface" class="flex items-center gap-2">
+            <Icon name="i-lucide-cloud" class="w-4 h-4 text-primary" />
             Service Worker
-          </h3>
+          </ui-title>
           <div class="flex items-center gap-2">
             <UiBadge :color="updateAvailable ? 'warning' : (isControlling ? 'success' : 'neutral')" variant="subtle"
               size="xs">
@@ -80,7 +80,7 @@
               v{{ version }}
             </UiBadge>
             <UiButton size="xs" variant="ghost" @click="toggleDebugPanel">
-              <Icon name="heroicons:x-mark" class="w-3 h-3" />
+              <Icon name="i-lucide-x" class="w-3 h-3" />
             </UiButton>
           </div>
         </header>
@@ -116,39 +116,39 @@
         </section>
         <!-- Debug Controls (Development Mode) -->
         <UiPanel variant="subtle" size="md" class-name="mb-4 border-warning/20 bg-warning/10">
-          <h4 class="font-medium text-warning-text mb-2 flex items-center gap-2">
-            <Icon name="heroicons:wrench-screwdriver" class="w-4 h-4" />
+          <ui-title tag="h4" size="base" weight="medium" color="warning" class="mb-2 flex items-center gap-2">
+            <Icon name="i-lucide-wrench" class="w-4 h-4" />
             Debug Controls
-          </h4>
+          </ui-title>
           <div class="flex flex-wrap gap-2">
-            <UiButton size="xs" @click="forceServiceWorkerUpdate" variant="outline">
+            <UiButton size="xs" @click="forceServiceWorkerUpdate" variant="soft">
               Force SW Update
             </UiButton>
-            <UiButton size="xs" @click="forceServiceWorkerControl" variant="outline">
+            <UiButton size="xs" @click="forceServiceWorkerControl" variant="soft">
               Claim Control
             </UiButton>
-            <UiButton size="xs" @click="simulateUpdateAvailable" variant="outline">
+            <UiButton size="xs" @click="simulateUpdateAvailable" variant="soft">
               Simulate Update
             </UiButton>
-            <UiButton size="xs" @click="debugServiceWorker" variant="outline">
+            <UiButton size="xs" @click="debugServiceWorker" variant="soft">
               Debug SW
             </UiButton>
-            <UiButton size="xs" @click="manualRefresh" variant="outline">
+            <UiButton size="xs" @click="manualRefresh" variant="soft">
               Manual Refresh
             </UiButton>
-            <UiButton size="xs" @click="resetUpdateState" variant="outline" color="error">
+            <UiButton size="xs" @click="resetUpdateState" variant="soft" color="error">
               Reset State
             </UiButton>
           </div>
         </UiPanel>
 
         <footer class="flex items-center justify-between pt-2 border-t text-xs text-content-secondary">
-          <button @click="showModal = true" class="underline hover:text-content-on-background">
+          <UiButton size="xs" variant="link" @click="showModal = true">
             Open Panel
-          </button>
-          <button @click="toggleCollapsed" class="underline hover:text-content-on-background">
+          </UiButton>
+          <UiButton size="xs" variant="link" @click="toggleCollapsed">
             {{ collapsed ? "Expand" : "Collapse" }}
-          </button>
+          </UiButton>
         </footer>
       </UiPanel>
     </div>
@@ -297,7 +297,7 @@ const bannerTitle = computed(() => isUpdating.value ? 'Updating App...' : 'New V
 const bannerSubtitle = computed(() => isUpdating.value ? 'Please wait while we update the app...' : `Get the latest features and improvements${version.value ? ` (v${version.value})` : ''}.`);
 const progressPercent = computed(() => refreshing.value ? 100 : 60);
 const swStateBadge = computed(() => updateAvailable.value ? 'Update' : (isControlling.value ? 'Active' : 'Inactive'));
-const iconName = computed(() => isUpdating.value ? 'heroicons:arrow-path' : 'heroicons:sparkles');
+const iconName = computed(() => isUpdating.value ? 'i-lucide-refresh-cw' : 'i-lucide-sparkles');
 
 if (isDev) {
   onMounted(() => console.debug('[SW Update] mounted'));

@@ -119,7 +119,7 @@ const toolControls = computed<NoteToolbarControl[]>(() => [
     hideLabelOnMobile: true,
     active: isShapeToolActive.value,
     icon: currentShapeTool.value.icon,
-    trailingIcon: "i-heroicons-chevron-down",
+    trailingIcon: "i-lucide-chevron-down",
     items: shapeDropdownItems.value,
   },
 ]);

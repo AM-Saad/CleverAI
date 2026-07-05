@@ -102,94 +102,187 @@ const formattedDate = computed(() => {
       item.isLoading && 'opacity-60 pointer-events-none grayscale',
     ]"
   >
-    <UiInteractiveCard
+    <!-- Drag Handle (Mobile/Tablet Friendly) -->
+    <div class="board-item-card__drag" aria-hidden="true">
+      <div class="board-item-card__drag-dot" />
+      <div class="board-item-card__drag-dot" />
+      <div class="board-item-card__drag-dot" />
+    </div>
+
+    <UiItemCard
+      clickable
       :selected="isSelected"
-      selectable
-      variant="outline"
-      size="xs"
+      variant="soft"
+      size="sm"
       :disabled="item.isLoading"
-      :class-name="[
-        'relative cursor-pointer transition-all duration-200 hover:-translate-y-0.5',
-        item.error && 'border-error/30 bg-error/5',
-      ].filter(Boolean).join(' ')"
+      :show-body="false"
+      :class-name="
+        ['board-item-card__surface', item.error && 'border-error/30 bg-error/5']
+          .filter(Boolean)
+          .join(' ')
+      "
       @click="emit('select')"
     >
-    <!-- Drag Handle (Mobile/Tablet Friendly) -->
-    <div
-      class="lg:opacity-0 lg:group-hover:opacity-100 absolute -left-1 top-1/2 -translate-y-1/2 w-2 h-6 flex flex-col justify-center items-center gap-0.5 text-content-disabled cursor-grab active:cursor-grabbing transition-opacity"
-      aria-hidden="true">
-      <div class="w-1 h-1 bg-current rounded-full" />
-      <div class="w-1 h-1 bg-current rounded-full" />
-      <div class="w-1 h-1 bg-current rounded-full" />
-    </div>
+      <template #title>
+        <span dir="auto">{{ plainContent.slice(0, 40) }}</span>
+      </template>
+      <template v-if="item.isLoading || item.error" #status>
+        <Icon
+          v-if="item.isLoading"
+          name="svg-spinners:ring-resize"
+          class="h-4 w-4 text-primary"
+        />
+        <Icon
+          v-else-if="item.error"
+          name="i-lucide-circle-alert"
+          class="h-4 w-4 text-error-text"
+          :title="item.error"
+        />
+      </template>
 
-    <!-- Loading/Error indicators -->
-    <div v-if="item.isLoading" class="absolute top-3 right-3 flex items-center gap-1 text-primary">
-      <Icon name="svg-spinners:ring-resize" class="w-4 h-4" />
-    </div>
+      <template v-if="noteTags.length" #kicker>
+        <UiPill
+          v-for="tag in noteTags"
+          :key="tag.id"
+          size="sm"
+          variant="fill"
+          :label="tag.name"
+          :color="tag.color ?? 'var(--color-primary)'"
+          max-width="150px"
+        />
+      </template>
 
-    <div v-if="item.error" class="absolute top-3 right-3 text-error-text" :title="item.error">
-      <Icon name="heroicons:exclamation-circle" class="w-4 h-4" />
-    </div>
-
-    <!-- Item content preview -->
-    <div class="space-y-3">
-      <!-- Content -->
-      <UiParagraph class="line-clamp-3 leading-relaxed">
-        {{ plainContent.slice(0, 40) }}
-      </UiParagraph>
-
-      <!-- Tags -->
-      <UiBadge v-for="tag in noteTags" :key="tag.id" :style="{
-        backgroundColor: tag.color,
-        color: 'var(--color-on-primary)',
-      }" variant="solid" size="sm" class="rounded-full px-2.5 mr-0.5">
-        {{ tag.name }}
-      </UiBadge>
-
-      <!-- Due date + attachments row -->
-      <div v-if="dueDateInfo || attachmentCount > 0" class="flex items-center gap-2 flex-wrap mt-0.5">
-        <span v-if="dueDateInfo" :class="[
-          'inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5',
-          dueDateInfo.isOverdue
-            ? 'bg-error/10 text-error-text dark:bg-error/20'
-            : 'bg-success/10 text-success-text dark:bg-success/20',
-        ]">
-          <Icon name="heroicons:calendar-days" class="w-3 h-3" />
-          {{ dueDateInfo.label }}
-        </span>
-        <span v-if="attachmentCount > 0"
-          class="inline-flex items-center gap-1 text-[10px] font-semibold rounded-full px-2 py-0.5 bg-secondary text-content-secondary">
-          <Icon name="heroicons:paper-clip" class="w-3 h-3" />
-          {{ attachmentCount }}
-        </span>
-      </div>
-
-      <!-- Footer: Date + Actions -->
-      <div
-        class="flex items-center justify-between text-[10px] font-semibold text-content-secondary uppercase pt-2 border-t border-secondary">
-        <span class="truncate">{{ formattedDate }}</span>
-      </div>
-    </div>
-    </UiInteractiveCard>
+      <template #footer>
+        <UiPill
+          v-if="dueDateInfo"
+          size="sm"
+          variant="outline"
+          :active="dueDateInfo.isOverdue"
+          :label="dueDateInfo.label"
+          :color="
+            dueDateInfo.isOverdue
+              ? 'var(--color-error)'
+              : 'var(--color-success)'
+          "
+          max-width="92px"
+        >
+          <template #indicator>
+            <UiPillIcon name="i-lucide-calendar-days" size="sm" />
+          </template>
+        </UiPill>
+        <UiPill
+          v-if="attachmentCount > 0"
+          size="sm"
+          :label="String(attachmentCount)"
+          color="var(--color-content-secondary)"
+          max-width="76px"
+        >
+          <template #indicator>
+            <UiPillIcon name="i-lucide-paperclip" size="sm" />
+          </template>
+        </UiPill>
+        <span class="board-item-card__date">{{ formattedDate }}</span>
+      </template>
+    </UiItemCard>
 
     <!-- Secondary actions are siblings, not nested inside the clickable card target. -->
-    <div class="absolute bottom-2 right-2 z-10 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-      <UiActionMenu :items="columnOptions" :content="{ align: 'start', side: 'bottom', sideOffset: 4 }">
-        <UiIconButton icon="heroicons:arrows-right-left" label="Move to column" size="xs" variant="ghost"
-          class="hover:bg-primary/10" />
+    <div
+      class="absolute bottom-2 right-2 z-10 flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+    >
+      <UiActionMenu
+        :items="columnOptions"
+        :content="{ align: 'start', side: 'bottom', sideOffset: 4 }"
+      >
+        <UiIconButton
+          icon="i-lucide-arrow-left-right"
+          label="Move to column"
+          size="xs"
+          variant="ghost"
+          class="hover:bg-primary/10"
+        />
       </UiActionMenu>
 
-      <UiIconButton icon="heroicons:trash" label="Delete note" size="xs" variant="ghost"
-        class="hover:bg-error/10 hover:text-error-text" @click.stop="emit('delete')" />
+      <UiDoubleTapDeleteButton
+        hide-label
+        stop-propagation
+        icon="i-lucide-trash-2"
+        label="Delete item"
+        armed-label="Tap again to delete item"
+        size="xs"
+        variant="ghost"
+        class="hover:bg-error/10 hover:text-error-text"
+        :reset-key="item.id"
+        @confirm="emit('delete')"
+      />
     </div>
 
     <!-- Dirty indicator -->
-    <div v-if="item.isDirty && !item.error"
+    <div
+      v-if="item.isDirty && !item.error"
       class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-warning rounded-full border-2 border-white shadow-[var(--shadow-dropdown)]"
-      title="Unsaved changes" />
-    <div v-else-if="item.error"
+      title="Unsaved changes"
+    />
+    <div
+      v-else-if="item.error"
       class="absolute -top-1 -right-1 w-2.5 h-2.5 bg-error rounded-full border-2 border-white shadow-[var(--shadow-dropdown)]"
-      title="Sync failed. Open item details to retry." />
+      title="Sync failed. Open item details to retry."
+    />
   </div>
 </template>
+
+<style scoped>
+.board-item-card__surface {
+  padding-right: calc(var(--space-3) + 56px);
+}
+
+.board-item-card__drag {
+  position: absolute;
+  left: calc(var(--space-1) * -1);
+  top: 50%;
+  z-index: 1;
+  display: flex;
+  width: var(--space-2);
+  height: var(--space-6);
+  cursor: grab;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--color-content-disabled);
+  opacity: 1;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+  transform: translateY(-50%);
+}
+
+.board-item-card__drag:active {
+  cursor: grabbing;
+}
+
+.board-item-card__drag-dot {
+  width: var(--space-1);
+  height: var(--space-1);
+  border-radius: var(--radius-full);
+  background: currentColor;
+}
+
+.board-item-card__date {
+  margin-left: auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0;
+  color: var(--color-content-secondary);
+}
+
+@media (min-width: 1024px) {
+  .board-item-card__drag {
+    opacity: 0;
+  }
+
+  .group:hover .board-item-card__drag {
+    opacity: 1;
+  }
+}
+</style>

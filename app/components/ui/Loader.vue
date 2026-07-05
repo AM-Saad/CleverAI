@@ -1,7 +1,7 @@
 <template>
   <div v-if="isFetching" class="flex items-center justify-center flex-1" role="status" aria-live="polite" aria-busy="true">
     <div class="flex items-center gap-2 text-muted dark:text-light text-sm">
-      <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin" />
+      <UiIcon name="i-lucide-refresh-cw" class="w-5 h-5 animate-spin" />
       <span>{{ label }}</span>
     </div>
   </div>
@@ -14,7 +14,7 @@ interface Props {
   isFetching?: boolean;
   label?: string;
 }
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   isFetching: false,
   label: "Loading...",
 });

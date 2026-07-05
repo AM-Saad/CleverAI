@@ -34,7 +34,7 @@
           </ui-button>
         </div>
 
-        <u-collapsible class="flex flex-col min-h-0">
+        <UiCollapsible class="flex flex-col min-h-0">
 
           <ui-paragraph size="xs" color="content-on-background" class="font-medium mb-2 text-wrap mr-12 cursor-pointer">
             {{ idx + 1 }}. {{ q.question }}</ui-paragraph>
@@ -54,7 +54,7 @@
 
             </div>
           </template>
-        </u-collapsible>
+        </UiCollapsible>
       </UiCard>
     </div>
   </div>
