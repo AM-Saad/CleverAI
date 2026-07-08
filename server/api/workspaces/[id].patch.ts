@@ -1,10 +1,16 @@
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
+import { WorkspaceSummarySchema } from "@@/shared/utils/workspace.contract";
+import { workspaceSummarySelect } from "~~/server/utils/workspaceSummary";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
   const prisma = event.context.prisma;
   const id = getRouterParam(event, "id");
+
+  if (!id) {
+    throw Errors.badRequest("Workspace ID is required");
+  }
 
   const raw = await readBody(event);
   const ParsedUpdateDTO = UpdateWorkspaceDTO;
@@ -38,10 +44,9 @@ export default defineEventHandler(async (event) => {
     workspaceData.rawText = body.rawText ?? null;
   }
 
-  let materialCreated = false;
   if (body.materialContent) {
     const materialData = {
-      workspaceId: id!,
+      workspaceId: id,
       title: body.materialTitle || "Workspace Content",
       content: body.materialContent,
       type: body.materialType || "text",
@@ -60,33 +65,26 @@ export default defineEventHandler(async (event) => {
     } else {
       await prisma.material.create({ data: materialData });
     }
-    materialCreated = true;
   }
 
-  let updated = existing;
-  if (Object.keys(workspaceData).length > 0) {
-    updated = await prisma.workspace.update({
-      where: { id: id },
-      data: workspaceData,
-      include: { materials: true, flashcards: true, questions: true },
-    });
-  } else {
-    const freshWorkspace = await prisma.workspace.findUnique({
-      where: { id: id },
-      include: { materials: true, flashcards: true, questions: true },
-    });
-    if (freshWorkspace) updated = freshWorkspace;
-  }
-  if (materialCreated && !Object.keys(workspaceData).length) {
-    const freshWorkspace = await prisma.workspace.findUnique({
-      where: { id: id },
-      include: { materials: true, flashcards: true, questions: true },
-    });
-    if (freshWorkspace) updated = freshWorkspace;
+  const updated =
+    Object.keys(workspaceData).length > 0
+      ? await prisma.workspace.update({
+          where: { id: id },
+          data: workspaceData,
+          select: workspaceSummarySelect,
+        })
+      : await prisma.workspace.findUnique({
+          where: { id: id },
+          select: workspaceSummarySelect,
+        });
+
+  if (!updated) {
+    throw Errors.notFound("Workspace");
   }
 
   if (process.env.NODE_ENV === "development") {
-    WorkspaceSchema.parse(updated);
+    WorkspaceSummarySchema.parse(updated);
   }
   return success(updated);
 });

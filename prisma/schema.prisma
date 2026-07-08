@@ -105,6 +105,8 @@ model Material {
   // Relations to generated content
   flashcards  Flashcard[]
   questions   Question[]
+
+  @@index([workspaceId])
 }
 
 model Note {
@@ -399,6 +401,7 @@ model Question {
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
+  @@index([workspaceId])
   @@index([materialId])
 }
 
@@ -417,6 +420,7 @@ model Flashcard {
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
+  @@index([workspaceId])
   @@index([materialId])
 }
 
@@ -447,6 +451,7 @@ model CardReview {
 
   @@unique([userId, cardId], name: "userId_cardId")
   @@index([userId, nextReviewAt])
+  @@index([userId, workspaceId])
   @@index([workspaceId, nextReviewAt])
 }
 

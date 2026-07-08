@@ -185,7 +185,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, reactive, computed, watch } from "vue";
 import { ACCENT_TOKENS, accentVarFor } from "~/composables/useAccentColor";
 import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace";
 import {
@@ -193,7 +193,7 @@ import {
   useUpdateWorkspace,
   useDeleteWorkspace,
 } from "~/composables/workspaces/useWorkspaces";
-import type { Workspace } from "#shared/utils/workspace.contract";
+import type { WorkspaceSummary } from "#shared/utils/workspace.contract";
 import type { ReviewWorkspaceStats } from "@shared/utils/review.contract";
 
 const { $api } = useNuxtApp();
@@ -210,14 +210,17 @@ const { createWorkspace, creating } = useCreateWorkspace(refresh);
 const { updateWorkspace, updating } = useUpdateWorkspace();
 const { deleteWorkspace } = useDeleteWorkspace(refresh);
 
-const workspaces = computed<Workspace[]>(() => wsList.value ?? []);
+const workspaces = computed<WorkspaceSummary[]>(() => wsList.value ?? []);
 const createOpen = ref(false);
 const accentTokens = ACCENT_TOKENS;
 const statsById = ref<Record<string, ReviewWorkspaceStats>>({});
+const workspaceIdsKey = computed(() => workspaces.value.map((w) => w.id).join(","));
+const handledEditId = ref<string | null>(null);
+const handledNewIntent = ref(false);
 
 // Row actions / edit state
 const actionsOpen = ref(false);
-const actionTarget = ref<Workspace | null>(null);
+const actionTarget = ref<WorkspaceSummary | null>(null);
 const editingId = ref<string | null>(null);
 
 const form = reactive({
@@ -233,7 +236,7 @@ function initial(name: string) {
 function gradientFromToken(token: string) {
   return `linear-gradient(135deg, var(${token}), color-mix(in srgb, var(${token}) 62%, black))`;
 }
-function gradientFor(w: Workspace) {
+function gradientFor(w: WorkspaceSummary) {
   const meta = w.metadata as Record<string, unknown> | null;
   const token =
     typeof meta?.color === "string" && meta.color.startsWith("--")
@@ -301,7 +304,7 @@ function startCreate() {
 }
 
 // ── Row actions ─────────────────────────────────────────────────────────────
-function openActions(w: Workspace) {
+function openActions(w: WorkspaceSummary) {
   actionTarget.value = w;
   actionsOpen.value = true;
 }
@@ -334,32 +337,46 @@ async function onDeleteTap() {
   await deleteWorkspace(w.id);
   actionsOpen.value = false;
   toast.add({ title: "Workspace deleted", color: "neutral" });
-  await refresh();
   await loadStats();
 }
 
 async function loadStats() {
   const ids = workspaces.value.map((w) => w.id);
-  if (!ids.length) return;
+  if (!ids.length) {
+    statsById.value = {};
+    return;
+  }
   const res = await $api.review.getStatsBatch(ids);
   if (res.success) statsById.value = res.data.stats;
 }
 
-onMounted(async () => {
-  await refresh();
-  await loadStats();
+function handleRouteIntents() {
   // Deep-link from the workspace overview's edit button.
   const editId = route.query.edit as string | undefined;
-  if (editId) {
+  if (editId && handledEditId.value !== editId) {
     const w = workspaces.value.find((x) => x.id === editId);
     if (w) {
       actionTarget.value = w;
+      handledEditId.value = editId;
       startEdit();
     }
   }
   // Deep-link from the quick-switcher's "New workspace".
-  if (route.query.new) startCreate();
-});
+  if (route.query.new && !handledNewIntent.value) {
+    handledNewIntent.value = true;
+    startCreate();
+  }
+}
+
+watch(workspaceIdsKey, () => {
+  void loadStats();
+}, { immediate: true });
+
+watch(
+  [workspaces, () => route.query.edit, () => route.query.new],
+  handleRouteIntents,
+  { immediate: true },
+);
 </script>
 
 <style scoped>

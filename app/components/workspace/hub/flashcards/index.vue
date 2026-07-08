@@ -1,18 +1,20 @@
 <script setup lang="ts">
 import { useRoute } from "vue-router";
-import { computed } from "vue";
-import type { Flashcard } from "@prisma/client";
+import { computed, onMounted, ref } from "vue";
+import type { WorkspaceStudyContent } from "@@/shared/utils/workspace.contract";
+
+type FlashcardItem = WorkspaceStudyContent["flashcards"][number];
 
 const route = useRoute();
 const id = route.params.id as string;
 
-const { workspace, refresh: refreshWorkspace } = useWorkspace(id);
+const { studyContent, refresh: refreshWorkspace } = useWorkspaceStudyContent(id);
 
 // Context Bridge integration
 const contextBridge = useContextBridge();
 
 const existingFlashcards = computed(
-  () => (workspace.value as Workspace | null | undefined)?.flashcards || [],
+  () => studyContent.value?.flashcards ?? [],
 );
 
 
@@ -50,11 +52,11 @@ function handleEnrollError(error: string) {
   console.error("Failed to enroll card:", error);
 }
 
-function handleFlashcardCreated(_flashcard: Flashcard) {
+function handleFlashcardCreated(_flashcard: unknown) {
   refreshWorkspace();
 }
 
-function handleFlashcardUpdated(_flashcard: Flashcard) {
+function handleFlashcardUpdated(_flashcard: unknown) {
   refreshWorkspace();
   editingFlashcard.value = undefined;
 }
@@ -65,7 +67,7 @@ function handleFlashcardDeleted() {
 }
 
 // Edit/Delete actions
-function openEditModal(card: Flashcard) {
+function openEditModal(card: FlashcardItem) {
   editingFlashcard.value = {
     id: card.id,
     front: card.front,
@@ -74,7 +76,7 @@ function openEditModal(card: Flashcard) {
   showCreateModal.value = true;
 }
 
-function openDeleteModal(card: Flashcard) {
+function openDeleteModal(card: FlashcardItem) {
   deletingFlashcard.value = {
     id: card.id,
     isEnrolled: props.enrolledIds.has(card.id),
@@ -93,7 +95,7 @@ onMounted(() => {
 
 // Filter draft cards for bulk enrollment
 const draftCards = computed(() =>
-  cardsToShow.value.filter((card: any) => card.status === 'DRAFT')
+  cardsToShow.value.filter((card) => card.status === 'DRAFT')
 );
 
 const bulkEnrolling = ref(false);
@@ -102,7 +104,7 @@ async function bulkEnrollDrafts() {
   if (draftCards.value.length === 0) return;
 
   bulkEnrolling.value = true;
-  const draftIds = draftCards.value.map((card: any) => card.id);
+  const draftIds = draftCards.value.map((card) => card.id);
   const success = await contextBridge.bulkEnroll(draftIds, 'flashcard');
 
   if (success) {

@@ -154,7 +154,7 @@ import { useQuickNoteCapture } from "~/features/notes/composables/useQuickNoteCa
 import QuickWordTranslator from "~/features/language-learning/components/QuickWordTranslator.vue";
 import QuickBoardItemEditor from "~/features/board/components/QuickBoardItemEditor.vue";
 import { useQuickBoardItemCapture } from "~/features/board/composables/useQuickBoardItemCapture";
-import type { Workspace } from "@@/shared/utils/workspace.contract";
+import type { WorkspaceSummary } from "@@/shared/utils/workspace.contract";
 
 const props = defineProps<{ open: boolean }>();
 const emit = defineEmits<{
@@ -213,11 +213,11 @@ const workspaceScopedActions = new Set<CaptureAction>([
 const selectedWorkspaceId = ref<string | null>(null);
 const isWorkspacePickerOpen = ref(false);
 
-const workspaceList = computed<Workspace[]>(() => workspaces.value ?? []);
+const workspaceList = computed<WorkspaceSummary[]>(() => workspaces.value ?? []);
 const showWorkspaceTarget = computed(
   () => workspaceLoading.value || workspaceList.value.length > 0,
 );
-const selectedWorkspace = computed<Workspace | null>(
+const selectedWorkspace = computed<WorkspaceSummary | null>(
   () =>
     workspaceList.value.find(
       (workspace) => workspace.id === selectedWorkspaceId.value,
@@ -246,7 +246,7 @@ function isActionWaitingForWorkspace(key: CaptureAction) {
   );
 }
 
-function accentFor(workspace: Workspace) {
+function accentFor(workspace: WorkspaceSummary) {
   const meta = workspace.metadata as Record<string, unknown> | null;
   if (typeof meta?.color === "string" && meta.color.startsWith("--")) {
     return `var(${meta.color})`;

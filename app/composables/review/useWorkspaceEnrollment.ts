@@ -1,10 +1,12 @@
 import type { EnrollCardResponse } from "~/shared/utils/review.contract";
+import type { Ref } from "vue";
+import type { WorkspaceStudyContent } from "@@/shared/utils/workspace.contract";
 
 import { useOperation } from "~/composables/shared/useOperation";
 
 export function useWorkspaceEnrollment(
   workspaceId: string | Ref<string>,
-  workspace: Ref<Workspace | null | undefined>
+  studyContent: Ref<WorkspaceStudyContent | null | undefined>
 ) {
   const { $api } = useNuxtApp();
 
@@ -17,19 +19,22 @@ export function useWorkspaceEnrollment(
   // Helper to ensure we have a string ID
   const resolvedWorkspaceId = computed(() => unref(workspaceId));
 
-
   // Optimization: Don't fetch if workspace has no content
-  const hasQuestions = computed(() => workspace.value?.questions && workspace.value.questions.length > 0);
-  const hasFlashcards = computed(() => workspace.value?.flashcards && workspace.value.flashcards.length > 0);
+  const hasQuestions = computed(() => (studyContent.value?.questions?.length ?? 0) > 0);
+  const hasFlashcards = computed(() => (studyContent.value?.flashcards?.length ?? 0) > 0);
 
   const fetchEnrollments = async () => {
     const fId = resolvedWorkspaceId.value;
-    const currentWorkspace = workspace.value;
+    const currentContent = studyContent.value;
 
-    if (!fId || !currentWorkspace) return;
+    if (!fId || !currentContent) return;
 
 
-    if (!hasQuestions.value && !hasFlashcards.value) return;
+    if (!hasQuestions.value && !hasFlashcards.value) {
+      enrolledQuestionIds.value.clear();
+      enrolledFlashcardIds.value.clear();
+      return;
+    }
 
     const response = await enrollmentOperation.execute(() =>
       $api.review.getEnrollmentStatus(undefined, undefined, fId)
@@ -41,11 +46,11 @@ export function useWorkspaceEnrollment(
       enrolledFlashcardIds.value.clear();
 
       // Populate sets based on known IDs in the workspace
-      currentWorkspace.questions?.forEach((q) => {
+      currentContent.questions.forEach((q) => {
         if (q.id && enrollments[q.id]) enrolledQuestionIds.value.add(q.id);
       });
 
-      currentWorkspace.flashcards?.forEach((f) => {
+      currentContent.flashcards.forEach((f) => {
         if (f.id && enrollments[f.id]) enrolledFlashcardIds.value.add(f.id);
       });
     }
@@ -53,7 +58,7 @@ export function useWorkspaceEnrollment(
 
   // Auto-fetch when workspace data becomes available
   watch(
-    workspace,
+    studyContent,
     (newVal) => {
       if (newVal) fetchEnrollments();
     },

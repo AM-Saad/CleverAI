@@ -1,6 +1,6 @@
-import type { Workspace } from "@shared/utils/workspace.contract";
+import type { WorkspaceSummary } from "@shared/utils/workspace.contract";
 
-type WorkspaceSummary = Pick<Workspace, "id" | "title">;
+type ReviewWorkspaceSummary = Pick<WorkspaceSummary, "id" | "title">;
 
 export const useReviewPage = () => {
   const route = useRoute();
@@ -11,7 +11,7 @@ export const useReviewPage = () => {
     const id = route.query.workspaceId;
     return typeof id === "string" ? id : undefined;
   });
-  const currentWorkspace = ref<WorkspaceSummary | null>(null);
+  const currentWorkspace = ref<ReviewWorkspaceSummary | null>(null);
 
   const fetchWorkspaceInfo = async () => {
     if (!workspaceId.value) {

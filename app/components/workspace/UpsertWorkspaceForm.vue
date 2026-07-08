@@ -1,6 +1,9 @@
 <script setup lang="ts">
 
-import type { CreateWorkspaceDTO } from "@@/shared/utils/workspace.contract";
+import type {
+  CreateWorkspaceDTO,
+  WorkspaceSummary,
+} from "@@/shared/utils/workspace.contract";
 import type { FormSubmitEvent } from "@nuxt/ui";
 const toast = useToast();
 
@@ -14,7 +17,7 @@ const canSubmit = computed(
 const props = defineProps({
   show: Boolean,
   workspace: {
-    type: Object as () => Workspace | null,
+    type: Object as () => WorkspaceSummary | null,
     default: null,
   },
 });

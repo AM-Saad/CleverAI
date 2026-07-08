@@ -1,5 +1,7 @@
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
+import { WorkspaceSummarySchema } from "@@/shared/utils/workspace.contract";
+import { workspaceSummarySelect } from "~~/server/utils/workspaceSummary";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -29,9 +31,12 @@ export default defineEventHandler(async (event) => {
       order: nextOrder,
       user: { connect: { id: user.id } },
     },
+    select: workspaceSummarySelect,
   });
 
-  if (process.env.NODE_ENV === "development") WorkspaceSchema.parse(created);
+  if (process.env.NODE_ENV === "development") {
+    WorkspaceSummarySchema.parse(created);
+  }
   setResponseStatus(event, 201);
   return success(created);
 });

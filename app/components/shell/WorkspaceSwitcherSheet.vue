@@ -123,7 +123,7 @@
 import { ref, computed, watch } from "vue";
 import { ACCENT_TOKENS, accentVarFor } from "~/composables/useAccentColor";
 import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace";
-import type { Workspace } from "#shared/utils/workspace.contract";
+import type { WorkspaceSummary } from "#shared/utils/workspace.contract";
 import type { ReviewWorkspaceStats } from "@shared/utils/review.contract";
 
 const { $api } = useNuxtApp();
@@ -137,7 +137,7 @@ const {
   closeSwitcher,
 } = useActiveWorkspace();
 
-const workspaces = computed<Workspace[]>(() => wsList.value ?? []);
+const workspaces = computed<WorkspaceSummary[]>(() => wsList.value ?? []);
 const query = ref("");
 const statsById = ref<Record<string, ReviewWorkspaceStats>>({});
 
@@ -158,16 +158,16 @@ function gradientFromToken(token: string) {
 function accentTokenFromVar(v: string) {
   return v.match(/var\((--[a-z-]+)\)/)?.[1] ?? "--color-accent-indigo";
 }
-function tokenFor(w: Workspace) {
+function tokenFor(w: WorkspaceSummary) {
   const meta = w.metadata as Record<string, unknown> | null;
   return typeof meta?.color === "string" && meta.color.startsWith("--")
     ? meta.color
     : accentTokenFromVar(accentVarFor(w.id));
 }
-function gradientFor(w: Workspace) {
+function gradientFor(w: WorkspaceSummary) {
   return gradientFromToken(tokenFor(w));
 }
-function accentFor(w: Workspace) {
+function accentFor(w: WorkspaceSummary) {
   return `var(${tokenFor(w)})`;
 }
 function metaFor(id: string) {
@@ -180,7 +180,7 @@ function caughtUp(id: string) {
   return !!s && s.total > 0 && s.due === 0;
 }
 
-function select(w: Workspace) {
+function select(w: WorkspaceSummary) {
   if (w.id !== activeId.value) {
     setActive(w.id);
     toast.add({ title: `Switched to ${w.title}`, color: "neutral" });

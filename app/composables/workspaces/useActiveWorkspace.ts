@@ -7,7 +7,7 @@
  * the live workspace list, defaulting to the first available space.
  */
 import { computed, watch } from "vue";
-import type { Workspace } from "#shared/utils/workspace.contract";
+import type { WorkspaceSummary } from "#shared/utils/workspace.contract";
 
 const STORAGE_KEY = "cognilo:active-workspace";
 const RECENTS_KEY = "cognilo:ws-recents";
@@ -54,13 +54,13 @@ export function useActiveWorkspace() {
     if (import.meta.client && id) localStorage.setItem(STORAGE_KEY, id);
   });
 
-  const activeWorkspace = computed<Workspace | null>(
+  const activeWorkspace = computed<WorkspaceSummary | null>(
     () => workspaces.value?.find((w) => w.id === activeId.value) ?? null,
   );
 
   // Workspaces ordered most-recently-used first (active pinned to the top),
   // so the spaces you hop between surface immediately in the switcher.
-  const recentWorkspaces = computed<Workspace[]>(() => {
+  const recentWorkspaces = computed<WorkspaceSummary[]>(() => {
     const list = workspaces.value ?? [];
     return [...list].sort((a, b) => {
       if (a.id === activeId.value) return -1;

@@ -92,7 +92,6 @@ export default NuxtAuthHandler({
           where: { email },
           include: {
             subscription: true,
-            workspaces: true,
           },
         });
 
@@ -231,7 +230,6 @@ export default NuxtAuthHandler({
             where: { email: token.email },
             include: {
               subscription: true,
-              workspaces: true,
             },
           });
           if (dbUser) {

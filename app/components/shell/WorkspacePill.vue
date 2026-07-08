@@ -2,6 +2,7 @@
   <UiPill
     v-if="activeWorkspace"
     clickable
+    variant="ghost"
     :label="activeWorkspace.title"
     :color="accent"
     class-name="wpill"

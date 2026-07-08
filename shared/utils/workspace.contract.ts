@@ -3,6 +3,19 @@ import { z } from "zod";
 import { LLMEnum } from "./llm";
 
 const trim = (v: unknown) => (typeof v === "string" ? v.trim() : v);
+const dateish = z.string().datetime().or(z.date()).or(z.string());
+
+export const WorkspaceSummarySchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  metadata: z.record(z.string(), z.unknown()).nullable(),
+  order: z.number(),
+  llmModel: LLMEnum,
+  createdAt: dateish,
+  updatedAt: dateish,
+});
+export type WorkspaceSummary = z.infer<typeof WorkspaceSummarySchema>;
 
 // Lightweight relation schemas (DB rows or generated DTOs). Passthrough preserves extra fields.
 const WorkspaceFlashcardRelation = z
@@ -49,15 +62,52 @@ export const WorkspaceSchema = z.object({
   description: z.string().nullable(),
   userId: z.string(),
   metadata: z.record(z.string(), z.unknown()).nullable(),
+  order: z.number().optional(),
   rawText: z.string().nullable().optional(), // Keep for backward compatibility, but deprecated
   llmModel: LLMEnum,
-  createdAt: z.string().datetime().or(z.date()).or(z.string()),
-  updatedAt: z.string().datetime().or(z.date()).or(z.string()),
+  createdAt: dateish,
+  updatedAt: dateish,
   flashcards: z.array(WorkspaceFlashcardRelation).optional(),
   questions: z.array(WorkspaceQuestionRelation).optional(),
   materials: z.array(WorkspaceMaterialRelation).optional(),
 });
 export type Workspace = z.infer<typeof WorkspaceSchema>;
+
+export const WorkspaceStudyFlashcardSchema = z
+  .object({
+    id: z.string(),
+    workspaceId: z.string(),
+    materialId: z.string().nullable().optional(),
+    front: z.string(),
+    back: z.string(),
+    sourceRef: z.unknown().nullable().optional(),
+    status: z.string().optional(),
+    createdAt: dateish,
+    updatedAt: dateish,
+  })
+  .passthrough();
+
+export const WorkspaceStudyQuestionSchema = z
+  .object({
+    id: z.string(),
+    workspaceId: z.string(),
+    materialId: z.string().nullable().optional(),
+    type: z.string().optional(),
+    question: z.string(),
+    choices: z.array(z.string()),
+    answerIndex: z.number().int().nonnegative(),
+    sourceRef: z.unknown().nullable().optional(),
+    status: z.string().optional(),
+    createdAt: dateish,
+    updatedAt: dateish,
+  })
+  .passthrough();
+
+export const WorkspaceStudyContentSchema = z.object({
+  flashcards: z.array(WorkspaceStudyFlashcardSchema),
+  questions: z.array(WorkspaceStudyQuestionSchema),
+});
+export type WorkspaceStudyContent = z.infer<typeof WorkspaceStudyContentSchema>;
 
 export const CreateWorkspaceDTO = z.object({
   title: z.preprocess(trim, z.string().min(1)),

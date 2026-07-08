@@ -10,7 +10,8 @@ import type {
   DeleteFlashcardResponse,
 } from "@@/shared/utils/flashcard.contract";
 import type {
-  Workspace,
+  WorkspaceSummary,
+  WorkspaceStudyContent,
   CreateWorkspaceDTO,
   UpdateWorkspaceDTO,
 } from "@@/shared/utils/workspace.contract";
@@ -19,43 +20,79 @@ class WorkspacesModule extends FetchFactory {
   private RESOURCE = RESOURCES.FOLDERS;
 
   async getWorkspaces(
-    _validator?: ZodSchema<Workspace[]>
-  ): Promise<Result<Workspace[]>> {
+    validator?: ZodSchema<WorkspaceSummary[]>
+  ): Promise<Result<WorkspaceSummary[]>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",
       },
     };
+    if (validator) {
+      return this.call("GET", `${this.RESOURCE}`, undefined, fetchOptions, validator);
+    }
     return this.call(
       "GET",
       `${this.RESOURCE}`,
       undefined,
       fetchOptions
-      //   validator,
     );
   }
 
   async getWorkspace(
     id: string,
-    _validator?: ZodSchema<Workspace>
-  ): Promise<Result<Workspace>> {
+    validator?: ZodSchema<WorkspaceSummary>
+  ): Promise<Result<WorkspaceSummary>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",
       },
     };
+    if (validator) {
+      return this.call(
+        "GET",
+        `${this.RESOURCE}/${id}`,
+        undefined,
+        fetchOptions,
+        validator
+      );
+    }
     return this.call(
       "GET",
       `${this.RESOURCE}/${id}`,
       undefined,
       fetchOptions
-      //   validator,
+    );
+  }
+
+  async getStudyContent(
+    id: string,
+    validator?: ZodSchema<WorkspaceStudyContent>
+  ): Promise<Result<WorkspaceStudyContent>> {
+    const fetchOptions = {
+      headers: {
+        "Accept-Language": "en-US",
+      },
+    };
+    if (validator) {
+      return this.call(
+        "GET",
+        `${this.RESOURCE}/${id}/study-content`,
+        undefined,
+        fetchOptions,
+        validator
+      );
+    }
+    return this.call(
+      "GET",
+      `${this.RESOURCE}/${id}/study-content`,
+      undefined,
+      fetchOptions
     );
   }
 
   async create(
     payload: CreateWorkspaceDTO
-  ): Promise<Result<Workspace>> {
+  ): Promise<Result<WorkspaceSummary>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",
@@ -66,8 +103,8 @@ class WorkspacesModule extends FetchFactory {
 
   async update(
     id: string,
-    payload: Partial<typeof UpdateWorkspaceDTO>
-  ): Promise<Result<Workspace>> {
+    payload: UpdateWorkspaceDTO
+  ): Promise<Result<WorkspaceSummary>> {
     const fetchOptions = {
       headers: {
         "Accept-Language": "en-US",

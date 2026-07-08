@@ -99,17 +99,17 @@ const emit = defineEmits<{
   (e: "enrolled", response: EnrollCardResponse): void;
 }>();
 
-const { workspace, refresh: refreshWorkspace } = useWorkspace(id);
+const { studyContent, refresh: refreshWorkspace } = useWorkspaceStudyContent(id);
 
 const existingQuestions = computed(
-  () => (workspace.value as Workspace | null | undefined)?.questions || []
+  () => studyContent.value?.questions ?? []
 );
 
 const questionsToShow = computed(() => existingQuestions.value);
 
 // Filter draft questions for bulk enrollment
 const draftQuestions = computed(() =>
-  questionsToShow.value.filter((q: any) => q.status === 'DRAFT')
+  questionsToShow.value.filter((q) => q.status === 'DRAFT')
 );
 
 const bulkEnrolling = ref(false);
@@ -118,7 +118,7 @@ async function bulkEnrollDrafts() {
   if (draftQuestions.value.length === 0) return;
 
   bulkEnrolling.value = true;
-  const draftIds = draftQuestions.value.map((q: any) => q.id);
+  const draftIds = draftQuestions.value.map((q) => q.id);
   const success = await contextBridge.bulkEnroll(draftIds, 'question');
 
   if (success) {

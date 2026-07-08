@@ -3860,7 +3860,8 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
                 }
               }
             );
-          } else {
+          }
+          if (url.pathname === "/api/workspaces" || url.pathname === "/api/workspaces/") {
             return new Response(JSON.stringify({ success: true, data: [] }), {
               status: 200,
               headers: {
@@ -3869,6 +3870,38 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
               }
             });
           }
+          if (url.pathname.endsWith("/study-content")) {
+            return new Response(
+              JSON.stringify({
+                success: true,
+                data: { flashcards: [], questions: [] }
+              }),
+              {
+                status: 200,
+                headers: {
+                  "Content-Type": "application/json",
+                  "Cache-Control": "no-store"
+                }
+              }
+            );
+          }
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: {
+                message: "Workspace is not cached for offline use",
+                statusCode: 404,
+                code: "OFFLINE_CACHE_MISS"
+              }
+            }),
+            {
+              status: 404,
+              headers: {
+                "Content-Type": "application/json",
+                "Cache-Control": "no-store"
+              }
+            }
+          );
         }
       }
     );

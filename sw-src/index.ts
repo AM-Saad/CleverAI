@@ -387,8 +387,10 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
               },
             }
           );
-        } else {
-          // Return empty array for list endpoints
+        }
+
+        if (url.pathname === "/api/workspaces" || url.pathname === "/api/workspaces/") {
+          // Return empty array for the summary list endpoint
           return new Response(JSON.stringify({ success: true, data: [] }), {
             status: 200,
             headers: {
@@ -397,6 +399,40 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
             },
           });
         }
+
+        if (url.pathname.endsWith("/study-content")) {
+          return new Response(
+            JSON.stringify({
+              success: true,
+              data: { flashcards: [], questions: [] },
+            }),
+            {
+              status: 200,
+              headers: {
+                "Content-Type": "application/json",
+                "Cache-Control": "no-store",
+              },
+            }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: {
+              message: "Workspace is not cached for offline use",
+              statusCode: 404,
+              code: "OFFLINE_CACHE_MISS",
+            },
+          }),
+          {
+            status: 404,
+            headers: {
+              "Content-Type": "application/json",
+              "Cache-Control": "no-store",
+            },
+          }
+        );
       }
     }
   );
