@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div :style="morphTargetStyle">
     <MobileNoteEditor
       v-if="note"
       ref="editorRef"
@@ -104,84 +104,33 @@ import MobileNoteEditor from "~/features/notes/components/MobileNoteEditor.vue";
 import AiResultSheet from "~/features/notes/components/AiResultSheet.vue";
 import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace";
 import { useNoteGroupsStore } from "~/features/notes/composables/useNoteGroupsStore";
+import { useNoteDraft } from "~/features/notes/composables/useNoteDraft";
+import { useViewTransitionMorph } from "~/composables/ui/useViewTransitionMorph";
 import { accentVarFor } from "~/composables/useAccentColor";
 
 const route = useRoute();
 const toast = useToast();
 const { $api } = useNuxtApp();
 const { activeId } = useActiveWorkspace();
+// Carries the quick-capture morph name on the page root when the navigation
+// came from the quick sheet's "Open full note" (one-shot, self-clearing).
+const { morphTargetStyle } = useViewTransitionMorph();
 
 const routeId = computed(() => String(route.params.id));
 const store = computed(() => (activeId.value ? useNotesStore(activeId.value) : null));
-// Resolve temp→real ids: an optimistic note's temp id is swapped for the server
-// id after sync, so look up directly, then via the store's alias map.
-const note = computed(() => {
-  const s = store.value;
-  if (!s) return null;
-  const direct = s.notes.value.get(routeId.value);
-  if (direct) return direct;
-  const resolved = s.resolveNoteId(routeId.value);
-  return resolved ? s.notes.value.get(resolved) ?? null : null;
-});
-// The id to use for store mutations (the note's real id once known).
-const noteId = computed(() => note.value?.id ?? routeId.value);
-
-const titleDraft = ref(note.value?.title ?? "");
-watch(
-  () => noteId.value,
-  () => (titleDraft.value = note.value?.title ?? ""),
-);
-watch(
-  () => note.value?.title,
-  (t) => {
-    if (t !== undefined && t !== titleDraft.value) titleDraft.value = t;
-  },
-);
-
-// ── Persistence ──────────────────────────────────────────────────────────────
-// applyNoteDraft is an in-memory echo only — it neither writes IndexedDB nor
-// enqueues a server sync. The real save is updateNote (which upserts memory+IDB
-// and queues a PATCH carrying content/title/metadata/noteType). We echo on every
-// keystroke for instant UI, then debounce the durable updateNote.
-let saveTimer: ReturnType<typeof setTimeout> | null = null;
-function scheduleSave() {
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => void commitNow(), 500);
-}
-async function commitNow() {
-  if (saveTimer) {
-    clearTimeout(saveTimer);
-    saveTimer = null;
-  }
-  const n = note.value;
-  if (!n || !store.value) return;
-  await store.value.updateNote(noteId.value, { ...n, isDirty: true, updatedAt: new Date() });
-}
-
-function onTitle(v: string) {
-  titleDraft.value = v;
-  store.value?.applyNoteDraft(noteId.value, { title: v });
-  scheduleSave();
-}
-function onContent(html: string) {
-  store.value?.applyNoteDraft(noteId.value, { content: html });
-  scheduleSave();
-}
-function onTags(tags: string[]) {
-  const n = note.value;
-  if (!n || !store.value) return;
-  store.value.updateNote(noteId.value, { ...n, tags, isDirty: true, updatedAt: new Date() });
-}
-function onMetadata(metadata: Record<string, unknown>) {
-  const n = note.value;
-  if (!n || !store.value) return;
-  // Persist ONLY metadata — never the text content. Canvas/math shapes live in
-  // metadata; the note's `content` (which may hold real text from before a
-  // conversion) must be preserved so converting between types is reversible and
-  // non-destructive.
-  store.value.applyNoteDraft(noteId.value, { metadata });
-  scheduleSave();
-}
+// Draft persistence (echo + debounced durable save + temp→real id resolution)
+// is shared with the quick-capture sheet via useNoteDraft.
+const {
+  note,
+  noteId,
+  titleDraft,
+  onTitle,
+  onContent,
+  onTags,
+  onMetadata,
+  commitNow,
+  cancelPendingSave,
+} = useNoteDraft(store, routeId);
 
 const NOTE_TYPES = [
   { value: "TEXT", label: "Text", icon: "i-lucide-type" },
@@ -265,10 +214,7 @@ async function createAndAssign() {
 }
 async function deleteNote() {
   if (!store.value) return;
-  if (saveTimer) {
-    clearTimeout(saveTimer);
-    saveTimer = null;
-  }
+  cancelPendingSave();
   moreOpen.value = false;
   await store.value.deleteNote(noteId.value);
   toast.add({ title: "Note deleted", color: "neutral" });

@@ -37,7 +37,7 @@ import {
 
 export type { NoteState } from "./noteTransforms";
 
-interface NotesStore {
+export interface NotesStore {
   notes: Ref<Map<string, NoteState>>;
   loadingStates: Ref<Map<string, boolean>>;
   lastSync: Ref<Date | null>;

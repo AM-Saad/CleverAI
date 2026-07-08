@@ -228,8 +228,7 @@
           </template>
         </UiItemCard>
 
-        <button type="button" class="board__add" @click="addCard">
-          <!-- design-allow: native dashed add control -->
+        <button type="button" class="board__add" @click="addCard($event)"> <!-- design-allow: native dashed add control -->
           <UiIcon name="i-lucide-plus" class="h-4 w-4" /> Add a card
         </button>
       </div>
@@ -247,13 +246,18 @@
 
     <BoardCardSheet
       v-model:open="sheetOpen"
-      :item="editingItem"
+      :item="sheetItem"
       :columns="columns"
       :tags="allTags"
       :default-column-id="activeColumn?.id ?? null"
       :create-tag="createTag"
+      :live="liveMode"
+      :morphing="morphing"
       @save="onSaveCard"
+      @live-update="onLiveUpdate"
+      @open-full="onOpenFull"
       @delete="onDeleteCard"
+      @closed="finalizeLiveCard"
     />
 
     <BoardColumnsSheet
@@ -307,11 +311,13 @@ import BoardCardSheet from "~/features/board/components/BoardCardSheet.vue";
 import BoardColumnsSheet from "~/features/board/components/BoardColumnsSheet.vue";
 import WorkspacePill from "~/components/shell/WorkspacePill.vue";
 import { tagColorVar } from "~/composables/useAccentColor";
+import { useViewTransitionMorph } from "~/composables/ui/useViewTransitionMorph";
 import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace";
 import { designTokenValues } from "~/design-system/tokens.generated";
 import type { BoardItemState } from "~/features/board/composables/useBoardItemsStore";
 import type { BoardColumnState } from "~/features/board/composables/useBoardColumnsStore";
 
+const route = useRoute();
 const { activeId } = useActiveWorkspace();
 
 const columnsStore = computed(() =>
@@ -329,6 +335,7 @@ const overview = ref(false);
 const loading = ref(true);
 const settingUp = ref(false);
 const syncing = ref(false);
+const lastComposeToken = ref("");
 
 const sheetOpen = ref(false);
 const columnsOpen = ref(false);
@@ -413,6 +420,7 @@ const searchResults = computed(() => {
 // ── Card edit ─────────────────────────────────────────────────────────────────
 function openCard(item: BoardItemState) {
   editingItem.value = item;
+  liveMode.value = false;
   sheetOpen.value = true;
 }
 function onBoardCardActivate(
@@ -421,10 +429,164 @@ function onBoardCardActivate(
 ) {
   if (event instanceof KeyboardEvent) openCard(item);
 }
-function addCard() {
+
+// ── Quick capture (create-first, morph from the Add button) ──────────────────
+const { morph, armMorphTarget, morphing } = useViewTransitionMorph();
+const liveMode = ref(false);
+const liveItemId = ref<string | null>(null);
+let liveTriggerEl: HTMLElement | null = null;
+let liveFinalized = false;
+
+// The live item, following the temp→server id swap.
+const liveItem = computed<BoardItemState | null>(() => {
+  const store = itemsStore.value;
+  const id = liveItemId.value;
+  if (!store || !id) return null;
+  return (
+    store.items.value.get(id) ??
+    store.items.value.get(store.resolveItemId(id) ?? "") ??
+    null
+  );
+});
+/** The id to use for store mutations (the real id once reconciled). */
+const liveRealId = computed(() => liveItem.value?.id ?? liveItemId.value);
+const sheetItem = computed(() =>
+  liveMode.value ? liveItem.value : editingItem.value,
+);
+
+async function addCard(event?: MouseEvent) {
+  const store = itemsStore.value;
+  if (!store || liveMode.value) return;
+  // currentTarget is only valid synchronously — capture before any await.
+  const trigger = (event?.currentTarget as HTMLElement | null) ?? null;
+  // Lazy create: nothing exists yet — the item is created on the first typed
+  // character (see ensureLiveItem).
   editingItem.value = null;
-  sheetOpen.value = true;
+  liveItemId.value = null;
+  liveMode.value = true;
+  liveFinalized = false;
+  liveTriggerEl = trigger;
+  await morph({
+    from: trigger,
+    update: () => {
+      sheetOpen.value = true;
+    },
+  });
 }
+
+function firstQueryValue(value: typeof route.query.compose) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+async function consumeComposeRoute(value: typeof route.query.compose) {
+  const compose = firstQueryValue(value);
+  if (compose !== "card" || !itemsStore.value) return;
+
+  const token = `${compose}:${route.query.capture ?? ""}:${activeId.value ?? ""}`;
+  if (lastComposeToken.value === token) return;
+  lastComposeToken.value = token;
+
+  await addCard();
+}
+
+type LivePayload = {
+  content: string;
+  tags: string[];
+  columnId: string | null;
+  dueDate: string | null;
+};
+
+function payloadHasContent(payload: LivePayload) {
+  return payload.content.replace(/<[^>]*>/g, "").trim().length > 0;
+}
+
+// Create the live item on demand (idempotent — concurrent callers share the
+// in-flight create). `allowEmpty` is for "Open full", where the user's intent
+// to edit in full justifies creating the card before anything is typed.
+let liveCreatePromise: Promise<string | null> | null = null;
+function ensureLiveItem(
+  payload: LivePayload,
+  allowEmpty = false,
+): Promise<string | null> {
+  if (liveItemId.value) return Promise.resolve(liveRealId.value);
+  const store = itemsStore.value;
+  if (!store || (!allowEmpty && !payloadHasContent(payload)))
+    return Promise.resolve(null);
+  if (!liveCreatePromise) {
+    liveCreatePromise = store
+      .createItem(
+        payload.content,
+        payload.tags,
+        payload.columnId ?? activeColumn.value?.id ?? null,
+        payload.dueDate,
+      )
+      .then((id) => {
+        if (id) liveItemId.value = id;
+        return id;
+      })
+      .finally(() => {
+        liveCreatePromise = null;
+      });
+  }
+  return liveCreatePromise;
+}
+
+async function applyLivePayload(payload: LivePayload) {
+  const store = itemsStore.value;
+  if (!store) return;
+  if (!liveItemId.value) {
+    await ensureLiveItem(payload);
+    return;
+  }
+  const item = liveItem.value;
+  const id = liveRealId.value;
+  if (!item || !id) return;
+  await store.updateItem(id, {
+    ...item,
+    content: payload.content,
+    tags: payload.tags,
+    dueDate: payload.dueDate,
+  });
+  if (payload.columnId !== (item.columnId ?? null)) {
+    await store.moveItemToColumn(id, payload.columnId);
+  }
+}
+function onLiveUpdate(payload: LivePayload) {
+  void applyLivePayload(payload);
+}
+
+/** Open the card in its own place — the sheet morphs into /board/[id]. */
+async function onOpenFull(payload: LivePayload) {
+  // Explicit intent to edit in full: create now even if nothing is typed yet.
+  const id = (await ensureLiveItem(payload, true)) ?? liveRealId.value;
+  if (!id) return;
+  liveFinalized = true; // navigating away — never delete, even if still empty
+  armMorphTarget();
+  await morph({
+    update: async () => {
+      sheetOpen.value = false;
+      await navigateTo(`/board/${id}`);
+    },
+  });
+}
+
+/** After the live sheet closes (any path): keep real cards, drop empty drafts. */
+async function finalizeLiveCard() {
+  if (!liveMode.value || liveFinalized) return;
+  liveFinalized = true;
+  const store = itemsStore.value;
+  const item = liveItem.value;
+  const id = liveRealId.value;
+  liveMode.value = false;
+  liveTriggerEl = null;
+  liveItemId.value = null;
+  if (!store || !item || !id) return;
+  const hasContent =
+    (item.content ?? "").replace(/<[^>]*>/g, "").trim().length > 0;
+  const hasMeta = (item.tags?.length ?? 0) > 0 || Boolean(item.dueDate);
+  if (!hasContent && !hasMeta) await store.deleteItem(id);
+}
+
 async function onSaveCard(payload: {
   content: string;
   tags: string[];
@@ -433,6 +595,18 @@ async function onSaveCard(payload: {
 }) {
   const store = itemsStore.value;
   if (!store) return;
+  if (liveMode.value) {
+    // Done: the payload has already streamed via live-update flush; morph the
+    // sheet back into the Add button it came from (when possible).
+    await applyLivePayload(payload);
+    await morph({
+      to: liveTriggerEl?.isConnected ? liveTriggerEl : null,
+      update: () => {
+        sheetOpen.value = false;
+      },
+    });
+    return;
+  }
   if (editingItem.value) {
     const prev = editingItem.value;
     await store.updateItem(prev.id, {
@@ -659,13 +833,23 @@ watch(activeId, () => {
   void loadBoard();
 });
 
+watch(
+  [() => route.query.compose, () => route.query.capture, activeId],
+  ([compose]) => {
+    void consumeComposeRoute(compose);
+  },
+);
+
 watch(columns, (next) => {
   if (activeIndex.value >= next.length) {
     activeIndex.value = Math.max(0, next.length - 1);
   }
 });
 
-onMounted(loadBoard);
+onMounted(async () => {
+  await loadBoard();
+  await consumeComposeRoute(route.query.compose);
+});
 </script>
 
 <style scoped>

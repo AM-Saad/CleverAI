@@ -42,7 +42,7 @@ const { setActive } = useActiveWorkspace();
 
 const captureOpen = ref(false);
 const captureRequest = ref(0);
-type CaptureAction = "note" | "word" | "upload" | "ai" | "dictate";
+type CaptureAction = "note" | "word" | "board" | "ai" | "dictate";
 type CaptureSelection = { key: CaptureAction; workspaceId: string | null };
 
 // Chrome (tab bar + capture) only for the authenticated app — auth/marketing
@@ -56,7 +56,10 @@ const isBareRoute = computed(
 // Immersive flows hide the tab bar + capture FAB so their own bottom controls
 // (review grade bar, note format bar) own the bottom edge.
 const isImmersiveRoute = computed(
-  () => route.path === "/review" || /^\/notes\/[^/]+$/.test(route.path),
+  () =>
+    route.path === "/review" ||
+    /^\/notes\/[^/]+$/.test(route.path) ||
+    /^\/board\/[^/]+$/.test(route.path),
 );
 const showChrome = computed(
   () =>
@@ -89,19 +92,18 @@ function onCapture(payload: CaptureSelection) {
 
   switch (payload.key) {
     case "note":
-      return navigateTo({
-        path: "/notes",
-        query: { compose: "note", capture: nextCaptureToken() },
-      });
+      // Only reached when no workspace exists yet (CaptureSheet captures notes
+      // in place otherwise); commitWorkspaceTarget already routed to create one.
+      return;
     case "word":
       return navigateTo({
         path: "/language",
         query: { compose: "1", capture: nextCaptureToken() },
       });
-    case "upload":
+    case "board":
       return navigateTo({
-        path: "/materials",
-        query: { upload: "1", capture: nextCaptureToken() },
+        path: "/board",
+        query: { compose: "card", capture: nextCaptureToken() },
       });
     case "ai":
       return navigateTo({

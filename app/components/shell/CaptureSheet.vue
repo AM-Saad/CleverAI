@@ -1,10 +1,74 @@
 <template>
   <UiSheet
     :open="open"
-    title="Capture"
+    :title="mode === 'menu' ? 'Capture' : undefined"
+    :morphing="morphing"
     @update:open="emit('update:open', $event)"
+    @closed="onSheetClosed"
   >
-    <div v-if="showWorkspaceTarget" class="ds-capture-target">
+    <!-- ── In-place note editor (the "New note" tile morphs into this) ── -->
+    <div
+      v-if="mode === 'note'"
+      class="ds-capture-note"
+      :style="{ viewTransitionName: MORPH_NAME }"
+    >
+      <div class="ds-capture-note__bar">
+        <UiIconButton
+          icon="i-lucide-chevron-left"
+          label="Back to capture"
+          size="sm"
+          @click="backToMenu"
+        />
+        <span class="ds-capture-note__ws">
+          <span
+            class="ds-capture-target__dot"
+            :style="{ background: selectedWorkspaceAccent }"
+          />
+          <UiAnimatedText :text="selectedWorkspaceLabel" />
+        </span>
+      </div>
+
+      <QuickNoteEditor
+        @update:title="quick.onTitle"
+        @update:content="quick.onContent"
+      />
+
+      <div class="ds-capture-note__footer">
+        <UiButton
+          variant="ghost"
+          tone="neutral"
+          leading-icon="i-lucide-maximize-2"
+          @click="openFullNote"
+        >
+          Open full note
+        </UiButton>
+        <UiButton pill tone="primary" @click="doneNoteCapture">Done</UiButton>
+      </div>
+    </div>
+
+    <div
+      v-if="mode === 'word'"
+      class="ds-capture-mode"
+      :style="{ viewTransitionName: MORPH_NAME }"
+    >
+      <QuickWordTranslator @back="backToMenu" @done="doneWordCapture" />
+    </div>
+
+    <div
+      v-if="mode === 'board'"
+      class="ds-capture-mode"
+      :style="{ viewTransitionName: MORPH_NAME }"
+    >
+      <QuickBoardItemEditor
+        :column-label="boardColumnLabel"
+        @update:content="boardQuick.onContent"
+        @back="backToMenu"
+        @done="doneBoardCapture"
+        @open-full="openFullBoardItem"
+      />
+    </div>
+
+    <div v-if="mode === 'menu' && showWorkspaceTarget" class="ds-capture-target">
       <button type="button" class="ds-capture-target__button" :aria-expanded="isWorkspacePickerOpen" aria-controls="capture-workspace-options" :disabled="workspaceLoading && !selectedWorkspace" @click="toggleWorkspacePicker"> <!-- design-allow: compact workspace target control in capture sheet -->
         <span class="ds-capture-target__main">
           <span
@@ -13,9 +77,9 @@
           />
           <span class="ds-capture-target__copy">
             <span class="ds-capture-target__eyebrow">Workspace</span>
-            <span class="ds-capture-target__name">{{
-              selectedWorkspaceLabel
-            }}</span>
+            <span class="ds-capture-target__name">
+              <UiAnimatedText :text="selectedWorkspaceLabel" />
+            </span>
           </span>
         </span>
         <UiIcon
@@ -47,8 +111,8 @@
       </Transition>
     </div>
 
-    <div class="grid grid-cols-2 gap-3 pb-1">
-      <button v-for="opt in options" :key="opt.key" type="button" class="ds-capture-opt" :disabled="isActionWaitingForWorkspace(opt.key)" @click="choose(opt.key)"> <!-- design-allow: shell chrome, native capture tile -->
+    <div v-if="mode === 'menu'" class="grid grid-cols-2 gap-3 pb-1">
+      <button v-for="opt in options" :key="opt.key" :ref="(el) => setActionElement(opt.key, el)" type="button" class="ds-capture-opt" :disabled="isActionWaitingForWorkspace(opt.key)" @click="choose(opt.key, $event)"> <!-- design-allow: shell chrome, native capture tile -->
         <span
           class="ds-capture-opt__tile"
           :style="{ background: tint(opt.color, 14), color: opt.color }"
@@ -60,7 +124,7 @@
       </button>
     </div>
 
-    <button type="button" class="ds-dictate" :disabled="isActionWaitingForWorkspace('dictate')" @click="choose('dictate')"> <!-- design-allow: shell chrome, native press-and-hold dictate -->
+    <button v-if="mode === 'menu'" type="button" class="ds-dictate" :disabled="isActionWaitingForWorkspace('dictate')" @click="choose('dictate')"> <!-- design-allow: shell chrome, native press-and-hold dictate -->
       <UiIcon name="i-lucide-mic" class="h-4 w-4" />
       Hold to dictate a quick note…
     </button>
@@ -69,13 +133,27 @@
 
 <script setup lang="ts">
 /**
- * CaptureSheet — the center-FAB target. Every create path (note, word, upload,
+ * CaptureSheet — the center-FAB target. Every create path (note, word, board,
  * AI) lives in this one sheet, per the handoff "AI is anchored to a source"
  * intent: each option routes into a real flow rather than a floating chat.
+ *
+ * "New note" is captured in place: the tile morphs (View Transitions) into a
+ * writable editor panel inside this sheet. Nothing is created until the first
+ * typed character (useQuickNoteCapture); "Open full note" morphs on into
+ * /notes/[id].
  */
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { accentVarFor, tint } from "~/composables/useAccentColor";
 import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace";
+import {
+  MORPH_NAME,
+} from "~/composables/ui/useViewTransitionMorph";
+import { useQuickCaptureMorph } from "~/composables/ui/useQuickCaptureMorph";
+import QuickNoteEditor from "~/features/notes/components/QuickNoteEditor.vue";
+import { useQuickNoteCapture } from "~/features/notes/composables/useQuickNoteCapture";
+import QuickWordTranslator from "~/features/language-learning/components/QuickWordTranslator.vue";
+import QuickBoardItemEditor from "~/features/board/components/QuickBoardItemEditor.vue";
+import { useQuickBoardItemCapture } from "~/features/board/composables/useQuickBoardItemCapture";
 import type { Workspace } from "@@/shared/utils/workspace.contract";
 
 const props = defineProps<{ open: boolean }>();
@@ -84,13 +162,14 @@ const emit = defineEmits<{
   (e: "select", payload: CaptureSelection): void;
 }>();
 
-type CaptureAction = "note" | "word" | "upload" | "ai" | "dictate";
+type CaptureAction = "note" | "word" | "board" | "ai" | "dictate";
 type CaptureSelection = { key: CaptureAction; workspaceId: string | null };
 
 const {
   workspaces,
   recentWorkspaces,
   activeId,
+  setActive,
   loading: workspaceLoading,
 } = useActiveWorkspace();
 
@@ -110,10 +189,10 @@ const options = [
     color: "var(--color-accent-teal)",
   },
   {
-    key: "upload" as const,
-    title: "Upload",
-    subtitle: "PDF or image",
-    icon: "i-lucide-upload",
+    key: "board" as const,
+    title: "Board item",
+    subtitle: "Task, idea or follow-up",
+    icon: "i-lucide-kanban",
     color: "var(--color-accent-orange)",
   },
   {
@@ -127,7 +206,7 @@ const options = [
 
 const workspaceScopedActions = new Set<CaptureAction>([
   "note",
-  "upload",
+  "board",
   "ai",
   "dictate",
 ]);
@@ -202,7 +281,19 @@ function selectWorkspace(id: string) {
   isWorkspacePickerOpen.value = false;
 }
 
-function choose(key: CaptureAction) {
+function choose(key: CaptureAction, event?: MouseEvent) {
+  if (key === "note" && selectedWorkspaceId.value) {
+    void startNoteCapture(event);
+    return;
+  }
+  if (key === "word") {
+    void startWordCapture(event);
+    return;
+  }
+  if (key === "board" && selectedWorkspaceId.value) {
+    void startBoardCapture(event);
+    return;
+  }
   emit("select", {
     key,
     workspaceId: isWorkspaceScoped(key) ? selectedWorkspaceId.value : null,
@@ -210,11 +301,159 @@ function choose(key: CaptureAction) {
   emit("update:open", false);
 }
 
+// ── In-place capture modes (tile → editor morph, lazy create where needed) ──
+const {
+  morph,
+  armMorphTarget,
+  morphing,
+  setActionElement,
+  morphFromAction,
+  morphToAction,
+} = useQuickCaptureMorph<CaptureAction>();
+const mode = ref<"menu" | "note" | "word" | "board">("menu");
+const captureWorkspaceId = ref<string | null>(null);
+const captureStore = computed(() =>
+  captureWorkspaceId.value ? useNotesStore(captureWorkspaceId.value) : null,
+);
+const quick = useQuickNoteCapture(captureStore);
+
+const boardItemsStore = computed(() =>
+  captureWorkspaceId.value
+    ? useBoardItemsStore(captureWorkspaceId.value)
+    : null,
+);
+const boardColumnsStore = computed(() =>
+  captureWorkspaceId.value
+    ? useBoardColumnsStore(captureWorkspaceId.value)
+    : null,
+);
+const boardColumns = computed(
+  () => boardColumnsStore.value?.getOrderedColumns() ?? [],
+);
+const boardColumnId = computed(() => boardColumns.value[0]?.id ?? null);
+const boardColumnLabel = computed(
+  () => boardColumns.value[0]?.name ?? "Unassigned",
+);
+const boardQuick = useQuickBoardItemCapture(boardItemsStore, boardColumnId);
+
+async function startNoteCapture(event?: MouseEvent) {
+  captureWorkspaceId.value = selectedWorkspaceId.value;
+  isWorkspacePickerOpen.value = false;
+  quick.begin(null);
+  await morphFromAction("note", event, () => {
+    mode.value = "note";
+  });
+}
+
+async function startWordCapture(event?: MouseEvent) {
+  isWorkspacePickerOpen.value = false;
+  await morphFromAction("word", event, () => {
+    mode.value = "word";
+  });
+}
+
+async function startBoardCapture(event?: MouseEvent) {
+  captureWorkspaceId.value = selectedWorkspaceId.value;
+  isWorkspacePickerOpen.value = false;
+  boardQuick.begin();
+  await nextTick();
+  void boardColumnsStore.value?.syncWithServer();
+  await morphFromAction("board", event, () => {
+    mode.value = "board";
+  });
+}
+
+function actionForMode(value: typeof mode.value): CaptureAction | null {
+  if (value === "menu") return null;
+  return value;
+}
+
+function finalizeCurrentMode() {
+  if (mode.value === "note") return quick.finalize();
+  if (mode.value === "board") return boardQuick.finalize();
+  return Promise.resolve();
+}
+
+async function backToMenu() {
+  const action = actionForMode(mode.value);
+  const finalize = finalizeCurrentMode();
+  if (action) {
+    await morphToAction(action, () => {
+      mode.value = "menu";
+    });
+  } else {
+    mode.value = "menu";
+  }
+  await finalize;
+}
+
+async function doneNoteCapture() {
+  const finalize = quick.finalize(); // commits real content, drops empty leftovers
+  emit("update:open", false);
+  await finalize;
+}
+
+function doneWordCapture() {
+  emit("update:open", false);
+}
+
+async function doneBoardCapture() {
+  const finalize = boardQuick.finalize();
+  emit("update:open", false);
+  await finalize;
+}
+
+/** Open the note in its own place — the editor panel morphs into /notes/[id]. */
+async function openFullNote() {
+  // Explicit intent to edit in full: create now even if nothing is typed yet.
+  const id = await quick.ensureCreated();
+  if (!id) return;
+  quick.markFinalized();
+  await quick.commitNow();
+  // The full editor resolves its store from the active workspace — align it
+  // with where this capture actually went.
+  if (captureWorkspaceId.value && captureWorkspaceId.value !== activeId.value) {
+    setActive(captureWorkspaceId.value);
+  }
+  armMorphTarget();
+  await morph({
+    update: async () => {
+      emit("update:open", false);
+      await navigateTo(`/notes/${id}`);
+    },
+  });
+}
+
+/** Open the board card in its own place — the panel morphs into /board/[id]. */
+async function openFullBoardItem() {
+  const id = await boardQuick.ensureCreated(true);
+  if (!id) return;
+  boardQuick.markFinalized();
+  await boardQuick.commitNow();
+  if (captureWorkspaceId.value && captureWorkspaceId.value !== activeId.value) {
+    setActive(captureWorkspaceId.value);
+  }
+  armMorphTarget();
+  await morph({
+    update: async () => {
+      emit("update:open", false);
+      await navigateTo(`/board/${id}`);
+    },
+  });
+}
+
+function onSheetClosed() {
+  // Reset after the exit settles so the menu doesn't flash mid-close.
+  mode.value = "menu";
+  captureWorkspaceId.value = null;
+}
+
 watch(
   () => props.open,
   (open) => {
     if (!open) {
       isWorkspacePickerOpen.value = false;
+      void finalizeCurrentMode();
       return;
     }
     syncSelectedWorkspace();
@@ -227,6 +466,37 @@ watch([workspaceList, activeId], () => {
 </script>
 
 <style scoped>
+.ds-capture-note {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.ds-capture-mode {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.ds-capture-note__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: calc(-1 * var(--space-1));
+}
+.ds-capture-note__ws {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-content-secondary);
+}
+.ds-capture-note__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+}
 .ds-capture-target {
   margin-bottom: var(--space-3);
 }

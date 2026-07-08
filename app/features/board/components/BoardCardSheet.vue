@@ -1,8 +1,11 @@
 <template>
   <UiSheet
     :open="open"
-    :title="isCreate ? 'New card' : 'Edit card'"
+    :title="live ? 'New card' : isCreate ? 'New card' : 'Edit card'"
+    :morph-name="MORPH_NAME"
+    :morphing="morphing"
     @update:open="emit('update:open', $event)"
+    @closed="emit('closed')"
   >
     <div class="bcs">
       <label class="bcs__label">CARD</label>
@@ -96,7 +99,7 @@
     <template #footer>
       <div class="bcs__footer">
         <UiDoubleTapDeleteButton
-          v-if="!isCreate"
+          v-if="!isCreate && !live"
           unstyled
           class="bcs__delete"
           label="Delete"
@@ -109,13 +112,23 @@
           </template>
         </UiDoubleTapDeleteButton>
         <UiButton
+          v-if="live"
+          variant="ghost"
+          tone="neutral"
+          leading-icon="i-lucide-maximize-2"
+          class="shrink-0"
+          @click="onOpenFull"
+        >
+          Open full
+        </UiButton>
+        <UiButton
           pill
           block
           tone="primary"
-          :disabled="!hasContent"
+          :disabled="!live && !hasContent"
           @click="onSave"
         >
-          {{ isCreate ? "Add card" : "Save" }}
+          {{ live ? "Done" : isCreate ? "Add card" : "Save" }}
         </UiButton>
       </div>
     </template>
@@ -128,10 +141,18 @@
  * edit content (rich text), move between columns, assign/create tags, set due,
  * delete. A move-selector is more reliable on a phone than dragging between
  * paged columns.
+ *
+ * Two save modes:
+ *  - default (edit an existing card): deferred — commits on Save, swipe-down
+ *    discards.
+ *  - `live` (quick capture): the item already exists (created optimistically
+ *    before the sheet opened); edits stream out via debounced `live-update`
+ *    emits, Save becomes "Done", and "Open full" jumps to /board/[id].
  */
-import { ref, computed, watch, nextTick } from "vue";
+import { ref, computed, watch, nextTick, onBeforeUnmount } from "vue";
 import type { UserTagState } from "~/composables/tags/useUserTagsStore";
 import { tagColorVar, ACCENT_TOKENS } from "~/composables/useAccentColor";
+import { MORPH_NAME } from "~/composables/ui/useViewTransitionMorph";
 
 interface ColumnLike {
   id: string;
@@ -153,20 +174,26 @@ const props = defineProps<{
   defaultColumnId?: string | null;
   /** Create a tag and return its id (owned by the parent's tags store). */
   createTag: (name: string, colorToken: string) => Promise<string | null>;
+  /** Quick-capture mode: item pre-exists, edits stream via live-update. */
+  live?: boolean;
+  /** True while a view-transition morph drives the open/close (see UiSheet). */
+  morphing?: boolean;
 }>();
+
+type SavePayload = {
+  content: string;
+  tags: string[];
+  columnId: string | null;
+  dueDate: string | null;
+};
 
 const emit = defineEmits<{
   (e: "update:open", v: boolean): void;
-  (
-    e: "save",
-    payload: {
-      content: string;
-      tags: string[];
-      columnId: string | null;
-      dueDate: string | null;
-    },
-  ): void;
+  (e: "save", payload: SavePayload): void;
+  (e: "live-update", payload: SavePayload): void;
+  (e: "open-full", payload: SavePayload): void;
   (e: "delete"): void;
+  (e: "closed"): void;
 }>();
 
 const isCreate = computed(() => !props.item);
@@ -228,9 +255,12 @@ async function commitNewTag() {
   }
 }
 
+// Reseed ONLY on the closed→open edge — in live mode the `item` prop is the
+// live store object, and reseeding on its identity changes (every debounced
+// store write) would repaint the contenteditable mid-typing and eat the caret.
 watch(
-  () => [props.open, props.item] as const,
-  ([open]) => {
+  () => props.open,
+  (open) => {
     if (!open) {
       cancelAddTag();
       return;
@@ -245,16 +275,47 @@ watch(
       ? new Date(props.item.dueDate).toISOString().slice(0, 10)
       : "";
     selected.value = new Set(props.item?.tags ?? []);
-    // Paint the contenteditable once it's in the DOM.
+    // Paint the contenteditable once it's in the DOM; in live (quick-capture)
+    // mode focus it right away — writing immediately is the point.
     nextTick(() => {
       if (bodyEl.value) bodyEl.value.innerHTML = contentHtml.value;
+      if (props.live) bodyEl.value?.focus();
     });
   },
   { immediate: true },
 );
 
+function currentPayload(): SavePayload {
+  return {
+    content: contentHtml.value,
+    tags: [...selected.value],
+    columnId: columnId.value,
+    dueDate: due.value ? new Date(due.value).toISOString() : null,
+  };
+}
+
+// ── Live mode: stream edits out, debounced ──────────────────────────────────
+let liveTimer: ReturnType<typeof setTimeout> | null = null;
+function scheduleLiveUpdate() {
+  if (!props.live || !props.open) return;
+  if (liveTimer) clearTimeout(liveTimer);
+  liveTimer = setTimeout(() => flushLiveUpdate(), 500);
+}
+function flushLiveUpdate() {
+  if (liveTimer) {
+    clearTimeout(liveTimer);
+    liveTimer = null;
+  }
+  if (props.live) emit("live-update", currentPayload());
+}
+watch([columnId, due, selected], () => scheduleLiveUpdate());
+onBeforeUnmount(() => {
+  if (liveTimer) clearTimeout(liveTimer);
+});
+
 function onBodyInput() {
   contentHtml.value = bodyEl.value?.innerHTML ?? "";
+  scheduleLiveUpdate();
 }
 function runFormat(cmd: string) {
   document.execCommand(cmd);
@@ -271,12 +332,21 @@ function toggleTag(id: string) {
 }
 
 function onSave() {
-  emit("save", {
-    content: contentHtml.value,
-    tags: [...selected.value],
-    columnId: columnId.value,
-    dueDate: due.value ? new Date(due.value).toISOString() : null,
-  });
+  if (props.live) {
+    // Done: flush any pending stream, then let the parent close/finalize.
+    flushLiveUpdate();
+  }
+  emit("save", currentPayload());
+}
+
+function onOpenFull() {
+  // Carry the current state so the parent can create-on-demand (nothing may
+  // have been typed yet) without racing the debounced live-update stream.
+  if (liveTimer) {
+    clearTimeout(liveTimer);
+    liveTimer = null;
+  }
+  emit("open-full", currentPayload());
 }
 </script>
 

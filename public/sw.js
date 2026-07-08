@@ -4728,6 +4728,16 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       boardItemsSyncInProgress = true;
       try {
         const clients = await swSelf.clients.matchAll({ type: "window" });
+        if (mode === "background" && clients.length > 0) {
+          log("[Board Items Sync] Background sync deferred \u2014 client tabs are open, they own sync");
+          clients.forEach(
+            (c) => c.postMessage({
+              type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNCED,
+              data: { appliedCount: 0, mode, deferredToClient: true }
+            })
+          );
+          return;
+        }
         const pending = await loadPendingBoardItemChanges();
         clients.forEach(
           (c) => c.postMessage({

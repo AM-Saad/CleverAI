@@ -1,6 +1,6 @@
 <template>
   <Teleport to="body">
-    <Transition name="ds-sheet-scrim">
+    <Transition :name="morphing ? 'ds-sheet-none' : 'ds-sheet-scrim'">
       <div
         v-if="open"
         class="ds-sheet-scrim"
@@ -9,7 +9,10 @@
       />
     </Transition>
 
-    <Transition name="ds-sheet" @after-leave="onAfterLeave">
+    <Transition
+      :name="morphing ? 'ds-sheet-none' : 'ds-sheet'"
+      @after-leave="onAfterLeave"
+    >
       <div
         v-if="open"
         ref="panel"
@@ -70,8 +73,18 @@ const props = withDefaults(
     closeOnBackdrop?: boolean;
     /** Drag distance (px) past which release dismisses. */
     dismissThreshold?: number;
+    /**
+     * View-transition name the panel carries while open, making the sheet a
+     * shared-element morph target/source (see useViewTransitionMorph).
+     */
+    morphName?: string;
+    /**
+     * True while a view-transition morph is driving this open/close — skips
+     * the sheet's own slide so the VT snapshots capture resting states.
+     */
+    morphing?: boolean;
   }>(),
-  { closeOnBackdrop: true, dismissThreshold: 110 },
+  { closeOnBackdrop: true, dismissThreshold: 110, morphing: false },
 );
 
 const emit = defineEmits<{
@@ -89,11 +102,12 @@ const { onKeydown } = useFocusTrap(isOpen, panel, {
   onEscape: () => emit("update:open", false),
 });
 
-const panelStyle = computed(() =>
-  dragY.value > 0
+const panelStyle = computed(() => ({
+  ...(props.morphName ? { viewTransitionName: props.morphName } : {}),
+  ...(dragY.value > 0
     ? { transform: `translateY(${dragY.value}px)`, transition: "none" }
-    : {},
-);
+    : {}),
+}));
 
 function onPointerDown(e: PointerEvent) {
   dragging = true;

@@ -91,6 +91,20 @@ body {
   }
 }
 
+/* View-transition morph (quick capture) — see useViewTransitionMorph.ts.
+   The `*` reduced-motion rule above cannot match these pseudo-elements; the
+   composable skips startViewTransition entirely under reduced motion. */
+::view-transition-group(quick-capture) {
+  animation-duration: var(--duration-slow);
+  animation-timing-function: var(--ease-standard);
+}
+::view-transition-old(quick-capture),
+::view-transition-new(quick-capture) {
+  height: 100%;
+  animation-duration: var(--duration-slow);
+  animation-timing-function: var(--ease-standard);
+}
+
 .blur {
   --tw-blur: blur(8px);
 }

@@ -95,7 +95,7 @@
             type="button"
             class="notes__group-add"
             :aria-label="`Add note to ${group.name}`"
-            @click="newNote(undefined, group.id)"
+            @click="openQuickNote(group.id, $event)"
           >
             <!-- design-allow: native add-to-group control -->
             <UiIcon name="i-lucide-plus" class="h-4 w-4" />
@@ -123,7 +123,7 @@
       class="notes__fab"
       :disabled="creating"
       aria-label="New note"
-      @click="newNote()"
+      @click="openQuickNote(null, $event)"
     >
       <!-- design-allow: gradient create FAB (shell chrome) -->
       <UiIcon name="i-lucide-plus" class="h-6 w-6" />
@@ -137,6 +137,18 @@
       @delete="onGroupDelete"
       @reorder="onGroupReorder"
     />
+
+    <QuickNoteSheet
+      v-model:open="quickOpen"
+      title=""
+      content=""
+      :morphing="morphing"
+      @update:title="quick.onTitle"
+      @update:content="quick.onContent"
+      @open-full="openQuickNoteFull"
+      @done="doneQuickNote"
+      @closed="finalizeQuickNote"
+    />
   </div>
 </template>
 
@@ -144,6 +156,9 @@
 import { ref, computed, onMounted, watch } from "vue";
 import NoteListRow from "~/features/notes/components/NoteListRow.vue";
 import NoteGroupsSheet from "~/features/notes/components/NoteGroupsSheet.vue";
+import QuickNoteSheet from "~/features/notes/components/QuickNoteSheet.vue";
+import { useQuickNoteCapture } from "~/features/notes/composables/useQuickNoteCapture";
+import { useViewTransitionMorph } from "~/composables/ui/useViewTransitionMorph";
 import WorkspacePill from "~/components/shell/WorkspacePill.vue";
 import SaveLocalBar from "~/components/shell/SaveLocalBar.vue";
 import { accentVarFor } from "~/composables/useAccentColor";
@@ -256,6 +271,58 @@ async function newNote(action?: "ai" | "dictate", groupId?: string | null) {
   }
 }
 
+// ── Quick capture (lazy create — nothing exists until the first character) ──
+const { morph, armMorphTarget, morphing } = useViewTransitionMorph();
+const quickOpen = ref(false);
+const quick = useQuickNoteCapture(store);
+let quickTriggerEl: HTMLElement | null = null;
+
+async function openQuickNote(groupId?: string | null, event?: MouseEvent) {
+  if (!store.value || quickOpen.value) return;
+  // currentTarget is only valid synchronously — capture before any await.
+  const trigger = (event?.currentTarget as HTMLElement | null) ?? null;
+  quick.begin(groupId ?? null);
+  quickTriggerEl = trigger;
+  await morph({
+    from: trigger,
+    update: () => {
+      quickOpen.value = true;
+    },
+  });
+}
+
+/** Done → morph the sheet back into the trigger it came from (when possible). */
+async function doneQuickNote() {
+  await morph({
+    to: quickTriggerEl?.isConnected ? quickTriggerEl : null,
+    update: () => {
+      quickOpen.value = false;
+    },
+  });
+}
+
+/** Open the note in its own place — the sheet morphs into /notes/[id]. */
+async function openQuickNoteFull() {
+  // Explicit intent to edit in full: create now even if nothing is typed yet.
+  const id = await quick.ensureCreated();
+  if (!id) return;
+  quick.markFinalized(); // navigating away — never delete, even if still empty
+  await quick.commitNow();
+  armMorphTarget();
+  await morph({
+    update: async () => {
+      quickOpen.value = false;
+      await navigateTo(`/notes/${id}`);
+    },
+  });
+}
+
+/** After the sheet closes (any path): keep real notes, drop empty leftovers. */
+function finalizeQuickNote() {
+  quickTriggerEl = null;
+  void quick.finalize();
+}
+
 function firstQueryValue(value: typeof route.query.compose) {
   return Array.isArray(value) ? value[0] : value;
 }
@@ -268,9 +335,13 @@ async function consumeComposeRoute(value: typeof route.query.compose) {
   if (lastComposeToken.value === token) return;
   lastComposeToken.value = token;
 
-  await newNote(
-    compose === "ai" || compose === "dictate" ? compose : undefined,
-  );
+  // Ask AI / Dictate need the full editor (AI bubble, dictation); a plain
+  // "New note" from the capture sheet opens quick capture in place.
+  if (compose === "ai" || compose === "dictate") {
+    await newNote(compose);
+  } else {
+    await openQuickNote(null);
+  }
 }
 
 // ── Group management ─────────────────────────────────────────────────────────

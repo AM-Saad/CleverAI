@@ -7,6 +7,8 @@
     class-name="wpill"
     @click="openSwitcher"
   >
+    <UiAnimatedText :text="activeWorkspace.title" />
+
     <template #indicator>
       <UiPillIndicator :color="accent" />
     </template>

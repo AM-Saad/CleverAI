@@ -16,6 +16,7 @@
  */
 
 import { DB_CONFIG, SYNC_TAGS } from "~/utils/constants/pwa";
+import { useNetworkStatus } from "~/composables/shared/useNetworkStatus";
 import { openUnifiedDB, getAllRecords } from "~/utils/idb";
 import {
   canUseServiceWorker,
@@ -105,6 +106,23 @@ const registeredOnlineListeners = new Set<string>();
 export function setupOnlineListener(options: OnlineListenerOptions): () => void {
   if (!process.client) return () => {};
 
+  const registerConnectivityListener = (cb: () => void | Promise<void>) => {
+    window.addEventListener("online", cb);
+    const cleanupVerifiedOnline = (() => {
+      try {
+        const networkMonitor = useNetworkStatus();
+        return networkMonitor.onOnline(cb);
+      } catch {
+        return null;
+      }
+    })();
+
+    return () => {
+      window.removeEventListener("online", cb);
+      cleanupVerifiedOnline?.();
+    };
+  };
+
   const pendingStoreNames = options.pendingStoreNames?.length
     ? options.pendingStoreNames
     : [options.pendingStoreName];
@@ -113,9 +131,7 @@ export function setupOnlineListener(options: OnlineListenerOptions): () => void 
     // Already registered; still wire up the per-store onOnline callback via a
     // lightweight additional listener (cheap, no IDB poll).
     if (options.onOnline) {
-      const cb = options.onOnline;
-      window.addEventListener("online", cb);
-      return () => window.removeEventListener("online", cb);
+      return registerConnectivityListener(options.onOnline);
     }
     return () => {};
   }
@@ -176,9 +192,9 @@ export function setupOnlineListener(options: OnlineListenerOptions): () => void 
     }
   };
 
-  window.addEventListener("online", handler);
+  const cleanupConnectivityListener = registerConnectivityListener(handler);
   return () => {
-    window.removeEventListener("online", handler);
+    cleanupConnectivityListener();
     registeredOnlineListeners.delete(key);
   };
 }

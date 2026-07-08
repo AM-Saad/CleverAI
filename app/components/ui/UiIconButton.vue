@@ -12,6 +12,7 @@
     :aria-pressed="pressed === undefined ? undefined : String(pressed)"
     :title="label"
     v-bind="$attrs"
+    :class="focusRing"
   />
 </template>
 
@@ -21,6 +22,7 @@
  * required accessible label. Consolidates the many bespoke toolbar/icon buttons.
  */
 import type { Size, Tone } from "./variants";
+import { focusRing } from "./variants";
 
 const {
   icon,

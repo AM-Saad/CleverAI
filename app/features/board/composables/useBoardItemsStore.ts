@@ -4,7 +4,16 @@ import type { BoardItem, BoardItemLink, BoardItemComment, Attachment } from "~/s
 import { BoardItemsSyncRequestSchema } from "@@/shared/utils/boardItem.contract";
 import { DB_CONFIG, SW_MESSAGE_TYPES } from "~/utils/constants/pwa";
 import {
-  createOfflineToastState,
+  deletePendingBoardItemChanges,
+  getAllRecords,
+  loadPendingBoardItemChanges,
+  openUnifiedDB,
+  putAllRecords,
+  putRecord,
+  queueBoardItemChange,
+  type PendingBoardItemChange,
+} from "~/utils/idb";
+import {
   registerBoardItemsSync,
   setupOnlineListener,
   setupSyncCompletionListener,
@@ -50,6 +59,8 @@ interface BoardItemsStore {
   isItemDirty: (id: string) => boolean;
   isItemInFilter: (id: string) => boolean;
   getItem: (id: string) => BoardItemState | null;
+  /** Temp→server id resolution for optimistic items (mirrors notes' resolveNoteId). */
+  resolveItemId: (id: string | null) => string | null;
   setItems?: (items: BoardItemState[]) => void;
   setFilteredItemIds: (ids: Set<string> | null) => void;
   resetOfflineToast?: () => void;
@@ -57,6 +68,7 @@ interface BoardItemsStore {
 
 type BoardItemsStoreInternal = BoardItemsStore & {
   _flushDebounce?: () => Promise<void>;
+  _syncPendingChanges?: () => Promise<boolean>;
 };
 
 const BOARD_ITEMS_STORE_FALLBACK_KEY = "__default__";
@@ -94,6 +106,13 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
         await Promise.all(
           Array.from(boardItemsStores.values()).map((store) =>
             store._flushDebounce?.(),
+          ),
+        );
+      },
+      onSyncDirect: async () => {
+        await Promise.all(
+          Array.from(boardItemsStores.values()).map((store) =>
+            store._syncPendingChanges?.(),
           ),
         );
       },
@@ -144,6 +163,22 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   const items = ref<Map<string, BoardItemState>>(new Map());
   const loadingStates = ref<Map<string, boolean>>(new Map());
   const lastSync = ref<Date | null>(null);
+
+  // Temp→server id aliases (mirrors notes' noteIdAliases): an optimistic
+  // item's temp id is swapped for the server id on reconcile; surfaces that
+  // captured the temp id (quick capture, /board/[id]) resolve through this.
+  const itemIdAliases = ref<Map<string, string>>(new Map());
+  const resolveItemId = (id: string | null): string | null => {
+    if (!id) return null;
+    return itemIdAliases.value.get(id) ?? null;
+  };
+  const recordItemAlias = (tempId: string, serverId: string) => {
+    const next = new Map(itemIdAliases.value);
+    next.set(tempId, serverId);
+    itemIdAliases.value = next;
+  };
+  const isUnreconciledTempId = (id: string) =>
+    id.startsWith("temp-") && !itemIdAliases.value.has(id);
   const isPositionMutationPending = ref(false);
   const filteredItemIds = ref<Set<string> | null>(null);
   let pendingPositionMutationCount = 0;
@@ -172,7 +207,7 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     item: BoardItemState,
     operation: 'upsert' | 'delete',
     localVersion: number
-  ): import('~/utils/idb').PendingBoardItemChange => ({
+  ): PendingBoardItemChange => ({
     id: item.id,
     operation,
     updatedAt: Date.now(),
@@ -191,6 +226,43 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       ? (item.createdAt instanceof Date ? item.createdAt.getTime() : new Date(item.createdAt as string).getTime())
       : Date.now(),
   });
+
+  const toTimestamp = (value: BoardItemState["updatedAt"] | number | string | undefined): number => {
+    if (typeof value === "number") return value;
+    if (value instanceof Date) return value.getTime();
+    if (typeof value === "string") {
+      const parsed = Date.parse(value);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    }
+    return 0;
+  };
+
+  const localVersionFor = (
+    item: BoardItemState,
+    sentChange?: PendingBoardItemChange,
+  ): number =>
+    Math.max(
+      sentChange?.localVersion ?? 0,
+      (item as { localVersion?: number }).localVersion ?? 0,
+    ) + 1;
+
+  const isSamePendingChange = (
+    left: PendingBoardItemChange | undefined,
+    right: PendingBoardItemChange | undefined,
+  ): boolean =>
+    Boolean(left && right) &&
+    left!.id === right!.id &&
+    left!.operation === right!.operation &&
+    left!.updatedAt === right!.updatedAt &&
+    (left!.localVersion ?? 0) === (right!.localVersion ?? 0);
+
+  const changedAfterPendingSnapshot = (
+    item: BoardItemState,
+    sentChange?: PendingBoardItemChange,
+  ): boolean => {
+    if (!sentChange) return Boolean(item.isDirty);
+    return toTimestamp(item.updatedAt) > sentChange.updatedAt;
+  };
 
   const isTransientNetworkError = (error?: APIError | null): boolean =>
     error?.code === "FETCH_ERROR" || error?.code === "TIMEOUT" || !networkMonitor.isVerifiedOnline.value;
@@ -222,12 +294,60 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     await registerBoardItemsSync();
   };
 
+  const repairDirtyItemsWithoutPending = async (
+    pendingChanges: PendingBoardItemChange[],
+  ): Promise<PendingBoardItemChange[]> => {
+    const pendingById = new Set(pendingChanges.map((change) => change.id));
+    const nextChanges = pendingChanges.slice();
+
+    for (const item of items.value.values()) {
+      if (!item.isDirty || item.error || pendingById.has(item.id)) continue;
+
+      const repairedChange = buildPendingPayload(
+        item,
+        "upsert",
+        localVersionFor(item),
+      );
+      await queueBoardItemChange(repairedChange);
+      nextChanges.push(repairedChange);
+      pendingById.add(item.id);
+    }
+
+    if (nextChanges.length !== pendingChanges.length) {
+      await registerBoardItemsSync();
+    }
+
+    return nextChanges;
+  };
+
+  const deleteAppliedChangesIfUnchanged = async (
+    appliedIds: string[],
+    sentChanges: PendingBoardItemChange[],
+  ): Promise<void> => {
+    if (!appliedIds.length) return;
+
+    const sentById = new Map(sentChanges.map((change) => [change.id, change]));
+    const latestChanges = await loadPendingBoardItemChanges(workspaceId);
+    const latestById = new Map(
+      latestChanges.map((change) => [change.id, change]),
+    );
+    const safeToDelete = appliedIds.filter((id) =>
+      isSamePendingChange(latestById.get(id), sentById.get(id)),
+    );
+
+    await deletePendingBoardItemChanges(safeToDelete);
+  };
+
   // Sync board item changes to server
   const updateItemToServer = async (
-    id: string
+    rawId: string
   ): Promise<boolean> => {
+    const id = itemIdAliases.value.get(rawId) ?? rawId;
     const item = items.value.get(id);
     if (!item) return false;
+    // A temp item is replayed through the pending queue; a PATCH against the
+    // temp id would just 404.
+    if (isUnreconciledTempId(id)) return true;
     const nextVersion = ((item as any).localVersion ?? 0) + 1;
 
     try {
@@ -287,42 +407,77 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     applied?: string[];
     conflicts?: Array<{ id: string }>;
     idMap?: Record<string, string>;
-  }) => {
+  }, sentChanges: PendingBoardItemChange[] = []): Promise<PendingBoardItemChange[]> => {
     const appliedIds = response.applied ?? [];
     const conflicts = response.conflicts ?? [];
     const idMap = response.idMap ?? {};
+    const sentById = new Map(sentChanges.map((change) => [change.id, change]));
+    const followUpChanges: PendingBoardItemChange[] = [];
     const now = new Date();
 
     for (const [tempId, serverId] of Object.entries(idMap)) {
+      recordItemAlias(tempId, serverId);
       const tempItem = items.value.get(tempId);
-      if (!tempItem) continue;
+      const sentChange = sentById.get(tempId);
+      if (!tempItem) {
+        followUpChanges.push({
+          id: serverId,
+          operation: "delete",
+          updatedAt: Date.now(),
+          localVersion: (sentChange?.localVersion ?? 0) + 1,
+          workspaceId: sentChange?.workspaceId ?? workspaceId,
+        });
+        continue;
+      }
 
       items.value.delete(tempId);
       await deleteBoardItemFromIndexedDB(tempId);
+      const changedAfterSync = changedAfterPendingSnapshot(tempItem, sentChange);
 
       const serverItem: BoardItemState = {
         ...tempItem,
         id: serverId,
-        isDirty: false,
+        isDirty: changedAfterSync,
         isLoading: false,
         lastSaved: now,
         error: null,
       };
       items.value.set(serverId, serverItem);
       await saveBoardItemToIndexedDB(serverItem);
+      if (changedAfterSync) {
+        followUpChanges.push(
+          buildPendingPayload(
+            serverItem,
+            "upsert",
+            localVersionFor(serverItem, sentChange),
+          ),
+        );
+      }
     }
 
     for (const itemId of appliedIds) {
+      if (idMap[itemId]) continue;
       const localId = idMap[itemId] ?? itemId;
       const item = items.value.get(localId);
       if (!item) continue;
+      const sentChange = sentById.get(itemId);
+      const changedAfterSync = changedAfterPendingSnapshot(item, sentChange);
 
-      item.isDirty = false;
+      item.isDirty = changedAfterSync;
       item.isLoading = false;
       item.lastSaved = now;
       item.error = null;
       items.value.set(localId, { ...item });
       await saveBoardItemToIndexedDB(item);
+      if (changedAfterSync) {
+        followUpChanges.push(
+          buildPendingPayload(
+            item,
+            "upsert",
+            localVersionFor(item, sentChange),
+          ),
+        );
+      }
     }
 
     for (const conflict of conflicts) {
@@ -335,6 +490,8 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       items.value.set(conflict.id, { ...item });
       await saveBoardItemToIndexedDB(item);
     }
+
+    return followUpChanges;
   };
 
   const syncPendingChanges = async (): Promise<boolean> => {
@@ -344,19 +501,41 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       return false;
     }
 
-    const pendingChanges = await loadPendingBoardItemChanges(workspaceId);
-    if (!pendingChanges.length) {
+    for (let pass = 0; pass < 3; pass += 1) {
+      let pendingChanges = await loadPendingBoardItemChanges(workspaceId);
+      pendingChanges = await repairDirtyItemsWithoutPending(pendingChanges);
+      if (!pendingChanges.length) {
+        lastSync.value = new Date();
+        return true;
+      }
+
+      const syncRequest = BoardItemsSyncRequestSchema.parse(pendingChanges);
+      const result = await $api.boardItems.sync(syncRequest);
+      if (!result.success) {
+        return false;
+      }
+
+      const followUpChanges = await applySyncResultLocally(result.data, pendingChanges);
+      const mappedTempIds = Object.keys(result.data.idMap ?? {});
+      if (mappedTempIds.length) {
+        await deletePendingBoardItemChanges(mappedTempIds);
+      }
+      await deleteAppliedChangesIfUnchanged(
+        (result.data.applied ?? []).filter((id) => !mappedTempIds.includes(id)),
+        pendingChanges,
+      );
+      for (const change of followUpChanges) {
+        await queueBoardItemChange(change);
+      }
+      if (followUpChanges.length) {
+        await registerBoardItemsSync();
+        continue;
+      }
+
+      lastSync.value = new Date();
       return true;
     }
 
-    const syncRequest = BoardItemsSyncRequestSchema.parse(pendingChanges);
-    const result = await $api.boardItems.sync(syncRequest);
-    if (!result.success) {
-      return false;
-    }
-
-    await applySyncResultLocally(result.data);
-    await deletePendingBoardItemChanges(result.data.applied ?? []);
     lastSync.value = new Date();
     return true;
   };
@@ -366,15 +545,30 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     id: string,
     updatedItem: BoardItemState
   ): Promise<boolean> => {
+    // A caller may still hold a temp id after the create reconciled — write
+    // through to the real id so the temp entry isn't resurrected.
+    const realId = itemIdAliases.value.get(id) ?? id;
+    updatedItem = { ...updatedItem, id: realId };
     updatedItem.updatedAt = new Date();
     updatedItem.isDirty = true;
-    items.value.set(id, updatedItem);
+    items.value.set(realId, updatedItem);
 
     // Save to IndexedDB
     await saveBoardItemToIndexedDB(updatedItem);
 
+    if (isUnreconciledTempId(realId)) {
+      await queueBoardItemChange(
+        buildPendingPayload(updatedItem, "upsert", localVersionFor(updatedItem)),
+      );
+      await registerBoardItemsSync();
+      if (networkMonitor.isVerifiedOnline.value) {
+        void syncPendingChanges();
+      }
+      return true;
+    }
+
     // Debounced server sync (reads full item from store)
-    await saveToServer(id);
+    await saveToServer(realId);
     return true;
   };
 
@@ -406,102 +600,56 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       attachments,
       createdAt: new Date(),
       updatedAt: new Date(),
-      isLoading: true,
-      isDirty: false,
+      isLoading: false,
+      isDirty: true,
       error: null,
     };
 
     await saveBoardItemToIndexedDB(optimisticItem);
     items.value.set(tempId, optimisticItem);
-
-    if (!networkMonitor.isVerifiedOnline.value) {
+    try {
       await queueBoardItemChange(buildPendingPayload(optimisticItem, "upsert", 1));
       await registerBoardItemsSync();
-
-      optimisticItem.isLoading = false;
-      optimisticItem.isDirty = true;
-      items.value.set(tempId, optimisticItem);
-
-      // Offline toast handled globally by NetworkStatusIndicator/App.vue
-      return tempId;
-    }
-    try {
-      const result = await $api.boardItems.create({
-        content,
-        tags,
-        columnId: columnId ?? undefined,
-        workspaceId: workspaceId,
-        dueDate: dueDate ?? undefined,
-        attachments: attachments,
+      if (networkMonitor.isVerifiedOnline.value) {
+        void syncPendingChanges();
+      }
+    } catch (error) {
+      const current = items.value.get(tempId) ?? optimisticItem;
+      items.value.set(tempId, {
+        ...current,
+        error:
+          "This item is visible locally, but could not be queued for sync. Keep this page open and retry.",
       });
-
-      if (result.success) {
-        items.value.delete(tempId);
-        await deleteBoardItemFromIndexedDB(tempId);
-
-        const serverItem: BoardItemState = {
-          ...result.data,
-          isLoading: false,
-          isDirty: false,
-          lastSaved: new Date(),
-          error: null,
-        };
-        items.value.set(result.data.id, serverItem);
-        await saveBoardItemToIndexedDB(serverItem);
-        return result.data.id;
-      }
-      // BUG-9 fix: this block was inside the if(result.success) block due to missing }
-      // FetchFactory network error — queue for offline sync silently.
-      if (isTransientNetworkError(result.error)) {
-        await queueBoardItemChange(buildPendingPayload(optimisticItem, "upsert", 1));
-        await registerBoardItemsSync();
-        const offlineItem = items.value.get(tempId);
-        if (offlineItem) {
-          offlineItem.isLoading = false;
-          offlineItem.isDirty = true;
-          items.value.set(tempId, offlineItem);
-        }
-        return tempId;
-      }
-
-      // Genuine server rejection.
-      const item = items.value.get(tempId);
-      if (item) {
-        item.isLoading = false;
-        item.error = "Server rejected board item creation";
-        items.value.set(tempId, item);
-      }
-      return null;
-    } catch {
-      if (!networkMonitor.isVerifiedOnline.value) {
-        await queueBoardItemChange(buildPendingPayload(optimisticItem, "upsert", 1));
-        await registerBoardItemsSync();
-        const offlineItem = items.value.get(tempId);
-        if (offlineItem) {
-          offlineItem.isLoading = false;
-          offlineItem.isDirty = true;
-          items.value.set(tempId, offlineItem);
-        }
-        return tempId;
-      }
-      const item = items.value.get(tempId);
-      if (item) {
-        item.isLoading = false;
-        item.error = "Network error";
-        items.value.set(tempId, item);
-      }
-      return null;
+      console.error("Failed to queue board item creation:", error);
     }
+
+    return tempId;
   };
 
   // Delete board item
-  const deleteItem = async (id: string): Promise<boolean> => {
+  const deleteItem = async (rawId: string): Promise<boolean> => {
+    const id = itemIdAliases.value.get(rawId) ?? rawId;
     const originalItem = items.value.get(id);
     if (!originalItem) return false;
 
     // Optimistic delete
     items.value.delete(id);
     await deleteBoardItemFromIndexedDB(id);
+
+    if (isUnreconciledTempId(id)) {
+      await queueBoardItemChange({
+        id,
+        operation: "delete",
+        updatedAt: Date.now(),
+        localVersion: 1,
+        workspaceId: originalItem.workspaceId ?? workspaceId,
+      });
+      await registerBoardItemsSync();
+      if (networkMonitor.isVerifiedOnline.value) {
+        void syncPendingChanges();
+      }
+      return true;
+    }
 
     // If already offline, queue the delete immediately.
     if (!networkMonitor.isVerifiedOnline.value) {
@@ -815,8 +963,11 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     beginPositionMutation();
 
     try {
-      if (!networkMonitor.isVerifiedOnline.value) {
+      if (!networkMonitor.isVerifiedOnline.value || isUnreconciledTempId(itemId)) {
         await queueBoardItemsForSync([movedItem]);
+        if (networkMonitor.isVerifiedOnline.value) {
+          void syncPendingChanges();
+        }
         return true;
       }
 
@@ -968,12 +1119,19 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     const changedItems = Array.from(pending.keys())
       .map((id) => items.value.get(id))
       .filter((item): item is BoardItemState => Boolean(item));
+    const tempChangedItems = changedItems.filter((item) =>
+      isUnreconciledTempId(item.id),
+    );
 
     try {
       if (!networkMonitor.isVerifiedOnline.value) {
         await queueBoardItemsForSync(changedItems);
         state.rollback = null; // queued = accepted
         return;
+      }
+
+      if (tempChangedItems.length) {
+        await queueBoardItemsForSync(tempChangedItems);
       }
 
       // Nothing persistable (only optimistic temp items moved) — they'll be
@@ -988,6 +1146,7 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       if (result.success) {
         const lastSaved = new Date();
         changedItems.forEach((item) => {
+          if (isUnreconciledTempId(item.id)) return;
           const current = items.value.get(item.id);
           if (current) {
             items.value.set(item.id, {
@@ -1097,9 +1256,11 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     isItemDirty,
     isItemInFilter,
     getItem,
+    resolveItemId,
     setItems,
     setFilteredItemIds,
     _flushDebounce,
+    _syncPendingChanges: syncPendingChanges,
   };
 
   boardItemsStores.set(storeKey, store);
