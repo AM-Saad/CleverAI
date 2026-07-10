@@ -6,6 +6,7 @@ import {
   UpdateNoteGroupDTO,
   type UpdateNoteGroupDTO as UpdateNoteGroupPayload,
 } from "@@/shared/utils/note-group.contract";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -44,6 +45,7 @@ export default defineEventHandler(async (event) => {
     where: { id },
     data: { title: data.title },
   });
+  await advanceOfflineEntityState({ prisma, userId: user.id, entity: "noteGroup", entityId: id, changedFields: ["title"] });
 
   if (process.env.NODE_ENV === "development") {
     NoteGroupSchema.parse(updatedGroup);

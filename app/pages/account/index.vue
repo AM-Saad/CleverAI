@@ -69,6 +69,7 @@
 </template>
 
 <script setup lang="ts">
+import { useOfflineLogout } from "~/composables/offline/useOfflineLogout";
 import { computed, onMounted, ref } from "vue";
 import type { UserProfile } from "@@/shared/utils/user.contract";
 import type { SubscriptionInfo } from "@shared/utils/llm-generate.contract";
@@ -80,6 +81,7 @@ type ProfileWithSubscription = UserProfile & {
 };
 
 const { data: authData, signOut } = useAuth();
+const clearOfflineAccount = useOfflineLogout();
 const creditsStore = useCreditsStore();
 const subscriptionStore = useSubscriptionStore();
 const { unreadCount } = useInAppNotifications();
@@ -147,6 +149,13 @@ const accountItems = computed(() => [
     to: "/account/language",
   },
   {
+    title: "Offline sync",
+    description: "Downloads, pending changes, and conflict resolution",
+    trailing: "Manage",
+    icon: "i-lucide-cloud-off",
+    to: "/account/offline",
+  },
+  {
     title: "Security",
     description: "Password and account deletion",
     trailing: "Account",
@@ -180,6 +189,7 @@ function openAccountSection(path: string) {
 async function logout() {
   signingOut.value = true;
   try {
+    await clearOfflineAccount();
     await signOut({ redirect: false });
   } catch {
     /* fall through to hard redirect */

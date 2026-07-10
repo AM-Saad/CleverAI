@@ -250,8 +250,8 @@ export function setupSyncCompletionListener(
 
 /** Register notes Background Sync tag. */
 export const registerNotesSync = () =>
-  registerBackgroundSync(SYNC_TAGS.NOTES);
+  registerBackgroundSync(SYNC_TAGS.OFFLINE_V2);
 
 /** Register board items Background Sync tag. */
 export const registerBoardItemsSync = () =>
-  registerBackgroundSync(SYNC_TAGS.BOARD_ITEMS);
+  registerBackgroundSync(SYNC_TAGS.OFFLINE_V2);

@@ -3,6 +3,8 @@ import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { MoveItemToColumnDTO } from "@@/shared/utils/boardColumn.contract";
 import { BoardItemSchema } from "@@/shared/utils/boardItem.contract";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
+import { positionBetween } from "@@/shared/utils/position-key";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -46,13 +48,22 @@ export default defineEventHandler(async (event) => {
 
     // Fractional ranking → a move is a single-item write: just set the new
     // column + rank. Sibling ranks are untouched (gaps are harmless).
+    const neighbours = await prisma.boardItem.findMany({
+      where: { userId: user.id, columnId: data.targetColumnId, id: { not: data.itemId } },
+      orderBy: { order: "asc" },
+      select: { order: true, position: true },
+    });
+    const before = neighbours.filter((item: { order: number }) => item.order < data.rank).at(-1)?.position;
+    const after = neighbours.find((item: { order: number }) => item.order >= data.rank)?.position;
     const updatedItem = await prisma.boardItem.update({
       where: { id: data.itemId },
       data: {
         columnId: data.targetColumnId,
         order: data.rank,
+        position: positionBetween(before, after),
       },
     });
+    await advanceOfflineEntityState({ prisma, userId: user.id, entity: "boardItem", entityId: data.itemId, changedFields: ["columnId", "position"] });
 
     if (process.env.NODE_ENV === "development") {
       BoardItemSchema.parse(updatedItem);

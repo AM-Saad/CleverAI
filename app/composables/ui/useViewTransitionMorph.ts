@@ -19,6 +19,13 @@ import { computed, nextTick, readonly, ref } from "vue";
  */
 
 export const MORPH_NAME = "quick-capture";
+/**
+ * Name the CaptureSheet panel carries while open (UiSheet `morph-name`). It
+ * makes the panel its own morph group, so in-sheet mode swaps animate the
+ * sheet's bounds (springy grow/shrink) instead of hard-cutting between the
+ * menu-sized and editor-sized panel. Styled in main.css.
+ */
+export const SHEET_MORPH_NAME = "capture-sheet";
 
 type MorphTarget = HTMLElement | null | (() => HTMLElement | null);
 
@@ -47,7 +54,11 @@ function vtSupported(): boolean {
   );
 }
 
-function prefersReducedMotion(): boolean {
+/**
+ * Shared JS-side reduced-motion check for animations the global CSS rule
+ * can't reach (view transitions, WAAPI).
+ */
+export function prefersReducedMotion(): boolean {
   return (
     import.meta.client &&
     window.matchMedia?.("(prefers-reduced-motion: reduce)").matches === true

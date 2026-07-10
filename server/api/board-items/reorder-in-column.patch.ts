@@ -5,6 +5,8 @@ import { Errors, success } from "@server/utils/error";
 import { ReorderItemsInColumnDTO } from "@@/shared/utils/boardColumn.contract";
 import { BoardItemSchema } from "@@/shared/utils/boardItem.contract";
 import { persistBoardItemOrders } from "@server/modules/board/application/persistBoardItemOrders";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
+import { rebalancePositionKeys } from "@server/modules/offline/application/rebalancePositionKeys";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -66,6 +68,8 @@ export default defineEventHandler(async (event) => {
           "Some board items do not belong to this user or were not found"
         ),
     });
+    await rebalancePositionKeys({ prisma, model: "boardItem", ids: data.itemOrders.slice().sort((left, right) => left.order - right.order).map((item) => item.id) });
+    await Promise.all(data.itemOrders.map((item: { id: string }) => advanceOfflineEntityState({ prisma, userId: user.id, entity: "boardItem", entityId: item.id, changedFields: ["position"] })));
 
     // Return minimal success response - client already has the data
     // Only fetch if truly needed for verification in development
@@ -75,7 +79,7 @@ export default defineEventHandler(async (event) => {
           userId: user.id,
           columnId: data.columnId,
         },
-        orderBy: { order: "asc" },
+        orderBy: { position: "asc" },
       });
       updatedItems.forEach((item: BoardItem) => BoardItemSchema.parse(item));
       return success(updatedItems, {

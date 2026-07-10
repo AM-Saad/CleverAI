@@ -69,6 +69,9 @@ model Workspace {
   description    String?
   metadata       Json?
   order          Int
+  // LexoRank-style key used by offline-v2. `order` remains a legacy display
+  // fallback while existing records are backfilled.
+  position       String?
   rawText        String?
   questions      Question[]
   flashcards     Flashcard[]
@@ -87,7 +90,8 @@ model Workspace {
   externalWorkspaceMappings ExternalWorkspaceMapping[]
   workspaceExternalRefs WorkspaceExternalRef[]
 
-  @@unique([userId, order])
+  @@index([userId, order])
+  @@index([userId, position])
 }
 
 model Material {
@@ -120,6 +124,7 @@ model Note {
   content     String
   tags        String[]  @default([])
   order       Int       @default(0)
+  position    String?
   noteType    String?   @default("TEXT")
   metadata    Json?
   version     Int       @default(1)
@@ -150,6 +155,7 @@ model NoteGroup {
   workspaceId String    @db.ObjectId
   title       String
   order       Int       @default(0)
+  position    String?
   notes       Note[]
   version     Int       @default(1)
   createdAt   DateTime  @default(now())
@@ -167,6 +173,7 @@ model BoardItem {
   content       String
   tags          String[]           @default([])
   order         Float              @default(0) // fractional rank (LexoRank-style)
+  position      String?
   dueDate       DateTime?
   attachments   Json               @default("[]")
   createdAt     DateTime           @default(now())
@@ -184,6 +191,7 @@ model BoardItem {
   @@index([userId, order])
   @@index([columnId, order])
   @@index([workspaceId])
+  @@index([workspaceId, position])
 }
 
 model IntegrationAccount {
@@ -360,6 +368,7 @@ model BoardColumn {
   userId      String      @db.ObjectId
   name        String
   order       Int         @default(0)
+  position    String?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   items       BoardItem[] @relation("ColumnItems")
@@ -368,6 +377,7 @@ model BoardColumn {
   workspaceId String?     @db.ObjectId
 
   @@index([userId, order])
+  @@index([userId, position])
 }
 
 model UserTag {
@@ -377,11 +387,13 @@ model UserTag {
   name      String
   color     String   @default("#3b82f6")
   order     Int      @default(0)
+  position  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@unique([userId, name])
   @@index([userId, order])
+  @@index([userId, position])
 }
 
 model Question {
@@ -901,4 +913,39 @@ model UserLanguagePreferences {
   updatedAt        DateTime @updatedAt
 
   @@map("userLanguagePreferences")
+}
+
+// =========================
+// OFFLINE RECONCILIATION
+// =========================
+
+// Stores the exact terminal response for a client mutation. Replays return the
+// original result instead of applying a side effect twice.
+model OfflineMutationReceipt {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String   @db.ObjectId
+  mutationId String
+  status     String
+  result     Json
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, mutationId], name: "userId_mutationId")
+  @@index([createdAt])
+}
+
+// Generic per-entity field revisions. Keeping it outside individual domain
+// tables lets legacy entities participate in field-aware conflict detection.
+model OfflineEntityState {
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String    @db.ObjectId
+  entity        String
+  entityId      String
+  version       Int       @default(0)
+  fieldVersions Json      @default("{}")
+  deletedAt     DateTime?
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([userId, entity, entityId], name: "userId_entity_entityId")
+  @@index([userId, entity])
+  @@index([deletedAt])
 }

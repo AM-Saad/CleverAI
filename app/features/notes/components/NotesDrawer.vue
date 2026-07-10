@@ -5,6 +5,7 @@ import type { NoteLayoutItem } from "@@/shared/utils/note-sync.contract";
 import type { NoteState } from "../composables/useNotesStore";
 import type { NoteRowIntent } from "../composables/noteRowIntents";
 import { logNotesOperation } from "../composables/notesOperationLog";
+import { comparePosition } from "../../../shared/utils/position-key";
 import DeleteConfirmationModal from "~/components/shared/DeleteConfirmationModal.vue";
 import NoteGroupSection from "./NoteGroupSection.vue";
 import NotesSearch from "~/features/notes/components/NotesSearch.vue";
@@ -71,12 +72,12 @@ const deletingGroup = computed(() =>
 const sortedNotesForGroup = (groupId: string | null) =>
   props.notes
     .filter((note) => (note.groupId ?? null) === groupId)
-    .sort((a, b) => a.order - b.order);
+    .sort(comparePosition);
 
 const groupSections = computed<DrawerSection[]>(() =>
   props.groups
     .slice()
-    .sort((a, b) => a.order - b.order)
+    .sort(comparePosition)
     .map((group) => ({
       key: group.id,
       groupId: group.id,

@@ -1,6 +1,8 @@
 import { APIError } from "@/services/FetchFactory";
 import type Result from "@/types/Result";
 import type { UploadMaterialResponse } from "@/services/Material";
+import { saveOfflineBlob } from "~/utils/offline-v2/repository";
+import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 
 export interface MaterialState extends Material {
   // Local state tracking
@@ -64,7 +66,7 @@ export function useMaterialsStore(workspaceId: string): MaterialStore {
 
   const { $api } = useNuxtApp();
   const toast = useToast();
-  const { handleOfflineSubmit } = useOffline();
+  const offline = useOfflineRuntime();
 
 
   // Local reactive state
@@ -140,6 +142,19 @@ export function useMaterialsStore(workspaceId: string): MaterialStore {
     title: string;
     type: "text" | "video" | "audio" | "pdf" | "url" | "document" | undefined;
   }): Promise<boolean> => {
+    if (!offline.isOnline.value) {
+      const { entityId } = await offline.queue({
+        entity: "material",
+        operation: "material.create",
+        workspaceId,
+        changedFields: ["title", "content", "type"],
+        payload: { workspaceId, ...payload },
+        localData: { workspaceId, ...payload, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+      });
+      materials.value.set(entityId, { id: entityId, workspaceId, ...payload, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(), isLoading: false, error: null } as MaterialState);
+      toast.add({ title: "Saved locally", description: "This material will sync when you reconnect.", color: "warning" });
+      return true;
+    }
     // const tempId = `temp-${Date.now()}`;
 
     // // Add optimistic material
@@ -196,6 +211,12 @@ export function useMaterialsStore(workspaceId: string): MaterialStore {
     file: File,
     title?: string
   ): Promise<UploadMaterialResponse | null> => {
+    if (!offline.isOnline.value) {
+      if (!offline.accountId.value) return null;
+      await saveOfflineBlob({ accountId: offline.accountId.value, workspaceId, name: title ?? file.name, type: file.type, blob: file });
+      toast.add({ title: "Upload saved as draft", description: "Send this file manually after reconnecting. AI processing will not start automatically.", color: "warning" });
+      return null;
+    }
     uploading.value = true;
     uploadError.value = null;
 
@@ -246,6 +267,12 @@ export function useMaterialsStore(workspaceId: string): MaterialStore {
 
       // Optimistic removal from reactive state
       materials.value.delete(id);
+
+      if (!offline.isOnline.value) {
+        await offline.queue({ entity: "material", operation: "material.delete", entityId: id, workspaceId, changedFields: ["deleted"], payload: {} });
+        toast.add({ title: "Saved locally", description: "Deletion will sync when you reconnect.", color: "warning" });
+        return true;
+      }
 
       // Attempt to submit to server
       const result: Result<unknown, APIError> = await $api.materials.delete(id);

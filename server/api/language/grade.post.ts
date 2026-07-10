@@ -5,6 +5,7 @@ import { LanguageGradeRequestSchema } from "@shared/utils/language.contract";
 import { gradeReviewCard } from "@server/modules/review/application/gradeReviewCard";
 import { PrismaLanguageReviewRepository } from "@server/modules/language-learning/infrastructure/PrismaLanguageReviewRepository";
 import { PrismaXpPort } from "@server/modules/review/infrastructure/PrismaXpPort";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 export default defineEventHandler(async (event) => {
   let validatedBody;
@@ -32,7 +33,9 @@ export default defineEventHandler(async (event) => {
     grade: parseInt(validatedBody.grade),
     requestId: validatedBody.requestId,
     xpSource: "language_review",
+    reviewedAt: validatedBody.reviewedAt ? new Date(validatedBody.reviewedAt) : undefined,
   });
+  await advanceOfflineEntityState({ prisma, userId: user.id, entity: "languageReview", entityId: result.reviewId, changedFields: ["reviewState"] });
 
   return success({
     nextReviewAt: result.nextReviewAt.toISOString(),

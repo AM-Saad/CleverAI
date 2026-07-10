@@ -2,8 +2,9 @@
 import TextNote from "~/features/notes/components/TextNote.vue";
 import { useBoardItemsStore } from "../composables/useBoardItemsStore";
 import type { BoardItemState } from "../composables/useBoardItemsStore";
-import type { Attachment } from "~/shared/utils/boardItem.contract";
+import type { Attachment, BoardItemComment, BoardItemLink } from "~/shared/utils/boardItem.contract";
 import type { BoardItemExternalRef } from "@@/shared/utils/boardIntegration.contract";
+import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 
 const props = defineProps<{
   item: BoardItemState;
@@ -24,6 +25,7 @@ const toast = useToast();
 const tagsStore = useUserTagsStore(props.workspaceId);
 const itemsStore = useBoardItemsStore(props.workspaceId);
 const { $api } = useNuxtApp();
+const offline = useOfflineRuntime();
 
 // ─── Tabs ──────────────────────────────────────────────────────────────────
 const activeTab = ref<"content" | "details" | "links" | "comments" | "integrations">("content");
@@ -191,6 +193,17 @@ async function addLink() {
   if (!newLinkTargetId.value) return;
   addingLink.value = true;
   try {
+    if (!offline.isOnline.value) {
+      const id = `local:${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const link = { id, sourceId: props.item.id, targetId: newLinkTargetId.value, linkType: newLinkType.value, userId: "", createdAt: new Date() } as BoardItemLink;
+      const current = itemsStore.getItem(props.item.id);
+      if (current) itemsStore.items.value.set(props.item.id, { ...current, links: { sent: [...(current.links?.sent ?? []), link], received: current.links?.received ?? [] } });
+      await offline.queue({ entity: "boardLink", operation: "boardLink.create", entityId: id, workspaceId: props.workspaceId, changedFields: ["sourceId", "targetId", "linkType"], payload: { sourceId: link.sourceId, targetId: link.targetId, linkType: link.linkType }, localData: link as unknown as Record<string, unknown> });
+      showAddLink.value = false;
+      newLinkTargetId.value = "";
+      newLinkType.value = "RELATED";
+      return;
+    }
     const result = await $api.boardItems.createLink({
       sourceId: props.item.id,
       targetId: newLinkTargetId.value,
@@ -213,6 +226,12 @@ async function addLink() {
 
 async function deleteLink(linkId: string) {
   try {
+    if (!offline.isOnline.value) {
+      const current = itemsStore.getItem(props.item.id);
+      if (current?.links) itemsStore.items.value.set(props.item.id, { ...current, links: { sent: current.links.sent.filter((link) => link.id !== linkId), received: current.links.received.filter((link) => link.id !== linkId) } });
+      await offline.queue({ entity: "boardLink", operation: "boardLink.delete", entityId: linkId, workspaceId: props.workspaceId, changedFields: ["deleted"], payload: {} });
+      return;
+    }
     const result = await $api.boardItems.deleteLink(linkId);
     if (result.success || (result as any).status === 204) {
       await itemsStore.loadItemLinks(props.item.id);
@@ -234,6 +253,15 @@ async function addComment() {
   if (!text) return;
   addingComment.value = true;
   try {
+    if (!offline.isOnline.value) {
+      const id = `local:${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const comment = { id, itemId: props.item.id, userId: "", content: text, createdAt: new Date(), updatedAt: new Date() } as BoardItemComment;
+      const current = itemsStore.getItem(props.item.id);
+      if (current) itemsStore.items.value.set(props.item.id, { ...current, comments: [...(current.comments ?? []), comment] });
+      await offline.queue({ entity: "boardComment", operation: "boardComment.create", entityId: id, workspaceId: props.workspaceId, changedFields: ["itemId", "content"], payload: { itemId: props.item.id, content: text }, localData: comment as unknown as Record<string, unknown> });
+      newCommentContent.value = "";
+      return;
+    }
     const result = await $api.boardItems.createComment({ itemId: props.item.id, content: text });
     if (result.success) {
       await itemsStore.loadItemComments(props.item.id);
@@ -433,7 +461,7 @@ watch(() => props.item.id, async () => {
 
           <!-- design-allow: native datetime picker — no Ui primitive wraps type=datetime-local -->
           <input v-model="dueDateInput" type="datetime-local"
-            class="w-full px-3 py-2 rounded-[var(--radius-lg)] border border-secondary bg-surface text-sm text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]" />
+            class="w-full px-3 py-2 rounded-[var(--radius-lg)] border border-secondary bg-surface text-sm text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--ds-focus-outline-color)]" />
         </section>
 
         <!-- Attachments -->

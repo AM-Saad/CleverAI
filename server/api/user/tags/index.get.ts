@@ -11,7 +11,7 @@ export default defineEventHandler(async (event) => {
   try {
     const tags: UserTag[] = await prisma.userTag.findMany({
       where: { userId },
-      orderBy: { order: "asc" },
+      orderBy: { position: "asc" },
     });
 
     return {

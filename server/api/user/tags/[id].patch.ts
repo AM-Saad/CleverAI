@@ -1,6 +1,7 @@
 // server/api/user/tags/[id].patch.ts
 import { requireRole } from "~~/server/utils/auth";
 import { UpdateUserTagDTO, UserTagSchema } from "~/shared/utils/user-tag.contract";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -56,6 +57,7 @@ export default defineEventHandler(async (event) => {
       where: { id: tagId },
       data: dto,
     });
+    await advanceOfflineEntityState({ prisma, userId, entity: "userTag", entityId: tagId, changedFields: Object.keys(dto) });
 
     return {
       success: true,

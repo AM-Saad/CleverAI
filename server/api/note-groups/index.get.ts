@@ -32,7 +32,7 @@ export default defineEventHandler(async (event) => {
 
   const groups = await prisma.noteGroup.findMany({
     where: { workspaceId: query.workspaceId },
-    orderBy: { order: "asc" },
+    orderBy: { position: "asc" },
   });
 
   if (process.env.NODE_ENV === "development") {

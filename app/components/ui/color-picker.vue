@@ -444,7 +444,7 @@ const handleSetSelectedColor = (color: string | null) => {
 
 .color-dot:focus-visible {
   outline: 2px solid var(--ds-focus-outline-color);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .color-dot-ring {

@@ -316,6 +316,7 @@ import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace"
 import { designTokenValues } from "~/design-system/tokens.generated";
 import type { BoardItemState } from "~/features/board/composables/useBoardItemsStore";
 import type { BoardColumnState } from "~/features/board/composables/useBoardColumnsStore";
+import { comparePosition } from "@@/shared/utils/position-key";
 
 const route = useRoute();
 const { activeId } = useActiveWorkspace();
@@ -367,7 +368,7 @@ const failedCount = computed(
 function itemsByColumn(columnId: string) {
   return allItems.value
     .filter((i) => i.columnId === columnId)
-    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+    .sort(comparePosition);
 }
 function columnName(columnId: string | null | undefined) {
   return columns.value.find((c) => c.id === columnId)?.name ?? "Unassigned";

@@ -201,7 +201,7 @@ defineExpose({
         activation-mode="automatic"
         active-class="text-primary"
         inactive-class="text-content-secondary hover:text-content-on-surface"
-        button-base-class="flex min-h-[52px] flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] px-2 text-[10px] font-medium tracking-[0.02em] transition-colors focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)]"
+        button-base-class="flex min-h-[52px] flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] px-2 text-[10px] font-medium tracking-[0.02em] transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ds-focus-outline-color)]"
         @select="selectPanelByIndex"
       />
       <UiButton

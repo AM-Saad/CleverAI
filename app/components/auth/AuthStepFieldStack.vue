@@ -175,7 +175,7 @@ const progressVars = computed(() => ({
 
 .auth-step-field-stack__submit:focus-visible {
   outline: 2px solid var(--ds-focus-outline-color);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .auth-step-field-stack__submit:disabled {

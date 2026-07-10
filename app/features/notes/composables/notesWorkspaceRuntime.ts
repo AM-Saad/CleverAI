@@ -12,6 +12,7 @@ import {
 import { createIndexedDbNotesGroupQueue } from "./notesGroupQueue";
 import { createIndexedDbNotesLayoutQueue } from "./notesLayoutQueue";
 import { createNotesGroupCommandService } from "./notesGroupCommandService";
+import { comparePosition } from "../../../../shared/utils/position-key";
 
 export type NotesSyncReason = "manual" | "background" | "reconnect" | "refresh";
 
@@ -81,7 +82,7 @@ export function useNotesWorkspaceRuntime(workspaceId: string): NotesWorkspaceRun
   };
 
   const orderedGroups = computed(() =>
-    Array.from(groups.value.values()).sort((a, b) => a.order - b.order),
+    Array.from(groups.value.values()).sort(comparePosition),
   );
 
   const getGroupLayout = (): NoteGroupLayoutItem[] =>

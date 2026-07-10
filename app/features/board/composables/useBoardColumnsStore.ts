@@ -8,6 +8,8 @@ import type {
 } from "~/shared/utils/boardColumn.contract";
 import type { BoardItemState } from "~/features/board/composables/useBoardItemsStore";
 import { useNetworkStatus } from "~/composables/shared/useNetworkStatus";
+import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
+import { comparePosition, positionBetween } from "@@/shared/utils/position-key";
 
 export interface BoardColumnState extends BoardColumn {
   // Local state tracking
@@ -50,6 +52,7 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
   const { $api } = useNuxtApp();
   const toast = useToast();
   const networkMonitor = useNetworkStatus();
+  const offline = useOfflineRuntime();
   const itemsStore = useBoardItemsStore(workspaceId);
 
   // Local reactive state
@@ -60,12 +63,14 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
   // Create a new board column
   const createColumn = async (name: string): Promise<string | null> => {
     if (!networkMonitor.isVerifiedOnline.value) {
-      toast.add({
-        title: "Offline",
-        description: "Column operations are disabled while offline.",
-        color: "warning"
-      });
-      return null;
+      const tempId = `local:${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const lastPosition = Array.from(columns.value.values()).sort((left, right) => (left.position ?? "").localeCompare(right.position ?? "")).at(-1)?.position;
+      const optimisticColumn: BoardColumnState = { id: tempId, userId: "", name, order: columns.value.size, position: positionBetween(lastPosition, null), workspaceId, createdAt: new Date(), updatedAt: new Date(), isLoading: false, isDirty: true, error: null };
+      columns.value.set(tempId, optimisticColumn);
+      await saveColumnToIndexedDB(optimisticColumn);
+      await offline.queue({ entity: "boardColumn", operation: "boardColumn.create", entityId: tempId, workspaceId, changedFields: ["name", "position"], payload: { name, workspaceId, position: optimisticColumn.position }, localData: optimisticColumn as unknown as Record<string, unknown> });
+      toast.add({ title: "Saved locally", description: "The column will sync when you reconnect.", color: "warning" });
+      return tempId;
     }
 
     const tempId = `temp-${Date.now()}`;
@@ -129,15 +134,6 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
 
   // Update board column name
   const updateColumn = async (id: string, name: string): Promise<boolean> => {
-    if (!networkMonitor.isVerifiedOnline.value) {
-      toast.add({
-        title: "Offline",
-        description: "Column operations are disabled while offline.",
-        color: "warning"
-      });
-      return false;
-    }
-
     const originalColumn = columns.value.get(id);
     if (!originalColumn) return false;
 
@@ -150,6 +146,12 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
     };
     columns.value.set(id, updatedColumn);
     await saveColumnToIndexedDB(updatedColumn);
+
+    if (!networkMonitor.isVerifiedOnline.value) {
+      await offline.queue({ entity: "boardColumn", operation: "boardColumn.update", entityId: id, workspaceId, changedFields: ["name"], payload: { name }, localData: updatedColumn as unknown as Record<string, unknown> });
+      toast.add({ title: "Saved locally", description: "The column name will sync when you reconnect.", color: "warning" });
+      return true;
+    }
 
     try {
       const result: Result<BoardColumn, APIError> = await $api.boardColumns.update(id, { name });
@@ -187,15 +189,6 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
 
   // Delete board column
   const deleteColumn = async (id: string): Promise<boolean> => {
-    if (!networkMonitor.isVerifiedOnline.value) {
-      toast.add({
-        title: "Offline",
-        description: "Column operations are disabled while offline.",
-        color: "warning"
-      });
-      return false;
-    }
-
     const originalColumn = columns.value.get(id);
     if (!originalColumn) return false;
 
@@ -205,24 +198,30 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
     const movedAt = new Date();
     const sourceItems = originalItems
       .filter((item) => item.columnId === id)
-      .sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
+      .sort(comparePosition);
     const movedItemIds = new Set(sourceItems.map((item) => item.id));
     const uncategorizedItems = originalItems
       .filter((item) => item.columnId === null)
-      .sort((left, right) => (left.order ?? 0) - (right.order ?? 0));
+      .sort(comparePosition);
     const affectedItemIds = new Set([
       ...movedItemIds,
       ...uncategorizedItems.map((item) => item.id),
     ]);
 
+    let previousItemPosition: string | undefined;
     const normalizedUncategorizedItems = [...uncategorizedItems, ...sourceItems].map(
-      (item, index): BoardItemState => ({
-        ...item,
-        columnId: null,
-        order: index,
-        isDirty: true,
-        updatedAt: movedAt,
-      }),
+      (item, index): BoardItemState => {
+        const position = positionBetween(previousItemPosition, null);
+        previousItemPosition = position;
+        return {
+          ...item,
+          columnId: null,
+          order: index,
+          position,
+          isDirty: true,
+          updatedAt: movedAt,
+        };
+      },
     );
     const unaffectedItems = originalItems.filter(
       (item) => !affectedItemIds.has(item.id),
@@ -237,6 +236,15 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
     // Optimistic delete
     columns.value.delete(id);
     await deleteColumnFromIndexedDB(id);
+
+    if (!networkMonitor.isVerifiedOnline.value) {
+      await offline.queue({ entity: "boardColumn", operation: "boardColumn.delete", entityId: id, workspaceId, changedFields: ["deleted"], payload: {} });
+      for (const item of normalizedUncategorizedItems) {
+        await offline.queue({ entity: "boardItem", operation: "boardItem.update", entityId: item.id, workspaceId, changedFields: ["columnId", "position"], payload: { columnId: null, position: item.position! }, localData: item as unknown as Record<string, unknown> });
+      }
+      toast.add({ title: "Saved locally", description: "The column and moved cards will sync when you reconnect.", color: "warning" });
+      return true;
+    }
 
     try {
       const result: Result<DeleteBoardColumnResponse, APIError> = await $api.boardColumns.delete(id);
@@ -292,15 +300,6 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
 
   // Reorder board columns
   const reorderColumns = async (orderedColumns: BoardColumnState[]): Promise<boolean> => {
-    if (!networkMonitor.isVerifiedOnline.value) {
-      toast.add({
-        title: "Offline",
-        description: "Column operations are disabled while offline.",
-        color: "warning"
-      });
-      return false;
-    }
-
     // Abort any pending reorder request
     if (reorderAbortController) {
       reorderAbortController.abort();
@@ -314,10 +313,22 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
 
     try {
       // Optimistic update
+      let previousPosition: string | undefined;
       orderedColumns.forEach((col, index) => {
-        col.order = index;
-        columns.value.set(col.id, col);
+        const position = positionBetween(previousPosition, null);
+        previousPosition = position;
+        const next = { ...col, order: index, position };
+        columns.value.set(col.id, next);
+        orderedColumns[index] = next;
       });
+
+      if (!networkMonitor.isVerifiedOnline.value) {
+        for (const column of orderedColumns) {
+          await offline.queue({ entity: "boardColumn", operation: "boardColumn.update", entityId: column.id, workspaceId, changedFields: ["position"], payload: { position: column.position! }, localData: column as unknown as Record<string, unknown> });
+        }
+        toast.add({ title: "Saved locally", description: "Column order will sync when you reconnect.", color: "warning" });
+        return true;
+      }
 
       // Save to IndexedDB in parallel (fire and forget - don't block)
       Promise.all(
@@ -460,7 +471,7 @@ export function useBoardColumnsStore(workspaceId?: string): BoardColumnsStore {
   };
 
   const getOrderedColumns = (): BoardColumnState[] => {
-    return Array.from(columns.value.values()).sort((a, b) => a.order - b.order);
+    return Array.from(columns.value.values()).sort(comparePosition);
   };
 
   const store: BoardColumnsStore = {

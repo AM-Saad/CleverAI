@@ -20,6 +20,9 @@ export const CACHE_NAMES = {
   API_AUTH: "api-auth",
   API_FOLDERS: "api-workspaces",
   API_NOTES: "api-notes",
+  // Explicitly user-downloaded attachments only. This is intentionally not a
+  // general user-data HTTP cache.
+  OFFLINE_FILES: "offline-files",
 } as const;
 
 // ===== CACHE CONFIGURATION =====
@@ -54,7 +57,9 @@ export const DB_CONFIG = {
   // 14: Added pendingNoteLayouts store for local-first note/group layout sync
   // 15: Added noteGroups + pendingNoteGroupChanges for local-first note grouping
   // 16: Added noteSyncConflicts for durable local/server conflict snapshots
-  VERSION: 16,
+  // 17: Account-scoped offline-v2 snapshots, outbox, packs, blobs and recovery
+  // 18: Durable per-account sync metadata and crash-recovery state.
+  VERSION: 18,
   STORES: {
     FORMS: "forms",
     NOTES: "notes",
@@ -67,6 +72,14 @@ export const DB_CONFIG = {
     PENDING_BOARD_ITEMS: "pendingBoardItems",
     BOARD_COLUMNS: "boardColumns",
     USER_TAGS: "userTags",
+    OFFLINE_ENTITIES: "offlineEntities",
+    OFFLINE_MUTATIONS: "offlineMutations",
+    OFFLINE_CONFLICTS: "offlineConflicts",
+    OFFLINE_PACKS: "offlinePacks",
+    OFFLINE_BLOBS: "offlineBlobs",
+    OFFLINE_SESSIONS: "offlineSessions",
+    OFFLINE_SYNC_META: "offlineSyncMeta",
+    OFFLINE_LEGACY_RECOVERY: "offlineLegacyRecovery",
   },
 } as const;
 
@@ -82,21 +95,8 @@ export const IDB_RETRY_CONFIG = {
   JITTER_PCT: 0.2, // +/-20% jitter
 } as const;
 
-// ===== PENDING QUEUE LIMITS =====
-// Prevents unbounded IDB growth from long offline sessions.
-export const PENDING_QUEUE_CONFIG = {
-  MAX_PENDING_NOTES: 200,
-  MAX_PENDING_GROUPS: 50,
-  MAX_PENDING_LAYOUTS: 10,
-  STALENESS_DAYS: 14, // evict changes older than 14 days
-} as const;
-
 // ===== MESSAGE TYPES =====
 export const SW_MESSAGE_TYPES = {
-  // Sync messages
-  FORM_SYNC_ERROR: "FORM_SYNC_ERROR",
-  FORM_SYNCED: "FORM_SYNCED",
-  FORM_SYNC_STARTED: "FORM_SYNC_STARTED",
   // Notes sync specific
   SYNC_NOTES: "SYNC_NOTES",
   NOTES_SYNC_STARTED: "NOTES_SYNC_STARTED",
@@ -108,6 +108,9 @@ export const SW_MESSAGE_TYPES = {
   BOARD_ITEMS_SYNC_STARTED: "BOARD_ITEMS_SYNC_STARTED",
   BOARD_ITEMS_SYNCED: "BOARD_ITEMS_SYNCED",
   BOARD_ITEMS_SYNC_ERROR: "BOARD_ITEMS_SYNC_ERROR",
+  OFFLINE_SYNC_STARTED: "OFFLINE_SYNC_STARTED",
+  OFFLINE_SYNCED: "OFFLINE_SYNCED",
+  OFFLINE_SYNC_ERROR: "OFFLINE_SYNC_ERROR",
 
   // Service worker control
   SW_ACTIVATED: "SW_ACTIVATED",
@@ -160,10 +163,10 @@ export const AI_WORKER_MESSAGE_TYPES = {
 
 // ===== SYNC TAGS =====
 export const SYNC_TAGS = {
-  FORM: "syncForm",
   CONTENT: "content-sync",
   NOTES: "notes-sync",
   BOARD_ITEMS: "board-items-sync",
+  OFFLINE_V2: "offline-v2-sync",
 } as const;
 
 // ===== NOTIFICATION CONSTANTS =====
@@ -204,8 +207,6 @@ export const URL_PATTERNS = {
 
   // API patterns
   AUTH_API: "/api/auth/",
-  FORM_SYNC_API: "/api/form-sync",
-
   // Static files
   MANIFEST: "/manifest.webmanifest",
   FAVICON: "/favicon.ico",
@@ -213,7 +214,9 @@ export const URL_PATTERNS = {
 } as const;
 
 // ===== PREWARM PATHS =====
-export const PREWARM_PATHS = ["/", "/about", "/workspaces"] as const;
+// Only a neutral app shell is stored as HTML. Account data lives in IndexedDB
+// packs; authenticated route responses must never become an offline data cache.
+export const PREWARM_PATHS = ["/"] as const;
 
 // (STATIC_WARM_FILES removed) Static warm list now lives inline in sw prewarm implementation.
 
@@ -244,10 +247,6 @@ export const PERIODIC_SYNC_CONFIG = {
 
 // ===== DOM EVENT NAMES =====
 export const DOM_EVENTS = {
-  OFFLINE_FORM_SAVED: "offline-form-saved",
-  OFFLINE_FORM_SYNC_STARTED: "offline-form-sync-started",
-  OFFLINE_FORM_SYNCED: "offline-form-synced",
-  OFFLINE_FORM_SYNC_ERROR: "offline-form-sync-error",
   VISIBILITY_CHANGE: "visibilitychange",
   ONLINE: "online",
   STORAGE_RESTRICTED: "storage-restricted",

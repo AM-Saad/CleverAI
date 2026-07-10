@@ -43,20 +43,6 @@ export interface NotesSyncConflictsMessage {
   };
 }
 
-// Form sync lifecycle
-export interface FormSyncStartedMessage {
-  type: typeof SW_MESSAGE_TYPES.FORM_SYNC_STARTED;
-  data: { message: string; mode: SyncMode };
-}
-export interface FormSyncedMessage {
-  type: typeof SW_MESSAGE_TYPES.FORM_SYNCED;
-  data: { message: string; appliedCount?: number; mode?: SyncMode };
-}
-export interface FormSyncErrorMessage {
-  type: typeof SW_MESSAGE_TYPES.FORM_SYNC_ERROR;
-  data: { message: string; attemptedCount?: number; mode?: SyncMode };
-}
-
 // SW lifecycle & update
 export interface SwActivatedMessage {
   type: typeof SW_MESSAGE_TYPES.SW_ACTIVATED;
@@ -104,9 +90,6 @@ export type OutgoingSWMessage =
   | BoardItemsSyncStartedMessage
   | BoardItemsSyncedMessage
   | BoardItemsSyncErrorMessage
-  | FormSyncStartedMessage
-  | FormSyncedMessage
-  | FormSyncErrorMessage
   | SwActivatedMessage
   | SwControlClaimedMessage
   | SwUpdateAvailableMessage

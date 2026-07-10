@@ -77,7 +77,9 @@ body {
 
 :where(a, button, input, textarea, select, [tabindex]):focus-visible:not([class*="focus-visible:ring-"]):not([class*="focus-visible:outline-"]):not([class*="focus:ring-"]):not([class*="focus:outline-"]) {
   outline: 2px solid var(--ds-focus-outline-color);
-  outline-offset: 2px;
+  /* Keep the fallback inside the border box. Many controls live in scrolling
+     rails, sheets, and translated panels, which clip outward outlines. */
+  outline-offset: -2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -95,13 +97,30 @@ body {
    The `*` reduced-motion rule above cannot match these pseudo-elements; the
    composable skips startViewTransition entirely under reduced motion. */
 ::view-transition-group(quick-capture) {
-  animation-duration: var(--duration-slow);
-  animation-timing-function: var(--ease-standard);
+  animation-duration: var(--duration-spring);
+  animation-timing-function: var(--ease-spring);
 }
 ::view-transition-old(quick-capture),
 ::view-transition-new(quick-capture) {
   height: 100%;
-  animation-duration: var(--duration-slow);
+  animation-duration: var(--duration-spring);
+  animation-timing-function: var(--ease-standard);
+}
+
+/* The capture sheet panel is its own morph group (UiSheet morph-name), so
+   mode swaps (menu ⟷ note/word/board) resize the panel with the same springy
+   grow/shrink as the tile morph inside it — they must share timing or the
+   content would detach from the panel edge during the overshoot. The
+   cross-fading old/new images keep the standard ease: an overshooting bezier
+   on opacity just clamps. */
+::view-transition-group(capture-sheet) {
+  animation-duration: var(--duration-spring);
+  animation-timing-function: var(--ease-spring);
+}
+::view-transition-old(capture-sheet),
+::view-transition-new(capture-sheet) {
+  height: 100%;
+  animation-duration: var(--duration-spring);
   animation-timing-function: var(--ease-standard);
 }
 

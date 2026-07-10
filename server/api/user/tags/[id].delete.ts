@@ -1,5 +1,6 @@
 // server/api/user/tags/[id].delete.ts
 import { requireRole } from "~~/server/utils/auth";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -30,6 +31,7 @@ export default defineEventHandler(async (event) => {
     await prisma.userTag.delete({
       where: { id: tagId },
     });
+    await advanceOfflineEntityState({ prisma, userId, entity: "userTag", entityId: tagId, changedFields: ["deleted"], deleted: true });
 
     return {
       success: true,

@@ -2,6 +2,7 @@ import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { WorkspaceSummarySchema } from "@@/shared/utils/workspace.contract";
 import { workspaceSummarySelect } from "~~/server/utils/workspaceSummary";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -82,6 +83,7 @@ export default defineEventHandler(async (event) => {
   if (!updated) {
     throw Errors.notFound("Workspace");
   }
+  if (Object.keys(workspaceData).length) await advanceOfflineEntityState({ prisma, userId: user.id, entity: "workspace", entityId: id, changedFields: Object.keys(workspaceData) });
 
   if (process.env.NODE_ENV === "development") {
     WorkspaceSummarySchema.parse(updated);

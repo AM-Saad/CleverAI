@@ -1,6 +1,8 @@
 // server/api/user/tags/index.post.ts
 import { requireRole } from "~~/server/utils/auth";
 import { CreateUserTagDTO, UserTagSchema } from "~/shared/utils/user-tag.contract";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
+import { positionBetween } from "@@/shared/utils/position-key";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -37,6 +39,7 @@ export default defineEventHandler(async (event) => {
     });
 
     const newOrder = (maxOrderTag?.order ?? -1) + 1;
+    const lastPositioned = await prisma.userTag.findFirst({ where: { userId }, orderBy: { position: "desc" }, select: { position: true } });
 
     const tag = await prisma.userTag.create({
       data: {
@@ -44,8 +47,10 @@ export default defineEventHandler(async (event) => {
         name: dto.name,
         color: dto.color,
         order: newOrder,
+        position: positionBetween(lastPositioned?.position, null),
       },
     });
+    await advanceOfflineEntityState({ prisma, userId, entity: "userTag", entityId: tag.id, changedFields: ["name", "color", "position"] });
 
     return {
       success: true,

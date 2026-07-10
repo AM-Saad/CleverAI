@@ -6,6 +6,7 @@ import {
   getOrCreateLanguagePreferences,
   updateLanguagePreferences,
 } from "@server/modules/language-learning/application/languagePreferences";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 export default defineEventHandler(async (event) => {
   const method = getMethod(event);
@@ -27,13 +28,13 @@ export default defineEventHandler(async (event) => {
       throw Errors.badRequest("Invalid preferences data");
     }
 
-    return success(
-      await updateLanguagePreferences({
+    const updated = await updateLanguagePreferences({
         prisma,
         userId: user.id,
         data: validatedPrefs,
-      }),
-    );
+      });
+    await advanceOfflineEntityState({ prisma, userId: user.id, entity: "languagePreference", entityId: updated.id, changedFields: Object.keys(validatedPrefs) });
+    return success(updated);
   }
 
   throw Errors.methodNotAllowed();

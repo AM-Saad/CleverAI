@@ -5,6 +5,8 @@ import {
   CreateNoteGroupDTO,
   NoteGroupSchema,
 } from "@@/shared/utils/note-group.contract";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
+import { positionBetween } from "@@/shared/utils/position-key";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -41,8 +43,10 @@ export default defineEventHandler(async (event) => {
       workspaceId: data.workspaceId,
       title: data.title,
       order: maxOrderGroup ? maxOrderGroup.order + 1 : 0,
+      position: positionBetween((await prisma.noteGroup.findFirst({ where: { workspaceId: data.workspaceId }, orderBy: { position: "desc" }, select: { position: true } }))?.position, null),
     },
   });
+  await advanceOfflineEntityState({ prisma, userId: user.id, entity: "noteGroup", entityId: group.id, changedFields: ["title", "position"] });
 
   if (process.env.NODE_ENV === "development") {
     NoteGroupSchema.parse(group);

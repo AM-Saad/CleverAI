@@ -4,7 +4,8 @@
  * Ensures identical schema handling and non-destructive migrations.
  */
 
-import { DB_CONFIG, IDB_RETRY_CONFIG, PENDING_QUEUE_CONFIG } from "./constants/pwa";
+import { DB_CONFIG, IDB_RETRY_CONFIG } from "./constants/pwa";
+import { comparePosition } from "../../shared/utils/position-key";
 import type { Note } from "../../shared/utils/note.contract";
 import type { NoteGroup } from "../../shared/utils/note-group.contract";
 import type {
@@ -63,6 +64,14 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
       ensureStore(STORES.PENDING_BOARD_ITEMS);
       ensureStore(STORES.BOARD_COLUMNS);
       ensureStore(STORES.USER_TAGS);
+      ensureStore(STORES.OFFLINE_ENTITIES);
+      ensureStore(STORES.OFFLINE_MUTATIONS);
+      ensureStore(STORES.OFFLINE_CONFLICTS);
+      ensureStore(STORES.OFFLINE_PACKS);
+      ensureStore(STORES.OFFLINE_BLOBS);
+      ensureStore(STORES.OFFLINE_SESSIONS);
+      ensureStore(STORES.OFFLINE_SYNC_META);
+      ensureStore(STORES.OFFLINE_LEGACY_RECOVERY);
 
       // Add indexes for NOTES store if missing.
       try {
@@ -152,6 +161,26 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
             }
           }
         }
+        const createIndex = (storeName: string, name: string, keyPath: string | string[]) => {
+          if (!db.objectStoreNames.contains(storeName)) return;
+          const tx = req.transaction;
+          if (!tx) return;
+          const store = tx.objectStore(storeName);
+          if (!store.indexNames.contains(name)) store.createIndex(name, keyPath, { unique: false });
+        };
+        createIndex(STORES.OFFLINE_ENTITIES, "accountId", "accountId");
+        createIndex(STORES.OFFLINE_ENTITIES, "accountEntity", ["accountId", "entity"]);
+        createIndex(STORES.OFFLINE_ENTITIES, "accountWorkspace", ["accountId", "workspaceId"]);
+        createIndex(STORES.OFFLINE_MUTATIONS, "accountId", "accountId");
+        createIndex(STORES.OFFLINE_MUTATIONS, "accountStatus", ["accountId", "status"]);
+        createIndex(STORES.OFFLINE_MUTATIONS, "accountEntity", ["accountId", "entity", "entityId"]);
+        createIndex(STORES.OFFLINE_MUTATIONS, "createdAt", "createdAt");
+        createIndex(STORES.OFFLINE_CONFLICTS, "accountId", "accountId");
+        createIndex(STORES.OFFLINE_PACKS, "accountId", "accountId");
+        createIndex(STORES.OFFLINE_PACKS, "accountWorkspace", ["accountId", "workspaceId"]);
+        createIndex(STORES.OFFLINE_BLOBS, "accountId", "accountId");
+        createIndex(STORES.OFFLINE_SYNC_META, "accountId", "accountId");
+        createIndex(STORES.OFFLINE_LEGACY_RECOVERY, "accountId", "accountId");
       } catch (e) {
         console.warn('[IDB] Failed creating indexes during upgrade:', e);
       }
@@ -172,6 +201,14 @@ export function openUnifiedDB(): Promise<IDBDatabase> {
           DB_CONFIG.STORES.PENDING_BOARD_ITEMS,
           DB_CONFIG.STORES.BOARD_COLUMNS,
           DB_CONFIG.STORES.USER_TAGS,
+          DB_CONFIG.STORES.OFFLINE_ENTITIES,
+          DB_CONFIG.STORES.OFFLINE_MUTATIONS,
+          DB_CONFIG.STORES.OFFLINE_CONFLICTS,
+          DB_CONFIG.STORES.OFFLINE_PACKS,
+          DB_CONFIG.STORES.OFFLINE_BLOBS,
+          DB_CONFIG.STORES.OFFLINE_SESSIONS,
+          DB_CONFIG.STORES.OFFLINE_SYNC_META,
+          DB_CONFIG.STORES.OFFLINE_LEGACY_RECOVERY,
         ];
         const missing = required.filter(s => !db.objectStoreNames.contains(s));
         if (missing.length) {
@@ -431,7 +468,7 @@ export const loadNoteGroupsFromIndexedDB = async (workspaceId: string): Promise<
     if (store.indexNames.contains("workspaceId")) {
       const request = store.index("workspaceId").getAll(workspaceId);
       return new Promise((resolve, reject) => {
-        request.onsuccess = () => resolve((request.result || []).sort((a, b) => a.order - b.order));
+        request.onsuccess = () => resolve((request.result || []).sort(comparePosition));
         request.onerror = () => reject(request.error);
       });
     }
@@ -441,7 +478,7 @@ export const loadNoteGroupsFromIndexedDB = async (workspaceId: string): Promise<
       request.onsuccess = () =>
         resolve((request.result || [])
           .filter((group: NoteGroup) => group.workspaceId === workspaceId)
-          .sort((a: NoteGroup, b: NoteGroup) => a.order - b.order));
+          .sort(comparePosition));
       request.onerror = () => reject(request.error);
     });
   } catch (error) {
@@ -887,6 +924,11 @@ export async function queueBoardItemChange(change: PendingBoardItemChange): Prom
   const db = await openUnifiedDB();
   if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_BOARD_ITEMS)) return;
   await putRecord(db, DB_CONFIG.STORES.PENDING_BOARD_ITEMS as STORES, change);
+  // The v1 Board store is only a crash-safe intake buffer. A client runtime
+  // listener moves this write to the account-scoped v2 outbox immediately.
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("offline-v2-legacy-board-change"));
+  }
 }
 
 /**
@@ -967,66 +1009,4 @@ export async function deleteRecord(
     }
   }
   throw lastErr;
-}
-
-// ===== PENDING QUEUE STALENESS EVICTION =====
-
-let evictionRanThisSession = false;
-
-/**
- * Evicts stale and excess pending changes from a given IDB store.
- * - Deletes records where `updatedAt < Date.now() - maxAgeDays`.
- * - If count still exceeds `maxCount`, deletes oldest-first.
- * - Runs once per browser session to avoid unnecessary IDB churn.
- */
-export async function evictStalePendingChanges(options?: {
-  /** Run even if already executed this session */
-  force?: boolean;
-}): Promise<void> {
-  if (evictionRanThisSession && !options?.force) return;
-  evictionRanThisSession = true;
-
-  const db = await openUnifiedDB();
-  const maxAgeMs = PENDING_QUEUE_CONFIG.STALENESS_DAYS * 24 * 60 * 60 * 1000;
-  const now = Date.now();
-
-  const storeConfigs: Array<{ store: STORES; maxCount: number }> = [
-    { store: DB_CONFIG.STORES.PENDING_NOTES as STORES, maxCount: PENDING_QUEUE_CONFIG.MAX_PENDING_NOTES },
-    { store: DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES as STORES, maxCount: PENDING_QUEUE_CONFIG.MAX_PENDING_GROUPS },
-    { store: DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS as STORES, maxCount: PENDING_QUEUE_CONFIG.MAX_PENDING_LAYOUTS },
-  ];
-
-  for (const { store, maxCount } of storeConfigs) {
-    if (!db.objectStoreNames.contains(store)) continue;
-
-    try {
-      const records = await getAllRecords<{ id: string; updatedAt?: number }>(db, store);
-      if (!records.length) continue;
-
-      // Phase 1: delete stale records
-      const stale = records.filter(
-        (r) => r.updatedAt && now - r.updatedAt > maxAgeMs,
-      );
-      for (const r of stale) {
-        try {
-          await deleteRecord(db, store, r.id);
-        } catch { /* best effort */ }
-      }
-
-      // Phase 2: if still over limit, delete oldest first
-      const remaining = records
-        .filter((r) => !stale.includes(r))
-        .sort((a, b) => (a.updatedAt ?? 0) - (b.updatedAt ?? 0));
-      if (remaining.length > maxCount) {
-        const excess = remaining.slice(0, remaining.length - maxCount);
-        for (const r of excess) {
-          try {
-            await deleteRecord(db, store, r.id);
-          } catch { /* best effort */ }
-        }
-      }
-    } catch {
-      // Store-level failure — non-critical, skip.
-    }
-  }
 }

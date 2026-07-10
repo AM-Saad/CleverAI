@@ -139,7 +139,7 @@ export default defineAppConfig({
     },
     checkbox: {
       slots: {
-        base: "rounded-[var(--radius-sm)] ring-1 ring-inset ring-secondary focus-visible:outline-2! focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]!",
+        base: "rounded-[var(--radius-sm)] ring-1 ring-inset ring-secondary focus-visible:outline-2! focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--ds-focus-outline-color)]!",
         indicator: "text-on-primary",
         label: "text-content-on-surface",
         description: "text-content-secondary",
@@ -169,7 +169,7 @@ export default defineAppConfig({
     },
     switch: {
       slots: {
-        base: "border-2 border-transparent focus-visible:outline-2! focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]! data-[state=unchecked]:bg-surface-strong transition-[background-color] duration-[var(--duration-fast)] ease-[var(--ease-standard)]",
+        base: "border-2 border-transparent focus-visible:outline-2! focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--ds-focus-outline-color)]! data-[state=unchecked]:bg-surface-strong transition-[background-color] duration-[var(--duration-fast)] ease-[var(--ease-standard)]",
         thumb: "bg-surface shadow-[var(--shadow-dropdown)] transition-transform duration-[var(--duration-fast)] ease-[var(--ease-standard)]",
         label: "text-content-on-surface",
         description: "text-content-secondary",
@@ -204,7 +204,7 @@ export default defineAppConfig({
     },
     button: {
       slots: {
-        base: 'rounded-[var(--radius-lg)] cursor-pointer focus-visible:ring-0! focus-visible:outline-2! focus-visible:outline-offset-2! focus-visible:outline-[var(--ds-focus-outline-color)]! disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60! aria-disabled:pointer-events-none aria-disabled:cursor-not-allowed aria-disabled:opacity-60! active:scale-[0.98] transition-[background-color,border-color,color,box-shadow,transform,opacity] duration-[var(--duration-fast)] ease-[var(--ease-standard)]',
+        base: 'rounded-[var(--radius-lg)] cursor-pointer focus-visible:ring-0! focus-visible:outline-2! focus-visible:outline-offset-[-2px]! focus-visible:outline-[var(--ds-focus-outline-color)]! disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60! aria-disabled:pointer-events-none aria-disabled:cursor-not-allowed aria-disabled:opacity-60! active:scale-[0.98] transition-[background-color,border-color,color,box-shadow,transform,opacity] duration-[var(--duration-fast)] ease-[var(--ease-standard)]',
       },
       compoundVariants: [...buttonStateVariants],
     },

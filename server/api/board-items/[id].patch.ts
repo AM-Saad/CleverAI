@@ -7,6 +7,7 @@ import {
   UpdateBoardItemDTO as UpdateBoardItemDTOSchema,
   BoardItemSchema,
 } from "~/shared/utils/boardItem.contract";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 // Simple retry helper for transient Prisma write conflicts / deadlocks
 async function retryPrismaUpdate<T>(
@@ -77,6 +78,7 @@ export default defineEventHandler(async (event) => {
     if (process.env.NODE_ENV === "development") {
       BoardItemSchema.parse(updatedItem);
     }
+    await advanceOfflineEntityState({ prisma, userId: user.id, entity: "boardItem", entityId: id, changedFields: Object.keys(data) });
 
     return success(updatedItem, {
       message: "Board item updated successfully",

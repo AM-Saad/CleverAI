@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { UserTag } from "~/shared/utils/user-tag.contract";
+import { comparePosition } from "../../../shared/utils/position-key";
 
 export interface BoardFilterState {
   tags: string[];
@@ -27,7 +28,7 @@ onMounted(() => {
 });
 
 const allTags = computed(() =>
-  Array.from(tagsStore.tags.value.values()).sort((a, b) => a.order - b.order),
+  Array.from(tagsStore.tags.value.values()).sort(comparePosition),
 );
 
 // ── helpers ─────────────────────────────────────────────────────────────────

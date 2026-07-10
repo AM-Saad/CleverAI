@@ -10,14 +10,12 @@ import {
   DB_CONFIG,
   CACHE_NAMES,
   CACHE_CONFIG as _CACHE_CONFIG,
-  AUTH_STUBS,
   SYNC_TAGS,
 } from "../app/utils/constants/pwa";
 
 // // Import shared IndexedDB helpers
 import {
   openUnifiedDB,
-  getAllRecords,
   deleteRecord,
   putRecord,
   loadPendingNoteChanges,
@@ -30,7 +28,17 @@ import {
   loadPendingBoardItemChanges,
   deletePendingBoardItemChanges,
 } from "../app/utils/idb";
-import { FormSyncType } from "../shared/types/offline";
+import {
+  applySyncResult as applyOfflineSyncResult,
+  getOfflineSession,
+  listOfflineMutations,
+  remapOfflineIds,
+  recoverInterruptedMutations,
+  setMutationStatus,
+  updateOfflineSyncMetadata,
+} from "../app/utils/offline-v2/repository";
+import type { OfflineSyncResponse } from "../shared/utils/offline-sync.contract";
+import { orderOfflineMutations } from "../shared/utils/offline-mutation-order";
 import type {
   IncomingSWMessage,
   OutgoingSWMessage,
@@ -86,14 +94,6 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
 
   // -------------------------- TYPE DEFINITIONS --------------------------
   // Redundant inlined message interfaces removed in favor of shared/types/sw-messages
-
-  // Data types stored in forms object store
-  interface StoredFormRecord {
-    id: string;
-    type: FormSyncType;
-    payload: unknown;
-    createdAt: number;
-  }
 
   // Message types constant - use centralized constants directly (alias removed)
 
@@ -253,27 +253,6 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         // Normal cache-first handling
         return await assetsStrategy.handle({ event, request });
       } catch (err) {
-        // When offline and a lazy JS chunk was never seen before, dynamic import fails hard.
-        // Return a minimal, valid JS module to avoid a white-screen crash.
-        // The app may still lack the feature, but it keeps running.
-        const req = request as Request;
-        const isJsChunk =
-          req.destination === "script" &&
-          new URL(req.url).pathname.startsWith("/_nuxt/");
-        if (isJsChunk) {
-          return new Response(
-            "/* offline stub chunk */\n" +
-            "export default {};\n" +
-            "export const __offline__ = true;\n",
-            {
-              headers: {
-                "Content-Type": "application/javascript",
-                "Cache-Control": "no-store",
-              },
-              status: 200,
-            }
-          );
-        }
         throw err;
       }
     }
@@ -288,8 +267,9 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
     new StaleWhileRevalidate({ cacheName: CACHE_NAMES.STATIC })
   );
 
-  // 4. Auth API group — network-first GET, stub per path, cache 200 JSON
-  // Use centralized auth stubs from constants
+  // Auth and API entity data are never served from Cache Storage. Account data
+  // lives in account-scoped IndexedDB; returning a fake 200 here previously
+  // made an uncached workspace look empty and could leak an old account.
 
   registerRoute(
     ({ url, request }: { url: URL; request: Request }) =>
@@ -297,185 +277,54 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       url.pathname.startsWith("/api/auth/") &&
       request.method === "GET",
     async ({ request }: RouteHandlerCallbackOptions) => {
-      const url = new URL(request.url);
-      const cacheName = CACHE_NAMES.API_AUTH;
-      const cache = await caches.open(cacheName);
       try {
-        const resp = await fetch(request);
-        // Only cache successful JSON responses
-        const isJson = resp.headers
-          .get("content-type")
-          ?.includes("application/json");
-        if (resp.ok && isJson) {
-          try {
-            await cache.put(request, resp.clone());
-          } catch {
-            /* ignore quota/errors */
-          }
-        }
-        return resp;
+        return await fetch(request);
       } catch {
-        // offline/network fail: return cached if present
-        const cached = await cache.match(request);
-        if (cached) return cached;
-        // otherwise a path-specific stub (only for known GET endpoints)
-        if (url.pathname in AUTH_STUBS) {
-          return new Response(
-            JSON.stringify(AUTH_STUBS[url.pathname as keyof typeof AUTH_STUBS]),
-            {
-              status: 200,
-              headers: {
-                "Content-Type": "application/json",
-                "Cache-Control": "no-store",
-              },
-            }
-          );
-        }
-        // for unknown auth GET endpoints, signal temporary unavailability
-        return new Response("", {
-          status: 503,
-          headers: { "Cache-Control": "no-store" },
-        });
+        return new Response(JSON.stringify({ success: false, error: { code: "OFFLINE_NETWORK_UNAVAILABLE", message: "Authentication is unavailable while offline." } }), { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
       }
     }
   );
 
-  // 2. Workspaces API GET — network-first with cache fallback
+  // Explicit workspace-pack files are the only user content served from Cache
+  // Storage. Everything else continues to use account-scoped IndexedDB or the
+  // network, so an old API response can never masquerade as current data.
+  registerRoute(
+    ({ url, request }: { url: URL; request: Request }) =>
+      url.origin === self.location.origin && !url.pathname.startsWith("/api/") && request.method === "GET" && request.mode !== "navigate",
+    async ({ request }: RouteHandlerCallbackOptions) => {
+      const cache = await caches.open(CACHE_NAMES.OFFLINE_FILES);
+      const packed = await cache.match(request, { ignoreSearch: false });
+      if (packed) return packed;
+      return fetch(request);
+    },
+  );
+
+  // Workspace reads fall back in their feature repository, never this cache.
   registerRoute(
     ({ url, request }: { url: URL; request: Request }) =>
       url.origin === self.location.origin &&
       url.pathname.startsWith("/api/workspaces") &&
       request.method === "GET",
     async ({ request }: RouteHandlerCallbackOptions) => {
-      const cacheName = CACHE_NAMES.API_FOLDERS;
-      const cache = await caches.open(cacheName);
       try {
-        const resp = await fetch(request);
-        // Only cache successful JSON responses
-        const isJson = resp.headers
-          .get("content-type")
-          ?.includes("application/json");
-        if (resp.ok && isJson) {
-          try {
-            await cache.put(request, resp.clone());
-            log("Cached workspaces response:", request.url);
-          } catch {
-            /* ignore quota/errors */
-          }
-        }
-        return resp;
+        return await fetch(request);
       } catch {
-        // offline/network fail: return cached if present
-        log("Workspaces API network failed, checking cache:", request.url);
-        const cached = await cache.match(request);
-        if (cached) {
-          log("Serving cached workspaces:", request.url);
-          return cached;
-        }
-
-        // No cache available - provide graceful fallback based on endpoint
-        const url = new URL(request.url);
-        if (url.pathname === "/api/workspaces/count") {
-          // Return count fallback
-          return new Response(
-            JSON.stringify({ success: true, data: { count: 0 } }),
-            {
-              status: 200,
-              headers: {
-                "Content-Type": "application/json",
-                "Cache-Control": "no-store",
-              },
-            }
-          );
-        }
-
-        if (url.pathname === "/api/workspaces" || url.pathname === "/api/workspaces/") {
-          // Return empty array for the summary list endpoint
-          return new Response(JSON.stringify({ success: true, data: [] }), {
-            status: 200,
-            headers: {
-              "Content-Type": "application/json",
-              "Cache-Control": "no-store",
-            },
-          });
-        }
-
-        if (url.pathname.endsWith("/study-content")) {
-          return new Response(
-            JSON.stringify({
-              success: true,
-              data: { flashcards: [], questions: [] },
-            }),
-            {
-              status: 200,
-              headers: {
-                "Content-Type": "application/json",
-                "Cache-Control": "no-store",
-              },
-            }
-          );
-        }
-
-        return new Response(
-          JSON.stringify({
-            success: false,
-            error: {
-              message: "Workspace is not cached for offline use",
-              statusCode: 404,
-              code: "OFFLINE_CACHE_MISS",
-            },
-          }),
-          {
-            status: 404,
-            headers: {
-              "Content-Type": "application/json",
-              "Cache-Control": "no-store",
-            },
-          }
-        );
+        return new Response(JSON.stringify({ success: false, error: { code: "OFFLINE_CACHE_MISS", message: "This content is not downloaded for offline use." } }), { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
       }
     }
   );
 
-  // 3. Notes API GET — network-first with cache fallback
+  // Notes hydrate from their local-first repository.
   registerRoute(
     ({ url, request }: { url: URL; request: Request }) =>
       url.origin === self.location.origin &&
       url.pathname.startsWith("/api/notes") &&
       request.method === "GET",
     async ({ request }: RouteHandlerCallbackOptions) => {
-      const cacheName = CACHE_NAMES.API_NOTES;
-      const cache = await caches.open(cacheName);
       try {
-        const resp = await fetch(request);
-        // Only cache successful JSON responses
-        const isJson = resp.headers
-          .get("content-type")
-          ?.includes("application/json");
-        if (resp.ok && isJson) {
-          try {
-            await cache.put(request, resp.clone());
-            log("Cached notes response:", request.url);
-          } catch {
-            /* ignore quota/errors */
-          }
-        }
-        return resp;
+        return await fetch(request);
       } catch {
-        // offline/network fail: return cached if present
-        const cached = await cache.match(request);
-        if (cached) {
-          log("Serving cached notes:", request.url);
-          return cached;
-        }
-        // No cache available - return empty array for graceful degradation
-        return new Response(JSON.stringify({ success: true, data: [] }), {
-          status: 200,
-          headers: {
-            "Content-Type": "application/json",
-            "Cache-Control": "no-store",
-          },
-        });
+        return new Response(JSON.stringify({ success: false, error: { code: "OFFLINE_CACHE_MISS", message: "Notes are not available in this offline pack." } }), { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
       }
     }
   );
@@ -865,50 +714,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
     if (syncEvt.tag === SYNC_TAGS.BOARD_ITEMS) {
       syncEvt.waitUntil(syncPendingBoardItems("background"));
     }
-    if (syncEvt.tag === SYNC_TAGS.FORM) {
-      syncEvt.waitUntil(
-        (async () => {
-          try {
-            // Ensure DB is available before syncing
-            const database = await ensureDB();
-            if (!database) {
-              warn("IndexedDB unavailable, cannot sync forms");
-              await notifyClientsOfDBFailure();
-              return;
-            }
-
-            const records = await getAllRecords<StoredFormRecord>(
-              database,
-              "forms"
-            );
-            if (records.length === 0 || records.every((r) => !r.payload)) {
-              log("No forms to sync");
-              return;
-            }
-            log("SW: Syncing forms records:", records);
-            const clients = await swSelf.clients.matchAll({ type: "window" });
-            clients.forEach((c) =>
-              c.postMessage({
-                type: SW_MESSAGE_TYPES.FORM_SYNC_STARTED,
-                data: { message: "Syncing data..", mode: "background" },
-              })
-            );
-
-            // Process sync with records
-            await syncForms(clients, records); // TODO: implement actual sync logic
-          } catch (err) {
-            error("Background sync failed:", err);
-            const clients = await swSelf.clients.matchAll({ type: "window" });
-            clients.forEach((client) => {
-              client.postMessage({
-                type: SW_MESSAGE_TYPES.FORM_SYNC_ERROR,
-                data: { message: "Failed to sync offline data" },
-              });
-            });
-          }
-        })()
-      );
-    }
+    if (syncEvt.tag === SYNC_TAGS.OFFLINE_V2) syncEvt.waitUntil(syncOfflineV2());
   });
 
   // ------------------------ FETCH FALLBACK (Only for non-navigation requests) ------------------------
@@ -947,8 +753,10 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
             log("Fetching navigation request:", req.url);
             const response = await fetch(req);
 
-            // Cache successful responses
-            if (response.ok && response.status === 200) {
+            // Cache only the neutral shell. Workspace/board/account HTML can
+            // contain an authenticated SSR payload and must never be used as
+            // an offline source of user data.
+            if (response.ok && response.status === 200 && url.pathname === "/") {
               try {
                 const cache = await caches.open(CACHE_NAMES.PAGES);
                 await cache.put(req, response.clone());
@@ -1092,104 +900,67 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
     }
   });
 
-  // ------------------------ FORM SYNC (IDB usage) ------------------------
-  // rely directly on shared generic helpers;
-  async function syncForms(
-    clients: readonly Client[],
-    preloaded?: StoredFormRecord[]
-  ) {
-    try {
-      const formData =
-        preloaded ??
-        (await (async () => {
-          try {
-            const db = await openUnifiedDB();
-            return await getAllRecords<StoredFormRecord>(
-              db,
-              DB_CONFIG.STORES.FORMS
-            );
-          } catch (e) {
-            error("Failed to load form data:", e);
-            return [];
-          }
-        })());
-      if (!formData.length) return;
-
-      // Remove expired records before attempting sync
-      const expiryDays =
-        (
-          globalThis as unknown as {
-            OFFLINE_FORM_CONFIG?: { FORM_EXPIRY_DAYS?: number };
-          }
-        ).OFFLINE_FORM_CONFIG?.FORM_EXPIRY_DAYS || 7;
-      const expiryMs = expiryDays * 24 * 60 * 60 * 1000;
-      const now = Date.now();
-      const valid = formData.filter((r) => now - r.createdAt <= expiryMs);
-      const expired = formData.filter((r) => now - r.createdAt > expiryMs);
-      if (expired.length) {
-        try {
-          const db = await openUnifiedDB();
-          await Promise.all(
-            expired.map((e) => deleteRecord(db, DB_CONFIG.STORES.FORMS, e.id))
-          );
-          warn("Purged expired offline records:", expired.length);
-        } catch (e) {
-          warn("Failed purging expired records:", e);
-        }
-      }
-      if (!valid.length) return;
-
-      const response = await sendDataToServer(valid);
-      if (!response.ok) throw new Error("Sync failed");
-
-      // Cleanup after confirmed success only for successfully processed records
-      try {
-        const db = await openUnifiedDB();
-        await Promise.all(
-          valid.map((f) => deleteRecord(db, DB_CONFIG.STORES.FORMS, f.id))
-        );
-      } catch (e) {
-        warn("Failed deleting processed form records:", e);
-      }
-      clients.forEach((c) =>
-        c.postMessage({
-          type: SW_MESSAGE_TYPES.FORM_SYNCED,
-          data: {
-            message: `Form data synced (${valid.length} records).`,
-            appliedCount: valid.length,
-            mode: "background",
-          },
-        })
-      );
-    } catch (err) {
-      error("syncForms error", err);
-      clients.forEach((c) =>
-        c.postMessage({
-          type: SW_MESSAGE_TYPES.FORM_SYNC_ERROR,
-          data: { message: "Form sync failed.", mode: "background" },
-        })
-      );
-    }
-  }
-
   async function syncContent() {
     log("periodic content sync placeholder");
   }
 
-  // removeLocalData intentionally omitted (unused)
-
-  async function sendDataToServer(data: StoredFormRecord[]): Promise<Response> {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
+  async function syncOfflineV2() {
+    const clients = await swSelf.clients.matchAll({ type: "window" });
+    // A visible client owns reconciliation to avoid two actors reading the same
+    // outbox. Background Sync is only the no-client recovery path.
+    if (clients.length) return;
+    const session = await getOfflineSession();
+    if (!session) return;
+    await recoverInterruptedMutations(session.accountId);
+    const pending = (await listOfflineMutations(session.accountId))
+      .filter((mutation) => mutation.status === "pending" || mutation.status === "retry")
+    const { ordered, cyclic } = orderOfflineMutations(pending);
+    if (cyclic.length) await setMutationStatus(session.accountId, cyclic.map((mutation) => mutation.id), "rejected", "Cyclic offline dependency");
+    const batch = ordered.slice(0, 50);
+    if (!batch.length) return;
+    await setMutationStatus(session.accountId, batch.map((mutation) => mutation.id), "syncing");
     try {
-      const resp = await fetch("/api/form-sync", {
+      const response = await fetch("/api/offline/sync", {
         method: "POST",
-        body: JSON.stringify(data),
-        signal: controller.signal,
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ clientId: "service-worker", mutations: batch }),
       });
-      return resp;
-    } finally {
-      clearTimeout(timeout);
+      if (!response.ok) throw Object.assign(new Error(`Offline sync failed (${response.status})`), { statusCode: response.status });
+      const payload = await response.json() as { data?: OfflineSyncResponse };
+      if (!payload.data) throw new Error("Offline sync returned no data");
+      const byId = new Map(batch.map((mutation) => [mutation.id, mutation]));
+      const returned = new Set<string>();
+      for (const result of payload.data.results) {
+        const mutation = byId.get(result.id);
+        if (!mutation) continue;
+        returned.add(result.id);
+        if (result.idMap) await remapOfflineIds(session.accountId, result.idMap);
+        await applyOfflineSyncResult({ accountId: session.accountId, mutation, result });
+      }
+      const missing = batch.filter((mutation) => !returned.has(mutation.id));
+      if (missing.length) {
+        await setMutationStatus(session.accountId, missing.map((mutation) => mutation.id), "retry", "The sync service did not acknowledge this mutation.");
+      }
+      await updateOfflineSyncMetadata(session.accountId, {
+        lastAttemptAt: Date.now(),
+        lastSuccessfulSyncAt: Date.now(),
+        lastError: undefined,
+      });
+      const remaining = (await listOfflineMutations(session.accountId)).some((mutation) => mutation.status === "pending" || mutation.status === "retry");
+      if (remaining && "sync" in swSelf.registration) {
+        // @ts-expect-error SyncManager is missing in some worker libdefs.
+        await swSelf.registration.sync.register(SYNC_TAGS.OFFLINE_V2);
+      }
+    } catch (err: any) {
+      const message = err instanceof Error ? err.message : "Background sync failed";
+      const statusCode = Number(err?.statusCode ?? 0);
+      await setMutationStatus(session.accountId, batch.map((mutation) => mutation.id), statusCode === 401 || statusCode === 403 ? "blocked" : "retry", statusCode === 401 || statusCode === 403 ? "Sign in to sync your saved local changes." : message);
+      await updateOfflineSyncMetadata(session.accountId, {
+        lastAttemptAt: Date.now(),
+        lastError: statusCode === 401 || statusCode === 403 ? "Sign in to sync your saved local changes." : message,
+      });
+      error("offline-v2 sync error", err);
     }
   }
 

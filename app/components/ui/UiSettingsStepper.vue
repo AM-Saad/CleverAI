@@ -83,7 +83,7 @@ function update(next: number) {
 
 .ui-settings-stepper__button:focus-visible {
   outline: 2px solid var(--ds-focus-outline-color);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .ui-settings-stepper__button:disabled {

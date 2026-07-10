@@ -6,6 +6,8 @@ import {
   ReorderBoardColumnsDTO,
   BoardColumnSchema,
 } from "@@/shared/utils/boardColumn.contract";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
+import { rebalancePositionKeys } from "@server/modules/offline/application/rebalancePositionKeys";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -53,12 +55,14 @@ export default defineEventHandler(async (event) => {
         )
       );
     });
+    await rebalancePositionKeys({ prisma, model: "boardColumn", ids: data.columnOrders.slice().sort((left, right) => left.order - right.order).map((column) => column.id) });
+    await Promise.all(data.columnOrders.map((columnOrder: { id: string }) => advanceOfflineEntityState({ prisma, userId: user.id, entity: "boardColumn", entityId: columnOrder.id, changedFields: ["position"] })));
 
     // Return minimal success response - client already has the data
     if (process.env.NODE_ENV === "development") {
       const updatedColumns: BoardColumn[] = await prisma.boardColumn.findMany({
         where: { userId: user.id },
-        orderBy: { order: "asc" },
+        orderBy: { position: "asc" },
       });
       updatedColumns.forEach((column: BoardColumn) => BoardColumnSchema.parse(column));
       return success(updatedColumns, {

@@ -5,6 +5,7 @@ import {
   UpdateBoardColumnDTO,
   BoardColumnSchema,
 } from "@@/shared/utils/boardColumn.contract";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -46,6 +47,7 @@ export default defineEventHandler(async (event) => {
         ...(data.name !== undefined && { name: data.name }),
       },
     });
+    await advanceOfflineEntityState({ prisma, userId: user.id, entity: "boardColumn", entityId: columnId, changedFields: Object.keys(data) });
 
     if (process.env.NODE_ENV === "development") {
       BoardColumnSchema.parse(column);

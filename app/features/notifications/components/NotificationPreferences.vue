@@ -259,7 +259,7 @@
               <UiIcon name="i-lucide-clock" class="w-4 h-4 text-content-secondary" />
               <!-- design-allow: native time picker — no Ui primitive wraps type=time -->
               <input v-model="preferences.dailyReminderTime" type="time"
-                class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]"
+                class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--ds-focus-outline-color)]"
                 :disabled="loading" @change="updatePreferences" />
             </div>
           </UiFormField>
@@ -289,7 +289,7 @@
                 <UiIcon name="i-lucide-moon" class="w-4 h-4 text-content-secondary" />
                 <!-- design-allow: native time picker — no Ui primitive wraps type=time -->
                 <input v-model="preferences.quietHoursStart" type="time"
-                  class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]"
+                  class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--ds-focus-outline-color)]"
                   :disabled="loading" @change="updatePreferences" />
               </div>
             </UiFormField>
@@ -299,7 +299,7 @@
                 <UiIcon name="i-lucide-sun" class="w-4 h-4 text-content-secondary" />
                 <!-- design-allow: native time picker — no Ui primitive wraps type=time -->
                 <input v-model="preferences.quietHoursEnd" type="time"
-                  class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]"
+                  class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--ds-focus-outline-color)]"
                   :disabled="loading" @change="updatePreferences" />
               </div>
             </UiFormField>
@@ -363,7 +363,7 @@
                 <UiIcon name="i-lucide-play" class="w-4 h-4 text-content-secondary" />
                 <!-- design-allow: native time picker — no Ui primitive wraps type=time -->
                 <input v-model="preferences.activeHoursStart" type="time"
-                  class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]"
+                  class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--ds-focus-outline-color)]"
                   :disabled="loading" @change="updatePreferences" />
               </div>
             </UiFormField>
@@ -373,7 +373,7 @@
                 <UiIcon name="i-lucide-square" class="w-4 h-4 text-content-secondary" />
                 <!-- design-allow: native time picker — no Ui primitive wraps type=time -->
                 <input v-model="preferences.activeHoursEnd" type="time"
-                  class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]"
+                  class="px-3 py-2 border border-secondary rounded-[var(--radius-md)] bg-white dark:bg-surface text-content-on-surface focus-visible:outline-none focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--ds-focus-outline-color)]"
                   :disabled="loading" @change="updatePreferences" />
               </div>
             </UiFormField>
@@ -440,6 +440,7 @@ import { useDebounceFn } from "@vueuse/core";
 import { useToast } from "#imports";
 import type { NotificationSubscriptionsResponse } from "@@/shared/utils/notification.contract";
 import { useNotifications } from "../composables/useNotifications";
+import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 
 interface NotificationPreferences {
   cardDueEnabled: boolean;
@@ -459,6 +460,7 @@ interface NotificationPreferences {
 
 const toast = useToast();
 const { $api } = useNuxtApp();
+const offline = useOfflineRuntime();
 type NotificationsApi = {
   getSubscriptions?: (currentEndpointHash?: string | null) => Promise<{
     success: boolean;
@@ -727,6 +729,10 @@ async function loadDeviceDeliveryState() {
 }
 
 async function enableCurrentDevice() {
+  if (!offline.isOnline.value) {
+    toast.add({ title: "Unavailable offline", description: "Push registration needs a connection.", color: "warning" });
+    return;
+  }
   const enabled = await registerNotification();
   await loadDeviceDeliveryState();
   toast.add({
@@ -739,6 +745,10 @@ async function enableCurrentDevice() {
 }
 
 async function disableCurrentDevice() {
+  if (!offline.isOnline.value) {
+    toast.add({ title: "Unavailable offline", description: "Push registration needs a connection.", color: "warning" });
+    return;
+  }
   const disabled = await unsubscribe();
   await loadDeviceDeliveryState();
   toast.add({
@@ -817,6 +827,12 @@ function formatUserAgent(userAgent: string | null | undefined) {
 
 // Load preferences from API
 const loadPreferences = async () => {
+  if (!offline.isOnline.value && offline.accountId.value) {
+    const { listOfflineEntities } = await import("~/utils/offline-v2/repository");
+    const cached = await listOfflineEntities<NotificationPreferences>(offline.accountId.value, "notificationPreference");
+    if (cached[0]?.data) preferences.value = { ...preferences.value, ...cached[0].data };
+    return;
+  }
   try {
     loading.value = true;
     const { data } = await $fetch("/api/notifications/preferences");
@@ -848,6 +864,13 @@ const loadPreferences = async () => {
 const updatePreferences = useDebounceFn(async () => {
   try {
     loading.value = true;
+
+    if (!offline.isOnline.value) {
+      await offline.queue({ entity: "notificationPreference", operation: "notificationPreference.update", entityId: "notificationPreference", changedFields: Object.keys(preferences.value), payload: preferences.value });
+      lastSaved.value = new Date();
+      toast.add({ title: "Saved locally", description: "Notification preferences will sync when you reconnect.", color: "warning" });
+      return;
+    }
 
     await $fetch("/api/notifications/preferences", {
       method: "PUT",

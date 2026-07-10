@@ -16,7 +16,7 @@ export default defineEventHandler(async (event) => {
 
     const columns: BoardColumn[] = await prisma.boardColumn.findMany({
       where: query,
-      orderBy: { order: "asc" },
+      orderBy: { position: "asc" },
     });
 
     if (process.env.NODE_ENV === "development") {

@@ -3,6 +3,8 @@ import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { CreateNoteDTO, NoteSchema } from "~/shared/utils/note.contract";
 import { normalizeWorkspaceNoteTitle } from "@@/shared/utils/workspaceNote";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
+import { positionBetween } from "@@/shared/utils/position-key";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -45,6 +47,7 @@ export default defineEventHandler(async (event) => {
   });
 
   const nextOrder = maxOrderNote ? maxOrderNote.order + 1 : 0;
+  const lastPositioned = await prisma.note.findFirst({ where: { workspaceId: data.workspaceId, groupId: data.groupId ?? null }, orderBy: { position: "desc" }, select: { position: true } });
 
   const note = await prisma.note.create({
     data: {
@@ -54,10 +57,12 @@ export default defineEventHandler(async (event) => {
       content: data.content,
       tags: data.tags || [],
       order: nextOrder,
+      position: positionBetween(lastPositioned?.position, null),
       noteType: data.noteType ?? "TEXT",
       metadata: data.metadata as any,
     },
   });
+  await advanceOfflineEntityState({ prisma, userId: user.id, entity: "note", entityId: note.id, changedFields: ["title", "content", "groupId", "tags", "noteType", "metadata", "position"] });
 
   const normalizedNote = {
     ...note,

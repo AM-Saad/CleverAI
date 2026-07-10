@@ -6,9 +6,13 @@ import type {
   ReviewCard,
   ReviewGrade,
 } from "@shared/utils/review.contract";
+import { calculateOfflineNextReviewDate, calculateOfflineSM2, calculateOfflineNextStreak } from "@@/shared/utils/sm2";
+import { listOfflineEntities } from "~/utils/offline-v2/repository";
+import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 
 export const useCardReview = () => {
   const { $api } = useNuxtApp();
+  const offline = useOfflineRuntime();
 
   const reviewQueue = ref<ReviewCard[]>([]);
   const currentCard = ref<ReviewCard | null>(null);
@@ -134,6 +138,45 @@ export const useCardReview = () => {
     gradeError.value = null;
 
     try {
+      if (!offline.isOnline.value) {
+        const card = removed?.card;
+        if (!card) return null;
+        const reviewedAt = new Date();
+        const next = calculateOfflineSM2({
+          currentEF: card.reviewState.easeFactor,
+          currentInterval: card.reviewState.intervalDays,
+          currentRepetitions: card.reviewState.repetitions,
+          grade: Number(grade),
+        });
+        await offline.queue({
+          entity: "review",
+          operation: "review.grade",
+          entityId: cardId,
+          workspaceId: "workspaceId" in card.resource ? card.resource.workspaceId : undefined,
+          changedFields: ["reviewState"],
+          payload: { cardId, grade: Number(grade), reviewedAt: reviewedAt.toISOString(), requestId },
+          // Persist the provisional schedule in the same transaction as the
+          // grade event. A reload must never put an already-answered card back
+          // in the offline queue.
+          localData: {
+            intervalDays: next.intervalDays,
+            easeFactor: next.easeFactor,
+            repetitions: next.repetitions,
+            nextReviewAt: calculateOfflineNextReviewDate(next.intervalDays, reviewedAt).toISOString(),
+            lastReviewedAt: reviewedAt.toISOString(),
+            lastGrade: Number(grade),
+            streak: calculateOfflineNextStreak(card.reviewState.streak ?? 0, Number(grade)),
+          },
+          sequence: true,
+        });
+        return {
+          success: true,
+          nextReviewAt: calculateOfflineNextReviewDate(next.intervalDays, reviewedAt).toISOString(),
+          intervalDays: next.intervalDays,
+          easeFactor: next.easeFactor,
+          message: "Saved locally",
+        };
+      }
       const result = await $api.review.grade({ cardId, grade, requestId });
       if (result.success) {
         if (mutationId === optimisticMutationId) gradeError.value = null;
@@ -156,6 +199,31 @@ export const useCardReview = () => {
     workspaceId?: string,
     limit: number = 20,
   ): Promise<void> => {
+    if (!offline.isOnline.value && offline.accountId.value) {
+      const cached = await listOfflineEntities<Record<string, any>>(offline.accountId.value, "review", workspaceId);
+      const cards: ReviewCard[] = cached
+        .map((record) => {
+          const review = record.data;
+          const resource = review.offlineResource;
+          if (!resource) return null;
+          const resourceType = String(review.resourceType ?? "flashcard") as ReviewCard["resourceType"];
+          const normalizedResource = resourceType === "material"
+            ? { title: resource.title, content: resource.content, tags: [], workspaceId: resource.workspaceId }
+            : resourceType === "question"
+              ? { question: resource.question, choices: resource.choices, answerIndex: resource.answerIndex, workspaceId: resource.workspaceId }
+              : { front: resource.front, back: resource.back, hint: undefined, tags: [], workspaceId: resource.workspaceId };
+          return { cardId: review.id, resourceType, resourceId: review.cardId, resource: normalizedResource, reviewState: { repetitions: review.repetitions, easeFactor: review.easeFactor, intervalDays: review.intervalDays, nextReviewAt: review.nextReviewAt, lastReviewedAt: review.lastReviewedAt } } as ReviewCard;
+        })
+        .filter((card): card is ReviewCard => Boolean(card))
+        .filter((card) => new Date(card.reviewState.nextReviewAt).getTime() <= Date.now())
+        .slice(0, limit);
+      activeQueueKey = workspaceId ?? "__global__";
+      reviewQueue.value = cards;
+      queueStats.value = { total: cached.length, new: cached.filter((record) => Number(record.data.repetitions ?? 0) === 0).length, due: cards.length, learning: cached.filter((record) => Number(record.data.repetitions ?? 0) > 0 && Number(record.data.repetitions ?? 0) < 3).length };
+      currentCardIndex.value = 0;
+      currentCard.value = cards[0] ?? null;
+      return;
+    }
     const response = await fetchOp.execute(() =>
       $api.review.getQueue(workspaceId, limit),
     );

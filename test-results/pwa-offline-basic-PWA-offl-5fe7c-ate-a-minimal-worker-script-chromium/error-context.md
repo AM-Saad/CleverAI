@@ -1,0 +1,104 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - generic [ref=e4]:
+    - link "Skip to main content" [ref=e5] [cursor=pointer]:
+      - /url: "#main-content"
+    - main [ref=e7]:
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - generic [ref=e10]:
+            - heading "Turn Notes Into Knowledge That Sticks empowered by Cognilo" [level=1] [ref=e11]
+            - link "Try for free" [ref=e13] [cursor=pointer]:
+              - /url: /auth/signup
+              - button "Try for free" [ref=e14]
+          - generic [ref=e15]:
+            - img [ref=e18]
+            - generic [ref=e215]:
+              - generic [ref=e216]: About
+              - paragraph [ref=e217]: Cognilo is a cutting-edge AI-powered spaced repetition learning platform designed to dramatically improve long-term retention and make learning fast, smart, and intuitive
+              - generic [ref=e219]: Watch us
+        - generic [ref=e222]:
+          - generic [ref=e225]:
+            - generic [ref=e226]:
+              - heading "You take notes." [level=2] [ref=e227]
+              - heading "You mean to review them." [level=2] [ref=e228]
+              - heading "You don’t." [level=2] [ref=e229]
+            - generic [ref=e230]:
+              - paragraph [ref=e232]: "Idea for app: A service that reminds you to water your plants."
+              - paragraph [ref=e234]: "Meeting notes: Follow up with Sarah about Q3 budget. Project Titan is on track."
+              - paragraph [ref=e236]: "\"The quick brown fox jumps over the lazy dog.\" A classic pangram for testing fonts."
+          - generic [ref=e237]:
+            - generic [ref=e239]:
+              - generic [ref=e240]: Capture
+              - generic [ref=e241]: ideas.
+              - generic [ref=e242]: Learn
+              - generic [ref=e243]: them.
+              - generic [ref=e244]: Retain
+              - generic [ref=e245]: forever.
+            - article [ref=e247]:
+              - generic [ref=e249]: Notes
+              - generic [ref=e256]: Writing notes helps reinforce learning.
+        - generic [ref=e258]:
+          - generic [ref=e260]:
+            - heading "Features That Boost Your Learning" [level=2] [ref=e262]:
+              - text: Features That
+              - text: Boost Your Learning
+            - paragraph [ref=e264]: Everything you need to capture knowledge, retain it forever, and master any subject in record time.
+          - generic [ref=e265]:
+            - generic [ref=e267]:
+              - heading "Notes + Study Together" [level=3] [ref=e270]
+              - paragraph [ref=e271]: Jot text. Structure workspaces.
+            - generic [ref=e273]:
+              - heading "Smart Flashcard Generator" [level=3] [ref=e276]
+              - paragraph [ref=e277]: Select any text and auto-generate using AI.
+            - generic [ref=e279]:
+              - heading "Spaced Repetition" [level=3] [ref=e282]
+              - paragraph [ref=e283]: Automated review intervals based on your performance.
+            - generic [ref=e285]:
+              - heading "Manual Card Mode" [level=3] [ref=e288]
+              - paragraph [ref=e289]: Create your own cards anytime.
+            - generic [ref=e291]:
+              - heading "Timing Config" [level=3] [ref=e294]
+              - paragraph [ref=e295]: Control when reminders arrive.
+            - generic [ref=e297]:
+              - heading "AI Chat Assistant" [level=3] [ref=e300]
+              - paragraph [ref=e301]: Get help understanding and memorizing content.
+        - paragraph [ref=e304]:
+          - generic [ref=e305]:
+            - generic [ref=e306]: Learn
+            - text: Learn
+          - generic [ref=e307]:
+            - generic [ref=e308]: smarter.
+            - text: smarter.
+          - generic [ref=e309]:
+            - generic [ref=e310]: Retain
+            - text: Retain
+          - generic [ref=e311]:
+            - generic [ref=e312]: longer.
+            - text: longer.
+          - generic [ref=e313]:
+            - generic [ref=e314]: Achieve
+            - text: Achieve
+          - generic [ref=e315]:
+            - generic [ref=e316]: more
+            - text: more
+          - generic [ref=e317]:
+            - generic [ref=e318]: with
+            - text: with
+          - generic [ref=e319]:
+            - generic [ref=e320]: Cognilo.
+            - text: Cognilo.
+        - generic [ref=e323]:
+          - heading "Ready to close the loop?" [level=2] [ref=e325]
+          - paragraph [ref=e327]:
+            - text: Start free. Upgrade only if it helps you learn faster.
+            - text: No credit card required.
+          - button "Start Your First Loop" [ref=e330] [cursor=pointer]:
+            - link "Start Your First Loop" [ref=e331]:
+              - /url: /auth/signup
+              - text: Start Your First Loop
+  - region "Notifications (F8)":
+    - list
+```

@@ -4,7 +4,7 @@
     leave-active-class="transition-all duration-300 ease-in" leave-from-class="opacity-100 scale-100 translate-y-0"
     leave-to-class="opacity-0 scale-50 translate-y-10">
     <button v-if="visible" @click="handleClick"
-      class="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] shadow-[2px_20px_50px_rgba(var(--color-primary-rgb),0.8)] transition-all duration-[var(--duration-fast)] active:scale-[0.98] group overflow-hidden outline-0 select-none focus-visible:ring-2 focus-visible:ring-[var(--ds-focus-outline-color)]"
+      class="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-3 py-2 rounded-[var(--radius-lg)] shadow-[2px_20px_50px_rgba(var(--color-primary-rgb),0.8)] transition-all duration-[var(--duration-fast)] active:scale-[0.98] group overflow-hidden outline-0 select-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ds-focus-outline-color)]"
       aria-label="Open Learning Hub" title="Open Learning Hub">
       <!-- Premium Gradient Background -->
       <div

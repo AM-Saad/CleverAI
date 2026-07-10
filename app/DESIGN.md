@@ -139,7 +139,7 @@ A **4-variant emphasis ladder** — one style per importance tier, so a button's
 
 **Sizes:** `xs / sm / md / lg / xl`. **Defaults:** `tone="primary"`, `variant="solid"`, `size="md"`.
 
-**States:** hover/active shift the fill (or `underline` for `link`); press adds `active:scale-[0.98]`; focus is a keyboard-only 2px outline (`--ds-focus-outline-color`); `disabled`/`loading` dim to 60% and block pointer events. Radius `var(--radius-lg)` (6px), set globally in `app.config.ts` — the single source for the matrix (rendered live at `/design-system`).
+**States:** hover/active shift the fill (or `underline` for `link`); press adds `active:scale-[0.98]`; focus is a keyboard-only inset 2px outline (`--ds-focus-outline-color`), so it remains visible within scrolling and clipped containers; `disabled`/`loading` dim to 60% and block pointer events. Radius `var(--radius-lg)` (6px), set globally in `app.config.ts` — the single source for the matrix (rendered live at `/design-system`).
 
 **Conventions:**
 - Never place more than one `solid` button in the same view section.

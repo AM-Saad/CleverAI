@@ -8,6 +8,7 @@ import type { NotesLocalRepository } from "./notesLocalRepository";
 import type { NotesLayoutQueue } from "./notesLayoutQueue";
 import type { NoteState } from "./noteTransforms";
 import { logNotesOperation } from "./notesOperationLog";
+import { comparePosition } from "../../../../shared/utils/position-key";
 
 export type NotesLayoutStatus =
   | "idle"
@@ -185,7 +186,7 @@ export function createNotesLayoutController(input: {
       }
 
       for (const group of notesByGroup.values()) {
-        group.sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+        group.sort(comparePosition);
       }
 
       const targetKey = groupKey(targetGroupId);

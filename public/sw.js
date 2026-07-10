@@ -19,7 +19,10 @@
     STATIC: "static",
     API_AUTH: "api-auth",
     API_FOLDERS: "api-workspaces",
-    API_NOTES: "api-notes"
+    API_NOTES: "api-notes",
+    // Explicitly user-downloaded attachments only. This is intentionally not a
+    // general user-data HTTP cache.
+    OFFLINE_FILES: "offline-files"
   };
   var CACHE_CONFIG = {
     IMAGES: {
@@ -52,7 +55,9 @@
     // 14: Added pendingNoteLayouts store for local-first note/group layout sync
     // 15: Added noteGroups + pendingNoteGroupChanges for local-first note grouping
     // 16: Added noteSyncConflicts for durable local/server conflict snapshots
-    VERSION: 16,
+    // 17: Account-scoped offline-v2 snapshots, outbox, packs, blobs and recovery
+    // 18: Durable per-account sync metadata and crash-recovery state.
+    VERSION: 18,
     STORES: {
       FORMS: "forms",
       NOTES: "notes",
@@ -64,7 +69,15 @@
       BOARD_ITEMS: "boardItems",
       PENDING_BOARD_ITEMS: "pendingBoardItems",
       BOARD_COLUMNS: "boardColumns",
-      USER_TAGS: "userTags"
+      USER_TAGS: "userTags",
+      OFFLINE_ENTITIES: "offlineEntities",
+      OFFLINE_MUTATIONS: "offlineMutations",
+      OFFLINE_CONFLICTS: "offlineConflicts",
+      OFFLINE_PACKS: "offlinePacks",
+      OFFLINE_BLOBS: "offlineBlobs",
+      OFFLINE_SESSIONS: "offlineSessions",
+      OFFLINE_SYNC_META: "offlineSyncMeta",
+      OFFLINE_LEGACY_RECOVERY: "offlineLegacyRecovery"
     }
   };
   var IDB_RETRY_CONFIG = {
@@ -80,10 +93,6 @@
     // +/-20% jitter
   };
   var SW_MESSAGE_TYPES = {
-    // Sync messages
-    FORM_SYNC_ERROR: "FORM_SYNC_ERROR",
-    FORM_SYNCED: "FORM_SYNCED",
-    FORM_SYNC_STARTED: "FORM_SYNC_STARTED",
     // Notes sync specific
     SYNC_NOTES: "SYNC_NOTES",
     NOTES_SYNC_STARTED: "NOTES_SYNC_STARTED",
@@ -95,6 +104,9 @@
     BOARD_ITEMS_SYNC_STARTED: "BOARD_ITEMS_SYNC_STARTED",
     BOARD_ITEMS_SYNCED: "BOARD_ITEMS_SYNCED",
     BOARD_ITEMS_SYNC_ERROR: "BOARD_ITEMS_SYNC_ERROR",
+    OFFLINE_SYNC_STARTED: "OFFLINE_SYNC_STARTED",
+    OFFLINE_SYNCED: "OFFLINE_SYNCED",
+    OFFLINE_SYNC_ERROR: "OFFLINE_SYNC_ERROR",
     // Service worker control
     SW_ACTIVATED: "SW_ACTIVATED",
     SW_CONTROL_CLAIMED: "SW_CONTROL_CLAIMED",
@@ -110,21 +122,20 @@
     ERROR: "error"
   };
   var SYNC_TAGS = {
-    FORM: "syncForm",
     CONTENT: "content-sync",
     NOTES: "notes-sync",
-    BOARD_ITEMS: "board-items-sync"
+    BOARD_ITEMS: "board-items-sync",
+    OFFLINE_V2: "offline-v2-sync"
   };
-  var PREWARM_PATHS = ["/", "/about", "/workspaces"];
-  var AUTH_STUBS = {
-    "/api/auth/session": { user: null, expires: null },
-    "/api/auth/csrf": { csrfToken: null },
-    "/api/auth/providers": {}
-  };
+  var PREWARM_PATHS = ["/"];
   var PERIODIC_SYNC_CONFIG = {
     CONTENT_SYNC_INTERVAL: 60 * 60 * 1e3
     // 1 hour
   };
+
+  // shared/utils/position-key.ts
+  var alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  var base = alphabet.length;
 
   // app/utils/idb.ts
   var unifiedDbPromise = null;
@@ -151,6 +162,14 @@
         ensureStore(STORES.PENDING_BOARD_ITEMS);
         ensureStore(STORES.BOARD_COLUMNS);
         ensureStore(STORES.USER_TAGS);
+        ensureStore(STORES.OFFLINE_ENTITIES);
+        ensureStore(STORES.OFFLINE_MUTATIONS);
+        ensureStore(STORES.OFFLINE_CONFLICTS);
+        ensureStore(STORES.OFFLINE_PACKS);
+        ensureStore(STORES.OFFLINE_BLOBS);
+        ensureStore(STORES.OFFLINE_SESSIONS);
+        ensureStore(STORES.OFFLINE_SYNC_META);
+        ensureStore(STORES.OFFLINE_LEGACY_RECOVERY);
         try {
           if (db.objectStoreNames.contains(STORES.NOTES)) {
             const tx = req.transaction;
@@ -236,6 +255,26 @@
               }
             }
           }
+          const createIndex = (storeName, name, keyPath) => {
+            if (!db.objectStoreNames.contains(storeName)) return;
+            const tx = req.transaction;
+            if (!tx) return;
+            const store = tx.objectStore(storeName);
+            if (!store.indexNames.contains(name)) store.createIndex(name, keyPath, { unique: false });
+          };
+          createIndex(STORES.OFFLINE_ENTITIES, "accountId", "accountId");
+          createIndex(STORES.OFFLINE_ENTITIES, "accountEntity", ["accountId", "entity"]);
+          createIndex(STORES.OFFLINE_ENTITIES, "accountWorkspace", ["accountId", "workspaceId"]);
+          createIndex(STORES.OFFLINE_MUTATIONS, "accountId", "accountId");
+          createIndex(STORES.OFFLINE_MUTATIONS, "accountStatus", ["accountId", "status"]);
+          createIndex(STORES.OFFLINE_MUTATIONS, "accountEntity", ["accountId", "entity", "entityId"]);
+          createIndex(STORES.OFFLINE_MUTATIONS, "createdAt", "createdAt");
+          createIndex(STORES.OFFLINE_CONFLICTS, "accountId", "accountId");
+          createIndex(STORES.OFFLINE_PACKS, "accountId", "accountId");
+          createIndex(STORES.OFFLINE_PACKS, "accountWorkspace", ["accountId", "workspaceId"]);
+          createIndex(STORES.OFFLINE_BLOBS, "accountId", "accountId");
+          createIndex(STORES.OFFLINE_SYNC_META, "accountId", "accountId");
+          createIndex(STORES.OFFLINE_LEGACY_RECOVERY, "accountId", "accountId");
         } catch (e) {
           console.warn("[IDB] Failed creating indexes during upgrade:", e);
         }
@@ -254,7 +293,15 @@
             DB_CONFIG.STORES.BOARD_ITEMS,
             DB_CONFIG.STORES.PENDING_BOARD_ITEMS,
             DB_CONFIG.STORES.BOARD_COLUMNS,
-            DB_CONFIG.STORES.USER_TAGS
+            DB_CONFIG.STORES.USER_TAGS,
+            DB_CONFIG.STORES.OFFLINE_ENTITIES,
+            DB_CONFIG.STORES.OFFLINE_MUTATIONS,
+            DB_CONFIG.STORES.OFFLINE_CONFLICTS,
+            DB_CONFIG.STORES.OFFLINE_PACKS,
+            DB_CONFIG.STORES.OFFLINE_BLOBS,
+            DB_CONFIG.STORES.OFFLINE_SESSIONS,
+            DB_CONFIG.STORES.OFFLINE_SYNC_META,
+            DB_CONFIG.STORES.OFFLINE_LEGACY_RECOVERY
           ];
           const missing = required.filter((s) => !db.objectStoreNames.contains(s));
           if (missing.length) {
@@ -598,6 +645,218 @@
       }
     }
     throw lastErr;
+  }
+
+  // app/utils/offline-v2/repository.ts
+  var stores = DB_CONFIG.STORES;
+  var now = () => Date.now();
+  var scopedId = (...parts) => parts.filter(Boolean).join(":");
+  function request(operation) {
+    return new Promise((resolve, reject) => {
+      operation.onsuccess = () => resolve(operation.result);
+      operation.onerror = () => {
+        var _a;
+        return reject((_a = operation.error) != null ? _a : new Error("IndexedDB request failed"));
+      };
+    });
+  }
+  function complete(transaction) {
+    return new Promise((resolve, reject) => {
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => {
+        var _a;
+        return reject((_a = transaction.error) != null ? _a : new Error("IndexedDB transaction failed"));
+      };
+      transaction.onabort = () => {
+        var _a;
+        return reject((_a = transaction.error) != null ? _a : new Error("IndexedDB transaction aborted"));
+      };
+    });
+  }
+  async function listOfflineMutations(accountId) {
+    const db = await openUnifiedDB();
+    const all = await getAllRecords(db, stores.OFFLINE_MUTATIONS);
+    return all.filter((mutation) => mutation.accountId === accountId).sort((a, b) => a.createdAt - b.createdAt);
+  }
+  async function setMutationStatus(accountId, ids, status, lastError) {
+    if (!ids.length) return;
+    const db = await openUnifiedDB();
+    const tx = db.transaction(stores.OFFLINE_MUTATIONS, "readwrite");
+    const store = tx.objectStore(stores.OFFLINE_MUTATIONS);
+    for (const id of ids) {
+      const existing = await request(store.get(id));
+      if ((existing == null ? void 0 : existing.accountId) === accountId) {
+        store.put({ ...existing, status, lastError, updatedAt: now(), attempts: status === "retry" ? existing.attempts + 1 : existing.attempts });
+      }
+    }
+    await complete(tx);
+  }
+  async function recoverInterruptedMutations(accountId) {
+    const db = await openUnifiedDB();
+    const tx = db.transaction(stores.OFFLINE_MUTATIONS, "readwrite");
+    const store = tx.objectStore(stores.OFFLINE_MUTATIONS);
+    const mutations = await request(store.getAll());
+    let recovered = 0;
+    for (const mutation of mutations) {
+      if (mutation.accountId !== accountId || mutation.status !== "syncing") continue;
+      store.put(sanitizeForIDB({
+        ...mutation,
+        status: "retry",
+        lastError: "The previous sync was interrupted. Retrying safely.",
+        updatedAt: now(),
+        attempts: mutation.attempts + 1
+      }));
+      recovered += 1;
+    }
+    await complete(tx);
+    return recovered;
+  }
+  async function updateOfflineSyncMetadata(accountId, patch) {
+    const db = await openUnifiedDB();
+    const tx = db.transaction(stores.OFFLINE_SYNC_META, "readwrite");
+    const store = tx.objectStore(stores.OFFLINE_SYNC_META);
+    const current = await request(store.get(accountId));
+    const next = {
+      id: accountId,
+      accountId,
+      ...current,
+      ...patch,
+      updatedAt: now()
+    };
+    store.put(sanitizeForIDB(next));
+    await complete(tx);
+    return next;
+  }
+  async function applySyncResult(input) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+    const db = await openUnifiedDB();
+    const tx = db.transaction(
+      [stores.OFFLINE_ENTITIES, stores.OFFLINE_MUTATIONS, stores.OFFLINE_CONFLICTS],
+      "readwrite"
+    );
+    const mutations = tx.objectStore(stores.OFFLINE_MUTATIONS);
+    const entities = tx.objectStore(stores.OFFLINE_ENTITIES);
+    const conflicts = tx.objectStore(stores.OFFLINE_CONFLICTS);
+    const result = input.result;
+    if (result.status === "applied") {
+      mutations.delete(input.mutation.id);
+      if (result.canonical && result.entity && result.entityId) {
+        entities.put(sanitizeForIDB({
+          id: scopedId(input.accountId, result.entity, result.entityId),
+          accountId: input.accountId,
+          entity: result.entity,
+          entityId: result.entityId,
+          workspaceId: (_a = result.canonical.workspaceId) != null ? _a : input.mutation.workspaceId,
+          version: (_b = result.version) != null ? _b : 0,
+          updatedAt: now(),
+          deleted: input.mutation.operation.endsWith(".delete"),
+          data: result.canonical
+        }));
+      }
+    } else if (result.status === "conflict") {
+      mutations.put({ ...input.mutation, status: "conflict", lastError: result.message, updatedAt: now() });
+      conflicts.put(sanitizeForIDB({
+        id: scopedId(input.accountId, input.mutation.id),
+        accountId: input.accountId,
+        mutationId: input.mutation.id,
+        entity: input.mutation.entity,
+        entityId: input.mutation.entityId,
+        serverVersion: Number((_d = (_c = result.conflict) == null ? void 0 : _c.serverVersion) != null ? _d : 0),
+        overlappingFields: Array.isArray((_e = result.conflict) == null ? void 0 : _e.overlappingFields) ? (_f = result.conflict) == null ? void 0 : _f.overlappingFields : [],
+        serverSnapshot: (_h = (_g = result.conflict) == null ? void 0 : _g.serverSnapshot) != null ? _h : null,
+        reason: String((_j = (_i = result.conflict) == null ? void 0 : _i.reason) != null ? _j : "The same fields changed on another device."),
+        createdAt: now()
+      }));
+    } else {
+      mutations.put({
+        ...input.mutation,
+        status: result.status,
+        attempts: result.status === "retry" ? input.mutation.attempts + 1 : input.mutation.attempts,
+        lastError: result.message,
+        updatedAt: now()
+      });
+    }
+    await complete(tx);
+  }
+  function remapValue(value, idMap) {
+    var _a;
+    if (typeof value === "string") return (_a = idMap[value]) != null ? _a : value;
+    if (Array.isArray(value)) return value.map((item) => remapValue(item, idMap));
+    if (value && typeof value === "object") {
+      return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, remapValue(item, idMap)]));
+    }
+    return value;
+  }
+  async function remapOfflineIds(accountId, idMap) {
+    var _a, _b, _c, _d;
+    if (!Object.keys(idMap).length) return;
+    const db = await openUnifiedDB();
+    const tx = db.transaction([stores.OFFLINE_ENTITIES, stores.OFFLINE_MUTATIONS], "readwrite");
+    const entities = tx.objectStore(stores.OFFLINE_ENTITIES);
+    const mutations = tx.objectStore(stores.OFFLINE_MUTATIONS);
+    const allEntities = await request(entities.getAll());
+    for (const record of allEntities) {
+      if (record.accountId !== accountId) continue;
+      const entityId = (_a = idMap[record.entityId]) != null ? _a : record.entityId;
+      const workspaceId = record.workspaceId ? (_b = idMap[record.workspaceId]) != null ? _b : record.workspaceId : void 0;
+      const next = { ...record, entityId, workspaceId, id: scopedId(accountId, record.entity, entityId), data: remapValue(record.data, idMap) };
+      if (next.id !== record.id) entities.delete(record.id);
+      entities.put(sanitizeForIDB(next));
+    }
+    const allMutations = await request(mutations.getAll());
+    for (const record of allMutations) {
+      if (record.accountId !== accountId) continue;
+      mutations.put(sanitizeForIDB({
+        ...record,
+        entityId: (_c = idMap[record.entityId]) != null ? _c : record.entityId,
+        workspaceId: record.workspaceId ? (_d = idMap[record.workspaceId]) != null ? _d : record.workspaceId : void 0,
+        payload: remapValue(record.payload, idMap)
+      }));
+    }
+    await complete(tx);
+  }
+  async function getOfflineSession() {
+    const db = await openUnifiedDB();
+    const tx = db.transaction(stores.OFFLINE_SESSIONS, "readonly");
+    const sessions = await request(tx.objectStore(stores.OFFLINE_SESSIONS).getAll());
+    await complete(tx);
+    return sessions.sort((a, b) => b.verifiedAt - a.verifiedAt)[0];
+  }
+
+  // shared/utils/offline-mutation-order.ts
+  function orderOfflineMutations(mutations) {
+    var _a, _b, _c;
+    const byId = new Map(mutations.map((mutation) => [mutation.id, mutation]));
+    const pending = /* @__PURE__ */ new Map();
+    const children = /* @__PURE__ */ new Map();
+    for (const mutation of mutations) {
+      const localDependencies = mutation.dependsOn.filter((dependency) => byId.has(dependency));
+      pending.set(mutation.id, localDependencies.length);
+      for (const dependency of localDependencies) {
+        const list = (_a = children.get(dependency)) != null ? _a : [];
+        list.push(mutation);
+        children.set(dependency, list);
+      }
+    }
+    const compare = (left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id);
+    const ready = mutations.filter((mutation) => pending.get(mutation.id) === 0).sort(compare);
+    const ordered = [];
+    while (ready.length) {
+      const mutation = ready.shift();
+      ordered.push(mutation);
+      for (const child of (_b = children.get(mutation.id)) != null ? _b : []) {
+        const next = ((_c = pending.get(child.id)) != null ? _c : 1) - 1;
+        pending.set(child.id, next);
+        if (next === 0) {
+          ready.push(child);
+          ready.sort(compare);
+        }
+      }
+    }
+    return {
+      ordered,
+      cyclic: mutations.filter((mutation) => !ordered.some((item) => item.id === mutation.id)).sort(compare)
+    };
   }
 
   // node_modules/workbox-core/_version.js
@@ -993,9 +1252,9 @@
     constructor() {
       this.updatedURLs = [];
       this.notUpdatedURLs = [];
-      this.handlerWillStart = async ({ request, state }) => {
+      this.handlerWillStart = async ({ request: request2, state }) => {
         if (state) {
-          state.originalRequest = request;
+          state.originalRequest = request2;
         }
       };
       this.cachedResponseWillBeUsed = async ({ event, state, cachedResponse }) => {
@@ -1017,9 +1276,9 @@
   // node_modules/workbox-precaching/utils/PrecacheCacheKeyPlugin.js
   var PrecacheCacheKeyPlugin = class {
     constructor({ precacheController: precacheController2 }) {
-      this.cacheKeyWillBeUsed = async ({ request, params }) => {
-        const cacheKey = (params === null || params === void 0 ? void 0 : params.cacheKey) || this._precacheController.getCacheKeyForURL(request.url);
-        return cacheKey ? new Request(cacheKey, { headers: request.headers }) : request;
+      this.cacheKeyWillBeUsed = async ({ request: request2, params }) => {
+        const cacheKey = (params === null || params === void 0 ? void 0 : params.cacheKey) || this._precacheController.getCacheKeyForURL(request2.url);
+        return cacheKey ? new Request(cacheKey, { headers: request2.headers }) : request2;
       };
       this._precacheController = precacheController2;
     }
@@ -1121,13 +1380,13 @@
     }
     return strippedURL.href;
   }
-  async function cacheMatchIgnoreParams(cache, request, ignoreParams, matchOptions) {
-    const strippedRequestURL = stripParams(request.url, ignoreParams);
-    if (request.url === strippedRequestURL) {
-      return cache.match(request, matchOptions);
+  async function cacheMatchIgnoreParams(cache, request2, ignoreParams, matchOptions) {
+    const strippedRequestURL = stripParams(request2.url, ignoreParams);
+    if (request2.url === strippedRequestURL) {
+      return cache.match(request2, matchOptions);
     }
     const keysOptions = Object.assign(Object.assign({}, matchOptions), { ignoreSearch: true });
-    const cacheKeys = await cache.keys(request, keysOptions);
+    const cacheKeys = await cache.keys(request2, keysOptions);
     for (const cacheKey of cacheKeys) {
       const strippedCacheKeyURL = stripParams(cacheKey.url, ignoreParams);
       if (strippedRequestURL === strippedCacheKeyURL) {
@@ -1238,20 +1497,20 @@
      */
     async fetch(input) {
       const { event } = this;
-      let request = toRequest(input);
-      if (request.mode === "navigate" && event instanceof FetchEvent && event.preloadResponse) {
+      let request2 = toRequest(input);
+      if (request2.mode === "navigate" && event instanceof FetchEvent && event.preloadResponse) {
         const possiblePreloadResponse = await event.preloadResponse;
         if (possiblePreloadResponse) {
           if (true) {
-            logger.log(`Using a preloaded navigation response for '${getFriendlyURL(request.url)}'`);
+            logger.log(`Using a preloaded navigation response for '${getFriendlyURL(request2.url)}'`);
           }
           return possiblePreloadResponse;
         }
       }
-      const originalRequest = this.hasCallback("fetchDidFail") ? request.clone() : null;
+      const originalRequest = this.hasCallback("fetchDidFail") ? request2.clone() : null;
       try {
         for (const cb of this.iterateCallbacks("requestWillFetch")) {
-          request = await cb({ request: request.clone(), event });
+          request2 = await cb({ request: request2.clone(), event });
         }
       } catch (err) {
         if (err instanceof Error) {
@@ -1260,12 +1519,12 @@
           });
         }
       }
-      const pluginFilteredRequest = request.clone();
+      const pluginFilteredRequest = request2.clone();
       try {
         let fetchResponse;
-        fetchResponse = await fetch(request, request.mode === "navigate" ? void 0 : this._strategy.fetchOptions);
+        fetchResponse = await fetch(request2, request2.mode === "navigate" ? void 0 : this._strategy.fetchOptions);
         if (true) {
-          logger.debug(`Network request for '${getFriendlyURL(request.url)}' returned a response with status '${fetchResponse.status}'.`);
+          logger.debug(`Network request for '${getFriendlyURL(request2.url)}' returned a response with status '${fetchResponse.status}'.`);
         }
         for (const callback of this.iterateCallbacks("fetchDidSucceed")) {
           fetchResponse = await callback({
@@ -1277,7 +1536,7 @@
         return fetchResponse;
       } catch (error) {
         if (true) {
-          logger.log(`Network request for '${getFriendlyURL(request.url)}' threw an error.`, error);
+          logger.log(`Network request for '${getFriendlyURL(request2.url)}' threw an error.`, error);
         }
         if (originalRequest) {
           await this.runCallbacks("fetchDidFail", {
@@ -1319,10 +1578,10 @@
      * @return {Promise<Response|undefined>} A matching response, if found.
      */
     async cacheMatch(key) {
-      const request = toRequest(key);
+      const request2 = toRequest(key);
       let cachedResponse;
       const { cacheName, matchOptions } = this._strategy;
-      const effectiveRequest = await this.getCacheKey(request, "read");
+      const effectiveRequest = await this.getCacheKey(request2, "read");
       const multiMatchOptions = Object.assign(Object.assign({}, matchOptions), { cacheName });
       cachedResponse = await caches.match(effectiveRequest, multiMatchOptions);
       if (true) {
@@ -1359,9 +1618,9 @@
      * not be cached, and `true` otherwise.
      */
     async cachePut(key, response) {
-      const request = toRequest(key);
+      const request2 = toRequest(key);
       await timeout(0);
-      const effectiveRequest = await this.getCacheKey(request, "write");
+      const effectiveRequest = await this.getCacheKey(request2, "write");
       if (true) {
         if (effectiveRequest.method && effectiveRequest.method !== "GET") {
           throw new WorkboxError("attempt-to-cache-non-get-request", {
@@ -1436,10 +1695,10 @@
      * @param {string} mode
      * @return {Promise<Request>}
      */
-    async getCacheKey(request, mode) {
-      const key = `${request.url} | ${mode}`;
+    async getCacheKey(request2, mode) {
+      const key = `${request2.url} | ${mode}`;
       if (!this._cacheKeys[key]) {
-        let effectiveRequest = request;
+        let effectiveRequest = request2;
         for (const callback of this.iterateCallbacks("cacheKeyWillBeUsed")) {
           effectiveRequest = toRequest(await callback({
             mode,
@@ -1682,25 +1941,25 @@
         };
       }
       const event = options.event;
-      const request = typeof options.request === "string" ? new Request(options.request) : options.request;
+      const request2 = typeof options.request === "string" ? new Request(options.request) : options.request;
       const params = "params" in options ? options.params : void 0;
-      const handler = new StrategyHandler(this, { event, request, params });
-      const responseDone = this._getResponse(handler, request, event);
-      const handlerDone = this._awaitComplete(responseDone, handler, request, event);
+      const handler = new StrategyHandler(this, { event, request: request2, params });
+      const responseDone = this._getResponse(handler, request2, event);
+      const handlerDone = this._awaitComplete(responseDone, handler, request2, event);
       return [responseDone, handlerDone];
     }
-    async _getResponse(handler, request, event) {
-      await handler.runCallbacks("handlerWillStart", { event, request });
+    async _getResponse(handler, request2, event) {
+      await handler.runCallbacks("handlerWillStart", { event, request: request2 });
       let response = void 0;
       try {
-        response = await this._handle(request, handler);
+        response = await this._handle(request2, handler);
         if (!response || response.type === "error") {
-          throw new WorkboxError("no-response", { url: request.url });
+          throw new WorkboxError("no-response", { url: request2.url });
         }
       } catch (error) {
         if (error instanceof Error) {
           for (const callback of handler.iterateCallbacks("handlerDidError")) {
-            response = await callback({ error, event, request });
+            response = await callback({ error, event, request: request2 });
             if (response) {
               break;
             }
@@ -1709,15 +1968,15 @@
         if (!response) {
           throw error;
         } else if (true) {
-          logger.log(`While responding to '${getFriendlyURL(request.url)}', an ${error instanceof Error ? error.toString() : ""} error occurred. Using a fallback response provided by a handlerDidError plugin.`);
+          logger.log(`While responding to '${getFriendlyURL(request2.url)}', an ${error instanceof Error ? error.toString() : ""} error occurred. Using a fallback response provided by a handlerDidError plugin.`);
         }
       }
       for (const callback of handler.iterateCallbacks("handlerWillRespond")) {
-        response = await callback({ event, request, response });
+        response = await callback({ event, request: request2, response });
       }
       return response;
     }
-    async _awaitComplete(responseDone, handler, request, event) {
+    async _awaitComplete(responseDone, handler, request2, event) {
       let response;
       let error;
       try {
@@ -1727,7 +1986,7 @@
       try {
         await handler.runCallbacks("handlerDidRespond", {
           event,
-          request,
+          request: request2,
           response
         });
         await handler.doneWaiting();
@@ -1738,7 +1997,7 @@
       }
       await handler.runCallbacks("handlerDidComplete", {
         event,
-        request,
+        request: request2,
         response,
         error
       });
@@ -1781,50 +2040,50 @@
      *     triggered the request.
      * @return {Promise<Response>}
      */
-    async _handle(request, handler) {
-      const response = await handler.cacheMatch(request);
+    async _handle(request2, handler) {
+      const response = await handler.cacheMatch(request2);
       if (response) {
         return response;
       }
       if (handler.event && handler.event.type === "install") {
-        return await this._handleInstall(request, handler);
+        return await this._handleInstall(request2, handler);
       }
-      return await this._handleFetch(request, handler);
+      return await this._handleFetch(request2, handler);
     }
-    async _handleFetch(request, handler) {
+    async _handleFetch(request2, handler) {
       let response;
       const params = handler.params || {};
       if (this._fallbackToNetwork) {
         if (true) {
-          logger.warn(`The precached response for ${getFriendlyURL(request.url)} in ${this.cacheName} was not found. Falling back to the network.`);
+          logger.warn(`The precached response for ${getFriendlyURL(request2.url)} in ${this.cacheName} was not found. Falling back to the network.`);
         }
         const integrityInManifest = params.integrity;
-        const integrityInRequest = request.integrity;
+        const integrityInRequest = request2.integrity;
         const noIntegrityConflict = !integrityInRequest || integrityInRequest === integrityInManifest;
-        response = await handler.fetch(new Request(request, {
-          integrity: request.mode !== "no-cors" ? integrityInRequest || integrityInManifest : void 0
+        response = await handler.fetch(new Request(request2, {
+          integrity: request2.mode !== "no-cors" ? integrityInRequest || integrityInManifest : void 0
         }));
-        if (integrityInManifest && noIntegrityConflict && request.mode !== "no-cors") {
+        if (integrityInManifest && noIntegrityConflict && request2.mode !== "no-cors") {
           this._useDefaultCacheabilityPluginIfNeeded();
-          const wasCached = await handler.cachePut(request, response.clone());
+          const wasCached = await handler.cachePut(request2, response.clone());
           if (true) {
             if (wasCached) {
-              logger.log(`A response for ${getFriendlyURL(request.url)} was used to "repair" the precache.`);
+              logger.log(`A response for ${getFriendlyURL(request2.url)} was used to "repair" the precache.`);
             }
           }
         }
       } else {
         throw new WorkboxError("missing-precache-entry", {
           cacheName: this.cacheName,
-          url: request.url
+          url: request2.url
         });
       }
       if (true) {
-        const cacheKey = params.cacheKey || await handler.getCacheKey(request, "read");
-        logger.groupCollapsed(`Precaching is responding to: ` + getFriendlyURL(request.url));
+        const cacheKey = params.cacheKey || await handler.getCacheKey(request2, "read");
+        logger.groupCollapsed(`Precaching is responding to: ` + getFriendlyURL(request2.url));
         logger.log(`Serving the precached url: ${getFriendlyURL(cacheKey instanceof Request ? cacheKey.url : cacheKey)}`);
         logger.groupCollapsed(`View request details here.`);
-        logger.log(request);
+        logger.log(request2);
         logger.groupEnd();
         logger.groupCollapsed(`View response details here.`);
         logger.log(response);
@@ -1833,13 +2092,13 @@
       }
       return response;
     }
-    async _handleInstall(request, handler) {
+    async _handleInstall(request2, handler) {
       this._useDefaultCacheabilityPluginIfNeeded();
-      const response = await handler.fetch(request);
-      const wasCached = await handler.cachePut(request, response.clone());
+      const response = await handler.fetch(request2);
+      const wasCached = await handler.cachePut(request2, response.clone());
       if (!wasCached) {
         throw new WorkboxError("bad-precaching-response", {
-          url: request.url,
+          url: request2.url,
           status: response.status
         });
       }
@@ -2028,14 +2287,14 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         for (const [url, cacheKey] of this._urlsToCacheKeys) {
           const integrity = this._cacheKeysToIntegrities.get(cacheKey);
           const cacheMode = this._urlsToCacheModes.get(url);
-          const request = new Request(url, {
+          const request2 = new Request(url, {
             integrity,
             cache: cacheMode,
             credentials: "same-origin"
           });
           await Promise.all(this.strategy.handleAll({
             params: { cacheKey },
-            request,
+            request: request2,
             event
           }));
         }
@@ -2062,10 +2321,10 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         const currentlyCachedRequests = await cache.keys();
         const expectedCacheKeys = new Set(this._urlsToCacheKeys.values());
         const deletedURLs = [];
-        for (const request of currentlyCachedRequests) {
-          if (!expectedCacheKeys.has(request.url)) {
-            await cache.delete(request);
-            deletedURLs.push(request.url);
+        for (const request2 of currentlyCachedRequests) {
+          if (!expectedCacheKeys.has(request2.url)) {
+            await cache.delete(request2);
+            deletedURLs.push(request2.url);
           }
         }
         if (true) {
@@ -2131,8 +2390,8 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
      * to look up in the precache.
      * @return {Promise<Response|undefined>}
      */
-    async matchPrecache(request) {
-      const url = request instanceof Request ? request.url : request;
+    async matchPrecache(request2) {
+      const url = request2 instanceof Request ? request2.url : request2;
       const cacheKey = this.getCacheKeyForURL(url);
       if (cacheKey) {
         const cache = await self.caches.open(this.strategy.cacheName);
@@ -2315,8 +2574,8 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
      */
     addFetchListener() {
       self.addEventListener("fetch", (event) => {
-        const { request } = event;
-        const responsePromise = this.handleRequest({ request, event });
+        const { request: request2 } = event;
+        const responsePromise = this.handleRequest({ request: request2, event });
         if (responsePromise) {
           event.respondWith(responsePromise);
         }
@@ -2355,8 +2614,8 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
             if (typeof entry === "string") {
               entry = [entry];
             }
-            const request = new Request(...entry);
-            return this.handleRequest({ request, event });
+            const request2 = new Request(...entry);
+            return this.handleRequest({ request: request2, event });
           }));
           event.waitUntil(requestPromises);
           if (event.ports && event.ports[0]) {
@@ -2377,16 +2636,16 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
      *     registered route can handle the request. If there is no matching
      *     route and there's no `defaultHandler`, `undefined` is returned.
      */
-    handleRequest({ request, event }) {
+    handleRequest({ request: request2, event }) {
       if (true) {
-        finalAssertExports.isInstance(request, Request, {
+        finalAssertExports.isInstance(request2, Request, {
           moduleName: "workbox-routing",
           className: "Router",
           funcName: "handleRequest",
           paramName: "options.request"
         });
       }
-      const url = new URL(request.url, location.href);
+      const url = new URL(request2.url, location.href);
       if (!url.protocol.startsWith("http")) {
         if (true) {
           logger.debug(`Workbox Router only supports URLs that start with 'http'.`);
@@ -2396,7 +2655,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       const sameOrigin = url.origin === location.origin;
       const { params, route } = this.findMatchingRoute({
         event,
-        request,
+        request: request2,
         sameOrigin,
         url
       });
@@ -2413,7 +2672,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           }
         }
       }
-      const method = request.method;
+      const method = request2.method;
       if (!handler && this._defaultHandlerMap.has(method)) {
         if (true) {
           debugMessages.push(`Failed to find a matching route. Falling back to the default handler for ${method}.`);
@@ -2439,7 +2698,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       }
       let responsePromise;
       try {
-        responsePromise = handler.handle({ url, request, event, params });
+        responsePromise = handler.handle({ url, request: request2, event, params });
       } catch (err) {
         responsePromise = Promise.reject(err);
       }
@@ -2454,7 +2713,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
               logger.groupEnd();
             }
             try {
-              return await catchHandler.handle({ url, request, event, params });
+              return await catchHandler.handle({ url, request: request2, event, params });
             } catch (catchErr) {
               if (catchErr instanceof Error) {
                 err = catchErr;
@@ -2468,7 +2727,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
               logger.error(err);
               logger.groupEnd();
             }
-            return this._catchHandler.handle({ url, request, event });
+            return this._catchHandler.handle({ url, request: request2, event });
           }
           throw err;
         });
@@ -2490,11 +2749,11 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
      *     They are populated if a matching route was found or `undefined`
      *     otherwise.
      */
-    findMatchingRoute({ url, sameOrigin, request, event }) {
-      const routes = this._routes.get(request.method) || [];
+    findMatchingRoute({ url, sameOrigin, request: request2, event }) {
+      const routes = this._routes.get(request2.method) || [];
       for (const route of routes) {
         let params;
-        const matchResult = route.match({ url, sameOrigin, request, event });
+        const matchResult = route.match({ url, sameOrigin, request: request2, event });
         if (matchResult) {
           if (true) {
             if (matchResult instanceof Promise) {
@@ -2716,9 +2975,9 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
      * alternative URLs that should be checked for precache matches.
      */
     constructor(precacheController2, options) {
-      const match = ({ request }) => {
+      const match = ({ request: request2 }) => {
         const urlsToCacheKeys = precacheController2.getURLsToCacheKeys();
-        for (const possibleURL of generateURLVariations(request.url, options)) {
+        for (const possibleURL of generateURLVariations(request2.url, options)) {
           const cacheKey = urlsToCacheKeys.get(possibleURL);
           if (cacheKey) {
             const integrity = precacheController2.getIntegrityForCacheKey(cacheKey);
@@ -2726,7 +2985,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           }
         }
         if (true) {
-          logger.debug(`Precaching did not find a match for ` + getFriendlyURL(request.url));
+          logger.debug(`Precaching did not find a match for ` + getFriendlyURL(request2.url));
         }
         return;
       };
@@ -2780,7 +3039,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
 
   // node_modules/workbox-strategies/utils/messages.js
   var messages2 = {
-    strategyStart: (strategyName, request) => `Using ${strategyName} to respond to '${getFriendlyURL(request.url)}'`,
+    strategyStart: (strategyName, request2) => `Using ${strategyName} to respond to '${getFriendlyURL(request2.url)}'`,
     printFinalResponse: (response) => {
       if (response) {
         logger.groupCollapsed(`View the final response here.`);
@@ -2799,24 +3058,24 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
      *     triggered the request.
      * @return {Promise<Response>}
      */
-    async _handle(request, handler) {
+    async _handle(request2, handler) {
       const logs = [];
       if (true) {
-        finalAssertExports.isInstance(request, Request, {
+        finalAssertExports.isInstance(request2, Request, {
           moduleName: "workbox-strategies",
           className: this.constructor.name,
           funcName: "makeRequest",
           paramName: "request"
         });
       }
-      let response = await handler.cacheMatch(request);
+      let response = await handler.cacheMatch(request2);
       let error = void 0;
       if (!response) {
         if (true) {
           logs.push(`No response found in the '${this.cacheName}' cache. Will respond with a network request.`);
         }
         try {
-          response = await handler.fetchAndCachePut(request);
+          response = await handler.fetchAndCachePut(request2);
         } catch (err) {
           if (err instanceof Error) {
             error = err;
@@ -2835,7 +3094,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         }
       }
       if (true) {
-        logger.groupCollapsed(messages2.strategyStart(this.constructor.name, request));
+        logger.groupCollapsed(messages2.strategyStart(this.constructor.name, request2));
         for (const log of logs) {
           logger.log(log);
         }
@@ -2843,7 +3102,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         logger.groupEnd();
       }
       if (!response) {
-        throw new WorkboxError("no-response", { url: request.url, error });
+        throw new WorkboxError("no-response", { url: request2.url, error });
       }
       return response;
     }
@@ -2897,20 +3156,20 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
      *     triggered the request.
      * @return {Promise<Response>}
      */
-    async _handle(request, handler) {
+    async _handle(request2, handler) {
       const logs = [];
       if (true) {
-        finalAssertExports.isInstance(request, Request, {
+        finalAssertExports.isInstance(request2, Request, {
           moduleName: "workbox-strategies",
           className: this.constructor.name,
           funcName: "handle",
           paramName: "request"
         });
       }
-      const fetchAndCachePromise = handler.fetchAndCachePut(request).catch(() => {
+      const fetchAndCachePromise = handler.fetchAndCachePut(request2).catch(() => {
       });
       void handler.waitUntil(fetchAndCachePromise);
-      let response = await handler.cacheMatch(request);
+      let response = await handler.cacheMatch(request2);
       let error;
       if (response) {
         if (true) {
@@ -2929,7 +3188,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         }
       }
       if (true) {
-        logger.groupCollapsed(messages2.strategyStart(this.constructor.name, request));
+        logger.groupCollapsed(messages2.strategyStart(this.constructor.name, request2));
         for (const log of logs) {
           logger.log(log);
         }
@@ -2937,7 +3196,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         logger.groupEnd();
       }
       if (!response) {
-        throw new WorkboxError("no-response", { url: request.url, error });
+        throw new WorkboxError("no-response", { url: request2.url, error });
       }
       return response;
     }
@@ -2974,30 +3233,30 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
   var transactionStoreNamesMap = /* @__PURE__ */ new WeakMap();
   var transformCache = /* @__PURE__ */ new WeakMap();
   var reverseTransformCache = /* @__PURE__ */ new WeakMap();
-  function promisifyRequest(request) {
+  function promisifyRequest(request2) {
     const promise = new Promise((resolve, reject) => {
       const unlisten = () => {
-        request.removeEventListener("success", success);
-        request.removeEventListener("error", error);
+        request2.removeEventListener("success", success);
+        request2.removeEventListener("error", error);
       };
       const success = () => {
-        resolve(wrap(request.result));
+        resolve(wrap(request2.result));
         unlisten();
       };
       const error = () => {
-        reject(request.error);
+        reject(request2.error);
         unlisten();
       };
-      request.addEventListener("success", success);
-      request.addEventListener("error", error);
+      request2.addEventListener("success", success);
+      request2.addEventListener("error", error);
     });
     promise.then((value) => {
       if (value instanceof IDBCursor) {
-        cursorRequestMap.set(value, request);
+        cursorRequestMap.set(value, request2);
       }
     }).catch(() => {
     });
-    reverseTransformCache.set(promise, request);
+    reverseTransformCache.set(promise, request2);
     return promise;
   }
   function cacheDonePromiseForTransaction(tx) {
@@ -3005,11 +3264,11 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       return;
     const done = new Promise((resolve, reject) => {
       const unlisten = () => {
-        tx.removeEventListener("complete", complete);
+        tx.removeEventListener("complete", complete2);
         tx.removeEventListener("error", error);
         tx.removeEventListener("abort", error);
       };
-      const complete = () => {
+      const complete2 = () => {
         resolve();
         unlisten();
       };
@@ -3017,7 +3276,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         reject(tx.error || new DOMException("AbortError", "AbortError"));
         unlisten();
       };
-      tx.addEventListener("complete", complete);
+      tx.addEventListener("complete", complete2);
       tx.addEventListener("error", error);
       tx.addEventListener("abort", error);
     });
@@ -3094,15 +3353,15 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
 
   // node_modules/idb/build/index.js
   function openDB(name, version, { blocked, upgrade, blocking, terminated } = {}) {
-    const request = indexedDB.open(name, version);
-    const openPromise = wrap(request);
+    const request2 = indexedDB.open(name, version);
+    const openPromise = wrap(request2);
     if (upgrade) {
-      request.addEventListener("upgradeneeded", (event) => {
-        upgrade(wrap(request.result), event.oldVersion, event.newVersion, wrap(request.transaction), event);
+      request2.addEventListener("upgradeneeded", (event) => {
+        upgrade(wrap(request2.result), event.oldVersion, event.newVersion, wrap(request2.transaction), event);
       });
     }
     if (blocked) {
-      request.addEventListener("blocked", (event) => blocked(
+      request2.addEventListener("blocked", (event) => blocked(
         // Casting due to https://github.com/microsoft/TypeScript-DOM-lib-generator/pull/1405
         event.oldVersion,
         event.newVersion,
@@ -3120,15 +3379,15 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     return openPromise;
   }
   function deleteDB(name, { blocked } = {}) {
-    const request = indexedDB.deleteDatabase(name);
+    const request2 = indexedDB.deleteDatabase(name);
     if (blocked) {
-      request.addEventListener("blocked", (event) => blocked(
+      request2.addEventListener("blocked", (event) => blocked(
         // Casting due to https://github.com/microsoft/TypeScript-DOM-lib-generator/pull/1405
         event.oldVersion,
         event
       ));
     }
-    return wrap(request).then(() => void 0);
+    return wrap(request2).then(() => void 0);
   }
   var readMethods = ["get", "getKey", "getAll", "getAllKeys", "count"];
   var writeMethods = ["put", "add", "delete", "clear"];
@@ -3483,14 +3742,14 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
      * automatic deletion if the available storage quota has been exceeded.
      */
     constructor(config = {}) {
-      this.cachedResponseWillBeUsed = async ({ event, request, cacheName, cachedResponse }) => {
+      this.cachedResponseWillBeUsed = async ({ event, request: request2, cacheName, cachedResponse }) => {
         if (!cachedResponse) {
           return null;
         }
         const isFresh = this._isResponseDateFresh(cachedResponse);
         const cacheExpiration = this._getCacheExpiration(cacheName);
         dontWaitFor(cacheExpiration.expireEntries());
-        const updateTimestampDone = cacheExpiration.updateTimestamp(request.url);
+        const updateTimestampDone = cacheExpiration.updateTimestamp(request2.url);
         if (event) {
           try {
             event.waitUntil(updateTimestampDone);
@@ -3504,7 +3763,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         }
         return isFresh ? cachedResponse : null;
       };
-      this.cacheDidUpdate = async ({ cacheName, request }) => {
+      this.cacheDidUpdate = async ({ cacheName, request: request2 }) => {
         if (true) {
           finalAssertExports.isType(cacheName, "string", {
             moduleName: "workbox-expiration",
@@ -3512,7 +3771,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
             funcName: "cacheDidUpdate",
             paramName: "cacheName"
           });
-          finalAssertExports.isInstance(request, Request, {
+          finalAssertExports.isInstance(request2, Request, {
             moduleName: "workbox-expiration",
             className: "Plugin",
             funcName: "cacheDidUpdate",
@@ -3520,7 +3779,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           });
         }
         const cacheExpiration = this._getCacheExpiration(cacheName);
-        await cacheExpiration.updateTimestamp(request.url);
+        await cacheExpiration.updateTimestamp(request2.url);
         await cacheExpiration.expireEntries();
       };
       if (true) {
@@ -3589,8 +3848,8 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       if (dateHeaderTimestamp === null) {
         return true;
       }
-      const now = Date.now();
-      return dateHeaderTimestamp >= now - this._maxAgeSeconds * 1e3;
+      const now2 = Date.now();
+      return dateHeaderTimestamp >= now2 - this._maxAgeSeconds * 1e3;
     }
     /**
      * This method will extract the data header and parse it into a useful
@@ -3756,27 +4015,13 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       ]
     });
     registerRoute(
-      ({ url, request }) => url.origin === self.location.origin && // Exclude the AI worker script — it's loaded via Blob URL in the plugin,
+      ({ url, request: request2 }) => url.origin === self.location.origin && // Exclude the AI worker script — it's loaded via Blob URL in the plugin,
       // but direct loads must not get the CacheFirst/offline-stub treatment either.
-      !url.pathname.endsWith("/ai-worker.js") && (url.pathname.startsWith("/_nuxt/") || request.destination === "script" || request.destination === "style"),
-      async ({ event, request }) => {
+      !url.pathname.endsWith("/ai-worker.js") && (url.pathname.startsWith("/_nuxt/") || request2.destination === "script" || request2.destination === "style"),
+      async ({ event, request: request2 }) => {
         try {
-          return await assetsStrategy.handle({ event, request });
+          return await assetsStrategy.handle({ event, request: request2 });
         } catch (err) {
-          const req = request;
-          const isJsChunk = req.destination === "script" && new URL(req.url).pathname.startsWith("/_nuxt/");
-          if (isJsChunk) {
-            return new Response(
-              "/* offline stub chunk */\nexport default {};\nexport const __offline__ = true;\n",
-              {
-                headers: {
-                  "Content-Type": "application/javascript",
-                  "Cache-Control": "no-store"
-                },
-                status: 200
-              }
-            );
-          }
           throw err;
         }
       }
@@ -3786,155 +4031,41 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       new StaleWhileRevalidate({ cacheName: CACHE_NAMES.STATIC })
     );
     registerRoute(
-      ({ url, request }) => url.origin === self.location.origin && url.pathname.startsWith("/api/auth/") && request.method === "GET",
-      async ({ request }) => {
-        var _a;
-        const url = new URL(request.url);
-        const cacheName = CACHE_NAMES.API_AUTH;
-        const cache = await caches.open(cacheName);
+      ({ url, request: request2 }) => url.origin === self.location.origin && url.pathname.startsWith("/api/auth/") && request2.method === "GET",
+      async ({ request: request2 }) => {
         try {
-          const resp = await fetch(request);
-          const isJson = (_a = resp.headers.get("content-type")) == null ? void 0 : _a.includes("application/json");
-          if (resp.ok && isJson) {
-            try {
-              await cache.put(request, resp.clone());
-            } catch {
-            }
-          }
-          return resp;
+          return await fetch(request2);
         } catch {
-          const cached = await cache.match(request);
-          if (cached) return cached;
-          if (url.pathname in AUTH_STUBS) {
-            return new Response(
-              JSON.stringify(AUTH_STUBS[url.pathname]),
-              {
-                status: 200,
-                headers: {
-                  "Content-Type": "application/json",
-                  "Cache-Control": "no-store"
-                }
-              }
-            );
-          }
-          return new Response("", {
-            status: 503,
-            headers: { "Cache-Control": "no-store" }
-          });
+          return new Response(JSON.stringify({ success: false, error: { code: "OFFLINE_NETWORK_UNAVAILABLE", message: "Authentication is unavailable while offline." } }), { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
         }
       }
     );
     registerRoute(
-      ({ url, request }) => url.origin === self.location.origin && url.pathname.startsWith("/api/workspaces") && request.method === "GET",
-      async ({ request }) => {
-        var _a;
-        const cacheName = CACHE_NAMES.API_FOLDERS;
-        const cache = await caches.open(cacheName);
+      ({ url, request: request2 }) => url.origin === self.location.origin && !url.pathname.startsWith("/api/") && request2.method === "GET" && request2.mode !== "navigate",
+      async ({ request: request2 }) => {
+        const cache = await caches.open(CACHE_NAMES.OFFLINE_FILES);
+        const packed = await cache.match(request2, { ignoreSearch: false });
+        if (packed) return packed;
+        return fetch(request2);
+      }
+    );
+    registerRoute(
+      ({ url, request: request2 }) => url.origin === self.location.origin && url.pathname.startsWith("/api/workspaces") && request2.method === "GET",
+      async ({ request: request2 }) => {
         try {
-          const resp = await fetch(request);
-          const isJson = (_a = resp.headers.get("content-type")) == null ? void 0 : _a.includes("application/json");
-          if (resp.ok && isJson) {
-            try {
-              await cache.put(request, resp.clone());
-              log("Cached workspaces response:", request.url);
-            } catch {
-            }
-          }
-          return resp;
+          return await fetch(request2);
         } catch {
-          log("Workspaces API network failed, checking cache:", request.url);
-          const cached = await cache.match(request);
-          if (cached) {
-            log("Serving cached workspaces:", request.url);
-            return cached;
-          }
-          const url = new URL(request.url);
-          if (url.pathname === "/api/workspaces/count") {
-            return new Response(
-              JSON.stringify({ success: true, data: { count: 0 } }),
-              {
-                status: 200,
-                headers: {
-                  "Content-Type": "application/json",
-                  "Cache-Control": "no-store"
-                }
-              }
-            );
-          }
-          if (url.pathname === "/api/workspaces" || url.pathname === "/api/workspaces/") {
-            return new Response(JSON.stringify({ success: true, data: [] }), {
-              status: 200,
-              headers: {
-                "Content-Type": "application/json",
-                "Cache-Control": "no-store"
-              }
-            });
-          }
-          if (url.pathname.endsWith("/study-content")) {
-            return new Response(
-              JSON.stringify({
-                success: true,
-                data: { flashcards: [], questions: [] }
-              }),
-              {
-                status: 200,
-                headers: {
-                  "Content-Type": "application/json",
-                  "Cache-Control": "no-store"
-                }
-              }
-            );
-          }
-          return new Response(
-            JSON.stringify({
-              success: false,
-              error: {
-                message: "Workspace is not cached for offline use",
-                statusCode: 404,
-                code: "OFFLINE_CACHE_MISS"
-              }
-            }),
-            {
-              status: 404,
-              headers: {
-                "Content-Type": "application/json",
-                "Cache-Control": "no-store"
-              }
-            }
-          );
+          return new Response(JSON.stringify({ success: false, error: { code: "OFFLINE_CACHE_MISS", message: "This content is not downloaded for offline use." } }), { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
         }
       }
     );
     registerRoute(
-      ({ url, request }) => url.origin === self.location.origin && url.pathname.startsWith("/api/notes") && request.method === "GET",
-      async ({ request }) => {
-        var _a;
-        const cacheName = CACHE_NAMES.API_NOTES;
-        const cache = await caches.open(cacheName);
+      ({ url, request: request2 }) => url.origin === self.location.origin && url.pathname.startsWith("/api/notes") && request2.method === "GET",
+      async ({ request: request2 }) => {
         try {
-          const resp = await fetch(request);
-          const isJson = (_a = resp.headers.get("content-type")) == null ? void 0 : _a.includes("application/json");
-          if (resp.ok && isJson) {
-            try {
-              await cache.put(request, resp.clone());
-              log("Cached notes response:", request.url);
-            } catch {
-            }
-          }
-          return resp;
+          return await fetch(request2);
         } catch {
-          const cached = await cache.match(request);
-          if (cached) {
-            log("Serving cached notes:", request.url);
-            return cached;
-          }
-          return new Response(JSON.stringify({ success: true, data: [] }), {
-            status: 200,
-            headers: {
-              "Content-Type": "application/json",
-              "Cache-Control": "no-store"
-            }
-          });
+          return new Response(JSON.stringify({ success: false, error: { code: "OFFLINE_CACHE_MISS", message: "Notes are not available in this offline pack." } }), { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
         }
       }
     );
@@ -4247,46 +4378,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       if (syncEvt.tag === SYNC_TAGS.BOARD_ITEMS) {
         syncEvt.waitUntil(syncPendingBoardItems("background"));
       }
-      if (syncEvt.tag === SYNC_TAGS.FORM) {
-        syncEvt.waitUntil(
-          (async () => {
-            try {
-              const database = await ensureDB();
-              if (!database) {
-                warn("IndexedDB unavailable, cannot sync forms");
-                await notifyClientsOfDBFailure();
-                return;
-              }
-              const records = await getAllRecords(
-                database,
-                "forms"
-              );
-              if (records.length === 0 || records.every((r) => !r.payload)) {
-                log("No forms to sync");
-                return;
-              }
-              log("SW: Syncing forms records:", records);
-              const clients = await swSelf.clients.matchAll({ type: "window" });
-              clients.forEach(
-                (c) => c.postMessage({
-                  type: SW_MESSAGE_TYPES.FORM_SYNC_STARTED,
-                  data: { message: "Syncing data..", mode: "background" }
-                })
-              );
-              await syncForms(clients, records);
-            } catch (err) {
-              error("Background sync failed:", err);
-              const clients = await swSelf.clients.matchAll({ type: "window" });
-              clients.forEach((client) => {
-                client.postMessage({
-                  type: SW_MESSAGE_TYPES.FORM_SYNC_ERROR,
-                  data: { message: "Failed to sync offline data" }
-                });
-              });
-            }
-          })()
-        );
-      }
+      if (syncEvt.tag === SYNC_TAGS.OFFLINE_V2) syncEvt.waitUntil(syncOfflineV2());
     });
     swSelf.addEventListener("fetch", (event) => {
       const req = event.request;
@@ -4301,7 +4393,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
             try {
               log("Fetching navigation request:", req.url);
               const response = await fetch(req);
-              if (response.ok && response.status === 200) {
+              if (response.ok && response.status === 200 && url.pathname === "/") {
                 try {
                   const cache = await caches.open(CACHE_NAMES.PAGES);
                   await cache.put(req, response.clone());
@@ -4426,84 +4518,63 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         );
       }
     });
-    async function syncForms(clients, preloaded) {
-      var _a;
-      try {
-        const formData = preloaded != null ? preloaded : await (async () => {
-          try {
-            const db2 = await openUnifiedDB();
-            return await getAllRecords(
-              db2,
-              DB_CONFIG.STORES.FORMS
-            );
-          } catch (e) {
-            error("Failed to load form data:", e);
-            return [];
-          }
-        })();
-        if (!formData.length) return;
-        const expiryDays = ((_a = globalThis.OFFLINE_FORM_CONFIG) == null ? void 0 : _a.FORM_EXPIRY_DAYS) || 7;
-        const expiryMs = expiryDays * 24 * 60 * 60 * 1e3;
-        const now = Date.now();
-        const valid = formData.filter((r) => now - r.createdAt <= expiryMs);
-        const expired = formData.filter((r) => now - r.createdAt > expiryMs);
-        if (expired.length) {
-          try {
-            const db2 = await openUnifiedDB();
-            await Promise.all(
-              expired.map((e) => deleteRecord(db2, DB_CONFIG.STORES.FORMS, e.id))
-            );
-            warn("Purged expired offline records:", expired.length);
-          } catch (e) {
-            warn("Failed purging expired records:", e);
-          }
-        }
-        if (!valid.length) return;
-        const response = await sendDataToServer(valid);
-        if (!response.ok) throw new Error("Sync failed");
-        try {
-          const db2 = await openUnifiedDB();
-          await Promise.all(
-            valid.map((f) => deleteRecord(db2, DB_CONFIG.STORES.FORMS, f.id))
-          );
-        } catch (e) {
-          warn("Failed deleting processed form records:", e);
-        }
-        clients.forEach(
-          (c) => c.postMessage({
-            type: SW_MESSAGE_TYPES.FORM_SYNCED,
-            data: {
-              message: `Form data synced (${valid.length} records).`,
-              appliedCount: valid.length,
-              mode: "background"
-            }
-          })
-        );
-      } catch (err) {
-        error("syncForms error", err);
-        clients.forEach(
-          (c) => c.postMessage({
-            type: SW_MESSAGE_TYPES.FORM_SYNC_ERROR,
-            data: { message: "Form sync failed.", mode: "background" }
-          })
-        );
-      }
-    }
     async function syncContent() {
       log("periodic content sync placeholder");
     }
-    async function sendDataToServer(data) {
-      const controller = new AbortController();
-      const timeout2 = setTimeout(() => controller.abort(), 2e4);
+    async function syncOfflineV2() {
+      var _a;
+      const clients = await swSelf.clients.matchAll({ type: "window" });
+      if (clients.length) return;
+      const session = await getOfflineSession();
+      if (!session) return;
+      await recoverInterruptedMutations(session.accountId);
+      const pending = (await listOfflineMutations(session.accountId)).filter((mutation) => mutation.status === "pending" || mutation.status === "retry");
+      const { ordered, cyclic } = orderOfflineMutations(pending);
+      if (cyclic.length) await setMutationStatus(session.accountId, cyclic.map((mutation) => mutation.id), "rejected", "Cyclic offline dependency");
+      const batch = ordered.slice(0, 50);
+      if (!batch.length) return;
+      await setMutationStatus(session.accountId, batch.map((mutation) => mutation.id), "syncing");
       try {
-        const resp = await fetch("/api/form-sync", {
+        const response = await fetch("/api/offline/sync", {
           method: "POST",
-          body: JSON.stringify(data),
-          signal: controller.signal
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ clientId: "service-worker", mutations: batch })
         });
-        return resp;
-      } finally {
-        clearTimeout(timeout2);
+        if (!response.ok) throw Object.assign(new Error(`Offline sync failed (${response.status})`), { statusCode: response.status });
+        const payload = await response.json();
+        if (!payload.data) throw new Error("Offline sync returned no data");
+        const byId = new Map(batch.map((mutation) => [mutation.id, mutation]));
+        const returned = /* @__PURE__ */ new Set();
+        for (const result of payload.data.results) {
+          const mutation = byId.get(result.id);
+          if (!mutation) continue;
+          returned.add(result.id);
+          if (result.idMap) await remapOfflineIds(session.accountId, result.idMap);
+          await applySyncResult({ accountId: session.accountId, mutation, result });
+        }
+        const missing = batch.filter((mutation) => !returned.has(mutation.id));
+        if (missing.length) {
+          await setMutationStatus(session.accountId, missing.map((mutation) => mutation.id), "retry", "The sync service did not acknowledge this mutation.");
+        }
+        await updateOfflineSyncMetadata(session.accountId, {
+          lastAttemptAt: Date.now(),
+          lastSuccessfulSyncAt: Date.now(),
+          lastError: void 0
+        });
+        const remaining = (await listOfflineMutations(session.accountId)).some((mutation) => mutation.status === "pending" || mutation.status === "retry");
+        if (remaining && "sync" in swSelf.registration) {
+          await swSelf.registration.sync.register(SYNC_TAGS.OFFLINE_V2);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Background sync failed";
+        const statusCode = Number((_a = err == null ? void 0 : err.statusCode) != null ? _a : 0);
+        await setMutationStatus(session.accountId, batch.map((mutation) => mutation.id), statusCode === 401 || statusCode === 403 ? "blocked" : "retry", statusCode === 401 || statusCode === 403 ? "Sign in to sync your saved local changes." : message);
+        await updateOfflineSyncMetadata(session.accountId, {
+          lastAttemptAt: Date.now(),
+          lastError: statusCode === 401 || statusCode === 403 ? "Sign in to sync your saved local changes." : message
+        });
+        error("offline-v2 sync error", err);
       }
     }
     async function syncPendingNotes(mode) {
@@ -4561,7 +4632,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           });
           if (!contentConflicts.length) return;
           const database = await openUnifiedDB();
-          const now = Date.now();
+          const now2 = Date.now();
           for (const conflict of contentConflicts) {
             const original = pending.find((change) => change.id === conflict.id);
             const workspaceId = (original == null ? void 0 : original.workspaceId) || (typeof ((_a2 = conflict.serverSnapshot) == null ? void 0 : _a2.workspaceId) === "string" ? conflict.serverSnapshot.workspaceId : void 0);
@@ -4579,8 +4650,8 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
               scope: "content",
               entityId: conflict.id,
               reason: (_c = conflict.reason) != null ? _c : "SYNC_CONFLICT",
-              createdAt: now,
-              updatedAt: now,
+              createdAt: now2,
+              updatedAt: now2,
               localSnapshot: original != null ? original : null,
               serverSnapshot: (_d = conflict.serverSnapshot) != null ? _d : null,
               serverVersion: conflict.serverVersion,

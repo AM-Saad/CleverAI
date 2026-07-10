@@ -7,7 +7,6 @@ import type {
 } from "@@/shared/utils/note-sync.contract";
 import type { Ref } from "vue";
 import type { Result } from "../../../types/Result";
-import { evictStalePendingChanges } from "../../../utils/idb";
 import type { NotesConflictResolver } from "./notesConflictResolver";
 import type { NotesGroupQueue } from "./notesGroupQueue";
 import type { NotesLayoutQueue } from "./notesLayoutQueue";
@@ -301,7 +300,6 @@ export function createNotesSyncRuntime(input: {
 
   const hydrateLocalNotes = async (): Promise<void> => {
     try {
-      await evictStalePendingChanges();
       await Promise.all([
         syncCoordinator.hydrateFromLocalState(),
         hydrateLocalGroups(),

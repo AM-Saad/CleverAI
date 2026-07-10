@@ -3,6 +3,7 @@ import { NotificationPreferencesDTO } from "@@/shared/utils/notification.contrac
 import { safeGetServerSession } from "@server/utils/safeGetServerSession";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 type SessionWithUser = {
   user?: {
@@ -17,6 +18,7 @@ export default defineEventHandler(async (event) => {
   const method = getMethod(event);
 
   const user = await requireRole(event, ["USER"]); // throws if unauthorized
+  const prisma = event.context.prisma;
 
   // Get user from database to get proper user ID
 
@@ -82,6 +84,7 @@ export default defineEventHandler(async (event) => {
       update: validatedPrefs,
       create: { userId, ...validatedPrefs },
     });
+    await advanceOfflineEntityState({ prisma, userId, entity: "notificationPreference", entityId: preferences.id, changedFields: Object.keys(validatedPrefs) });
 
     return success({
       cardDueEnabled: preferences.cardDueEnabled,

@@ -357,6 +357,9 @@ export default defineNuxtConfig({
       // Single dev toggle for the app service worker.
       // Production always enables the service worker regardless of this flag.
       serviceWorkerEnabledInDev: process.env.NUXT_PUBLIC_SERVICE_WORKER_IN_DEV === "true",
+      // Can be set to "false" to hold the new local-first runtime during a
+      // staged rollout. It defaults on for this pre-user environment.
+      offlineV2: process.env.NUXT_PUBLIC_OFFLINE_V2 !== "false",
 
       enableLlmGateway: process.env.ENABLE_LLM_GATEWAY === "true",
     },

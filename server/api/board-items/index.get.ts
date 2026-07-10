@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
 
     const items: BoardItem[] = await prisma.boardItem.findMany({
       where: query,
-      orderBy: { order: "asc" },
+      orderBy: { position: "asc" },
     });
 
     if (process.env.NODE_ENV === "development") {

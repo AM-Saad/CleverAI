@@ -74,6 +74,7 @@
 </template>
 
 <script setup lang="ts">
+import { useOfflineLogout } from "~/composables/offline/useOfflineLogout";
 import { computed, onMounted, ref } from "vue";
 import type {
   ChangePasswordDTO,
@@ -89,6 +90,7 @@ type ProfileWithAuth = UserProfile & {
 
 const route = useRoute();
 const { data: authData, signOut } = useAuth();
+const clearOfflineAccount = useOfflineLogout();
 const toast = useToast();
 const {
   fetchProfile,
@@ -148,6 +150,7 @@ async function handleDeleteAccount(data: DeleteAccountDTO) {
   const result = await deleteAccount(data);
   if (!result) return;
   showDeleteAccount.value = false;
+  await clearOfflineAccount();
   await signOut({ redirect: false });
   const target = data.permanent
     ? "/auth/signin"

@@ -8,6 +8,8 @@ import type {
   LanguageWord,
   UserLanguagePreferences,
 } from "@shared/utils/language.contract";
+import { listOfflineEntities } from "../../../utils/offline-v2/repository";
+import { useOfflineRuntime } from "../../../composables/offline/useOfflineRuntime";
 
 type WordBankFilters = {
   status: string;
@@ -109,6 +111,13 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
     if (preferences.value) return preferences.value;
     if (preferencesRequest) return preferencesRequest;
 
+    const offline = typeof useAuth === "function" && typeof useOfflineRuntime === "function" ? useOfflineRuntime() : null;
+    if (offline && !offline.isOnline.value && offline.accountId.value) {
+      const local = await listOfflineEntities<UserLanguagePreferences>(offline.accountId.value, "languagePreference");
+      const cached = local[0]?.data ?? null;
+      preferences.value = cached;
+      return cached;
+    }
     const api = getApi();
     if (!api.getPreferences) return null;
 
@@ -156,6 +165,21 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
 
     try {
       await ensurePreferences();
+      const offline = typeof useAuth === "function" && typeof useOfflineRuntime === "function" ? useOfflineRuntime() : null;
+      if (offline && !offline.isOnline.value && offline.accountId.value) {
+        let cached = (await listOfflineEntities<LanguageWord>(offline.accountId.value, "languageWord")).map((record) => record.data);
+        const filter = wordFilters.value;
+        if (filter.status !== "all") cached = cached.filter((word) => word.status === filter.status);
+        if (filter.category !== "all") cached = cached.filter((word) => word.category === filter.category);
+        if (filter.search.trim()) cached = cached.filter((word) => `${word.word} ${word.translation}`.toLowerCase().includes(filter.search.trim().toLowerCase()));
+        words.value = cached;
+        categories.value = [...new Set(cached.map((word) => word.category).filter((category): category is string => Boolean(category)))];
+        totalWords.value = cached.length;
+        statusCounts.value = cached.reduce<Record<string, number>>((all, word) => ({ ...all, [word.status]: (all[word.status] ?? 0) + 1 }), {});
+        cursor.value = undefined;
+        hasMore.value = false;
+        return { words: cached, nextCursor: null, categories: categories.value, totalWords: cached.length, statusCounts: statusCounts.value };
+      }
       const result = await getApi().getWords(toWordQuery(false));
       if (requestId !== wordsRequestId) return null;
 
@@ -204,6 +228,12 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
   };
 
   const deleteWord = async (id: string) => {
+    const offline = typeof useAuth === "function" && typeof useOfflineRuntime === "function" ? useOfflineRuntime() : null;
+    if (offline && !offline.isOnline.value) {
+      await offline.queue({ entity: "languageWord", operation: "languageWord.delete", entityId: id, changedFields: ["deleted"], payload: {} });
+      words.value = words.value.filter((word) => word.id !== id);
+      return { message: "Saved locally" };
+    }
     const result = await getApi().deleteWord(id);
     if (!result.success) {
       wordBankError.value = result.error;
@@ -216,6 +246,12 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
   };
 
   const enrollWord = async (id: string) => {
+    const offline = typeof useAuth === "function" && typeof useOfflineRuntime === "function" ? useOfflineRuntime() : null;
+    if (offline && !offline.isOnline.value) {
+      await offline.queue({ entity: "languageWord", operation: "languageWord.enroll", entityId: id, changedFields: ["status"], payload: {} });
+      words.value = words.value.map((word) => word.id === id ? { ...word, status: "enrolled" } : word);
+      return { wordId: id, status: "enrolled" };
+    }
     const result = await getApi().enrollWord(id);
     if (!result.success) {
       wordBankError.value = result.error;

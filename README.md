@@ -1,6 +1,6 @@
 # Cognilo
 
-Cognilo is an AI-powered learning platform built with **Nuxt 4 + TypeScript**. It generates flashcards and quizzes from study materials using multiple LLM backends, and reinforces retention with spaced repetition (SM-2). The app runs as a PWA with full offline support.
+Cognilo is an AI-powered learning platform built with **Nuxt 4 + TypeScript**. It generates flashcards and quizzes from study materials using multiple LLM backends, and reinforces retention with spaced repetition (SM-2). Its local-first PWA runtime is being verified against the offline acceptance matrix before any public “full offline support” claim.
 
 ---
 
@@ -18,7 +18,7 @@ Cognilo is an AI-powered learning platform built with **Nuxt 4 + TypeScript**. I
 | **On-Device AI** | Local math recognition, speech-to-text, text-to-speech, text summarization via web workers |
 | **MyScript Integration** | Stroke-based handwriting math recognition (server-proxied API) |
 | **Push Notifications** | Scheduled review reminders with quiet hours and snooze |
-| **PWA & Offline** | Installable, full offline access via Workbox service worker |
+| **PWA & Offline** | Installable PWA with downloaded-workspace offline packs, durable local mutations, and explicit capability states |
 | **Subscription & Quota** | FREE / PRO / ENTERPRISE tiers with generation limits |
 | **Multiple LLM Backends** | OpenAI, Google Gemini, DeepSeek, Groq — smart routing by cost/latency/health |
 | **Sharing & Public Links** | Share workspaces/files with other users or via public URL |
@@ -97,6 +97,7 @@ Models are managed via the `LlmModelRegistry` database table. The gateway (`/api
 | `yarn build:inject` | Build SW + AI worker + Nuxt production bundle |
 | `yarn db:sync` | Generate Prisma client + push schema to MongoDB |
 | `yarn db:seed` | Seed LLM pricing data |
+| `yarn offline:backfill` | Backfill position keys and initial offline reconciliation state before enabling offline-v2 for existing data |
 | `yarn db:studio` | Open Prisma Studio GUI |
 | `yarn typecheck` | Run TypeScript type checking |
 | `yarn lint` | ESLint + Prettier check |

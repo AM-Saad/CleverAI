@@ -5,9 +5,6 @@ import {
 } from "../utils/serviceWorkerRuntime";
 import type {
   OutgoingSWMessage,
-  FormSyncStartedMessage,
-  FormSyncedMessage,
-  FormSyncErrorMessage,
 } from "../../shared/types/sw-messages";
 
 type Incoming = OutgoingSWMessage;
@@ -18,19 +15,6 @@ const version = ref<string | null>(null);
 const updateAvailable = ref(false);
 const isControlling = ref(false);
 const lastError = ref<string | null>(null);
-const formSyncStatus = ref<string | null>(null);
-const lastFormSyncEventType = ref<
-  | typeof SW_MESSAGE_TYPES.FORM_SYNC_STARTED
-  | typeof SW_MESSAGE_TYPES.FORM_SYNCED
-  | typeof SW_MESSAGE_TYPES.FORM_SYNC_ERROR
-  | null
->(null);
-const lastFormSyncData = ref<
-  | FormSyncStartedMessage["data"]
-  | FormSyncedMessage["data"]
-  | FormSyncErrorMessage["data"]
-  | null
->(null);
 const notificationUrl = ref<string | null>(null);
 
 let messageHandler: ((e: MessageEvent) => void) | null = null;
@@ -125,18 +109,6 @@ export function useServiceWorkerBridge() {
       case SW_MESSAGE_TYPES.SW_CONTROL_CLAIMED:
         isControlling.value = true;
         break;
-      case SW_MESSAGE_TYPES.FORM_SYNC_STARTED:
-      case SW_MESSAGE_TYPES.FORM_SYNCED:
-      case SW_MESSAGE_TYPES.FORM_SYNC_ERROR: {
-        const msg = data as
-          | FormSyncStartedMessage
-          | FormSyncedMessage
-          | FormSyncErrorMessage;
-        lastFormSyncEventType.value = msg.type;
-        formSyncStatus.value = msg.data.message;
-        lastFormSyncData.value = msg.data;
-        break;
-      }
       case SW_MESSAGE_TYPES.ERROR:
         lastError.value = (
           data as Extract<Incoming, { type: typeof SW_MESSAGE_TYPES.ERROR }>
@@ -203,9 +175,6 @@ export function useServiceWorkerBridge() {
     updateAvailable,
     isControlling,
     lastError,
-    formSyncStatus,
-    lastFormSyncEventType,
-    lastFormSyncData,
     notificationUrl,
     ensureRegistration,
     requestSkipWaiting,

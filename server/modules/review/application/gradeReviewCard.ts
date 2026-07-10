@@ -57,6 +57,14 @@ export interface GradeReviewCardInput {
   requestId?: string;
   xpSource: string;
   attempts?: number;
+  /** Client answer time for an offline grade. The caller validates its bounds. */
+  reviewedAt?: Date;
+  /** Reuse a surrounding mutation transaction (offline reconciliation). */
+  transaction?: any;
+  /** The surrounding transaction owns idempotency through OfflineMutationReceipt. */
+  skipRequestClaim?: boolean;
+  /** Publish only after a caller-controlled transaction commits. */
+  suppressEvent?: boolean;
 }
 
 export interface GradeReviewCardResult {
@@ -71,7 +79,7 @@ export interface GradeReviewCardResult {
 export async function gradeReviewCard(
   input: GradeReviewCardInput,
 ): Promise<GradeReviewCardResult> {
-  const now = new Date();
+  const now = input.reviewedAt ?? new Date();
   const attempts = Math.max(1, input.attempts ?? 3);
 
   const readPersistedState = async (): Promise<GradeReviewCardResult> => {
@@ -94,6 +102,7 @@ export async function gradeReviewCard(
   };
 
   const claimRequest = async (): Promise<"claimed" | "replayed"> => {
+    if (input.skipRequestClaim) return "claimed";
     if (!input.requestId) return "claimed";
     try {
       await input.prisma.gradeRequest.create({
@@ -120,9 +129,7 @@ export async function gradeReviewCard(
       .catch(() => undefined);
   };
 
-  const runMutation = async (): Promise<GradeReviewCardResult> =>
-    input.prisma.$transaction(
-      async (tx: any) => {
+  const mutate = async (tx: any): Promise<GradeReviewCardResult> => {
         const record = await input.repository.findByIdForUser(
           tx,
           input.cardId,
@@ -178,9 +185,12 @@ export async function gradeReviewCard(
           easeFactor: updated.easeFactor,
           xpEarned,
         };
-      },
-      { maxWait: 5000, timeout: 10000 },
-    );
+  };
+
+  const runMutation = async (): Promise<GradeReviewCardResult> =>
+    input.transaction
+      ? mutate(input.transaction)
+      : input.prisma.$transaction(mutate, { maxWait: 5000, timeout: 10000 });
 
   let result: GradeReviewCardResult | null = null;
   let lastError: unknown;
@@ -195,7 +205,7 @@ export async function gradeReviewCard(
       result = await runMutation();
       break;
     } catch (err) {
-      await releaseRequestClaim();
+      if (!input.skipRequestClaim) await releaseRequestClaim();
       lastError = err;
 
       const retryable = isRetryableReviewGradeError(err);
@@ -222,7 +232,7 @@ export async function gradeReviewCard(
     );
   }
 
-  await domainEventBus.publish({
+  if (!input.suppressEvent) await domainEventBus.publish({
     type: "ReviewCardGraded",
     occurredAt: now,
     payload: {

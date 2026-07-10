@@ -11,6 +11,7 @@ export const WorkspaceSummarySchema = z.object({
   description: z.string().nullable(),
   metadata: z.record(z.string(), z.unknown()).nullable(),
   order: z.number(),
+  position: z.string().regex(/^[0-9A-Za-z]+$/).optional(),
   llmModel: LLMEnum,
   createdAt: dateish,
   updatedAt: dateish,
@@ -63,6 +64,7 @@ export const WorkspaceSchema = z.object({
   userId: z.string(),
   metadata: z.record(z.string(), z.unknown()).nullable(),
   order: z.number().optional(),
+  position: z.string().regex(/^[0-9A-Za-z]+$/).optional(),
   rawText: z.string().nullable().optional(), // Keep for backward compatibility, but deprecated
   llmModel: LLMEnum,
   createdAt: dateish,

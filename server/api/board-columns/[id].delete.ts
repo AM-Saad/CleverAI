@@ -3,6 +3,7 @@ import { Errors, success } from "@server/utils/error";
 import {
   DeleteBoardColumnResponseSchema,
 } from "@@/shared/utils/boardColumn.contract";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -70,6 +71,8 @@ export default defineEventHandler(async (event) => {
         ),
       };
     });
+    await advanceOfflineEntityState({ prisma, userId: user.id, entity: "boardColumn", entityId: columnId, changedFields: ["deleted"], deleted: true });
+    await Promise.all(deletedColumn.movedItems.map((item: { id: string }) => advanceOfflineEntityState({ prisma, userId: user.id, entity: "boardItem", entityId: item.id, changedFields: ["columnId", "position"] })));
 
     if (process.env.NODE_ENV === "development") {
       DeleteBoardColumnResponseSchema.parse(deletedColumn);

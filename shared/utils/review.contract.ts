@@ -54,6 +54,7 @@ export const GradeCardRequestSchema = z.object({
   cardId: z.string(),
   grade: z.enum(["0", "1", "2", "3", "4", "5"]),
   requestId: z.string().optional(), // For idempotency
+  reviewedAt: z.string().datetime().optional(),
 });
 export type GradeCardRequest = z.infer<typeof GradeCardRequestSchema>;
 

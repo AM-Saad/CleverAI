@@ -4,6 +4,7 @@ import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { type UpdateNoteDTO, UpdateNoteDTO as UpdateNoteDTOSchema, NoteSchema } from "~/shared/utils/note.contract";
 import { normalizeWorkspaceNoteTitle } from "@@/shared/utils/workspaceNote";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 // Simple retry helper for transient Prisma write conflicts / deadlocks.
 // Uses exponential backoff with jitter. Keep local to this route for now; can be
@@ -107,6 +108,7 @@ export default defineEventHandler(async (event) => {
       ...updatedNote,
       title: normalizeWorkspaceNoteTitle(updatedNote.title, updatedNote.content),
     };
+    await advanceOfflineEntityState({ prisma, userId: user.id, entity: "note", entityId: id, changedFields: Object.keys(data) });
 
     if (process.env.NODE_ENV === "development") {
       NoteSchema.parse(normalizedNote);

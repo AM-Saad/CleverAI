@@ -2,6 +2,8 @@ import type { UserTag, CreateUserTagDTO, UpdateUserTagDTO } from "~/shared/utils
 import { DB_CONFIG } from "~/utils/constants/pwa";
 import { openUnifiedDB, putRecord, getAllRecords, deleteRecord } from "~/utils/idb";
 import { useNetworkStatus } from "~/composables/shared/useNetworkStatus";
+import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
+import { comparePosition, positionBetween } from "@@/shared/utils/position-key";
 
 type STORES = typeof DB_CONFIG.STORES[keyof typeof DB_CONFIG.STORES];
 
@@ -23,6 +25,7 @@ interface UserTagsStore {
 }
 
 let globalStore: UserTagsStore | null = null;
+let globalStoreAccountId: string | null = null;
 
 // ─── IDB helpers ──────────────────────────────────────────────────────────────
 
@@ -88,14 +91,12 @@ async function replaceAllTagsInIDB(allTags: UserTagState[]): Promise<void> {
  *    if the user is offline, similar to board columns.
  */
 export function useUserTagsStore(workspaceId?: string): UserTagsStore {
-  // Return existing store if available
-  if (globalStore) {
-    return globalStore;
-  }
-
   const { $api } = useNuxtApp();
   const toast = useToast();
   const networkMonitor = useNetworkStatus();
+  const offline = useOfflineRuntime();
+  // Never share a tag singleton across accounts on a shared device.
+  if (globalStore && globalStoreAccountId === offline.accountId.value) return globalStore;
 
   // Local reactive state
   const tags = ref<Map<string, UserTagState>>(new Map());
@@ -118,6 +119,12 @@ export function useUserTagsStore(workspaceId?: string): UserTagsStore {
 
       // Step 2: If offline, stop here — IDB is good enough
       if (!networkMonitor.isVerifiedOnline.value) {
+        if (offline.accountId.value) {
+          const { listOfflineEntities } = await import("~/utils/offline-v2/repository");
+          const scoped = await listOfflineEntities<UserTagState>(offline.accountId.value, "userTag");
+          tags.value.clear();
+          scoped.forEach((record) => tags.value.set(record.entityId, record.data));
+        }
         return;
       }
 
@@ -157,12 +164,14 @@ export function useUserTagsStore(workspaceId?: string): UserTagsStore {
    */
   const createTag = async (name: string, color: string = "#3b82f6"): Promise<string | null> => {
     if (!networkMonitor.isVerifiedOnline.value) {
-      toast.add({
-        title: "Offline",
-        description: "Tag creation is not available while offline.",
-        color: "warning",
-      });
-      return null;
+      const id = `local:${Date.now()}-${Math.random().toString(36).slice(2)}`;
+      const lastPosition = Array.from(tags.value.values()).sort((left, right) => (left.position ?? "").localeCompare(right.position ?? "")).at(-1)?.position;
+      const tag = { id, userId: "", name, color, order: tags.value.size, position: positionBetween(lastPosition, null), createdAt: new Date(), updatedAt: new Date() } as UserTagState;
+      tags.value.set(id, tag);
+      await offline.queue({ entity: "userTag", operation: "userTag.create", entityId: id, changedFields: ["name", "color", "position"], payload: { name, color, position: tag.position }, localData: tag as unknown as Record<string, unknown> });
+      await saveTagToIDB(tag);
+      toast.add({ title: "Saved locally", description: "The tag will sync when you reconnect.", color: "warning" });
+      return id;
     }
 
     try {
@@ -207,19 +216,16 @@ export function useUserTagsStore(workspaceId?: string): UserTagsStore {
     const tag = tags.value.get(id);
     if (!tag) return false;
 
-    if (!networkMonitor.isVerifiedOnline.value) {
-      toast.add({
-        title: "Offline",
-        description: "Tag updates are not available while offline.",
-        color: "warning",
-      });
-      return false;
-    }
-
     try {
       // Optimistic update
       const updatedTag = { ...tag, ...updates };
       tags.value.set(id, updatedTag);
+
+      if (!networkMonitor.isVerifiedOnline.value) {
+        await offline.queue({ entity: "userTag", operation: id.startsWith("local:") ? "userTag.create" : "userTag.update", entityId: id, changedFields: Object.keys(updates), payload: { ...updatedTag, position: updatedTag.position }, localData: updatedTag as unknown as Record<string, unknown> });
+        await saveTagToIDB(updatedTag);
+        return true;
+      }
 
       const result = await $api.userTags.update(id, updates);
 
@@ -260,18 +266,15 @@ export function useUserTagsStore(workspaceId?: string): UserTagsStore {
     const tag = tags.value.get(id);
     if (!tag) return false;
 
-    if (!networkMonitor.isVerifiedOnline.value) {
-      toast.add({
-        title: "Offline",
-        description: "Tag deletion is not available while offline.",
-        color: "warning",
-      });
-      return false;
-    }
-
     try {
       // Optimistic delete
       tags.value.delete(id);
+
+      if (!networkMonitor.isVerifiedOnline.value) {
+        await offline.queue({ entity: "userTag", operation: "userTag.delete", entityId: id, changedFields: ["deleted"], payload: {} });
+        await deleteTagFromIDB(id);
+        return true;
+      }
 
       const result = await $api.userTags.delete(id);
 
@@ -311,16 +314,18 @@ export function useUserTagsStore(workspaceId?: string): UserTagsStore {
    * Reorder tags (requires online)
    */
   const reorderTags = async (reorderedTags: UserTagState[]): Promise<boolean> => {
-    if (!networkMonitor.isVerifiedOnline.value) {
-      toast.add({
-        title: "Offline",
-        description: "Tag reordering is not available while offline.",
-        color: "warning",
-      });
-      return false;
-    }
-
     try {
+      if (!networkMonitor.isVerifiedOnline.value) {
+        let previousPosition: string | undefined;
+        for (const [index, tag] of reorderedTags.entries()) {
+          const position = positionBetween(previousPosition, null);
+          previousPosition = position;
+          const updated = { ...tag, order: index, position };
+          tags.value.set(tag.id, updated);
+          await offline.queue({ entity: "userTag", operation: tag.id.startsWith("local:") ? "userTag.create" : "userTag.update", entityId: tag.id, changedFields: ["position"], payload: { position, name: tag.name, color: tag.color }, localData: updated as unknown as Record<string, unknown> });
+        }
+        return true;
+      }
       // Build the reorder payload
       const tagOrders = reorderedTags.map((tag, index) => ({
         id: tag.id,
@@ -395,6 +400,7 @@ export function useUserTagsStore(workspaceId?: string): UserTagsStore {
 
   // Cache the global store
   globalStore = store;
+  globalStoreAccountId = offline.accountId.value || null;
 
   return store;
 }

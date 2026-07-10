@@ -92,6 +92,7 @@ export const NoteSchema = z.object({
   content: z.string(),
   tags: z.array(z.string()).default([]),
   order: z.number().int().default(0),
+  position: z.string().regex(/^[0-9A-Za-z]+$/).optional(),
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),
   /** Discriminator — defaults to "TEXT" for backward compatibility */

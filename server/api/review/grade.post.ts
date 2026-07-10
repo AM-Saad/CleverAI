@@ -8,6 +8,7 @@ import {
 import { gradeReviewCard } from "@server/modules/review/application/gradeReviewCard";
 import { PrismaCardReviewRepository } from "@server/modules/review/infrastructure/PrismaCardReviewRepository";
 import { PrismaXpPort } from "@server/modules/review/infrastructure/PrismaXpPort";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 export default defineEventHandler(async (event) => {
   // Parse & validate body
@@ -36,7 +37,9 @@ export default defineEventHandler(async (event) => {
     grade: parseInt(validatedBody.grade),
     requestId: validatedBody.requestId,
     xpSource: "review",
+    reviewedAt: validatedBody.reviewedAt ? new Date(validatedBody.reviewedAt) : undefined,
   });
+  await advanceOfflineEntityState({ prisma, userId: user.id, entity: "review", entityId: result.reviewId, changedFields: ["reviewState"] });
 
   const payload = GradeCardResponseSchema.parse({
     success: true,

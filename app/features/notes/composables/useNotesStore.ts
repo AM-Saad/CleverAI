@@ -1,6 +1,7 @@
 import type { NoteType } from "@@/shared/utils/note.contract";
 import type { NoteGroupLayoutItem } from "@@/shared/utils/note-sync.contract";
 import { useNetworkStatus } from "~/composables/shared/useNetworkStatus";
+import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 import { createIndexedDbNotesLocalRepository } from "./notesLocalRepository";
 import {
   createNotesLayoutController,
@@ -91,6 +92,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
   const { $api } = useNuxtApp();
   const toast = useToast();
   const networkMonitor = useNetworkStatus();
+  const offline = useOfflineRuntime();
   const workspaceRuntime = useNotesWorkspaceRuntime(workspaceId);
   const localRepository = createIndexedDbNotesLocalRepository();
   const layoutQueue = createIndexedDbNotesLayoutQueue();
@@ -157,7 +159,10 @@ export function useNotesStore(workspaceId: string): NotesStore {
   const resetSyncRetry = () => errorPolicy.reset();
   let syncRuntime: ReturnType<typeof createNotesSyncRuntime>;
   const syncPendingChanges = async (): Promise<boolean> => {
-    return syncRuntime.syncPendingChanges("background");
+    if (!offline.accountId.value) return syncRuntime.syncPendingChanges("background");
+    await offline.migrateLegacyNotes();
+    await offline.sync();
+    return true;
   };
   const scheduleSyncRetry = () => {
     errorPolicy.scheduleRetry({
@@ -257,9 +262,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
     },
   });
 
-  workspaceRuntime.registerSyncDrainer((reason) =>
-    syncRuntime.syncPendingChanges(reason),
-  );
+  workspaceRuntime.registerSyncDrainer(() => syncPendingChanges());
 
   // Update note content - local-first approach with IndexedDB persistence
   const updateNote = async (
@@ -348,8 +351,20 @@ export function useNotesStore(workspaceId: string): NotesStore {
 
   const remapGroupIds = syncRuntime.remapGroupIds;
   const hydrateLocalNotes = syncRuntime.hydrateLocalNotes;
-  const refreshFromServer = syncRuntime.refreshFromServer;
-  const syncWithServer = syncRuntime.syncWithServer;
+  const refreshFromServer = async () => {
+    if (offline.accountId.value) {
+      await offline.migrateLegacyNotes();
+      await offline.sync();
+    }
+    await syncRuntime.refreshFromServer();
+  };
+  const syncWithServer = async () => {
+    if (offline.accountId.value) {
+      await offline.migrateLegacyNotes();
+      await offline.sync();
+    }
+    await syncRuntime.syncWithServer();
+  };
 
   // Utility functions
   const isNoteLoading = (id: string): boolean => {

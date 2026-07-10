@@ -1,5 +1,5 @@
 // app/middleware/auth.global.ts
-export default defineNuxtRouteMiddleware((to) => {
+export default defineNuxtRouteMiddleware(async (to) => {
   const { status, data } = useAuth();
 
   // Skip auth check for API routes (handled by server middleware)
@@ -31,6 +31,21 @@ export default defineNuxtRouteMiddleware((to) => {
 
   // If user is not authenticated and trying to access protected route
   if (status.value === "unauthenticated") {
+    // An installed app may have a last verified account and a downloaded pack.
+    // Never fake a server session: this only permits local core routes while
+    // the browser itself reports offline.
+    if (import.meta.client && !navigator.onLine) {
+      const { getOfflineSession } = await import("~/utils/offline-v2/repository");
+      const cached = await getOfflineSession();
+      const isOfflineCoreRoute = [
+        /^\/$/,
+        /^\/(workspaces|notes|board|materials)(?:\/|$)/,
+        /^\/(review|offline|account\/offline)$/,
+        /^\/language(?:\/review|\/settings)?$/,
+        /^\/account\/notifications$/,
+      ].some((pattern) => pattern.test(to.path));
+      if (cached && isOfflineCoreRoute) return;
+    }
     return navigateTo("/auth/signin");
   }
 

@@ -11,7 +11,7 @@
         <span>{{ message }}</span>
         <!-- design-allow: inverse white-on-warning-banner button, no Ui* tone covers this on-color context -->
         <button v-if="showRetry"
-          class="ml-2 px-2 py-1 bg-white/20 rounded-[var(--radius-md)] text-xs hover:bg-white/30 transition-colors focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--ds-focus-outline-color)]"
+          class="ml-2 px-2 py-1 bg-white/20 rounded-[var(--radius-md)] text-xs hover:bg-white/30 transition-colors focus-visible:ring-0 focus-visible:[outline-style:solid] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--ds-focus-outline-color)]"
           @click="handleRetry">
           Retry
         </button>

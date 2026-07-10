@@ -9,6 +9,7 @@ export const BoardColumnSchema = z.object({
   userId: z.string(),
   name: z.string(),
   order: z.number().int().default(0),
+  position: z.string().regex(/^[0-9A-Za-z]+$/).optional(),
   workspaceId: z.string().nullable().optional(),
 
   createdAt: z.string().datetime().or(z.date()).or(z.string()),

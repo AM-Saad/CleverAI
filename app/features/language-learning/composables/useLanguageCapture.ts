@@ -5,6 +5,7 @@ import type {
   UserLanguagePreferences,
 } from "@shared/utils/language.contract";
 import { useLanguageLearningRuntime } from "./languageLearningRuntime";
+import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 
 type CaptureState =
   | "idle"
@@ -18,6 +19,8 @@ export function useLanguageCapture() {
   const creditsStore = useCreditsStore();
   const subscriptionStore = useSubscriptionStore();
   const runtime = useLanguageLearningRuntime();
+  const offline = useOfflineRuntime();
+  const toast = useToast();
 
   // State machine
   const state = ref<CaptureState>("idle");
@@ -57,6 +60,7 @@ export function useLanguageCapture() {
   // Load preferences once
   const loadPreferences = async () => {
     if (preferences.value) return preferences.value;
+    if (!offline.isOnline.value) return runtime.ensurePreferences();
     const result = await prefsOperation.execute(() =>
       $api.language.getPreferences(),
     );
@@ -102,6 +106,10 @@ export function useLanguageCapture() {
       forceRetranslate?: boolean;
     },
   ) => {
+    if (!offline.isOnline.value) {
+      toast.add({ title: "Unavailable offline", description: "Capture and translation use AI and are not queued while offline.", color: "warning" });
+      return null;
+    }
     state.value = "loading";
     captureResult.value = null;
     storyResult.value = null;
@@ -139,7 +147,8 @@ export function useLanguageCapture() {
     showConsentSheet.value = false;
 
     // Update preferences to hide consent next time
-    await $api.language.updatePreferences({ showConsent: false });
+    if (offline.isOnline.value) await $api.language.updatePreferences({ showConsent: false });
+    else await offline.queue({ entity: "languagePreference", operation: "languagePreference.update", entityId: "languagePreference", changedFields: ["showConsent"], payload: { showConsent: false } });
     if (preferences.value) {
       runtime.setPreferences({ ...preferences.value, showConsent: false });
     }
@@ -159,7 +168,8 @@ export function useLanguageCapture() {
     showConsentSheet.value = false;
 
     // Still update prefs so consent doesn't show again
-    await $api.language.updatePreferences({ showConsent: false });
+    if (offline.isOnline.value) await $api.language.updatePreferences({ showConsent: false });
+    else await offline.queue({ entity: "languagePreference", operation: "languagePreference.update", entityId: "languagePreference", changedFields: ["showConsent"], payload: { showConsent: false } });
     if (preferences.value) {
       runtime.setPreferences({ ...preferences.value, showConsent: false });
     }
@@ -177,6 +187,10 @@ export function useLanguageCapture() {
 
   const generateStory = async (wordId: string, relatedWords: string[] = []) => {
     if (!wordId) return null;
+    if (!offline.isOnline.value) {
+      toast.add({ title: "Unavailable offline", description: "Story generation uses AI and is not queued while offline.", color: "warning" });
+      return null;
+    }
 
     // Gate on local balance. Do NOT spend here — the server spends atomically
     // inside incrementGenerationCount. A frontend pre-spend double-bills.

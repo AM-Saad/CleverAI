@@ -29,7 +29,7 @@ export type Tone = (typeof TONES)[number];
 // text-success-text, …); there is intentionally no second tone map here.
 
 /**
- * Tokenized focus ring — primitives compose this for keyboard focus.
+ * Tokenized inset focus ring — primitives compose this for keyboard focus.
  *
  * `focus-visible:[outline-style:solid]!` is required, not `focus-visible:outline!`.
  * In Tailwind v4 the bare `outline` utility resolves through a CSS custom
@@ -38,10 +38,12 @@ export type Tone = (typeof TONES)[number];
  * *variable* to `none` on the element — `!important` on the `var()`-based
  * read can't fix it, since nothing re-defines the variable itself. The
  * arbitrary-property utility below sets a literal value with no variable
- * indirection, so it isn't affected by that poisoning.
+ * indirection, so it isn't affected by that poisoning. The negative offset
+ * keeps the indicator inside the control, so scroll and clipped containers
+ * never cut it off.
  */
 export const focusRing =
-  "focus-visible:ring-0! focus-visible:[outline-style:solid]! focus-visible:outline-2! focus-visible:outline-offset-2! focus-visible:outline-[var(--ds-focus-outline-color)]!";
+  "focus-visible:ring-0! focus-visible:[outline-style:solid]! focus-visible:outline-2! focus-visible:outline-offset-[-2px]! focus-visible:outline-[var(--ds-focus-outline-color)]!";
 
 /** Canonical interactive motion. Keep hover/active feedback subtle and consistent. */
 export const interactiveTransition =

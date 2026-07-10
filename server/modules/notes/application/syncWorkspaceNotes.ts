@@ -2,6 +2,7 @@ import { NotesSyncResponseSchema } from "../../../../shared/utils/note-sync.cont
 import type { NotesSyncRequest } from "../../../../shared/utils/note-sync.contract";
 import { normalizeWorkspaceNoteTitle } from "../../../../shared/utils/workspaceNote";
 import { applyWorkspaceNoteLayout } from "./applyWorkspaceNoteLayout";
+import { advanceOfflineEntityState } from "../../offline/application/advanceOfflineEntityState";
 
 export async function syncWorkspaceNotes(input: {
   prisma: any;
@@ -84,6 +85,7 @@ export async function syncWorkspaceNotes(input: {
               ...(change.order !== undefined && { order: change.order }),
             },
           });
+          await advanceOfflineEntityState({ prisma, userId, entity: "noteGroup", entityId: existing.id, changedFields: ["title", "position"] });
           groupApplied.push(change.id);
           continue;
         }
@@ -100,6 +102,7 @@ export async function syncWorkspaceNotes(input: {
             order: change.order ?? (maxOrderGroup ? maxOrderGroup.order + 1 : 0),
           },
         });
+        await advanceOfflineEntityState({ prisma, userId, entity: "noteGroup", entityId: created.id, changedFields: ["title", "position"] });
         if (isTempId) groupIdMap[change.id] = created.id;
         groupApplied.push(change.id);
         continue;
@@ -121,6 +124,7 @@ export async function syncWorkspaceNotes(input: {
           where: { id: change.id },
           data: { title: change.title },
         });
+        await advanceOfflineEntityState({ prisma, userId, entity: "noteGroup", entityId: group.id, changedFields: ["title"] });
         groupApplied.push(change.id);
         continue;
       }
@@ -141,6 +145,7 @@ export async function syncWorkspaceNotes(input: {
           });
           await tx.noteGroup.delete({ where: { id: serverGroupId } });
         });
+        await advanceOfflineEntityState({ prisma, userId, entity: "noteGroup", entityId: serverGroupId, changedFields: ["deleted"], deleted: true });
         groupApplied.push(change.id);
         continue;
       }
@@ -235,6 +240,7 @@ export async function syncWorkspaceNotes(input: {
         }
 
         await prisma.note.delete({ where: { id: change.id } });
+        await advanceOfflineEntityState({ prisma, userId, entity: "note", entityId: change.id, changedFields: ["deleted"], deleted: true });
         applied.push(change.id);
         continue;
       }
@@ -283,6 +289,7 @@ export async function syncWorkspaceNotes(input: {
           metadata: change.metadata as any,
         };
         const created = await prisma.note.create({ data });
+        await advanceOfflineEntityState({ prisma, userId, entity: "note", entityId: created.id, changedFields: ["title", "content", "groupId", "tags", "noteType", "metadata", "position"] });
         if (isTempId) idMap[change.id] = created.id;
         appliedNotes.push({
           id: change.id,
@@ -333,6 +340,7 @@ export async function syncWorkspaceNotes(input: {
           version: { increment: 1 },
         },
       });
+      await advanceOfflineEntityState({ prisma, userId, entity: "note", entityId: updated.id, changedFields: ["title", "content", "groupId", "tags", "noteType", "metadata"] });
       appliedNotes.push({
         id: change.id,
         version: updated.version ?? existing.version ?? 1,

@@ -97,6 +97,7 @@ import {
   type SupportedLanguageCode,
 } from "@shared/utils/language.contract";
 import { useLanguageLearningRuntime } from "../composables/languageLearningRuntime";
+import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 
 const props = withDefaults(defineProps<{ compact?: boolean }>(), {
   compact: false,
@@ -105,6 +106,7 @@ const emit = defineEmits<{ (e: "saved"): void }>();
 
 const { $api } = useNuxtApp();
 const languageRuntime = useLanguageLearningRuntime();
+const offline = useOfflineRuntime();
 
 const fetchOp = useOperation<any>();
 const saveOp = useOperation<any>();
@@ -126,6 +128,13 @@ const form = ref<{
 } | null>(null);
 
 const load = async () => {
+  if (!offline.isOnline.value) {
+    const result = await languageRuntime.ensurePreferences();
+    if (result) {
+      form.value = { enabled: result.enabled ?? true, targetLanguage: (result.targetLanguage ?? "en") as SupportedLanguageCode, nativeLanguage: (result.nativeLanguage ?? "en") as SupportedLanguageCode, autoEnroll: result.autoEnroll ?? true, sessionCardLimit: result.sessionCardLimit ?? 20 };
+    }
+    return;
+  }
   const result = await fetchOp.execute(() => $api.language.getPreferences());
   if (result) {
     languageRuntime.setPreferences(result);
@@ -144,6 +153,13 @@ const load = async () => {
 
 const handleSave = async () => {
   if (!form.value) return;
+  if (!offline.isOnline.value) {
+    await offline.queue({ entity: "languagePreference", operation: "languagePreference.update", entityId: "languagePreference", changedFields: Object.keys(form.value), payload: form.value });
+    languageRuntime.setPreferences({ ...(languageRuntime.preferences.value ?? {}), ...form.value } as any);
+    languageRuntime.invalidateWords();
+    emit("saved");
+    return;
+  }
   const result = await saveOp.execute(() =>
     $api.language.updatePreferences(form.value!),
   );

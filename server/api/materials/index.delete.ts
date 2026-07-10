@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -22,5 +23,6 @@ export default defineEventHandler(async (event) => {
   }
 
   await prisma.material.delete({ where: { id } });
+  await advanceOfflineEntityState({ prisma, userId: user.id, entity: "material", entityId: id, changedFields: ["deleted"], deleted: true });
   return success({ message: "Material deleted successfully" });
 });

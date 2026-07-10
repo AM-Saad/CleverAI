@@ -1,6 +1,8 @@
 // server/api/user/tags/reorder.patch.ts
 import { requireRole } from "~~/server/utils/auth";
 import { ReorderUserTagsDTO } from "~/shared/utils/user-tag.contract";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
+import { rebalancePositionKeys } from "@server/modules/offline/application/rebalancePositionKeys";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -34,6 +36,8 @@ export default defineEventHandler(async (event) => {
         })
       )
     );
+    await rebalancePositionKeys({ prisma, model: "userTag", ids: dto.tagOrders.slice().sort((left, right) => left.order - right.order).map((tag) => tag.id) });
+    await Promise.all(dto.tagOrders.map((item) => advanceOfflineEntityState({ prisma, userId, entity: "userTag", entityId: item.id, changedFields: ["position"] })));
 
     return {
       success: true,

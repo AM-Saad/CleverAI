@@ -72,8 +72,10 @@
   --duration-fast: 120ms; /* Small state changes */
   --duration-normal: 200ms; /* Default interaction motion */
   --duration-slow: 320ms; /* Overlays and larger transitions */
+  --duration-spring: 420ms; /* Springy size/position changes */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1); /* Default easing */
   --ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2); /* Small emphasized entrance */
+  --ease-spring: cubic-bezier(0.32, 1.4, 0.45, 1); /* Gentle overshoot for playful grow/shrink */
   --target-min: 1.5rem; /* WCAG 2.2 minimum target size (24px) */
   --target-compact: 2rem; /* Compact desktop controls (32px) */
   --target-default: 2.5rem; /* Default controls (40px) */
@@ -105,7 +107,7 @@
   --ui-border: var(--color-secondary);
   --ds-brand-gradient: linear-gradient(90deg, rgb(49 165 217) 0%, rgb(248 54 145) 46%, rgb(255 184 0) 100%);
   --ds-focus-outline-color: var(--color-primary); /* Opaque keyboard focus indicator (≥3:1 against app surfaces) */
-  --ds-focus-ring: 0 0 0 2px var(--ds-focus-outline-color); /* Compact keyboard focus ring (box-shadow) */
+  --ds-focus-ring: inset 0 0 0 2px var(--ds-focus-outline-color); /* Inset keyboard focus ring (box-shadow) */
   --ds-backdrop-strong: rgb(2 6 23 / 0.8);
   --ds-backdrop-dim: rgb(0 0 0 / 0.4);
   --ds-sheet-scrim: rgb(2 6 23 / 0.45); /* Bottom-sheet scrim overlay */

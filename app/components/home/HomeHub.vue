@@ -484,7 +484,7 @@ onMounted(async () => {
 
 .home__hero:focus-visible {
   outline: 2px solid var(--ds-focus-outline-color);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .home__hero-deco {

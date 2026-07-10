@@ -19,8 +19,10 @@ import {
   setupSyncCompletionListener,
 } from "~/utils/sync/offlineSync";
 import { useNetworkStatus } from "~/composables/shared/useNetworkStatus";
+import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 import { mergePendingBoardItems } from "./mergePendingBoardItems";
 import { rankBetween, needsRebalance, rebalancedRanks, RANK_GAP } from "./rank";
+import { comparePosition, positionBetween } from "@@/shared/utils/position-key";
 
 type STORES = typeof DB_CONFIG.STORES[keyof typeof DB_CONFIG.STORES];
 
@@ -92,6 +94,7 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   const { $api } = useNuxtApp();
   const toast = useToast();
   const networkMonitor = useNetworkStatus();
+  const offline = useOfflineRuntime();
 
   // Register once-per-app online listener and sync completion listener.
   if (import.meta.client && !onlineListenerRegistered) {
@@ -497,6 +500,14 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   const syncPendingChanges = async (): Promise<boolean> => {
     await _flushDebounce();
 
+    // The old Board queue is an intake buffer only. Convert it before any
+    // reconnect work so all durable replay goes through the v2 contract.
+    if (offline.accountId.value) {
+      await offline.migrateLegacyBoard();
+      await offline.sync();
+      return true;
+    }
+
     if (!networkMonitor.isVerifiedOnline.value) {
       return false;
     }
@@ -556,6 +567,20 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     // Save to IndexedDB
     await saveBoardItemToIndexedDB(updatedItem);
 
+    if (!networkMonitor.isVerifiedOnline.value) {
+      const create = isUnreconciledTempId(realId);
+      await offline.queue({
+        entity: "boardItem",
+        operation: create ? "boardItem.create" : "boardItem.update",
+        entityId: realId,
+        workspaceId: updatedItem.workspaceId ?? workspaceId,
+        changedFields: ["content", "tags", "dueDate", "attachments", "columnId", "position"],
+        payload: { workspaceId: updatedItem.workspaceId ?? workspaceId, columnId: updatedItem.columnId ?? null, content: updatedItem.content, tags: updatedItem.tags, dueDate: updatedItem.dueDate instanceof Date ? updatedItem.dueDate.toISOString() : updatedItem.dueDate ?? null, attachments: updatedItem.attachments, order: updatedItem.order, position: updatedItem.position },
+        localData: updatedItem as unknown as Record<string, unknown>,
+      });
+      return true;
+    }
+
     if (isUnreconciledTempId(realId)) {
       await queueBoardItemChange(
         buildPendingPayload(updatedItem, "upsert", localVersionFor(updatedItem)),
@@ -587,6 +612,10 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     const columnMaxRank = Array.from(items.value.values())
       .filter((i) => (i.columnId ?? null) === (columnId ?? null))
       .reduce((max, i) => Math.max(max, i.order ?? 0), 0);
+    const lastPosition = Array.from(items.value.values())
+      .filter((i) => (i.columnId ?? null) === (columnId ?? null))
+      .sort((left, right) => (left.position ?? "").localeCompare(right.position ?? ""))
+      .at(-1)?.position;
 
     const optimisticItem: BoardItemState = {
       id: tempId,
@@ -595,6 +624,7 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       content,
       tags,
       order: columnMaxRank + RANK_GAP,
+      position: positionBetween(lastPosition, null),
       workspaceId: workspaceId,
       dueDate,
       attachments,
@@ -608,6 +638,10 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     await saveBoardItemToIndexedDB(optimisticItem);
     items.value.set(tempId, optimisticItem);
     try {
+      if (!networkMonitor.isVerifiedOnline.value) {
+        await offline.queue({ entity: "boardItem", operation: "boardItem.create", entityId: tempId, workspaceId, changedFields: ["content", "tags", "columnId", "dueDate", "attachments", "position"], payload: { workspaceId, columnId, content, tags, dueDate, attachments, order: optimisticItem.order, position: optimisticItem.position }, localData: optimisticItem as unknown as Record<string, unknown> });
+        return tempId;
+      }
       await queueBoardItemChange(buildPendingPayload(optimisticItem, "upsert", 1));
       await registerBoardItemsSync();
       if (networkMonitor.isVerifiedOnline.value) {
@@ -635,6 +669,11 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     // Optimistic delete
     items.value.delete(id);
     await deleteBoardItemFromIndexedDB(id);
+
+    if (!networkMonitor.isVerifiedOnline.value) {
+      await offline.queue({ entity: "boardItem", operation: "boardItem.delete", entityId: id, workspaceId: originalItem.workspaceId ?? workspaceId, changedFields: ["deleted"], payload: {} });
+      return true;
+    }
 
     if (isUnreconciledTempId(id)) {
       await queueBoardItemChange({
@@ -855,6 +894,13 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     items.value.set(id, { ...item });
 
     if (!networkMonitor.isVerifiedOnline.value) {
+      if (offline.accountId.value) {
+        const { listOfflineEntities } = await import("~/utils/offline-v2/repository");
+        const cached = await listOfflineEntities<any>(offline.accountId.value, "boardLink", workspaceId);
+        const sent = cached.map((record) => record.data).filter((link) => link.sourceId === id);
+        const received = cached.map((record) => record.data).filter((link) => link.targetId === id);
+        item.links = { sent, received };
+      }
       item.linksLoading = false;
       items.value.set(id, { ...item });
       return;
@@ -884,6 +930,11 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     items.value.set(id, { ...item });
 
     if (!networkMonitor.isVerifiedOnline.value) {
+      if (offline.accountId.value) {
+        const { listOfflineEntities } = await import("~/utils/offline-v2/repository");
+        const cached = await listOfflineEntities<any>(offline.accountId.value, "boardComment", workspaceId);
+        item.comments = cached.map((record) => record.data).filter((comment) => comment.itemId === id);
+      }
       item.commentsLoading = false;
       items.value.set(id, { ...item });
       return;
@@ -905,7 +956,7 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   };
 
   const sortItemsByOrder = (left: BoardItemState, right: BoardItemState) =>
-    (left.order ?? 0) - (right.order ?? 0);
+    comparePosition(left, right);
 
   const getOrderedColumnItems = (
     columnId: string | null,
@@ -934,6 +985,16 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     return rankBetween(before, after);
   };
 
+  const positionForInsert = (
+    targetColumnId: string | null,
+    insertIndex: number,
+    excludeItemId?: string,
+  ): string => {
+    const targetItems = getOrderedColumnItems(targetColumnId, excludeItemId);
+    const idx = Math.min(Math.max(insertIndex, 0), targetItems.length);
+    return positionBetween(targetItems[idx - 1]?.position, targetItems[idx]?.position);
+  };
+
   // Move item to a different column (or reposition) — a SINGLE-item write under
   // fractional ranking: only the moved item's columnId + rank change.
   const moveItemToColumn = async (
@@ -949,11 +1010,13 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
 
     const targetItems = getOrderedColumnItems(targetColumnId, itemId);
     const rank = rankForInsert(targetColumnId, newOrder ?? targetItems.length, itemId);
+    const position = positionForInsert(targetColumnId, newOrder ?? targetItems.length, itemId);
 
     const movedItem: BoardItemState = {
       ...originalItem,
       columnId: targetColumnId,
       order: rank,
+      position,
       isDirty: true,
       updatedAt: new Date(),
       error: null,
@@ -964,6 +1027,10 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
 
     try {
       if (!networkMonitor.isVerifiedOnline.value || isUnreconciledTempId(itemId)) {
+        if (!networkMonitor.isVerifiedOnline.value) {
+          await offline.queue({ entity: "boardItem", operation: isUnreconciledTempId(itemId) ? "boardItem.create" : "boardItem.update", entityId: itemId, workspaceId: movedItem.workspaceId ?? workspaceId, changedFields: ["columnId", "position"], payload: { workspaceId: movedItem.workspaceId ?? workspaceId, columnId: targetColumnId, order: rank, position, content: movedItem.content, tags: movedItem.tags, dueDate: movedItem.dueDate instanceof Date ? movedItem.dueDate.toISOString() : movedItem.dueDate ?? null, attachments: movedItem.attachments }, localData: movedItem as unknown as Record<string, unknown> });
+          return true;
+        }
         await queueBoardItemsForSync([movedItem]);
         if (networkMonitor.isVerifiedOnline.value) {
           void syncPendingChanges();
@@ -1073,16 +1140,21 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   // ONE change. If two anchors are too tight to split, rebalance the column.
   const computeReorderRankChanges = (
     orderedItems: BoardItemState[],
-  ): { id: string; order: number }[] => {
+  ): { id: string; order: number; position: string }[] => {
     const ranks = orderedItems.map(
       (item) => items.value.get(item.id)?.order ?? item.order ?? 0,
     );
     const keep = lisKeptIndices(ranks);
 
-    const changes: { id: string; order: number }[] = [];
+    const changes: { id: string; order: number; position: string }[] = [];
     let prev: number | null = null;
+    let previousPosition: string | undefined;
     for (let i = 0; i < orderedItems.length; i++) {
-      if (keep.has(i)) { prev = ranks[i]!; continue; }
+      if (keep.has(i)) {
+        prev = ranks[i]!;
+        previousPosition = orderedItems[i]!.position;
+        continue;
+      }
       // Next kept anchor after this moved item.
       let next: number | null = null;
       for (let j = i + 1; j < orderedItems.length; j++) {
@@ -1090,14 +1162,22 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       }
       if (prev !== null && next !== null && needsRebalance(prev, next)) {
         // Precision exhausted — relabel the entire column with fresh spacing.
-        return rebalancedRanks(orderedItems).map((order, idx) => ({
-          id: orderedItems[idx]!.id,
-          order,
-        }));
+        let previous: string | undefined;
+        return rebalancedRanks(orderedItems).map((order, idx) => {
+          const position = positionBetween(previous, null);
+          previous = position;
+          return { id: orderedItems[idx]!.id, order, position };
+        });
       }
       const newRank = rankBetween(prev, next);
-      changes.push({ id: orderedItems[i]!.id, order: newRank });
+      let nextPosition: string | undefined;
+      for (let j = i + 1; j < orderedItems.length; j++) {
+        if (keep.has(j)) { nextPosition = orderedItems[j]!.position; break; }
+      }
+      const position = positionBetween(previousPosition, nextPosition);
+      changes.push({ id: orderedItems[i]!.id, order: newRank, position });
       prev = newRank;
+      previousPosition = position;
     }
     return changes;
   };
@@ -1125,7 +1205,9 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
 
     try {
       if (!networkMonitor.isVerifiedOnline.value) {
-        await queueBoardItemsForSync(changedItems);
+        for (const item of changedItems) {
+          await offline.queue({ entity: "boardItem", operation: isUnreconciledTempId(item.id) ? "boardItem.create" : "boardItem.update", entityId: item.id, workspaceId: item.workspaceId ?? workspaceId, changedFields: ["position", "columnId"], payload: { workspaceId: item.workspaceId ?? workspaceId, columnId, order: item.order, position: item.position, content: item.content, tags: item.tags, dueDate: item.dueDate instanceof Date ? item.dueDate.toISOString() : item.dueDate ?? null, attachments: item.attachments }, localData: item as unknown as Record<string, unknown> });
+        }
         state.rollback = null; // queued = accepted
         return;
       }
@@ -1201,12 +1283,13 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     // (usually exactly one item — the one that was dragged).
     const changes = computeReorderRankChanges(orderedItems);
     const changeMap = new Map(changes.map((c) => [c.id, c.order]));
+    const positionMap = new Map(changes.map((c) => [c.id, c.position]));
 
     // Optimistic UI immediately — new objects, set columnId + (possibly new) rank.
     orderedItems.forEach((item) => {
       const current = items.value.get(item.id) ?? item;
       const nextRank = changeMap.get(item.id) ?? current.order ?? 0;
-      items.value.set(item.id, { ...current, columnId, order: nextRank });
+      items.value.set(item.id, { ...current, columnId, order: nextRank, position: positionMap.get(item.id) ?? current.position });
     });
     const optimisticChanged = changes
       .map((c) => items.value.get(c.id))

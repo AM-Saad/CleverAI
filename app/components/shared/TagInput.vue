@@ -119,7 +119,7 @@ const handleBlur = () => {
     <UiPanel
       variant="surface"
       size="xs"
-      class-name="focus-within:ring-2 focus-within:ring-[var(--ds-focus-outline-color)] focus-within:border-primary"
+      class-name="focus-within:ring-2 focus-within:ring-inset focus-within:ring-[var(--ds-focus-outline-color)] focus-within:border-primary"
       content-class="flex flex-wrap gap-1.5"
     >
       <!-- Selected Tags -->

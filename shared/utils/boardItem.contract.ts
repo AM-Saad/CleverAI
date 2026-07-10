@@ -25,6 +25,7 @@ export const BoardItemSchema = z.object({
   tags: z.array(z.string()).default([]),
   // Fractional rank (see board fractional-ranking). Not an integer.
   order: z.number().default(0),
+  position: z.string().regex(/^[0-9A-Za-z]+$/).optional(),
   dueDate: z.string().datetime().or(z.date()).nullable().optional(),
   attachments: z.array(AttachmentSchema).default([]),
   createdAt: z.string().datetime().or(z.date()).or(z.string()),

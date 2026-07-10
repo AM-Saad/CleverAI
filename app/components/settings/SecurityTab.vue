@@ -37,10 +37,12 @@
 </template>
 
 <script setup lang="ts">
+import { useOfflineLogout } from "~/composables/offline/useOfflineLogout";
 import type { ChangePasswordDTO, DeleteAccountDTO } from "@@/shared/utils/user.contract";
 
 const toast = useToast();
 const { signOut } = useAuth();
+const clearOfflineAccount = useOfflineLogout();
 
 // Modal states
 const showChangePasswordModal = ref(false);
@@ -75,10 +77,12 @@ const handleDeleteAccount = async (data: DeleteAccountDTO) => {
 
         if (data.permanent) {
             // Immediate deletion - sign out
+            await clearOfflineAccount();
             await signOut({ redirect: false });
             window.location.href = "/auth/signin";
         } else {
             // Soft delete - inform user and sign out
+            await clearOfflineAccount();
             await signOut({ redirect: false });
             window.location.href = "/auth/signin?message=account_scheduled_deletion";
         }

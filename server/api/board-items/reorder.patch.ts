@@ -4,6 +4,8 @@ import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { ReorderBoardItemsDTO, BoardItemSchema } from "@@/shared/utils/boardItem.contract";
 import { persistBoardItemOrders } from "@server/modules/board/application/persistBoardItemOrders";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
+import { rebalancePositionKeys } from "@server/modules/offline/application/rebalancePositionKeys";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -48,11 +50,13 @@ export default defineEventHandler(async (event) => {
       missingItemError: () =>
         Errors.badRequest("Some board items do not belong to this user"),
     });
+    await rebalancePositionKeys({ prisma, model: "boardItem", ids: data.itemOrders.slice().sort((left, right) => left.order - right.order).map((item) => item.id) });
+    await Promise.all(data.itemOrders.map((item: { id: string }) => advanceOfflineEntityState({ prisma, userId: user.id, entity: "boardItem", entityId: item.id, changedFields: ["position"] })));
 
     // Fetch updated items for verification
     const updatedItems: BoardItem[] = await prisma.boardItem.findMany({
       where: { userId: user.id },
-      orderBy: { order: "asc" },
+      orderBy: { position: "asc" },
     });
 
     if (process.env.NODE_ENV === "development") {

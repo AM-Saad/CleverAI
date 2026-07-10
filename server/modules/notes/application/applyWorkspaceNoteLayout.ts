@@ -1,5 +1,6 @@
 import type { NoteLayoutChange } from "../../../../shared/utils/note-sync.contract";
 import { Errors } from "../../../utils/error";
+import { advanceOfflineEntityState } from "../../offline/application/advanceOfflineEntityState";
 
 function assertUnique(ids: string[], label: string) {
   if (new Set(ids).size !== ids.length) {
@@ -153,6 +154,10 @@ export async function applyWorkspaceNoteLayout(input: {
         });
       }
     });
+    await Promise.all([
+      ...changedNotes.map((note) => advanceOfflineEntityState({ prisma, userId, entity: "note", entityId: note.id, changedFields: ["groupId", "position"] })),
+      ...changedGroups.map((group) => advanceOfflineEntityState({ prisma, userId, entity: "noteGroup", entityId: group.id, changedFields: ["position"] })),
+    ]);
   }
 
   return { layoutApplied: true, skippedNotes, skippedGroups };

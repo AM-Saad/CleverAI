@@ -5,15 +5,31 @@ import {
   loadPendingNoteLayoutChange,
   queueNoteLayoutChange,
 } from "~/utils/idb";
-import { registerNotesSync } from "~/utils/sync/offlineSync";
+import { SYNC_TAGS } from "~/utils/constants/pwa";
+import { getServiceWorkerReadyRegistration } from "~/utils/serviceWorkerRuntime";
+import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 
 export type NotesLayoutQueue = LayoutQueue<NoteLayoutChange>;
 
+async function registerOfflineV2Sync() {
+  const registration = await getServiceWorkerReadyRegistration(1500);
+  if (registration && "sync" in registration) {
+    // @ts-expect-error SyncManager is absent from some DOM lib versions.
+    await registration.sync.register(SYNC_TAGS.OFFLINE_V2);
+  }
+}
+
 export function createIndexedDbNotesLayoutQueue(): NotesLayoutQueue {
   return {
-    save: queueNoteLayoutChange,
+    save: async (change) => {
+      await queueNoteLayoutChange(change);
+      if (typeof useAuth === "function") {
+        const offline = useOfflineRuntime();
+        if (offline.accountId.value) await offline.migrateLegacyNotes();
+      }
+    },
     load: loadPendingNoteLayoutChange,
     remove: deletePendingNoteLayoutChange,
-    registerBackgroundSync: registerNotesSync,
+    registerBackgroundSync: registerOfflineV2Sync,
   };
 }

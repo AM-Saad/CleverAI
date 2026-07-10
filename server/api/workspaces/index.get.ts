@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     const workspaces = await prisma.workspace.findMany({
       where: { userId: user.id },
       select: workspaceSummarySelect,
-      orderBy: { order: "asc" },
+      orderBy: { position: "asc" },
     });
     const prismaMs = performance.now() - queryStart;
     const payload = measureWorkspacePayload(workspaces);

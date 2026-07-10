@@ -188,6 +188,7 @@ const emit = defineEmits<{
   }): void;
 }>();
 const collaborationHandle = ref<CollaborationHandle>(null);
+const { data: authData } = useAuth();
 const props = withDefaults(defineProps<{
   id?: string;
   isFullScreen?: boolean;
@@ -812,7 +813,11 @@ const createCollaborationHandle = async (): Promise<{
   const config = props.collaboration;
   const ydoc = new Y.Doc();
   const field = NOTE_COLLAB_FIELD;
-  const localDocName = `notes:${config.workspaceId}:${config.noteId}:${field}`;
+  // Yjs IndexedDB names are otherwise global to this browser profile. Scope
+  // persisted CRDT state by account before workspace/note so another account
+  // can never attach to the previous account's local document.
+  const accountId = String((authData.value?.user as { id?: string } | undefined)?.id ?? "unverified");
+  const localDocName = `notes:${accountId}:${config.workspaceId}:${config.noteId}:${field}`;
   const indexedDbProvider = new IndexeddbPersistence(localDocName, ydoc);
   indexedDbProvider.on("synced", () => {
     emit("collaboration-status", { indexedDbSynced: true });
@@ -823,7 +828,15 @@ const createCollaborationHandle = async (): Promise<{
     name: config.roomName!,
     token: config.token!,
     document: ydoc,
+    // Build the local Yjs document first. A disconnected browser must not
+    // attempt a collaboration websocket; reconnect attaches this same CRDT
+    // document and lets Yjs merge it with the server document.
+    connect: typeof navigator === "undefined" ? false : navigator.onLine,
   });
+  const reconnect = () => {
+    if (navigator.onLine) (provider as unknown as { connect?: () => void }).connect?.();
+  };
+  window.addEventListener("online", reconnect);
 
   provider.on("status", ({ status }: { status: string }) => {
     emit("collaboration-status", {
@@ -861,6 +874,7 @@ const createCollaborationHandle = async (): Promise<{
 
   const cleanup = async () => {
     try {
+      window.removeEventListener("online", reconnect);
       provider.destroy();
     } finally {
       indexedDbProvider.destroy();

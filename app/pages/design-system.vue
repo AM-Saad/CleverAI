@@ -422,6 +422,7 @@
         <div class="flex flex-wrap gap-2">
           <UiButton @click="modalOpen = true">Open UiModal</UiButton>
           <UiButton tone="error" @click="confirmOpen = true">Open UiConfirmDialog</UiButton>
+          <UiButton variant="soft" @click="sheetOpen = true">Open UiSheet</UiButton>
           <UiPopover>
             <UiButton variant="soft">Open UiPopover</UiButton>
             <template #content>
@@ -441,6 +442,25 @@
           confirm-label="Delete"
           @confirm="confirmOpen = false"
         />
+        <UiSheet v-model:open="sheetOpen" title="Example sheet">
+          <div class="flex flex-col gap-3">
+            <UiParagraph size="sm">
+              Bottom sheet with drag-to-dismiss. Toggling the block below
+              springs the panel height (animate-resize).
+            </UiParagraph>
+            <UiButton variant="soft" size="sm" @click="sheetExpanded = !sheetExpanded">
+              {{ sheetExpanded ? "Shrink content" : "Grow content" }}
+            </UiButton>
+            <UiCard v-if="sheetExpanded" variant="outline">
+              <div class="flex flex-col gap-2 py-2">
+                <UiParagraph v-for="i in 6" :key="i" size="sm">
+                  Extra content row {{ i }} — the sheet grows and shrinks with
+                  a gentle overshoot instead of snapping.
+                </UiParagraph>
+              </div>
+            </UiCard>
+          </div>
+        </UiSheet>
       </section>
     </div>
   </div>
@@ -505,6 +525,8 @@ const unchecked = ref(false);
 const indeterminate = ref<boolean | "indeterminate">("indeterminate");
 const modalOpen = ref(false);
 const confirmOpen = ref(false);
+const sheetOpen = ref(false);
+const sheetExpanded = ref(false);
 const interactiveSelected = ref(true);
 const selectItems = ["Light", "Sepia", "Dark"];
 const catalogMenuItems = [

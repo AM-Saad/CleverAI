@@ -446,7 +446,7 @@ button,
 /* Focus states for accessibility */
 button:focus {
   outline: 2px solid var(--color-accent-blue);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 /* Dark mode specific adjustments */

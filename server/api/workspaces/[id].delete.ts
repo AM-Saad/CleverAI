@@ -1,5 +1,6 @@
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -16,5 +17,6 @@ export default defineEventHandler(async (event) => {
   if (result.count === 0) {
     throw Errors.notFound("Workspace");
   }
+  await advanceOfflineEntityState({ prisma, userId: user.id, entity: "workspace", entityId: id, changedFields: ["deleted"], deleted: true });
   return success({ deleted: true });
 });

@@ -205,7 +205,7 @@ function invokeAd() {
         <UiPanel v-if="clientSecret"
           variant="surface"
           size="md"
-          class-name="relative rounded-[var(--radius-2xl)] shadow-[var(--shadow-dropdown)] focus-within:ring-2 focus-within:ring-[var(--ds-focus-outline-color)]">
+          class-name="relative rounded-[var(--radius-2xl)] shadow-[var(--shadow-dropdown)] focus-within:ring-2 focus-within:ring-inset focus-within:ring-[var(--ds-focus-outline-color)]">
           <UiIconButton v-if="!isPaymentProcessing"
             icon="i-lucide-arrow-left"
             label="Back to credit packs"

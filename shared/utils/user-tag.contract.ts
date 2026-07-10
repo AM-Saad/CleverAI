@@ -9,6 +9,7 @@ export const UserTagSchema = z.object({
   name: z.string(),
   color: z.string().default("#3b82f6"),
   order: z.number().int().default(0),
+  position: z.string().regex(/^[0-9A-Za-z]+$/).optional(),
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),
 });

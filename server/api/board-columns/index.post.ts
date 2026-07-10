@@ -5,6 +5,8 @@ import {
   CreateBoardColumnDTO,
   BoardColumnSchema,
 } from "@@/shared/utils/boardColumn.contract";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
+import { positionBetween } from "@@/shared/utils/position-key";
 
 export default defineEventHandler(async (event) => {
   try {
@@ -32,15 +34,18 @@ export default defineEventHandler(async (event) => {
       _max: { order: true },
     });
     const newOrder = (maxOrderResult._max.order ?? -1) + 1;
+    const lastPositioned = await prisma.boardColumn.findFirst({ where: { userId: user.id, workspaceId: data.workspaceId ?? null }, orderBy: { position: "desc" }, select: { position: true } });
 
     const column = await prisma.boardColumn.create({
       data: {
         userId: user.id,
         name: data.name,
         order: newOrder,
+        position: positionBetween(lastPositioned?.position, null),
         workspaceId: data.workspaceId,
       },
     });
+    await advanceOfflineEntityState({ prisma, userId: user.id, entity: "boardColumn", entityId: column.id, changedFields: ["name", "workspaceId", "position"] });
 
     if (process.env.NODE_ENV === "development") {
       BoardColumnSchema.parse(column);

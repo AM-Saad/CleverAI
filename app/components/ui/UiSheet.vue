@@ -64,7 +64,9 @@
  * Reuses the design tokens for radius/shadow/scrim. Use for capture, AI result,
  * generate, and workspace-switcher sheets.
  */
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, onBeforeUnmount } from "vue";
+import { prefersReducedMotion } from "~/composables/ui/useViewTransitionMorph";
+import { designTokenValues } from "~/design-system/tokens.generated";
 
 const props = withDefaults(
   defineProps<{
@@ -83,8 +85,19 @@ const props = withDefaults(
      * the sheet's own slide so the VT snapshots capture resting states.
      */
     morphing?: boolean;
+    /**
+     * Spring the panel's height when its content grows/shrinks while open
+     * (mode swaps, expanding pickers) instead of snapping. VT morphs and
+     * reduced motion bypass it.
+     */
+    animateResize?: boolean;
   }>(),
-  { closeOnBackdrop: true, dismissThreshold: 110, morphing: false },
+  {
+    closeOnBackdrop: true,
+    dismissThreshold: 110,
+    morphing: false,
+    animateResize: true,
+  },
 );
 
 const emit = defineEmits<{
@@ -130,6 +143,78 @@ function onPointerUp() {
 function onAfterLeave() {
   emit("closed");
 }
+
+// ── Springy content resize ──────────────────────────────────────────────────
+// The panel is bottom-anchored with auto height, so a content swap normally
+// snaps its top edge. A ResizeObserver catches the new height and a WAAPI
+// height animation (fill: none — the box stays auto) springs old → new.
+// WAAPI because the global reduced-motion CSS kill-switch and the panel's own
+// transitions don't interfere with it; reduced motion is re-checked in JS.
+const SPRING_EASE = designTokenValues["--ease-spring"];
+const SPRING_MS = Number.parseFloat(designTokenValues["--duration-spring"]);
+
+let resizeObserver: ResizeObserver | null = null;
+let panelHeight: number | null = null;
+let heightAnim: Animation | null = null;
+
+function skipResizeSpring() {
+  return (
+    !props.animateResize || props.morphing || dragging || prefersReducedMotion()
+  );
+}
+
+function springPanelHeight(from: number, to: number) {
+  const el = panel.value;
+  if (!el) return;
+  heightAnim = el.animate(
+    [{ height: `${from}px` }, { height: `${to}px` }],
+    { duration: SPRING_MS, easing: SPRING_EASE },
+  );
+  const settle = () => {
+    heightAnim = null;
+    if (!el.isConnected) return;
+    const natural = el.offsetHeight;
+    panelHeight = natural;
+    // While the keyframes owned the box the observer couldn't see content
+    // changes — chase any drift so the height never snaps at the end.
+    if (Math.abs(natural - to) >= 2 && !skipResizeSpring()) {
+      springPanelHeight(to, natural);
+    }
+  };
+  heightAnim.finished.then(settle, settle);
+}
+
+function onPanelResize(entries: ResizeObserverEntry[]) {
+  // Our own height animation drives the border box — those frames aren't
+  // content changes.
+  if (heightAnim) return;
+  const el = panel.value;
+  if (!el) return;
+  const next =
+    entries[entries.length - 1]?.borderBoxSize?.[0]?.blockSize ??
+    el.offsetHeight;
+  const prev = panelHeight;
+  panelHeight = next;
+  if (prev === null || Math.abs(next - prev) < 2) return;
+  if (skipResizeSpring()) return;
+  springPanelHeight(prev, next);
+}
+
+watch(panel, (el) => {
+  resizeObserver?.disconnect();
+  heightAnim?.cancel();
+  heightAnim = null;
+  panelHeight = null;
+  if (el && typeof ResizeObserver !== "undefined") {
+    resizeObserver = new ResizeObserver(onPanelResize);
+    resizeObserver.observe(el, { box: "border-box" });
+  }
+});
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
+  heightAnim?.cancel();
+});
 
 // Body scroll lock while open.
 watch(

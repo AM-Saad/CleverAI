@@ -2,6 +2,7 @@
   <UiSheet
     :open="open"
     :title="mode === 'menu' ? 'Capture' : undefined"
+    :morph-name="SHEET_MORPH_NAME"
     :morphing="morphing"
     @update:open="emit('update:open', $event)"
     @closed="onSheetClosed"
@@ -147,6 +148,7 @@ import { accentVarFor, tint } from "~/composables/useAccentColor";
 import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace";
 import {
   MORPH_NAME,
+  SHEET_MORPH_NAME,
 } from "~/composables/ui/useViewTransitionMorph";
 import { useQuickCaptureMorph } from "~/composables/ui/useQuickCaptureMorph";
 import QuickNoteEditor from "~/features/notes/components/QuickNoteEditor.vue";

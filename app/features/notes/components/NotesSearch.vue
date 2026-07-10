@@ -11,6 +11,7 @@ import { useFuse } from "@vueuse/integrations/useFuse";
 import { computed, shallowRef, watch } from "vue";
 import type { NoteState } from "~/features/notes/composables/useNotesStore";
 import { useNotesStore } from "../composables/useNotesStore";
+import { comparePosition } from "../../../shared/utils/position-key";
 
 const props = defineProps<{
   workspaceId: string;
@@ -23,7 +24,7 @@ const notesStore = useNotesStore(props.workspaceId);
 const notes = computed(() => {
   const allNotes = Array.from(notesStore.notes.value.values());
   // Sort by order field
-  return allNotes.sort((a, b) => a.order - b.order);
+  return allNotes.sort(comparePosition);
 });
 
 const search = shallowRef("");

@@ -62,7 +62,7 @@
               <div class="space-y-4">
                 <!-- Unified Input Row: Mic + Input + Send in one line -->
                 <div class="flex items-center gap-2 bg-surface-strong rounded-full border p-1.5 transition-all duration-[var(--duration-fast)]"
-                  :class="isInputFocused ? 'ring-2 ring-[var(--ds-focus-outline-color)] border-primary shadow-[var(--shadow-dropdown)]' : 'border-secondary'">
+                  :class="isInputFocused ? 'ring-2 ring-inset ring-[var(--ds-focus-outline-color)] border-primary shadow-[var(--shadow-dropdown)]' : 'border-secondary'">
                   <!-- Mic Button (compact icon-only) -->
                   <UiButton
                     square

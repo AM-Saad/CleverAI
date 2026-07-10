@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
 
   const notes: Note[] = await prisma.note.findMany({
     where: { workspaceId: query.workspaceId },
-    orderBy: { order: "asc" },
+    orderBy: { position: "asc" },
   });
 
   const normalizedNotes = notes.map((note) => ({

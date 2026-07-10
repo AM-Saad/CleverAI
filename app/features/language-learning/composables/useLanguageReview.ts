@@ -6,10 +6,14 @@ import type { ReviewGrade } from "@shared/utils/review.contract";
 import type { APIError } from "~/services/FetchFactory";
 import { useTextToSpeechWorker } from "~/composables/ai/useTextToSpeechWorker";
 import { useLanguageLearningRuntime } from "./languageLearningRuntime";
+import { calculateOfflineNextReviewDate, calculateOfflineNextStreak, calculateOfflineSM2 } from "@@/shared/utils/sm2";
+import { listOfflineEntities } from "~/utils/offline-v2/repository";
+import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 
 export function useLanguageReview() {
   const { $api } = useNuxtApp();
   const languageRuntime = useLanguageLearningRuntime();
+  const offline = useOfflineRuntime();
 
   const queue = ref<LanguageQueueCard[]>([]);
   const currentIndex = ref(0);
@@ -49,6 +53,39 @@ export function useLanguageReview() {
     gradeError.value = null;
     requestIdsByCard.clear();
     await languageRuntime.ensurePreferences();
+
+    if (!offline.isOnline.value && offline.accountId.value) {
+      const [reviews, words] = await Promise.all([
+        listOfflineEntities<Record<string, any>>(offline.accountId.value, "languageReview"),
+        listOfflineEntities<Record<string, any>>(offline.accountId.value, "languageWord"),
+      ]);
+      const wordsById = new Map(words.map((record) => [record.entityId, record.data]));
+      const cards = reviews
+        .filter((record) => new Date(record.data.nextReviewAt).getTime() <= Date.now() && !record.data.suspended)
+        .map((record) => {
+          const review = record.data;
+          const word = wordsById.get(review.wordId);
+          if (!word) return null;
+          const story = Array.isArray(word.stories) ? word.stories.find((candidate: any) => candidate.id === review.storyId) : null;
+          return {
+            cardId: review.id,
+            wordId: word.id,
+            word: word.word,
+            translation: word.translation,
+            sourceLang: word.sourceLang,
+            translationLang: word.translationLang,
+            storyId: story?.id ?? null,
+            storyText: story?.storyText ?? null,
+            sentences: story?.sentences ?? null,
+            mode: story ? "story_cloze" : "word_translation",
+            reviewState: { intervalDays: review.intervalDays, easeFactor: review.easeFactor, repetitions: review.repetitions, nextReviewAt: new Date(review.nextReviewAt), lastGrade: review.lastGrade, streak: review.streak },
+          } as LanguageQueueCard;
+        })
+        .filter((card): card is LanguageQueueCard => Boolean(card));
+      queue.value = cards;
+      isComplete.value = cards.length === 0;
+      return { cards };
+    }
 
     const result = await fetchOperation.execute(() =>
       $api.language.getQueue({
@@ -147,6 +184,31 @@ export function useLanguageReview() {
     gradeError.value = null;
 
     try {
+      if (!offline.isOnline.value) {
+        const card = removed?.card;
+        if (!card) return null;
+        const reviewedAt = new Date();
+        const next = calculateOfflineSM2({ currentEF: card.reviewState.easeFactor, currentInterval: card.reviewState.intervalDays, currentRepetitions: card.reviewState.repetitions, grade: Number(gradeValue) });
+        await offline.queue({
+          entity: "languageReview",
+          operation: "languageReview.grade",
+          entityId: cardId,
+          changedFields: ["reviewState"],
+          payload: { cardId, grade: Number(gradeValue), reviewedAt: reviewedAt.toISOString(), requestId: payload.requestId },
+          localData: {
+            intervalDays: next.intervalDays,
+            easeFactor: next.easeFactor,
+            repetitions: next.repetitions,
+            nextReviewAt: calculateOfflineNextReviewDate(next.intervalDays, reviewedAt).toISOString(),
+            lastReviewedAt: reviewedAt.toISOString(),
+            lastGrade: Number(gradeValue),
+            streak: calculateOfflineNextStreak(card.reviewState.streak ?? 0, Number(gradeValue)),
+          },
+          sequence: true,
+        });
+        requestIdsByCard.delete(cardId);
+        return { nextReviewAt: calculateOfflineNextReviewDate(next.intervalDays, reviewedAt).toISOString(), intervalDays: next.intervalDays, easeFactor: next.easeFactor, xpEarned: 0 };
+      }
       const result = await $api.language.gradeCard(payload);
       if (!result.success) {
         const nextGradedIds = new Set(gradedCardIds.value);

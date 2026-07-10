@@ -20,13 +20,10 @@ const props = defineProps<{
 }>();
 
 const route = useRoute();
-const { $api } = useNuxtApp();
 const toast = useToast();
-const { data } = useAuth();
 
 const id = route.params.id as string;
 const { createMaterial, uploadMaterial, uploading, addPendingTranscription, updatePendingTranscription, removePendingTranscription } = useMaterialsStore(id);
-const { handleOfflineSubmit } = useOffline();
 
 // ----- Voice transcription -----
 // useSpeachToText lives HERE (not inside SpeechRecorder) so it survives modal close
@@ -138,28 +135,6 @@ async function onSubmit(event: FormSubmitEvent<Schema>) {
 
 const saveMaterial = async (title: string, content: string, type: "text" | "video" | "audio" | "pdf" | "url" | "document" | undefined) => {
   try {
-    const payload = {
-      title: title,
-      content: content,
-      type: type,
-    };
-    // handle offline case
-    if (!navigator.onLine) {
-      const userData = data.value?.user
-        ? {
-          email: data.value.user.email,
-          name: data.value.user.name,
-          image: data.value.user.image,
-        }
-        : null;
-
-      handleOfflineSubmit({
-        payload: { ...payload, workspaceId: id, user: userData },
-        storeName: DB_CONFIG.STORES.FORMS,
-        type: FORM_SYNC_TYPES.UPLOAD_MATERIAL,
-      });
-      return;
-    }
     const success = await createMaterial({
       title: title,
       content: content,

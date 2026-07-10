@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { IDBKeyRange as FakeIDBKeyRange, indexedDB as fakeIndexedDB } from "fake-indexeddb";
 import { effectScope, ref } from "vue";
 import { calculateSM2 } from "../server/modules/review/domain/sm2";
 import {
@@ -99,6 +100,23 @@ import type {
 } from "../server/modules/review/ports/ReviewRepository";
 import type { XpPort } from "../server/modules/review/ports/XpPort";
 import type { BoardItemState } from "../app/features/board/composables/useBoardItemsStore";
+import { OfflineSyncRequestSchema } from "../shared/utils/offline-sync.contract";
+import { calculateOfflineSM2 } from "../shared/utils/sm2";
+import { orderOfflineMutations } from "../shared/utils/offline-mutation-order";
+import { positionBetween } from "../shared/utils/position-key";
+import {
+  applySyncResult,
+  commitOfflineMutation,
+  getOfflineEntity,
+  getOfflineSyncMetadata,
+  listOfflineMutations,
+  recoverInterruptedMutations,
+  resolveOfflineConflict,
+  updateOfflineSyncMetadata,
+} from "../app/utils/offline-v2/repository";
+
+if (!(globalThis as any).indexedDB) (globalThis as any).indexedDB = fakeIndexedDB;
+if (!(globalThis as any).IDBKeyRange) (globalThis as any).IDBKeyRange = FakeIDBKeyRange;
 
 type TestCase = {
   name: string;
@@ -110,6 +128,109 @@ const tests: TestCase[] = [];
 function test(name: string, run: TestCase["run"]) {
   tests.push({ name, run });
 }
+
+test("offline-v2 contract keeps mutations replayable and ordered", () => {
+  const parsed = OfflineSyncRequestSchema.parse({
+    clientId: "device-a",
+    mutations: [{
+      id: "mutation-a",
+      entity: "review",
+      operation: "review.grade",
+      entityId: "review-a",
+      changedFields: ["reviewState"],
+      payload: { cardId: "review-a", grade: 4 },
+      dependsOn: [],
+      occurredAt: "2026-07-09T20:00:00.000Z",
+      createdAt: 1,
+      attempts: 0,
+      status: "pending",
+      sequence: true,
+    }],
+  });
+  assert.equal(parsed.mutations[0]?.sequence, true);
+  assert.equal(parsed.mutations[0]?.status, "pending");
+});
+
+test("offline SM-2 calculation matches the server default policy", () => {
+  assert.deepEqual(
+    calculateOfflineSM2({ currentEF: 2.5, currentInterval: 1, currentRepetitions: 1, grade: 4 }),
+    calculateSM2({ currentEF: 2.5, currentInterval: 1, currentRepetitions: 1, grade: 4 }),
+  );
+});
+
+test("offline mutation ordering is dependency-first and rejects cycles", () => {
+  const { ordered, cyclic } = orderOfflineMutations([
+    { id: "child", createdAt: 2, dependsOn: ["parent"] },
+    { id: "parent", createdAt: 3, dependsOn: [] },
+    { id: "cycle-a", createdAt: 4, dependsOn: ["cycle-b"] },
+    { id: "cycle-b", createdAt: 5, dependsOn: ["cycle-a"] },
+  ]);
+  assert.deepEqual(ordered.map((mutation) => mutation.id), ["parent", "child"]);
+  assert.deepEqual(cyclic.map((mutation) => mutation.id), ["cycle-a", "cycle-b"]);
+});
+
+test("position keys remain ordered through repeated midpoint inserts", () => {
+  let upper: string | undefined;
+  for (let i = 0; i < 100; i++) {
+    const next = positionBetween(undefined, upper);
+    if (upper) assert.ok(next < upper, `${next} should sort before ${upper}`);
+    upper = next;
+  }
+});
+
+test("offline outbox cancels dependent local children when its local workspace is deleted", async () => {
+  const accountId = `account-${Date.now()}-cascade`;
+  const parent = {
+    id: `workspace-create-${accountId}`,
+    entity: "workspace" as const,
+    operation: "workspace.create",
+    entityId: `local:workspace-${accountId}`,
+    changedFields: ["title"],
+    payload: { title: "Draft" },
+    dependsOn: [],
+    occurredAt: "2026-07-10T00:00:00.000Z",
+    createdAt: Date.now(), attempts: 0, status: "pending" as const, sequence: false,
+  };
+  await commitOfflineMutation({ accountId, mutation: parent, localRecord: { entity: "workspace", entityId: parent.entityId, version: 0, data: { id: parent.entityId, title: "Draft" } } });
+  await commitOfflineMutation({
+    accountId,
+    mutation: { ...parent, id: `material-create-${accountId}`, entity: "material", operation: "material.create", entityId: `local:material-${accountId}`, workspaceId: parent.entityId, changedFields: ["title", "content"], payload: { workspaceId: parent.entityId, title: "Child", content: "Local" }, dependsOn: [parent.id], createdAt: parent.createdAt + 1 },
+    localRecord: { entity: "material", entityId: `local:material-${accountId}`, workspaceId: parent.entityId, version: 0, data: { id: `local:material-${accountId}`, workspaceId: parent.entityId, title: "Child", content: "Local" } },
+  });
+  await commitOfflineMutation({ accountId, mutation: { ...parent, id: `workspace-delete-${accountId}`, operation: "workspace.delete", changedFields: ["deleted"], payload: {}, createdAt: parent.createdAt + 2 } });
+  assert.equal((await listOfflineMutations(accountId)).length, 0);
+});
+
+test("choosing the server conflict snapshot replaces local data atomically", async () => {
+  const accountId = `account-${Date.now()}-conflict`;
+  const mutation = {
+    id: `workspace-update-${accountId}`, entity: "workspace" as const, operation: "workspace.update", entityId: `workspace-${accountId}`, changedFields: ["title"], payload: { title: "Mine" }, dependsOn: [], occurredAt: "2026-07-10T00:00:00.000Z", createdAt: Date.now(), attempts: 0, status: "pending" as const, sequence: false, baseVersion: 1,
+  };
+  await commitOfflineMutation({ accountId, mutation, localRecord: { entity: "workspace", entityId: mutation.entityId, version: 1, data: { id: mutation.entityId, title: "Mine" } } });
+  await applySyncResult({ accountId, mutation: { ...mutation, accountId, updatedAt: Date.now() }, result: { status: "conflict", entity: "workspace", entityId: mutation.entityId, conflict: { serverVersion: 2, overlappingFields: ["title"], serverSnapshot: { id: mutation.entityId, title: "Server" }, reason: "Same field" } } });
+  await resolveOfflineConflict({ accountId, mutationId: mutation.id, strategy: "keep-server" });
+  const current = await getOfflineEntity<{ id: string; title: string }>(accountId, "workspace", mutation.entityId);
+  assert.equal(current?.data.title, "Server");
+  assert.equal((await listOfflineMutations(accountId)).length, 0);
+});
+
+test("an interrupted sync is recovered and per-account sync metadata survives reload", async () => {
+  const accountId = `account-${Date.now()}-recovery`;
+  const mutation = {
+    id: `material-${accountId}`, entity: "material" as const, operation: "material.create", entityId: `local:material-${accountId}`,
+    workspaceId: `workspace-${accountId}`, changedFields: ["title", "content"], payload: { workspaceId: `workspace-${accountId}`, title: "Draft", content: "Offline" },
+    dependsOn: [], occurredAt: "2026-07-10T00:00:00.000Z", createdAt: Date.now(), attempts: 0, status: "syncing" as const, sequence: false,
+  };
+  await commitOfflineMutation({ accountId, mutation, localRecord: { entity: "material", entityId: mutation.entityId, workspaceId: mutation.workspaceId, version: 0, data: { id: mutation.entityId, ...mutation.payload } } });
+  assert.equal(await recoverInterruptedMutations(accountId), 1);
+  assert.equal((await listOfflineMutations(accountId))[0]?.status, "retry");
+  await updateOfflineSyncMetadata(accountId, { lastAttemptAt: 10, lastSuccessfulSyncAt: 9 });
+  const metadata = await getOfflineSyncMetadata(accountId);
+  assert.equal(metadata?.accountId, accountId);
+  assert.equal(metadata?.lastAttemptAt, 10);
+  assert.equal(metadata?.lastSuccessfulSyncAt, 9);
+});
+
 
 class FakeReviewRepository implements ReviewRepository {
   constructor(public record: ReviewCardRecord | null) {}

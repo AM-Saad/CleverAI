@@ -112,6 +112,7 @@ export const LanguageGradeRequestSchema = z.object({
   cardId: z.string().min(1),
   grade: z.enum(["0", "1", "2", "3", "4", "5"]),
   requestId: z.string().optional(),
+  reviewedAt: z.string().datetime().optional(),
 });
 
 export const LanguagePreferencesDTO = z.object({

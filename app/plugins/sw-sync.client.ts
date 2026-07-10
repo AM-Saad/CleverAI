@@ -14,13 +14,12 @@ export default defineNuxtPlugin(() => {
 
       if (!reg) return;
 
-      // One-off Background Sync: let the SW run syncs when online
-      // Note: FORM sync is registered here because it's always available
-      // Note: NOTES sync is registered on-demand in useNotesStore when there are pending changes
+      // v2 is the only generic background queue. Feature-specific legacy tags
+      // remain temporarily for Notes/Board until their stores are migrated.
       if ("sync" in reg) {
         try {
           // @ts-expect-error Background Sync is not in some TS lib DOM versions
-          await reg.sync.register(SYNC_TAGS.FORM);
+          await reg.sync.register(SYNC_TAGS.OFFLINE_V2);
         } catch {
           // not supported / permission denied — ignore silently
         }

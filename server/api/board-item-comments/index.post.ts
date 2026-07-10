@@ -2,6 +2,7 @@ import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { CreateBoardItemCommentDTO } from "~/shared/utils/boardItem.contract";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -37,6 +38,7 @@ export default defineEventHandler(async (event) => {
         user: { select: { id: true, name: true, email: true } },
       },
     });
+    await advanceOfflineEntityState({ prisma, userId: user.id, entity: "boardComment", entityId: comment.id, changedFields: ["itemId", "content"] });
 
     setResponseStatus(event, 201);
     return success({

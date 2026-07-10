@@ -2,6 +2,7 @@ import {
   BoardItemsSyncResponseSchema,
   type BoardItemsSyncRequest,
 } from "../../../../shared/utils/boardItem.contract";
+import { advanceOfflineEntityState } from "../../offline/application/advanceOfflineEntityState";
 
 export async function syncBoardItems(input: {
   prisma: any;
@@ -44,6 +45,7 @@ export async function syncBoardItems(input: {
         }
 
         await prisma.boardItem.delete({ where: { id: item.id } });
+        await advanceOfflineEntityState({ prisma, userId, entity: "boardItem", entityId: item.id, changedFields: ["deleted"], deleted: true });
         applied.push(item.id);
         results.push({ id: item.id, status: "deleted" });
         continue;
@@ -87,6 +89,7 @@ export async function syncBoardItems(input: {
             updatedAt: new Date(item.updatedAt),
           },
         });
+        await advanceOfflineEntityState({ prisma, userId, entity: "boardItem", entityId: updated.id, changedFields: ["content", "tags", "columnId", "dueDate", "attachments", "position"] });
         applied.push(item.id);
         results.push({ id: item.id, status: "updated", data: updated });
         continue;
@@ -107,6 +110,7 @@ export async function syncBoardItems(input: {
           updatedAt: new Date(item.updatedAt),
         },
       });
+      await advanceOfflineEntityState({ prisma, userId, entity: "boardItem", entityId: created.id, changedFields: ["content", "tags", "columnId", "workspaceId", "dueDate", "attachments", "position"] });
       applied.push(item.id);
       if (isTempId) idMap[item.id] = created.id;
       results.push({ id: item.id, status: "created", data: created });

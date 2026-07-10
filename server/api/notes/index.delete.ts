@@ -1,5 +1,6 @@
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -31,6 +32,7 @@ export default defineEventHandler(async (event) => {
   await prisma.note.delete({
     where: { id },
   });
+  await advanceOfflineEntityState({ prisma, userId: user.id, entity: "note", entityId: id, changedFields: ["deleted"], deleted: true });
 
   return success(
     { success: true },

@@ -2,6 +2,7 @@ import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { CreateBoardItemLinkDTO } from "~/shared/utils/boardItem.contract";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -44,6 +45,7 @@ export default defineEventHandler(async (event) => {
         source: { select: { id: true, content: true, columnId: true, tags: true, dueDate: true } },
       },
     });
+    await advanceOfflineEntityState({ prisma, userId: user.id, entity: "boardLink", entityId: link.id, changedFields: ["sourceId", "targetId", "linkType"] });
 
     setResponseStatus(event, 201);
     return success(link, { message: "Link created successfully" });
