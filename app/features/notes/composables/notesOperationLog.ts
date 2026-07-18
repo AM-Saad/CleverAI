@@ -3,6 +3,9 @@ export type NotesOperationName =
   | "split"
   | "drag-start"
   | "layout-queued"
+  | "create-queued"
+  | "capture-create-ready"
+  | "capture-finalize"
   | "content-queued"
   | "sync-start"
   | "sync-success"
@@ -13,5 +16,5 @@ export function logNotesOperation(
   details: Record<string, unknown> = {},
 ) {
   if (!import.meta.dev) return;
-  console.debug(`[notes:${operation}]`, details);
+  console.debug(`[notes:${operation}] ${JSON.stringify(details)}`);
 }

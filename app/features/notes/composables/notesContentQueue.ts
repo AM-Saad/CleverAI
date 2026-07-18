@@ -13,7 +13,11 @@ type PendingSave = {
 
 export interface NotesContentQueue {
   queueContentSave(id: string, content: string, title?: string): void;
-  queueContentSaveNow(id: string, content: string, title?: string): Promise<boolean>;
+  queueContentSaveNow(
+    id: string,
+    content: string,
+    title?: string,
+  ): Promise<boolean>;
   flushDrafts(): Promise<void>;
 }
 
@@ -57,7 +61,10 @@ export function createNotesContentQueue(input: {
 
     const note = notes.value.get(id);
     if (!note) return false;
-    const resolvedTitle = normalizeWorkspaceNoteTitle(title ?? note.title, content);
+    const resolvedTitle = normalizeWorkspaceNoteTitle(
+      title ?? note.title,
+      content,
+    );
 
     try {
       patchNote(id, {
@@ -77,11 +84,13 @@ export function createNotesContentQueue(input: {
         tags: note.tags,
         noteType: note.noteType,
         metadata: note.metadata,
+        order: note.order,
       });
-      if (!isVerifiedOnline.value) {
-        await pendingQueue.registerBackgroundSync();
-      }
-      logNotesOperation("content-queued", { workspaceId: note.workspaceId, id });
+      await pendingQueue.registerBackgroundSync();
+      logNotesOperation("content-queued", {
+        workspaceId: note.workspaceId,
+        id,
+      });
       patchNote(id, {
         isLoading: false,
         isDirty: true,
@@ -116,7 +125,9 @@ export function createNotesContentQueue(input: {
     await flushEditorDrafts();
     const saves = Array.from(pendingSaves.entries());
     await Promise.allSettled(
-      saves.map(([id, save]) => queueContentSaveNow(id, save.content, save.title)),
+      saves.map(([id, save]) =>
+        queueContentSaveNow(id, save.content, save.title),
+      ),
     );
   };
 

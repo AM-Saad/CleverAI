@@ -340,7 +340,7 @@ const updateTimes = () => {
 // Load current preferences
 const loadPreferences = async () => {
   try {
-    const { data } = await $fetch("/api/notifications/preferences");
+    const { data } = await $fetch<{ data: NotificationPreferences }>("/api/notifications/preferences");
     preferences.value = data;
   } catch (error) {
     console.error("Failed to load preferences:", error);

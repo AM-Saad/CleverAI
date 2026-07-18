@@ -118,31 +118,39 @@ Current maturity: high value but still high complexity. This module needs the mo
 
 ## Board Module
 
-Board item sync is local-first. Board column mutation is still mostly online-first.
+Board items, columns, links, and comments share one Offline V2 local-first
+pipeline. Reactive stores are projections; `offlineEntities` is the only
+durable Board state and `offlineMutations` is the only outbox.
 
 ```mermaid
 flowchart TD
   BoardUI["BoardNotesSection / kanban / list / detail panel"] --> ItemStore["useBoardItemsStore"]
-  ItemStore --> ItemIDB["boardItems IndexedDB"]
-  ItemStore --> Pending["pendingBoardItems queue"]
-  ItemStore --> OnlineMutation["direct online item update"]
-  Pending --> Sync["board item sync"]
-  Sync --> Api["POST /api/board-items/sync"]
-  Api --> App["syncBoardItems"]
-  App --> PrismaItems["BoardItem"]
-
-  ColumnStore["useBoardColumnsStore"] --> ColumnApi["/api/board-columns"]
-  ColumnApi --> PrismaColumns["BoardColumn"]
+  BoardUI --> ColumnStore["useBoardColumnsStore"]
+  ItemStore --> Repo["Board Offline V2 repository ports"]
+  ColumnStore --> Repo
+  Repo --> Entities["offlineEntities"]
+  Repo --> Outbox["offlineMutations"]
+  Outbox --> Owner{"Visible page?"}
+  Owner -->|"yes"| Browser["browser drainer"]
+  Owner -->|"no"| Worker["service-worker drainer"]
+  Browser --> Api["POST /api/offline/sync"]
+  Worker --> Api
+  Api --> Domain["Board transaction + revision + receipt"]
+  Domain --> Ack["generic remap / acknowledgement"]
+  Ack --> Entities
+  Ack --> Outbox
+  Ack --> ItemStore
+  Ack --> ColumnStore
 ```
 
 Important invariants:
 
-- Offline-created `temp-*` board items are replaced from server `idMap`.
-- Pending board item changes are merged over local cache during hydration.
-- Server-newer conflicts keep the local item visible and retryable.
-- Column mutations do not currently have the same local-first queue as items.
+- Temporary IDs are remapped atomically in generic entities, dependent payloads, and mutations.
+- Server snapshots replace only clean rows; active mutations and `localDirty` drafts win.
+- Server-newer conflicts retain local and server snapshots until explicit resolution.
+- Columns, related item revision changes, links, and comments use the same receipt-aware pipeline.
 
-Current maturity: medium. Board items are organized; board layout/column behavior is less isolated than Notes.
+Current maturity: high after Board Offline V2 Phase 2; authenticated multi-tab and no-window browser scenarios remain valuable operational coverage.
 
 ## Review Module
 

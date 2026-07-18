@@ -26,7 +26,10 @@ export class NoteService extends FetchFactory {
    * Get all notes for a workspace
    */
   async getByWorkspace(workspaceId: string): Promise<Result<Note[]>> {
-    return this.call<Note[]>("GET", `${this.RESOURCE}?workspaceId=${workspaceId}`);
+    return this.call<Note[]>(
+      "GET",
+      `${this.RESOURCE}?workspaceId=${workspaceId}`,
+    );
   }
 
   /**
@@ -56,18 +59,23 @@ export class NoteService extends FetchFactory {
   /**
    * Reorder notes in a workspace
    */
-  async reorder(payload: ReorderNotesDTO, options?: FetchOptions<"json">): Promise<Result<{ layoutApplied: boolean }>> {
-    return this.call<{ layoutApplied: boolean }>("PATCH", `${this.RESOURCE}/reorder`, payload, options);
+  async reorder(
+    payload: ReorderNotesDTO,
+    options?: FetchOptions<"json">,
+  ): Promise<Result<{ layoutApplied: boolean }>> {
+    return this.call<{ layoutApplied: boolean }>(
+      "PATCH",
+      `${this.RESOURCE}/reorder`,
+      payload,
+      options,
+    );
   }
 
-  /**
-   * Sync pending local note changes.
-   */
   async sync(payload: NotesSyncRequest): Promise<Result<NotesSyncResponse>> {
     return this.call<NotesSyncResponse>(
       "POST",
       `${this.RESOURCE}/sync`,
-      payload
+      payload,
     );
   }
 

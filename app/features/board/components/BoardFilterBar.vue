@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { UserTag } from "~/shared/utils/user-tag.contract";
-import { comparePosition } from "../../../shared/utils/position-key";
+import { comparePosition } from "@@/shared/utils/position-key";
 
 export interface BoardFilterState {
   tags: string[];

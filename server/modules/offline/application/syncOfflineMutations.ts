@@ -17,7 +17,13 @@ import { isPositionKey, positionBetween } from "../../../../shared/utils/positio
 
 type JsonRecord = Record<string, unknown>;
 
-const position = z.string().refine(isPositionKey, "Invalid position key").optional();
+// Legacy database/client rows used null for "not ranked yet". Treat it as an
+// omitted field so creates generate a key and updates leave the current key
+// untouched; malformed non-null values are still rejected.
+const position = z.preprocess(
+  (value) => (value === null ? undefined : value),
+  z.string().refine(isPositionKey, "Invalid position key").optional(),
+);
 const createWorkspace = z.object({ title: z.string().trim().min(1).max(200), description: z.string().nullable().optional(), metadata: z.record(z.string(), z.unknown()).nullable().optional(), position }).strict();
 const updateWorkspace = createWorkspace.extend({ order: z.number().int().optional() }).partial();
 const createMaterial = z.object({ workspaceId: z.string().min(1), title: z.string().trim().min(1), content: z.string(), type: z.string().optional(), metadata: z.record(z.string(), z.unknown()).nullable().optional() }).strict();
@@ -73,7 +79,19 @@ async function currentSnapshot(prisma: any, userId: string, entity: string, enti
   }
 }
 
-async function applyDomainMutation(input: { prisma: any; userId: string; mutation: OfflineMutation }): Promise<{ entityId: string; canonical: JsonRecord | null; idMap?: Record<string, string> }> {
+type RelatedDomainChange = {
+  entity: OfflineMutation["entity"];
+  entityId: string;
+  changedFields: string[];
+  canonical?: JsonRecord | null;
+};
+
+async function applyDomainMutation(input: { prisma: any; userId: string; mutation: OfflineMutation }): Promise<{
+  entityId: string;
+  canonical: JsonRecord | null;
+  idMap?: Record<string, string>;
+  relatedChanges?: RelatedDomainChange[];
+}> {
   const { prisma, userId, mutation } = input;
   const payload = mutation.payload;
   const create = mutation.operation.endsWith(".create");
@@ -200,7 +218,43 @@ async function applyDomainMutation(input: { prisma: any; userId: string; mutatio
     }
     const existing = await prisma.boardColumn.findFirst({ where: { id: mutation.entityId, userId } });
     if (!existing) throw Object.assign(new Error("Board column not found"), { statusCode: 404 });
-    if (remove) { await prisma.boardColumn.delete({ where: { id: existing.id } }); return { entityId: existing.id, canonical: { id: existing.id, deleted: true } }; }
+    if (remove) {
+      const [uncategorizedItems, sourceItems] = await Promise.all([
+        prisma.boardItem.findMany({
+          where: { userId, workspaceId: existing.workspaceId ?? null, columnId: null },
+          orderBy: [{ position: "asc" }, { order: "asc" }],
+        }),
+        prisma.boardItem.findMany({
+          where: { userId, columnId: existing.id },
+          orderBy: [{ position: "asc" }, { order: "asc" }],
+        }),
+      ]);
+      let previousPosition: string | undefined;
+      const normalizedItems = [...uncategorizedItems, ...sourceItems].map((item, order) => {
+        const nextPosition = positionBetween(previousPosition, null);
+        previousPosition = nextPosition;
+        return { ...item, columnId: null, order, position: nextPosition };
+      });
+      const persistedNormalizedItems: typeof normalizedItems = [];
+      for (const item of normalizedItems) {
+        const persisted = await prisma.boardItem.update({
+          where: { id: item.id },
+          data: { columnId: null, order: item.order, position: item.position },
+        });
+        persistedNormalizedItems.push(persisted);
+      }
+      await prisma.boardColumn.delete({ where: { id: existing.id } });
+      return {
+        entityId: existing.id,
+        canonical: { id: existing.id, deleted: true },
+        relatedChanges: persistedNormalizedItems.map((item) => ({
+          entity: "boardItem" as const,
+          entityId: item.id,
+          changedFields: ["columnId", "order", "position"],
+          canonical: json(item),
+        })),
+      };
+    }
     const data = boardColumnPayload.parse(payload);
     if (data.workspaceId !== undefined && data.workspaceId) {
       const workspace = await prisma.workspace.findFirst({ where: { id: data.workspaceId, userId } });
@@ -374,6 +428,47 @@ async function syncOne(input: { prisma: any; userId: string; mutation: OfflineMu
         update: { version, fieldVersions: nextFields, deletedAt: mutation.operation.endsWith(".delete") ? new Date() : null },
         create: { userId, entity: mutation.entity, entityId: stateEntityId, version, fieldVersions: nextFields, deletedAt: mutation.operation.endsWith(".delete") ? new Date() : null },
       });
+      const relatedResults: NonNullable<OfflineSyncResult["related"]> = [];
+      for (const related of applied.relatedChanges ?? []) {
+        const relatedPrevious = await tx.offlineEntityState.findUnique({
+          where: {
+            userId_entity_entityId: {
+              userId,
+              entity: related.entity,
+              entityId: related.entityId,
+            },
+          },
+        });
+        const relatedVersion = (relatedPrevious?.version ?? 0) + 1;
+        const relatedFields = {
+          ...fieldVersions(relatedPrevious?.fieldVersions),
+          ...Object.fromEntries(related.changedFields.map((field) => [field, relatedVersion])),
+        };
+        await tx.offlineEntityState.upsert({
+          where: {
+            userId_entity_entityId: {
+              userId,
+              entity: related.entity,
+              entityId: related.entityId,
+            },
+          },
+          update: { version: relatedVersion, fieldVersions: relatedFields, deletedAt: null },
+          create: {
+            userId,
+            entity: related.entity,
+            entityId: related.entityId,
+            version: relatedVersion,
+            fieldVersions: relatedFields,
+            deletedAt: null,
+          },
+        });
+        relatedResults.push({
+          entity: related.entity,
+          entityId: related.entityId,
+          version: relatedVersion,
+          canonical: related.canonical ?? await currentSnapshot(tx, userId, related.entity, related.entityId),
+        });
+      }
       const result: OfflineSyncResult = {
         id: mutation.id,
         status: "applied",
@@ -382,6 +477,7 @@ async function syncOne(input: { prisma: any; userId: string; mutation: OfflineMu
         version,
         canonical: applied.canonical,
         idMap: applied.idMap,
+        related: relatedResults.length ? relatedResults : undefined,
       };
       // The receipt is committed atomically with the domain write and entity
       // revision. A retry can therefore only observe the same canonical result.

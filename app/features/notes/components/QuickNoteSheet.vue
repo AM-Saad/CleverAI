@@ -20,11 +20,19 @@
           variant="ghost"
           tone="neutral"
           leading-icon="i-lucide-maximize-2"
+          :disabled="morphing"
           @click="emit('open-full')"
         >
           Open full note
         </UiButton>
-        <UiButton pill tone="primary" @click="emit('done')">Done</UiButton>
+        <UiButton
+          pill
+          tone="primary"
+          :disabled="morphing"
+          @click="emit('done')"
+        >
+          Done
+        </UiButton>
       </div>
     </template>
   </UiSheet>

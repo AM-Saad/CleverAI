@@ -11,7 +11,7 @@ import { useFuse } from "@vueuse/integrations/useFuse";
 import { computed, shallowRef, watch } from "vue";
 import type { NoteState } from "~/features/notes/composables/useNotesStore";
 import { useNotesStore } from "../composables/useNotesStore";
-import { comparePosition } from "../../../shared/utils/position-key";
+import { comparePosition } from "@@/shared/utils/position-key";
 
 const props = defineProps<{
   workspaceId: string;

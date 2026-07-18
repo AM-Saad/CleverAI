@@ -1,12 +1,9 @@
 import type { Note } from "@@/shared/utils/note.contract";
 import type {
   NoteLayoutChange,
-  NotesSyncRequest,
-  NotesSyncResponse,
   PendingNoteChange,
 } from "@@/shared/utils/note-sync.contract";
 import type { Ref } from "vue";
-import type { Result } from "../../../types/Result";
 import type { NotesConflictResolver } from "./notesConflictResolver";
 import type { NotesGroupQueue } from "./notesGroupQueue";
 import type { NotesLayoutQueue } from "./notesLayoutQueue";
@@ -15,8 +12,10 @@ import type { NotesPendingQueue } from "./notesPendingQueue";
 import { logNotesOperation } from "./notesOperationLog";
 import { createNotesSyncEngine, type NotesSyncReason } from "./notesSyncEngine";
 import type { NotesSyncCoordinator } from "./notesSyncCoordinator";
+import { withNotesWorkspaceMutationLock } from "./notesWorkspaceMutationLock";
 import {
   normalizeLocalNote,
+  noteStateFromPendingChange,
   noteStateFromServer,
   type NoteState,
 } from "./noteTransforms";
@@ -50,13 +49,29 @@ export function createNotesSyncRuntime(input: {
     isVerifiedOnline: Ref<boolean>;
   };
   notesApi: {
-    getByWorkspace(workspaceId: string): Promise<Result<Note[]>>;
-    sync(payload: NotesSyncRequest): Promise<Result<NotesSyncResponse>>;
+    getByWorkspace(
+      workspaceId: string,
+    ): ReturnType<
+      import("~/features/notes/services/noteService").NoteService["getByWorkspace"]
+    >;
+    sync(
+      payload: Parameters<
+        import("~/features/notes/services/noteService").NoteService["sync"]
+      >[0],
+    ): ReturnType<
+      import("~/features/notes/services/noteService").NoteService["sync"]
+    >;
   };
   flushDrafts(): Promise<void>;
-  resetSyncRetry(): void;
-  scheduleSyncRetry(): void;
   hydrateLocalGroups(): Promise<void>;
+  applyGroupIdMap?(groupIdMap: Record<string, string>): Promise<void>;
+  settleGroupDeletes?(input: {
+    appliedIds: string[];
+    conflictIds: string[];
+    sentChanges: import("@@/shared/utils/note-sync.contract").PendingNoteGroupChange[];
+  }): Promise<void>;
+  resetSyncRetry?(): void;
+  scheduleSyncRetry?(): void;
 }): NotesSyncRuntime {
   const {
     workspaceId,
@@ -75,9 +90,11 @@ export function createNotesSyncRuntime(input: {
     networkMonitor,
     notesApi,
     flushDrafts,
-    resetSyncRetry,
-    scheduleSyncRetry,
     hydrateLocalGroups,
+    applyGroupIdMap = async () => {},
+    settleGroupDeletes = async () => {},
+    resetSyncRetry = () => {},
+    scheduleSyncRetry = () => {},
   } = input;
 
   const refreshLayoutPendingCount = async () => {
@@ -214,7 +231,13 @@ export function createNotesSyncRuntime(input: {
       (change) => !change.conflicted,
     );
     pendingChanges = await repairDirtyNotesWithoutPending(pendingChanges);
-    const pendingGroupChanges = await groupQueue.load(workspaceId);
+    const allPendingGroupChanges = await groupQueue.load(workspaceId);
+    const hasUnresolvedGroupConflicts = allPendingGroupChanges.some(
+      (change) => change.conflicted,
+    );
+    const pendingGroupChanges = allPendingGroupChanges.filter(
+      (change) => !change.conflicted,
+    );
     let pendingLayout = await layoutQueue.load(workspaceId);
     ({ pendingChanges, pendingLayout } = await preparePendingLayoutForSync(
       pendingChanges,
@@ -227,9 +250,11 @@ export function createNotesSyncRuntime(input: {
       !pendingLayout
     ) {
       layoutPendingCount.value = 0;
-      layoutStatus.value = "synced";
-      resetSyncRetry();
-      return !hasUnresolvedConflicts;
+      layoutStatus.value =
+        hasUnresolvedConflicts || hasUnresolvedGroupConflicts
+          ? "conflict"
+          : "synced";
+      return !hasUnresolvedConflicts && !hasUnresolvedGroupConflicts;
     }
 
     logNotesOperation("sync-start", {
@@ -246,11 +271,9 @@ export function createNotesSyncRuntime(input: {
       groupChanges: pendingGroupChanges,
       ...(pendingLayout && { layoutChange: pendingLayout }),
     });
-
     if (!result.success) {
-      console.error("Failed to sync notes queues", { error: result.error });
       await refreshLayoutPendingCount();
-      if (pendingLayout) layoutStatus.value = "failed";
+      if (pendingLayout) layoutStatus.value = "queued";
       logNotesOperation("sync-failure", {
         workspaceId,
         reason: "notes-sync-api-failed",
@@ -259,33 +282,126 @@ export function createNotesSyncRuntime(input: {
       return false;
     }
 
-    resetSyncRetry();
-
-    await syncCoordinator.applySyncResult(result.data);
+    const hasProcessingErrors = (result.data.errors ?? []).length > 0;
+    if (!hasProcessingErrors) resetSyncRetry();
+    await syncCoordinator.applySyncResult(result.data, pendingChanges);
     const recordedConflicts = await conflictResolver.recordContentConflicts(
       result.data,
     );
-    await pendingQueue.remove(result.data.applied ?? []);
-    await groupQueue.remove(result.data.groupApplied ?? []);
-    if (result.data.layoutApplied && pendingLayout) {
+    if (Object.keys(result.data.groupIdMap ?? {}).length) {
+      await applyGroupIdMap(result.data.groupIdMap);
+    }
+
+    const currentGroups = new Map(
+      (await groupQueue.load(workspaceId)).map((change) => [change.id, change]),
+    );
+    const sentGroups = new Map(
+      pendingGroupChanges.map((change) => [change.id, change]),
+    );
+    const replayedGroupCreates = new Set(
+      result.data.replayedGroupCreates ?? [],
+    );
+    for (const id of result.data.groupApplied ?? []) {
+      const current = currentGroups.get(id);
+      const sent = sentGroups.get(id);
+      const hasNewer =
+        replayedGroupCreates.has(id) ||
+        Boolean(
+          current &&
+          sent &&
+          (current.localVersion > sent.localVersion ||
+            current.updatedAt > sent.updatedAt ||
+            current.operation !== sent.operation),
+        );
+      const serverId = result.data.groupIdMap?.[id];
+      if (serverId) {
+        await groupQueue.remove([id]);
+        if (hasNewer && current) {
+          await groupQueue.add({
+            ...current,
+            id: serverId,
+            operation: current.operation === "delete" ? "delete" : "rename",
+            serverVersion: current.serverVersion ?? 1,
+          });
+        }
+      } else if (!hasNewer) {
+        await groupQueue.remove([id]);
+      }
+    }
+    for (const conflict of result.data.groupConflicts ?? []) {
+      const current =
+        currentGroups.get(conflict.id) ?? sentGroups.get(conflict.id);
+      if (!current) continue;
+      await groupQueue.add({ ...current, conflicted: true });
+    }
+    await settleGroupDeletes({
+      appliedIds: result.data.groupApplied ?? [],
+      conflictIds: (result.data.groupConflicts ?? []).map(
+        (conflict) => conflict.id,
+      ),
+      sentChanges: pendingGroupChanges,
+    });
+
+    const currentLayout = await layoutQueue.load(workspaceId);
+    if (
+      result.data.layoutApplied &&
+      pendingLayout &&
+      currentLayout?.localVersion === pendingLayout.localVersion &&
+      currentLayout.updatedAt === pendingLayout.updatedAt
+    ) {
       await layoutQueue.remove(workspaceId);
     }
+
+    const [remainingChanges, remainingGroups, remainingLayout] =
+      await Promise.all([
+        pendingQueue.load(workspaceId),
+        groupQueue.load(workspaceId),
+        layoutQueue.load(workspaceId),
+      ]);
     await refreshLayoutPendingCount();
-    layoutStatus.value = result.data.layoutConflict
-      ? "conflict"
-      : layoutPendingCount.value
-        ? "queued"
-        : "synced";
+    const hasContentConflict = remainingChanges.some(
+      (change) => change.conflicted,
+    );
+    const hasGroupConflict = remainingGroups.some(
+      (change) => change.conflicted,
+    );
+    const hasRetryableWork =
+      remainingChanges.some((change) => !change.conflicted) ||
+      remainingGroups.some((change) => !change.conflicted) ||
+      Boolean(remainingLayout);
+    if (hasProcessingErrors && hasRetryableWork) {
+      logNotesOperation("sync-failure", {
+        workspaceId,
+        reason: "notes-sync-processing-error",
+        errors: result.data.errors,
+      });
+      scheduleSyncRetry();
+    }
+    layoutStatus.value =
+      hasContentConflict || hasGroupConflict || result.data.layoutConflict
+        ? "conflict"
+        : remainingLayout
+          ? "queued"
+          : "synced";
     lastSync.value = new Date();
     logNotesOperation("sync-success", {
       workspaceId,
-      applied: result.data.applied.length,
-      groupApplied: result.data.groupApplied.length,
-      layoutApplied: result.data.layoutApplied,
-      layoutConflict: result.data.layoutConflict,
+      remainingChanges: remainingChanges.length,
+      remainingGroups: remainingGroups.length,
+      layoutPending: Boolean(remainingLayout),
     });
 
-    return !result.data.layoutConflict && recordedConflicts === 0;
+    return (
+      !hasUnresolvedConflicts &&
+      recordedConflicts === 0 &&
+      !hasContentConflict &&
+      !hasGroupConflict &&
+      !result.data.layoutConflict &&
+      !hasProcessingErrors &&
+      remainingChanges.length === 0 &&
+      remainingGroups.length === 0 &&
+      !remainingLayout
+    );
   };
 
   const syncEngine = createNotesSyncEngine({
@@ -310,7 +426,63 @@ export function createNotesSyncRuntime(input: {
     }
   };
 
-  const refreshFromServer = async (): Promise<void> => {
+  const sameNoteValue = (left: NoteState, right: NoteState) =>
+    left.id === right.id &&
+    left.title === right.title &&
+    left.content === right.content &&
+    (left.groupId ?? null) === (right.groupId ?? null) &&
+    left.order === right.order &&
+    left.noteType === right.noteType &&
+    left.version === right.version &&
+    JSON.stringify(left.tags ?? []) === JSON.stringify(right.tags ?? []) &&
+    JSON.stringify(left.metadata ?? null) ===
+      JSON.stringify(right.metadata ?? null) &&
+    Boolean(left.isDirty) === Boolean(right.isDirty) &&
+    left.error === right.error;
+
+  const mergeServerProjection = (
+    serverNotes: NoteState[],
+    volatileNotes: NoteState[],
+    pendingChanges: PendingNoteChange[],
+    suppressedIds: Set<string>,
+  ): NoteState[] => {
+    const projection = new Map(
+      serverNotes
+        .filter((note) => !suppressedIds.has(note.id))
+        .map((note) => [note.id, note]),
+    );
+    for (const note of volatileNotes) projection.set(note.id, note);
+
+    for (const change of pendingChanges) {
+      if (change.operation === "delete") {
+        projection.delete(change.id);
+        continue;
+      }
+      const existing = projection.get(change.id);
+      const pendingNote = existing
+        ? normalizeLocalNote({
+            ...existing,
+            ...(change.groupId !== undefined && { groupId: change.groupId }),
+            ...(change.title !== undefined && { title: change.title }),
+            ...(change.content !== undefined && { content: change.content }),
+            ...(change.tags !== undefined && { tags: change.tags }),
+            ...(change.noteType !== undefined && {
+              noteType: change.noteType,
+            }),
+            ...(change.metadata !== undefined && {
+              metadata: change.metadata,
+            }),
+            ...(change.order !== undefined && { order: change.order }),
+            updatedAt: new Date(change.updatedAt),
+            isDirty: true,
+          })
+        : noteStateFromPendingChange(change, projection.size);
+      projection.set(change.id, pendingNote as NoteState);
+    }
+    return Array.from(projection.values());
+  };
+
+  const runRefreshFromServer = async (): Promise<void> => {
     if (!networkMonitor.isVerifiedOnline.value) {
       await refreshLayoutPendingCount();
       return;
@@ -346,68 +518,130 @@ export function createNotesSyncRuntime(input: {
         return;
       }
 
-      const pendingAfterSync = new Set(
-        remainingChanges.map((change) => change.id),
+      const requestSnapshot = new Map(
+        Array.from(notes.value.entries()).map(([id, note]) => [
+          id,
+          normalizeLocalNote({ ...note }),
+        ]),
       );
       const result = await notesApi.getByWorkspace(workspaceId);
 
       if (!result.success) return;
 
-      const tempNotes = Array.from(notes.value.values()).filter(
-        (note) => note.id.startsWith("temp-") && pendingAfterSync.has(note.id),
-      );
-      const dirtyNotes = new Map<string, NoteState>();
-      for (const [id, note] of notes.value) {
-        if (note.isDirty && !id.startsWith("temp-")) {
-          dirtyNotes.set(id, note);
+      await withNotesWorkspaceMutationLock(workspaceId, async () => {
+        const pendingAtApply = await pendingQueue.load(workspaceId);
+        const currentNotes = new Map(notes.value);
+        const concurrentDeletedIds = new Set<string>();
+        for (const id of requestSnapshot.keys()) {
+          if (!currentNotes.has(id)) concurrentDeletedIds.add(id);
         }
-      }
+        const pendingUpsertIds = new Set(
+          pendingAtApply
+            .filter((change) => change.operation === "upsert")
+            .map((change) => change.id),
+        );
+        pendingAtApply
+          .filter((change) => change.operation === "delete")
+          .forEach((change) => pendingDeleteIds.add(change.id));
+        concurrentDeletedIds.forEach((id) => pendingDeleteIds.add(id));
 
-      const noteStates: NoteState[] = result.data
-        .filter((note) => !pendingDeleteIds.has(note.id))
-        .map((note) => noteStateFromServer(note));
+        const volatileNotes = Array.from(currentNotes.values()).filter(
+          (note) => {
+            const before = requestSnapshot.get(note.id);
+            return (
+              !before ||
+              !sameNoteValue(before, note) ||
+              Boolean(note.isDirty) ||
+              Boolean(note.error) ||
+              /^(temp-|local:)/.test(note.id) ||
+              pendingUpsertIds.has(note.id)
+            );
+          },
+        );
+        const serverNotes = result.data.map((note) =>
+          noteStateFromServer(note),
+        );
+        const projection = mergeServerProjection(
+          serverNotes,
+          volatileNotes,
+          pendingAtApply,
+          pendingDeleteIds,
+        );
 
-      notes.value.clear();
-      noteStates.forEach((note) => {
-        const dirty = dirtyNotes.get(note.id);
-        notes.value.set(note.id, dirty ?? note);
+        // Publish the race-aware projection before the IndexedDB transaction.
+        // A keystroke that lands while storage is settling marks its row dirty
+        // and is overlaid again below instead of being overwritten.
+        notes.value = new Map(projection.map((note) => [note.id, note]));
+
+        let persistedProjection = projection;
+        if (localRepository.replaceWorkspaceProjection) {
+          persistedProjection =
+            await localRepository.replaceWorkspaceProjection(
+              workspaceId,
+              serverNotes.filter((note) => !pendingDeleteIds.has(note.id)),
+              volatileNotes,
+            );
+        } else {
+          const existingLocal =
+            await localRepository.loadByWorkspace(workspaceId);
+          const desiredIds = new Set(projection.map((note) => note.id));
+          await Promise.all(
+            existingLocal
+              .filter((note) => !desiredIds.has(note.id))
+              .map((note) => localRepository.delete(note.id)),
+          );
+          await localRepository.saveMany(projection);
+        }
+
+        const editsDuringPersistence = Array.from(notes.value.values()).filter(
+          (note) => note.isDirty || Boolean(note.error),
+        );
+        const finalProjection = new Map(
+          persistedProjection.map((note) => [
+            note.id,
+            normalizeLocalNote(note) as NoteState,
+          ]),
+        );
+        for (const note of editsDuringPersistence) {
+          finalProjection.set(note.id, note);
+        }
+        notes.value = finalProjection;
+        lastSync.value = new Date();
       });
-
-      for (const tempNote of tempNotes) {
-        notes.value.set(tempNote.id, tempNote);
-      }
-
-      await localRepository.saveMany(
-        noteStates.filter((note) => !dirtyNotes.has(note.id)),
-      );
-
-      for (const tempNote of tempNotes) {
-        try {
-          await localRepository.delete(tempNote.id);
-        } catch {
-          /* best effort cleanup */
-        }
-      }
-
-      lastSync.value = new Date();
     } finally {
       await refreshLayoutPendingCount();
       loadingStates.value.set(workspaceId, false);
     }
   };
 
-  const syncWithServer = async (): Promise<void> => {
-    await hydrateLocalNotes();
+  let refreshPromise: Promise<void> | null = null;
+  const refreshFromServer = (): Promise<void> => {
+    if (refreshPromise) return refreshPromise;
+    const run = runRefreshFromServer().finally(() => {
+      if (refreshPromise === run) refreshPromise = null;
+    });
+    refreshPromise = run;
+    return run;
+  };
 
-    if (!networkMonitor.isVerifiedOnline.value) {
-      return;
-    }
+  let syncWithServerPromise: Promise<void> | null = null;
+  const syncWithServer = (): Promise<void> => {
+    if (syncWithServerPromise) return syncWithServerPromise;
+    const run = (async () => {
+      await hydrateLocalNotes();
 
-    try {
-      await refreshFromServer();
-    } catch {
-      // IDB data from hydrateLocalNotes remains visible.
-    }
+      if (!networkMonitor.isVerifiedOnline.value) return;
+
+      try {
+        await refreshFromServer();
+      } catch {
+        // IDB data from hydrateLocalNotes remains visible.
+      }
+    })().finally(() => {
+      if (syncWithServerPromise === run) syncWithServerPromise = null;
+    });
+    syncWithServerPromise = run;
+    return run;
   };
 
   const remapGroupIds = async (

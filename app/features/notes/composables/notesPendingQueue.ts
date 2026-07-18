@@ -1,38 +1,45 @@
 import type { PendingNoteChange } from "@@/shared/utils/note-sync.contract";
 import type { PendingQueue } from "../../../utils/local-first/ports";
 import {
+  acknowledgePendingNoteChange,
   deletePendingNoteChanges,
   loadPendingNoteChanges,
   queueNoteChange,
+  type StoredNoteState,
 } from "~/utils/idb";
-import { SYNC_TAGS } from "~/utils/constants/pwa";
-import { getServiceWorkerReadyRegistration } from "~/utils/serviceWorkerRuntime";
-import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
+import { registerNotesBackgroundSync } from "./notesBackgroundSync";
 
 export type NotesPendingQueue = PendingQueue<PendingNoteChange>;
 
-async function registerOfflineV2Sync() {
-  const registration = await getServiceWorkerReadyRegistration(1500);
-  if (registration && "sync" in registration) {
-    // @ts-expect-error SyncManager is absent from some DOM lib versions.
-    await registration.sync.register(SYNC_TAGS.OFFLINE_V2);
-  }
-}
+export type NotesPendingAcknowledgement = {
+  remapToId?: string;
+  serverVersion?: number;
+  keepCurrent?: boolean;
+  localMutation?:
+    | { type: "delete"; id?: string }
+    | { type: "remap"; fromId: string; note: StoredNoteState }
+    | {
+        type: "advance";
+        id: string;
+        serverVersion?: number;
+        updatedAt?: string;
+      };
+};
 
-export function createIndexedDbNotesPendingQueue(): NotesPendingQueue {
+export type RevisionAwareNotesPendingQueue = NotesPendingQueue & {
+  acknowledge?: (
+    sent: PendingNoteChange,
+    acknowledgement?: NotesPendingAcknowledgement,
+  ) => Promise<PendingNoteChange | null>;
+};
+
+/** Notes has one feature-owned, durable outbox. */
+export function createIndexedDbNotesPendingQueue(): RevisionAwareNotesPendingQueue {
   return {
-    add: async (change) => {
-      await queueNoteChange(change);
-      // Legacy storage is a crash-safe intake buffer only. Move every write
-      // into the account-scoped outbox immediately so reconnect does not rely
-      // on the old Notes-specific sync protocol.
-      if (typeof useAuth === "function") {
-        const offline = useOfflineRuntime();
-        if (offline.accountId.value) await offline.migrateLegacyNotes();
-      }
-    },
+    add: queueNoteChange,
     load: loadPendingNoteChanges,
     remove: deletePendingNoteChanges,
-    registerBackgroundSync: registerOfflineV2Sync,
+    acknowledge: acknowledgePendingNoteChange,
+    registerBackgroundSync: registerNotesBackgroundSync,
   };
 }

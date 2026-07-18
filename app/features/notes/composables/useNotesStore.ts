@@ -1,7 +1,6 @@
 import type { NoteType } from "@@/shared/utils/note.contract";
 import type { NoteGroupLayoutItem } from "@@/shared/utils/note-sync.contract";
 import { useNetworkStatus } from "~/composables/shared/useNetworkStatus";
-import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 import { createIndexedDbNotesLocalRepository } from "./notesLocalRepository";
 import {
   createNotesLayoutController,
@@ -12,21 +11,18 @@ import { createIndexedDbNotesGroupQueue } from "./notesGroupQueue";
 import { createIndexedDbNotesLayoutQueue } from "./notesLayoutQueue";
 import { createIndexedDbNotesPendingQueue } from "./notesPendingQueue";
 import { createNotesSyncCoordinator } from "./notesSyncCoordinator";
-import {
-  normalizeLocalNote,
-  type NoteState,
-} from "./noteTransforms";
+import { normalizeLocalNote, type NoteState } from "./noteTransforms";
 import { createIndexedDbNotesConflictRepository } from "./notesConflictRepository";
 import {
   createNotesConflictResolver,
   type NotesConflictResolution,
 } from "./notesConflictResolver";
 import type { NoteSyncConflictRecord } from "~/utils/idb";
-import { createNotesErrorPolicy } from "./notesErrorPolicy";
 import { createNotesMemoryStore } from "./notesMemoryStore";
 import { createNotesCommandService } from "./notesCommandService";
 import { createNotesSyncRuntime } from "./notesSyncRuntime";
 import { createNotesContentQueue } from "./notesContentQueue";
+import { createNotesErrorPolicy } from "./notesErrorPolicy";
 import {
   registerNotesSyncListenersOnce,
   setActiveNotesWorkspace,
@@ -47,12 +43,27 @@ export interface NotesStore {
   layoutPendingCount: Ref<number>;
   layoutStatus: Ref<NotesLayoutStatus>;
   errorCount: ComputedRef<number>;
-  applyNoteDraft: (id: string, draft: Partial<Pick<NoteState, "title" | "content" | "metadata">>) => boolean;
-  createNote: (content: string, tags?: string[], noteType?: NoteType, metadata?: Record<string, unknown>, title?: string, groupId?: string | null) => Promise<string | null>;
+  applyNoteDraft: (
+    id: string,
+    draft: Partial<Pick<NoteState, "title" | "content" | "metadata">>,
+  ) => boolean;
+  createNote: (
+    content: string,
+    tags?: string[],
+    noteType?: NoteType,
+    metadata?: Record<string, unknown>,
+    title?: string,
+    groupId?: string | null,
+    options?: { deferSync?: boolean },
+  ) => Promise<string | null>;
   updateNote: (id: string, updatedNote: NoteState) => Promise<boolean>;
   deleteNote: (id: string) => Promise<boolean>;
   applyLayoutCommand: (command: NotesLayoutCommand) => Promise<boolean>;
-  reorderNotes: (reorderedNotes: NoteState[] | Array<{ id: string; groupId: string | null; order: number }>) => Promise<boolean>;
+  reorderNotes: (
+    reorderedNotes:
+      | NoteState[]
+      | Array<{ id: string; groupId: string | null; order: number }>,
+  ) => Promise<boolean>;
   clearGroup: (groupId: string) => Promise<void>;
   remapGroupIds: (groupIdMap: Record<string, string>) => Promise<void>;
   hydrateLocalNotes: () => Promise<void>;
@@ -65,7 +76,10 @@ export interface NotesStore {
   retryFailedNote: (id: string) => Promise<boolean>;
   clearNoteError: (id: string) => void;
   getConflict: (id: string) => NoteSyncConflictRecord | null;
-  resolveNoteConflict: (id: string, resolution: NotesConflictResolution) => Promise<boolean>;
+  resolveNoteConflict: (
+    id: string,
+    resolution: NotesConflictResolution,
+  ) => Promise<boolean>;
   isNoteLoading: (id: string) => boolean;
   isNoteDirty: (id: string) => boolean;
   getNote: (id: string) => NoteState | null;
@@ -92,7 +106,6 @@ export function useNotesStore(workspaceId: string): NotesStore {
   const { $api } = useNuxtApp();
   const toast = useToast();
   const networkMonitor = useNetworkStatus();
-  const offline = useOfflineRuntime();
   const workspaceRuntime = useNotesWorkspaceRuntime(workspaceId);
   const localRepository = createIndexedDbNotesLocalRepository();
   const layoutQueue = createIndexedDbNotesLayoutQueue();
@@ -109,10 +122,14 @@ export function useNotesStore(workspaceId: string): NotesStore {
   const conflicts = ref<Map<string, NoteSyncConflictRecord>>(new Map());
   const noteValues = computed(() => Array.from(notes.value.values()));
   const memoryStore = createNotesMemoryStore(notes);
-  const dirtyCount = computed(() => noteValues.value.filter((note) => note.isDirty).length);
+  const dirtyCount = computed(
+    () => noteValues.value.filter((note) => note.isDirty).length,
+  );
   const layoutPendingCount = ref(0);
   const layoutStatus = ref<NotesLayoutStatus>("idle");
-  const errorCount = computed(() => noteValues.value.filter((note) => Boolean(note.error)).length);
+  const errorCount = computed(
+    () => noteValues.value.filter((note) => Boolean(note.error)).length,
+  );
   let groupLayoutProvider: () => NoteGroupLayoutItem[] = () =>
     workspaceRuntime.getGroupLayout();
   const setGroupLayoutProvider = (provider: () => NoteGroupLayoutItem[]) => {
@@ -143,44 +160,25 @@ export function useNotesStore(workspaceId: string): NotesStore {
     id: string,
     draft: Partial<Pick<NoteState, "title" | "content" | "metadata">>,
   ): boolean => {
-    const note = notes.value.get(id);
+    const durableId = noteIdAliases.value.get(id) ?? id;
+    const note = notes.value.get(durableId);
     if (!note) return false;
 
     const nextNote = normalizeLocalNote({
       ...note,
       ...draft,
       updatedAt: new Date(),
+      isDirty: true,
     });
-    notes.value.set(id, nextNote);
+    notes.value.set(durableId, nextNote);
     return true;
   };
 
-  const errorPolicy = createNotesErrorPolicy({ maxAttempts: 4 });
-  const resetSyncRetry = () => errorPolicy.reset();
   let syncRuntime: ReturnType<typeof createNotesSyncRuntime>;
   const syncPendingChanges = async (): Promise<boolean> => {
-    if (!offline.accountId.value) return syncRuntime.syncPendingChanges("background");
-    await offline.migrateLegacyNotes();
-    await offline.sync();
-    return true;
+    return await syncRuntime.syncPendingChanges("background");
   };
-  const scheduleSyncRetry = () => {
-    errorPolicy.scheduleRetry({
-      workspaceId,
-      retry: () => {
-        if (networkMonitor.isVerifiedOnline.value) {
-          void syncPendingChanges();
-        }
-      },
-      onTerminalFailure: () => {
-        toast.add({
-          title: "Sync failed",
-          description: "4 retries exhausted. Your local notes are still saved. Retry sync or export affected notes.",
-          color: "error",
-        });
-      },
-    });
-  };
+  const errorPolicy = createNotesErrorPolicy({ maxAttempts: 4 });
   const contentQueue = createNotesContentQueue({
     workspaceId,
     notes,
@@ -193,7 +191,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
     },
   });
   const flushDrafts = contentQueue.flushDrafts;
-  const queueContentSave = contentQueue.queueContentSave;
+  const queueContentSave = contentQueue.queueContentSaveNow;
 
   syncRuntime = createNotesSyncRuntime({
     workspaceId,
@@ -214,12 +212,31 @@ export function useNotesStore(workspaceId: string): NotesStore {
     },
     notesApi: $api.notes,
     flushDrafts,
-    resetSyncRetry,
-    scheduleSyncRetry,
     hydrateLocalGroups: () => workspaceRuntime.hydrateLocalGroups(),
+    applyGroupIdMap: async (groupIdMap) => {
+      await workspaceRuntime.applyOfflineGroupIdMap(groupIdMap);
+    },
+    settleGroupDeletes: (result) => workspaceRuntime.settleGroupDeletes(result),
+    resetSyncRetry: () => errorPolicy.reset(),
+    scheduleSyncRetry: () =>
+      errorPolicy.scheduleRetry({
+        workspaceId,
+        retry: () => {
+          if (networkMonitor.isVerifiedOnline.value) void syncPendingChanges();
+        },
+        onTerminalFailure: () => {
+          toast.add({
+            title: "Sync failed",
+            description:
+              "Your local notes are still saved. Retry when the connection is stable.",
+            color: "error",
+          });
+        },
+      }),
   });
 
-  const refreshLayoutPendingCount = () => syncRuntime.refreshLayoutPendingCount();
+  const refreshLayoutPendingCount = () =>
+    syncRuntime.refreshLayoutPendingCount();
 
   let layoutSyncTimer: ReturnType<typeof setTimeout> | null = null;
   const scheduleLayoutSync = () => {
@@ -253,13 +270,13 @@ export function useNotesStore(workspaceId: string): NotesStore {
     memoryStore,
     localRepository,
     pendingQueue,
-    layoutController,
     registerBackgroundSync: () => pendingQueue.registerBackgroundSync(),
     requestSync: () => {
       if (networkMonitor.isVerifiedOnline.value) {
         void syncPendingChanges();
       }
     },
+    resolveNoteId: (id) => syncRuntime.resolveNoteId(id) ?? id,
   });
 
   workspaceRuntime.registerSyncDrainer(() => syncPendingChanges());
@@ -267,7 +284,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
   // Update note content - local-first approach with IndexedDB persistence
   const updateNote = async (
     id: string,
-    updatedNote: NoteState
+    updatedNote: NoteState,
   ): Promise<boolean> => {
     if (conflictResolver.getConflict(id)) {
       toast.add({
@@ -292,6 +309,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
     metadata?: Record<string, unknown>,
     title?: string,
     groupId?: string | null,
+    options?: { deferSync?: boolean },
   ): Promise<string | null> => {
     return commandService.createNote({
       workspaceId,
@@ -301,8 +319,10 @@ export function useNotesStore(workspaceId: string): NotesStore {
       metadata,
       title,
       groupId,
+      deferSync: options?.deferSync,
     });
   };
+
   // Delete a note - simple optimistic approach
   const deleteNote = async (id: string): Promise<boolean> => {
     const note = notes.value.get(id);
@@ -314,7 +334,9 @@ export function useNotesStore(workspaceId: string): NotesStore {
     });
   };
 
-  const applyLayoutCommand = async (command: NotesLayoutCommand): Promise<boolean> => {
+  const applyLayoutCommand = async (
+    command: NotesLayoutCommand,
+  ): Promise<boolean> => {
     const result = await layoutController.apply(command);
     if (!result) {
       toast.add({
@@ -328,7 +350,9 @@ export function useNotesStore(workspaceId: string): NotesStore {
 
   // Compatibility entrypoint. New UI paths emit layout items, not full notes.
   const reorderNotes = async (
-    reorderedNotes: NoteState[] | Array<{ id: string; groupId: string | null; order: number }>,
+    reorderedNotes:
+      | NoteState[]
+      | Array<{ id: string; groupId: string | null; order: number }>,
   ): Promise<boolean> => {
     return applyLayoutCommand({
       type: "APPLY_NOTE_LAYOUT",
@@ -351,20 +375,8 @@ export function useNotesStore(workspaceId: string): NotesStore {
 
   const remapGroupIds = syncRuntime.remapGroupIds;
   const hydrateLocalNotes = syncRuntime.hydrateLocalNotes;
-  const refreshFromServer = async () => {
-    if (offline.accountId.value) {
-      await offline.migrateLegacyNotes();
-      await offline.sync();
-    }
-    await syncRuntime.refreshFromServer();
-  };
-  const syncWithServer = async () => {
-    if (offline.accountId.value) {
-      await offline.migrateLegacyNotes();
-      await offline.sync();
-    }
-    await syncRuntime.syncWithServer();
-  };
+  const refreshFromServer = syncRuntime.refreshFromServer;
+  const syncWithServer = syncRuntime.syncWithServer;
 
   // Utility functions
   const isNoteLoading = (id: string): boolean => {
@@ -385,7 +397,8 @@ export function useNotesStore(workspaceId: string): NotesStore {
     if (note.error.includes("Sync conflict detected")) {
       toast.add({
         title: "Resolve conflict first",
-        description: "This note has local and server versions. It will not overwrite either side until a conflict choice is made.",
+        description:
+          "This note has local and server versions. It will not overwrite either side until a conflict choice is made.",
         color: "warning",
       });
       return false;
@@ -415,8 +428,15 @@ export function useNotesStore(workspaceId: string): NotesStore {
     id: string,
     resolution: NotesConflictResolution,
   ): Promise<boolean> => {
-    const resolved = await conflictResolver.resolveContentConflict(id, resolution);
-    if (resolved && resolution === "keep-local" && networkMonitor.isVerifiedOnline.value) {
+    const resolved = await conflictResolver.resolveContentConflict(
+      id,
+      resolution,
+    );
+    if (
+      resolved &&
+      resolution === "keep-local" &&
+      networkMonitor.isVerifiedOnline.value
+    ) {
       void syncPendingChanges();
     }
     return resolved;
@@ -489,18 +509,8 @@ export function useNotesStore(workspaceId: string): NotesStore {
   stores.set(workspaceId, store);
   registerNotesSyncListenersOnce(stores);
 
-  // Defer local hydration to the mounting phase so that:
-  //  1. The cache entry is already set (race condition above is avoided).
-  //  2. The composable can be called outside a component (e.g. in a Pinia
-  //     action or test) without triggering a spurious server round-trip.
-  if (getCurrentInstance()) {
-    onMounted(() => {
-      void hydrateLocalNotes();
-    });
-  } else {
-    // Called outside a component – caller is responsible for triggering sync
-    // (e.g. via store.syncWithServer()) at the appropriate time.
-  }
+  // Page/container owners hydrate explicitly. Registering lifecycle hooks here
+  // is invalid when this cached store is first resolved from a computed value.
 
   return store;
 }

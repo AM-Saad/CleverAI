@@ -63,6 +63,18 @@ export async function syncBoardItems(input: {
         }
       }
 
+      if (item.columnId) {
+        const column = await prisma.boardColumn.findFirst({
+          where: { id: item.columnId, userId },
+          select: { id: true, workspaceId: true },
+        });
+        if (!column || (column.workspaceId && column.workspaceId !== (item.workspaceId ?? null))) {
+          conflicts.push({ id: item.id });
+          results.push({ id: item.id, status: "conflict" });
+          continue;
+        }
+      }
+
       const isTempId = item.id.startsWith("temp-");
       const existing = await prisma.boardItem.findFirst({
         where: {
@@ -83,7 +95,10 @@ export async function syncBoardItems(input: {
           data: {
             content: item.content,
             tags: item.tags,
+            ...(item.columnId !== undefined && { columnId: item.columnId }),
+            ...(item.workspaceId !== undefined && { workspaceId: item.workspaceId }),
             order: item.order,
+            ...(item.position !== undefined && { position: item.position }),
             dueDate: item.dueDate ? new Date(item.dueDate) : null,
             attachments: item.attachments ?? [],
             updatedAt: new Date(item.updatedAt),
@@ -104,6 +119,7 @@ export async function syncBoardItems(input: {
           content: item.content,
           tags: item.tags || [],
           order: item.order || 0,
+          ...(item.position !== undefined && { position: item.position }),
           dueDate: item.dueDate ? new Date(item.dueDate) : null,
           attachments: item.attachments ?? [],
           createdAt: new Date(item.createdAt),

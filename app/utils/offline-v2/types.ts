@@ -15,6 +15,8 @@ export type OfflineEntityRecord<T extends object = Record<string, unknown>> = {
   version: number;
   updatedAt: number;
   deleted?: boolean;
+  /** Durable local draft not yet represented by an outbox mutation. */
+  localDirty?: boolean;
   data: T;
 };
 
@@ -22,6 +24,11 @@ export type StoredOfflineMutation = OfflineMutation & {
   accountId: string;
   workspaceId?: string;
   updatedAt: number;
+  /** Monotonic local payload revision used to reject stale acknowledgements. */
+  localRevision?: number;
+  /** Cross-context lease. Only the owner may acknowledge or release this row. */
+  claimToken?: string;
+  claimedAt?: number;
 };
 
 export type StoredOfflineConflict = OfflineConflict & {

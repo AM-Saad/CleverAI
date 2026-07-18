@@ -127,6 +127,7 @@ export function createNotesLayoutController(input: {
     const generation = ++layoutGeneration;
     const canonical = buildCanonicalNoteLayout(noteLayout);
     const changedNotes: NoteState[] = [];
+    const previousNotes: NoteState[] = [];
 
     for (const item of canonical) {
       const existing = notes.value.get(item.id);
@@ -138,30 +139,35 @@ export function createNotesLayoutController(input: {
         groupId: item.groupId,
         order: item.order,
       };
+      previousNotes.push(existing);
       notes.value.set(item.id, nextNote);
       changedNotes.push(nextNote);
     }
 
     status.value = "queued";
-    void (async () => {
-      try {
-        if (changedNotes.length) {
-          await localRepository.saveMany(changedNotes);
-        }
-
-        await saveLayoutChange(canonical, generation);
-      } catch (error) {
-        console.error("Failed to queue note layout", error);
-        status.value = "failed";
-        logNotesOperation("sync-failure", {
-          workspaceId,
-          reason: "layout-queue-failed",
-          error,
-        });
+    try {
+      if (changedNotes.length) {
+        await localRepository.saveMany(changedNotes);
       }
-    })();
 
-    return true;
+      await saveLayoutChange(canonical, generation);
+      return true;
+    } catch (error) {
+      console.error("Failed to queue note layout", error);
+      if (generation === layoutGeneration) {
+        for (const previous of previousNotes) notes.value.set(previous.id, previous);
+        if (previousNotes.length) {
+          try { await localRepository.saveMany(previousNotes); } catch { /* original error remains authoritative */ }
+        }
+        status.value = "failed";
+      }
+      logNotesOperation("sync-failure", {
+        workspaceId,
+        reason: "layout-queue-failed",
+        error,
+      });
+      return false;
+    }
   };
 
   const apply = async (command: NotesLayoutCommand): Promise<boolean> => {

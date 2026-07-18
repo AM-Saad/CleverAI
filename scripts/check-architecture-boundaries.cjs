@@ -235,11 +235,40 @@ function checkFrontendFeatureFile(file) {
   return violations;
 }
 
+function checkBoardSingleProjection() {
+  const boardRoot = path.join(frontendFeaturesRoot, "board");
+  const allowed = new Set([
+    path.join(boardRoot, "repositories", "boardOfflineRepository.ts"),
+  ]);
+  const files = [
+    ...walk(boardRoot),
+    path.join(root, "app", "composables", "offline", "useOfflineRuntime.ts"),
+    path.join(root, "sw-src", "index.ts"),
+  ].filter((file) => fs.existsSync(file) && !allowed.has(file));
+  const violations = [];
+  for (const file of files) {
+    const source = fs.readFileSync(file, "utf8");
+    const match = source.match(
+      /(?:DB_CONFIG\.)?STORES\.(BOARD_ITEMS|BOARD_COLUMNS|PENDING_BOARD_ITEMS)/,
+    );
+    if (match) {
+      violations.push({
+        rel: path.relative(root, file),
+        specifier: match[0],
+        message:
+          "active Board code must use offlineEntities/offlineMutations; legacy Board stores are migration inputs only",
+      });
+    }
+  }
+  return violations;
+}
+
 const serverFiles = walk(modulesRoot);
 const frontendFiles = walk(frontendFeaturesRoot);
 const violations = [
   ...serverFiles.flatMap(checkFile),
   ...frontendFiles.flatMap(checkFrontendFeatureFile),
+  ...checkBoardSingleProjection(),
 ];
 
 if (violations.length) {

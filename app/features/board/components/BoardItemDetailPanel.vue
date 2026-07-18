@@ -5,6 +5,7 @@ import type { BoardItemState } from "../composables/useBoardItemsStore";
 import type { Attachment, BoardItemComment, BoardItemLink } from "~/shared/utils/boardItem.contract";
 import type { BoardItemExternalRef } from "@@/shared/utils/boardIntegration.contract";
 import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
+import { createClientTempId } from "~/utils/local-first/tempIds";
 
 const props = defineProps<{
   item: BoardItemState;
@@ -175,6 +176,177 @@ const showAddLink = ref(false);
 const newLinkTargetId = ref<string>("");
 const newLinkType = ref<LinkType>("RELATED");
 const addingLink = ref(false);
+const relationIdAliases = new Map<string, string>();
+
+const handleOfflineRelationRemap = (event: Event) => {
+  const detail = (event as CustomEvent<{ entity?: string; idMap?: Record<string, string> }>).detail;
+  if (!detail?.idMap || (detail.entity !== "boardLink" && detail.entity !== "boardComment")) return;
+  const current = itemsStore.getItem(props.item.id);
+  if (!current) return;
+  for (const [tempId, serverId] of Object.entries(detail.idMap)) relationIdAliases.set(tempId, serverId);
+  if (detail.entity === "boardLink" && current.links) {
+    itemsStore.items.value.set(current.id, {
+      ...current,
+      links: {
+        sent: current.links.sent.map((link) => ({ ...link, id: detail.idMap![link.id] ?? link.id })),
+        received: current.links.received.map((link) => ({ ...link, id: detail.idMap![link.id] ?? link.id })),
+      },
+    });
+  } else if (detail.entity === "boardComment" && current.comments) {
+    itemsStore.items.value.set(current.id, {
+      ...current,
+      comments: current.comments.map((comment) => ({ ...comment, id: detail.idMap![comment.id] ?? comment.id })),
+    });
+  }
+};
+
+const handleOfflineRelationFailure = (event: Event) => {
+  const detail = (event as CustomEvent<{
+    entity?: string;
+    entityId?: string;
+    status?: string;
+    operation?: string;
+    rollbackData?: Record<string, unknown> | null;
+    message?: string;
+    canonical?: Record<string, unknown> | null;
+    version?: number;
+  }>).detail;
+  if (!detail?.entityId || (detail.entity !== "boardLink" && detail.entity !== "boardComment")) return;
+  const current = itemsStore.getItem(props.item.id);
+  if (!current) return;
+
+  if (detail.status === "applied") {
+    if (detail.entity === "boardLink") {
+      const links = current.links ?? { sent: [], received: [] };
+      const withoutCurrent = {
+        sent: links.sent.filter((link) => link.id !== detail.entityId),
+        received: links.received.filter((link) => link.id !== detail.entityId),
+      };
+      const canonical = detail.canonical as BoardItemLink | null | undefined;
+      if (canonical && !((canonical as unknown as { deleted?: boolean }).deleted)) {
+        const prior = [...links.sent, ...links.received].find((link) => link.id === detail.entityId);
+        const next = {
+          ...prior,
+          ...canonical,
+          id: detail.entityId,
+          offlineRevision: detail.version,
+        } as BoardItemLink;
+        const direction = next.sourceId === props.item.id ? "sent" : "received";
+        withoutCurrent[direction] = [...withoutCurrent[direction], next];
+      }
+      itemsStore.items.value.set(current.id, { ...current, links: withoutCurrent });
+    } else {
+      const withoutCurrent = (current.comments ?? []).filter(
+        (comment) => comment.id !== detail.entityId,
+      );
+      const canonical = detail.canonical as BoardItemComment | null | undefined;
+      itemsStore.items.value.set(current.id, {
+        ...current,
+        comments:
+          canonical && !((canonical as unknown as { deleted?: boolean }).deleted)
+            ? [...withoutCurrent, {
+                ...canonical,
+                id: detail.entityId,
+                offlineRevision: detail.version,
+              }]
+            : withoutCurrent,
+      });
+    }
+    return;
+  }
+  if (detail.status !== "rejected" && detail.status !== "conflict") return;
+
+  if (detail.status === "rejected") {
+    if (detail.entity === "boardLink") {
+      const links = current.links ?? { sent: [], received: [] };
+      const withoutRejected = {
+        sent: links.sent.filter((link) => link.id !== detail.entityId),
+        received: links.received.filter((link) => link.id !== detail.entityId),
+      };
+      const rollback = detail.rollbackData as BoardItemLink | null | undefined;
+      if (rollback) {
+        const direction = rollback.sourceId === props.item.id ? "sent" : "received";
+        withoutRejected[direction] = [...withoutRejected[direction], rollback];
+      }
+      itemsStore.items.value.set(current.id, { ...current, links: withoutRejected });
+    } else {
+      const withoutRejected = (current.comments ?? []).filter((comment) => comment.id !== detail.entityId);
+      const rollback = detail.rollbackData as BoardItemComment | null | undefined;
+      itemsStore.items.value.set(current.id, {
+        ...current,
+        comments: rollback ? [...withoutRejected, rollback] : withoutRejected,
+      });
+    }
+  }
+  toast.add({
+    title: detail.status === "conflict" ? "Board relation conflict" : "Board relation rejected",
+    description: detail.message ?? "Review the saved local change in Sync Center.",
+    color: "warning",
+  });
+};
+
+const handleOfflineRelationConflictResolution = (event: Event) => {
+  const detail = (event as CustomEvent<{
+    entity?: string;
+    entityId?: string;
+    strategy?: "keep-local" | "keep-server";
+    serverVersion?: number;
+    serverSnapshot?: Record<string, unknown> | null;
+  }>).detail;
+  if (
+    !detail?.entityId ||
+    !detail.strategy ||
+    (detail.entity !== "boardLink" && detail.entity !== "boardComment")
+  ) return;
+  const current = itemsStore.getItem(props.item.id);
+  if (!current) return;
+  if (detail.strategy === "keep-local") return;
+
+  if (detail.entity === "boardLink") {
+    const links = current.links ?? { sent: [], received: [] };
+    const next = {
+      sent: links.sent.filter((link) => link.id !== detail.entityId),
+      received: links.received.filter((link) => link.id !== detail.entityId),
+    };
+    const snapshot = detail.serverSnapshot as BoardItemLink | null | undefined;
+    if (snapshot) {
+      const relation = {
+        ...snapshot,
+        id: detail.entityId,
+        offlineRevision: detail.serverVersion,
+      } as BoardItemLink;
+      const direction = relation.sourceId === props.item.id ? "sent" : "received";
+      next[direction] = [...next[direction], relation];
+    }
+    itemsStore.items.value.set(current.id, { ...current, links: next });
+  } else {
+    const comments = (current.comments ?? []).filter(
+      (comment) => comment.id !== detail.entityId,
+    );
+    const snapshot = detail.serverSnapshot as BoardItemComment | null | undefined;
+    itemsStore.items.value.set(current.id, {
+      ...current,
+      comments: snapshot
+        ? [...comments, {
+            ...snapshot,
+            id: detail.entityId,
+            offlineRevision: detail.serverVersion,
+          }]
+        : comments,
+    });
+  }
+};
+
+onMounted(() => {
+  window.addEventListener("offline-v2-entity-id-remapped", handleOfflineRelationRemap);
+  window.addEventListener("offline-v2-sync-result", handleOfflineRelationFailure);
+  window.addEventListener("offline-v2-board-conflict-resolved", handleOfflineRelationConflictResolution);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener("offline-v2-entity-id-remapped", handleOfflineRelationRemap);
+  window.removeEventListener("offline-v2-sync-result", handleOfflineRelationFailure);
+  window.removeEventListener("offline-v2-board-conflict-resolved", handleOfflineRelationConflictResolution);
+});
 
 const linkableItems = computed(() => {
   const linkedIds = new Set([
@@ -192,32 +364,40 @@ const linkableItems = computed(() => {
 async function addLink() {
   if (!newLinkTargetId.value) return;
   addingLink.value = true;
+  const id = createClientTempId("board-link");
+  const link = {
+    id,
+    sourceId: props.item.id,
+    targetId: newLinkTargetId.value,
+    linkType: newLinkType.value,
+    userId: "",
+    createdAt: new Date(),
+  } as BoardItemLink;
+  const before = itemsStore.getItem(props.item.id);
   try {
-    if (!offline.isOnline.value) {
-      const id = `local:${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const link = { id, sourceId: props.item.id, targetId: newLinkTargetId.value, linkType: newLinkType.value, userId: "", createdAt: new Date() } as BoardItemLink;
-      const current = itemsStore.getItem(props.item.id);
-      if (current) itemsStore.items.value.set(props.item.id, { ...current, links: { sent: [...(current.links?.sent ?? []), link], received: current.links?.received ?? [] } });
-      await offline.queue({ entity: "boardLink", operation: "boardLink.create", entityId: id, workspaceId: props.workspaceId, changedFields: ["sourceId", "targetId", "linkType"], payload: { sourceId: link.sourceId, targetId: link.targetId, linkType: link.linkType }, localData: link as unknown as Record<string, unknown> });
-      showAddLink.value = false;
-      newLinkTargetId.value = "";
-      newLinkType.value = "RELATED";
-      return;
+    if (before) {
+      itemsStore.items.value.set(before.id, {
+        ...before,
+        links: {
+          sent: [...(before.links?.sent ?? []), link],
+          received: before.links?.received ?? [],
+        },
+      });
     }
-    const result = await $api.boardItems.createLink({
-      sourceId: props.item.id,
-      targetId: newLinkTargetId.value,
-      linkType: newLinkType.value,
+    await offline.queue({
+      entity: "boardLink",
+      operation: "boardLink.create",
+      entityId: id,
+      workspaceId: props.workspaceId,
+      changedFields: ["sourceId", "targetId", "linkType"],
+      payload: { sourceId: link.sourceId, targetId: link.targetId, linkType: link.linkType },
+      localData: link as unknown as Record<string, unknown>,
     });
-    if (result.success) {
-      await itemsStore.loadItemLinks(props.item.id);
-      showAddLink.value = false;
-      newLinkTargetId.value = "";
-      newLinkType.value = "RELATED";
-    } else {
-      toast.add({ title: "Error", description: "Could not create link", color: "error" });
-    }
+    showAddLink.value = false;
+    newLinkTargetId.value = "";
+    newLinkType.value = "RELATED";
   } catch {
+    if (before) itemsStore.items.value.set(before.id, before);
     toast.add({ title: "Error", description: "Could not create link", color: "error" });
   } finally {
     addingLink.value = false;
@@ -225,18 +405,32 @@ async function addLink() {
 }
 
 async function deleteLink(linkId: string) {
+  linkId = relationIdAliases.get(linkId) ?? linkId;
+  const before = itemsStore.getItem(props.item.id);
+  const deletedLink = before?.links
+    ? [...before.links.sent, ...before.links.received].find((link) => link.id === linkId)
+    : undefined;
   try {
-    if (!offline.isOnline.value) {
-      const current = itemsStore.getItem(props.item.id);
-      if (current?.links) itemsStore.items.value.set(props.item.id, { ...current, links: { sent: current.links.sent.filter((link) => link.id !== linkId), received: current.links.received.filter((link) => link.id !== linkId) } });
-      await offline.queue({ entity: "boardLink", operation: "boardLink.delete", entityId: linkId, workspaceId: props.workspaceId, changedFields: ["deleted"], payload: {} });
-      return;
+    if (before?.links) {
+      itemsStore.items.value.set(before.id, {
+        ...before,
+        links: {
+          sent: before.links.sent.filter((link) => link.id !== linkId),
+          received: before.links.received.filter((link) => link.id !== linkId),
+        },
+      });
     }
-    const result = await $api.boardItems.deleteLink(linkId);
-    if (result.success || (result as any).status === 204) {
-      await itemsStore.loadItemLinks(props.item.id);
-    }
+    await offline.queue({
+      entity: "boardLink",
+      operation: "boardLink.delete",
+      entityId: linkId,
+      workspaceId: props.workspaceId,
+      changedFields: ["deleted"],
+      payload: {},
+      rollbackData: deletedLink as unknown as Record<string, unknown> | undefined,
+    });
   } catch {
+    if (before) itemsStore.items.value.set(before.id, before);
     toast.add({ title: "Error", description: "Could not remove link", color: "error" });
   }
 }
@@ -252,24 +446,35 @@ async function addComment() {
   const text = newCommentContent.value.trim();
   if (!text) return;
   addingComment.value = true;
+  const id = createClientTempId("board-comment");
+  const comment = {
+    id,
+    itemId: props.item.id,
+    userId: "",
+    content: text,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as BoardItemComment;
+  const before = itemsStore.getItem(props.item.id);
   try {
-    if (!offline.isOnline.value) {
-      const id = `local:${Date.now()}-${Math.random().toString(36).slice(2)}`;
-      const comment = { id, itemId: props.item.id, userId: "", content: text, createdAt: new Date(), updatedAt: new Date() } as BoardItemComment;
-      const current = itemsStore.getItem(props.item.id);
-      if (current) itemsStore.items.value.set(props.item.id, { ...current, comments: [...(current.comments ?? []), comment] });
-      await offline.queue({ entity: "boardComment", operation: "boardComment.create", entityId: id, workspaceId: props.workspaceId, changedFields: ["itemId", "content"], payload: { itemId: props.item.id, content: text }, localData: comment as unknown as Record<string, unknown> });
-      newCommentContent.value = "";
-      return;
+    if (before) {
+      itemsStore.items.value.set(before.id, {
+        ...before,
+        comments: [...(before.comments ?? []), comment],
+      });
     }
-    const result = await $api.boardItems.createComment({ itemId: props.item.id, content: text });
-    if (result.success) {
-      await itemsStore.loadItemComments(props.item.id);
-      newCommentContent.value = "";
-    } else {
-      toast.add({ title: "Error", description: "Could not add comment", color: "error" });
-    }
+    await offline.queue({
+      entity: "boardComment",
+      operation: "boardComment.create",
+      entityId: id,
+      workspaceId: props.workspaceId,
+      changedFields: ["itemId", "content"],
+      payload: { itemId: props.item.id, content: text },
+      localData: comment as unknown as Record<string, unknown>,
+    });
+    newCommentContent.value = "";
   } catch {
+    if (before) itemsStore.items.value.set(before.id, before);
     toast.add({ title: "Error", description: "Could not add comment", color: "error" });
   } finally {
     addingComment.value = false;

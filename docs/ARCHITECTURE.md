@@ -752,7 +752,7 @@ sw-src/ai-worker.ts → esbuild → public/ai-worker.js (AI web worker)
 | Static assets | CacheFirst | Immutable files |
 | Pages | StaleWhileRevalidate | Balance freshness/speed |
 
-**IndexedDB Stores** (`DB_CONFIG`, `app/utils/constants/pwa.ts`, currently `VERSION: 16`):
+**IndexedDB Stores** (`DB_CONFIG`, `app/utils/constants/pwa.ts`, currently `VERSION: 18`):
 - `forms` — Offline form submissions
 - `notes` — Local notes cache
 - `noteGroups` — Local note-group cache
@@ -760,7 +760,8 @@ sw-src/ai-worker.ts → esbuild → public/ai-worker.js (AI web worker)
 - `pendingNoteGroupChanges` — Queued note-group mutations
 - `pendingNoteLayouts` — Queued layout changes
 - `noteSyncConflicts` — Durable local/server conflict snapshots
-- `boardItems` / `pendingBoardItems` / `boardColumns` — Board local-first cache + sync queue
+- `offlineEntities` / `offlineMutations` / `offlineConflicts` — account-scoped Offline V2 projection, outbox, and conflicts (the active Board durable path)
+- `boardItems` / `pendingBoardItems` / `boardColumns` — legacy Board migration inputs only; Phase 2 clears them after moving recoverable data into V2
 - `userTags` — Tag cache
 
 **Background Sync Tags**:

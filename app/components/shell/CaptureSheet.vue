@@ -18,6 +18,7 @@
           icon="i-lucide-chevron-left"
           label="Back to capture"
           size="sm"
+          :disabled="modeTransitioning || morphing"
           @click="backToMenu"
         />
         <span class="ds-capture-note__ws">
@@ -39,11 +40,19 @@
           variant="ghost"
           tone="neutral"
           leading-icon="i-lucide-maximize-2"
+          :disabled="modeTransitioning || morphing"
           @click="openFullNote"
         >
           Open full note
         </UiButton>
-        <UiButton pill tone="primary" @click="doneNoteCapture">Done</UiButton>
+        <UiButton
+          pill
+          tone="primary"
+          :disabled="modeTransitioning || morphing"
+          @click="doneNoteCapture"
+        >
+          Done
+        </UiButton>
       </div>
     </div>
 
@@ -69,8 +78,19 @@
       />
     </div>
 
-    <div v-if="mode === 'menu' && showWorkspaceTarget" class="ds-capture-target">
-      <button type="button" class="ds-capture-target__button" :aria-expanded="isWorkspacePickerOpen" aria-controls="capture-workspace-options" :disabled="workspaceLoading && !selectedWorkspace" @click="toggleWorkspacePicker"> <!-- design-allow: compact workspace target control in capture sheet -->
+    <div
+      v-if="mode === 'menu' && showWorkspaceTarget"
+      class="ds-capture-target"
+    >
+      <button
+        type="button"
+        class="ds-capture-target__button"
+        :aria-expanded="isWorkspacePickerOpen"
+        aria-controls="capture-workspace-options"
+        :disabled="workspaceLoading && !selectedWorkspace"
+        @click="toggleWorkspacePicker"
+      >
+        <!-- design-allow: compact workspace target control in capture sheet -->
         <span class="ds-capture-target__main">
           <span
             class="ds-capture-target__dot"
@@ -101,7 +121,20 @@
           role="listbox"
           aria-label="Capture workspace"
         >
-          <button v-for="workspace in pickerWorkspaces" :key="workspace.id" type="button" class="ds-capture-target__chip" :class="{ 'ds-capture-target__chip--on': workspace.id === selectedWorkspaceId }" role="option" :aria-selected="workspace.id === selectedWorkspaceId" @click="selectWorkspace(workspace.id)"> <!-- design-allow: native compact workspace option -->
+          <button
+            v-for="workspace in pickerWorkspaces"
+            :key="workspace.id"
+            type="button"
+            class="ds-capture-target__chip"
+            :class="{
+              'ds-capture-target__chip--on':
+                workspace.id === selectedWorkspaceId,
+            }"
+            role="option"
+            :aria-selected="workspace.id === selectedWorkspaceId"
+            @click="selectWorkspace(workspace.id)"
+          >
+            <!-- design-allow: native compact workspace option -->
             <span
               class="ds-capture-target__chip-dot"
               :style="{ background: accentFor(workspace) }"
@@ -113,7 +146,16 @@
     </div>
 
     <div v-if="mode === 'menu'" class="grid grid-cols-2 gap-3 pb-1">
-      <button v-for="opt in options" :key="opt.key" :ref="(el) => setActionElement(opt.key, el)" type="button" class="ds-capture-opt" :disabled="isActionWaitingForWorkspace(opt.key)" @click="choose(opt.key, $event)"> <!-- design-allow: shell chrome, native capture tile -->
+      <button
+        v-for="opt in options"
+        :key="opt.key"
+        :ref="(el) => setActionElement(opt.key, el)"
+        type="button"
+        class="ds-capture-opt"
+        :disabled="isActionWaitingForWorkspace(opt.key)"
+        @click="choose(opt.key, $event)"
+      >
+        <!-- design-allow: shell chrome, native capture tile -->
         <span
           class="ds-capture-opt__tile"
           :style="{ background: tint(opt.color, 14), color: opt.color }"
@@ -125,7 +167,14 @@
       </button>
     </div>
 
-    <button v-if="mode === 'menu'" type="button" class="ds-dictate" :disabled="isActionWaitingForWorkspace('dictate')" @click="choose('dictate')"> <!-- design-allow: shell chrome, native press-and-hold dictate -->
+    <button
+      v-if="mode === 'menu'"
+      type="button"
+      class="ds-dictate"
+      :disabled="isActionWaitingForWorkspace('dictate')"
+      @click="choose('dictate')"
+    >
+      <!-- design-allow: shell chrome, native press-and-hold dictate -->
       <UiIcon name="i-lucide-mic" class="h-4 w-4" />
       Hold to dictate a quick note…
     </button>
@@ -215,7 +264,9 @@ const workspaceScopedActions = new Set<CaptureAction>([
 const selectedWorkspaceId = ref<string | null>(null);
 const isWorkspacePickerOpen = ref(false);
 
-const workspaceList = computed<WorkspaceSummary[]>(() => workspaces.value ?? []);
+const workspaceList = computed<WorkspaceSummary[]>(
+  () => workspaces.value ?? [],
+);
 const showWorkspaceTarget = computed(
   () => workspaceLoading.value || workspaceList.value.length > 0,
 );
@@ -313,6 +364,7 @@ const {
   morphToAction,
 } = useQuickCaptureMorph<CaptureAction>();
 const mode = ref<"menu" | "note" | "word" | "board">("menu");
+const modeTransitioning = ref(false);
 const captureWorkspaceId = ref<string | null>(null);
 const captureStore = computed(() =>
   captureWorkspaceId.value ? useNotesStore(captureWorkspaceId.value) : null,
@@ -339,12 +391,18 @@ const boardColumnLabel = computed(
 const boardQuick = useQuickBoardItemCapture(boardItemsStore, boardColumnId);
 
 async function startNoteCapture(event?: MouseEvent) {
+  if (modeTransitioning.value) return;
+  modeTransitioning.value = true;
   captureWorkspaceId.value = selectedWorkspaceId.value;
   isWorkspacePickerOpen.value = false;
-  quick.begin(null);
-  await morphFromAction("note", event, () => {
-    mode.value = "note";
-  });
+  try {
+    await quick.begin(null);
+    await morphFromAction("note", event, () => {
+      mode.value = "note";
+    });
+  } finally {
+    modeTransitioning.value = false;
+  }
 }
 
 async function startWordCapture(event?: MouseEvent) {
@@ -355,14 +413,20 @@ async function startWordCapture(event?: MouseEvent) {
 }
 
 async function startBoardCapture(event?: MouseEvent) {
+  if (modeTransitioning.value) return;
+  modeTransitioning.value = true;
   captureWorkspaceId.value = selectedWorkspaceId.value;
   isWorkspacePickerOpen.value = false;
-  boardQuick.begin();
-  await nextTick();
-  void boardColumnsStore.value?.syncWithServer();
-  await morphFromAction("board", event, () => {
-    mode.value = "board";
-  });
+  try {
+    await boardQuick.begin();
+    await nextTick();
+    void boardColumnsStore.value?.syncWithServer();
+    await morphFromAction("board", event, () => {
+      mode.value = "board";
+    });
+  } finally {
+    modeTransitioning.value = false;
+  }
 }
 
 function actionForMode(value: typeof mode.value): CaptureAction | null {
@@ -377,22 +441,34 @@ function finalizeCurrentMode() {
 }
 
 async function backToMenu() {
+  if (modeTransitioning.value) return;
+  modeTransitioning.value = true;
   const action = actionForMode(mode.value);
   const finalize = finalizeCurrentMode();
-  if (action) {
-    await morphToAction(action, () => {
+  try {
+    if (action) {
+      await morphToAction(action, () => {
+        mode.value = "menu";
+      });
+    } else {
       mode.value = "menu";
-    });
-  } else {
-    mode.value = "menu";
+    }
+    await finalize;
+  } finally {
+    modeTransitioning.value = false;
   }
-  await finalize;
 }
 
 async function doneNoteCapture() {
-  const finalize = quick.finalize(); // commits real content, drops empty leftovers
-  emit("update:open", false);
-  await finalize;
+  if (modeTransitioning.value) return;
+  modeTransitioning.value = true;
+  try {
+    const finalize = quick.finalize(); // commits real content, drops empty leftovers
+    emit("update:open", false);
+    await finalize;
+  } finally {
+    modeTransitioning.value = false;
+  }
 }
 
 function doneWordCapture() {
@@ -400,48 +476,72 @@ function doneWordCapture() {
 }
 
 async function doneBoardCapture() {
-  const finalize = boardQuick.finalize();
-  emit("update:open", false);
-  await finalize;
+  if (modeTransitioning.value) return;
+  modeTransitioning.value = true;
+  try {
+    const finalize = boardQuick.finalize();
+    emit("update:open", false);
+    await finalize;
+  } finally {
+    modeTransitioning.value = false;
+  }
 }
 
 /** Open the note in its own place — the editor panel morphs into /notes/[id]. */
 async function openFullNote() {
-  // Explicit intent to edit in full: create now even if nothing is typed yet.
-  const id = await quick.ensureCreated();
-  if (!id) return;
-  quick.markFinalized();
-  await quick.commitNow();
-  // The full editor resolves its store from the active workspace — align it
-  // with where this capture actually went.
-  if (captureWorkspaceId.value && captureWorkspaceId.value !== activeId.value) {
-    setActive(captureWorkspaceId.value);
+  if (modeTransitioning.value) return;
+  modeTransitioning.value = true;
+  try {
+    // Explicit intent to edit in full: create now even if nothing is typed yet.
+    const id = await quick.ensureCreated();
+    if (!id) return;
+    quick.markFinalized();
+    await quick.commitNow();
+    // The full editor resolves its store from the active workspace — align it
+    // with where this capture actually went.
+    if (
+      captureWorkspaceId.value &&
+      captureWorkspaceId.value !== activeId.value
+    ) {
+      setActive(captureWorkspaceId.value);
+    }
+    armMorphTarget();
+    await morph({
+      update: async () => {
+        emit("update:open", false);
+        await navigateTo(`/notes/${id}`);
+      },
+    });
+  } finally {
+    modeTransitioning.value = false;
   }
-  armMorphTarget();
-  await morph({
-    update: async () => {
-      emit("update:open", false);
-      await navigateTo(`/notes/${id}`);
-    },
-  });
 }
 
 /** Open the board card in its own place — the panel morphs into /board/[id]. */
 async function openFullBoardItem() {
-  const id = await boardQuick.ensureCreated(true);
-  if (!id) return;
-  boardQuick.markFinalized();
-  await boardQuick.commitNow();
-  if (captureWorkspaceId.value && captureWorkspaceId.value !== activeId.value) {
-    setActive(captureWorkspaceId.value);
+  if (modeTransitioning.value) return;
+  modeTransitioning.value = true;
+  try {
+    const id = await boardQuick.ensureCreated(true);
+    if (!id) return;
+    if (!(await boardQuick.commitNow())) return;
+    boardQuick.markFinalized();
+    if (
+      captureWorkspaceId.value &&
+      captureWorkspaceId.value !== activeId.value
+    ) {
+      setActive(captureWorkspaceId.value);
+    }
+    armMorphTarget();
+    await morph({
+      update: async () => {
+        emit("update:open", false);
+        await navigateTo(`/board/${id}`);
+      },
+    });
+  } finally {
+    modeTransitioning.value = false;
   }
-  armMorphTarget();
-  await morph({
-    update: async () => {
-      emit("update:open", false);
-      await navigateTo(`/board/${id}`);
-    },
-  });
 }
 
 function onSheetClosed() {

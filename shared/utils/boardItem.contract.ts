@@ -2,6 +2,10 @@
 import { z } from "zod";
 
 const trim = (v: unknown) => (typeof v === "string" ? v.trim() : v);
+const optionalPosition = z.preprocess(
+  (value) => (value === null ? undefined : value),
+  z.string().regex(/^[0-9A-Za-z]+$/).optional(),
+);
 
 // ─── Attachment ──────────────────────────────────────────────────────────────
 
@@ -25,9 +29,11 @@ export const BoardItemSchema = z.object({
   tags: z.array(z.string()).default([]),
   // Fractional rank (see board fractional-ranking). Not an integer.
   order: z.number().default(0),
-  position: z.string().regex(/^[0-9A-Za-z]+$/).optional(),
+  position: optionalPosition,
   dueDate: z.string().datetime().or(z.date()).nullable().optional(),
   attachments: z.array(AttachmentSchema).default([]),
+  /** Revision used by the offline-v2 optimistic concurrency protocol. */
+  offlineRevision: z.number().int().nonnegative().optional(),
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),
 });
@@ -79,6 +85,7 @@ const BoardItemSyncBaseSchema = z.object({
   workspaceId: z.string().nullable().optional(),
   columnId: z.string().nullable().optional(),
   order: z.number().optional(),
+  position: optionalPosition,
   content: z.string().optional(),
   tags: z.array(z.string()).optional(),
   dueDate: z.string().datetime().or(z.date()).nullable().optional(),
@@ -137,6 +144,8 @@ export const BoardItemLinkSchema = z.object({
   linkType: z.enum(LINK_TYPES),
   userId: z.string(),
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
+  /** Revision used by the offline-v2 optimistic concurrency protocol. */
+  offlineRevision: z.number().int().nonnegative().optional(),
   // populated when fetched
   target: BoardItemSchema.pick({ id: true, content: true, columnId: true, tags: true, dueDate: true }).optional(),
   source: BoardItemSchema.pick({ id: true, content: true, columnId: true, tags: true, dueDate: true }).optional(),
@@ -159,6 +168,8 @@ export const BoardItemCommentSchema = z.object({
   content: z.preprocess(trim, z.string().min(1)),
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),
+  /** Revision used by the offline-v2 optimistic concurrency protocol. */
+  offlineRevision: z.number().int().nonnegative().optional(),
   author: z.object({
     name: z.string().nullable().optional(),
     email: z.string().optional(),

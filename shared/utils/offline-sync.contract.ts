@@ -44,6 +44,8 @@ export const OfflineMutationSchema = z.object({
   baseVersion: z.number().int().nonnegative().optional(),
   changedFields: z.array(z.string().min(1)).max(64).default([]),
   payload: z.record(z.string(), z.unknown()).default({}),
+  /** Canonical local snapshot from before this coalesced command began. */
+  rollbackData: z.record(z.string(), z.unknown()).nullable().optional(),
   dependsOn: z.array(z.string().min(1)).max(32).default([]),
   occurredAt: z.string().datetime(),
   createdAt: z.number().int().nonnegative(),
@@ -65,6 +67,14 @@ export const OfflineConflictSchema = z.object({
 });
 export type OfflineConflict = z.infer<typeof OfflineConflictSchema>;
 
+export const OfflineRelatedEntityResultSchema = z.object({
+  entity: OfflineEntitySchema,
+  entityId: z.string(),
+  version: z.number().int().nonnegative(),
+  canonical: z.record(z.string(), z.unknown()).nullable().optional(),
+});
+export type OfflineRelatedEntityResult = z.infer<typeof OfflineRelatedEntityResultSchema>;
+
 export const OfflineSyncResultSchema = z.object({
   id: z.string(),
   status: z.enum(["applied", "retry", "rejected", "conflict"]),
@@ -73,6 +83,7 @@ export const OfflineSyncResultSchema = z.object({
   version: z.number().int().nonnegative().optional(),
   canonical: z.record(z.string(), z.unknown()).nullable().optional(),
   idMap: z.record(z.string(), z.string()).optional(),
+  related: z.array(OfflineRelatedEntityResultSchema).optional(),
   conflict: OfflineConflictSchema.optional(),
   message: z.string().optional(),
 });

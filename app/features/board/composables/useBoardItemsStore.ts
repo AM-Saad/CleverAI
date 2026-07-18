@@ -1,30 +1,25 @@
-import type { APIError } from "@/services/FetchFactory";
-import type Result from "@/types/Result";
 import type { BoardItem, BoardItemLink, BoardItemComment, Attachment } from "~/shared/utils/boardItem.contract";
-import { BoardItemsSyncRequestSchema } from "@@/shared/utils/boardItem.contract";
-import { DB_CONFIG, SW_MESSAGE_TYPES } from "~/utils/constants/pwa";
-import {
-  deletePendingBoardItemChanges,
-  getAllRecords,
-  loadPendingBoardItemChanges,
-  openUnifiedDB,
-  putAllRecords,
-  putRecord,
-  queueBoardItemChange,
-  type PendingBoardItemChange,
-} from "~/utils/idb";
-import {
-  registerBoardItemsSync,
-  setupOnlineListener,
-  setupSyncCompletionListener,
-} from "~/utils/sync/offlineSync";
 import { useNetworkStatus } from "~/composables/shared/useNetworkStatus";
 import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
-import { mergePendingBoardItems } from "./mergePendingBoardItems";
 import { rankBetween, needsRebalance, rebalancedRanks, RANK_GAP } from "./rank";
 import { comparePosition, positionBetween } from "@@/shared/utils/position-key";
-
-type STORES = typeof DB_CONFIG.STORES[keyof typeof DB_CONFIG.STORES];
+import { createClientTempId } from "~/utils/local-first/tempIds";
+import { createKeyedAsyncDebounce } from "~/utils/keyedAsyncDebounce";
+import {
+  BOARD_ITEM_MUTABLE_FIELDS,
+  boardItemPayloadForFields,
+  changedBoardItemFields,
+  comparableBoardItemValue,
+  type BoardItemMutableField,
+} from "./boardItemMutation";
+import {
+  boardItemDurableData,
+  loadBoardItemsProjection,
+  putBoardProjectionRecord,
+  putBoardProjectionRecords,
+  reconcileBoardRelationsForItem,
+  reconcileBoardWorkspaceProjection,
+} from "../repositories/boardOfflineRepository";
 
 export interface BoardItemState extends BoardItem {
   // Local state tracking
@@ -48,6 +43,8 @@ interface BoardItemsStore {
   filteredItemIds: Ref<Set<string> | null>;
   createItem: (content: string, tags?: string[], columnId?: string | null, dueDate?: string | null, attachments?: Attachment[]) => Promise<string | null>;
   updateItem: (id: string, updatedItem: BoardItemState) => Promise<boolean>;
+  /** Force one item's debounced edit into the durable V2 outbox. */
+  flushItem: (id: string) => Promise<void>;
   loadItemLinks: (id: string) => Promise<void>;
   loadItemComments: (id: string) => Promise<void>;
   deleteItem: (id: string) => Promise<boolean>;
@@ -64,6 +61,7 @@ interface BoardItemsStore {
   /** Temp→server id resolution for optimistic items (mirrors notes' resolveNoteId). */
   resolveItemId: (id: string | null) => string | null;
   setItems?: (items: BoardItemState[]) => void;
+  persistAndQueueItems?: (items: BoardItemState[]) => Promise<void>;
   setFilteredItemIds: (ids: Set<string> | null) => void;
   resetOfflineToast?: () => void;
 }
@@ -71,6 +69,12 @@ interface BoardItemsStore {
 type BoardItemsStoreInternal = BoardItemsStore & {
   _flushDebounce?: () => Promise<void>;
   _syncPendingChanges?: () => Promise<boolean>;
+  _applyOfflineItemIdMap?: (idMap: Record<string, string>, syncedPayload?: Record<string, unknown>, version?: number, forceDirty?: boolean) => Promise<void>;
+  _applyOfflineItemAck?: (itemId: string, syncedPayload: Record<string, unknown>, canonical?: Record<string, unknown> | null, version?: number, forceDirty?: boolean) => Promise<void>;
+  _applyOfflineColumnIdMap?: (idMap: Record<string, string>) => Promise<void>;
+  _cancelDebounces?: () => void;
+  _applyOfflineItemFailure?: (itemId: string, status: "conflict" | "rejected", message?: string, operation?: string, rollbackData?: Record<string, unknown> | null) => Promise<void>;
+  _applyOfflineConflictResolution?: (itemId: string, strategy: "keep-local" | "keep-server", serverVersion: number, serverSnapshot?: Record<string, unknown> | null) => Promise<void>;
 };
 
 const BOARD_ITEMS_STORE_FALLBACK_KEY = "__default__";
@@ -95,51 +99,87 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   const toast = useToast();
   const networkMonitor = useNetworkStatus();
   const offline = useOfflineRuntime();
+  const requireAccountId = () => {
+    const accountId = offline.accountId.value;
+    if (!accountId) throw new Error("Board projection requires an authenticated account");
+    return accountId;
+  };
+  const saveBoardItemToIndexedDBStrict = async (item: BoardItemState) => {
+    await putBoardProjectionRecord({
+      accountId: requireAccountId(),
+      entity: "boardItem",
+      record: item as unknown as Record<string, unknown> & { id: string },
+    });
+  };
+  const saveBoardItemToIndexedDB = async (item: BoardItemState) => {
+    try {
+      await saveBoardItemToIndexedDBStrict(item);
+    } catch (error) {
+      console.error("Failed to save Board item projection:", error);
+    }
+  };
+  const saveBoardItemsToIndexedDB = async (records: BoardItemState[]) => {
+    if (!records.length) return;
+    await putBoardProjectionRecords({
+      accountId: requireAccountId(),
+      entity: "boardItem",
+      records: records as unknown as Array<Record<string, unknown> & { id: string }>,
+    });
+  };
 
-  // Register once-per-app online listener and sync completion listener.
+  // V2 owns reconnect/background sync. Feature timers only need to flush their
+  // latest local state into that outbox before suspension or reconnect.
   if (import.meta.client && !onlineListenerRegistered) {
-    setupOnlineListener({
-      pendingStoreName: DB_CONFIG.STORES.PENDING_BOARD_ITEMS,
-      swMessageType: SW_MESSAGE_TYPES.SYNC_BOARD_ITEMS,
-      onOnline: () => {
-        // Obsolete: resetOfflineToast no longer needed, using global toast deduplication
-      },
-      // Step 1 of reconnect: flush debounced saves before sync
-      onBeforeSync: async () => {
-        await Promise.all(
-          Array.from(boardItemsStores.values()).map((store) =>
-            store._flushDebounce?.(),
-          ),
-        );
-      },
-      onSyncDirect: async () => {
-        await Promise.all(
-          Array.from(boardItemsStores.values()).map((store) =>
-            store._syncPendingChanges?.(),
-          ),
-        );
-      },
+    const flush = () => {
+      void Promise.all(Array.from(boardItemsStores.values()).map((store) =>
+        store._flushDebounce?.(),
+      ));
+    };
+    window.addEventListener("online", flush);
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") flush();
     });
 
-    // Guard: avoid re-entrant sync cycles.
-    let boardSyncRefreshing = false;
-
-    setupSyncCompletionListener({
-      messageType: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNCED,
-      onSynced: async (appliedCount: number) => {
-        if (boardSyncRefreshing) return;
-        boardSyncRefreshing = true;
-        try {
-          // Always re-sync after a successful background sync
-          await Promise.all(
-            Array.from(boardItemsStores.values()).map((store) =>
-              store.syncWithServer(),
-            ),
-          );
-        } finally {
-          boardSyncRefreshing = false;
-        }
-      },
+    window.addEventListener("offline-v2-board-item-id-remapped", (event) => {
+      const detail = (event as CustomEvent<{ idMap?: Record<string, string>; syncedPayload?: Record<string, unknown>; version?: number; forceDirty?: boolean }>).detail;
+      if (!detail?.idMap) return;
+      void Promise.all(Array.from(boardItemsStores.values()).map((store) =>
+        store._applyOfflineItemIdMap?.(detail.idMap!, detail.syncedPayload, detail.version, detail.forceDirty),
+      ));
+    });
+    window.addEventListener("offline-v2-board-column-id-remapped", (event) => {
+      const detail = (event as CustomEvent<{ idMap?: Record<string, string> }>).detail;
+      if (!detail?.idMap) return;
+      void Promise.all(Array.from(boardItemsStores.values()).map((store) =>
+        store._applyOfflineColumnIdMap?.(detail.idMap!),
+      ));
+    });
+    window.addEventListener("offline-v2-board-item-applied", (event) => {
+      const detail = (event as CustomEvent<{ itemId?: string; syncedPayload?: Record<string, unknown>; canonical?: Record<string, unknown> | null; version?: number; forceDirty?: boolean }>).detail;
+      if (!detail?.itemId || !detail.syncedPayload) return;
+      void Promise.all(Array.from(boardItemsStores.values()).map((store) =>
+        store._applyOfflineItemAck?.(detail.itemId!, detail.syncedPayload!, detail.canonical, detail.version, detail.forceDirty),
+      ));
+    });
+    window.addEventListener("offline-v2-sync-result", (event) => {
+      const detail = (event as CustomEvent<{ entity?: string; entityId?: string; status?: string; message?: string; operation?: string; rollbackData?: Record<string, unknown> | null }>).detail;
+      if (detail?.entity !== "boardItem" || !detail.entityId || (detail.status !== "conflict" && detail.status !== "rejected")) return;
+      void Promise.all(Array.from(boardItemsStores.values()).map((store) =>
+        store._applyOfflineItemFailure?.(detail.entityId!, detail.status as "conflict" | "rejected", detail.message, detail.operation, detail.rollbackData),
+      ));
+    });
+    window.addEventListener("offline-v2-board-conflict-resolved", (event) => {
+      const detail = (event as CustomEvent<{ entity?: string; entityId?: string; strategy?: "keep-local" | "keep-server"; serverVersion?: number; serverSnapshot?: Record<string, unknown> | null }>).detail;
+      if (detail?.entity !== "boardItem" || !detail.entityId || !detail.strategy) return;
+      void Promise.all(Array.from(boardItemsStores.values()).map((store) =>
+        store._applyOfflineConflictResolution?.(
+          detail.entityId!,
+          detail.strategy!,
+          detail.serverVersion ?? 0,
+          detail.serverSnapshot,
+        ),
+      ));
     });
 
     onlineListenerRegistered = true;
@@ -147,25 +187,11 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
 
   // (Removed offline toast deduplication state)
 
-  const { debouncedFunc: debouncedSave, cancel: cancelSave, flush: flushSave } = useDebounce(
-    (id: string) => {
-      updateItemToServer(id);
-    },
-    1000
-  );
-
-  // Expose flush so the online listener can call it before sync
-  const _flushDebounce = async () => {
-    const dirtyItems = Array.from(items.value.values()).filter(i => i.isDirty);
-    await Promise.allSettled(
-      dirtyItems.map((item) => Promise.resolve(flushSave(item.id))),
-    );
-  };
-
   // Local reactive state
   const items = ref<Map<string, BoardItemState>>(new Map());
   const loadingStates = ref<Map<string, boolean>>(new Map());
   const lastSync = ref<Date | null>(null);
+  const pendingUpdateSnapshots = new Map<string, BoardItemState>();
 
   // Temp→server id aliases (mirrors notes' noteIdAliases): an optimistic
   // item's temp id is swapped for the server id on reconcile; surfaces that
@@ -173,7 +199,7 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   const itemIdAliases = ref<Map<string, string>>(new Map());
   const resolveItemId = (id: string | null): string | null => {
     if (!id) return null;
-    return itemIdAliases.value.get(id) ?? null;
+    return itemIdAliases.value.get(id) ?? id;
   };
   const recordItemAlias = (tempId: string, serverId: string) => {
     const next = new Map(itemIdAliases.value);
@@ -181,7 +207,166 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     itemIdAliases.value = next;
   };
   const isUnreconciledTempId = (id: string) =>
-    id.startsWith("temp-") && !itemIdAliases.value.has(id);
+    /^(temp-|local:)/.test(id) && !itemIdAliases.value.has(id);
+
+  const itemMatchesSyncedPayload = (
+    item: BoardItemState,
+    payload?: Record<string, unknown>,
+  ): boolean => {
+    if (!payload) return false;
+    const values = item as unknown as Record<string, unknown>;
+    const normalizeDate = (value: unknown) => value
+      ? new Date(value as string | number | Date).toISOString()
+      : null;
+    const comparable: Record<string, (left: unknown, right: unknown) => boolean> = {
+      content: (left, right) => left === right,
+      workspaceId: (left, right) => (left ?? null) === (right ?? null),
+      columnId: (left, right) => (left ?? null) === (right ?? null),
+      order: (left, right) => left === right,
+      position: (left, right) => left === right,
+      dueDate: (left, right) => normalizeDate(left) === normalizeDate(right),
+      tags: (left, right) => JSON.stringify(left ?? []) === JSON.stringify(right ?? []),
+      attachments: (left, right) => JSON.stringify(left ?? []) === JSON.stringify(right ?? []),
+    };
+    return Object.entries(comparable).every(([field, compare]) =>
+      !(field in payload) || compare(values[field], payload[field]),
+    );
+  };
+
+  const applyOfflineItemIdMap = async (
+    idMap: Record<string, string>,
+    syncedPayload?: Record<string, unknown>,
+    version?: number,
+    forceDirty = false,
+  ): Promise<void> => {
+    for (const [tempId, serverId] of Object.entries(idMap)) {
+      recordItemAlias(tempId, serverId);
+      const tempItem = items.value.get(tempId);
+      if (!tempItem) continue;
+      const serverItem: BoardItemState = {
+        ...tempItem,
+        id: serverId,
+        ...(version !== undefined && { offlineRevision: version }),
+        isDirty: forceDirty || !itemMatchesSyncedPayload(tempItem, syncedPayload),
+        isLoading: false,
+        lastSaved: new Date(),
+        error: null,
+      };
+      items.value.delete(tempId);
+      items.value.set(serverId, serverItem);
+      const snapshot = pendingUpdateSnapshots.get(tempId);
+      if (snapshot) {
+        pendingUpdateSnapshots.delete(tempId);
+        pendingUpdateSnapshots.set(serverId, { ...snapshot, id: serverId });
+      }
+    }
+  };
+
+  const applyOfflineColumnIdMap = async (idMap: Record<string, string>): Promise<void> => {
+    const changed: BoardItemState[] = [];
+    for (const [id, item] of items.value) {
+      if (!item.columnId || !idMap[item.columnId]) continue;
+      const next = { ...item, columnId: idMap[item.columnId] };
+      items.value.set(id, next);
+      changed.push(next);
+    }
+  };
+
+  const applyOfflineItemAck = async (
+    itemId: string,
+    syncedPayload: Record<string, unknown>,
+    canonical?: Record<string, unknown> | null,
+    version?: number,
+    forceDirty = false,
+  ): Promise<void> => {
+    const item = items.value.get(itemId);
+    if (!item) return;
+    const matches = itemMatchesSyncedPayload(item, syncedPayload);
+    const next: BoardItemState = {
+      ...item,
+      ...(matches && !forceDirty && canonical ? canonical : {}),
+      id: itemId,
+      ...(version !== undefined && { offlineRevision: version }),
+      isDirty: forceDirty || !matches,
+      isLoading: false,
+      lastSaved: new Date(),
+      error: null,
+    } as BoardItemState;
+    items.value.set(itemId, next);
+  };
+  const applyOfflineItemFailure = async (
+    itemId: string,
+    status: "conflict" | "rejected",
+    message?: string,
+    operation?: string,
+    rollbackData?: Record<string, unknown> | null,
+  ): Promise<void> => {
+    const resolvedId = resolveItemId(itemId) ?? itemId;
+    const item = items.value.get(resolvedId);
+    if (status === "rejected") {
+      if (rollbackData) {
+        const restored = {
+          ...rollbackData,
+          id: resolvedId,
+          isDirty: false,
+          isLoading: false,
+          error: null,
+        } as BoardItemState;
+        items.value.set(resolvedId, restored);
+      } else if (operation?.endsWith(".create")) {
+        items.value.delete(resolvedId);
+      }
+      toast.add({
+        title: "Board change rejected",
+        description: message ?? "The previous saved version was restored.",
+        color: "error",
+      });
+      return;
+    }
+    if (!item) return;
+    const next: BoardItemState = {
+      ...item,
+      isDirty: true,
+      isLoading: false,
+      error: status === "conflict"
+        ? "Sync conflict detected. Resolve the local and server versions in Sync Center."
+        : (message ?? "The server rejected this saved local change."),
+    };
+    items.value.set(resolvedId, next);
+  };
+  const applyOfflineConflictResolution = async (
+    itemId: string,
+    strategy: "keep-local" | "keep-server",
+    serverVersion: number,
+    serverSnapshot?: Record<string, unknown> | null,
+  ) => {
+    const resolvedId = resolveItemId(itemId) ?? itemId;
+    if (strategy === "keep-server") {
+      if (!serverSnapshot) {
+        items.value.delete(resolvedId);
+        return;
+      }
+      items.value.set(resolvedId, {
+        ...serverSnapshot,
+        id: resolvedId,
+        offlineRevision: serverVersion,
+        isDirty: false,
+        isLoading: false,
+        error: null,
+        lastSaved: new Date(),
+      } as BoardItemState);
+      return;
+    }
+    const current = items.value.get(resolvedId);
+    if (current)
+      items.value.set(resolvedId, {
+        ...current,
+        offlineRevision: serverVersion,
+        isDirty: true,
+        isLoading: false,
+        error: null,
+      });
+  };
   const isPositionMutationPending = ref(false);
   const filteredItemIds = ref<Set<string> | null>(null);
   let pendingPositionMutationCount = 0;
@@ -196,82 +381,12 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     isPositionMutationPending.value = pendingPositionMutationCount > 0;
   };
 
-  // Debounced server sync
-  const saveToServer = async (id: string) => {
-    debouncedSave(id);
-  };
-
-  /**
-   * Build a complete PendingBoardItemChange from a BoardItemState.
-   * Ensures the sync endpoint receives all required fields (columnId, order,
-   * userId, workspaceId, createdAt, dueDate, tags, attachments).
-   */
-  const buildPendingPayload = (
-    item: BoardItemState,
-    operation: 'upsert' | 'delete',
-    localVersion: number
-  ): PendingBoardItemChange => ({
-    id: item.id,
-    operation,
-    updatedAt: Date.now(),
-    localVersion,
-    workspaceId: item.workspaceId ?? workspaceId,
-    userId: item.userId || "",
-    columnId: item.columnId ?? null,
-    order: item.order ?? 0,
-    content: item.content,
-    tags: item.tags,
-    dueDate: item.dueDate
-      ? (item.dueDate instanceof Date ? item.dueDate.toISOString() : item.dueDate as string)
-      : null,
-    attachments: item.attachments,
-    createdAt: item.createdAt
-      ? (item.createdAt instanceof Date ? item.createdAt.getTime() : new Date(item.createdAt as string).getTime())
-      : Date.now(),
-  });
-
-  const toTimestamp = (value: BoardItemState["updatedAt"] | number | string | undefined): number => {
-    if (typeof value === "number") return value;
-    if (value instanceof Date) return value.getTime();
-    if (typeof value === "string") {
-      const parsed = Date.parse(value);
-      return Number.isNaN(parsed) ? 0 : parsed;
-    }
-    return 0;
-  };
-
-  const localVersionFor = (
-    item: BoardItemState,
-    sentChange?: PendingBoardItemChange,
-  ): number =>
-    Math.max(
-      sentChange?.localVersion ?? 0,
-      (item as { localVersion?: number }).localVersion ?? 0,
-    ) + 1;
-
-  const isSamePendingChange = (
-    left: PendingBoardItemChange | undefined,
-    right: PendingBoardItemChange | undefined,
-  ): boolean =>
-    Boolean(left && right) &&
-    left!.id === right!.id &&
-    left!.operation === right!.operation &&
-    left!.updatedAt === right!.updatedAt &&
-    (left!.localVersion ?? 0) === (right!.localVersion ?? 0);
-
-  const changedAfterPendingSnapshot = (
-    item: BoardItemState,
-    sentChange?: PendingBoardItemChange,
-  ): boolean => {
-    if (!sentChange) return Boolean(item.isDirty);
-    return toTimestamp(item.updatedAt) > sentChange.updatedAt;
-  };
-
-  const isTransientNetworkError = (error?: APIError | null): boolean =>
-    error?.code === "FETCH_ERROR" || error?.code === "TIMEOUT" || !networkMonitor.isVerifiedOnline.value;
-
   const queueBoardItemsForSync = async (
     boardItems: BoardItemState[],
+    options?: {
+      changedFields?: readonly BoardItemMutableField[];
+      rollbackById?: Map<string, BoardItemState>;
+    },
   ): Promise<void> => {
     const queuedAt = new Date();
 
@@ -279,66 +394,45 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       const current = items.value.get(item.id) ?? item;
       const nextItem: BoardItemState = {
         ...current,
+        workspaceId: current.workspaceId ?? workspaceId,
         isLoading: false,
         isDirty: true,
         updatedAt: current.updatedAt ?? queuedAt,
         error: null,
       };
       items.value.set(item.id, nextItem);
-      await queueBoardItemChange(
-        buildPendingPayload(
-          nextItem,
-          "upsert",
-          ((nextItem as { localVersion?: number }).localVersion ?? 0) + 1,
+      const creating = isUnreconciledTempId(nextItem.id);
+      const changedFields = creating
+        ? [...BOARD_ITEM_MUTABLE_FIELDS]
+        : [...(options?.changedFields ?? BOARD_ITEM_MUTABLE_FIELDS)];
+      if (!changedFields.length) continue;
+      const rollback = options?.rollbackById?.get(nextItem.id);
+      await offline.queue({
+        entity: "boardItem",
+        operation: creating ? "boardItem.create" : "boardItem.update",
+        entityId: nextItem.id,
+        workspaceId: nextItem.workspaceId ?? workspaceId,
+        baseVersion: nextItem.offlineRevision ?? rollback?.offlineRevision ?? 0,
+        changedFields,
+        payload: boardItemPayloadForFields(nextItem, changedFields),
+        localData: boardItemDurableData(
+          nextItem as unknown as Record<string, unknown> & { id: string },
         ),
-      );
+        rollbackData: rollback as unknown as Record<string, unknown> | undefined,
+        deferSync: true,
+      });
     }
-
-    await registerBoardItemsSync();
+    if (networkMonitor.isVerifiedOnline.value) void offline.sync();
   };
 
-  const repairDirtyItemsWithoutPending = async (
-    pendingChanges: PendingBoardItemChange[],
-  ): Promise<PendingBoardItemChange[]> => {
-    const pendingById = new Set(pendingChanges.map((change) => change.id));
-    const nextChanges = pendingChanges.slice();
-
-    for (const item of items.value.values()) {
-      if (!item.isDirty || item.error || pendingById.has(item.id)) continue;
-
-      const repairedChange = buildPendingPayload(
-        item,
-        "upsert",
-        localVersionFor(item),
-      );
-      await queueBoardItemChange(repairedChange);
-      nextChanges.push(repairedChange);
-      pendingById.add(item.id);
-    }
-
-    if (nextChanges.length !== pendingChanges.length) {
-      await registerBoardItemsSync();
-    }
-
-    return nextChanges;
-  };
-
-  const deleteAppliedChangesIfUnchanged = async (
-    appliedIds: string[],
-    sentChanges: PendingBoardItemChange[],
-  ): Promise<void> => {
-    if (!appliedIds.length) return;
-
-    const sentById = new Map(sentChanges.map((change) => [change.id, change]));
-    const latestChanges = await loadPendingBoardItemChanges(workspaceId);
-    const latestById = new Map(
-      latestChanges.map((change) => [change.id, change]),
-    );
-    const safeToDelete = appliedIds.filter((id) =>
-      isSamePendingChange(latestById.get(id), sentById.get(id)),
-    );
-
-    await deletePendingBoardItemChanges(safeToDelete);
+  // Multi-entity commands (currently deleting an unsynced local column) use
+  // this to make the projected card state and its V2 commands durable before
+  // reporting success. It intentionally bypasses the UI edit debounce.
+  const persistAndQueueItems = async (boardItems: BoardItemState[]): Promise<void> => {
+    await Promise.all(boardItems.map((item) => saveBoardItemToIndexedDBStrict(item)));
+    await queueBoardItemsForSync(boardItems, {
+      changedFields: ["columnId", "order", "position"],
+    });
   };
 
   // Sync board item changes to server
@@ -348,207 +442,70 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     const id = itemIdAliases.value.get(rawId) ?? rawId;
     const item = items.value.get(id);
     if (!item) return false;
-    // A temp item is replayed through the pending queue; a PATCH against the
-    // temp id would just 404.
-    if (isUnreconciledTempId(id)) return true;
-    const nextVersion = ((item as any).localVersion ?? 0) + 1;
-
     try {
       item.isLoading = true;
       item.error = null;
-
-      if (!networkMonitor.isVerifiedOnline.value) {
-        await queueBoardItemChange(buildPendingPayload(item, "upsert", nextVersion));
-        await registerBoardItemsSync();
-        item.isLoading = false;
-        item.isDirty = true;
+      const rollback = pendingUpdateSnapshots.get(id);
+      const changedFields = rollback
+        ? changedBoardItemFields(rollback, item)
+        : [...BOARD_ITEM_MUTABLE_FIELDS];
+      if (!isUnreconciledTempId(id) && changedFields.length === 0) {
+        pendingUpdateSnapshots.delete(id);
+        const unchanged = {
+          ...item,
+          isLoading: false,
+          isDirty: rollback?.isDirty ?? false,
+        };
+        items.value.set(id, unchanged);
+        await saveBoardItemToIndexedDBStrict(unchanged);
         return true;
       }
-
-      const result: Result<BoardItem, APIError> = await $api.boardItems.update(id, {
-        content: item.content,
-        tags: item.tags,
-        dueDate: item.dueDate ? (item.dueDate instanceof Date ? item.dueDate.toISOString() : item.dueDate as string) : null,
-        attachments: item.attachments,
+      await queueBoardItemsForSync([item], {
+        changedFields,
+        rollbackById: rollback ? new Map([[id, rollback]]) : undefined,
       });
-
-      if (result.success) {
-        item.isLoading = false;
-        item.isDirty = false;
-        item.lastSaved = new Date();
-        return true;
-      }
-
-      // FetchFactory wraps network failures as FETCH_ERROR / TIMEOUT — treat
-      // identically to being offline: queue for background sync.
-      if (isTransientNetworkError(result.error)) {
-        await queueBoardItemChange(buildPendingPayload(item, "upsert", nextVersion));
-        await registerBoardItemsSync();
-        item.isLoading = false;
-        item.isDirty = true;
-        return true;
-      }
-
-      // Genuine server rejection (e.g. 400/403/500).
-      item.isLoading = false;
-      item.error = "Server rejected update";
-      return false;
-    } catch {
-      if (!networkMonitor.isVerifiedOnline.value) {
-        await queueBoardItemChange(buildPendingPayload(item, "upsert", nextVersion));
-        await registerBoardItemsSync();
-        item.isLoading = false;
-        item.isDirty = true;
-        return true;
-      }
-      item.isLoading = false;
+      pendingUpdateSnapshots.delete(id);
+      const current = items.value.get(id);
+      if (current) items.value.set(id, { ...current, isLoading: false, isDirty: true });
+      return true;
+    } catch (error) {
+      const current = items.value.get(id);
+      if (current) items.value.set(id, { ...current, isLoading: false, error: "Failed to save item locally" });
+      console.error("Failed to queue Board item update", error);
       return false;
     }
   };
 
-  const applySyncResultLocally = async (response: {
-    applied?: string[];
-    conflicts?: Array<{ id: string }>;
-    idMap?: Record<string, string>;
-  }, sentChanges: PendingBoardItemChange[] = []): Promise<PendingBoardItemChange[]> => {
-    const appliedIds = response.applied ?? [];
-    const conflicts = response.conflicts ?? [];
-    const idMap = response.idMap ?? {};
-    const sentById = new Map(sentChanges.map((change) => [change.id, change]));
-    const followUpChanges: PendingBoardItemChange[] = [];
-    const now = new Date();
+  // Store-owned and keyed: editing item B cannot cancel item A, and an edit
+  // made during A's request schedules one latest-state follow-up.
+  const itemSaveDebounce = createKeyedAsyncDebounce(
+    async (id: string) => { await updateItemToServer(id); },
+    1000,
+  );
 
-    for (const [tempId, serverId] of Object.entries(idMap)) {
-      recordItemAlias(tempId, serverId);
-      const tempItem = items.value.get(tempId);
-      const sentChange = sentById.get(tempId);
-      if (!tempItem) {
-        followUpChanges.push({
-          id: serverId,
-          operation: "delete",
-          updatedAt: Date.now(),
-          localVersion: (sentChange?.localVersion ?? 0) + 1,
-          workspaceId: sentChange?.workspaceId ?? workspaceId,
-        });
-        continue;
-      }
+  const saveToServer = async (id: string) => {
+    itemSaveDebounce.schedule(id);
+  };
 
-      items.value.delete(tempId);
-      await deleteBoardItemFromIndexedDB(tempId);
-      const changedAfterSync = changedAfterPendingSnapshot(tempItem, sentChange);
+  const flushItem = async (rawId: string): Promise<void> => {
+    const id = resolveItemId(rawId) ?? rawId;
+    await itemSaveDebounce.flush(id);
+  };
 
-      const serverItem: BoardItemState = {
-        ...tempItem,
-        id: serverId,
-        isDirty: changedAfterSync,
-        isLoading: false,
-        lastSaved: now,
-        error: null,
-      };
-      items.value.set(serverId, serverItem);
-      await saveBoardItemToIndexedDB(serverItem);
-      if (changedAfterSync) {
-        followUpChanges.push(
-          buildPendingPayload(
-            serverItem,
-            "upsert",
-            localVersionFor(serverItem, sentChange),
-          ),
-        );
-      }
-    }
-
-    for (const itemId of appliedIds) {
-      if (idMap[itemId]) continue;
-      const localId = idMap[itemId] ?? itemId;
-      const item = items.value.get(localId);
-      if (!item) continue;
-      const sentChange = sentById.get(itemId);
-      const changedAfterSync = changedAfterPendingSnapshot(item, sentChange);
-
-      item.isDirty = changedAfterSync;
-      item.isLoading = false;
-      item.lastSaved = now;
-      item.error = null;
-      items.value.set(localId, { ...item });
-      await saveBoardItemToIndexedDB(item);
-      if (changedAfterSync) {
-        followUpChanges.push(
-          buildPendingPayload(
-            item,
-            "upsert",
-            localVersionFor(item, sentChange),
-          ),
-        );
-      }
-    }
-
-    for (const conflict of conflicts) {
-      const item = items.value.get(conflict.id);
-      if (!item) continue;
-
-      item.isLoading = false;
-      item.isDirty = true;
-      item.error = "Sync conflict detected. Review this item and retry.";
-      items.value.set(conflict.id, { ...item });
-      await saveBoardItemToIndexedDB(item);
-    }
-
-    return followUpChanges;
+  // Expose flush so reconnect can durably drain every dirty item.
+  const _flushDebounce = async () => {
+    const dirtyIds = Array.from(items.value.values())
+      .filter((item) => item.isDirty)
+      .map((item) => item.id);
+    await itemSaveDebounce.flushAll(dirtyIds);
   };
 
   const syncPendingChanges = async (): Promise<boolean> => {
     await _flushDebounce();
-
-    // The old Board queue is an intake buffer only. Convert it before any
-    // reconnect work so all durable replay goes through the v2 contract.
-    if (offline.accountId.value) {
-      await offline.migrateLegacyBoard();
-      await offline.sync();
-      return true;
-    }
-
-    if (!networkMonitor.isVerifiedOnline.value) {
-      return false;
-    }
-
-    for (let pass = 0; pass < 3; pass += 1) {
-      let pendingChanges = await loadPendingBoardItemChanges(workspaceId);
-      pendingChanges = await repairDirtyItemsWithoutPending(pendingChanges);
-      if (!pendingChanges.length) {
-        lastSync.value = new Date();
-        return true;
-      }
-
-      const syncRequest = BoardItemsSyncRequestSchema.parse(pendingChanges);
-      const result = await $api.boardItems.sync(syncRequest);
-      if (!result.success) {
-        return false;
-      }
-
-      const followUpChanges = await applySyncResultLocally(result.data, pendingChanges);
-      const mappedTempIds = Object.keys(result.data.idMap ?? {});
-      if (mappedTempIds.length) {
-        await deletePendingBoardItemChanges(mappedTempIds);
-      }
-      await deleteAppliedChangesIfUnchanged(
-        (result.data.applied ?? []).filter((id) => !mappedTempIds.includes(id)),
-        pendingChanges,
-      );
-      for (const change of followUpChanges) {
-        await queueBoardItemChange(change);
-      }
-      if (followUpChanges.length) {
-        await registerBoardItemsSync();
-        continue;
-      }
-
-      lastSync.value = new Date();
-      return true;
-    }
-
-    lastSync.value = new Date();
-    return true;
+    if (!offline.accountId.value || !networkMonitor.isVerifiedOnline.value) return false;
+    const synced = await offline.sync();
+    if (synced) lastSync.value = new Date();
+    return synced;
   };
 
   // Update board item content - local-first approach
@@ -559,42 +516,26 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     // A caller may still hold a temp id after the create reconciled — write
     // through to the real id so the temp entry isn't resurrected.
     const realId = itemIdAliases.value.get(id) ?? id;
+    const previousItem = items.value.get(realId);
+    if (previousItem && !pendingUpdateSnapshots.has(realId))
+      pendingUpdateSnapshots.set(realId, { ...previousItem });
     updatedItem = { ...updatedItem, id: realId };
     updatedItem.updatedAt = new Date();
     updatedItem.isDirty = true;
     items.value.set(realId, updatedItem);
 
-    // Save to IndexedDB
-    await saveBoardItemToIndexedDB(updatedItem);
-
-    if (!networkMonitor.isVerifiedOnline.value) {
-      const create = isUnreconciledTempId(realId);
-      await offline.queue({
-        entity: "boardItem",
-        operation: create ? "boardItem.create" : "boardItem.update",
-        entityId: realId,
-        workspaceId: updatedItem.workspaceId ?? workspaceId,
-        changedFields: ["content", "tags", "dueDate", "attachments", "columnId", "position"],
-        payload: { workspaceId: updatedItem.workspaceId ?? workspaceId, columnId: updatedItem.columnId ?? null, content: updatedItem.content, tags: updatedItem.tags, dueDate: updatedItem.dueDate instanceof Date ? updatedItem.dueDate.toISOString() : updatedItem.dueDate ?? null, attachments: updatedItem.attachments, order: updatedItem.order, position: updatedItem.position },
-        localData: updatedItem as unknown as Record<string, unknown>,
-      });
+    try {
+      await saveBoardItemToIndexedDBStrict(updatedItem);
+      // One keyed debounce feeds the V2 outbox online and offline.
+      await saveToServer(realId);
       return true;
+    } catch (error) {
+      if (previousItem) items.value.set(realId, previousItem);
+      else items.value.delete(realId);
+      pendingUpdateSnapshots.delete(realId);
+      console.error("Failed to persist Board item update", error);
+      return false;
     }
-
-    if (isUnreconciledTempId(realId)) {
-      await queueBoardItemChange(
-        buildPendingPayload(updatedItem, "upsert", localVersionFor(updatedItem)),
-      );
-      await registerBoardItemsSync();
-      if (networkMonitor.isVerifiedOnline.value) {
-        void syncPendingChanges();
-      }
-      return true;
-    }
-
-    // Debounced server sync (reads full item from store)
-    await saveToServer(realId);
-    return true;
   };
 
   // Create a new board item
@@ -605,7 +546,7 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     dueDate: string | null = null,
     attachments: Attachment[] = []
   ): Promise<string | null> => {
-    const tempId = `temp-${Date.now()}`;
+    const tempId = createClientTempId("board-item");
 
     // Append rank: one gap past the column's current max (ranks are per-column
     // and needn't be contiguous).
@@ -635,26 +576,23 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       error: null,
     };
 
-    await saveBoardItemToIndexedDB(optimisticItem);
     items.value.set(tempId, optimisticItem);
     try {
-      if (!networkMonitor.isVerifiedOnline.value) {
-        await offline.queue({ entity: "boardItem", operation: "boardItem.create", entityId: tempId, workspaceId, changedFields: ["content", "tags", "columnId", "dueDate", "attachments", "position"], payload: { workspaceId, columnId, content, tags, dueDate, attachments, order: optimisticItem.order, position: optimisticItem.position }, localData: optimisticItem as unknown as Record<string, unknown> });
-        return tempId;
-      }
-      await queueBoardItemChange(buildPendingPayload(optimisticItem, "upsert", 1));
-      await registerBoardItemsSync();
-      if (networkMonitor.isVerifiedOnline.value) {
-        void syncPendingChanges();
-      }
-    } catch (error) {
-      const current = items.value.get(tempId) ?? optimisticItem;
-      items.value.set(tempId, {
-        ...current,
-        error:
-          "This item is visible locally, but could not be queued for sync. Keep this page open and retry.",
+      await offline.queue({
+        entity: "boardItem",
+        operation: "boardItem.create",
+        entityId: tempId,
+        workspaceId,
+        changedFields: [...BOARD_ITEM_MUTABLE_FIELDS],
+        payload: boardItemPayloadForFields(optimisticItem, BOARD_ITEM_MUTABLE_FIELDS),
+        localData: boardItemDurableData(
+          optimisticItem as unknown as Record<string, unknown> & { id: string },
+        ),
       });
+    } catch (error) {
+      items.value.delete(tempId);
       console.error("Failed to queue board item creation:", error);
+      return null;
     }
 
     return tempId;
@@ -666,171 +604,141 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     const originalItem = items.value.get(id);
     if (!originalItem) return false;
 
-    // Optimistic delete
+    // Optimistic delete. V2 retains originalItem as the rejection snapshot.
+    itemSaveDebounce.cancel(id);
+    pendingUpdateSnapshots.delete(id);
     items.value.delete(id);
-    await deleteBoardItemFromIndexedDB(id);
-
-    if (!networkMonitor.isVerifiedOnline.value) {
-      await offline.queue({ entity: "boardItem", operation: "boardItem.delete", entityId: id, workspaceId: originalItem.workspaceId ?? workspaceId, changedFields: ["deleted"], payload: {} });
-      return true;
-    }
-
-    if (isUnreconciledTempId(id)) {
-      await queueBoardItemChange({
-        id,
-        operation: "delete",
-        updatedAt: Date.now(),
-        localVersion: 1,
-        workspaceId: originalItem.workspaceId ?? workspaceId,
-      });
-      await registerBoardItemsSync();
-      if (networkMonitor.isVerifiedOnline.value) {
-        void syncPendingChanges();
-      }
-      return true;
-    }
-
-    // If already offline, queue the delete immediately.
-    if (!networkMonitor.isVerifiedOnline.value) {
-      await queueBoardItemChange({ id, operation: "delete", updatedAt: Date.now(), localVersion: 1 });
-      await registerBoardItemsSync();
-      return true;
-    }
-
     try {
-      const result: Result<unknown, APIError> = await $api.boardItems.delete(id);
-
-      if (result.success) return true;
-
-      // FetchFactory network error — queue for background sync.
-      if (isTransientNetworkError(result.error)) {
-        await queueBoardItemChange({ id, operation: "delete", updatedAt: Date.now(), localVersion: 1 });
-        await registerBoardItemsSync();
-        return true;
-      }
-
-      // Genuine server rejection — restore the item.
+      await offline.queue({
+        entity: "boardItem",
+        operation: "boardItem.delete",
+        entityId: id,
+        workspaceId: originalItem.workspaceId ?? workspaceId,
+        baseVersion: originalItem.offlineRevision ?? 0,
+        changedFields: ["deleted"],
+        payload: {},
+        rollbackData: originalItem as unknown as Record<string, unknown>,
+      });
+      return true;
+    } catch (error) {
       items.value.set(id, originalItem);
-      await saveBoardItemToIndexedDB(originalItem);
-      toast.add({ title: "Error", description: "Failed to delete board item", color: "error" });
-      return false;
-    } catch {
-      if (!networkMonitor.isVerifiedOnline.value) {
-        await queueBoardItemChange({ id, operation: "delete", updatedAt: Date.now(), localVersion: 1 });
-        await registerBoardItemsSync();
-        return true;
-      }
-      items.value.set(id, originalItem);
-      await saveBoardItemToIndexedDB(originalItem);
+      console.error("Failed to queue Board item delete", error);
       return false;
     }
   };
 
-  // Load board items from server with IndexedDB fallback
-  const syncWithServer = async (): Promise<void> => {
-    loadingStates.value.set("global", true);
+  const boardItemProjectionKey = (item: BoardItemState) =>
+    JSON.stringify(
+      Object.fromEntries(
+        BOARD_ITEM_MUTABLE_FIELDS.map((field) => [
+          field,
+          comparableBoardItemValue(field, item[field]),
+        ]),
+      ),
+    );
+  let syncWithServerPromise: Promise<void> | null = null;
 
-    // IDB-first: always hydrate from local storage before the network attempt
-    // so that an offline reload immediately shows the user's last-known data.
-    try { await hydrateFromIDB(); } catch { /* ignore — navbar pill shows offline */ }
+  // Load Board items IDB-first, then replace the clean projection with one
+  // authoritative server snapshot while preserving mutations and request races.
+  const syncWithServer = (): Promise<void> => {
+    if (syncWithServerPromise) return syncWithServerPromise;
+    const run = (async () => {
+      loadingStates.value.set("global", true);
+      try {
+        await hydrateFromIDB();
+        if (!networkMonitor.isVerifiedOnline.value) return;
+        // A sibling Board store may already own the V2 drain. The projection
+        // transaction below overlays pending/syncing/retry rows, so a GET is
+        // still safe even when this caller did not own that sync request.
+        await syncPendingChanges();
+        await hydrateFromIDB();
 
-    // BUG-1 fix: if we're not verified online, stop here.
-    // The SW's cached API response is stale server data that would overwrite
-    // the fresher IDB data we just hydrated.
-    if (!networkMonitor.isVerifiedOnline.value) {
-      loadingStates.value.set("global", false);
-      return;
-    }
-
-    try {
-      const pendingBeforeSync = await loadPendingBoardItemChanges(workspaceId);
-      const pendingDeleteIds = new Set(
-        pendingBeforeSync
-          .filter((change) => change.operation === "delete")
-          .map((change) => change.id),
-      );
-      await syncPendingChanges();
-      const pendingBeforeFetch = await loadPendingBoardItemChanges(workspaceId);
-      pendingBeforeFetch
-        .filter((change) => change.operation === "delete")
-        .forEach((change) => pendingDeleteIds.add(change.id));
-      const pendingAfterSync = new Set(pendingBeforeFetch.map((change) => change.id));
-      const result = await $api.boardItems.getAll(workspaceId);
-
-      if (result.success) {
-        const tempItems = Array.from(items.value.values()).filter(i =>
-          i.id.startsWith("temp-") && pendingAfterSync.has(i.id)
+        const requestSnapshot = new Map(
+          Array.from(items.value, ([id, item]) => [id, { ...item }]),
         );
+        const result = await $api.boardItems.getAll(workspaceId);
+        if (!result.success || !offline.accountId.value) return;
 
-        // Preserve dirty items (in-progress edits)
-        const dirtyItems = new Map<string, BoardItemState>();
-        for (const [id, item] of items.value) {
-          if (item.isDirty && !id.startsWith("temp-")) {
-            dirtyItems.set(id, item);
-          }
-        }
-
-        const itemStates: BoardItemState[] = result.data
-          .filter((item: BoardItem) => !pendingDeleteIds.has(item.id))
-          .map((item: BoardItem) => ({
-            ...item,
-            isLoading: false,
-            isDirty: false,
-            lastSaved: new Date(),
-            error: null,
-          }));
-
-        items.value.clear();
-        itemStates.forEach((is) => {
-          // Merge: keep dirty local version over server data
-          const dirty = dirtyItems.get(is.id);
-          if (dirty) {
-            items.value.set(is.id, dirty);
-          } else {
-            items.value.set(is.id, is);
-          }
+        const atResponse = new Map(
+          Array.from(items.value, ([id, item]) => [id, { ...item }]),
+        );
+        const volatileItems = Array.from(atResponse.values()).filter((item) => {
+          const before = requestSnapshot.get(item.id);
+          return !before || boardItemProjectionKey(before) !== boardItemProjectionKey(item);
+        });
+        const volatileDeletedIds = Array.from(requestSnapshot.keys()).filter(
+          (id) => !atResponse.has(id),
+        );
+        const serverItems: BoardItemState[] = result.data.map((item: BoardItem) => ({
+          ...item,
+          isLoading: false,
+          isDirty: false,
+          lastSaved: new Date(),
+          error: null,
+        }));
+        const projection = await reconcileBoardWorkspaceProjection({
+          accountId: offline.accountId.value,
+          workspaceId,
+          entity: "boardItem",
+          serverRecords: serverItems,
+          volatileRecords: volatileItems,
+          volatileDeletedIds,
         });
 
-        // Re-add temp items
-        for (const tempItem of tempItems) {
-          items.value.set(tempItem.id, tempItem);
+        // An edit can start while the IDB transaction is being committed. Apply
+        // that last memory delta after the authoritative projection returns.
+        const afterPersistence = new Map(items.value);
+        const final = new Map(projection.map((item) => {
+          const ephemeral = atResponse.get(item.id);
+          return [item.id, {
+            ...item,
+            ...(ephemeral?.links && { links: ephemeral.links }),
+            ...(ephemeral?.comments && { comments: ephemeral.comments }),
+            linksLoading: ephemeral?.linksLoading ?? false,
+            commentsLoading: ephemeral?.commentsLoading ?? false,
+          } as BoardItemState];
+        }));
+        for (const [id, item] of afterPersistence) {
+          const before = atResponse.get(id);
+          if (!before || boardItemProjectionKey(before) !== boardItemProjectionKey(item))
+            final.set(id, item);
         }
-
-        // Only persist non-dirty items to IDB
-        await saveBoardItemsToIndexedDB(itemStates.filter(is => !dirtyItems.has(is.id)));
-
-        for (const tempItem of tempItems) {
-          try {
-            await deleteBoardItemFromIndexedDB(tempItem.id);
-          } catch {
-            /* best effort cleanup */
-          }
+        for (const id of atResponse.keys()) {
+          if (!afterPersistence.has(id)) final.delete(id);
         }
-
+        items.value = final;
         lastSync.value = new Date();
+      } catch {
+        // IDB state remains visible on network or reconciliation failure.
+      } finally {
+        loadingStates.value.set("global", false);
       }
-      // Server failed: IDB data from hydrateFromIDB remains visible.
-    } catch {
-      // Network error: IDB data from hydrateFromIDB remains visible.
-    } finally {
-      loadingStates.value.set("global", false);
-    }
+    })();
+    syncWithServerPromise = run.finally(() => {
+      syncWithServerPromise = null;
+    });
+    return syncWithServerPromise;
   };
 
-  // Pure IDB hydration — loads BOARD_ITEMS store and overlays PENDING_BOARD_ITEMS
-  // so offline edits survive a page reload.
+  // Offline V2 entities are the only durable Board projection.
   const hydrateFromIDB = async (): Promise<void> => {
-    const [localItems, pendingChanges] = await Promise.all([
-      loadBoardItemsFromIndexedDB(workspaceId),  // BUG-4 fix: filter by workspaceId
-      loadPendingBoardItemChanges(workspaceId),
-    ]);
-
-    if (localItems.length === 0 && pendingChanges.length === 0) return;
-
-    const itemMap = mergePendingBoardItems(localItems, pendingChanges);
-
+    if (!offline.accountId.value) return;
+    const localItems = await loadBoardItemsProjection({
+      accountId: offline.accountId.value,
+      workspaceId,
+    });
+    const previous = new Map(items.value);
     items.value.clear();
-    itemMap.forEach((item, id) => items.value.set(id, item));
+    localItems.forEach((item) => {
+      const ephemeral = previous.get(item.id);
+      items.value.set(item.id, {
+        ...item,
+        ...(ephemeral?.links && { links: ephemeral.links }),
+        ...(ephemeral?.comments && { comments: ephemeral.comments }),
+        linksLoading: ephemeral?.linksLoading ?? false,
+        commentsLoading: ephemeral?.commentsLoading ?? false,
+      });
+    });
   };
 
   // Thin wrapper kept for backward compatibility.
@@ -845,14 +753,15 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   };
 
   const isItemLoading = (id: string): boolean => {
-    return items.value.get(id)?.isLoading ?? false;
+    return items.value.get(resolveItemId(id) ?? id)?.isLoading ?? false;
   };
 
   const isItemDirty = (id: string): boolean => {
-    return items.value.get(id)?.isDirty ?? false;
+    return items.value.get(resolveItemId(id) ?? id)?.isDirty ?? false;
   };
 
   const retryFailedItem = async (id: string): Promise<boolean> => {
+    id = resolveItemId(id) ?? id;
     const item = items.value.get(id);
     if (!item || !item.error) return false;
 
@@ -864,6 +773,7 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   };
 
   const clearItemError = (id: string) => {
+    id = resolveItemId(id) ?? id;
     const item = items.value.get(id);
     if (item) {
       item.error = null;
@@ -873,11 +783,11 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
 
   const isItemInFilter = (id: string): boolean => {
     if (!filteredItemIds.value) return true;
-    return filteredItemIds.value.has(id);
+    return filteredItemIds.value.has(resolveItemId(id) ?? id);
   };
 
   const getItem = (id: string): BoardItemState | null => {
-    return items.value.get(id) || null;
+    return items.value.get(resolveItemId(id) ?? id) || null;
   };
 
   const setItems = (newItems: BoardItemState[]) => {
@@ -893,14 +803,21 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     item.linksLoading = true;
     items.value.set(id, { ...item });
 
+    if (offline.accountId.value) {
+      const { listOfflineEntities } = await import("~/utils/offline-v2/repository");
+      const cached = await listOfflineEntities<any>(offline.accountId.value, "boardLink", workspaceId);
+      const sent = cached.map((record) => ({
+        ...record.data,
+        offlineRevision: record.version,
+      })).filter((link) => link.sourceId === id);
+      const received = cached.map((record) => ({
+        ...record.data,
+        offlineRevision: record.version,
+      })).filter((link) => link.targetId === id);
+      item.links = { sent, received };
+      items.value.set(id, { ...item });
+    }
     if (!networkMonitor.isVerifiedOnline.value) {
-      if (offline.accountId.value) {
-        const { listOfflineEntities } = await import("~/utils/offline-v2/repository");
-        const cached = await listOfflineEntities<any>(offline.accountId.value, "boardLink", workspaceId);
-        const sent = cached.map((record) => record.data).filter((link) => link.sourceId === id);
-        const received = cached.map((record) => record.data).filter((link) => link.targetId === id);
-        item.links = { sent, received };
-      }
       item.linksLoading = false;
       items.value.set(id, { ...item });
       return;
@@ -910,8 +827,22 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       const result = await $api.boardItems.getLinks(id);
       const current = items.value.get(id);
       if (!current) return;
-      if (result.success) {
-        items.value.set(id, { ...current, links: result.data, linksLoading: false });
+      if (result.success && offline.accountId.value) {
+        const relations = await reconcileBoardRelationsForItem({
+          accountId: offline.accountId.value,
+          workspaceId,
+          itemId: id,
+          entity: "boardLink",
+          serverRecords: [...result.data.sent, ...result.data.received],
+        });
+        items.value.set(id, {
+          ...current,
+          links: {
+            sent: relations.filter((link) => link.sourceId === id),
+            received: relations.filter((link) => link.targetId === id),
+          },
+          linksLoading: false,
+        });
       } else {
         items.value.set(id, { ...current, linksLoading: false });
       }
@@ -929,12 +860,16 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     item.commentsLoading = true;
     items.value.set(id, { ...item });
 
+    if (offline.accountId.value) {
+      const { listOfflineEntities } = await import("~/utils/offline-v2/repository");
+      const cached = await listOfflineEntities<any>(offline.accountId.value, "boardComment", workspaceId);
+      item.comments = cached.map((record) => ({
+        ...record.data,
+        offlineRevision: record.version,
+      })).filter((comment) => comment.itemId === id);
+      items.value.set(id, { ...item });
+    }
     if (!networkMonitor.isVerifiedOnline.value) {
-      if (offline.accountId.value) {
-        const { listOfflineEntities } = await import("~/utils/offline-v2/repository");
-        const cached = await listOfflineEntities<any>(offline.accountId.value, "boardComment", workspaceId);
-        item.comments = cached.map((record) => record.data).filter((comment) => comment.itemId === id);
-      }
       item.commentsLoading = false;
       items.value.set(id, { ...item });
       return;
@@ -944,8 +879,15 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
       const result = await $api.boardItems.getComments(id);
       const current = items.value.get(id);
       if (!current) return;
-      if (result.success) {
-        items.value.set(id, { ...current, comments: result.data, commentsLoading: false });
+      if (result.success && offline.accountId.value) {
+        const comments = await reconcileBoardRelationsForItem({
+          accountId: offline.accountId.value,
+          workspaceId,
+          itemId: id,
+          entity: "boardComment",
+          serverRecords: result.data,
+        });
+        items.value.set(id, { ...current, comments, commentsLoading: false });
       } else {
         items.value.set(id, { ...current, commentsLoading: false });
       }
@@ -998,10 +940,11 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   // Move item to a different column (or reposition) — a SINGLE-item write under
   // fractional ranking: only the moved item's columnId + rank change.
   const moveItemToColumn = async (
-    itemId: string,
+    rawItemId: string,
     columnId: string | null,
     newOrder?: number,
   ): Promise<boolean> => {
+    const itemId = resolveItemId(rawItemId) ?? rawItemId;
     const originalItem = items.value.get(itemId);
     if (!originalItem) return false;
 
@@ -1026,44 +969,11 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     beginPositionMutation();
 
     try {
-      if (!networkMonitor.isVerifiedOnline.value || isUnreconciledTempId(itemId)) {
-        if (!networkMonitor.isVerifiedOnline.value) {
-          await offline.queue({ entity: "boardItem", operation: isUnreconciledTempId(itemId) ? "boardItem.create" : "boardItem.update", entityId: itemId, workspaceId: movedItem.workspaceId ?? workspaceId, changedFields: ["columnId", "position"], payload: { workspaceId: movedItem.workspaceId ?? workspaceId, columnId: targetColumnId, order: rank, position, content: movedItem.content, tags: movedItem.tags, dueDate: movedItem.dueDate instanceof Date ? movedItem.dueDate.toISOString() : movedItem.dueDate ?? null, attachments: movedItem.attachments }, localData: movedItem as unknown as Record<string, unknown> });
-          return true;
-        }
-        await queueBoardItemsForSync([movedItem]);
-        if (networkMonitor.isVerifiedOnline.value) {
-          void syncPendingChanges();
-        }
-        return true;
-      }
-
-      const result = await $api.boardItems.moveToColumn({ itemId, targetColumnId, rank });
-
-      if (result.success) {
-        const current = items.value.get(itemId);
-        if (current) {
-          const reconciled: BoardItemState = {
-            ...current,
-            ...result.data,
-            isLoading: false,
-            isDirty: false,
-            lastSaved: new Date(),
-            error: null,
-          };
-          items.value.set(itemId, reconciled);
-          await saveBoardItemToIndexedDB(reconciled);
-        }
-        return true;
-      } else if (isTransientNetworkError(result.error)) {
-        await queueBoardItemsForSync([movedItem]);
-        return true;
-      } else {
-        items.value.set(itemId, rollback);
-        await saveBoardItemToIndexedDB(rollback);
-        toast.add({ title: "Error", description: "Failed to move item", color: "error" });
-        return false;
-      }
+      await queueBoardItemsForSync([movedItem], {
+        changedFields: ["columnId", "order", "position"],
+        rollbackById: new Map([[itemId, rollback]]),
+      });
+      return true;
     } catch (error) {
       console.error("Failed to move board item:", error);
       items.value.set(itemId, rollback);
@@ -1089,13 +999,14 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     /** Last server-confirmed order, cloned to plain values for safe rollback. */
     rollback: BoardItemState[] | null;
     seq: number;
+    generation: number;
     debounce: ReturnType<typeof setTimeout> | null;
   };
   const columnReorderStates = new Map<string, ColumnReorderState>();
   const getColumnReorderState = (key: string): ColumnReorderState => {
     let state = columnReorderStates.get(key);
     if (!state) {
-      state = { inFlight: false, pending: null, rollback: null, seq: 0, debounce: null };
+      state = { inFlight: false, pending: null, rollback: null, seq: 0, generation: 0, debounce: null };
       columnReorderStates.set(key, state);
     }
     return state;
@@ -1191,68 +1102,26 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     state.pending = null;
     state.inFlight = true;
     const mySeq = ++state.seq;
+    const myGeneration = state.generation;
     beginPositionMutation();
 
-    const itemOrders = Array.from(pending.entries())
-      .filter(([id]) => !id.startsWith("temp-"))
-      .map(([id, order]) => ({ id, order }));
     const changedItems = Array.from(pending.keys())
       .map((id) => items.value.get(id))
       .filter((item): item is BoardItemState => Boolean(item));
-    const tempChangedItems = changedItems.filter((item) =>
-      isUnreconciledTempId(item.id),
-    );
 
     try {
-      if (!networkMonitor.isVerifiedOnline.value) {
-        for (const item of changedItems) {
-          await offline.queue({ entity: "boardItem", operation: isUnreconciledTempId(item.id) ? "boardItem.create" : "boardItem.update", entityId: item.id, workspaceId: item.workspaceId ?? workspaceId, changedFields: ["position", "columnId"], payload: { workspaceId: item.workspaceId ?? workspaceId, columnId, order: item.order, position: item.position, content: item.content, tags: item.tags, dueDate: item.dueDate instanceof Date ? item.dueDate.toISOString() : item.dueDate ?? null, attachments: item.attachments }, localData: item as unknown as Record<string, unknown> });
-        }
-        state.rollback = null; // queued = accepted
-        return;
-      }
-
-      if (tempChangedItems.length) {
-        await queueBoardItemsForSync(tempChangedItems);
-      }
-
-      // Nothing persistable (only optimistic temp items moved) — they'll be
-      // ordered correctly once their create resolves.
-      if (itemOrders.length === 0) { state.rollback = null; return; }
-
-      const result = await $api.boardItems.reorderInColumn({ columnId, itemOrders });
-
-      // A newer flush has superseded this one — discard this (stale) response.
-      if (mySeq !== state.seq) return;
-
-      if (result.success) {
-        const lastSaved = new Date();
-        changedItems.forEach((item) => {
-          if (isUnreconciledTempId(item.id)) return;
-          const current = items.value.get(item.id);
-          if (current) {
-            items.value.set(item.id, {
-              ...current, isLoading: false, isDirty: false, lastSaved, error: null,
-            });
-          }
-        });
-        state.rollback = null; // confirmed
-      } else if (isTransientNetworkError(result.error)) {
-        await queueBoardItemsForSync(changedItems);
+      await queueBoardItemsForSync(changedItems, {
+        changedFields: ["columnId", "order", "position"],
+      });
+      if (mySeq === state.seq && myGeneration === state.generation) {
         state.rollback = null;
-      } else {
-        console.error("Server rejected item reordering:", result.error);
-        rollbackColumnReorder(state);
-        toast.add({
-          title: "Couldn't save the new order",
-          description: "Your other changes are safe. Please try again.",
-          color: "error",
-        });
       }
     } catch (error) {
       console.error("Failed to reorder board items in column:", error);
       try {
-        await queueBoardItemsForSync(changedItems);
+        await queueBoardItemsForSync(changedItems, {
+          changedFields: ["columnId", "order", "position"],
+        });
         state.rollback = null;
       } catch {
         rollbackColumnReorder(state);
@@ -1271,6 +1140,7 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
   ): Promise<boolean> => {
     const key = columnId ?? "uncategorized";
     const state = getColumnReorderState(key);
+    state.generation += 1;
 
     // At the start of a burst (fully idle), snapshot the last server-confirmed
     // order as plain clones so a later rollback can't be corrupted by the
@@ -1284,17 +1154,31 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     const changes = computeReorderRankChanges(orderedItems);
     const changeMap = new Map(changes.map((c) => [c.id, c.order]));
     const positionMap = new Map(changes.map((c) => [c.id, c.position]));
+    const changedIds = new Set(changes.map((change) => change.id));
+    const changedAt = new Date();
 
     // Optimistic UI immediately — new objects, set columnId + (possibly new) rank.
     orderedItems.forEach((item) => {
       const current = items.value.get(item.id) ?? item;
       const nextRank = changeMap.get(item.id) ?? current.order ?? 0;
-      items.value.set(item.id, { ...current, columnId, order: nextRank, position: positionMap.get(item.id) ?? current.position });
+      items.value.set(item.id, {
+        ...current,
+        columnId,
+        order: nextRank,
+        position: positionMap.get(item.id) ?? current.position,
+        ...(changedIds.has(item.id) && { isDirty: true, updatedAt: changedAt }),
+      });
     });
     const optimisticChanged = changes
       .map((c) => items.value.get(c.id))
       .filter((item): item is BoardItemState => Boolean(item));
-    void saveBoardItemsToIndexedDB(optimisticChanged);
+    try {
+      await Promise.all(optimisticChanged.map(saveBoardItemToIndexedDBStrict));
+    } catch (error) {
+      console.error("Failed to persist board item reorder locally:", error);
+      rollbackColumnReorder(state);
+      return false;
+    }
 
     // Accumulate changed ranks to persist (coalesce: latest rank per id wins).
     if (!state.pending) state.pending = new Map();
@@ -1326,6 +1210,7 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     filteredItemIds,
     createItem,
     updateItem,
+    flushItem,
     loadItemLinks,
     loadItemComments,
     deleteItem,
@@ -1341,9 +1226,16 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
     getItem,
     resolveItemId,
     setItems,
+    persistAndQueueItems,
     setFilteredItemIds,
     _flushDebounce,
     _syncPendingChanges: syncPendingChanges,
+    _applyOfflineItemIdMap: applyOfflineItemIdMap,
+    _applyOfflineItemAck: applyOfflineItemAck,
+    _applyOfflineColumnIdMap: applyOfflineColumnIdMap,
+    _applyOfflineItemFailure: applyOfflineItemFailure,
+    _applyOfflineConflictResolution: applyOfflineConflictResolution,
+    _cancelDebounces: itemSaveDebounce.cancelAll,
   };
 
   boardItemsStores.set(storeKey, store);
@@ -1356,67 +1248,11 @@ export function useBoardItemsStore(workspaceId?: string): BoardItemsStore {
  */
 export function cleanupBoardItemsStore(workspaceId?: string): void {
   if (workspaceId) {
+    boardItemsStores.get(workspaceId)?._cancelDebounces?.();
     boardItemsStores.delete(workspaceId);
     return;
   }
 
+  for (const store of boardItemsStores.values()) store._cancelDebounces?.();
   boardItemsStores.clear();
-}
-
-// IndexedDB helper functions
-async function saveBoardItemToIndexedDB(item: BoardItemState): Promise<void> {
-  try {
-    const db = await openUnifiedDB();
-    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.BOARD_ITEMS)) return;
-
-    // Use putRecord which automatically sanitizes for IndexedDB
-    await putRecord(db, DB_CONFIG.STORES.BOARD_ITEMS as STORES, item);
-  } catch (error) {
-    console.error("Failed to save board item to IndexedDB:", error);
-  }
-}
-
-async function saveBoardItemsToIndexedDB(itemsArr: BoardItemState[]): Promise<void> {
-  try {
-    const db = await openUnifiedDB();
-    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.BOARD_ITEMS)) return;
-    await putAllRecords(db, DB_CONFIG.STORES.BOARD_ITEMS as STORES, itemsArr);
-  } catch (error) {
-    console.error("Failed to batch save board items to IndexedDB:", error);
-  }
-}
-
-async function deleteBoardItemFromIndexedDB(id: string): Promise<void> {
-  try {
-    const db = await openUnifiedDB();
-    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.BOARD_ITEMS)) return;
-
-    const tx = db.transaction(DB_CONFIG.STORES.BOARD_ITEMS, "readwrite");
-    const store = tx.objectStore(DB_CONFIG.STORES.BOARD_ITEMS);
-    await store.delete(id);
-  } catch (error) {
-    console.error("Failed to delete board item from IndexedDB:", error);
-  }
-}
-
-// BUG-4 fix: filter by workspaceId to prevent cross-workspace data leakage
-async function loadBoardItemsFromIndexedDB(wsId?: string): Promise<BoardItemState[]> {
-  try {
-    const db = await openUnifiedDB();
-    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.BOARD_ITEMS)) return [];
-
-    const allItems = await getAllRecords<BoardItemState>(
-      db,
-      DB_CONFIG.STORES.BOARD_ITEMS as any
-    );
-
-    // Client-side filter by workspaceId
-    if (wsId) {
-      return allItems.filter(item => item.workspaceId === wsId);
-    }
-    return allItems;
-  } catch (error) {
-    console.error("Failed to load board items from IndexedDB:", error);
-    return [];
-  }
 }

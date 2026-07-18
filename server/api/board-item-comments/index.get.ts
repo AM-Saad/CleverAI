@@ -34,6 +34,19 @@ export default defineEventHandler(async (event) => {
       },
     });
 
+    const states = comments.length
+      ? await prisma.offlineEntityState.findMany({
+          where: {
+            userId: user.id,
+            entity: "boardComment",
+            entityId: { in: comments.map((comment) => comment.id) },
+          },
+          select: { entityId: true, version: true },
+        })
+      : [];
+    const revisions = new Map(
+      states.map((state) => [state.entityId, state.version]),
+    );
     const shaped = comments.map((comment: CommentRow) => ({
       id: comment.id,
       itemId: comment.itemId,
@@ -41,6 +54,7 @@ export default defineEventHandler(async (event) => {
       content: comment.content,
       createdAt: comment.createdAt,
       updatedAt: comment.updatedAt,
+      offlineRevision: revisions.get(comment.id) ?? 0,
       author: { name: comment.user.name, email: comment.user.email ?? undefined },
     }));
 

@@ -3,14 +3,20 @@ import { z } from "zod";
 import { BoardItemSchema } from "./boardItem.contract";
 
 const trim = (v: unknown) => (typeof v === "string" ? v.trim() : v);
+const optionalPosition = z.preprocess(
+  (value) => (value === null ? undefined : value),
+  z.string().regex(/^[0-9A-Za-z]+$/).optional(),
+);
 
 export const BoardColumnSchema = z.object({
   id: z.string(),
   userId: z.string(),
   name: z.string(),
   order: z.number().int().default(0),
-  position: z.string().regex(/^[0-9A-Za-z]+$/).optional(),
+  position: optionalPosition,
   workspaceId: z.string().nullable().optional(),
+  /** Revision used by the offline-v2 optimistic concurrency protocol. */
+  offlineRevision: z.number().int().nonnegative().optional(),
 
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),

@@ -38,7 +38,29 @@ export default defineEventHandler(async (event) => {
       }),
     ]);
 
-    return success({ sent: linksSent, received: linksReceived });
+    const linkIds = [...linksSent, ...linksReceived].map((link) => link.id);
+    const states = linkIds.length
+      ? await prisma.offlineEntityState.findMany({
+          where: {
+            userId: user.id,
+            entity: "boardLink",
+            entityId: { in: linkIds },
+          },
+          select: { entityId: true, version: true },
+        })
+      : [];
+    const revisions = new Map(
+      states.map((state) => [state.entityId, state.version]),
+    );
+    const withRevision = <T extends { id: string }>(link: T) => ({
+      ...link,
+      offlineRevision: revisions.get(link.id) ?? 0,
+    });
+
+    return success({
+      sent: linksSent.map(withRevision),
+      received: linksReceived.map(withRevision),
+    });
   } catch (error) {
     console.error("Failed to fetch board item links:", error);
     throw Errors.server("Failed to fetch board item links");

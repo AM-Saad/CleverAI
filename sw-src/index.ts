@@ -16,20 +16,25 @@ import {
 // // Import shared IndexedDB helpers
 import {
   openUnifiedDB,
+  acknowledgePendingNoteChange,
+  deletePendingNoteGroupChanges,
+  deletePendingNoteLayoutChange,
   deleteRecord,
-  putRecord,
+  getRecord,
   loadPendingNoteChanges,
   loadPendingNoteGroupChanges,
   loadPendingNoteLayoutChanges,
-  deletePendingNoteChanges,
-  deletePendingNoteGroupChanges,
-  deletePendingNoteLayoutChange,
+  putRecord,
+  queueNoteChange,
+  queueNoteGroupChange,
+  reconcileNoteGroupIds,
   remapPendingNoteGroupIds,
-  loadPendingBoardItemChanges,
-  deletePendingBoardItemChanges,
+  remapPendingNoteIds,
+  saveNoteSyncConflict,
 } from "../app/utils/idb";
 import {
   applySyncResult as applyOfflineSyncResult,
+  claimOfflineMutations,
   getOfflineSession,
   listOfflineMutations,
   remapOfflineIds,
@@ -38,6 +43,11 @@ import {
   updateOfflineSyncMetadata,
 } from "../app/utils/offline-v2/repository";
 import type { OfflineSyncResponse } from "../shared/utils/offline-sync.contract";
+import type {
+  NotesSyncResponse,
+  PendingNoteChange,
+  PendingNoteGroupChange,
+} from "../shared/utils/note-sync.contract";
 import { orderOfflineMutations } from "../shared/utils/offline-mutation-order";
 import type {
   IncomingSWMessage,
@@ -58,13 +68,36 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
 
 // No global augmentation required; we'll cast when reading __WB_MANIFEST.
 
-// Wrap logic but avoid nested ambiguous closures for TS parser
+// Wrap logic but avoid nested ambiguous closures for TS parser.
 (() => {
   // Use centralized SW version
   const SW_VERSION = SW_CONFIG.VERSION;
   // Use centralized prewarm paths
   // Toggleable debug flag (can be overridden via postMessage later if desired)
   let DEBUG = false; // Default off; can be toggled via postMessage.
+  let notesSyncInProgress = false;
+  const isViteDevelopmentAsset = (url: URL) => {
+    const isDevelopmentHost =
+      url.hostname === "localhost" ||
+      url.hostname === "127.0.0.1" ||
+      url.hostname.endsWith(".local");
+    if (!isDevelopmentHost || !url.pathname.startsWith("/_nuxt/")) {
+      return false;
+    }
+    return (
+      /\.(?:vue|ts|tsx|jsx|scss|sass|less)$/.test(url.pathname) ||
+      url.pathname.includes("/@") ||
+      url.pathname.startsWith("/_nuxt/assets/") ||
+      url.pathname.startsWith("/_nuxt/components/") ||
+      url.pathname.startsWith("/_nuxt/composables/") ||
+      url.pathname.startsWith("/_nuxt/features/") ||
+      url.pathname.startsWith("/_nuxt/layouts/") ||
+      url.pathname.startsWith("/_nuxt/pages/") ||
+      url.pathname.startsWith("/_nuxt/plugins/") ||
+      url.searchParams.has("t") ||
+      url.searchParams.has("v")
+    );
+  };
   const log = (...args: unknown[]) => {
     if (DEBUG) console.log("[SW]", ...args);
   };
@@ -102,10 +135,6 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
   let db: IDBDatabase | null = null;
   let dbInitAttempts = 0;
   const MAX_DB_INIT_ATTEMPTS = 3;
-  // Prevent concurrent sync runs
-  let notesSyncInProgress = false;
-  let boardItemsSyncInProgress = false;
-
   async function ensureDB(): Promise<IDBDatabase | null> {
     if (db) return db;
 
@@ -123,7 +152,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
     } catch (e) {
       error(
         `Failed to initialize IndexedDB (attempt ${dbInitAttempts}/${MAX_DB_INIT_ATTEMPTS}):`,
-        e
+        e,
       );
 
       // Notify user on final failure
@@ -169,7 +198,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
 
       // Log other unhandled rejections
       error("Unhandled rejection in SW:", event.reason);
-    }
+    },
   );
 
   let storageIssueNotified = false;
@@ -216,6 +245,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
   registerRoute(
     ({ request: _request, url }: { request: Request; url: URL }) =>
       url.origin === self.location.origin &&
+      !isViteDevelopmentAsset(url) &&
       (/\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/.test(url.pathname) ||
         url.pathname.startsWith("/AppImages/")),
     new CacheFirst({
@@ -226,7 +256,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
           maxAgeSeconds: _CACHE_CONFIG.IMAGES.MAX_AGE_SECONDS,
         }),
       ],
-    })
+    }),
   );
 
   // 2. Hashed build assets (JS/CSS) - CacheFirst with safe offline fallback for unknown chunks
@@ -242,6 +272,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
   registerRoute(
     ({ url, request }: { url: URL; request: Request }) =>
       url.origin === self.location.origin &&
+      !isViteDevelopmentAsset(url) &&
       // Exclude the AI worker script — it's loaded via Blob URL in the plugin,
       // but direct loads must not get the CacheFirst/offline-stub treatment either.
       !url.pathname.endsWith("/ai-worker.js") &&
@@ -255,7 +286,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       } catch (err) {
         throw err;
       }
-    }
+    },
   );
 
   // 3. App manifest & favicon - SWR so they stay fresh when online
@@ -264,7 +295,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       url.origin === self.location.origin &&
       (url.pathname === "/manifest.webmanifest" ||
         url.pathname === "/favicon.ico"),
-    new StaleWhileRevalidate({ cacheName: CACHE_NAMES.STATIC })
+    new StaleWhileRevalidate({ cacheName: CACHE_NAMES.STATIC }),
   );
 
   // Auth and API entity data are never served from Cache Storage. Account data
@@ -280,9 +311,24 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       try {
         return await fetch(request);
       } catch {
-        return new Response(JSON.stringify({ success: false, error: { code: "OFFLINE_NETWORK_UNAVAILABLE", message: "Authentication is unavailable while offline." } }), { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: {
+              code: "OFFLINE_NETWORK_UNAVAILABLE",
+              message: "Authentication is unavailable while offline.",
+            },
+          }),
+          {
+            status: 503,
+            headers: {
+              "Content-Type": "application/json",
+              "Cache-Control": "no-store",
+            },
+          },
+        );
       }
-    }
+    },
   );
 
   // Explicit workspace-pack files are the only user content served from Cache
@@ -290,7 +336,10 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
   // network, so an old API response can never masquerade as current data.
   registerRoute(
     ({ url, request }: { url: URL; request: Request }) =>
-      url.origin === self.location.origin && !url.pathname.startsWith("/api/") && request.method === "GET" && request.mode !== "navigate",
+      url.origin === self.location.origin &&
+      !url.pathname.startsWith("/api/") &&
+      request.method === "GET" &&
+      request.mode !== "navigate",
     async ({ request }: RouteHandlerCallbackOptions) => {
       const cache = await caches.open(CACHE_NAMES.OFFLINE_FILES);
       const packed = await cache.match(request, { ignoreSearch: false });
@@ -309,9 +358,24 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       try {
         return await fetch(request);
       } catch {
-        return new Response(JSON.stringify({ success: false, error: { code: "OFFLINE_CACHE_MISS", message: "This content is not downloaded for offline use." } }), { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: {
+              code: "OFFLINE_CACHE_MISS",
+              message: "This content is not downloaded for offline use.",
+            },
+          }),
+          {
+            status: 503,
+            headers: {
+              "Content-Type": "application/json",
+              "Cache-Control": "no-store",
+            },
+          },
+        );
       }
-    }
+    },
   );
 
   // Notes hydrate from their local-first repository.
@@ -324,9 +388,24 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       try {
         return await fetch(request);
       } catch {
-        return new Response(JSON.stringify({ success: false, error: { code: "OFFLINE_CACHE_MISS", message: "Notes are not available in this offline pack." } }), { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: {
+              code: "OFFLINE_CACHE_MISS",
+              message: "Notes are not available in this offline pack.",
+            },
+          }),
+          {
+            status: 503,
+            headers: {
+              "Content-Type": "application/json",
+              "Cache-Control": "no-store",
+            },
+          },
+        );
       }
-    }
+    },
   );
 
   // NOTE: Navigation requests are handled by our custom fetch listener below
@@ -447,7 +526,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         } catch {
           /* ignore */
         }
-      })()
+      })(),
     );
   });
 
@@ -475,17 +554,17 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
           c.postMessage({
             type: SW_MESSAGE_TYPES.SW_UPDATE_AVAILABLE,
             version: SW_VERSION,
-          })
+          }),
         );
       }
     };
     // Initial slight delay to allow potential update flow to settle.
     setTimeout(() => {
-      notifyIfWaiting().catch(() => { });
+      notifyIfWaiting().catch(() => {});
     }, 1500);
     // Periodic lightweight check (every 30s) – can be disabled if noisy.
     setInterval(() => {
-      notifyIfWaiting().catch(() => { });
+      notifyIfWaiting().catch(() => {});
     }, 30000);
   } catch {
     /* ignore */
@@ -504,7 +583,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       swSelf.clients.claim().then(async () => {
         const clients = await swSelf.clients.matchAll({ type: "window" });
         clients.forEach((c) =>
-          c.postMessage({ type: SW_MESSAGE_TYPES.SW_CONTROL_CLAIMED })
+          c.postMessage({ type: SW_MESSAGE_TYPES.SW_CONTROL_CLAIMED }),
         );
       });
       return;
@@ -537,18 +616,12 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
           } else {
             await swSelf.clients.openWindow(targetUrl);
           }
-        })()
+        })(),
       );
       return;
     }
     if (type === SW_MESSAGE_TYPES.SYNC_NOTES) {
-      const extendable = event as ExtendableEvent;
-      extendable.waitUntil(syncPendingNotes("manual"));
-      return;
-    }
-    if (type === SW_MESSAGE_TYPES.SYNC_BOARD_ITEMS) {
-      const extendable = event as ExtendableEvent;
-      extendable.waitUntil(syncPendingBoardItems("manual"));
+      (event as ExtendableEvent).waitUntil(syncPendingNotes());
       return;
     }
     if (type === SW_MESSAGE_TYPES.SET_DEBUG) {
@@ -598,11 +671,18 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
             try {
               data = event.data.json();
             } catch {
-              data = { title: "Card Review", message: "You have cards to review!" };
+              data = {
+                title: "Card Review",
+                message: "You have cards to review!",
+              };
             }
           }
 
           const title = data.title || "Card Review";
+          // Avoid spreading a logical expression directly. esbuild can remove
+          // its parentheses, making the generated worker invalid in Chromium.
+          const notificationData =
+            data.data && typeof data.data === "object" ? data.data : {};
           const options = {
             body: data.message || "You have cards to review!",
             icon: data.icon || "/icons/192x192.png",
@@ -614,14 +694,16 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
             data: {
               url: data.url || "/review",
               timestamp: Date.now(),
-              ...(data.data || {}),
+              ...notificationData,
             },
             actions: [
               { action: "review", title: "📚 Review Now" },
               { action: "snooze", title: "⏰ Snooze 1hr" },
               { action: "dismiss", title: "❌ Dismiss" },
             ],
-          } as NotificationOptions & { actions?: Array<{ action: string; title: string }> };
+          } as NotificationOptions & {
+            actions?: Array<{ action: string; title: string }>;
+          };
 
           await swSelf.registration.showNotification(title, options);
           log("Notification shown:", title);
@@ -638,7 +720,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
             error("Emergency fallback notification failed:", fallbackError);
           }
         }
-      })()
+      })(),
     );
   });
 
@@ -672,7 +754,10 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         });
         if (clients.length) {
           for (const c of clients) {
-            c.postMessage({ type: SW_MESSAGE_TYPES.NOTIFICATION_CLICK_NAVIGATE, url: targetUrl });
+            c.postMessage({
+              type: SW_MESSAGE_TYPES.NOTIFICATION_CLICK_NAVIGATE,
+              url: targetUrl,
+            });
           }
           try {
             await (clients[0] as WindowClient).focus();
@@ -687,7 +772,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         } catch (e) {
           error("openWindow failed:", e);
         }
-      })()
+      })(),
     );
   });
 
@@ -708,13 +793,9 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       tag?: string;
       waitUntil: ExtendableEvent["waitUntil"];
     };
-    if (syncEvt.tag === SYNC_TAGS.NOTES) {
-      syncEvt.waitUntil(syncPendingNotes("background"));
-    }
-    if (syncEvt.tag === SYNC_TAGS.BOARD_ITEMS) {
-      syncEvt.waitUntil(syncPendingBoardItems("background"));
-    }
-    if (syncEvt.tag === SYNC_TAGS.OFFLINE_V2) syncEvt.waitUntil(syncOfflineV2());
+    if (syncEvt.tag === SYNC_TAGS.NOTES) syncEvt.waitUntil(syncPendingNotes());
+    if (syncEvt.tag === SYNC_TAGS.OFFLINE_V2)
+      syncEvt.waitUntil(syncOfflineV2());
   });
 
   // ------------------------ FETCH FALLBACK (Only for non-navigation requests) ------------------------
@@ -728,6 +809,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
 
     // Skip development files completely - let them fail naturally
     if (
+      isViteDevelopmentAsset(url) ||
       url.pathname.includes("/@fs/") ||
       url.pathname.includes("/node_modules/") ||
       url.pathname.includes("error-dev.vue") ||
@@ -756,7 +838,11 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
             // Cache only the neutral shell. Workspace/board/account HTML can
             // contain an authenticated SSR payload and must never be used as
             // an offline source of user data.
-            if (response.ok && response.status === 200 && url.pathname === "/") {
+            if (
+              response.ok &&
+              response.status === 200 &&
+              url.pathname === "/"
+            ) {
               try {
                 const cache = await caches.open(CACHE_NAMES.PAGES);
                 await cache.put(req, response.clone());
@@ -776,11 +862,11 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
                         } catch {
                           /* best effort */
                         }
-                      })
+                      }),
                     );
                     log(
                       "Opportunistically cached assets from navigation:",
-                      assetUrls.length
+                      assetUrls.length,
                     );
                   }
                 } catch {
@@ -815,7 +901,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
               const cacheKeys = await cache.keys();
               log(
                 "Pages cache contains:",
-                cacheKeys.map((r) => r.url)
+                cacheKeys.map((r) => r.url),
               );
             }
 
@@ -860,7 +946,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
             // No cached page or shell - serve simple offline HTML
             log(
               "No cached page or shell found, serving offline HTML for:",
-              req.url
+              req.url,
             );
             return new Response(
               `
@@ -892,16 +978,314 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
                   "Cache-Control": "no-store",
                 },
                 status: 503,
-              }
+              },
             );
           }
-        })()
+        })(),
       );
     }
   });
 
   async function syncContent() {
     log("periodic content sync placeholder");
+  }
+
+  async function syncPendingNotes(): Promise<void> {
+    if (notesSyncInProgress) return;
+    notesSyncInProgress = true;
+    try {
+      const clients = await swSelf.clients.matchAll({ type: "window" });
+      // The feature runtime is the sole owner whenever a window exists.
+      if (clients.length) return;
+
+      const pending = (await loadPendingNoteChanges()).filter(
+        (change) => !change.conflicted,
+      );
+      const pendingGroups = (await loadPendingNoteGroupChanges()).filter(
+        (change) => !change.conflicted,
+      );
+      const layouts = await loadPendingNoteLayoutChanges();
+      if (!pending.length && !pendingGroups.length && !layouts.length) return;
+
+      const requests = [
+        {
+          changes: pending,
+          groupChanges: pendingGroups,
+          layout: layouts[0],
+        },
+        ...layouts.slice(1).map((layout) => ({
+          changes: [] as PendingNoteChange[],
+          groupChanges: [] as PendingNoteGroupChange[],
+          layout,
+        })),
+      ];
+
+      for (const request of requests) {
+        const response = await fetch("/api/notes/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({
+            changes: request.changes,
+            contentChanges: [],
+            groupChanges: request.groupChanges,
+            ...(request.layout && { layoutChange: request.layout }),
+          }),
+        });
+        if (!response.ok)
+          throw new Error(`Notes sync failed (${response.status})`);
+        const envelope = (await response.json()) as {
+          data?: NotesSyncResponse;
+        };
+        if (!envelope.data) throw new Error("Notes sync returned no data");
+        const result = envelope.data;
+        // If a window appeared while the request was in flight, leave the
+        // durable acknowledgement to the feature runtime. The create receipt
+        // makes its retry idempotent and avoids cross-context cache races.
+        if ((await swSelf.clients.matchAll({ type: "window" })).length) return;
+        const replayedCreates = new Set(result.replayedCreates ?? []);
+        const replayedGroupCreates = new Set(result.replayedGroupCreates ?? []);
+        const sentById = new Map(
+          request.changes.map((change) => [change.id, change]),
+        );
+        const sentGroupsById = new Map(
+          request.groupChanges.map((change) => [change.id, change]),
+        );
+        const currentPending = new Map(
+          (await loadPendingNoteChanges()).map((change) => [change.id, change]),
+        );
+        const currentGroups = new Map(
+          (await loadPendingNoteGroupChanges()).map((change) => [
+            change.id,
+            change,
+          ]),
+        );
+        const isNewer = <
+          T extends {
+            localVersion: number;
+            updatedAt: number;
+            operation: string;
+          },
+        >(
+          current: T | undefined,
+          sent: T | undefined,
+        ) =>
+          Boolean(
+            current &&
+            sent &&
+            (current.localVersion > sent.localVersion ||
+              current.updatedAt > sent.updatedAt ||
+              current.operation !== sent.operation),
+          );
+        const appliedMetadata = new Map(
+          (result.appliedNotes ?? []).map((note) => [note.id, note]),
+        );
+        const db = await openUnifiedDB();
+
+        for (const conflict of result.conflicts ?? []) {
+          const sent = sentById.get(conflict.id);
+          const current = currentPending.get(conflict.id) ?? sent;
+          if (!current) continue;
+          await queueNoteChange({
+            ...current,
+            conflicted: true,
+            serverVersion: conflict.serverVersion ?? current.serverVersion,
+          });
+          if (sent?.operation === "delete" && sent.rollbackData) {
+            await putRecord(db, DB_CONFIG.STORES.NOTES as any, {
+              ...sent.rollbackData,
+              id: conflict.id,
+              isDirty: true,
+              isLoading: false,
+              error:
+                "Sync conflict detected. Resolve local and server versions before syncing this note.",
+            });
+          }
+          await saveNoteSyncConflict({
+            id: `${current.workspaceId}:content:${conflict.id}`,
+            workspaceId: current.workspaceId!,
+            scope: "content",
+            entityId: conflict.id,
+            reason: conflict.reason ?? "SYNC_CONFLICT",
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            localSnapshot: current,
+            serverSnapshot: conflict.serverSnapshot ?? null,
+            serverVersion: conflict.serverVersion,
+            clientServerVersion: conflict.clientServerVersion,
+          });
+        }
+
+        for (const [tempId, serverId] of Object.entries(result.idMap ?? {})) {
+          const sent = sentById.get(tempId);
+          const current = currentPending.get(tempId);
+          if (!sent) continue;
+          const metadata = appliedMetadata.get(tempId);
+          const local = await getRecord<Record<string, unknown>>(
+            db,
+            DB_CONFIG.STORES.NOTES as any,
+            tempId,
+          );
+          const source = local ?? sent.rollbackData ?? sent;
+          const canonicalLocalRecord = {
+            ...source,
+            id: serverId,
+            workspaceId: sent.workspaceId,
+            groupId: current?.groupId ?? sent.groupId ?? null,
+            title: current?.title ?? sent.title,
+            content: current?.content ?? sent.content ?? "",
+            tags: current?.tags ?? sent.tags ?? [],
+            noteType: current?.noteType ?? sent.noteType ?? "TEXT",
+            metadata: current?.metadata ?? sent.metadata,
+            order: current?.order ?? sent.order ?? 0,
+            version: metadata?.version ?? 1,
+            createdAt:
+              (local?.createdAt as Date | undefined) ??
+              new Date(sent.updatedAt),
+            updatedAt: metadata?.updatedAt
+              ? new Date(metadata.updatedAt)
+              : new Date(sent.updatedAt),
+            isDirty: false,
+            isLoading: false,
+            error: null,
+            lastSaved: new Date(),
+          };
+          const retained = await acknowledgePendingNoteChange(sent, {
+            remapToId: serverId,
+            serverVersion: metadata?.version ?? 1,
+            keepCurrent: replayedCreates.has(tempId),
+            localMutation: {
+              type: "remap",
+              fromId: tempId,
+              note: canonicalLocalRecord as any,
+            },
+          });
+          void retained;
+        }
+        await remapPendingNoteIds(result.idMap ?? {});
+
+        for (const id of result.applied ?? []) {
+          if (result.idMap?.[id]) continue;
+          const sent = sentById.get(id);
+          if (!sent) continue;
+          const metadata = appliedMetadata.get(id);
+          const retained = await acknowledgePendingNoteChange(sent, {
+            serverVersion: metadata?.version ?? sent.serverVersion,
+            ...(sent.operation === "delete" && {
+              localMutation: { type: "delete" as const, id },
+            }),
+            ...(sent.operation !== "delete" && {
+              localMutation: {
+                type: "advance" as const,
+                id,
+                serverVersion: metadata?.version ?? sent.serverVersion,
+                updatedAt: metadata?.updatedAt,
+              },
+            }),
+          });
+          if (retained) continue;
+          if (sent.operation === "delete") {
+            continue;
+          }
+          const local = await getRecord<Record<string, unknown>>(
+            db,
+            DB_CONFIG.STORES.NOTES as any,
+            id,
+          );
+          if (local) {
+            await putRecord(db, DB_CONFIG.STORES.NOTES as any, {
+              ...local,
+              version: metadata?.version ?? local.version,
+              updatedAt: metadata?.updatedAt
+                ? new Date(metadata.updatedAt)
+                : local.updatedAt,
+              isDirty: false,
+              isLoading: false,
+              error: null,
+              lastSaved: new Date(),
+            });
+          }
+        }
+
+        if (Object.keys(result.groupIdMap ?? {}).length) {
+          await remapPendingNoteGroupIds(result.groupIdMap);
+          await reconcileNoteGroupIds(result.groupIdMap);
+        }
+        for (const id of result.groupApplied ?? []) {
+          const sent = sentGroupsById.get(id);
+          const current = currentGroups.get(id);
+          const newer = replayedGroupCreates.has(id) || isNewer(current, sent);
+          const serverId = result.groupIdMap?.[id];
+          if (serverId) {
+            await deletePendingNoteGroupChanges([id]);
+            if (newer && current) {
+              await queueNoteGroupChange({
+                ...current,
+                id: serverId,
+                operation: current.operation === "delete" ? "delete" : "rename",
+                serverVersion: current.serverVersion ?? 1,
+              });
+            }
+          } else if (!newer) {
+            await deletePendingNoteGroupChanges([id]);
+          }
+          if (!newer && sent?.operation === "delete") {
+            await deleteRecord(db, DB_CONFIG.STORES.NOTE_GROUPS as any, id);
+          }
+        }
+        for (const conflict of result.groupConflicts ?? []) {
+          const sent = sentGroupsById.get(conflict.id);
+          const current = currentGroups.get(conflict.id) ?? sent;
+          if (current) {
+            await queueNoteGroupChange({ ...current, conflicted: true });
+          }
+          if (sent?.operation === "delete" && sent.rollbackData) {
+            await putRecord(db, DB_CONFIG.STORES.NOTE_GROUPS as any, {
+              ...sent.rollbackData,
+              id: conflict.id,
+            });
+          }
+        }
+
+        if (result.layoutApplied && request.layout) {
+          const current = (await loadPendingNoteLayoutChanges()).find(
+            (layout) => layout.workspaceId === request.layout!.workspaceId,
+          );
+          if (
+            current?.localVersion === request.layout.localVersion &&
+            current.updatedAt === request.layout.updatedAt
+          ) {
+            await deletePendingNoteLayoutChange(request.layout.workspaceId);
+          }
+        }
+      }
+      const hasRemaining =
+        (await loadPendingNoteChanges()).some((change) => !change.conflicted) ||
+        (await loadPendingNoteGroupChanges()).some(
+          (change) => !change.conflicted,
+        ) ||
+        (await loadPendingNoteLayoutChanges()).length > 0;
+      if (hasRemaining && "sync" in swSelf.registration) {
+        try {
+          // @ts-expect-error SyncManager is missing in some worker libdefs.
+          await swSelf.registration.sync.register(SYNC_TAGS.NOTES);
+        } catch {
+          // Reconnect/app-open remains the fallback.
+        }
+      }
+    } catch (err) {
+      error("notes background sync error", err);
+      if ("sync" in swSelf.registration) {
+        try {
+          // @ts-expect-error SyncManager is missing in some worker libdefs.
+          await swSelf.registration.sync.register(SYNC_TAGS.NOTES);
+        } catch {
+          // Reconnect/app-open remains the fallback.
+        }
+      }
+    } finally {
+      notesSyncInProgress = false;
+    }
   }
 
   async function syncOfflineV2() {
@@ -913,12 +1297,31 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
     if (!session) return;
     await recoverInterruptedMutations(session.accountId);
     const pending = (await listOfflineMutations(session.accountId))
-      .filter((mutation) => mutation.status === "pending" || mutation.status === "retry")
+      .filter(
+        (mutation) =>
+          mutation.entity !== "note" && mutation.entity !== "noteGroup",
+      )
+      .filter(
+        (mutation) =>
+          mutation.status === "pending" || mutation.status === "retry",
+      );
     const { ordered, cyclic } = orderOfflineMutations(pending);
-    if (cyclic.length) await setMutationStatus(session.accountId, cyclic.map((mutation) => mutation.id), "rejected", "Cyclic offline dependency");
-    const batch = ordered.slice(0, 50);
+    if (cyclic.length)
+      await setMutationStatus(
+        session.accountId,
+        cyclic.map((mutation) => mutation.id),
+        "rejected",
+        "Cyclic offline dependency",
+      );
+    const candidates = ordered.slice(0, 50);
+    if (!candidates.length) return;
+    const claimToken = `service-worker:${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`}`;
+    const batch = await claimOfflineMutations({
+      accountId: session.accountId,
+      ids: candidates.map((mutation) => mutation.id),
+      claimToken,
+    });
     if (!batch.length) return;
-    await setMutationStatus(session.accountId, batch.map((mutation) => mutation.id), "syncing");
     try {
       const response = await fetch("/api/offline/sync", {
         method: "POST",
@@ -926,8 +1329,12 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         credentials: "same-origin",
         body: JSON.stringify({ clientId: "service-worker", mutations: batch }),
       });
-      if (!response.ok) throw Object.assign(new Error(`Offline sync failed (${response.status})`), { statusCode: response.status });
-      const payload = await response.json() as { data?: OfflineSyncResponse };
+      if (!response.ok)
+        throw Object.assign(
+          new Error(`Offline sync failed (${response.status})`),
+          { statusCode: response.status },
+        );
+      const payload = (await response.json()) as { data?: OfflineSyncResponse };
       if (!payload.data) throw new Error("Offline sync returned no data");
       const byId = new Map(batch.map((mutation) => [mutation.id, mutation]));
       const returned = new Set<string>();
@@ -935,475 +1342,64 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         const mutation = byId.get(result.id);
         if (!mutation) continue;
         returned.add(result.id);
-        if (result.idMap) await remapOfflineIds(session.accountId, result.idMap);
-        await applyOfflineSyncResult({ accountId: session.accountId, mutation, result });
+        if (result.idMap) {
+          await remapOfflineIds(session.accountId, result.idMap, {
+            serverVersion: result.version,
+            mutationId: mutation.id,
+          });
+        }
+        await applyOfflineSyncResult({
+          accountId: session.accountId,
+          mutation,
+          result,
+        });
       }
       const missing = batch.filter((mutation) => !returned.has(mutation.id));
       if (missing.length) {
-        await setMutationStatus(session.accountId, missing.map((mutation) => mutation.id), "retry", "The sync service did not acknowledge this mutation.");
+        await setMutationStatus(
+          session.accountId,
+          missing.map((mutation) => mutation.id),
+          "retry",
+          "The sync service did not acknowledge this mutation.",
+          claimToken,
+        );
       }
       await updateOfflineSyncMetadata(session.accountId, {
         lastAttemptAt: Date.now(),
         lastSuccessfulSyncAt: Date.now(),
         lastError: undefined,
       });
-      const remaining = (await listOfflineMutations(session.accountId)).some((mutation) => mutation.status === "pending" || mutation.status === "retry");
+      const remaining = (await listOfflineMutations(session.accountId)).some(
+        (mutation) =>
+          mutation.entity !== "note" &&
+          mutation.entity !== "noteGroup" &&
+          (mutation.status === "pending" || mutation.status === "retry"),
+      );
       if (remaining && "sync" in swSelf.registration) {
         // @ts-expect-error SyncManager is missing in some worker libdefs.
         await swSelf.registration.sync.register(SYNC_TAGS.OFFLINE_V2);
       }
     } catch (err: any) {
-      const message = err instanceof Error ? err.message : "Background sync failed";
+      const message =
+        err instanceof Error ? err.message : "Background sync failed";
       const statusCode = Number(err?.statusCode ?? 0);
-      await setMutationStatus(session.accountId, batch.map((mutation) => mutation.id), statusCode === 401 || statusCode === 403 ? "blocked" : "retry", statusCode === 401 || statusCode === 403 ? "Sign in to sync your saved local changes." : message);
+      await setMutationStatus(
+        session.accountId,
+        batch.map((mutation) => mutation.id),
+        statusCode === 401 || statusCode === 403 ? "blocked" : "retry",
+        statusCode === 401 || statusCode === 403
+          ? "Sign in to sync your saved local changes."
+          : message,
+        claimToken,
+      );
       await updateOfflineSyncMetadata(session.accountId, {
         lastAttemptAt: Date.now(),
-        lastError: statusCode === 401 || statusCode === 403 ? "Sign in to sync your saved local changes." : message,
+        lastError:
+          statusCode === 401 || statusCode === 403
+            ? "Sign in to sync your saved local changes."
+            : message,
       });
       error("offline-v2 sync error", err);
-    }
-  }
-
-  // ------------------------ NOTES SYNC (shared) ------------------------
-  async function syncPendingNotes(
-    mode: "manual" | "background"
-  ): Promise<void> {
-    // Coalesce concurrent triggers (e.g., Background Sync and 'online' message)
-    if (notesSyncInProgress) return;
-    notesSyncInProgress = true;
-    try {
-      const clients = await swSelf.clients.matchAll({ type: "window" });
-
-      // ── Dual-sync race prevention ──
-      // When Background Sync fires and client tabs are open, defer to the
-      // client-side sync path (useNotesStore.syncPendingChanges) which is the
-      // primary sync owner. The SW only auto-syncs when no tabs are open
-      // (e.g., app backgrounded or all tabs closed). Manual triggers (via
-      // postMessage from a client) proceed normally since the client explicitly
-      // asked the SW to do the work.
-      if (mode === "background" && clients.length > 0) {
-        log("[Notes Sync] Background sync deferred — client tabs are open, they own sync");
-        // Nudge clients to run their own sync in case the online listener missed
-        clients.forEach((c) =>
-          c.postMessage({
-            type: SW_MESSAGE_TYPES.NOTES_SYNCED,
-            data: { appliedCount: 0, conflictsCount: 0, mode, deferredToClient: true },
-          })
-        );
-        return;
-      }
-
-      const pending = await loadPendingNoteChanges();
-      const syncablePending = pending.filter((change: any) => !change.conflicted);
-      const pendingGroups = await loadPendingNoteGroupChanges();
-      const pendingLayouts = await loadPendingNoteLayoutChanges();
-
-      clients.forEach((c) =>
-        c.postMessage({
-          type: SW_MESSAGE_TYPES.NOTES_SYNC_STARTED,
-          data: {
-            message: "Syncing notes…",
-            pendingCount: syncablePending.length + pendingGroups.length + pendingLayouts.length,
-            mode,
-          },
-        })
-      );
-
-      if (!syncablePending.length && !pendingGroups.length && !pendingLayouts.length) {
-        if (pending.some((change: any) => change.conflicted)) {
-          clients.forEach((c) =>
-            c.postMessage({
-              type: SW_MESSAGE_TYPES.NOTES_SYNC_CONFLICTS,
-              data: { conflictsCount: pending.filter((change: any) => change.conflicted).length, mode },
-            })
-          );
-        }
-        clients.forEach((c) =>
-          c.postMessage({
-            type: SW_MESSAGE_TYPES.NOTES_SYNCED,
-            data: { appliedCount: 0, conflictsCount: 0, mode },
-          })
-        );
-        return;
-      }
-
-      type NotesSyncPayload = {
-        changes: typeof pending;
-        groupChanges?: typeof pendingGroups;
-        layoutChange?: (typeof pendingLayouts)[number];
-      };
-      type NotesSyncResult = {
-        success?: boolean;
-        data?: {
-          applied?: string[];
-          conflicts?: Array<{
-            id: string;
-            reason?: string;
-            serverVersion?: number;
-            clientServerVersion?: number;
-            serverSnapshot?: Record<string, unknown> | null;
-          }>;
-          idMap?: Record<string, string>;
-          groupApplied?: string[];
-          groupConflicts?: Array<{ id: string }>;
-          groupIdMap?: Record<string, string>;
-          layoutApplied?: boolean;
-          layoutConflict?: boolean;
-        };
-      };
-
-      const persistContentConflicts = async (results: NotesSyncResult[]) => {
-        const contentConflicts = results.flatMap((result) => result.data?.conflicts || []);
-        if (!contentConflicts.length) return;
-
-        const database = await openUnifiedDB();
-        const now = Date.now();
-        for (const conflict of contentConflicts) {
-          const original = pending.find((change: any) => change.id === conflict.id);
-          const workspaceId =
-            original?.workspaceId ||
-            (typeof conflict.serverSnapshot?.workspaceId === "string"
-              ? conflict.serverSnapshot.workspaceId
-              : undefined);
-          if (!workspaceId) continue;
-
-          if (original) {
-            await putRecord(database, DB_CONFIG.STORES.PENDING_NOTES as any, {
-              ...original,
-              conflicted: true,
-              serverVersion: conflict.serverVersion ?? original.serverVersion,
-            });
-          }
-
-          await putRecord(database, DB_CONFIG.STORES.NOTE_SYNC_CONFLICTS as any, {
-            id: `${workspaceId}:content:${conflict.id}`,
-            workspaceId,
-            scope: "content",
-            entityId: conflict.id,
-            reason: conflict.reason ?? "SYNC_CONFLICT",
-            createdAt: now,
-            updatedAt: now,
-            localSnapshot: original ?? null,
-            serverSnapshot: conflict.serverSnapshot ?? null,
-            serverVersion: conflict.serverVersion,
-            clientServerVersion: conflict.clientServerVersion,
-          });
-        }
-      };
-
-      const postNotesSync = async (payload: NotesSyncPayload): Promise<NotesSyncResult> => {
-        const resp = await fetch("/api/notes/sync", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-
-        if (!resp.ok) {
-          error("[Notes Sync] Server error:", resp.status);
-          throw new Error("Notes sync failed");
-        }
-
-        return (await resp.json().catch(() => ({}))) as NotesSyncResult;
-      };
-
-      const syncResults: Array<{
-        result: NotesSyncResult;
-        layout?: (typeof pendingLayouts)[number];
-      }> = [];
-      const [firstLayout, ...remainingLayouts] = pendingLayouts;
-      syncResults.push({
-        result: await postNotesSync({
-          changes: syncablePending,
-          groupChanges: pendingGroups,
-          ...(firstLayout && { layoutChange: firstLayout }),
-        }),
-        layout: firstLayout,
-      });
-
-      for (const layout of remainingLayouts) {
-        syncResults.push({
-          result: await postNotesSync({ changes: [], layoutChange: layout }),
-          layout,
-        });
-      }
-
-      const appliedIds = Array.from(
-        new Set(syncResults.flatMap(({ result }) => result.data?.applied || []))
-      );
-      const conflictsCount = syncResults.reduce(
-        (total, { result }) => total + (result.data?.conflicts?.length || 0),
-        0
-      );
-      const groupAppliedIds = Array.from(
-        new Set(syncResults.flatMap(({ result }) => result.data?.groupApplied || []))
-      );
-      const groupConflictsCount = syncResults.reduce(
-        (total, { result }) => total + (result.data?.groupConflicts?.length || 0),
-        0
-      );
-      const idMap = syncResults.reduce<Record<string, string>>((acc, { result }) => {
-        Object.assign(acc, result.data?.idMap || {});
-        return acc;
-      }, {});
-      const groupIdMap = syncResults.reduce<Record<string, string>>((acc, { result }) => {
-        Object.assign(acc, result.data?.groupIdMap || {});
-        return acc;
-      }, {});
-      const syncedLayouts = syncResults
-        .filter(({ result, layout }) => result.data?.layoutApplied && layout)
-        .map(({ layout }) => layout!);
-      const layoutConflict = syncResults.some(({ result }) => Boolean(result.data?.layoutConflict));
-
-      await persistContentConflicts(syncResults.map(({ result }) => result));
-
-      if (Object.keys(idMap).length) {
-        try {
-          const db = await openUnifiedDB();
-          for (const [tempId, serverId] of Object.entries(idMap)) {
-            const original = pending.find((p: any) => p.id === tempId);
-            if (original) {
-              await putRecord(db, DB_CONFIG.STORES.NOTES as any, {
-                id: serverId,
-                workspaceId: original.workspaceId,
-                groupId: original.groupId ?? null,
-                title: original.title,
-                content: original.content || "",
-                tags: original.tags || [],
-                order: 0,
-                noteType: original.noteType || "TEXT",
-                metadata: original.metadata,
-                createdAt: new Date(original.updatedAt),
-                updatedAt: new Date(original.updatedAt),
-                isDirty: false,
-              });
-              await deleteRecord(db, DB_CONFIG.STORES.NOTES as any, tempId);
-            }
-          }
-        } catch (e) {
-          error("[Notes Sync] Failed to apply server id map:", e);
-        }
-      }
-
-      if (appliedIds.length) {
-        try {
-          await deletePendingNoteChanges(appliedIds);
-        } catch (e) {
-          error("[Notes Sync] Failed to clear synced changes:", e);
-        }
-      }
-
-      if (groupAppliedIds.length) {
-        try {
-          await deletePendingNoteGroupChanges(groupAppliedIds);
-          await remapPendingNoteGroupIds(groupIdMap);
-          const db = await openUnifiedDB();
-          for (const tempId of Object.keys(groupIdMap)) {
-            await deleteRecord(db, DB_CONFIG.STORES.NOTE_GROUPS as any, tempId);
-          }
-        } catch (e) {
-          error("[Notes Sync] Failed to clear synced group changes:", e);
-        }
-      }
-
-      if (syncedLayouts.length) {
-        try {
-          await Promise.all(
-            syncedLayouts.map((layout) => deletePendingNoteLayoutChange(layout.workspaceId))
-          );
-        } catch (e) {
-          error("[Notes Sync] Failed to clear synced layout change:", e);
-        }
-      }
-
-      if (conflictsCount || groupConflictsCount || layoutConflict) {
-        clients.forEach((c) =>
-          c.postMessage({
-            type: SW_MESSAGE_TYPES.NOTES_SYNC_CONFLICTS,
-            data: { conflictsCount, groupConflictsCount, layoutConflict, mode },
-          })
-        );
-      }
-
-      log("[Notes Sync] Complete:", {
-        applied: appliedIds.length,
-        conflicts: conflictsCount,
-        groupApplied: groupAppliedIds.length,
-        groupConflicts: groupConflictsCount,
-        layoutApplied: syncedLayouts.length,
-        layoutConflict,
-      });
-      clients.forEach((c) =>
-        c.postMessage({
-          type: SW_MESSAGE_TYPES.NOTES_SYNCED,
-          data: {
-            appliedCount: appliedIds.length,
-            conflictsCount: conflictsCount + groupConflictsCount,
-            groupAppliedCount: groupAppliedIds.length,
-            layoutApplied: syncedLayouts.length,
-            layoutConflict,
-            mode,
-          },
-        })
-      );
-    } catch (err) {
-      error("[Notes Sync] Error:", err);
-      const clients = await swSelf.clients.matchAll({ type: "window" });
-      clients.forEach((c) =>
-        c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNC_ERROR })
-      );
-    } finally {
-      notesSyncInProgress = false;
-    }
-  }
-
-  // ------------------------ BOARD ITEMS SYNC (shared) ------------------------
-  async function syncPendingBoardItems(
-    mode: "manual" | "background"
-  ): Promise<void> {
-    // Coalesce concurrent triggers
-    if (boardItemsSyncInProgress) return;
-    boardItemsSyncInProgress = true;
-    try {
-      const clients = await swSelf.clients.matchAll({ type: "window" });
-
-      if (mode === "background" && clients.length > 0) {
-        log("[Board Items Sync] Background sync deferred — client tabs are open, they own sync");
-        clients.forEach((c) =>
-          c.postMessage({
-            type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNCED,
-            data: { appliedCount: 0, mode, deferredToClient: true },
-          })
-        );
-        return;
-      }
-
-      const pending = await loadPendingBoardItemChanges();
-
-      clients.forEach((c) =>
-        c.postMessage({
-          type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNC_STARTED,
-          data: {
-            message: "Syncing board items…",
-            pendingCount: pending.length,
-            mode,
-          },
-        })
-      );
-
-      if (!pending.length) {
-        clients.forEach((c) =>
-          c.postMessage({
-            type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNCED,
-            data: { appliedCount: 0, mode },
-          })
-        );
-        return;
-      }
-
-      // Transform PendingBoardItemChange entries into the full BoardItemSchema
-      // shape the server endpoint validates against.
-      const syncPayload = pending.map((p: any) => ({
-        id: p.id,
-        operation: p.operation || "upsert",
-        localVersion: p.localVersion ?? 1,
-        userId: p.userId || "",  // server will use auth context
-        columnId: p.columnId ?? null,
-        workspaceId: p.workspaceId ?? null,
-        content: p.content || "",
-        tags: p.tags || [],
-        order: p.order ?? 0,
-        dueDate: p.dueDate ?? null,
-        attachments: p.attachments || [],
-        createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : new Date(p.updatedAt).toISOString(),
-        updatedAt: new Date(p.updatedAt).toISOString(),
-      }));
-
-      const resp = await fetch("/api/board-items/sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(syncPayload),
-      });
-
-      if (!resp.ok) {
-        error("[Board Items Sync] Server error:", resp.status);
-        throw new Error("Board items sync failed");
-      }
-
-      const result = (await resp.json().catch(() => ({}))) as {
-        success?: boolean;
-        data?:
-          | Array<{ id: string; status: string }>
-          | {
-            applied?: string[];
-            conflicts?: Array<{ id: string }>;
-            idMap?: Record<string, string>;
-            results?: Array<{ id: string; status: string; data?: any }>;
-          };
-      };
-
-      const resultData = result.data;
-      const appliedIds = Array.from(
-        new Set(
-          Array.isArray(resultData)
-            ? resultData
-              .filter((r) => r.status === "created" || r.status === "updated" || r.status === "deleted")
-              .map((r) => r.id)
-            : resultData?.applied || []
-        )
-      );
-
-      const idMap = !Array.isArray(resultData) ? resultData?.idMap || {} : {};
-      if (Object.keys(idMap).length) {
-        try {
-          const db = await openUnifiedDB();
-          const resultItems = !Array.isArray(resultData)
-            ? resultData?.results || []
-            : [];
-          for (const [tempId, serverId] of Object.entries(idMap)) {
-            const original = pending.find((p: any) => p.id === tempId);
-            const serverItem = resultItems.find((r) => r.id === tempId)?.data;
-            if (serverItem) {
-              await putRecord(db, DB_CONFIG.STORES.BOARD_ITEMS as any, {
-                ...serverItem,
-                id: serverId,
-              });
-            } else if (original) {
-              await putRecord(db, DB_CONFIG.STORES.BOARD_ITEMS as any, {
-                ...original,
-                id: serverId,
-                isDirty: false,
-              });
-            }
-            await deleteRecord(db, DB_CONFIG.STORES.BOARD_ITEMS as any, tempId);
-          }
-        } catch (e) {
-          error("[Board Items Sync] Failed to apply server id map:", e);
-        }
-      }
-
-      if (appliedIds.length) {
-        try {
-          await deletePendingBoardItemChanges(appliedIds);
-        } catch (e) {
-          error("[Board Items Sync] Failed to clear synced changes:", e);
-        }
-      }
-
-      log("[Board Items Sync] Complete:", { applied: appliedIds.length });
-      clients.forEach((c) =>
-        c.postMessage({
-          type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNCED,
-          data: { appliedCount: appliedIds.length, mode },
-        })
-      );
-    } catch (err) {
-      error("[Board Items Sync] Error:", err);
-      const clients = await swSelf.clients.matchAll({ type: "window" });
-      clients.forEach((c) =>
-        c.postMessage({ type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNC_ERROR })
-      );
-    } finally {
-      boardItemsSyncInProgress = false;
     }
   }
 

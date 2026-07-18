@@ -106,9 +106,6 @@
             <ul class="space-y-0.5">
               <!-- <li>Uploads: <strong>{{ Object.keys(uploads).length }}</strong></li> -->
               <li>
-                Sync: <strong>{{ formSyncStatus || "Idle" }}</strong>
-              </li>
-              <li>
                 Version: <strong>{{ version || "Unknown" }}</strong>
               </li>
             </ul>
@@ -185,7 +182,7 @@ const {
   simulateUpdateAvailable,
   resetUpdateState
 } = swUpdates;
-const { version, isControlling, lastError, formSyncStatus } = swBridge;
+const { version, isControlling, lastError } = swBridge;
 
 // Network status
 const { isOnline } = useNetworkStatus();

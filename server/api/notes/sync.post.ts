@@ -9,25 +9,27 @@ import { syncWorkspaceNotes } from "@server/modules/notes/application/syncWorksp
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
-  const prisma = event.context.prisma;
+  let request: ReturnType<typeof NotesSyncRequestSchema.parse>;
 
-  let parsed: ReturnType<typeof NotesSyncRequestSchema.parse>;
   try {
-    parsed = NotesSyncRequestSchema.parse(await readBody(event));
-  } catch (err) {
-    if (err instanceof ZodError) {
+    request = NotesSyncRequestSchema.parse(await readBody(event));
+  } catch (error) {
+    if (error instanceof ZodError) {
       throw Errors.badRequest(
         "Invalid request body",
-        err.issues.map((i) => ({ path: i.path, message: i.message }))
+        error.issues.map((issue) => ({
+          path: issue.path,
+          message: issue.message,
+        })),
       );
     }
     throw Errors.badRequest("Invalid request body");
   }
 
   const response = await syncWorkspaceNotes({
-    prisma,
+    prisma: event.context.prisma,
     userId: user.id,
-    request: parsed,
+    request,
   });
 
   if (process.env.NODE_ENV === "development") {

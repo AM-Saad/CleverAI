@@ -49,6 +49,7 @@ export default defineEventHandler(async (event) => {
   const revisions = new Map(states.map((state: { entity: string; entityId: string; version: number }) => [`${state.entity}:${state.entityId}`, state.version]));
   const withRevision = <T extends { id: string }>(entity: string, record: T) => ({
     ...record,
+    ...((record as T & { position?: string | null }).position === null && { position: undefined }),
     offlineRevision: revisions.get(`${entity}:${record.id}`) ?? 0,
   });
   const materialById = new Map(materials.map((item: { id: string }) => [item.id, item]));
@@ -65,7 +66,7 @@ export default defineEventHandler(async (event) => {
     ...workspaces, ...notes, ...noteGroups, ...materials, ...flashcards, ...questions,
     ...boardColumns, ...boardItems, ...userTags, ...cardReviews, ...languageWords,
     ...languageReviews,
-  ].map((record: { updatedAt?: Date; createdAt?: Date }) => new Date(record.updatedAt ?? record.createdAt ?? 0).getTime());
+  ].map((record: any) => new Date(record.updatedAt ?? record.createdAt ?? 0).getTime());
   const revision = `${Math.max(0, ...timestamps)}:${workspaceIds.sort().join(",") || "account"}`;
   setHeader(event, "Cache-Control", "no-store");
   return success(asJson({

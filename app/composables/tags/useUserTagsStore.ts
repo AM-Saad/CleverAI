@@ -26,6 +26,29 @@ interface UserTagsStore {
 
 let globalStore: UserTagsStore | null = null;
 let globalStoreAccountId: string | null = null;
+const tagIdAliases = new Map<string, string>();
+let tagRemapListenerRegistered = false;
+
+function registerTagRemapListener() {
+  if (tagRemapListenerRegistered || typeof window === "undefined") return;
+  window.addEventListener("offline-v2-entity-id-remapped", (event) => {
+    const detail = (event as CustomEvent<{ entity?: string; idMap?: Record<string, string> }>).detail;
+    if (detail?.entity !== "userTag" || !detail.idMap || !globalStore) return;
+    void (async () => {
+      for (const [tempId, serverId] of Object.entries(detail.idMap!)) {
+        tagIdAliases.set(tempId, serverId);
+        const tag = globalStore?.tags.value.get(tempId);
+        if (!tag || !globalStore) continue;
+        const remapped = { ...tag, id: serverId };
+        globalStore.tags.value.delete(tempId);
+        globalStore.tags.value.set(serverId, remapped);
+        await saveTagToIDB(remapped);
+        await deleteTagFromIDB(tempId);
+      }
+    })();
+  });
+  tagRemapListenerRegistered = true;
+}
 
 // ─── IDB helpers ──────────────────────────────────────────────────────────────
 
@@ -97,6 +120,8 @@ export function useUserTagsStore(workspaceId?: string): UserTagsStore {
   const offline = useOfflineRuntime();
   // Never share a tag singleton across accounts on a shared device.
   if (globalStore && globalStoreAccountId === offline.accountId.value) return globalStore;
+  if (globalStoreAccountId !== offline.accountId.value) tagIdAliases.clear();
+  registerTagRemapListener();
 
   // Local reactive state
   const tags = ref<Map<string, UserTagState>>(new Map());
@@ -213,6 +238,7 @@ export function useUserTagsStore(workspaceId?: string): UserTagsStore {
    * Update an existing tag (requires online)
    */
   const updateTag = async (id: string, updates: UpdateUserTagDTO): Promise<boolean> => {
+    id = tagIdAliases.get(id) ?? id;
     const tag = tags.value.get(id);
     if (!tag) return false;
 
@@ -263,6 +289,7 @@ export function useUserTagsStore(workspaceId?: string): UserTagsStore {
    * Delete a tag (requires online)
    */
   const deleteTag = async (id: string): Promise<boolean> => {
+    id = tagIdAliases.get(id) ?? id;
     const tag = tags.value.get(id);
     if (!tag) return false;
 
@@ -369,7 +396,7 @@ export function useUserTagsStore(workspaceId?: string): UserTagsStore {
    * Get a tag by ID
    */
   const getTag = (id: string): UserTagState | null => {
-    return tags.value.get(id) || null;
+    return tags.value.get(tagIdAliases.get(id) ?? id) || null;
   };
 
   /**

@@ -103,6 +103,7 @@ export const ReviewCardSchema = z.object({
     intervalDays: z.number(),
     nextReviewAt: z.string(), // ISO date string
     lastReviewedAt: z.string().optional(), // ISO date string
+    streak: z.number().optional(),
   }),
 });
 export type ReviewCard = z.infer<typeof ReviewCardSchema>;

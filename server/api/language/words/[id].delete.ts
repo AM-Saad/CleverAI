@@ -1,5 +1,6 @@
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
+import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -18,6 +19,7 @@ export default defineEventHandler(async (event) => {
   }
 
   await prisma.languageWord.delete({ where: { id } });
+  await advanceOfflineEntityState({ prisma, userId: user.id, entity: "languageWord", entityId: id, changedFields: ["deleted"], deleted: true });
 
   return success({ message: "Word deleted successfully" });
 });

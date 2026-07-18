@@ -4,6 +4,21 @@ import { test, expect } from '@playwright/test';
 // Assumes build already completed and service worker registered on /.
 
 test.describe('PWA offline basic', () => {
+  test('production worker parses in Chromium', async ({ page, browserName }) => {
+    test.skip(browserName !== 'chromium', 'Worker parser check runs in Chromium');
+    await page.goto('/');
+    const source = await page.evaluate(() => fetch('/sw.js', { cache: 'no-store' }).then((response) => response.text()));
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Runtime.enable');
+    const result = await cdp.send('Runtime.compileScript', {
+      expression: source,
+      sourceURL: 'production-sw.js',
+      persistScript: false,
+    });
+    await cdp.detach();
+    expect(result.exceptionDetails).toBeUndefined();
+  });
+
   test('can evaluate a minimal worker script', async ({ page, browserName }) => {
     test.skip(browserName !== 'chromium', 'Service-worker diagnostics run in Chromium');
     await page.goto('/');
@@ -35,10 +50,17 @@ test.describe('PWA offline basic', () => {
   test('should load an internal route offline after warmup', async ({ page, context, browserName }) => {
     test.skip(browserName !== 'chromium', 'Offline simulation stable only in Chromium for this test');
     const workerMessages: string[] = [];
+    await page.addInitScript(() => {
+      (window as Window & { __swDiagnosticMessages?: unknown[] }).__swDiagnosticMessages = [];
+      navigator.serviceWorker?.addEventListener('message', (event) => {
+        (window as Window & { __swDiagnosticMessages?: unknown[] }).__swDiagnosticMessages?.push(event.data);
+      });
+    });
     context.on('serviceworker', (worker) => {
       worker.on('console', (message) => workerMessages.push(`[worker:${message.type()}] ${message.text()}`));
       worker.on('close', () => workerMessages.push('[worker] closed'));
     });
+    context.on('weberror', (error) => workerMessages.push(`[web-error] ${error.stack}`));
     page.on('console', (message) => workerMessages.push(`[page:${message.type()}] ${message.text()}`));
 
     await page.goto('/');
@@ -61,6 +83,8 @@ test.describe('PWA offline basic', () => {
       };
     });
     if (!serviceWorkerState.controller) {
+      const diagnostics = await page.evaluate(() => (window as Window & { __swDiagnosticMessages?: unknown[] }).__swDiagnosticMessages ?? []);
+      workerMessages.push(...diagnostics.map((diagnostic) => `[worker-diagnostic] ${JSON.stringify(diagnostic)}`));
       throw new Error(`Service worker did not control the page: ${JSON.stringify(serviceWorkerState)}\n${workerMessages.join('\n')}`);
     }
     expect(serviceWorkerState.controller).toContain('/sw.js');

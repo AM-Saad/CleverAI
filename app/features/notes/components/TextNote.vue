@@ -185,13 +185,13 @@ const { exportContent } = useExportContent();
 const { $api } = useNuxtApp();
 const runtimeConfig = useRuntimeConfig();
 const collaborationStatus = useNotesCollaborationStatus();
-const { debouncedFunc: scheduleSave, flush: flushScheduledSave } = useDebounce(
+const { debouncedFunc: scheduleSave, cancel: cancelScheduledSave } = useDebounce(
   () => {
     commitDraft();
   },
   700,
 );
-const { debouncedFunc: scheduleCollaborationSnapshot, flush: flushCollaborationSnapshot } = useDebounce(
+const { debouncedFunc: scheduleCollaborationSnapshot, cancel: cancelCollaborationSnapshot } = useDebounce(
   () => {
     void saveCollaborationSnapshot();
   },
@@ -397,11 +397,11 @@ const flushPendingSave = (noteId = draftNoteId.value) => {
     return;
   }
   if (collaborationConfig.value.enabled) {
-    flushCollaborationSnapshot();
+    cancelCollaborationSnapshot();
     void saveCollaborationSnapshot();
     return;
   }
-  flushScheduledSave();
+  cancelScheduledSave();
   commitDraft(noteId, true);
 };
 

@@ -6,6 +6,10 @@ const OptionalNoteTitleSchema = z.preprocess(
   (val) => (val === null || val === undefined ? undefined : trim(val)),
   z.string().optional()
 );
+const OptionalPositionSchema = z.preprocess(
+  (val) => (val === null ? undefined : val),
+  z.string().regex(/^[0-9A-Za-z]+$/).optional(),
+);
 
 // ── Note type discriminator ──
 // "TEXT" = default rich-text note, "MATH" = handwritten math note, "CANVAS" = free-form drawing canvas
@@ -92,7 +96,7 @@ export const NoteSchema = z.object({
   content: z.string(),
   tags: z.array(z.string()).default([]),
   order: z.number().int().default(0),
-  position: z.string().regex(/^[0-9A-Za-z]+$/).optional(),
+  position: OptionalPositionSchema,
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),
   /** Discriminator — defaults to "TEXT" for backward compatibility */

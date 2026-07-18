@@ -3,6 +3,126 @@ import type { NotesSyncRequest } from "../../../../shared/utils/note-sync.contra
 import { normalizeWorkspaceNoteTitle } from "../../../../shared/utils/workspaceNote";
 import { applyWorkspaceNoteLayout } from "./applyWorkspaceNoteLayout";
 import { advanceOfflineEntityState } from "../../offline/application/advanceOfflineEntityState";
+import { positionFromLegacyOrder } from "../../../../shared/utils/position-key";
+
+type NotesCreateReceipt = {
+  kind: "notes-v1-create";
+  entity: "note" | "noteGroup";
+  tempId: string;
+  serverId: string;
+  version: number;
+  updatedAt?: string;
+};
+
+function isDuplicateReceiptError(error: unknown): boolean {
+  return Boolean(
+    error &&
+    typeof error === "object" &&
+    (error as { code?: string }).code === "P2002",
+  );
+}
+
+function parseCreateReceipt(value: unknown): NotesCreateReceipt | null {
+  if (!value || typeof value !== "object") return null;
+  const receipt = value as Partial<NotesCreateReceipt>;
+  if (
+    receipt.kind !== "notes-v1-create" ||
+    (receipt.entity !== "note" && receipt.entity !== "noteGroup") ||
+    typeof receipt.tempId !== "string" ||
+    typeof receipt.serverId !== "string" ||
+    typeof receipt.version !== "number"
+  )
+    return null;
+  return receipt as NotesCreateReceipt;
+}
+
+/**
+ * A temp-ID create must remain idempotent even when the database commit
+ * succeeds but the HTTP response is lost. The temp ID is the stable command
+ * key; the receipt and domain insert commit in the same transaction.
+ */
+async function createNotesEntityOnce(input: {
+  prisma: any;
+  userId: string;
+  entity: "note" | "noteGroup";
+  tempId: string;
+  create(tx: any): Promise<any>;
+  advance(tx: any, serverId: string): Promise<void>;
+}): Promise<NotesCreateReceipt & { replayed: boolean }> {
+  const { prisma, userId, entity, tempId, create, advance } = input;
+  const mutationId = `notes-v1:${entity}:create:${tempId}`;
+  const readReceipt = async (client: any) => {
+    if (!client.offlineMutationReceipt?.findUnique) return null;
+    const row = await client.offlineMutationReceipt.findUnique({
+      where: { userId_mutationId: { userId, mutationId } },
+    });
+    const receipt = parseCreateReceipt(row?.result);
+    return receipt && receipt.entity === entity && receipt.tempId === tempId
+      ? receipt
+      : null;
+  };
+
+  const existing = await readReceipt(prisma);
+  if (existing) return { ...existing, replayed: true };
+
+  // Unit-test doubles and pre-migration development databases intentionally
+  // keep the old behavior. Production has both capabilities.
+  if (
+    !prisma.offlineMutationReceipt?.create ||
+    typeof prisma.$transaction !== "function"
+  ) {
+    const created = await create(prisma);
+    await advance(prisma, created.id);
+    return {
+      kind: "notes-v1-create",
+      entity,
+      tempId,
+      serverId: created.id,
+      version: created.version ?? 1,
+      updatedAt: created.updatedAt
+        ? new Date(created.updatedAt).toISOString()
+        : undefined,
+      replayed: false,
+    };
+  }
+
+  try {
+    return await prisma.$transaction(
+      async (tx: any) => {
+        const insideReceipt = await readReceipt(tx);
+        if (insideReceipt) return { ...insideReceipt, replayed: true };
+        const created = await create(tx);
+        await advance(tx, created.id);
+        const receipt: NotesCreateReceipt = {
+          kind: "notes-v1-create",
+          entity,
+          tempId,
+          serverId: created.id,
+          version: created.version ?? 1,
+          updatedAt: created.updatedAt
+            ? new Date(created.updatedAt).toISOString()
+            : undefined,
+        };
+        await tx.offlineMutationReceipt.create({
+          data: {
+            userId,
+            mutationId,
+            status: "applied",
+            result: receipt,
+          },
+        });
+        return { ...receipt, replayed: false };
+      },
+      { maxWait: 5_000, timeout: 15_000 },
+    );
+  } catch (error) {
+    if (isDuplicateReceiptError(error)) {
+      const winner = await readReceipt(prisma);
+      if (winner) return { ...winner, replayed: true };
+    }
+    throw error;
+  }
+}
 
 export async function syncWorkspaceNotes(input: {
   prisma: any;
@@ -11,7 +131,11 @@ export async function syncWorkspaceNotes(input: {
 }) {
   const { prisma, request, userId } = input;
   const applied: string[] = [];
-  const appliedNotes: Array<{ id: string; version: number; updatedAt?: string }> = [];
+  const appliedNotes: Array<{
+    id: string;
+    version: number;
+    updatedAt?: string;
+  }> = [];
   const conflicts: Array<{
     id: string;
     reason?: string;
@@ -32,9 +156,11 @@ export async function syncWorkspaceNotes(input: {
     };
   }> = [];
   const idMap: Record<string, string> = {};
+  const replayedCreates: string[] = [];
   const groupApplied: string[] = [];
   const groupConflicts: Array<{ id: string }> = [];
   const groupIdMap: Record<string, string> = {};
+  const replayedGroupCreates: string[] = [];
   const errors: Array<{ scope: string; id?: string; message: string }> = [];
   let layoutApplied = false;
   let layoutConflict = false;
@@ -51,7 +177,9 @@ export async function syncWorkspaceNotes(input: {
     noteType: note.noteType ?? undefined,
     metadata: note.metadata ?? undefined,
     version: note.version ?? undefined,
-    updatedAt: note.updatedAt ? new Date(note.updatedAt).toISOString() : undefined,
+    updatedAt: note.updatedAt
+      ? new Date(note.updatedAt).toISOString()
+      : undefined,
   });
 
   for (const change of groupChanges) {
@@ -74,8 +202,8 @@ export async function syncWorkspaceNotes(input: {
         const existing = isTempId
           ? null
           : await prisma.noteGroup.findFirst({
-            where: { id: change.id, workspaceId: change.workspaceId },
-          });
+              where: { id: change.id, workspaceId: change.workspaceId },
+            });
 
         if (existing) {
           await prisma.noteGroup.update({
@@ -85,7 +213,13 @@ export async function syncWorkspaceNotes(input: {
               ...(change.order !== undefined && { order: change.order }),
             },
           });
-          await advanceOfflineEntityState({ prisma, userId, entity: "noteGroup", entityId: existing.id, changedFields: ["title", "position"] });
+          await advanceOfflineEntityState({
+            prisma,
+            userId,
+            entity: "noteGroup",
+            entityId: existing.id,
+            changedFields: ["title", "position"],
+          });
           groupApplied.push(change.id);
           continue;
         }
@@ -95,15 +229,45 @@ export async function syncWorkspaceNotes(input: {
           orderBy: { order: "desc" },
           select: { order: true },
         });
-        const created = await prisma.noteGroup.create({
-          data: {
-            workspaceId: change.workspaceId,
-            title: change.title,
-            order: change.order ?? (maxOrderGroup ? maxOrderGroup.order + 1 : 0),
-          },
-        });
-        await advanceOfflineEntityState({ prisma, userId, entity: "noteGroup", entityId: created.id, changedFields: ["title", "position"] });
-        if (isTempId) groupIdMap[change.id] = created.id;
+        const order =
+          change.order ?? (maxOrderGroup ? maxOrderGroup.order + 1 : 0);
+        const createGroup = (client: any) =>
+          client.noteGroup.create({
+            data: {
+              ...(!isTempId && { id: change.id }),
+              workspaceId: change.workspaceId,
+              title: change.title,
+              order,
+              position: positionFromLegacyOrder(order),
+            },
+          });
+        const advanceGroup = async (client: any, serverId: string) => {
+          await advanceOfflineEntityState({
+            prisma: client,
+            userId,
+            entity: "noteGroup",
+            entityId: serverId,
+            changedFields: ["title", "position"],
+          });
+        };
+        const created = isTempId
+          ? await createNotesEntityOnce({
+              prisma,
+              userId,
+              entity: "noteGroup",
+              tempId: change.id,
+              create: createGroup,
+              advance: advanceGroup,
+            })
+          : await (async () => {
+              const row = await createGroup(prisma);
+              await advanceGroup(prisma, row.id);
+              return { serverId: row.id, replayed: false };
+            })();
+        if (isTempId) {
+          groupIdMap[change.id] = created.serverId;
+          if (created.replayed) replayedGroupCreates.push(change.id);
+        }
         groupApplied.push(change.id);
         continue;
       }
@@ -124,7 +288,13 @@ export async function syncWorkspaceNotes(input: {
           where: { id: change.id },
           data: { title: change.title },
         });
-        await advanceOfflineEntityState({ prisma, userId, entity: "noteGroup", entityId: group.id, changedFields: ["title"] });
+        await advanceOfflineEntityState({
+          prisma,
+          userId,
+          entity: "noteGroup",
+          entityId: group.id,
+          changedFields: ["title"],
+        });
         groupApplied.push(change.id);
         continue;
       }
@@ -145,7 +315,14 @@ export async function syncWorkspaceNotes(input: {
           });
           await tx.noteGroup.delete({ where: { id: serverGroupId } });
         });
-        await advanceOfflineEntityState({ prisma, userId, entity: "noteGroup", entityId: serverGroupId, changedFields: ["deleted"], deleted: true });
+        await advanceOfflineEntityState({
+          prisma,
+          userId,
+          entity: "noteGroup",
+          entityId: serverGroupId,
+          changedFields: ["deleted"],
+          deleted: true,
+        });
         groupApplied.push(change.id);
         continue;
       }
@@ -190,17 +367,23 @@ export async function syncWorkspaceNotes(input: {
   for (const change of contentChanges) {
     try {
       if (change.operation === "delete") {
-        const note = await prisma.note.findFirst({ where: { id: change.id } });
-        if (!note) {
-          applied.push(change.id);
-          continue;
-        }
-
-        const workspace = await prisma.workspace.findFirst({
-          where: { id: note.workspaceId, userId },
+        const note = await prisma.note.findFirst({
+          where: { id: change.id, workspace: { userId } },
         });
-        if (!workspace) {
-          applied.push(change.id);
+        if (!note) {
+          const inaccessible =
+            typeof prisma.note.findUnique === "function"
+              ? await prisma.note.findUnique({
+                  where: { id: change.id },
+                  select: { id: true },
+                })
+              : null;
+          if (inaccessible) {
+            conflicts.push({ id: change.id, reason: "FORBIDDEN" });
+          } else {
+            // Idempotent retry after an already-applied delete.
+            applied.push(change.id);
+          }
           continue;
         }
 
@@ -240,7 +423,14 @@ export async function syncWorkspaceNotes(input: {
         }
 
         await prisma.note.delete({ where: { id: change.id } });
-        await advanceOfflineEntityState({ prisma, userId, entity: "note", entityId: change.id, changedFields: ["deleted"], deleted: true });
+        await advanceOfflineEntityState({
+          prisma,
+          userId,
+          entity: "note",
+          entityId: change.id,
+          changedFields: ["deleted"],
+          deleted: true,
+        });
         applied.push(change.id);
         continue;
       }
@@ -260,7 +450,7 @@ export async function syncWorkspaceNotes(input: {
       }
 
       const resolvedGroupId = change.groupId
-        ? groupIdMap[change.groupId] ?? change.groupId
+        ? (groupIdMap[change.groupId] ?? change.groupId)
         : change.groupId;
 
       if (resolvedGroupId) {
@@ -287,14 +477,68 @@ export async function syncWorkspaceNotes(input: {
           tags: change.tags || [],
           noteType: change.noteType ?? "TEXT",
           metadata: change.metadata as any,
+          order: change.order ?? 0,
+          position: positionFromLegacyOrder(change.order ?? 0),
         };
-        const created = await prisma.note.create({ data });
-        await advanceOfflineEntityState({ prisma, userId, entity: "note", entityId: created.id, changedFields: ["title", "content", "groupId", "tags", "noteType", "metadata", "position"] });
-        if (isTempId) idMap[change.id] = created.id;
+        const created = isTempId
+          ? await createNotesEntityOnce({
+              prisma,
+              userId,
+              entity: "note",
+              tempId: change.id,
+              create: (tx) => tx.note.create({ data }),
+              advance: async (tx, serverId) => {
+                await advanceOfflineEntityState({
+                  prisma: tx,
+                  userId,
+                  entity: "note",
+                  entityId: serverId,
+                  changedFields: [
+                    "title",
+                    "content",
+                    "groupId",
+                    "tags",
+                    "noteType",
+                    "metadata",
+                    "position",
+                  ],
+                });
+              },
+            })
+          : await (async () => {
+              const row = await prisma.note.create({ data });
+              await advanceOfflineEntityState({
+                prisma,
+                userId,
+                entity: "note",
+                entityId: row.id,
+                changedFields: [
+                  "title",
+                  "content",
+                  "groupId",
+                  "tags",
+                  "noteType",
+                  "metadata",
+                  "position",
+                ],
+              });
+              return {
+                serverId: row.id,
+                version: row.version ?? 1,
+                updatedAt: row.updatedAt
+                  ? new Date(row.updatedAt).toISOString()
+                  : undefined,
+                replayed: false,
+              };
+            })();
+        if (isTempId) {
+          idMap[change.id] = created.serverId;
+          if (created.replayed) replayedCreates.push(change.id);
+        }
         appliedNotes.push({
           id: change.id,
-          version: created.version ?? 1,
-          updatedAt: created.updatedAt ? new Date(created.updatedAt).toISOString() : undefined,
+          version: created.version,
+          updatedAt: created.updatedAt,
         });
         applied.push(change.id);
         continue;
@@ -340,11 +584,26 @@ export async function syncWorkspaceNotes(input: {
           version: { increment: 1 },
         },
       });
-      await advanceOfflineEntityState({ prisma, userId, entity: "note", entityId: updated.id, changedFields: ["title", "content", "groupId", "tags", "noteType", "metadata"] });
+      await advanceOfflineEntityState({
+        prisma,
+        userId,
+        entity: "note",
+        entityId: updated.id,
+        changedFields: [
+          "title",
+          "content",
+          "groupId",
+          "tags",
+          "noteType",
+          "metadata",
+        ],
+      });
       appliedNotes.push({
         id: change.id,
         version: updated.version ?? existing.version ?? 1,
-        updatedAt: updated.updatedAt ? new Date(updated.updatedAt).toISOString() : undefined,
+        updatedAt: updated.updatedAt
+          ? new Date(updated.updatedAt).toISOString()
+          : undefined,
       });
       applied.push(change.id);
     } catch (e) {
@@ -355,7 +614,6 @@ export async function syncWorkspaceNotes(input: {
         errorMessage: e instanceof Error ? e.message : String(e),
         errorStack: e instanceof Error ? e.stack : undefined,
       });
-      conflicts.push({ id: change.id });
       errors.push({
         scope: "content",
         id: change.id,
@@ -371,7 +629,9 @@ export async function syncWorkspaceNotes(input: {
         notes: request.layoutChange.notes.map((note) => ({
           ...note,
           id: idMap[note.id] ?? note.id,
-          groupId: note.groupId ? groupIdMap[note.groupId] ?? note.groupId : null,
+          groupId: note.groupId
+            ? (groupIdMap[note.groupId] ?? note.groupId)
+            : null,
         })),
         groups: request.layoutChange.groups.map((group) => ({
           ...group,
@@ -405,9 +665,11 @@ export async function syncWorkspaceNotes(input: {
     conflicts,
     idMap,
     noteIdMap: idMap,
+    replayedCreates,
     groupApplied,
     groupConflicts,
     groupIdMap,
+    replayedGroupCreates,
     errors,
     layoutApplied,
     layoutConflict,

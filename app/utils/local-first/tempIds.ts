@@ -3,6 +3,8 @@ export type ClientTempIdScope =
   | "note-group"
   | "board-item"
   | "board-column"
+  | "board-link"
+  | "board-comment"
   | "material";
 
 const TEMP_ID_PREFIX_BY_SCOPE: Record<ClientTempIdScope, string> = {
@@ -10,6 +12,8 @@ const TEMP_ID_PREFIX_BY_SCOPE: Record<ClientTempIdScope, string> = {
   "note-group": "temp-group",
   "board-item": "temp-board-item",
   "board-column": "temp-board-column",
+  "board-link": "temp-board-link",
+  "board-comment": "temp-board-comment",
   material: "temp-material",
 };
 

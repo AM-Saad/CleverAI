@@ -62,11 +62,11 @@ export function useMaterials(workspaceId: string) {
         operation: "material.create",
         workspaceId,
         changedFields: ["title", "content", "type", "metadata"],
-        payload: { workspaceId, ...payload },
-        localData: { workspaceId, ...payload, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+        payload,
+        localData: { ...payload, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
       });
       await refresh();
-      return { id: entityId, workspaceId, ...payload, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Material;
+      return { id: entityId, ...payload, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as Material;
     }
     const result = await createOperation.execute(async () => {
       const createResult = await $api.materials.create(payload);

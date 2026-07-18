@@ -11,7 +11,7 @@ Owns workspace notes UI, local-first note state, and the notes API client.
 - `composables/useNotesStore.ts` is the compatibility facade for note state, commands, sync status, and legacy callers.
 - `composables/notesContentQueue.ts` owns debounced content saves, draft flushing, content queue writes, and online/offline scheduling for note edits.
 - `composables/notesSyncRuntime.ts` owns hydration, queue draining, conflict recording, server refresh, retry hooks, and sync result application.
-- `composables/notesSyncListeners.ts` owns the once-per-app reconnect and service-worker completion listeners.
+- `composables/notesSyncListeners.ts` owns the once-per-app reconnect listener.
 - `composables/notesLayoutController.ts` owns note layout commands, canonical per-group ordering, layout-only IndexedDB persistence, and the pending layout queue.
 - `composables/useNoteGroupsStore.ts` is the compatibility facade for group state, group commands, and locally persisted collapse state.
 - `services/noteService.ts` owns the `/api/notes` client.
@@ -27,10 +27,10 @@ Feature internals should import local components and composables explicitly inst
 - Layout changes use one workspace-level status such as `layout saved locally`, `layout syncing`, or `layout conflict`; reorder/move must not mark every note row as `Local`.
 - The workspace runtime is the source of truth for group state and the note/group sync bridge; `notesSyncRuntime.ts` is the only note-side queue drainer.
 - `useNotesStore.ts` remains the public source for note sync status and last-sync timestamps, but it delegates sync/hydration/refresh behavior, reconnect listeners, and content queueing to runtime helpers.
-- There is one queue drainer: `notesStore.syncPendingChanges()`. Group UI may enqueue group work and refresh group data, but it must not call `/api/notes/sync` directly.
+- There is one Notes queue drainer: `notesSyncRuntime.ts`. Notes, groups, and layout use the feature-owned IndexedDB outboxes; the page runtime or no-window service worker calls `POST /api/notes/sync`. The generic Offline V2 runtime explicitly excludes Notes entities so it cannot become a second owner.
 - Content edit saves are debounced per note and flushed together on blur, reconnect, manual sync, or unmount; one split-pane edit must not replace another pane's pending save.
 - Initial load hydrates IndexedDB notes and groups first so the drawer/editor can render immediately; server refresh and pending sync run in the background when the network is verified online.
-- Groups are local-first in v1 for create/rename/delete/reorder. Group commands are queued locally, then drained by the notes sync engine.
+- Groups are local-first for create/rename/delete/reorder. Group commands are queued locally, then drained by the same Notes sync engine.
 - Deleting a group moves notes back to the virtual `Ungrouped` section (`groupId: null`).
 - Version conflicts use explicit resolution. The server returns `VERSION_MISMATCH` with a server snapshot; the client stores local/server snapshots in IndexedDB, freezes normal editing for that note, and lets the user keep local, use server, or unlock the local draft as a manual merge against the latest server version.
 - When `NUXT_PUBLIC_NOTES_COLLAB_ENABLED=true`, existing non-temp `TEXT` note bodies use Yjs/Tiptap collaboration over the self-hosted Hocuspocus server. `note.content` and `note.title` become debounced read/search projections, while the Yjs document is authoritative for rich-text body edits.

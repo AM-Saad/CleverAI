@@ -828,11 +828,11 @@ const createCollaborationHandle = async (): Promise<{
     name: config.roomName!,
     token: config.token!,
     document: ydoc,
-    // Build the local Yjs document first. A disconnected browser must not
-    // attempt a collaboration websocket; reconnect attaches this same CRDT
-    // document and lets Yjs merge it with the server document.
-    connect: typeof navigator === "undefined" ? false : navigator.onLine,
   });
+  // Build the local Yjs document first. A disconnected browser must not keep
+  // a collaboration socket alive; reconnect attaches this same CRDT document
+  // and lets Yjs merge it with the server document.
+  if (typeof navigator === "undefined" || !navigator.onLine) provider.disconnect();
   const reconnect = () => {
     if (navigator.onLine) (provider as unknown as { connect?: () => void }).connect?.();
   };

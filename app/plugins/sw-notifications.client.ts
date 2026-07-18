@@ -77,67 +77,6 @@ export default defineNuxtPlugin(() => {
       return;
     }
 
-    // ── Notes Sync ────────────────────────────────────────────────────────────
-    // STARTED is intentionally silent – background sync startup is noise not signal.
-
-    if (type === SW_MESSAGE_TYPES.NOTES_SYNCED) {
-      const applied = Number(data?.appliedCount ?? 0);
-      const conflicts = Number(data?.conflictsCount ?? 0);
-      // Only surface a toast when something actually changed.
-      if (applied === 0 && conflicts === 0) return;
-      const parts: string[] = [];
-      if (applied) parts.push(`${applied} note${applied !== 1 ? "s" : ""} saved`);
-      if (conflicts) parts.push(`${conflicts} conflict${conflicts !== 1 ? "s" : ""} need review`);
-      toast.add({
-        title: "Notes synced",
-        description: parts.join(" · "),
-        color: conflicts ? "warning" : "success",
-      });
-      return;
-    }
-
-    if (type === SW_MESSAGE_TYPES.NOTES_SYNC_ERROR) {
-      toast.add({
-        title: "Notes sync failed",
-        description: String(data?.message ?? "Will retry when back online."),
-        color: "warning",
-      });
-      return;
-    }
-
-    if (type === SW_MESSAGE_TYPES.NOTES_SYNC_CONFLICTS) {
-      const conflicts = Number(data?.conflictsCount ?? 0);
-      toast.add({
-        title: "Notes conflicts",
-        description: conflicts ? `${conflicts} note${conflicts !== 1 ? "s" : ""} need review.` : "Conflicts detected.",
-        color: "warning",
-      });
-      return;
-    }
-
-    // ── Board Items Sync ──────────────────────────────────────────────────────
-    // Same policy as notes: STARTED is silent, SYNCED only toasts on actual changes.
-
-    if (type === SW_MESSAGE_TYPES.BOARD_ITEMS_SYNCED) {
-      const applied = Number(data?.appliedCount ?? 0);
-      if (applied === 0) return;
-      toast.add({
-        title: "Board synced",
-        description: `${applied} item${applied !== 1 ? "s" : ""} saved`,
-        color: "success",
-      });
-      return;
-    }
-
-    if (type === SW_MESSAGE_TYPES.BOARD_ITEMS_SYNC_ERROR) {
-      toast.add({
-        title: "Board sync failed",
-        description: String(data?.message ?? "Will retry when back online."),
-        color: "warning",
-      });
-      return;
-    }
-
     // ── Navigation Events from SW ─────────────────────────────────────────────
 
     if (type === SW_MESSAGE_TYPES.NOTIFICATION_CLICK_NAVIGATE) {

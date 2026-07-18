@@ -2,6 +2,10 @@
 import { z } from "zod";
 
 const trim = (v: unknown) => (typeof v === "string" ? v.trim() : v);
+const optionalPosition = z.preprocess(
+  (value) => (value === null ? undefined : value),
+  z.string().regex(/^[0-9A-Za-z]+$/).optional(),
+);
 
 export const UserTagSchema = z.object({
   id: z.string(),
@@ -9,7 +13,7 @@ export const UserTagSchema = z.object({
   name: z.string(),
   color: z.string().default("#3b82f6"),
   order: z.number().int().default(0),
-  position: z.string().regex(/^[0-9A-Za-z]+$/).optional(),
+  position: optionalPosition,
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),
 });

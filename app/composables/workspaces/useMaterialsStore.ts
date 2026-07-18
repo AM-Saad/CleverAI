@@ -53,12 +53,39 @@ interface MaterialStore {
 
 // Global store instance
 const stores = new Map<string, MaterialStore>();
+const materialIdAliases = new Map<string, string>();
+let materialRemapListenerRegistered = false;
+
+function registerMaterialRemapListener() {
+  if (materialRemapListenerRegistered || typeof window === "undefined") return;
+  window.addEventListener("offline-v2-entity-id-remapped", (event) => {
+    const detail = (event as CustomEvent<{ entity?: string; idMap?: Record<string, string>; canonical?: Record<string, unknown> | null }>).detail;
+    if (detail?.entity !== "material" || !detail.idMap) return;
+    for (const [tempId, serverId] of Object.entries(detail.idMap)) {
+      materialIdAliases.set(tempId, serverId);
+      for (const store of stores.values()) {
+        const material = store.materials.value.get(tempId);
+        if (!material) continue;
+        store.materials.value.delete(tempId);
+        store.materials.value.set(serverId, {
+          ...material,
+          ...(detail.canonical ?? {}),
+          id: serverId,
+          isLoading: false,
+          error: null,
+        } as MaterialState);
+      }
+    }
+  });
+  materialRemapListenerRegistered = true;
+}
 
 /**
  * Creates or returns a notes store for a specific workspace
  * This provides local state management with optimistic updates
  */
 export function useMaterialsStore(workspaceId: string): MaterialStore {
+  registerMaterialRemapListener();
   // Return existing store if available
   if (stores.has(workspaceId)) {
     return stores.get(workspaceId)!;
@@ -261,6 +288,7 @@ export function useMaterialsStore(workspaceId: string): MaterialStore {
 
   // Delete a material - simple optimistic approach
   const deleteMaterial = async (id: string): Promise<boolean> => {
+    id = materialIdAliases.get(id) ?? id;
     try {
       const material = materials.value.get(id);
       if (!material) return false;
@@ -321,11 +349,11 @@ export function useMaterialsStore(workspaceId: string): MaterialStore {
 
   // Utility functions
   const isMaterialLoading = (id: string): boolean => {
-    return materials.value.get(id)?.isLoading ?? false;
+    return materials.value.get(materialIdAliases.get(id) ?? id)?.isLoading ?? false;
   };
 
   const getMaterial = (id: string): MaterialState | null => {
-    return materials.value.get(id) ?? null;
+    return materials.value.get(materialIdAliases.get(id) ?? id) ?? null;
   };
 
   const setMaterials = (newMaterials: MaterialState[]) => {

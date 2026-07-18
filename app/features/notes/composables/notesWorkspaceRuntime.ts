@@ -1,11 +1,15 @@
 import { APIError } from "@/services/FetchFactory";
 import { computed, ref, type ComputedRef, type Ref } from "vue";
 import type { NoteGroup } from "@@/shared/utils/note-group.contract";
-import type { NoteGroupLayoutItem } from "@@/shared/utils/note-sync.contract";
+import type {
+  NoteGroupLayoutItem,
+  PendingNoteGroupChange,
+} from "@@/shared/utils/note-sync.contract";
 import { useNetworkStatus } from "~/composables/shared/useNetworkStatus";
 import {
   deleteNoteGroupFromIndexedDB,
   loadNoteGroupsFromIndexedDB,
+  reconcileNoteGroupIds,
   saveNoteGroupToIndexedDB,
   saveNoteGroupsToIndexedDB,
 } from "~/utils/idb";
@@ -38,14 +42,27 @@ export interface NotesWorkspaceRuntime {
   groupFacade: NoteGroupsFacade;
   getGroupLayout(): NoteGroupLayoutItem[];
   hydrateLocalGroups(): Promise<void>;
+  applyOfflineGroupIdMap(
+    groupIdMap: Record<string, string>,
+    version?: number,
+  ): Promise<void>;
+  settleGroupDeletes(input: {
+    appliedIds: string[];
+    conflictIds: string[];
+    sentChanges: PendingNoteGroupChange[];
+  }): Promise<void>;
   syncGroupsWithServer(): Promise<void>;
-  registerSyncDrainer(drainer: (reason: NotesSyncReason) => Promise<boolean>): void;
+  registerSyncDrainer(
+    drainer: (reason: NotesSyncReason) => Promise<boolean>,
+  ): void;
 }
 
 const runtimes = new Map<string, NotesWorkspaceRuntime>();
 const ungroupedKey = "__ungrouped__";
 
-export function useNotesWorkspaceRuntime(workspaceId: string): NotesWorkspaceRuntime {
+export function useNotesWorkspaceRuntime(
+  workspaceId: string,
+): NotesWorkspaceRuntime {
   const existing = runtimes.get(workspaceId);
   if (existing) return existing;
 
@@ -59,7 +76,8 @@ export function useNotesWorkspaceRuntime(workspaceId: string): NotesWorkspaceRun
   const collapsedGroupIds = ref<Set<string>>(new Set());
   const storageKey = `collapsedNoteGroups_${workspaceId}`;
   let groupSyncTimer: ReturnType<typeof setTimeout> | null = null;
-  let syncDrainer: ((reason: NotesSyncReason) => Promise<boolean>) | null = null;
+  let syncDrainer: ((reason: NotesSyncReason) => Promise<boolean>) | null =
+    null;
 
   const loadCollapsedState = () => {
     if (typeof window === "undefined") return;
@@ -75,7 +93,10 @@ export function useNotesWorkspaceRuntime(workspaceId: string): NotesWorkspaceRun
   const persistCollapsedState = () => {
     if (typeof window === "undefined") return;
     try {
-      localStorage.setItem(storageKey, JSON.stringify(Array.from(collapsedGroupIds.value)));
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify(Array.from(collapsedGroupIds.value)),
+      );
     } catch {
       // localStorage unavailable
     }
@@ -97,6 +118,53 @@ export function useNotesWorkspaceRuntime(workspaceId: string): NotesWorkspaceRun
       groups.value = new Map(localGroups.map((group) => [group.id, group]));
     }
   };
+
+  const applyOfflineGroupIdMap = async (
+    groupIdMap: Record<string, string>,
+    version?: number,
+  ) => {
+    if (!Object.keys(groupIdMap).length) return;
+    await reconcileNoteGroupIds(groupIdMap, version);
+    const nextGroups = new Map(groups.value);
+    const nextCollapsed = new Set(collapsedGroupIds.value);
+    for (const [tempId, serverId] of Object.entries(groupIdMap)) {
+      const group = nextGroups.get(tempId);
+      if (group) {
+        nextGroups.delete(tempId);
+        nextGroups.set(serverId, {
+          ...group,
+          id: serverId,
+          ...(version !== undefined && { version }),
+        });
+      }
+      if (nextCollapsed.delete(tempId)) nextCollapsed.add(serverId);
+    }
+    groups.value = nextGroups;
+    collapsedGroupIds.value = nextCollapsed;
+    persistCollapsedState();
+  };
+
+  const settleGroupDeletes: NotesWorkspaceRuntime["settleGroupDeletes"] =
+    async ({ appliedIds, conflictIds, sentChanges }) => {
+      const sentById = new Map(
+        sentChanges.map((change) => [change.id, change]),
+      );
+      for (const id of appliedIds) {
+        if (sentById.get(id)?.operation === "delete") {
+          await deleteNoteGroupFromIndexedDB(id);
+        }
+      }
+      for (const id of conflictIds) {
+        const sent = sentById.get(id);
+        if (sent?.operation !== "delete" || !sent.rollbackData) continue;
+        const restored = sent.rollbackData as unknown as NoteGroup;
+        groups.value = new Map(groups.value).set(id, { ...restored, id });
+        await saveNoteGroupToIndexedDB({ ...restored, id });
+        error.value = new APIError(
+          "The group was changed on the server, so it was restored locally.",
+        );
+      }
+    };
 
   const scheduleGroupSync = () => {
     if (!networkMonitor.isVerifiedOnline.value) return;
@@ -121,9 +189,10 @@ export function useNotesWorkspaceRuntime(workspaceId: string): NotesWorkspaceRun
     registerBackgroundSync: () => groupQueue.registerBackgroundSync(),
     scheduleSync: scheduleGroupSync,
     setError: (nextError) => {
-      error.value = nextError instanceof APIError
-        ? nextError
-        : new APIError("Failed to save note group locally");
+      error.value =
+        nextError instanceof APIError
+          ? nextError
+          : new APIError("Failed to save note group locally");
     },
   });
 
@@ -140,9 +209,7 @@ export function useNotesWorkspaceRuntime(workspaceId: string): NotesWorkspaceRun
     const pendingGroups = await groupQueue.load(workspaceId);
     const pendingLayout = await layoutQueue.load(workspaceId);
     if (pendingGroups.length || pendingLayout?.groups.length) {
-      const synced = syncDrainer
-        ? await syncDrainer("background")
-        : false;
+      const synced = syncDrainer ? await syncDrainer("background") : false;
       if (!synced) {
         loading.value = false;
         return;
@@ -151,7 +218,9 @@ export function useNotesWorkspaceRuntime(workspaceId: string): NotesWorkspaceRun
 
     const result = await $api.noteGroups.getByWorkspace(workspaceId);
     if (result.success) {
-      const serverGroups = new Map(result.data.map((group) => [group.id, group]));
+      const serverGroups = new Map(
+        result.data.map((group) => [group.id, group]),
+      );
       const remainingPending = await groupQueue.load(workspaceId);
       const pendingIds = new Set(remainingPending.map((pending) => pending.id));
       const merged = new Map(serverGroups);
@@ -172,20 +241,22 @@ export function useNotesWorkspaceRuntime(workspaceId: string): NotesWorkspaceRun
   }
 
   const createGroup = async (title: string): Promise<string | null> =>
-    groupCommandService.createGroup(title);
+    await groupCommandService.createGroup(title);
 
   const renameGroup = async (id: string, title: string): Promise<boolean> =>
-    groupCommandService.renameGroup(id, title);
+    await groupCommandService.renameGroup(id, title);
 
   const deleteGroup = async (id: string): Promise<boolean> => {
-    const deleted = groupCommandService.deleteGroup(id);
-    collapsedGroupIds.value.delete(id);
-    persistCollapsedState();
+    const deleted = await groupCommandService.deleteGroup(id);
+    if (deleted) {
+      collapsedGroupIds.value.delete(id);
+      persistCollapsedState();
+    }
     return deleted;
   };
 
   const reorderGroups = async (ordered: NoteGroup[]): Promise<boolean> =>
-    groupCommandService.reorderGroups(ordered);
+    await groupCommandService.reorderGroups(ordered);
 
   const isCollapsed = (id: string | null) =>
     collapsedGroupIds.value.has(id ?? ungroupedKey);
@@ -225,6 +296,8 @@ export function useNotesWorkspaceRuntime(workspaceId: string): NotesWorkspaceRun
     },
     getGroupLayout,
     hydrateLocalGroups,
+    applyOfflineGroupIdMap,
+    settleGroupDeletes,
     syncGroupsWithServer,
     registerSyncDrainer(drainer) {
       syncDrainer = drainer;

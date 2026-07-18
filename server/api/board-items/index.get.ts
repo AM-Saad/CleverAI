@@ -19,12 +19,24 @@ export default defineEventHandler(async (event) => {
       where: query,
       orderBy: { position: "asc" },
     });
+    const revisionRows = items.length
+      ? await prisma.offlineEntityState.findMany({
+          where: { userId: user.id, entity: "boardItem", entityId: { in: items.map((item) => item.id) } },
+          select: { entityId: true, version: true },
+        })
+      : [];
+    const revisions = new Map(revisionRows.map((row: { entityId: string; version: number }) => [row.entityId, row.version]));
+    const responseItems = items.map((item) => ({
+      ...item,
+      position: item.position ?? undefined,
+      offlineRevision: revisions.get(item.id) ?? 0,
+    }));
 
     if (process.env.NODE_ENV === "development") {
-      items.forEach((item: BoardItem) => BoardItemSchema.parse(item));
+      responseItems.forEach((item) => BoardItemSchema.parse(item));
     }
 
-    return success(items, { count: items.length });
+    return success(responseItems, { count: responseItems.length });
   }
 
   catch (error) {

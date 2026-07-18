@@ -4,6 +4,10 @@ import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { NoteSchema } from "~/shared/utils/note.contract";
 import { normalizeWorkspaceNoteTitle } from "@@/shared/utils/workspaceNote";
+import {
+  isPositionKey,
+  positionFromLegacyOrder,
+} from "@@/shared/utils/position-key";
 
 const QuerySchema = z.object({
   workspaceId: z
@@ -41,6 +45,11 @@ export default defineEventHandler(async (event) => {
   const normalizedNotes = notes.map((note) => ({
     ...note,
     title: normalizeWorkspaceNoteTitle(note.title, note.content),
+    // Legacy rows used null to mean "not ranked yet". Always return a
+    // canonical string so one old row cannot invalidate the entire list.
+    position: isPositionKey(note.position)
+      ? note.position
+      : positionFromLegacyOrder(note.order),
   }));
 
   if (process.env.NODE_ENV === "development") {

@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
-import { IDBKeyRange as FakeIDBKeyRange, indexedDB as fakeIndexedDB } from "fake-indexeddb";
-import { effectScope, ref } from "vue";
+import {
+  IDBKeyRange as FakeIDBKeyRange,
+  indexedDB as fakeIndexedDB,
+} from "fake-indexeddb";
+import { effectScope, ref, shallowRef } from "vue";
 import { calculateSM2 } from "../server/modules/review/domain/sm2";
 import {
   gradeReviewCard,
@@ -18,7 +21,6 @@ import { saveGeneratedArtifacts } from "../server/modules/ai-generation/applicat
 import { prepareGatewayGeneration } from "../server/modules/ai-generation/application/prepareGatewayGeneration";
 import { completeGatewayCacheHit } from "../server/modules/ai-generation/application/completeGatewayGeneration";
 import { quotaHeaders } from "../server/modules/subscription/infrastructure/http/quotaHttp";
-import { mergePendingBoardItems } from "../app/features/board/composables/mergePendingBoardItems";
 import { BoardItemsSyncRequestSchema } from "../shared/utils/boardItem.contract";
 import {
   WorkspaceExternalRefSchema,
@@ -27,6 +29,7 @@ import {
 import { isDuplicateKeyError } from "../server/modules/integrations/infrastructure/integrationRepository";
 import {
   CreateNoteDTO,
+  NoteSchema,
   ReorderNotesDTO,
   UpdateNoteDTO,
 } from "../shared/utils/note.contract";
@@ -57,6 +60,9 @@ import {
 import { createNotesConflictResolver } from "../app/features/notes/composables/notesConflictResolver";
 import { createNotesCommandService } from "../app/features/notes/composables/notesCommandService";
 import { createNotesContentQueue } from "../app/features/notes/composables/notesContentQueue";
+import { useNoteDraft } from "../app/features/notes/composables/useNoteDraft";
+import { useQuickNoteCapture } from "../app/features/notes/composables/useQuickNoteCapture";
+import { useQuickBoardItemCapture } from "../app/features/board/composables/useQuickBoardItemCapture";
 import { createNotesGroupCommandService } from "../app/features/notes/composables/notesGroupCommandService";
 import { createNotesMemoryStore } from "../app/features/notes/composables/notesMemoryStore";
 import { createNotesSyncEngine } from "../app/features/notes/composables/notesSyncEngine";
@@ -100,23 +106,58 @@ import type {
 } from "../server/modules/review/ports/ReviewRepository";
 import type { XpPort } from "../server/modules/review/ports/XpPort";
 import type { BoardItemState } from "../app/features/board/composables/useBoardItemsStore";
-import { OfflineSyncRequestSchema } from "../shared/utils/offline-sync.contract";
+import {
+  boardItemPayloadForFields,
+  changedBoardItemFields,
+} from "../app/features/board/composables/boardItemMutation";
+import {
+  OfflineSyncRequestSchema,
+  OfflineSyncResultSchema,
+} from "../shared/utils/offline-sync.contract";
 import { calculateOfflineSM2 } from "../shared/utils/sm2";
 import { orderOfflineMutations } from "../shared/utils/offline-mutation-order";
 import { positionBetween } from "../shared/utils/position-key";
+import { createKeyedAsyncDebounce } from "../app/utils/keyedAsyncDebounce";
+import { DB_CONFIG } from "../app/utils/constants/pwa";
 import {
   applySyncResult,
+  claimOfflineMutations,
   commitOfflineMutation,
   getOfflineEntity,
   getOfflineSyncMetadata,
   listOfflineMutations,
   recoverInterruptedMutations,
+  remapOfflineIds,
   resolveOfflineConflict,
   updateOfflineSyncMetadata,
 } from "../app/utils/offline-v2/repository";
+import {
+  loadNotesFromIndexedDB,
+  getAllRecords,
+  acknowledgePendingNoteChange,
+  deleteNoteFromIndexedDB,
+  deletePendingNoteChanges,
+  loadPendingNoteChanges,
+  openUnifiedDB,
+  putRecord,
+  queueNoteChange,
+  reconcileNotesWorkspaceProjection,
+  reconcileOfflineV2NoteIds,
+  reconcileOfflineV2NoteGroupIds,
+  saveNoteToIndexedDB,
+} from "../app/utils/idb";
+import {
+  loadBoardItemsProjection,
+  migrateLegacyBoardProjection,
+  putBoardProjectionRecord,
+  reconcileBoardRelationsForItem,
+  reconcileBoardWorkspaceProjection,
+} from "../app/features/board/repositories/boardOfflineRepository";
 
-if (!(globalThis as any).indexedDB) (globalThis as any).indexedDB = fakeIndexedDB;
-if (!(globalThis as any).IDBKeyRange) (globalThis as any).IDBKeyRange = FakeIDBKeyRange;
+if (!(globalThis as any).indexedDB)
+  (globalThis as any).indexedDB = fakeIndexedDB;
+if (!(globalThis as any).IDBKeyRange)
+  (globalThis as any).IDBKeyRange = FakeIDBKeyRange;
 
 type TestCase = {
   name: string;
@@ -129,32 +170,112 @@ function test(name: string, run: TestCase["run"]) {
   tests.push({ name, run });
 }
 
+function notesSyncSuccess(overrides: Record<string, unknown> = {}) {
+  return {
+    success: true as const,
+    data: {
+      applied: [],
+      appliedNotes: [],
+      conflicts: [],
+      idMap: {},
+      noteIdMap: {},
+      replayedCreates: [],
+      groupApplied: [],
+      groupConflicts: [],
+      groupIdMap: {},
+      replayedGroupCreates: [],
+      errors: [],
+      layoutApplied: false,
+      layoutConflict: false,
+      ...overrides,
+    },
+  };
+}
+
 test("offline-v2 contract keeps mutations replayable and ordered", () => {
   const parsed = OfflineSyncRequestSchema.parse({
     clientId: "device-a",
-    mutations: [{
-      id: "mutation-a",
-      entity: "review",
-      operation: "review.grade",
-      entityId: "review-a",
-      changedFields: ["reviewState"],
-      payload: { cardId: "review-a", grade: 4 },
-      dependsOn: [],
-      occurredAt: "2026-07-09T20:00:00.000Z",
-      createdAt: 1,
-      attempts: 0,
-      status: "pending",
-      sequence: true,
-    }],
+    mutations: [
+      {
+        id: "mutation-a",
+        entity: "review",
+        operation: "review.grade",
+        entityId: "review-a",
+        changedFields: ["reviewState"],
+        payload: { cardId: "review-a", grade: 4 },
+        dependsOn: [],
+        occurredAt: "2026-07-09T20:00:00.000Z",
+        createdAt: 1,
+        attempts: 0,
+        status: "pending",
+        sequence: true,
+      },
+    ],
   });
   assert.equal(parsed.mutations[0]?.sequence, true);
   assert.equal(parsed.mutations[0]?.status, "pending");
 });
 
+test("offline-v2 results carry revisions for indirectly changed Board rows", () => {
+  const result = OfflineSyncResultSchema.parse({
+    id: "delete-column-1",
+    status: "applied",
+    entity: "boardColumn",
+    entityId: "column-1",
+    version: 3,
+    canonical: { id: "column-1", deleted: true },
+    related: [
+      {
+        entity: "boardItem",
+        entityId: "item-1",
+        version: 8,
+        canonical: { id: "item-1", columnId: null, order: 0, position: "V" },
+      },
+    ],
+  });
+  assert.equal(result.related?.[0]?.version, 8);
+  assert.equal(result.related?.[0]?.canonical?.columnId, null);
+});
+
+test("Board item patches contain exactly the fields that changed", () => {
+  const previous = {
+    id: "item-exact-patch",
+    workspaceId: "workspace-exact-patch",
+    columnId: "column-a",
+    content: "Before",
+    tags: ["one"],
+    dueDate: null,
+    attachments: [],
+    order: 10,
+    position: "V",
+  } as unknown as BoardItemState;
+  const next = {
+    ...previous,
+    content: "After",
+    tags: ["one", "two"],
+  };
+  const fields = changedBoardItemFields(previous, next);
+  assert.deepEqual(fields, ["content", "tags"]);
+  assert.deepEqual(boardItemPayloadForFields(next, fields), {
+    content: "After",
+    tags: ["one", "two"],
+  });
+});
+
 test("offline SM-2 calculation matches the server default policy", () => {
   assert.deepEqual(
-    calculateOfflineSM2({ currentEF: 2.5, currentInterval: 1, currentRepetitions: 1, grade: 4 }),
-    calculateSM2({ currentEF: 2.5, currentInterval: 1, currentRepetitions: 1, grade: 4 }),
+    calculateOfflineSM2({
+      currentEF: 2.5,
+      currentInterval: 1,
+      currentRepetitions: 1,
+      grade: 4,
+    }),
+    calculateSM2({
+      currentEF: 2.5,
+      currentInterval: 1,
+      currentRepetitions: 1,
+      grade: 4,
+    }),
   );
 });
 
@@ -165,8 +286,14 @@ test("offline mutation ordering is dependency-first and rejects cycles", () => {
     { id: "cycle-a", createdAt: 4, dependsOn: ["cycle-b"] },
     { id: "cycle-b", createdAt: 5, dependsOn: ["cycle-a"] },
   ]);
-  assert.deepEqual(ordered.map((mutation) => mutation.id), ["parent", "child"]);
-  assert.deepEqual(cyclic.map((mutation) => mutation.id), ["cycle-a", "cycle-b"]);
+  assert.deepEqual(
+    ordered.map((mutation) => mutation.id),
+    ["parent", "child"],
+  );
+  assert.deepEqual(
+    cyclic.map((mutation) => mutation.id),
+    ["cycle-a", "cycle-b"],
+  );
 });
 
 test("position keys remain ordered through repeated midpoint inserts", () => {
@@ -176,6 +303,35 @@ test("position keys remain ordered through repeated midpoint inserts", () => {
     if (upper) assert.ok(next < upper, `${next} should sort before ${upper}`);
     upper = next;
   }
+});
+
+test("keyed async debounce does not let one board item cancel another", async () => {
+  const calls: string[] = [];
+  const debouncer = createKeyedAsyncDebounce(async (id: string) => {
+    calls.push(id);
+  }, 5);
+  debouncer.schedule("item-a");
+  debouncer.schedule("item-b");
+  await new Promise((resolve) => setTimeout(resolve, 15));
+  assert.deepEqual(calls.sort(), ["item-a", "item-b"]);
+});
+
+test("keyed async debounce reruns once when an item changes during save", async () => {
+  let releaseFirst!: () => void;
+  const firstBlocked = new Promise<void>((resolve) => {
+    releaseFirst = resolve;
+  });
+  let calls = 0;
+  const debouncer = createKeyedAsyncDebounce(async () => {
+    calls += 1;
+    if (calls === 1) await firstBlocked;
+  }, 1);
+  const running = debouncer.flush("item-a");
+  debouncer.schedule("item-a");
+  debouncer.schedule("item-a");
+  releaseFirst();
+  await running;
+  assert.equal(calls, 2);
 });
 
 test("offline outbox cancels dependent local children when its local workspace is deleted", async () => {
@@ -189,27 +345,562 @@ test("offline outbox cancels dependent local children when its local workspace i
     payload: { title: "Draft" },
     dependsOn: [],
     occurredAt: "2026-07-10T00:00:00.000Z",
-    createdAt: Date.now(), attempts: 0, status: "pending" as const, sequence: false,
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
   };
-  await commitOfflineMutation({ accountId, mutation: parent, localRecord: { entity: "workspace", entityId: parent.entityId, version: 0, data: { id: parent.entityId, title: "Draft" } } });
   await commitOfflineMutation({
     accountId,
-    mutation: { ...parent, id: `material-create-${accountId}`, entity: "material", operation: "material.create", entityId: `local:material-${accountId}`, workspaceId: parent.entityId, changedFields: ["title", "content"], payload: { workspaceId: parent.entityId, title: "Child", content: "Local" }, dependsOn: [parent.id], createdAt: parent.createdAt + 1 },
-    localRecord: { entity: "material", entityId: `local:material-${accountId}`, workspaceId: parent.entityId, version: 0, data: { id: `local:material-${accountId}`, workspaceId: parent.entityId, title: "Child", content: "Local" } },
+    mutation: parent,
+    localRecord: {
+      entity: "workspace",
+      entityId: parent.entityId,
+      version: 0,
+      data: { id: parent.entityId, title: "Draft" },
+    },
   });
-  await commitOfflineMutation({ accountId, mutation: { ...parent, id: `workspace-delete-${accountId}`, operation: "workspace.delete", changedFields: ["deleted"], payload: {}, createdAt: parent.createdAt + 2 } });
+  await commitOfflineMutation({
+    accountId,
+    mutation: {
+      ...parent,
+      id: `material-create-${accountId}`,
+      entity: "material",
+      operation: "material.create",
+      entityId: `local:material-${accountId}`,
+      workspaceId: parent.entityId,
+      changedFields: ["title", "content"],
+      payload: {
+        workspaceId: parent.entityId,
+        title: "Child",
+        content: "Local",
+      },
+      dependsOn: [parent.id],
+      createdAt: parent.createdAt + 1,
+    },
+    localRecord: {
+      entity: "material",
+      entityId: `local:material-${accountId}`,
+      workspaceId: parent.entityId,
+      version: 0,
+      data: {
+        id: `local:material-${accountId}`,
+        workspaceId: parent.entityId,
+        title: "Child",
+        content: "Local",
+      },
+    },
+  });
+  await commitOfflineMutation({
+    accountId,
+    mutation: {
+      ...parent,
+      id: `workspace-delete-${accountId}`,
+      operation: "workspace.delete",
+      changedFields: ["deleted"],
+      payload: {},
+      createdAt: parent.createdAt + 2,
+    },
+  });
   assert.equal((await listOfflineMutations(accountId)).length, 0);
+});
+
+test("cancelling a local parent restores dependent canonical projections", async () => {
+  const suffix = `${Date.now()}-${Math.random()}`;
+  const accountId = `account-dependent-rollback-${suffix}`;
+  const columnId = `local:column-${suffix}`;
+  const itemId = `item-${suffix}`;
+  const columnCreate = {
+    id: `column-create-${suffix}`,
+    entity: "boardColumn" as const,
+    operation: "boardColumn.create",
+    entityId: columnId,
+    workspaceId: "workspace-1",
+    changedFields: ["name"],
+    payload: { workspaceId: "workspace-1", name: "Draft" },
+    dependsOn: [],
+    occurredAt: new Date().toISOString(),
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+  };
+  await commitOfflineMutation({
+    accountId,
+    mutation: columnCreate,
+    localRecord: {
+      entity: "boardColumn",
+      entityId: columnId,
+      workspaceId: "workspace-1",
+      version: 0,
+      data: { id: columnId, workspaceId: "workspace-1", name: "Draft" },
+    },
+  });
+  await commitOfflineMutation({
+    accountId,
+    mutation: {
+      ...columnCreate,
+      id: `item-update-${suffix}`,
+      entity: "boardItem",
+      operation: "boardItem.update",
+      entityId: itemId,
+      baseVersion: 4,
+      changedFields: ["columnId"],
+      payload: { columnId },
+      rollbackData: {
+        id: itemId,
+        workspaceId: "workspace-1",
+        columnId: "column-old",
+        content: "Keep me",
+      },
+      dependsOn: [columnCreate.id],
+      createdAt: columnCreate.createdAt + 1,
+    },
+    localRecord: {
+      entity: "boardItem",
+      entityId: itemId,
+      workspaceId: "workspace-1",
+      version: 4,
+      data: {
+        id: itemId,
+        workspaceId: "workspace-1",
+        columnId,
+        content: "Keep me",
+      },
+    },
+  });
+  await commitOfflineMutation({
+    accountId,
+    mutation: {
+      ...columnCreate,
+      id: `column-delete-${suffix}`,
+      operation: "boardColumn.delete",
+      changedFields: ["deleted"],
+      payload: {},
+      createdAt: columnCreate.createdAt + 2,
+    },
+  });
+
+  assert.equal((await listOfflineMutations(accountId)).length, 0);
+  const restored = await getOfflineEntity<{
+    columnId: string;
+    content: string;
+  }>(accountId, "boardItem", itemId);
+  assert.equal(restored?.data.columnId, "column-old");
+  assert.equal(restored?.data.content, "Keep me");
+  assert.equal(restored?.version, 4);
+});
+
+test("offline id remap converts a create queued during in-flight creation into an update", async () => {
+  const accountId = `account-${Date.now()}-inflight-create`;
+  const tempId = createClientTempId("board-item");
+  const original = {
+    id: `create-${accountId}`,
+    entity: "boardItem" as const,
+    operation: "boardItem.create",
+    entityId: tempId,
+    workspaceId: "workspace-1",
+    changedFields: ["content"],
+    payload: { workspaceId: "workspace-1", content: "First" },
+    dependsOn: [],
+    occurredAt: "2026-07-12T00:00:00.000Z",
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "syncing" as const,
+    sequence: false,
+  };
+  await commitOfflineMutation({ accountId, mutation: original });
+  await commitOfflineMutation({
+    accountId,
+    mutation: {
+      ...original,
+      id: `later-${accountId}`,
+      payload: { workspaceId: "workspace-1", content: "Edited while syncing" },
+      status: "pending",
+      createdAt: original.createdAt + 1,
+    },
+  });
+
+  await remapOfflineIds(
+    accountId,
+    { [tempId]: "server-board-item-1" },
+    {
+      serverVersion: 7,
+      mutationId: original.id,
+    },
+  );
+
+  const mutations = await listOfflineMutations(accountId);
+  const acknowledged = mutations.find(
+    (mutation) => mutation.id === original.id,
+  );
+  const later = mutations.find(
+    (mutation) => mutation.id === `later-${accountId}`,
+  );
+  assert.equal(acknowledged?.operation, "boardItem.create");
+  assert.equal(acknowledged?.entityId, "server-board-item-1");
+  assert.equal(later?.operation, "boardItem.update");
+  assert.equal(later?.entityId, "server-board-item-1");
+  assert.equal(later?.baseVersion, 7);
+});
+
+test("offline outbox atomically claims the latest coalesced payload revision", async () => {
+  const accountId = `account-${Date.now()}-atomic-claim`;
+  const entityId = `board-item-${accountId}`;
+  const original = {
+    id: `first-${accountId}`,
+    entity: "boardItem" as const,
+    operation: "boardItem.update",
+    entityId,
+    changedFields: ["content"],
+    payload: { content: "First" },
+    dependsOn: [],
+    occurredAt: "2026-07-13T00:00:00.000Z",
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+    baseVersion: 3,
+  };
+  await commitOfflineMutation({ accountId, mutation: original });
+  await commitOfflineMutation({
+    accountId,
+    mutation: {
+      ...original,
+      id: `second-${accountId}`,
+      payload: { content: "Latest" },
+      createdAt: original.createdAt + 1,
+    },
+  });
+
+  const claimed = await claimOfflineMutations({
+    accountId,
+    ids: [original.id],
+    claimToken: `claim-${accountId}`,
+  });
+  assert.equal(claimed.length, 1);
+  assert.equal(claimed[0]?.payload.content, "Latest");
+  assert.equal(claimed[0]?.localRevision, 2);
+  assert.equal(claimed[0]?.status, "syncing");
+});
+
+test("a stale acknowledgement preserves and rebases a newer same-entity edit", async () => {
+  const accountId = `account-${Date.now()}-stale-ack`;
+  const entityId = `board-item-${accountId}`;
+  const original = {
+    id: `first-${accountId}`,
+    entity: "boardItem" as const,
+    operation: "boardItem.update",
+    entityId,
+    changedFields: ["content"],
+    payload: { content: "Sent" },
+    dependsOn: [],
+    occurredAt: "2026-07-13T00:00:00.000Z",
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+    baseVersion: 3,
+  };
+  await commitOfflineMutation({
+    accountId,
+    mutation: original,
+    localRecord: {
+      entity: "boardItem",
+      entityId,
+      version: 3,
+      data: { id: entityId, content: "Sent" },
+    },
+  });
+  const [claimed] = await claimOfflineMutations({
+    accountId,
+    ids: [original.id],
+    claimToken: `claim-${accountId}`,
+  });
+  assert.ok(claimed);
+  await commitOfflineMutation({
+    accountId,
+    mutation: {
+      ...original,
+      id: `later-${accountId}`,
+      payload: { content: "Newer" },
+      createdAt: original.createdAt + 1,
+    },
+    localRecord: {
+      entity: "boardItem",
+      entityId,
+      version: 3,
+      data: { id: entityId, content: "Newer" },
+    },
+  });
+
+  await applySyncResult({
+    accountId,
+    mutation: claimed!,
+    result: {
+      status: "applied",
+      entity: "boardItem",
+      entityId,
+      version: 4,
+      canonical: { id: entityId, content: "Sent" },
+    },
+  });
+
+  const remaining = await listOfflineMutations(accountId);
+  assert.equal(remaining.length, 1);
+  assert.equal(remaining[0]?.payload.content, "Newer");
+  assert.equal(remaining[0]?.baseVersion, 4);
+  const local = await getOfflineEntity<{ id: string; content: string }>(
+    accountId,
+    "boardItem",
+    entityId,
+  );
+  assert.equal(local?.data.content, "Newer");
+  assert.equal(local?.version, 4);
+});
+
+test("a related Board revision rebases pending item work without overwriting it", async () => {
+  const suffix = `${Date.now()}-${Math.random()}`;
+  const accountId = `account-related-${suffix}`;
+  const workspaceId = `workspace-related-${suffix}`;
+  const columnId = `column-related-${suffix}`;
+  const itemId = `item-related-${suffix}`;
+  const deleteMutation = {
+    id: `delete-column-${suffix}`,
+    entity: "boardColumn" as const,
+    operation: "boardColumn.delete",
+    entityId: columnId,
+    workspaceId,
+    baseVersion: 2,
+    changedFields: ["deleted"],
+    payload: {},
+    dependsOn: [],
+    occurredAt: new Date().toISOString(),
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+  };
+  await commitOfflineMutation({ accountId, mutation: deleteMutation });
+  const [claimed] = await claimOfflineMutations({
+    accountId,
+    ids: [deleteMutation.id],
+    claimToken: `claim-related-${suffix}`,
+  });
+  assert.ok(claimed);
+  await commitOfflineMutation({
+    accountId,
+    mutation: {
+      ...deleteMutation,
+      id: `edit-item-${suffix}`,
+      entity: "boardItem",
+      operation: "boardItem.update",
+      entityId: itemId,
+      baseVersion: 4,
+      changedFields: ["content"],
+      payload: { content: "Newer local text" },
+      createdAt: deleteMutation.createdAt + 1,
+      status: "pending",
+    },
+    localRecord: {
+      entity: "boardItem",
+      entityId: itemId,
+      workspaceId,
+      version: 4,
+      data: {
+        id: itemId,
+        workspaceId,
+        columnId,
+        content: "Newer local text",
+      },
+    },
+  });
+  await applySyncResult({
+    accountId,
+    mutation: claimed!,
+    result: {
+      status: "applied",
+      entity: "boardColumn",
+      entityId: columnId,
+      version: 3,
+      canonical: { id: columnId, deleted: true },
+      related: [
+        {
+          entity: "boardItem",
+          entityId: itemId,
+          version: 5,
+          canonical: {
+            id: itemId,
+            workspaceId,
+            columnId: null,
+            content: "Server text",
+          },
+        },
+      ],
+    },
+  });
+
+  const remaining = await listOfflineMutations(accountId);
+  const itemMutation = remaining.find((mutation) => mutation.entityId === itemId);
+  assert.equal(itemMutation?.baseVersion, 5);
+  const local = await getOfflineEntity<{ content: string }>(
+    accountId,
+    "boardItem",
+    itemId,
+  );
+  assert.equal(local?.version, 5);
+  assert.equal(local?.data.content, "Newer local text");
+});
+
+test("a definitive V2 rejection restores the pre-command snapshot", async () => {
+  const suffix = `${Date.now()}-${Math.random()}`;
+  const accountId = `account-rollback-${suffix}`;
+  const entityId = `note-rollback-${suffix}`;
+  const mutationId = `mutation-rollback-${suffix}`;
+  await commitOfflineMutation({
+    accountId,
+    mutation: {
+      id: mutationId,
+      entity: "note",
+      operation: "note.update",
+      entityId,
+      workspaceId: "workspace-rollback",
+      baseVersion: 3,
+      changedFields: ["content"],
+      payload: { content: "New" },
+      rollbackData: {
+        id: entityId,
+        workspaceId: "workspace-rollback",
+        content: "Old",
+      },
+      dependsOn: [],
+      occurredAt: new Date().toISOString(),
+      createdAt: Date.now(),
+      attempts: 0,
+      status: "pending",
+      sequence: false,
+    },
+    localRecord: {
+      entity: "note",
+      entityId,
+      workspaceId: "workspace-rollback",
+      version: 3,
+      data: { id: entityId, workspaceId: "workspace-rollback", content: "New" },
+    },
+  });
+  const [claimed] = await claimOfflineMutations({
+    accountId,
+    ids: [mutationId],
+    claimToken: "rollback-claim",
+  });
+  assert.ok(claimed);
+  await applySyncResult({
+    accountId,
+    mutation: claimed!,
+    result: {
+      status: "rejected",
+      entity: "note",
+      entityId,
+      message: "Invalid note",
+    },
+  });
+
+  const restored = await getOfflineEntity<any>(accountId, "note", entityId);
+  assert.equal(restored?.data.content, "Old");
+  assert.equal(restored?.deleted, false);
+  const [rejected] = await listOfflineMutations(accountId);
+  assert.equal(rejected?.status, "rejected");
+});
+
+test("a live outbox lease cannot be stolen by recovery or a second sync owner", async () => {
+  const accountId = `account-${Date.now()}-lease`;
+  const mutation = {
+    id: `material-${accountId}`,
+    entity: "material" as const,
+    operation: "material.update",
+    entityId: `material-${accountId}`,
+    changedFields: ["title"],
+    payload: { title: "Draft" },
+    dependsOn: [],
+    occurredAt: "2026-07-13T00:00:00.000Z",
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+    baseVersion: 1,
+  };
+  await commitOfflineMutation({ accountId, mutation });
+  const first = await claimOfflineMutations({
+    accountId,
+    ids: [mutation.id],
+    claimToken: `first-${accountId}`,
+  });
+  const second = await claimOfflineMutations({
+    accountId,
+    ids: [mutation.id],
+    claimToken: `second-${accountId}`,
+  });
+  assert.equal(first.length, 1);
+  assert.equal(second.length, 0);
+  assert.equal(await recoverInterruptedMutations(accountId), 0);
+  assert.equal(
+    (await listOfflineMutations(accountId))[0]?.claimToken,
+    `first-${accountId}`,
+  );
 });
 
 test("choosing the server conflict snapshot replaces local data atomically", async () => {
   const accountId = `account-${Date.now()}-conflict`;
   const mutation = {
-    id: `workspace-update-${accountId}`, entity: "workspace" as const, operation: "workspace.update", entityId: `workspace-${accountId}`, changedFields: ["title"], payload: { title: "Mine" }, dependsOn: [], occurredAt: "2026-07-10T00:00:00.000Z", createdAt: Date.now(), attempts: 0, status: "pending" as const, sequence: false, baseVersion: 1,
+    id: `workspace-update-${accountId}`,
+    entity: "workspace" as const,
+    operation: "workspace.update",
+    entityId: `workspace-${accountId}`,
+    changedFields: ["title"],
+    payload: { title: "Mine" },
+    dependsOn: [],
+    occurredAt: "2026-07-10T00:00:00.000Z",
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+    baseVersion: 1,
   };
-  await commitOfflineMutation({ accountId, mutation, localRecord: { entity: "workspace", entityId: mutation.entityId, version: 1, data: { id: mutation.entityId, title: "Mine" } } });
-  await applySyncResult({ accountId, mutation: { ...mutation, accountId, updatedAt: Date.now() }, result: { status: "conflict", entity: "workspace", entityId: mutation.entityId, conflict: { serverVersion: 2, overlappingFields: ["title"], serverSnapshot: { id: mutation.entityId, title: "Server" }, reason: "Same field" } } });
-  await resolveOfflineConflict({ accountId, mutationId: mutation.id, strategy: "keep-server" });
-  const current = await getOfflineEntity<{ id: string; title: string }>(accountId, "workspace", mutation.entityId);
+  await commitOfflineMutation({
+    accountId,
+    mutation,
+    localRecord: {
+      entity: "workspace",
+      entityId: mutation.entityId,
+      version: 1,
+      data: { id: mutation.entityId, title: "Mine" },
+    },
+  });
+  await applySyncResult({
+    accountId,
+    mutation: { ...mutation, accountId, updatedAt: Date.now() },
+    result: {
+      status: "conflict",
+      entity: "workspace",
+      entityId: mutation.entityId,
+      conflict: {
+        serverVersion: 2,
+        overlappingFields: ["title"],
+        serverSnapshot: { id: mutation.entityId, title: "Server" },
+        reason: "Same field",
+      },
+    },
+  });
+  await resolveOfflineConflict({
+    accountId,
+    mutationId: mutation.id,
+    strategy: "keep-server",
+  });
+  const current = await getOfflineEntity<{ id: string; title: string }>(
+    accountId,
+    "workspace",
+    mutation.entityId,
+  );
   assert.equal(current?.data.title, "Server");
   assert.equal((await listOfflineMutations(accountId)).length, 0);
 });
@@ -217,20 +908,46 @@ test("choosing the server conflict snapshot replaces local data atomically", asy
 test("an interrupted sync is recovered and per-account sync metadata survives reload", async () => {
   const accountId = `account-${Date.now()}-recovery`;
   const mutation = {
-    id: `material-${accountId}`, entity: "material" as const, operation: "material.create", entityId: `local:material-${accountId}`,
-    workspaceId: `workspace-${accountId}`, changedFields: ["title", "content"], payload: { workspaceId: `workspace-${accountId}`, title: "Draft", content: "Offline" },
-    dependsOn: [], occurredAt: "2026-07-10T00:00:00.000Z", createdAt: Date.now(), attempts: 0, status: "syncing" as const, sequence: false,
+    id: `material-${accountId}`,
+    entity: "material" as const,
+    operation: "material.create",
+    entityId: `local:material-${accountId}`,
+    workspaceId: `workspace-${accountId}`,
+    changedFields: ["title", "content"],
+    payload: {
+      workspaceId: `workspace-${accountId}`,
+      title: "Draft",
+      content: "Offline",
+    },
+    dependsOn: [],
+    occurredAt: "2026-07-10T00:00:00.000Z",
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "syncing" as const,
+    sequence: false,
   };
-  await commitOfflineMutation({ accountId, mutation, localRecord: { entity: "material", entityId: mutation.entityId, workspaceId: mutation.workspaceId, version: 0, data: { id: mutation.entityId, ...mutation.payload } } });
+  await commitOfflineMutation({
+    accountId,
+    mutation,
+    localRecord: {
+      entity: "material",
+      entityId: mutation.entityId,
+      workspaceId: mutation.workspaceId,
+      version: 0,
+      data: { id: mutation.entityId, ...mutation.payload },
+    },
+  });
   assert.equal(await recoverInterruptedMutations(accountId), 1);
   assert.equal((await listOfflineMutations(accountId))[0]?.status, "retry");
-  await updateOfflineSyncMetadata(accountId, { lastAttemptAt: 10, lastSuccessfulSyncAt: 9 });
+  await updateOfflineSyncMetadata(accountId, {
+    lastAttemptAt: 10,
+    lastSuccessfulSyncAt: 9,
+  });
   const metadata = await getOfflineSyncMetadata(accountId);
   assert.equal(metadata?.accountId, accountId);
   assert.equal(metadata?.lastAttemptAt, 10);
   assert.equal(metadata?.lastSuccessfulSyncAt, 9);
 });
-
 
 class FakeReviewRepository implements ReviewRepository {
   constructor(public record: ReviewCardRecord | null) {}
@@ -1071,6 +1788,71 @@ test("workspace note sync maps temp IDs to server IDs", async () => {
   assert.deepEqual(result.conflicts, []);
 });
 
+test("workspace note sync replays temp creates without duplicate server rows", async () => {
+  const { notes, noteGroups, prisma } = fakeNotesPrisma();
+  const receipts = new Map<string, any>();
+  prisma.offlineMutationReceipt = {
+    findUnique: async ({ where }: any) =>
+      receipts.get(
+        `${where.userId_mutationId.userId}:${where.userId_mutationId.mutationId}`,
+      ) ?? null,
+    create: async ({ data }: any) => {
+      const key = `${data.userId}:${data.mutationId}`;
+      if (receipts.has(key)) {
+        throw Object.assign(new Error("Unique constraint failed"), {
+          code: "P2002",
+        });
+      }
+      const row = { id: `receipt-${receipts.size + 1}`, ...data };
+      receipts.set(key, row);
+      return row;
+    },
+  };
+  prisma.$transaction = async <T>(fn: (tx: any) => Promise<T>) => fn(prisma);
+  const request = {
+    groupChanges: [
+      {
+        id: "temp-group-retry",
+        operation: "create" as const,
+        workspaceId: "workspace-1",
+        title: "Retry group",
+        order: 1,
+        updatedAt: 100,
+        localVersion: 1,
+      },
+    ],
+    changes: [
+      {
+        id: "temp-note-retry",
+        operation: "upsert" as const,
+        updatedAt: 100,
+        localVersion: 1,
+        workspaceId: "workspace-1",
+        groupId: "temp-group-retry",
+        title: "Retry note",
+        content: "<h1>Retry note</h1>",
+      },
+    ],
+  };
+
+  const first = await syncWorkspaceNotes({ prisma, userId: "user-1", request });
+  const second = await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request,
+  });
+
+  assert.equal(notes.size, 1);
+  assert.equal(noteGroups.size, 2);
+  assert.equal(second.idMap["temp-note-retry"], first.idMap["temp-note-retry"]);
+  assert.equal(
+    second.groupIdMap["temp-group-retry"],
+    first.groupIdMap["temp-group-retry"],
+  );
+  assert.deepEqual(second.replayedCreates, ["temp-note-retry"]);
+  assert.deepEqual(second.replayedGroupCreates, ["temp-group-retry"]);
+});
+
 test("workspace note sync treats missing deletes as applied", async () => {
   const { prisma } = fakeNotesPrisma();
 
@@ -1247,6 +2029,47 @@ test("workspace note sync returns fresh versions for repeated same-client edits"
   assert.equal(second.appliedNotes[0]?.version, 3);
 });
 
+test("workspace note processing failures stay retryable instead of becoming conflicts", async () => {
+  const { notes, prisma } = fakeNotesPrisma();
+  notes.set("note-1", {
+    id: "note-1",
+    workspaceId: "workspace-1",
+    title: "First",
+    content: "<h1>First</h1>",
+    tags: [],
+    noteType: "TEXT",
+    metadata: null,
+    version: 1,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  });
+  prisma.note.update = async () => {
+    throw new Error("temporary database failure");
+  };
+
+  const result = await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request: {
+      changes: [
+        {
+          id: "note-1",
+          operation: "upsert",
+          updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+          localVersion: 1,
+          serverVersion: 1,
+          workspaceId: "workspace-1",
+          content: "<h1>Second</h1>",
+        },
+      ],
+    },
+  });
+
+  assert.deepEqual(result.applied, []);
+  assert.deepEqual(result.conflicts, []);
+  assert.equal(result.errors[0]?.scope, "content");
+  assert.equal(result.errors[0]?.id, "note-1");
+});
+
 test("notes sync coordinator stores fresh applied note versions locally", async () => {
   const notes = ref(
     new Map<string, any>([
@@ -1324,6 +2147,86 @@ test("notes sync coordinator stores fresh applied note versions locally", async 
   assert.equal(notes.value.get("note-1")?.version, 2);
   assert.equal(notes.value.get("note-1")?.isDirty, false);
   assert.equal(saved.get("note-1")?.version, 2);
+});
+
+test("notes sync coordinator advances memory version while retaining a newer edit", async () => {
+  const sent = {
+    id: "note-retained-version",
+    operation: "upsert" as const,
+    updatedAt: 100,
+    localVersion: 1,
+    serverVersion: 1,
+    workspaceId: "workspace-1",
+    title: "First",
+    content: "<h1>First</h1>",
+  };
+  const newer = {
+    ...sent,
+    updatedAt: 200,
+    localVersion: 2,
+    title: "Second",
+    content: "<h1>Second</h1>",
+  };
+  const notes = ref(
+    new Map<string, any>([
+      [
+        sent.id,
+        {
+          ...newer,
+          groupId: null,
+          tags: [],
+          order: 0,
+          noteType: "TEXT",
+          metadata: null,
+          version: 1,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          isDirty: true,
+          isLoading: false,
+          error: null,
+        },
+      ],
+    ]),
+  );
+  const coordinator = createNotesSyncCoordinator({
+    workspaceId: "workspace-1",
+    notes,
+    localRepository: {
+      save: async () => {},
+      saveMany: async () => {},
+      delete: async () => {},
+      loadByWorkspace: async () => [],
+    } as any,
+    layoutQueue: {
+      load: async () => null,
+      save: async () => {},
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    } as any,
+    pendingQueue: {
+      add: async () => {},
+      load: async () => [newer],
+      remove: async () => {},
+      acknowledge: async (_sent: any, acknowledgement: any) => ({
+        ...newer,
+        serverVersion: acknowledgement.serverVersion,
+      }),
+      registerBackgroundSync: async () => {},
+    } as any,
+  });
+
+  await coordinator.applySyncResult(
+    {
+      ...notesSyncSuccess().data,
+      applied: [sent.id],
+      appliedNotes: [{ id: sent.id, version: 2 }],
+    },
+    [sent],
+  );
+
+  assert.equal(notes.value.get(sent.id)?.version, 2);
+  assert.equal(notes.value.get(sent.id)?.content, newer.content);
+  assert.equal(notes.value.get(sent.id)?.isDirty, true);
 });
 
 test("notes sync coordinator leaves version conflicts to resolver", async () => {
@@ -1422,6 +2325,531 @@ test("notes sync coordinator leaves version conflicts to resolver", async () => 
   assert.equal(saved.has("note-1"), false);
   assert.equal(pending.get("note-1")?.serverVersion, 1);
   assert.equal(notes.value.get("note-1")?.isDirty, true);
+});
+
+test("notes sync coordinator remaps a newer temp edit instead of acknowledging it away", async () => {
+  const tempId = "temp-note-race";
+  const serverId = "server-note-race";
+  const sent = {
+    id: tempId,
+    operation: "upsert",
+    updatedAt: 100,
+    localVersion: 1,
+    workspaceId: "workspace-1",
+    title: "First",
+    content: "<h1>First</h1>",
+    tags: [],
+    noteType: "TEXT",
+    order: 0,
+  } as any;
+  const newer = {
+    ...sent,
+    updatedAt: 200,
+    localVersion: 2,
+    title: "Newer",
+    content: "<h1>Newer</h1>",
+  };
+  const note = {
+    ...newer,
+    groupId: null,
+    version: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isDirty: true,
+    isLoading: false,
+    error: null,
+  };
+  const notes = ref(new Map<string, any>([[tempId, note]]));
+  const pending = new Map<string, any>([[tempId, newer]]);
+  const saved = new Map<string, any>([[tempId, note]]);
+  const coordinator = createNotesSyncCoordinator({
+    workspaceId: "workspace-1",
+    notes,
+    localRepository: {
+      save: async (value: any) => {
+        saved.set(value.id, value);
+      },
+      saveMany: async () => {},
+      delete: async (id: string) => {
+        saved.delete(id);
+      },
+      loadByWorkspace: async () => Array.from(saved.values()),
+    } as any,
+    layoutQueue: {
+      load: async () => null,
+      save: async () => {},
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    } as any,
+    pendingQueue: {
+      add: async (change: any) => {
+        pending.set(change.id, change);
+      },
+      load: async () => Array.from(pending.values()),
+      remove: async (ids: string[]) => ids.forEach((id) => pending.delete(id)),
+      registerBackgroundSync: async () => {},
+    } as any,
+  });
+
+  await coordinator.applySyncResult(
+    {
+      ...notesSyncSuccess().data,
+      applied: [tempId],
+      appliedNotes: [{ id: tempId, version: 2 }],
+      idMap: { [tempId]: serverId },
+      noteIdMap: { [tempId]: serverId },
+    },
+    [sent],
+  );
+
+  assert.equal(notes.value.has(tempId), false);
+  assert.equal(notes.value.get(serverId)?.content, newer.content);
+  assert.equal(notes.value.get(serverId)?.isDirty, true);
+  assert.equal(pending.has(tempId), false);
+  assert.equal(pending.get(serverId)?.operation, "upsert");
+  assert.equal(pending.get(serverId)?.serverVersion, 2);
+  assert.equal(saved.has(tempId), false);
+  assert.equal(saved.get(serverId)?.isDirty, true);
+});
+
+test("notes outbox acknowledgement atomically remaps a newer temp revision", async () => {
+  const suffix = `${Date.now()}-${Math.random()}`;
+  const workspaceId = `workspace-note-ack-${suffix}`;
+  const tempId = `temp-note-ack-${suffix}`;
+  const serverId = `server-note-ack-${suffix}`;
+  const sent = {
+    id: tempId,
+    operation: "upsert" as const,
+    updatedAt: 100,
+    localVersion: 1,
+    workspaceId,
+    title: "F",
+    content: "<h1>F</h1>",
+  };
+
+  await queueNoteChange(sent);
+  const actualSent = (await loadPendingNoteChanges(workspaceId))[0]!;
+  await queueNoteChange({
+    ...actualSent,
+    updatedAt: 200,
+    title: "FIX",
+    content: "<h1>FIX</h1>",
+  });
+
+  const retained = await acknowledgePendingNoteChange(actualSent, {
+    remapToId: serverId,
+    serverVersion: 2,
+  });
+  const remaining = await loadPendingNoteChanges(workspaceId);
+
+  assert.equal(retained?.id, serverId);
+  assert.equal(retained?.title, "FIX");
+  assert.equal(
+    remaining.some((change) => change.id === tempId),
+    false,
+  );
+  assert.equal(
+    remaining.find((change) => change.id === serverId)?.content,
+    "<h1>FIX</h1>",
+  );
+  assert.equal(
+    remaining.find((change) => change.id === serverId)?.serverVersion,
+    2,
+  );
+  await deletePendingNoteChanges([tempId, serverId]);
+});
+
+test("notes delete acknowledgement removes the outbox and cache row atomically", async () => {
+  const suffix = `${Date.now()}-${Math.random()}`;
+  const workspaceId = `workspace-note-delete-atomic-${suffix}`;
+  const noteId = `note-delete-atomic-${suffix}`;
+  const note = {
+    id: noteId,
+    workspaceId,
+    groupId: null,
+    title: "Delete atomically",
+    content: "<h1>Delete atomically</h1>",
+    tags: [],
+    order: 0,
+    noteType: "TEXT" as const,
+    metadata: undefined,
+    version: 3,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isDirty: false,
+    isLoading: false,
+    error: null,
+  };
+  await saveNoteToIndexedDB(note);
+  await queueNoteChange({
+    id: noteId,
+    operation: "delete",
+    updatedAt: Date.now(),
+    localVersion: 1,
+    serverVersion: 3,
+    workspaceId,
+    rollbackData: note,
+  });
+  const sent = (await loadPendingNoteChanges(workspaceId))[0]!;
+
+  await acknowledgePendingNoteChange(sent, {
+    localMutation: { type: "delete", id: noteId },
+  });
+
+  assert.equal((await loadPendingNoteChanges(workspaceId)).length, 0);
+  assert.equal((await loadNotesFromIndexedDB(workspaceId)).length, 0);
+});
+
+test("notes outbox keeps the freshest server base and advances cache atomically", async () => {
+  const suffix = `${Date.now()}-${Math.random()}`;
+  const workspaceId = `workspace-note-version-chain-${suffix}`;
+  const noteId = `note-version-chain-${suffix}`;
+  const note = {
+    id: noteId,
+    workspaceId,
+    groupId: null,
+    title: "First",
+    content: "<h1>First</h1>",
+    tags: [],
+    order: 0,
+    noteType: "TEXT" as const,
+    metadata: undefined,
+    version: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isDirty: true,
+    isLoading: false,
+    error: null,
+  };
+  await saveNoteToIndexedDB(note);
+  await queueNoteChange({
+    id: noteId,
+    operation: "upsert",
+    updatedAt: 100,
+    localVersion: 1,
+    serverVersion: 1,
+    workspaceId,
+    title: note.title,
+    content: note.content,
+  });
+  const sent = (await loadPendingNoteChanges(workspaceId))[0]!;
+  await queueNoteChange({
+    ...sent,
+    updatedAt: 200,
+    serverVersion: 2,
+    title: "Second",
+    content: "<h1>Second</h1>",
+  });
+  await queueNoteChange({
+    ...sent,
+    updatedAt: 300,
+    serverVersion: 1,
+    title: "Third",
+    content: "<h1>Third</h1>",
+  });
+
+  const beforeAck = (await loadPendingNoteChanges(workspaceId))[0]!;
+  assert.equal(beforeAck.serverVersion, 2);
+  const retained = await acknowledgePendingNoteChange(sent, {
+    serverVersion: 2,
+    localMutation: {
+      type: "advance",
+      id: noteId,
+      serverVersion: 2,
+    },
+  });
+  const cached = (await loadNotesFromIndexedDB(workspaceId))[0]!;
+
+  assert.equal(retained?.serverVersion, 2);
+  assert.equal(cached.version, 2);
+  assert.equal(cached.isDirty, true);
+  await deletePendingNoteChanges([noteId]);
+  await deleteNoteFromIndexedDB(noteId);
+});
+
+test("notes server projection purges stale rows and preserves current outbox work", async () => {
+  const suffix = `${Date.now()}-${Math.random()}`;
+  const workspaceId = `workspace-note-projection-${suffix}`;
+  const makeNote = (id: string, title: string, isDirty = false) => ({
+    id,
+    workspaceId,
+    groupId: null,
+    title,
+    content: `<h1>${title}</h1>`,
+    tags: [],
+    order: 0,
+    noteType: "TEXT" as const,
+    metadata: undefined,
+    version: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isDirty,
+    isLoading: false,
+    error: null,
+  });
+  const stale = makeNote(`stale-${suffix}`, "Stale local row");
+  const pendingUpsert = makeNote(
+    `temp-pending-${suffix}`,
+    "Pending local create",
+    true,
+  );
+  const pendingDelete = makeNote(`delete-${suffix}`, "Pending delete", true);
+  const serverNote = makeNote(`server-${suffix}`, "Canonical server row");
+  await Promise.all([
+    saveNoteToIndexedDB(stale),
+    saveNoteToIndexedDB(pendingUpsert),
+    saveNoteToIndexedDB(pendingDelete),
+  ]);
+  await queueNoteChange({
+    id: pendingUpsert.id,
+    operation: "upsert",
+    updatedAt: Date.now(),
+    localVersion: 1,
+    workspaceId,
+    title: pendingUpsert.title,
+    content: pendingUpsert.content,
+    tags: [],
+    noteType: "TEXT",
+    order: 0,
+  });
+  await queueNoteChange({
+    id: pendingDelete.id,
+    operation: "delete",
+    updatedAt: Date.now(),
+    localVersion: 1,
+    serverVersion: 1,
+    workspaceId,
+    rollbackData: pendingDelete,
+  });
+
+  const projection = await reconcileNotesWorkspaceProjection(workspaceId, [
+    serverNote,
+    pendingDelete,
+  ]);
+  const ids = new Set(projection.map((note) => note.id));
+  const storedIds = new Set(
+    (await loadNotesFromIndexedDB(workspaceId)).map((note) => note.id),
+  );
+
+  assert.deepEqual(ids, new Set([serverNote.id, pendingUpsert.id]));
+  assert.deepEqual(storedIds, ids);
+  assert.equal(
+    projection.find((note) => note.id === pendingUpsert.id)?.isDirty,
+    true,
+  );
+
+  await deletePendingNoteChanges([pendingUpsert.id, pendingDelete.id]);
+  await reconcileNotesWorkspaceProjection(workspaceId, []);
+});
+
+test("a stale temp editor save resolves to the canonical id behind acknowledgement", async () => {
+  const workspaceId = "workspace-temp-save-after-ack";
+  const tempId = "temp-save-after-ack";
+  const serverId = "server-save-after-ack";
+  const sent = {
+    id: tempId,
+    operation: "upsert",
+    updatedAt: 100,
+    localVersion: 1,
+    workspaceId,
+    title: "F",
+    content: "<h1>F</h1>",
+  } as any;
+  const tempNote = {
+    ...sent,
+    groupId: null,
+    tags: [],
+    order: 0,
+    noteType: "TEXT",
+    metadata: null,
+    version: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isDirty: true,
+    isLoading: false,
+    error: null,
+  };
+  const notes = ref(new Map<string, any>([[tempId, tempNote]]));
+  const pending = new Map<string, any>([[tempId, sent]]);
+  const saved = new Map<string, any>([[tempId, tempNote]]);
+  const aliases = new Map<string, string>();
+  let releaseCanonicalSave: (() => void) | null = null;
+  const canonicalSaveGate = new Promise<void>((resolve) => {
+    releaseCanonicalSave = resolve;
+  });
+  let canonicalSaveStarted = false;
+  const localRepository = {
+    save: async (value: any) => {
+      if (value.id === serverId && !canonicalSaveStarted) {
+        canonicalSaveStarted = true;
+        await canonicalSaveGate;
+      }
+      saved.set(value.id, value);
+    },
+    saveMany: async () => {},
+    delete: async (id: string) => {
+      saved.delete(id);
+    },
+    loadByWorkspace: async () => Array.from(saved.values()),
+  } as any;
+  const pendingQueue = {
+    add: async (change: any) => pending.set(change.id, change),
+    load: async () => Array.from(pending.values()),
+    remove: async (ids: string[]) => ids.forEach((id) => pending.delete(id)),
+    registerBackgroundSync: async () => {},
+  } as any;
+  const coordinator = createNotesSyncCoordinator({
+    workspaceId,
+    notes,
+    localRepository,
+    layoutQueue: {
+      load: async () => null,
+      save: async () => {},
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    } as any,
+    pendingQueue,
+    onNoteIdRemapped: (from, to) => aliases.set(from, to),
+  });
+  const service = createNotesCommandService({
+    memoryStore: createNotesMemoryStore(notes as any),
+    localRepository,
+    pendingQueue,
+    registerBackgroundSync: async () => {},
+    requestSync: () => {},
+    resolveNoteId: (id) => aliases.get(id) ?? id,
+  });
+
+  const acknowledgement = coordinator.applySyncResult(
+    {
+      ...notesSyncSuccess().data,
+      applied: [tempId],
+      appliedNotes: [{ id: tempId, version: 2 }],
+      idMap: { [tempId]: serverId },
+      noteIdMap: { [tempId]: serverId },
+    },
+    [sent],
+  );
+  while (!canonicalSaveStarted) await flushAsyncWork();
+
+  const staleEditorSave = service.updateNoteContent({
+    id: tempId,
+    note: {
+      ...tempNote,
+      title: "FIX",
+      content: "<h1>FIX</h1>",
+    },
+    queueContentSave: async (id, content, title) => {
+      pending.set(id, {
+        ...sent,
+        id,
+        title,
+        content,
+        localVersion: 2,
+        serverVersion: 2,
+      });
+      return true;
+    },
+  });
+  releaseCanonicalSave?.();
+  await Promise.all([acknowledgement, staleEditorSave]);
+
+  assert.equal(notes.value.has(tempId), false);
+  assert.equal(notes.value.get(serverId)?.title, "FIX");
+  assert.equal(saved.has(tempId), false);
+  assert.equal(saved.get(serverId)?.content, "<h1>FIX</h1>");
+  assert.equal(pending.has(tempId), false);
+  assert.equal(pending.get(serverId)?.title, "FIX");
+});
+
+test("notes sync coordinator purges an acknowledged delete and restores a conflicted delete", async () => {
+  const note = {
+    id: "note-delete-ack",
+    workspaceId: "workspace-1",
+    groupId: null,
+    title: "Keep until ack",
+    content: "<h1>Keep until ack</h1>",
+    tags: [],
+    order: 0,
+    noteType: "TEXT",
+    metadata: null,
+    version: 3,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isDirty: false,
+    isLoading: false,
+    error: null,
+  };
+  const makeDelete = (id: string) =>
+    ({
+      id,
+      operation: "delete",
+      updatedAt: 100,
+      localVersion: 1,
+      serverVersion: 3,
+      workspaceId: "workspace-1",
+      rollbackData: { ...note, id },
+    }) as any;
+  const pending = new Map<string, any>();
+  const saved = new Map<string, any>();
+  const notes = ref(new Map<string, any>());
+  const coordinator = createNotesSyncCoordinator({
+    workspaceId: "workspace-1",
+    notes,
+    localRepository: {
+      save: async (value: any) => {
+        saved.set(value.id, value);
+      },
+      saveMany: async () => {},
+      delete: async (id: string) => {
+        saved.delete(id);
+      },
+      loadByWorkspace: async () => Array.from(saved.values()),
+    } as any,
+    layoutQueue: {
+      load: async () => null,
+      save: async () => {},
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    } as any,
+    pendingQueue: {
+      add: async (change: any) => {
+        pending.set(change.id, change);
+      },
+      load: async () => Array.from(pending.values()),
+      remove: async (ids: string[]) => ids.forEach((id) => pending.delete(id)),
+      registerBackgroundSync: async () => {},
+    } as any,
+  });
+
+  const acknowledged = makeDelete("note-delete-ack");
+  pending.set(acknowledged.id, acknowledged);
+  saved.set(acknowledged.id, note);
+  await coordinator.applySyncResult(
+    {
+      ...notesSyncSuccess().data,
+      applied: [acknowledged.id],
+    },
+    [acknowledged],
+  );
+  assert.equal(pending.has(acknowledged.id), false);
+  assert.equal(saved.has(acknowledged.id), false);
+
+  const conflicted = makeDelete("note-delete-conflict");
+  pending.set(conflicted.id, conflicted);
+  await coordinator.applySyncResult(
+    {
+      ...notesSyncSuccess().data,
+      conflicts: [
+        { id: conflicted.id, reason: "VERSION_MISMATCH", serverVersion: 4 },
+      ],
+    },
+    [conflicted],
+  );
+  assert.equal(notes.value.get(conflicted.id)?.content, note.content);
+  assert.equal(notes.value.get(conflicted.id)?.isDirty, true);
+  assert.equal(saved.has(conflicted.id), true);
+  assert.equal(pending.has(conflicted.id), true);
 });
 
 test("notes conflict resolver stores local and server snapshots and blocks resend", async () => {
@@ -2608,28 +4036,30 @@ test("notes command service updates editor memory before durable save resolves",
       remove: async () => {},
       registerBackgroundSync: async () => {},
     } as any,
-    layoutController: {
-      status: ref("idle"),
-      apply: async () => true,
-      queueNoteLayout: async () => true,
-    } as any,
     registerBackgroundSync: async () => {},
     requestSync: () => {},
   });
 
-  const result = await service.updateNoteContent({
-    id: "note-1",
-    note: {
-      ...note,
-      title: "Live title",
-      content: "<h1>Live title</h1><p>Updated</p>",
-    },
-    queueContentSave: (id, content, title) => {
-      queuedContent = { id, content, title };
-    },
-  });
+  let resolved: boolean | null = null;
+  const updatePromise = service
+    .updateNoteContent({
+      id: "note-1",
+      note: {
+        ...note,
+        title: "Live title",
+        content: "<h1>Live title</h1><p>Updated</p>",
+      },
+      queueContentSave: async (id, content, title) => {
+        queuedContent = { id, content, title };
+        return true;
+      },
+    })
+    .then((result) => {
+      resolved = result;
+      return result;
+    });
 
-  assert.equal(result, true);
+  await flushAsyncWork();
   assert.equal(notes.value.get("note-1")?.title, "Live title");
   assert.equal(
     notes.value.get("note-1")?.content,
@@ -2638,14 +4068,537 @@ test("notes command service updates editor memory before durable save resolves",
   assert.equal(notes.value.get("note-1")?.isDirty, true);
   assert.equal(saveStarted, true);
   assert.equal(queuedContent, null);
+  assert.equal(resolved, null);
 
   releaseSave?.();
-  await flushAsyncWork();
+  const result = await updatePromise;
+  assert.equal(result, true);
   assert.deepEqual(queuedContent, {
     id: "note-1",
     content: "<h1>Live title</h1><p>Updated</p>",
     title: "Live title",
   });
+});
+
+test("note response contract normalizes legacy null positions", () => {
+  const parsed = NoteSchema.parse({
+    id: "note-legacy",
+    workspaceId: "workspace-1",
+    groupId: null,
+    title: "Legacy note",
+    content: "<h1>Legacy note</h1>",
+    tags: [],
+    order: 3,
+    position: null,
+    noteType: "TEXT",
+    metadata: null,
+    version: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+
+  assert.equal(parsed.position, undefined);
+});
+
+test("note draft finalize shares an in-flight commit and skips durable revisions", async () => {
+  let releaseUpdate: (() => void) | null = null;
+  const updateGate = new Promise<void>((resolve) => {
+    releaseUpdate = resolve;
+  });
+  let updateCount = 0;
+  const sourceId = ref<string | null>("note-draft-1");
+  const note = {
+    id: "note-draft-1",
+    workspaceId: "workspace-1",
+    groupId: null,
+    title: "Old",
+    content: "<h1>Old</h1>",
+    tags: [],
+    order: 0,
+    noteType: "TEXT",
+    metadata: null,
+    version: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isDirty: false,
+  };
+  const notes = ref(new Map<string, any>([[note.id, note]]));
+  const store = shallowRef({
+    notes,
+    resolveNoteId: (id: string | null) => id,
+    applyNoteDraft: (id: string, patch: Record<string, unknown>) => {
+      const current = notes.value.get(id);
+      if (!current) return false;
+      notes.value.set(id, { ...current, ...patch });
+      return true;
+    },
+    updateNote: async (id: string, next: any) => {
+      updateCount += 1;
+      await updateGate;
+      notes.value.set(id, next);
+      return true;
+    },
+  } as any);
+  const scope = effectScope();
+  const draft = scope.run(() => useNoteDraft(store, sourceId))!;
+
+  // An unchanged, already-durable note does not generate an update on close.
+  await draft.commitNow();
+  assert.equal(updateCount, 0);
+
+  draft.onTitle("Changed once");
+  const debouncedCommit = draft.commitNow();
+  const finalizeCommit = draft.commitNow();
+  await flushAsyncWork();
+  assert.equal(updateCount, 1);
+
+  releaseUpdate?.();
+  await Promise.all([debouncedCommit, finalizeCommit]);
+  await draft.commitNow();
+  assert.equal(updateCount, 1);
+  scope.stop();
+});
+
+test("quick note capture includes the first input in one durable create", async () => {
+  const notes = ref(new Map<string, any>());
+  const creates: any[] = [];
+  let updateCount = 0;
+  const store = shallowRef({
+    notes,
+    resolveNoteId: (id: string) => id,
+    createNote: async (
+      content: string,
+      tags: string[],
+      noteType: string,
+      metadata: unknown,
+      title: string | undefined,
+      groupId: string | null,
+      options: { deferSync?: boolean } | undefined,
+    ) => {
+      const id = "temp-quick-note-1";
+      creates.push({
+        content,
+        tags,
+        noteType,
+        metadata,
+        title,
+        groupId,
+        options,
+      });
+      notes.value.set(id, {
+        id,
+        workspaceId: "workspace-quick-capture",
+        groupId,
+        title: title ?? TITLE_FALLBACK,
+        content,
+        tags,
+        order: 0,
+        noteType,
+        metadata: metadata ?? null,
+        version: 1,
+        isDirty: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      return id;
+    },
+    applyNoteDraft: (id: string, patch: Record<string, unknown>) => {
+      const note = notes.value.get(id);
+      if (note) notes.value.set(id, { ...note, ...patch });
+    },
+    updateNote: async (id: string, patch: Record<string, unknown>) => {
+      updateCount += 1;
+      const note = notes.value.get(id);
+      if (note) notes.value.set(id, { ...note, ...patch });
+      return true;
+    },
+    deleteNote: async (id: string) => {
+      notes.value.delete(id);
+      return true;
+    },
+    syncPendingChanges: async () => true,
+  } as any);
+  const scope = effectScope();
+  const capture = scope.run(() => useQuickNoteCapture(store))!;
+
+  await capture.begin("group-quick-capture");
+  capture.onTitle("Captured immediately");
+  await flushAsyncWork();
+  await capture.finalize();
+
+  assert.equal(creates.length, 1);
+  assert.equal(creates[0]?.title, "Captured immediately");
+  assert.equal(creates[0]?.groupId, "group-quick-capture");
+  assert.equal(creates[0]?.options?.deferSync, true);
+  assert.equal(updateCount, 0);
+  scope.stop();
+});
+
+test("quick note capture settles the previous create before a new session", async () => {
+  const notes = ref(new Map<string, any>());
+  const pendingCreates: Array<{
+    title: string | undefined;
+    resolve: (id: string) => void;
+  }> = [];
+  const store = shallowRef({
+    notes,
+    resolveNoteId: (id: string) => id,
+    createNote: async (
+      content: string,
+      tags: string[],
+      noteType: string,
+      metadata: unknown,
+      title: string | undefined,
+      groupId: string | null,
+    ) =>
+      new Promise<string>((resolve) => {
+        pendingCreates.push({
+          title,
+          resolve: (id: string) => {
+            notes.value.set(id, {
+              id,
+              workspaceId: "workspace-quick-capture-race",
+              groupId,
+              title: title ?? TITLE_FALLBACK,
+              content,
+              tags,
+              order: 0,
+              noteType,
+              metadata: metadata ?? null,
+              version: 1,
+              isDirty: true,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+            resolve(id);
+          },
+        });
+      }),
+    applyNoteDraft: (id: string, patch: Record<string, unknown>) => {
+      const note = notes.value.get(id);
+      if (note) notes.value.set(id, { ...note, ...patch });
+    },
+    updateNote: async () => true,
+    deleteNote: async (id: string) => {
+      notes.value.delete(id);
+      return true;
+    },
+    syncPendingChanges: async () => true,
+  } as any);
+  const scope = effectScope();
+  const capture = scope.run(() => useQuickNoteCapture(store))!;
+
+  await capture.begin();
+  capture.onTitle("Old session");
+  const beginCurrent = capture.begin();
+  await flushAsyncWork();
+  assert.equal(pendingCreates.length, 1);
+
+  pendingCreates[0]!.resolve("temp-old-session");
+  await beginCurrent;
+  capture.onTitle("Current session");
+  assert.equal(pendingCreates.length, 2);
+
+  pendingCreates[1]!.resolve("temp-current-session");
+  await flushAsyncWork();
+  assert.equal(capture.created.value, true);
+  assert.equal(capture.noteId.value, "temp-current-session");
+  assert.equal(pendingCreates[0]?.title, "Old session");
+  assert.equal(pendingCreates[1]?.title, "Current session");
+  scope.stop();
+});
+
+test("quick note capture cannot let an old finalize clear a reopened session", async () => {
+  const notes = ref(new Map<string, any>());
+  const createIds: string[] = [];
+  let releaseUpdate: (() => void) | null = null;
+  let updateStarted: (() => void) | null = null;
+  const updateGate = new Promise<void>((resolve) => {
+    releaseUpdate = resolve;
+  });
+  const updateHasStarted = new Promise<void>((resolve) => {
+    updateStarted = resolve;
+  });
+  const store = shallowRef({
+    notes,
+    resolveNoteId: (id: string) => id,
+    createNote: async (
+      content: string,
+      tags: string[],
+      noteType: string,
+      metadata: unknown,
+      title: string | undefined,
+      groupId: string | null,
+    ) => {
+      const id = `temp-session-${createIds.length + 1}`;
+      createIds.push(id);
+      notes.value.set(id, {
+        id,
+        workspaceId: "workspace-session-barrier",
+        groupId,
+        title: title ?? TITLE_FALLBACK,
+        content,
+        tags,
+        order: 0,
+        noteType,
+        metadata: metadata ?? null,
+        version: 1,
+        isDirty: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      return id;
+    },
+    applyNoteDraft: (id: string, patch: Record<string, unknown>) => {
+      const note = notes.value.get(id);
+      if (note) notes.value.set(id, { ...note, ...patch });
+    },
+    updateNote: async (id: string, patch: Record<string, unknown>) => {
+      updateStarted?.();
+      await updateGate;
+      const note = notes.value.get(id);
+      if (note) notes.value.set(id, { ...note, ...patch });
+      return true;
+    },
+    deleteNote: async (id: string) => {
+      notes.value.delete(id);
+      return true;
+    },
+    syncPendingChanges: async () => true,
+  } as any);
+  const scope = effectScope();
+  const capture = scope.run(() => useQuickNoteCapture(store))!;
+
+  await capture.begin();
+  capture.onTitle("First session");
+  await flushAsyncWork();
+  capture.onTitle("First session revised");
+  const oldFinalize = capture.finalize();
+  await updateHasStarted;
+
+  let reopened = false;
+  const reopen = capture.begin().then(() => {
+    reopened = true;
+  });
+  await flushAsyncWork();
+  assert.equal(reopened, false);
+
+  releaseUpdate?.();
+  await Promise.all([oldFinalize, reopen]);
+  capture.onTitle("Second session");
+  await flushAsyncWork();
+  capture.onTitle("Second session continued");
+  await flushAsyncWork();
+
+  assert.deepEqual(createIds, ["temp-session-1", "temp-session-2"]);
+  assert.equal(capture.noteId.value, "temp-session-2");
+  scope.stop();
+});
+
+test("quick note capture pins its workspace store through sheet close", async () => {
+  const notes = ref(new Map<string, any>());
+  let syncCount = 0;
+  const pinnedStore = {
+    notes,
+    resolveNoteId: (id: string) => id,
+    createNote: async (
+      content: string,
+      tags: string[],
+      noteType: string,
+      metadata: unknown,
+      title: string | undefined,
+      groupId: string | null,
+    ) => {
+      const id = "temp-pinned-workspace";
+      notes.value.set(id, {
+        id,
+        workspaceId: "workspace-pinned-capture",
+        groupId,
+        title: title ?? TITLE_FALLBACK,
+        content,
+        tags,
+        order: 0,
+        noteType,
+        metadata: metadata ?? null,
+        version: 1,
+        isDirty: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      return id;
+    },
+    applyNoteDraft: (id: string, patch: Record<string, unknown>) => {
+      const note = notes.value.get(id);
+      if (note) notes.value.set(id, { ...note, ...patch });
+    },
+    updateNote: async () => true,
+    deleteNote: async (id: string) => {
+      notes.value.delete(id);
+      return true;
+    },
+    syncPendingChanges: async () => {
+      syncCount += 1;
+      return true;
+    },
+  };
+  const store = shallowRef<any>(pinnedStore);
+  const scope = effectScope();
+  const capture = scope.run(() => useQuickNoteCapture(store))!;
+
+  await capture.begin();
+  capture.onTitle("Pinned workspace capture");
+  await flushAsyncWork();
+  store.value = null;
+  await capture.finalize();
+
+  assert.equal(syncCount, 1);
+  assert.equal(notes.value.size, 1);
+  assert.equal(notes.value.has("temp-pinned-workspace"), true);
+  scope.stop();
+});
+
+test("quick board capture settles its previous create before reopening", async () => {
+  const items = ref(new Map<string, any>());
+  const pendingCreates: Array<{
+    content: string;
+    resolve: (id: string) => void;
+  }> = [];
+  const store = shallowRef({
+    items,
+    resolveItemId: (id: string) => id,
+    createItem: async (
+      content: string,
+      tags: string[],
+      columnId: string | null,
+      dueDate: string | null,
+    ) =>
+      new Promise<string>((resolve) => {
+        pendingCreates.push({
+          content,
+          resolve: (id: string) => {
+            items.value.set(id, {
+              id,
+              workspaceId: "workspace-board-session",
+              content,
+              tags,
+              columnId,
+              dueDate,
+              attachments: [],
+              order: 0,
+              position: "a0",
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            });
+            resolve(id);
+          },
+        });
+      }),
+    updateItem: async () => true,
+    moveItemToColumn: async () => true,
+    deleteItem: async (id: string) => {
+      items.value.delete(id);
+      return true;
+    },
+  } as any);
+  const scope = effectScope();
+  const defaultColumnId = ref<string | null>(null);
+  const capture = scope.run(() =>
+    useQuickBoardItemCapture(store, defaultColumnId),
+  )!;
+
+  await capture.begin();
+  capture.onContent("Old board session");
+  const beginCurrent = capture.begin();
+  await flushAsyncWork();
+  assert.equal(pendingCreates.length, 1);
+
+  pendingCreates[0]!.resolve("temp-board-old");
+  await beginCurrent;
+  capture.onContent("Current board session");
+  assert.equal(pendingCreates.length, 2);
+  pendingCreates[1]!.resolve("temp-board-current");
+  await flushAsyncWork();
+
+  assert.equal(capture.itemId.value, "temp-board-current");
+  assert.deepEqual(
+    pendingCreates.map((create) => create.content),
+    ["Old board session", "Current board session"],
+  );
+  scope.stop();
+});
+
+test("quick board capture does not mark a revision durable before flushing the store", async () => {
+  const items = ref(new Map<string, any>());
+  let flushes = 0;
+  let updates = 0;
+  const store = shallowRef({
+    items,
+    resolveItemId: (id: string) => id,
+    createItem: async (
+      content: string,
+      tags: string[],
+      columnId: string | null,
+      dueDate: string | null,
+    ) => {
+      const id = "temp-board-durable-boundary";
+      items.value.set(id, {
+        id,
+        workspaceId: "workspace-board-durable-boundary",
+        columnId,
+        content,
+        tags,
+        dueDate,
+        attachments: [],
+        order: 0,
+        position: "V",
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      return id;
+    },
+    updateItem: async (id: string, item: any) => {
+      updates += 1;
+      items.value.set(id, item);
+      return true;
+    },
+    flushItem: async () => {
+      flushes += 1;
+    },
+    moveItemToColumn: async () => true,
+    deleteItem: async () => true,
+  } as any);
+  const scope = effectScope();
+  const capture = scope.run(() =>
+    useQuickBoardItemCapture(store, ref<string | null>(null)),
+  )!;
+  await capture.begin();
+  capture.onPayload({
+    content: "First",
+    tags: [],
+    columnId: null,
+    dueDate: null,
+  });
+  await flushAsyncWork();
+  capture.onPayload({
+    content: "Second",
+    tags: [],
+    columnId: null,
+    dueDate: null,
+  });
+  assert.equal(await capture.commitNow(), true);
+  assert.equal(updates, 1);
+  assert.equal(flushes, 1);
+  assert.equal(items.value.get("temp-board-durable-boundary")?.content, "Second");
+  capture.onPayload({
+    content: "Second",
+    tags: [],
+    columnId: null,
+    dueDate: null,
+  });
+  assert.equal(await capture.commitNow(), true);
+  assert.equal(updates, 1);
+  assert.equal(flushes, 1);
+  scope.stop();
 });
 
 test("notes command service waits for durable create queue before returning new note id", async () => {
@@ -2655,8 +4608,8 @@ test("notes command service waits for durable create queue before returning new 
   });
   const notes = ref(new Map<string, any>());
   let queuedCreate: any = null;
-  let queuedLayout = false;
   let resolvedId: string | null = null;
+  let syncRequests = 0;
   const service = createNotesCommandService({
     memoryStore: createNotesMemoryStore(notes as any),
     localRepository: {
@@ -2675,16 +4628,10 @@ test("notes command service waits for durable create queue before returning new 
       remove: async () => {},
       registerBackgroundSync: async () => {},
     } as any,
-    layoutController: {
-      status: ref("idle"),
-      apply: async () => true,
-      queueNoteLayout: async () => {
-        queuedLayout = true;
-        return true;
-      },
-    } as any,
     registerBackgroundSync: async () => {},
-    requestSync: () => {},
+    requestSync: () => {
+      syncRequests += 1;
+    },
   });
 
   const createPromise = service
@@ -2692,6 +4639,7 @@ test("notes command service waits for durable create queue before returning new 
       workspaceId: "workspace-1",
       groupId: "group-1",
       content: DEFAULT_WORKSPACE_NOTE_HTML,
+      deferSync: true,
     })
     .then((id) => {
       resolvedId = id;
@@ -2710,14 +4658,511 @@ test("notes command service waits for durable create queue before returning new 
   const id = await createPromise;
   assert.equal(queuedCreate?.id, id);
   assert.equal(queuedCreate?.groupId, "group-1");
-  assert.equal(queuedLayout, true);
+  assert.equal(queuedCreate?.order, 0);
+  assert.equal(syncRequests, 0);
 });
 
-test("notes command service waits for durable delete tombstone before resolving", async () => {
-  let releaseDelete: (() => void) | null = null;
-  const deleteGate = new Promise<void>((resolve) => {
-    releaseDelete = resolve;
+test("offline-v2 note create reconciliation remaps the Notes view cache", async () => {
+  const workspaceId = `workspace-remap-${Date.now()}`;
+  const tempId = `temp-note-remap-${Date.now()}`;
+  const serverId = `server-note-remap-${Date.now()}`;
+  const now = new Date();
+  await saveNoteToIndexedDB({
+    id: tempId,
+    workspaceId,
+    groupId: null,
+    title: "Local note",
+    content: "<h1>Local note</h1>",
+    tags: [],
+    order: 0,
+    noteType: "TEXT",
+    version: 1,
+    createdAt: now,
+    updatedAt: now,
+    isDirty: true,
+  } as any);
+  await reconcileOfflineV2NoteIds({ [tempId]: serverId }, 7, {
+    workspaceId,
+    groupId: null,
+    title: "Local note",
+    content: "<h1>Local note</h1>",
+    tags: [],
+    metadata: null,
+    order: 0,
   });
+
+  const notes = await loadNotesFromIndexedDB(workspaceId);
+  assert.equal(
+    notes.some((note) => note.id === tempId),
+    false,
+  );
+  assert.equal(notes.find((note) => note.id === serverId)?.version, 7);
+  assert.equal(notes.find((note) => note.id === serverId)?.isDirty, false);
+});
+
+test("offline-v2 note group reconciliation remaps group and note view caches", async () => {
+  const suffix = `${Date.now()}-${Math.random()}`;
+  const workspaceId = `workspace-group-remap-${suffix}`;
+  const tempGroupId = `temp-group-${suffix}`;
+  const serverGroupId = `server-group-${suffix}`;
+  const noteId = `note-group-remap-${suffix}`;
+  const db = await openUnifiedDB();
+  await putRecord(db, DB_CONFIG.STORES.NOTE_GROUPS as any, {
+    id: tempGroupId,
+    workspaceId,
+    title: "Local group",
+    order: 0,
+    version: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+  await saveNoteToIndexedDB({
+    id: noteId,
+    workspaceId,
+    groupId: tempGroupId,
+    title: "Grouped",
+    content: "<h1>Grouped</h1>",
+    tags: [],
+    order: 0,
+    noteType: "TEXT",
+    version: 1,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  } as any);
+  await reconcileOfflineV2NoteGroupIds({ [tempGroupId]: serverGroupId }, 6);
+
+  const groups = await getAllRecords<any>(
+    db,
+    DB_CONFIG.STORES.NOTE_GROUPS as any,
+  );
+  const notes = await loadNotesFromIndexedDB(workspaceId);
+  assert.equal(
+    groups.some((group) => group.id === tempGroupId),
+    false,
+  );
+  assert.equal(groups.find((group) => group.id === serverGroupId)?.version, 6);
+  assert.equal(
+    notes.find((note) => note.id === noteId)?.groupId,
+    serverGroupId,
+  );
+});
+
+test("notes command service does not return an ID for a non-durable create", async () => {
+  const notes = ref(new Map<string, any>());
+  let queued = false;
+  const service = createNotesCommandService({
+    memoryStore: createNotesMemoryStore(notes as any),
+    localRepository: {
+      save: async () => {
+        throw new Error("storage unavailable");
+      },
+      saveMany: async () => {},
+      delete: async () => {},
+      loadByWorkspace: async () => [],
+    } as any,
+    pendingQueue: {
+      add: async () => {
+        queued = true;
+      },
+      load: async () => [],
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    } as any,
+    registerBackgroundSync: async () => {},
+    requestSync: () => {},
+  });
+
+  const id = await service.createNote({
+    workspaceId: "workspace-failed-create",
+    content: DEFAULT_WORKSPACE_NOTE_HTML,
+  });
+  assert.equal(id, null);
+  assert.equal(notes.value.size, 0);
+  assert.equal(queued, false);
+});
+test("Board Phase 2 migrates legacy projection and pending intake exactly once", async () => {
+  const suffix = "board-phase2-migration-" + Date.now() + "-" + Math.random();
+  const accountId = "account-" + suffix;
+  const workspaceId = "workspace-" + suffix;
+  const itemId = "item-" + suffix;
+  const columnId = "column-" + suffix;
+  const db = await openUnifiedDB();
+
+  await putRecord(db, DB_CONFIG.STORES.BOARD_COLUMNS as any, {
+    id: columnId,
+    userId: accountId,
+    workspaceId,
+    name: "Legacy column",
+    position: "V",
+    offlineRevision: 2,
+    isDirty: false,
+  });
+  await putRecord(db, DB_CONFIG.STORES.BOARD_ITEMS as any, {
+    id: itemId,
+    userId: accountId,
+    workspaceId,
+    columnId,
+    content: "Legacy cached value",
+    tags: [],
+    order: 0,
+    position: "V",
+    dueDate: null,
+    attachments: [],
+    offlineRevision: 4,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isDirty: false,
+  });
+  await putRecord(db, DB_CONFIG.STORES.PENDING_BOARD_ITEMS as any, {
+    id: itemId,
+    operation: "upsert",
+    updatedAt: Date.now(),
+    localVersion: 5,
+    workspaceId,
+    userId: accountId,
+    columnId,
+    content: "Recovered pending value",
+    tags: ["recovered"],
+    order: 2,
+    position: "k",
+  });
+
+  await migrateLegacyBoardProjection(accountId);
+  await migrateLegacyBoardProjection(accountId);
+
+  assert.equal(
+    (await getAllRecords<any>(db, DB_CONFIG.STORES.BOARD_ITEMS as any)).length,
+    0,
+  );
+  assert.equal(
+    (await getAllRecords<any>(db, DB_CONFIG.STORES.BOARD_COLUMNS as any)).length,
+    0,
+  );
+  assert.equal(
+    (await getAllRecords<any>(db, DB_CONFIG.STORES.PENDING_BOARD_ITEMS as any)).length,
+    0,
+  );
+  const item = await getOfflineEntity<any>(accountId, "boardItem", itemId);
+  const column = await getOfflineEntity<any>(accountId, "boardColumn", columnId);
+  assert.equal(item?.data.content, "Recovered pending value");
+  assert.equal(item?.version, 4);
+  assert.equal(column?.data.name, "Legacy column");
+  assert.equal(column?.version, 2);
+  const mutations = await listOfflineMutations(accountId);
+  assert.equal(mutations.length, 1);
+  assert.equal(mutations[0]?.operation, "boardItem.update");
+  assert.equal(mutations[0]?.baseVersion, 4);
+  assert.equal(mutations[0]?.payload.content, "Recovered pending value");
+});
+
+test("Board Phase 2 projection purges clean rows and preserves pending local rows", async () => {
+  const suffix = "board-phase2-projection-" + Date.now() + "-" + Math.random();
+  const accountId = "account-" + suffix;
+  const workspaceId = "workspace-" + suffix;
+  const staleId = "stale-" + suffix;
+  const pendingId = "pending-" + suffix;
+  const cleanId = "clean-" + suffix;
+  const baseItem = {
+    userId: accountId,
+    workspaceId,
+    columnId: null,
+    tags: [],
+    dueDate: null,
+    attachments: [],
+    order: 0,
+    position: "V",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+
+  await putBoardProjectionRecord({
+    accountId,
+    entity: "boardItem",
+    record: {
+      ...baseItem,
+      id: staleId,
+      content: "Deleted remotely",
+      offlineRevision: 2,
+    },
+  });
+  await commitOfflineMutation({
+    accountId,
+    mutation: {
+      id: "mutation-" + pendingId,
+      entity: "boardItem",
+      operation: "boardItem.update",
+      entityId: pendingId,
+      workspaceId,
+      baseVersion: 4,
+      changedFields: ["content"],
+      payload: { content: "Local edit" },
+      rollbackData: { ...baseItem, id: pendingId, content: "Server before" },
+      dependsOn: [],
+      occurredAt: new Date().toISOString(),
+      createdAt: Date.now(),
+      attempts: 0,
+      status: "pending",
+      sequence: false,
+    },
+    localRecord: {
+      entity: "boardItem",
+      entityId: pendingId,
+      workspaceId,
+      version: 4,
+      data: { ...baseItem, id: pendingId, content: "Local edit" },
+    },
+  });
+
+  const projection = await reconcileBoardWorkspaceProjection({
+    accountId,
+    workspaceId,
+    entity: "boardItem",
+    serverRecords: [
+      { ...baseItem, id: pendingId, content: "Server before", offlineRevision: 4 },
+      { ...baseItem, id: cleanId, content: "Canonical clean", offlineRevision: 7 },
+    ],
+  });
+  assert.equal(projection.some((item) => item.id === staleId), false);
+  assert.equal(projection.find((item) => item.id === pendingId)?.content, "Local edit");
+  assert.equal(projection.find((item) => item.id === pendingId)?.isDirty, true);
+  assert.equal(
+    (await getOfflineEntity<any>(accountId, "boardItem", staleId))?.deleted,
+    true,
+  );
+  const clean = await getOfflineEntity<any>(accountId, "boardItem", cleanId);
+  assert.equal(clean?.version, 7);
+  assert.equal(clean?.data.content, "Canonical clean");
+});
+
+test("generic Board acknowledgement preserves a queued successor without a cache bridge", async () => {
+  const suffix = "board-phase2-successor-" + Date.now() + "-" + Math.random();
+  const accountId = "account-" + suffix;
+  const workspaceId = "workspace-" + suffix;
+  const itemId = "item-" + suffix;
+  const first = {
+    id: "first-" + suffix,
+    entity: "boardItem" as const,
+    operation: "boardItem.update",
+    entityId: itemId,
+    workspaceId,
+    baseVersion: 3,
+    changedFields: ["content"],
+    payload: { content: "First edit" },
+    dependsOn: [],
+    occurredAt: new Date().toISOString(),
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+  };
+  await commitOfflineMutation({
+    accountId,
+    mutation: first,
+    localRecord: {
+      entity: "boardItem",
+      entityId: itemId,
+      workspaceId,
+      version: 3,
+      data: { id: itemId, workspaceId, content: "First edit" },
+    },
+  });
+  const [claimed] = await claimOfflineMutations({
+    accountId,
+    ids: [first.id],
+    claimToken: "claim-" + suffix,
+  });
+  assert.ok(claimed);
+  await commitOfflineMutation({
+    accountId,
+    mutation: {
+      ...first,
+      id: "second-" + suffix,
+      payload: { content: "Second edit" },
+      createdAt: first.createdAt + 1,
+      status: "pending",
+    },
+    localRecord: {
+      entity: "boardItem",
+      entityId: itemId,
+      workspaceId,
+      version: 3,
+      data: { id: itemId, workspaceId, content: "Second edit" },
+    },
+  });
+  const applied = await applySyncResult({
+    accountId,
+    mutation: claimed!,
+    result: {
+      status: "applied",
+      entity: "boardItem",
+      entityId: itemId,
+      version: 4,
+      canonical: { id: itemId, workspaceId, content: "First edit" },
+    },
+  });
+  assert.equal(applied.hasPendingSuccessor, true);
+  const entity = await getOfflineEntity<any>(accountId, "boardItem", itemId);
+  assert.equal(entity?.version, 4);
+  assert.equal(entity?.data.content, "Second edit");
+  const successor = (await listOfflineMutations(accountId)).find(
+    (mutation) => mutation.id !== first.id,
+  );
+  assert.equal(successor?.baseVersion, 4);
+  const visible = await loadBoardItemsProjection({ accountId, workspaceId });
+  assert.equal(visible[0]?.content, "Second edit");
+  assert.equal(visible[0]?.isDirty, true);
+});
+
+test("ordinary Board relation reads seed revisions and preserve pending local relations", async () => {
+  const suffix = "board-phase2-relations-" + Date.now() + "-" + Math.random();
+  const accountId = "account-" + suffix;
+  const workspaceId = "workspace-" + suffix;
+  const itemId = "item-" + suffix;
+  const targetId = "target-" + suffix;
+  const linkId = "link-" + suffix;
+  const localLinkId = "temp-board-link-" + suffix;
+
+  const links = await reconcileBoardRelationsForItem({
+    accountId,
+    workspaceId,
+    itemId,
+    entity: "boardLink",
+    serverRecords: [{
+      id: linkId,
+      sourceId: itemId,
+      targetId,
+      linkType: "RELATED" as const,
+      userId: accountId,
+      createdAt: new Date(),
+      offlineRevision: 6,
+    }],
+  });
+  assert.equal(links[0]?.offlineRevision, 6);
+  assert.equal(
+    (await getOfflineEntity<any>(accountId, "boardLink", linkId))?.version,
+    6,
+  );
+
+  await commitOfflineMutation({
+    accountId,
+    mutation: {
+      id: "mutation-" + localLinkId,
+      entity: "boardLink",
+      operation: "boardLink.create",
+      entityId: localLinkId,
+      workspaceId,
+      changedFields: ["sourceId", "targetId", "linkType"],
+      payload: { sourceId: itemId, targetId, linkType: "BLOCKS" },
+      dependsOn: [],
+      occurredAt: new Date().toISOString(),
+      createdAt: Date.now(),
+      attempts: 0,
+      status: "pending",
+      sequence: false,
+    },
+    localRecord: {
+      entity: "boardLink",
+      entityId: localLinkId,
+      workspaceId,
+      version: 0,
+      data: {
+        id: localLinkId,
+        sourceId: itemId,
+        targetId,
+        linkType: "BLOCKS",
+        userId: accountId,
+        createdAt: new Date(),
+      },
+    },
+  });
+  const reconciled = await reconcileBoardRelationsForItem({
+    accountId,
+    workspaceId,
+    itemId,
+    entity: "boardLink",
+    serverRecords: [{
+      id: linkId,
+      sourceId: itemId,
+      targetId,
+      linkType: "RELATED" as const,
+      userId: accountId,
+      createdAt: new Date(),
+      offlineRevision: 6,
+    }],
+  });
+  assert.equal(reconciled.some((link) => link.id === localLinkId), true);
+  assert.equal(reconciled.some((link) => link.id === linkId), true);
+});
+
+test("Board acknowledgement preserves a durable draft that has not reached the outbox yet", async () => {
+  const suffix = "board-phase2-draft-" + Date.now() + "-" + Math.random();
+  const accountId = "account-" + suffix;
+  const workspaceId = "workspace-" + suffix;
+  const itemId = "item-" + suffix;
+  const mutation = {
+    id: "mutation-" + suffix,
+    entity: "boardItem" as const,
+    operation: "boardItem.update",
+    entityId: itemId,
+    workspaceId,
+    baseVersion: 2,
+    changedFields: ["content"],
+    payload: { content: "In flight" },
+    dependsOn: [],
+    occurredAt: new Date().toISOString(),
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+  };
+  await commitOfflineMutation({
+    accountId,
+    mutation,
+    localRecord: {
+      entity: "boardItem",
+      entityId: itemId,
+      workspaceId,
+      version: 2,
+      data: { id: itemId, workspaceId, content: "In flight" },
+    },
+  });
+  const [claimed] = await claimOfflineMutations({
+    accountId,
+    ids: [mutation.id],
+    claimToken: "claim-" + suffix,
+  });
+  assert.ok(claimed);
+  await putBoardProjectionRecord({
+    accountId,
+    entity: "boardItem",
+    record: {
+      id: itemId,
+      workspaceId,
+      content: "Draft after request",
+      isDirty: true,
+      offlineRevision: 2,
+    },
+  });
+
+  const projection = await applySyncResult({
+    accountId,
+    mutation: claimed!,
+    result: {
+      status: "applied",
+      entity: "boardItem",
+      entityId: itemId,
+      version: 3,
+      canonical: { id: itemId, workspaceId, content: "In flight" },
+    },
+  });
+  assert.equal(projection.hasPendingSuccessor, true);
+  const entity = await getOfflineEntity<any>(accountId, "boardItem", itemId);
+  assert.equal(entity?.data.content, "Draft after request");
+  assert.equal(entity?.version, 3);
+  assert.equal(entity?.localDirty, true);
+});
+
+test("notes delete queues a rollback snapshot and keeps canonical cache until acknowledgement", async () => {
   const note = {
     id: "note-1",
     workspaceId: "workspace-1",
@@ -2737,6 +5182,7 @@ test("notes command service waits for durable delete tombstone before resolving"
   };
   const notes = ref(new Map<string, any>([[note.id, note]]));
   let queuedDelete: any = null;
+  let localDeleteCalled = false;
   let syncRequested = false;
   let resolved: boolean | null = null;
   const service = createNotesCommandService({
@@ -2745,7 +5191,7 @@ test("notes command service waits for durable delete tombstone before resolving"
       save: async () => {},
       saveMany: async () => {},
       delete: async () => {
-        await deleteGate;
+        localDeleteCalled = true;
       },
       loadByWorkspace: async () => [],
     } as any,
@@ -2756,11 +5202,6 @@ test("notes command service waits for durable delete tombstone before resolving"
       load: async () => [],
       remove: async () => {},
       registerBackgroundSync: async () => {},
-    } as any,
-    layoutController: {
-      status: ref("idle"),
-      apply: async () => true,
-      queueNoteLayout: async () => true,
     } as any,
     registerBackgroundSync: async () => {},
     requestSync: () => {
@@ -2777,16 +5218,13 @@ test("notes command service waits for durable delete tombstone before resolving"
 
   await flushAsyncWork();
   assert.equal(notes.value.has("note-1"), false);
-  assert.equal(queuedDelete, null);
-  assert.equal(resolved, null);
-  assert.equal(syncRequested, false);
-
-  releaseDelete?.();
   const result = await deletePromise;
   assert.equal(result, true);
   assert.equal(queuedDelete?.operation, "delete");
   assert.equal(queuedDelete?.id, "note-1");
   assert.equal(queuedDelete?.serverVersion, 4);
+  assert.equal(queuedDelete?.rollbackData?.content, note.content);
+  assert.equal(localDeleteCalled, false);
   assert.equal(syncRequested, true);
 });
 
@@ -2963,15 +5401,22 @@ test("notes group command service updates drawer memory before durable save reso
     setError: () => {},
   });
 
-  const id = service.createGroup("Immediate group");
+  let resolvedId: string | null | undefined;
+  const createPromise = service.createGroup("Immediate group").then((id) => {
+    resolvedId = id;
+    return id;
+  });
+  await flushAsyncWork();
+  const id = Array.from(groups.value.keys())[0];
 
   assert.ok(id?.startsWith("temp-group-"));
   assert.equal(groups.value.get(id!)?.title, "Immediate group");
   assert.equal(groups.value.get(id!)?.order, 0);
   assert.equal(queuedGroup, null);
+  assert.equal(resolvedId, undefined);
 
   releaseSave?.();
-  await flushAsyncWork();
+  assert.equal(await createPromise, id);
   assert.equal(queuedGroup?.id, id);
   assert.equal(queuedGroup?.operation, "create");
 });
@@ -3064,8 +5509,8 @@ test("notes sync runtime drains queues in deterministic order", async () => {
   );
   const layoutPendingCount = ref(0);
   const layoutStatus = ref<any>("idle");
-  let syncPayload: any = null;
   let layoutRemoved = false;
+  let queuesDrained = false;
 
   const runtime = createNotesSyncRuntime({
     workspaceId: "workspace-1",
@@ -3083,7 +5528,7 @@ test("notes sync runtime drains queues in deterministic order", async () => {
     } as any,
     pendingQueue: {
       add: async () => {},
-      load: async () => pendingChanges as any,
+      load: async () => (queuesDrained ? [] : pendingChanges) as any,
       remove: async (ids: string[]) => {
         events.push(`content-remove:${ids.join(",")}`);
       },
@@ -3091,7 +5536,7 @@ test("notes sync runtime drains queues in deterministic order", async () => {
     },
     groupQueue: {
       add: async () => {},
-      load: async () => pendingGroups as any,
+      load: async () => (queuesDrained ? [] : pendingGroups) as any,
       remove: async (ids: string[]) => {
         events.push(`group-remove:${ids.join(",")}`);
       },
@@ -3099,7 +5544,8 @@ test("notes sync runtime drains queues in deterministic order", async () => {
     },
     layoutQueue: {
       save: async () => {},
-      load: async () => (layoutRemoved ? null : (pendingLayout as any)),
+      load: async () =>
+        queuesDrained || layoutRemoved ? null : (pendingLayout as any),
       remove: async (workspaceId: string) => {
         layoutRemoved = true;
         events.push(`layout-remove:${workspaceId}`);
@@ -3126,35 +5572,18 @@ test("notes sync runtime drains queues in deterministic order", async () => {
     },
     notesApi: {
       getByWorkspace: async () => ({ success: true, data: [] }),
-      sync: async (payload: any) => {
-        events.push("api-sync");
-        syncPayload = payload;
-        return {
-          success: true,
-          data: {
-            applied: ["note-1"],
-            appliedNotes: [],
-            conflicts: [],
-            idMap: {},
-            noteIdMap: {},
-            groupApplied: ["group-1"],
-            groupConflicts: [],
-            groupIdMap: {},
-            errors: [],
-            layoutApplied: true,
-            layoutConflict: false,
-          },
-        };
+      sync: async () => {
+        events.push("notes-sync");
+        queuesDrained = true;
+        return notesSyncSuccess({
+          applied: ["note-1"],
+          groupApplied: ["group-1"],
+          layoutApplied: true,
+        });
       },
     },
     flushDrafts: async () => {
       events.push("flush-drafts");
-    },
-    resetSyncRetry: () => {
-      events.push("reset-retry");
-    },
-    scheduleSyncRetry: () => {
-      events.push("schedule-retry");
     },
     hydrateLocalGroups: async () => {},
   });
@@ -3162,21 +5591,91 @@ test("notes sync runtime drains queues in deterministic order", async () => {
   const synced = await runtime.syncPendingChanges("manual");
 
   assert.equal(synced, true);
-  assert.equal(syncPayload.changes.length, 1);
-  assert.equal(syncPayload.groupChanges.length, 1);
-  assert.equal(syncPayload.layoutChange.workspaceId, "workspace-1");
   assert.deepEqual(events, [
     "flush-drafts",
-    "api-sync",
-    "reset-retry",
+    "notes-sync",
     "apply-result",
     "record-conflicts",
-    "content-remove:note-1",
     "group-remove:group-1",
-    "layout-remove:workspace-1",
   ]);
   assert.equal(layoutStatus.value, "synced");
   assert.equal(layoutPendingCount.value, 0);
+});
+
+test("notes sync runtime quarantines group conflicts instead of resending forever", async () => {
+  let pendingGroup: any = {
+    id: "group-conflict",
+    operation: "rename",
+    workspaceId: "workspace-1",
+    title: "Local rename",
+    updatedAt: 100,
+    localVersion: 1,
+  };
+  let syncRequests = 0;
+  const layoutStatus = ref<any>("idle");
+  const runtime = createNotesSyncRuntime({
+    workspaceId: "workspace-1",
+    notes: ref(new Map()) as any,
+    loadingStates: ref(new Map()),
+    lastSync: ref(null),
+    layoutPendingCount: ref(0),
+    layoutStatus,
+    noteIdAliases: ref(new Map()),
+    localRepository: {
+      save: async () => {},
+      saveMany: async () => {},
+      loadByWorkspace: async () => [],
+      delete: async () => {},
+    } as any,
+    pendingQueue: {
+      add: async () => {},
+      load: async () => [],
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    },
+    groupQueue: {
+      add: async (change: any) => {
+        pendingGroup = change;
+      },
+      load: async () => (pendingGroup ? [pendingGroup] : []),
+      remove: async () => {
+        pendingGroup = null;
+      },
+      registerBackgroundSync: async () => {},
+    },
+    layoutQueue: {
+      save: async () => {},
+      load: async () => null,
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    },
+    syncCoordinator: {
+      hydrateFromLocalState: async () => {},
+      applySyncResult: async () => {},
+    },
+    conflictResolver: {
+      hasConflicts: async () => false,
+      getConflict: () => null,
+      hydrateConflictState: async () => {},
+      recordContentConflicts: async () => 0,
+    },
+    networkMonitor: { isVerifiedOnline: ref(true) },
+    notesApi: {
+      getByWorkspace: async () => ({ success: true, data: [] }),
+      sync: async () => {
+        syncRequests += 1;
+        return notesSyncSuccess({ groupConflicts: [{ id: "group-conflict" }] });
+      },
+    },
+    flushDrafts: async () => {},
+    hydrateLocalGroups: async () => {},
+  });
+
+  assert.equal(await runtime.syncPendingChanges("manual"), false);
+  assert.equal(pendingGroup.conflicted, true);
+  assert.equal(layoutStatus.value, "conflict");
+  assert.equal(await runtime.syncPendingChanges("manual"), false);
+  assert.equal(syncRequests, 1);
 });
 
 test("notes sync runtime overlays latest layout onto pending note upserts", async () => {
@@ -3213,7 +5712,6 @@ test("notes sync runtime overlays latest layout onto pending note upserts", asyn
     groups: [],
   };
   const patchedChanges: any[] = [];
-  let syncPayload: any = null;
 
   const runtime = createNotesSyncRuntime({
     workspaceId: "workspace-1",
@@ -3287,43 +5785,20 @@ test("notes sync runtime overlays latest layout onto pending note upserts", asyn
     },
     notesApi: {
       getByWorkspace: async () => ({ success: true, data: [] }),
-      sync: async (payload: any) => {
-        syncPayload = payload;
-        return {
-          success: true,
-          data: {
-            applied: ["temp-note-1"],
-            appliedNotes: [],
-            conflicts: [],
-            idMap: {},
-            noteIdMap: {},
-            groupApplied: ["temp-group-deleted"],
-            groupConflicts: [],
-            groupIdMap: {},
-            errors: [],
-            layoutApplied: true,
-            layoutConflict: false,
-          },
-        };
-      },
+      sync: async () => notesSyncSuccess(),
     },
     flushDrafts: async () => {},
-    resetSyncRetry: () => {},
-    scheduleSyncRetry: () => {},
     hydrateLocalGroups: async () => {},
   });
 
   await runtime.syncPendingChanges("manual");
 
-  assert.equal(syncPayload.changes[0]?.groupId, null);
-  assert.equal(syncPayload.changes[0]?.updatedAt, 200);
   assert.equal(patchedChanges[0]?.id, "temp-note-1");
   assert.equal(patchedChanges[0]?.groupId, null);
 });
 
 test("notes sync runtime repairs dirty notes missing pending queue rows", async () => {
   const repaired: any[] = [];
-  let syncPayload: any = null;
   const notes = ref(
     new Map<string, any>([
       [
@@ -3398,29 +5873,9 @@ test("notes sync runtime repairs dirty notes missing pending queue rows", async 
     },
     notesApi: {
       getByWorkspace: async () => ({ success: true, data: [] }),
-      sync: async (payload: any) => {
-        syncPayload = payload;
-        return {
-          success: true,
-          data: {
-            applied: ["note-1"],
-            appliedNotes: [],
-            conflicts: [],
-            idMap: {},
-            noteIdMap: {},
-            groupApplied: [],
-            groupConflicts: [],
-            groupIdMap: {},
-            errors: [],
-            layoutApplied: false,
-            layoutConflict: false,
-          },
-        };
-      },
+      sync: async () => notesSyncSuccess({ applied: ["note-1"] }),
     },
     flushDrafts: async () => {},
-    resetSyncRetry: () => {},
-    scheduleSyncRetry: () => {},
     hydrateLocalGroups: async () => {},
   });
 
@@ -3434,7 +5889,6 @@ test("notes sync runtime repairs dirty notes missing pending queue rows", async 
     repaired[0]?.content,
     "<h1>Offline title</h1><p>Desktop edit</p>",
   );
-  assert.equal(syncPayload.changes.length, 1);
 });
 
 test("notes refresh does not resurrect server rows with pending delete tombstones", async () => {
@@ -3529,26 +5983,13 @@ test("notes refresh does not resurrect server rows with pending delete tombstone
           ],
         } as any;
       },
-      sync: async () => ({
-        success: true,
-        data: {
-          applied: ["note-1"],
-          appliedNotes: [],
-          conflicts: [],
-          idMap: {},
-          noteIdMap: {},
-          groupApplied: [],
-          groupConflicts: [],
-          groupIdMap: {},
-          errors: [],
-          layoutApplied: false,
-          layoutConflict: false,
-        },
-      }),
+      sync: async () => {
+        pending.delete("note-1");
+        saved.delete("note-1");
+        return notesSyncSuccess({ applied: ["note-1"] });
+      },
     },
     flushDrafts: async () => {},
-    resetSyncRetry: () => {},
-    scheduleSyncRetry: () => {},
     hydrateLocalGroups: async () => {},
   });
 
@@ -3558,6 +5999,116 @@ test("notes refresh does not resurrect server rows with pending delete tombstone
   assert.equal(pending.has("note-1"), false);
   assert.equal(notes.value.has("note-1"), false);
   assert.equal(saved.has("note-1"), false);
+});
+
+test("notes refresh cannot apply a stale GET over create and delete actions", async () => {
+  const workspaceId = "workspace-refresh-race";
+  const makeNote = (id: string, title: string) => ({
+    id,
+    workspaceId,
+    groupId: null,
+    title,
+    content: `<h1>${title}</h1>`,
+    tags: [],
+    order: 0,
+    noteType: "TEXT",
+    metadata: null,
+    version: 1,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    isDirty: false,
+    isLoading: false,
+    error: null,
+  });
+  const deletedDuringGet = makeNote("note-delete-during-get", "Delete me");
+  const staleLocal = makeNote("note-stale-local", "Stale local");
+  const createdDuringGet = makeNote("note-create-during-get", "Create me");
+  const notes = ref(
+    new Map<string, any>([
+      [deletedDuringGet.id, deletedDuringGet],
+      [staleLocal.id, staleLocal],
+    ]),
+  );
+  const saved = new Map<string, any>(notes.value);
+  let getStarted = false;
+  let releaseGet: (() => void) | null = null;
+  const getGate = new Promise<void>((resolve) => {
+    releaseGet = resolve;
+  });
+
+  const runtime = createNotesSyncRuntime({
+    workspaceId,
+    notes: notes as any,
+    loadingStates: ref(new Map()),
+    lastSync: ref(null),
+    layoutPendingCount: ref(0),
+    layoutStatus: ref<any>("idle"),
+    noteIdAliases: ref(new Map()),
+    localRepository: {
+      save: async (note: any) => saved.set(note.id, note),
+      saveMany: async (items: any[]) => {
+        for (const note of items) saved.set(note.id, note);
+      },
+      loadByWorkspace: async () => Array.from(saved.values()),
+      delete: async (id: string) => {
+        saved.delete(id);
+      },
+    } as any,
+    pendingQueue: {
+      add: async () => {},
+      load: async () => [],
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    },
+    groupQueue: {
+      add: async () => {},
+      load: async () => [],
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    },
+    layoutQueue: {
+      save: async () => {},
+      load: async () => null,
+      remove: async () => {},
+      registerBackgroundSync: async () => {},
+    },
+    syncCoordinator: {
+      hydrateFromLocalState: async () => {},
+      applySyncResult: async () => {},
+    },
+    conflictResolver: {
+      hasConflicts: async () => false,
+      getConflict: () => null,
+      hydrateConflictState: async () => {},
+      recordContentConflicts: async () => 0,
+    },
+    networkMonitor: { isVerifiedOnline: ref(true) },
+    notesApi: {
+      getByWorkspace: async () => {
+        getStarted = true;
+        await getGate;
+        return {
+          success: true,
+          // This is the snapshot from before the concurrent delete/create.
+          data: [deletedDuringGet],
+        } as any;
+      },
+      sync: async () => notesSyncSuccess(),
+    },
+    flushDrafts: async () => {},
+    hydrateLocalGroups: async () => {},
+  });
+
+  const refresh = runtime.refreshFromServer();
+  while (!getStarted) await flushAsyncWork();
+  notes.value.delete(deletedDuringGet.id);
+  notes.value.set(createdDuringGet.id, createdDuringGet as any);
+  saved.set(createdDuringGet.id, createdDuringGet);
+  releaseGet?.();
+  await refresh;
+
+  assert.deepEqual(new Set(notes.value.keys()), new Set([createdDuringGet.id]));
+  assert.deepEqual(new Set(saved.keys()), new Set([createdDuringGet.id]));
 });
 
 test("notes temp IDs are unique for fast repeated note and group creation", () => {
@@ -3576,6 +6127,7 @@ test("shared local-first temp IDs are unique and scoped", () => {
   const noteId = createClientTempId("note");
   const groupId = createClientTempId("note-group");
   const boardItemId = createClientTempId("board-item");
+  const boardColumnId = createClientTempId("board-column");
 
   for (let i = 0; i < 100; i++) {
     ids.add(createClientTempId("note"));
@@ -3586,6 +6138,7 @@ test("shared local-first temp IDs are unique and scoped", () => {
   assert.ok(noteId.startsWith("temp-"));
   assert.ok(groupId.startsWith("temp-group-"));
   assert.ok(boardItemId.startsWith("temp-board-item-"));
+  assert.ok(boardColumnId.startsWith("temp-board-column-"));
 });
 
 test("shared local-first retry policy retries transient failures and stops at the cap", async () => {
@@ -4154,6 +6707,7 @@ test("board item sync contract accepts numeric offline upserts", () => {
       content: "Offline task",
       tags: [],
       order: 0,
+      position: "V",
       attachments: [],
       createdAt: now,
       updatedAt: now,
@@ -4162,118 +6716,7 @@ test("board item sync contract accepts numeric offline upserts", () => {
 
   assert.equal(parsed[0]?.operation, "upsert");
   assert.equal(parsed[0]?.content, "Offline task");
-});
-
-test("mergePendingBoardItems preserves pending column and order", () => {
-  const merged = mergePendingBoardItems(
-    [
-      {
-        id: "board-1",
-        userId: "user-1",
-        workspaceId: "workspace-1",
-        columnId: "column-a",
-        content: "Server task",
-        tags: ["server"],
-        order: 0,
-        dueDate: null,
-        attachments: [],
-        createdAt: new Date("2026-01-01T00:00:00.000Z"),
-        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
-      } satisfies BoardItemState,
-    ],
-    [
-      {
-        id: "board-1",
-        operation: "upsert",
-        updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
-        localVersion: 2,
-        workspaceId: "workspace-1",
-        columnId: "column-b",
-        order: 7,
-        content: "Offline task",
-        tags: ["offline"],
-      },
-    ],
-  );
-
-  const item = merged.get("board-1");
-  assert.ok(item);
-  assert.equal(item.columnId, "column-b");
-  assert.equal(item.order, 7);
-  assert.equal(item.content, "Offline task");
-  assert.deepEqual(item.tags, ["offline"]);
-  assert.equal(item.isDirty, true);
-});
-
-test("mergePendingBoardItems ignores stale pending updates", () => {
-  const merged = mergePendingBoardItems(
-    [
-      {
-        id: "board-1",
-        userId: "user-1",
-        workspaceId: "workspace-1",
-        columnId: "column-a",
-        content: "Newer local task",
-        tags: ["local"],
-        order: 2,
-        dueDate: null,
-        attachments: [],
-        createdAt: new Date("2026-01-01T00:00:00.000Z"),
-        updatedAt: new Date("2026-01-03T00:00:00.000Z"),
-      } satisfies BoardItemState,
-    ],
-    [
-      {
-        id: "board-1",
-        operation: "upsert",
-        updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
-        localVersion: 1,
-        workspaceId: "workspace-1",
-        columnId: "column-b",
-        order: 7,
-        content: "Stale pending task",
-        tags: ["stale"],
-      },
-    ],
-  );
-
-  const item = merged.get("board-1");
-  assert.ok(item);
-  assert.equal(item.columnId, "column-a");
-  assert.equal(item.order, 2);
-  assert.equal(item.content, "Newer local task");
-  assert.deepEqual(item.tags, ["local"]);
-});
-
-test("mergePendingBoardItems removes local rows covered by pending deletes", () => {
-  const merged = mergePendingBoardItems(
-    [
-      {
-        id: "board-1",
-        userId: "user-1",
-        workspaceId: "workspace-1",
-        columnId: "column-a",
-        content: "Deleted local task",
-        tags: [],
-        order: 0,
-        dueDate: null,
-        attachments: [],
-        createdAt: new Date("2026-01-01T00:00:00.000Z"),
-        updatedAt: new Date("2026-01-01T00:00:00.000Z"),
-      } satisfies BoardItemState,
-    ],
-    [
-      {
-        id: "board-1",
-        operation: "delete",
-        updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
-        localVersion: 2,
-        workspaceId: "workspace-1",
-      },
-    ],
-  );
-
-  assert.equal(merged.has("board-1"), false);
+  assert.equal(parsed[0]?.position, "V");
 });
 
 test("workspace integration refs support local-change sync status", () => {

@@ -29,8 +29,28 @@ const WorkspaceStudyContentResponse = z
 const WorkspacesResponseSchema = WorkspacesResponse;
 const WorkspaceResponseSchema = WorkspaceResponse;
 const WorkspaceStudyContentResponseSchema = WorkspaceStudyContentResponse;
+const workspaceIdAliases = new Map<string, string>();
+
+function recordWorkspaceIdMap(idMap: Record<string, string>) {
+  for (const [tempId, serverId] of Object.entries(idMap)) workspaceIdAliases.set(tempId, serverId);
+}
+
+function resolveWorkspaceId(id: string) {
+  return workspaceIdAliases.get(id) ?? id;
+}
+
+let workspaceAliasListenerRegistered = false;
+function ensureWorkspaceAliasListener() {
+  if (workspaceAliasListenerRegistered || typeof window === "undefined") return;
+  window.addEventListener("offline-v2-entity-id-remapped", (event) => {
+    const detail = (event as CustomEvent<{ entity?: string; idMap?: Record<string, string> }>).detail;
+    if (detail?.entity === "workspace" && detail.idMap) recordWorkspaceIdMap(detail.idMap);
+  });
+  workspaceAliasListenerRegistered = true;
+}
 
 export function useWorkspaces() {
+  ensureWorkspaceAliasListener();
   const { $api } = useNuxtApp();
   const offline = useOfflineRuntime();
 
@@ -56,6 +76,16 @@ export function useWorkspaces() {
       return result;
     }
   );
+  if (import.meta.client) {
+    const handleRemap = (event: Event) => {
+      const detail = (event as CustomEvent<{ entity?: string; idMap?: Record<string, string> }>).detail;
+      if (detail?.entity !== "workspace" || !detail.idMap) return;
+      recordWorkspaceIdMap(detail.idMap);
+      void refresh();
+    };
+    window.addEventListener("offline-v2-entity-id-remapped", handleRemap);
+    onScopeDispose(() => window.removeEventListener("offline-v2-entity-id-remapped", handleRemap));
+  }
   return {
     workspaces: data,
     loading: pending,
@@ -65,6 +95,7 @@ export function useWorkspaces() {
 }
 
 export function useCreateWorkspace(refreshWorkspaces?: () => void | Promise<void>) {
+  ensureWorkspaceAliasListener();
   const { $api } = useNuxtApp();
   // Use centralized operation handling - all errors constructed by FetchFactory
   const createOperation = useOperation<WorkspaceSummary>();
@@ -109,19 +140,29 @@ export function useCreateWorkspace(refreshWorkspaces?: () => void | Promise<void
 }
 
 export const useWorkspace = (id: string) => {
+  ensureWorkspaceAliasListener();
   const { $api } = useNuxtApp();
   const offline = useOfflineRuntime();
   const { data, pending, error, refresh } = useDataFetch<WorkspaceSummary>(
     `workspace-${id}`,
     async () => {
+      const resolvedId = resolveWorkspaceId(id);
       if (!offline.isOnline.value && offline.accountId.value) {
         const local = await listOfflineEntities<WorkspaceSummary>(offline.accountId.value, "workspace");
-        const workspace = local.find((record) => record.entityId === id)?.data;
+        const workspace = local.find((record) => record.entityId === resolvedId)?.data;
         return workspace ? { success: true, data: workspace } as any : { success: false, error: { message: "This workspace has not been downloaded for offline use." } } as any;
       }
-      return $api.workspaces.getWorkspace(id, WorkspaceResponseSchema);
+      return $api.workspaces.getWorkspace(resolvedId, WorkspaceResponseSchema);
     }
   );
+  if (import.meta.client) {
+    const handleRemap = (event: Event) => {
+      const detail = (event as CustomEvent<{ entity?: string; idMap?: Record<string, string> }>).detail;
+      if (detail?.entity === "workspace" && detail.idMap?.[id]) void refresh();
+    };
+    window.addEventListener("offline-v2-entity-id-remapped", handleRemap);
+    onScopeDispose(() => window.removeEventListener("offline-v2-entity-id-remapped", handleRemap));
+  }
 
   return {
     workspace: data,
@@ -132,18 +173,28 @@ export const useWorkspace = (id: string) => {
 };
 
 export const useWorkspaceStudyContent = (id: string) => {
+  ensureWorkspaceAliasListener();
   const { $api } = useNuxtApp();
   const offline = useOfflineRuntime();
   const { data, pending, error, refresh } = useDataFetch<WorkspaceStudyContent>(
     `workspace-${id}-study-content`,
     async () => {
+      const resolvedId = resolveWorkspaceId(id);
       if (!offline.isOnline.value && offline.accountId.value) {
-        const stored = await listOfflineEntities<Record<string, unknown>>(offline.accountId.value, "studyContent", id);
+        const stored = await listOfflineEntities<Record<string, unknown>>(offline.accountId.value, "studyContent", resolvedId);
         return { success: true, data: { flashcards: stored.filter((record) => "front" in record.data).map((record) => record.data), questions: stored.filter((record) => "question" in record.data).map((record) => record.data) } } as any;
       }
-      return $api.workspaces.getStudyContent(id, WorkspaceStudyContentResponseSchema);
+      return $api.workspaces.getStudyContent(resolvedId, WorkspaceStudyContentResponseSchema);
     }
   );
+  if (import.meta.client) {
+    const handleRemap = (event: Event) => {
+      const detail = (event as CustomEvent<{ entity?: string; idMap?: Record<string, string> }>).detail;
+      if (detail?.entity === "workspace" && detail.idMap?.[id]) void refresh();
+    };
+    window.addEventListener("offline-v2-entity-id-remapped", handleRemap);
+    onScopeDispose(() => window.removeEventListener("offline-v2-entity-id-remapped", handleRemap));
+  }
 
   return {
     studyContent: data,
@@ -154,12 +205,14 @@ export const useWorkspaceStudyContent = (id: string) => {
 };
 
 export function useDeleteWorkspace(refreshWorkspaces: () => void) {
+  ensureWorkspaceAliasListener();
   const { $api } = useNuxtApp();
   // Use centralized operation handling - all errors constructed by FetchFactory
   const deleteOperation = useOperation();
   const offline = useOfflineRuntime();
 
   const deleteWorkspace = async (id: string) => {
+    id = resolveWorkspaceId(id);
     if (!offline.isOnline.value) {
       await offline.queue({ entity: "workspace", operation: "workspace.delete", entityId: id, changedFields: ["deleted"], payload: {} });
       refreshWorkspaces();
@@ -183,6 +236,7 @@ export function useDeleteWorkspace(refreshWorkspaces: () => void) {
 }
 
 export function useUpdateWorkspace() {
+  ensureWorkspaceAliasListener();
   const { $api } = useNuxtApp();
   // Use centralized operation handling - all errors constructed by FetchFactory
   const updateOperation = useOperation<WorkspaceSummary>();
@@ -191,6 +245,7 @@ export function useUpdateWorkspace() {
   const updateWorkspace = async (
     payload: UpdateWorkspaceDTO
   ) => {
+    payload = { ...payload, id: resolveWorkspaceId(payload.id) };
     if (!offline.isOnline.value) {
       const data = { ...payload } as Record<string, unknown>;
       delete data.id;

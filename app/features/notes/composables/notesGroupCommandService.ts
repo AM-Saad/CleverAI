@@ -6,10 +6,10 @@ import type { NotesLayoutQueue } from "./notesLayoutQueue";
 import { createNotesTempId } from "./tempIds";
 
 export interface NotesGroupCommandService {
-  createGroup(title: string): string | null;
-  renameGroup(id: string, title: string): boolean;
-  deleteGroup(id: string): boolean;
-  reorderGroups(orderedGroups: NoteGroup[]): boolean;
+  createGroup(title: string): Promise<string | null>;
+  renameGroup(id: string, title: string): Promise<boolean>;
+  deleteGroup(id: string): Promise<boolean>;
+  reorderGroups(orderedGroups: NoteGroup[]): Promise<boolean>;
 }
 
 export function createNotesGroupCommandService(input: {
@@ -40,18 +40,13 @@ export function createNotesGroupCommandService(input: {
   } = input;
   let groupLayoutGeneration = 0;
 
-  const runBackground = (work: () => Promise<void>) => {
-    void work().catch((error) => {
-      console.error("[NotesGroupCommandService] Background command failed", error);
-      setError(error);
-    });
-  };
-
   const setGroup = (group: NoteGroup) => {
     groups.value = new Map(groups.value).set(group.id, group);
   };
 
-  const createGroup: NotesGroupCommandService["createGroup"] = (title) => {
+  const createGroup: NotesGroupCommandService["createGroup"] = async (
+    title,
+  ) => {
     const now = new Date();
     const id = createNotesTempId("temp-group");
     const group: NoteGroup = {
@@ -65,7 +60,7 @@ export function createNotesGroupCommandService(input: {
     };
 
     setGroup(group);
-    runBackground(async () => {
+    try {
       await saveGroup(group);
       const currentGroup = groups.value.get(id) ?? group;
       await groupQueue.add({
@@ -79,21 +74,29 @@ export function createNotesGroupCommandService(input: {
       });
       await registerBackgroundSync();
       scheduleSync();
-    });
-
-    return id;
+      return id;
+    } catch (error) {
+      const nextGroups = new Map(groups.value);
+      nextGroups.delete(id);
+      groups.value = nextGroups;
+      setError(error);
+      return null;
+    }
   };
 
-  const renameGroup: NotesGroupCommandService["renameGroup"] = (id, title) => {
+  const renameGroup: NotesGroupCommandService["renameGroup"] = async (
+    id,
+    title,
+  ) => {
     const existing = groups.value.get(id);
     if (!existing) return false;
 
     const nextGroup = { ...existing, title, updatedAt: new Date() };
     setGroup(nextGroup);
-    runBackground(async () => {
+    try {
       await saveGroup(nextGroup);
       const currentGroup = groups.value.get(id);
-      if (!currentGroup) return;
+      if (!currentGroup) return false;
       await groupQueue.add({
         id,
         operation: id.startsWith("temp-") ? "create" : "rename",
@@ -106,19 +109,21 @@ export function createNotesGroupCommandService(input: {
       });
       await registerBackgroundSync();
       scheduleSync();
-    });
-
-    return true;
+      return true;
+    } catch (error) {
+      setGroup(existing);
+      setError(error);
+      return false;
+    }
   };
 
-  const deleteGroup: NotesGroupCommandService["deleteGroup"] = (id) => {
+  const deleteGroup: NotesGroupCommandService["deleteGroup"] = async (id) => {
     const existing = groups.value.get(id);
     const nextGroups = new Map(groups.value);
     nextGroups.delete(id);
     groups.value = nextGroups;
 
-    runBackground(async () => {
-      await deleteGroupLocal(id);
+    try {
       await groupQueue.add({
         id,
         operation: "delete",
@@ -126,16 +131,35 @@ export function createNotesGroupCommandService(input: {
         updatedAt: Date.now(),
         localVersion: 1,
         serverVersion: existing?.version,
+        rollbackData: existing as unknown as
+          | Record<string, unknown>
+          | undefined,
       });
+      // Keep a server-backed canonical snapshot until the server acknowledges
+      // the tombstone. A never-synced temp group can be removed immediately.
+      if (/^(temp-|local:)/.test(id)) await deleteGroupLocal(id);
       await registerBackgroundSync();
       scheduleSync();
-    });
-
-    return true;
+      return true;
+    } catch (error) {
+      if (existing) {
+        setGroup(existing);
+        try {
+          await saveGroup(existing);
+        } catch {
+          /* retain memory rollback */
+        }
+      }
+      setError(error);
+      return false;
+    }
   };
 
-  const reorderGroups: NotesGroupCommandService["reorderGroups"] = (orderedGroups) => {
+  const reorderGroups: NotesGroupCommandService["reorderGroups"] = async (
+    orderedGroups,
+  ) => {
     const generation = ++groupLayoutGeneration;
+    const previousGroups = groups.value;
     const nextGroups = new Map(groups.value);
     const groupOrders: NoteGroupLayoutItem[] = [];
 
@@ -146,10 +170,10 @@ export function createNotesGroupCommandService(input: {
     });
 
     groups.value = nextGroups;
-    runBackground(async () => {
-      if (generation !== groupLayoutGeneration) return;
+    try {
+      if (generation !== groupLayoutGeneration) return true;
       const existingLayout = await layoutQueue.load(workspaceId);
-      if (generation !== groupLayoutGeneration) return;
+      if (generation !== groupLayoutGeneration) return true;
       await layoutQueue.save({
         id: workspaceId,
         workspaceId,
@@ -158,13 +182,16 @@ export function createNotesGroupCommandService(input: {
         notes: existingLayout?.notes ?? [],
         groups: groupOrders,
       });
-      if (generation !== groupLayoutGeneration) return;
+      if (generation !== groupLayoutGeneration) return true;
       await layoutQueue.registerBackgroundSync();
       await saveGroups(Array.from(nextGroups.values()));
       scheduleSync();
-    });
-
-    return true;
+      return true;
+    } catch (error) {
+      if (generation === groupLayoutGeneration) groups.value = previousGroups;
+      setError(error);
+      return false;
+    }
   };
 
   return {

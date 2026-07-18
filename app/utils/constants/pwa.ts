@@ -3,7 +3,11 @@
 
 // ===== SERVICE WORKER CONSTANTS =====
 export const SW_CONFIG = {
-  VERSION: "v2.0.4-enhanced",
+  VERSION: "v2.0.5-enhanced",
+  // Changes only when ownership/semantics of a durable sync queue change.
+  // Unlike an asset update, protocol upgrades must activate immediately to
+  // prevent an old worker from draining a queue with obsolete rules.
+  SYNC_PROTOCOL: "notes-v1.1-board-v2-single-projection",
   DEBUG_VALUE: "1",
   UPDATE_CHECK_INTERVAL: 30000, // 30 seconds
   UPDATE_SETTLE_DELAY: 1500, // 1.5 seconds
@@ -97,20 +101,15 @@ export const IDB_RETRY_CONFIG = {
 
 // ===== MESSAGE TYPES =====
 export const SW_MESSAGE_TYPES = {
-  // Notes sync specific
+  OFFLINE_SYNC_STARTED: "OFFLINE_SYNC_STARTED",
+  OFFLINE_SYNCED: "OFFLINE_SYNCED",
+  OFFLINE_SYNC_ERROR: "OFFLINE_SYNC_ERROR",
+
   SYNC_NOTES: "SYNC_NOTES",
   NOTES_SYNC_STARTED: "NOTES_SYNC_STARTED",
   NOTES_SYNCED: "NOTES_SYNCED",
   NOTES_SYNC_ERROR: "NOTES_SYNC_ERROR",
   NOTES_SYNC_CONFLICTS: "NOTES_SYNC_CONFLICTS",
-  // Board items sync specific
-  SYNC_BOARD_ITEMS: "SYNC_BOARD_ITEMS",
-  BOARD_ITEMS_SYNC_STARTED: "BOARD_ITEMS_SYNC_STARTED",
-  BOARD_ITEMS_SYNCED: "BOARD_ITEMS_SYNCED",
-  BOARD_ITEMS_SYNC_ERROR: "BOARD_ITEMS_SYNC_ERROR",
-  OFFLINE_SYNC_STARTED: "OFFLINE_SYNC_STARTED",
-  OFFLINE_SYNCED: "OFFLINE_SYNCED",
-  OFFLINE_SYNC_ERROR: "OFFLINE_SYNC_ERROR",
 
   // Service worker control
   SW_ACTIVATED: "SW_ACTIVATED",
@@ -165,7 +164,6 @@ export const AI_WORKER_MESSAGE_TYPES = {
 export const SYNC_TAGS = {
   CONTENT: "content-sync",
   NOTES: "notes-sync",
-  BOARD_ITEMS: "board-items-sync",
   OFFLINE_V2: "offline-v2-sync",
 } as const;
 

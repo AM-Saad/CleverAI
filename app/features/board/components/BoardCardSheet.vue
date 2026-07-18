@@ -4,7 +4,7 @@
     :title="live ? 'New card' : isCreate ? 'New card' : 'Edit card'"
     :morph-name="MORPH_NAME"
     :morphing="morphing"
-    @update:open="emit('update:open', $event)"
+    @update:open="onOpenChange"
     @closed="emit('closed')"
   >
     <div class="bcs">
@@ -216,6 +216,7 @@ const contentHtml = ref("");
 const columnId = ref<string | null>(null);
 const due = ref("");
 const selected = ref<Set<string>>(new Set());
+let finalPayloadEmitted = false;
 
 const hasContent = computed(
   () => contentHtml.value.replace(/<[^>]*>/g, "").trim().length > 0,
@@ -265,6 +266,7 @@ watch(
       cancelAddTag();
       return;
     }
+    finalPayloadEmitted = false;
     contentHtml.value = props.item?.content ?? "";
     columnId.value =
       props.item?.columnId ??
@@ -308,6 +310,12 @@ function flushLiveUpdate() {
   }
   if (props.live) emit("live-update", currentPayload());
 }
+function onOpenChange(open: boolean) {
+  // Swipe/back dismissal must publish the final editor state before the parent
+  // changes `open` and starts capture finalization.
+  if (!open && props.live && !finalPayloadEmitted) flushLiveUpdate();
+  emit("update:open", open);
+}
 watch([columnId, due, selected], () => scheduleLiveUpdate());
 onBeforeUnmount(() => {
   if (liveTimer) clearTimeout(liveTimer);
@@ -332,10 +340,13 @@ function toggleTag(id: string) {
 }
 
 function onSave() {
-  if (props.live) {
-    // Done: flush any pending stream, then let the parent close/finalize.
-    flushLiveUpdate();
+  if (liveTimer) {
+    clearTimeout(liveTimer);
+    liveTimer = null;
   }
+  finalPayloadEmitted = true;
+  // Save is the one final payload. Emitting a live update here as well made the
+  // parent apply the same revision twice.
   emit("save", currentPayload());
 }
 
@@ -346,6 +357,7 @@ function onOpenFull() {
     clearTimeout(liveTimer);
     liveTimer = null;
   }
+  finalPayloadEmitted = true;
   emit("open-full", currentPayload());
 }
 </script>

@@ -1,8 +1,12 @@
-import type { OfflineEntity, OfflineMutation } from "@@/shared/utils/offline-sync.contract";
+import type {
+  OfflineEntity,
+  OfflineMutation,
+  OfflineRelatedEntityResult,
+} from "@@/shared/utils/offline-sync.contract";
 // Relative imports keep this repository usable by both Nuxt and the raw
 // esbuild service-worker bundle (which does not know Nuxt's `~` alias).
 import { DB_CONFIG } from "../constants/pwa";
-import { deleteRecord, getAllRecords, openUnifiedDB, sanitizeForIDB } from "../idb";
+import { getAllRecords, openUnifiedDB, sanitizeForIDB } from "../idb";
 import type {
   OfflineEntityRecord,
   StoredOfflineConflict,
@@ -39,7 +43,37 @@ function containsValue(value: unknown, target: string): boolean {
   return false;
 }
 
-/** Remove a cancelled create and every still-pending mutation that depends on it. */
+function comparableOfflineValue(value: unknown): unknown {
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) return value.map(comparableOfflineValue);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+        key,
+        comparableOfflineValue(item),
+      ]),
+    );
+  return value;
+}
+
+function snapshotMatchesPayload(
+  snapshot: Record<string, unknown>,
+  payload: Record<string, unknown>,
+) {
+  return Object.entries(payload).every(
+    ([field, value]) =>
+      JSON.stringify(comparableOfflineValue(snapshot[field])) ===
+      JSON.stringify(comparableOfflineValue(value)),
+  );
+}
+
+/**
+ * Remove a cancelled create and every still-pending mutation that depends on
+ * it. Dependent updates are restored to their pre-command snapshot; only
+ * dependent creates disappear. Deleting every projection here used to erase
+ * canonical local data when an update happened to reference a cancelled temp
+ * parent.
+ */
 function cancelDependentMutations(
   mutationStore: IDBObjectStore,
   entityStore: IDBObjectStore,
@@ -62,7 +96,22 @@ function cancelDependentMutations(
   for (const candidate of mutations) {
     if (!cancelled.has(candidate.id)) continue;
     mutationStore.delete(candidate.id);
-    entityStore.delete(scopedId(accountId, candidate.entity, candidate.entityId));
+    const entityKey = scopedId(accountId, candidate.entity, candidate.entityId);
+    if (candidate.rollbackData) {
+      entityStore.put(sanitizeForIDB({
+        id: entityKey,
+        accountId,
+        entity: candidate.entity,
+        entityId: candidate.entityId,
+        workspaceId: candidate.workspaceId,
+        version: candidate.baseVersion ?? 0,
+        updatedAt: now(),
+        deleted: false,
+        data: candidate.rollbackData,
+      }));
+    } else {
+      entityStore.delete(entityKey);
+    }
   }
 }
 
@@ -137,6 +186,10 @@ export async function replaceOfflinePackEntities(input: {
       .map((mutation) => scopedId(input.accountId, mutation.entity, mutation.entityId)),
   );
   for (const record of existing) {
+    if (record.accountId === input.accountId && record.localDirty)
+      protectedEntities.add(record.id);
+  }
+  for (const record of existing) {
     if (record.accountId !== input.accountId) continue;
     // An account pack is authoritative for every entity in that account; a
     // workspace pack is authoritative only for that workspace.  Treating an
@@ -193,6 +246,10 @@ export async function removeOfflinePack(input: { accountId: string; workspaceId?
     .filter((mutation) => mutation.accountId === input.accountId && ["pending", "syncing", "retry", "blocked", "conflict"].includes(mutation.status))
     .map((mutation) => scopedId(input.accountId, mutation.entity, mutation.entityId)));
   for (const record of allEntities) {
+    if (record.accountId === input.accountId && record.localDirty)
+      protectedEntities.add(record.id);
+  }
+  for (const record of allEntities) {
     const inScope = input.workspaceId ? record.workspaceId === input.workspaceId : true;
     if (record.accountId === input.accountId && inScope && !protectedEntities.has(record.id)) entities.delete(record.id);
   }
@@ -237,6 +294,7 @@ export async function commitOfflineMutation(input: {
     ...input.mutation,
     accountId: input.accountId,
     updatedAt: now(),
+    localRevision: (input.mutation as StoredOfflineMutation).localRevision ?? 1,
   };
 
   // Updates are coalesced by entity. Ordered events such as grades are never
@@ -254,13 +312,18 @@ export async function commitOfflineMutation(input: {
       if (mutation.operation.endsWith(".delete") && existing.operation.endsWith(".create")) {
         cancelDependentMutations(mutationStore, entityStore, all, input.accountId, existing.id);
       } else {
+        const rollbackData = existing.operation.endsWith(".create")
+          ? existing.rollbackData
+          : existing.rollbackData ?? mutation.rollbackData;
         mutation.id = existing.id;
         mutation.createdAt = existing.createdAt;
+        mutation.localRevision = (existing.localRevision ?? 1) + 1;
         mutation.operation = mutation.operation.endsWith(".delete") ? mutation.operation : existing.operation.endsWith(".create") ? existing.operation : mutation.operation;
         mutation.payload = mutation.operation.endsWith(".delete") ? mutation.payload : { ...existing.payload, ...mutation.payload };
         mutation.changedFields = [...new Set([...existing.changedFields, ...mutation.changedFields])];
         mutation.dependsOn = [...new Set([...existing.dependsOn, ...mutation.dependsOn])];
         mutation.attempts = existing.attempts;
+        mutation.rollbackData = rollbackData;
         mutationStore.put(sanitizeForIDB(mutation));
       }
     } else {
@@ -288,6 +351,7 @@ export async function commitOfflineMutation(input: {
       id: scopedId(input.accountId, input.localRecord.entity, input.localRecord.entityId),
       accountId: input.accountId,
       updatedAt: now(),
+      localDirty: false,
     };
     entityStore.put(sanitizeForIDB(record));
   } else if (mutation.operation.endsWith(".delete")) {
@@ -304,6 +368,7 @@ export async function setMutationStatus(
   ids: string[],
   status: StoredOfflineMutation["status"],
   lastError?: string,
+  expectedClaimToken?: string,
 ): Promise<void> {
   if (!ids.length) return;
   const db = await openUnifiedDB();
@@ -311,11 +376,89 @@ export async function setMutationStatus(
   const store = tx.objectStore(stores.OFFLINE_MUTATIONS);
   for (const id of ids) {
     const existing = await request(store.get(id)) as StoredOfflineMutation | undefined;
-    if (existing?.accountId === accountId) {
-      store.put({ ...existing, status, lastError, updatedAt: now(), attempts: status === "retry" ? existing.attempts + 1 : existing.attempts });
+    if (existing?.accountId === accountId && (!expectedClaimToken || existing.claimToken === expectedClaimToken)) {
+      store.put(sanitizeForIDB({
+        ...existing,
+        status,
+        lastError,
+        updatedAt: now(),
+        attempts: status === "retry" ? existing.attempts + 1 : existing.attempts,
+        ...(status === "syncing" ? {} : { claimToken: undefined, claimedAt: undefined }),
+      }));
     }
   }
   await complete(tx);
+}
+
+/**
+ * Atomically claims and returns the exact payload revision that may be sent.
+ * A dependency outside this claim, or an in-flight write to the same entity,
+ * keeps the candidate queued. This is the cross-tab/service-worker sync lock.
+ */
+export async function claimOfflineMutations(input: {
+  accountId: string;
+  ids: string[];
+  claimToken: string;
+  claimedAt?: number;
+}): Promise<StoredOfflineMutation[]> {
+  if (!input.ids.length) return [];
+  const db = await openUnifiedDB();
+  const tx = db.transaction(stores.OFFLINE_MUTATIONS, "readwrite");
+  const store = tx.objectStore(stores.OFFLINE_MUTATIONS);
+  const all = await request(store.getAll()) as StoredOfflineMutation[];
+  const byId = new Map(all.map((mutation) => [mutation.id, mutation]));
+  const requested = new Set(input.ids);
+  const claimable = new Map<string, StoredOfflineMutation>();
+
+  for (const id of input.ids) {
+    const mutation = byId.get(id);
+    if (!mutation || mutation.accountId !== input.accountId || !["pending", "retry"].includes(mutation.status)) continue;
+    const predecessorInFlight = all.some((candidate) =>
+      candidate.accountId === input.accountId &&
+      candidate.id !== mutation.id &&
+      candidate.entity === mutation.entity &&
+      candidate.entityId === mutation.entityId &&
+      candidate.status === "syncing",
+    );
+    if (!predecessorInFlight) claimable.set(id, mutation);
+  }
+
+  // Removing an unready predecessor must also remove every child selected in
+  // this transaction. Repeat until the claim set is stable.
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const [id, mutation] of claimable) {
+      const hasUnresolvedDependency = mutation.dependsOn.some((dependencyId) => {
+        const dependency = byId.get(dependencyId);
+        if (!dependency || dependency.accountId !== input.accountId) return false;
+        return !requested.has(dependencyId) || !claimable.has(dependencyId);
+      });
+      if (hasUnresolvedDependency) {
+        claimable.delete(id);
+        changed = true;
+      }
+    }
+  }
+
+  const claimedAt = input.claimedAt ?? now();
+  const claimed: StoredOfflineMutation[] = [];
+  for (const id of input.ids) {
+    const mutation = claimable.get(id);
+    if (!mutation) continue;
+    const next: StoredOfflineMutation = {
+      ...mutation,
+      status: "syncing",
+      claimToken: input.claimToken,
+      claimedAt,
+      localRevision: mutation.localRevision ?? 1,
+      updatedAt: claimedAt,
+    };
+    store.put(sanitizeForIDB(next));
+    claimed.push(next);
+  }
+  await complete(tx);
+  return claimed;
 }
 
 /**
@@ -328,12 +471,18 @@ export async function recoverInterruptedMutations(accountId: string): Promise<nu
   const tx = db.transaction(stores.OFFLINE_MUTATIONS, "readwrite");
   const store = tx.objectStore(stores.OFFLINE_MUTATIONS);
   const mutations = await request(store.getAll()) as StoredOfflineMutation[];
+  const staleBefore = now() - 2 * 60 * 1000;
   let recovered = 0;
   for (const mutation of mutations) {
     if (mutation.accountId !== accountId || mutation.status !== "syncing") continue;
+    // A newly opened tab must not steal a live service-worker or sibling-tab
+    // request. Rows from older builds have no claimedAt and are safe to retry.
+    if (mutation.claimedAt && mutation.claimedAt > staleBefore) continue;
     store.put(sanitizeForIDB({
       ...mutation,
       status: "retry",
+      claimToken: undefined,
+      claimedAt: undefined,
       lastError: "The previous sync was interrupted. Retrying safely.",
       updatedAt: now(),
       attempts: mutation.attempts + 1,
@@ -372,6 +521,12 @@ export async function updateOfflineSyncMetadata(
   return next;
 }
 
+export type OfflineSyncProjectionResult = {
+  entityId: string;
+  hasPendingSuccessor: boolean;
+  relatedPendingSuccessors: Record<string, boolean>;
+};
+
 export async function applySyncResult(input: {
   accountId: string;
   mutation: StoredOfflineMutation;
@@ -381,10 +536,11 @@ export async function applySyncResult(input: {
     entityId?: string;
     version?: number;
     canonical?: Record<string, unknown> | null;
+    related?: OfflineRelatedEntityResult[];
     conflict?: Record<string, unknown>;
     message?: string;
   };
-}): Promise<void> {
+}): Promise<OfflineSyncProjectionResult> {
   const db = await openUnifiedDB();
   const tx = db.transaction(
     [stores.OFFLINE_ENTITIES, stores.OFFLINE_MUTATIONS, stores.OFFLINE_CONFLICTS],
@@ -394,23 +550,153 @@ export async function applySyncResult(input: {
   const entities = tx.objectStore(stores.OFFLINE_ENTITIES);
   const conflicts = tx.objectStore(stores.OFFLINE_CONFLICTS);
   const result = input.result;
+  const projection: OfflineSyncProjectionResult = {
+    entityId: result.entityId ?? input.mutation.entityId,
+    hasPendingSuccessor: false,
+    relatedPendingSuccessors: {},
+  };
+  const current = await request(mutations.get(input.mutation.id)) as StoredOfflineMutation | undefined;
+  const hasLeaseIdentity = Boolean(input.mutation.claimToken || input.mutation.localRevision);
+  const ownsCurrentRevision = Boolean(current) && (
+    !hasLeaseIdentity || (
+      current!.claimToken === input.mutation.claimToken &&
+      (current!.localRevision ?? 1) === (input.mutation.localRevision ?? 1)
+    )
+  );
   if (result.status === "applied") {
-    mutations.delete(input.mutation.id);
-    if (result.canonical && result.entity && result.entityId) {
+    if (ownsCurrentRevision) mutations.delete(input.mutation.id);
+    const allMutations = await request(mutations.getAll()) as StoredOfflineMutation[];
+    const allConflicts = await request(conflicts.getAll()) as StoredOfflineConflict[];
+    const canonicalEntityId = result.entityId ?? current?.entityId ?? input.mutation.entityId;
+    const canonicalEntity = result.entity ?? input.mutation.entity;
+    projection.entityId = canonicalEntityId;
+    const successors = allMutations.filter((candidate) =>
+      candidate.accountId === input.accountId &&
+      candidate.id !== input.mutation.id &&
+      candidate.entity === input.mutation.entity &&
+      candidate.entityId === canonicalEntityId &&
+      ["pending", "retry", "blocked"].includes(candidate.status),
+    );
+    if (!ownsCurrentRevision && current) successors.push(current);
+    const entityKey = scopedId(
+      input.accountId,
+      canonicalEntity,
+      canonicalEntityId,
+    );
+    const localEntity = await request(entities.get(entityKey)) as
+      | OfflineEntityRecord
+      | undefined;
+    const hasNewerDraft = Boolean(
+      localEntity?.localDirty &&
+      !snapshotMatchesPayload(localEntity.data, input.mutation.payload),
+    );
+    projection.hasPendingSuccessor = successors.length > 0 || hasNewerDraft;
+    if (result.version !== undefined) {
+      for (const successor of successors) {
+        if (successor.operation.endsWith(".create")) continue;
+        mutations.put(sanitizeForIDB({
+          ...successor,
+          baseVersion: result.version,
+          updatedAt: now(),
+        }));
+      }
+    }
+    if (result.canonical) {
+      const preserveNewerLocalState = Boolean(localEntity) &&
+        (successors.length > 0 || hasNewerDraft);
       entities.put(sanitizeForIDB({
-        id: scopedId(input.accountId, result.entity, result.entityId),
+        id: entityKey,
         accountId: input.accountId,
-        entity: result.entity,
-        entityId: result.entityId,
-        workspaceId: (result.canonical.workspaceId as string | undefined) ?? input.mutation.workspaceId,
+        entity: canonicalEntity,
+        entityId: canonicalEntityId,
+        workspaceId: preserveNewerLocalState
+          ? localEntity!.workspaceId
+          : (result.canonical.workspaceId as string | undefined) ?? input.mutation.workspaceId,
         version: result.version ?? 0,
         updatedAt: now(),
-        deleted: input.mutation.operation.endsWith(".delete"),
-        data: result.canonical,
+        localDirty: preserveNewerLocalState ? localEntity!.localDirty : false,
+        deleted: preserveNewerLocalState ? localEntity!.deleted : input.mutation.operation.endsWith(".delete"),
+        data: preserveNewerLocalState ? localEntity!.data : result.canonical,
       }));
     }
+    for (const related of result.related ?? []) {
+      const relatedKey = scopedId(input.accountId, related.entity, related.entityId);
+      const relatedEntity = await request(entities.get(relatedKey)) as OfflineEntityRecord | undefined;
+      const relatedSuccessors = allMutations.filter((candidate) =>
+        candidate.accountId === input.accountId &&
+        candidate.entity === related.entity &&
+        candidate.entityId === related.entityId &&
+        ["pending", "retry", "blocked"].includes(candidate.status),
+      );
+      const hasRelatedDraft = Boolean(
+        relatedEntity?.localDirty &&
+        related.canonical &&
+        !snapshotMatchesPayload(
+          relatedEntity.data,
+          Object.fromEntries(
+            Object.entries(related.canonical).filter(
+              ([field]) =>
+                field in relatedEntity.data &&
+                ![
+                  "id",
+                  "userId",
+                  "createdAt",
+                  "updatedAt",
+                  "offlineRevision",
+                ].includes(field),
+            ),
+          ),
+        ),
+      );
+      projection.relatedPendingSuccessors[
+        `${related.entity}:${related.entityId}`
+      ] = relatedSuccessors.length > 0 || hasRelatedDraft;
+      const relatedConflict = allConflicts.find(
+        (conflict) =>
+          conflict.accountId === input.accountId &&
+          conflict.entity === related.entity &&
+          conflict.entityId === related.entityId,
+      );
+      if (relatedConflict) {
+        conflicts.put(sanitizeForIDB({
+          ...relatedConflict,
+          serverVersion: related.version,
+          serverSnapshot: related.canonical ?? relatedConflict.serverSnapshot,
+        }));
+      }
+      for (const successor of relatedSuccessors) {
+        if (successor.operation.endsWith(".create")) continue;
+        mutations.put(sanitizeForIDB({
+          ...successor,
+          baseVersion: related.version,
+          updatedAt: now(),
+        }));
+      }
+      if (related.canonical) {
+        const preserveNewerLocalState = Boolean(relatedEntity) &&
+          (relatedSuccessors.length > 0 || hasRelatedDraft);
+        entities.put(sanitizeForIDB({
+          id: relatedKey,
+          accountId: input.accountId,
+          entity: related.entity,
+          entityId: related.entityId,
+          workspaceId: preserveNewerLocalState
+            ? relatedEntity!.workspaceId
+            : (related.canonical.workspaceId as string | undefined),
+          version: related.version,
+          updatedAt: now(),
+          localDirty: preserveNewerLocalState ? relatedEntity!.localDirty : false,
+          deleted: preserveNewerLocalState ? relatedEntity!.deleted : false,
+          data: preserveNewerLocalState ? relatedEntity!.data : related.canonical,
+        }));
+      }
+    }
   } else if (result.status === "conflict") {
-    mutations.put({ ...input.mutation, status: "conflict", lastError: result.message, updatedAt: now() });
+    if (!ownsCurrentRevision) {
+      await complete(tx);
+      return projection;
+    }
+    mutations.put(sanitizeForIDB({ ...current!, status: "conflict", claimToken: undefined, claimedAt: undefined, lastError: result.message, updatedAt: now() }));
     conflicts.put(sanitizeForIDB({
       id: scopedId(input.accountId, input.mutation.id),
       accountId: input.accountId,
@@ -423,16 +709,54 @@ export async function applySyncResult(input: {
       reason: String(result.conflict?.reason ?? "The same fields changed on another device."),
       createdAt: now(),
     }));
-  } else {
-    mutations.put({
-      ...input.mutation,
-      status: result.status,
-      attempts: result.status === "retry" ? input.mutation.attempts + 1 : input.mutation.attempts,
+  } else if (result.status === "rejected") {
+    if (!ownsCurrentRevision) {
+      await complete(tx);
+      return projection;
+    }
+    const rejected = current!;
+    mutations.put(sanitizeForIDB({
+      ...rejected,
+      status: "rejected",
+      claimToken: undefined,
+      claimedAt: undefined,
       lastError: result.message,
       updatedAt: now(),
-    });
+    }));
+    const entityKey = scopedId(input.accountId, rejected.entity, rejected.entityId);
+    if (rejected.rollbackData) {
+      entities.put(sanitizeForIDB({
+        id: entityKey,
+        accountId: input.accountId,
+        entity: rejected.entity,
+        entityId: rejected.entityId,
+        workspaceId: rejected.workspaceId,
+        version: rejected.baseVersion ?? 0,
+        updatedAt: now(),
+        localDirty: false,
+        deleted: false,
+        data: rejected.rollbackData,
+      }));
+    } else if (rejected.operation.endsWith(".create")) {
+      entities.delete(entityKey);
+    }
+  } else {
+    if (!ownsCurrentRevision) {
+      await complete(tx);
+      return projection;
+    }
+    mutations.put(sanitizeForIDB({
+      ...current!,
+      status: result.status,
+      claimToken: undefined,
+      claimedAt: undefined,
+      attempts: result.status === "retry" ? current!.attempts + 1 : current!.attempts,
+      lastError: result.message,
+      updatedAt: now(),
+    }));
   }
   await complete(tx);
+  return projection;
 }
 
 function remapValue(value: unknown, idMap: Record<string, string>): unknown {
@@ -445,7 +769,11 @@ function remapValue(value: unknown, idMap: Record<string, string>): unknown {
 }
 
 /** Replace temporary IDs in local snapshots and still-pending dependent writes. */
-export async function remapOfflineIds(accountId: string, idMap: Record<string, string>): Promise<void> {
+export async function remapOfflineIds(
+  accountId: string,
+  idMap: Record<string, string>,
+  acknowledgement?: { serverVersion?: number; mutationId?: string },
+): Promise<void> {
   if (!Object.keys(idMap).length) return;
   const db = await openUnifiedDB();
   const tx = db.transaction([stores.OFFLINE_ENTITIES, stores.OFFLINE_MUTATIONS], "readwrite");
@@ -463,11 +791,22 @@ export async function remapOfflineIds(accountId: string, idMap: Record<string, s
   const allMutations = await request(mutations.getAll()) as StoredOfflineMutation[];
   for (const record of allMutations) {
     if (record.accountId !== accountId) continue;
+    const remappedEntityId = idMap[record.entityId];
+    const convertQueuedCreate = Boolean(remappedEntityId) &&
+      record.id !== acknowledgement?.mutationId &&
+      record.operation.endsWith(".create");
     mutations.put(sanitizeForIDB({
       ...record,
-      entityId: idMap[record.entityId] ?? record.entityId,
+      entityId: remappedEntityId ?? record.entityId,
       workspaceId: record.workspaceId ? idMap[record.workspaceId] ?? record.workspaceId : undefined,
       payload: remapValue(record.payload, idMap) as Record<string, unknown>,
+      rollbackData: record.rollbackData
+        ? remapValue(record.rollbackData, idMap) as Record<string, unknown>
+        : record.rollbackData,
+      ...(convertQueuedCreate && {
+        operation: `${record.entity}.update`,
+        baseVersion: acknowledgement?.serverVersion ?? 1,
+      }),
     }));
   }
   await complete(tx);
@@ -525,14 +864,20 @@ export async function resolveOfflineConflict(input: { accountId: string; mutatio
           workspaceId: typeof snapshot.workspaceId === "string" ? snapshot.workspaceId : mutation.workspaceId,
           version: conflict?.serverVersion ?? 0,
           updatedAt: now(),
+          localDirty: false,
           data: snapshot,
         }));
       } else {
         const existing = await request(entityStore.get(key)) as OfflineEntityRecord | undefined;
-        if (existing) entityStore.put({ ...existing, deleted: true, version: conflict?.serverVersion ?? existing.version, updatedAt: now() });
+        if (existing) entityStore.put({ ...existing, deleted: true, localDirty: false, version: conflict?.serverVersion ?? existing.version, updatedAt: now() });
       }
     }
-    else mutationStore.put({ ...mutation, status: "pending", baseVersion: conflict?.serverVersion, lastError: undefined, updatedAt: now() });
+    else {
+      mutationStore.put({ ...mutation, status: "pending", baseVersion: conflict?.serverVersion, lastError: undefined, updatedAt: now() });
+      const key = scopedId(input.accountId, mutation.entity, mutation.entityId);
+      const existing = await request(entityStore.get(key)) as OfflineEntityRecord | undefined;
+      if (existing) entityStore.put({ ...existing, localDirty: false, updatedAt: now() });
+    }
   }
   conflictStore.delete(scopedId(input.accountId, input.mutationId));
   await complete(tx);
@@ -565,43 +910,4 @@ export async function clearOfflineSession(accountId: string): Promise<void> {
   const tx = db.transaction(stores.OFFLINE_SESSIONS, "readwrite");
   tx.objectStore(stores.OFFLINE_SESSIONS).delete(accountId);
   await complete(tx);
-}
-
-/**
- * The former generic form queue acknowledged an entire HTTP batch even when
- * individual records failed. Move its surviving records exactly once into the
- * typed outbox; unknown data is retained for recovery instead of being sent to
- * a stale endpoint or silently discarded.
- */
-export async function migrateLegacyForms(accountId: string): Promise<void> {
-  const db = await openUnifiedDB();
-  if (!db.objectStoreNames.contains(stores.FORMS)) return;
-  const forms = await getAllRecords<{ id: string; type?: string; payload?: Record<string, unknown>; createdAt?: number }>(db, stores.FORMS as StoreName);
-  for (const form of forms) {
-    const payload = form.payload ?? {};
-    const title = typeof payload.title === "string" ? payload.title : typeof payload.materialTitle === "string" ? payload.materialTitle : undefined;
-    const content = typeof payload.content === "string" ? payload.content : typeof payload.materialContent === "string" ? payload.materialContent : undefined;
-    const workspaceId = typeof payload.workspaceId === "string" ? payload.workspaceId : undefined;
-    if (form.type === "upload-material" && title && content && workspaceId) {
-      await commitOfflineMutation({
-        accountId,
-        mutation: {
-          id: form.id,
-          entity: "material",
-          operation: "material.create",
-          entityId: `local:${form.id}`,
-          workspaceId,
-          changedFields: ["title", "content", "type"],
-          payload: { workspaceId, title, content, type: payload.type ?? payload.materialType ?? "text" },
-          dependsOn: [], occurredAt: new Date(form.createdAt ?? now()).toISOString(), createdAt: form.createdAt ?? now(), attempts: 0, status: "pending", sequence: false,
-        },
-        localRecord: { entity: "material", entityId: `local:${form.id}`, workspaceId, version: 0, data: { id: `local:${form.id}`, workspaceId, title, content, type: payload.type ?? payload.materialType ?? "text" } },
-      });
-    } else {
-      const tx = db.transaction(stores.OFFLINE_LEGACY_RECOVERY, "readwrite");
-      tx.objectStore(stores.OFFLINE_LEGACY_RECOVERY).put({ id: `legacy:${form.id}`, accountId, sourceId: form.id, record: sanitizeForIDB(form), createdAt: now(), reason: "This legacy offline record could not be safely migrated." });
-      await complete(tx);
-    }
-    await deleteRecord(db, stores.FORMS as StoreName, form.id);
-  }
 }

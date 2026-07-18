@@ -26,8 +26,8 @@ export function positionBetween(lower?: string | null, upper?: string | null): s
 
   let prefix = "";
   for (let index = 0; index < 128; index++) {
-    const left = digitAt(lower, index, 0);
-    const right = digitAt(upper, index, base - 1);
+    const left = digitAt(lower ?? undefined, index, 0);
+    const right = digitAt(upper ?? undefined, index, base - 1);
     if (right - left > 1) return prefix + alphabet[Math.floor((left + right) / 2)]!;
     prefix += alphabet[left]!;
   }

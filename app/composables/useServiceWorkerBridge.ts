@@ -3,9 +3,7 @@ import {
   canUseServiceWorker,
   getServiceWorkerReadyRegistration,
 } from "../utils/serviceWorkerRuntime";
-import type {
-  OutgoingSWMessage,
-} from "../../shared/types/sw-messages";
+import type { OutgoingSWMessage } from "../../shared/types/sw-messages";
 
 type Incoming = OutgoingSWMessage;
 
@@ -31,7 +29,7 @@ export function useServiceWorkerBridge() {
     if (controllerChangeListener) {
       navigator.serviceWorker.removeEventListener(
         "controllerchange",
-        controllerChangeListener
+        controllerChangeListener,
       );
     }
 
@@ -61,7 +59,7 @@ export function useServiceWorkerBridge() {
     reg.addEventListener("updatefound", updateFoundListener);
     navigator.serviceWorker.addEventListener(
       "controllerchange",
-      controllerChangeListener
+      controllerChangeListener,
     );
   }
 
@@ -138,30 +136,17 @@ export function useServiceWorkerBridge() {
     navigator.serviceWorker.addEventListener("message", messageHandler);
   }
 
-  onMounted(async () => {
+  const initializeBridge = async () => {
     if (!canUseServiceWorker()) return;
     await ensureRegistration();
     startListening();
     checkForWaitingAndSignal().catch(() => {});
-  });
+  };
 
-  onBeforeUnmount(() => {
-    if (messageHandler) {
-      navigator.serviceWorker.removeEventListener("message", messageHandler);
-    }
-    if (registration.value && updateFoundListener) {
-      registration.value.removeEventListener(
-        "updatefound",
-        updateFoundListener
-      );
-    }
-    if (controllerChangeListener) {
-      navigator.serviceWorker.removeEventListener(
-        "controllerchange",
-        controllerChangeListener
-      );
-    }
-  });
+  // This is a module-scoped singleton and is also used from a Nuxt plugin.
+  // Initialize directly; component lifecycle cleanup would tear down the one
+  // shared listener while other consumers still rely on it.
+  void initializeBridge();
 
   async function activateUpdateAndReload() {
     requestSkipWaiting();

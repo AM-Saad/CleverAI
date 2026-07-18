@@ -1,7 +1,6 @@
 import type { NoteType } from "../../../../shared/utils/note.contract";
 import { normalizeWorkspaceNoteTitle } from "../../../../shared/utils/workspaceNote";
 import type { NotesLocalRepository } from "./notesLocalRepository";
-import type { NotesLayoutController } from "./notesLayoutController";
 import type { NotesMemoryStore } from "./notesMemoryStore";
 import type { NotesPendingQueue } from "./notesPendingQueue";
 import { createNotesTempId } from "./tempIds";
@@ -10,6 +9,8 @@ import {
   normalizeLocalNote,
   type NoteState,
 } from "./noteTransforms";
+import { withNotesWorkspaceMutationLock } from "./notesWorkspaceMutationLock";
+import { logNotesOperation } from "./notesOperationLog";
 
 export interface NotesCommandService {
   createNote(input: {
@@ -20,40 +21,36 @@ export interface NotesCommandService {
     metadata?: Record<string, unknown>;
     title?: string;
     groupId?: string | null;
-  }): Promise<string>;
+    deferSync?: boolean;
+  }): Promise<string | null>;
   updateNoteContent(input: {
     id: string;
     note: NoteState;
-    queueContentSave: (id: string, content: string, title?: string) => void;
+    queueContentSave: (
+      id: string,
+      content: string,
+      title?: string,
+    ) => Promise<boolean>;
   }): Promise<boolean>;
-  deleteNote(input: {
-    id: string;
-    note: NoteState;
-  }): Promise<boolean>;
+  deleteNote(input: { id: string; note: NoteState }): Promise<boolean>;
 }
 
 export function createNotesCommandService(input: {
   memoryStore: NotesMemoryStore;
   localRepository: NotesLocalRepository;
   pendingQueue: NotesPendingQueue;
-  layoutController: NotesLayoutController;
   registerBackgroundSync: () => Promise<void>;
   requestSync: () => void;
+  resolveNoteId?: (id: string) => string;
 }): NotesCommandService {
   const {
     memoryStore,
     localRepository,
     pendingQueue,
-    layoutController,
     registerBackgroundSync,
     requestSync,
+    resolveNoteId = (id) => id,
   } = input;
-
-  const runBackground = (work: () => Promise<void>) => {
-    void work().catch((error) => {
-      console.error("[NotesCommandService] Background command failed", error);
-    });
-  };
 
   const createNote: NotesCommandService["createNote"] = async ({
     workspaceId,
@@ -63,6 +60,7 @@ export function createNotesCommandService(input: {
     metadata,
     title,
     groupId,
+    deferSync = false,
   }) => {
     const tempId = createNotesTempId("temp");
     const resolvedContent = normalizeCreateContent(content, noteType);
@@ -92,37 +90,34 @@ export function createNotesCommandService(input: {
 
     memoryStore.upsert(optimisticNote);
     try {
-      await localRepository.save(optimisticNote);
-      const currentNote = memoryStore.get(tempId) ?? optimisticNote;
-      await pendingQueue.add({
-        id: tempId,
-        operation: "upsert",
-        updatedAt: Date.now(),
-        localVersion: 1,
-        workspaceId,
-        groupId: currentNote.groupId ?? null,
-        title: currentNote.title,
-        content: currentNote.content,
-        tags: currentNote.tags,
-        noteType: currentNote.noteType,
-        metadata: currentNote.metadata,
+      await withNotesWorkspaceMutationLock(workspaceId, async () => {
+        await localRepository.save(optimisticNote);
+        const currentNote = memoryStore.get(tempId) ?? optimisticNote;
+        await pendingQueue.add({
+          id: tempId,
+          operation: "upsert",
+          updatedAt: Date.now(),
+          localVersion: 1,
+          workspaceId,
+          groupId: currentNote.groupId ?? null,
+          title: currentNote.title,
+          content: currentNote.content,
+          tags: currentNote.tags,
+          noteType: currentNote.noteType,
+          metadata: currentNote.metadata,
+          order: currentNote.order,
+        });
+        await registerBackgroundSync();
       });
-      await registerBackgroundSync();
-      await layoutController.queueNoteLayout(
-        memoryStore.values().map((note) => ({
-          id: note.id,
-          groupId: note.groupId ?? null,
-          order: note.order,
-        })),
-      );
-      requestSync();
+      logNotesOperation("create-queued", { workspaceId, tempId, deferSync });
+      if (!deferSync) requestSync();
     } catch (error) {
-      memoryStore.upsert({
-        ...optimisticNote,
-        error:
-          "This note is visible in memory, but could not be saved locally. Keep this page open and retry.",
-      });
-      console.error("[NotesCommandService] Failed to persist created note", error);
+      memoryStore.remove(tempId);
+      console.error(
+        "[NotesCommandService] Failed to persist created note",
+        error,
+      );
+      return null;
     }
     return tempId;
   };
@@ -132,58 +127,105 @@ export function createNotesCommandService(input: {
     note,
     queueContentSave,
   }) => {
+    const initialId = resolveNoteId(id);
     const nextNote = normalizeLocalNote({
       ...note,
+      id: initialId,
       updatedAt: new Date(),
       isDirty: true,
     });
+    if (initialId !== id) memoryStore.remove(id);
     memoryStore.upsert(nextNote);
-    runBackground(async () => {
-      try {
-        await localRepository.save(nextNote);
-        const currentNote = memoryStore.get(id);
-        if (
-          !currentNote ||
-          currentNote.content !== nextNote.content ||
-          currentNote.title !== nextNote.title
-        ) {
-          return;
-        }
-        queueContentSave(id, nextNote.content, nextNote.title);
-      } catch (error) {
-        memoryStore.upsert({
-          ...nextNote,
-          error:
-            "This edit is visible in memory, but could not be saved locally. Keep this page open and retry.",
-        });
-        throw error;
-      }
-    });
-    return true;
+    try {
+      return await withNotesWorkspaceMutationLock(
+        nextNote.workspaceId,
+        async () => {
+          // The create acknowledgement may have won the lock before this
+          // debounced edit. Resolve again inside the lock so no temp-id write
+          // can land after the acknowledgement.
+          const durableId = resolveNoteId(id);
+          const durableNote = normalizeLocalNote({
+            ...nextNote,
+            id: durableId,
+          });
+          if (durableId !== id) {
+            memoryStore.remove(id);
+            memoryStore.upsert(durableNote);
+          }
+          await localRepository.save(durableNote);
+          if (durableId !== id) await localRepository.delete(id);
+          const currentNote = memoryStore.get(durableId);
+          if (
+            !currentNote ||
+            currentNote.content !== durableNote.content ||
+            currentNote.title !== durableNote.title
+          ) {
+            // A newer editor revision owns the next durable commit.
+            return true;
+          }
+          return await queueContentSave(
+            durableId,
+            durableNote.content,
+            durableNote.title,
+          );
+        },
+      );
+    } catch (error) {
+      memoryStore.upsert({
+        ...nextNote,
+        error:
+          "This edit is visible in memory, but could not be saved locally. Keep this page open and retry.",
+      });
+      console.error("[NotesCommandService] Failed to persist note edit", error);
+      return false;
+    }
   };
 
-  const deleteNote: NotesCommandService["deleteNote"] = async ({ id, note }) => {
+  const deleteNote: NotesCommandService["deleteNote"] = async ({
+    id,
+    note,
+  }) => {
+    const initialId = resolveNoteId(id);
     memoryStore.remove(id);
+    memoryStore.remove(initialId);
     try {
-      await localRepository.delete(id);
-      await pendingQueue.add({
-        id,
-        operation: "delete",
-        updatedAt: Date.now(),
-        localVersion: 1,
-        serverVersion: note.version,
-        workspaceId: note.workspaceId,
+      await withNotesWorkspaceMutationLock(note.workspaceId, async () => {
+        const durableId = resolveNoteId(id);
+        await pendingQueue.add({
+          id: durableId,
+          operation: "delete",
+          updatedAt: Date.now(),
+          localVersion: 1,
+          serverVersion: note.version,
+          workspaceId: note.workspaceId,
+          rollbackData: {
+            ...note,
+            id: durableId,
+          } as unknown as Record<string, unknown>,
+        });
+        // A never-synced temp create followed by delete has no canonical server
+        // row to retain. Server-backed notes stay in IndexedDB until ack.
+        if (/^(temp-|local:)/.test(durableId)) {
+          await localRepository.delete(durableId);
+        }
+        if (durableId !== id && /^(temp-|local:)/.test(id)) {
+          await localRepository.delete(id);
+        }
+        await registerBackgroundSync();
       });
-      await registerBackgroundSync();
       requestSync();
       return true;
     } catch (error) {
       memoryStore.upsert({
         ...note,
+        id: initialId,
         error:
           "Delete is visible in memory, but could not be saved locally. Retry before closing this page.",
       });
-      console.error("[NotesCommandService] Failed to persist delete tombstone", error);
+      console.error(
+        "[NotesCommandService] Failed to persist delete tombstone",
+        error,
+      );
       return false;
     }
   };

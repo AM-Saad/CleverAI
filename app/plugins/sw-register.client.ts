@@ -5,6 +5,7 @@ import {
   hasServiceWorkerSupport,
   isServiceWorkerRuntimeEnabled,
 } from "~/utils/serviceWorkerRuntime";
+import { SW_CONFIG } from "~/utils/constants/pwa";
 
 // Registers the custom service worker at /sw.js and migrates away from any lingering dev-sw.
 export default defineNuxtPlugin(() => {
@@ -16,14 +17,62 @@ export default defineNuxtPlugin(() => {
     getAllServiceWorkerRegistrations().then((registrations) => {
       for (const registration of registrations) {
         registration.unregister().then((success) => {
-          if (success) console.log("[SW] Unregistered service worker because runtime SW is disabled");
+          if (success)
+            console.log(
+              "[SW] Unregistered service worker because runtime SW is disabled",
+            );
         });
       }
     });
     return;
   }
 
-  const SW_URL = "/sw.js";
+  const SW_URL = `/sw.js?syncProtocol=${encodeURIComponent(SW_CONFIG.SYNC_PROTOCOL)}`;
+  const watchedRegistrations = new WeakSet<ServiceWorkerRegistration>();
+  let criticalReloadArmed = false;
+  const protocolOf = (worker: ServiceWorker | null | undefined) => {
+    if (!worker) return null;
+    try {
+      return new URL(worker.scriptURL).searchParams.get("syncProtocol");
+    } catch {
+      return null;
+    }
+  };
+  const activateCriticalProtocolUpgrade = (reg: ServiceWorkerRegistration) => {
+    const waiting = reg.waiting;
+    if (!waiting) return;
+    const activeProtocol = protocolOf(
+      navigator.serviceWorker.controller ?? reg.active,
+    );
+    const waitingProtocol = protocolOf(waiting);
+    if (
+      waitingProtocol === SW_CONFIG.SYNC_PROTOCOL &&
+      activeProtocol !== SW_CONFIG.SYNC_PROTOCOL
+    ) {
+      if (!criticalReloadArmed) {
+        criticalReloadArmed = true;
+        navigator.serviceWorker.addEventListener(
+          "controllerchange",
+          () => window.location.reload(),
+          { once: true },
+        );
+      }
+      waiting.postMessage({ type: "SKIP_WAITING" });
+    }
+  };
+  const watchCriticalProtocolUpgrade = (reg: ServiceWorkerRegistration) => {
+    activateCriticalProtocolUpgrade(reg);
+    if (watchedRegistrations.has(reg)) return;
+    watchedRegistrations.add(reg);
+    reg.addEventListener("updatefound", () => {
+      const installing = reg.installing;
+      installing?.addEventListener("statechange", () => {
+        if (installing.state === "installed") {
+          activateCriticalProtocolUpgrade(reg);
+        }
+      });
+    });
+  };
   const isDevSW = (reg: ServiceWorkerRegistration | null | undefined) =>
     !!reg &&
     (reg.active?.scriptURL.includes("dev-sw.js") ||
@@ -32,7 +81,8 @@ export default defineNuxtPlugin(() => {
 
   const registerCustom = async () => {
     try {
-      await navigator.serviceWorker.register(SW_URL);
+      const registration = await navigator.serviceWorker.register(SW_URL);
+      watchCriticalProtocolUpgrade(registration);
     } catch (err) {
       console.error("[SW] register error:", err);
     }
@@ -59,13 +109,19 @@ export default defineNuxtPlugin(() => {
         return;
       }
 
+      watchCriticalProtocolUpgrade(reg);
+
       // If it's not our /sw.js yet, ensure it's registered
       const currentUrl =
         reg.active?.scriptURL ||
         reg.waiting?.scriptURL ||
         reg.installing?.scriptURL ||
         "";
-      if (!currentUrl.includes("/sw.js")) {
+      if (
+        !currentUrl.includes("/sw.js") ||
+        protocolOf(reg.active ?? reg.waiting ?? reg.installing) !==
+          SW_CONFIG.SYNC_PROTOCOL
+      ) {
         await registerCustom();
       }
     } catch (err) {

@@ -5,7 +5,7 @@ import type { NoteLayoutItem } from "@@/shared/utils/note-sync.contract";
 import type { NoteState } from "../composables/useNotesStore";
 import type { NoteRowIntent } from "../composables/noteRowIntents";
 import { logNotesOperation } from "../composables/notesOperationLog";
-import { comparePosition } from "../../../shared/utils/position-key";
+import { comparePosition } from "@@/shared/utils/position-key";
 import DeleteConfirmationModal from "~/components/shared/DeleteConfirmationModal.vue";
 import NoteGroupSection from "./NoteGroupSection.vue";
 import NotesSearch from "~/features/notes/components/NotesSearch.vue";

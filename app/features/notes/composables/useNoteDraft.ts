@@ -1,8 +1,9 @@
-import { computed, ref, watch, type Ref } from "vue";
+import { computed, onScopeDispose, ref, watch, type Ref } from "vue";
 import type {
   NoteState,
   NotesStore,
-} from "~/features/notes/composables/useNotesStore";
+} from "./useNotesStore";
+import { registerNotesDraftFlusher } from "./notesEditorRuntimeState";
 
 /**
  * useNoteDraft — the single draft-persistence pipeline for editing one note.
@@ -34,6 +35,34 @@ export function useNoteDraft(
   const noteId = computed(() => note.value?.id ?? sourceId.value ?? "");
 
   const titleDraft = ref(note.value?.title ?? "");
+  let draftRevision = 0;
+  let durableRevision = 0;
+  let draftEpoch = 0;
+  let commitPromise: Promise<boolean> | null = null;
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function cancelPendingSave() {
+    if (saveTimer) {
+      clearTimeout(saveTimer);
+      saveTimer = null;
+    }
+  }
+
+  // A source-id change means a different logical editor session. Temp-to-real
+  // remaps do not change sourceId, so pending work survives acknowledgement.
+  watch(
+    sourceId,
+    () => {
+      cancelPendingSave();
+      draftRevision = 0;
+      durableRevision = 0;
+      draftEpoch += 1;
+      // The old request may finish, but it belongs to the previous epoch and
+      // must not make the new note wait or update its durable revision.
+      commitPromise = null;
+    },
+    { flush: "sync" },
+  );
   watch(
     () => noteId.value,
     () => (titleDraft.value = note.value?.title ?? ""),
@@ -45,34 +74,52 @@ export function useNoteDraft(
     },
   );
 
-  let saveTimer: ReturnType<typeof setTimeout> | null = null;
   function scheduleSave() {
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => void commitNow(), 500);
   }
-  function cancelPendingSave() {
-    if (saveTimer) {
-      clearTimeout(saveTimer);
-      saveTimer = null;
-    }
-  }
   async function commitNow() {
     cancelPendingSave();
-    const n = note.value;
-    if (!n || !store.value) return;
-    await store.value.updateNote(noteId.value, {
-      ...n,
-      isDirty: true,
-      updatedAt: new Date(),
-    });
+    while (durableRevision < draftRevision) {
+      if (commitPromise) {
+        const committed = await commitPromise;
+        if (!committed) return;
+        continue;
+      }
+
+      const n = note.value;
+      const s = store.value;
+      if (!n || !s) return;
+      const targetRevision = draftRevision;
+      const targetEpoch = draftEpoch;
+      const task = s.updateNote(noteId.value, {
+        ...n,
+        isDirty: true,
+        updatedAt: new Date(),
+      }).then((committed) => {
+        if (committed && targetEpoch === draftEpoch) {
+          durableRevision = Math.max(durableRevision, targetRevision);
+        }
+        return committed;
+      }).finally(() => {
+        if (commitPromise === task) commitPromise = null;
+      });
+      commitPromise = task;
+      if (!(await task)) return;
+    }
   }
 
+  const unregisterDraftFlusher = registerNotesDraftFlusher(commitNow);
+  onScopeDispose(unregisterDraftFlusher);
+
   function onTitle(v: string) {
+    draftRevision += 1;
     titleDraft.value = v;
     store.value?.applyNoteDraft(noteId.value, { title: v });
     scheduleSave();
   }
   function onContent(html: string) {
+    draftRevision += 1;
     store.value?.applyNoteDraft(noteId.value, { content: html });
     scheduleSave();
   }
@@ -93,6 +140,7 @@ export function useNoteDraft(
     // in metadata; the note's `content` (which may hold real text from before
     // a conversion) must be preserved so converting between types is
     // reversible and non-destructive.
+    draftRevision += 1;
     store.value.applyNoteDraft(noteId.value, { metadata });
     scheduleSave();
   }

@@ -306,7 +306,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onBeforeUnmount, onMounted, watch } from "vue";
 import BoardCardSheet from "~/features/board/components/BoardCardSheet.vue";
 import BoardColumnsSheet from "~/features/board/components/BoardColumnsSheet.vue";
 import WorkspacePill from "~/components/shell/WorkspacePill.vue";
@@ -316,6 +316,7 @@ import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace"
 import { designTokenValues } from "~/design-system/tokens.generated";
 import type { BoardItemState } from "~/features/board/composables/useBoardItemsStore";
 import type { BoardColumnState } from "~/features/board/composables/useBoardColumnsStore";
+import { useQuickBoardItemCapture } from "~/features/board/composables/useQuickBoardItemCapture";
 import { comparePosition } from "@@/shared/utils/position-key";
 
 const route = useRoute();
@@ -330,6 +331,27 @@ const itemsStore = computed(() =>
 const tagsStore = computed(() =>
   activeId.value ? useUserTagsStore(activeId.value) : null,
 );
+const offlineRuntime = useOfflineRuntime();
+const boardMutationCount = ref(0);
+
+async function refreshBoardMutationCount() {
+  const workspaceId = activeId.value;
+  if (!workspaceId) {
+    boardMutationCount.value = 0;
+    return;
+  }
+  const mutations = await offlineRuntime.mutationsList();
+  boardMutationCount.value = mutations.filter(
+    (mutation) =>
+      mutation.workspaceId === workspaceId &&
+      ["boardItem", "boardColumn", "boardComment", "boardLink"].includes(
+        mutation.entity,
+      ) &&
+      ["pending", "syncing", "retry", "blocked", "conflict", "rejected"].includes(
+        mutation.status,
+      ),
+  ).length;
+}
 
 const activeIndex = ref(0);
 const overview = ref(false);
@@ -357,12 +379,15 @@ const allItems = computed(() =>
 const dirty = computed(() =>
   Boolean(
     itemsStore.value &&
-    (itemsStore.value.lastSync.value === null ||
-      allItems.value.some((i) => i.isDirty)),
+    (boardMutationCount.value > 0 ||
+      allItems.value.some((i) => i.isDirty) ||
+      columns.value.some((column) => column.isDirty)),
   ),
 );
 const failedCount = computed(
-  () => allItems.value.filter((i) => Boolean(i.error)).length,
+  () =>
+    allItems.value.filter((i) => Boolean(i.error)).length +
+    columns.value.filter((column) => Boolean(column.error)).length,
 );
 
 function itemsByColumn(columnId: string) {
@@ -434,23 +459,20 @@ function onBoardCardActivate(
 // ── Quick capture (create-first, morph from the Add button) ──────────────────
 const { morph, armMorphTarget, morphing } = useViewTransitionMorph();
 const liveMode = ref(false);
-const liveItemId = ref<string | null>(null);
 let liveTriggerEl: HTMLElement | null = null;
 let liveFinalized = false;
+const quickCaptureDefaultColumnId = computed(
+  () => activeColumn.value?.id ?? null,
+);
+const boardQuickCapture = useQuickBoardItemCapture(
+  itemsStore,
+  quickCaptureDefaultColumnId,
+);
 
 // The live item, following the temp→server id swap.
-const liveItem = computed<BoardItemState | null>(() => {
-  const store = itemsStore.value;
-  const id = liveItemId.value;
-  if (!store || !id) return null;
-  return (
-    store.items.value.get(id) ??
-    store.items.value.get(store.resolveItemId(id) ?? "") ??
-    null
-  );
-});
+const liveItem = boardQuickCapture.item;
 /** The id to use for store mutations (the real id once reconciled). */
-const liveRealId = computed(() => liveItem.value?.id ?? liveItemId.value);
+const liveRealId = computed(() => boardQuickCapture.itemId.value || null);
 const sheetItem = computed(() =>
   liveMode.value ? liveItem.value : editingItem.value,
 );
@@ -460,10 +482,8 @@ async function addCard(event?: MouseEvent) {
   if (!store || liveMode.value) return;
   // currentTarget is only valid synchronously — capture before any await.
   const trigger = (event?.currentTarget as HTMLElement | null) ?? null;
-  // Lazy create: nothing exists yet — the item is created on the first typed
-  // character (see ensureLiveItem).
+  await boardQuickCapture.begin();
   editingItem.value = null;
-  liveItemId.value = null;
   liveMode.value = true;
   liveFinalized = false;
   liveTriggerEl = trigger;
@@ -497,70 +517,19 @@ type LivePayload = {
   dueDate: string | null;
 };
 
-function payloadHasContent(payload: LivePayload) {
-  return payload.content.replace(/<[^>]*>/g, "").trim().length > 0;
-}
-
-// Create the live item on demand (idempotent — concurrent callers share the
-// in-flight create). `allowEmpty` is for "Open full", where the user's intent
-// to edit in full justifies creating the card before anything is typed.
-let liveCreatePromise: Promise<string | null> | null = null;
-function ensureLiveItem(
-  payload: LivePayload,
-  allowEmpty = false,
-): Promise<string | null> {
-  if (liveItemId.value) return Promise.resolve(liveRealId.value);
-  const store = itemsStore.value;
-  if (!store || (!allowEmpty && !payloadHasContent(payload)))
-    return Promise.resolve(null);
-  if (!liveCreatePromise) {
-    liveCreatePromise = store
-      .createItem(
-        payload.content,
-        payload.tags,
-        payload.columnId ?? activeColumn.value?.id ?? null,
-        payload.dueDate,
-      )
-      .then((id) => {
-        if (id) liveItemId.value = id;
-        return id;
-      })
-      .finally(() => {
-        liveCreatePromise = null;
-      });
-  }
-  return liveCreatePromise;
-}
-
-async function applyLivePayload(payload: LivePayload) {
-  const store = itemsStore.value;
-  if (!store) return;
-  if (!liveItemId.value) {
-    await ensureLiveItem(payload);
-    return;
-  }
-  const item = liveItem.value;
-  const id = liveRealId.value;
-  if (!item || !id) return;
-  await store.updateItem(id, {
-    ...item,
-    content: payload.content,
-    tags: payload.tags,
-    dueDate: payload.dueDate,
-  });
-  if (payload.columnId !== (item.columnId ?? null)) {
-    await store.moveItemToColumn(id, payload.columnId);
-  }
-}
 function onLiveUpdate(payload: LivePayload) {
-  void applyLivePayload(payload);
+  boardQuickCapture.onPayload(payload);
 }
 
 /** Open the card in its own place — the sheet morphs into /board/[id]. */
 async function onOpenFull(payload: LivePayload) {
   // Explicit intent to edit in full: create now even if nothing is typed yet.
-  const id = (await ensureLiveItem(payload, true)) ?? liveRealId.value;
+  boardQuickCapture.onPayload(payload);
+  const id =
+    (await boardQuickCapture.ensureCreated(true)) ?? liveRealId.value;
   if (!id) return;
+  if (!(await boardQuickCapture.commitNow())) return;
+  boardQuickCapture.markFinalized();
   liveFinalized = true; // navigating away — never delete, even if still empty
   armMorphTarget();
   await morph({
@@ -575,17 +544,9 @@ async function onOpenFull(payload: LivePayload) {
 async function finalizeLiveCard() {
   if (!liveMode.value || liveFinalized) return;
   liveFinalized = true;
-  const store = itemsStore.value;
-  const item = liveItem.value;
-  const id = liveRealId.value;
+  await boardQuickCapture.finalize();
   liveMode.value = false;
   liveTriggerEl = null;
-  liveItemId.value = null;
-  if (!store || !item || !id) return;
-  const hasContent =
-    (item.content ?? "").replace(/<[^>]*>/g, "").trim().length > 0;
-  const hasMeta = (item.tags?.length ?? 0) > 0 || Boolean(item.dueDate);
-  if (!hasContent && !hasMeta) await store.deleteItem(id);
 }
 
 async function onSaveCard(payload: {
@@ -597,15 +558,17 @@ async function onSaveCard(payload: {
   const store = itemsStore.value;
   if (!store) return;
   if (liveMode.value) {
-    // Done: the payload has already streamed via live-update flush; morph the
-    // sheet back into the Add button it came from (when possible).
-    await applyLivePayload(payload);
+    boardQuickCapture.onPayload(payload);
+    liveFinalized = true;
+    await boardQuickCapture.finalize();
     await morph({
       to: liveTriggerEl?.isConnected ? liveTriggerEl : null,
       update: () => {
         sheetOpen.value = false;
       },
     });
+    liveMode.value = false;
+    liveTriggerEl = null;
     return;
   }
   if (editingItem.value) {
@@ -792,6 +755,7 @@ async function onSyncTap() {
       itemsStore.value.syncWithServer(),
       columnsStore.value.syncWithServer(),
     ]);
+    await refreshBoardMutationCount();
   } finally {
     syncing.value = false;
   }
@@ -824,6 +788,7 @@ async function loadBoard() {
     await columnsStore.value.syncWithServer();
     await itemsStore.value.syncWithServer();
     await tagsStore.value.loadTags();
+    await refreshBoardMutationCount();
   } finally {
     loading.value = false;
   }
@@ -848,8 +813,14 @@ watch(columns, (next) => {
 });
 
 onMounted(async () => {
+  window.addEventListener("offline-v2-mutation-queued", refreshBoardMutationCount);
+  window.addEventListener("offline-v2-sync-result", refreshBoardMutationCount);
   await loadBoard();
   await consumeComposeRoute(route.query.compose);
+});
+onBeforeUnmount(() => {
+  window.removeEventListener("offline-v2-mutation-queued", refreshBoardMutationCount);
+  window.removeEventListener("offline-v2-sync-result", refreshBoardMutationCount);
 });
 </script>
 

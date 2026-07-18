@@ -1,7 +1,11 @@
 (() => {
   // app/utils/constants/pwa.ts
   var SW_CONFIG = {
-    VERSION: "v2.0.4-enhanced",
+    VERSION: "v2.0.5-enhanced",
+    // Changes only when ownership/semantics of a durable sync queue change.
+    // Unlike an asset update, protocol upgrades must activate immediately to
+    // prevent an old worker from draining a queue with obsolete rules.
+    SYNC_PROTOCOL: "notes-v1.1-board-v2-single-projection",
     DEBUG_VALUE: "1",
     UPDATE_CHECK_INTERVAL: 3e4,
     // 30 seconds
@@ -93,20 +97,14 @@
     // +/-20% jitter
   };
   var SW_MESSAGE_TYPES = {
-    // Notes sync specific
+    OFFLINE_SYNC_STARTED: "OFFLINE_SYNC_STARTED",
+    OFFLINE_SYNCED: "OFFLINE_SYNCED",
+    OFFLINE_SYNC_ERROR: "OFFLINE_SYNC_ERROR",
     SYNC_NOTES: "SYNC_NOTES",
     NOTES_SYNC_STARTED: "NOTES_SYNC_STARTED",
     NOTES_SYNCED: "NOTES_SYNCED",
     NOTES_SYNC_ERROR: "NOTES_SYNC_ERROR",
     NOTES_SYNC_CONFLICTS: "NOTES_SYNC_CONFLICTS",
-    // Board items sync specific
-    SYNC_BOARD_ITEMS: "SYNC_BOARD_ITEMS",
-    BOARD_ITEMS_SYNC_STARTED: "BOARD_ITEMS_SYNC_STARTED",
-    BOARD_ITEMS_SYNCED: "BOARD_ITEMS_SYNCED",
-    BOARD_ITEMS_SYNC_ERROR: "BOARD_ITEMS_SYNC_ERROR",
-    OFFLINE_SYNC_STARTED: "OFFLINE_SYNC_STARTED",
-    OFFLINE_SYNCED: "OFFLINE_SYNCED",
-    OFFLINE_SYNC_ERROR: "OFFLINE_SYNC_ERROR",
     // Service worker control
     SW_ACTIVATED: "SW_ACTIVATED",
     SW_CONTROL_CLAIMED: "SW_CONTROL_CLAIMED",
@@ -124,7 +122,6 @@
   var SYNC_TAGS = {
     CONTENT: "content-sync",
     NOTES: "notes-sync",
-    BOARD_ITEMS: "board-items-sync",
     OFFLINE_V2: "offline-v2-sync"
   };
   var PREWARM_PATHS = ["/"];
@@ -176,10 +173,14 @@
             if (tx) {
               const notesStore = tx.objectStore(STORES.NOTES);
               if (!notesStore.indexNames.contains("workspaceId")) {
-                notesStore.createIndex("workspaceId", "workspaceId", { unique: false });
+                notesStore.createIndex("workspaceId", "workspaceId", {
+                  unique: false
+                });
               }
               if (!notesStore.indexNames.contains("updatedAt")) {
-                notesStore.createIndex("updatedAt", "updatedAt", { unique: false });
+                notesStore.createIndex("updatedAt", "updatedAt", {
+                  unique: false
+                });
               }
               if (!notesStore.indexNames.contains("groupId")) {
                 notesStore.createIndex("groupId", "groupId", { unique: false });
@@ -191,7 +192,9 @@
             if (tx) {
               const groupsStore = tx.objectStore(STORES.NOTE_GROUPS);
               if (!groupsStore.indexNames.contains("workspaceId")) {
-                groupsStore.createIndex("workspaceId", "workspaceId", { unique: false });
+                groupsStore.createIndex("workspaceId", "workspaceId", {
+                  unique: false
+                });
               }
               if (!groupsStore.indexNames.contains("order")) {
                 groupsStore.createIndex("order", "order", { unique: false });
@@ -203,13 +206,19 @@
             if (tx) {
               const boardItemsStore = tx.objectStore(STORES.BOARD_ITEMS);
               if (!boardItemsStore.indexNames.contains("userId")) {
-                boardItemsStore.createIndex("userId", "userId", { unique: false });
+                boardItemsStore.createIndex("userId", "userId", {
+                  unique: false
+                });
               }
               if (!boardItemsStore.indexNames.contains("updatedAt")) {
-                boardItemsStore.createIndex("updatedAt", "updatedAt", { unique: false });
+                boardItemsStore.createIndex("updatedAt", "updatedAt", {
+                  unique: false
+                });
               }
               if (!boardItemsStore.indexNames.contains("workspaceId")) {
-                boardItemsStore.createIndex("workspaceId", "workspaceId", { unique: false });
+                boardItemsStore.createIndex("workspaceId", "workspaceId", {
+                  unique: false
+                });
               }
             }
           }
@@ -221,22 +230,32 @@
                 pending.createIndex("updatedAt", "updatedAt", { unique: false });
               }
               if (!pending.indexNames.contains("workspaceId")) {
-                pending.createIndex("workspaceId", "workspaceId", { unique: false });
+                pending.createIndex("workspaceId", "workspaceId", {
+                  unique: false
+                });
               }
               if (!pending.indexNames.contains("conflicted")) {
-                pending.createIndex("conflicted", "conflicted", { unique: false });
+                pending.createIndex("conflicted", "conflicted", {
+                  unique: false
+                });
               }
             }
           }
           if (db.objectStoreNames.contains(STORES.PENDING_NOTE_GROUP_CHANGES)) {
             const tx = req.transaction;
             if (tx) {
-              const pendingGroups = tx.objectStore(STORES.PENDING_NOTE_GROUP_CHANGES);
+              const pendingGroups = tx.objectStore(
+                STORES.PENDING_NOTE_GROUP_CHANGES
+              );
               if (!pendingGroups.indexNames.contains("workspaceId")) {
-                pendingGroups.createIndex("workspaceId", "workspaceId", { unique: false });
+                pendingGroups.createIndex("workspaceId", "workspaceId", {
+                  unique: false
+                });
               }
               if (!pendingGroups.indexNames.contains("updatedAt")) {
-                pendingGroups.createIndex("updatedAt", "updatedAt", { unique: false });
+                pendingGroups.createIndex("updatedAt", "updatedAt", {
+                  unique: false
+                });
               }
             }
           }
@@ -245,7 +264,9 @@
             if (tx) {
               const conflicts = tx.objectStore(STORES.NOTE_SYNC_CONFLICTS);
               if (!conflicts.indexNames.contains("workspaceId")) {
-                conflicts.createIndex("workspaceId", "workspaceId", { unique: false });
+                conflicts.createIndex("workspaceId", "workspaceId", {
+                  unique: false
+                });
               }
               if (!conflicts.indexNames.contains("entityId")) {
                 conflicts.createIndex("entityId", "entityId", { unique: false });
@@ -260,18 +281,35 @@
             const tx = req.transaction;
             if (!tx) return;
             const store = tx.objectStore(storeName);
-            if (!store.indexNames.contains(name)) store.createIndex(name, keyPath, { unique: false });
+            if (!store.indexNames.contains(name))
+              store.createIndex(name, keyPath, { unique: false });
           };
           createIndex(STORES.OFFLINE_ENTITIES, "accountId", "accountId");
-          createIndex(STORES.OFFLINE_ENTITIES, "accountEntity", ["accountId", "entity"]);
-          createIndex(STORES.OFFLINE_ENTITIES, "accountWorkspace", ["accountId", "workspaceId"]);
+          createIndex(STORES.OFFLINE_ENTITIES, "accountEntity", [
+            "accountId",
+            "entity"
+          ]);
+          createIndex(STORES.OFFLINE_ENTITIES, "accountWorkspace", [
+            "accountId",
+            "workspaceId"
+          ]);
           createIndex(STORES.OFFLINE_MUTATIONS, "accountId", "accountId");
-          createIndex(STORES.OFFLINE_MUTATIONS, "accountStatus", ["accountId", "status"]);
-          createIndex(STORES.OFFLINE_MUTATIONS, "accountEntity", ["accountId", "entity", "entityId"]);
+          createIndex(STORES.OFFLINE_MUTATIONS, "accountStatus", [
+            "accountId",
+            "status"
+          ]);
+          createIndex(STORES.OFFLINE_MUTATIONS, "accountEntity", [
+            "accountId",
+            "entity",
+            "entityId"
+          ]);
           createIndex(STORES.OFFLINE_MUTATIONS, "createdAt", "createdAt");
           createIndex(STORES.OFFLINE_CONFLICTS, "accountId", "accountId");
           createIndex(STORES.OFFLINE_PACKS, "accountId", "accountId");
-          createIndex(STORES.OFFLINE_PACKS, "accountWorkspace", ["accountId", "workspaceId"]);
+          createIndex(STORES.OFFLINE_PACKS, "accountWorkspace", [
+            "accountId",
+            "workspaceId"
+          ]);
           createIndex(STORES.OFFLINE_BLOBS, "accountId", "accountId");
           createIndex(STORES.OFFLINE_SYNC_META, "accountId", "accountId");
           createIndex(STORES.OFFLINE_LEGACY_RECOVERY, "accountId", "accountId");
@@ -303,15 +341,22 @@
             DB_CONFIG.STORES.OFFLINE_SYNC_META,
             DB_CONFIG.STORES.OFFLINE_LEGACY_RECOVERY
           ];
-          const missing = required.filter((s) => !db.objectStoreNames.contains(s));
+          const missing = required.filter(
+            (s) => !db.objectStoreNames.contains(s)
+          );
           if (missing.length) {
-            console.warn("[IDB] Detected missing stores post-open:", missing, "forcing rebuild");
+            console.warn(
+              "[IDB] Detected missing stores post-open:",
+              missing,
+              "forcing rebuild"
+            );
             db.close();
             const tempReq = indexedDB.open(DB_CONFIG.NAME, DB_CONFIG.VERSION + 1);
             tempReq.onupgradeneeded = () => {
               const udb = tempReq.result;
               for (const s of required) {
-                if (!udb.objectStoreNames.contains(s)) udb.createObjectStore(s, { keyPath: "id" });
+                if (!udb.objectStoreNames.contains(s))
+                  udb.createObjectStore(s, { keyPath: "id" });
               }
             };
             tempReq.onerror = () => resolve(db);
@@ -322,7 +367,8 @@
               finalReq.onupgradeneeded = () => {
                 const fdb = finalReq.result;
                 for (const s of required) {
-                  if (!fdb.objectStoreNames.contains(s)) fdb.createObjectStore(s, { keyPath: "id" });
+                  if (!fdb.objectStoreNames.contains(s))
+                    fdb.createObjectStore(s, { keyPath: "id" });
                 }
               };
               finalReq.onerror = () => resolve(db);
@@ -340,7 +386,11 @@
       req.onerror = () => {
         var _a;
         if (((_a = req.error) == null ? void 0 : _a.name) === "VersionError") {
-          console.warn("[IDB] VersionError opening DB at version", DB_CONFIG.VERSION, "\u2014 attempting fallback open without explicit version");
+          console.warn(
+            "[IDB] VersionError opening DB at version",
+            DB_CONFIG.VERSION,
+            "\u2014 attempting fallback open without explicit version"
+          );
           try {
             const fallbackReq = indexedDB.open(DB_CONFIG.NAME);
             fallbackReq.onsuccess = () => resolve(fallbackReq.result);
@@ -379,16 +429,13 @@
     }
   }
   async function putRecord(db, storeName, record) {
-    const {
-      MAX_ATTEMPTS,
-      BASE_DELAY_MS,
-      FACTOR,
-      MAX_DELAY_MS,
-      JITTER_PCT
-    } = IDB_RETRY_CONFIG;
+    const { MAX_ATTEMPTS, BASE_DELAY_MS, FACTOR, MAX_DELAY_MS, JITTER_PCT } = IDB_RETRY_CONFIG;
     const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
     const calcDelay = (attempt) => {
-      const raw = Math.min(BASE_DELAY_MS * Math.pow(FACTOR, attempt), MAX_DELAY_MS);
+      const raw = Math.min(
+        BASE_DELAY_MS * Math.pow(FACTOR, attempt),
+        MAX_DELAY_MS
+      );
       const jitter = raw * JITTER_PCT * (Math.random() * 2 - 1);
       return Math.max(0, Math.round(raw + jitter));
     };
@@ -428,16 +475,13 @@
   }
   async function putAllRecords(db, storeName, records) {
     if (!records.length) return;
-    const {
-      MAX_ATTEMPTS,
-      BASE_DELAY_MS,
-      FACTOR,
-      MAX_DELAY_MS,
-      JITTER_PCT
-    } = IDB_RETRY_CONFIG;
+    const { MAX_ATTEMPTS, BASE_DELAY_MS, FACTOR, MAX_DELAY_MS, JITTER_PCT } = IDB_RETRY_CONFIG;
     const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
     const calcDelay = (attempt) => {
-      const raw = Math.min(BASE_DELAY_MS * Math.pow(FACTOR, attempt), MAX_DELAY_MS);
+      const raw = Math.min(
+        BASE_DELAY_MS * Math.pow(FACTOR, attempt),
+        MAX_DELAY_MS
+      );
       const jitter = raw * JITTER_PCT * (Math.random() * 2 - 1);
       return Math.max(0, Math.round(raw + jitter));
     };
@@ -477,6 +521,15 @@
     }
     throw lastErr;
   }
+  async function getRecord(db, storeName, key) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction([storeName], "readonly");
+      const store = tx.objectStore(storeName);
+      const req = store.get(key);
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
   async function getAllRecords(db, storeName) {
     return new Promise((resolve, reject) => {
       const tx = db.transaction([storeName], "readonly");
@@ -486,24 +539,180 @@
       req.onerror = () => reject(req.error);
     });
   }
+  async function queueNoteChange(change) {
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) return;
+    const tx = db.transaction(DB_CONFIG.STORES.PENDING_NOTES, "readwrite");
+    const store = tx.objectStore(DB_CONFIG.STORES.PENDING_NOTES);
+    const request2 = store.get(change.id);
+    request2.onsuccess = () => {
+      const existing = request2.result;
+      const serverVersion = (existing == null ? void 0 : existing.serverVersion) === void 0 ? change.serverVersion : change.serverVersion === void 0 ? existing.serverVersion : Math.max(existing.serverVersion, change.serverVersion);
+      store.put(
+        sanitizeForIDB({
+          ...change,
+          ...serverVersion !== void 0 && { serverVersion },
+          localVersion: Math.max(
+            change.localVersion,
+            existing ? existing.localVersion + 1 : 1
+          )
+        })
+      );
+    };
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => {
+        var _a;
+        return reject((_a = tx.error) != null ? _a : new Error("Note queue transaction aborted"));
+      };
+    });
+  }
+  async function acknowledgePendingNoteChange(sent, acknowledgement = {}) {
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES))
+      return null;
+    const transactionStores = [DB_CONFIG.STORES.PENDING_NOTES];
+    const hasLocalStore = Boolean(
+      acknowledgement.localMutation && db.objectStoreNames.contains(DB_CONFIG.STORES.NOTES)
+    );
+    if (hasLocalStore) {
+      transactionStores.push(DB_CONFIG.STORES.NOTES);
+    }
+    const tx = db.transaction(transactionStores, "readwrite");
+    const store = tx.objectStore(DB_CONFIG.STORES.PENDING_NOTES);
+    const noteStore = hasLocalStore ? tx.objectStore(DB_CONFIG.STORES.NOTES) : null;
+    let retained = null;
+    const request2 = store.get(sent.id);
+    const applyLocalAcknowledgement = (shouldRetain) => {
+      var _a, _b;
+      const mutation = acknowledgement.localMutation;
+      if (!mutation || !noteStore) return;
+      if (mutation.type === "delete") {
+        if (!shouldRetain) noteStore.delete((_a = mutation.id) != null ? _a : sent.id);
+        return;
+      }
+      if (mutation.type === "remap") {
+        noteStore.delete(mutation.fromId);
+        noteStore.put(
+          sanitizeForIDB({
+            ...mutation.note,
+            id: (_b = acknowledgement.remapToId) != null ? _b : mutation.note.id,
+            isDirty: shouldRetain
+          })
+        );
+        return;
+      }
+      const noteRequest = noteStore.get(mutation.id);
+      noteRequest.onsuccess = () => {
+        var _a2;
+        const note = noteRequest.result;
+        if (!note) return;
+        noteStore.put(
+          sanitizeForIDB({
+            ...note,
+            ...mutation.serverVersion !== void 0 && {
+              version: Math.max((_a2 = note.version) != null ? _a2 : 1, mutation.serverVersion)
+            },
+            ...mutation.updatedAt && !shouldRetain && {
+              updatedAt: new Date(mutation.updatedAt)
+            },
+            isDirty: shouldRetain,
+            isLoading: false,
+            error: null,
+            ...!shouldRetain && { lastSaved: /* @__PURE__ */ new Date() }
+          })
+        );
+      };
+    };
+    request2.onsuccess = () => {
+      const current = request2.result;
+      if (!current) {
+        applyLocalAcknowledgement(false);
+        return;
+      }
+      const isNewer = current.localVersion > sent.localVersion || current.updatedAt > sent.updatedAt || current.operation !== sent.operation;
+      const shouldRetain = isNewer || acknowledgement.keepCurrent === true;
+      const remapToId = acknowledgement.remapToId;
+      if (!remapToId) {
+        if (!shouldRetain) {
+          store.delete(sent.id);
+          applyLocalAcknowledgement(false);
+          return;
+        }
+        retained = {
+          ...current,
+          ...acknowledgement.serverVersion !== void 0 && {
+            serverVersion: acknowledgement.serverVersion
+          }
+        };
+        store.put(sanitizeForIDB(retained));
+        applyLocalAcknowledgement(true);
+        return;
+      }
+      store.delete(sent.id);
+      applyLocalAcknowledgement(shouldRetain);
+      if (!shouldRetain) return;
+      const canonicalRequest = store.get(remapToId);
+      canonicalRequest.onsuccess = () => {
+        const canonical = canonicalRequest.result;
+        const remapped = {
+          ...current,
+          id: remapToId,
+          ...acknowledgement.serverVersion !== void 0 && {
+            serverVersion: acknowledgement.serverVersion
+          }
+        };
+        const next = canonical && (canonical.localVersion > remapped.localVersion || canonical.updatedAt > remapped.updatedAt) ? canonical : remapped;
+        retained = next;
+        store.put(sanitizeForIDB(next));
+      };
+    };
+    await new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => {
+        var _a;
+        return reject((_a = tx.error) != null ? _a : new Error("Note acknowledgement transaction aborted"));
+      };
+    });
+    return retained;
+  }
   async function loadPendingNoteChanges(workspaceId) {
     const db = await openUnifiedDB();
     if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) return [];
-    const records = await getAllRecords(db, DB_CONFIG.STORES.PENDING_NOTES);
+    const records = await getAllRecords(
+      db,
+      DB_CONFIG.STORES.PENDING_NOTES
+    );
     if (workspaceId) {
-      return records.filter((r) => !r.workspaceId || r.workspaceId === workspaceId);
+      return records.filter(
+        (r) => !r.workspaceId || r.workspaceId === workspaceId
+      );
     }
     return records;
   }
-  async function deletePendingNoteChanges(ids) {
-    if (!ids.length) return;
+  async function queueNoteGroupChange(change) {
     const db = await openUnifiedDB();
-    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) return;
-    await Promise.all(ids.map((id) => deleteRecord(db, DB_CONFIG.STORES.PENDING_NOTES, id)));
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES))
+      return;
+    const existing = await getRecord(
+      db,
+      DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES,
+      change.id
+    );
+    await putRecord(db, DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES, {
+      ...change,
+      localVersion: Math.max(
+        change.localVersion,
+        existing ? existing.localVersion + 1 : 1
+      )
+    });
   }
   async function loadPendingNoteGroupChanges(workspaceId) {
     const db = await openUnifiedDB();
-    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES)) return [];
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES))
+      return [];
     const records = await getAllRecords(
       db,
       DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES
@@ -514,27 +723,46 @@
   async function deletePendingNoteGroupChanges(ids) {
     if (!ids.length) return;
     const db = await openUnifiedDB();
-    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES)) return;
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES))
+      return;
     await Promise.all(
-      ids.map((id) => deleteRecord(db, DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES, id))
+      ids.map(
+        (id) => deleteRecord(
+          db,
+          DB_CONFIG.STORES.PENDING_NOTE_GROUP_CHANGES,
+          id
+        )
+      )
     );
   }
   async function loadPendingNoteLayoutChanges() {
     const db = await openUnifiedDB();
-    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS)) return [];
-    return getAllRecords(db, DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS);
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS))
+      return [];
+    return getAllRecords(
+      db,
+      DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS
+    );
   }
   async function deletePendingNoteLayoutChange(workspaceId) {
     const db = await openUnifiedDB();
-    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS)) return;
-    await deleteRecord(db, DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS, workspaceId);
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS))
+      return;
+    await deleteRecord(
+      db,
+      DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS,
+      workspaceId
+    );
   }
   async function remapPendingNoteGroupIds(groupIdMap) {
     const entries = Object.entries(groupIdMap);
     if (!entries.length) return;
     const db = await openUnifiedDB();
     if (db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTES)) {
-      const changes = await getAllRecords(db, DB_CONFIG.STORES.PENDING_NOTES);
+      const changes = await getAllRecords(
+        db,
+        DB_CONFIG.STORES.PENDING_NOTES
+      );
       const remapped = changes.filter((change) => change.groupId && groupIdMap[change.groupId]).map((change) => {
         var _a;
         return {
@@ -543,11 +771,18 @@
         };
       });
       if (remapped.length) {
-        await putAllRecords(db, DB_CONFIG.STORES.PENDING_NOTES, remapped);
+        await putAllRecords(
+          db,
+          DB_CONFIG.STORES.PENDING_NOTES,
+          remapped
+        );
       }
     }
     if (db.objectStoreNames.contains(DB_CONFIG.STORES.NOTES)) {
-      const notes = await getAllRecords(db, DB_CONFIG.STORES.NOTES);
+      const notes = await getAllRecords(
+        db,
+        DB_CONFIG.STORES.NOTES
+      );
       const remapped = notes.filter((note) => note.groupId && groupIdMap[note.groupId]).map((note) => {
         var _a;
         return {
@@ -560,7 +795,10 @@
       }
     }
     if (db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS)) {
-      const layouts = await getAllRecords(db, DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS);
+      const layouts = await getAllRecords(
+        db,
+        DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS
+      );
       const remapped = layouts.map((layout) => ({
         ...layout,
         notes: layout.notes.map((note) => {
@@ -579,36 +817,106 @@
         })
       }));
       if (remapped.length) {
-        await putAllRecords(db, DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS, remapped);
+        await putAllRecords(
+          db,
+          DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS,
+          remapped
+        );
       }
     }
   }
-  async function loadPendingBoardItemChanges(workspaceId) {
+  async function remapPendingNoteIds(noteIdMap) {
+    const entries = Object.entries(noteIdMap);
+    if (!entries.length) return;
     const db = await openUnifiedDB();
-    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_BOARD_ITEMS)) return [];
-    const records = await getAllRecords(db, DB_CONFIG.STORES.PENDING_BOARD_ITEMS);
-    if (workspaceId) {
-      return records.filter((r) => !r.workspaceId || r.workspaceId === workspaceId);
+    if (db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS)) {
+      const layouts = await getAllRecords(
+        db,
+        DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS
+      );
+      const remapped = layouts.map((layout) => ({
+        ...layout,
+        notes: layout.notes.map((note) => {
+          var _a;
+          return {
+            ...note,
+            id: (_a = noteIdMap[note.id]) != null ? _a : note.id
+          };
+        })
+      }));
+      if (remapped.length) {
+        await putAllRecords(
+          db,
+          DB_CONFIG.STORES.PENDING_NOTE_LAYOUTS,
+          remapped
+        );
+      }
     }
-    return records;
   }
-  async function deletePendingBoardItemChanges(ids) {
-    if (!ids.length) return;
+  async function reconcileNoteGroupIds(groupIdMap, serverVersion) {
+    if (!Object.keys(groupIdMap).length) return;
     const db = await openUnifiedDB();
-    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.PENDING_BOARD_ITEMS)) return;
-    await Promise.all(ids.map((id) => deleteRecord(db, DB_CONFIG.STORES.PENDING_BOARD_ITEMS, id)));
+    const storeNames = [
+      DB_CONFIG.STORES.NOTE_GROUPS,
+      DB_CONFIG.STORES.NOTES
+    ].filter((name) => db.objectStoreNames.contains(name));
+    if (!storeNames.length) return;
+    const tx = db.transaction(storeNames, "readwrite");
+    const done = new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => {
+        var _a;
+        return reject((_a = tx.error) != null ? _a : new Error("Note group ID reconciliation was aborted"));
+      };
+    });
+    const readAll = (store) => new Promise((resolve, reject) => {
+      const query = store.getAll();
+      query.onsuccess = () => resolve(query.result);
+      query.onerror = () => reject(query.error);
+    });
+    const groupStore = storeNames.includes(DB_CONFIG.STORES.NOTE_GROUPS) ? tx.objectStore(DB_CONFIG.STORES.NOTE_GROUPS) : null;
+    const noteStore = storeNames.includes(DB_CONFIG.STORES.NOTES) ? tx.objectStore(DB_CONFIG.STORES.NOTES) : null;
+    const [groups, notes] = await Promise.all([
+      groupStore ? readAll(groupStore) : [],
+      noteStore ? readAll(noteStore) : []
+    ]);
+    for (const [tempId, serverId] of Object.entries(groupIdMap)) {
+      const group = groups.find((candidate) => candidate.id === tempId);
+      if (group && groupStore) {
+        groupStore.delete(tempId);
+        groupStore.put(
+          sanitizeForIDB({
+            ...group,
+            id: serverId,
+            ...serverVersion !== void 0 && { version: serverVersion }
+          })
+        );
+      }
+    }
+    for (const note of notes) {
+      if (note.groupId && groupIdMap[note.groupId] && noteStore) {
+        noteStore.put(
+          sanitizeForIDB({ ...note, groupId: groupIdMap[note.groupId] })
+        );
+      }
+    }
+    await done;
+  }
+  async function saveNoteSyncConflict(conflict) {
+    const db = await openUnifiedDB();
+    if (!db.objectStoreNames.contains(DB_CONFIG.STORES.NOTE_SYNC_CONFLICTS))
+      return;
+    await putRecord(db, DB_CONFIG.STORES.NOTE_SYNC_CONFLICTS, conflict);
   }
   async function deleteRecord(db, storeName, key) {
-    const {
-      MAX_ATTEMPTS,
-      BASE_DELAY_MS,
-      FACTOR,
-      MAX_DELAY_MS,
-      JITTER_PCT
-    } = IDB_RETRY_CONFIG;
+    const { MAX_ATTEMPTS, BASE_DELAY_MS, FACTOR, MAX_DELAY_MS, JITTER_PCT } = IDB_RETRY_CONFIG;
     const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
     const calcDelay = (attempt) => {
-      const raw = Math.min(BASE_DELAY_MS * Math.pow(FACTOR, attempt), MAX_DELAY_MS);
+      const raw = Math.min(
+        BASE_DELAY_MS * Math.pow(FACTOR, attempt),
+        MAX_DELAY_MS
+      );
       const jitter = raw * JITTER_PCT * (Math.random() * 2 - 1);
       return Math.max(0, Math.round(raw + jitter));
     };
@@ -673,35 +981,115 @@
       };
     });
   }
+  function comparableOfflineValue(value) {
+    if (value instanceof Date) return value.toISOString();
+    if (Array.isArray(value)) return value.map(comparableOfflineValue);
+    if (value && typeof value === "object")
+      return Object.fromEntries(
+        Object.entries(value).map(([key, item]) => [
+          key,
+          comparableOfflineValue(item)
+        ])
+      );
+    return value;
+  }
+  function snapshotMatchesPayload(snapshot, payload) {
+    return Object.entries(payload).every(
+      ([field, value]) => JSON.stringify(comparableOfflineValue(snapshot[field])) === JSON.stringify(comparableOfflineValue(value))
+    );
+  }
   async function listOfflineMutations(accountId) {
     const db = await openUnifiedDB();
     const all = await getAllRecords(db, stores.OFFLINE_MUTATIONS);
     return all.filter((mutation) => mutation.accountId === accountId).sort((a, b) => a.createdAt - b.createdAt);
   }
-  async function setMutationStatus(accountId, ids, status, lastError) {
+  async function setMutationStatus(accountId, ids, status, lastError, expectedClaimToken) {
     if (!ids.length) return;
     const db = await openUnifiedDB();
     const tx = db.transaction(stores.OFFLINE_MUTATIONS, "readwrite");
     const store = tx.objectStore(stores.OFFLINE_MUTATIONS);
     for (const id of ids) {
       const existing = await request(store.get(id));
-      if ((existing == null ? void 0 : existing.accountId) === accountId) {
-        store.put({ ...existing, status, lastError, updatedAt: now(), attempts: status === "retry" ? existing.attempts + 1 : existing.attempts });
+      if ((existing == null ? void 0 : existing.accountId) === accountId && (!expectedClaimToken || existing.claimToken === expectedClaimToken)) {
+        store.put(sanitizeForIDB({
+          ...existing,
+          status,
+          lastError,
+          updatedAt: now(),
+          attempts: status === "retry" ? existing.attempts + 1 : existing.attempts,
+          ...status === "syncing" ? {} : { claimToken: void 0, claimedAt: void 0 }
+        }));
       }
     }
     await complete(tx);
+  }
+  async function claimOfflineMutations(input) {
+    var _a, _b;
+    if (!input.ids.length) return [];
+    const db = await openUnifiedDB();
+    const tx = db.transaction(stores.OFFLINE_MUTATIONS, "readwrite");
+    const store = tx.objectStore(stores.OFFLINE_MUTATIONS);
+    const all = await request(store.getAll());
+    const byId = new Map(all.map((mutation) => [mutation.id, mutation]));
+    const requested = new Set(input.ids);
+    const claimable = /* @__PURE__ */ new Map();
+    for (const id of input.ids) {
+      const mutation = byId.get(id);
+      if (!mutation || mutation.accountId !== input.accountId || !["pending", "retry"].includes(mutation.status)) continue;
+      const predecessorInFlight = all.some(
+        (candidate) => candidate.accountId === input.accountId && candidate.id !== mutation.id && candidate.entity === mutation.entity && candidate.entityId === mutation.entityId && candidate.status === "syncing"
+      );
+      if (!predecessorInFlight) claimable.set(id, mutation);
+    }
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const [id, mutation] of claimable) {
+        const hasUnresolvedDependency = mutation.dependsOn.some((dependencyId) => {
+          const dependency = byId.get(dependencyId);
+          if (!dependency || dependency.accountId !== input.accountId) return false;
+          return !requested.has(dependencyId) || !claimable.has(dependencyId);
+        });
+        if (hasUnresolvedDependency) {
+          claimable.delete(id);
+          changed = true;
+        }
+      }
+    }
+    const claimedAt = (_a = input.claimedAt) != null ? _a : now();
+    const claimed = [];
+    for (const id of input.ids) {
+      const mutation = claimable.get(id);
+      if (!mutation) continue;
+      const next = {
+        ...mutation,
+        status: "syncing",
+        claimToken: input.claimToken,
+        claimedAt,
+        localRevision: (_b = mutation.localRevision) != null ? _b : 1,
+        updatedAt: claimedAt
+      };
+      store.put(sanitizeForIDB(next));
+      claimed.push(next);
+    }
+    await complete(tx);
+    return claimed;
   }
   async function recoverInterruptedMutations(accountId) {
     const db = await openUnifiedDB();
     const tx = db.transaction(stores.OFFLINE_MUTATIONS, "readwrite");
     const store = tx.objectStore(stores.OFFLINE_MUTATIONS);
     const mutations = await request(store.getAll());
+    const staleBefore = now() - 2 * 60 * 1e3;
     let recovered = 0;
     for (const mutation of mutations) {
       if (mutation.accountId !== accountId || mutation.status !== "syncing") continue;
+      if (mutation.claimedAt && mutation.claimedAt > staleBefore) continue;
       store.put(sanitizeForIDB({
         ...mutation,
         status: "retry",
+        claimToken: void 0,
+        claimedAt: void 0,
         lastError: "The previous sync was interrupted. Retrying safely.",
         updatedAt: now(),
         attempts: mutation.attempts + 1
@@ -728,7 +1116,7 @@
     return next;
   }
   async function applySyncResult(input) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s;
     const db = await openUnifiedDB();
     const tx = db.transaction(
       [stores.OFFLINE_ENTITIES, stores.OFFLINE_MUTATIONS, stores.OFFLINE_CONFLICTS],
@@ -738,45 +1126,183 @@
     const entities = tx.objectStore(stores.OFFLINE_ENTITIES);
     const conflicts = tx.objectStore(stores.OFFLINE_CONFLICTS);
     const result = input.result;
+    const projection = {
+      entityId: (_a = result.entityId) != null ? _a : input.mutation.entityId,
+      hasPendingSuccessor: false,
+      relatedPendingSuccessors: {}
+    };
+    const current = await request(mutations.get(input.mutation.id));
+    const hasLeaseIdentity = Boolean(input.mutation.claimToken || input.mutation.localRevision);
+    const ownsCurrentRevision = Boolean(current) && (!hasLeaseIdentity || current.claimToken === input.mutation.claimToken && ((_b = current.localRevision) != null ? _b : 1) === ((_c = input.mutation.localRevision) != null ? _c : 1));
     if (result.status === "applied") {
-      mutations.delete(input.mutation.id);
-      if (result.canonical && result.entity && result.entityId) {
+      if (ownsCurrentRevision) mutations.delete(input.mutation.id);
+      const allMutations = await request(mutations.getAll());
+      const allConflicts = await request(conflicts.getAll());
+      const canonicalEntityId = (_e = (_d = result.entityId) != null ? _d : current == null ? void 0 : current.entityId) != null ? _e : input.mutation.entityId;
+      const canonicalEntity = (_f = result.entity) != null ? _f : input.mutation.entity;
+      projection.entityId = canonicalEntityId;
+      const successors = allMutations.filter(
+        (candidate) => candidate.accountId === input.accountId && candidate.id !== input.mutation.id && candidate.entity === input.mutation.entity && candidate.entityId === canonicalEntityId && ["pending", "retry", "blocked"].includes(candidate.status)
+      );
+      if (!ownsCurrentRevision && current) successors.push(current);
+      const entityKey = scopedId(
+        input.accountId,
+        canonicalEntity,
+        canonicalEntityId
+      );
+      const localEntity = await request(entities.get(entityKey));
+      const hasNewerDraft = Boolean(
+        (localEntity == null ? void 0 : localEntity.localDirty) && !snapshotMatchesPayload(localEntity.data, input.mutation.payload)
+      );
+      projection.hasPendingSuccessor = successors.length > 0 || hasNewerDraft;
+      if (result.version !== void 0) {
+        for (const successor of successors) {
+          if (successor.operation.endsWith(".create")) continue;
+          mutations.put(sanitizeForIDB({
+            ...successor,
+            baseVersion: result.version,
+            updatedAt: now()
+          }));
+        }
+      }
+      if (result.canonical) {
+        const preserveNewerLocalState = Boolean(localEntity) && (successors.length > 0 || hasNewerDraft);
         entities.put(sanitizeForIDB({
-          id: scopedId(input.accountId, result.entity, result.entityId),
+          id: entityKey,
           accountId: input.accountId,
-          entity: result.entity,
-          entityId: result.entityId,
-          workspaceId: (_a = result.canonical.workspaceId) != null ? _a : input.mutation.workspaceId,
-          version: (_b = result.version) != null ? _b : 0,
+          entity: canonicalEntity,
+          entityId: canonicalEntityId,
+          workspaceId: preserveNewerLocalState ? localEntity.workspaceId : (_g = result.canonical.workspaceId) != null ? _g : input.mutation.workspaceId,
+          version: (_h = result.version) != null ? _h : 0,
           updatedAt: now(),
-          deleted: input.mutation.operation.endsWith(".delete"),
-          data: result.canonical
+          localDirty: preserveNewerLocalState ? localEntity.localDirty : false,
+          deleted: preserveNewerLocalState ? localEntity.deleted : input.mutation.operation.endsWith(".delete"),
+          data: preserveNewerLocalState ? localEntity.data : result.canonical
         }));
       }
+      for (const related of (_i = result.related) != null ? _i : []) {
+        const relatedKey = scopedId(input.accountId, related.entity, related.entityId);
+        const relatedEntity = await request(entities.get(relatedKey));
+        const relatedSuccessors = allMutations.filter(
+          (candidate) => candidate.accountId === input.accountId && candidate.entity === related.entity && candidate.entityId === related.entityId && ["pending", "retry", "blocked"].includes(candidate.status)
+        );
+        const hasRelatedDraft = Boolean(
+          (relatedEntity == null ? void 0 : relatedEntity.localDirty) && related.canonical && !snapshotMatchesPayload(
+            relatedEntity.data,
+            Object.fromEntries(
+              Object.entries(related.canonical).filter(
+                ([field]) => field in relatedEntity.data && ![
+                  "id",
+                  "userId",
+                  "createdAt",
+                  "updatedAt",
+                  "offlineRevision"
+                ].includes(field)
+              )
+            )
+          )
+        );
+        projection.relatedPendingSuccessors[`${related.entity}:${related.entityId}`] = relatedSuccessors.length > 0 || hasRelatedDraft;
+        const relatedConflict = allConflicts.find(
+          (conflict) => conflict.accountId === input.accountId && conflict.entity === related.entity && conflict.entityId === related.entityId
+        );
+        if (relatedConflict) {
+          conflicts.put(sanitizeForIDB({
+            ...relatedConflict,
+            serverVersion: related.version,
+            serverSnapshot: (_j = related.canonical) != null ? _j : relatedConflict.serverSnapshot
+          }));
+        }
+        for (const successor of relatedSuccessors) {
+          if (successor.operation.endsWith(".create")) continue;
+          mutations.put(sanitizeForIDB({
+            ...successor,
+            baseVersion: related.version,
+            updatedAt: now()
+          }));
+        }
+        if (related.canonical) {
+          const preserveNewerLocalState = Boolean(relatedEntity) && (relatedSuccessors.length > 0 || hasRelatedDraft);
+          entities.put(sanitizeForIDB({
+            id: relatedKey,
+            accountId: input.accountId,
+            entity: related.entity,
+            entityId: related.entityId,
+            workspaceId: preserveNewerLocalState ? relatedEntity.workspaceId : related.canonical.workspaceId,
+            version: related.version,
+            updatedAt: now(),
+            localDirty: preserveNewerLocalState ? relatedEntity.localDirty : false,
+            deleted: preserveNewerLocalState ? relatedEntity.deleted : false,
+            data: preserveNewerLocalState ? relatedEntity.data : related.canonical
+          }));
+        }
+      }
     } else if (result.status === "conflict") {
-      mutations.put({ ...input.mutation, status: "conflict", lastError: result.message, updatedAt: now() });
+      if (!ownsCurrentRevision) {
+        await complete(tx);
+        return projection;
+      }
+      mutations.put(sanitizeForIDB({ ...current, status: "conflict", claimToken: void 0, claimedAt: void 0, lastError: result.message, updatedAt: now() }));
       conflicts.put(sanitizeForIDB({
         id: scopedId(input.accountId, input.mutation.id),
         accountId: input.accountId,
         mutationId: input.mutation.id,
         entity: input.mutation.entity,
         entityId: input.mutation.entityId,
-        serverVersion: Number((_d = (_c = result.conflict) == null ? void 0 : _c.serverVersion) != null ? _d : 0),
-        overlappingFields: Array.isArray((_e = result.conflict) == null ? void 0 : _e.overlappingFields) ? (_f = result.conflict) == null ? void 0 : _f.overlappingFields : [],
-        serverSnapshot: (_h = (_g = result.conflict) == null ? void 0 : _g.serverSnapshot) != null ? _h : null,
-        reason: String((_j = (_i = result.conflict) == null ? void 0 : _i.reason) != null ? _j : "The same fields changed on another device."),
+        serverVersion: Number((_l = (_k = result.conflict) == null ? void 0 : _k.serverVersion) != null ? _l : 0),
+        overlappingFields: Array.isArray((_m = result.conflict) == null ? void 0 : _m.overlappingFields) ? (_n = result.conflict) == null ? void 0 : _n.overlappingFields : [],
+        serverSnapshot: (_p = (_o = result.conflict) == null ? void 0 : _o.serverSnapshot) != null ? _p : null,
+        reason: String((_r = (_q = result.conflict) == null ? void 0 : _q.reason) != null ? _r : "The same fields changed on another device."),
         createdAt: now()
       }));
-    } else {
-      mutations.put({
-        ...input.mutation,
-        status: result.status,
-        attempts: result.status === "retry" ? input.mutation.attempts + 1 : input.mutation.attempts,
+    } else if (result.status === "rejected") {
+      if (!ownsCurrentRevision) {
+        await complete(tx);
+        return projection;
+      }
+      const rejected = current;
+      mutations.put(sanitizeForIDB({
+        ...rejected,
+        status: "rejected",
+        claimToken: void 0,
+        claimedAt: void 0,
         lastError: result.message,
         updatedAt: now()
-      });
+      }));
+      const entityKey = scopedId(input.accountId, rejected.entity, rejected.entityId);
+      if (rejected.rollbackData) {
+        entities.put(sanitizeForIDB({
+          id: entityKey,
+          accountId: input.accountId,
+          entity: rejected.entity,
+          entityId: rejected.entityId,
+          workspaceId: rejected.workspaceId,
+          version: (_s = rejected.baseVersion) != null ? _s : 0,
+          updatedAt: now(),
+          localDirty: false,
+          deleted: false,
+          data: rejected.rollbackData
+        }));
+      } else if (rejected.operation.endsWith(".create")) {
+        entities.delete(entityKey);
+      }
+    } else {
+      if (!ownsCurrentRevision) {
+        await complete(tx);
+        return projection;
+      }
+      mutations.put(sanitizeForIDB({
+        ...current,
+        status: result.status,
+        claimToken: void 0,
+        claimedAt: void 0,
+        attempts: result.status === "retry" ? current.attempts + 1 : current.attempts,
+        lastError: result.message,
+        updatedAt: now()
+      }));
     }
     await complete(tx);
+    return projection;
   }
   function remapValue(value, idMap) {
     var _a;
@@ -787,7 +1313,7 @@
     }
     return value;
   }
-  async function remapOfflineIds(accountId, idMap) {
+  async function remapOfflineIds(accountId, idMap, acknowledgement) {
     var _a, _b, _c, _d;
     if (!Object.keys(idMap).length) return;
     const db = await openUnifiedDB();
@@ -806,11 +1332,18 @@
     const allMutations = await request(mutations.getAll());
     for (const record of allMutations) {
       if (record.accountId !== accountId) continue;
+      const remappedEntityId = idMap[record.entityId];
+      const convertQueuedCreate = Boolean(remappedEntityId) && record.id !== (acknowledgement == null ? void 0 : acknowledgement.mutationId) && record.operation.endsWith(".create");
       mutations.put(sanitizeForIDB({
         ...record,
-        entityId: (_c = idMap[record.entityId]) != null ? _c : record.entityId,
-        workspaceId: record.workspaceId ? (_d = idMap[record.workspaceId]) != null ? _d : record.workspaceId : void 0,
-        payload: remapValue(record.payload, idMap)
+        entityId: remappedEntityId != null ? remappedEntityId : record.entityId,
+        workspaceId: record.workspaceId ? (_c = idMap[record.workspaceId]) != null ? _c : record.workspaceId : void 0,
+        payload: remapValue(record.payload, idMap),
+        rollbackData: record.rollbackData ? remapValue(record.rollbackData, idMap) : record.rollbackData,
+        ...convertQueuedCreate && {
+          operation: `${record.entity}.update`,
+          baseVersion: (_d = acknowledgement == null ? void 0 : acknowledgement.serverVersion) != null ? _d : 1
+        }
       }));
     }
     await complete(tx);
@@ -3901,6 +4434,14 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
   (() => {
     const SW_VERSION = SW_CONFIG.VERSION;
     let DEBUG = false;
+    let notesSyncInProgress = false;
+    const isViteDevelopmentAsset = (url) => {
+      const isDevelopmentHost = url.hostname === "localhost" || url.hostname === "127.0.0.1" || url.hostname.endsWith(".local");
+      if (!isDevelopmentHost || !url.pathname.startsWith("/_nuxt/")) {
+        return false;
+      }
+      return /\.(?:vue|ts|tsx|jsx|scss|sass|less)$/.test(url.pathname) || url.pathname.includes("/@") || url.pathname.startsWith("/_nuxt/assets/") || url.pathname.startsWith("/_nuxt/components/") || url.pathname.startsWith("/_nuxt/composables/") || url.pathname.startsWith("/_nuxt/features/") || url.pathname.startsWith("/_nuxt/layouts/") || url.pathname.startsWith("/_nuxt/pages/") || url.pathname.startsWith("/_nuxt/plugins/") || url.searchParams.has("t") || url.searchParams.has("v");
+    };
     const log = (...args) => {
       if (DEBUG) console.log("[SW]", ...args);
     };
@@ -3917,8 +4458,6 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     let db = null;
     let dbInitAttempts = 0;
     const MAX_DB_INIT_ATTEMPTS = 3;
-    let notesSyncInProgress = false;
-    let boardItemsSyncInProgress = false;
     async function ensureDB() {
       if (db) return db;
       if (dbInitAttempts >= MAX_DB_INIT_ATTEMPTS) {
@@ -3994,7 +4533,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       error("Workbox precache failed (continuing without precache):", e);
     }
     registerRoute(
-      ({ request: _request, url }) => url.origin === self.location.origin && (/\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/.test(url.pathname) || url.pathname.startsWith("/AppImages/")),
+      ({ request: _request, url }) => url.origin === self.location.origin && !isViteDevelopmentAsset(url) && (/\.(?:png|gif|jpg|jpeg|webp|svg|ico)$/.test(url.pathname) || url.pathname.startsWith("/AppImages/")),
       new CacheFirst({
         cacheName: CACHE_NAMES.IMAGES,
         plugins: [
@@ -4015,7 +4554,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       ]
     });
     registerRoute(
-      ({ url, request: request2 }) => url.origin === self.location.origin && // Exclude the AI worker script — it's loaded via Blob URL in the plugin,
+      ({ url, request: request2 }) => url.origin === self.location.origin && !isViteDevelopmentAsset(url) && // Exclude the AI worker script — it's loaded via Blob URL in the plugin,
       // but direct loads must not get the CacheFirst/offline-stub treatment either.
       !url.pathname.endsWith("/ai-worker.js") && (url.pathname.startsWith("/_nuxt/") || request2.destination === "script" || request2.destination === "style"),
       async ({ event, request: request2 }) => {
@@ -4036,7 +4575,22 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         try {
           return await fetch(request2);
         } catch {
-          return new Response(JSON.stringify({ success: false, error: { code: "OFFLINE_NETWORK_UNAVAILABLE", message: "Authentication is unavailable while offline." } }), { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: {
+                code: "OFFLINE_NETWORK_UNAVAILABLE",
+                message: "Authentication is unavailable while offline."
+              }
+            }),
+            {
+              status: 503,
+              headers: {
+                "Content-Type": "application/json",
+                "Cache-Control": "no-store"
+              }
+            }
+          );
         }
       }
     );
@@ -4055,7 +4609,22 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         try {
           return await fetch(request2);
         } catch {
-          return new Response(JSON.stringify({ success: false, error: { code: "OFFLINE_CACHE_MISS", message: "This content is not downloaded for offline use." } }), { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: {
+                code: "OFFLINE_CACHE_MISS",
+                message: "This content is not downloaded for offline use."
+              }
+            }),
+            {
+              status: 503,
+              headers: {
+                "Content-Type": "application/json",
+                "Cache-Control": "no-store"
+              }
+            }
+          );
         }
       }
     );
@@ -4065,7 +4634,22 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         try {
           return await fetch(request2);
         } catch {
-          return new Response(JSON.stringify({ success: false, error: { code: "OFFLINE_CACHE_MISS", message: "Notes are not available in this offline pack." } }), { status: 503, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } });
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: {
+                code: "OFFLINE_CACHE_MISS",
+                message: "Notes are not available in this offline pack."
+              }
+            }),
+            {
+              status: 503,
+              headers: {
+                "Content-Type": "application/json",
+                "Cache-Control": "no-store"
+              }
+            }
+          );
         }
       }
     );
@@ -4241,13 +4825,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         return;
       }
       if (type === SW_MESSAGE_TYPES.SYNC_NOTES) {
-        const extendable = event;
-        extendable.waitUntil(syncPendingNotes("manual"));
-        return;
-      }
-      if (type === SW_MESSAGE_TYPES.SYNC_BOARD_ITEMS) {
-        const extendable = event;
-        extendable.waitUntil(syncPendingBoardItems("manual"));
+        event.waitUntil(syncPendingNotes());
         return;
       }
       if (type === SW_MESSAGE_TYPES.SET_DEBUG) {
@@ -4279,10 +4857,14 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
               try {
                 data = event.data.json();
               } catch {
-                data = { title: "Card Review", message: "You have cards to review!" };
+                data = {
+                  title: "Card Review",
+                  message: "You have cards to review!"
+                };
               }
             }
             const title = data.title || "Card Review";
+            const notificationData = data.data && typeof data.data === "object" ? data.data : {};
             const options = {
               body: data.message || "You have cards to review!",
               icon: data.icon || "/icons/192x192.png",
@@ -4294,7 +4876,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
               data: {
                 url: data.url || "/review",
                 timestamp: Date.now(),
-                ...data.data || {}
+                ...notificationData
               },
               actions: [
                 { action: "review", title: "\u{1F4DA} Review Now" },
@@ -4347,7 +4929,10 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           });
           if (clients.length) {
             for (const c of clients) {
-              c.postMessage({ type: SW_MESSAGE_TYPES.NOTIFICATION_CLICK_NAVIGATE, url: targetUrl });
+              c.postMessage({
+                type: SW_MESSAGE_TYPES.NOTIFICATION_CLICK_NAVIGATE,
+                url: targetUrl
+              });
             }
             try {
               await clients[0].focus();
@@ -4372,19 +4957,15 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     });
     swSelf.addEventListener("sync", (event) => {
       const syncEvt = event;
-      if (syncEvt.tag === SYNC_TAGS.NOTES) {
-        syncEvt.waitUntil(syncPendingNotes("background"));
-      }
-      if (syncEvt.tag === SYNC_TAGS.BOARD_ITEMS) {
-        syncEvt.waitUntil(syncPendingBoardItems("background"));
-      }
-      if (syncEvt.tag === SYNC_TAGS.OFFLINE_V2) syncEvt.waitUntil(syncOfflineV2());
+      if (syncEvt.tag === SYNC_TAGS.NOTES) syncEvt.waitUntil(syncPendingNotes());
+      if (syncEvt.tag === SYNC_TAGS.OFFLINE_V2)
+        syncEvt.waitUntil(syncOfflineV2());
     });
     swSelf.addEventListener("fetch", (event) => {
       const req = event.request;
       const url = new URL(req.url);
       const isDevHost = self.location.hostname === "localhost" || self.location.hostname === "127.0.0.1" || self.location.hostname.endsWith(".local");
-      if (url.pathname.includes("/@fs/") || url.pathname.includes("/node_modules/") || url.pathname.includes("error-dev.vue") || url.pathname.includes("builds/meta/dev.json") || url.pathname.includes("/@vite/") || url.pathname.includes("/@id/") || url.pathname.includes("/__vite_ping") || url.pathname.includes("/nuxt/dist/app/") || url.pathname.includes("sw.js") || isDevHost && url.searchParams.has("v") && req.mode !== "navigate" || req.url.includes("?import")) {
+      if (isViteDevelopmentAsset(url) || url.pathname.includes("/@fs/") || url.pathname.includes("/node_modules/") || url.pathname.includes("error-dev.vue") || url.pathname.includes("builds/meta/dev.json") || url.pathname.includes("/@vite/") || url.pathname.includes("/@id/") || url.pathname.includes("/__vite_ping") || url.pathname.includes("/nuxt/dist/app/") || url.pathname.includes("sw.js") || isDevHost && url.searchParams.has("v") && req.mode !== "navigate" || req.url.includes("?import")) {
         return;
       }
       if (req.mode === "navigate") {
@@ -4521,19 +5102,287 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     async function syncContent() {
       log("periodic content sync placeholder");
     }
+    async function syncPendingNotes() {
+      var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _A, _B, _C, _D, _E, _F, _G, _H, _I, _J, _K;
+      if (notesSyncInProgress) return;
+      notesSyncInProgress = true;
+      try {
+        const clients = await swSelf.clients.matchAll({ type: "window" });
+        if (clients.length) return;
+        const pending = (await loadPendingNoteChanges()).filter(
+          (change) => !change.conflicted
+        );
+        const pendingGroups = (await loadPendingNoteGroupChanges()).filter(
+          (change) => !change.conflicted
+        );
+        const layouts = await loadPendingNoteLayoutChanges();
+        if (!pending.length && !pendingGroups.length && !layouts.length) return;
+        const requests = [
+          {
+            changes: pending,
+            groupChanges: pendingGroups,
+            layout: layouts[0]
+          },
+          ...layouts.slice(1).map((layout) => ({
+            changes: [],
+            groupChanges: [],
+            layout
+          }))
+        ];
+        for (const request2 of requests) {
+          const response = await fetch("/api/notes/sync", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({
+              changes: request2.changes,
+              contentChanges: [],
+              groupChanges: request2.groupChanges,
+              ...request2.layout && { layoutChange: request2.layout }
+            })
+          });
+          if (!response.ok)
+            throw new Error(`Notes sync failed (${response.status})`);
+          const envelope = await response.json();
+          if (!envelope.data) throw new Error("Notes sync returned no data");
+          const result = envelope.data;
+          if ((await swSelf.clients.matchAll({ type: "window" })).length) return;
+          const replayedCreates = new Set((_a = result.replayedCreates) != null ? _a : []);
+          const replayedGroupCreates = new Set((_b = result.replayedGroupCreates) != null ? _b : []);
+          const sentById = new Map(
+            request2.changes.map((change) => [change.id, change])
+          );
+          const sentGroupsById = new Map(
+            request2.groupChanges.map((change) => [change.id, change])
+          );
+          const currentPending = new Map(
+            (await loadPendingNoteChanges()).map((change) => [change.id, change])
+          );
+          const currentGroups = new Map(
+            (await loadPendingNoteGroupChanges()).map((change) => [
+              change.id,
+              change
+            ])
+          );
+          const isNewer = (current, sent) => Boolean(
+            current && sent && (current.localVersion > sent.localVersion || current.updatedAt > sent.updatedAt || current.operation !== sent.operation)
+          );
+          const appliedMetadata = new Map(
+            ((_c = result.appliedNotes) != null ? _c : []).map((note) => [note.id, note])
+          );
+          const db2 = await openUnifiedDB();
+          for (const conflict of (_d = result.conflicts) != null ? _d : []) {
+            const sent = sentById.get(conflict.id);
+            const current = (_e = currentPending.get(conflict.id)) != null ? _e : sent;
+            if (!current) continue;
+            await queueNoteChange({
+              ...current,
+              conflicted: true,
+              serverVersion: (_f = conflict.serverVersion) != null ? _f : current.serverVersion
+            });
+            if ((sent == null ? void 0 : sent.operation) === "delete" && sent.rollbackData) {
+              await putRecord(db2, DB_CONFIG.STORES.NOTES, {
+                ...sent.rollbackData,
+                id: conflict.id,
+                isDirty: true,
+                isLoading: false,
+                error: "Sync conflict detected. Resolve local and server versions before syncing this note."
+              });
+            }
+            await saveNoteSyncConflict({
+              id: `${current.workspaceId}:content:${conflict.id}`,
+              workspaceId: current.workspaceId,
+              scope: "content",
+              entityId: conflict.id,
+              reason: (_g = conflict.reason) != null ? _g : "SYNC_CONFLICT",
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              localSnapshot: current,
+              serverSnapshot: (_h = conflict.serverSnapshot) != null ? _h : null,
+              serverVersion: conflict.serverVersion,
+              clientServerVersion: conflict.clientServerVersion
+            });
+          }
+          for (const [tempId, serverId] of Object.entries((_i = result.idMap) != null ? _i : {})) {
+            const sent = sentById.get(tempId);
+            const current = currentPending.get(tempId);
+            if (!sent) continue;
+            const metadata = appliedMetadata.get(tempId);
+            const local = await getRecord(
+              db2,
+              DB_CONFIG.STORES.NOTES,
+              tempId
+            );
+            const source = (_j = local != null ? local : sent.rollbackData) != null ? _j : sent;
+            const canonicalLocalRecord = {
+              ...source,
+              id: serverId,
+              workspaceId: sent.workspaceId,
+              groupId: (_l = (_k = current == null ? void 0 : current.groupId) != null ? _k : sent.groupId) != null ? _l : null,
+              title: (_m = current == null ? void 0 : current.title) != null ? _m : sent.title,
+              content: (_o = (_n = current == null ? void 0 : current.content) != null ? _n : sent.content) != null ? _o : "",
+              tags: (_q = (_p = current == null ? void 0 : current.tags) != null ? _p : sent.tags) != null ? _q : [],
+              noteType: (_s = (_r = current == null ? void 0 : current.noteType) != null ? _r : sent.noteType) != null ? _s : "TEXT",
+              metadata: (_t = current == null ? void 0 : current.metadata) != null ? _t : sent.metadata,
+              order: (_v = (_u = current == null ? void 0 : current.order) != null ? _u : sent.order) != null ? _v : 0,
+              version: (_w = metadata == null ? void 0 : metadata.version) != null ? _w : 1,
+              createdAt: (_x = local == null ? void 0 : local.createdAt) != null ? _x : new Date(sent.updatedAt),
+              updatedAt: (metadata == null ? void 0 : metadata.updatedAt) ? new Date(metadata.updatedAt) : new Date(sent.updatedAt),
+              isDirty: false,
+              isLoading: false,
+              error: null,
+              lastSaved: /* @__PURE__ */ new Date()
+            };
+            const retained = await acknowledgePendingNoteChange(sent, {
+              remapToId: serverId,
+              serverVersion: (_y = metadata == null ? void 0 : metadata.version) != null ? _y : 1,
+              keepCurrent: replayedCreates.has(tempId),
+              localMutation: {
+                type: "remap",
+                fromId: tempId,
+                note: canonicalLocalRecord
+              }
+            });
+          }
+          await remapPendingNoteIds((_z = result.idMap) != null ? _z : {});
+          for (const id of (_A = result.applied) != null ? _A : []) {
+            if ((_B = result.idMap) == null ? void 0 : _B[id]) continue;
+            const sent = sentById.get(id);
+            if (!sent) continue;
+            const metadata = appliedMetadata.get(id);
+            const retained = await acknowledgePendingNoteChange(sent, {
+              serverVersion: (_C = metadata == null ? void 0 : metadata.version) != null ? _C : sent.serverVersion,
+              ...sent.operation === "delete" && {
+                localMutation: { type: "delete", id }
+              },
+              ...sent.operation !== "delete" && {
+                localMutation: {
+                  type: "advance",
+                  id,
+                  serverVersion: (_D = metadata == null ? void 0 : metadata.version) != null ? _D : sent.serverVersion,
+                  updatedAt: metadata == null ? void 0 : metadata.updatedAt
+                }
+              }
+            });
+            if (retained) continue;
+            if (sent.operation === "delete") {
+              continue;
+            }
+            const local = await getRecord(
+              db2,
+              DB_CONFIG.STORES.NOTES,
+              id
+            );
+            if (local) {
+              await putRecord(db2, DB_CONFIG.STORES.NOTES, {
+                ...local,
+                version: (_E = metadata == null ? void 0 : metadata.version) != null ? _E : local.version,
+                updatedAt: (metadata == null ? void 0 : metadata.updatedAt) ? new Date(metadata.updatedAt) : local.updatedAt,
+                isDirty: false,
+                isLoading: false,
+                error: null,
+                lastSaved: /* @__PURE__ */ new Date()
+              });
+            }
+          }
+          if (Object.keys((_F = result.groupIdMap) != null ? _F : {}).length) {
+            await remapPendingNoteGroupIds(result.groupIdMap);
+            await reconcileNoteGroupIds(result.groupIdMap);
+          }
+          for (const id of (_G = result.groupApplied) != null ? _G : []) {
+            const sent = sentGroupsById.get(id);
+            const current = currentGroups.get(id);
+            const newer = replayedGroupCreates.has(id) || isNewer(current, sent);
+            const serverId = (_H = result.groupIdMap) == null ? void 0 : _H[id];
+            if (serverId) {
+              await deletePendingNoteGroupChanges([id]);
+              if (newer && current) {
+                await queueNoteGroupChange({
+                  ...current,
+                  id: serverId,
+                  operation: current.operation === "delete" ? "delete" : "rename",
+                  serverVersion: (_I = current.serverVersion) != null ? _I : 1
+                });
+              }
+            } else if (!newer) {
+              await deletePendingNoteGroupChanges([id]);
+            }
+            if (!newer && (sent == null ? void 0 : sent.operation) === "delete") {
+              await deleteRecord(db2, DB_CONFIG.STORES.NOTE_GROUPS, id);
+            }
+          }
+          for (const conflict of (_J = result.groupConflicts) != null ? _J : []) {
+            const sent = sentGroupsById.get(conflict.id);
+            const current = (_K = currentGroups.get(conflict.id)) != null ? _K : sent;
+            if (current) {
+              await queueNoteGroupChange({ ...current, conflicted: true });
+            }
+            if ((sent == null ? void 0 : sent.operation) === "delete" && sent.rollbackData) {
+              await putRecord(db2, DB_CONFIG.STORES.NOTE_GROUPS, {
+                ...sent.rollbackData,
+                id: conflict.id
+              });
+            }
+          }
+          if (result.layoutApplied && request2.layout) {
+            const current = (await loadPendingNoteLayoutChanges()).find(
+              (layout) => layout.workspaceId === request2.layout.workspaceId
+            );
+            if ((current == null ? void 0 : current.localVersion) === request2.layout.localVersion && current.updatedAt === request2.layout.updatedAt) {
+              await deletePendingNoteLayoutChange(request2.layout.workspaceId);
+            }
+          }
+        }
+        const hasRemaining = (await loadPendingNoteChanges()).some((change) => !change.conflicted) || (await loadPendingNoteGroupChanges()).some(
+          (change) => !change.conflicted
+        ) || (await loadPendingNoteLayoutChanges()).length > 0;
+        if (hasRemaining && "sync" in swSelf.registration) {
+          try {
+            await swSelf.registration.sync.register(SYNC_TAGS.NOTES);
+          } catch {
+          }
+        }
+      } catch (err) {
+        error("notes background sync error", err);
+        if ("sync" in swSelf.registration) {
+          try {
+            await swSelf.registration.sync.register(SYNC_TAGS.NOTES);
+          } catch {
+          }
+        }
+      } finally {
+        notesSyncInProgress = false;
+      }
+    }
     async function syncOfflineV2() {
-      var _a;
+      var _a, _b, _c, _d;
       const clients = await swSelf.clients.matchAll({ type: "window" });
       if (clients.length) return;
       const session = await getOfflineSession();
       if (!session) return;
       await recoverInterruptedMutations(session.accountId);
-      const pending = (await listOfflineMutations(session.accountId)).filter((mutation) => mutation.status === "pending" || mutation.status === "retry");
+      const pending = (await listOfflineMutations(session.accountId)).filter(
+        (mutation) => mutation.entity !== "note" && mutation.entity !== "noteGroup"
+      ).filter(
+        (mutation) => mutation.status === "pending" || mutation.status === "retry"
+      );
       const { ordered, cyclic } = orderOfflineMutations(pending);
-      if (cyclic.length) await setMutationStatus(session.accountId, cyclic.map((mutation) => mutation.id), "rejected", "Cyclic offline dependency");
-      const batch = ordered.slice(0, 50);
+      if (cyclic.length)
+        await setMutationStatus(
+          session.accountId,
+          cyclic.map((mutation) => mutation.id),
+          "rejected",
+          "Cyclic offline dependency"
+        );
+      const candidates = ordered.slice(0, 50);
+      if (!candidates.length) return;
+      const claimToken = `service-worker:${(_c = (_b = (_a = globalThis.crypto) == null ? void 0 : _a.randomUUID) == null ? void 0 : _b.call(_a)) != null ? _c : `${Date.now()}-${Math.random()}`}`;
+      const batch = await claimOfflineMutations({
+        accountId: session.accountId,
+        ids: candidates.map((mutation) => mutation.id),
+        claimToken
+      });
       if (!batch.length) return;
-      await setMutationStatus(session.accountId, batch.map((mutation) => mutation.id), "syncing");
       try {
         const response = await fetch("/api/offline/sync", {
           method: "POST",
@@ -4541,7 +5390,11 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           credentials: "same-origin",
           body: JSON.stringify({ clientId: "service-worker", mutations: batch })
         });
-        if (!response.ok) throw Object.assign(new Error(`Offline sync failed (${response.status})`), { statusCode: response.status });
+        if (!response.ok)
+          throw Object.assign(
+            new Error(`Offline sync failed (${response.status})`),
+            { statusCode: response.status }
+          );
         const payload = await response.json();
         if (!payload.data) throw new Error("Offline sync returned no data");
         const byId = new Map(batch.map((mutation) => [mutation.id, mutation]));
@@ -4550,401 +5403,54 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           const mutation = byId.get(result.id);
           if (!mutation) continue;
           returned.add(result.id);
-          if (result.idMap) await remapOfflineIds(session.accountId, result.idMap);
-          await applySyncResult({ accountId: session.accountId, mutation, result });
+          if (result.idMap) {
+            await remapOfflineIds(session.accountId, result.idMap, {
+              serverVersion: result.version,
+              mutationId: mutation.id
+            });
+          }
+          await applySyncResult({
+            accountId: session.accountId,
+            mutation,
+            result
+          });
         }
         const missing = batch.filter((mutation) => !returned.has(mutation.id));
         if (missing.length) {
-          await setMutationStatus(session.accountId, missing.map((mutation) => mutation.id), "retry", "The sync service did not acknowledge this mutation.");
+          await setMutationStatus(
+            session.accountId,
+            missing.map((mutation) => mutation.id),
+            "retry",
+            "The sync service did not acknowledge this mutation.",
+            claimToken
+          );
         }
         await updateOfflineSyncMetadata(session.accountId, {
           lastAttemptAt: Date.now(),
           lastSuccessfulSyncAt: Date.now(),
           lastError: void 0
         });
-        const remaining = (await listOfflineMutations(session.accountId)).some((mutation) => mutation.status === "pending" || mutation.status === "retry");
+        const remaining = (await listOfflineMutations(session.accountId)).some(
+          (mutation) => mutation.entity !== "note" && mutation.entity !== "noteGroup" && (mutation.status === "pending" || mutation.status === "retry")
+        );
         if (remaining && "sync" in swSelf.registration) {
           await swSelf.registration.sync.register(SYNC_TAGS.OFFLINE_V2);
         }
       } catch (err) {
         const message = err instanceof Error ? err.message : "Background sync failed";
-        const statusCode = Number((_a = err == null ? void 0 : err.statusCode) != null ? _a : 0);
-        await setMutationStatus(session.accountId, batch.map((mutation) => mutation.id), statusCode === 401 || statusCode === 403 ? "blocked" : "retry", statusCode === 401 || statusCode === 403 ? "Sign in to sync your saved local changes." : message);
+        const statusCode = Number((_d = err == null ? void 0 : err.statusCode) != null ? _d : 0);
+        await setMutationStatus(
+          session.accountId,
+          batch.map((mutation) => mutation.id),
+          statusCode === 401 || statusCode === 403 ? "blocked" : "retry",
+          statusCode === 401 || statusCode === 403 ? "Sign in to sync your saved local changes." : message,
+          claimToken
+        );
         await updateOfflineSyncMetadata(session.accountId, {
           lastAttemptAt: Date.now(),
           lastError: statusCode === 401 || statusCode === 403 ? "Sign in to sync your saved local changes." : message
         });
         error("offline-v2 sync error", err);
-      }
-    }
-    async function syncPendingNotes(mode) {
-      var _a;
-      if (notesSyncInProgress) return;
-      notesSyncInProgress = true;
-      try {
-        const clients = await swSelf.clients.matchAll({ type: "window" });
-        if (mode === "background" && clients.length > 0) {
-          log("[Notes Sync] Background sync deferred \u2014 client tabs are open, they own sync");
-          clients.forEach(
-            (c) => c.postMessage({
-              type: SW_MESSAGE_TYPES.NOTES_SYNCED,
-              data: { appliedCount: 0, conflictsCount: 0, mode, deferredToClient: true }
-            })
-          );
-          return;
-        }
-        const pending = await loadPendingNoteChanges();
-        const syncablePending = pending.filter((change) => !change.conflicted);
-        const pendingGroups = await loadPendingNoteGroupChanges();
-        const pendingLayouts = await loadPendingNoteLayoutChanges();
-        clients.forEach(
-          (c) => c.postMessage({
-            type: SW_MESSAGE_TYPES.NOTES_SYNC_STARTED,
-            data: {
-              message: "Syncing notes\u2026",
-              pendingCount: syncablePending.length + pendingGroups.length + pendingLayouts.length,
-              mode
-            }
-          })
-        );
-        if (!syncablePending.length && !pendingGroups.length && !pendingLayouts.length) {
-          if (pending.some((change) => change.conflicted)) {
-            clients.forEach(
-              (c) => c.postMessage({
-                type: SW_MESSAGE_TYPES.NOTES_SYNC_CONFLICTS,
-                data: { conflictsCount: pending.filter((change) => change.conflicted).length, mode }
-              })
-            );
-          }
-          clients.forEach(
-            (c) => c.postMessage({
-              type: SW_MESSAGE_TYPES.NOTES_SYNCED,
-              data: { appliedCount: 0, conflictsCount: 0, mode }
-            })
-          );
-          return;
-        }
-        const persistContentConflicts = async (results) => {
-          var _a2, _b, _c, _d;
-          const contentConflicts = results.flatMap((result) => {
-            var _a3;
-            return ((_a3 = result.data) == null ? void 0 : _a3.conflicts) || [];
-          });
-          if (!contentConflicts.length) return;
-          const database = await openUnifiedDB();
-          const now2 = Date.now();
-          for (const conflict of contentConflicts) {
-            const original = pending.find((change) => change.id === conflict.id);
-            const workspaceId = (original == null ? void 0 : original.workspaceId) || (typeof ((_a2 = conflict.serverSnapshot) == null ? void 0 : _a2.workspaceId) === "string" ? conflict.serverSnapshot.workspaceId : void 0);
-            if (!workspaceId) continue;
-            if (original) {
-              await putRecord(database, DB_CONFIG.STORES.PENDING_NOTES, {
-                ...original,
-                conflicted: true,
-                serverVersion: (_b = conflict.serverVersion) != null ? _b : original.serverVersion
-              });
-            }
-            await putRecord(database, DB_CONFIG.STORES.NOTE_SYNC_CONFLICTS, {
-              id: `${workspaceId}:content:${conflict.id}`,
-              workspaceId,
-              scope: "content",
-              entityId: conflict.id,
-              reason: (_c = conflict.reason) != null ? _c : "SYNC_CONFLICT",
-              createdAt: now2,
-              updatedAt: now2,
-              localSnapshot: original != null ? original : null,
-              serverSnapshot: (_d = conflict.serverSnapshot) != null ? _d : null,
-              serverVersion: conflict.serverVersion,
-              clientServerVersion: conflict.clientServerVersion
-            });
-          }
-        };
-        const postNotesSync = async (payload) => {
-          const resp = await fetch("/api/notes/sync", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-          if (!resp.ok) {
-            error("[Notes Sync] Server error:", resp.status);
-            throw new Error("Notes sync failed");
-          }
-          return await resp.json().catch(() => ({}));
-        };
-        const syncResults = [];
-        const [firstLayout, ...remainingLayouts] = pendingLayouts;
-        syncResults.push({
-          result: await postNotesSync({
-            changes: syncablePending,
-            groupChanges: pendingGroups,
-            ...firstLayout && { layoutChange: firstLayout }
-          }),
-          layout: firstLayout
-        });
-        for (const layout of remainingLayouts) {
-          syncResults.push({
-            result: await postNotesSync({ changes: [], layoutChange: layout }),
-            layout
-          });
-        }
-        const appliedIds = Array.from(
-          new Set(syncResults.flatMap(({ result }) => {
-            var _a2;
-            return ((_a2 = result.data) == null ? void 0 : _a2.applied) || [];
-          }))
-        );
-        const conflictsCount = syncResults.reduce(
-          (total, { result }) => {
-            var _a2, _b;
-            return total + (((_b = (_a2 = result.data) == null ? void 0 : _a2.conflicts) == null ? void 0 : _b.length) || 0);
-          },
-          0
-        );
-        const groupAppliedIds = Array.from(
-          new Set(syncResults.flatMap(({ result }) => {
-            var _a2;
-            return ((_a2 = result.data) == null ? void 0 : _a2.groupApplied) || [];
-          }))
-        );
-        const groupConflictsCount = syncResults.reduce(
-          (total, { result }) => {
-            var _a2, _b;
-            return total + (((_b = (_a2 = result.data) == null ? void 0 : _a2.groupConflicts) == null ? void 0 : _b.length) || 0);
-          },
-          0
-        );
-        const idMap = syncResults.reduce((acc, { result }) => {
-          var _a2;
-          Object.assign(acc, ((_a2 = result.data) == null ? void 0 : _a2.idMap) || {});
-          return acc;
-        }, {});
-        const groupIdMap = syncResults.reduce((acc, { result }) => {
-          var _a2;
-          Object.assign(acc, ((_a2 = result.data) == null ? void 0 : _a2.groupIdMap) || {});
-          return acc;
-        }, {});
-        const syncedLayouts = syncResults.filter(({ result, layout }) => {
-          var _a2;
-          return ((_a2 = result.data) == null ? void 0 : _a2.layoutApplied) && layout;
-        }).map(({ layout }) => layout);
-        const layoutConflict = syncResults.some(({ result }) => {
-          var _a2;
-          return Boolean((_a2 = result.data) == null ? void 0 : _a2.layoutConflict);
-        });
-        await persistContentConflicts(syncResults.map(({ result }) => result));
-        if (Object.keys(idMap).length) {
-          try {
-            const db2 = await openUnifiedDB();
-            for (const [tempId, serverId] of Object.entries(idMap)) {
-              const original = pending.find((p) => p.id === tempId);
-              if (original) {
-                await putRecord(db2, DB_CONFIG.STORES.NOTES, {
-                  id: serverId,
-                  workspaceId: original.workspaceId,
-                  groupId: (_a = original.groupId) != null ? _a : null,
-                  title: original.title,
-                  content: original.content || "",
-                  tags: original.tags || [],
-                  order: 0,
-                  noteType: original.noteType || "TEXT",
-                  metadata: original.metadata,
-                  createdAt: new Date(original.updatedAt),
-                  updatedAt: new Date(original.updatedAt),
-                  isDirty: false
-                });
-                await deleteRecord(db2, DB_CONFIG.STORES.NOTES, tempId);
-              }
-            }
-          } catch (e) {
-            error("[Notes Sync] Failed to apply server id map:", e);
-          }
-        }
-        if (appliedIds.length) {
-          try {
-            await deletePendingNoteChanges(appliedIds);
-          } catch (e) {
-            error("[Notes Sync] Failed to clear synced changes:", e);
-          }
-        }
-        if (groupAppliedIds.length) {
-          try {
-            await deletePendingNoteGroupChanges(groupAppliedIds);
-            await remapPendingNoteGroupIds(groupIdMap);
-            const db2 = await openUnifiedDB();
-            for (const tempId of Object.keys(groupIdMap)) {
-              await deleteRecord(db2, DB_CONFIG.STORES.NOTE_GROUPS, tempId);
-            }
-          } catch (e) {
-            error("[Notes Sync] Failed to clear synced group changes:", e);
-          }
-        }
-        if (syncedLayouts.length) {
-          try {
-            await Promise.all(
-              syncedLayouts.map((layout) => deletePendingNoteLayoutChange(layout.workspaceId))
-            );
-          } catch (e) {
-            error("[Notes Sync] Failed to clear synced layout change:", e);
-          }
-        }
-        if (conflictsCount || groupConflictsCount || layoutConflict) {
-          clients.forEach(
-            (c) => c.postMessage({
-              type: SW_MESSAGE_TYPES.NOTES_SYNC_CONFLICTS,
-              data: { conflictsCount, groupConflictsCount, layoutConflict, mode }
-            })
-          );
-        }
-        log("[Notes Sync] Complete:", {
-          applied: appliedIds.length,
-          conflicts: conflictsCount,
-          groupApplied: groupAppliedIds.length,
-          groupConflicts: groupConflictsCount,
-          layoutApplied: syncedLayouts.length,
-          layoutConflict
-        });
-        clients.forEach(
-          (c) => c.postMessage({
-            type: SW_MESSAGE_TYPES.NOTES_SYNCED,
-            data: {
-              appliedCount: appliedIds.length,
-              conflictsCount: conflictsCount + groupConflictsCount,
-              groupAppliedCount: groupAppliedIds.length,
-              layoutApplied: syncedLayouts.length,
-              layoutConflict,
-              mode
-            }
-          })
-        );
-      } catch (err) {
-        error("[Notes Sync] Error:", err);
-        const clients = await swSelf.clients.matchAll({ type: "window" });
-        clients.forEach(
-          (c) => c.postMessage({ type: SW_MESSAGE_TYPES.NOTES_SYNC_ERROR })
-        );
-      } finally {
-        notesSyncInProgress = false;
-      }
-    }
-    async function syncPendingBoardItems(mode) {
-      var _a;
-      if (boardItemsSyncInProgress) return;
-      boardItemsSyncInProgress = true;
-      try {
-        const clients = await swSelf.clients.matchAll({ type: "window" });
-        if (mode === "background" && clients.length > 0) {
-          log("[Board Items Sync] Background sync deferred \u2014 client tabs are open, they own sync");
-          clients.forEach(
-            (c) => c.postMessage({
-              type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNCED,
-              data: { appliedCount: 0, mode, deferredToClient: true }
-            })
-          );
-          return;
-        }
-        const pending = await loadPendingBoardItemChanges();
-        clients.forEach(
-          (c) => c.postMessage({
-            type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNC_STARTED,
-            data: {
-              message: "Syncing board items\u2026",
-              pendingCount: pending.length,
-              mode
-            }
-          })
-        );
-        if (!pending.length) {
-          clients.forEach(
-            (c) => c.postMessage({
-              type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNCED,
-              data: { appliedCount: 0, mode }
-            })
-          );
-          return;
-        }
-        const syncPayload = pending.map((p) => {
-          var _a2, _b, _c, _d, _e;
-          return {
-            id: p.id,
-            operation: p.operation || "upsert",
-            localVersion: (_a2 = p.localVersion) != null ? _a2 : 1,
-            userId: p.userId || "",
-            // server will use auth context
-            columnId: (_b = p.columnId) != null ? _b : null,
-            workspaceId: (_c = p.workspaceId) != null ? _c : null,
-            content: p.content || "",
-            tags: p.tags || [],
-            order: (_d = p.order) != null ? _d : 0,
-            dueDate: (_e = p.dueDate) != null ? _e : null,
-            attachments: p.attachments || [],
-            createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : new Date(p.updatedAt).toISOString(),
-            updatedAt: new Date(p.updatedAt).toISOString()
-          };
-        });
-        const resp = await fetch("/api/board-items/sync", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(syncPayload)
-        });
-        if (!resp.ok) {
-          error("[Board Items Sync] Server error:", resp.status);
-          throw new Error("Board items sync failed");
-        }
-        const result = await resp.json().catch(() => ({}));
-        const resultData = result.data;
-        const appliedIds = Array.from(
-          new Set(
-            Array.isArray(resultData) ? resultData.filter((r) => r.status === "created" || r.status === "updated" || r.status === "deleted").map((r) => r.id) : (resultData == null ? void 0 : resultData.applied) || []
-          )
-        );
-        const idMap = !Array.isArray(resultData) ? (resultData == null ? void 0 : resultData.idMap) || {} : {};
-        if (Object.keys(idMap).length) {
-          try {
-            const db2 = await openUnifiedDB();
-            const resultItems = !Array.isArray(resultData) ? (resultData == null ? void 0 : resultData.results) || [] : [];
-            for (const [tempId, serverId] of Object.entries(idMap)) {
-              const original = pending.find((p) => p.id === tempId);
-              const serverItem = (_a = resultItems.find((r) => r.id === tempId)) == null ? void 0 : _a.data;
-              if (serverItem) {
-                await putRecord(db2, DB_CONFIG.STORES.BOARD_ITEMS, {
-                  ...serverItem,
-                  id: serverId
-                });
-              } else if (original) {
-                await putRecord(db2, DB_CONFIG.STORES.BOARD_ITEMS, {
-                  ...original,
-                  id: serverId,
-                  isDirty: false
-                });
-              }
-              await deleteRecord(db2, DB_CONFIG.STORES.BOARD_ITEMS, tempId);
-            }
-          } catch (e) {
-            error("[Board Items Sync] Failed to apply server id map:", e);
-          }
-        }
-        if (appliedIds.length) {
-          try {
-            await deletePendingBoardItemChanges(appliedIds);
-          } catch (e) {
-            error("[Board Items Sync] Failed to clear synced changes:", e);
-          }
-        }
-        log("[Board Items Sync] Complete:", { applied: appliedIds.length });
-        clients.forEach(
-          (c) => c.postMessage({
-            type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNCED,
-            data: { appliedCount: appliedIds.length, mode }
-          })
-        );
-      } catch (err) {
-        error("[Board Items Sync] Error:", err);
-        const clients = await swSelf.clients.matchAll({ type: "window" });
-        clients.forEach(
-          (c) => c.postMessage({ type: SW_MESSAGE_TYPES.BOARD_ITEMS_SYNC_ERROR })
-        );
-      } finally {
-        boardItemsSyncInProgress = false;
       }
     }
   })();

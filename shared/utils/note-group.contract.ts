@@ -1,13 +1,17 @@
 import { z } from "zod";
 
 const trim = (v: unknown) => (typeof v === "string" ? v.trim() : v);
+const optionalPosition = z.preprocess(
+  (value) => (value === null ? undefined : value),
+  z.string().regex(/^[0-9A-Za-z]+$/).optional(),
+);
 
 export const NoteGroupSchema = z.object({
   id: z.string(),
   workspaceId: z.string(),
   title: z.preprocess(trim, z.string().min(1)),
   order: z.number().int().default(0),
-  position: z.string().regex(/^[0-9A-Za-z]+$/).optional(),
+  position: optionalPosition,
   version: z.number().int().default(1),
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),

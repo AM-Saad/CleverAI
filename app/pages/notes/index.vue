@@ -274,31 +274,48 @@ async function newNote(action?: "ai" | "dictate", groupId?: string | null) {
 // ── Quick capture (lazy create — nothing exists until the first character) ──
 const { morph, armMorphTarget, morphing } = useViewTransitionMorph();
 const quickOpen = ref(false);
+const quickTransitioning = ref(false);
 const quick = useQuickNoteCapture(store);
 let quickTriggerEl: HTMLElement | null = null;
 
 async function openQuickNote(groupId?: string | null, event?: MouseEvent) {
-  if (!store.value || quickOpen.value) return;
+  if (!store.value || quickOpen.value || quickTransitioning.value) return;
+  quickTransitioning.value = true;
   // currentTarget is only valid synchronously — capture before any await.
   const trigger = (event?.currentTarget as HTMLElement | null) ?? null;
-  quick.begin(groupId ?? null);
-  quickTriggerEl = trigger;
-  await morph({
-    from: trigger,
-    update: () => {
-      quickOpen.value = true;
-    },
-  });
+  try {
+    await quick.begin(groupId ?? null);
+    quickTriggerEl = trigger;
+    await morph({
+      from: trigger,
+      update: () => {
+        quickOpen.value = true;
+      },
+    });
+  } finally {
+    quickTransitioning.value = false;
+  }
 }
 
 /** Done → morph the sheet back into the trigger it came from (when possible). */
 async function doneQuickNote() {
-  await morph({
-    to: quickTriggerEl?.isConnected ? quickTriggerEl : null,
-    update: () => {
-      quickOpen.value = false;
-    },
-  });
+  if (quickTransitioning.value) return;
+  quickTransitioning.value = true;
+  // Start finalization before the exit animation. Waiting for @closed allowed
+  // the 500 ms autosave timer to send the first-character create mid-animation,
+  // followed by a second request for the completed title.
+  try {
+    const finalize = quick.finalize();
+    await morph({
+      to: quickTriggerEl?.isConnected ? quickTriggerEl : null,
+      update: () => {
+        quickOpen.value = false;
+      },
+    });
+    await finalize;
+  } finally {
+    quickTransitioning.value = false;
+  }
 }
 
 /** Open the note in its own place — the sheet morphs into /notes/[id]. */
@@ -446,12 +463,12 @@ async function onNotePointerUp() {
 }
 
 async function loadNotes() {
-  if (!store.value) return;
+  const targetStore = store.value;
+  if (!targetStore) return;
   loading.value = true;
   try {
-    await store.value.hydrateLocalNotes();
     await Promise.all([
-      store.value.refreshFromServer(),
+      targetStore.syncWithServer(),
       groupsStore.value?.syncWithServer(),
     ]);
   } finally {

@@ -1,5 +1,13 @@
-import { computed, nextTick, ref, type Ref } from "vue";
-import type { BoardItemState } from "~/features/board/composables/useBoardItemsStore";
+import {
+  computed,
+  nextTick,
+  onScopeDispose,
+  ref,
+  shallowRef,
+  type Ref,
+} from "vue";
+import { createQuickCaptureSessionController } from "../../../composables/shared/quickCaptureSession";
+import type { BoardItemState } from "./useBoardItemsStore";
 
 type BoardItemsStore = ReturnType<typeof useBoardItemsStore>;
 
@@ -23,19 +31,32 @@ function hasContent(payload: BoardItemPayload) {
   return payload.content.replace(/<[^>]*>/g, "").trim().length > 0;
 }
 
+function payloadsMatch(left: BoardItemPayload, right: BoardItemPayload) {
+  return (
+    left.content === right.content &&
+    left.columnId === right.columnId &&
+    left.dueDate === right.dueDate &&
+    JSON.stringify(left.tags) === JSON.stringify(right.tags)
+  );
+}
+
 export function useQuickBoardItemCapture(
   store: Ref<BoardItemsStore | null>,
   defaultColumnId: Ref<string | null>,
 ) {
   const sourceId = ref<string | null>(null);
+  const sessionStore = shallowRef<BoardItemsStore | null>(null);
 
   let pending = emptyPayload(defaultColumnId.value);
   let createPromise: Promise<string | null> | null = null;
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
-  let finalized = false;
+  let draftRevision = 0;
+  let durableRevision = 0;
+  let commitPromise: Promise<boolean> | null = null;
+  const session = createQuickCaptureSessionController();
 
   const item = computed<BoardItemState | null>(() => {
-    const s = store.value;
+    const s = sessionStore.value;
     const id = sourceId.value;
     if (!s || !id) return null;
     return (
@@ -47,12 +68,17 @@ export function useQuickBoardItemCapture(
 
   const itemId = computed(() => item.value?.id ?? sourceId.value ?? "");
 
-  function begin() {
-    cancelPendingSave();
-    sourceId.value = null;
-    pending = emptyPayload(defaultColumnId.value);
-    createPromise = null;
-    finalized = false;
+  async function begin() {
+    await session.begin(finalize, () => {
+      cancelPendingSave();
+      sourceId.value = null;
+      sessionStore.value = store.value;
+      pending = emptyPayload(defaultColumnId.value);
+      createPromise = null;
+      draftRevision = 0;
+      durableRevision = 0;
+      commitPromise = null;
+    });
   }
 
   function payloadWithDefaultColumn(payload = pending): BoardItemPayload {
@@ -64,20 +90,33 @@ export function useQuickBoardItemCapture(
 
   function ensureCreated(allowEmpty = false): Promise<string | null> {
     if (sourceId.value) return Promise.resolve(itemId.value);
-    const s = store.value;
+    const s = sessionStore.value;
     const payload = payloadWithDefaultColumn();
-    if (!s || (!allowEmpty && !hasContent(payload))) return Promise.resolve(null);
+    if (!s || (!allowEmpty && !hasContent(payload)))
+      return Promise.resolve(null);
 
     if (!createPromise) {
-      createPromise = s
-        .createItem(payload.content, payload.tags, payload.columnId, payload.dueDate)
+      const createRevision = draftRevision;
+      const generation = session.currentGeneration();
+      const task = s
+        .createItem(
+          payload.content,
+          payload.tags,
+          payload.columnId,
+          payload.dueDate,
+        )
         .then((id) => {
-          if (id) sourceId.value = id;
+          if (id && session.isCurrent(generation)) {
+            sourceId.value = id;
+            durableRevision = Math.max(durableRevision, createRevision);
+            if (draftRevision > durableRevision) scheduleSave();
+          }
           return id;
         })
         .finally(() => {
-          createPromise = null;
+          if (createPromise === task) createPromise = null;
         });
+      createPromise = task;
     }
 
     return createPromise;
@@ -89,34 +128,62 @@ export function useQuickBoardItemCapture(
       saveTimer = null;
     }
   }
+  onScopeDispose(cancelPendingSave);
 
   function scheduleSave() {
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(() => void commitNow(), 500);
   }
 
-  async function commitNow() {
+  async function commitNow(): Promise<boolean> {
     cancelPendingSave();
-    const s = store.value;
-    const current = item.value;
-    const id = itemId.value;
-    if (!s || !current || !id) return;
-
-    const payload = payloadWithDefaultColumn();
-    await s.updateItem(id, {
-      ...current,
-      content: payload.content,
-      tags: payload.tags,
-      dueDate: payload.dueDate,
-      updatedAt: new Date(),
-    });
-    if (payload.columnId !== (current.columnId ?? null)) {
-      await s.moveItemToColumn(id, payload.columnId);
+    while (durableRevision < draftRevision) {
+      if (commitPromise) {
+        if (!(await commitPromise)) return false;
+        continue;
+      }
+      const s = sessionStore.value;
+      const current = item.value;
+      const id = itemId.value;
+      if (!s || !current || !id) return false;
+      const targetRevision = draftRevision;
+      const payload = payloadWithDefaultColumn();
+      const task = (async () => {
+        const updated = await s.updateItem(id, {
+          ...current,
+          content: payload.content,
+          tags: payload.tags,
+          dueDate: payload.dueDate,
+          updatedAt: new Date(),
+        });
+        if (!updated) return false;
+        // updateItem intentionally debounces ordinary editor traffic. A capture
+        // commit/finalize is a durability boundary, so force this item into the
+        // V2 outbox before reporting that the draft revision is saved.
+        await s.flushItem(id);
+        if (payload.columnId !== (current.columnId ?? null)) {
+          if (!(await s.moveItemToColumn(id, payload.columnId))) return false;
+        }
+        durableRevision = Math.max(durableRevision, targetRevision);
+        return true;
+      })().finally(() => {
+        if (commitPromise === task) commitPromise = null;
+      });
+      commitPromise = task;
+      if (!(await task)) return false;
     }
+    return true;
   }
 
   function onContent(content: string) {
-    pending = payloadWithDefaultColumn({ ...pending, content });
+    onPayload({ ...pending, content });
+  }
+
+  function onPayload(payload: BoardItemPayload) {
+    const next = payloadWithDefaultColumn(payload);
+    if (payloadsMatch(pending, next)) return;
+    draftRevision += 1;
+    pending = next;
     if (!sourceId.value) {
       if (hasContent(pending)) void ensureCreated();
       return;
@@ -124,34 +191,37 @@ export function useQuickBoardItemCapture(
     scheduleSave();
   }
 
-  async function finalize() {
-    if (finalized) return;
-    finalized = true;
-    if (createPromise) {
-      await createPromise;
-      await nextTick();
-    }
+  function finalize(): Promise<void> {
+    return session.finalize(async (finalizingGeneration) => {
+      const pendingCreate = createPromise;
+      if (pendingCreate) {
+        await pendingCreate;
+        await nextTick();
+      }
+      if (!session.isCurrent(finalizingGeneration)) return;
 
-    const s = store.value;
-    const current = item.value;
-    const id = itemId.value;
-    if (!s || !current || !id) {
-      sourceId.value = null;
-      return;
-    }
+      const s = sessionStore.value;
+      const current = item.value;
+      const id = itemId.value;
+      if (!s || !current || !id) {
+        sourceId.value = null;
+        return;
+      }
 
-    const hasMeta = (current.tags?.length ?? 0) > 0 || Boolean(current.dueDate);
-    if (hasContent({ ...pending, content: current.content }) || hasMeta) {
-      await commitNow();
-    } else {
-      cancelPendingSave();
-      await s.deleteItem(id);
-    }
-    sourceId.value = null;
+      const hasMeta =
+        pending.tags.length > 0 || Boolean(pending.dueDate);
+      if (hasContent(pending) || hasMeta) {
+        await commitNow();
+      } else {
+        cancelPendingSave();
+        await s.deleteItem(id);
+      }
+      if (session.isCurrent(finalizingGeneration)) sourceId.value = null;
+    });
   }
 
   function markFinalized() {
-    finalized = true;
+    session.markFinalized();
   }
 
   return {
@@ -160,6 +230,7 @@ export function useQuickBoardItemCapture(
     begin,
     ensureCreated,
     onContent,
+    onPayload,
     commitNow,
     finalize,
     markFinalized,

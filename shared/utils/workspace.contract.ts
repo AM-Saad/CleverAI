@@ -4,6 +4,10 @@ import { LLMEnum } from "./llm";
 
 const trim = (v: unknown) => (typeof v === "string" ? v.trim() : v);
 const dateish = z.string().datetime().or(z.date()).or(z.string());
+const optionalPosition = z.preprocess(
+  (value) => (value === null ? undefined : value),
+  z.string().regex(/^[0-9A-Za-z]+$/).optional(),
+);
 
 export const WorkspaceSummarySchema = z.object({
   id: z.string(),
@@ -11,7 +15,7 @@ export const WorkspaceSummarySchema = z.object({
   description: z.string().nullable(),
   metadata: z.record(z.string(), z.unknown()).nullable(),
   order: z.number(),
-  position: z.string().regex(/^[0-9A-Za-z]+$/).optional(),
+  position: optionalPosition,
   llmModel: LLMEnum,
   createdAt: dateish,
   updatedAt: dateish,
@@ -64,7 +68,7 @@ export const WorkspaceSchema = z.object({
   userId: z.string(),
   metadata: z.record(z.string(), z.unknown()).nullable(),
   order: z.number().optional(),
-  position: z.string().regex(/^[0-9A-Za-z]+$/).optional(),
+  position: optionalPosition,
   rawText: z.string().nullable().optional(), // Keep for backward compatibility, but deprecated
   llmModel: LLMEnum,
   createdAt: dateish,

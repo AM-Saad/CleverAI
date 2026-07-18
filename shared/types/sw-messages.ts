@@ -5,44 +5,7 @@
 
 import type { SW_MESSAGE_TYPES } from "../../app/utils/constants/pwa";
 
-// Helper literal extraction for discriminated unions
-type ValueOf<T> = T[keyof T];
-
-// Modes for sync operations
-export type SyncMode = "manual" | "background" | "reconnect" | "refresh";
-
 // ---------------- Outgoing (SW -> Window) ----------------
-// Notes sync lifecycle
-export interface NotesSyncStartedMessage {
-  type: typeof SW_MESSAGE_TYPES.NOTES_SYNC_STARTED;
-  data: { message: string; pendingCount: number; mode: SyncMode };
-}
-export interface NotesSyncedMessage {
-  type: typeof SW_MESSAGE_TYPES.NOTES_SYNCED;
-  data: {
-    appliedCount: number;
-    conflictsCount: number;
-    mode: SyncMode;
-    groupAppliedCount?: number;
-    layoutApplied?: number;
-    layoutConflict?: boolean;
-    deferredToClient?: boolean;
-  };
-}
-export interface NotesSyncErrorMessage {
-  type: typeof SW_MESSAGE_TYPES.NOTES_SYNC_ERROR;
-  data?: { message?: string; mode?: SyncMode };
-}
-export interface NotesSyncConflictsMessage {
-  type: typeof SW_MESSAGE_TYPES.NOTES_SYNC_CONFLICTS;
-  data: {
-    conflictsCount: number;
-    mode: SyncMode;
-    groupConflictsCount?: number;
-    layoutConflict?: boolean;
-  };
-}
-
 // SW lifecycle & update
 export interface SwActivatedMessage {
   type: typeof SW_MESSAGE_TYPES.SW_ACTIVATED;
@@ -54,20 +17,6 @@ export interface SwControlClaimedMessage {
 export interface SwUpdateAvailableMessage {
   type: typeof SW_MESSAGE_TYPES.SW_UPDATE_AVAILABLE;
   version: string;
-}
-
-// Board items sync lifecycle
-export interface BoardItemsSyncStartedMessage {
-  type: typeof SW_MESSAGE_TYPES.BOARD_ITEMS_SYNC_STARTED;
-  data: { message: string; pendingCount: number; mode: SyncMode };
-}
-export interface BoardItemsSyncedMessage {
-  type: typeof SW_MESSAGE_TYPES.BOARD_ITEMS_SYNCED;
-  data: { appliedCount: number; mode: SyncMode };
-}
-export interface BoardItemsSyncErrorMessage {
-  type: typeof SW_MESSAGE_TYPES.BOARD_ITEMS_SYNC_ERROR;
-  data?: { message?: string; mode?: SyncMode };
 }
 
 // Navigation after notification click
@@ -83,13 +32,6 @@ export interface SwGenericErrorMessage {
 }
 
 export type OutgoingSWMessage =
-  | NotesSyncStartedMessage
-  | NotesSyncedMessage
-  | NotesSyncErrorMessage
-  | NotesSyncConflictsMessage
-  | BoardItemsSyncStartedMessage
-  | BoardItemsSyncedMessage
-  | BoardItemsSyncErrorMessage
   | SwActivatedMessage
   | SwControlClaimedMessage
   | SwUpdateAvailableMessage
@@ -110,10 +52,6 @@ export interface SWSetDebugMessage {
 export interface SyncNotesMessage {
   type: typeof SW_MESSAGE_TYPES.SYNC_NOTES;
 }
-export interface SyncBoardItemsMessage {
-  type: typeof SW_MESSAGE_TYPES.SYNC_BOARD_ITEMS;
-}
-
 // (Internal test notification click trigger retained separately)
 export interface TestNotificationClickMessage {
   type: typeof SW_MESSAGE_TYPES.TEST_NOTIFICATION_CLICK;
@@ -123,9 +61,8 @@ export interface TestNotificationClickMessage {
 export type IncomingSWMessage =
   | SkipWaitingMessage
   | ClaimControlMessage
-  | SWSetDebugMessage
   | SyncNotesMessage
-  | SyncBoardItemsMessage
+  | SWSetDebugMessage
   | TestNotificationClickMessage;
 
 // Public aggregate namespace
