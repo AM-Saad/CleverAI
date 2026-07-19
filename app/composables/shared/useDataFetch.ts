@@ -1,13 +1,14 @@
 // shared/composables/useDataFetch.ts
 
 import type Result from "~/types/Result";
+import type { MaybeRefOrGetter } from "vue";
 
 /**
  * Result-based useDataFetch - No more H3Error wrapping issues!
  * FetchFactory returns Result<T> instead of throwing, so no complex error extraction needed
  */
 export function useDataFetch<T>(
-  key: string,
+  key: MaybeRefOrGetter<string>,
   fetcher: () => Promise<Result<T>>,
 ) {
   const {

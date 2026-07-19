@@ -9,6 +9,7 @@ import {
 } from "@@/shared/utils/workspace.contract";
 import { listOfflineEntities, putOfflineEntities } from "~/utils/offline-v2/repository";
 import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
+import { Result } from "~/types/Result";
 const WorkspaceResponse = z
   .union([WorkspaceSummarySchema, z.object({ data: WorkspaceSummarySchema })])
   .transform((x) => ("id" in x ? x : x.data));
@@ -53,13 +54,26 @@ export function useWorkspaces() {
   ensureWorkspaceAliasListener();
   const { $api } = useNuxtApp();
   const offline = useOfflineRuntime();
+  const { status } = useAuth();
+  const dataKey = computed(() =>
+    status.value === "authenticated" && offline.accountId.value
+      ? `workspaces:${offline.accountId.value}`
+      : "workspaces:anonymous",
+  );
 
   const { data, pending, error, refresh } = useDataFetch<WorkspaceSummary[]>(
-    "workspaces",
+    dataKey,
     async () => {
       if (!offline.isOnline.value && offline.accountId.value) {
         const local = await listOfflineEntities<WorkspaceSummary>(offline.accountId.value, "workspace");
         return { success: true, data: local.map((record) => record.data) } as any;
+      }
+      // The app shell exists on the sign-in page, so this composable can mount
+      // before Auth.js has established a session. Keep that anonymous cache
+      // empty; the reactive account-scoped key above automatically executes a
+      // fresh request as soon as authentication and the account id are ready.
+      if (status.value !== "authenticated" || !offline.accountId.value) {
+        return Result.success<WorkspaceSummary[]>([]);
       }
       const result = await $api.workspaces.getWorkspaces(WorkspacesResponseSchema);
       if (result.success && offline.accountId.value) {

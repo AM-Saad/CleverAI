@@ -31,6 +31,7 @@
       </div>
 
       <QuickNoteEditor
+        :autofocus="!isMobile"
         @update:title="quick.onTitle"
         @update:content="quick.onContent"
       />
@@ -194,6 +195,7 @@
  */
 import { computed, nextTick, ref, watch } from "vue";
 import { accentVarFor, tint } from "~/composables/useAccentColor";
+import { useResponsive } from "~/composables/ui/useResponsive";
 import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace";
 import {
   MORPH_NAME,
@@ -212,6 +214,8 @@ const emit = defineEmits<{
   (e: "update:open", value: boolean): void;
   (e: "select", payload: CaptureSelection): void;
 }>();
+
+const { isMobile } = useResponsive();
 
 type CaptureAction = "note" | "word" | "board" | "ai" | "dictate";
 type CaptureSelection = { key: CaptureAction; workspaceId: string | null };
