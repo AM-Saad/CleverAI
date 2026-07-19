@@ -30,6 +30,8 @@ export const Errors = {
     apiError("PAYMENT_REQUIRED", message, 402, details),
   unauthorized: (message = "Unauthorized") =>
     apiError("UNAUTHORIZED", message, 401),
+  sessionInvalid: (message = "Your session is no longer valid") =>
+    apiError("SESSION_INVALID", message, 401),
   forbidden: (message = "Forbidden") => apiError("FORBIDDEN", message, 403),
   notFound: (resource = "resource") =>
     apiError("NOT_FOUND", `${resource} not found`, 404),

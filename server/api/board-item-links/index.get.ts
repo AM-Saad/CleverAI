@@ -50,7 +50,10 @@ export default defineEventHandler(async (event) => {
         })
       : [];
     const revisions = new Map(
-      states.map((state) => [state.entityId, state.version]),
+      states.map((state: { entityId: string; version: number }) => [
+        state.entityId,
+        state.version,
+      ]),
     );
     const withRevision = <T extends { id: string }>(link: T) => ({
       ...link,

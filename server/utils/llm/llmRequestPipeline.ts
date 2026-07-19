@@ -100,7 +100,7 @@ export interface LlmPipelineOptions {
    * calling requireRole a second time. Use when the endpoint already
    * called requireRole for a DB lookup before invoking the pipeline.
    */
-  user?: { id: string; [key: string]: any };
+  user?: { id: string;[key: string]: any };
   /**
    * Quota status the caller already fetched (e.g. the gateway checks quota
    * before its semantic-cache lookup). When provided with checkQuota=true, the
@@ -137,7 +137,7 @@ export interface LlmFinalizeResult {
 }
 
 export interface LlmPipelineContext {
-  user: { id: string; [key: string]: any };
+  user: { id: string;[key: string]: any };
   requestId: string;
   strategy: LLMStrategy;
   selectedModel: LlmModelRegistry;
@@ -264,6 +264,7 @@ export async function llmRequestPipeline(
     }
   }
 
+
   if (!selectedModel) {
     console.log(
       "[pipeline] No DEV override, proceeding to normal model selection:",
@@ -328,6 +329,7 @@ export async function llmRequestPipeline(
       }
     }
   }
+
 
   // ── Strategy instantiation ───────────────────────────────────────────────
   // The measuredTokens holder is written by the onMeasure callback inside

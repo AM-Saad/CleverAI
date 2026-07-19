@@ -1,20 +1,9 @@
 <template>
-  <AccountPageFrame
-    id="settings"
-    title="Account"
-    subtitle="Profile, preferences, reminders, and security."
-    back-to="/"
-    back-label="Back home"
-  >
+  <AccountPageFrame id="settings" title="Account" subtitle="Profile, preferences, reminders, and security." back-to="/"
+    back-label="Back home">
     <template #action>
-      <UiPill
-        v-if="unreadCount > 0"
-        size="sm"
-        :label="String(unreadCount)"
-        color="var(--color-primary)"
-        variant="fill"
-        max-width="60px"
-      />
+      <UiPill v-if="unreadCount > 0" size="sm" :label="String(unreadCount)" color="var(--color-primary)" variant="fill"
+        max-width="60px" />
     </template>
 
     <section class="account-hub__profile" aria-label="Account summary">
@@ -31,38 +20,19 @@
     </section>
 
     <nav aria-label="Account sections" class="account-hub__list">
-      <UiListCard
-        v-for="item in accountItems"
-        :key="item.to"
-        clickable
-        :title="item.title"
-        :description="item.description"
-        :trailing-text="item.trailing"
-        size="lg"
-        @click="openAccountSection(item.to)"
-      >
+      <UiListCard v-for="item in accountItems" :key="item.to" clickable :title="item.title"
+        :description="item.description" :trailing-text="item.trailing" size="lg" @click="openAccountSection(item.to)">
         <template #leading>
           <UiIcon :name="item.icon" class="h-5 w-5" />
         </template>
         <template #action>
-          <UiIcon
-            name="i-lucide-chevron-right"
-            class="h-4 w-4 text-content-disabled"
-          />
+          <UiIcon name="i-lucide-chevron-right" class="h-4 w-4 text-content-disabled" />
         </template>
       </UiListCard>
     </nav>
 
-    <UiButton
-      pill
-      block
-      tone="error"
-      variant="soft"
-      size="lg"
-      :loading="signingOut"
-      class="account-hub__logout"
-      @click="logout"
-    >
+    <UiButton pill block tone="error" variant="soft" size="lg" :loading="signingOut" class="account-hub__logout"
+      @click="logout">
       Log out
     </UiButton>
   </AccountPageFrame>
@@ -273,6 +243,10 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  border-radius: var(--radius-2xl);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  padding: var(--space-2);
 }
 
 .account-hub__logout {

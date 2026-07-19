@@ -311,6 +311,19 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       try {
         return await fetch(request);
       } catch {
+        // Match Auth.js' normal "no session" response while offline. This is
+        // deliberately neutral (not a cached/fake authenticated session):
+        // route access and account-scoped data are resolved separately from
+        // the last identity that was verified online and stored in IndexedDB.
+        if (new URL(request.url).pathname === "/api/auth/session") {
+          return new Response("{}", {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json",
+              "Cache-Control": "no-store",
+            },
+          });
+        }
         return new Response(
           JSON.stringify({
             success: false,

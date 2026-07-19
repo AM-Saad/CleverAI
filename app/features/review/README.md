@@ -19,6 +19,17 @@ Current public entrypoints:
 - `composables/useSessionSummary.ts`
 - `services/reviewService.ts`
 
+Runtime notes:
+
+- Standard and language review use the shared SM-2 grade mapping and interval
+  projection from `shared/utils/sm2.ts`.
+- Review grades are optimistic in memory, serialized per session, and
+  idempotent across ambiguous online retries.
+- Offline grades persist the provisional schedule with the outbox mutation and
+  reconcile through the same server grading application service.
+- See `docs/FLASHCARD_REVIEW_SESSION_AUDIT.md` for the end-to-end flow and
+  resolved failure modes.
+
 Compatibility wrappers:
 
 - `app/components/review/*` re-export feature components so existing Nuxt auto-import names keep working.

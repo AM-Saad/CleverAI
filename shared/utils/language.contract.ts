@@ -52,6 +52,14 @@ export const LanguageStoryPreviewSchema = z.object({
   sentences: z.array(LanguageSentenceSchema),
 });
 
+export const LanguageWordStatusSchema = z.enum([
+  "captured",
+  "story_ready",
+  "enrolled",
+  "mastered",
+]);
+export type LanguageWordStatus = z.infer<typeof LanguageWordStatusSchema>;
+
 export const LanguageMeaningSchema = z.object({
   definition: z.string(),
   translation: z.string().optional(),
@@ -84,7 +92,7 @@ export const LanguageWordSchema = z.object({
   isPhrase: z.boolean().optional(),
   metadata: z.record(z.string(), z.unknown()).nullable().optional(),
   stories: z.array(LanguageStoryPreviewSchema).optional(),
-  status: z.string(),
+  status: LanguageWordStatusSchema,
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });
@@ -108,6 +116,15 @@ export const GenerateStoryDTO = z.object({
   relatedWords: z.array(z.string()).optional().default([]),
 });
 
+export const SaveLanguageWordDTO = z.object({
+  translationId: z.string().min(1),
+  sourceContext: z.string().max(500).optional(),
+  sourceType: z
+    .enum(["note", "material", "external", "manual"])
+    .default("manual"),
+  sourceRefId: z.string().optional(),
+});
+
 export const LanguageGradeRequestSchema = z.object({
   cardId: z.string().min(1),
   grade: z.enum(["0", "1", "2", "3", "4", "5"]),
@@ -119,6 +136,7 @@ export const LanguagePreferencesDTO = z.object({
   enabled: z.boolean().optional(),
   targetLanguage: SupportedLanguageCodeSchema.optional(),
   nativeLanguage: SupportedLanguageCodeSchema.optional(),
+  translateOnCapture: z.boolean().optional(),
   autoEnroll: z.boolean().optional(),
   sessionCardLimit: z.number().int().min(5).max(50).optional(),
   showConsent: z.boolean().optional(),
@@ -164,6 +182,16 @@ export const LanguageGradeResponseSchema = z.object({
   intervalDays: z.number(),
   easeFactor: z.number(),
   xpEarned: z.number(),
+  projection: z
+    .array(
+      z.object({
+        entity: z.enum(["languageWord", "languageReview"]),
+        entityId: z.string(),
+        version: z.number().int().nonnegative(),
+        canonical: z.record(z.string(), z.unknown()),
+      }),
+    )
+    .optional(),
 });
 
 export const LanguageStatsSchema = z.object({
@@ -174,30 +202,120 @@ export const LanguageStatsSchema = z.object({
   streakDays: z.number().optional(),
 });
 
+export const CaptureWordResponseSchema = z.object({
+  wordId: z.string().optional(),
+  translationId: z.string().optional(),
+  word: z.string(),
+  translation: z.string(),
+  partOfSpeech: z.string(),
+  detectedLang: z.string(),
+  phonetic: z.string().optional(),
+  meanings: z.array(LanguageMeaningSchema).optional(),
+  examples: z.array(LanguageExampleSchema).optional(),
+  category: z.string().optional(),
+  difficulty: z.string().optional(),
+  isPhrase: z.boolean().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+  saved: z.boolean(),
+  status: LanguageWordStatusSchema.optional(),
+  cached: z.boolean().optional(),
+  sharedCacheHit: z.boolean().optional(),
+  projection: z
+    .array(
+      z.object({
+        entity: z.enum(["languageWord", "languageReview"]),
+        entityId: z.string(),
+        version: z.number().int().nonnegative(),
+        canonical: z.record(z.string(), z.unknown()),
+      }),
+    )
+    .optional(),
+});
+
+export const GenerateStoryResponseSchema = z.object({
+  storyId: z.string(),
+  storyText: z.string(),
+  sentences: z.array(LanguageSentenceSchema),
+  wordId: z.string(),
+  language: z.string(),
+  subscription: SubscriptionInfoSchema.optional(),
+  projection: CaptureWordResponseSchema.shape.projection,
+});
+
+export const LanguageQueueResponseSchema = z.object({
+  cards: z.array(LanguageQueueCardSchema),
+});
+
+export const LanguagePreferencesSchema = z.object({
+  id: z.string(),
+  userId: z.string(),
+  enabled: z.boolean(),
+  targetLanguage: SupportedLanguageCodeSchema,
+  nativeLanguage: SupportedLanguageCodeSchema,
+  translateOnCapture: z.boolean(),
+  autoEnroll: z.boolean(),
+  sessionCardLimit: z.number().int().min(5).max(50),
+  showConsent: z.boolean(),
+  createdAt: z.coerce.date(),
+  updatedAt: z.coerce.date(),
+  offlineVersion: z.number().int().nonnegative().optional(),
+});
+
+export const LanguageWordsResponseSchema = z.object({
+  words: z.array(LanguageWordSchema),
+  nextCursor: z.string().nullable(),
+  categories: z.array(z.string()).optional(),
+  totalWords: z.number().optional(),
+  statusCounts: z.record(z.string(), z.number()).optional(),
+});
+
+export const LanguageDeleteResponseSchema = z.object({
+  message: z.string(),
+  projection: CaptureWordResponseSchema.shape.projection,
+});
+
+export const LanguageEnrollResponseSchema = z.object({
+  wordId: z.string(),
+  status: LanguageWordStatusSchema,
+  reviewId: z.string().optional(),
+  storyId: z.string().nullable().optional(),
+  projection: CaptureWordResponseSchema.shape.projection,
+});
+
 export type LanguageWord = z.infer<typeof LanguageWordSchema>;
 export type LanguageStory = z.infer<typeof LanguageStorySchema>;
+export type LanguageStoryPreview = z.infer<typeof LanguageStoryPreviewSchema>;
 export type LanguageSentence = z.infer<typeof LanguageSentenceSchema>;
 export type LanguageMeaning = z.infer<typeof LanguageMeaningSchema>;
 export type LanguageExample = z.infer<typeof LanguageExampleSchema>;
 export type CaptureWordDTO = z.infer<typeof CaptureWordDTO>;
 export type GenerateStoryDTO = z.infer<typeof GenerateStoryDTO>;
+export type SaveLanguageWordDTO = z.infer<typeof SaveLanguageWordDTO>;
 export type LanguageGradeRequest = z.infer<typeof LanguageGradeRequestSchema>;
 export type LanguagePreferencesDTO = z.infer<typeof LanguagePreferencesDTO>;
 export type LanguageQueueCard = z.infer<typeof LanguageQueueCardSchema>;
 export type LanguageGradeResponse = z.infer<typeof LanguageGradeResponseSchema>;
+export type LanguageDeleteResponse = z.infer<
+  typeof LanguageDeleteResponseSchema
+>;
+export type LanguageEnrollResponse = z.infer<
+  typeof LanguageEnrollResponseSchema
+>;
 export type LanguageStats = z.infer<typeof LanguageStatsSchema>;
 
 export interface UserLanguagePreferences {
   id: string;
   userId: string;
   enabled: boolean;
-  targetLanguage: string;
-  nativeLanguage: string;
+  targetLanguage: SupportedLanguageCode;
+  nativeLanguage: SupportedLanguageCode;
+  translateOnCapture: boolean;
   autoEnroll: boolean;
   sessionCardLimit: number;
   showConsent: boolean;
   createdAt: Date;
   updatedAt: Date;
+  offlineVersion?: number;
 }
 
 export interface CaptureWordResponse {
@@ -220,6 +338,12 @@ export interface CaptureWordResponse {
   cached?: boolean;
   /** true when the lexical data came from the shared translation pool */
   sharedCacheHit?: boolean;
+  projection?: Array<{
+    entity: "languageWord" | "languageReview";
+    entityId: string;
+    version: number;
+    canonical: Record<string, unknown>;
+  }>;
 }
 
 export interface GenerateStoryResponse {
@@ -227,9 +351,12 @@ export interface GenerateStoryResponse {
   storyText: string;
   sentences: LanguageSentence[];
   wordId: string;
+  /** ISO code of the learned language used for story text and sentences. */
+  language: string;
   /** Present when story generation consumed a quota slot. */
   subscription?: Pick<
     SubscriptionInfo,
     "tier" | "generationsUsed" | "generationsQuota" | "remaining"
   >;
+  projection?: CaptureWordResponse["projection"];
 }

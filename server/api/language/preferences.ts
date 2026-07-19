@@ -14,7 +14,9 @@ export default defineEventHandler(async (event) => {
   const prisma = event.context.prisma;
 
   if (method === "GET") {
-    return success(await getOrCreateLanguagePreferences({ prisma, userId: user.id }));
+    return success(
+      await getOrCreateLanguagePreferences({ prisma, userId: user.id }),
+    );
   }
 
   if (method === "PUT") {
@@ -29,12 +31,18 @@ export default defineEventHandler(async (event) => {
     }
 
     const updated = await updateLanguagePreferences({
-        prisma,
-        userId: user.id,
-        data: validatedPrefs,
-      });
-    await advanceOfflineEntityState({ prisma, userId: user.id, entity: "languagePreference", entityId: updated.id, changedFields: Object.keys(validatedPrefs) });
-    return success(updated);
+      prisma,
+      userId: user.id,
+      data: validatedPrefs,
+    });
+    const offlineVersion = await advanceOfflineEntityState({
+      prisma,
+      userId: user.id,
+      entity: "languagePreference",
+      entityId: updated.id,
+      changedFields: Object.keys(validatedPrefs),
+    });
+    return success({ ...updated, offlineVersion });
   }
 
   throw Errors.methodNotAllowed();

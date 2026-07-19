@@ -2,6 +2,7 @@ import type { H3Event } from "h3";
 import { Errors } from "@server/utils/error";
 import {
   type CaptureWordDTO,
+  type CaptureWordResponse,
   getLanguageLabel,
   type LanguageExample,
   type LanguageMeaning,
@@ -10,6 +11,8 @@ import { translationPrompt } from "@server/utils/llm/languagePrompts";
 import { parseLexicalEntry } from "../domain/lexicalEntry";
 import type { QuotaPort } from "@server/modules/subscription/ports/QuotaPort";
 import { maybeAutoEnrollLanguageWord } from "./autoEnrollLanguageWord";
+import { createHash } from "node:crypto";
+import { saveLanguageWord } from "./saveLanguageWord";
 
 const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
 
@@ -24,6 +27,22 @@ const jsonRecord = (value: unknown): Record<string, unknown> =>
 const safeSourceRefId = (sourceRefId?: string) =>
   sourceRefId && OBJECT_ID_RE.test(sourceRefId) ? sourceRefId : undefined;
 
+const normalizedContext = (sourceContext?: string) =>
+  sourceContext?.trim().replace(/\s+/g, " ") || undefined;
+
+const translationContextKey = (
+  sourceContext?: string,
+  includeTranslation = true,
+) => {
+  const context = normalizedContext(sourceContext);
+  const base = context
+    ? createHash("sha256").update(context.toLowerCase()).digest("hex")
+    : "general";
+  // A definition-only lexical entry must never overwrite or masquerade as a
+  // translated entry for the same word and language pair.
+  return includeTranslation ? base : `definition-only:${base}`;
+};
+
 const withSourceRefMetadata = (
   metadata: Record<string, unknown>,
   sourceRefId?: string,
@@ -32,7 +51,7 @@ const withSourceRefMetadata = (
     ? { ...metadata, sourceRefId }
     : metadata;
 
-const serializeWord = (
+export const serializeCapturedWord = (
   word: {
     id: string;
     translationId?: string | null;
@@ -76,29 +95,46 @@ export async function captureLanguageWord(input: {
   user: { id: string };
   data: CaptureWordDTO;
   quotaPort: QuotaPort;
-  billSharedTranslationHit: (event: H3Event, userId: string) => Promise<unknown>;
-}) {
+  billSharedTranslationHit: (
+    event: H3Event,
+    userId: string,
+  ) => Promise<unknown>;
+}): Promise<CaptureWordResponse> {
   const prisma = input.event.context.prisma;
   const { data, user } = input;
   const targetLang = data.targetLang ?? "en";
   const normalizedWord = data.word.trim().toLowerCase();
   const explicitSourceLang =
     data.sourceLang && data.sourceLang !== "auto" ? data.sourceLang : undefined;
+  const sourceContext = normalizedContext(data.sourceContext);
+  const contextKey = translationContextKey(
+    sourceContext,
+    data.includeTranslation,
+  );
+  // Automatic source detection cannot safely select a cross-language cache
+  // entry. Resolve the language with the model first, then persist/cache under
+  // the detected source language.
+  const canUseExistingTranslation =
+    !data.forceRetranslate && Boolean(explicitSourceLang);
   const preferences = data.translateOnly
     ? null
     : await prisma.userLanguagePreferences.findUnique({
         where: { userId: user.id },
         select: { autoEnroll: true },
       });
-  const autoEnroll = data.translateOnly ? false : (preferences?.autoEnroll ?? true);
+  const autoEnroll = data.translateOnly
+    ? false
+    : (preferences?.autoEnroll ?? true);
 
-  if (!data.forceRetranslate) {
+  if (canUseExistingTranslation) {
     const existing = await prisma.languageWord.findFirst({
       where: {
         userId: user.id,
         word: normalizedWord,
         translationLang: targetLang,
-        ...(explicitSourceLang ? { sourceLang: explicitSourceLang } : {}),
+        sourceLang: explicitSourceLang,
+        sourceContext: sourceContext ?? null,
+        ...(data.includeTranslation ? { translation: { not: "" } } : {}),
       },
       orderBy: { createdAt: "desc" },
     });
@@ -111,14 +147,15 @@ export async function captureLanguageWord(input: {
         currentStatus: existing.status,
         autoEnroll,
       });
-      return serializeWord({ ...existing, status }, true);
+      return serializeCapturedWord({ ...existing, status }, true);
     }
 
     const sharedTranslation = await prisma.languageTranslation.findFirst({
       where: {
         normalizedSourceText: normalizedWord,
         translationLang: targetLang,
-        ...(explicitSourceLang ? { sourceLang: explicitSourceLang } : {}),
+        sourceLang: explicitSourceLang,
+        contextKey,
       },
       orderBy: { updatedAt: "desc" },
     });
@@ -144,43 +181,16 @@ export async function captureLanguageWord(input: {
           sharedCacheHit: true,
         };
       }
-
-      const sharedMetadata = {
-        ...jsonRecord(sharedTranslation.metadata),
-        sharedTranslationId: sharedTranslation.id,
-      };
-      const languageWord = await prisma.languageWord.create({
-        data: {
-          userId: user.id,
-          translationId: sharedTranslation.id,
-          word: sharedTranslation.sourceText,
-          translation: sharedTranslation.translation,
-          translationLang: sharedTranslation.translationLang,
-          sourceLang: sharedTranslation.sourceLang,
-          partOfSpeech: sharedTranslation.partOfSpeech ?? "unknown",
-          phonetic: sharedTranslation.phonetic ?? null,
-          meanings: sharedTranslation.meanings ?? undefined,
-          examples: sharedTranslation.examples ?? undefined,
-          category: sharedTranslation.category ?? null,
-          difficulty: sharedTranslation.difficulty ?? null,
-          isPhrase: sharedTranslation.isPhrase,
-          metadata: withSourceRefMetadata(sharedMetadata, data.sourceRefId) as any,
-          sourceContext: data.sourceContext,
-          sourceType: data.sourceType ?? "manual",
-          sourceRefId: safeSourceRefId(data.sourceRefId),
-          status: "captured",
-        },
-      });
-
-      const status = await maybeAutoEnrollLanguageWord({
+      return saveLanguageWord({
         prisma,
         userId: user.id,
-        wordId: languageWord.id,
-        currentStatus: languageWord.status,
-        autoEnroll,
+        data: {
+          translationId: sharedTranslation.id,
+          sourceContext,
+          sourceType: data.sourceType ?? "manual",
+          sourceRefId: data.sourceRefId,
+        },
       });
-
-      return serializeWord({ ...languageWord, status }, true, true);
     }
   }
 
@@ -191,9 +201,8 @@ export async function captureLanguageWord(input: {
     data.includeTranslation,
   );
 
-  const { llmRequestPipeline } = await import(
-    "@server/utils/llm/llmRequestPipeline"
-  );
+  const { llmRequestPipeline } =
+    await import("@server/utils/llm/llmRequestPipeline");
   const ctx = await llmRequestPipeline(input.event, {
     quotaPort: input.quotaPort,
     task: "language_translate",
@@ -221,14 +230,16 @@ export async function captureLanguageWord(input: {
     const metadata = withSourceRefMetadata(entry.metadata, data.sourceRefId);
     const translationEntry = await prisma.languageTranslation.upsert({
       where: {
-        normalizedSourceText_sourceLang_translationLang: {
+        normalizedSourceText_sourceLang_translationLang_contextKey: {
           normalizedSourceText: normalizedWord,
           sourceLang: entry.detectedLang,
           translationLang: targetLang,
+          contextKey,
         },
       },
       update: {
         sourceText: normalizedWord,
+        contextKey,
         translation: entry.translation,
         partOfSpeech: entry.partOfSpeech,
         phonetic: entry.phonetic ?? null,
@@ -245,6 +256,7 @@ export async function captureLanguageWord(input: {
         normalizedSourceText: normalizedWord,
         sourceLang: entry.detectedLang,
         translationLang: targetLang,
+        contextKey,
         translation: entry.translation,
         partOfSpeech: entry.partOfSpeech,
         phonetic: entry.phonetic ?? null,
@@ -259,6 +271,16 @@ export async function captureLanguageWord(input: {
     });
 
     if (data.translateOnly) {
+      const existingWord = await prisma.languageWord.findFirst({
+        where: {
+          userId: user.id,
+          translationId: translationEntry.id,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      if (existingWord) {
+        return serializeCapturedWord(existingWord, false);
+      }
       return {
         translationId: translationEntry.id,
         word: normalizedWord,
@@ -277,54 +299,16 @@ export async function captureLanguageWord(input: {
       };
     }
 
-    const languageWord = await prisma.languageWord.create({
-      data: {
-        userId: user.id,
-        translationId: translationEntry.id,
-        word: normalizedWord,
-        translation: entry.translation,
-        translationLang: targetLang,
-        sourceLang: entry.detectedLang ?? data.sourceLang ?? "auto",
-        partOfSpeech: entry.partOfSpeech,
-        phonetic: entry.phonetic ?? null,
-        meanings: entry.meanings as any,
-        examples: entry.examples as any,
-        category: entry.category ?? null,
-        difficulty: entry.difficulty ?? null,
-        isPhrase: entry.isPhrase,
-        metadata: metadata as any,
-        sourceContext: data.sourceContext,
-        sourceType: data.sourceType ?? "manual",
-        sourceRefId: safeSourceRefId(data.sourceRefId),
-        status: "captured",
-      },
-    });
-    const status = await maybeAutoEnrollLanguageWord({
+    return saveLanguageWord({
       prisma,
       userId: user.id,
-      wordId: languageWord.id,
-      currentStatus: languageWord.status,
-      autoEnroll,
+      data: {
+        translationId: translationEntry.id,
+        sourceContext,
+        sourceType: data.sourceType ?? "manual",
+        sourceRefId: data.sourceRefId,
+      },
     });
-
-    return {
-      wordId: languageWord.id,
-      translationId: translationEntry.id,
-      word: languageWord.word,
-      translation: entry.translation,
-      partOfSpeech: entry.partOfSpeech,
-      detectedLang: entry.detectedLang,
-      phonetic: entry.phonetic,
-      meanings: entry.meanings,
-      examples: entry.examples,
-      category: entry.category,
-      difficulty: entry.difficulty,
-      isPhrase: entry.isPhrase,
-      metadata,
-      saved: true,
-      status,
-      cached: false,
-    };
   } catch (err) {
     if (!didFinalize) {
       await ctx.fail(err);

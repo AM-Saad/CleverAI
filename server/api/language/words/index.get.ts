@@ -1,7 +1,10 @@
 import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
-import { LanguageWordsQuerySchema } from "@shared/utils/language.contract";
+import {
+  LanguageWordsQuerySchema,
+  LanguageWordsResponseSchema,
+} from "@shared/utils/language.contract";
 import { listLanguageWords } from "@server/modules/language-learning/application/listLanguageWords";
 
 export default defineEventHandler(async (event) => {
@@ -21,11 +24,24 @@ export default defineEventHandler(async (event) => {
     throw Errors.badRequest("Invalid query parameters");
   }
 
-  return success(
-    await listLanguageWords({
-      prisma,
-      userId: user.id,
-      ...query,
-    }),
-  );
+  const response = await listLanguageWords({
+    prisma,
+    userId: user.id,
+    ...query,
+  });
+
+  try {
+    return success(LanguageWordsResponseSchema.parse(response));
+  } catch (err) {
+    if (err instanceof ZodError) {
+      throw Errors.server(
+        "Language word bank response is invalid",
+        err.issues.map((issue) => ({
+          path: issue.path,
+          message: issue.message,
+        })),
+      );
+    }
+    throw err;
+  }
 });

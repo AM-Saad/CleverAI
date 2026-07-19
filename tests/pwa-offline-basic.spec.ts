@@ -65,13 +65,16 @@ test.describe('PWA offline basic', () => {
 
     await page.goto('/');
     // A precache can take longer than an arbitrary sleep on a cold install.
-    // Require an active controller before we simulate disconnection; otherwise
-    // this test only proves that a race can bypass the service worker.
+    // A protocol upgrade intentionally reloads once on controllerchange, so
+    // poll outside the page execution context and tolerate that navigation.
+    await expect.poll(async () => {
+      try {
+        return await page.evaluate(() => navigator.serviceWorker.controller?.scriptURL ?? null);
+      } catch {
+        return null;
+      }
+    }, { timeout: 20_000 }).toContain('/sw.js');
     const serviceWorkerState = await page.evaluate(async () => {
-      await Promise.race([
-        navigator.serviceWorker.ready,
-        new Promise((resolve) => window.setTimeout(resolve, 15_000)),
-      ]);
       const registrations = await navigator.serviceWorker.getRegistrations();
       return {
         controller: navigator.serviceWorker.controller?.scriptURL ?? null,
@@ -96,6 +99,17 @@ test.describe('PWA offline basic', () => {
 
     // Go offline
     await context.setOffline(true);
+
+    // Auth.js checks this endpoint during every cold start/window refresh.
+    // Offline is a valid "no live session" state, not a server failure.
+    const offlineSession = await page.evaluate(async () => {
+      const response = await fetch('/api/auth/session', { cache: 'no-store' });
+      return {
+        status: response.status,
+        body: await response.json(),
+      };
+    });
+    expect(offlineSession).toEqual({ status: 200, body: {} });
 
     // Reload about page (should come from precache/runtime cache)
     await page.reload();

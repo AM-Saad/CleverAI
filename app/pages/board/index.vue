@@ -311,6 +311,7 @@ import BoardCardSheet from "~/features/board/components/BoardCardSheet.vue";
 import BoardColumnsSheet from "~/features/board/components/BoardColumnsSheet.vue";
 import WorkspacePill from "~/components/shell/WorkspacePill.vue";
 import { tagColorVar } from "~/composables/useAccentColor";
+import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 import { useViewTransitionMorph } from "~/composables/ui/useViewTransitionMorph";
 import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace";
 import { designTokenValues } from "~/design-system/tokens.generated";

@@ -64,31 +64,31 @@ enum UserRole {
 }
 
 model Workspace {
-  id             String          @id @default(auto()) @map("_id") @db.ObjectId
-  title          String
-  description    String?
-  metadata       Json?
-  order          Int
+  id                        String                     @id @default(auto()) @map("_id") @db.ObjectId
+  title                     String
+  description               String?
+  metadata                  Json?
+  order                     Int
   // LexoRank-style key used by offline-v2. `order` remains a legacy display
   // fallback while existing records are backfilled.
-  position       String?
-  rawText        String?
-  questions      Question[]
-  flashcards     Flashcard[]
-  materials      Material[]
-  notes          Note[]
-  noteGroups     NoteGroup[]
-  user           User            @relation("UserWorkspaces", fields: [userId], references: [id], onDelete: Cascade)
-  userId         String          @db.ObjectId
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  llmModel       String          @default("gpt-3.5")
-  llmGatewayLogs LlmGatewayLog[]
-  boardColumns   BoardColumn[]
-  boardItems     BoardItem[]
-  externalBoardMappings ExternalBoardMapping[]
+  position                  String?
+  rawText                   String?
+  questions                 Question[]
+  flashcards                Flashcard[]
+  materials                 Material[]
+  notes                     Note[]
+  noteGroups                NoteGroup[]
+  user                      User                       @relation("UserWorkspaces", fields: [userId], references: [id], onDelete: Cascade)
+  userId                    String                     @db.ObjectId
+  createdAt                 DateTime                   @default(now())
+  updatedAt                 DateTime                   @updatedAt
+  llmModel                  String                     @default("gpt-3.5")
+  llmGatewayLogs            LlmGatewayLog[]
+  boardColumns              BoardColumn[]
+  boardItems                BoardItem[]
+  externalBoardMappings     ExternalBoardMapping[]
   externalWorkspaceMappings ExternalWorkspaceMapping[]
-  workspaceExternalRefs WorkspaceExternalRef[]
+  workspaceExternalRefs     WorkspaceExternalRef[]
 
   @@index([userId, order])
   @@index([userId, position])
@@ -114,22 +114,22 @@ model Material {
 }
 
 model Note {
-  id          String    @id @default(auto()) @map("_id") @db.ObjectId
-  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  workspaceId String    @db.ObjectId
-  group       NoteGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
-  groupId     String?   @db.ObjectId
+  id             String              @id @default(auto()) @map("_id") @db.ObjectId
+  workspace      Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId    String              @db.ObjectId
+  group          NoteGroup?          @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  groupId        String?             @db.ObjectId
   collabDocument NoteCollabDocument?
-  title       String?
-  content     String
-  tags        String[]  @default([])
-  order       Int       @default(0)
-  position    String?
-  noteType    String?   @default("TEXT")
-  metadata    Json?
-  version     Int       @default(1)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  title          String?
+  content        String
+  tags           String[]            @default([])
+  order          Int                 @default(0)
+  position       String?
+  noteType       String?             @default("TEXT")
+  metadata       Json?
+  version        Int                 @default(1)
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   @@index([workspaceId])
   @@index([workspaceId, groupId, order])
@@ -165,25 +165,25 @@ model NoteGroup {
 }
 
 model BoardItem {
-  id            String             @id @default(auto()) @map("_id") @db.ObjectId
-  user          User               @relation("UserBoardItems", fields: [userId], references: [id], onDelete: Cascade)
-  userId        String             @db.ObjectId
-  column        BoardColumn?       @relation("ColumnItems", fields: [columnId], references: [id], onDelete: SetNull)
-  columnId      String?            @db.ObjectId
+  id            String                 @id @default(auto()) @map("_id") @db.ObjectId
+  user          User                   @relation("UserBoardItems", fields: [userId], references: [id], onDelete: Cascade)
+  userId        String                 @db.ObjectId
+  column        BoardColumn?           @relation("ColumnItems", fields: [columnId], references: [id], onDelete: SetNull)
+  columnId      String?                @db.ObjectId
   content       String
-  tags          String[]           @default([])
-  order         Float              @default(0) // fractional rank (LexoRank-style)
+  tags          String[]               @default([])
+  order         Float                  @default(0) // fractional rank (LexoRank-style)
   position      String?
   dueDate       DateTime?
-  attachments   Json               @default("[]")
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  attachments   Json                   @default("[]")
+  createdAt     DateTime               @default(now())
+  updatedAt     DateTime               @updatedAt
   // optional workspace relation
-  workspace     Workspace?         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  workspaceId   String?            @db.ObjectId
+  workspace     Workspace?             @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId   String?                @db.ObjectId
   // item linking
-  linksSent     BoardItemLink[]    @relation("ItemLinkSources")
-  linksReceived BoardItemLink[]    @relation("ItemLinkTargets")
+  linksSent     BoardItemLink[]        @relation("ItemLinkSources")
+  linksReceived BoardItemLink[]        @relation("ItemLinkTargets")
   // comments (future collaboration)
   comments      BoardItemComment[]
   externalRefs  BoardItemExternalRef[]
@@ -195,9 +195,9 @@ model BoardItem {
 }
 
 model IntegrationAccount {
-  id                     String                 @id @default(auto()) @map("_id") @db.ObjectId
-  user                   User                   @relation("UserIntegrationAccounts", fields: [userId], references: [id], onDelete: Cascade)
-  userId                 String                 @db.ObjectId
+  id                     String                     @id @default(auto()) @map("_id") @db.ObjectId
+  user                   User                       @relation("UserIntegrationAccounts", fields: [userId], references: [id], onDelete: Cascade)
+  userId                 String                     @db.ObjectId
   provider               String
   externalAccountId      String
   displayName            String
@@ -205,39 +205,39 @@ model IntegrationAccount {
   accessTokenCiphertext  String
   refreshTokenCiphertext String?
   tokenExpiresAt         DateTime?
-  scopes                 String[]               @default([])
-  metadata               Json                   @default("{}")
+  scopes                 String[]                   @default([])
+  metadata               Json                       @default("{}")
   mappings               ExternalBoardMapping[]
   itemRefs               BoardItemExternalRef[]
   workspaceMappings      ExternalWorkspaceMapping[]
   workspaceRefs          WorkspaceExternalRef[]
-  createdAt              DateTime               @default(now())
-  updatedAt              DateTime               @updatedAt
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
 
   @@unique([userId, provider, externalAccountId])
   @@index([userId, provider])
 }
 
 model ExternalBoardMapping {
-  id                  String                 @id @default(auto()) @map("_id") @db.ObjectId
-  user                User                   @relation("UserExternalBoardMappings", fields: [userId], references: [id], onDelete: Cascade)
-  userId              String                 @db.ObjectId
-  workspace           Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  workspaceId         String                 @db.ObjectId
-  account             IntegrationAccount     @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  accountId           String                 @db.ObjectId
-  provider            String
-  externalContainerId String
+  id                   String                 @id @default(auto()) @map("_id") @db.ObjectId
+  user                 User                   @relation("UserExternalBoardMappings", fields: [userId], references: [id], onDelete: Cascade)
+  userId               String                 @db.ObjectId
+  workspace            Workspace              @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspaceId          String                 @db.ObjectId
+  account              IntegrationAccount     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId            String                 @db.ObjectId
+  provider             String
+  externalContainerId  String
   externalContainerKey String?
-  name                String
-  syncDirection       String                 @default("IMPORT_ONLY")
-  fieldMapping        Json                   @default("{}")
-  status              String                 @default("ACTIVE")
-  lastSyncedAt        DateTime?
-  lastError           String?
-  itemRefs            BoardItemExternalRef[]
-  createdAt           DateTime               @default(now())
-  updatedAt           DateTime               @updatedAt
+  name                 String
+  syncDirection        String                 @default("IMPORT_ONLY")
+  fieldMapping         Json                   @default("{}")
+  status               String                 @default("ACTIVE")
+  lastSyncedAt         DateTime?
+  lastError            String?
+  itemRefs             BoardItemExternalRef[]
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
 
   @@unique([workspaceId, provider, externalContainerId])
   @@index([userId, workspaceId])
@@ -245,26 +245,26 @@ model ExternalBoardMapping {
 }
 
 model BoardItemExternalRef {
-  id                String              @id @default(auto()) @map("_id") @db.ObjectId
-  item              BoardItem           @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  itemId            String              @db.ObjectId
-  user              User                @relation("UserBoardItemExternalRefs", fields: [userId], references: [id], onDelete: Cascade)
-  userId            String              @db.ObjectId
-  account           IntegrationAccount  @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  accountId         String              @db.ObjectId
+  id                String                @id @default(auto()) @map("_id") @db.ObjectId
+  item              BoardItem             @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId            String                @db.ObjectId
+  user              User                  @relation("UserBoardItemExternalRefs", fields: [userId], references: [id], onDelete: Cascade)
+  userId            String                @db.ObjectId
+  account           IntegrationAccount    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId         String                @db.ObjectId
   mapping           ExternalBoardMapping? @relation(fields: [mappingId], references: [id], onDelete: SetNull)
-  mappingId         String?             @db.ObjectId
+  mappingId         String?               @db.ObjectId
   provider          String
   externalId        String
   externalKey       String?
   externalUrl       String?
   externalUpdatedAt DateTime?
-  syncStatus        String              @default("SYNCED")
+  syncStatus        String                @default("SYNCED")
   lastSyncedAt      DateTime?
   lastError         String?
   raw               Json?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 
   @@unique([userId, provider, externalId])
   @@index([itemId])
@@ -638,19 +638,19 @@ type SubscriptionKeys {
 }
 
 model Notification {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  userId      String   @db.ObjectId
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String    @db.ObjectId
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   type        String
-  title       String   @default("Notification")
+  title       String    @default("Notification")
   content     String
   url         String?
-  isRead      Boolean  @default(false)
+  isRead      Boolean   @default(false)
   readAt      DateTime?
-  pushStatus  String   @default("IN_APP_ONLY")
+  pushStatus  String    @default("IN_APP_ONLY")
   deliveredAt DateTime?
   metadata    Json?
-  sentAt      DateTime @default(now())
+  sentAt      DateTime  @default(now())
 
   @@index([userId, sentAt])
   @@index([userId, isRead, sentAt])
@@ -833,7 +833,7 @@ model LanguageWord {
   @@index([userId, status])
   @@index([userId, createdAt])
   @@index([translationId])
-  @@index([userId, word, translationLang])
+  @@index([userId, word, sourceLang, translationLang])
 }
 
 model LanguageTranslation {
@@ -842,6 +842,7 @@ model LanguageTranslation {
   normalizedSourceText String
   sourceLang           String         @default("auto")
   translationLang      String         @default("en")
+  contextKey           String         @default("general")
   translation          String
   partOfSpeech         String?        @default("unknown")
   phonetic             String?
@@ -856,7 +857,7 @@ model LanguageTranslation {
   updatedAt            DateTime       @updatedAt
   userWords            LanguageWord[]
 
-  @@unique([normalizedSourceText, sourceLang, translationLang], name: "normalizedSourceText_sourceLang_translationLang")
+  @@unique([normalizedSourceText, sourceLang, translationLang, contextKey], name: "normalizedSourceText_sourceLang_translationLang_contextKey")
   @@index([normalizedSourceText, translationLang])
   @@index([category])
 }
@@ -900,17 +901,18 @@ model LanguageCardReview {
 }
 
 model UserLanguagePreferences {
-  id               String   @id @default(auto()) @map("_id") @db.ObjectId
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId           String   @unique @db.ObjectId
-  enabled          Boolean  @default(true)
-  targetLanguage   String   @default("en")
-  nativeLanguage   String   @default("en")
-  autoEnroll       Boolean  @default(true)
-  sessionCardLimit Int      @default(12)
-  showConsent      Boolean  @default(true)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId             String   @unique @db.ObjectId
+  enabled            Boolean  @default(true)
+  targetLanguage     String   @default("en")
+  nativeLanguage     String   @default("en")
+  translateOnCapture Boolean? @default(true)
+  autoEnroll         Boolean  @default(true)
+  sessionCardLimit   Int      @default(12)
+  showConsent        Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
 
   @@map("userLanguagePreferences")
 }

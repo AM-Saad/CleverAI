@@ -6,7 +6,9 @@ export function serializeLanguagePreferences(prefs: any) {
     userId: prefs.userId,
     enabled: prefs.enabled,
     targetLanguage: prefs.targetLanguage,
-    nativeLanguage: prefs.nativeLanguage === "auto" ? "en" : prefs.nativeLanguage,
+    nativeLanguage:
+      prefs.nativeLanguage === "auto" ? "en" : prefs.nativeLanguage,
+    translateOnCapture: prefs.translateOnCapture ?? true,
     autoEnroll: prefs.autoEnroll,
     sessionCardLimit: prefs.sessionCardLimit,
     showConsent: prefs.showConsent,

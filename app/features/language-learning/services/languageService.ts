@@ -1,95 +1,32 @@
 import FetchFactory from "~/services/FetchFactory";
 import type { Result } from "~/types/Result";
 import {
+  CaptureWordResponseSchema,
+  GenerateStoryResponseSchema,
+  LanguageDeleteResponseSchema,
+  LanguageEnrollResponseSchema,
+  LanguagePreferencesSchema,
+  LanguageQueueResponseSchema,
   LanguageStatsSchema,
   LanguageGradeResponseSchema,
-  LanguageQueueCardSchema,
+  LanguageWordsResponseSchema,
 } from "@shared/utils/language.contract";
-import { SubscriptionInfoSchema } from "@shared/utils/llm-generate.contract";
 import type {
   CaptureWordDTO,
   GenerateStoryDTO,
+  SaveLanguageWordDTO,
   LanguageWord,
   LanguageQueueCard,
   LanguageGradeRequest,
   LanguageGradeResponse,
+  LanguageDeleteResponse,
+  LanguageEnrollResponse,
   LanguageStats,
   CaptureWordResponse,
   GenerateStoryResponse,
   UserLanguagePreferences,
   LanguagePreferencesDTO,
 } from "@shared/utils/language.contract";
-import { z } from "zod";
-
-const CaptureWordResponseSchema = z.object({
-  wordId: z.string().optional(),
-  translationId: z.string().optional(),
-  word: z.string(),
-  translation: z.string(),
-  partOfSpeech: z.string(),
-  detectedLang: z.string(),
-  phonetic: z.string().optional(),
-  meanings: z
-    .array(
-      z.object({
-        definition: z.string(),
-        translation: z.string().optional(),
-        example: z.string().optional(),
-        partOfSpeech: z.string().optional(),
-        category: z.string().optional(),
-        register: z.string().optional(),
-      }),
-    )
-    .optional(),
-  examples: z
-    .array(
-      z.object({
-        text: z.string(),
-        translation: z.string().optional(),
-      }),
-    )
-    .optional(),
-  category: z.string().optional(),
-  difficulty: z.string().optional(),
-  isPhrase: z.boolean().optional(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-  saved: z.boolean(),
-  status: z.string().optional(),
-  cached: z.boolean().optional(),
-  sharedCacheHit: z.boolean().optional(),
-});
-
-const GenerateStoryResponseSchema = z.object({
-  storyId: z.string(),
-  storyText: z.string(),
-  sentences: z.array(
-    z.object({
-      text: z.string(),
-      clozeWord: z.string(),
-      clozeBlank: z.string(),
-      clozeIndex: z.number(),
-    }),
-  ),
-  wordId: z.string(),
-  subscription: SubscriptionInfoSchema.optional(),
-});
-
-const LanguageQueueResponseSchema = z.object({
-  cards: z.array(LanguageQueueCardSchema),
-});
-
-const PreferencesSchema = z.object({
-  id: z.string(),
-  userId: z.string(),
-  enabled: z.boolean(),
-  targetLanguage: z.string(),
-  nativeLanguage: z.string(),
-  autoEnroll: z.boolean(),
-  sessionCardLimit: z.number(),
-  showConsent: z.boolean(),
-  createdAt: z.coerce.date(),
-  updatedAt: z.coerce.date(),
-});
 
 export class LanguageService extends FetchFactory {
   private readonly RESOURCE = "/api/language";
@@ -115,6 +52,18 @@ export class LanguageService extends FetchFactory {
       payload,
       {},
       GenerateStoryResponseSchema,
+    );
+  }
+
+  async saveWord(
+    payload: SaveLanguageWordDTO,
+  ): Promise<Result<CaptureWordResponse>> {
+    return this.call<typeof CaptureWordResponseSchema>(
+      "POST",
+      `${this.RESOURCE}/words`,
+      payload,
+      {},
+      CaptureWordResponseSchema,
     );
   }
 
@@ -152,22 +101,33 @@ export class LanguageService extends FetchFactory {
     if (params?.limit) query.set("limit", String(params.limit));
     if (params?.cursor) query.set("cursor", params.cursor);
     const qs = query.toString();
-    return this.call(
+    return this.call<typeof LanguageWordsResponseSchema>(
       "GET",
       `${this.RESOURCE}/words${qs ? `?${qs}` : ""}`,
       undefined,
       {},
+      LanguageWordsResponseSchema,
     );
   }
 
-  async deleteWord(id: string): Promise<Result<{ message: string }>> {
-    return this.call("DELETE", `${this.RESOURCE}/words/${id}`, undefined, {});
+  async deleteWord(id: string): Promise<Result<LanguageDeleteResponse>> {
+    return this.call<typeof LanguageDeleteResponseSchema>(
+      "DELETE",
+      `${this.RESOURCE}/words/${id}`,
+      undefined,
+      {},
+      LanguageDeleteResponseSchema,
+    );
   }
 
-  async enrollWord(
-    id: string,
-  ): Promise<Result<{ wordId: string; status: string }>> {
-    return this.call("POST", `${this.RESOURCE}/words/${id}/enroll`, {}, {});
+  async enrollWord(id: string): Promise<Result<LanguageEnrollResponse>> {
+    return this.call<typeof LanguageEnrollResponseSchema>(
+      "POST",
+      `${this.RESOURCE}/words/${id}/enroll`,
+      {},
+      {},
+      LanguageEnrollResponseSchema,
+    );
   }
 
   async getQueue(params?: {
@@ -206,24 +166,24 @@ export class LanguageService extends FetchFactory {
   }
 
   async getPreferences(): Promise<Result<UserLanguagePreferences>> {
-    return this.call<typeof PreferencesSchema>(
+    return this.call<typeof LanguagePreferencesSchema>(
       "GET",
       `${this.RESOURCE}/preferences`,
       undefined,
       {},
-      PreferencesSchema,
+      LanguagePreferencesSchema,
     );
   }
 
   async updatePreferences(
     data: Partial<LanguagePreferencesDTO>,
   ): Promise<Result<UserLanguagePreferences>> {
-    return this.call<typeof PreferencesSchema>(
+    return this.call<typeof LanguagePreferencesSchema>(
       "PUT",
       `${this.RESOURCE}/preferences`,
       data,
       {},
-      PreferencesSchema,
+      LanguagePreferencesSchema,
     );
   }
 

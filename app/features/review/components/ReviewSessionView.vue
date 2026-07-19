@@ -64,6 +64,7 @@ const summaryXp = ref(0);
 const achievement = ref<string | null>(null);
 const mounted = ref(false);
 const finishing = ref(false);
+let sessionEpoch = 0;
 
 const waitingForPendingGrades = computed(
   () => !review.hasCards.value && review.isGrading.value && !finished.value,
@@ -117,21 +118,17 @@ function extractQA(card: typeof current.value): {
 async function onGrade(key: GradeKey) {
   const card = current.value;
   if (!card || submitting.value) return;
+  const epoch = sessionEpoch;
 
   const wasRevealed = revealed.value;
   const wasLastCard = review.reviewQueue.value.length <= 1;
-  const requestId =
-    globalThis.crypto?.randomUUID?.() ?? `${card.cardId}-${Date.now()}`;
   revealed.value = false;
   if (key !== "again") correctCount.value += 1;
   reviewedCount.value += 1;
   finishing.value = wasLastCard;
   try {
-    const result = await review.grade(
-      card.cardId,
-      gradeEnumFor(key),
-      requestId,
-    );
+    const result = await review.grade(card.cardId, gradeEnumFor(key));
+    if (epoch !== sessionEpoch) return;
     if (!result) {
       reviewedCount.value = Math.max(0, reviewedCount.value - 1);
       if (key !== "again")
@@ -149,7 +146,7 @@ async function onGrade(key: GradeKey) {
 
     if (!review.hasCards.value && !review.isGrading.value) await endSession();
   } finally {
-    finishing.value = false;
+    if (epoch === sessionEpoch) finishing.value = false;
   }
 }
 
@@ -176,6 +173,7 @@ async function fetchStreak() {
 }
 
 async function load() {
+  const epoch = ++sessionEpoch;
   startedAt.value = Date.now();
   reviewedCount.value = 0;
   correctCount.value = 0;
@@ -184,8 +182,11 @@ async function load() {
   finished.value = false;
   finishing.value = false;
   revealed.value = false;
-  await sessionSummary.startSession();
-  await review.fetchQueue(props.workspaceId, props.limit);
+  await Promise.all([
+    sessionSummary.startSession(),
+    review.fetchQueue(props.workspaceId, props.limit),
+  ]);
+  if (epoch !== sessionEpoch) return;
   sessionTotal.value = review.reviewQueue.value.length;
   void fetchStreak();
 }

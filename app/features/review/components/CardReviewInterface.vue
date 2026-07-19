@@ -37,7 +37,10 @@
         <div
           class="flex h-16 w-16 items-center justify-center rounded-full bg-success/10"
         >
-          <Icon name="i-lucide-party-popper" class="h-8 w-8 text-success-text" />
+          <Icon
+            name="i-lucide-party-popper"
+            class="h-8 w-8 text-success-text"
+          />
         </div>
         <div class="space-y-1">
           <ui-subtitle size="xl" color="content-on-surface"
@@ -151,17 +154,23 @@ const {
 } = useCardReview();
 
 const { incrementReviews, reset: resetSession } = useSessionTimer();
-const { startSession, endSession, summary: sessionSummary } = useSessionSummary();
+const {
+  startSession,
+  endSession,
+  summary: sessionSummary,
+} = useSessionSummary();
 
 const showAnalytics = ref(false);
 const showDebugPanel = ref(false);
 const sessionComplete = ref(false);
 
 const gradeCard = async (gradeValue: ReviewGrade) => {
-  if (!currentCard.value) return;
+  const card = currentCard.value;
+  if (!card || isSubmitting.value) return;
   try {
-    emit("cardGraded", currentCard.value.cardId, gradeValue);
-    await grade(currentCard.value.cardId, gradeValue);
+    const result = await grade(card.cardId, gradeValue);
+    if (!result) return;
+    emit("cardGraded", card.cardId, gradeValue);
     incrementReviews();
     if (reviewQueue.value.length === 0) {
       await endSession();
@@ -179,8 +188,7 @@ const skipCard = () => goToNextCardInQueue();
 const restartSession = async () => {
   sessionComplete.value = false;
   resetSession();
-  startSession();
-  await fetchQueue(props.workspaceId);
+  await Promise.all([startSession(), fetchQueue(props.workspaceId)]);
   emit("refresh");
 };
 
@@ -188,9 +196,8 @@ watch(
   () => props.workspaceId,
   () => {
     sessionComplete.value = false;
-    fetchQueue(props.workspaceId);
     resetSession();
-    startSession();
+    void Promise.all([startSession(), fetchQueue(props.workspaceId)]);
   },
   { immediate: true },
 );

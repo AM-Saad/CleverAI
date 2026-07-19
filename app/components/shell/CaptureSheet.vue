@@ -62,7 +62,7 @@
       class="ds-capture-mode"
       :style="{ viewTransitionName: MORPH_NAME }"
     >
-      <QuickWordTranslator @back="backToMenu" @done="doneWordCapture" />
+      <QuickWordCapture @back="backToMenu" @done="doneWordCapture" />
     </div>
 
     <div
@@ -204,7 +204,8 @@ import {
 import { useQuickCaptureMorph } from "~/composables/ui/useQuickCaptureMorph";
 import QuickNoteEditor from "~/features/notes/components/QuickNoteEditor.vue";
 import { useQuickNoteCapture } from "~/features/notes/composables/useQuickNoteCapture";
-import QuickWordTranslator from "~/features/language-learning/components/QuickWordTranslator.vue";
+import QuickWordCapture from "~/features/language-learning/components/QuickWordCapture.vue";
+import { useLanguageLearningRuntime } from "~/features/language-learning/composables/languageLearningRuntime";
 import QuickBoardItemEditor from "~/features/board/components/QuickBoardItemEditor.vue";
 import { useQuickBoardItemCapture } from "~/features/board/composables/useQuickBoardItemCapture";
 import type { WorkspaceSummary } from "@@/shared/utils/workspace.contract";
@@ -216,6 +217,7 @@ const emit = defineEmits<{
 }>();
 
 const { isMobile } = useResponsive();
+const languageRuntime = useLanguageLearningRuntime();
 
 type CaptureAction = "note" | "word" | "board" | "ai" | "dictate";
 type CaptureSelection = { key: CaptureAction; workspaceId: string | null };
@@ -228,7 +230,7 @@ const {
   loading: workspaceLoading,
 } = useActiveWorkspace();
 
-const options = [
+const allOptions = [
   {
     key: "note" as const,
     title: "New note",
@@ -258,6 +260,13 @@ const options = [
     color: "var(--color-primary)",
   },
 ];
+const options = computed(() =>
+  allOptions.filter(
+    (option) =>
+      option.key !== "word" ||
+      (languageRuntime.preferences.value?.enabled ?? true),
+  ),
+);
 
 const workspaceScopedActions = new Set<CaptureAction>([
   "note",
@@ -265,6 +274,14 @@ const workspaceScopedActions = new Set<CaptureAction>([
   "ai",
   "dictate",
 ]);
+
+watch(
+  () => props.open,
+  (isOpen) => {
+    if (isOpen) void languageRuntime.ensurePreferences();
+  },
+  { immediate: true },
+);
 const selectedWorkspaceId = ref<string | null>(null);
 const isWorkspacePickerOpen = ref(false);
 

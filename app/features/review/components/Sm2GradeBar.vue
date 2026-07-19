@@ -1,8 +1,19 @@
 <template>
   <div class="gradebar">
-    <button v-for="g in grades" :key="g.key" type="button" class="gradebar__btn" :style="{ '--g': g.color, '--gt': g.text }" :disabled="disabled" @click="emit('grade', g.key)"> <!-- design-allow: per-tone tinted native grade controls -->
+    <button
+      v-for="g in grades"
+      :key="g.key"
+      type="button"
+      class="gradebar__btn"
+      :style="{ '--g': g.color, '--gt': g.text }"
+      :disabled="disabled"
+      :aria-label="`${g.label}, next review ${g.interval}, shortcut ${g.shortcut}`"
+      @click="emit('grade', g.key)"
+    >
+      <!-- design-allow: per-tone tinted native grade controls -->
       <span class="gradebar__label">{{ g.label }}</span>
       <span class="gradebar__interval">{{ g.interval }}</span>
+      <kbd class="gradebar__key">{{ g.shortcut }}</kbd>
     </button>
   </div>
 </template>
@@ -31,11 +42,41 @@ const emit = defineEmits<{ (e: "grade", key: GradeKey): void }>();
 const grades = computed(() =>
   (
     [
-      { key: "again", label: "Again", color: "var(--color-error)", text: "var(--color-error-text)" },
-      { key: "hard", label: "Hard", color: "var(--color-warning)", text: "var(--color-warning-text)" },
-      { key: "good", label: "Good", color: "var(--color-success)", text: "var(--color-success-text)" },
-      { key: "easy", label: "Easy", color: "var(--color-primary)", text: "var(--color-primary)" },
-    ] as { key: GradeKey; label: string; color: string; text: string }[]
+      {
+        key: "again",
+        label: "Again",
+        shortcut: "1",
+        color: "var(--color-error)",
+        text: "var(--color-error-text)",
+      },
+      {
+        key: "hard",
+        label: "Hard",
+        shortcut: "2",
+        color: "var(--color-warning)",
+        text: "var(--color-warning-text)",
+      },
+      {
+        key: "good",
+        label: "Good",
+        shortcut: "3",
+        color: "var(--color-success)",
+        text: "var(--color-success-text)",
+      },
+      {
+        key: "easy",
+        label: "Easy",
+        shortcut: "4",
+        color: "var(--color-primary)",
+        text: "var(--color-primary)",
+      },
+    ] as {
+      key: GradeKey;
+      label: string;
+      shortcut: string;
+      color: string;
+      text: string;
+    }[]
   ).map((g) => ({
     ...g,
     interval: formatInterval(projectInterval(props.state, g.key)),
@@ -59,7 +100,8 @@ const grades = computed(() =>
   border-radius: var(--radius-2xl);
   background: color-mix(in srgb, var(--g) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--g) 28%, transparent);
-  transition: transform var(--duration-fast) var(--ease-standard),
+  transition:
+    transform var(--duration-fast) var(--ease-standard),
     background-color var(--duration-fast) var(--ease-standard);
 }
 .gradebar__btn:active {
@@ -79,5 +121,20 @@ const grades = computed(() =>
   font-size: 10px;
   font-weight: 500;
   color: var(--color-content-secondary);
+}
+.gradebar__key {
+  display: none;
+  min-width: 18px;
+  border: 1px solid var(--color-secondary);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  color: var(--color-content-secondary);
+  font-size: 9px;
+  line-height: 16px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .gradebar__key {
+    display: inline-block;
+  }
 }
 </style>

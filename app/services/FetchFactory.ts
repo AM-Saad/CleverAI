@@ -1,7 +1,7 @@
 import type { $Fetch, FetchOptions } from "ofetch";
-import type { Result } from "@/types/Result";
+import type { Result } from "../types/Result";
 import type * as z from "zod";
-import { Result as R } from "@/types/Result";
+import { Result as R } from "../types/Result";
 export class APIError extends Error {
   public status: number | undefined;
   public code: string | undefined;
@@ -14,7 +14,7 @@ export class APIError extends Error {
     message: string,
     cause?:
       | { message?: string; status?: number; code?: string; details?: unknown }
-      | undefined
+      | undefined,
   ) {
     super(message);
     this.name = "APIError";
@@ -38,6 +38,17 @@ type MaybeEnvelope<T> = T | SuccessEnvelope<T> | FailureEnvelope;
 
 type OnErrorHook = (error: APIError) => void | Promise<void>;
 
+const zodIssueMessage = (error: unknown) => {
+  const typed = error as {
+    issues?: Array<{ path?: PropertyKey[]; message: string }>;
+    errors?: Array<{ path?: PropertyKey[]; message: string }>;
+  };
+  const issue = (typed.issues ?? typed.errors)?.[0];
+  if (!issue) return "Invalid response shape";
+  const path = issue.path?.length ? `${issue.path.join(".")}: ` : "";
+  return `${path}${issue.message}`;
+};
+
 class FetchFactory {
   private $fetch: $Fetch;
   private baseUrl: string;
@@ -50,7 +61,7 @@ class FetchFactory {
     baseUrl = "",
     retries = 0,
     onErrorHook?: OnErrorHook,
-    timeout = 30000 // 30 second default timeout
+    timeout = 30000, // 30 second default timeout
   ) {
     this.$fetch = fetcher;
     this.baseUrl = baseUrl;
@@ -77,7 +88,7 @@ class FetchFactory {
     method: string,
     url: string,
     data?: object,
-    fetchOptions?: FetchOptions<"json">
+    fetchOptions?: FetchOptions<"json">,
   ): Promise<Result<T>>;
 
   async call<TSchema extends z.ZodTypeAny>(
@@ -85,7 +96,7 @@ class FetchFactory {
     url: string,
     data: object | undefined,
     fetchOptions: FetchOptions<"json"> | undefined,
-    validator: TSchema
+    validator: TSchema,
   ): Promise<Result<z.infer<TSchema>>>;
 
   async call<T, TSchema extends z.ZodTypeAny>(
@@ -93,7 +104,7 @@ class FetchFactory {
     url: string,
     data?: object,
     fetchOptions: FetchOptions<"json"> = {},
-    validator?: TSchema
+    validator?: TSchema,
   ): Promise<Result<TSchema extends z.ZodTypeAny ? z.infer<TSchema> : T>> {
     const attemptLimit = this.retries + 1;
     let attempt = 0;
@@ -114,7 +125,7 @@ class FetchFactory {
             body: data,
             signal: controller.signal,
             ...fetchOptions,
-          }
+          },
         );
 
         clearTimeout(timeoutId);
@@ -129,22 +140,20 @@ class FetchFactory {
               try {
                 payload = validator.parse(payload);
               } catch (zErr) {
-                const firstMsg = (
-                  zErr as { errors?: Array<{ message: string }> }
-                ).errors?.[0]?.message;
+                const issue = zodIssueMessage(zErr);
                 const validationError = new APIError(
-                  "ZOD:Response Validation failed",
+                  `ZOD:Response Validation failed (${issue})`,
                   {
-                    message: firstMsg || "Invalid response shape",
+                    message: issue,
                     status: 500,
                     code: "INVALID_RESPONSE",
-                  }
+                  },
                 );
                 return R.error(validationError);
               }
             }
             return R.success(
-              payload as TSchema extends z.ZodTypeAny ? z.infer<TSchema> : T
+              payload as TSchema extends z.ZodTypeAny ? z.infer<TSchema> : T,
             );
           }
           if ((env as FailureEnvelope).success === false) {
@@ -165,21 +174,20 @@ class FetchFactory {
           try {
             legacyPayload = validator.parse(legacyPayload);
           } catch (zErr) {
-            const firstMsg = (zErr as { errors?: Array<{ message: string }> })
-              .errors?.[0]?.message;
+            const issue = zodIssueMessage(zErr);
             const validationError = new APIError(
-              "ZOD:Response Validation failed",
+              `ZOD:Response Validation failed (${issue})`,
               {
-                message: firstMsg || "Invalid response shape",
+                message: issue,
                 status: 500,
                 code: "INVALID_RESPONSE",
-              }
+              },
             );
             return R.error(validationError);
           }
         }
         return R.success(
-          legacyPayload as TSchema extends z.ZodTypeAny ? z.infer<TSchema> : T
+          legacyPayload as TSchema extends z.ZodTypeAny ? z.infer<TSchema> : T,
         );
       } catch (err) {
         // console.log(`FetchFactory: Error on attempt ${attempt + 1} for ${method} ${url}`, err);
@@ -225,7 +233,7 @@ class FetchFactory {
     // Return the last error as a failed Result
     return R.error(
       lastError ||
-      new APIError("Unknown error", { code: "UNKNOWN_ERROR", status: 500 })
+        new APIError("Unknown error", { code: "UNKNOWN_ERROR", status: 500 }),
     );
   }
 
@@ -282,7 +290,7 @@ class FetchFactory {
           status: undefined,
           code: "UNKNOWN_ERROR",
           message: err instanceof Error ? err.message : "Unknown Error",
-        }
+        },
       );
     }
   }

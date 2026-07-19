@@ -43,6 +43,8 @@ import { orderOfflineMutations } from "../../../shared/utils/offline-mutation-or
 const clientIdKey = "cognilo-offline-client-id";
 const states = new Map<string, ReturnType<typeof createRuntimeState>>();
 let runtimeLifecycleInstalled = false;
+let offlineIdentityLoadPromise: Promise<string | null> | null = null;
+let offlineIdentityGeneration = 0;
 const syncRetryTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 function isOwnedOfflineV2Entity(entity: OfflineEntity) {
@@ -283,14 +285,52 @@ export function useOfflineRuntime() {
   const { isOnline } = useNetworkStatus();
   const runtimeConfig = useRuntimeConfig();
   const enabled = computed(() => runtimeConfig.public.offlineV2 !== false);
-  const accountId = computed(() =>
-    String((authData.value?.user as { id?: string } | undefined)?.id ?? ""),
+  const authenticatedAccountId = computed(() =>
+    status.value === "authenticated"
+      ? String(
+          (authData.value?.user as { id?: string } | undefined)?.id ?? "",
+        )
+      : "",
+  );
+  const verifiedOfflineAccountId = useState<string | null>(
+    "verified-offline-account-id",
+    () => null,
+  );
+  const accountId = computed(
+    () =>
+      authenticatedAccountId.value ||
+      (!isOnline.value ? (verifiedOfflineAccountId.value ?? "") : ""),
   );
   const activeState = computed(() => {
     const id = accountId.value || "anonymous";
     if (!states.has(id)) states.set(id, createRuntimeState());
     return states.get(id)!;
   });
+
+  const loadVerifiedOfflineIdentity = async () => {
+    if (
+      !import.meta.client ||
+      isOnline.value ||
+      authenticatedAccountId.value
+    ) {
+      return accountId.value || null;
+    }
+    const generation = offlineIdentityGeneration;
+    if (!offlineIdentityLoadPromise) {
+      offlineIdentityLoadPromise = getOfflineSession()
+        .then((session) => session?.accountId ?? null)
+        .finally(() => {
+          offlineIdentityLoadPromise = null;
+        });
+    }
+    const verifiedAccountId = await offlineIdentityLoadPromise;
+    if (generation === offlineIdentityGeneration) {
+      verifiedOfflineAccountId.value = verifiedAccountId;
+    }
+    return generation === offlineIdentityGeneration
+      ? verifiedOfflineAccountId.value
+      : null;
+  };
 
   const refreshStatus = async () => {
     if (!accountId.value) return;
@@ -323,36 +363,47 @@ export function useOfflineRuntime() {
 
   const initialize = async () => {
     if (!import.meta.client || !enabled.value) return;
-    const state = activeState.value;
-    if (status.value === "authenticated" && accountId.value) {
+    if (!isOnline.value && !authenticatedAccountId.value) {
+      await loadVerifiedOfflineIdentity();
+    }
+
+    const runtimeAccountId = accountId.value;
+    if (!runtimeAccountId) return;
+
+    if (
+      status.value === "authenticated" &&
+      authenticatedAccountId.value &&
+      isOnline.value
+    ) {
       // A browser-reported offline session is never enough to establish a new
       // offline identity. It must have been observed during a live session.
-      if (isOnline.value) {
-        await saveOfflineSession(
-          accountId.value,
-          (authData.value?.user ?? {}) as Record<string, unknown>,
+      verifiedOfflineAccountId.value = authenticatedAccountId.value;
+      await saveOfflineSession(
+        runtimeAccountId,
+        (authData.value?.user ?? {}) as Record<string, unknown>,
+      );
+      const blocked = (await listOfflineMutations(runtimeAccountId)).filter(
+        (mutation) =>
+          isOwnedOfflineV2Entity(mutation.entity) &&
+          mutation.status === "blocked",
+      );
+      if (blocked.length)
+        await setMutationStatus(
+          runtimeAccountId,
+          blocked.map((mutation) => mutation.id),
+          "pending",
         );
-        const blocked = (await listOfflineMutations(accountId.value)).filter(
-          (mutation) =>
-            isOwnedOfflineV2Entity(mutation.entity) &&
-            mutation.status === "blocked",
-        );
-        if (blocked.length)
-          await setMutationStatus(
-            accountId.value,
-            blocked.map((mutation) => mutation.id),
-            "pending",
-          );
-      }
-      if (!state.initialized.value) {
-        await recoverInterruptedMutations(accountId.value);
-      }
-      const metadata = await getOfflineSyncMetadata(accountId.value);
-      state.lastSyncAt.value = metadata?.lastSuccessfulSyncAt;
-      await refreshStatus();
-      state.initialized.value = true;
-      if (isOnline.value) void sync();
     }
+
+    const state = activeState.value;
+    if (!state.initialized.value) {
+      await recoverInterruptedMutations(runtimeAccountId);
+    }
+    const metadata = await getOfflineSyncMetadata(runtimeAccountId);
+    state.lastSyncAt.value = metadata?.lastSuccessfulSyncAt;
+    await refreshStatus();
+    state.initialized.value = true;
+    if (isOnline.value && status.value === "authenticated") void sync();
   };
 
   const queue = async (input: {
@@ -830,6 +881,8 @@ export function useOfflineRuntime() {
 
   const clearCurrentAccount = async () => {
     if (accountId.value) await clearOfflineAccount(accountId.value);
+    offlineIdentityGeneration += 1;
+    verifiedOfflineAccountId.value = null;
     await clearOfflineSessions();
     if (import.meta.client) {
       const indexedDbWithList = indexedDB as IDBFactory & {
@@ -863,6 +916,12 @@ export function useOfflineRuntime() {
     // Page responses and runtime assets can contain an authenticated SSR shell,
     // so logout clears Cache Storage as well as IndexedDB.
     await clearRuntimeCaches();
+  };
+
+  const forgetOfflineIdentity = async () => {
+    offlineIdentityGeneration += 1;
+    verifiedOfflineAccountId.value = null;
+    await clearOfflineSessions();
   };
 
   const removeDownloadedWorkspace = async (workspaceId?: string) => {
@@ -964,7 +1023,7 @@ export function useOfflineRuntime() {
   if (import.meta.client && !runtimeLifecycleInstalled) {
     runtimeLifecycleInstalled = true;
     watch(
-      [accountId, status],
+      [accountId, status, isOnline],
       () => {
         void initialize();
       },
@@ -995,6 +1054,7 @@ export function useOfflineRuntime() {
     downloadWorkspace,
     refreshStatus,
     clearCurrentAccount,
+    forgetOfflineIdentity,
     removeDownloadedWorkspace,
     offlineSession,
     conflictsList,

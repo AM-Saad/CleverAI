@@ -11,6 +11,17 @@ import type { QuotaPort } from "@server/modules/subscription/ports/QuotaPort";
 
 type RelatedWordCandidate = { id: string; word: string };
 
+const firstDefinition = (meanings: unknown) => {
+  if (!Array.isArray(meanings)) return undefined;
+  const first = meanings.find(
+    (meaning) =>
+      meaning &&
+      typeof meaning === "object" &&
+      typeof (meaning as { definition?: unknown }).definition === "string",
+  ) as { definition?: string } | undefined;
+  return first?.definition;
+};
+
 const sanitizeRelatedWords = (words: string[]) =>
   words
     .map((word) => word.trim())
@@ -50,6 +61,7 @@ export async function generateLanguageStory(input: {
             userId: user.id,
             id: { not: languageWord.id },
             category: languageWord.category,
+            sourceLang: languageWord.sourceLang,
             createdAt: { lt: languageWord.createdAt },
           },
           orderBy: { createdAt: "desc" },
@@ -60,19 +72,28 @@ export async function generateLanguageStory(input: {
     data.relatedWords.length > 0
       ? sanitizeRelatedWords(data.relatedWords)
       : relatedCandidates.map((word) => word.word);
+  const learnedLanguage =
+    languageWord.sourceLang && languageWord.sourceLang !== "auto"
+      ? languageWord.sourceLang
+      : prefs.targetLanguage;
+  const nativeLanguage =
+    languageWord.translationLang && languageWord.translationLang !== "auto"
+      ? languageWord.translationLang
+      : prefs.nativeLanguage;
 
   const prompt = languageStoryPrompt(
     languageWord.word,
-    languageWord.translation,
+    languageWord.translation ||
+      firstDefinition(languageWord.meanings) ||
+      "captured vocabulary",
     languageWord.sourceContext ?? undefined,
     relatedWords,
-    getLanguageLabel(languageWord.sourceLang),
-    getLanguageLabel(languageWord.translationLang),
+    getLanguageLabel(learnedLanguage),
+    getLanguageLabel(nativeLanguage),
   );
 
-  const { llmRequestPipeline } = await import(
-    "@server/utils/llm/llmRequestPipeline"
-  );
+  const { llmRequestPipeline } =
+    await import("@server/utils/llm/llmRequestPipeline");
   const ctx = await llmRequestPipeline(input.event, {
     quotaPort: input.quotaPort,
     task: "language_story",
@@ -118,6 +139,7 @@ export async function generateLanguageStory(input: {
       storyText: story.storyText,
       sentences: parsed.sentences,
       wordId: languageWord.id,
+      language: learnedLanguage,
       subscription: updatedQuota
         ? {
             tier: updatedQuota.tier,
@@ -136,7 +158,10 @@ export async function generateLanguageStory(input: {
       throw err;
     }
     if (rawText) {
-      console.error("[generate-story] Failed to process LLM response:", rawText);
+      console.error(
+        "[generate-story] Failed to process LLM response:",
+        rawText,
+      );
     }
 
     const message =

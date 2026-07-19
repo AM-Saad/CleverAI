@@ -25,7 +25,7 @@
       </template>
 
       <!-- Global quick-switch (opened from any scoped screen's workspace pill). -->
-      <WorkspaceSwitcherSheet v-if="status === 'authenticated'" />
+      <WorkspaceSwitcherSheet v-if="hasAppAccess && !isBareRoute" />
     </div>
   </div>
 </template>
@@ -35,8 +35,10 @@ import { computed, ref } from "vue";
 import MobileTabBar from "~/components/shell/MobileTabBar.vue";
 import CaptureSheet from "~/components/shell/CaptureSheet.vue";
 import WorkspaceSwitcherSheet from "~/components/shell/WorkspaceSwitcherSheet.vue";
+import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 
 const { status } = useAuth();
+const offline = useOfflineRuntime();
 const route = useRoute();
 const { setActive } = useActiveWorkspace();
 
@@ -58,18 +60,24 @@ const isBareRoute = computed(
 const isImmersiveRoute = computed(
   () =>
     route.path === "/review" ||
+    route.path === "/language/review" ||
     /^\/notes\/[^/]+$/.test(route.path) ||
     /^\/board\/[^/]+$/.test(route.path),
 );
-const showChrome = computed(
+const hasAppAccess = computed(
   () =>
-    status.value === "authenticated" &&
-    !isBareRoute.value &&
-    !isImmersiveRoute.value,
+    status.value === "authenticated" ||
+    (!offline.isOnline.value && Boolean(offline.accountId.value)),
+);
+const showChrome = computed(
+  () => hasAppAccess.value && !isBareRoute.value && !isImmersiveRoute.value,
 );
 // The signed-out home is the full-width marketing landing, not the phone column.
 const isMarketingLanding = computed(
-  () => route.path === "/" && status.value === "unauthenticated",
+  () =>
+    route.path === "/" &&
+    status.value === "unauthenticated" &&
+    !hasAppAccess.value,
 );
 
 function nextCaptureToken() {

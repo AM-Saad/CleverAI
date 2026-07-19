@@ -48,12 +48,13 @@
 </template>
 
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted } from "vue";
 import ReviewCardView from "~/features/review/components/ReviewCardView.vue";
 import ReviewSessionFrame from "~/features/review/components/ReviewSessionFrame.vue";
 import Sm2GradeBar from "~/features/review/components/Sm2GradeBar.vue";
 import type { GradeKey, Sm2State } from "~/composables/review/useSm2Preview";
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     finished: boolean;
     xp: number;
@@ -87,7 +88,7 @@ withDefaults(
     state: null,
     disabled: false,
     swipeEnabled: true,
-    hint: "Tap the card to reveal · swipe to grade",
+    hint: "Tap the card or press Space to reveal",
     emptyTitle: "All caught up",
     emptySubtitle: "No cards are due right now. Come back later.",
     emptyActionLabel: "Back to home",
@@ -101,6 +102,48 @@ const emit = defineEmits<{
   reveal: [];
   grade: [key: GradeKey];
 }>();
+
+const gradeKeyForShortcut: Record<string, GradeKey> = {
+  "1": "again",
+  "2": "hard",
+  "3": "good",
+  "4": "easy",
+};
+
+function onKeydown(event: KeyboardEvent) {
+  if (
+    event.defaultPrevented ||
+    event.repeat ||
+    props.finished ||
+    props.loading ||
+    props.error ||
+    !props.hasCard ||
+    props.disabled
+  ) {
+    return;
+  }
+
+  const target = event.target as HTMLElement | null;
+  if (target?.closest("input, textarea, select, [contenteditable='true']")) {
+    return;
+  }
+
+  if (!props.revealed && (event.key === " " || event.key === "Enter")) {
+    if (target?.closest("button, a")) return;
+    event.preventDefault();
+    emit("reveal");
+    return;
+  }
+
+  if (!props.revealed) return;
+  const gradeKey = gradeKeyForShortcut[event.key];
+  if (!gradeKey) return;
+  event.preventDefault();
+  emit("grade", gradeKey);
+}
+
+onMounted(() => window.addEventListener("keydown", onKeydown));
+onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
 </script>
 
 <style scoped>

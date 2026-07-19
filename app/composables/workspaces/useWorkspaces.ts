@@ -56,7 +56,7 @@ export function useWorkspaces() {
   const offline = useOfflineRuntime();
   const { status } = useAuth();
   const dataKey = computed(() =>
-    status.value === "authenticated" && offline.accountId.value
+    offline.accountId.value
       ? `workspaces:${offline.accountId.value}`
       : "workspaces:anonymous",
   );

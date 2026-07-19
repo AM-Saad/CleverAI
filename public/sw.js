@@ -1000,7 +1000,10 @@
   }
   async function listOfflineMutations(accountId) {
     const db = await openUnifiedDB();
-    const all = await getAllRecords(db, stores.OFFLINE_MUTATIONS);
+    const all = await getAllRecords(
+      db,
+      stores.OFFLINE_MUTATIONS
+    );
     return all.filter((mutation) => mutation.accountId === accountId).sort((a, b) => a.createdAt - b.createdAt);
   }
   async function setMutationStatus(accountId, ids, status, lastError, expectedClaimToken) {
@@ -1011,14 +1014,16 @@
     for (const id of ids) {
       const existing = await request(store.get(id));
       if ((existing == null ? void 0 : existing.accountId) === accountId && (!expectedClaimToken || existing.claimToken === expectedClaimToken)) {
-        store.put(sanitizeForIDB({
-          ...existing,
-          status,
-          lastError,
-          updatedAt: now(),
-          attempts: status === "retry" ? existing.attempts + 1 : existing.attempts,
-          ...status === "syncing" ? {} : { claimToken: void 0, claimedAt: void 0 }
-        }));
+        store.put(
+          sanitizeForIDB({
+            ...existing,
+            status,
+            lastError,
+            updatedAt: now(),
+            attempts: status === "retry" ? existing.attempts + 1 : existing.attempts,
+            ...status === "syncing" ? {} : { claimToken: void 0, claimedAt: void 0 }
+          })
+        );
       }
     }
     await complete(tx);
@@ -1035,7 +1040,8 @@
     const claimable = /* @__PURE__ */ new Map();
     for (const id of input.ids) {
       const mutation = byId.get(id);
-      if (!mutation || mutation.accountId !== input.accountId || !["pending", "retry"].includes(mutation.status)) continue;
+      if (!mutation || mutation.accountId !== input.accountId || !["pending", "retry"].includes(mutation.status))
+        continue;
       const predecessorInFlight = all.some(
         (candidate) => candidate.accountId === input.accountId && candidate.id !== mutation.id && candidate.entity === mutation.entity && candidate.entityId === mutation.entityId && candidate.status === "syncing"
       );
@@ -1045,11 +1051,14 @@
     while (changed) {
       changed = false;
       for (const [id, mutation] of claimable) {
-        const hasUnresolvedDependency = mutation.dependsOn.some((dependencyId) => {
-          const dependency = byId.get(dependencyId);
-          if (!dependency || dependency.accountId !== input.accountId) return false;
-          return !requested.has(dependencyId) || !claimable.has(dependencyId);
-        });
+        const hasUnresolvedDependency = mutation.dependsOn.some(
+          (dependencyId) => {
+            const dependency = byId.get(dependencyId);
+            if (!dependency || dependency.accountId !== input.accountId)
+              return false;
+            return !requested.has(dependencyId) || !claimable.has(dependencyId);
+          }
+        );
         if (hasUnresolvedDependency) {
           claimable.delete(id);
           changed = true;
@@ -1083,17 +1092,20 @@
     const staleBefore = now() - 2 * 60 * 1e3;
     let recovered = 0;
     for (const mutation of mutations) {
-      if (mutation.accountId !== accountId || mutation.status !== "syncing") continue;
+      if (mutation.accountId !== accountId || mutation.status !== "syncing")
+        continue;
       if (mutation.claimedAt && mutation.claimedAt > staleBefore) continue;
-      store.put(sanitizeForIDB({
-        ...mutation,
-        status: "retry",
-        claimToken: void 0,
-        claimedAt: void 0,
-        lastError: "The previous sync was interrupted. Retrying safely.",
-        updatedAt: now(),
-        attempts: mutation.attempts + 1
-      }));
+      store.put(
+        sanitizeForIDB({
+          ...mutation,
+          status: "retry",
+          claimToken: void 0,
+          claimedAt: void 0,
+          lastError: "The previous sync was interrupted. Retrying safely.",
+          updatedAt: now(),
+          attempts: mutation.attempts + 1
+        })
+      );
       recovered += 1;
     }
     await complete(tx);
@@ -1119,7 +1131,11 @@
     var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s;
     const db = await openUnifiedDB();
     const tx = db.transaction(
-      [stores.OFFLINE_ENTITIES, stores.OFFLINE_MUTATIONS, stores.OFFLINE_CONFLICTS],
+      [
+        stores.OFFLINE_ENTITIES,
+        stores.OFFLINE_MUTATIONS,
+        stores.OFFLINE_CONFLICTS
+      ],
       "readwrite"
     );
     const mutations = tx.objectStore(stores.OFFLINE_MUTATIONS);
@@ -1132,12 +1148,18 @@
       relatedPendingSuccessors: {}
     };
     const current = await request(mutations.get(input.mutation.id));
-    const hasLeaseIdentity = Boolean(input.mutation.claimToken || input.mutation.localRevision);
+    const hasLeaseIdentity = Boolean(
+      input.mutation.claimToken || input.mutation.localRevision
+    );
     const ownsCurrentRevision = Boolean(current) && (!hasLeaseIdentity || current.claimToken === input.mutation.claimToken && ((_b = current.localRevision) != null ? _b : 1) === ((_c = input.mutation.localRevision) != null ? _c : 1));
     if (result.status === "applied") {
       if (ownsCurrentRevision) mutations.delete(input.mutation.id);
-      const allMutations = await request(mutations.getAll());
-      const allConflicts = await request(conflicts.getAll());
+      const allMutations = await request(
+        mutations.getAll()
+      );
+      const allConflicts = await request(
+        conflicts.getAll()
+      );
       const canonicalEntityId = (_e = (_d = result.entityId) != null ? _d : current == null ? void 0 : current.entityId) != null ? _e : input.mutation.entityId;
       const canonicalEntity = (_f = result.entity) != null ? _f : input.mutation.entity;
       projection.entityId = canonicalEntityId;
@@ -1158,30 +1180,38 @@
       if (result.version !== void 0) {
         for (const successor of successors) {
           if (successor.operation.endsWith(".create")) continue;
-          mutations.put(sanitizeForIDB({
-            ...successor,
-            baseVersion: result.version,
-            updatedAt: now()
-          }));
+          mutations.put(
+            sanitizeForIDB({
+              ...successor,
+              baseVersion: result.version,
+              updatedAt: now()
+            })
+          );
         }
       }
       if (result.canonical) {
         const preserveNewerLocalState = Boolean(localEntity) && (successors.length > 0 || hasNewerDraft);
-        entities.put(sanitizeForIDB({
-          id: entityKey,
-          accountId: input.accountId,
-          entity: canonicalEntity,
-          entityId: canonicalEntityId,
-          workspaceId: preserveNewerLocalState ? localEntity.workspaceId : (_g = result.canonical.workspaceId) != null ? _g : input.mutation.workspaceId,
-          version: (_h = result.version) != null ? _h : 0,
-          updatedAt: now(),
-          localDirty: preserveNewerLocalState ? localEntity.localDirty : false,
-          deleted: preserveNewerLocalState ? localEntity.deleted : input.mutation.operation.endsWith(".delete"),
-          data: preserveNewerLocalState ? localEntity.data : result.canonical
-        }));
+        entities.put(
+          sanitizeForIDB({
+            id: entityKey,
+            accountId: input.accountId,
+            entity: canonicalEntity,
+            entityId: canonicalEntityId,
+            workspaceId: preserveNewerLocalState ? localEntity.workspaceId : (_g = result.canonical.workspaceId) != null ? _g : input.mutation.workspaceId,
+            version: (_h = result.version) != null ? _h : 0,
+            updatedAt: now(),
+            localDirty: preserveNewerLocalState ? localEntity.localDirty : false,
+            deleted: preserveNewerLocalState ? localEntity.deleted : input.mutation.operation.endsWith(".delete"),
+            data: preserveNewerLocalState ? localEntity.data : result.canonical
+          })
+        );
       }
       for (const related of (_i = result.related) != null ? _i : []) {
-        const relatedKey = scopedId(input.accountId, related.entity, related.entityId);
+        const relatedKey = scopedId(
+          input.accountId,
+          related.entity,
+          related.entityId
+        );
         const relatedEntity = await request(entities.get(relatedKey));
         const relatedSuccessors = allMutations.filter(
           (candidate) => candidate.accountId === input.accountId && candidate.entity === related.entity && candidate.entityId === related.entityId && ["pending", "retry", "blocked"].includes(candidate.status)
@@ -1207,34 +1237,40 @@
           (conflict) => conflict.accountId === input.accountId && conflict.entity === related.entity && conflict.entityId === related.entityId
         );
         if (relatedConflict) {
-          conflicts.put(sanitizeForIDB({
-            ...relatedConflict,
-            serverVersion: related.version,
-            serverSnapshot: (_j = related.canonical) != null ? _j : relatedConflict.serverSnapshot
-          }));
+          conflicts.put(
+            sanitizeForIDB({
+              ...relatedConflict,
+              serverVersion: related.version,
+              serverSnapshot: (_j = related.canonical) != null ? _j : relatedConflict.serverSnapshot
+            })
+          );
         }
         for (const successor of relatedSuccessors) {
           if (successor.operation.endsWith(".create")) continue;
-          mutations.put(sanitizeForIDB({
-            ...successor,
-            baseVersion: related.version,
-            updatedAt: now()
-          }));
+          mutations.put(
+            sanitizeForIDB({
+              ...successor,
+              baseVersion: related.version,
+              updatedAt: now()
+            })
+          );
         }
         if (related.canonical) {
           const preserveNewerLocalState = Boolean(relatedEntity) && (relatedSuccessors.length > 0 || hasRelatedDraft);
-          entities.put(sanitizeForIDB({
-            id: relatedKey,
-            accountId: input.accountId,
-            entity: related.entity,
-            entityId: related.entityId,
-            workspaceId: preserveNewerLocalState ? relatedEntity.workspaceId : related.canonical.workspaceId,
-            version: related.version,
-            updatedAt: now(),
-            localDirty: preserveNewerLocalState ? relatedEntity.localDirty : false,
-            deleted: preserveNewerLocalState ? relatedEntity.deleted : false,
-            data: preserveNewerLocalState ? relatedEntity.data : related.canonical
-          }));
+          entities.put(
+            sanitizeForIDB({
+              id: relatedKey,
+              accountId: input.accountId,
+              entity: related.entity,
+              entityId: related.entityId,
+              workspaceId: preserveNewerLocalState ? relatedEntity.workspaceId : related.canonical.workspaceId,
+              version: related.version,
+              updatedAt: now(),
+              localDirty: preserveNewerLocalState ? relatedEntity.localDirty : false,
+              deleted: preserveNewerLocalState ? relatedEntity.deleted : related.canonical.deleted === true,
+              data: preserveNewerLocalState ? relatedEntity.data : related.canonical
+            })
+          );
         }
       }
     } else if (result.status === "conflict") {
@@ -1242,47 +1278,68 @@
         await complete(tx);
         return projection;
       }
-      mutations.put(sanitizeForIDB({ ...current, status: "conflict", claimToken: void 0, claimedAt: void 0, lastError: result.message, updatedAt: now() }));
-      conflicts.put(sanitizeForIDB({
-        id: scopedId(input.accountId, input.mutation.id),
-        accountId: input.accountId,
-        mutationId: input.mutation.id,
-        entity: input.mutation.entity,
-        entityId: input.mutation.entityId,
-        serverVersion: Number((_l = (_k = result.conflict) == null ? void 0 : _k.serverVersion) != null ? _l : 0),
-        overlappingFields: Array.isArray((_m = result.conflict) == null ? void 0 : _m.overlappingFields) ? (_n = result.conflict) == null ? void 0 : _n.overlappingFields : [],
-        serverSnapshot: (_p = (_o = result.conflict) == null ? void 0 : _o.serverSnapshot) != null ? _p : null,
-        reason: String((_r = (_q = result.conflict) == null ? void 0 : _q.reason) != null ? _r : "The same fields changed on another device."),
-        createdAt: now()
-      }));
+      mutations.put(
+        sanitizeForIDB({
+          ...current,
+          status: "conflict",
+          claimToken: void 0,
+          claimedAt: void 0,
+          lastError: result.message,
+          updatedAt: now()
+        })
+      );
+      conflicts.put(
+        sanitizeForIDB({
+          id: scopedId(input.accountId, input.mutation.id),
+          accountId: input.accountId,
+          mutationId: input.mutation.id,
+          entity: input.mutation.entity,
+          entityId: input.mutation.entityId,
+          serverVersion: Number((_l = (_k = result.conflict) == null ? void 0 : _k.serverVersion) != null ? _l : 0),
+          overlappingFields: Array.isArray((_m = result.conflict) == null ? void 0 : _m.overlappingFields) ? (_n = result.conflict) == null ? void 0 : _n.overlappingFields : [],
+          serverSnapshot: (_p = (_o = result.conflict) == null ? void 0 : _o.serverSnapshot) != null ? _p : null,
+          reason: String(
+            (_r = (_q = result.conflict) == null ? void 0 : _q.reason) != null ? _r : "The same fields changed on another device."
+          ),
+          createdAt: now()
+        })
+      );
     } else if (result.status === "rejected") {
       if (!ownsCurrentRevision) {
         await complete(tx);
         return projection;
       }
       const rejected = current;
-      mutations.put(sanitizeForIDB({
-        ...rejected,
-        status: "rejected",
-        claimToken: void 0,
-        claimedAt: void 0,
-        lastError: result.message,
-        updatedAt: now()
-      }));
-      const entityKey = scopedId(input.accountId, rejected.entity, rejected.entityId);
+      mutations.put(
+        sanitizeForIDB({
+          ...rejected,
+          status: "rejected",
+          claimToken: void 0,
+          claimedAt: void 0,
+          lastError: result.message,
+          updatedAt: now()
+        })
+      );
+      const entityKey = scopedId(
+        input.accountId,
+        rejected.entity,
+        rejected.entityId
+      );
       if (rejected.rollbackData) {
-        entities.put(sanitizeForIDB({
-          id: entityKey,
-          accountId: input.accountId,
-          entity: rejected.entity,
-          entityId: rejected.entityId,
-          workspaceId: rejected.workspaceId,
-          version: (_s = rejected.baseVersion) != null ? _s : 0,
-          updatedAt: now(),
-          localDirty: false,
-          deleted: false,
-          data: rejected.rollbackData
-        }));
+        entities.put(
+          sanitizeForIDB({
+            id: entityKey,
+            accountId: input.accountId,
+            entity: rejected.entity,
+            entityId: rejected.entityId,
+            workspaceId: rejected.workspaceId,
+            version: (_s = rejected.baseVersion) != null ? _s : 0,
+            updatedAt: now(),
+            localDirty: false,
+            deleted: false,
+            data: rejected.rollbackData
+          })
+        );
       } else if (rejected.operation.endsWith(".create")) {
         entities.delete(entityKey);
       }
@@ -1291,15 +1348,17 @@
         await complete(tx);
         return projection;
       }
-      mutations.put(sanitizeForIDB({
-        ...current,
-        status: result.status,
-        claimToken: void 0,
-        claimedAt: void 0,
-        attempts: result.status === "retry" ? current.attempts + 1 : current.attempts,
-        lastError: result.message,
-        updatedAt: now()
-      }));
+      mutations.put(
+        sanitizeForIDB({
+          ...current,
+          status: result.status,
+          claimToken: void 0,
+          claimedAt: void 0,
+          attempts: result.status === "retry" ? current.attempts + 1 : current.attempts,
+          lastError: result.message,
+          updatedAt: now()
+        })
+      );
     }
     await complete(tx);
     return projection;
@@ -1309,7 +1368,12 @@
     if (typeof value === "string") return (_a = idMap[value]) != null ? _a : value;
     if (Array.isArray(value)) return value.map((item) => remapValue(item, idMap));
     if (value && typeof value === "object") {
-      return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, remapValue(item, idMap)]));
+      return Object.fromEntries(
+        Object.entries(value).map(([key, item]) => [
+          key,
+          remapValue(item, idMap)
+        ])
+      );
     }
     return value;
   }
@@ -1317,41 +1381,58 @@
     var _a, _b, _c, _d;
     if (!Object.keys(idMap).length) return;
     const db = await openUnifiedDB();
-    const tx = db.transaction([stores.OFFLINE_ENTITIES, stores.OFFLINE_MUTATIONS], "readwrite");
+    const tx = db.transaction(
+      [stores.OFFLINE_ENTITIES, stores.OFFLINE_MUTATIONS],
+      "readwrite"
+    );
     const entities = tx.objectStore(stores.OFFLINE_ENTITIES);
     const mutations = tx.objectStore(stores.OFFLINE_MUTATIONS);
-    const allEntities = await request(entities.getAll());
+    const allEntities = await request(
+      entities.getAll()
+    );
     for (const record of allEntities) {
       if (record.accountId !== accountId) continue;
       const entityId = (_a = idMap[record.entityId]) != null ? _a : record.entityId;
       const workspaceId = record.workspaceId ? (_b = idMap[record.workspaceId]) != null ? _b : record.workspaceId : void 0;
-      const next = { ...record, entityId, workspaceId, id: scopedId(accountId, record.entity, entityId), data: remapValue(record.data, idMap) };
+      const next = {
+        ...record,
+        entityId,
+        workspaceId,
+        id: scopedId(accountId, record.entity, entityId),
+        data: remapValue(record.data, idMap)
+      };
       if (next.id !== record.id) entities.delete(record.id);
       entities.put(sanitizeForIDB(next));
     }
-    const allMutations = await request(mutations.getAll());
+    const allMutations = await request(
+      mutations.getAll()
+    );
     for (const record of allMutations) {
       if (record.accountId !== accountId) continue;
       const remappedEntityId = idMap[record.entityId];
       const convertQueuedCreate = Boolean(remappedEntityId) && record.id !== (acknowledgement == null ? void 0 : acknowledgement.mutationId) && record.operation.endsWith(".create");
-      mutations.put(sanitizeForIDB({
-        ...record,
-        entityId: remappedEntityId != null ? remappedEntityId : record.entityId,
-        workspaceId: record.workspaceId ? (_c = idMap[record.workspaceId]) != null ? _c : record.workspaceId : void 0,
-        payload: remapValue(record.payload, idMap),
-        rollbackData: record.rollbackData ? remapValue(record.rollbackData, idMap) : record.rollbackData,
-        ...convertQueuedCreate && {
-          operation: `${record.entity}.update`,
-          baseVersion: (_d = acknowledgement == null ? void 0 : acknowledgement.serverVersion) != null ? _d : 1
-        }
-      }));
+      mutations.put(
+        sanitizeForIDB({
+          ...record,
+          entityId: remappedEntityId != null ? remappedEntityId : record.entityId,
+          workspaceId: record.workspaceId ? (_c = idMap[record.workspaceId]) != null ? _c : record.workspaceId : void 0,
+          payload: remapValue(record.payload, idMap),
+          rollbackData: record.rollbackData ? remapValue(record.rollbackData, idMap) : record.rollbackData,
+          ...convertQueuedCreate && {
+            operation: `${record.entity}.update`,
+            baseVersion: (_d = acknowledgement == null ? void 0 : acknowledgement.serverVersion) != null ? _d : 1
+          }
+        })
+      );
     }
     await complete(tx);
   }
   async function getOfflineSession() {
     const db = await openUnifiedDB();
     const tx = db.transaction(stores.OFFLINE_SESSIONS, "readonly");
-    const sessions = await request(tx.objectStore(stores.OFFLINE_SESSIONS).getAll());
+    const sessions = await request(
+      tx.objectStore(stores.OFFLINE_SESSIONS).getAll()
+    );
     await complete(tx);
     return sessions.sort((a, b) => b.verifiedAt - a.verifiedAt)[0];
   }
@@ -4575,6 +4656,15 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         try {
           return await fetch(request2);
         } catch {
+          if (new URL(request2.url).pathname === "/api/auth/session") {
+            return new Response("{}", {
+              status: 200,
+              headers: {
+                "Content-Type": "application/json",
+                "Cache-Control": "no-store"
+              }
+            });
+          }
           return new Response(
             JSON.stringify({
               success: false,

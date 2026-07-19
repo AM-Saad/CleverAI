@@ -1,4 +1,4 @@
-<!-- design-allow-file: quick translator uses one native input so the compact
+<!-- design-allow-file: quick word capture uses one native input so the compact
      shared-element capture field can keep exact IME/autofill/mobile keyboard
      behavior while matching the full language translator. -->
 <template>
@@ -12,8 +12,8 @@
         @click="handleBack"
       />
       <span class="qwt__label">
-        <UiIcon name="i-lucide-languages" class="h-3.5 w-3.5" />
-        Translate word
+        <UiIcon name="i-lucide-bookmark-plus" class="h-3.5 w-3.5" />
+        Capture word
       </span>
       <UiPill
         v-if="state !== 'idle'"
@@ -25,32 +25,40 @@
       />
     </div>
 
-    <form class="qwt__form" @submit.prevent="translate">
-      <input
-        ref="inputEl"
-        v-model="wordInput"
-        class="qwt__input"
-        dir="auto"
-        placeholder="Type a word or phrase"
-        aria-label="Word or phrase to translate"
-        enterkeyhint="go"
+    <form class="qwt__capture" @submit.prevent="capture">
+      <div class="qwt__form">
+        <input
+          ref="inputEl"
+          v-model="wordInput"
+          class="qwt__input"
+          dir="auto"
+          placeholder="Type a word or phrase"
+          aria-label="Word or phrase to capture"
+          enterkeyhint="done"
+        />
+        <!-- design-allow: native quick-capture input -->
+        <UiButton
+          square
+          tone="primary"
+          :loading="isCapturing"
+          :disabled="!wordInput.trim() || isBusy"
+          aria-label="Capture word"
+          type="submit"
+        >
+          <UiIcon name="i-lucide-bookmark-plus" class="h-4 w-4" />
+        </UiButton>
+      </div>
+      <UiCheckbox
+        v-model="translateCapturedWord"
+        :label="`Translate into ${translationLanguageLabel}`"
+        description="The word is always saved to your word bank"
+        :disabled="isBusy"
       />
-      <!-- design-allow: native quick-translation input -->
-      <UiButton
-        square
-        tone="primary"
-        :loading="isCapturing"
-        :disabled="!wordInput.trim() || isBusy"
-        aria-label="Translate"
-        type="submit"
-      >
-        <UiIcon name="i-lucide-arrow-right" class="h-4 w-4" />
-      </UiButton>
     </form>
 
     <div v-if="state === 'loading'" class="qwt__loading">
       <UiIcon name="i-lucide-loader-2" class="h-5 w-5 animate-spin" />
-      Translating…
+      Capturing…
     </div>
 
     <div v-else-if="captureResult" class="qwt__result">
@@ -72,16 +80,19 @@
       </div>
 
       <div v-if="captureResult.translation" class="qwt__translation">
-        <span>{{ captureResult.detectedLang }} → {{ translationLanguage }}</span>
+        <span
+          >{{ captureResult.detectedLang }} → {{ translationLanguage }}</span
+        >
         <p dir="auto">{{ captureResult.translation }}</p>
       </div>
 
-      <p
-        v-if="captureResult.meanings?.[0]?.definition"
-        class="qwt__definition"
-      >
+      <p v-if="captureResult.meanings?.[0]?.definition" class="qwt__definition">
         {{ captureResult.meanings[0].definition }}
       </p>
+      <div class="qwt__saved">
+        <UiIcon name="i-lucide-check-circle-2" class="h-4 w-4" />
+        Saved to your word bank
+      </div>
 
       <div v-if="state === 'story-ready' && storyResult" class="qwt__story">
         <UiIcon name="i-lucide-check-circle-2" class="h-4 w-4" />
@@ -96,18 +107,7 @@
 
     <div class="qwt__footer">
       <UiButton
-        v-if="captureResult && !captureResult.saved"
-        variant="ghost"
-        tone="neutral"
-        leading-icon="i-lucide-book-plus"
-        :loading="isCapturing"
-        :disabled="isBusy"
-        @click="saveWord"
-      >
-        Save
-      </UiButton>
-      <UiButton
-        v-else-if="captureResult"
+        v-if="captureResult"
         variant="ghost"
         tone="neutral"
         leading-icon="i-lucide-rotate-ccw"
@@ -134,75 +134,67 @@
         Done
       </UiButton>
     </div>
-
-    <ConsentSheet
-      :show="showConsentSheet"
-      @confirm="confirmCapture"
-      @decline="declineCapture"
-    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from "vue";
-import ConsentSheet from "~/features/language-learning/components/ConsentSheet.vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { getLanguageLabel } from "@shared/utils/language.contract";
 import { useLanguageCapture } from "~/features/language-learning/composables/useLanguageCapture";
 
 const emit = defineEmits<{
   (e: "back"): void;
   (e: "done"): void;
 }>();
+const { isMobile } = useResponsive();
 
 const {
   state,
   captureResult,
   storyResult,
-  showConsentSheet,
   preferences,
   isCapturing,
   captureError,
   isGeneratingStory,
   storyError,
   captureWord,
-  confirmCapture,
-  declineCapture,
   generateStory,
+  saveCapture,
   dismissResult,
   loadPreferences,
 } = useLanguageCapture();
 
 const inputEl = ref<HTMLInputElement | null>(null);
 const wordInput = ref("");
+const translateCapturedWord = ref(true);
 
 const isBusy = computed(
-  () => state.value === "loading" || state.value === "story-loading",
+  () =>
+    state.value === "loading" ||
+    state.value === "saving" ||
+    state.value === "story-loading",
 );
 const translationLanguage = computed(
   () => preferences.value?.nativeLanguage ?? "en",
 );
+const translationLanguageLabel = computed(() =>
+  getLanguageLabel(translationLanguage.value),
+);
 const stateLabel = computed(() => {
-  if (state.value === "loading") return "Translating";
+  if (state.value === "loading") return "Capturing";
+  if (state.value === "saving") return "Saving";
   if (state.value === "story-loading") return "Story";
   if (state.value === "story-ready") return "Ready";
   return "Result";
 });
 
-async function translate() {
+async function capture() {
   const word = wordInput.value.trim();
   if (!word || isBusy.value) return;
   await captureWord(word, {
-    includeTranslation: true,
-    translateOnly: true,
-    sourceType: "manual",
-  });
-}
-
-async function saveWord() {
-  const word = captureResult.value?.word ?? wordInput.value.trim();
-  if (!word || isBusy.value) return;
-  await captureWord(word, {
-    includeTranslation: true,
+    includeTranslation: translateCapturedWord.value,
     translateOnly: false,
+    sourceLang: preferences.value?.targetLanguage ?? "auto",
     sourceType: "manual",
   });
 }
@@ -211,20 +203,24 @@ async function generateWordStory() {
   if (isBusy.value) return;
   let wordId = captureResult.value?.wordId;
   if (!wordId) {
-    const saved = await captureWord(captureResult.value?.word ?? wordInput.value.trim(), {
-      includeTranslation: true,
-      translateOnly: false,
-      sourceType: "manual",
-    });
+    const saved = await saveCapture();
     wordId = saved?.wordId;
   }
   if (wordId) await generateStory(wordId);
 }
 
+watch(
+  () => preferences.value?.translateOnCapture,
+  (value) => {
+    if (typeof value === "boolean") translateCapturedWord.value = value;
+  },
+  { immediate: true },
+);
+
 function reset() {
   dismissResult();
   wordInput.value = "";
-  nextTick(() => inputEl.value?.focus());
+  if (!isMobile.value) nextTick(() => inputEl.value?.focus());
 }
 
 function clearAndEmit(eventName: "back" | "done") {
@@ -244,7 +240,7 @@ function handleDone() {
 
 onMounted(() => {
   void loadPreferences();
-  nextTick(() => inputEl.value?.focus());
+  if (!isMobile.value) nextTick(() => inputEl.value?.focus());
 });
 </script>
 
@@ -269,6 +265,11 @@ onMounted(() => {
   color: var(--color-content-secondary);
   font-size: 12px;
   font-weight: 700;
+}
+.qwt__capture {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 .qwt__form {
   display: flex;
@@ -313,9 +314,14 @@ onMounted(() => {
   justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-4);
-  border: 1px solid color-mix(in srgb, var(--color-accent-teal) 28%, var(--color-secondary));
+  border: 1px solid
+    color-mix(in srgb, var(--color-accent-teal) 28%, var(--color-secondary));
   border-radius: var(--radius-xl);
-  background: color-mix(in srgb, var(--color-accent-teal) 8%, var(--color-surface));
+  background: color-mix(
+    in srgb,
+    var(--color-accent-teal) 8%,
+    var(--color-surface)
+  );
 }
 .qwt__word {
   color: var(--color-content-on-surface-strong);
@@ -346,6 +352,14 @@ onMounted(() => {
   font-weight: 800;
 }
 .qwt__story {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--color-success);
+  font-size: 13px;
+  font-weight: 700;
+}
+.qwt__saved {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);

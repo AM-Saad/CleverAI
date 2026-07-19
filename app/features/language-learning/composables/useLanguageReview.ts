@@ -6,8 +6,15 @@ import type { ReviewGrade } from "@shared/utils/review.contract";
 import type { APIError } from "~/services/FetchFactory";
 import { useTextToSpeechWorker } from "~/composables/ai/useTextToSpeechWorker";
 import { useLanguageLearningRuntime } from "./languageLearningRuntime";
-import { calculateOfflineNextReviewDate, calculateOfflineNextStreak, calculateOfflineSM2 } from "@@/shared/utils/sm2";
-import { listOfflineEntities } from "~/utils/offline-v2/repository";
+import {
+  calculateOfflineNextReviewDate,
+  calculateOfflineNextStreak,
+  calculateOfflineSM2,
+} from "@@/shared/utils/sm2";
+import {
+  listOfflineEntities,
+  listOfflineMutations,
+} from "~/utils/offline-v2/repository";
 import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 
 export function useLanguageReview() {
@@ -20,6 +27,7 @@ export function useLanguageReview() {
   const isComplete = ref(false);
   const gradedCardIds = ref(new Set<string>());
   const requestIdsByCard = new Map<string, string>();
+  const offlineReviewDataById = new Map<string, Record<string, any>>();
   let optimisticGradeId = 0;
   let sessionEpoch = 0;
 
@@ -43,7 +51,7 @@ export function useLanguageReview() {
   );
 
   const fetchQueue = async () => {
-    sessionEpoch++;
+    const epoch = ++sessionEpoch;
     optimisticGradeId++;
     isComplete.value = false;
     currentIndex.value = 0;
@@ -52,21 +60,42 @@ export function useLanguageReview() {
     pendingGradeIds.value = new Set();
     gradeError.value = null;
     requestIdsByCard.clear();
+    offlineReviewDataById.clear();
     await languageRuntime.ensurePreferences();
+    if (epoch !== sessionEpoch) return null;
 
     if (!offline.isOnline.value && offline.accountId.value) {
       const [reviews, words] = await Promise.all([
-        listOfflineEntities<Record<string, any>>(offline.accountId.value, "languageReview"),
-        listOfflineEntities<Record<string, any>>(offline.accountId.value, "languageWord"),
+        listOfflineEntities<Record<string, any>>(
+          offline.accountId.value,
+          "languageReview",
+        ),
+        listOfflineEntities<Record<string, any>>(
+          offline.accountId.value,
+          "languageWord",
+        ),
       ]);
-      const wordsById = new Map(words.map((record) => [record.entityId, record.data]));
-      const cards = reviews
-        .filter((record) => new Date(record.data.nextReviewAt).getTime() <= Date.now() && !record.data.suspended)
+      if (epoch !== sessionEpoch) return null;
+      const wordsById = new Map(
+        words.map((record) => [record.entityId, record.data]),
+      );
+      const preferences = languageRuntime.preferences.value;
+      const allDueCards = reviews
+        .filter(
+          (record) =>
+            new Date(record.data.nextReviewAt).getTime() <= Date.now() &&
+            !record.data.suspended,
+        )
         .map((record) => {
           const review = record.data;
           const word = wordsById.get(review.wordId);
           if (!word) return null;
-          const story = Array.isArray(word.stories) ? word.stories.find((candidate: any) => candidate.id === review.storyId) : null;
+          offlineReviewDataById.set(record.entityId, review);
+          const story = Array.isArray(word.stories)
+            ? word.stories.find(
+                (candidate: any) => candidate.id === review.storyId,
+              )
+            : null;
           return {
             cardId: review.id,
             wordId: word.id,
@@ -78,10 +107,32 @@ export function useLanguageReview() {
             storyText: story?.storyText ?? null,
             sentences: story?.sentences ?? null,
             mode: story ? "story_cloze" : "word_translation",
-            reviewState: { intervalDays: review.intervalDays, easeFactor: review.easeFactor, repetitions: review.repetitions, nextReviewAt: new Date(review.nextReviewAt), lastGrade: review.lastGrade, streak: review.streak },
+            reviewState: {
+              intervalDays: review.intervalDays,
+              easeFactor: review.easeFactor,
+              repetitions: review.repetitions,
+              nextReviewAt: new Date(review.nextReviewAt),
+              lastGrade: review.lastGrade,
+              streak: review.streak,
+            },
           } as LanguageQueueCard;
         })
         .filter((card): card is LanguageQueueCard => Boolean(card));
+      const scopedCards = allDueCards.filter(
+        (card) =>
+          (!preferences?.targetLanguage ||
+            preferences.targetLanguage === preferences.nativeLanguage ||
+            card.sourceLang === preferences.targetLanguage) &&
+          (!preferences?.nativeLanguage ||
+            card.translationLang === preferences.nativeLanguage),
+      );
+      const cards = (scopedCards.length > 0 ? scopedCards : allDueCards)
+        .sort(
+          (left, right) =>
+            left.reviewState.nextReviewAt.getTime() -
+            right.reviewState.nextReviewAt.getTime(),
+        )
+        .slice(0, preferences?.sessionCardLimit ?? 20);
       queue.value = cards;
       isComplete.value = cards.length === 0;
       return { cards };
@@ -93,6 +144,7 @@ export function useLanguageReview() {
         nativeLanguage: languageRuntime.preferences.value?.nativeLanguage,
       }),
     );
+    if (epoch !== sessionEpoch) return null;
     if (result) {
       queue.value = result.cards;
       if (result.cards.length === 0) {
@@ -159,9 +211,17 @@ export function useLanguageReview() {
   };
 
   const grade = async (cardId: string, gradeValue: ReviewGrade) => {
-    if (pendingGradeIds.value.has(cardId) || gradedCardIds.value.has(cardId)) {
+    if (
+      pendingGradeIds.value.size > 0 ||
+      pendingGradeIds.value.has(cardId) ||
+      gradedCardIds.value.has(cardId)
+    ) {
       return null;
     }
+
+    const removed = removeCardFromQueue(cardId);
+    if (!removed) return null;
+
     if (!requestIdsByCard.has(cardId)) {
       const uniquePart =
         globalThis.crypto?.randomUUID?.() ??
@@ -179,7 +239,6 @@ export function useLanguageReview() {
     const nextGraded = new Set(gradedCardIds.value);
     nextGraded.add(cardId);
     gradedCardIds.value = nextGraded;
-    const removed = removeCardFromQueue(cardId);
     setGradePending(cardId, true);
     gradeError.value = null;
 
@@ -188,26 +247,73 @@ export function useLanguageReview() {
         const card = removed?.card;
         if (!card) return null;
         const reviewedAt = new Date();
-        const next = calculateOfflineSM2({ currentEF: card.reviewState.easeFactor, currentInterval: card.reviewState.intervalDays, currentRepetitions: card.reviewState.repetitions, grade: Number(gradeValue) });
+        const next = calculateOfflineSM2({
+          currentEF: card.reviewState.easeFactor,
+          currentInterval: card.reviewState.intervalDays,
+          currentRepetitions: card.reviewState.repetitions,
+          grade: Number(gradeValue),
+        });
+        const nextReviewAt = calculateOfflineNextReviewDate(
+          next.intervalDays,
+          reviewedAt,
+        );
+        const existingReview = offlineReviewDataById.get(cardId) ?? {
+          id: cardId,
+          userId: offline.accountId.value,
+          wordId: card.wordId,
+          storyId: card.storyId ?? null,
+          suspended: false,
+          createdAt: reviewedAt.toISOString(),
+        };
+        const pendingEnroll =
+          cardId.startsWith("local:") && offline.accountId.value
+            ? (await listOfflineMutations(offline.accountId.value)).find(
+                (mutation) =>
+                  mutation.operation === "languageWord.enroll" &&
+                  mutation.payload.localReviewId === cardId &&
+                  ["pending", "retry", "blocked", "syncing"].includes(
+                    mutation.status,
+                  ),
+              )
+            : undefined;
+        const localData = {
+          ...existingReview,
+          intervalDays: next.intervalDays,
+          easeFactor: next.easeFactor,
+          repetitions: next.repetitions,
+          nextReviewAt: nextReviewAt.toISOString(),
+          lastReviewedAt: reviewedAt.toISOString(),
+          lastGrade: Number(gradeValue),
+          streak: calculateOfflineNextStreak(
+            card.reviewState.streak ?? 0,
+            Number(gradeValue),
+          ),
+          updatedAt: reviewedAt.toISOString(),
+        };
         await offline.queue({
           entity: "languageReview",
           operation: "languageReview.grade",
           entityId: cardId,
           changedFields: ["reviewState"],
-          payload: { cardId, grade: Number(gradeValue), reviewedAt: reviewedAt.toISOString(), requestId: payload.requestId },
-          localData: {
-            intervalDays: next.intervalDays,
-            easeFactor: next.easeFactor,
-            repetitions: next.repetitions,
-            nextReviewAt: calculateOfflineNextReviewDate(next.intervalDays, reviewedAt).toISOString(),
-            lastReviewedAt: reviewedAt.toISOString(),
-            lastGrade: Number(gradeValue),
-            streak: calculateOfflineNextStreak(card.reviewState.streak ?? 0, Number(gradeValue)),
+          payload: {
+            cardId,
+            grade: Number(gradeValue),
+            reviewedAt: reviewedAt.toISOString(),
+            requestId: payload.requestId,
           },
+          localData,
+          dependsOn: pendingEnroll ? [pendingEnroll.id] : undefined,
+          baseVersion: pendingEnroll ? 1 : undefined,
           sequence: true,
         });
+        offlineReviewDataById.set(cardId, localData);
         requestIdsByCard.delete(cardId);
-        return { nextReviewAt: calculateOfflineNextReviewDate(next.intervalDays, reviewedAt).toISOString(), intervalDays: next.intervalDays, easeFactor: next.easeFactor, xpEarned: 0 };
+        return {
+          nextReviewAt: nextReviewAt.toISOString(),
+          intervalDays: next.intervalDays,
+          easeFactor: next.easeFactor,
+          xpEarned: 0,
+        };
       }
       const result = await $api.language.gradeCard(payload);
       if (!result.success) {
@@ -220,6 +326,7 @@ export function useLanguageReview() {
       }
 
       requestIdsByCard.delete(cardId);
+      await languageRuntime.applyServerProjection(result.data.projection);
       languageRuntime.invalidateWords();
       void languageRuntime.refreshStats();
       if (mutationId === optimisticGradeId) gradeError.value = null;
@@ -292,11 +399,7 @@ export function useLanguageReview() {
     // Operation state
     isLoading: fetchOperation.pending,
     fetchError: fetchOperation.error,
-    isGrading: computed(() =>
-      currentCard.value
-        ? pendingGradeIds.value.has(currentCard.value.cardId)
-        : false,
-    ),
+    isGrading: computed(() => pendingGradeIds.value.size > 0),
     hasPendingGrades: computed(() => pendingGradeIds.value.size > 0),
     gradeError: readonly(gradeError),
 

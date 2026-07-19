@@ -1,4 +1,5 @@
 import type { ReviewGrade } from "~/shared/utils/review.contract";
+import { REVIEW_GRADE_BY_KEY } from "~/shared/utils/sm2";
 
 export type ReviewGradeTone = "error" | "warning" | "info" | "success";
 
@@ -22,10 +23,34 @@ export interface ReviewGradeOption {
  * SM-2 0–5 scale the backend expects.
  */
 export const REVIEW_GRADES: readonly ReviewGradeOption[] = [
-  { value: "0", label: "Again", hint: "Forgot", tone: "error", key: "1" },
-  { value: "2", label: "Hard", hint: "Tough recall", tone: "warning", key: "2" },
-  { value: "3", label: "Good", hint: "Recalled", tone: "info", key: "3" },
-  { value: "5", label: "Easy", hint: "Instant", tone: "success", key: "4" },
+  {
+    value: REVIEW_GRADE_BY_KEY.again,
+    label: "Again",
+    hint: "Forgot",
+    tone: "error",
+    key: "1",
+  },
+  {
+    value: REVIEW_GRADE_BY_KEY.hard,
+    label: "Hard",
+    hint: "Tough recall",
+    tone: "warning",
+    key: "2",
+  },
+  {
+    value: REVIEW_GRADE_BY_KEY.good,
+    label: "Good",
+    hint: "Recalled",
+    tone: "info",
+    key: "3",
+  },
+  {
+    value: REVIEW_GRADE_BY_KEY.easy,
+    label: "Easy",
+    hint: "Instant",
+    tone: "success",
+    key: "4",
+  },
 ];
 
 /** Look up a grade option by its keyboard shortcut. */

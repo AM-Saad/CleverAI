@@ -6,18 +6,40 @@ import { Errors } from "../utils/error";
 export async function requireAuth(event: any): Promise<any> {
   try {
     const session = (await safeGetServerSession(event)) as {
-      user?: { email?: string;[key: string]: unknown };
+      user?: {
+        id?: unknown;
+        sub?: unknown;
+        email?: unknown;
+        [key: string]: unknown;
+      };
       [key: string]: unknown;
     } | null;
 
-    if (!session || !session.user || !session.user.email) {
+    if (!session?.user) {
       throw Errors.unauthorized("Authentication required");
     }
-    const email = session.user.email;
+
+    const sessionId =
+      typeof session.user.id === "string"
+        ? session.user.id
+        : typeof session.user.sub === "string"
+          ? session.user.sub
+          : null;
+    const email =
+      typeof session.user.email === "string" ? session.user.email : null;
+    if (!sessionId && !email) {
+      throw Errors.unauthorized("Authentication required");
+    }
+
     const prisma = event.context.prisma;
-    const user = await prisma.user.findUnique({ where: { email } });
+    // Current JWTs carry the immutable database id. Only legacy sessions that
+    // predate that claim fall back to email; an id that no longer exists must
+    // not silently authenticate a newly-created account with the same email.
+    const user = sessionId
+      ? await prisma.user.findUnique({ where: { id: sessionId } })
+      : await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      throw Errors.unauthorized("User account not found");
+      throw Errors.sessionInvalid("User account not found");
     }
     event.context.user = user;
     return user;

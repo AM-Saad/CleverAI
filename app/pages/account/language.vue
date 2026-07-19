@@ -13,7 +13,7 @@
       <template v-else-if="languageForm">
         <UiSettingsRow
           title="Quick capture"
-          description="Show the floating translate button"
+          description="Show the Word action in global capture"
         >
           <template #leading>
             <UiIcon name="i-lucide-languages" class="h-4 w-4" />
@@ -61,8 +61,19 @@
           </template>
         </UiSettingsRow>
         <UiSettingsRow
+          title="Translate captured words"
+          description="Default the capture translation checkbox to on"
+        >
+          <template #leading>
+            <UiIcon name="i-lucide-languages" class="h-4 w-4" />
+          </template>
+          <template #control>
+            <UiSwitch v-model="languageForm.translateOnCapture" />
+          </template>
+        </UiSettingsRow>
+        <UiSettingsRow
           title="Auto-enroll new words"
-          description="Add generated stories to the review queue"
+          description="Add newly saved words to the review queue"
         >
           <template #leading>
             <UiIcon name="i-lucide-book-plus" class="h-4 w-4" />
@@ -135,7 +146,6 @@ import { useLanguageLearningRuntime } from "~/features/language-learning/composa
 
 definePageMeta({ middleware: "auth" });
 
-const { $api } = useNuxtApp();
 const toast = useToast();
 const languageRuntime = useLanguageLearningRuntime();
 const languageOptions = SUPPORTED_LANGUAGE_OPTIONS;
@@ -143,6 +153,7 @@ const languageForm = ref<{
   enabled: boolean;
   targetLanguage: SupportedLanguageCode;
   nativeLanguage: SupportedLanguageCode;
+  translateOnCapture: boolean;
   autoEnroll: boolean;
   sessionCardLimit: number;
 } | null>(null);
@@ -154,13 +165,14 @@ async function loadLanguagePreferences() {
   languageLoading.value = true;
   languageError.value = null;
   try {
-    const result = await $api.language.getPreferences();
-    if (!result.success) {
-      languageError.value = result.error;
+    const result = await languageRuntime.ensurePreferences();
+    if (!result) {
+      languageError.value =
+        languageRuntime.preferencesError.value ??
+        "Language preferences are not available offline yet.";
       return;
     }
-    setLanguageForm(result.data);
-    languageRuntime.setPreferences(result.data);
+    setLanguageForm(result);
   } finally {
     languageLoading.value = false;
   }
@@ -170,10 +182,8 @@ function setLanguageForm(result: UserLanguagePreferences) {
   languageForm.value = {
     enabled: result.enabled ?? true,
     targetLanguage: (result.targetLanguage ?? "en") as SupportedLanguageCode,
-    nativeLanguage:
-      result.nativeLanguage === "auto"
-        ? "en"
-        : ((result.nativeLanguage ?? "en") as SupportedLanguageCode),
+    nativeLanguage: (result.nativeLanguage ?? "en") as SupportedLanguageCode,
+    translateOnCapture: result.translateOnCapture ?? true,
     autoEnroll: result.autoEnroll ?? true,
     sessionCardLimit: result.sessionCardLimit ?? 20,
   };
@@ -184,17 +194,19 @@ async function saveLanguagePreferences() {
   languageSaving.value = true;
   languageError.value = null;
   try {
-    const result = await $api.language.updatePreferences(languageForm.value);
-    if (result.success) {
-      setLanguageForm(result.data);
-      languageRuntime.setPreferences(result.data);
-      languageRuntime.invalidateWords();
+    const result = await languageRuntime.updatePreferences(languageForm.value);
+    if (result) {
+      setLanguageForm(result);
       toast.add({ title: "Language preferences saved", color: "success" });
     } else {
-      languageError.value = result.error;
+      languageError.value =
+        languageRuntime.preferencesError.value ??
+        "Could not save language preferences.";
       toast.add({
         title: "Could not save language",
-        description: result.error.message,
+        description:
+          languageRuntime.preferencesError.value?.message ??
+          "Try again when you are online.",
         color: "error",
       });
     }

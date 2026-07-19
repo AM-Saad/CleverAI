@@ -16,6 +16,8 @@ function isUniqueConstraintViolation(err: unknown): boolean {
   );
 }
 
+class ReviewGradeReplay extends Error {}
+
 export function isRetryableReviewGradeError(err: unknown): boolean {
   if (
     err &&
@@ -101,90 +103,78 @@ export async function gradeReviewCard(
     };
   };
 
-  const claimRequest = async (): Promise<"claimed" | "replayed"> => {
-    if (input.skipRequestClaim) return "claimed";
-    if (!input.requestId) return "claimed";
-    try {
-      await input.prisma.gradeRequest.create({
-        data: {
-          requestId: input.requestId,
-          userId: input.userId,
-          cardId: input.cardId,
-          grade: input.grade,
-        },
-      });
-      return "claimed";
-    } catch (err) {
-      if (isUniqueConstraintViolation(err)) {
-        return "replayed";
-      }
-      throw err;
-    }
-  };
-
-  const releaseRequestClaim = async () => {
-    if (!input.requestId) return;
-    await input.prisma.gradeRequest
-      .deleteMany({ where: { requestId: input.requestId } })
-      .catch(() => undefined);
-  };
-
   const mutate = async (tx: any): Promise<GradeReviewCardResult> => {
-        const record = await input.repository.findByIdForUser(
-          tx,
-          input.cardId,
-          input.userId,
-        );
-
-        if (!record) {
-          throw Errors.notFound("card");
-        }
-
-        const next = calculateSM2({
-          currentEF: record.easeFactor,
-          currentInterval: record.intervalDays,
-          currentRepetitions: record.repetitions,
-          grade: input.grade,
+    if (!input.skipRequestClaim && input.requestId) {
+      try {
+        await tx.gradeRequest.create({
+          data: {
+            requestId: input.requestId,
+            userId: input.userId,
+            cardId: input.cardId,
+            grade: input.grade,
+          },
         });
+      } catch (err) {
+        if (isUniqueConstraintViolation(err)) throw new ReviewGradeReplay();
+        throw err;
+      }
+    }
 
-        const nextReviewAt = calculateNextReviewDate(next.intervalDays, now);
-        const streak = calculateNextStreak(record.streak, input.grade);
+    const record = await input.repository.findByIdForUser(
+      tx,
+      input.cardId,
+      input.userId,
+    );
 
-        const xpEarned = await input.xpPort.awardReviewXp({
-          tx,
-          userId: input.userId,
-          resourceId: record.resourceId,
-          source: input.xpSource,
-          easeFactor: record.easeFactor,
-          intervalDays: record.intervalDays,
-          grade: input.grade,
-          now,
-          nextReviewAt: record.nextReviewAt,
-        });
+    if (!record) {
+      throw Errors.notFound("card");
+    }
 
-        const updated = await input.repository.updateAfterGrade(tx, {
-          id: record.id,
-          easeFactor: next.easeFactor,
-          intervalDays: next.intervalDays,
-          repetitions: next.repetitions,
-          nextReviewAt,
-          lastReviewedAt: now,
-          lastGrade: input.grade,
-          streak,
-        });
+    const next = calculateSM2({
+      currentEF: record.easeFactor,
+      currentInterval: record.intervalDays,
+      currentRepetitions: record.repetitions,
+      grade: input.grade,
+    });
 
-        if (input.repository.markMastered) {
-          await input.repository.markMastered(tx, updated);
-        }
+    const nextReviewAt = calculateNextReviewDate(next.intervalDays, now);
+    const streak = calculateNextStreak(record.streak, input.grade);
 
-        return {
-          reviewId: updated.id,
-          resourceId: updated.resourceId,
-          nextReviewAt: updated.nextReviewAt,
-          intervalDays: updated.intervalDays,
-          easeFactor: updated.easeFactor,
-          xpEarned,
-        };
+    const xpEarned = await input.xpPort.awardReviewXp({
+      tx,
+      userId: input.userId,
+      resourceId: record.resourceId,
+      source: input.xpSource,
+      easeFactor: record.easeFactor,
+      intervalDays: record.intervalDays,
+      grade: input.grade,
+      now,
+      nextReviewAt: record.nextReviewAt,
+    });
+
+    const updated = await input.repository.updateAfterGrade(tx, {
+      id: record.id,
+      easeFactor: next.easeFactor,
+      intervalDays: next.intervalDays,
+      repetitions: next.repetitions,
+      nextReviewAt,
+      lastReviewedAt: now,
+      lastGrade: input.grade,
+      streak,
+    });
+
+    if (input.repository.markMastered) {
+      await input.repository.markMastered(tx, updated);
+    }
+
+    return {
+      reviewId: updated.id,
+      resourceId: updated.resourceId,
+      nextReviewAt: updated.nextReviewAt,
+      intervalDays: updated.intervalDays,
+      easeFactor: updated.easeFactor,
+      xpEarned,
+    };
   };
 
   const runMutation = async (): Promise<GradeReviewCardResult> =>
@@ -196,16 +186,13 @@ export async function gradeReviewCard(
   let lastError: unknown;
 
   for (let attempt = 0; attempt < attempts; attempt++) {
-    const claimStatus = await claimRequest();
-    if (claimStatus === "replayed") {
-      return readPersistedState();
-    }
-
     try {
       result = await runMutation();
       break;
     } catch (err) {
-      if (!input.skipRequestClaim) await releaseRequestClaim();
+      if (err instanceof ReviewGradeReplay) {
+        return readPersistedState();
+      }
       lastError = err;
 
       const retryable = isRetryableReviewGradeError(err);
@@ -232,18 +219,19 @@ export async function gradeReviewCard(
     );
   }
 
-  if (!input.suppressEvent) await domainEventBus.publish({
-    type: "ReviewCardGraded",
-    occurredAt: now,
-    payload: {
-      userId: input.userId,
-      reviewId: result.reviewId,
-      resourceId: result.resourceId,
-      grade: input.grade,
-      nextReviewAt: result.nextReviewAt,
-      xpEarned: result.xpEarned,
-    },
-  });
+  if (!input.suppressEvent)
+    await domainEventBus.publish({
+      type: "ReviewCardGraded",
+      occurredAt: now,
+      payload: {
+        userId: input.userId,
+        reviewId: result.reviewId,
+        resourceId: result.resourceId,
+        grade: input.grade,
+        nextReviewAt: result.nextReviewAt,
+        xpEarned: result.xpEarned,
+      },
+    });
 
   return result;
 }

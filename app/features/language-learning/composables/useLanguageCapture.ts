@@ -2,7 +2,6 @@ import type {
   CaptureWordResponse,
   GenerateStoryResponse,
   SupportedLanguageCode,
-  UserLanguagePreferences,
 } from "@shared/utils/language.contract";
 import { useLanguageLearningRuntime } from "./languageLearningRuntime";
 import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
@@ -10,9 +9,21 @@ import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 type CaptureState =
   | "idle"
   | "loading"
+  | "saving"
   | "result"
   | "story-loading"
   | "story-ready";
+
+type CaptureOptions = {
+  sourceContext?: string;
+  sourceLang?: string;
+  targetLang?: string;
+  includeTranslation?: boolean;
+  translateOnly?: boolean;
+  sourceType?: "note" | "material" | "external" | "manual";
+  sourceRefId?: string;
+  forceRetranslate?: boolean;
+};
 
 export function useLanguageCapture() {
   const { $api } = useNuxtApp();
@@ -29,166 +40,139 @@ export function useLanguageCapture() {
   const captureResult = ref<CaptureWordResponse | null>(null);
   const storyResult = ref<GenerateStoryResponse | null>(null);
 
-  // Consent flow
-  const showConsentSheet = ref(false);
-  const pendingCapture = ref<
-    | [
-        string,
-        (
-          | {
-              sourceContext?: string;
-              sourceLang?: string;
-              targetLang?: string;
-              includeTranslation?: boolean;
-              translateOnly?: boolean;
-              sourceType?: "note" | "material" | "external" | "manual";
-              sourceRefId?: string;
-              forceRetranslate?: boolean;
-            }
-          | undefined
-        ),
-      ]
-    | null
-  >(null);
   const preferences = runtime.preferences;
 
   // Operations
   const captureOperation = useOperation<CaptureWordResponse>();
+  const saveOperation = useOperation<CaptureWordResponse>();
   const storyOperation = useOperation<GenerateStoryResponse>();
-  const prefsOperation = useOperation<UserLanguagePreferences>();
+  const lastCaptureOptions = ref<CaptureOptions>();
+  let capturePromise: Promise<CaptureWordResponse | null> | null = null;
+  let savePromise: Promise<CaptureWordResponse | null> | null = null;
 
   // Load preferences once
-  const loadPreferences = async () => {
-    if (preferences.value) return preferences.value;
-    if (!offline.isOnline.value) return runtime.ensurePreferences();
-    const result = await prefsOperation.execute(() =>
-      $api.language.getPreferences(),
-    );
-    if (result) runtime.setPreferences(result);
-    return result;
-  };
+  const loadPreferences = () => runtime.ensurePreferences();
 
-  const captureWord = async (
-    word: string,
-    options?: {
-      sourceContext?: string;
-      sourceLang?: string;
-      targetLang?: string;
-      includeTranslation?: boolean;
-      translateOnly?: boolean;
-      sourceType?: "note" | "material" | "external" | "manual";
-      sourceRefId?: string;
-      forceRetranslate?: boolean;
-    },
-  ) => {
-    const prefs = await loadPreferences();
-
-    // First time: show consent sheet
-    if (prefs && prefs.showConsent) {
-      pendingCapture.value = [word, options] as any;
-      showConsentSheet.value = true;
+  const captureWord = async (word: string, options?: CaptureOptions) => {
+    if (!offline.isOnline.value) {
+      toast.add({
+        title: "Unavailable offline",
+        description:
+          "Capture and translation use AI and are not queued while offline.",
+        color: "warning",
+      });
       return null;
     }
-
+    await loadPreferences();
     return _doCapture(word, options);
   };
 
-  const _doCapture = async (
-    word: string,
-    options?: {
-      sourceContext?: string;
-      sourceLang?: string;
-      targetLang?: string;
-      includeTranslation?: boolean;
-      translateOnly?: boolean;
-      sourceType?: "note" | "material" | "external" | "manual";
-      sourceRefId?: string;
-      forceRetranslate?: boolean;
-    },
-  ) => {
+  const _doCapture = async (word: string, options?: CaptureOptions) => {
+    if (capturePromise) return capturePromise;
     if (!offline.isOnline.value) {
-      toast.add({ title: "Unavailable offline", description: "Capture and translation use AI and are not queued while offline.", color: "warning" });
+      toast.add({
+        title: "Unavailable offline",
+        description:
+          "Capture and translation use AI and are not queued while offline.",
+        color: "warning",
+      });
       return null;
     }
-    state.value = "loading";
-    captureResult.value = null;
-    storyResult.value = null;
+    lastCaptureOptions.value = options;
+    capturePromise = (async () => {
+      state.value = "loading";
+      captureResult.value = null;
+      storyResult.value = null;
 
-    const result = await captureOperation.execute(() =>
-      $api.language.captureWord({
-        word,
-        sourceContext: options?.sourceContext,
-        sourceLang: options?.sourceLang ?? "auto",
-        targetLang: (options?.targetLang ??
-          preferences.value?.nativeLanguage ??
-          "en") as SupportedLanguageCode,
-        includeTranslation: options?.includeTranslation ?? true,
-        translateOnly: options?.translateOnly ?? false,
-        forceRetranslate: options?.forceRetranslate ?? false,
-        sourceType: options?.sourceType ?? "manual",
-        sourceRefId: options?.sourceRefId,
-      }),
-    );
+      const result = await captureOperation.execute(() =>
+        $api.language.captureWord({
+          word,
+          sourceContext: options?.sourceContext,
+          sourceLang: options?.sourceLang ?? "auto",
+          targetLang: (options?.targetLang ??
+            preferences.value?.nativeLanguage ??
+            "en") as SupportedLanguageCode,
+          includeTranslation: options?.includeTranslation ?? true,
+          translateOnly: options?.translateOnly ?? false,
+          forceRetranslate: options?.forceRetranslate ?? false,
+          sourceType: options?.sourceType ?? "manual",
+          sourceRefId: options?.sourceRefId,
+        }),
+      );
 
-    if (result) {
-      captureResult.value = result;
-      runtime.setLatestCapture(result);
+      if (result) {
+        await runtime.applyServerProjection(result.projection);
+        captureResult.value = result;
+        runtime.setLatestCapture(result);
+        state.value = "result";
+        if (result.saved) runtime.invalidateWords();
+      } else {
+        state.value = "idle";
+      }
+      return result;
+    })().finally(() => {
+      capturePromise = null;
+    });
+    return capturePromise;
+  };
+
+  const saveCapture = async (
+    result: CaptureWordResponse | null = captureResult.value,
+  ) => {
+    if (!result || result.saved) return result;
+    if (savePromise) return savePromise;
+    if (!result.translationId) {
+      toast.add({
+        title: "Translate again",
+        description: "This result has no reusable translation identity.",
+        color: "warning",
+      });
+      return null;
+    }
+    if (!offline.isOnline.value) {
+      toast.add({
+        title: "Unavailable offline",
+        description: "New AI translations must be saved while online.",
+        color: "warning",
+      });
+      return null;
+    }
+
+    savePromise = (async () => {
+      state.value = "saving";
+      const options = lastCaptureOptions.value;
+      const saved = await saveOperation.execute(() =>
+        $api.language.saveWord({
+          translationId: result.translationId!,
+          sourceContext: options?.sourceContext,
+          sourceType: options?.sourceType ?? "manual",
+          sourceRefId: options?.sourceRefId,
+        }),
+      );
+      if (saved) {
+        await runtime.applyServerProjection(saved.projection);
+        captureResult.value = saved;
+        runtime.setLatestCapture(saved);
+        runtime.invalidateWords();
+      }
       state.value = "result";
-      if (result.saved) runtime.invalidateWords();
-    } else {
-      state.value = "idle";
-    }
-
-    return result;
-  };
-
-  // Called from ConsentSheet "Add to Deck" — sets showConsent false then proceeds
-  const confirmCapture = async () => {
-    showConsentSheet.value = false;
-
-    // Update preferences to hide consent next time
-    if (offline.isOnline.value) await $api.language.updatePreferences({ showConsent: false });
-    else await offline.queue({ entity: "languagePreference", operation: "languagePreference.update", entityId: "languagePreference", changedFields: ["showConsent"], payload: { showConsent: false } });
-    if (preferences.value) {
-      runtime.setPreferences({ ...preferences.value, showConsent: false });
-    }
-
-    const pending = pendingCapture.value as any;
-    pendingCapture.value = null;
-    if (pending) {
-      await _doCapture(pending[0], {
-        ...(pending[1] ?? {}),
-        translateOnly: false,
-      });
-    }
-  };
-
-  // Called from ConsentSheet "Just translate" — translates without saving a new word
-  const declineCapture = async () => {
-    showConsentSheet.value = false;
-
-    // Still update prefs so consent doesn't show again
-    if (offline.isOnline.value) await $api.language.updatePreferences({ showConsent: false });
-    else await offline.queue({ entity: "languagePreference", operation: "languagePreference.update", entityId: "languagePreference", changedFields: ["showConsent"], payload: { showConsent: false } });
-    if (preferences.value) {
-      runtime.setPreferences({ ...preferences.value, showConsent: false });
-    }
-
-    const pending = pendingCapture.value as any;
-    pendingCapture.value = null;
-    if (pending) {
-      await _doCapture(pending[0], {
-        ...(pending[1] ?? {}),
-        translateOnly: true,
-      });
-    }
-    pendingCapture.value = null;
+      return saved;
+    })().finally(() => {
+      savePromise = null;
+    });
+    return savePromise;
   };
 
   const generateStory = async (wordId: string, relatedWords: string[] = []) => {
     if (!wordId) return null;
+    if (storyOperation.pending.value) return null;
     if (!offline.isOnline.value) {
-      toast.add({ title: "Unavailable offline", description: "Story generation uses AI and is not queued while offline.", color: "warning" });
+      toast.add({
+        title: "Unavailable offline",
+        description:
+          "Story generation uses AI and is not queued while offline.",
+        color: "warning",
+      });
       return null;
     }
 
@@ -206,6 +190,7 @@ export function useLanguageCapture() {
     );
 
     if (result) {
+      await runtime.applyServerProjection(result.projection);
       storyResult.value = result;
       runtime.setLatestStory(result);
       state.value = "story-ready";
@@ -259,23 +244,24 @@ export function useLanguageCapture() {
     captureResult: readonly(captureResult),
     storyResult: readonly(storyResult),
 
-    // Consent
-    showConsentSheet: readonly(showConsentSheet),
     preferences: readonly(preferences),
 
     // Credits gate
     // (wallet opened globally via creditsStore.openWallet() — see useCreditsStore)
 
     // Operation state
-    isCapturing: captureOperation.pending,
-    captureError: captureOperation.error,
+    isCapturing: computed(
+      () => captureOperation.pending.value || saveOperation.pending.value,
+    ),
+    captureError: computed(
+      () => captureOperation.error.value ?? saveOperation.error.value,
+    ),
     isGeneratingStory: storyOperation.pending,
     storyError: storyOperation.error,
 
     // Actions
     captureWord,
-    confirmCapture,
-    declineCapture,
+    saveCapture,
     generateStory,
     dismissResult,
     loadPreferences,

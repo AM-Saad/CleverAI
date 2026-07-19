@@ -6,6 +6,11 @@ import {
 import { effectScope, ref, shallowRef } from "vue";
 import { calculateSM2 } from "../server/modules/review/domain/sm2";
 import {
+  projectOfflineReviewInterval,
+  reviewGradeForKey,
+  REVIEW_GRADE_BY_KEY,
+} from "../shared/utils/sm2";
+import {
   gradeReviewCard,
   isRetryableReviewGradeError,
 } from "../server/modules/review/application/gradeReviewCard";
@@ -95,9 +100,16 @@ import {
 import { normalizeShapeTransform } from "../app/utils/canvas/geometry";
 import { parseLexicalEntry } from "../server/modules/language-learning/domain/lexicalEntry";
 import { parseLanguageStoryResponse } from "../server/modules/language-learning/domain/storyResponse";
+import {
+  languageStoryPrompt,
+  translationPrompt,
+} from "../server/utils/llm/languagePrompts";
 import { listLanguageWords } from "../server/modules/language-learning/application/listLanguageWords";
+import { LanguageWordsResponseSchema } from "../shared/utils/language.contract";
 import { maybeAutoEnrollLanguageWord } from "../server/modules/language-learning/application/autoEnrollLanguageWord";
+import { saveLanguageWord } from "../server/modules/language-learning/application/saveLanguageWord";
 import { createLanguageLearningRuntime } from "../app/features/language-learning/composables/languageLearningRuntime";
+import FetchFactory from "../app/services/FetchFactory";
 import { PrismaLanguageReviewRepository } from "../server/modules/language-learning/infrastructure/PrismaLanguageReviewRepository";
 import type {
   ReviewCardRecord,
@@ -126,6 +138,8 @@ import {
   getOfflineEntity,
   getOfflineSyncMetadata,
   listOfflineMutations,
+  listOfflineEntities,
+  putOfflineEntities,
   recoverInterruptedMutations,
   remapOfflineIds,
   resolveOfflineConflict,
@@ -741,7 +755,9 @@ test("a related Board revision rebases pending item work without overwriting it"
   });
 
   const remaining = await listOfflineMutations(accountId);
-  const itemMutation = remaining.find((mutation) => mutation.entityId === itemId);
+  const itemMutation = remaining.find(
+    (mutation) => mutation.entityId === itemId,
+  );
   assert.equal(itemMutation?.baseVersion, 5);
   const local = await getOfflineEntity<{ content: string }>(
     accountId,
@@ -750,6 +766,75 @@ test("a related Board revision rebases pending item work without overwriting it"
   );
   assert.equal(local?.version, 5);
   assert.equal(local?.data.content, "Newer local text");
+});
+
+test("a related offline tombstone removes a cascaded language review", async () => {
+  const suffix = `${Date.now()}-${Math.random()}`;
+  const accountId = `account-language-delete-${suffix}`;
+  const wordId = `word-language-delete-${suffix}`;
+  const reviewId = `review-language-delete-${suffix}`;
+  await putOfflineEntities([
+    {
+      id: `${accountId}:languageReview:${reviewId}`,
+      accountId,
+      entity: "languageReview",
+      entityId: reviewId,
+      version: 2,
+      updatedAt: Date.now(),
+      data: { id: reviewId, wordId, nextReviewAt: new Date().toISOString() },
+    },
+  ]);
+  const mutation = {
+    id: `delete-language-word-${suffix}`,
+    entity: "languageWord" as const,
+    operation: "languageWord.delete",
+    entityId: wordId,
+    baseVersion: 2,
+    changedFields: ["deleted"],
+    payload: {},
+    dependsOn: [],
+    occurredAt: new Date().toISOString(),
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+  };
+  await commitOfflineMutation({ accountId, mutation });
+  const [claimed] = await claimOfflineMutations({
+    accountId,
+    ids: [mutation.id],
+    claimToken: `claim-language-delete-${suffix}`,
+  });
+  assert.ok(claimed);
+
+  await applySyncResult({
+    accountId,
+    mutation: claimed!,
+    result: {
+      status: "applied",
+      entity: "languageWord",
+      entityId: wordId,
+      version: 3,
+      canonical: { id: wordId, deleted: true },
+      related: [
+        {
+          entity: "languageReview",
+          entityId: reviewId,
+          version: 3,
+          canonical: { id: reviewId, deleted: true },
+        },
+      ],
+    },
+  });
+
+  const visible = await listOfflineEntities(accountId, "languageReview");
+  const tombstone = await getOfflineEntity(
+    accountId,
+    "languageReview",
+    reviewId,
+  );
+  assert.equal(visible.length, 0);
+  assert.equal(tombstone?.deleted, true);
 });
 
 test("a definitive V2 rejection restores the pre-command snapshot", async () => {
@@ -984,26 +1069,23 @@ class FakeXpPort implements XpPort {
 
 function fakePrismaForReview() {
   // Models the GradeRequest.requestId unique constraint so idempotency can be
-  // exercised: the key is claimed via create() BEFORE the mutation transaction,
-  // and a duplicate claim throws a Prisma P2002 the way the real client does.
+  // exercised inside the same transaction as the schedule mutation.
   const claimedRequestIds = new Set<string>();
-  return {
-    gradeRequest: {
-      create: async ({ data }: any) => {
-        if (claimedRequestIds.has(data.requestId)) {
-          throw Object.assign(new Error("Unique constraint failed"), {
-            code: "P2002",
-          });
-        }
-        claimedRequestIds.add(data.requestId);
-        return { id: `gr-${claimedRequestIds.size}`, ...data };
-      },
-      deleteMany: async ({ where }: any) => {
-        const removed = claimedRequestIds.delete(where.requestId);
-        return { count: removed ? 1 : 0 };
-      },
+  const gradeRequest = {
+    create: async ({ data }: any) => {
+      if (claimedRequestIds.has(data.requestId)) {
+        throw Object.assign(new Error("Unique constraint failed"), {
+          code: "P2002",
+        });
+      }
+      claimedRequestIds.add(data.requestId);
+      return { id: `gr-${claimedRequestIds.size}`, ...data };
     },
-    $transaction: async <T>(fn: (tx: any) => Promise<T>) => fn({}),
+  };
+  return {
+    gradeRequest,
+    $transaction: async <T>(fn: (tx: any) => Promise<T>) =>
+      fn({ gradeRequest }),
   };
 }
 
@@ -1606,6 +1688,49 @@ test("SM-2 schedules first successful review for one day", () => {
   assert.equal(result.repetitions, 1);
 });
 
+test("review grade labels use one canonical SM-2 mapping", () => {
+  assert.deepEqual(REVIEW_GRADE_BY_KEY, {
+    again: "1",
+    hard: "3",
+    good: "4",
+    easy: "5",
+  });
+  assert.equal(reviewGradeForKey("again"), REVIEW_GRADE_BY_KEY.again);
+  assert.equal(reviewGradeForKey("hard"), REVIEW_GRADE_BY_KEY.hard);
+  assert.equal(reviewGradeForKey("good"), REVIEW_GRADE_BY_KEY.good);
+  assert.equal(reviewGradeForKey("easy"), REVIEW_GRADE_BY_KEY.easy);
+});
+
+test("review interval previews match the schedule committed by shared SM-2", () => {
+  const state = {
+    easeFactor: 2.3,
+    intervalDays: 12,
+    repetitions: 4,
+  };
+
+  for (const key of Object.keys(REVIEW_GRADE_BY_KEY) as Array<
+    keyof typeof REVIEW_GRADE_BY_KEY
+  >) {
+    const committed = calculateSM2({
+      currentEF: state.easeFactor,
+      currentInterval: state.intervalDays,
+      currentRepetitions: state.repetitions,
+      grade: Number(REVIEW_GRADE_BY_KEY[key]),
+    });
+    assert.equal(
+      projectOfflineReviewInterval(
+        {
+          currentEF: state.easeFactor,
+          currentInterval: state.intervalDays,
+          currentRepetitions: state.repetitions,
+        },
+        key,
+      ),
+      committed.intervalDays,
+    );
+  }
+});
+
 test("shared review grading updates card state and awards XP", async () => {
   const repository = new FakeReviewRepository({
     id: "review-1",
@@ -1702,26 +1827,21 @@ test("shared review grading retries closed transaction writes", async () => {
   };
   const claimedRequestIds = new Set<string>();
   let creates = 0;
-  let deletes = 0;
   let transactions = 0;
-  const prisma = {
-    gradeRequest: {
-      create: async ({ data }: any) => {
-        creates++;
-        if (claimedRequestIds.has(data.requestId)) {
-          throw Object.assign(new Error("Unique constraint failed"), {
-            code: "P2002",
-          });
-        }
-        claimedRequestIds.add(data.requestId);
-        return { id: `gr-${creates}`, ...data };
-      },
-      deleteMany: async ({ where }: any) => {
-        deletes++;
-        claimedRequestIds.delete(where.requestId);
-        return { count: 1 };
-      },
+  const gradeRequest = {
+    create: async ({ data }: any) => {
+      creates++;
+      if (claimedRequestIds.has(data.requestId)) {
+        throw Object.assign(new Error("Unique constraint failed"), {
+          code: "P2002",
+        });
+      }
+      claimedRequestIds.add(data.requestId);
+      return { id: `gr-${creates}`, ...data };
     },
+  };
+  const prisma = {
+    gradeRequest,
     $transaction: async <T>(fn: (tx: any) => Promise<T>) => {
       transactions++;
       if (transactions === 1) {
@@ -1729,7 +1849,7 @@ test("shared review grading retries closed transaction writes", async () => {
           "Transaction API error: Transaction already closed: Could not perform operation.",
         );
       }
-      return fn({});
+      return fn({ gradeRequest });
     },
   };
 
@@ -1749,8 +1869,7 @@ test("shared review grading retries closed transaction writes", async () => {
   assert.equal(repository.record?.repetitions, 1);
   assert.equal(xpAwards, 1);
   assert.equal(transactions, 2);
-  assert.equal(creates, 2);
-  assert.equal(deletes, 1);
+  assert.equal(creates, 1);
 });
 
 test("workspace note sync maps temp IDs to server IDs", async () => {
@@ -4588,7 +4707,10 @@ test("quick board capture does not mark a revision durable before flushing the s
   assert.equal(await capture.commitNow(), true);
   assert.equal(updates, 1);
   assert.equal(flushes, 1);
-  assert.equal(items.value.get("temp-board-durable-boundary")?.content, "Second");
+  assert.equal(
+    items.value.get("temp-board-durable-boundary")?.content,
+    "Second",
+  );
   capture.onPayload({
     content: "Second",
     tags: [],
@@ -4835,15 +4957,21 @@ test("Board Phase 2 migrates legacy projection and pending intake exactly once",
     0,
   );
   assert.equal(
-    (await getAllRecords<any>(db, DB_CONFIG.STORES.BOARD_COLUMNS as any)).length,
+    (await getAllRecords<any>(db, DB_CONFIG.STORES.BOARD_COLUMNS as any))
+      .length,
     0,
   );
   assert.equal(
-    (await getAllRecords<any>(db, DB_CONFIG.STORES.PENDING_BOARD_ITEMS as any)).length,
+    (await getAllRecords<any>(db, DB_CONFIG.STORES.PENDING_BOARD_ITEMS as any))
+      .length,
     0,
   );
   const item = await getOfflineEntity<any>(accountId, "boardItem", itemId);
-  const column = await getOfflineEntity<any>(accountId, "boardColumn", columnId);
+  const column = await getOfflineEntity<any>(
+    accountId,
+    "boardColumn",
+    columnId,
+  );
   assert.equal(item?.data.content, "Recovered pending value");
   assert.equal(item?.version, 4);
   assert.equal(column?.data.name, "Legacy column");
@@ -4918,12 +5046,28 @@ test("Board Phase 2 projection purges clean rows and preserves pending local row
     workspaceId,
     entity: "boardItem",
     serverRecords: [
-      { ...baseItem, id: pendingId, content: "Server before", offlineRevision: 4 },
-      { ...baseItem, id: cleanId, content: "Canonical clean", offlineRevision: 7 },
+      {
+        ...baseItem,
+        id: pendingId,
+        content: "Server before",
+        offlineRevision: 4,
+      },
+      {
+        ...baseItem,
+        id: cleanId,
+        content: "Canonical clean",
+        offlineRevision: 7,
+      },
     ],
   });
-  assert.equal(projection.some((item) => item.id === staleId), false);
-  assert.equal(projection.find((item) => item.id === pendingId)?.content, "Local edit");
+  assert.equal(
+    projection.some((item) => item.id === staleId),
+    false,
+  );
+  assert.equal(
+    projection.find((item) => item.id === pendingId)?.content,
+    "Local edit",
+  );
   assert.equal(projection.find((item) => item.id === pendingId)?.isDirty, true);
   assert.equal(
     (await getOfflineEntity<any>(accountId, "boardItem", staleId))?.deleted,
@@ -5027,15 +5171,17 @@ test("ordinary Board relation reads seed revisions and preserve pending local re
     workspaceId,
     itemId,
     entity: "boardLink",
-    serverRecords: [{
-      id: linkId,
-      sourceId: itemId,
-      targetId,
-      linkType: "RELATED" as const,
-      userId: accountId,
-      createdAt: new Date(),
-      offlineRevision: 6,
-    }],
+    serverRecords: [
+      {
+        id: linkId,
+        sourceId: itemId,
+        targetId,
+        linkType: "RELATED" as const,
+        userId: accountId,
+        createdAt: new Date(),
+        offlineRevision: 6,
+      },
+    ],
   });
   assert.equal(links[0]?.offlineRevision, 6);
   assert.equal(
@@ -5080,18 +5226,26 @@ test("ordinary Board relation reads seed revisions and preserve pending local re
     workspaceId,
     itemId,
     entity: "boardLink",
-    serverRecords: [{
-      id: linkId,
-      sourceId: itemId,
-      targetId,
-      linkType: "RELATED" as const,
-      userId: accountId,
-      createdAt: new Date(),
-      offlineRevision: 6,
-    }],
+    serverRecords: [
+      {
+        id: linkId,
+        sourceId: itemId,
+        targetId,
+        linkType: "RELATED" as const,
+        userId: accountId,
+        createdAt: new Date(),
+        offlineRevision: 6,
+      },
+    ],
   });
-  assert.equal(reconciled.some((link) => link.id === localLinkId), true);
-  assert.equal(reconciled.some((link) => link.id === linkId), true);
+  assert.equal(
+    reconciled.some((link) => link.id === localLinkId),
+    true,
+  );
+  assert.equal(
+    reconciled.some((link) => link.id === linkId),
+    true,
+  );
 });
 
 test("Board acknowledgement preserves a durable draft that has not reached the outbox yet", async () => {
@@ -7066,6 +7220,188 @@ test("language lexical parser validates JSON before callers finalize generation"
   assert.equal(entry.meanings[0]?.definition, "greeting");
 });
 
+test("language lexical parser never substitutes the source word for a missing translation", () => {
+  const entry = parseLexicalEntry(
+    JSON.stringify({
+      detectedLang: "es",
+      partOfSpeech: "interjection",
+      meanings: [{ definition: "greeting" }],
+      examples: [],
+    }),
+    "hola",
+  );
+
+  assert.equal(entry.translation, "");
+});
+
+test("language prompts keep definitions and stories in the learned language", () => {
+  const lexicalPrompt = translationPrompt("hola", undefined, "English", false);
+  assert.match(
+    lexicalPrompt,
+    /Write every definition and source example in the same language as the captured word/,
+  );
+  assert.match(lexicalPrompt, /Direct translation requested: no/);
+
+  const storyPrompt = languageStoryPrompt(
+    "hola",
+    "hello",
+    undefined,
+    [],
+    "Spanish",
+    "English",
+  );
+  assert.match(
+    storyPrompt,
+    /Write ALL of title, storyText, sentences\[\]\.text.+in Spanish/,
+  );
+  assert.match(
+    storyPrompt,
+    /Never write storyText or sentence text in English/,
+  );
+  assert.match(
+    storyPrompt,
+    /Do not return a native-language version of the story/,
+  );
+  assert.match(storyPrompt, /Use English ONLY for glossary translations/);
+});
+
+test("saving a generated translation is idempotent and performs no generation work", async () => {
+  let storedWord: Record<string, any> | null = null;
+  let creates = 0;
+  const translation = {
+    id: "64b000000000000000000001",
+    sourceText: "hola",
+    translation: "hello",
+    translationLang: "en",
+    sourceLang: "es",
+    partOfSpeech: "interjection",
+    phonetic: null,
+    meanings: [{ definition: "greeting" }],
+    examples: [],
+    category: "greeting",
+    difficulty: "A1",
+    isPhrase: false,
+    metadata: {},
+  };
+  const prisma = {
+    languageTranslation: {
+      findUnique: async () => translation,
+    },
+    languageWord: {
+      findFirst: async () => storedWord,
+      create: async ({ data }: any) => {
+        creates++;
+        storedWord = {
+          ...data,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        return storedWord;
+      },
+    },
+    userLanguagePreferences: {
+      findUnique: async () => ({ autoEnroll: false }),
+    },
+  };
+
+  const first = await saveLanguageWord({
+    prisma,
+    userId: "64a000000000000000000001",
+    data: { translationId: translation.id, sourceType: "manual" },
+  });
+  const second = await saveLanguageWord({
+    prisma,
+    userId: "64a000000000000000000001",
+    data: { translationId: translation.id, sourceType: "manual" },
+  });
+
+  assert.equal(creates, 1);
+  assert.equal(first.wordId, second.wordId);
+  assert.equal(first.saved, true);
+  assert.equal(second.cached, true);
+});
+
+test("translating a definition-only capture enriches its existing bank row", async () => {
+  const definitionOnlyWord = {
+    id: "64c000000000000000000001",
+    userId: "64a000000000000000000001",
+    translationId: "64b000000000000000000000",
+    word: "hola",
+    translation: "",
+    translationLang: "en",
+    sourceLang: "es",
+    sourceContext: null,
+    sourceType: "manual",
+    partOfSpeech: "interjection",
+    phonetic: null,
+    meanings: [{ definition: "Un saludo breve." }],
+    examples: [],
+    category: "greeting",
+    difficulty: "A1",
+    isPhrase: false,
+    metadata: {},
+    status: "captured",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  const translatedEntry = {
+    id: "64b000000000000000000001",
+    sourceText: "hola",
+    translation: "hello",
+    translationLang: "en",
+    sourceLang: "es",
+    partOfSpeech: "interjection",
+    phonetic: "ˈola",
+    meanings: [
+      {
+        definition: "Un saludo breve.",
+        translation: "A brief greeting.",
+      },
+    ],
+    examples: [{ text: "Hola, Ana.", translation: "Hello, Ana." }],
+    category: "greeting",
+    difficulty: "A1",
+    isPhrase: false,
+    metadata: { lemma: "hola" },
+  };
+  let updatedWord: Record<string, any> | null = null;
+  let creates = 0;
+  const prisma = {
+    languageTranslation: {
+      findUnique: async () => translatedEntry,
+    },
+    languageWord: {
+      findFirst: async ({ where }: any) => {
+        if (where.translationId === translatedEntry.id) return null;
+        if (where.translation === "") return definitionOnlyWord;
+        return null;
+      },
+      update: async ({ data }: any) => {
+        updatedWord = { ...definitionOnlyWord, ...data };
+        return updatedWord;
+      },
+      create: async () => {
+        creates++;
+        throw new Error("should not create a second word");
+      },
+    },
+    userLanguagePreferences: {
+      findUnique: async () => ({ autoEnroll: false }),
+    },
+  };
+
+  const result = await saveLanguageWord({
+    prisma,
+    userId: definitionOnlyWord.userId,
+    data: { translationId: translatedEntry.id, sourceType: "manual" },
+  });
+
+  assert.equal(creates, 0);
+  assert.equal(result.wordId, definitionOnlyWord.id);
+  assert.equal(result.translation, "hello");
+  assert.equal(updatedWord?.translationId, translatedEntry.id);
+});
+
 test("language story parser rejects incomplete LLM story responses", () => {
   assert.throws(() =>
     parseLanguageStoryResponse(JSON.stringify({ storyText: "Only text" })),
@@ -7136,6 +7472,80 @@ test("language words listing paginates after hasStory filtering", async () => {
     ["word-with-story"],
   );
   assert.equal(result.nextCursor, "2026-01-02T00:00:00.000Z");
+});
+
+test("language word bank normalizes nullable Prisma fields before response validation", async () => {
+  const now = new Date("2026-07-19T12:00:00.000Z");
+  const databaseWord = {
+    id: "word-1",
+    userId: "user-1",
+    translationId: null,
+    word: "hola",
+    translation: "hello",
+    translationLang: "en",
+    sourceLang: "es",
+    sourceContext: null,
+    sourceType: "manual",
+    sourceRefId: null,
+    relatedWordIds: [],
+    partOfSpeech: null,
+    phonetic: null,
+    meanings: [
+      {
+        definition: "a greeting",
+        translation: null,
+        example: null,
+        partOfSpeech: null,
+        category: null,
+        register: null,
+      },
+      null,
+    ],
+    examples: [{ text: "Hola", translation: null }, null],
+    category: null,
+    difficulty: null,
+    isPhrase: false,
+    metadata: null,
+    status: "legacy_saved",
+    createdAt: now,
+    updatedAt: now,
+    stories: [],
+  };
+  const prisma = {
+    languageWord: {
+      findMany: async ({ where, select }: any) => {
+        if (where?.category?.not === null) return [];
+        if (select?.status) return [{ status: "captured" }];
+        return [databaseWord];
+      },
+    },
+  };
+
+  const result = await listLanguageWords({
+    prisma,
+    userId: "user-1",
+    limit: 50,
+  });
+  const parsed = LanguageWordsResponseSchema.parse(result);
+
+  assert.equal(parsed.words[0]?.sourceContext, undefined);
+  assert.equal(parsed.words[0]?.partOfSpeech, "unknown");
+  assert.deepEqual(parsed.words[0]?.meanings, [{ definition: "a greeting" }]);
+  assert.deepEqual(parsed.words[0]?.examples, [{ text: "Hola" }]);
+  assert.equal(parsed.words[0]?.status, "captured");
+
+  const fetchFactory = new FetchFactory((async () => ({
+    success: true,
+    data: JSON.parse(JSON.stringify(result)),
+  })) as any);
+  const pageResult = await fetchFactory.call(
+    "GET",
+    "/api/language/words",
+    undefined,
+    {},
+    LanguageWordsResponseSchema,
+  );
+  assert.equal(pageResult.success, true);
 });
 
 test("language capture auto-enroll creates a due review card", async () => {
@@ -7496,6 +7906,127 @@ test("language runtime mutates word-bank memory after enroll and delete", async 
 
   await runtime.deleteWord("word-1");
   assert.deepEqual(runtime.words.value, []);
+});
+
+test("language runtime resets account-owned state on an account switch", () => {
+  const runtime = createLanguageLearningRuntime({
+    api: {
+      getWords: async () => ({
+        success: true,
+        data: { words: [], nextCursor: null },
+      }),
+      deleteWord: async () => ({ success: true, data: { message: "ok" } }),
+      enrollWord: async (id: string) => ({
+        success: true,
+        data: { wordId: id, status: "enrolled" },
+      }),
+      getStats: async () => ({
+        success: true,
+        data: { total: 0, due: 0, enrolled: 0, mastered: 0 },
+      }),
+    },
+  });
+
+  runtime.setAccountScope("account-a");
+  runtime.setPreferences({
+    id: "prefs-a",
+    userId: "account-a",
+    enabled: true,
+    targetLanguage: "es",
+    nativeLanguage: "en",
+    autoEnroll: true,
+    sessionCardLimit: 12,
+    showConsent: false,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  });
+  runtime.setLatestCapture({
+    word: "hola",
+    translation: "hello",
+    partOfSpeech: "interjection",
+    detectedLang: "es",
+    saved: false,
+  });
+
+  runtime.setAccountScope("account-b");
+
+  assert.equal(runtime.preferences.value, null);
+  assert.equal(runtime.latestCapture.value, null);
+  assert.deepEqual(runtime.words.value, []);
+});
+
+test("offline language enrollment queues a full word and a remappable review projection", async () => {
+  const suffix = `${Date.now()}-${Math.random()}`;
+  const accountId = `language-account-${suffix}`;
+  const wordId = `language-word-${suffix}`;
+  const word = {
+    id: wordId,
+    word: "hola",
+    translation: "hello",
+    translationLang: "en",
+    sourceLang: "es",
+    sourceType: "manual",
+    status: "captured" as const,
+    stories: [],
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  await putOfflineEntities([
+    {
+      id: `${accountId}:languageWord:${wordId}`,
+      accountId,
+      entity: "languageWord",
+      entityId: wordId,
+      version: 3,
+      updatedAt: Date.now(),
+      data: word,
+    },
+  ]);
+  const queued: any[] = [];
+  const offline = {
+    isOnline: ref(false),
+    accountId: ref<string | null>(accountId),
+    queue: async (input: any) => {
+      queued.push(input);
+      return {
+        mutation: { id: `mutation-${queued.length}` },
+        entityId: input.entityId,
+      };
+    },
+  };
+  const runtime = createLanguageLearningRuntime({
+    offline: offline as any,
+    api: {
+      getWords: async () => ({
+        success: true,
+        data: { words: [], nextCursor: null },
+      }),
+      deleteWord: async () => ({ success: true, data: { message: "ok" } }),
+      enrollWord: async (id: string) => ({
+        success: true,
+        data: { wordId: id, status: "enrolled" },
+      }),
+      getStats: async () => ({
+        success: true,
+        data: { total: 0, due: 0, enrolled: 0, mastered: 0 },
+      }),
+    },
+  });
+
+  await runtime.fetchWords();
+  await runtime.enrollWord(wordId);
+
+  assert.equal(queued[0]?.operation, "languageWord.enroll");
+  assert.equal(queued[0]?.localData.word, "hola");
+  assert.equal(queued[0]?.localData.status, "enrolled");
+  assert.match(queued[0]?.payload.localReviewId, /^local:language-review:/);
+  const reviews = await listOfflineEntities<Record<string, any>>(
+    accountId,
+    "languageReview",
+  );
+  assert.equal(reviews.length, 1);
+  assert.equal(reviews[0]?.data.wordId, wordId);
+  assert.equal(reviews[0]?.data.intervalDays, 0);
 });
 
 test("notes collaboration room names round-trip workspace and note ids", () => {

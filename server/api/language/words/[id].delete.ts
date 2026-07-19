@@ -1,6 +1,6 @@
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
-import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
+import { projectLanguageOfflineState } from "@server/modules/offline/application/projectLanguageOfflineState";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -18,8 +18,23 @@ export default defineEventHandler(async (event) => {
     throw Errors.notFound("Word");
   }
 
+  const review = await prisma.languageCardReview.findUnique({
+    where: { userId_wordId: { userId: user.id, wordId: id } },
+    select: { id: true },
+  });
   await prisma.languageWord.delete({ where: { id } });
-  await advanceOfflineEntityState({ prisma, userId: user.id, entity: "languageWord", entityId: id, changedFields: ["deleted"], deleted: true });
+  const projection = await projectLanguageOfflineState({
+    prisma,
+    userId: user.id,
+    word: { id, changedFields: ["deleted"], deleted: true },
+    review: review
+      ? {
+          id: review.id,
+          changedFields: ["deleted"],
+          deleted: true,
+        }
+      : undefined,
+  });
 
-  return success({ message: "Word deleted successfully" });
+  return success({ message: "Word deleted successfully", projection });
 });

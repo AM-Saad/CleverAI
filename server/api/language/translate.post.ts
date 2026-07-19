@@ -9,6 +9,7 @@ import {
   throwQuotaExceeded,
 } from "@server/modules/subscription/infrastructure/http/quotaHttp";
 import { enforceLlmRateLimit } from "@server/utils/llm/rateLimit";
+import { projectLanguageOfflineState } from "@server/modules/offline/application/projectLanguageOfflineState";
 
 const quotaPort = new PrismaQuotaPort();
 
@@ -47,13 +48,28 @@ export default defineEventHandler(async (event) => {
   }
 
   const user = await requireRole(event, ["USER"]);
-  return success(
-    await captureLanguageWord({
-      event,
-      user,
-      data,
-      quotaPort,
-      billSharedTranslationHit,
-    }),
-  );
+  const result = await captureLanguageWord({
+    event,
+    user,
+    data,
+    quotaPort,
+    billSharedTranslationHit,
+  });
+  if (result.saved && result.wordId) {
+    const review = await event.context.prisma.languageCardReview.findUnique({
+      where: {
+        userId_wordId: { userId: user.id, wordId: result.wordId },
+      },
+    });
+    const projection = await projectLanguageOfflineState({
+      prisma: event.context.prisma,
+      userId: user.id,
+      word: { id: result.wordId, changedFields: ["status"] },
+      review: review
+        ? { id: review.id, changedFields: ["reviewState"] }
+        : undefined,
+    });
+    return success({ ...result, projection });
+  }
+  return success(result);
 });

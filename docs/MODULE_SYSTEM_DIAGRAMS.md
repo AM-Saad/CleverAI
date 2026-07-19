@@ -195,12 +195,14 @@ flowchart TD
   LangUI["Language feature containers/components"] --> LangRuntime["LanguageLearningRuntime"]
   LangRuntime --> LangService["languageService"]
   LangService --> Translate["/api/language/translate"]
+  LangService --> SaveWord["/api/language/words"]
   LangService --> Story["/api/language/generate-story"]
   LangService --> Queue["/api/language/queue"]
   LangService --> GradeRoute["/api/language/grade"]
   LangService --> EnrollRoute["/api/language/words/:id/enroll"]
 
   Translate --> CaptureWord["captureLanguageWord"]
+  SaveWord --> SaveWordUseCase["saveLanguageWord"]
   Story --> GenerateStory["generateLanguageStory"]
   Queue --> QueueUseCase["getLanguageReviewQueue"]
   GradeRoute --> SharedGrade["review.gradeReviewCard"]
@@ -208,6 +210,7 @@ flowchart TD
   EnrollRoute --> EnrollWord["enrollLanguageWord"]
   GenerateStory --> EnrollWord
   CaptureWord --> Prisma["LanguageWord / LanguageTranslation"]
+  SaveWordUseCase --> Prisma
   EnrollWord --> Prisma2["LanguageStory / LanguageCardReview"]
 ```
 
@@ -218,10 +221,21 @@ Important invariants:
 - Language word enrollment emits `LanguageWordEnrolled`.
 - Translation and story routes are thin adapters over language application services.
 - Capture/story LLM responses are parsed and validated before quota finalization.
-- Language Learning is online-first for v1; cached translation billing is preserved behind an explicit quota policy.
+- AI translation/story generation is online-only. Preferences, word bank,
+  enrollment, deletion, review, grading, and stats use account-scoped Offline
+  V2 projections and typed mutations.
+- User-facing Capture always saves the lexical entry. Translation fields are
+  optional and default from `translateOnCapture`; definition-only and translated
+  cache identities remain separate.
+- `POST /api/language/words` remains the idempotent, non-generative persistence
+  command for callers that already hold a `translationId`.
+- Clicking a bank card opens word details. Story generation is a deliberate
+  dialog action, and story text is constrained to the learned language.
 - Frontend word-bank refresh goes through `LanguageLearningRuntime`, not global browser events.
 
-Current maturity: high for review reuse and medium-high for capture/story. Full offline review remains a future slice.
+Current maturity: high for review reuse and capture/save separation,
+medium-high for offline Language integration. Authenticated browser coverage for
+offline enrollment followed by dependent grading remains a release follow-up.
 
 ## Materials Module
 

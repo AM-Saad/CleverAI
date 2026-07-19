@@ -58,7 +58,18 @@ export default defineNuxtPlugin((_nuxtApp) => {
       console.error("🌐 [API PLUGIN] Request error:", error);
     },
     onResponseError({ response }) {
-      // console.error("🌐 [API PLUGIN] Response error:", response);
+      if (!import.meta.client || response.status !== 401) return;
+      const payload = response._data as
+        | {
+            code?: string;
+            data?: { code?: string };
+            error?: { code?: string };
+          }
+        | undefined;
+      const code = payload?.code ?? payload?.data?.code ?? payload?.error?.code;
+      if (code === "SESSION_INVALID") {
+        window.dispatchEvent(new Event("auth-session-invalidated"));
+      }
     },
   });
 

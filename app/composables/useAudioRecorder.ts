@@ -2,7 +2,7 @@
  * useAudioRecorder
  *
  * Reusable composable for recording audio from the microphone.
- * Shared by SpeechRecorder (materials) and QuickCaptureModal (language capture).
+ * Shared audio-recorder primitive for speech-enabled capture surfaces.
  *
  * Features:
  *  - High-quality audio constraints (echo cancellation, noise suppression, AGC)

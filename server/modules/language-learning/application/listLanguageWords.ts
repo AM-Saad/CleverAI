@@ -1,4 +1,10 @@
 import type { Prisma } from "@prisma/client";
+import type {
+  LanguageExample,
+  LanguageMeaning,
+  LanguageSentence,
+  LanguageWordStatus,
+} from "@shared/utils/language.contract";
 
 type ListLanguageWordsInput = {
   prisma: any;
@@ -35,6 +41,109 @@ const wordLanguageWhere = (input: ListLanguageWordsInput) => ({
     ? { sourceLang: input.targetLanguage }
     : {}),
   ...(input.nativeLanguage ? { translationLang: input.nativeLanguage } : {}),
+});
+
+const LANGUAGE_WORD_STATUSES = new Set<LanguageWordStatus>([
+  "captured",
+  "story_ready",
+  "enrolled",
+  "mastered",
+]);
+
+const optionalString = (value: unknown) =>
+  typeof value === "string" && value.length > 0 ? value : undefined;
+
+const normalizeMeaning = (value: unknown): LanguageMeaning | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const source = value as Record<string, unknown>;
+  const definition = optionalString(source.definition);
+  if (!definition) return null;
+  const translation = optionalString(source.translation);
+  const example = optionalString(source.example);
+  const partOfSpeech = optionalString(source.partOfSpeech);
+  const category = optionalString(source.category);
+  const register = optionalString(source.register);
+  return {
+    definition,
+    ...(translation ? { translation } : {}),
+    ...(example ? { example } : {}),
+    ...(partOfSpeech ? { partOfSpeech } : {}),
+    ...(category ? { category } : {}),
+    ...(register ? { register } : {}),
+  };
+};
+
+const normalizeExample = (value: unknown): LanguageExample | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const source = value as Record<string, unknown>;
+  const text = optionalString(source.text);
+  if (!text) return null;
+  const translation = optionalString(source.translation);
+  return {
+    text,
+    ...(translation ? { translation } : {}),
+  };
+};
+
+const normalizeSentence = (value: unknown): LanguageSentence | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const source = value as Record<string, unknown>;
+  const text = optionalString(source.text);
+  const clozeWord = optionalString(source.clozeWord);
+  const clozeBlank = optionalString(source.clozeBlank);
+  if (
+    !text ||
+    !clozeWord ||
+    !clozeBlank ||
+    typeof source.clozeIndex !== "number"
+  ) {
+    return null;
+  }
+  return {
+    text,
+    clozeWord,
+    clozeBlank,
+    clozeIndex: source.clozeIndex,
+  };
+};
+
+const normalizeStatus = (status: unknown): LanguageWordStatus =>
+  typeof status === "string" &&
+  LANGUAGE_WORD_STATUSES.has(status as LanguageWordStatus)
+    ? (status as LanguageWordStatus)
+    : "captured";
+
+/**
+ * Prisma represents optional Mongo fields as `null`, while the public
+ * LanguageWord contract models source context as optional and lexical
+ * collections as arrays. Normalize at the server boundary so an ordinary
+ * context-free word cannot invalidate the entire bank response.
+ */
+export const serializeLanguageWordForResponse = (
+  word: LanguageWordWithStories,
+) => ({
+  ...word,
+  sourceContext: word.sourceContext ?? undefined,
+  partOfSpeech: word.partOfSpeech ?? "unknown",
+  meanings: Array.isArray(word.meanings)
+    ? word.meanings
+        .map(normalizeMeaning)
+        .filter((meaning): meaning is LanguageMeaning => meaning !== null)
+    : [],
+  examples: Array.isArray(word.examples)
+    ? word.examples
+        .map(normalizeExample)
+        .filter((example): example is LanguageExample => example !== null)
+    : [],
+  stories: word.stories.map((story) => ({
+    ...story,
+    sentences: Array.isArray(story.sentences)
+      ? story.sentences
+          .map(normalizeSentence)
+          .filter((sentence): sentence is LanguageSentence => sentence !== null)
+      : [],
+  })),
+  status: normalizeStatus(word.status),
 });
 
 export async function listLanguageWords(input: ListLanguageWordsInput) {
@@ -120,15 +229,15 @@ export async function listLanguageWords(input: ListLanguageWordsInput) {
   const totalWords = statusRows.length;
   const statusCounts = statusRows.reduce(
     (acc: Record<string, number>, row: { status?: unknown }) => {
-      if (typeof row.status !== "string") return acc;
-      acc[row.status] = (acc[row.status] ?? 0) + 1;
+      const status = normalizeStatus(row.status);
+      acc[status] = (acc[status] ?? 0) + 1;
       return acc;
     },
     {},
   );
 
   return {
-    words,
+    words: words.map(serializeLanguageWordForResponse),
     nextCursor:
       words.length === input.limit && hasMoreScannable && scanCursor
         ? scanCursor

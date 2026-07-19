@@ -196,8 +196,10 @@ async function load() {
   finished.value = false;
   finishing.value = false;
   revealed.value = false;
-  await sessionSummary.startSession();
-  const result = await fetchQueue();
+  const [, result] = await Promise.all([
+    sessionSummary.startSession(),
+    fetchQueue(),
+  ]);
   sessionTotal.value = result?.cards.length ?? totalCards.value;
   void fetchStreak();
 }

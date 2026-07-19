@@ -1,16 +1,15 @@
 <script setup lang="ts">
-import { useWorkspaceLayout, type PanelId } from "~/composables/ui/useWorkspaceLayout";
+import {
+  useWorkspaceLayout,
+  type PanelId,
+} from "~/composables/ui/useWorkspaceLayout";
 import { useResponsive } from "~/composables/ui/useResponsive";
-import QuickCaptureModal from "~/features/language-learning/components/QuickCaptureModal.vue";
 
 const props = defineProps<{
   workspaceId: string;
 }>();
 
 const { isDesktop } = useResponsive();
-const { preferences: quickCapturePreferences, loadPreferences: loadQuickCapturePreferences } = useLanguageCapture();
-const { _isOpen: isQuickCaptureOpen } = useQuickCaptureModal();
-const quickCaptureEnabled = computed(() => quickCapturePreferences.value?.enabled ?? false);
 
 const {
   PANELS,
@@ -71,19 +70,23 @@ function onResizeHandleKeydown(index: 0 | 1, event: KeyboardEvent) {
   }
 }
 
-onMounted(() => {
-  void loadQuickCapturePreferences();
-});
-
 // ─── Desktop: Collapse button helpers ───────────────────────────
 function getCollapseIcon(panelId: PanelId): string {
   const idx = PANELS.findIndex((p) => p.id === panelId);
   if (isCollapsed(panelId)) {
     // Show expand direction
-    return idx === 0 ? "i-lucide-chevron-right" : idx === 2 ? "i-lucide-chevron-left" : "i-lucide-chevrons-left";
+    return idx === 0
+      ? "i-lucide-chevron-right"
+      : idx === 2
+        ? "i-lucide-chevron-left"
+        : "i-lucide-chevrons-left";
   }
   // Show collapse direction
-  return idx === 0 ? "i-lucide-chevron-left" : idx === 2 ? "i-lucide-chevron-right" : "i-lucide-chevrons-right";
+  return idx === 0
+    ? "i-lucide-chevron-left"
+    : idx === 2
+      ? "i-lucide-chevron-right"
+      : "i-lucide-chevrons-right";
 }
 
 function getPanelIcon(panelId: PanelId): string {
@@ -106,16 +109,25 @@ defineExpose({
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- DESKTOP LAYOUT: 3 resizable panels with drag handles          -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div v-if="isDesktop" ref="containerRef" class="workspace-layout-desktop"
-    :class="{ 'is-resizing': isResizing, 'is-animating': isAnimating }">
+  <div
+    v-if="isDesktop"
+    ref="containerRef"
+    class="workspace-layout-desktop"
+    :class="{ 'is-resizing': isResizing, 'is-animating': isAnimating }"
+  >
     <template v-for="(panel, index) in PANELS" :key="panel.id">
       <!-- Panel -->
-      <div class="workspace-panel" :class="[
-        `panel-${panel.id}`,
-        { 'is-collapsed': isCollapsed(panel.id) },
-      ]" :style="panelStyles[index]">
+      <div
+        class="workspace-panel"
+        :class="[
+          `panel-${panel.id}`,
+          { 'is-collapsed': isCollapsed(panel.id) },
+        ]"
+        :style="panelStyles[index]"
+      >
         <!-- Collapsed strip -->
-        <button data-design-allow="custom vertical collapsed panel strip needs native button semantics with bespoke layout"
+        <button
+          data-design-allow="custom vertical collapsed panel strip needs native button semantics with bespoke layout"
           v-if="isCollapsed(panel.id)"
           type="button"
           class="collapsed-strip"
@@ -126,7 +138,10 @@ defineExpose({
             <UiIcon :name="getPanelIcon(panel.id)" class="collapsed-icon" />
             <span class="collapsed-label">{{ getPanelLabel(panel.id) }}</span>
           </div>
-          <UiIcon :name="getCollapseIcon(panel.id)" class="collapsed-expand-icon" />
+          <UiIcon
+            :name="getCollapseIcon(panel.id)"
+            class="collapsed-expand-icon"
+          />
         </button>
 
         <!-- Panel content (visible when not collapsed) -->
@@ -148,22 +163,32 @@ defineExpose({
       </div>
 
       <!-- Resize handle (between panels, not after the last one) -->
-      <div v-if="index < PANELS.length - 1" class="resize-handle" :class="{
-        'handle-disabled': isCollapsed(PANELS[index]!.id) || isCollapsed(PANELS[index + 1]!.id),
-      }"
+      <div
+        v-if="index < PANELS.length - 1"
+        class="resize-handle"
+        :class="{
+          'handle-disabled':
+            isCollapsed(PANELS[index]!.id) ||
+            isCollapsed(PANELS[index + 1]!.id),
+        }"
         role="separator"
         aria-orientation="vertical"
         :aria-label="`Resize ${PANELS[index]!.label} and ${PANELS[index + 1]!.label} panels`"
         :aria-valuenow="Math.round(panelSizes[index] ?? 0)"
         aria-valuemin="20"
         aria-valuemax="80"
-        :tabindex="isCollapsed(PANELS[index]!.id) || isCollapsed(PANELS[index + 1]!.id) ? -1 : 0"
+        :tabindex="
+          isCollapsed(PANELS[index]!.id) || isCollapsed(PANELS[index + 1]!.id)
+            ? -1
+            : 0
+        "
         @keydown="onResizeHandleKeydown(index as 0 | 1, $event)"
         @mousedown="
-        !isCollapsed(PANELS[index]!.id) && !isCollapsed(PANELS[index + 1]!.id)
-          ? startResize(index as 0 | 1, $event)
-          : undefined
-        ">
+          !isCollapsed(PANELS[index]!.id) && !isCollapsed(PANELS[index + 1]!.id)
+            ? startResize(index as 0 | 1, $event)
+            : undefined
+        "
+      >
         <div class="handle-grip">
           <span class="grip-dot" />
           <span class="grip-dot" />
@@ -177,14 +202,23 @@ defineExpose({
   <!-- MOBILE LAYOUT: Bottom tabs + translated panel track            -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <div v-else class="workspace-layout-mobile">
-
-
     <!-- Tab-controlled panel container -->
     <div class="mobile-panels-container">
-      <div class="mobile-panels-track" :style="{ transform: `translateX(-${activePanelIndex * 100}%)` }">
-        <div v-for="panel in PANELS" :id="panelDomId(panel.id)" :key="panel.id" class="mobile-panel"
-          :data-panel-id="panel.id" role="tabpanel" :aria-labelledby="panelTabId(panel.id)"
-          :aria-hidden="activeTab !== panel.id" :inert="activeTab !== panel.id">
+      <div
+        class="mobile-panels-track"
+        :style="{ transform: `translateX(-${activePanelIndex * 100}%)` }"
+      >
+        <div
+          v-for="panel in PANELS"
+          :id="panelDomId(panel.id)"
+          :key="panel.id"
+          class="mobile-panel"
+          :data-panel-id="panel.id"
+          role="tabpanel"
+          :aria-labelledby="panelTabId(panel.id)"
+          :aria-hidden="activeTab !== panel.id"
+          :inert="activeTab !== panel.id"
+        >
           <slot :name="panel.id" />
         </div>
       </div>
@@ -204,20 +238,7 @@ defineExpose({
         button-base-class="flex min-h-[52px] flex-1 flex-col items-center justify-center gap-1 rounded-[var(--radius-md)] px-2 text-[10px] font-medium tracking-[0.02em] transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--ds-focus-outline-color)]"
         @select="selectPanelByIndex"
       />
-      <UiButton
-        v-if="quickCaptureEnabled"
-        type="button"
-        tone="primary"
-        variant="solid"
-        square
-        class="mobile-quick-capture"
-        aria-label="Open quick translate"
-        @click="isQuickCaptureOpen = true"
-      >
-        <shared-icon name="translation" />
-      </UiButton>
     </div>
-    <QuickCaptureModal :show="isQuickCaptureOpen" @close="isQuickCaptureOpen = false" />
   </div>
 </template>
 
@@ -275,7 +296,9 @@ defineExpose({
   border: 1px solid var(--ui-border);
   border-radius: 12px;
   text-align: center;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .collapsed-strip:hover {
@@ -338,7 +361,11 @@ defineExpose({
   color: var(--ui-text-dimmed);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.2s ease, background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  transition:
+    opacity 0.2s ease,
+    background 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
@@ -437,7 +464,7 @@ defineExpose({
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;
-  gap: 2px
+  gap: 2px;
 }
 
 /* ─── Tab Bar ───────────────────────────────────────────────────── */
@@ -462,23 +489,6 @@ defineExpose({
 
 .mobile-tab-bar :deep(nav) {
   flex: 1;
-}
-
-.mobile-quick-capture {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: var(--target-touch);
-  min-height: 52px;
-  border-radius: var(--radius-xl);
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  box-shadow: var(--shadow-dropdown);
-  transition: background-color var(--duration-fast) var(--ease-standard), transform var(--duration-fast) var(--ease-standard);
-}
-
-.mobile-quick-capture:active {
-  transform: scale(0.97);
 }
 
 .mobile-tab-btn {

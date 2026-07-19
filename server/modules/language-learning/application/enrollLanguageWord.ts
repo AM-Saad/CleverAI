@@ -23,8 +23,8 @@ export async function enrollLanguageWord(input: {
 
   const story = word.stories[0] ?? null;
 
-  await input.prisma.$transaction(async (tx: any) => {
-    await tx.languageCardReview.upsert({
+  const persist = async (tx: any) => {
+    const review: { id: string } = await tx.languageCardReview.upsert({
       where: {
         userId_wordId: {
           userId: input.userId,
@@ -48,7 +48,12 @@ export async function enrollLanguageWord(input: {
       where: { id: input.wordId },
       data: { status: "enrolled" },
     });
-  });
+    return review;
+  };
+  const review =
+    typeof input.prisma.$transaction === "function"
+      ? await input.prisma.$transaction(persist)
+      : await persist(input.prisma);
 
   await domainEventBus.publish({
     type: "LanguageWordEnrolled",
@@ -60,5 +65,10 @@ export async function enrollLanguageWord(input: {
     },
   });
 
-  return { wordId: input.wordId, status: "enrolled" };
+  return {
+    wordId: input.wordId,
+    status: "enrolled",
+    reviewId: review.id,
+    storyId: story?.id ?? null,
+  };
 }

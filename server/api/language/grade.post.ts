@@ -5,7 +5,7 @@ import { LanguageGradeRequestSchema } from "@shared/utils/language.contract";
 import { gradeReviewCard } from "@server/modules/review/application/gradeReviewCard";
 import { PrismaLanguageReviewRepository } from "@server/modules/language-learning/infrastructure/PrismaLanguageReviewRepository";
 import { PrismaXpPort } from "@server/modules/review/infrastructure/PrismaXpPort";
-import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
+import { projectLanguageOfflineState } from "@server/modules/offline/application/projectLanguageOfflineState";
 
 export default defineEventHandler(async (event) => {
   let validatedBody;
@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
     if (e instanceof ZodError) {
       throw Errors.badRequest(
         "Invalid request data",
-        e.issues.map((i) => ({ path: i.path, message: i.message }))
+        e.issues.map((i) => ({ path: i.path, message: i.message })),
       );
     }
     throw Errors.badRequest("Invalid request data");
@@ -33,14 +33,22 @@ export default defineEventHandler(async (event) => {
     grade: parseInt(validatedBody.grade),
     requestId: validatedBody.requestId,
     xpSource: "language_review",
-    reviewedAt: validatedBody.reviewedAt ? new Date(validatedBody.reviewedAt) : undefined,
+    reviewedAt: validatedBody.reviewedAt
+      ? new Date(validatedBody.reviewedAt)
+      : undefined,
   });
-  await advanceOfflineEntityState({ prisma, userId: user.id, entity: "languageReview", entityId: result.reviewId, changedFields: ["reviewState"] });
+  const projection = await projectLanguageOfflineState({
+    prisma,
+    userId: user.id,
+    word: { id: result.resourceId, changedFields: ["status"] },
+    review: { id: result.reviewId, changedFields: ["reviewState"] },
+  });
 
   return success({
     nextReviewAt: result.nextReviewAt.toISOString(),
     intervalDays: result.intervalDays,
     easeFactor: result.easeFactor,
     xpEarned: result.xpEarned,
+    projection,
   });
 });
