@@ -4,6 +4,7 @@ import { normalizeWorkspaceNoteTitle } from "../../../../shared/utils/workspaceN
 import { applyWorkspaceNoteLayout } from "./applyWorkspaceNoteLayout";
 import { advanceOfflineEntityState } from "../../offline/application/advanceOfflineEntityState";
 import { positionFromLegacyOrder } from "../../../../shared/utils/position-key";
+import { areNoteSyncStatesEquivalent } from "../../../../shared/utils/note-sync-equivalence";
 
 type NotesCreateReceipt = {
   kind: "notes-v1-create";
@@ -557,6 +558,21 @@ export async function syncWorkspaceNotes(input: {
         existing.version !== undefined &&
         existing.version !== change.serverVersion
       ) {
+        // The previous attempt may have committed while its HTTP response was
+        // lost (or a no-window service worker may have finished as the app
+        // opened). Identical complete state is an acknowledged replay, not a
+        // competing edit that requires manual conflict resolution.
+        if (areNoteSyncStatesEquivalent(change, existing)) {
+          appliedNotes.push({
+            id: change.id,
+            version: existing.version,
+            updatedAt: existing.updatedAt
+              ? new Date(existing.updatedAt).toISOString()
+              : undefined,
+          });
+          applied.push(change.id);
+          continue;
+        }
         conflicts.push({
           id: change.id,
           reason: "VERSION_MISMATCH",

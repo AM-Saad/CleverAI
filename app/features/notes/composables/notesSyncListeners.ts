@@ -4,6 +4,10 @@ export interface NotesSyncListenerStore {
   hydrateLocalNotes(): Promise<void>;
 }
 
+type RegisterVerifiedOnline = (
+  callback: () => void | Promise<void>,
+) => () => void;
+
 let listenersRegistered = false;
 let activeWorkspaceId: string | null = null;
 
@@ -13,10 +17,11 @@ export function setActiveNotesWorkspace(workspaceId: string): void {
 
 export function registerNotesSyncListenersOnce(
   stores: ReadonlyMap<string, NotesSyncListenerStore>,
+  onVerifiedOnline: RegisterVerifiedOnline,
 ): void {
   if (!process.client || listenersRegistered) return;
 
-  window.addEventListener("online", () => {
+  onVerifiedOnline(() => {
     void (async () => {
       await Promise.all(
         Array.from(stores.values()).map((store) => store.flushDrafts()),

@@ -187,7 +187,16 @@ export function useQuickNoteCapture(store: Ref<NotesStore | null>) {
 
   /** Navigating away — the note must survive even if still empty. */
   function markFinalized() {
+    cancelScheduledSync();
     session.markFinalized();
+  }
+
+  function requestSync() {
+    cancelScheduledSync();
+    // "Open full note" bypasses finalize(), but creation was intentionally
+    // deferred while the capture sheet was active. Hand the already-durable
+    // outbox to the same drainer after the final draft commit.
+    void sessionStore.value?.syncPendingChanges();
   }
 
   const created = computed(() => Boolean(sourceId.value));
@@ -203,5 +212,6 @@ export function useQuickNoteCapture(store: Ref<NotesStore | null>) {
     commitNow: draft.commitNow,
     finalize,
     markFinalized,
+    requestSync,
   };
 }

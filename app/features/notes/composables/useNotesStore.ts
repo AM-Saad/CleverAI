@@ -507,7 +507,7 @@ export function useNotesStore(workspaceId: string): NotesStore {
   // cache rather than spinning up a second instance and a second network
   // request.
   stores.set(workspaceId, store);
-  registerNotesSyncListenersOnce(stores);
+  registerNotesSyncListenersOnce(stores, networkMonitor.onOnline);
 
   // Page/container owners hydrate explicitly. Registering lifecycle hooks here
   // is invalid when this cached store is first resolved from a computed value.

@@ -130,6 +130,7 @@ import { calculateOfflineSM2 } from "../shared/utils/sm2";
 import { orderOfflineMutations } from "../shared/utils/offline-mutation-order";
 import { positionBetween } from "../shared/utils/position-key";
 import { createKeyedAsyncDebounce } from "../app/utils/keyedAsyncDebounce";
+import { useDebounce } from "../app/utils/debounce";
 import { DB_CONFIG } from "../app/utils/constants/pwa";
 import {
   applySyncResult,
@@ -346,6 +347,53 @@ test("keyed async debounce reruns once when an item changes during save", async 
   releaseFirst();
   await running;
   assert.equal(calls, 2);
+});
+
+test("shared debounce enforces a maximum wait during continuous input", () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const timers = new Map<
+    number,
+    { callback: () => void; delay: number }
+  >();
+  let timerId = 0;
+  let calls = 0;
+
+  globalThis.setTimeout = ((callback: () => void, delay = 0) => {
+    const id = ++timerId;
+    timers.set(id, { callback, delay });
+    return id as unknown as ReturnType<typeof setTimeout>;
+  }) as typeof setTimeout;
+  globalThis.clearTimeout = ((id: ReturnType<typeof setTimeout>) => {
+    timers.delete(id as unknown as number);
+  }) as typeof clearTimeout;
+
+  try {
+    const scope = effectScope();
+    const debounced = scope.run(() =>
+      useDebounce(() => {
+        calls++;
+      }, 700, 2_500),
+    )!;
+
+    debounced.debouncedFunc();
+    debounced.debouncedFunc();
+    debounced.debouncedFunc();
+
+    const maxWaitTimer = Array.from(timers.values()).find(
+      (timer) => timer.delay === 2_500,
+    );
+    assert.ok(maxWaitTimer);
+    assert.equal(calls, 0);
+
+    maxWaitTimer.callback();
+    assert.equal(calls, 1);
+    assert.equal(timers.size, 0);
+    scope.stop();
+  } finally {
+    globalThis.setTimeout = originalSetTimeout;
+    globalThis.clearTimeout = originalClearTimeout;
+  }
 });
 
 test("offline outbox cancels dependent local children when its local workspace is deleted", async () => {
@@ -2148,6 +2196,58 @@ test("workspace note sync returns fresh versions for repeated same-client edits"
   assert.equal(second.appliedNotes[0]?.version, 3);
 });
 
+test("workspace note sync acknowledges an identical retry after a lost response", async () => {
+  const { notes, prisma } = fakeNotesPrisma();
+  notes.set("note-retry", {
+    id: "note-retry",
+    workspaceId: "workspace-1",
+    groupId: null,
+    title: "Before",
+    content: "<h1>Before</h1>",
+    tags: ["study"],
+    noteType: "TEXT",
+    metadata: { color: "blue", nested: { b: 2, a: 1 } },
+    version: 1,
+    updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+  });
+  const request = {
+    changes: [
+      {
+        id: "note-retry",
+        operation: "upsert" as const,
+        updatedAt: Date.parse("2026-01-02T00:00:00.000Z"),
+        localVersion: 1,
+        serverVersion: 1,
+        workspaceId: "workspace-1",
+        groupId: null,
+        title: "After",
+        content: "<h1>After</h1>",
+        tags: ["study"],
+        noteType: "TEXT",
+        metadata: { nested: { a: 1, b: 2 }, color: "blue" },
+      },
+    ],
+  };
+
+  const first = await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request,
+  });
+  const replay = await syncWorkspaceNotes({
+    prisma,
+    userId: "user-1",
+    request,
+  });
+
+  assert.deepEqual(first.conflicts, []);
+  assert.equal(first.appliedNotes[0]?.version, 2);
+  assert.deepEqual(replay.conflicts, []);
+  assert.deepEqual(replay.applied, ["note-retry"]);
+  assert.equal(replay.appliedNotes[0]?.version, 2);
+  assert.equal(notes.get("note-retry")?.version, 2);
+});
+
 test("workspace note processing failures stay retryable instead of becoming conflicts", async () => {
   const { notes, prisma } = fakeNotesPrisma();
   notes.set("note-1", {
@@ -3080,6 +3180,106 @@ test("notes conflict resolver stores local and server snapshots and blocks resen
     true,
   );
   assert.equal(saved.get("note-1")?.version, 2);
+});
+
+test("notes conflict resolver clears a replay conflict when both sides already match", async () => {
+  const localNote = {
+    id: "note-replay",
+    workspaceId: "workspace-1",
+    groupId: null,
+    title: "Converged",
+    content: "<h1>Converged</h1><p>Body</p>",
+    tags: ["study"],
+    order: 0,
+    noteType: "TEXT",
+    metadata: { color: "blue" },
+    version: 1,
+    createdAt: new Date("2026-01-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-01-02T00:00:00.000Z"),
+    isDirty: true,
+    isLoading: true,
+    error: null,
+  };
+  const notes = ref(new Map<string, any>([[localNote.id, localNote]]));
+  const pending = new Map<string, any>([
+    [
+      localNote.id,
+      {
+        id: localNote.id,
+        operation: "upsert",
+        updatedAt: localNote.updatedAt.getTime(),
+        localVersion: 1,
+        serverVersion: 1,
+        workspaceId: localNote.workspaceId,
+        groupId: null,
+        title: localNote.title,
+        content: localNote.content,
+        tags: localNote.tags,
+        noteType: localNote.noteType,
+        metadata: localNote.metadata,
+      },
+    ],
+  ]);
+  const storedConflicts = new Map<string, any>();
+  const conflictState = ref(new Map<string, any>());
+  const saved = new Map<string, any>();
+  const resolver = createNotesConflictResolver({
+    workspaceId: "workspace-1",
+    notes,
+    conflicts: conflictState,
+    conflictRepository: {
+      save: async (conflict: any) =>
+        storedConflicts.set(conflict.id, conflict),
+      load: async () => Array.from(storedConflicts.values()),
+      remove: async (ids: string[]) =>
+        ids.forEach((id) => storedConflicts.delete(id)),
+    } as any,
+    pendingQueue: {
+      add: async (change: any) => pending.set(change.id, change),
+      load: async () => Array.from(pending.values()),
+      remove: async (ids: string[]) =>
+        ids.forEach((id) => pending.delete(id)),
+      registerBackgroundSync: async () => {},
+    } as any,
+    localRepository: {
+      save: async (note: any) => saved.set(note.id, note),
+      saveMany: async () => {},
+      delete: async () => {},
+      loadByWorkspace: async () => [],
+    } as any,
+  });
+
+  const recorded = await resolver.recordContentConflicts({
+    ...notesSyncSuccess().data,
+    conflicts: [
+      {
+        id: localNote.id,
+        reason: "VERSION_MISMATCH",
+        serverVersion: 2,
+        clientServerVersion: 1,
+        serverSnapshot: {
+          id: localNote.id,
+          workspaceId: localNote.workspaceId,
+          groupId: null,
+          title: localNote.title,
+          content: localNote.content,
+          tags: localNote.tags,
+          noteType: localNote.noteType,
+          metadata: localNote.metadata,
+          version: 2,
+          updatedAt: "2026-01-03T00:00:00.000Z",
+        },
+      },
+    ],
+  });
+
+  assert.equal(recorded, 0);
+  assert.equal(pending.has(localNote.id), false);
+  assert.equal(storedConflicts.size, 0);
+  assert.equal(conflictState.value.size, 0);
+  assert.equal(notes.value.get(localNote.id)?.version, 2);
+  assert.equal(notes.value.get(localNote.id)?.isDirty, false);
+  assert.equal(saved.get(localNote.id)?.error, null);
 });
 
 test("notes conflict resolver keep-local queues overwrite against latest server version", async () => {
@@ -4350,6 +4550,60 @@ test("quick note capture includes the first input in one durable create", async 
   assert.equal(creates[0]?.groupId, "group-quick-capture");
   assert.equal(creates[0]?.options?.deferSync, true);
   assert.equal(updateCount, 0);
+  scope.stop();
+});
+
+test("opening a deferred quick note in the full editor starts its sync", async () => {
+  const notes = ref(new Map<string, any>());
+  let syncCount = 0;
+  const store = shallowRef({
+    notes,
+    resolveNoteId: (id: string) => id,
+    createNote: async (
+      content: string,
+      tags: string[],
+      noteType: string,
+      metadata: unknown,
+      title: string | undefined,
+    ) => {
+      const id = "temp-open-full";
+      notes.value.set(id, {
+        id,
+        workspaceId: "workspace-quick-capture",
+        groupId: null,
+        title: title ?? TITLE_FALLBACK,
+        content,
+        tags,
+        order: 0,
+        noteType,
+        metadata: metadata ?? null,
+        version: 1,
+        isDirty: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      return id;
+    },
+    applyNoteDraft: () => true,
+    updateNote: async () => true,
+    deleteNote: async () => true,
+    syncPendingChanges: async () => {
+      syncCount++;
+      return true;
+    },
+  } as any);
+  const scope = effectScope();
+  const capture = scope.run(() => useQuickNoteCapture(store))!;
+
+  await capture.begin();
+  capture.onTitle("Open me");
+  await flushAsyncWork();
+  capture.markFinalized();
+  await capture.commitNow();
+  capture.requestSync();
+  await flushAsyncWork();
+
+  assert.equal(syncCount, 1);
   scope.stop();
 });
 

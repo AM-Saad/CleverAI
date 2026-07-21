@@ -89,6 +89,18 @@ The correction makes the server-version chain monotonic in both places: acknowle
 
 A separate classification bug had the same visible outcome: an unexpected database/processing exception was returned in both `errors` and `conflicts`, permanently quarantining retryable work. Processing exceptions now remain errors, keep their durable command pending, and schedule the retry policy; only actual concurrency responses enter manual conflict resolution.
 
+## Recurrence: stalled drains and acknowledgement replays
+
+The 2026-07-19 report exposed five scheduling and retry gaps that were independent of IndexedDB durability:
+
+1. Both text-editor debounces were purely trailing. Continuous typing could keep resetting the timer forever, so the current text was visible and dirty in memory but never promoted into the durable outbox.
+2. A fetch failure could move the shared network monitor into an unverified-online state without a browser `offline` event. The monitor later verified recovery, but Notes listened only to `window.online`, so the already-durable outbox received no drain request.
+3. The sync engine removed its in-flight marker in a promise `finally`. A drain request arriving after the last rerun check but before that callback could be recorded and then deleted without running.
+4. An update could commit on the server while its HTTP acknowledgement was lost. Retrying the same complete payload with the old base version was classified as `VERSION_MISMATCH`, even though local and server content had already converged.
+5. “Open full note” marked a deferred Quick Capture session finalized without running the normal finalizer, so an unchanged create could remain queued until a later unrelated trigger.
+
+Editors now use a quiet-period debounce with a maximum wait, verified connectivity recovery drains every Notes store, sync ownership is cleared in the same continuation as the final rerun check, and a version mismatch with equivalent complete note state is acknowledged as a replay. Existing stored replay-conflicts are also healed during conflict hydration. Divergent state still creates a real conflict.
+
 ## Root causes and fixes
 
 | Bug                                                     | Root cause                                                                                                                                                               | Fix                                                                                                                                                                            | Why this is correct                                                                                                             |
@@ -118,6 +130,11 @@ A separate classification bug had the same visible outcome: an unexpected databa
 | A transient server exception demanded manual resolution | The server added unexpected processing failures to both `errors` and `conflicts`                                                                                         | Return processing failures only as retryable errors and schedule retry while recoverable work remains                                                                          | Manual conflict UI is reserved for two valid competing versions, not infrastructure failures                                    |
 | Group conflicts retried forever                         | Conflicted group rows were not quarantined                                                                                                                               | Mark them `conflicted`, restore delete snapshots, and exclude them from automatic drains                                                                                       | An unresolved conflict stays visible without becoming a request loop                                                            |
 | No-window sync could strand a successor                 | A worker completed one snapshot but did not register another drain when newer work remained                                                                              | Re-register `notes-sync` whenever non-conflicted work remains                                                                                                                  | Work created during acknowledgement gets another recovery opportunity                                                           |
+| Continuous typing sent no request                       | The editor had an unbounded trailing debounce                                                                                                                             | Keep the quiet-period debounce and add a 2–2.5 second maximum wait                                                                                                             | Typing remains coalesced, but current work crosses the durable boundary during a long editing session                            |
+| A degraded connection left durable work waiting         | Notes listened to the browser `online` event, not the monitor's later verified-online transition                                                                          | Subscribe the once-per-app Notes listener to verified recovery and reduce degraded-only polling to five seconds                                                               | A drain begins only after the API is reachable and no unrelated edit or reload is required                                       |
+| A trailing sync trigger disappeared                     | The sync engine cleared a rerun flag in a later promise-finally callback                                                                                                   | Clear run ownership synchronously with the final rerun decision                                                                                                                | A caller is either included in the current loop or becomes the owner of a new run                                                 |
+| A lost update response became a conflict                | Updates had no way to distinguish an acknowledgement replay from competing content                                                                                        | Treat an old-version retry as applied only when every supplied note field already equals the server snapshot; auto-heal equivalent stored conflicts                            | Equal state is already converged, while any divergent user-visible field still enters manual conflict resolution                 |
+| Open-full left a Quick Capture queued                    | That navigation intentionally skipped `finalize()`, which owned the deferred drain                                                                                         | Commit the final draft, then explicitly request the same Notes drainer before handing the session to the full editor                                                           | Navigation cannot strand the create or send an avoidable intermediate revision                                                   |
 
 ## Correct create flow: both Quick Capture surfaces
 
@@ -174,14 +191,16 @@ Ordinary read endpoints still use `GET`, and the direct service methods retain `
 ## Debounce and scheduling audit
 
 - Keystrokes update memory synchronously.
-- `useNoteDraft` owns one 500 ms trailing durable commit per mounted editor draft.
+- `useNoteDraft` owns one 500 ms quiet-period durable commit per mounted editor draft with a 2 second maximum wait.
+- The desktop rich-text editor uses a 700 ms quiet period with a 2.5 second maximum wait.
 - `notesContentQueue.queueContentSaveNow` writes the outbox immediately after that timer; there is no second stacked content debounce in the store path.
 - `commitNow()` shares one promise and loops only when `draftRevision` is newer than `durableRevision`.
 - Quick Capture's first input is already its durable create revision and does not immediately start a competing drain.
 - An unchanged first capture schedules one 800 ms drain. If input changes while creation is settling, the editor's 500 ms draft pipeline becomes the sole debounce/drain owner.
 - Done calls the idempotent `finalize()` before the closing morph. The `closed` callback is only a safe fallback and cannot create a second command.
 - The 50 ms group timer coalesces drain requests, not group durability; group commands await IndexedDB/outbox first.
-- `notesSyncEngine` permits one workspace drain at a time and performs one requested rerun if work arrived in flight.
+- `notesSyncEngine` permits one workspace drain at a time and performs requested reruns without a completion gap that can discard the final trigger.
+- Verified-online recovery flushes mounted drafts and drains every workspace; degraded-only reachability checks run every five seconds.
 - The service worker refuses ownership while a window exists. With no window, it drains the same queues and re-registers if work remains.
 
 ## Why this is the recommended fix
@@ -211,11 +230,11 @@ This is appropriate even with no production users. A data-migration bridge is un
 
 ## Validation
 
-- 148 deterministic unit tests pass.
+- 167 deterministic unit tests pass.
 - Nuxt typecheck passes.
 - Architecture boundary checks pass.
 - The service worker source bundles successfully and retains its injection placeholder.
-- Regression coverage includes atomic delete acknowledgement/cache purge, pending-aware removal of clean stale local rows, preservation of a pending create, suppression of a pending delete, a stale GET interleaving with a newer create/delete, monotonic outbox server versions, atomic cached-version advancement, retained-successor memory advancement, and retryable processing-error classification. Existing temp-remap, capture-session, conflict, layout, group, and receipt tests remain green.
+- Regression coverage includes atomic delete acknowledgement/cache purge, pending-aware removal of clean stale local rows, preservation of a pending create, suppression of a pending delete, a stale GET interleaving with a newer create/delete, monotonic outbox server versions, atomic cached-version advancement, retained-successor memory advancement, retryable processing-error classification, lost-response update replay, converged-conflict healing, and open-full Quick Capture draining. Existing temp-remap, capture-session, conflict, layout, group, and receipt tests remain green.
 - Authenticated in-app browser verification covered both reported lazy Quick Capture surfaces: the Notes-page sheet and the center general Capture sheet. Each produced one create, one row, and still one row after reload. A separate normal full-editor New Note run produced one create plus its expected later title update and also remained one row after reload.
 - Both verification notes were deleted through the normal optimistic flow. On the following reload they were absent immediately after page load, after 150 ms, and after the server refresh, proving the acknowledged cache rows were not rehydrated as ghosts.
 - A rapid close/reopen stress run created two intentionally named sessions back-to-back while the first was settling. Each session produced exactly one synced row and one create operation; neither produced a third stale-session note.
@@ -227,7 +246,7 @@ This is appropriate even with no production users. A data-migration bridge is un
 
 This establishes explicit ownership and deterministic race coverage; it is not a claim of mathematical certainty.
 
-1. A hard browser-process kill before the 500 ms draft timer and before lifecycle flushing can still lose the last keystrokes. Once the IndexedDB/outbox write finishes, recovery is durable.
+1. A hard browser-process kill before the quiet-period/max-wait timer and before lifecycle flushing can still lose the latest keystrokes. Once the IndexedDB/outbox write finishes, recovery is durable.
 2. Temp-to-canonical route aliases are held in live memory. The cache is canonical after background acknowledgement, but reopening an old bookmarked temp URL may still need a durable redirect table.
 3. Authenticated single-tab Quick Capture is browser-verified, but two-tab contention and a true worker-only reconnect are not yet automated in the Playwright suite. The queue/interleaving logic is covered deterministically.
 4. Historical pending V2 Notes mutations are deliberately not given a second runtime owner. This is acceptable before production users; a migration must be designed before changing that assumption.

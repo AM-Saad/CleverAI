@@ -518,6 +518,7 @@ async function openFullNote() {
     if (!id) return;
     quick.markFinalized();
     await quick.commitNow();
+    quick.requestSync();
     // The full editor resolves its store from the active workspace — align it
     // with where this capture actually went.
     if (

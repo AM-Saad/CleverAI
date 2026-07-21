@@ -34,7 +34,10 @@ const offlineCallbacks = new Set<() => void | Promise<void>>();
 // ─── Config ──────────────────────────────────────────────────────────────────
 const PING_URL = '/api/health'; // lightweight unauthenticated endpoint
 const PING_TIMEOUT_MS = 5_000;
-const PERIODIC_PING_INTERVAL_MS = 30_000;
+// Poll only while reachability is unverified. Five seconds keeps durable
+// outboxes from appearing stuck after a transient API/network failure without
+// adding steady-state traffic while the app is healthy.
+const PERIODIC_PING_INTERVAL_MS = 5_000;
 const TRANSITION_DEBOUNCE_MS = 2_000;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────

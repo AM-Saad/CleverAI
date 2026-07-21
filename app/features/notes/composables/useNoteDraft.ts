@@ -20,7 +20,13 @@ import { registerNotesDraftFlusher } from "./notesEditorRuntimeState";
 export function useNoteDraft(
   store: Ref<NotesStore | null>,
   sourceId: Ref<string | null>,
+  timing: {
+    debounceMs?: number;
+    maxWaitMs?: number;
+  } = {},
 ) {
+  const debounceMs = timing.debounceMs ?? 500;
+  const maxWaitMs = timing.maxWaitMs ?? 2_000;
   const note = computed<NoteState | null>(() => {
     const s = store.value;
     const id = sourceId.value;
@@ -40,11 +46,16 @@ export function useNoteDraft(
   let draftEpoch = 0;
   let commitPromise: Promise<boolean> | null = null;
   let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  let maxSaveTimer: ReturnType<typeof setTimeout> | null = null;
 
   function cancelPendingSave() {
     if (saveTimer) {
       clearTimeout(saveTimer);
       saveTimer = null;
+    }
+    if (maxSaveTimer) {
+      clearTimeout(maxSaveTimer);
+      maxSaveTimer = null;
     }
   }
 
@@ -76,7 +87,10 @@ export function useNoteDraft(
 
   function scheduleSave() {
     if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => void commitNow(), 500);
+    saveTimer = setTimeout(() => void commitNow(), debounceMs);
+    if (!maxSaveTimer) {
+      maxSaveTimer = setTimeout(() => void commitNow(), maxWaitMs);
+    }
   }
   async function commitNow() {
     cancelPendingSave();

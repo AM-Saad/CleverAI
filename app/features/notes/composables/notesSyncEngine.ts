@@ -7,32 +7,45 @@ export interface NotesSyncEngine {
 export function createNotesSyncEngine(input: {
   drainWorkspace: (workspaceId: string, reason: NotesSyncReason) => Promise<boolean>;
 }): NotesSyncEngine {
-  const inFlight = new Map<string, Promise<boolean>>();
-  const rerunRequested = new Set<string>();
+  type WorkspaceRun = {
+    promise: Promise<boolean>;
+    rerunRequested: boolean;
+  };
+  const inFlight = new Map<string, WorkspaceRun>();
 
   return {
     syncWorkspace(workspaceId, reason) {
       const running = inFlight.get(workspaceId);
       if (running) {
-        rerunRequested.add(workspaceId);
-        return running;
+        running.rerunRequested = true;
+        return running.promise;
       }
 
+      const state = {
+        promise: Promise.resolve(false),
+        rerunRequested: false,
+      } satisfies WorkspaceRun;
       const runUntilSettled = async () => {
-        let result = await input.drainWorkspace(workspaceId, reason);
-        while (rerunRequested.has(workspaceId)) {
-          rerunRequested.delete(workspaceId);
-          result = await input.drainWorkspace(workspaceId, reason);
+        let result = false;
+        try {
+          do {
+            state.rerunRequested = false;
+            result = await input.drainWorkspace(workspaceId, reason);
+          } while (state.rerunRequested);
+          return result;
+        } finally {
+          // Clear ownership in the same synchronous continuation as the final
+          // rerun check. A caller can now either be observed by the loop or
+          // start a fresh run; there is no promise-finally gap that drops it.
+          if (inFlight.get(workspaceId) === state) {
+            inFlight.delete(workspaceId);
+          }
         }
-        return result;
       };
 
-      const nextRun = runUntilSettled().finally(() => {
-        inFlight.delete(workspaceId);
-        rerunRequested.delete(workspaceId);
-      });
-      inFlight.set(workspaceId, nextRun);
-      return nextRun;
+      inFlight.set(workspaceId, state);
+      state.promise = runUntilSettled();
+      return state.promise;
     },
   };
 }

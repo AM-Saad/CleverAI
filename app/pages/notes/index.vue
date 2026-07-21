@@ -325,6 +325,7 @@ async function openQuickNoteFull() {
   if (!id) return;
   quick.markFinalized(); // navigating away — never delete, even if still empty
   await quick.commitNow();
+  quick.requestSync();
   armMorphTarget();
   await morph({
     update: async () => {

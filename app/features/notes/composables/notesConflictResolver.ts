@@ -5,6 +5,7 @@ import type { NotesConflictRepository } from "./notesConflictRepository";
 import type { NotesLocalRepository } from "./notesLocalRepository";
 import type { NotesPendingQueue } from "./notesPendingQueue";
 import { normalizeLocalNote, toNoteType, type NoteState } from "./noteTransforms";
+import { areNoteSyncStatesEquivalent } from "../../../../shared/utils/note-sync-equivalence";
 
 export type NotesConflictResolution = "keep-local" | "keep-server" | "manual-merge";
 
@@ -69,6 +70,56 @@ export function createNotesConflictResolver(input: {
     conflictRecords.value = nextConflicts;
   };
 
+  const settleConvergedConflict = async (
+    noteId: string,
+    pendingChange: Awaited<ReturnType<NotesPendingQueue["load"]>>[number] | undefined,
+    serverSnapshot: NoteSyncConflictRecord["serverSnapshot"],
+    serverVersion?: number,
+  ): Promise<boolean> => {
+    if (
+      pendingChange?.operation !== "upsert" ||
+      !serverSnapshot ||
+      !areNoteSyncStatesEquivalent(pendingChange, serverSnapshot)
+    ) {
+      return false;
+    }
+
+    const note = notes.value.get(noteId);
+    if (!note) return false;
+
+    await pendingQueue.remove([noteId]);
+    const snapshot = serverSnapshot as {
+      groupId?: string | null;
+      title?: string;
+      content?: string;
+      tags?: string[];
+      noteType?: string;
+      metadata?: unknown;
+      updatedAt?: string;
+    };
+    const nextNote = normalizeLocalNote({
+      ...note,
+      groupId: snapshot.groupId ?? null,
+      title: snapshot.title ?? note.title,
+      content: snapshot.content ?? note.content,
+      tags: snapshot.tags ?? note.tags,
+      noteType: toNoteType(snapshot.noteType),
+      metadata: snapshot.metadata as Record<string, unknown> | undefined,
+      version: serverVersion ?? note.version,
+      updatedAt: snapshot.updatedAt
+        ? new Date(snapshot.updatedAt)
+        : note.updatedAt,
+      isLoading: false,
+      isDirty: false,
+      lastSaved: new Date(),
+      error: null,
+    });
+    notes.value.set(noteId, nextNote);
+    await localRepository.save(nextNote);
+    await unmarkNoteConflict(noteId);
+    return true;
+  };
+
   const recordContentConflicts = async (response: NotesSyncResponse): Promise<number> => {
     const conflicts = response.conflicts ?? [];
     if (!conflicts.length) return 0;
@@ -80,6 +131,16 @@ export function createNotesConflictResolver(input: {
     for (const conflict of conflicts) {
       const localNote = notes.value.get(conflict.id);
       const pendingChange = pendingById.get(conflict.id);
+      if (
+        await settleConvergedConflict(
+          conflict.id,
+          pendingChange,
+          conflict.serverSnapshot ?? null,
+          conflict.serverVersion,
+        )
+      ) {
+        continue;
+      }
       const now = Date.now();
       const record: NoteSyncConflictRecord = {
         id: contentConflictId(workspaceId, conflict.id),
@@ -112,9 +173,23 @@ export function createNotesConflictResolver(input: {
 
   const hydrateConflictState = async () => {
     const conflicts = await conflictRepository.load(workspaceId);
+    const pendingChanges = await pendingQueue.load(workspaceId);
+    const pendingById = new Map(
+      pendingChanges.map((change) => [change.id, change]),
+    );
     const nextConflicts = new Map<string, NoteSyncConflictRecord>();
     for (const conflict of conflicts) {
       if (conflict.scope !== "content") continue;
+      if (
+        await settleConvergedConflict(
+          conflict.entityId,
+          pendingById.get(conflict.entityId),
+          conflict.serverSnapshot,
+          conflict.serverVersion,
+        )
+      ) {
+        continue;
+      }
       nextConflicts.set(conflict.entityId, conflict);
       await markNoteConflict(conflict.entityId, conflict);
     }

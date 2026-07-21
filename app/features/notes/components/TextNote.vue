@@ -190,6 +190,7 @@ const { debouncedFunc: scheduleSave, cancel: cancelScheduledSave } = useDebounce
     commitDraft();
   },
   700,
+  2_500,
 );
 const { debouncedFunc: scheduleCollaborationSnapshot, cancel: cancelCollaborationSnapshot } = useDebounce(
   () => {

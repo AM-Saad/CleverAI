@@ -1,3 +1,5 @@
+import { onBeforeUnmount, readonly, ref } from "vue";
+
 /**
  * Creates a debounced version of a function that delays invoking func until after
  * wait milliseconds have elapsed since the last time the debounced function was invoked.
@@ -79,31 +81,56 @@ export function throttle<T extends (...args: unknown[]) => unknown>(
  */
 export function useDebounce<TArgs extends unknown[], TReturn = void>(
   func: (...args: TArgs) => TReturn | Promise<TReturn>,
-  delay = 300
+  delay = 300,
+  maxWait?: number,
 ) {
   const isWaiting = ref(false);
   let timeoutId: NodeJS.Timeout | null = null;
+  let maxWaitTimeoutId: NodeJS.Timeout | null = null;
+  let latestArgs: TArgs | null = null;
+
+  const clearTimers = () => {
+    if (timeoutId) clearTimeout(timeoutId);
+    if (maxWaitTimeoutId) clearTimeout(maxWaitTimeoutId);
+    timeoutId = null;
+    maxWaitTimeoutId = null;
+  };
+
+  const invoke = () => {
+    const args = latestArgs;
+    clearTimers();
+    latestArgs = null;
+    isWaiting.value = false;
+    if (args) return func(...args);
+  };
 
   const debouncedFunc = (...args: TArgs) => {
     isWaiting.value = true;
+    latestArgs = args;
 
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
 
     timeoutId = setTimeout(() => {
-      func(...args);
-      isWaiting.value = false;
-      timeoutId = null;
+      invoke();
     }, delay);
+
+    if (
+      maxWait !== undefined &&
+      maxWait > 0 &&
+      maxWaitTimeoutId === null
+    ) {
+      maxWaitTimeoutId = setTimeout(() => {
+        invoke();
+      }, maxWait);
+    }
   };
 
   const cancel = () => {
-    if (timeoutId) {
-      clearTimeout(timeoutId);
-      timeoutId = null;
-      isWaiting.value = false;
-    }
+    clearTimers();
+    latestArgs = null;
+    isWaiting.value = false;
   };
 
   const flush = (...args: TArgs): TReturn | Promise<TReturn> => {
