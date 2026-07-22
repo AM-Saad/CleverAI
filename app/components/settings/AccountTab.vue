@@ -7,14 +7,14 @@
                     <UiIcon name="i-lucide-user" class="w-5 h-5" />
                     Account Information
                 </div>
-                <ui-button size="sm" variant="soft" color="primary" @click="showUpdateModal = true">
+                <ui-button size="sm" variant="soft" tone="primary" @click="showUpdateModal = true">
                     Update Profile
                 </ui-button>
             </template>
 
             <template #default>
 
-                <ui-loader v-if="fetchProfilePending" :is-fetching="fetchProfilePending"
+                <UiLoadingState v-if="fetchProfilePending" :active="fetchProfilePending"
                     label="Loading Account Information..." />
 
                 <div v-else-if="profile" class="flex flex-col gap-4">

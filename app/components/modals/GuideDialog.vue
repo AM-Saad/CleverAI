@@ -25,7 +25,7 @@ const gotit = (): void => {
 <template>
   <Teleport to="body">
     <!-- use the modal component, pass in the prop -->
-    <shared-dialog-modal :show="show" @close="gotit">
+    <UiModal :open="show" @close="gotit">
       <template #header>
         <div class="flex flex-col">
           <div class="title text-xl font-bold">Check "Share Audio" Box</div>
@@ -43,7 +43,7 @@ const gotit = (): void => {
       <template #footer>
         <UiButton tone="primary" @click="gotit">Got it</UiButton>
       </template>
-    </shared-dialog-modal>
+    </UiModal>
   </Teleport>
 </template>
 

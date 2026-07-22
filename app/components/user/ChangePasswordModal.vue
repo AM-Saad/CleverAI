@@ -65,8 +65,8 @@ function submit() {
 
 <template>
   <Teleport to="body">
-    <shared-dialog-modal
-      :show="show"
+    <UiModal
+      :open="show"
       title="Change password"
       icon="security"
       description="Update the password used for email sign-in"
@@ -127,7 +127,7 @@ function submit() {
           </div>
         </form>
       </template>
-    </shared-dialog-modal>
+    </UiModal>
   </Teleport>
 </template>
 

@@ -1253,7 +1253,7 @@ function getSelectedText(): string | null {
   right: 0;
   top: 0;
   bottom: 0;
-  background: var(--color-primary-50);
+  background: var(--color-primary-soft);
   pointer-events: none;
 }
 

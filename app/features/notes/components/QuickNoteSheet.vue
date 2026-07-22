@@ -26,7 +26,6 @@
           Open full note
         </UiButton>
         <UiButton
-          pill
           tone="primary"
           :disabled="morphing"
           @click="emit('done')"

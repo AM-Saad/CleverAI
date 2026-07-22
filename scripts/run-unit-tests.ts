@@ -91,6 +91,12 @@ import {
   resolveEditorSaveState,
   saveStateLabel,
 } from "../app/features/notes/composables/notesDraftCommitter";
+import {
+  buildDailyNoteDraftCommit,
+  dailySaveStateLabel,
+  previewDailyNoteContent,
+  resolveDailyEditorSaveState,
+} from "../app/features/daily/composables/dailyDraftCommitter";
 import { createNotesSplitInteractionController } from "../app/features/notes/composables/notesSplitInteractionController";
 import {
   useSplitNotes,
@@ -3956,6 +3962,66 @@ test("notes editor save state favors conflicts, drafts, local saves, and synced 
     saveStateLabel(resolveEditorSaveState({ hasLocalDraft: false })),
     "Synced",
   );
+});
+
+test("daily editor save state favors conflict over drafting over syncing over saved", () => {
+  assert.equal(
+    resolveDailyEditorSaveState({ hasLocalDraft: true, isConflicted: true }),
+    "conflict",
+  );
+  assert.equal(
+    resolveDailyEditorSaveState({ hasLocalDraft: true, isSyncing: true }),
+    "editing",
+  );
+  assert.equal(
+    resolveDailyEditorSaveState({ hasLocalDraft: false, isSyncing: true }),
+    "syncing",
+  );
+  assert.equal(
+    resolveDailyEditorSaveState({ hasLocalDraft: false }),
+    "saved-local",
+  );
+  assert.equal(
+    dailySaveStateLabel(resolveDailyEditorSaveState({ hasLocalDraft: false })),
+    "Saved locally",
+  );
+  assert.equal(
+    dailySaveStateLabel(
+      resolveDailyEditorSaveState({ hasLocalDraft: false, isConflicted: true }),
+    ),
+    "Conflict",
+  );
+});
+
+test("daily note draft commit passes through Tiptap JSON content untouched", () => {
+  const content = { type: "doc", content: [{ type: "paragraph" }] };
+  assert.deepEqual(buildDailyNoteDraftCommit(content), { content });
+});
+
+test("daily note content preview extracts plain text from Tiptap JSON", () => {
+  const doc = {
+    type: "doc",
+    content: [
+      { type: "paragraph", content: [{ type: "text", text: "Buy milk" }] },
+      {
+        type: "bulletList",
+        content: [
+          {
+            type: "listItem",
+            content: [
+              { type: "paragraph", content: [{ type: "text", text: "and eggs" }] },
+            ],
+          },
+        ],
+      },
+    ],
+  };
+  assert.equal(previewDailyNoteContent(doc), "Buy milk and eggs");
+  assert.equal(
+    previewDailyNoteContent({ type: "doc", content: [{ type: "paragraph" }] }),
+    "No content",
+  );
+  assert.equal(previewDailyNoteContent(undefined), "No content");
 });
 
 test("workspace note sync derives fallback title when payload omits it", async () => {

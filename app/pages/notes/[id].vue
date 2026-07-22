@@ -24,7 +24,7 @@
     <div v-else class="note-missing">
       <UiIcon name="i-lucide-file-x" class="h-9 w-9 text-content-disabled" />
       <p>Note not found.</p>
-      <UiButton pill @click="goBack">Back to notes</UiButton>
+      <UiButton @click="goBack">Back to notes</UiButton>
     </div>
 
     <AiResultSheet
@@ -88,7 +88,7 @@
 
         <div v-if="addingGroup" class="note-groups__new">
           <input ref="groupNameEl" v-model="newGroupName" class="note-groups__input" placeholder="New group name" maxlength="60" @keydown.enter.prevent="createAndAssign" /> <!-- design-allow: native group-name field -->
-          <UiButton pill size="sm" tone="primary" :loading="creatingGroup" :disabled="!newGroupName.trim()" @click="createAndAssign">Add</UiButton>
+          <UiButton size="sm" tone="primary" :loading="creatingGroup" :disabled="!newGroupName.trim()" @click="createAndAssign">Add</UiButton>
         </div>
         <button v-else type="button" class="note-groups__add" @click="startAddGroup"> <!-- design-allow: native dashed add control -->
           <UiIcon name="i-lucide-plus" class="h-4 w-4" /> New group
@@ -380,7 +380,7 @@ function stripHtml(html: string) {
 }
 .note-actions__type--on {
   color: var(--color-primary);
-  background: var(--color-primary-50);
+  background: var(--color-primary-soft);
   border-color: var(--color-primary);
 }
 .note-actions__row {
@@ -424,7 +424,7 @@ function stripHtml(html: string) {
   border: 1px solid transparent;
 }
 .note-groups__row--on {
-  background: var(--color-primary-50);
+  background: var(--color-primary-soft);
   border-color: var(--color-primary);
 }
 .note-groups__name {

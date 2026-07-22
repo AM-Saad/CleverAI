@@ -26,6 +26,7 @@ import Paper from "~/components/shared/Paper.js";
 const props = defineProps<{ modelValue?: unknown; readonly?: boolean }>();
 const emit = defineEmits<{
   (event: "update:modelValue", value: JSONContent): void;
+  (event: "blur"): void;
 }>();
 const applyingExternal = ref(false);
 
@@ -57,6 +58,7 @@ onMounted(() => {
       if (!applyingExternal.value)
         emit("update:modelValue", instance.getJSON());
     },
+    onBlur: () => emit("blur"),
   });
 });
 
@@ -97,29 +99,29 @@ onBeforeUnmount(() => editor.value?.destroy());
 <style scoped>
 .daily-editor {
   min-height: 320px;
-  border: 1px solid var(--color-secondary);
-  border-radius: var(--component-card-radius);
-  background: var(--color-surface);
+  /* border: 1px solid var(--color-secondary); */
+  /* border-radius: var(--component-card-radius); */
+  /* background: var(--color-surface); */
   overflow: hidden;
 }
 
 .daily-editor__toolbar {
   position: sticky;
   top: 0;
-  z-index: var(--z-sticky);
-  border-bottom: 1px solid var(--color-secondary);
-  background: var(--color-surface);
-  padding: var(--space-2);
+  /* border-bottom: 1px solid var(--color-secondary); */
+  /* background: var(--color-surface); */
+  padding: var(--space-2) 0;
 }
 
 .daily-editor__content {
-  min-height: 270px;
-  padding: var(--space-4);
+  height: 270px;
+  padding: var(--space-1);
+  overflow: auto
 }
 
 .daily-editor__content :deep(.tiptap) {
   min-height: 235px;
-  outline: none;
+  outline: none !important;
   line-height: 1.7;
   color: var(--color-content-on-surface);
 }
@@ -133,7 +135,6 @@ onBeforeUnmount(() => editor.value?.destroy());
 }
 
 .daily-editor__content :deep(.tiptap h2) {
-  margin: var(--space-5) 0 var(--space-2);
   font-size: var(--text-xl);
   font-weight: 700;
 }

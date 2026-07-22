@@ -120,7 +120,7 @@ watch(
 <template>
   <Teleport to="body">
     <!-- use the modal component, pass in the prop -->
-    <shared-dialog-modal :show="props.show" @close="closeModel"
+    <UiModal :open="props.show" @close="closeModel"
       :title="props.workspace ? 'Edit Workspace' : 'Create Workspace'" :icon="'workspaces'"
       :description="props.workspace ? '' : 'Workspace is a container for organizing your content.'">
       <template #body>
@@ -162,6 +162,6 @@ watch(
           </div>
         </UiForm>
       </template>
-    </shared-dialog-modal>
+    </UiModal>
   </Teleport>
 </template>

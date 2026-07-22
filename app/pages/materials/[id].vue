@@ -1,24 +1,20 @@
 <template>
   <div class="md">
-    <header class="md__header">
-      <UiIconButton
-        class="md__back"
-        icon="i-lucide-chevron-left"
-        label="Back"
-        @click="goBack"
-      />
-      <ui-title tag="h1" class="md__title">Material</ui-title>
-    </header>
+    <AppPageHeader
+      title="Material"
+      subtitle="Source and generated study content"
+      back-to="/materials"
+    />
 
     <div v-if="loading" class="md__list">
-      <UiSkeleton class="h-16 w-full rounded-[var(--radius-2xl)]" />
-      <UiSkeleton class="h-40 w-full rounded-[var(--radius-2xl)]" />
+      <UiSkeleton class="h-16 w-full rounded-[var(--component-card-radius)]" />
+      <UiSkeleton class="h-40 w-full rounded-[var(--component-card-radius)]" />
     </div>
 
     <template v-else-if="material">
       <!-- source meta -->
       <div class="md__source">
-        <span class="md__source-tile" :style="tileStyle">{{ typeLabel }}</span>
+        <span class="md__source-tile">{{ typeLabel }}</span>
         <div>
           <p class="md__source-name" dir="auto">
             {{ material.title || "Untitled material" }}
@@ -53,7 +49,6 @@
       <!-- pinned generate -->
       <div class="md__pinned">
         <UiButton
-          pill
           block
           tone="primary"
           size="lg"
@@ -65,10 +60,14 @@
       </div>
     </template>
 
-    <div v-else class="md__empty">
-      <UiIcon name="i-lucide-file-x" class="h-9 w-9 text-content-disabled" />
-      <p>Material not found.</p>
-    </div>
+    <UiEmptyState
+      v-else
+      icon="i-lucide-file-x"
+      title="Material not found"
+      description="This material may have been removed or is not available offline."
+      action-label="Back to materials"
+      @action="navigateTo('/materials')"
+    />
 
     <!-- generate / result sheet -->
     <UiSheet
@@ -78,32 +77,19 @@
       <!-- config -->
       <template v-if="phase === 'config'">
         <div class="gen">
-          <div class="gen__toggle">
-            <button
-              type="button"
-              :class="{ 'gen__toggle-btn--on': genType === 'flashcards' }"
-              class="gen__toggle-btn"
-              @click="genType = 'flashcards'"
-            >
-              Flashcards
-            </button>
-            <!-- design-allow: native type toggle -->
-            <button
-              type="button"
-              :class="{ 'gen__toggle-btn--on': genType === 'quiz' }"
-              class="gen__toggle-btn"
-              @click="genType = 'quiz'"
-            >
-              Quiz
-            </button>
-            <!-- design-allow: native type toggle -->
-          </div>
+          <UiSegmentedControl
+            v-model="genType"
+            label="Generation type"
+            full-width
+            :items="genTypeItems"
+          />
 
-          <label class="gen__label"
+          <UiLabel tag="label" for="generation-count" class="gen__label"
             >{{ maxItems }}
-            {{ genType === "quiz" ? "questions" : "cards" }}</label
+            {{ genType === "quiz" ? "questions" : "cards" }}</UiLabel
           >
           <input
+            id="generation-count"
             v-model.number="maxItems"
             type="range"
             min="4"
@@ -113,20 +99,14 @@
           />
           <!-- design-allow: native count slider -->
 
-          <label class="gen__label">Difficulty</label>
-          <div class="gen__seg">
-            <button
-              v-for="d in difficulties"
-              :key="d.depth"
-              type="button"
-              class="gen__seg-btn"
-              :class="{ 'gen__seg-btn--on': depth === d.depth }"
-              @click="depth = d.depth"
-            >
-              {{ d.label }}
-            </button>
-            <!-- design-allow: native difficulty segment -->
-          </div>
+          <UiLabel class="gen__label">Difficulty</UiLabel>
+          <UiSegmentedControl
+            v-model="depth"
+            label="Difficulty"
+            size="sm"
+            full-width
+            :items="difficultyItems"
+          />
 
           <div class="gen__quota" :class="{ 'gen__quota--warn': lowQuota }">
             <UiIcon name="i-lucide-info" class="h-4 w-4" />
@@ -164,7 +144,6 @@
       <template #footer>
         <div v-if="phase === 'config'">
           <UiButton
-            pill
             block
             tone="primary"
             size="lg"
@@ -180,7 +159,7 @@
           <UiButton variant="ghost" tone="neutral" @click="discard"
             >Discard</UiButton
           >
-          <UiButton pill block tone="primary" :loading="adding" @click="addAll"
+          <UiButton block tone="primary" :loading="adding" @click="addAll"
             >Add all to review</UiButton
           >
         </div>
@@ -192,7 +171,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue";
 import AiShimmer from "~/components/ui/AiShimmer.vue";
-import { tint } from "~/composables/useAccentColor";
+import AppPageHeader from "~/components/patterns/AppPageHeader.vue";
 import { useGenerateFromMaterial } from "~/features/materials/composables/useGenerateFromMaterial";
 import { useSubscriptionStore } from "~/composables/shared/useSubscription";
 import type { Material } from "~/shared/utils/material.contract";
@@ -216,11 +195,15 @@ const maxItems = ref(12);
 const depth = ref<"quick" | "balanced" | "deep">("balanced");
 const adding = ref(false);
 
-const difficulties = [
-  { depth: "quick" as const, label: "Recall" },
-  { depth: "balanced" as const, label: "Balanced" },
-  { depth: "deep" as const, label: "Exam" },
-];
+const genTypeItems = [
+  { value: "flashcards", label: "Flashcards" },
+  { value: "quiz", label: "Quiz" },
+] as const;
+const difficultyItems = [
+  { value: "quick", label: "Recall" },
+  { value: "balanced", label: "Balanced" },
+  { value: "deep", label: "Exam" },
+] as const;
 
 const remaining = computed(() => subscription.subscriptionInfo.value.remaining);
 const tier = computed(() => subscription.subscriptionInfo.value.tier);
@@ -247,13 +230,6 @@ const typeLabel = computed(() => {
   if (t.includes("pdf")) return "PDF";
   if (t.includes("image")) return "IMG";
   return "DOC";
-});
-const tileStyle = computed(() => {
-  const color =
-    typeLabel.value === "PDF"
-      ? "var(--color-error)"
-      : "var(--color-accent-blue)";
-  return { background: tint(color, 16), color };
 });
 const sourceMeta = computed(() => {
   const meta = material.value?.metadata as Record<string, unknown> | undefined;
@@ -323,10 +299,6 @@ function discard() {
   phase.value = "config";
 }
 
-function goBack() {
-  navigateTo("/materials");
-}
-
 async function loadCounts() {
   const res = await $api.materials.getGeneratedContent(materialId.value);
   if (res.success) counts.value = res.data;
@@ -355,21 +327,6 @@ onMounted(async () => {
   padding: var(--space-4) var(--space-4) calc(var(--space-8) + 64px);
   min-height: 100dvh;
 }
-.md__header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding-top: var(--space-2);
-}
-.md__back {
-  margin-left: calc(-1 * var(--space-2));
-}
-.md__title {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.6px;
-  color: var(--color-content-on-surface-strong);
-}
 .md__list {
   display: flex;
   flex-direction: column;
@@ -390,6 +347,8 @@ onMounted(async () => {
   font-weight: 800;
   letter-spacing: 0.5px;
   flex-shrink: 0;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
 }
 .md__source-name {
   font-size: 16px;
@@ -403,7 +362,7 @@ onMounted(async () => {
 }
 .md__preview {
   padding: var(--space-4);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-lg);
   background: var(--color-surface-subtle);
   border: 1px solid var(--color-secondary);
 }
@@ -442,10 +401,9 @@ onMounted(async () => {
   align-items: center;
   gap: 2px;
   padding: var(--space-4);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-lg);
   background: var(--ds-surface-card);
   border: 1px solid var(--color-secondary);
-  box-shadow: var(--shadow-card);
 }
 .md__stat-num {
   font-size: 24px;
@@ -465,7 +423,7 @@ onMounted(async () => {
   max-width: 480px;
   margin: 0 auto;
   padding: var(--space-3) var(--space-4) var(--space-4);
-  background: linear-gradient(to top, var(--color-background) 70%, transparent);
+  background: var(--color-background);
 }
 .md__empty {
   display: flex;
@@ -484,29 +442,6 @@ onMounted(async () => {
   gap: var(--space-2);
   padding-bottom: var(--space-2);
 }
-.gen__toggle {
-  display: flex;
-  gap: 0;
-  padding: 4px;
-  border-radius: var(--radius-xl);
-  background: var(--color-surface);
-  margin-bottom: var(--space-2);
-}
-.gen__toggle-btn {
-  flex: 1;
-  padding: 9px;
-  border-radius: var(--radius-lg);
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-content-on-surface);
-}
-.gen__toggle-btn--on {
-  font-weight: 700;
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  box-shadow: 0 2px 6px
-    color-mix(in srgb, var(--color-primary) 30%, transparent);
-}
 .gen__label {
   font-size: 12px;
   font-weight: 700;
@@ -515,28 +450,45 @@ onMounted(async () => {
   margin-top: var(--space-2);
 }
 .gen__slider {
+  height: var(--target-compact);
   width: 100%;
-  accent-color: var(--color-primary);
+  appearance: none;
+  background: transparent;
+  outline: none;
 }
-.gen__seg {
-  display: flex;
-  gap: var(--space-2);
-}
-.gen__seg-btn {
-  flex: 1;
-  padding: 9px;
+.gen__slider::-webkit-slider-runnable-track {
+  height: 4px;
   border-radius: var(--radius-full);
-  font-size: 12px;
-  font-weight: 600;
-  background: var(--color-background);
-  border: 1px solid var(--color-secondary);
-  color: var(--color-content-on-surface);
+  background: var(--color-secondary);
 }
-.gen__seg-btn--on {
-  font-weight: 700;
-  background: var(--color-primary-50);
-  color: var(--color-primary);
-  border-color: var(--color-primary);
+.gen__slider::-webkit-slider-thumb {
+  width: 18px;
+  height: 18px;
+  margin-top: -7px;
+  appearance: none;
+  border: 2px solid var(--color-background);
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+}
+.gen__slider::-moz-range-track {
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--color-secondary);
+}
+.gen__slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-background);
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+}
+.gen__slider:focus-visible {
+  outline: 2px solid var(--ds-focus-outline-color);
+  outline-offset: 3px;
+}
+.gen__slider:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 .gen__quota {
   display: flex;
@@ -544,7 +496,7 @@ onMounted(async () => {
   gap: 8px;
   margin-top: var(--space-4);
   padding: var(--space-3);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   background: var(--color-surface-subtle);
   color: var(--color-content-secondary);
   font-size: 12.5px;
@@ -581,7 +533,7 @@ onMounted(async () => {
   display: flex;
   gap: var(--space-3);
   padding: var(--space-4);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-lg);
   background: var(--color-surface-subtle);
   border: 1px solid var(--color-secondary);
 }

@@ -3,8 +3,8 @@
     id="settings"
     title="Account"
     :subtitle="accountSubtitle"
-    :back-to="backTo"
-    :back-label="`Back to ${appContext === 'daily' ? 'Daily' : appContext === 'learning' ? 'Learning' : 'apps'}`"
+    :back-to="returnTo"
+    :back-label="`Back to ${appLabel}`"
   >
     <template #action>
       <UiPill
@@ -62,7 +62,6 @@
     </nav>
 
     <UiButton
-      pill
       block
       tone="error"
       variant="soft"
@@ -78,6 +77,7 @@
 
 <script setup lang="ts">
 import { useOfflineLogout } from "~/composables/offline/useOfflineLogout";
+import { useAccountContext } from "~/composables/account/useAccountContext";
 import { computed, onMounted, ref } from "vue";
 import type { UserProfile } from "@@/shared/utils/user.contract";
 import type { SubscriptionInfo } from "@shared/utils/llm-generate.contract";
@@ -89,7 +89,7 @@ type ProfileWithSubscription = UserProfile & {
 };
 
 const { data: authData, signOut } = useAuth();
-const route = useRoute();
+const { appContext, appLabel, returnTo, withContext } = useAccountContext();
 const clearOfflineAccount = useOfflineLogout();
 const creditsStore = useCreditsStore();
 const subscriptionStore = useSubscriptionStore();
@@ -116,20 +116,6 @@ const initial = computed(() => (name.value.trim()[0] || "U").toUpperCase());
 const balance = computed(() => creditsStore.balance ?? 0);
 const subscriptionInfo = computed(
   () => subscriptionStore.subscriptionInfo.value,
-);
-const appContext = computed(() =>
-  route.query.app === "daily" || route.query.app === "learning"
-    ? route.query.app
-    : null,
-);
-const backTo = computed(() =>
-  typeof route.query.returnTo === "string"
-    ? route.query.returnTo
-    : appContext.value === "daily"
-      ? "/day"
-      : appContext.value === "learning"
-        ? "/learn"
-        : "/",
 );
 const accountSubtitle = computed(() =>
   appContext.value === "daily"
@@ -166,7 +152,10 @@ const accountItems = computed(() =>
     },
     {
       title: "Reminders",
-      description: "Browser delivery and study notification timing",
+      description:
+        appContext.value === "daily"
+          ? "Browser delivery and shared notification settings"
+          : "Browser delivery and study notification timing",
       trailing:
         unreadCount.value > 0 ? `${unreadCount.value} unread` : "Settings",
       icon: "i-lucide-bell",
@@ -217,12 +206,7 @@ function capitalize(value: string) {
 }
 
 function openAccountSection(path: string) {
-  navigateTo({
-    path,
-    query: appContext.value
-      ? { app: appContext.value, returnTo: backTo.value }
-      : undefined,
-  });
+  navigateTo(withContext(path));
 }
 
 async function logout() {
@@ -263,9 +247,8 @@ onMounted(async () => {
   gap: var(--space-3);
   padding: var(--space-4);
   border: 1px solid var(--color-secondary);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-lg);
   background: var(--ds-surface-card);
-  box-shadow: var(--shadow-card);
 }
 
 .account-hub__avatar {
@@ -274,8 +257,8 @@ onMounted(async () => {
   width: 52px;
   height: 52px;
   border-radius: var(--radius-full);
-  background: var(--ds-gradient-fab);
-  color: var(--color-on-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
   font-size: 18px;
   font-weight: 800;
   overflow: hidden;
@@ -312,10 +295,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  border-radius: var(--radius-2xl);
-  background: var(--color-surface);
-  box-shadow: var(--shadow-card);
-  padding: var(--space-2);
+  border-radius: var(--radius-lg);
 }
 
 .account-hub__logout {

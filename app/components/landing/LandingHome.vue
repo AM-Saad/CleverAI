@@ -112,7 +112,7 @@
             required.
           </p>
           <div class="flex justify-center pt-8">
-            <ui-button size="xl"
+            <ui-button size="lg"
               class="group px-8 py-4 relative overflow-hidden transition-all hover:scale-105 hover:shadow-[var(--shadow-card-hover)] hover:shadow-primary/20">
               <router-link to="/auth/signup" class="flex items-center gap-3 text-lg">
                 Start Your First Loop

@@ -230,3 +230,47 @@ export async function autoResolveEquivalentNoteConflicts(
     });
   }
 }
+
+export interface DailyNoteConflict {
+  mutationId: string;
+  localContent: unknown;
+  serverContent: unknown;
+  serverVersion: number;
+}
+
+/**
+ * A dailyNote's local snapshot isn't stored on the conflict record itself
+ * (only `serverSnapshot` is) — it's recovered by joining against the
+ * matching `status: "conflict"` mutation's payload, same join
+ * `autoResolveEquivalentNoteConflicts` already performs above.
+ */
+export async function getDailyNoteConflict(
+  accountId: string,
+  dateKey: string,
+): Promise<DailyNoteConflict | null> {
+  const snapshot = await getDailyLocalSnapshot(accountId);
+  const noteId =
+    snapshot.notes.find((note) => note.dateKey === dateKey)?.id ??
+    `daily-note:${accountId}:${dateKey}`;
+  const conflicts = await listOfflineConflicts(accountId);
+  const conflict = conflicts.find(
+    (row) => row.entity === "dailyNote" && row.entityId === noteId,
+  );
+  if (!conflict) return null;
+  const mutations = await listOfflineMutations(accountId);
+  const mutation = mutations.find(
+    (row) =>
+      row.entity === "dailyNote" &&
+      row.entityId === noteId &&
+      row.status === "conflict",
+  );
+  return {
+    mutationId: conflict.mutationId,
+    localContent: (mutation?.payload as Record<string, unknown> | undefined)
+      ?.content,
+    serverContent: (
+      conflict.serverSnapshot as Record<string, unknown> | null | undefined
+    )?.content,
+    serverVersion: conflict.serverVersion,
+  };
+}

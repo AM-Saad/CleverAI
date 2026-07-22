@@ -20,20 +20,11 @@ interface Props {
   /**
    * Font weight
    */
-  weight?: "light" | "normal" | "medium" | "semibold" | "bold";
+  weight?: "medium" | "semibold";
   /**
    * Text color variant
    */
-  color?:
-    | "primary"
-    | "content-on-surface"
-    | "content-on-surface-strong"
-    | "content-on-background"
-    | "content-secondary"
-    | "white"
-    | "danger"
-    | "success"
-    | "disabled";
+  color?: "content-on-surface";
 
   /**
    * Center alignment
@@ -58,22 +49,11 @@ const label = tv({
       lg: "text-base",
     },
     weight: {
-      light: "font-light",
-      normal: "font-normal",
       medium: "font-medium",
       semibold: "font-semibold",
-      bold: "font-bold",
     },
     color: {
-      primary: "text-primary",
       "content-on-surface": "text-content-on-surface",
-      "content-on-surface-strong": "text-content-on-surface-strong",
-      "content-on-background": "text-content-on-background",
-      "content-secondary": "text-content-secondary",
-      white: "text-white",
-      danger: "text-error-text",
-      success: "text-success-text",
-      disabled: "text-content-disabled",
     },
   },
 });
@@ -86,6 +66,6 @@ const ui = computed(() =>
 <style scoped>
 .ui-label {
   margin: 0;
-  line-height: var(--line-height-normal);
+  line-height: var(--leading-normal);
 }
 </style>

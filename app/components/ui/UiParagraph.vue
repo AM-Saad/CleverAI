@@ -23,17 +23,15 @@ interface Props {
   color?:
     | "primary"
     | "content-on-surface"
-    | "content-on-surface-strong"
     | "content-on-background"
     | "content-secondary"
     | "disabled"
-    | "white"
-    | "danger"
+    | "error"
     | "success";
   /**
    * Font weight
    */
-  weight?: "light" | "normal" | "medium" | "semibold" | "bold";
+  weight?: "normal";
   /**
    * Center alignment
    */
@@ -63,22 +61,16 @@ const paragraph = tv({
       lg: "text-lg leading-relaxed",
     },
     weight: {
-      light: "font-light",
       normal: "font-normal",
-      medium: "font-medium",
-      semibold: "font-semibold",
-      bold: "font-bold",
     },
     color: {
       primary: "text-primary",
       "content-on-surface": "text-content-on-surface",
-      "content-on-surface-strong": "text-content-on-surface-strong",
       "content-on-background": "text-content-on-background",
       "content-secondary": "text-content-secondary",
-      white: "text-white",
-      danger: "text-error-text",
-      success: "text-success-text",
+      error: "text-error-text",
       disabled: "text-content-disabled",
+      success: "text-success-text",
     },
   },
 });
@@ -95,6 +87,6 @@ const ui = computed(() =>
 
 <style scoped>
 .ui-paragraph {
-  line-height: var(--line-height-normal);
+  line-height: var(--leading-normal);
 }
 </style>

@@ -2,11 +2,11 @@
   <nav class="ds-tabbar" aria-label="Primary">
     <NuxtLink
       v-for="item in items"
-      :key="item.to"
+      :key="item.label"
       :to="item.to"
       class="ds-tab"
-      :class="{ 'ds-tab--active': isActive(item.to) }"
-      :aria-current="isActive(item.to) ? 'page' : undefined"
+      :class="{ 'ds-tab--active': isActive(item.path) }"
+      :aria-current="isActive(item.path) ? 'page' : undefined"
     >
       <UiIcon :name="item.icon" class="ds-tab__icon" />
       <span class="ds-tab__label">{{ item.label }}</span>
@@ -18,12 +18,52 @@
 import { useRoute } from "vue-router";
 
 const route = useRoute();
-const items = [
-  { to: "/", label: "Apps", icon: "i-lucide-layout-grid" },
-  { to: "/day", label: "Daily", icon: "i-lucide-calendar-check-2" },
-  { to: "/learn", label: "Learning", icon: "i-lucide-graduation-cap" },
-  { to: "/account", label: "Account", icon: "i-lucide-user-round" },
-];
+const items = computed(() => {
+  const context = route.path.startsWith("/day")
+    ? "daily"
+    : ["/learn", "/language", "/materials", "/review", "/workspaces"].some(
+          (path) => route.path === path || route.path.startsWith(`${path}/`),
+        )
+      ? "learning"
+      : route.query.app === "daily" || route.query.app === "learning"
+        ? route.query.app
+        : null;
+  const accountTo = context
+    ? {
+        path: "/account",
+        query: {
+          app: context,
+          returnTo:
+            route.path.startsWith("/account") &&
+            typeof route.query.returnTo === "string"
+              ? route.query.returnTo
+              : route.fullPath,
+        },
+      }
+    : "/account";
+
+  return [
+    { path: "/", to: "/", label: "Apps", icon: "i-lucide-layout-grid" },
+    {
+      path: "/day",
+      to: "/day",
+      label: "Daily",
+      icon: "i-lucide-calendar-check-2",
+    },
+    {
+      path: "/learn",
+      to: "/learn",
+      label: "Learning",
+      icon: "i-lucide-graduation-cap",
+    },
+    {
+      path: "/account",
+      to: accountTo,
+      label: "Account",
+      icon: "i-lucide-user-round",
+    },
+  ];
+});
 
 function isActive(to: string) {
   if (to === "/") return route.path === "/";

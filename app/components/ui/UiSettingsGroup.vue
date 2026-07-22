@@ -58,13 +58,13 @@ const group = tv({
     title:
       "text-[11px] font-bold uppercase tracking-[1.5px] text-content-secondary",
     description: "text-xs text-content-secondary",
-    body: "ui-settings-group__body overflow-hidden rounded-[var(--radius-2xl)] border",
+    body: "ui-settings-group__body overflow-hidden rounded-[var(--component-card-radius)] border",
     footer: "mt-3",
   },
   variants: {
     variant: {
       card: {
-        body: "border-secondary bg-[var(--ds-surface-card)] shadow-[var(--shadow-card)]",
+        body: "border-secondary bg-[var(--ds-surface-card)] shadow-none",
       },
       soft: {
         body: "border-secondary bg-surface-subtle",

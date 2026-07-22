@@ -47,10 +47,13 @@
     "typecheck": "nuxt typecheck",
     "generate:api": "tsx scripts/codegen/api-client-generator.ts",
     "design:tokens": "node scripts/generate-design-tokens.cjs",
+    "design:tokens:check": "node scripts/generate-design-tokens.cjs --check && node scripts/check-design-token-contract.cjs",
     "design:check": "node scripts/check-design-tokens.cjs",
     "design:boundaries": "node scripts/check-component-boundaries.cjs",
     "design:states": "node scripts/check-interactive-states.cjs",
     "design:primitives": "node scripts/check-primitive-state-coverage.cjs",
+    "design:primitives:unused": "node scripts/check-unused-primitives.cjs",
+    "design:api": "node scripts/check-component-api-contracts.cjs",
     "design:audit": "node scripts/audit-design-usage.cjs",
     "design:components": "node scripts/audit-components.cjs",
     "design:contrast": "node scripts/check-contrast.cjs"

@@ -37,7 +37,7 @@ const {
 
 const panel = tv({
   slots: {
-    root: "flex flex-col overflow-hidden rounded-[var(--radius-xl)] border",
+    root: "flex flex-col overflow-hidden rounded-[var(--component-card-radius)] border",
     header:
       "flex min-w-0 items-center justify-between gap-3 border-b border-secondary text-sm font-semibold text-content-on-surface",
     content: "min-h-0 min-w-0 flex-1",

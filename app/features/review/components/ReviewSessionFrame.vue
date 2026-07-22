@@ -33,20 +33,22 @@
     </header>
 
     <div v-if="loading" class="rev__center">
-      <UiSkeleton class="h-[340px] w-full rounded-[var(--radius-2xl)]" />
+      <UiSkeleton
+        class="h-[340px] w-full rounded-[var(--component-card-radius)]"
+      />
     </div>
 
     <div v-else-if="error" class="rev__center rev__msg">
       <UiIcon name="i-lucide-triangle-alert" class="h-8 w-8 text-error-text" />
       <p>{{ error }}</p>
-      <UiButton pill @click="emit('retry')">Try again</UiButton>
+      <UiButton @click="emit('retry')">Try again</UiButton>
     </div>
 
     <div v-else-if="!hasCard" class="rev__center rev__msg">
       <UiIcon name="i-lucide-party-popper" class="h-9 w-9 text-success-text" />
       <p class="rev__msg-title">{{ emptyTitle }}</p>
       <p class="rev__msg-sub">{{ emptySubtitle }}</p>
-      <UiButton pill tone="primary" @click="emit('close')">
+      <UiButton tone="primary" @click="emit('close')">
         {{ emptyActionLabel }}
       </UiButton>
     </div>

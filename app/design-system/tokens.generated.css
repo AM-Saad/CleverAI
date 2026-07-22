@@ -2,45 +2,6 @@
 
 @theme static {
   --font-sans: "Saira", sans-serif; /* Primary UI font */
-  --color-primary: #384998; /* Interactive brand actions */
-  --color-on-primary: #ffffff; /* Text and icons on primary fills */
-  --color-success: #10b981; /* Positive and completed states */
-  --color-warning: #f59e0b; /* Caution and due-soon states */
-  --color-error: #ef4444; /* Destructive and failed states */
-  --color-info: #00c7e4; /* Informational states */
-  --color-success-text: #047857; /* AA text/icon success on light surfaces */
-  --color-warning-text: #92400e; /* AA text/icon warning on light surfaces */
-  --color-error-text: #b91c1c; /* AA text/icon error on light surfaces */
-  --color-info-text: #0369a1; /* AA text/icon info on light surfaces */
-  --color-secondary: #e7e9ec; /* Borders, dividers, neutral chips */
-  --color-background: #fafafa; /* Page background */
-  --color-surface: #f0f0f2; /* Raised surfaces */
-  --color-surface-subtle: #f4f5f7; /* Subtle rows and hover surfaces */
-  --color-surface-strong: #dddfe5; /* Selected and pressed surfaces */
-  --color-content-on-background: #333333; /* Text on page background */
-  --color-content-on-surface: #575252; /* Text on card/panel surfaces */
-  --color-content-on-surface-strong: #333333; /* Strong text on surfaces */
-  --color-content-secondary: #606771; /* Metadata and secondary text (AA on surface) */
-  --color-content-disabled: #6b7280; /* Disabled and placeholder text */
-  --color-white: #ffffff; /* Compatibility white token */
-  --color-dark: #1f2937; /* Compatibility dark text token */
-  --color-border: var(--color-secondary); /* Default border */
-  --color-primary-50: color-mix(in srgb, var(--color-primary) 10%, transparent); /* Primary subtle fill */
-  --color-primary-hover: color-mix(in srgb, black 10%, var(--color-primary)); /* Primary hover */
-  --color-primary-active: color-mix(in srgb, black 18%, var(--color-primary)); /* Primary pressed */
-  --color-on-success: #043a28; /* Text on success fill (dark — emerald+white fails AA) */
-  --color-on-warning: #1f2937; /* Text on warning fill (amber needs dark text) */
-  --color-on-error: #ffffff; /* Text on error fill */
-  --color-on-info: #06323a; /* Text on info fill (cyan needs dark text) */
-  --color-border-strong: #c7cbd2; /* Emphasized borders / dividers */
-  --color-accent-blue: #3b82f6; /* Accent blue — gradients, note swatch */
-  --color-accent-indigo: #6366f1; /* Accent indigo — gradients, highlights */
-  --color-accent-purple: #8b5cf6; /* Accent purple — gradients, note swatch */
-  --color-accent-pink: #ec4899; /* Accent pink — gradients, note swatch */
-  --color-accent-rose: #f43f5e; /* Accent rose — gradients */
-  --color-accent-teal: #06b6d4; /* Accent teal — gradients, note swatch */
-  --color-accent-cyan: #00e2ff; /* Accent cyan — gradients, glow */
-  --color-accent-orange: #f97316; /* Accent orange — gradients, note swatch */
   --radius-sm: 0.125rem; /* 2px */
   --radius-md: 0.25rem; /* 4px */
   --radius-lg: 0.375rem; /* 6px */
@@ -51,23 +12,16 @@
   --tracking-tight: -0.025em;
   --tracking-normal: 0em;
   --tracking-wide: 0.025em;
-  --font-size-display: clamp(2rem, 4vw, 3.5rem); /* Hero/display headings */
-  --font-size-page-title: clamp(1.75rem, 2.5vw, 2.5rem); /* Page-level h1 */
-  --font-size-section-title: 1.25rem; /* Section h2/h3 */
-  --font-size-body: 1rem; /* Default body copy */
   --font-size-caption: 0.8125rem; /* Metadata and captions */
   --leading-tight: 1.25;
   --leading-snug: 1.375;
   --leading-normal: 1.5;
   --leading-relaxed: 1.625;
-  --line-height-tight: var(--leading-tight); /* Compatibility typography alias */
-  --line-height-normal: var(--leading-normal); /* Compatibility typography alias */
-  --line-height-relaxed: var(--leading-relaxed); /* Compatibility typography alias */
   --shadow-card: 0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04); /* Resting card elevation */
   --shadow-card-hover: 0 8px 30px rgb(0 0 0 / 0.08);
   --shadow-dropdown: 0 4px 16px rgb(0 0 0 / 0.12);
   --shadow-modal: 0 20px 60px rgb(0 0 0 / 0.15);
-  --shadow-primary-glow: 0 4px 12px rgb(56 73 152 / 0.25);
+  --shadow-primary-glow: 0 4px 12px color-mix(in srgb, var(--color-primary) 25%, transparent);
   --shadow-sheet: 0 -10px 40px rgb(0 0 0 / 0.2); /* Bottom-sheet elevation */
   --duration-fast: 120ms; /* Small state changes */
   --duration-normal: 200ms; /* Default interaction motion */
@@ -75,17 +29,15 @@
   --duration-spring: 420ms; /* Springy size/position changes */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1); /* Default easing */
   --ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2); /* Small emphasized entrance */
-  --ease-spring: cubic-bezier(0.32, 1.4, 0.45, 1); /* Gentle overshoot for playful grow/shrink */
-  --target-min: 1.5rem; /* WCAG 2.2 minimum target size (24px) */
-  --target-compact: 2rem; /* Compact desktop controls (32px) */
-  --target-default: 2.5rem; /* Default controls (40px) */
-  --target-touch: 2.75rem; /* Preferred touch controls (44px) */
-  --z-header: 20; /* Global header */
-  --z-drawer: 40; /* Drawers and slideovers */
-  --z-modal: 50; /* Modal dialogs */
-  --z-popover: 60; /* Menus and popovers */
-  --z-toast: 70; /* Toasts and app notifications */
-  --z-tooltip: 80; /* Tooltips and skip links */
+  --ease-spring: cubic-bezier(0.32, 1.4, 0.45, 1); /* Gentle overshoot */
+  --target-min: 1.5rem; /* WCAG 2.2 minimum target size */
+  --target-compact: 2rem; /* Compact controls */
+  --target-touch: 2.75rem; /* Preferred touch controls */
+  --z-drawer: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-toast: 70;
+  --z-tooltip: 80;
   --space-1: 0.25rem; /* 4px */
   --space-2: 0.5rem; /* 8px */
   --space-3: 0.75rem; /* 12px */
@@ -94,6 +46,43 @@
   --space-8: 2rem; /* 32px */
   --space-12: 3rem; /* 48px */
   --space-16: 4rem; /* 64px */
+  --color-primary: #051a39; /* Interactive brand actions */
+  --color-on-primary: #ffffff; /* Text and icons on primary fills */
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+  --color-info: #00c7e4;
+  --color-success-text: #047857;
+  --color-warning-text: #92400e;
+  --color-error-text: #b91c1c;
+  --color-info-text: #0369a1;
+  --color-secondary: #e7e9ec;
+  --color-background: #fafafa;
+  --color-surface: #f0f0f2;
+  --color-surface-subtle: #f4f5f7;
+  --color-surface-strong: #dddfe5;
+  --color-content-on-background: #333333;
+  --color-content-on-surface: #575252;
+  --color-content-on-surface-strong: #333333;
+  --color-content-secondary: #606771;
+  --color-content-disabled: #6b7280;
+  --color-white: #ffffff; /* Compatibility white token */
+  --color-dark: #1f2937; /* Compatibility dark text token */
+  --color-border: var(--color-secondary);
+  --color-primary-soft: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  --color-primary-hover: color-mix(in srgb, black 10%, var(--color-primary));
+  --color-primary-active: color-mix(in srgb, black 18%, var(--color-primary));
+  --color-on-success: #043a28;
+  --color-on-error: #ffffff;
+  --color-border-strong: #c7cbd2;
+  --color-accent-blue: #3b82f6;
+  --color-accent-indigo: #6366f1;
+  --color-accent-purple: #8b5cf6;
+  --color-accent-pink: #ec4899;
+  --color-accent-rose: #f43f5e;
+  --color-accent-teal: #06b6d4;
+  --color-accent-cyan: #00e2ff;
+  --color-accent-orange: #f97316;
 }
 
 :root {
@@ -106,16 +95,14 @@
   --ui-text-muted: var(--color-content-secondary);
   --ui-border: var(--color-secondary);
   --ds-brand-gradient: linear-gradient(90deg, rgb(49 165 217) 0%, rgb(248 54 145) 46%, rgb(255 184 0) 100%);
-  --ds-focus-outline-color: var(--color-primary); /* Opaque keyboard focus indicator (≥3:1 against app surfaces) */
-  --ds-focus-ring: inset 0 0 0 2px var(--ds-focus-outline-color); /* Inset keyboard focus ring (box-shadow) */
+  --ds-focus-outline-color: var(--color-primary);
   --ds-backdrop-strong: rgb(2 6 23 / 0.8);
   --ds-backdrop-dim: rgb(0 0 0 / 0.4);
-  --ds-sheet-scrim: rgb(2 6 23 / 0.45); /* Bottom-sheet scrim overlay */
-  --ds-surface-card: var(--color-white); /* Mobile card surface — white on the light page; flips to dark surface under .dark */
-  --ds-gradient-fab: linear-gradient(135deg, #384998, #5566c4); /* Capture/create FAB fill */
-  --ds-gradient-due: linear-gradient(150deg, #384998, #2c3a7d); /* Due-now hero card */
-  --ds-gradient-summary: linear-gradient(165deg, #384998, #222a55); /* Review session summary backdrop */
-  --component-card-radius: var(--radius-2xl);
+  --ds-sheet-scrim: rgb(2 6 23 / 0.45);
+  --ds-surface-card: var(--color-white);
+  --ds-gradient-fab: linear-gradient(135deg, #051a39, #173b6c);
+  --ds-gradient-due: linear-gradient(150deg, #051a39, #173b6c);
+  --component-card-radius: var(--radius-lg);
   --component-card-padding-xs: var(--space-1);
   --component-card-padding-sm: var(--space-2);
   --component-card-padding-md: var(--space-3);
@@ -123,20 +110,19 @@
   --component-card-padding-xl: calc(var(--space-4) + var(--space-1));
   --component-toast-shadow: var(--shadow-modal);
   --component-drawer-shadow: var(--shadow-dropdown);
-  --component-dialog-shadow: var(--shadow-modal);
-  --syntax-bg: #1e2030; /* Code block background */
-  --syntax-bg-inline: #1f1e24; /* Inline code background */
-  --syntax-text: #c0c8e0; /* Default code text */
-  --syntax-muted: #8b92a8; /* Line numbers, gutters */
-  --syntax-comment: #636d83; /* Comments and quotes */
-  --syntax-keyword: #c792ea; /* Keywords, tags, attributes */
-  --syntax-string: #c3e88d; /* Strings, additions */
-  --syntax-number: #f78c6c; /* Numbers, literals, constants */
-  --syntax-function: #82aaff; /* Titles, functions, classes */
-  --syntax-type: #ffcb6b; /* Types, template tags */
-  --syntax-tag: #89ddff; /* Tags, symbols, links, regexp */
-  --syntax-deletion: #ff5370; /* Deletions, errors */
-  --syntax-invalid: #f07178; /* Invalid / selection accent */
+  --syntax-bg: #1e2030;
+  --syntax-bg-inline: #1f1e24;
+  --syntax-text: #c0c8e0;
+  --syntax-muted: #8b92a8;
+  --syntax-comment: #636d83;
+  --syntax-keyword: #c792ea;
+  --syntax-string: #c3e88d;
+  --syntax-number: #f78c6c;
+  --syntax-function: #82aaff;
+  --syntax-type: #ffcb6b;
+  --syntax-tag: #89ddff;
+  --syntax-deletion: #ff5370;
+  --syntax-invalid: #f07178;
 }
 
 /* Dark theme: same token names, overridden when an ancestor carries .dark
@@ -144,24 +130,24 @@
    text-content-*, ...) flip automatically. */
 html.dark,
 .dark {
-  --color-background: #0f1216; /* Dark page background */
-  --color-surface: #171b21; /* Dark raised surface */
-  --color-surface-subtle: #1e232b; /* Dark subtle/hover surface */
-  --color-surface-strong: #2b313b; /* Dark selected/pressed surface */
-  --color-content-on-background: #e9ebef; /* Text on dark background */
-  --color-content-on-surface: #c2c7d0; /* Text on dark surface */
-  --color-content-on-surface-strong: #f3f5f8; /* Strong text on dark surface */
-  --color-content-secondary: #99a1ad; /* Dark metadata text */
-  --color-content-disabled: #8b95a1; /* Dark disabled text */
-  --color-secondary: #2b313b; /* Dark borders/dividers */
-  --color-border-strong: #3a4250; /* Dark emphasized borders */
-  --color-primary: #7c8cff; /* Lighter brand action for dark bg */
-  --color-primary-hover: color-mix(in srgb, white 10%, var(--color-primary)); /* Dark primary hover (lighten) */
-  --color-primary-active: color-mix(in srgb, white 18%, var(--color-primary)); /* Dark primary pressed (lighten) */
-  --color-on-primary: #0f1216; /* Dark text on the lighter primary */
-  --color-success-text: #34d399; /* AA success text/icon on dark surfaces */
-  --color-warning-text: #fbbf24; /* AA warning text/icon on dark surfaces */
-  --color-error-text: #f87171; /* AA error text/icon on dark surfaces */
-  --color-info-text: #38bdf8; /* AA info text/icon on dark surfaces */
-  --ds-surface-card: var(--color-surface); /* Card surface flips to dark raised surface */
+  --color-background: #0f1216;
+  --color-surface: #171b21;
+  --color-surface-subtle: #1e232b;
+  --color-surface-strong: #2b313b;
+  --color-content-on-background: #e9ebef;
+  --color-content-on-surface: #c2c7d0;
+  --color-content-on-surface-strong: #f3f5f8;
+  --color-content-secondary: #99a1ad;
+  --color-content-disabled: #8b95a1;
+  --color-secondary: #2b313b;
+  --color-border-strong: #3a4250;
+  --color-primary: #e8e9f2; /* Accepted dark primary */
+  --color-primary-hover: color-mix(in srgb, white 10%, var(--color-primary));
+  --color-primary-active: color-mix(in srgb, white 18%, var(--color-primary));
+  --color-on-primary: #0f1216;
+  --color-success-text: #34d399;
+  --color-warning-text: #fbbf24;
+  --color-error-text: #f87171;
+  --color-info-text: #38bdf8;
+  --ds-surface-card: var(--color-surface);
 }

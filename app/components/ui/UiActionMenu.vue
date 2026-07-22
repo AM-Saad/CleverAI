@@ -23,7 +23,7 @@
  * UiActionMenu — canonical compact actions menu. Feature code should use this
  * instead of reaching for Nuxt UI `UDropdownMenu` directly.
  */
-import type { Size } from "./variants";
+import type { ControlSize } from "./variants";
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 
 type ActionMenuSelectEvent = { preventDefault?: () => void };
@@ -45,7 +45,7 @@ const props = withDefaults(
     modal?: boolean;
     icon?: string;
     label?: string;
-    size?: Size;
+    size?: ControlSize;
     disabled?: boolean;
   }>(),
   {

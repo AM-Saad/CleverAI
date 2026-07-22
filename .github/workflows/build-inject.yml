@@ -2,9 +2,9 @@ name: Build and Inject Service Worker
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   design-check:
@@ -16,17 +16,14 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'yarn'
+          node-version: "18"
+          cache: "yarn"
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
 
-      - name: Regenerate design tokens (must match committed output)
-        run: |
-          yarn design:tokens
-          git diff --exit-code app/design-system/tokens.generated.css app/design-system/tokens.generated.ts \
-            || (echo "::error::tokens.generated.* is stale — run 'yarn design:tokens' and commit." && exit 1)
+      - name: Verify generated tokens and token contracts
+        run: yarn design:tokens:check
 
       - name: Enforce design-system tokens
         run: yarn design:check
@@ -37,11 +34,20 @@ jobs:
       - name: Enforce primitive state coverage
         run: yarn design:primitives
 
+      - name: Reject unused design-system primitives
+        run: yarn design:primitives:unused
+
+      - name: Reject removed component APIs
+        run: yarn design:api
+
       - name: Enforce component boundaries
         run: yarn design:boundaries
 
       - name: Enforce WCAG AA contrast
         run: yarn design:contrast
+
+      - name: Enforce application architecture boundaries
+        run: yarn arch:check
 
   build:
     runs-on: ubuntu-latest
@@ -52,8 +58,8 @@ jobs:
       - name: Use Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'yarn'
+          node-version: "18"
+          cache: "yarn"
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile

@@ -39,7 +39,13 @@
  * - neither renders a native button, preserving Enter/Space keyboard behavior.
  */
 import { computed, resolveComponent } from "vue";
-import { disabledState, focusRing, interactiveTransition, pressedScale, tv } from "./variants";
+import {
+  disabledState,
+  focusRing,
+  interactiveTransition,
+  pressedScale,
+  tv,
+} from "./variants";
 
 const emit = defineEmits<{
   click: [event: MouseEvent];
@@ -55,7 +61,7 @@ const props = withDefaults(
     selected?: boolean;
     selectable?: boolean;
     disabled?: boolean;
-    variant?: "default" | "outline" | "ghost" | "surface";
+    variant?: "default" | "outline";
     size?: "xs" | "sm" | "md" | "lg";
     className?: string;
     contentClass?: string;
@@ -101,35 +107,39 @@ const interactiveCard = tv({
   variants: {
     variant: {
       default: {
-        root:
-          "border-secondary bg-surface hover:border-border-strong hover:shadow-[var(--shadow-card-hover)]",
+        root: "border-secondary bg-surface hover:border-border-strong hover:shadow-[var(--shadow-card-hover)]",
         header: "border-secondary",
       },
       outline: {
-        root:
-          "border-secondary bg-transparent hover:bg-surface-subtle hover:border-border-strong",
+        root: "border-secondary bg-transparent hover:bg-surface-subtle hover:border-border-strong",
         header: "border-secondary",
-      },
-      ghost: {
-        root: "border-transparent bg-transparent hover:bg-surface-subtle",
-        header: "border-transparent",
-      },
-      surface: {
-        root:
-          "border-surface-strong bg-surface-subtle hover:border-border-strong",
-        header: "border-surface-strong",
       },
     },
     size: {
-      xs: { header: "p-2 text-xs", content: "p-2 text-sm", footer: "p-2 text-xs" },
-      sm: { header: "p-3 text-sm", content: "p-3 text-sm", footer: "p-3 text-xs" },
-      md: { header: "p-4 text-sm font-medium", content: "p-4", footer: "p-4 text-sm" },
-      lg: { header: "p-6 text-base font-medium", content: "p-6", footer: "p-6 text-sm" },
+      xs: {
+        header: "p-2 text-xs",
+        content: "p-2 text-sm",
+        footer: "p-2 text-xs",
+      },
+      sm: {
+        header: "p-3 text-sm",
+        content: "p-3 text-sm",
+        footer: "p-3 text-xs",
+      },
+      md: {
+        header: "p-4 text-sm font-medium",
+        content: "p-4",
+        footer: "p-4 text-sm",
+      },
+      lg: {
+        header: "p-6 text-base font-medium",
+        content: "p-6",
+        footer: "p-6 text-sm",
+      },
     },
     selected: {
       true: {
-        root:
-          "border-2 border-primary bg-primary/10 shadow-[var(--shadow-primary-glow)]",
+        root: "border-2 border-primary bg-primary/10 shadow-[var(--shadow-primary-glow)]",
       },
       false: {},
     },

@@ -96,7 +96,7 @@ onMounted(async () => {
   display: flex;
   min-height: calc(100dvh - 74px);
   flex-direction: column;
-  gap: var(--space-7);
+  gap: var(--space-6);
   padding: var(--space-6) var(--space-4);
 }
 
@@ -141,25 +141,21 @@ onMounted(async () => {
 .launcher-card {
   position: relative;
   display: grid;
-  min-height: 190px;
+  /* min-height: 190px; */
   grid-template-columns: auto 1fr auto;
   align-items: start;
   gap: var(--space-4);
   overflow: hidden;
-  padding: var(--space-5);
+  padding: var(--space-4);
   border: 1px solid var(--color-secondary);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: var(--shadow-card);
   color: var(--color-content-on-surface);
-  transition:
-    transform var(--duration-fast) var(--ease-standard),
-    box-shadow var(--duration-fast) var(--ease-standard);
+  transition: border-color var(--duration-fast) var(--ease-standard);
 }
 
 .launcher-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-primary);
 }
 
 .launcher-card__icon {
@@ -167,7 +163,7 @@ onMounted(async () => {
   width: 52px;
   height: 52px;
   place-items: center;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-lg);
   background: var(--color-primary-soft);
   color: var(--color-primary);
 }

@@ -28,7 +28,7 @@
       <!-- Action Buttons -->
       <div class="space-y-4">
         <!-- Retry Connection -->
-        <UiButton class="w-full font-semibold py-3 px-6 flex items-center justify-center" color="primary"
+        <UiButton class="w-full font-semibold py-3 px-6 flex items-center justify-center" tone="primary"
           :disabled="isChecking" @click="checkConnection">
           <svg v-if="isChecking" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
@@ -39,12 +39,12 @@
         </UiButton>
 
         <!-- Go to Home -->
-        <UiButton class="w-full font-semibold py-3 px-6" color="neutral" variant="solid" @click="goHome">
+        <UiButton class="w-full font-semibold py-3 px-6" tone="neutral" variant="solid" @click="goHome">
           Go to Homepage
         </UiButton>
 
         <!-- View Cached Content -->
-        <UiButton class="w-full font-semibold py-3 px-6" color="primary" variant="soft"
+        <UiButton class="w-full font-semibold py-3 px-6" tone="primary" variant="soft"
           @click="showCachedContent = !showCachedContent">
           {{ showCachedContent ? "Hide" : "View" }} Available Content
         </UiButton>

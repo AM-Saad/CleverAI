@@ -25,11 +25,11 @@ const {
 }>();
 
 const toolbar = tv({
-  base: "flex items-center border border-secondary bg-surface-subtle",
+  base: "flex items-center ",
   variants: {
     density: {
-      compact: "gap-1 rounded-[var(--radius-lg)] p-1",
-      comfortable: "gap-2 rounded-[var(--radius-xl)] p-2",
+      compact: "gap-1 rounded-[var(--radius-lg)] ",
+      comfortable: "gap-2 rounded-[var(--radius-xl)]",
     },
     wrap: {
       true: "flex-wrap",

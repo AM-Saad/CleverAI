@@ -60,7 +60,7 @@ const { handleSubmit, credentials, fieldTypes, error, success, loading } =
       </UiParagraph>
       <ui-button v-for="provider in mappedProviders" :key="provider?.id"
         class="border border-error justify-center" :disabled="loading"
-        variant="ghost" color="error" type="button" tabindex="5" @click="signIn(provider?.id)">
+        variant="ghost" tone="error" type="button" tabindex="5" @click="signIn(provider?.id)">
         Sign in with {{ provider?.name }}
       </ui-button>
     </div>

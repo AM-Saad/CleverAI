@@ -1,7 +1,7 @@
 <template>
   <Teleport to="body">
     <!-- use the modal component, pass in the prop -->
-    <shared-dialog-modal :show="showModal" title="Stay on Track with Your Learning" icon="bell"
+    <UiModal v-model:open="showModal" title="Stay on Track with Your Learning" icon="bell"
       description="Get timely reminders when your flashcards are ready for review">
 
       <template #body>
@@ -75,7 +75,7 @@
       <!-- Action Buttons -->
       <template #footer>
         <div class="space-y-3">
-          <UiButton :loading="isLoading" :disabled="permissionStatus === 'denied'" color="primary" size="lg" block
+          <UiButton :loading="isLoading" :disabled="permissionStatus === 'denied'" tone="primary" size="lg" block
             @click="handleEnableNotifications">
             <template v-if="isLoading">
               <UiIcon name="i-lucide-refresh-cw" class="w-4 h-4 animate-spin mr-2" />
@@ -87,7 +87,7 @@
             </template>
           </UiButton>
 
-          <UiButton color="neutral" variant="ghost" size="lg" block @click="handleMaybeLater">
+          <UiButton tone="neutral" variant="ghost" size="lg" block @click="handleMaybeLater">
             Maybe Later
           </UiButton>
 
@@ -110,7 +110,7 @@
           </div>
         </UiPanel>
       </template>
-    </shared-dialog-modal>
+    </UiModal>
   </Teleport>
 </template>
 

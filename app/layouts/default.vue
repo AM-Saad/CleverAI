@@ -2,16 +2,8 @@
   <div class="ds-shell">
     <a href="#main-content" class="ds-skip">Skip to main content</a>
 
-    <div
-      class="ds-shell__frame"
-      :class="{ 'ds-shell__frame--wide': isMarketingLanding }"
-    >
-      <main
-        id="main-content"
-        tabindex="-1"
-        class="ds-shell__main"
-        :class="{ 'ds-shell__main--tabbar': showChrome }"
-      >
+    <div class="ds-shell__frame" :class="{ 'ds-shell__frame--wide': isMarketingLanding }">
+      <main id="main-content" tabindex="-1" class="ds-shell__main" :class="{ 'ds-shell__main--tabbar': showChrome }">
         <ServiceWorkerUpdateNotification mode="banner" />
         <slot />
       </main>
@@ -21,9 +13,7 @@
       </template>
 
       <!-- Global quick-switch (opened from any scoped screen's workspace pill). -->
-      <WorkspaceSwitcherSheet
-        v-if="hasAppAccess && isLearningRoute && !isBareRoute"
-      />
+      <WorkspaceSwitcherSheet v-if="hasAppAccess && isLearningRoute && !isBareRoute" />
     </div>
   </div>
 </template>
@@ -79,9 +69,10 @@ const isMarketingLanding = computed(
 
 <style scoped>
 .ds-shell {
-  min-height: 100dvh;
+  height: calc(100svh - calc(74px + env(safe-area-inset-bottom)));
   background: var(--color-background);
   color: var(--color-content-on-background);
+  display: flex
 }
 
 /* Mobile-first column, centered on wider viewports so the PWA reads as a phone
@@ -90,8 +81,9 @@ const isMarketingLanding = computed(
   position: relative;
   margin: 0 auto;
   width: 100%;
-  max-width: 580px;
-  min-height: 100dvh;
+  max-width: 680px;
+  flex-grow: 1;
+  display: flex;
 }
 
 .ds-shell__frame--wide {
@@ -101,7 +93,8 @@ const isMarketingLanding = computed(
 .ds-shell__main {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  flex-grow: 1;
+  padding: var(--space-2);
 }
 
 .ds-shell__main--tabbar {

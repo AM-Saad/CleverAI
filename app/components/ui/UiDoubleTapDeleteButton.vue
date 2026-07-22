@@ -5,7 +5,6 @@
     :class="rootClass"
     :style="rootStyle"
     :tone="tone"
-    :color="color"
     :variant="variant"
     :size="size"
     :icon="effectiveIcon"
@@ -15,7 +14,6 @@
     :disabled="disabled"
     :block="block"
     :square="square"
-    :pill="pill"
     :aria-label="computedAriaLabel"
     :title="computedTitle"
     :data-confirm-state="isArmed ? 'armed' : 'idle'"
@@ -59,10 +57,8 @@
  * composes UiButton and follows the design-system button state conventions.
  */
 import { computed, useAttrs, type StyleValue } from "vue";
-import type { Size, Tone } from "./variants";
+import type { ActionTone, ControlSize } from "./variants";
 import { useDoubleTapConfirm } from "~/composables/shared/useDoubleTapConfirm";
-
-type LegacyTone = Tone | "secondary";
 
 defineOptions({ inheritAttrs: false });
 
@@ -78,10 +74,9 @@ const props = withDefaults(
     unstyled?: boolean;
     stopPropagation?: boolean;
     preventDefault?: boolean;
-    tone?: Tone;
-    color?: LegacyTone;
+    tone?: ActionTone;
     variant?: "solid" | "soft" | "ghost" | "link";
-    size?: Size;
+    size?: ControlSize;
     icon?: string;
     armedIcon?: string;
     leadingIcon?: string;
@@ -89,7 +84,6 @@ const props = withDefaults(
     trailingIcon?: string;
     block?: boolean;
     square?: boolean;
-    pill?: boolean;
     title?: string;
     ariaLabel?: string;
     hideLabel?: boolean;
@@ -106,7 +100,6 @@ const props = withDefaults(
     stopPropagation: false,
     preventDefault: false,
     tone: "error",
-    color: undefined,
     variant: "ghost",
     size: "sm",
     icon: undefined,
@@ -116,7 +109,6 @@ const props = withDefaults(
     trailingIcon: undefined,
     block: false,
     square: false,
-    pill: false,
     title: undefined,
     ariaLabel: undefined,
     hideLabel: false,

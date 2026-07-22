@@ -13,25 +13,21 @@ interface Props {
   /**
    * Title size variant
    */
-  size?: "xs" | "sm" | "base" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl";
+  size?: "sm" | "base" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl";
   /**
    * Font weight
    */
-  weight?: "light" | "normal" | "medium" | "semibold" | "bold" | "extrabold";
+  weight?: "medium" | "semibold" | "bold";
   /**
    * Text color variant
    */
   color?:
-    | "primary"
     | "content-on-surface"
     | "content-on-surface-strong"
     | "content-on-background"
     | "white"
-    | "danger"
-    | "warning"
-    | "success"
-    | "info"
-    | "disabled";
+    | "error"
+    | "warning";
 
   /**
    * Center alignment
@@ -45,7 +41,7 @@ import { tv } from "./variants";
 const {
   tag = "h2",
   size = "2xl",
-  weight = "semibold",
+  weight = "medium",
   color = "content-on-background",
   center = false,
 } = defineProps<Props>();
@@ -54,7 +50,6 @@ const title = tv({
   base: "ui-title m-0 tracking-normal",
   variants: {
     size: {
-      xs: "text-xs leading-tight",
       sm: "text-sm leading-tight",
       base: "text-base leading-tight",
       lg: "text-lg leading-tight",
@@ -65,24 +60,17 @@ const title = tv({
       "5xl": "text-5xl leading-tight",
     },
     weight: {
-      light: "font-light",
-      normal: "font-normal",
       medium: "font-medium",
       semibold: "font-semibold",
       bold: "font-bold",
-      extrabold: "font-extrabold",
     },
     color: {
-      primary: "text-primary",
       "content-on-surface": "text-content-on-surface",
       "content-on-surface-strong": "text-content-on-surface-strong",
       "content-on-background": "text-content-on-background",
       white: "text-white",
-      danger: "text-error-text",
+      error: "text-error-text",
       warning: "text-warning-text",
-      success: "text-success-text",
-      info: "text-info-text",
-      disabled: "text-content-disabled",
     },
   },
 });
@@ -95,6 +83,6 @@ const ui = computed(() =>
 <style scoped>
 .ui-title {
   margin: 0;
-  line-height: var(--line-height-tight);
+  line-height: var(--leading-tight);
 }
 </style>

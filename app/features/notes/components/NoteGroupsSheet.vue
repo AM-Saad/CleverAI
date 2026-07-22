@@ -31,7 +31,7 @@
 
       <div v-if="adding" class="ngs__add-row">
         <input ref="addEl" v-model="newName" class="ngs__name ngs__name--add" placeholder="New group name" @keydown.enter.prevent="commitAdd" /> <!-- design-allow: native add field -->
-        <UiButton pill size="sm" tone="primary" :loading="busy" :disabled="!newName.trim()" @click="commitAdd">Add</UiButton>
+        <UiButton size="sm" tone="primary" :loading="busy" :disabled="!newName.trim()" @click="commitAdd">Add</UiButton>
       </div>
       <button v-else type="button" class="ngs__add" @click="startAdd"> <!-- design-allow: native dashed add control -->
         <UiIcon name="i-lucide-plus" class="h-4 w-4" /> New group

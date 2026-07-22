@@ -1,47 +1,34 @@
 <template>
   <div class="ws">
-    <header class="ws__header">
-      <UiIconButton
-        class="ws__back"
-        icon="i-lucide-chevron-left"
-        label="Back"
-        @click="goBack"
-      />
-      <div>
-        <ui-title tag="h1" class="ws__title">Workspaces</ui-title>
-        <p class="ws__sub">
-          {{ workspaces.length }} workspace{{
-            workspaces.length === 1 ? "" : "s"
-          }}
-        </p>
-      </div>
-    </header>
+    <AppPageHeader
+      title="Workspaces"
+      :subtitle="`${workspaces.length} workspace${workspaces.length === 1 ? '' : 's'}`"
+      back-to="/learn"
+    />
 
     <div v-if="loading && !workspaces.length" class="ws__list">
       <UiSkeleton
         v-for="i in 3"
         :key="i"
-        class="h-[68px] w-full rounded-[var(--radius-2xl)]"
+        class="h-[68px] w-full rounded-[var(--component-card-radius)]"
       />
     </div>
 
     <ul v-else class="ws__list">
-      <li
-        v-for="w in workspaces"
-        :key="w.id"
-        class="ws__row"
-        :class="{ 'ws__row--active': w.id === activeId }"
-      >
-        <button type="button" class="ws__row-select" @click="select(w.id)">
-          <!-- design-allow: native selectable workspace row -->
-          <span class="ws__tile" :style="{ background: gradientFor(w) }">{{
-            initial(w.title)
-          }}</span>
-          <span class="ws__row-main">
-            <span class="ws__row-name">{{ w.title }}</span>
-            <span class="ws__row-meta">{{ metaFor(w.id) }}</span>
-          </span>
-        </button>
+      <li v-for="w in workspaces" :key="w.id" class="ws__row">
+        <UiListCard
+          clickable
+          selectable
+          :selected="w.id === activeId"
+          :title="w.title"
+          :description="metaFor(w.id)"
+          class-name="ws__row-select"
+          @click="select(w.id)"
+        >
+          <template #leading>
+            <span class="ws__tile" :style="{ background: workspaceColor(w) }" />
+          </template>
+        </UiListCard>
         <UiPill
           v-if="caughtUp(w.id)"
           size="sm"
@@ -69,11 +56,16 @@
       </li>
 
       <li>
-        <button type="button" class="ws__new" @click="startCreate">
-          <!-- design-allow: native dashed add control -->
-          <UiIcon name="i-lucide-plus" class="h-4 w-4" />
-          New workspace
-        </button>
+        <UiListCard
+          clickable
+          variant="dashed"
+          title="New workspace"
+          @click="startCreate"
+        >
+          <template #leading
+            ><UiIcon name="i-lucide-plus" class="h-4 w-4"
+          /></template>
+        </UiListCard>
       </li>
     </ul>
 
@@ -96,7 +88,7 @@
         <UiListCard
           clickable
           variant="soft"
-          title="Open space"
+          title="Use workspace"
           @click="openSelected"
         >
           <template #leading>
@@ -132,10 +124,8 @@
       <div class="ws-create">
         <div
           class="ws-create__preview"
-          :style="{ background: previewGradient }"
-        >
-          {{ initial(form.title || "W") }}
-        </div>
+          :style="{ background: `var(${form.color})` }"
+        />
 
         <div class="ws-create__swatches">
           <button
@@ -146,16 +136,30 @@
             :class="{ 'ws-create__swatch--on': form.color === c }"
             :style="{ background: `var(${c})` }"
             :aria-label="`Color ${c}`"
+            :aria-pressed="form.color === c"
             @click="form.color = c"
           />
           <!-- design-allow: native color swatch -->
         </div>
 
-        <label class="ws-create__label">NAME</label>
-        <UiInput v-model="form.title" placeholder="e.g. Biology" autofocus />
+        <UiLabel tag="label" class="ws-create__label" for="workspace-name"
+          >NAME</UiLabel
+        >
+        <UiInput
+          id="workspace-name"
+          v-model="form.title"
+          placeholder="e.g. Biology"
+          autofocus
+        />
 
-        <label class="ws-create__label">DESCRIPTION (optional)</label>
+        <UiLabel
+          tag="label"
+          class="ws-create__label"
+          for="workspace-description"
+          >DESCRIPTION (optional)</UiLabel
+        >
         <UiTextarea
+          id="workspace-description"
           v-model="form.description"
           placeholder="What's this space for?"
           :rows="2"
@@ -169,7 +173,6 @@
 
       <template #footer>
         <UiButton
-          pill
           block
           tone="primary"
           size="lg"
@@ -186,6 +189,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from "vue";
+import AppPageHeader from "~/components/patterns/AppPageHeader.vue";
 import { ACCENT_TOKENS, accentVarFor } from "~/composables/useAccentColor";
 import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace";
 import {
@@ -214,7 +218,9 @@ const workspaces = computed<WorkspaceSummary[]>(() => wsList.value ?? []);
 const createOpen = ref(false);
 const accentTokens = ACCENT_TOKENS;
 const statsById = ref<Record<string, ReviewWorkspaceStats>>({});
-const workspaceIdsKey = computed(() => workspaces.value.map((w) => w.id).join(","));
+const workspaceIdsKey = computed(() =>
+  workspaces.value.map((w) => w.id).join(","),
+);
 const handledEditId = ref<string | null>(null);
 const handledNewIntent = ref(false);
 
@@ -228,21 +234,13 @@ const form = reactive({
   description: "",
   color: ACCENT_TOKENS[2] as string,
 });
-const previewGradient = computed(() => gradientFromToken(form.color));
-
-function initial(name: string) {
-  return (name?.trim()?.[0] ?? "W").toUpperCase();
-}
-function gradientFromToken(token: string) {
-  return `linear-gradient(135deg, var(${token}), color-mix(in srgb, var(${token}) 62%, black))`;
-}
-function gradientFor(w: WorkspaceSummary) {
+function workspaceColor(w: WorkspaceSummary) {
   const meta = w.metadata as Record<string, unknown> | null;
   const token =
     typeof meta?.color === "string" && meta.color.startsWith("--")
       ? meta.color
       : accentTokenFromVar(accentVarFor(w.id));
-  return gradientFromToken(token);
+  return `var(${token})`;
 }
 function accentTokenFromVar(v: string) {
   return v.match(/var\((--[a-z-]+)\)/)?.[1] ?? "--color-accent-indigo";
@@ -259,10 +257,7 @@ function caughtUp(id: string) {
 
 function select(id: string) {
   setActive(id);
-  navigateTo("/notes");
-}
-function goBack() {
-  navigateTo("/");
+  navigateTo("/learn");
 }
 
 async function submit() {
@@ -368,9 +363,13 @@ function handleRouteIntents() {
   }
 }
 
-watch(workspaceIdsKey, () => {
-  void loadStats();
-}, { immediate: true });
+watch(
+  workspaceIdsKey,
+  () => {
+    void loadStats();
+  },
+  { immediate: true },
+);
 
 watch(
   [workspaces, () => route.query.edit, () => route.query.new],
@@ -386,25 +385,6 @@ watch(
   gap: var(--space-4);
   padding: var(--space-4) var(--space-4) var(--space-8);
 }
-.ws__header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding-top: var(--space-2);
-}
-.ws__back {
-  margin-left: calc(-1 * var(--space-2));
-}
-.ws__title {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.6px;
-  color: var(--color-content-on-surface-strong);
-}
-.ws__sub {
-  font-size: 13px;
-  color: var(--color-content-secondary);
-}
 .ws__list {
   display: flex;
   flex-direction: column;
@@ -418,26 +398,11 @@ watch(
   align-items: center;
   gap: var(--space-3);
   width: 100%;
-  padding: var(--space-3);
-  border-radius: var(--radius-2xl);
-  background: var(--ds-surface-card);
-  border: 1px solid var(--color-secondary);
-  box-shadow: var(--shadow-card);
   text-align: left;
-}
-.ws__row--active {
-  border-width: 1.5px;
-  border-color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 6%, transparent);
 }
 .ws__row-select {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
   flex: 1;
   min-width: 0;
-  background: transparent;
-  text-align: left;
 }
 .ws-actions {
   display: flex;
@@ -451,7 +416,7 @@ watch(
   gap: var(--space-3);
   width: 100%;
   padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-xl);
+  border-radius: var(--component-card-radius);
   font-size: 15px;
   font-weight: 600;
   color: var(--color-content-on-surface-strong);
@@ -464,29 +429,10 @@ watch(
 .ws__tile {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-xl);
-  color: var(--color-white);
-  font-weight: 800;
-  font-size: 18px;
+  width: 12px;
+  height: 12px;
+  border-radius: var(--radius-full);
   flex-shrink: 0;
-}
-.ws__row-main {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-}
-.ws__row-name {
-  font-size: 15px;
-  font-weight: 700;
-  letter-spacing: -0.2px;
-  color: var(--color-content-on-surface-strong);
-}
-.ws__row-meta {
-  font-size: 12.5px;
-  color: var(--color-content-secondary);
 }
 .ws__active-icon {
   width: 22px;
@@ -494,23 +440,6 @@ watch(
   color: var(--color-primary);
   flex-shrink: 0;
 }
-.ws__new {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  width: 100%;
-  padding: 13px;
-  border-radius: var(--radius-2xl);
-  border: 1.5px dashed var(--color-border-strong);
-  color: var(--color-primary);
-  font-size: 14px;
-  font-weight: 600;
-}
-.ws__new:active {
-  background: var(--color-surface-subtle);
-}
-
 .ws-create {
   display: flex;
   flex-direction: column;
@@ -518,15 +447,10 @@ watch(
   padding-bottom: var(--space-2);
 }
 .ws-create__preview {
-  display: grid;
-  place-items: center;
-  width: 72px;
-  height: 72px;
-  margin: var(--space-2) auto var(--space-3);
-  border-radius: var(--radius-2xl);
-  color: var(--color-white);
-  font-size: 30px;
-  font-weight: 800;
+  width: 40px;
+  height: 6px;
+  margin: var(--space-2) auto;
+  border-radius: var(--radius-full);
 }
 .ws-create__swatches {
   display: flex;
@@ -544,6 +468,10 @@ watch(
   border-color: var(--color-content-on-surface-strong);
   transform: scale(1.1);
 }
+.ws-create__swatch:focus-visible {
+  outline: 2px solid var(--ds-focus-outline-color);
+  outline-offset: 2px;
+}
 .ws-create__label {
   font-size: 11px;
   font-weight: 700;
@@ -557,7 +485,7 @@ watch(
   gap: 8px;
   margin-top: var(--space-3);
   padding: var(--space-3);
-  border-radius: var(--radius-xl);
+  border-radius: var(--component-card-radius);
   background: var(--color-surface-subtle);
   color: var(--color-content-secondary);
   font-size: 12.5px;

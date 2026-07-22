@@ -1,20 +1,17 @@
 <template>
   <div class="learning-home">
-    <div class="learning-home__bar">
-      <NuxtLink to="/" class="learning-home__apps">
-        <UiIcon name="i-lucide-layout-grid" class="h-4 w-4" />
-        Apps
-      </NuxtLink>
-      <span>Learning</span>
-      <NuxtLink :to="accountLink" aria-label="Learning account settings">
-        <UiIcon name="i-lucide-user-round" class="h-5 w-5" />
-      </NuxtLink>
-    </div>
+    <AppPageHeader
+      title="Learning"
+      subtitle="Your materials, practice, and topics"
+      :account-to="accountLink"
+      account-label="Learning account settings"
+    />
     <LearningHome />
   </div>
 </template>
 
 <script setup lang="ts">
+import AppPageHeader from "~/components/patterns/AppPageHeader.vue";
 import LearningHome from "~/features/learning-shell/components/LearningHome.vue";
 
 definePageMeta({ middleware: "auth" });
@@ -25,21 +22,10 @@ const accountLink = {
 </script>
 
 <style scoped>
-.learning-home__bar {
+.learning-home {
   display: flex;
-  min-height: 52px;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--space-2) var(--space-4);
-  border-bottom: 1px solid var(--color-secondary);
-  color: var(--color-content-secondary);
-  font-size: var(--text-sm);
-  font-weight: 700;
-}
-
-.learning-home__apps {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-4) var(--space-4) var(--space-8);
 }
 </style>

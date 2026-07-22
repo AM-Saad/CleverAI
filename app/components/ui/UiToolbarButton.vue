@@ -26,16 +26,16 @@
  * UiToolbarButton — canonical toolbar command button. Prefer this over raw
  * button styling in editor/board/note toolbars.
  */
-import type { Size, Tone } from "./variants";
+import type { ActionTone, ControlSize } from "./variants";
 
 withDefaults(
   defineProps<{
     icon?: string;
     label?: string;
     tooltip?: string;
-    tone?: Tone;
+    tone?: ActionTone;
     variant?: "solid" | "soft" | "ghost" | "link";
-    size?: Size;
+    size?: ControlSize;
     active?: boolean;
     disabled?: boolean;
     loading?: boolean;

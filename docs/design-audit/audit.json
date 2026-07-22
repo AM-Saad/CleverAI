@@ -1,40 +1,40 @@
 {
   "generatedFrom": "scripts/audit-design-usage.cjs",
-  "scanned": 247,
+  "scanned": 257,
   "excluded": 19,
   "totals": {
-    "ok": 2335,
+    "ok": 2177,
     "violation": 0,
-    "review": 221,
+    "review": 170,
     "legacy": 0
   },
   "byCategory": {
     "color": {
-      "ok": 1050,
+      "ok": 963,
       "violation": 0,
-      "review": 55,
+      "review": 48,
       "legacy": 0
     },
     "radius": {
-      "ok": 101,
+      "ok": 81,
       "violation": 0,
-      "review": 34,
+      "review": 25,
       "legacy": 0
     },
     "spacing": {
-      "ok": 806,
+      "ok": 796,
       "violation": 0,
-      "review": 132,
+      "review": 97,
       "legacy": 0
     },
     "typography": {
-      "ok": 333,
+      "ok": 304,
       "violation": 0,
       "review": 0,
       "legacy": 0
     },
     "shadow": {
-      "ok": 45,
+      "ok": 33,
       "violation": 0,
       "review": 0,
       "legacy": 0
@@ -269,822 +269,9 @@
       ]
     },
     {
-      "file": "app/features/language-learning/components/QuickCaptureModal.vue",
-      "counts": {
-        "ok": 65,
-        "violation": 0,
-        "review": 14,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 10,
-        "rawLabels": 1,
-        "uiTypo": 3
-      },
-      "findings": [
-        {
-          "value": "from-accent-teal",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "via-accent-blue",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "to-accent-purple",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-primary/10",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "text-primary",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×12"
-        },
-        {
-          "value": "text-content-on-surface",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×8"
-        },
-        {
-          "value": "bg-secondary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-surface",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "border-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-secondary",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×3"
-        },
-        {
-          "value": "text-content-secondary",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×7"
-        },
-        {
-          "value": "bg-error",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-white",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-content-disabled",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "bg-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-on-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-primary/20",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "from-primary/8",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "via-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-primary/15",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-primary/50",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-success/20",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-success/8",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-primary/20",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--ds-backdrop-dim)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--ds-focus-outline-color)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "rounded-full",
-          "category": "radius",
-          "status": "review",
-          "suggest": "pill — avatars/dots only ×9"
-        },
-        {
-          "value": "rounded-[var(--radius-2xl)]",
-          "category": "radius",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-md)]",
-          "category": "radius",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "rounded-[var(--radius-lg)]",
-          "category": "radius",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "shadow-[var(--shadow-dropdown)]",
-          "category": "shadow",
-          "status": "ok"
-        },
-        {
-          "value": "px-5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "pb-5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "pt-0",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "pt-5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "pb-4",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "gap-3",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "px-2",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "py-0.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "py-5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "space-y-4",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×3"
-        },
-        {
-          "value": "gap-2",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×9"
-        },
-        {
-          "value": "p-1.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "p-0",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "space-y-1",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "gap-1",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "pt-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "mt-2",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "gap-4",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "py-12",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "mt-0.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid ×3"
-        },
-        {
-          "value": "gap-1.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid ×2"
-        },
-        {
-          "value": "mt-1",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×3"
-        },
-        {
-          "value": "mt-4",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "pt-4",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "mt-1.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "space-y-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "space-y-2",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "px-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "py-2",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "mb-2",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "mr-1.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid ×6"
-        },
-        {
-          "value": "gap-5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "gap-2.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "p-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "mt-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "px-0.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "text-base",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
-          "value": "text-xs",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size ×15"
-        },
-        {
-          "value": "text-sm",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size ×6"
-        },
-        {
-          "value": "text-2xl",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
-          "value": "text-xl",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
-          "value": "font-semibold",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight ×5"
-        },
-        {
-          "value": "font-medium",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight ×2"
-        },
-        {
-          "value": "tracking-tight",
-          "category": "typography",
-          "status": "ok"
-        },
-        {
-          "value": "leading-tight",
-          "category": "typography",
-          "status": "ok"
-        },
-        {
-          "value": "leading-snug",
-          "category": "typography",
-          "status": "ok"
-        },
-        {
-          "value": "tracking-wide",
-          "category": "typography",
-          "status": "ok"
-        },
-        {
-          "value": "leading-relaxed",
-          "category": "typography",
-          "status": "ok",
-          "suggest": " ×2"
-        }
-      ]
-    },
-    {
-      "file": "app/features/language-learning/components/TranslatePanel.vue",
-      "counts": {
-        "ok": 52,
-        "violation": 0,
-        "review": 11,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 4,
-        "rawLabels": 0,
-        "uiTypo": 3
-      },
-      "findings": [
-        {
-          "value": "from-primary/40",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "via-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "to-primary/40",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-primary/10",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "text-primary",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×6"
-        },
-        {
-          "value": "text-content-on-surface",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "bg-secondary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-surface",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-secondary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-primary/50",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-content-secondary",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "bg-error/10",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-error",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-primary/20",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-primary/15",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "from-primary/5",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "to-primary/2",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-primary/10",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-content-disabled",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "bg-primary/40",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-success/20",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-success/10",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-primary/20",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--ds-focus-outline-color)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-full",
-          "category": "radius",
-          "status": "review",
-          "suggest": "pill — avatars/dots only ×5"
-        },
-        {
-          "value": "rounded-[var(--radius-2xl)]",
-          "category": "radius",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-md)]",
-          "category": "radius",
-          "status": "ok"
-        },
-        {
-          "value": "p-0",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "px-4",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "pt-4",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "pb-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "gap-2.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "mx-4",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "pb-5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "space-y-3",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "gap-2",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×5"
-        },
-        {
-          "value": "px-5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "py-2.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "gap-1",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "mt-2",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "mr-1.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid ×6"
-        },
-        {
-          "value": "gap-4",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "py-10",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid ×2"
-        },
-        {
-          "value": "gap-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "mt-0.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid ×2"
-        },
-        {
-          "value": "pt-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "space-y-1",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "mb-2",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "gap-1.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "space-y-1.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "mt-1",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "px-0.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "text-base",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
-          "value": "text-sm",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size ×2"
-        },
-        {
-          "value": "text-xs",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size ×6"
-        },
-        {
-          "value": "text-xl",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
-          "value": "text-lg",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
-          "value": "font-semibold",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight ×3"
-        },
-        {
-          "value": "font-medium",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
-          "value": "tracking-tight",
-          "category": "typography",
-          "status": "ok"
-        },
-        {
-          "value": "leading-snug",
-          "category": "typography",
-          "status": "ok"
-        },
-        {
-          "value": "tracking-wide",
-          "category": "typography",
-          "status": "ok"
-        },
-        {
-          "value": "leading-relaxed",
-          "category": "typography",
-          "status": "ok"
-        }
-      ]
-    },
-    {
       "file": "app/components/shared/PaperComponent.vue",
       "counts": {
-        "ok": 12,
+        "ok": 8,
         "violation": 0,
         "review": 10,
         "legacy": 0
@@ -1109,41 +296,18 @@
           "suggest": " ×3"
         },
         {
-          "value": "var(--color-content-secondary)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "var(--color-surface-strong)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "var(--color-content-on-surface)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "var(--color-primary)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×6"
-        },
-        {
-          "value": "var(--color-on-primary)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
           "value": "var(--color-content-on-background)",
           "category": "color",
           "status": "ok"
         },
         {
-          "value": "var(--color-error)",
+          "value": "var(--color-primary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "var(--color-content-secondary)",
           "category": "color",
           "status": "ok",
           "suggest": " ×2"
@@ -1600,64 +764,6 @@
       ]
     },
     {
-      "file": "app/components/ui/color-picker.vue",
-      "counts": {
-        "ok": 1,
-        "violation": 0,
-        "review": 6,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "var(--color-content-on-background)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "hsl(0, 0%, 100%)",
-          "category": "color",
-          "status": "review",
-          "suggest": "raw color fn"
-        },
-        {
-          "value": "hsl(${normalizedHue.value}, 60%, 85%)",
-          "category": "color",
-          "status": "review",
-          "suggest": "raw color fn"
-        },
-        {
-          "value": "hsl(${normalizedHue.value}, 90%, 60%)",
-          "category": "color",
-          "status": "review",
-          "suggest": "raw color fn"
-        },
-        {
-          "value": "hsla(${normalizedHue.value}, 90%, 60%, 1)",
-          "category": "color",
-          "status": "review",
-          "suggest": "raw color fn"
-        },
-        {
-          "value": "hsla(${normalizedHue.value}, 90%, 60%, 0)",
-          "category": "color",
-          "status": "review",
-          "suggest": "raw color fn"
-        },
-        {
-          "value": "hsl(${i}, 90%, 60%)",
-          "category": "color",
-          "status": "review",
-          "suggest": "raw color fn"
-        }
-      ]
-    },
-    {
       "file": "app/features/integrations/components/WorkspaceImportDialog.vue",
       "counts": {
         "ok": 38,
@@ -1666,7 +772,7 @@
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 1,
+        "rawHeadings": 0,
         "rawParagraphs": 20,
         "rawLabels": 5,
         "uiTypo": 0
@@ -1922,7 +1028,7 @@
     {
       "file": "app/components/ui/UiCard.vue",
       "counts": {
-        "ok": 17,
+        "ok": 15,
         "violation": 0,
         "review": 5,
         "legacy": 0
@@ -1943,7 +1049,7 @@
           "value": "bg-surface",
           "category": "color",
           "status": "ok",
-          "suggest": " ×3"
+          "suggest": " ×2"
         },
         {
           "value": "border-secondary",
@@ -1955,7 +1061,7 @@
           "value": "border-surface",
           "category": "color",
           "status": "ok",
-          "suggest": " ×4"
+          "suggest": " ×2"
         },
         {
           "value": "var(--ds-card-spine)",
@@ -1979,17 +1085,6 @@
         },
         {
           "value": "shadow-[var(--shadow-card-hover)]",
-          "category": "shadow",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "shadow-[var(--shadow-modal)]",
-          "category": "shadow",
-          "status": "ok"
-        },
-        {
-          "value": "shadow-[var(--shadow-primary-glow)]",
           "category": "shadow",
           "status": "ok"
         },
@@ -2063,7 +1158,7 @@
     {
       "file": "app/components/workspace/hub/flashcards/index.vue",
       "counts": {
-        "ok": 9,
+        "ok": 13,
         "violation": 0,
         "review": 5,
         "legacy": 0
@@ -2087,6 +1182,11 @@
         },
         {
           "value": "bg-primary/10",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "border-secondary",
           "category": "color",
           "status": "ok"
         },
@@ -2132,6 +1232,11 @@
           "suggest": " ×3"
         },
         {
+          "value": "gap-3",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
           "value": "mt-4",
           "category": "spacing",
           "status": "ok"
@@ -2142,10 +1247,20 @@
           "status": "ok"
         },
         {
+          "value": "mt-3",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "pt-3",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
           "value": "text-xs",
           "category": "typography",
           "status": "ok",
-          "suggest": "size ×4"
+          "suggest": "size ×3"
         },
         {
           "value": "font-light",
@@ -2293,7 +1408,7 @@
     {
       "file": "app/features/language-learning/components/WordBankList.vue",
       "counts": {
-        "ok": 30,
+        "ok": 29,
         "violation": 0,
         "review": 5,
         "legacy": 0
@@ -2364,11 +1479,6 @@
         {
           "value": "rounded-[var(--radius-sm)]",
           "category": "radius",
-          "status": "ok"
-        },
-        {
-          "value": "shadow-[var(--shadow-card)]",
-          "category": "shadow",
           "status": "ok"
         },
         {
@@ -2505,13 +1615,13 @@
     {
       "file": "app/components/ServiceWorkerUpdateNotification.vue",
       "counts": {
-        "ok": 36,
+        "ok": 34,
         "violation": 0,
         "review": 4,
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 3,
+        "rawHeadings": 0,
         "rawParagraphs": 3,
         "rawLabels": 0,
         "uiTypo": 0
@@ -2572,12 +1682,6 @@
           "value": "text-content-secondary",
           "category": "color",
           "status": "ok"
-        },
-        {
-          "value": "text-content-on-background",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
         },
         {
           "value": "var(--color-accent-blue)",
@@ -2712,28 +1816,22 @@
           "status": "ok"
         },
         {
-          "value": "text-sm",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size ×2"
-        },
-        {
           "value": "text-xs",
           "category": "typography",
           "status": "ok",
           "suggest": "size ×4"
         },
         {
-          "value": "font-semibold",
+          "value": "text-sm",
           "category": "typography",
           "status": "ok",
-          "suggest": "weight ×2"
+          "suggest": "size"
         },
         {
           "value": "font-medium",
           "category": "typography",
           "status": "ok",
-          "suggest": "weight ×3"
+          "suggest": "weight ×2"
         }
       ]
     },
@@ -2931,13 +2029,13 @@
     {
       "file": "app/features/notifications/components/NotificationPreferences.vue",
       "counts": {
-        "ok": 37,
+        "ok": 38,
         "violation": 0,
         "review": 4,
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 1,
+        "rawHeadings": 0,
         "rawParagraphs": 1,
         "rawLabels": 0,
         "uiTypo": 0
@@ -2982,7 +2080,7 @@
           "value": "text-content-secondary",
           "category": "color",
           "status": "ok",
-          "suggest": " ×18"
+          "suggest": " ×16"
         },
         {
           "value": "bg-secondary",
@@ -3009,13 +2107,19 @@
           "value": "text-content-on-surface",
           "category": "color",
           "status": "ok",
-          "suggest": " ×8"
+          "suggest": " ×7"
         },
         {
           "value": "bg-white",
           "category": "color",
           "status": "ok",
           "suggest": " ×6"
+        },
+        {
+          "value": "var(--ds-focus-outline-color)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×5"
         },
         {
           "value": "rounded-full",
@@ -3033,7 +2137,7 @@
           "value": "gap-2",
           "category": "spacing",
           "status": "ok",
-          "suggest": " ×15"
+          "suggest": " ×14"
         },
         {
           "value": "space-y-6",
@@ -3105,19 +2209,13 @@
           "value": "mt-1",
           "category": "spacing",
           "status": "ok",
-          "suggest": " ×4"
+          "suggest": " ×3"
         },
         {
           "value": "space-y-3",
           "category": "spacing",
           "status": "ok",
           "suggest": " ×4"
-        },
-        {
-          "value": "gap-1",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×5"
         },
         {
           "value": "pl-4",
@@ -3138,6 +2236,12 @@
           "suggest": " ×5"
         },
         {
+          "value": "gap-1",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×4"
+        },
+        {
           "value": "py-1.5",
           "category": "spacing",
           "status": "review",
@@ -3152,7 +2256,7 @@
           "value": "text-xs",
           "category": "typography",
           "status": "ok",
-          "suggest": "size ×10"
+          "suggest": "size ×9"
         },
         {
           "value": "text-xl",
@@ -3176,7 +2280,7 @@
           "value": "font-medium",
           "category": "typography",
           "status": "ok",
-          "suggest": "weight ×4"
+          "suggest": "weight ×3"
         }
       ]
     },
@@ -3525,93 +2629,6 @@
       ]
     },
     {
-      "file": "app/components/shared/CreditsPill.vue",
-      "counts": {
-        "ok": 10,
-        "violation": 0,
-        "review": 3,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "bg-surface/70",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-primary/50",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "from-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "to-accent-blue",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--ds-focus-outline-color)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-full",
-          "category": "radius",
-          "status": "review",
-          "suggest": "pill — avatars/dots only"
-        },
-        {
-          "value": "gap-1.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "px-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "py-1.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "gap-1",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "text-sm",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
-          "value": "font-medium",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        }
-      ]
-    },
-    {
       "file": "app/components/shared/LocalSyncStatus.vue",
       "counts": {
         "ok": 13,
@@ -3795,183 +2812,6 @@
           "category": "typography",
           "status": "ok",
           "suggest": "size ×2"
-        }
-      ]
-    },
-    {
-      "file": "app/components/ui/CardStack.vue",
-      "counts": {
-        "ok": 26,
-        "violation": 0,
-        "review": 3,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "text-white",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-success",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-error",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-surface",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "text-content-secondary",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×5"
-        },
-        {
-          "value": "bg-surface",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "bg-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-secondary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-content-on-background)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--ds-focus-outline-color)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "rounded-full",
-          "category": "radius",
-          "status": "review",
-          "suggest": "pill — avatars/dots only ×3"
-        },
-        {
-          "value": "rounded-[var(--radius-lg)]",
-          "category": "radius",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "rounded-[var(--radius-2xl)]",
-          "category": "radius",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "shadow-[var(--shadow-card-hover)]",
-          "category": "shadow",
-          "status": "ok"
-        },
-        {
-          "value": "shadow-[var(--shadow-dropdown)]",
-          "category": "shadow",
-          "status": "ok",
-          "suggest": " ×3"
-        },
-        {
-          "value": "p-4",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "pt-16",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "px-4",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "py-1.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid ×2"
-        },
-        {
-          "value": "gap-6",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "mb-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "gap-8",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "mt-4",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "gap-2.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "text-xl",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
-          "value": "text-sm",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
-          "value": "font-bold",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight ×2"
-        },
-        {
-          "value": "tracking-tight",
-          "category": "typography",
-          "status": "ok"
-        },
-        {
-          "value": "tracking-widest",
-          "category": "typography",
-          "status": "ok",
-          "suggest": " ×2"
         }
       ]
     },
@@ -4362,211 +3202,6 @@
       ]
     },
     {
-      "file": "app/features/board/components/BoardKanbanView.vue",
-      "counts": {
-        "ok": 31,
-        "violation": 0,
-        "review": 3,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 1
-      },
-      "findings": [
-        {
-          "value": "border-secondary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-surface",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×3"
-        },
-        {
-          "value": "text-primary",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "bg-primary/10",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "ring-primary/30",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "bg-secondary",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "text-content-secondary",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "text-content-on-surface",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "ring-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-surface",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-full",
-          "category": "radius",
-          "status": "review",
-          "suggest": "pill — avatars/dots only ×2"
-        },
-        {
-          "value": "shadow-[var(--shadow-dropdown)]",
-          "category": "shadow",
-          "status": "ok",
-          "suggest": " ×3"
-        },
-        {
-          "value": "shadow-[var(--shadow-modal)]",
-          "category": "shadow",
-          "status": "ok"
-        },
-        {
-          "value": "p-0",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "gap-2",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×5"
-        },
-        {
-          "value": "p-2",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "px-3",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "py-1.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid ×2"
-        },
-        {
-          "value": "gap-1.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid ×3"
-        },
-        {
-          "value": "gap-4",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "p-4",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "mb-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "my-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "mb-4",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "space-y-2",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "gap-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "gap-1",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "pt-2",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "text-sm",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size ×3"
-        },
-        {
-          "value": "text-xs",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size ×2"
-        },
-        {
-          "value": "font-medium",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight ×3"
-        },
-        {
-          "value": "font-semibold",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
-          "value": "tracking-wider",
-          "category": "typography",
-          "status": "ok"
-        }
-      ]
-    },
-    {
       "file": "app/features/board/containers/BoardNotesSection.vue",
       "counts": {
         "ok": 24,
@@ -4729,84 +3364,9 @@
       ]
     },
     {
-      "file": "app/features/language-learning/components/ConsentSheet.vue",
-      "counts": {
-        "ok": 8,
-        "violation": 0,
-        "review": 3,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "bg-primary/10",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--ds-backdrop-dim)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-full",
-          "category": "radius",
-          "status": "review",
-          "suggest": "pill — avatars/dots only"
-        },
-        {
-          "value": "rounded-t-[var(--radius-2xl)]",
-          "category": "radius",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-2xl)]",
-          "category": "radius",
-          "status": "ok"
-        },
-        {
-          "value": "p-4",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "space-y-5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "gap-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "gap-2.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "mr-1",
-          "category": "spacing",
-          "status": "ok"
-        }
-      ]
-    },
-    {
       "file": "app/features/materials/components/SpeechRecorder.vue",
       "counts": {
-        "ok": 15,
+        "ok": 14,
         "violation": 0,
         "review": 3,
         "legacy": 0
@@ -4858,11 +3418,6 @@
           "category": "radius",
           "status": "review",
           "suggest": "pill — avatars/dots only ×2"
-        },
-        {
-          "value": "shadow-[var(--shadow-dropdown)]",
-          "category": "shadow",
-          "status": "ok"
         },
         {
           "value": "gap-2",
@@ -5134,51 +3689,6 @@
       ]
     },
     {
-      "file": "app/components/auth/AuthenticationStatus.vue",
-      "counts": {
-        "ok": 3,
-        "violation": 0,
-        "review": 2,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 2,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "rounded-full",
-          "category": "radius",
-          "status": "review",
-          "suggest": "pill — avatars/dots only"
-        },
-        {
-          "value": "shadow-[var(--shadow-modal)]",
-          "category": "shadow",
-          "status": "ok"
-        },
-        {
-          "value": "space-x-2",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "pt-0.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "text-lg",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        }
-      ]
-    },
-    {
       "file": "app/components/shared/CreditsWallet.vue",
       "counts": {
         "ok": 45,
@@ -5187,7 +3697,7 @@
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 2,
+        "rawHeadings": 0,
         "rawParagraphs": 2,
         "rawLabels": 0,
         "uiTypo": 1
@@ -5515,7 +4025,7 @@
           "suggest": " ×2"
         },
         {
-          "value": "var(--color-primary-50)",
+          "value": "var(--color-primary-soft)",
           "category": "color",
           "status": "ok"
         },
@@ -5665,7 +4175,71 @@
       ]
     },
     {
-      "file": "app/components/ui/Drawer.vue",
+      "file": "app/components/ui/UiColorModeToggle.vue",
+      "counts": {
+        "ok": 7,
+        "violation": 0,
+        "review": 2,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "border-secondary",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "bg-primary",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "text-on-primary",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "text-content-secondary",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "bg-surface",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "rounded-[var(--radius-lg)]",
+          "category": "radius",
+          "status": "ok"
+        },
+        {
+          "value": "rounded-[var(--radius-md)]",
+          "category": "radius",
+          "status": "ok"
+        },
+        {
+          "value": "gap-0.5",
+          "category": "spacing",
+          "status": "review",
+          "suggest": "off-grid"
+        },
+        {
+          "value": "p-0.5",
+          "category": "spacing",
+          "status": "review",
+          "suggest": "off-grid"
+        }
+      ]
+    },
+    {
+      "file": "app/components/ui/UiDrawer.vue",
       "counts": {
         "ok": 14,
         "violation": 0,
@@ -5764,70 +4338,6 @@
           "category": "typography",
           "status": "ok",
           "suggest": "weight"
-        }
-      ]
-    },
-    {
-      "file": "app/components/ui/UiColorModeToggle.vue",
-      "counts": {
-        "ok": 7,
-        "violation": 0,
-        "review": 2,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "border-secondary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-on-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-content-secondary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-surface",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-lg)]",
-          "category": "radius",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-md)]",
-          "category": "radius",
-          "status": "ok"
-        },
-        {
-          "value": "gap-0.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "p-0.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
         }
       ]
     },
@@ -6348,130 +4858,6 @@
       ]
     },
     {
-      "file": "app/features/language-learning/components/StoryCard.vue",
-      "counts": {
-        "ok": 17,
-        "violation": 0,
-        "review": 2,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 7
-      },
-      "findings": [
-        {
-          "value": "text-content-on-surface",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-content-secondary",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "text-primary",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×3"
-        },
-        {
-          "value": "bg-primary/20",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-md)]",
-          "category": "radius",
-          "status": "ok"
-        },
-        {
-          "value": "space-y-4",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "space-y-1",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "gap-1",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "space-y-5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "space-y-2",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "gap-2",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "mr-1",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "px-0.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "text-lg",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size ×2"
-        },
-        {
-          "value": "text-xs",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
-          "value": "font-medium",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
-          "value": "font-semibold",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
-          "value": "tracking-wide",
-          "category": "typography",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "leading-relaxed",
-          "category": "typography",
-          "status": "ok",
-          "suggest": " ×2"
-        }
-      ]
-    },
-    {
       "file": "app/features/notes/components/CanvasNoteToolbar.vue",
       "counts": {
         "ok": 3,
@@ -6839,13 +5225,13 @@
     {
       "file": "app/pages/auth/reactivate.vue",
       "counts": {
-        "ok": 21,
+        "ok": 18,
         "violation": 0,
         "review": 2,
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 1,
+        "rawHeadings": 0,
         "rawParagraphs": 5,
         "rawLabels": 0,
         "uiTypo": 0
@@ -6861,11 +5247,6 @@
           "category": "color",
           "status": "ok",
           "suggest": " ×2"
-        },
-        {
-          "value": "text-content-on-surface",
-          "category": "color",
-          "status": "ok"
         },
         {
           "value": "text-content-secondary",
@@ -6954,22 +5335,10 @@
           "status": "ok"
         },
         {
-          "value": "text-2xl",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
           "value": "text-sm",
           "category": "typography",
           "status": "ok",
           "suggest": "size ×5"
-        },
-        {
-          "value": "font-bold",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
         },
         {
           "value": "font-semibold",
@@ -6982,13 +5351,13 @@
     {
       "file": "app/app.vue",
       "counts": {
-        "ok": 24,
+        "ok": 15,
         "violation": 0,
         "review": 1,
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 1,
+        "rawHeadings": 0,
         "rawParagraphs": 2,
         "rawLabels": 0,
         "uiTypo": 0
@@ -7007,27 +5376,10 @@
         {
           "value": "border-secondary",
           "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
+          "status": "ok"
         },
         {
           "value": "text-content-secondary",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "bg-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-on-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--ds-focus-outline-color)",
           "category": "color",
           "status": "ok",
           "suggest": " ×2"
@@ -7041,12 +5393,6 @@
           "value": "rounded-[var(--radius-xl)]",
           "category": "radius",
           "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-md)]",
-          "category": "radius",
-          "status": "ok",
-          "suggest": " ×2"
         },
         {
           "value": "shadow-[var(--shadow-dropdown)]",
@@ -7081,25 +5427,7 @@
           "status": "ok"
         },
         {
-          "value": "px-3",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "py-2",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
           "value": "text-xs",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
-          "value": "text-xl",
           "category": "typography",
           "status": "ok",
           "suggest": "size"
@@ -7108,25 +5436,13 @@
           "value": "text-sm",
           "category": "typography",
           "status": "ok",
-          "suggest": "size ×3"
+          "suggest": "size"
         },
         {
           "value": "font-bold",
           "category": "typography",
           "status": "ok",
           "suggest": "weight"
-        },
-        {
-          "value": "font-semibold",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
-          "value": "font-medium",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight ×2"
         },
         {
           "value": "tracking-widest",
@@ -7160,6 +5476,104 @@
           "category": "spacing",
           "status": "review",
           "suggest": "off-grid"
+        }
+      ]
+    },
+    {
+      "file": "app/components/offline/OfflineSyncCenter.vue",
+      "counts": {
+        "ok": 13,
+        "violation": 0,
+        "review": 1,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 6,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "text-content-secondary",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×10"
+        },
+        {
+          "value": "border-secondary",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "space-y-5",
+          "category": "spacing",
+          "status": "review",
+          "suggest": "off-grid"
+        },
+        {
+          "value": "gap-3",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×5"
+        },
+        {
+          "value": "gap-2",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×4"
+        },
+        {
+          "value": "space-y-3",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "pt-3",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "pt-0",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "mb-2",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "mt-1",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "mt-2",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "text-sm",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size ×5"
+        },
+        {
+          "value": "font-semibold",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "weight ×5"
+        },
+        {
+          "value": "font-medium",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "weight ×2"
         }
       ]
     },
@@ -7222,142 +5636,6 @@
           "value": "leading-tight",
           "category": "typography",
           "status": "ok"
-        }
-      ]
-    },
-    {
-      "file": "app/components/shared/DeleteConfirmationModal.vue",
-      "counts": {
-        "ok": 8,
-        "violation": 0,
-        "review": 1,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 2,
-        "rawLabels": 0,
-        "uiTypo": 1
-      },
-      "findings": [
-        {
-          "value": "border-warning/20",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-warning/10",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-content-secondary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "space-y-4",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "gap-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "mt-0.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "mt-1",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "text-sm",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
-          "value": "font-medium",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        }
-      ]
-    },
-    {
-      "file": "app/components/shared/DialogModal.vue",
-      "counts": {
-        "ok": 9,
-        "violation": 0,
-        "review": 1,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "text-content-on-surface",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-secondary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-surface",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--ds-backdrop-strong)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "p-0",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "p-3.5",
-          "category": "spacing",
-          "status": "review",
-          "suggest": "off-grid"
-        },
-        {
-          "value": "pb-2",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "gap-1",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "p-3",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "font-medium",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
         }
       ]
     },
@@ -7461,39 +5739,6 @@
           "category": "spacing",
           "status": "ok",
           "suggest": " ×2"
-        }
-      ]
-    },
-    {
-      "file": "app/components/shared/Notifications.vue",
-      "counts": {
-        "ok": 2,
-        "violation": 0,
-        "review": 1,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "var(--color-surface)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-secondary)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rgba(0,0,0,0.1)",
-          "category": "color",
-          "status": "review",
-          "suggest": "raw color fn"
         }
       ]
     },
@@ -7628,7 +5873,7 @@
           "status": "ok"
         },
         {
-          "value": "rounded-[var(--radius-2xl)]",
+          "value": "rounded-[var(--component-card-radius)]",
           "category": "radius",
           "status": "ok"
         },
@@ -7820,7 +6065,7 @@
           "status": "ok"
         },
         {
-          "value": "rounded-[var(--radius-2xl)]",
+          "value": "rounded-[var(--component-card-radius)]",
           "category": "radius",
           "status": "ok"
         },
@@ -7830,13 +6075,12 @@
           "status": "ok"
         },
         {
-          "value": "shadow-[var(--shadow-card)]",
+          "value": "shadow-[var(--shadow-card-hover)]",
           "category": "shadow",
-          "status": "ok",
-          "suggest": " ×2"
+          "status": "ok"
         },
         {
-          "value": "shadow-[var(--shadow-card-hover)]",
+          "value": "shadow-[var(--shadow-card)]",
           "category": "shadow",
           "status": "ok"
         },
@@ -7909,7 +6153,7 @@
     {
       "file": "app/components/ui/UiSettingsGroup.vue",
       "counts": {
-        "ok": 13,
+        "ok": 12,
         "violation": 0,
         "review": 1,
         "legacy": 0
@@ -7949,13 +6193,8 @@
           "status": "ok"
         },
         {
-          "value": "rounded-[var(--radius-2xl)]",
+          "value": "rounded-[var(--component-card-radius)]",
           "category": "radius",
-          "status": "ok"
-        },
-        {
-          "value": "shadow-[var(--shadow-card)]",
-          "category": "shadow",
           "status": "ok"
         },
         {
@@ -8037,83 +6276,17 @@
       ]
     },
     {
-      "file": "app/components/ui/WatchVideo.vue",
+      "file": "app/components/user/DeleteAccountModal.vue",
       "counts": {
-        "ok": 8,
+        "ok": 13,
         "violation": 0,
         "review": 1,
         "legacy": 0
       },
       "typography": {
         "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "text-content-on-background",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "border-secondary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-surface",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--ds-focus-outline-color)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-accent-cyan)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-full",
-          "category": "radius",
-          "status": "review",
-          "suggest": "pill — avatars/dots only"
-        },
-        {
-          "value": "rounded-[var(--radius-md)]",
-          "category": "radius",
-          "status": "ok"
-        },
-        {
-          "value": "text-sm",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
-          "value": "font-light",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        }
-      ]
-    },
-    {
-      "file": "app/components/user/DeleteAccountModal.vue",
-      "counts": {
-        "ok": 19,
-        "violation": 0,
-        "review": 1,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 1,
         "rawParagraphs": 2,
-        "rawLabels": 2,
+        "rawLabels": 1,
         "uiTypo": 0
       },
       "findings": [
@@ -8130,32 +6303,11 @@
         {
           "value": "text-content-on-surface",
           "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "accent-error",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "border-secondary",
-          "category": "color",
           "status": "ok"
         },
         {
           "value": "text-content-secondary",
           "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--ds-focus-outline-color)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-md)]",
-          "category": "radius",
           "status": "ok"
         },
         {
@@ -8187,24 +6339,13 @@
         {
           "value": "mt-1",
           "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "gap-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "pt-2",
-          "category": "spacing",
           "status": "ok"
         },
         {
           "value": "text-sm",
           "category": "typography",
           "status": "ok",
-          "suggest": "size ×4"
+          "suggest": "size ×2"
         },
         {
           "value": "text-xs",
@@ -8216,7 +6357,7 @@
           "value": "font-medium",
           "category": "typography",
           "status": "ok",
-          "suggest": "weight ×4"
+          "suggest": "weight ×2"
         },
         {
           "value": "font-bold",
@@ -8278,11 +6419,6 @@
           "status": "ok"
         },
         {
-          "value": "var(--color-primary-rgb)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
           "value": "var(--ds-focus-outline-color)",
           "category": "color",
           "status": "ok"
@@ -8296,6 +6432,11 @@
         {
           "value": "rounded-[var(--radius-md)]",
           "category": "radius",
+          "status": "ok"
+        },
+        {
+          "value": "shadow-[var(--shadow-primary-glow)]",
+          "category": "shadow",
           "status": "ok"
         },
         {
@@ -8456,7 +6597,7 @@
     {
       "file": "app/components/workspace/WorkspaceLayout.vue",
       "counts": {
-        "ok": 14,
+        "ok": 13,
         "violation": 0,
         "review": 1,
         "legacy": 0
@@ -8509,18 +6650,13 @@
           "value": "var(--color-primary)",
           "category": "color",
           "status": "ok",
-          "suggest": " ×12"
+          "suggest": " ×11"
         },
         {
           "value": "var(--ui-text-dimmed)",
           "category": "color",
           "status": "ok",
           "suggest": " ×3"
-        },
-        {
-          "value": "var(--color-on-primary)",
-          "category": "color",
-          "status": "ok"
         },
         {
           "value": "rgba(0, 0, 0, 0.08)",
@@ -8576,7 +6712,7 @@
           "value": "gap-4",
           "category": "spacing",
           "status": "ok",
-          "suggest": " ×3"
+          "suggest": " ×4"
         },
         {
           "value": "space-y-1.5",
@@ -8586,55 +6722,6 @@
         },
         {
           "value": "mr-1",
-          "category": "spacing",
-          "status": "ok"
-        }
-      ]
-    },
-    {
-      "file": "app/features/language-learning/components/QuickCaptureButton.vue",
-      "counts": {
-        "ok": 5,
-        "violation": 0,
-        "review": 1,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "bg-primary",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "text-on-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--ds-focus-outline-color)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-full",
-          "category": "radius",
-          "status": "review",
-          "suggest": "pill — avatars/dots only"
-        },
-        {
-          "value": "shadow-[var(--shadow-card-hover)]",
-          "category": "shadow",
-          "status": "ok"
-        },
-        {
-          "value": "var(--space-6)",
           "category": "spacing",
           "status": "ok"
         }
@@ -9472,24 +7559,18 @@
     {
       "file": "app/features/review/components/ReviewAnalyticsSummary.vue",
       "counts": {
-        "ok": 30,
+        "ok": 27,
         "violation": 0,
         "review": 1,
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 4,
+        "rawHeadings": 0,
         "rawParagraphs": 0,
         "rawLabels": 0,
         "uiTypo": 0
       },
       "findings": [
-        {
-          "value": "text-content-on-surface",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
         {
           "value": "text-primary",
           "category": "color",
@@ -9560,11 +7641,6 @@
           "suggest": "pill — avatars/dots only"
         },
         {
-          "value": "shadow-[var(--shadow-card-hover)]",
-          "category": "shadow",
-          "status": "ok"
-        },
-        {
           "value": "mb-6",
           "category": "spacing",
           "status": "ok",
@@ -9613,12 +7689,6 @@
           "status": "ok"
         },
         {
-          "value": "text-xl",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size ×5"
-        },
-        {
           "value": "text-3xl",
           "category": "typography",
           "status": "ok",
@@ -9631,10 +7701,10 @@
           "suggest": "size ×12"
         },
         {
-          "value": "text-lg",
+          "value": "text-xl",
           "category": "typography",
           "status": "ok",
-          "suggest": "size ×3"
+          "suggest": "size ×4"
         },
         {
           "value": "text-xs",
@@ -9646,13 +7716,13 @@
           "value": "font-bold",
           "category": "typography",
           "status": "ok",
-          "suggest": "weight ×9"
+          "suggest": "weight ×8"
         },
         {
           "value": "font-medium",
           "category": "typography",
           "status": "ok",
-          "suggest": "weight ×7"
+          "suggest": "weight ×4"
         }
       ]
     },
@@ -9778,7 +7848,7 @@
         "rawHeadings": 0,
         "rawParagraphs": 6,
         "rawLabels": 0,
-        "uiTypo": 45
+        "uiTypo": 46
       },
       "findings": [
         {
@@ -9845,18 +7915,13 @@
           "value": "rounded-[var(--radius-lg)]",
           "category": "radius",
           "status": "ok",
-          "suggest": " ×5"
+          "suggest": " ×6"
         },
         {
           "value": "rounded-[var(--radius-sm)]",
           "category": "radius",
           "status": "ok",
           "suggest": " ×2"
-        },
-        {
-          "value": "rounded-[var(--radius-xl)]",
-          "category": "radius",
-          "status": "ok"
         },
         {
           "value": "p-6",
@@ -9918,7 +7983,7 @@
           "value": "gap-2",
           "category": "spacing",
           "status": "ok",
-          "suggest": " ×13"
+          "suggest": " ×14"
         },
         {
           "value": "gap-8",
@@ -9933,6 +7998,11 @@
         },
         {
           "value": "pt-2",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "py-2",
           "category": "spacing",
           "status": "ok"
         },
@@ -9959,13 +8029,13 @@
     {
       "file": "app/pages/error.vue",
       "counts": {
-        "ok": 19,
+        "ok": 17,
         "violation": 0,
         "review": 1,
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 1,
+        "rawHeadings": 0,
         "rawParagraphs": 2,
         "rawLabels": 0,
         "uiTypo": 0
@@ -10045,12 +8115,6 @@
           "suggest": "size"
         },
         {
-          "value": "text-2xl",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
           "value": "text-sm",
           "category": "typography",
           "status": "ok",
@@ -10058,12 +8122,6 @@
         },
         {
           "value": "font-bold",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
-          "value": "font-semibold",
           "category": "typography",
           "status": "ok",
           "suggest": "weight"
@@ -10084,13 +8142,13 @@
     {
       "file": "app/pages/offline.vue",
       "counts": {
-        "ok": 33,
+        "ok": 31,
         "violation": 0,
         "review": 1,
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 2,
+        "rawHeadings": 0,
         "rawParagraphs": 3,
         "rawLabels": 0,
         "uiTypo": 0
@@ -10141,8 +8199,7 @@
         {
           "value": "text-white",
           "category": "color",
-          "status": "ok",
-          "suggest": " ×3"
+          "status": "ok"
         },
         {
           "value": "bg-content-on-background/50",
@@ -10245,16 +8302,10 @@
           "status": "ok"
         },
         {
-          "value": "text-4xl",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
           "value": "text-lg",
           "category": "typography",
           "status": "ok",
-          "suggest": "size ×2"
+          "suggest": "size"
         },
         {
           "value": "text-sm",
@@ -10269,16 +8320,10 @@
           "suggest": "size"
         },
         {
-          "value": "font-bold",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
           "value": "font-semibold",
           "category": "typography",
           "status": "ok",
-          "suggest": "weight ×4"
+          "suggest": "weight ×3"
         }
       ]
     },
@@ -10291,7 +8336,7 @@
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 5,
+        "rawHeadings": 0,
         "rawParagraphs": 4,
         "rawLabels": 0,
         "uiTypo": 0
@@ -10331,47 +8376,31 @@
     {
       "file": "app/components/account/AccountPageFrame.vue",
       "counts": {
-        "ok": 6,
+        "ok": 3,
         "violation": 0,
         "review": 0,
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 1,
-        "rawParagraphs": 1,
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
         "rawLabels": 0,
         "uiTypo": 0
       },
       "findings": [
         {
-          "value": "var(--color-content-on-surface-strong)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-content-secondary)",
-          "category": "color",
+          "value": "var(--space-6)",
+          "category": "spacing",
           "status": "ok"
         },
         {
           "value": "var(--space-4)",
           "category": "spacing",
           "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "var(--space-8)",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "var(--space-2)",
-          "category": "spacing",
-          "status": "ok",
           "suggest": " ×3"
         },
         {
-          "value": "var(--space-1)",
+          "value": "var(--space-8)",
           "category": "spacing",
           "status": "ok"
         }
@@ -10566,15 +8595,123 @@
       ]
     },
     {
-      "file": "app/components/home/HomeHub.vue",
+      "file": "app/components/home/AppLauncher.vue",
       "counts": {
-        "ok": 25,
+        "ok": 16,
         "violation": 0,
         "review": 0,
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 3,
+        "rawHeadings": 0,
+        "rawParagraphs": 2,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "var(--color-primary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "var(--color-secondary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-surface)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-content-on-surface)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-primary-soft)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-surface-strong)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-accent-indigo)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-disabled)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-warning)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-6)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--space-4)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×6"
+        },
+        {
+          "value": "var(--space-1)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "text-xs",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size ×4"
+        },
+        {
+          "value": "text-2xl",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size ×2"
+        }
+      ]
+    },
+    {
+      "file": "app/components/home/HomeHub.vue",
+      "counts": {
+        "ok": 24,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
         "rawParagraphs": 2,
         "rawLabels": 0,
         "uiTypo": 0
@@ -10695,7 +8832,7 @@
           "value": "var(--space-4)",
           "category": "spacing",
           "status": "ok",
-          "suggest": " ×3"
+          "suggest": " ×4"
         },
         {
           "value": "var(--space-8)",
@@ -10707,11 +8844,6 @@
           "category": "spacing",
           "status": "ok",
           "suggest": " ×4"
-        },
-        {
-          "value": "var(--space-5)",
-          "category": "spacing",
-          "status": "ok"
         },
         {
           "value": "var(--space-3)",
@@ -10900,36 +9032,9 @@
       "findings": []
     },
     {
-      "file": "app/components/Loading.vue",
-      "counts": {
-        "ok": 2,
-        "violation": 0,
-        "review": 0,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 1,
-        "rawParagraphs": 1,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "var(--color-surface-subtle)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-accent-blue)",
-          "category": "color",
-          "status": "ok"
-        }
-      ]
-    },
-    {
       "file": "app/components/modals/GuideDialog.vue",
       "counts": {
-        "ok": 8,
+        "ok": 6,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -10937,17 +9042,12 @@
       "typography": {
         "rawHeadings": 0,
         "rawParagraphs": 0,
-        "rawLabels": 1,
+        "rawLabels": 0,
         "uiTypo": 0
       },
       "findings": [
         {
           "value": "text-content-secondary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-content-on-surface",
           "category": "color",
           "status": "ok"
         },
@@ -10959,11 +9059,6 @@
         },
         {
           "value": "gap-3",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "gap-2",
           "category": "spacing",
           "status": "ok"
         },
@@ -11041,7 +9136,7 @@
     {
       "file": "app/components/NetworkStatusIndicator.vue",
       "counts": {
-        "ok": 14,
+        "ok": 15,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -11070,6 +9165,11 @@
         },
         {
           "value": "bg-white/30",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--ds-focus-outline-color)",
           "category": "color",
           "status": "ok"
         },
@@ -11125,6 +9225,62 @@
           "category": "typography",
           "status": "ok",
           "suggest": "weight"
+        }
+      ]
+    },
+    {
+      "file": "app/components/patterns/AppPageHeader.vue",
+      "counts": {
+        "ok": 7,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 1,
+        "rawLabels": 0,
+        "uiTypo": 2
+      },
+      "findings": [
+        {
+          "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-secondary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-primary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-3)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "text-sm",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        },
+        {
+          "value": "text-xs",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
         }
       ]
     },
@@ -11377,9 +9533,9 @@
       "findings": []
     },
     {
-      "file": "app/components/shared/EmptyState.vue",
+      "file": "app/components/shared/CreditsPill.vue",
       "counts": {
-        "ok": 2,
+        "ok": 6,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -11392,15 +9548,36 @@
       },
       "findings": [
         {
-          "value": "gap-2",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
+          "value": "from-primary",
+          "category": "color",
+          "status": "ok"
         },
         {
-          "value": "mb-0",
+          "value": "to-accent-blue",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "text-primary",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "gap-1",
           "category": "spacing",
           "status": "ok"
+        },
+        {
+          "value": "text-sm",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        },
+        {
+          "value": "font-medium",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "weight"
         }
       ]
     },
@@ -11844,7 +10021,7 @@
     {
       "file": "app/components/shell/CaptureSheet.vue",
       "counts": {
-        "ok": 17,
+        "ok": 18,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -11884,6 +10061,12 @@
           "suggest": " ×3"
         },
         {
+          "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
           "value": "var(--color-secondary)",
           "category": "color",
           "status": "ok",
@@ -11913,12 +10096,6 @@
           "suggest": " ×4"
         },
         {
-          "value": "var(--color-content-secondary)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
           "value": "var(--color-surface)",
           "category": "color",
           "status": "ok"
@@ -11934,15 +10111,21 @@
           "status": "ok"
         },
         {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×6"
+        },
+        {
+          "value": "var(--space-1)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
           "value": "var(--space-3)",
           "category": "spacing",
           "status": "ok",
           "suggest": " ×3"
-        },
-        {
-          "value": "var(--space-2)",
-          "category": "spacing",
-          "status": "ok"
         },
         {
           "value": "var(--space-4)",
@@ -11954,7 +10137,7 @@
     {
       "file": "app/components/shell/MobileTabBar.vue",
       "counts": {
-        "ok": 11,
+        "ok": 4,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -11967,36 +10150,9 @@
       },
       "findings": [
         {
-          "value": "var(--color-primary)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "var(--color-accent-blue)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-accent-teal)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-accent-indigo)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-content-secondary)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
           "value": "var(--color-background)",
           "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
+          "status": "ok"
         },
         {
           "value": "var(--color-secondary)",
@@ -12009,18 +10165,8 @@
           "status": "ok"
         },
         {
-          "value": "var(--ds-gradient-fab)",
+          "value": "var(--color-primary)",
           "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-on-primary)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--space-2)",
-          "category": "spacing",
           "status": "ok"
         }
       ]
@@ -12064,7 +10210,7 @@
           "suggest": " ×2"
         },
         {
-          "value": "var(--color-primary-50)",
+          "value": "var(--color-primary-soft)",
           "category": "color",
           "status": "ok"
         },
@@ -12250,7 +10396,7 @@
       },
       "findings": [
         {
-          "value": "var(--color-white)",
+          "value": "var(--color-surface-subtle)",
           "category": "color",
           "status": "ok"
         },
@@ -12284,33 +10430,6 @@
         {
           "value": "var(--space-4)",
           "category": "spacing",
-          "status": "ok"
-        }
-      ]
-    },
-    {
-      "file": "app/components/SpaLoading.vue",
-      "counts": {
-        "ok": 2,
-        "violation": 0,
-        "review": 0,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 1,
-        "rawParagraphs": 1,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "var(--color-surface-subtle)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-accent-blue)",
-          "category": "color",
           "status": "ok"
         }
       ]
@@ -12352,211 +10471,6 @@
         "uiTypo": 0
       },
       "findings": []
-    },
-    {
-      "file": "app/components/ui/DropdownMenu.vue",
-      "counts": {
-        "ok": 11,
-        "violation": 0,
-        "review": 0,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "text-content-on-surface",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×8"
-        },
-        {
-          "value": "bg-surface",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×5"
-        },
-        {
-          "value": "border-secondary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "ring-white",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-error/10",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--ds-focus-outline-color)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-xl)]",
-          "category": "radius",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "shadow-[var(--shadow-dropdown)]",
-          "category": "shadow",
-          "status": "ok"
-        },
-        {
-          "value": "gap-3",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "text-sm",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size ×5"
-        },
-        {
-          "value": "font-semibold",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        }
-      ]
-    },
-    {
-      "file": "app/components/ui/flip-card/FlipCard.vue",
-      "counts": {
-        "ok": 9,
-        "violation": 0,
-        "review": 0,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "bg-success",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-dark",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-surface",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-background",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-content-on-background",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-2xl)]",
-          "category": "radius",
-          "status": "ok",
-          "suggest": " ×3"
-        },
-        {
-          "value": "mb-4",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "mb-0",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "p-4",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        }
-      ]
-    },
-    {
-      "file": "app/components/ui/GradientBg.vue",
-      "counts": {
-        "ok": 9,
-        "violation": 0,
-        "review": 0,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "to-error/40",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "to-error/50",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-accent-cyan)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "var(--color-accent-blue)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-accent-purple)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-accent-pink)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-lg)]",
-          "category": "radius",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-xl)]",
-          "category": "radius",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-2xl)]",
-          "category": "radius",
-          "status": "ok"
-        }
-      ]
     },
     {
       "file": "app/components/ui/InputField.vue",
@@ -12634,34 +10548,6 @@
       ]
     },
     {
-      "file": "app/components/ui/Loader.vue",
-      "counts": {
-        "ok": 2,
-        "violation": 0,
-        "review": 0,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "gap-2",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "text-sm",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        }
-      ]
-    },
-    {
       "file": "app/components/ui/RewardGradient.vue",
       "counts": {
         "ok": 1,
@@ -12681,49 +10567,6 @@
           "category": "color",
           "status": "ok",
           "suggest": " ×2"
-        }
-      ]
-    },
-    {
-      "file": "app/components/ui/spinning-text/SpinningText.vue",
-      "counts": {
-        "ok": 0,
-        "violation": 0,
-        "review": 0,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": []
-    },
-    {
-      "file": "app/components/ui/text-highlight/TextHighlight.vue",
-      "counts": {
-        "ok": 2,
-        "violation": 0,
-        "review": 0,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "px-1",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "pb-1",
-          "category": "spacing",
-          "status": "ok"
         }
       ]
     },
@@ -12760,9 +10603,9 @@
       "findings": []
     },
     {
-      "file": "app/components/ui/UiButton.vue",
+      "file": "app/components/ui/UiAnimatedText.vue",
       "counts": {
-        "ok": 1,
+        "ok": 4,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -12775,14 +10618,64 @@
       },
       "findings": [
         {
-          "value": "rounded-[var(--radius-full)]",
-          "category": "radius",
+          "value": "var(--ui-animated-text-width-duration)",
+          "category": "color",
           "status": "ok"
+        },
+        {
+          "value": "var(--ui-animated-text-duration)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--ui-animated-text-delay)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--ui-animated-text-direction)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
         }
       ]
     },
     {
+      "file": "app/components/ui/UiButton.vue",
+      "counts": {
+        "ok": 0,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": []
+    },
+    {
       "file": "app/components/ui/UiCheckbox.vue",
+      "counts": {
+        "ok": 0,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": []
+    },
+    {
+      "file": "app/components/ui/UiCollapsible.vue",
       "counts": {
         "ok": 0,
         "violation": 0,
@@ -12818,6 +10711,22 @@
           "status": "ok"
         }
       ]
+    },
+    {
+      "file": "app/components/ui/UiContextMenu.vue",
+      "counts": {
+        "ok": 0,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": []
     },
     {
       "file": "app/components/ui/UiDoubleTapDeleteButton.vue",
@@ -12899,6 +10808,22 @@
       ]
     },
     {
+      "file": "app/components/ui/UiForm.vue",
+      "counts": {
+        "ok": 0,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": []
+    },
+    {
       "file": "app/components/ui/UiFormField.vue",
       "counts": {
         "ok": 0,
@@ -12965,7 +10890,7 @@
     {
       "file": "app/components/ui/UiInteractiveCard.vue",
       "counts": {
-        "ok": 19,
+        "ok": 18,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -12998,19 +10923,13 @@
           "value": "bg-surface",
           "category": "color",
           "status": "ok",
-          "suggest": " ×5"
+          "suggest": " ×2"
         },
         {
           "value": "border-border",
           "category": "color",
           "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "border-surface",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
+          "suggest": " ×2"
         },
         {
           "value": "border-primary",
@@ -13090,7 +11009,7 @@
     {
       "file": "app/components/ui/UiLabel.vue",
       "counts": {
-        "ok": 15,
+        "ok": 8,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -13103,33 +11022,7 @@
       },
       "findings": [
         {
-          "value": "text-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
           "value": "text-content-on-surface",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "text-content-on-background",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-content-secondary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-white",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-content-disabled",
           "category": "color",
           "status": "ok"
         },
@@ -13157,18 +11050,6 @@
           "suggest": "size"
         },
         {
-          "value": "font-light",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
-          "value": "font-normal",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
           "value": "font-medium",
           "category": "typography",
           "status": "ok",
@@ -13181,17 +11062,16 @@
           "suggest": "weight"
         },
         {
-          "value": "font-bold",
+          "value": "leading-normal",
           "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
+          "status": "ok"
         }
       ]
     },
     {
-      "file": "app/components/ui/UiModal.vue",
+      "file": "app/components/ui/UiLoadingState.vue",
       "counts": {
-        "ok": 0,
+        "ok": 5,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -13202,7 +11082,88 @@
         "rawLabels": 0,
         "uiTypo": 0
       },
-      "findings": []
+      "findings": [
+        {
+          "value": "text-content-secondary",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "text-primary",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "gap-2",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "py-6",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "text-sm",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        }
+      ]
+    },
+    {
+      "file": "app/components/ui/UiModal.vue",
+      "counts": {
+        "ok": 7,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 2
+      },
+      "findings": [
+        {
+          "value": "var(--ds-backdrop-strong)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-secondary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "p-0",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "gap-1",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "gap-2",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-4)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-3)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×3"
+        }
+      ]
     },
     {
       "file": "app/components/ui/UiOverlaySurface.vue",
@@ -13339,7 +11300,7 @@
           "suggest": " ×2"
         },
         {
-          "value": "rounded-[var(--radius-xl)]",
+          "value": "rounded-[var(--component-card-radius)]",
           "category": "radius",
           "status": "ok"
         },
@@ -13389,7 +11350,7 @@
     {
       "file": "app/components/ui/UiParagraph.vue",
       "counts": {
-        "ok": 17,
+        "ok": 12,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -13409,8 +11370,7 @@
         {
           "value": "text-content-on-surface",
           "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
+          "status": "ok"
         },
         {
           "value": "text-content-on-background",
@@ -13419,11 +11379,6 @@
         },
         {
           "value": "text-content-secondary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-white",
           "category": "color",
           "status": "ok"
         },
@@ -13457,31 +11412,7 @@
           "suggest": "size"
         },
         {
-          "value": "font-light",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
           "value": "font-normal",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
-          "value": "font-medium",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
-          "value": "font-semibold",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
-          "value": "font-bold",
           "category": "typography",
           "status": "ok",
           "suggest": "weight"
@@ -13489,7 +11420,8 @@
         {
           "value": "leading-normal",
           "category": "typography",
-          "status": "ok"
+          "status": "ok",
+          "suggest": " ×2"
         },
         {
           "value": "leading-relaxed",
@@ -13576,7 +11508,111 @@
       "findings": []
     },
     {
+      "file": "app/components/ui/UiSegmentedControl.vue",
+      "counts": {
+        "ok": 13,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "border-secondary",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "bg-surface",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "text-content-secondary",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "text-content-on-surface",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "bg-primary",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "text-on-primary",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "rounded-[var(--radius-lg)]",
+          "category": "radius",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "p-1",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "gap-2",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "px-3",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "px-4",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "text-sm",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size ×2"
+        },
+        {
+          "value": "font-medium",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "weight"
+        }
+      ]
+    },
+    {
       "file": "app/components/ui/UiSelect.vue",
+      "counts": {
+        "ok": 0,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": []
+    },
+    {
+      "file": "app/components/ui/UiSelectMenu.vue",
       "counts": {
         "ok": 0,
         "violation": 0,
@@ -13692,7 +11728,7 @@
     {
       "file": "app/components/ui/UiSubtitle.vue",
       "counts": {
-        "ok": 19,
+        "ok": 14,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -13705,11 +11741,6 @@
       },
       "findings": [
         {
-          "value": "text-primary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
           "value": "text-content-on-surface",
           "category": "color",
           "status": "ok",
@@ -13721,25 +11752,9 @@
           "status": "ok"
         },
         {
-          "value": "text-white",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "text-content-disabled",
-          "category": "color",
-          "status": "ok"
-        },
-        {
           "value": "m-0",
           "category": "spacing",
           "status": "ok"
-        },
-        {
-          "value": "text-xs",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
         },
         {
           "value": "text-sm",
@@ -13772,18 +11787,6 @@
           "suggest": "size"
         },
         {
-          "value": "font-light",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
-          "value": "font-normal",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
           "value": "font-medium",
           "category": "typography",
           "status": "ok",
@@ -13810,7 +11813,12 @@
           "value": "leading-snug",
           "category": "typography",
           "status": "ok",
-          "suggest": " ×6"
+          "suggest": " ×5"
+        },
+        {
+          "value": "leading-normal",
+          "category": "typography",
+          "status": "ok"
         }
       ]
     },
@@ -13849,7 +11857,7 @@
     {
       "file": "app/components/ui/UiTitle.vue",
       "counts": {
-        "ok": 22,
+        "ok": 17,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -13861,11 +11869,6 @@
         "uiTypo": 0
       },
       "findings": [
-        {
-          "value": "text-primary",
-          "category": "color",
-          "status": "ok"
-        },
         {
           "value": "text-content-on-surface",
           "category": "color",
@@ -13883,20 +11886,9 @@
           "status": "ok"
         },
         {
-          "value": "text-content-disabled",
-          "category": "color",
-          "status": "ok"
-        },
-        {
           "value": "m-0",
           "category": "spacing",
           "status": "ok"
-        },
-        {
-          "value": "text-xs",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
         },
         {
           "value": "text-sm",
@@ -13947,18 +11939,6 @@
           "suggest": "size"
         },
         {
-          "value": "font-light",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
-          "value": "font-normal",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
-        },
-        {
           "value": "font-medium",
           "category": "typography",
           "status": "ok",
@@ -13992,7 +11972,7 @@
     {
       "file": "app/components/ui/UiToolbar.vue",
       "counts": {
-        "ok": 8,
+        "ok": 4,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -14004,16 +11984,6 @@
         "uiTypo": 0
       },
       "findings": [
-        {
-          "value": "border-secondary",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "bg-surface",
-          "category": "color",
-          "status": "ok"
-        },
         {
           "value": "rounded-[var(--radius-lg)]",
           "category": "radius",
@@ -14030,17 +12000,7 @@
           "status": "ok"
         },
         {
-          "value": "p-1",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
           "value": "gap-2",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "p-2",
           "category": "spacing",
           "status": "ok"
         }
@@ -14077,67 +12037,6 @@
         "uiTypo": 0
       },
       "findings": []
-    },
-    {
-      "file": "app/components/ui/UpgradeToPro.vue",
-      "counts": {
-        "ok": 8,
-        "violation": 0,
-        "review": 0,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 2,
-        "rawParagraphs": 1,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "var(--color-white)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-surface-subtle)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-accent-blue)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×5"
-        },
-        {
-          "value": "var(--color-content-on-background)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "var(--color-content-secondary)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "var(--color-secondary)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "var(--color-success)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-on-primary)",
-          "category": "color",
-          "status": "ok"
-        }
-      ]
     },
     {
       "file": "app/components/user/ChangePasswordModal.vue",
@@ -14341,28 +12240,6 @@
       ]
     },
     {
-      "file": "app/components/workspace/Editor.vue",
-      "counts": {
-        "ok": 1,
-        "violation": 0,
-        "review": 0,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 1,
-        "rawParagraphs": 0,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "var(--color-success)",
-          "category": "color",
-          "status": "ok"
-        }
-      ]
-    },
-    {
       "file": "app/components/workspace/hub/flashcards/CreateFlashcardModal.vue",
       "counts": {
         "ok": 4,
@@ -14402,18 +12279,61 @@
     {
       "file": "app/components/workspace/hub/flashcards/DeleteFlashcardModal.vue",
       "counts": {
-        "ok": 0,
+        "ok": 8,
         "violation": 0,
         "review": 0,
         "legacy": 0
       },
       "typography": {
         "rawHeadings": 0,
-        "rawParagraphs": 0,
+        "rawParagraphs": 2,
         "rawLabels": 0,
-        "uiTypo": 0
+        "uiTypo": 1
       },
-      "findings": []
+      "findings": [
+        {
+          "value": "border-warning/20",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "bg-warning/10",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "text-content-secondary",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "mt-4",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "gap-3",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "mt-1",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "text-sm",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        },
+        {
+          "value": "font-medium",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "weight"
+        }
+      ]
     },
     {
       "file": "app/components/workspace/hub/NoteContextViewer.vue",
@@ -14671,6 +12591,162 @@
       "findings": []
     },
     {
+      "file": "app/features/board/components/BoardKanbanView.vue",
+      "counts": {
+        "ok": 26,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 1
+      },
+      "findings": [
+        {
+          "value": "border-secondary",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "bg-surface",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "text-primary",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "ring-primary",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "border-surface",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "border-primary",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "text-content-secondary",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "shadow-[var(--shadow-dropdown)]",
+          "category": "shadow",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "shadow-[var(--shadow-modal)]",
+          "category": "shadow",
+          "status": "ok"
+        },
+        {
+          "value": "p-0",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "gap-2",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×5"
+        },
+        {
+          "value": "p-2",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "gap-4",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×4"
+        },
+        {
+          "value": "p-4",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "mb-3",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "my-3",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "mb-4",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "space-y-2",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "gap-3",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "gap-1",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "pt-2",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "text-xs",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size ×2"
+        },
+        {
+          "value": "text-sm",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        },
+        {
+          "value": "font-semibold",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "weight"
+        },
+        {
+          "value": "font-medium",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "weight"
+        },
+        {
+          "value": "tracking-wider",
+          "category": "typography",
+          "status": "ok"
+        }
+      ]
+    },
+    {
       "file": "app/features/board/components/BoardListView.vue",
       "counts": {
         "ok": 18,
@@ -14917,6 +12993,544 @@
       "findings": []
     },
     {
+      "file": "app/features/board/components/QuickBoardItemEditor.vue",
+      "counts": {
+        "ok": 5,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-on-surface)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-disabled)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×4"
+        },
+        {
+          "value": "var(--space-1)",
+          "category": "spacing",
+          "status": "ok"
+        }
+      ]
+    },
+    {
+      "file": "app/features/daily/components/ActionItemForm.vue",
+      "counts": {
+        "ok": 1,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "var(--space-3)",
+          "category": "spacing",
+          "status": "ok"
+        }
+      ]
+    },
+    {
+      "file": "app/features/daily/components/ActionItemSheet.vue",
+      "counts": {
+        "ok": 0,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": []
+    },
+    {
+      "file": "app/features/daily/components/DailyActionList.vue",
+      "counts": {
+        "ok": 1,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "var(--color-surface-subtle)",
+          "category": "color",
+          "status": "ok"
+        }
+      ]
+    },
+    {
+      "file": "app/features/daily/components/DailyActionRow.vue",
+      "counts": {
+        "ok": 9,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 1,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "var(--color-error)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-secondary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-on-surface)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-disabled)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-3)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--space-1)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "text-xs",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        }
+      ]
+    },
+    {
+      "file": "app/features/daily/components/DailyActionSection.vue",
+      "counts": {
+        "ok": 8,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 2,
+        "rawLabels": 0,
+        "uiTypo": 1
+      },
+      "findings": [
+        {
+          "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-secondary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-disabled)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-3)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "text-xs",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size ×2"
+        },
+        {
+          "value": "text-lg",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        },
+        {
+          "value": "text-sm",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        }
+      ]
+    },
+    {
+      "file": "app/features/daily/components/DailyDateNavigation.vue",
+      "counts": {
+        "ok": 11,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 1,
+        "rawLabels": 0,
+        "uiTypo": 1
+      },
+      "findings": [
+        {
+          "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "var(--color-secondary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-primary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-on-primary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-4)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-1)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "text-sm",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        },
+        {
+          "value": "text-xs",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size ×2"
+        },
+        {
+          "value": "text-xl",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        },
+        {
+          "value": "text-base",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        }
+      ]
+    },
+    {
+      "file": "app/features/daily/components/DailyNoteConflictPanel.vue",
+      "counts": {
+        "ok": 13,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 1,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "text-content-on-surface",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "bg-surface",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "text-content-secondary",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-warning)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "rounded-[var(--radius-md)]",
+          "category": "radius",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "mb-2",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "gap-3",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "mb-1",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "p-2",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "mt-3",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "gap-2",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "text-xs",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size ×5"
+        },
+        {
+          "value": "font-semibold",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "weight ×3"
+        }
+      ]
+    },
+    {
+      "file": "app/features/daily/components/DailyNoteSection.vue",
+      "counts": {
+        "ok": 4,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 1,
+        "rawLabels": 0,
+        "uiTypo": 1
+      },
+      "findings": [
+        {
+          "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-3)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "text-xs",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        },
+        {
+          "value": "text-lg",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        }
+      ]
+    },
+    {
+      "file": "app/features/daily/components/DailyRichEditor.vue",
+      "counts": {
+        "ok": 8,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "var(--color-secondary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-surface)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-content-on-surface)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-disabled)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "var(--space-1)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-6)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "text-xl",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        }
+      ]
+    },
+    {
+      "file": "app/features/daily/components/RescheduleActionForm.vue",
+      "counts": {
+        "ok": 1,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 1,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok"
+        }
+      ]
+    },
+    {
+      "file": "app/features/daily/components/RescheduleActionSheet.vue",
+      "counts": {
+        "ok": 0,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": []
+    },
+    {
       "file": "app/features/integrations/components/IntegrationAppsIcon.vue",
       "counts": {
         "ok": 4,
@@ -14997,6 +13611,110 @@
       ]
     },
     {
+      "file": "app/features/language-learning/components/LanguageCapturePanel.vue",
+      "counts": {
+        "ok": 16,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 3,
+        "rawLabels": 0,
+        "uiTypo": 3
+      },
+      "findings": [
+        {
+          "value": "var(--color-success)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-secondary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--ds-surface-card)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-primary-soft)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-primary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×5"
+        },
+        {
+          "value": "var(--color-content-on-surface-strong)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "var(--color-surface-subtle)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-4)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×4"
+        },
+        {
+          "value": "var(--space-3)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-1)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-6)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "text-xs",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        },
+        {
+          "value": "text-sm",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size ×2"
+        },
+        {
+          "value": "leading-normal",
+          "category": "typography",
+          "status": "ok"
+        }
+      ]
+    },
+    {
       "file": "app/features/language-learning/components/LanguageSessionView.vue",
       "counts": {
         "ok": 0,
@@ -15013,103 +13731,9 @@
       "findings": []
     },
     {
-      "file": "app/features/language-learning/components/StoryReader.vue",
+      "file": "app/features/language-learning/components/LanguageWordBankList.vue",
       "counts": {
         "ok": 14,
-        "violation": 0,
-        "review": 0,
-        "legacy": 0
-      },
-      "typography": {
-        "rawHeadings": 0,
-        "rawParagraphs": 3,
-        "rawLabels": 0,
-        "uiTypo": 0
-      },
-      "findings": [
-        {
-          "value": "var(--color-background)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-surface)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-content-on-surface)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "var(--color-content-on-surface-strong)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "var(--color-content-secondary)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-primary)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "var(--color-dark)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×3"
-        },
-        {
-          "value": "var(--color-white)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×7"
-        },
-        {
-          "value": "var(--color-accent-indigo)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-accent-cyan)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-accent-pink)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--space-2)",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "var(--space-4)",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "var(--space-3)",
-          "category": "spacing",
-          "status": "ok"
-        }
-      ]
-    },
-    {
-      "file": "app/features/language-learning/containers/LanguageHomeContainer.vue",
-      "counts": {
-        "ok": 4,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -15122,25 +13746,296 @@
       },
       "findings": [
         {
-          "value": "space-y-6",
-          "category": "spacing",
+          "value": "text-primary",
+          "category": "color",
           "status": "ok"
         },
         {
-          "value": "mt-6",
-          "category": "spacing",
+          "value": "var(--color-secondary)",
+          "category": "color",
           "status": "ok"
         },
         {
-          "value": "gap-2",
-          "category": "spacing",
+          "value": "var(--ds-surface-card)",
+          "category": "color",
           "status": "ok"
         },
         {
-          "value": "mr-1",
+          "value": "var(--color-content-on-surface-strong)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-error)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-background)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-error-text)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "rounded-[var(--component-card-radius)]",
+          "category": "radius",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-2)",
           "category": "spacing",
           "status": "ok",
           "suggest": " ×2"
+        },
+        {
+          "value": "var(--space-3)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×6"
+        },
+        {
+          "value": "var(--space-4)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-1)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "text-xs",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        }
+      ]
+    },
+    {
+      "file": "app/features/language-learning/components/LanguageWordBankToolbar.vue",
+      "counts": {
+        "ok": 6,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "var(--color-primary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "var(--color-secondary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--ds-surface-card)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-on-background)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-3)",
+          "category": "spacing",
+          "status": "ok"
+        }
+      ]
+    },
+    {
+      "file": "app/features/language-learning/components/LanguageWordDetailModal.vue",
+      "counts": {
+        "ok": 11,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 18
+      },
+      "findings": [
+        {
+          "value": "var(--color-primary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-success)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-warning)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--ds-surface-card)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-disabled)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-secondary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-on-surface)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-4)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--space-3)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×6"
+        }
+      ]
+    },
+    {
+      "file": "app/features/language-learning/components/QuickWordCapture.vue",
+      "counts": {
+        "ok": 14,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 4,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "var(--color-accent-teal)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×4"
+        },
+        {
+          "value": "var(--color-secondary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-surface-strong)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-on-surface)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-disabled)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-surface-subtle)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-content-on-surface-strong)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-primary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-success)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--space-3)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×10"
+        },
+        {
+          "value": "var(--space-1)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-4)",
+          "category": "spacing",
+          "status": "ok"
         }
       ]
     },
@@ -15179,6 +14074,64 @@
           "value": "mt-6",
           "category": "spacing",
           "status": "ok"
+        }
+      ]
+    },
+    {
+      "file": "app/features/learning-shell/components/LearningHome.vue",
+      "counts": {
+        "ok": 8,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 1,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "var(--color-primary-soft)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-primary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-on-surface-strong)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-6)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-3)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "text-xs",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
         }
       ]
     },
@@ -15231,7 +14184,7 @@
       "typography": {
         "rawHeadings": 0,
         "rawParagraphs": 1,
-        "rawLabels": 2,
+        "rawLabels": 1,
         "uiTypo": 0
       },
       "findings": [
@@ -15298,7 +14251,7 @@
           "value": "gap-3",
           "category": "spacing",
           "status": "ok",
-          "suggest": " ×4"
+          "suggest": " ×3"
         },
         {
           "value": "pt-2",
@@ -15372,7 +14325,7 @@
           "value": "text-sm",
           "category": "typography",
           "status": "ok",
-          "suggest": "size ×10"
+          "suggest": "size ×9"
         },
         {
           "value": "text-xs",
@@ -15390,7 +14343,7 @@
           "value": "font-medium",
           "category": "typography",
           "status": "ok",
-          "suggest": "weight ×7"
+          "suggest": "weight ×6"
         }
       ]
     },
@@ -15403,7 +14356,7 @@
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 1,
+        "rawHeadings": 0,
         "rawParagraphs": 4,
         "rawLabels": 0,
         "uiTypo": 0
@@ -15710,6 +14663,76 @@
       ]
     },
     {
+      "file": "app/features/notes/components/QuickNoteEditor.vue",
+      "counts": {
+        "ok": 6,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "var(--color-content-on-surface-strong)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-disabled)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-content-on-surface)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-primary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-1)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok"
+        }
+      ]
+    },
+    {
+      "file": "app/features/notes/components/QuickNoteSheet.vue",
+      "counts": {
+        "ok": 1,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok"
+        }
+      ]
+    },
+    {
       "file": "app/features/notes/components/SelectionAiBubble.vue",
       "counts": {
         "ok": 3,
@@ -15942,7 +14965,7 @@
     {
       "file": "app/features/review/components/ReviewAnalytics.vue",
       "counts": {
-        "ok": 4,
+        "ok": 3,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -15957,11 +14980,6 @@
         {
           "value": "text-content-secondary",
           "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "shadow-[var(--shadow-card-hover)]",
-          "category": "shadow",
           "status": "ok"
         },
         {
@@ -16132,7 +15150,7 @@
           "status": "ok"
         },
         {
-          "value": "rounded-[var(--radius-2xl)]",
+          "value": "rounded-[var(--component-card-radius)]",
           "category": "radius",
           "status": "ok"
         },
@@ -16180,7 +15198,7 @@
     {
       "file": "app/features/review/components/ReviewStats.vue",
       "counts": {
-        "ok": 6,
+        "ok": 4,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -16196,18 +15214,7 @@
           "value": "text-content-secondary",
           "category": "color",
           "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "text-content-on-surface",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-lg)]",
-          "category": "radius",
-          "status": "ok",
-          "suggest": " ×2"
+          "suggest": " ×3"
         },
         {
           "value": "space-x-4",
@@ -16232,41 +15239,48 @@
     {
       "file": "app/features/review/components/SessionSummary.vue",
       "counts": {
-        "ok": 11,
+        "ok": 16,
         "violation": 0,
         "review": 0,
         "legacy": 0
       },
       "typography": {
         "rawHeadings": 0,
-        "rawParagraphs": 2,
+        "rawParagraphs": 1,
         "rawLabels": 0,
         "uiTypo": 0
       },
       "findings": [
         {
-          "value": "var(--ds-gradient-summary)",
+          "value": "var(--color-background)",
           "category": "color",
           "status": "ok"
         },
         {
-          "value": "var(--color-white)",
+          "value": "var(--color-content-on-background)",
           "category": "color",
           "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "var(--ds-gradient-fab)",
-          "category": "color",
-          "status": "ok"
+          "suggest": " ×2"
         },
         {
           "value": "var(--color-content-secondary)",
           "category": "color",
-          "status": "ok"
+          "status": "ok",
+          "suggest": " ×3"
         },
         {
           "value": "var(--color-content-on-surface-strong)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-primary-soft)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-primary)",
           "category": "color",
           "status": "ok"
         },
@@ -16300,17 +15314,40 @@
           "suggest": " ×2"
         },
         {
-          "value": "var(--space-4)",
+          "value": "var(--space-1)",
           "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "text-xs",
+          "category": "typography",
           "status": "ok",
-          "suggest": " ×2"
+          "suggest": "size ×2"
+        },
+        {
+          "value": "text-4xl",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        },
+        {
+          "value": "text-sm",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size ×2"
+        },
+        {
+          "value": "text-2xl",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
         }
       ]
     },
     {
       "file": "app/features/review/components/Sm2GradeBar.vue",
       "counts": {
-        "ok": 9,
+        "ok": 11,
         "violation": 0,
         "review": 0,
         "legacy": 0
@@ -16360,6 +15397,17 @@
         },
         {
           "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-secondary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-background)",
           "category": "color",
           "status": "ok"
         },
@@ -16442,35 +15490,23 @@
     {
       "file": "app/pages/404.vue",
       "counts": {
-        "ok": 3,
+        "ok": 1,
         "violation": 0,
         "review": 0,
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 1,
+        "rawHeadings": 0,
         "rawParagraphs": 1,
         "rawLabels": 0,
         "uiTypo": 0
       },
       "findings": [
         {
-          "value": "text-4xl",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "size"
-        },
-        {
           "value": "text-lg",
           "category": "typography",
           "status": "ok",
           "suggest": "size"
-        },
-        {
-          "value": "font-bold",
-          "category": "typography",
-          "status": "ok",
-          "suggest": "weight"
         }
       ]
     },
@@ -16532,13 +15568,13 @@
     {
       "file": "app/pages/account/index.vue",
       "counts": {
-        "ok": 11,
+        "ok": 10,
         "violation": 0,
         "review": 0,
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 1,
+        "rawHeadings": 0,
         "rawParagraphs": 1,
         "rawLabels": 0,
         "uiTypo": 0
@@ -16552,7 +15588,8 @@
         {
           "value": "var(--color-primary)",
           "category": "color",
-          "status": "ok"
+          "status": "ok",
+          "suggest": " ×2"
         },
         {
           "value": "var(--color-secondary)",
@@ -16565,12 +15602,7 @@
           "status": "ok"
         },
         {
-          "value": "var(--ds-gradient-fab)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-on-primary)",
+          "value": "var(--color-primary-soft)",
           "category": "color",
           "status": "ok"
         },
@@ -16677,6 +15709,22 @@
       ]
     },
     {
+      "file": "app/pages/account/offline.vue",
+      "counts": {
+        "ok": 0,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": []
+    },
+    {
       "file": "app/pages/account/plan.vue",
       "counts": {
         "ok": 1,
@@ -16714,12 +15762,12 @@
       },
       "findings": [
         {
-          "value": "var(--ds-gradient-fab)",
+          "value": "var(--color-primary-soft)",
           "category": "color",
           "status": "ok"
         },
         {
-          "value": "var(--color-on-primary)",
+          "value": "var(--color-primary)",
           "category": "color",
           "status": "ok"
         }
@@ -16810,7 +15858,7 @@
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 1,
+        "rawHeadings": 0,
         "rawParagraphs": 1,
         "rawLabels": 0,
         "uiTypo": 0
@@ -17020,7 +16068,83 @@
       ]
     },
     {
-      "file": "app/pages/board.vue",
+      "file": "app/pages/board/[id].vue",
+      "counts": {
+        "ok": 11,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 5,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "text-content-disabled",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-primary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-background)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-secondary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "var(--color-error-text)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-error)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-3)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×5"
+        },
+        {
+          "value": "var(--space-4)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×7"
+        },
+        {
+          "value": "var(--space-1)",
+          "category": "spacing",
+          "status": "ok"
+        }
+      ]
+    },
+    {
+      "file": "app/pages/board/index.vue",
       "counts": {
         "ok": 17,
         "violation": 0,
@@ -17028,7 +16152,7 @@
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 1,
+        "rawHeadings": 0,
         "rawParagraphs": 4,
         "rawLabels": 0,
         "uiTypo": 0
@@ -17134,6 +16258,50 @@
       ]
     },
     {
+      "file": "app/pages/day/[date].vue",
+      "counts": {
+        "ok": 1,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "var(--space-6)",
+          "category": "spacing",
+          "status": "ok"
+        }
+      ]
+    },
+    {
+      "file": "app/pages/day/index.vue",
+      "counts": {
+        "ok": 1,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "var(--color-content-secondary)",
+          "category": "color",
+          "status": "ok"
+        }
+      ]
+    },
+    {
       "file": "app/pages/index.vue",
       "counts": {
         "ok": 0,
@@ -17152,123 +16320,33 @@
     {
       "file": "app/pages/language/index.vue",
       "counts": {
-        "ok": 25,
+        "ok": 7,
         "violation": 0,
         "review": 0,
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 2,
-        "rawParagraphs": 7,
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
         "rawLabels": 0,
-        "uiTypo": 0
+        "uiTypo": 2
       },
       "findings": [
         {
-          "value": "text-content-disabled",
+          "value": "var(--color-primary-soft)",
           "category": "color",
           "status": "ok"
         },
         {
           "value": "var(--color-primary)",
           "category": "color",
-          "status": "ok",
-          "suggest": " ×10"
-        },
-        {
-          "value": "var(--color-success)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-warning)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "var(--color-content-secondary)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×11"
-        },
-        {
-          "value": "var(--color-content-on-surface-strong)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "var(--color-warning-text)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-surface-subtle)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×3"
-        },
-        {
-          "value": "var(--color-background)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "var(--color-primary-50)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-white)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "var(--color-secondary)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×3"
-        },
-        {
-          "value": "var(--color-error-text)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "var(--ds-gradient-due)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--ds-surface-card)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "var(--color-content-on-background)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-error)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-2xl)]",
-          "category": "radius",
           "status": "ok"
         },
         {
           "value": "var(--space-4)",
           "category": "spacing",
           "status": "ok",
-          "suggest": " ×10"
+          "suggest": " ×4"
         },
         {
           "value": "var(--space-8)",
@@ -17278,30 +16356,19 @@
         {
           "value": "var(--space-2)",
           "category": "spacing",
-          "status": "ok",
-          "suggest": " ×6"
+          "status": "ok"
         },
         {
           "value": "var(--space-3)",
           "category": "spacing",
           "status": "ok",
-          "suggest": " ×4"
+          "suggest": " ×2"
         },
         {
-          "value": "var(--space-6)",
-          "category": "spacing",
+          "value": "text-xs",
+          "category": "typography",
           "status": "ok",
-          "suggest": " ×3"
-        },
-        {
-          "value": "var(--space-1)",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "var(--space-16)",
-          "category": "spacing",
-          "status": "ok"
+          "suggest": "size"
         }
       ]
     },
@@ -17354,6 +16421,39 @@
       "findings": []
     },
     {
+      "file": "app/pages/learn/index.vue",
+      "counts": {
+        "ok": 3,
+        "violation": 0,
+        "review": 0,
+        "legacy": 0
+      },
+      "typography": {
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 0
+      },
+      "findings": [
+        {
+          "value": "var(--space-6)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-4)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
+          "value": "var(--space-8)",
+          "category": "spacing",
+          "status": "ok"
+        }
+      ]
+    },
+    {
       "file": "app/pages/logout.vue",
       "counts": {
         "ok": 4,
@@ -17393,38 +16493,34 @@
     {
       "file": "app/pages/materials/[id].vue",
       "counts": {
-        "ok": 25,
+        "ok": 21,
         "violation": 0,
         "review": 0,
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 1,
-        "rawParagraphs": 7,
-        "rawLabels": 2,
-        "uiTypo": 0
+        "rawHeadings": 0,
+        "rawParagraphs": 6,
+        "rawLabels": 0,
+        "uiTypo": 2
       },
       "findings": [
         {
-          "value": "text-content-disabled",
+          "value": "var(--color-primary-soft)",
           "category": "color",
           "status": "ok"
         },
         {
-          "value": "var(--color-error)",
+          "value": "var(--color-primary)",
           "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-accent-blue)",
-          "category": "color",
-          "status": "ok"
+          "status": "ok",
+          "suggest": " ×4"
         },
         {
           "value": "var(--color-content-on-surface-strong)",
           "category": "color",
           "status": "ok",
-          "suggest": " ×4"
+          "suggest": " ×3"
         },
         {
           "value": "var(--color-content-secondary)",
@@ -17442,13 +16538,12 @@
           "value": "var(--color-secondary)",
           "category": "color",
           "status": "ok",
-          "suggest": " ×4"
+          "suggest": " ×5"
         },
         {
           "value": "var(--color-content-on-surface)",
           "category": "color",
-          "status": "ok",
-          "suggest": " ×3"
+          "status": "ok"
         },
         {
           "value": "var(--color-surface-strong)",
@@ -17464,26 +16559,10 @@
           "value": "var(--color-background)",
           "category": "color",
           "status": "ok",
-          "suggest": " ×2"
+          "suggest": " ×3"
         },
         {
-          "value": "var(--color-surface)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-primary)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×6"
-        },
-        {
-          "value": "var(--color-on-primary)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-primary-50)",
+          "value": "var(--ds-focus-outline-color)",
           "category": "color",
           "status": "ok"
         },
@@ -17508,7 +16587,7 @@
           "status": "ok"
         },
         {
-          "value": "rounded-[var(--radius-2xl)]",
+          "value": "rounded-[var(--component-card-radius)]",
           "category": "radius",
           "status": "ok",
           "suggest": " ×2"
@@ -17525,16 +16604,16 @@
           "status": "ok"
         },
         {
-          "value": "var(--space-2)",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×11"
-        },
-        {
           "value": "var(--space-3)",
           "category": "spacing",
           "status": "ok",
           "suggest": " ×9"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×6"
         },
         {
           "value": "var(--space-6)",
@@ -17546,44 +16625,18 @@
     {
       "file": "app/pages/materials/index.vue",
       "counts": {
-        "ok": 15,
+        "ok": 8,
         "violation": 0,
         "review": 0,
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 1,
-        "rawParagraphs": 3,
+        "rawHeadings": 0,
+        "rawParagraphs": 1,
         "rawLabels": 0,
         "uiTypo": 0
       },
       "findings": [
-        {
-          "value": "text-content-disabled",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-error)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-accent-purple)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-accent-blue)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-content-on-surface-strong)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
         {
           "value": "var(--color-surface-subtle)",
           "category": "color",
@@ -17592,8 +16645,7 @@
         {
           "value": "var(--color-content-secondary)",
           "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
+          "status": "ok"
         },
         {
           "value": "rounded-[var(--radius-full)]",
@@ -17602,7 +16654,7 @@
           "suggest": " ×2"
         },
         {
-          "value": "rounded-[var(--radius-2xl)]",
+          "value": "rounded-[var(--radius-lg)]",
           "category": "radius",
           "status": "ok"
         },
@@ -17620,24 +16672,13 @@
         {
           "value": "var(--space-2)",
           "category": "spacing",
-          "status": "ok",
-          "suggest": " ×2"
+          "status": "ok"
         },
         {
           "value": "var(--space-3)",
           "category": "spacing",
           "status": "ok",
           "suggest": " ×2"
-        },
-        {
-          "value": "var(--space-16)",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "var(--space-6)",
-          "category": "spacing",
-          "status": "ok"
         }
       ]
     },
@@ -17680,7 +16721,7 @@
           "suggest": " ×6"
         },
         {
-          "value": "var(--color-primary-50)",
+          "value": "var(--color-primary-soft)",
           "category": "color",
           "status": "ok",
           "suggest": " ×2"
@@ -17746,7 +16787,7 @@
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 1,
+        "rawHeadings": 0,
         "rawParagraphs": 2,
         "rawLabels": 0,
         "uiTypo": 0
@@ -17929,45 +16970,29 @@
     {
       "file": "app/pages/workspaces/[id].vue",
       "counts": {
-        "ok": 19,
+        "ok": 16,
         "violation": 0,
         "review": 0,
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 2,
-        "rawParagraphs": 3,
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
         "rawLabels": 0,
-        "uiTypo": 0
+        "uiTypo": 3
       },
       "findings": [
-        {
-          "value": "text-content-disabled",
-          "category": "color",
-          "status": "ok"
-        },
         {
           "value": "var(--color-content-secondary)",
           "category": "color",
           "status": "ok",
-          "suggest": " ×7"
-        },
-        {
-          "value": "var(--color-white)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-content-on-surface-strong)",
-          "category": "color",
-          "status": "ok",
           "suggest": " ×3"
         },
         {
-          "value": "var(--ds-surface-card)",
+          "value": "var(--color-primary)",
           "category": "color",
           "status": "ok",
-          "suggest": " ×3"
+          "suggest": " ×2"
         },
         {
           "value": "var(--color-secondary)",
@@ -17976,66 +17001,26 @@
           "suggest": " ×2"
         },
         {
-          "value": "var(--color-primary)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×5"
-        },
-        {
-          "value": "var(--color-accent-indigo)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "var(--color-accent-orange)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×2"
-        },
-        {
-          "value": "var(--color-content-disabled)",
+          "value": "var(--ds-surface-card)",
           "category": "color",
           "status": "ok"
         },
         {
-          "value": "var(--color-surface-subtle)",
+          "value": "var(--color-content-on-surface-strong)",
           "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-2xl)]",
-          "category": "radius",
           "status": "ok",
           "suggest": " ×2"
+        },
+        {
+          "value": "var(--color-primary-soft)",
+          "category": "color",
+          "status": "ok"
         },
         {
           "value": "rounded-[var(--radius-lg)]",
           "category": "radius",
-          "status": "ok"
-        },
-        {
-          "value": "var(--space-4)",
-          "category": "spacing",
           "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "var(--space-8)",
-          "category": "spacing",
-          "status": "ok"
-        },
-        {
-          "value": "var(--space-2)",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×6"
-        },
-        {
-          "value": "var(--space-3)",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×7"
+          "suggest": " ×3"
         },
         {
           "value": "var(--space-6)",
@@ -18043,25 +17028,66 @@
           "status": "ok"
         },
         {
+          "value": "var(--space-4)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×3"
+        },
+        {
+          "value": "var(--space-8)",
+          "category": "spacing",
+          "status": "ok"
+        },
+        {
+          "value": "var(--space-3)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×5"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×2"
+        },
+        {
           "value": "var(--space-1)",
           "category": "spacing",
           "status": "ok"
+        },
+        {
+          "value": "text-xl",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
+        },
+        {
+          "value": "text-xs",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size ×2"
+        },
+        {
+          "value": "text-sm",
+          "category": "typography",
+          "status": "ok",
+          "suggest": "size"
         }
       ]
     },
     {
       "file": "app/pages/workspaces/index.vue",
       "counts": {
-        "ok": 16,
+        "ok": 13,
         "violation": 0,
         "review": 0,
         "legacy": 0
       },
       "typography": {
-        "rawHeadings": 1,
-        "rawParagraphs": 1,
-        "rawLabels": 2,
-        "uiTypo": 0
+        "rawHeadings": 0,
+        "rawParagraphs": 0,
+        "rawLabels": 0,
+        "uiTypo": 2
       },
       "findings": [
         {
@@ -18073,35 +17099,13 @@
           "value": "var(--color-content-on-surface-strong)",
           "category": "color",
           "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "var(--color-content-secondary)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
-        },
-        {
-          "value": "var(--ds-surface-card)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-secondary)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "var(--color-primary)",
-          "category": "color",
-          "status": "ok",
-          "suggest": " ×4"
+          "suggest": " ×2"
         },
         {
           "value": "var(--color-surface-subtle)",
           "category": "color",
           "status": "ok",
-          "suggest": " ×3"
+          "suggest": " ×2"
         },
         {
           "value": "var(--color-error-text)",
@@ -18114,18 +17118,23 @@
           "status": "ok"
         },
         {
-          "value": "var(--color-white)",
+          "value": "var(--color-primary)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--ds-focus-outline-color)",
+          "category": "color",
+          "status": "ok"
+        },
+        {
+          "value": "var(--color-content-secondary)",
           "category": "color",
           "status": "ok",
           "suggest": " ×2"
         },
         {
-          "value": "var(--color-border-strong)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
-          "value": "rounded-[var(--radius-2xl)]",
+          "value": "rounded-[var(--component-card-radius)]",
           "category": "radius",
           "status": "ok"
         },
@@ -18141,16 +17150,16 @@
           "status": "ok"
         },
         {
-          "value": "var(--space-2)",
-          "category": "spacing",
-          "status": "ok",
-          "suggest": " ×10"
-        },
-        {
           "value": "var(--space-3)",
           "category": "spacing",
           "status": "ok",
-          "suggest": " ×10"
+          "suggest": " ×7"
+        },
+        {
+          "value": "var(--space-2)",
+          "category": "spacing",
+          "status": "ok",
+          "suggest": " ×7"
         }
       ]
     }

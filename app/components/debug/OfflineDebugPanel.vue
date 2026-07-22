@@ -74,7 +74,7 @@ onMounted(() => { load() })
 </template>
 
 <style scoped>
-.offline-debug-panel { border: 1px solid var(--border-color, #ddd); padding: 1rem; border-radius: 6px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.offline-debug-panel { border: 1px solid var(--color-secondary); padding: 1rem; border-radius: 6px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
 button { margin-bottom: .5rem; }
 .error { color: #b00020; margin:.5rem 0; }
 .stats { list-style: none; padding:0; margin:.5rem 0 1rem; }

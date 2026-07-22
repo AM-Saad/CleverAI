@@ -5,8 +5,8 @@
     :description="description"
     :disabled="disabled"
     :required="required"
-    :color="resolvedColor"
-    :variant="variant"
+    :color="error ? 'error' : 'primary'"
+    variant="list"
     :size="size"
     :indicator="indicator"
     :aria-invalid="error ? 'true' : undefined"
@@ -18,15 +18,12 @@
 /**
  * UiCheckbox — boolean checkbox with optional label. Thin wrapper over `UCheckbox`.
  */
-import { computed } from "vue";
-import type { Size, Tone } from "./variants";
+import type { ControlSize } from "./variants";
 
 const model = defineModel<boolean | "indeterminate">();
 const {
   label,
   description,
-  tone = "primary",
-  variant = "list",
   size = "md",
   indicator = "start",
   disabled = false,
@@ -35,14 +32,11 @@ const {
 } = defineProps<{
   label?: string;
   description?: string;
-  tone?: Tone;
-  variant?: "list" | "card";
-  size?: Size;
+  size?: ControlSize;
   indicator?: "start" | "end" | "hidden";
   disabled?: boolean;
   required?: boolean;
   error?: boolean | string;
 }>();
-const resolvedColor = computed(() => error ? "error" : tone);
 defineOptions({ inheritAttrs: false });
 </script>

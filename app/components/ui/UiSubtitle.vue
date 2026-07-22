@@ -16,23 +16,19 @@ interface Props {
   /**
    * Subtitle size variant
    */
-  size?: "xs" | "sm" | "base" | "lg" | "xl" | "2xl";
+  size?: "sm" | "base" | "lg" | "xl" | "2xl";
   /**
    * Font weight
    */
-  weight?: "light" | "normal" | "medium" | "semibold" | "bold";
+  weight?: "medium" | "semibold" | "bold";
   /**
    * Text color variant
    */
   color?:
-    | "primary"
     | "content-on-surface"
     | "content-on-surface-strong"
     | "content-on-background"
-    | "white"
-    | "danger"
-    | "success"
-    | "disabled";
+    | "error";
   /**
    * Center alignment
    */
@@ -51,7 +47,6 @@ const subtitle = tv({
   base: "ui-subtitle m-0 tracking-normal",
   variants: {
     size: {
-      xs: "text-xs leading-snug",
       sm: "text-sm leading-snug",
       base: "text-base leading-snug",
       lg: "text-base md:text-lg leading-snug",
@@ -59,21 +54,15 @@ const subtitle = tv({
       "2xl": "text-2xl leading-snug",
     },
     weight: {
-      light: "font-light",
-      normal: "font-normal",
       medium: "font-medium",
       semibold: "font-semibold",
       bold: "font-bold",
     },
     color: {
-      primary: "text-primary",
       "content-on-surface": "text-content-on-surface",
       "content-on-surface-strong": "text-content-on-surface-strong",
       "content-on-background": "text-content-on-background",
-      white: "text-white",
-      danger: "text-error-text",
-      success: "text-success-text",
-      disabled: "text-content-disabled",
+      error: "text-error-text",
     },
   },
 });
@@ -86,6 +75,6 @@ const ui = computed(() =>
 <style scoped>
 .ui-subtitle {
   margin: 0;
-  line-height: var(--line-height-normal);
+  line-height: var(--leading-normal);
 }
 </style>

@@ -26,7 +26,7 @@
           <div class="space-y-2">
             <div class="flex justify-between">
               <span>Permission:</span>
-              <UiBadge :color="notificationStatus.permission === 'granted'
+              <UiBadge :tone="notificationStatus.permission === 'granted'
                 ? 'success'
                 : 'error'
                 " variant="subtle">
@@ -35,7 +35,7 @@
             </div>
             <div class="flex justify-between">
               <span>Subscribed:</span>
-              <UiBadge :color="notificationStatus.subscribed ? 'success' : 'error'" variant="subtle">
+              <UiBadge :tone="notificationStatus.subscribed ? 'success' : 'error'" variant="subtle">
                 {{ notificationStatus.subscribed ? "Yes" : "No" }}
               </UiBadge>
             </div>
@@ -52,13 +52,13 @@
           <div class="space-y-2">
             <div class="flex justify-between">
               <span>Status:</span>
-              <UiBadge :color="swStatus.registered ? 'success' : 'error'" variant="subtle">
+              <UiBadge :tone="swStatus.registered ? 'success' : 'error'" variant="subtle">
                 {{ swStatus.state || "Not Registered" }}
               </UiBadge>
             </div>
             <div class="flex justify-between">
               <span>Debug Mode:</span>
-              <UiBadge :color="swStatus.debugEnabled ? 'success' : 'neutral'" variant="subtle">
+              <UiBadge :tone="swStatus.debugEnabled ? 'success' : 'neutral'" variant="subtle">
                 {{ swStatus.debugEnabled ? "Enabled" : "Disabled" }}
               </UiBadge>
             </div>
@@ -75,7 +75,7 @@
           <div class="space-y-2">
             <div class="flex justify-between">
               <span>Status:</span>
-              <UiBadge :color="cronStatus.running ? 'success' : 'neutral'" variant="subtle">
+              <UiBadge :tone="cronStatus.running ? 'success' : 'neutral'" variant="subtle">
                 {{ cronStatus.running ? "Running" : "Stopped" }}
               </UiBadge>
             </div>
@@ -95,16 +95,16 @@
             <h3 class="text-lg font-semibold">🔔 Permission Management</h3>
           </template>
           <div class="space-y-4">
-            <UiButton color="primary" :loading="loading.permission" @click="checkPermission">
+            <UiButton tone="primary" :loading="loading.permission" @click="checkPermission">
               Check Permission
             </UiButton>
-            <UiButton color="success" :loading="loading.request" @click="requestPermission">
+            <UiButton tone="primary" :loading="loading.request" @click="requestPermission">
               Request Permission
             </UiButton>
-            <UiButton color="success" :loading="loading.direct" @click="testDirectNotification">
+            <UiButton tone="primary" :loading="loading.direct" @click="testDirectNotification">
               Test Direct Notification
             </UiButton>
-            <UiButton color="primary" :loading="loading.test" @click="sendTestNotification">
+            <UiButton tone="primary" :loading="loading.test" @click="sendTestNotification">
               Send API Test Notification
             </UiButton>
           </div>
@@ -145,16 +145,16 @@
                 </h3>
               </template>
               <div class="space-y-4">
-                <UiButton color="primary" :loading="loading.swCheck" @click="checkServiceWorker">
+                <UiButton tone="primary" :loading="loading.swCheck" @click="checkServiceWorker">
                   Check Service Worker
                 </UiButton>
-                <UiButton color="primary" :loading="loading.swDebug" @click="enableSWDebugMode">
+                <UiButton tone="primary" :loading="loading.swDebug" @click="enableSWDebugMode">
                   Enable Debug Mode
                 </UiButton>
-                <UiButton color="warning" :loading="loading.swUpdate" @click="forceServiceWorkerUpdate">
+                <UiButton tone="primary" :loading="loading.swUpdate" @click="forceServiceWorkerUpdate">
                   Force Update
                 </UiButton>
-                <UiButton color="success" :loading="loading.swMessage" @click="testServiceWorkerMessage">
+                <UiButton tone="primary" :loading="loading.swMessage" @click="testServiceWorkerMessage">
                   Test SW Message
                 </UiButton>
               </div>
@@ -166,13 +166,13 @@
                 <h3 class="text-lg font-semibold">📡 Push Subscription</h3>
               </template>
               <div class="space-y-4">
-                <UiButton color="primary" :loading="loading.subscription" @click="checkSubscription">
+                <UiButton tone="primary" :loading="loading.subscription" @click="checkSubscription">
                   Check Subscription
                 </UiButton>
-                <UiButton color="warning" :loading="loading.refresh" @click="refreshSubscription">
+                <UiButton tone="primary" :loading="loading.refresh" @click="refreshSubscription">
                   Refresh Subscription
                 </UiButton>
-                <UiButton color="error" :loading="loading.unsubscribe" @click="unsubscribe">
+                <UiButton tone="error" :loading="loading.unsubscribe" @click="unsubscribe">
                   Unsubscribe
                 </UiButton>
 
@@ -195,16 +195,16 @@
                 <h3 class="text-lg font-semibold">🕒 Cron Testing</h3>
               </template>
               <div class="space-y-4">
-                <UiButton color="primary" :loading="loading.cron" @click="triggerCronCheck">
+                <UiButton tone="primary" :loading="loading.cron" @click="triggerCronCheck">
                   Trigger Cron Check
                 </UiButton>
-                <UiButton color="error" :loading="loading.cooldown" @click="clearCooldown">
+                <UiButton tone="error" :loading="loading.cooldown" @click="clearCooldown">
                   Clear Cooldown
                 </UiButton>
-                <UiButton color="primary" :loading="loading.timing" @click="checkTimingGates">
+                <UiButton tone="primary" :loading="loading.timing" @click="checkTimingGates">
                   Check Timing Gates
                 </UiButton>
-                <UiButton color="warning" :loading="loading.bypass" @click="bypassAllGates">
+                <UiButton tone="primary" :loading="loading.bypass" @click="bypassAllGates">
                   Bypass All Gates
                 </UiButton>
               </div>
@@ -218,19 +218,19 @@
               <div class="space-y-3">
                 <div class="flex justify-between items-center">
                   <span>Active Hours:</span>
-                  <UiBadge :color="timingGates.inActiveHours ? 'success' : 'error'" variant="subtle">
+                  <UiBadge :tone="timingGates.inActiveHours ? 'success' : 'error'" variant="subtle">
                     {{ timingGates.inActiveHours ? "Inside" : "Outside" }}
                   </UiBadge>
                 </div>
                 <div class="flex justify-between items-center">
                   <span>Quiet Hours:</span>
-                  <UiBadge :color="timingGates.inQuietHours ? 'error' : 'success'" variant="subtle">
+                  <UiBadge :tone="timingGates.inQuietHours ? 'error' : 'success'" variant="subtle">
                     {{ timingGates.inQuietHours ? "In Quiet" : "Not Quiet" }}
                   </UiBadge>
                 </div>
                 <div class="flex justify-between items-center">
                   <span>Send Anytime:</span>
-                  <UiBadge :color="timingGates.sendAnytime ? 'success' : 'neutral'" variant="subtle">
+                  <UiBadge :tone="timingGates.sendAnytime ? 'success' : 'neutral'" variant="subtle">
                     {{ timingGates.sendAnytime ? "Enabled" : "Disabled" }}
                   </UiBadge>
                 </div>
@@ -255,7 +255,7 @@
               <template #header>
                 <div class="flex items-center justify-between">
                   <h3 class="text-lg font-semibold">📝 Action Logs</h3>
-                  <UiButton color="success" size="xs" :disabled="logMonitoring" @click="startLogMonitoring">
+                  <UiButton tone="primary" size="xs" :disabled="logMonitoring" @click="startLogMonitoring">
                     {{ logMonitoring ? "Monitoring..." : "Start Monitoring" }}
                   </UiButton>
                 </div>
@@ -304,7 +304,7 @@
           </div>
           <div class="flex justify-between">
             <span class="font-medium">Success:</span>
-            <UiBadge :color="lastResult.success ? 'success' : 'error'" variant="subtle">
+            <UiBadge :tone="lastResult.success ? 'success' : 'error'" variant="subtle">
               {{ lastResult.success ? "Success" : "Failed" }}
             </UiBadge>
           </div>

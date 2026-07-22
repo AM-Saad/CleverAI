@@ -80,7 +80,7 @@ const closeModal = (): void => {
 
 <template>
   <Teleport to="body">
-    <shared-dialog-modal :show="props.show" @close="closeModal" title="Update Profile" icon="edit"
+    <UiModal :open="props.show" @close="closeModal" title="Update Profile" icon="edit"
       description="Update your profile information">
 
       <template #body>
@@ -91,7 +91,7 @@ const closeModal = (): void => {
 
           <UiFormField label="Gender" name="gender">
             <UiSelectMenu v-model="state.gender" :options="genderOptions" option-attribute="label"
-              value-attribute="value" color="neutral" variant="subtle" class="w-full" />
+              value-attribute="value" class="w-full" />
           </UiFormField>
 
           <div class="flex justify-end gap-3 pt-2">
@@ -104,6 +104,6 @@ const closeModal = (): void => {
           </div>
         </UiForm>
       </template>
-    </shared-dialog-modal>
+    </UiModal>
   </Teleport>
 </template>

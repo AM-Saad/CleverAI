@@ -169,8 +169,8 @@ onMounted(async () => {
   width: 32px;
   height: 32px;
   border-radius: var(--radius-full);
-  background: var(--ds-gradient-fab);
-  color: var(--color-on-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
   font-size: 13px;
   font-weight: 800;
   overflow: hidden;

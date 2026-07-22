@@ -19,13 +19,14 @@ import {
   autoResolveEquivalentNoteConflicts,
   dailyEntityRecord,
   getDailyLocalSnapshot,
+  getDailyNoteConflict,
   mergeServerDay,
   mergeServerBootstrap,
 } from "../repositories/dailyLocalRepository";
 
 type ApiSuccess<T> = { success: true; data: T };
 
-type NewActionInput = {
+export type DailyNewActionInput = {
   title: string;
   dateKey: string;
   timingMode: "ALL_DAY" | "TIMED";
@@ -129,7 +130,7 @@ export function useDaily() {
     }
   }
 
-  async function createAction(input: NewActionInput) {
+  async function createAction(input: DailyNewActionInput) {
     if (!accountId.value) throw new Error("Sign in once before saving offline");
     const snapshot = await getDailyLocalSnapshot(accountId.value);
     const now = new Date().toISOString();
@@ -246,6 +247,22 @@ export function useDaily() {
       .sync()
       .then(() => refreshFromServer(dateKey))
       .catch(() => undefined);
+  }
+
+  async function getNoteConflict(dateKey: string) {
+    if (!accountId.value) return null;
+    return getDailyNoteConflict(accountId.value, dateKey);
+  }
+
+  async function resolveNoteConflict(
+    dateKey: string,
+    strategy: "keep-local" | "keep-server",
+  ) {
+    if (!accountId.value) return;
+    const conflict = await getDailyNoteConflict(accountId.value, dateKey);
+    if (!conflict) return;
+    await offline.resolveConflict(conflict.mutationId, strategy);
+    await projectDate(dateKey);
   }
 
   function materialization(row: DayItemDTO, position: string) {
@@ -486,6 +503,8 @@ export function useDaily() {
     loadDay,
     createAction,
     saveNote,
+    getNoteConflict,
+    resolveNoteConflict,
     setCompleted,
     reschedule,
     sync: offline.sync,

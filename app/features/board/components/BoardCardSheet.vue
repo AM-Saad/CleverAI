@@ -81,7 +81,6 @@
             Cancel
           </button>
           <UiButton
-            pill
             size="sm"
             tone="primary"
             :loading="creatingTag"
@@ -122,7 +121,6 @@
           Open full
         </UiButton>
         <UiButton
-          pill
           block
           tone="primary"
           :disabled="!live && !hasContent"

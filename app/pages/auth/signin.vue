@@ -29,109 +29,55 @@ const submitLogin = async () => {
 </script>
 
 <template>
-  <div
-    class="mx-auto mt-8 flex w-full max-w-2xl flex-col items-center justify-center"
-  >
-    <form
-      ref="login"
-      method="post"
-      class="form w-full"
-      autocomplete="on"
-      @submit.prevent="submitLogin"
-    >
+  <div class="mx-auto mt-8 flex w-full max-w-2xl flex-col items-center justify-center">
+    <form ref="login" method="post" class="form w-full" autocomplete="on" @submit.prevent="submitLogin">
       <UiTitle>Login</UiTitle>
       <UiParagraph size="sm" color="content-on-background">
         Login to your account
       </UiParagraph>
       <shared-error-message v-if="error" :error="error" />
-      <AuthStepFieldStack
-        class="mb-2 mt-2 text-xs"
-        :reveal="isValidEmail"
-        :first-complete="isValidEmail"
-        :loading="loading"
-        :submit-disabled="!isValidEmail || !isValidPassword"
-        submit-label="Submit login form"
-      >
+      <AuthStepFieldStack class="mb-2 mt-2 text-xs" :reveal="isValidEmail" :first-complete="isValidEmail"
+        :loading="loading" :submit-disabled="!isValidEmail || !isValidPassword" submit-label="Submit login form">
         <template #first>
-          <ui-input-field
-            id="login-email-client"
-            v-model="credentials.email"
-            type="email"
-            name="email"
-            label="Email Address"
-            title="Please enter a valid email address"
-            autocomplete="email"
-            pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
-            tabindex="1"
-            :styles="{
+          <ui-input-field id="login-email-client" v-model="credentials.email" type="email" name="email"
+            label="Email Address" title="Please enter a valid email address" autocomplete="email"
+            pattern="[^\s@]+@[^\s@]+\.[^\s@]+" tabindex="1" :styles="{
               input: 'pr-12',
               inputField: isValidEmail
                 ? 'rounded-b-none border-b border-secondary'
                 : '',
-            }"
-          />
+            }" />
         </template>
 
         <template #second>
-          <ui-input-field
-            id="login-password-client"
-            v-model="credentials.password"
-            type="password"
-            name="password"
-            label="Password"
-            title="Please enter a valid password"
-            autocomplete="current-password"
-            tabindex="2"
-            :styles="{
+          <ui-input-field id="login-password-client" v-model="credentials.password" type="password" name="password"
+            label="Password" title="Please enter a valid password" autocomplete="current-password" tabindex="2" :styles="{
               input: 'pr-12',
               inputField: 'rounded-t-none',
-            }"
-          />
+            }" />
         </template>
       </AuthStepFieldStack>
-      <div
-        class="toggle-forms flex flex-col justify-between gap-2 text-content-on-background"
-      >
+      <div class="toggle-forms flex flex-col justify-between gap-2 text-content-on-background">
         <UiParagraph size="xs" color="content-on-background">
           You don't have an account
-          <router-link
-            tabindex="4"
-            class="font-semibold underline"
-            to="/auth/signup"
-          >
+          <router-link tabindex="4" class="font-semibold underline" to="/auth/signup">
             Signup
           </router-link>
         </UiParagraph>
         <UiParagraph size="xs" color="content-on-background">
           Forgot your password
-          <router-link
-            tabindex="4"
-            class="font-semibold underline"
-            to="/auth/editPassword"
-          >
+          <router-link tabindex="4" class="font-semibold underline" to="/auth/editPassword">
             Reset Password
           </router-link>
         </UiParagraph>
       </div>
     </form>
-    <div
-      v-if="mappedProviders.length"
-      class="flex flex-col justify-center mt-4"
-    >
+    <div v-if="mappedProviders.length" class="flex flex-col justify-center mt-4">
       <p class="text-center text-content-on-background text-xs mt-4 mb-2">
         Or sign in with a social account below 👇
       </p>
-      <ui-button
-        v-for="provider in mappedProviders"
-        :key="provider?.id"
-        class="border border-error justify-center"
-        :disabled="loading"
-        variant="ghost"
-        color="error"
-        type="button"
-        tabindex="5"
-        @click="signIn(provider?.id)"
-      >
+      <ui-button v-for="provider in mappedProviders" :key="provider?.id" class="border border-error justify-center"
+        :disabled="loading" variant="ghost" tone="error" type="button" tabindex="5" @click="signIn(provider?.id)">
         Sign in with {{ provider?.name }}
       </ui-button>
     </div>

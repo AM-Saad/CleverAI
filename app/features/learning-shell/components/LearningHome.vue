@@ -1,43 +1,42 @@
 <template>
   <div class="learning-dashboard">
-    <WorkspacePill />
-    <header class="learning-dashboard__header">
-      <p>Learning workspace</p>
-      <ui-title tag="h1">What will you learn next?</ui-title>
-    </header>
+    <WorkspacePill class="learning-dashboard__workspace" />
 
-    <nav class="learning-dashboard__grid" aria-label="Learning areas">
-      <UiInteractiveCard
+    <nav class="learning-dashboard__nav" aria-label="Learning areas">
+      <UiListCard
         v-for="destination in destinations"
         :key="destination.to"
-        :to="destination.to"
-        size="md"
+        clickable
+        variant="soft"
+        :title="destination.title"
+        :description="destination.description"
+        @click="navigateTo(destination.to)"
       >
-        <span class="learning-destination__icon">
-          <UiIcon :name="destination.icon" class="h-5 w-5" />
-        </span>
-        <strong>{{ destination.title }}</strong>
-        <span class="learning-destination__description">{{
-          destination.description
-        }}</span>
-      </UiInteractiveCard>
+        <template #leading>
+          <span class="learning-dashboard__icon">
+            <UiIcon :name="destination.icon" class="h-5 w-5" />
+          </span>
+        </template>
+        <template #action>
+          <UiIcon name="i-lucide-chevron-right" class="h-4 w-4" />
+        </template>
+      </UiListCard>
     </nav>
 
-    <UiCard variant="surface" size="lg">
+    <UiPanel variant="subtle" size="md">
       <div class="learning-dashboard__review">
         <span class="learning-dashboard__review-icon">
-          <UiIcon name="i-lucide-brain" class="h-6 w-6" />
+          <UiIcon name="i-lucide-brain" class="h-5 w-5" />
         </span>
         <div>
-          <p>Spaced repetition</p>
+          <p>Due for review</p>
           <strong
-            >{{ dueCount }}
-            {{ dueCount === 1 ? "card" : "cards" }} ready</strong
+            >{{ dueCount }} {{ dueCount === 1 ? "card" : "cards" }}</strong
           >
         </div>
         <UiButton to="/review" size="sm">Review</UiButton>
       </div>
-    </UiCard>
+    </UiPanel>
   </div>
 </template>
 
@@ -50,12 +49,12 @@ const destinations = [
   {
     to: "/materials",
     title: "Materials",
-    description: "Source content for this workspace",
+    description: "Source content for this topic",
     icon: "i-lucide-file-stack",
   },
   {
     to: "/review",
-    title: "Flashcards",
+    title: "Review",
     description: "Practice with spaced repetition",
     icon: "i-lucide-square-stack",
   },
@@ -69,7 +68,7 @@ const destinations = [
     to: "/workspaces",
     title: "Workspaces",
     description: "Separate topics and learning goals",
-    icon: "i-lucide-folder-kanban",
+    icon: "i-lucide-folders",
   },
 ];
 </script>
@@ -79,74 +78,39 @@ const destinations = [
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  padding: var(--space-4) var(--space-4) var(--space-8);
 }
-
-.learning-dashboard__header p {
-  color: var(--color-primary);
-  font-size: var(--text-xs);
-  font-weight: 750;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+.learning-dashboard__workspace {
+  align-self: flex-start;
 }
-
-.learning-dashboard__header h1 {
-  margin-top: var(--space-1);
-  font-size: var(--text-2xl);
+.learning-dashboard__nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
-
-.learning-dashboard__grid {
+.learning-dashboard__icon,
+.learning-dashboard__review-icon {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-3);
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-lg);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
 }
-
 .learning-dashboard__review {
   display: flex;
   align-items: center;
   gap: var(--space-3);
 }
-
 .learning-dashboard__review > div {
   min-width: 0;
   flex: 1;
 }
-
 .learning-dashboard__review p {
   color: var(--color-content-secondary);
   font-size: var(--text-xs);
 }
-
 .learning-dashboard__review strong {
-  color: var(--color-content-on-surface);
-}
-
-.learning-dashboard__review-icon {
-  display: grid;
-  width: 44px;
-  height: 44px;
-  place-items: center;
-  border-radius: var(--radius-xl);
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
-}
-
-.learning-destination__icon {
-  display: grid;
-  width: 40px;
-  height: 40px;
-  margin-bottom: var(--space-3);
-  place-items: center;
-  border-radius: var(--radius-lg);
-  background: var(--color-surface-strong);
-  color: var(--color-primary);
-}
-
-.learning-destination__description {
-  display: block;
-  margin-top: var(--space-1);
-  color: var(--color-content-secondary);
-  font-size: var(--text-xs);
-  line-height: 1.4;
+  color: var(--color-content-on-surface-strong);
 }
 </style>

@@ -8,9 +8,9 @@
     :placeholder="placeholder"
     :disabled="disabled"
     :required="required"
-    :color="resolvedColor"
-    :variant="variant"
-    :highlight="highlight || Boolean(error)"
+    :color="error ? 'error' : 'primary'"
+    variant="outline"
+    :highlight="Boolean(error)"
     :loading="loading"
     :multiple="multiple"
     :content="content"
@@ -27,10 +27,7 @@
 /**
  * UiSelect — single-choice dropdown. Thin wrapper over the themed `USelect`.
  */
-import { computed } from "vue";
-import type { Size, Tone } from "./variants";
-
-type FieldVariant = "outline" | "soft" | "subtle" | "ghost" | "none";
+import type { ControlSize } from "./variants";
 
 const model = defineModel<unknown>();
 const {
@@ -39,11 +36,8 @@ const {
   labelKey,
   size = "md",
   placeholder,
-  tone = "primary",
-  variant = "outline",
   disabled = false,
   required = false,
-  highlight = false,
   loading = false,
   multiple = false,
   error = false,
@@ -52,18 +46,14 @@ const {
   items?: readonly unknown[];
   valueKey?: string;
   labelKey?: string;
-  size?: Size;
+  size?: ControlSize;
   placeholder?: string;
-  tone?: Tone;
-  variant?: FieldVariant;
   disabled?: boolean;
   required?: boolean;
-  highlight?: boolean;
   loading?: boolean;
   multiple?: boolean;
   error?: boolean | string;
   content?: Record<string, unknown>;
 }>();
-const resolvedColor = computed(() => error ? "error" : tone);
 defineOptions({ inheritAttrs: false });
 </script>

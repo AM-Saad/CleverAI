@@ -253,7 +253,7 @@ onBeforeUnmount(() => activeAudio?.pause());
 .word-detail {
   display: flex;
   flex-direction: column;
-  gap: var(--space-5);
+  gap: var(--space-4);
 }
 
 .word-detail__hero,
@@ -279,8 +279,7 @@ onBeforeUnmount(() => activeAudio?.pause());
   padding: var(--space-2);
   background: var(--ds-surface-card);
   gap: var(--space-4);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-card);
+  border-radius: var(--component-card-radius);
   margin: var(--space-2);
 }
 

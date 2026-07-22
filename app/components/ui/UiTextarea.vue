@@ -9,9 +9,9 @@
     :readonly="readonly"
     :required="required"
     :autoresize="autoresize"
-    :color="resolvedColor"
-    :variant="variant"
-    :highlight="highlight || Boolean(error)"
+    :color="error ? 'error' : 'primary'"
+    variant="outline"
+    :highlight="Boolean(error)"
     :loading="loading"
     :aria-invalid="error ? 'true' : undefined"
     v-bind="$attrs"
@@ -22,10 +22,7 @@
 /**
  * UiTextarea — multi-line text input. Thin wrapper over the themed `UTextarea`.
  */
-import { computed } from "vue";
-import type { Size, Tone } from "./variants";
-
-type FieldVariant = "outline" | "soft" | "subtle" | "ghost" | "none";
+import type { ControlSize } from "./variants";
 
 const model = defineModel<string | null>();
 const {
@@ -33,30 +30,23 @@ const {
   rows = 3,
   maxrows,
   placeholder,
-  tone = "primary",
-  variant = "outline",
   disabled = false,
   readonly = false,
   required = false,
   autoresize = false,
-  highlight = false,
   loading = false,
   error = false,
 } = defineProps<{
-  size?: Size;
+  size?: ControlSize;
   rows?: number;
   maxrows?: number;
   placeholder?: string;
-  tone?: Tone;
-  variant?: FieldVariant;
   disabled?: boolean;
   readonly?: boolean;
   required?: boolean;
   autoresize?: boolean;
-  highlight?: boolean;
   loading?: boolean;
   error?: boolean | string;
 }>();
-const resolvedColor = computed(() => error ? "error" : tone);
 defineOptions({ inheritAttrs: false });
 </script>

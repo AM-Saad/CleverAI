@@ -1,7 +1,11 @@
 <template>
   <AccountPageFrame
     title="Reminders"
-    subtitle="Browser delivery and study notification timing."
+    :subtitle="
+      isDaily
+        ? 'Browser delivery and shared notification settings.'
+        : 'Browser delivery and study notification timing.'
+    "
   >
     <template #action>
       <UiButton
@@ -142,7 +146,7 @@
       </UiSettingsRow>
     </UiSettingsGroup>
 
-    <UiSettingsGroup title="Study reminders">
+    <UiSettingsGroup v-if="!isDaily" title="Study reminders">
       <UiSettingsRow
         v-if="notificationLoading"
         title="Loading reminder preferences"
@@ -316,7 +320,6 @@
       :refresh="loadNotificationPreferences"
     />
     <UiButton
-      pill
       block
       size="lg"
       :loading="notificationSaving"
@@ -337,10 +340,12 @@ import type {
   NotificationSubscriptionsResponse,
 } from "@@/shared/utils/notification.contract";
 import NotificationsInboxSheet from "~/components/shell/NotificationsInboxSheet.vue";
+import { useAccountContext } from "~/composables/account/useAccountContext";
 
 definePageMeta({ middleware: "auth" });
 
 const { $api } = useNuxtApp();
+const { isDaily } = useAccountContext();
 const toast = useToast();
 const {
   checkPermission,
@@ -616,7 +621,7 @@ onMounted(async () => {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2);
-  border-radius: var(--radius-xl);
+  border-radius: var(--component-card-radius);
   background: var(--color-surface-subtle);
 }
 

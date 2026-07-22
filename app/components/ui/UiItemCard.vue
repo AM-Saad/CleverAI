@@ -84,7 +84,7 @@ const props = withDefaults(
     as?: "article" | "div" | "li" | "section";
     title?: string;
     subtitle?: string;
-    variant?: "card" | "soft" | "ghost";
+    variant?: "card" | "soft";
     size?: "sm" | "md";
     clickable?: boolean;
     selected?: boolean;
@@ -139,7 +139,7 @@ const itemStyle = computed(() =>
 const itemCard = tv({
   slots: {
     root: [
-      "ui-item-card relative flex min-w-0 flex-col overflow-hidden rounded-[var(--radius-2xl)] border text-left outline-none",
+      "ui-item-card relative flex min-w-0 flex-col overflow-hidden rounded-[var(--component-card-radius)] border text-left outline-none",
       "text-content-on-surface",
       disabledState,
     ].join(" "),
@@ -165,9 +165,6 @@ const itemCard = tv({
       },
       soft: {
         root: "border-secondary bg-surface-subtle",
-      },
-      ghost: {
-        root: "border-transparent bg-transparent shadow-none",
       },
     },
     size: {
