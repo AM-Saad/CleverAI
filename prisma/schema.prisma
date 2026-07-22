@@ -41,6 +41,10 @@ model User {
   llmGatewayLogs            LlmGatewayLog[]
   languageWords             LanguageWord[]               @relation("UserLanguageWords")
   languagePreferences       UserLanguagePreferences?
+  dailyNotes                DailyNote[]                  @relation("UserDailyNotes")
+  actionItems               ActionItem[]                 @relation("UserActionItems")
+  actionOccurrences         ActionOccurrence[]           @relation("UserActionOccurrences")
+  actionPlacements          ActionPlacement[]            @relation("UserActionPlacements")
 
   // --- Authentication fields ---
   credentials           Json?
@@ -61,6 +65,116 @@ model User {
 
 enum UserRole {
   USER
+}
+
+// =========================
+// DAILY APPLICATION
+// =========================
+
+enum ActionTimingMode {
+  ALL_DAY
+  TIMED
+}
+
+enum ActionItemLifecycle {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ActionOccurrenceStatus {
+  OPEN
+  COMPLETED
+  SKIPPED
+  CANCELLED
+}
+
+enum ActionPlacementState {
+  ACTIVE
+  MOVED
+  COMPLETED
+}
+
+// A calendar day is intentionally virtual. Opening a date creates no row;
+// the first meaningful editor change upserts this document by user/date.
+model DailyNote {
+  id            String   @id @map("_id")
+  user          User     @relation("UserDailyNotes", fields: [userId], references: [id], onDelete: Cascade)
+  userId        String   @db.ObjectId
+  dateKey       String
+  content       Json
+  contentFormat String   @default("TIPTAP_JSON")
+  version       Int      @default(1)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([userId, dateKey])
+  @@index([userId, updatedAt])
+}
+
+// The definition of a one-time action or recurring series. Individual
+// recurring appearances are virtual until completion, movement, or another
+// override requires a durable occurrence record.
+model ActionItem {
+  id          String              @id @map("_id")
+  user        User                @relation("UserActionItems", fields: [userId], references: [id], onDelete: Cascade)
+  userId      String              @db.ObjectId
+  title       String
+  description String?
+  timingMode  ActionTimingMode
+  startDate   String
+  localTime   String?
+  timezone    String?
+  recurrence  Json?
+  lifecycle   ActionItemLifecycle @default(ACTIVE)
+  occurrences ActionOccurrence[]
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([userId, lifecycle, startDate])
+  @@index([userId, updatedAt])
+}
+
+model ActionOccurrence {
+  id                 String                 @id @map("_id")
+  occurrenceKey      String
+  user               User                   @relation("UserActionOccurrences", fields: [userId], references: [id], onDelete: Cascade)
+  userId             String                 @db.ObjectId
+  actionItem         ActionItem             @relation(fields: [actionItemId], references: [id], onDelete: Cascade)
+  actionItemId       String
+  originalDateKey    String
+  currentPlacementId String?
+  status             ActionOccurrenceStatus @default(OPEN)
+  completedAt        DateTime?
+  version            Int                    @default(1)
+  placements         ActionPlacement[]
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
+
+  @@unique([userId, occurrenceKey])
+  @@index([userId, status])
+  @@index([actionItemId, originalDateKey])
+}
+
+model ActionPlacement {
+  id                 String               @id @map("_id")
+  user               User                 @relation("UserActionPlacements", fields: [userId], references: [id], onDelete: Cascade)
+  userId             String               @db.ObjectId
+  occurrence         ActionOccurrence     @relation(fields: [occurrenceId], references: [id], onDelete: Cascade)
+  occurrenceId       String
+  occurrenceKey      String
+  dateKey            String
+  timingMode         ActionTimingMode
+  localTime          String?
+  timezone           String?
+  position           String
+  state              ActionPlacementState @default(ACTIVE)
+  movedToPlacementId String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+
+  @@index([userId, dateKey, state, position])
+  @@index([occurrenceId, createdAt])
+  @@index([userId, occurrenceKey])
 }
 
 model Workspace {

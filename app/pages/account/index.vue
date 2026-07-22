@@ -1,9 +1,20 @@
 <template>
-  <AccountPageFrame id="settings" title="Account" subtitle="Profile, preferences, reminders, and security." back-to="/"
-    back-label="Back home">
+  <AccountPageFrame
+    id="settings"
+    title="Account"
+    :subtitle="accountSubtitle"
+    :back-to="backTo"
+    :back-label="`Back to ${appContext === 'daily' ? 'Daily' : appContext === 'learning' ? 'Learning' : 'apps'}`"
+  >
     <template #action>
-      <UiPill v-if="unreadCount > 0" size="sm" :label="String(unreadCount)" color="var(--color-primary)" variant="fill"
-        max-width="60px" />
+      <UiPill
+        v-if="unreadCount > 0"
+        size="sm"
+        :label="String(unreadCount)"
+        color="var(--color-primary)"
+        variant="fill"
+        max-width="60px"
+      />
     </template>
 
     <section class="account-hub__profile" aria-label="Account summary">
@@ -19,20 +30,47 @@
       </div>
     </section>
 
+    <UiAlert
+      v-if="appContext"
+      tone="info"
+      variant="subtle"
+      :title="`${appContext === 'daily' ? 'Daily' : 'Learning'} settings context`"
+      description="Shared account controls stay here; app-specific options are filtered to where you came from."
+    />
+
     <nav aria-label="Account sections" class="account-hub__list">
-      <UiListCard v-for="item in accountItems" :key="item.to" clickable :title="item.title"
-        :description="item.description" :trailing-text="item.trailing" size="lg" @click="openAccountSection(item.to)">
+      <UiListCard
+        v-for="item in accountItems"
+        :key="item.to"
+        clickable
+        :title="item.title"
+        :description="item.description"
+        :trailing-text="item.trailing"
+        size="lg"
+        @click="openAccountSection(item.to)"
+      >
         <template #leading>
           <UiIcon :name="item.icon" class="h-5 w-5" />
         </template>
         <template #action>
-          <UiIcon name="i-lucide-chevron-right" class="h-4 w-4 text-content-disabled" />
+          <UiIcon
+            name="i-lucide-chevron-right"
+            class="h-4 w-4 text-content-disabled"
+          />
         </template>
       </UiListCard>
     </nav>
 
-    <UiButton pill block tone="error" variant="soft" size="lg" :loading="signingOut" class="account-hub__logout"
-      @click="logout">
+    <UiButton
+      pill
+      block
+      tone="error"
+      variant="soft"
+      size="lg"
+      :loading="signingOut"
+      class="account-hub__logout"
+      @click="logout"
+    >
       Log out
     </UiButton>
   </AccountPageFrame>
@@ -51,6 +89,7 @@ type ProfileWithSubscription = UserProfile & {
 };
 
 const { data: authData, signOut } = useAuth();
+const route = useRoute();
 const clearOfflineAccount = useOfflineLogout();
 const creditsStore = useCreditsStore();
 const subscriptionStore = useSubscriptionStore();
@@ -78,82 +117,112 @@ const balance = computed(() => creditsStore.balance ?? 0);
 const subscriptionInfo = computed(
   () => subscriptionStore.subscriptionInfo.value,
 );
+const appContext = computed(() =>
+  route.query.app === "daily" || route.query.app === "learning"
+    ? route.query.app
+    : null,
+);
+const backTo = computed(() =>
+  typeof route.query.returnTo === "string"
+    ? route.query.returnTo
+    : appContext.value === "daily"
+      ? "/day"
+      : appContext.value === "learning"
+        ? "/learn"
+        : "/",
+);
+const accountSubtitle = computed(() =>
+  appContext.value === "daily"
+    ? "Your shared account and Daily preferences."
+    : appContext.value === "learning"
+      ? "Your shared account and Learning preferences."
+      : "Profile, preferences, reminders, and security.",
+);
 
-const accountItems = computed(() => [
-  {
-    title: "Profile",
-    description: "Name, email, and personal details",
-    trailing: profile.value?.gender
-      ? capitalize(profile.value.gender)
-      : "Details",
-    icon: "i-lucide-user",
-    to: "/account/profile",
-  },
-  {
-    title: "Appearance",
-    description: "Theme and display preference",
-    trailing: "Theme",
-    icon: "i-lucide-sun-moon",
-    to: "/account/appearance",
-  },
-  {
-    title: "Plan & usage",
-    description: `${balance.value} credits available`,
-    trailing: subscriptionInfo.value.tier,
-    icon: "i-lucide-wallet",
-    to: "/account/plan",
-  },
-  {
-    title: "Reminders",
-    description: "Browser delivery and study notification timing",
-    trailing:
-      unreadCount.value > 0 ? `${unreadCount.value} unread` : "Settings",
-    icon: "i-lucide-bell",
-    to: "/account/notifications",
-  },
-  {
-    title: "Language",
-    description: "Quick capture, translation, and session defaults",
-    trailing: "Learning",
-    icon: "i-lucide-languages",
-    to: "/account/language",
-  },
-  {
-    title: "Offline sync",
-    description: "Downloads, pending changes, and conflict resolution",
-    trailing: "Manage",
-    icon: "i-lucide-cloud-off",
-    to: "/account/offline",
-  },
-  {
-    title: "Security",
-    description: "Password and account deletion",
-    trailing: "Account",
-    icon: "i-lucide-shield-check",
-    to: "/account/security",
-  },
-  {
-    title: "Data & privacy",
-    description: "Export, import, and privacy controls",
-    trailing: "Coming soon",
-    icon: "i-lucide-database",
-    to: "/account/data",
-  },
-  {
-    title: "About",
-    description: "Product information and pricing",
-    trailing: "Info",
-    icon: "i-lucide-info",
-    to: "/account/about",
-  },
-]);
+const accountItems = computed(() =>
+  [
+    {
+      title: "Profile",
+      description: "Name, email, and personal details",
+      trailing: profile.value?.gender
+        ? capitalize(profile.value.gender)
+        : "Details",
+      icon: "i-lucide-user",
+      to: "/account/profile",
+    },
+    {
+      title: "Appearance",
+      description: "Theme and display preference",
+      trailing: "Theme",
+      icon: "i-lucide-sun-moon",
+      to: "/account/appearance",
+    },
+    {
+      title: "Plan & usage",
+      description: `${balance.value} credits available`,
+      trailing: subscriptionInfo.value.tier,
+      icon: "i-lucide-wallet",
+      to: "/account/plan",
+    },
+    {
+      title: "Reminders",
+      description: "Browser delivery and study notification timing",
+      trailing:
+        unreadCount.value > 0 ? `${unreadCount.value} unread` : "Settings",
+      icon: "i-lucide-bell",
+      to: "/account/notifications",
+    },
+    {
+      title: "Language",
+      description: "Quick capture, translation, and session defaults",
+      trailing: "Learning",
+      icon: "i-lucide-languages",
+      to: "/account/language",
+    },
+    {
+      title: "Offline sync",
+      description: "Downloads, pending changes, and conflict resolution",
+      trailing: "Manage",
+      icon: "i-lucide-cloud-off",
+      to: "/account/offline",
+    },
+    {
+      title: "Security",
+      description: "Password and account deletion",
+      trailing: "Account",
+      icon: "i-lucide-shield-check",
+      to: "/account/security",
+    },
+    {
+      title: "Data & privacy",
+      description: "Export, import, and privacy controls",
+      trailing: "Coming soon",
+      icon: "i-lucide-database",
+      to: "/account/data",
+    },
+    {
+      title: "About",
+      description: "Product information and pricing",
+      trailing: "Info",
+      icon: "i-lucide-info",
+      to: "/account/about",
+    },
+  ].filter(
+    (item) => appContext.value !== "daily" || item.to !== "/account/language",
+  ),
+);
 
 function capitalize(value: string) {
   return value ? `${value.charAt(0).toUpperCase()}${value.slice(1)}` : value;
 }
 
 function openAccountSection(path: string) {
-  navigateTo(path);
+  navigateTo({
+    path,
+    query: appContext.value
+      ? { app: appContext.value, returnTo: backTo.value }
+      : undefined,
+  });
 }
 
 async function logout() {

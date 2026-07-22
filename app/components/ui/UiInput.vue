@@ -1,6 +1,6 @@
 <template>
   <UInput
-    v-model="model"
+    :model-value="model"
     :size="size"
     :icon="icon"
     :type="type"
@@ -14,6 +14,7 @@
     :loading="loading"
     :aria-invalid="error ? 'true' : undefined"
     v-bind="$attrs"
+    @update:model-value="updateModel"
   >
     <template v-for="(_, name) in $slots" #[name]="slotProps">
       <slot :name="name" v-bind="slotProps ?? {}" />
@@ -59,6 +60,11 @@ const {
   loading?: boolean;
   error?: boolean | string;
 }>();
-const resolvedColor = computed(() => error ? "error" : tone);
+const resolvedColor = computed(() => (error ? "error" : tone));
+
+function updateModel(value: string | number | null | undefined) {
+  model.value = value ?? null;
+}
+
 defineOptions({ inheritAttrs: false });
 </script>

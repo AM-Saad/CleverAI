@@ -2,7 +2,7 @@
 import process from "node:process";
 import tailwindcss from "@tailwindcss/vite";
 import { resolve } from "node:path";
-import vueDevTools from 'vite-plugin-vue-devtools'
+import vueDevTools from "vite-plugin-vue-devtools";
 
 const isDevelopment = process.env.NODE_ENV === "development";
 const railwayDomain =
@@ -19,6 +19,52 @@ const appBaseUrl =
   railwayBaseUrl ||
   (isDevelopment ? "http://localhost:8080" : "");
 const serverUrl = process.env.SERVER_URL || appBaseUrl;
+const appSurface = process.env.APP_SURFACE || "all";
+const dailyUpstream = process.env.DAILY_UPSTREAM || "http://127.0.0.1:8081";
+const learningUpstream =
+  process.env.LEARNING_UPSTREAM || "http://127.0.0.1:8082";
+const surfacePort =
+  appSurface === "daily" ? 24679 : appSurface === "learning" ? 24680 : 24678;
+const proxyRules =
+  appSurface === "platform"
+    ? {
+        "/day": { proxy: `${dailyUpstream}/day` },
+        "/day/**": { proxy: `${dailyUpstream}/day/**` },
+        "/api/daily/**": { proxy: `${dailyUpstream}/api/daily/**` },
+        "/learn": { proxy: `${learningUpstream}/learn` },
+        "/learn/**": { proxy: `${learningUpstream}/learn/**` },
+        "/language": { proxy: `${learningUpstream}/language` },
+        "/language/**": { proxy: `${learningUpstream}/language/**` },
+        "/materials": { proxy: `${learningUpstream}/materials` },
+        "/materials/**": { proxy: `${learningUpstream}/materials/**` },
+        "/review": { proxy: `${learningUpstream}/review` },
+        "/review/**": { proxy: `${learningUpstream}/review/**` },
+        "/workspaces": { proxy: `${learningUpstream}/workspaces` },
+        "/workspaces/**": { proxy: `${learningUpstream}/workspaces/**` },
+        "/api/language": { proxy: `${learningUpstream}/api/language` },
+        "/api/language/**": { proxy: `${learningUpstream}/api/language/**` },
+        "/api/materials": { proxy: `${learningUpstream}/api/materials` },
+        "/api/materials/**": { proxy: `${learningUpstream}/api/materials/**` },
+        "/api/review": { proxy: `${learningUpstream}/api/review` },
+        "/api/review/**": { proxy: `${learningUpstream}/api/review/**` },
+        "/api/workspaces": { proxy: `${learningUpstream}/api/workspaces` },
+        "/api/workspaces/**": {
+          proxy: `${learningUpstream}/api/workspaces/**`,
+        },
+        "/api/questions": { proxy: `${learningUpstream}/api/questions` },
+        "/api/questions/**": { proxy: `${learningUpstream}/api/questions/**` },
+        "/api/flashcards": { proxy: `${learningUpstream}/api/flashcards` },
+        "/api/flashcards/**": {
+          proxy: `${learningUpstream}/api/flashcards/**`,
+        },
+        "/api/workspace-integrations": {
+          proxy: `${learningUpstream}/api/workspace-integrations`,
+        },
+        "/api/workspace-integrations/**": {
+          proxy: `${learningUpstream}/api/workspace-integrations/**`,
+        },
+      }
+    : {};
 
 if (
   process.env.NODE_ENV === "production" &&
@@ -26,7 +72,7 @@ if (
   !process.env.RAILWAY_ENVIRONMENT
 ) {
   console.warn(
-    "[WARN] NUXT_AUTH_SECRET not present at build time (expected on Railway)."
+    "[WARN] NUXT_AUTH_SECRET not present at build time (expected on Railway).",
   );
 }
 export default defineNuxtConfig({
@@ -35,6 +81,8 @@ export default defineNuxtConfig({
   debug: isDevelopment,
   // Use the existing `app/` workspace as Nuxt source directory
   srcDir: "app",
+  buildDir: appSurface === "all" ? ".nuxt" : `.nuxt-${appSurface}`,
+  routeRules: proxyRules,
 
   // System by default; users switch via UiColorModeToggle (light/dark/system).
   // Dark tokens live in app/design-system/tokens/index.cjs and flip under .dark.
@@ -83,12 +131,12 @@ export default defineNuxtConfig({
           "OPENAI_API_KEY",
         ];
         const missing = required.filter(
-          (k) => !process.env[k as keyof NodeJS.ProcessEnv]
+          (k) => !process.env[k as keyof NodeJS.ProcessEnv],
         );
         if (missing.length) {
           console.warn(
             "[env] Missing variables in development:",
-            missing.join(", ")
+            missing.join(", "),
           );
         } else {
           console.log("[env] All required variables present.");
@@ -143,7 +191,11 @@ export default defineNuxtConfig({
       ],
       link: [
         { rel: "preconnect", href: "https://fonts.googleapis.com" },
-        { rel: "preconnect", href: "https://fonts.gstatic.com", crossorigin: "" },
+        {
+          rel: "preconnect",
+          href: "https://fonts.gstatic.com",
+          crossorigin: "",
+        },
         {
           rel: "stylesheet",
           href: "https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&family=Saira:ital,wght@0,100..900;1,100..900&display=swap",
@@ -244,6 +296,10 @@ export default defineNuxtConfig({
 
   nitro: {
     preset: process.env.NODE_ENV === "production" ? "node-server" : undefined,
+    output:
+      appSurface === "all"
+        ? undefined
+        : { dir: resolve(__dirname, `.output/${appSurface}`) },
     esbuild: {
       options: {
         target: "es2022", // Support BigInt on server side
@@ -255,9 +311,8 @@ export default defineNuxtConfig({
     logLevel: "info",
     server: {
       hmr: {
-        port: 3000, // Match the dev server port
+        port: surfacePort,
       },
-
     },
     define: {
       __APP_VERSION__: JSON.stringify("v1.0.0"),
@@ -292,7 +347,6 @@ export default defineNuxtConfig({
     worker: {
       format: "es", // Use ES modules for workers to preserve module dependencies
     },
-
   },
   ssr: false,
   // routeRules: {
@@ -338,6 +392,9 @@ export default defineNuxtConfig({
     notionClientId: process.env.NOTION_CLIENT_ID,
     notionClientSecret: process.env.NOTION_CLIENT_SECRET,
     integrationTokenSecret: process.env.INTEGRATION_TOKEN_SECRET,
+    appSurface,
+    dailyUpstream,
+    learningUpstream,
 
     VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
 
@@ -352,14 +409,18 @@ export default defineNuxtConfig({
       GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
       STRIPE_PUBLIC_KEY: process.env.STRIPE_PUBLIC_KEY,
       APPLIXIR_SITE_ID: process.env.APPLIXIR_SITE_ID,
-      notesCollabEnabled: process.env.NUXT_PUBLIC_NOTES_COLLAB_ENABLED === "true",
-      collabWsUrl: process.env.NUXT_PUBLIC_COLLAB_WS_URL || "ws://127.0.0.1:1234",
+      notesCollabEnabled:
+        process.env.NUXT_PUBLIC_NOTES_COLLAB_ENABLED === "true",
+      collabWsUrl:
+        process.env.NUXT_PUBLIC_COLLAB_WS_URL || "ws://127.0.0.1:1234",
       // Single dev toggle for the app service worker.
       // Production always enables the service worker regardless of this flag.
-      serviceWorkerEnabledInDev: process.env.NUXT_PUBLIC_SERVICE_WORKER_IN_DEV === "true",
+      serviceWorkerEnabledInDev:
+        process.env.NUXT_PUBLIC_SERVICE_WORKER_IN_DEV === "true",
       // Can be set to "false" to hold the new local-first runtime during a
       // staged rollout. It defaults on for this pre-user environment.
       offlineV2: process.env.NUXT_PUBLIC_OFFLINE_V2 !== "false",
+      appSurface,
 
       enableLlmGateway: process.env.ENABLE_LLM_GATEWAY === "true",
     },

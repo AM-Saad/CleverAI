@@ -7,7 +7,7 @@ export const SW_CONFIG = {
   // Changes only when ownership/semantics of a durable sync queue change.
   // Unlike an asset update, protocol upgrades must activate immediately to
   // prevent an old worker from draining a queue with obsolete rules.
-  SYNC_PROTOCOL: "notes-v1.1-board-v2-single-projection",
+  SYNC_PROTOCOL: "notes-v1.1-offline-v2-daily-v1",
   DEBUG_VALUE: "1",
   UPDATE_CHECK_INTERVAL: 30000, // 30 seconds
   UPDATE_SETTLE_DELAY: 1500, // 1.5 seconds
@@ -63,7 +63,10 @@ export const DB_CONFIG = {
   // 16: Added noteSyncConflicts for durable local/server conflict snapshots
   // 17: Account-scoped offline-v2 snapshots, outbox, packs, blobs and recovery
   // 18: Durable per-account sync metadata and crash-recovery state.
-  VERSION: 18,
+  // 19: Daily app projection and feature-owned command outbox (v1, retired).
+  // 20: Daily entities/mutations moved onto the shared offline-v2 stores;
+  //     the dedicated v19 Daily stores are dropped.
+  VERSION: 20,
   STORES: {
     FORMS: "forms",
     NOTES: "notes",

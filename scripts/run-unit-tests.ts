@@ -129,6 +129,17 @@ import {
 import { calculateOfflineSM2 } from "../shared/utils/sm2";
 import { orderOfflineMutations } from "../shared/utils/offline-mutation-order";
 import { positionBetween } from "../shared/utils/position-key";
+import {
+  formatDateKey,
+  occurrenceKey as dailyOccurrenceKey,
+  recurrenceMatchesDate,
+} from "../shared/utils/daily-recurrence";
+import { placementStateAfterMove } from "../shared/utils/daily-placement";
+import { projectLocalDay } from "../app/features/daily/domain/projectLocalDay";
+import {
+  autoResolveEquivalentNoteConflicts,
+  type DailyLocalSnapshot,
+} from "../app/features/daily/repositories/dailyLocalRepository";
 import { createKeyedAsyncDebounce } from "../app/utils/keyedAsyncDebounce";
 import { useDebounce } from "../app/utils/debounce";
 import { DB_CONFIG } from "../app/utils/constants/pwa";
@@ -138,6 +149,7 @@ import {
   commitOfflineMutation,
   getOfflineEntity,
   getOfflineSyncMetadata,
+  listOfflineConflicts,
   listOfflineMutations,
   listOfflineEntities,
   putOfflineEntities,
@@ -206,6 +218,216 @@ function notesSyncSuccess(overrides: Record<string, unknown> = {}) {
     },
   };
 }
+
+test("Daily recurrence clamps missing month days to the last day", () => {
+  const monthly = {
+    frequency: "MONTHLY" as const,
+    interval: 1,
+    monthDay: 31,
+    missingDayPolicy: "LAST_DAY" as const,
+    ends: "NEVER" as const,
+  };
+  assert.equal(
+    recurrenceMatchesDate("2027-01-31", monthly, "2027-02-28"),
+    true,
+  );
+  assert.equal(
+    recurrenceMatchesDate("2028-01-31", monthly, "2028-02-29"),
+    true,
+  );
+  assert.equal(
+    recurrenceMatchesDate("2027-01-31", monthly, "2027-02-27"),
+    false,
+  );
+});
+
+test("Daily recurrence honors weekday, interval, and occurrence count", () => {
+  const weekly = {
+    frequency: "WEEKLY" as const,
+    interval: 2,
+    weekdays: ["MONDAY" as const],
+    missingDayPolicy: "LAST_DAY" as const,
+    ends: "AFTER_COUNT" as const,
+    count: 3,
+  };
+  assert.equal(recurrenceMatchesDate("2026-07-06", weekly, "2026-07-20"), true);
+  assert.equal(recurrenceMatchesDate("2026-07-06", weekly, "2026-08-03"), true);
+  assert.equal(
+    recurrenceMatchesDate("2026-07-06", weekly, "2026-08-17"),
+    false,
+  );
+});
+
+test("Daily calendar labels do not shift across local timezones", () => {
+  assert.equal(
+    formatDateKey("2026-07-22", "en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+    }),
+    "Wednesday, July 22",
+  );
+  assert.equal(formatDateKey("not-a-date", "en-US"), "not-a-date");
+});
+
+test("moving an action preserves its completion state", () => {
+  assert.equal(placementStateAfterMove("OPEN"), "ACTIVE");
+  assert.equal(placementStateAfterMove("COMPLETED"), "COMPLETED");
+});
+
+test("Opening a future Daily date projects virtual items without creating records", () => {
+  const snapshot: DailyLocalSnapshot = {
+    notes: [],
+    actionItems: [
+      {
+        id: "series-1",
+        userId: "user-1",
+        title: "Practice",
+        description: null,
+        timingMode: "ALL_DAY",
+        startDate: "2026-07-20",
+        localTime: null,
+        timezone: "Africa/Cairo",
+        recurrence: {
+          frequency: "DAILY",
+          interval: 1,
+          missingDayPolicy: "LAST_DAY",
+          ends: "NEVER",
+        },
+        lifecycle: "ACTIVE",
+        createdAt: "2026-07-20T00:00:00.000Z",
+        updatedAt: "2026-07-20T00:00:00.000Z",
+      },
+    ],
+    occurrences: [],
+    placements: [],
+  };
+  const projection = projectLocalDay(snapshot, "2026-08-01");
+  assert.equal(projection.items.length, 1);
+  assert.equal(projection.items[0]?.virtual, true);
+  assert.equal(
+    projection.items[0]?.occurrenceKey,
+    dailyOccurrenceKey("series-1", "2026-08-01"),
+  );
+  assert.equal(snapshot.occurrences.length, 0);
+});
+
+test("an equivalent daily note conflict is auto-resolved without user interruption", async () => {
+  const accountId = `account-${Date.now()}-${Math.random()}-daily-note-converge`;
+  const noteId = `daily-note-${accountId}`;
+  const mutation = {
+    id: `note-upsert-${accountId}`,
+    entity: "dailyNote" as const,
+    operation: "dailyNote.upsert",
+    entityId: noteId,
+    changedFields: ["content"],
+    payload: {
+      id: noteId,
+      dateKey: "2026-07-22",
+      content: { type: "doc", content: [{ type: "text", text: "same" }] },
+    },
+    dependsOn: [],
+    occurredAt: "2026-07-22T00:00:00.000Z",
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+    baseVersion: 1,
+  };
+  await commitOfflineMutation({
+    accountId,
+    mutation,
+    localRecord: {
+      entity: "dailyNote",
+      entityId: noteId,
+      version: 1,
+      data: { id: noteId, content: mutation.payload.content },
+    },
+  });
+  await applySyncResult({
+    accountId,
+    mutation: { ...mutation, accountId, updatedAt: Date.now() },
+    result: {
+      status: "conflict",
+      entity: "dailyNote",
+      entityId: noteId,
+      conflict: {
+        serverVersion: 2,
+        overlappingFields: ["content"],
+        // A second device (or a retried save) landed identical content.
+        serverSnapshot: {
+          id: noteId,
+          content: { type: "doc", content: [{ type: "text", text: "same" }] },
+        },
+        reason: "The same fields changed on another device.",
+      },
+    },
+  });
+  assert.equal((await listOfflineConflicts(accountId)).length, 1);
+
+  await autoResolveEquivalentNoteConflicts(accountId);
+
+  assert.equal((await listOfflineConflicts(accountId)).length, 0);
+  assert.equal((await listOfflineMutations(accountId)).length, 0);
+});
+
+test("a genuinely conflicting daily note is left for the user to resolve", async () => {
+  const accountId = `account-${Date.now()}-${Math.random()}-daily-note-diverge`;
+  const noteId = `daily-note-${accountId}`;
+  const mutation = {
+    id: `note-upsert-${accountId}`,
+    entity: "dailyNote" as const,
+    operation: "dailyNote.upsert",
+    entityId: noteId,
+    changedFields: ["content"],
+    payload: {
+      id: noteId,
+      dateKey: "2026-07-22",
+      content: { type: "doc", content: [{ type: "text", text: "mine" }] },
+    },
+    dependsOn: [],
+    occurredAt: "2026-07-22T00:00:00.000Z",
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+    baseVersion: 1,
+  };
+  await commitOfflineMutation({
+    accountId,
+    mutation,
+    localRecord: {
+      entity: "dailyNote",
+      entityId: noteId,
+      version: 1,
+      data: { id: noteId, content: mutation.payload.content },
+    },
+  });
+  await applySyncResult({
+    accountId,
+    mutation: { ...mutation, accountId, updatedAt: Date.now() },
+    result: {
+      status: "conflict",
+      entity: "dailyNote",
+      entityId: noteId,
+      conflict: {
+        serverVersion: 2,
+        overlappingFields: ["content"],
+        serverSnapshot: {
+          id: noteId,
+          content: { type: "doc", content: [{ type: "text", text: "theirs" }] },
+        },
+        reason: "The same fields changed on another device.",
+      },
+    },
+  });
+  assert.equal((await listOfflineConflicts(accountId)).length, 1);
+
+  await autoResolveEquivalentNoteConflicts(accountId);
+
+  assert.equal((await listOfflineConflicts(accountId)).length, 1);
+  assert.equal((await listOfflineMutations(accountId)).length, 1);
+});
 
 test("offline-v2 contract keeps mutations replayable and ordered", () => {
   const parsed = OfflineSyncRequestSchema.parse({
@@ -352,10 +574,7 @@ test("keyed async debounce reruns once when an item changes during save", async 
 test("shared debounce enforces a maximum wait during continuous input", () => {
   const originalSetTimeout = globalThis.setTimeout;
   const originalClearTimeout = globalThis.clearTimeout;
-  const timers = new Map<
-    number,
-    { callback: () => void; delay: number }
-  >();
+  const timers = new Map<number, { callback: () => void; delay: number }>();
   let timerId = 0;
   let calls = 0;
 
@@ -371,9 +590,13 @@ test("shared debounce enforces a maximum wait during continuous input", () => {
   try {
     const scope = effectScope();
     const debounced = scope.run(() =>
-      useDebounce(() => {
-        calls++;
-      }, 700, 2_500),
+      useDebounce(
+        () => {
+          calls++;
+        },
+        700,
+        2_500,
+      ),
     )!;
 
     debounced.debouncedFunc();
@@ -3228,8 +3451,7 @@ test("notes conflict resolver clears a replay conflict when both sides already m
     notes,
     conflicts: conflictState,
     conflictRepository: {
-      save: async (conflict: any) =>
-        storedConflicts.set(conflict.id, conflict),
+      save: async (conflict: any) => storedConflicts.set(conflict.id, conflict),
       load: async () => Array.from(storedConflicts.values()),
       remove: async (ids: string[]) =>
         ids.forEach((id) => storedConflicts.delete(id)),
@@ -3237,8 +3459,7 @@ test("notes conflict resolver clears a replay conflict when both sides already m
     pendingQueue: {
       add: async (change: any) => pending.set(change.id, change),
       load: async () => Array.from(pending.values()),
-      remove: async (ids: string[]) =>
-        ids.forEach((id) => pending.delete(id)),
+      remove: async (ids: string[]) => ids.forEach((id) => pending.delete(id)),
       registerBackgroundSync: async () => {},
     } as any,
     localRepository: {

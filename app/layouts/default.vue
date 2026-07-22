@@ -17,35 +17,26 @@
       </main>
 
       <template v-if="showChrome">
-        <MobileTabBar
-          :capture-open="captureOpen"
-          @capture="captureOpen = true"
-        />
-        <CaptureSheet v-model:open="captureOpen" @select="onCapture" />
+        <MobileTabBar />
       </template>
 
       <!-- Global quick-switch (opened from any scoped screen's workspace pill). -->
-      <WorkspaceSwitcherSheet v-if="hasAppAccess && !isBareRoute" />
+      <WorkspaceSwitcherSheet
+        v-if="hasAppAccess && isLearningRoute && !isBareRoute"
+      />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import MobileTabBar from "~/components/shell/MobileTabBar.vue";
-import CaptureSheet from "~/components/shell/CaptureSheet.vue";
 import WorkspaceSwitcherSheet from "~/components/shell/WorkspaceSwitcherSheet.vue";
 import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 
 const { status } = useAuth();
 const offline = useOfflineRuntime();
 const route = useRoute();
-const { setActive } = useActiveWorkspace();
-
-const captureOpen = ref(false);
-const captureRequest = ref(0);
-type CaptureAction = "note" | "word" | "board" | "ai" | "dictate";
-type CaptureSelection = { key: CaptureAction; workspaceId: string | null };
 
 // Chrome (tab bar + capture) only for the authenticated app — auth/marketing
 // routes render the bare page.
@@ -72,6 +63,11 @@ const hasAppAccess = computed(
 const showChrome = computed(
   () => hasAppAccess.value && !isBareRoute.value && !isImmersiveRoute.value,
 );
+const isLearningRoute = computed(() =>
+  ["/learn", "/language", "/materials", "/review", "/workspaces"].some(
+    (path) => route.path === path || route.path.startsWith(`${path}/`),
+  ),
+);
 // The signed-out home is the full-width marketing landing, not the phone column.
 const isMarketingLanding = computed(
   () =>
@@ -79,52 +75,6 @@ const isMarketingLanding = computed(
     status.value === "unauthenticated" &&
     !hasAppAccess.value,
 );
-
-function nextCaptureToken() {
-  captureRequest.value += 1;
-  return String(captureRequest.value);
-}
-
-function commitWorkspaceTarget(payload: CaptureSelection) {
-  if (payload.key === "word") return true;
-  if (!payload.workspaceId) {
-    void navigateTo("/workspaces?new=1");
-    return false;
-  }
-  setActive(payload.workspaceId);
-  return true;
-}
-
-function onCapture(payload: CaptureSelection) {
-  if (!commitWorkspaceTarget(payload)) return;
-
-  switch (payload.key) {
-    case "note":
-      // Only reached when no workspace exists yet (CaptureSheet captures notes
-      // in place otherwise); commitWorkspaceTarget already routed to create one.
-      return;
-    case "word":
-      return navigateTo({
-        path: "/language",
-        query: { compose: "1", capture: nextCaptureToken() },
-      });
-    case "board":
-      return navigateTo({
-        path: "/board",
-        query: { compose: "card", capture: nextCaptureToken() },
-      });
-    case "ai":
-      return navigateTo({
-        path: "/notes",
-        query: { compose: "ai", capture: nextCaptureToken() },
-      });
-    case "dictate":
-      return navigateTo({
-        path: "/notes",
-        query: { compose: "dictate", capture: nextCaptureToken() },
-      });
-  }
-}
 </script>
 
 <style scoped>
