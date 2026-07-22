@@ -1,0 +1,1219 @@
+{
+  "generatedFrom": "scripts/audit-components.cjs",
+  "roots": {
+    "shell": [
+      "app/layouts/default.vue",
+      "app/app.vue"
+    ],
+    "launcher": [
+      "app/pages/index.vue"
+    ],
+    "daily": [
+      "app/pages/day/[date].vue",
+      "app/pages/day/index.vue"
+    ],
+    "learning": [
+      "app/pages/language/index.vue",
+      "app/pages/language/review.vue",
+      "app/pages/language/settings.vue",
+      "app/pages/learn/index.vue",
+      "app/pages/materials/[id].vue",
+      "app/pages/materials/index.vue",
+      "app/pages/review.vue",
+      "app/pages/workspaces/[id].vue",
+      "app/pages/workspaces/index.vue"
+    ],
+    "account": [
+      "app/pages/account/about.vue",
+      "app/pages/account/appearance.vue",
+      "app/pages/account/data.vue",
+      "app/pages/account/index.vue",
+      "app/pages/account/language.vue",
+      "app/pages/account/notifications.vue",
+      "app/pages/account/offline.vue",
+      "app/pages/account/plan.vue",
+      "app/pages/account/profile.vue",
+      "app/pages/account/security.vue"
+    ],
+    "user": [
+      "app/pages/user/profile.vue",
+      "app/pages/user/review.vue",
+      "app/pages/user/settings.vue"
+    ],
+    "platform": [
+      "app/pages/board/[id].vue",
+      "app/pages/board/index.vue",
+      "app/pages/notes/[id].vue",
+      "app/pages/notes/index.vue"
+    ]
+  },
+  "reachableBySurface": {
+    "shell": [
+      "app/app.vue",
+      "app/components/ServiceWorkerUpdateNotification.vue",
+      "app/components/shared/CreditsWallet.vue",
+      "app/components/shared/Icon.vue",
+      "app/components/shell/MobileTabBar.vue",
+      "app/components/shell/WorkspaceSwitcherSheet.vue",
+      "app/components/ui/UiBadge.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiCheckbox.vue",
+      "app/components/ui/UiDrawer.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiInteractiveCard.vue",
+      "app/components/ui/UiListCard.vue",
+      "app/components/ui/UiModal.vue",
+      "app/components/ui/UiOverlaySurface.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiPillIcon.vue",
+      "app/components/ui/UiPillIndicator.vue",
+      "app/components/ui/UiSheet.vue",
+      "app/components/ui/UiSubtitle.vue",
+      "app/components/ui/UiTitle.vue",
+      "app/features/notifications/components/NotificationSubscriptionModal.vue",
+      "app/layouts/default.vue"
+    ],
+    "launcher": [
+      "app/components/home/AppLauncher.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiTitle.vue",
+      "app/pages/index.vue"
+    ],
+    "daily": [
+      "app/components/shared/Icon.vue",
+      "app/components/ui/UiAlert.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiCheckbox.vue",
+      "app/components/ui/UiEmptyState.vue",
+      "app/components/ui/UiFormField.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiPillIcon.vue",
+      "app/components/ui/UiSegmentedControl.vue",
+      "app/components/ui/UiSelect.vue",
+      "app/components/ui/UiSheet.vue",
+      "app/components/ui/UiSkeleton.vue",
+      "app/components/ui/UiSubtitle.vue",
+      "app/components/ui/UiTitle.vue",
+      "app/components/ui/UiToolbar.vue",
+      "app/components/ui/UiToolbarButton.vue",
+      "app/components/ui/UiTooltip.vue",
+      "app/features/daily/components/ActionItemForm.vue",
+      "app/features/daily/components/ActionItemSheet.vue",
+      "app/features/daily/components/DailyActionList.vue",
+      "app/features/daily/components/DailyActionRow.vue",
+      "app/features/daily/components/DailyActionSection.vue",
+      "app/features/daily/components/DailyDateNavigation.vue",
+      "app/features/daily/components/DailyNoteConflictPanel.vue",
+      "app/features/daily/components/DailyNoteSection.vue",
+      "app/features/daily/components/DailyRichEditor.vue",
+      "app/features/daily/components/RescheduleActionForm.vue",
+      "app/features/daily/components/RescheduleActionSheet.vue",
+      "app/pages/day/[date].vue",
+      "app/pages/day/index.vue"
+    ],
+    "learning": [
+      "app/components/patterns/AppPageHeader.vue",
+      "app/components/shared/Icon.vue",
+      "app/components/shell/WorkspacePill.vue",
+      "app/components/ui/AiShimmer.vue",
+      "app/components/ui/UiAlert.vue",
+      "app/components/ui/UiAnimatedText.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiCard.vue",
+      "app/components/ui/UiCheckbox.vue",
+      "app/components/ui/UiDoubleTapDeleteButton.vue",
+      "app/components/ui/UiEmptyState.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiLabel.vue",
+      "app/components/ui/UiListCard.vue",
+      "app/components/ui/UiModal.vue",
+      "app/components/ui/UiOverlaySurface.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiPillIcon.vue",
+      "app/components/ui/UiPillIndicator.vue",
+      "app/components/ui/UiSegmentedControl.vue",
+      "app/components/ui/UiSheet.vue",
+      "app/components/ui/UiSkeleton.vue",
+      "app/components/ui/UiSubtitle.vue",
+      "app/components/ui/UiTextarea.vue",
+      "app/components/ui/UiTitle.vue",
+      "app/features/language-learning/components/LanguageCapturePanel.vue",
+      "app/features/language-learning/components/LanguageSessionView.vue",
+      "app/features/language-learning/components/LanguageWordBankList.vue",
+      "app/features/language-learning/components/LanguageWordBankToolbar.vue",
+      "app/features/language-learning/components/LanguageWordDetailModal.vue",
+      "app/features/language-learning/containers/LanguageReviewContainer.vue",
+      "app/features/learning-shell/components/LearningHome.vue",
+      "app/features/review/components/ReviewCardView.vue",
+      "app/features/review/components/ReviewSessionCard.vue",
+      "app/features/review/components/ReviewSessionFrame.vue",
+      "app/features/review/components/ReviewSessionView.vue",
+      "app/features/review/components/SessionSummary.vue",
+      "app/features/review/components/Sm2GradeBar.vue",
+      "app/pages/language/index.vue",
+      "app/pages/language/review.vue",
+      "app/pages/language/settings.vue",
+      "app/pages/learn/index.vue",
+      "app/pages/materials/[id].vue",
+      "app/pages/materials/index.vue",
+      "app/pages/review.vue",
+      "app/pages/workspaces/[id].vue",
+      "app/pages/workspaces/index.vue"
+    ],
+    "account": [
+      "app/components/account/AccountPageFrame.vue",
+      "app/components/offline/OfflineSyncCenter.vue",
+      "app/components/patterns/AppPageHeader.vue",
+      "app/components/shared/ErrorMessage.vue",
+      "app/components/shared/Icon.vue",
+      "app/components/shell/NotificationsInboxSheet.vue",
+      "app/components/ui/UiAlert.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiColorModeToggle.vue",
+      "app/components/ui/UiDoubleTapDeleteButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiListCard.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiPillIcon.vue",
+      "app/components/ui/UiSelect.vue",
+      "app/components/ui/UiSettingsGroup.vue",
+      "app/components/ui/UiSettingsRow.vue",
+      "app/components/ui/UiSettingsStepper.vue",
+      "app/components/ui/UiSheet.vue",
+      "app/components/ui/UiSkeleton.vue",
+      "app/components/ui/UiSwitch.vue",
+      "app/components/ui/UiTitle.vue",
+      "app/pages/account/about.vue",
+      "app/pages/account/appearance.vue",
+      "app/pages/account/data.vue",
+      "app/pages/account/index.vue",
+      "app/pages/account/language.vue",
+      "app/pages/account/notifications.vue",
+      "app/pages/account/offline.vue",
+      "app/pages/account/plan.vue",
+      "app/pages/account/profile.vue",
+      "app/pages/account/security.vue"
+    ],
+    "user": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiSkeleton.vue",
+      "app/features/review/components/ReviewCardView.vue",
+      "app/features/review/components/ReviewSessionCard.vue",
+      "app/features/review/components/ReviewSessionFrame.vue",
+      "app/features/review/components/ReviewSessionView.vue",
+      "app/features/review/components/SessionSummary.vue",
+      "app/features/review/components/Sm2GradeBar.vue",
+      "app/features/review/containers/ReviewPageContainer.vue",
+      "app/pages/user/profile.vue",
+      "app/pages/user/review.vue",
+      "app/pages/user/settings.vue"
+    ],
+    "platform": [
+      "app/components/shared/CodeBlockNode.vue",
+      "app/components/shared/Icon.vue",
+      "app/components/shared/NoteColorPickerButton.vue",
+      "app/components/shared/NoteContentArea.vue",
+      "app/components/shared/NoteToolbar.vue",
+      "app/components/shared/NoteToolbarButton.vue",
+      "app/components/shared/NoteToolbarControls.vue",
+      "app/components/shared/TiptapBubbleMenu.vue",
+      "app/components/shared/TiptapEditor.vue",
+      "app/components/shared/TiptapToolbar.vue",
+      "app/components/shell/SaveLocalBar.vue",
+      "app/components/shell/SyncBadge.vue",
+      "app/components/shell/WorkspacePill.vue",
+      "app/components/ui/AiShimmer.vue",
+      "app/components/ui/RewardGradient.vue",
+      "app/components/ui/UiActionMenu.vue",
+      "app/components/ui/UiAnimatedText.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiContextMenu.vue",
+      "app/components/ui/UiDoubleTapDeleteButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiItemCard.vue",
+      "app/components/ui/UiLabel.vue",
+      "app/components/ui/UiListCard.vue",
+      "app/components/ui/UiModal.vue",
+      "app/components/ui/UiOverlaySurface.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiPillIcon.vue",
+      "app/components/ui/UiPillIndicator.vue",
+      "app/components/ui/UiPopover.vue",
+      "app/components/ui/UiSheet.vue",
+      "app/components/ui/UiSkeleton.vue",
+      "app/components/ui/UiSubtitle.vue",
+      "app/components/ui/UiTitle.vue",
+      "app/components/ui/UiToolbarButton.vue",
+      "app/components/ui/UiTooltip.vue",
+      "app/features/board/components/BoardCardSheet.vue",
+      "app/features/board/components/BoardColumnsSheet.vue",
+      "app/features/notes/components/AiResultSheet.vue",
+      "app/features/notes/components/CanvasNoteEditor.vue",
+      "app/features/notes/components/CanvasNoteToolbar.vue",
+      "app/features/notes/components/MathNoteEditor.vue",
+      "app/features/notes/components/MobileNoteEditor.vue",
+      "app/features/notes/components/NoteGroupsSheet.vue",
+      "app/features/notes/components/NoteListRow.vue",
+      "app/features/notes/components/QuickNoteEditor.vue",
+      "app/features/notes/components/QuickNoteSheet.vue",
+      "app/features/notes/components/SelectionAiBubble.vue",
+      "app/features/notes/components/TextNote.vue",
+      "app/pages/board/[id].vue",
+      "app/pages/board/index.vue",
+      "app/pages/notes/[id].vue",
+      "app/pages/notes/index.vue"
+    ]
+  },
+  "orphanFeatures": [],
+  "edges": {
+    "app/components/account/AccountPageFrame.vue": [
+      "app/components/patterns/AppPageHeader.vue"
+    ],
+    "app/components/auth/AuthStepFieldStack.vue": [
+      "app/components/shared/Icon.vue",
+      "app/components/ui/UiButton.vue"
+    ],
+    "app/components/auth/createPassword.vue": [
+      "app/components/shared/ErrorMessage.vue",
+      "app/components/shared/SuccessMessage.vue",
+      "app/components/ui/InputField.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/components/auth/ResendBlockedToast.vue": [
+      "app/components/ui/UiOverlaySurface.vue"
+    ],
+    "app/components/home/AppLauncher.vue": [
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/components/home/HomeHub.vue": [
+      "app/components/shell/SyncBadge.vue",
+      "app/components/shell/WorkspacePill.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiListCard.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/components/NetworkStatusIndicator.vue": [],
+    "app/components/offline/OfflineSyncCenter.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/components/ServiceWorkerUpdateNotification.vue": [
+      "app/components/shared/Icon.vue",
+      "app/components/ui/UiBadge.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/components/settings/AccountTab.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiLabel.vue",
+      "app/components/ui/UiLoadingState.vue",
+      "app/components/ui/UiPanel.vue"
+    ],
+    "app/components/settings/DataPrivacyTab.vue": [
+      "app/components/ui/UiAlert.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiPanel.vue"
+    ],
+    "app/components/settings/LanguageSettingsTab.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiSubtitle.vue"
+    ],
+    "app/components/settings/SecurityTab.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiSubtitle.vue"
+    ],
+    "app/components/settings/StudyTab.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiFormField.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiSwitch.vue"
+    ],
+    "app/components/shell/MobileTabBar.vue": [
+      "app/components/ui/UiIcon.vue"
+    ],
+    "app/components/shell/NotificationsInboxSheet.vue": [
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiSheet.vue",
+      "app/components/ui/UiSkeleton.vue"
+    ],
+    "app/components/shell/SaveLocalBar.vue": [],
+    "app/components/shell/StreakRing.vue": [],
+    "app/components/shell/SyncBadge.vue": [
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiPillIndicator.vue"
+    ],
+    "app/components/shell/WorkspacePill.vue": [
+      "app/components/ui/UiAnimatedText.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiPillIcon.vue",
+      "app/components/ui/UiPillIndicator.vue"
+    ],
+    "app/components/shell/WorkspaceSwitcherSheet.vue": [
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiListCard.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiPillIcon.vue",
+      "app/components/ui/UiPillIndicator.vue",
+      "app/components/ui/UiSheet.vue"
+    ],
+    "app/components/user/ChangePasswordModal.vue": [
+      "app/components/shared/ErrorMessage.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiModal.vue"
+    ],
+    "app/components/user/DeleteAccountModal.vue": [
+      "app/components/ui/UiCheckbox.vue",
+      "app/components/ui/UiConfirmDialog.vue",
+      "app/components/ui/UiForm.vue",
+      "app/components/ui/UiFormField.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/components/user/UpdateProfileModal.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiForm.vue",
+      "app/components/ui/UiFormField.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiModal.vue",
+      "app/components/ui/UiSelectMenu.vue"
+    ],
+    "app/components/user/UsageStatistics.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiLabel.vue",
+      "app/components/ui/UiLoadingState.vue",
+      "app/components/ui/UiPanel.vue"
+    ],
+    "app/components/workspace/UpsertWorkspaceForm.vue": [
+      "app/components/shared/ErrorMessage.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiForm.vue",
+      "app/components/ui/UiFormField.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiModal.vue",
+      "app/components/ui/UiTextarea.vue"
+    ],
+    "app/features/language-learning/containers/LanguageReviewContainer.vue": [
+      "app/features/language-learning/components/LanguageSessionView.vue"
+    ],
+    "app/features/review/containers/ReviewPageContainer.vue": [
+      "app/features/review/components/ReviewSessionView.vue"
+    ],
+    "app/features/board/components/BoardCardSheet.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiDoubleTapDeleteButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiSheet.vue"
+    ],
+    "app/features/board/components/BoardColumnsSheet.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiDoubleTapDeleteButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiSheet.vue"
+    ],
+    "app/features/daily/components/ActionItemForm.vue": [
+      "app/components/ui/UiAlert.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiFormField.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiSegmentedControl.vue",
+      "app/components/ui/UiSelect.vue"
+    ],
+    "app/features/daily/components/ActionItemSheet.vue": [
+      "app/components/ui/UiSheet.vue",
+      "app/features/daily/components/ActionItemForm.vue"
+    ],
+    "app/features/daily/components/DailyActionList.vue": [
+      "app/features/daily/components/DailyActionRow.vue"
+    ],
+    "app/features/daily/components/DailyActionRow.vue": [
+      "app/components/ui/UiCheckbox.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiPill.vue"
+    ],
+    "app/features/daily/components/DailyActionSection.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiEmptyState.vue",
+      "app/components/ui/UiSkeleton.vue",
+      "app/components/ui/UiTitle.vue",
+      "app/features/daily/components/DailyActionList.vue"
+    ],
+    "app/features/daily/components/DailyDateNavigation.vue": [
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/features/daily/components/DailyNoteConflictPanel.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiPanel.vue"
+    ],
+    "app/features/daily/components/DailyNoteSection.vue": [
+      "app/components/ui/UiTitle.vue",
+      "app/features/daily/components/DailyNoteConflictPanel.vue",
+      "app/features/daily/components/DailyRichEditor.vue"
+    ],
+    "app/features/daily/components/DailyRichEditor.vue": [
+      "app/components/ui/UiToolbar.vue",
+      "app/components/ui/UiToolbarButton.vue"
+    ],
+    "app/features/daily/components/RescheduleActionForm.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiFormField.vue",
+      "app/components/ui/UiInput.vue"
+    ],
+    "app/features/daily/components/RescheduleActionSheet.vue": [
+      "app/components/ui/UiSheet.vue",
+      "app/features/daily/components/RescheduleActionForm.vue"
+    ],
+    "app/features/language-learning/components/LanguageCapturePanel.vue": [
+      "app/components/ui/AiShimmer.vue",
+      "app/components/ui/UiAlert.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiCard.vue",
+      "app/components/ui/UiCheckbox.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiSubtitle.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/features/language-learning/components/LanguageSessionView.vue": [
+      "app/features/review/components/ReviewSessionCard.vue"
+    ],
+    "app/features/language-learning/components/LanguageWordBankList.vue": [
+      "app/components/ui/UiAlert.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiDoubleTapDeleteButton.vue",
+      "app/components/ui/UiEmptyState.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiSkeleton.vue"
+    ],
+    "app/features/language-learning/components/LanguageWordBankToolbar.vue": [
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiPill.vue"
+    ],
+    "app/features/language-learning/components/LanguageWordDetailModal.vue": [
+      "app/components/ui/UiAlert.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiLabel.vue",
+      "app/components/ui/UiModal.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiSubtitle.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/features/learning-shell/components/LearningHome.vue": [
+      "app/components/shell/WorkspacePill.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiListCard.vue",
+      "app/components/ui/UiPanel.vue"
+    ],
+    "app/features/notes/components/AiResultSheet.vue": [
+      "app/components/ui/AiShimmer.vue",
+      "app/components/ui/RewardGradient.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiSheet.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/features/notes/components/CanvasNoteEditor.vue": [
+      "app/components/shared/NoteContentArea.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/features/notes/components/CanvasNoteToolbar.vue"
+    ],
+    "app/features/notes/components/CanvasNoteToolbar.vue": [
+      "app/components/shared/NoteToolbar.vue",
+      "app/components/shared/NoteToolbarButton.vue",
+      "app/components/shared/NoteToolbarControls.vue"
+    ],
+    "app/features/notes/components/MathNoteEditor.vue": [
+      "app/components/shared/NoteContentArea.vue",
+      "app/components/shared/NoteToolbar.vue",
+      "app/components/shared/NoteToolbarButton.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIcon.vue"
+    ],
+    "app/features/notes/components/MobileNoteEditor.vue": [
+      "app/components/shell/SyncBadge.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiPillIcon.vue",
+      "app/features/notes/components/CanvasNoteEditor.vue",
+      "app/features/notes/components/MathNoteEditor.vue",
+      "app/features/notes/components/SelectionAiBubble.vue"
+    ],
+    "app/features/notes/components/NoteGroupsSheet.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiDoubleTapDeleteButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiSheet.vue"
+    ],
+    "app/features/notes/components/NoteListRow.vue": [
+      "app/components/shell/SyncBadge.vue",
+      "app/components/ui/UiItemCard.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiPillIcon.vue"
+    ],
+    "app/features/notes/components/QuickNoteEditor.vue": [],
+    "app/features/notes/components/QuickNoteSheet.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiSheet.vue",
+      "app/features/notes/components/QuickNoteEditor.vue"
+    ],
+    "app/features/notes/components/SelectionAiBubble.vue": [
+      "app/components/ui/UiIcon.vue"
+    ],
+    "app/features/notes/components/TextNote.vue": [
+      "app/components/shared/Icon.vue",
+      "app/components/shared/NoteContentArea.vue",
+      "app/components/shared/NoteToolbar.vue",
+      "app/components/shared/TiptapEditor.vue",
+      "app/components/shared/TiptapToolbar.vue",
+      "app/components/ui/UiActionMenu.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiPanel.vue"
+    ],
+    "app/features/notifications/components/NotificationSubscriptionModal.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiCheckbox.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiModal.vue",
+      "app/components/ui/UiPanel.vue"
+    ],
+    "app/features/review/components/ReviewCardView.vue": [
+      "app/components/ui/UiIcon.vue"
+    ],
+    "app/features/review/components/ReviewSessionCard.vue": [
+      "app/features/review/components/ReviewCardView.vue",
+      "app/features/review/components/ReviewSessionFrame.vue",
+      "app/features/review/components/Sm2GradeBar.vue"
+    ],
+    "app/features/review/components/ReviewSessionFrame.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiSkeleton.vue",
+      "app/features/review/components/SessionSummary.vue"
+    ],
+    "app/features/review/components/ReviewSessionView.vue": [
+      "app/features/review/components/ReviewSessionCard.vue"
+    ],
+    "app/features/review/components/SessionSummary.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiPanel.vue"
+    ],
+    "app/features/review/components/Sm2GradeBar.vue": [],
+    "app/components/icons/Arrowback.vue": [],
+    "app/components/icons/CamNotAllowed.vue": [],
+    "app/components/icons/Expand.vue": [],
+    "app/components/icons/MicNotAllowed.vue": [],
+    "app/components/icons/Mute.vue": [],
+    "app/components/icons/Pause.vue": [],
+    "app/components/icons/Play.vue": [],
+    "app/components/icons/StarsGenerative.vue": [],
+    "app/components/icons/Stop.vue": [],
+    "app/components/icons/Undo.vue": [],
+    "app/components/icons/Unmute.vue": [],
+    "app/layouts/default.vue": [
+      "app/components/ServiceWorkerUpdateNotification.vue",
+      "app/components/shell/MobileTabBar.vue",
+      "app/components/shell/WorkspaceSwitcherSheet.vue"
+    ],
+    "app/app.vue": [
+      "app/components/shared/CreditsWallet.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiTitle.vue",
+      "app/features/notifications/components/NotificationSubscriptionModal.vue"
+    ],
+    "app/pages/404.vue": [
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/pages/about.vue": [
+      "app/components/shared/PageWrapper.vue",
+      "app/components/ui/UiCard.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiSubtitle.vue",
+      "app/components/ui/UiTitle.vue",
+      "app/components/ui/blur-reveal/BlurReveal.vue"
+    ],
+    "app/pages/account/about.vue": [
+      "app/components/account/AccountPageFrame.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiSettingsGroup.vue",
+      "app/components/ui/UiSettingsRow.vue"
+    ],
+    "app/pages/account/appearance.vue": [
+      "app/components/account/AccountPageFrame.vue",
+      "app/components/ui/UiColorModeToggle.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiSettingsGroup.vue",
+      "app/components/ui/UiSettingsRow.vue"
+    ],
+    "app/pages/account/data.vue": [
+      "app/components/account/AccountPageFrame.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiSettingsGroup.vue",
+      "app/components/ui/UiSettingsRow.vue"
+    ],
+    "app/pages/account/index.vue": [
+      "app/components/account/AccountPageFrame.vue",
+      "app/components/ui/UiAlert.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiListCard.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/pages/account/language.vue": [
+      "app/components/account/AccountPageFrame.vue",
+      "app/components/shared/ErrorMessage.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiSelect.vue",
+      "app/components/ui/UiSettingsGroup.vue",
+      "app/components/ui/UiSettingsRow.vue",
+      "app/components/ui/UiSettingsStepper.vue",
+      "app/components/ui/UiSwitch.vue"
+    ],
+    "app/pages/account/notifications.vue": [
+      "app/components/account/AccountPageFrame.vue",
+      "app/components/shared/ErrorMessage.vue",
+      "app/components/shell/NotificationsInboxSheet.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiDoubleTapDeleteButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiSelect.vue",
+      "app/components/ui/UiSettingsGroup.vue",
+      "app/components/ui/UiSettingsRow.vue",
+      "app/components/ui/UiSettingsStepper.vue",
+      "app/components/ui/UiSwitch.vue"
+    ],
+    "app/pages/account/offline.vue": [
+      "app/components/account/AccountPageFrame.vue",
+      "app/components/offline/OfflineSyncCenter.vue"
+    ],
+    "app/pages/account/plan.vue": [
+      "app/components/account/AccountPageFrame.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiSettingsGroup.vue",
+      "app/components/ui/UiSettingsRow.vue"
+    ],
+    "app/pages/account/profile.vue": [
+      "app/components/account/AccountPageFrame.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiSettingsGroup.vue",
+      "app/components/ui/UiSettingsRow.vue"
+    ],
+    "app/pages/account/security.vue": [
+      "app/components/account/AccountPageFrame.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiSettingsGroup.vue",
+      "app/components/ui/UiSettingsRow.vue"
+    ],
+    "app/pages/auth/editPassword.vue": [
+      "app/components/auth/AuthStepFieldStack.vue",
+      "app/components/shared/ErrorMessage.vue",
+      "app/components/shared/SuccessMessage.vue",
+      "app/components/ui/InputField.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/pages/auth/error.vue": [
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/pages/auth/reactivate.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/pages/auth/signin.vue": [
+      "app/components/auth/AuthStepFieldStack.vue",
+      "app/components/shared/ErrorMessage.vue",
+      "app/components/ui/InputField.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/pages/auth/signup.vue": [
+      "app/components/shared/ServerError.vue",
+      "app/components/shared/SuccessMessage.vue",
+      "app/components/ui/InputField.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/pages/auth/verifyAccount.vue": [
+      "app/components/auth/AuthStepFieldStack.vue",
+      "app/components/shared/ErrorMessage.vue",
+      "app/components/shared/SuccessMessage.vue",
+      "app/components/ui/InputField.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/pages/board/[id].vue": [
+      "app/components/shell/SyncBadge.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiDoubleTapDeleteButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiSheet.vue",
+      "app/features/notes/components/TextNote.vue"
+    ],
+    "app/pages/board/index.vue": [
+      "app/components/shell/WorkspacePill.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiItemCard.vue",
+      "app/components/ui/UiListCard.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiPillIcon.vue",
+      "app/components/ui/UiPillIndicator.vue",
+      "app/components/ui/UiSheet.vue",
+      "app/components/ui/UiTitle.vue",
+      "app/features/board/components/BoardCardSheet.vue",
+      "app/features/board/components/BoardColumnsSheet.vue"
+    ],
+    "app/pages/day/[date].vue": [
+      "app/components/ui/UiAlert.vue",
+      "app/features/daily/components/ActionItemSheet.vue",
+      "app/features/daily/components/DailyActionSection.vue",
+      "app/features/daily/components/DailyDateNavigation.vue",
+      "app/features/daily/components/DailyNoteSection.vue",
+      "app/features/daily/components/RescheduleActionSheet.vue"
+    ],
+    "app/pages/day/index.vue": [],
+    "app/pages/design-system.vue": [
+      "app/components/ui/UiActionMenu.vue",
+      "app/components/ui/UiAlert.vue",
+      "app/components/ui/UiBadge.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiCard.vue",
+      "app/components/ui/UiCheckbox.vue",
+      "app/components/ui/UiConfirmDialog.vue",
+      "app/components/ui/UiEmptyState.vue",
+      "app/components/ui/UiFormField.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiInteractiveCard.vue",
+      "app/components/ui/UiLoadingState.vue",
+      "app/components/ui/UiModal.vue",
+      "app/components/ui/UiOverlaySurface.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiPillIcon.vue",
+      "app/components/ui/UiPillIndicator.vue",
+      "app/components/ui/UiPopover.vue",
+      "app/components/ui/UiSegmentedControl.vue",
+      "app/components/ui/UiSelect.vue",
+      "app/components/ui/UiSheet.vue",
+      "app/components/ui/UiSkeleton.vue",
+      "app/components/ui/UiSubtitle.vue",
+      "app/components/ui/UiSwitch.vue",
+      "app/components/ui/UiTextarea.vue",
+      "app/components/ui/UiTitle.vue",
+      "app/components/ui/UiToolbar.vue",
+      "app/components/ui/UiToolbarButton.vue",
+      "app/components/ui/UiTooltip.vue"
+    ],
+    "app/pages/error.vue": [
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/pages/index.vue": [
+      "app/components/home/AppLauncher.vue"
+    ],
+    "app/pages/language/index.vue": [
+      "app/components/patterns/AppPageHeader.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiSubtitle.vue",
+      "app/features/language-learning/components/LanguageCapturePanel.vue",
+      "app/features/language-learning/components/LanguageWordBankList.vue",
+      "app/features/language-learning/components/LanguageWordBankToolbar.vue",
+      "app/features/language-learning/components/LanguageWordDetailModal.vue"
+    ],
+    "app/pages/language/review.vue": [
+      "app/features/language-learning/containers/LanguageReviewContainer.vue"
+    ],
+    "app/pages/language/settings.vue": [],
+    "app/pages/languages/settings.vue": [],
+    "app/pages/learn/index.vue": [
+      "app/components/patterns/AppPageHeader.vue",
+      "app/features/learning-shell/components/LearningHome.vue"
+    ],
+    "app/pages/logout.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/pages/materials/[id].vue": [
+      "app/components/patterns/AppPageHeader.vue",
+      "app/components/ui/AiShimmer.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiEmptyState.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiLabel.vue",
+      "app/components/ui/UiSegmentedControl.vue",
+      "app/components/ui/UiSheet.vue",
+      "app/components/ui/UiSkeleton.vue"
+    ],
+    "app/pages/materials/index.vue": [
+      "app/components/patterns/AppPageHeader.vue",
+      "app/components/shell/WorkspacePill.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiEmptyState.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiListCard.vue",
+      "app/components/ui/UiSkeleton.vue"
+    ],
+    "app/pages/notes/[id].vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiDoubleTapDeleteButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiSheet.vue",
+      "app/features/notes/components/AiResultSheet.vue",
+      "app/features/notes/components/MobileNoteEditor.vue"
+    ],
+    "app/pages/notes/index.vue": [
+      "app/components/shell/SaveLocalBar.vue",
+      "app/components/shell/WorkspacePill.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiSkeleton.vue",
+      "app/components/ui/UiTitle.vue",
+      "app/features/notes/components/NoteGroupsSheet.vue",
+      "app/features/notes/components/NoteListRow.vue",
+      "app/features/notes/components/QuickNoteSheet.vue"
+    ],
+    "app/pages/notifications.vue": [],
+    "app/pages/offline.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/pages/pricing.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/pages/review.vue": [
+      "app/features/review/components/ReviewSessionView.vue"
+    ],
+    "app/pages/trpc.vue": [],
+    "app/pages/user/profile.vue": [],
+    "app/pages/user/review.vue": [
+      "app/features/review/containers/ReviewPageContainer.vue"
+    ],
+    "app/pages/user/settings.vue": [],
+    "app/pages/workspaces/[id].vue": [
+      "app/components/patterns/AppPageHeader.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiEmptyState.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiPillIcon.vue",
+      "app/components/ui/UiSkeleton.vue",
+      "app/components/ui/UiSubtitle.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/pages/workspaces/index.vue": [
+      "app/components/patterns/AppPageHeader.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiDoubleTapDeleteButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiLabel.vue",
+      "app/components/ui/UiListCard.vue",
+      "app/components/ui/UiPill.vue",
+      "app/components/ui/UiPillIcon.vue",
+      "app/components/ui/UiSheet.vue",
+      "app/components/ui/UiSkeleton.vue",
+      "app/components/ui/UiTextarea.vue"
+    ],
+    "app/components/patterns/AppPageHeader.vue": [
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/components/ui/AiShimmer.vue": [],
+    "app/components/ui/blur-reveal/BlurReveal.vue": [],
+    "app/components/ui/InputField.vue": [],
+    "app/components/ui/RewardGradient.vue": [],
+    "app/components/ui/UiActionMenu.vue": [
+      "app/components/ui/UiIconButton.vue"
+    ],
+    "app/components/ui/UiAlert.vue": [],
+    "app/components/ui/UiAnimatedText.vue": [],
+    "app/components/ui/UiBadge.vue": [],
+    "app/components/ui/UiButton.vue": [],
+    "app/components/ui/UiCard.vue": [],
+    "app/components/ui/UiCheckbox.vue": [],
+    "app/components/ui/UiColorModeToggle.vue": [
+      "app/components/shared/Icon.vue"
+    ],
+    "app/components/ui/UiConfirmDialog.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiDoubleTapDeleteButton.vue",
+      "app/components/ui/UiModal.vue"
+    ],
+    "app/components/ui/UiContextMenu.vue": [],
+    "app/components/ui/UiDoubleTapDeleteButton.vue": [
+      "app/components/ui/UiButton.vue"
+    ],
+    "app/components/ui/UiDrawer.vue": [],
+    "app/components/ui/UiEmptyState.vue": [
+      "app/components/shared/Icon.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiSubtitle.vue"
+    ],
+    "app/components/ui/UiForm.vue": [],
+    "app/components/ui/UiFormField.vue": [],
+    "app/components/ui/UiIcon.vue": [],
+    "app/components/ui/UiIconButton.vue": [
+      "app/components/ui/UiButton.vue"
+    ],
+    "app/components/ui/UiInput.vue": [],
+    "app/components/ui/UiInteractiveCard.vue": [],
+    "app/components/ui/UiItemCard.vue": [],
+    "app/components/ui/UiLabel.vue": [],
+    "app/components/ui/UiListCard.vue": [],
+    "app/components/ui/UiLoadingState.vue": [
+      "app/components/ui/UiIcon.vue"
+    ],
+    "app/components/ui/UiModal.vue": [
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiOverlaySurface.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiSubtitle.vue"
+    ],
+    "app/components/ui/UiOverlaySurface.vue": [],
+    "app/components/ui/UiPanel.vue": [],
+    "app/components/ui/UiParagraph.vue": [],
+    "app/components/ui/UiPill.vue": [
+      "app/components/ui/UiPillIcon.vue"
+    ],
+    "app/components/ui/UiPillIcon.vue": [
+      "app/components/ui/UiIcon.vue"
+    ],
+    "app/components/ui/UiPillIndicator.vue": [],
+    "app/components/ui/UiPopover.vue": [],
+    "app/components/ui/UiSegmentedControl.vue": [
+      "app/components/ui/UiIcon.vue"
+    ],
+    "app/components/ui/UiSelect.vue": [],
+    "app/components/ui/UiSelectMenu.vue": [],
+    "app/components/ui/UiSettingsGroup.vue": [],
+    "app/components/ui/UiSettingsRow.vue": [],
+    "app/components/ui/UiSettingsStepper.vue": [
+      "app/components/ui/UiIcon.vue"
+    ],
+    "app/components/ui/UiSheet.vue": [],
+    "app/components/ui/UiSkeleton.vue": [],
+    "app/components/ui/UiSubtitle.vue": [],
+    "app/components/ui/UiSwitch.vue": [],
+    "app/components/ui/UiTextarea.vue": [],
+    "app/components/ui/UiTitle.vue": [],
+    "app/components/ui/UiToolbar.vue": [],
+    "app/components/ui/UiToolbarButton.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiTooltip.vue"
+    ],
+    "app/components/ui/UiTooltip.vue": [],
+    "app/components/shared/AIModalStatus.vue": [],
+    "app/components/shared/AutocompleteInput.vue": [
+      "app/components/ui/UiInput.vue"
+    ],
+    "app/components/shared/CodeBlockNode.vue": [
+      "app/components/ui/UiToolbarButton.vue"
+    ],
+    "app/components/shared/CreditsPill.vue": [
+      "app/components/shared/Icon.vue",
+      "app/components/ui/UiPill.vue"
+    ],
+    "app/components/shared/CreditsWallet.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiDrawer.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiInteractiveCard.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiSubtitle.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/components/shared/ErrorMessage.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiPanel.vue"
+    ],
+    "app/components/shared/FullscreenWrapper.vue": [],
+    "app/components/shared/Icon.vue": [],
+    "app/components/shared/InAppNotifications.vue": [
+      "app/components/ui/UiIconButton.vue",
+      "app/components/ui/UiOverlaySurface.vue"
+    ],
+    "app/components/shared/InAppNotificationsPanel.vue": [
+      "app/components/shared/Icon.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiLabel.vue",
+      "app/components/ui/UiPanel.vue",
+      "app/components/ui/UiParagraph.vue"
+    ],
+    "app/components/shared/LocalSyncStatus.vue": [
+      "app/components/shared/Icon.vue",
+      "app/components/ui/UiButton.vue"
+    ],
+    "app/components/shared/NoteColorPickerButton.vue": [
+      "app/components/shared/Icon.vue",
+      "app/components/shared/NoteToolbarButton.vue"
+    ],
+    "app/components/shared/NoteContentArea.vue": [],
+    "app/components/shared/NoteToolbar.vue": [
+      "app/components/shared/Icon.vue",
+      "app/components/shared/NoteToolbarButton.vue",
+      "app/components/ui/UiDoubleTapDeleteButton.vue",
+      "app/components/ui/UiTooltip.vue"
+    ],
+    "app/components/shared/NoteToolbarButton.vue": [
+      "app/components/shared/Icon.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiTooltip.vue"
+    ],
+    "app/components/shared/NoteToolbarControls.vue": [
+      "app/components/shared/NoteColorPickerButton.vue",
+      "app/components/shared/NoteToolbarButton.vue",
+      "app/components/ui/UiActionMenu.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiLabel.vue",
+      "app/components/ui/UiPopover.vue"
+    ],
+    "app/components/shared/PageWrapper.vue": [
+      "app/components/ui/UiLoadingState.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiTitle.vue"
+    ],
+    "app/components/shared/PaperComponent.vue": [
+      "app/components/ui/UiToolbarButton.vue"
+    ],
+    "app/components/shared/ServerError.vue": [
+      "app/components/ui/UiCard.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiParagraph.vue",
+      "app/components/ui/UiSubtitle.vue"
+    ],
+    "app/components/shared/SplitPaneLayout.vue": [
+      "app/components/ui/UiIcon.vue"
+    ],
+    "app/components/shared/SuccessMessage.vue": [
+      "app/components/ui/UiPanel.vue"
+    ],
+    "app/components/shared/TagInput.vue": [
+      "app/components/shared/Icon.vue",
+      "app/components/ui/UiBadge.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiOverlaySurface.vue",
+      "app/components/ui/UiPanel.vue"
+    ],
+    "app/components/shared/TiptapBubbleMenu.vue": [
+      "app/components/ui/UiActionMenu.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiIcon.vue",
+      "app/components/ui/UiToolbarButton.vue"
+    ],
+    "app/components/shared/TiptapEditor.vue": [
+      "app/components/shared/CodeBlockNode.vue",
+      "app/components/shared/TiptapBubbleMenu.vue",
+      "app/components/ui/UiContextMenu.vue",
+      "app/components/ui/UiOverlaySurface.vue"
+    ],
+    "app/components/shared/TiptapToolbar.vue": [
+      "app/components/shared/NoteToolbarControls.vue",
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiInput.vue",
+      "app/components/ui/UiLabel.vue",
+      "app/components/ui/UiModal.vue"
+    ],
+    "app/components/modals/GuideDialog.vue": [
+      "app/components/ui/UiButton.vue",
+      "app/components/ui/UiCheckbox.vue",
+      "app/components/ui/UiModal.vue"
+    ],
+    "app/components/modals/HowToAllowAccess.vue": [
+      "app/components/ui/UiModal.vue"
+    ]
+  }
+}

@@ -6,7 +6,7 @@
     :disabled="disabled"
     :required="required"
     :loading="loading"
-    :color="resolvedColor"
+    :color="error ? 'error' : 'primary'"
     :size="size"
     :checked-icon="checkedIcon"
     :unchecked-icon="uncheckedIcon"
@@ -20,14 +20,12 @@
  * UiSwitch — boolean toggle. Thin wrapper over the themed `USwitch`. Replaces
  * the deprecated `UToggle`.
  */
-import { computed } from "vue";
-import type { Size, Tone } from "./variants";
+import type { ControlSize } from "./variants";
 
 const model = defineModel<boolean>();
 const {
   label,
   description,
-  tone = "primary",
   size = "md",
   disabled = false,
   required = false,
@@ -38,8 +36,7 @@ const {
 } = defineProps<{
   label?: string;
   description?: string;
-  tone?: Tone;
-  size?: Size;
+  size?: ControlSize;
   disabled?: boolean;
   required?: boolean;
   loading?: boolean;
@@ -47,6 +44,5 @@ const {
   uncheckedIcon?: string;
   error?: boolean | string;
 }>();
-const resolvedColor = computed(() => error ? "error" : tone);
 defineOptions({ inheritAttrs: false });
 </script>

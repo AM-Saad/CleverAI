@@ -12,6 +12,8 @@
  *   - components.json   machine-readable per-component records
  *   - components.md     per-tier map: primitives used + bypass flags + props
  *   - duplication.md    clusters of likely-duplicate components + candidates
+ *   - reachability.json component reachability from the supported app roots
+ *   - reachability.md   human-readable surface coverage and orphan report
  *
  * Read-only. Shares file walking + exclusion set with the token audit so the
  * two stay consistent.
@@ -60,10 +62,13 @@ function detectSignals(src, template) {
   const rawHeading = COUNT(/<h[1-6][\s>]/g, template);
 
   // Ad-hoc modal overlay: a fixed full-bleed layer with z-index + a backdrop.
-  const hasFixedInset = /\bfixed\b[^"'`]*\binset-0\b|\binset-0\b[^"'`]*\bfixed\b/.test(template);
+  const hasFixedInset =
+    /\bfixed\b[^"'`]*\binset-0\b|\binset-0\b[^"'`]*\bfixed\b/.test(template);
   const hasZ = /\bz-(?:\d{1,3}|\[)/.test(template);
   const hasBackdrop =
-    /backdrop-blur|bg-black\/|bg-content-on-background\/|ds-backdrop|\/\d0\b.*backdrop/.test(template);
+    /backdrop-blur|bg-black\/|bg-content-on-background\/|ds-backdrop|\/\d0\b.*backdrop/.test(
+      template,
+    );
   const overlayScaffold = hasFixedInset && hasZ && hasBackdrop;
 
   // Hand-rolled card chrome: a border + tokenized radius + padding on styling —
@@ -127,11 +132,19 @@ function extractProps(script) {
 // Duplication clustering by name + structural signal.
 // ---------------------------------------------------------------------------
 const CLUSTER_RULES = [
-  { key: "modal/dialog/drawer", name: /modal|dialog|drawer|slideover|sheet|overlay|popup/i, signal: (s) => s.overlayScaffold || s.rawDialog > 0 },
+  {
+    key: "modal/dialog/drawer",
+    name: /modal|dialog|drawer|slideover|sheet|overlay|popup/i,
+    signal: (s) => s.overlayScaffold || s.rawDialog > 0,
+  },
   { key: "icon/toolbar button", name: /toolbar.*button|icon.*button|button$/i },
   { key: "pill/chip/badge/tag", name: /pill|chip|badge|tag(?!iptap)/i },
   { key: "card/panel", name: /card|panel/i, signal: (s) => s.cardChrome },
-  { key: "input/form field", name: /input|field|textarea|select|form(?!at)/i, signal: (s) => s.rawInput > 0 || s.rawSelect > 0 },
+  {
+    key: "input/form field",
+    name: /input|field|textarea|select|form(?!at)/i,
+    signal: (s) => s.rawInput > 0 || s.rawSelect > 0,
+  },
   { key: "empty-state", name: /empty|no-?results|placeholder/i },
   { key: "skeleton/loading", name: /skeleton|loading|loader|spinner|shimmer/i },
 ];
@@ -139,7 +152,8 @@ const CLUSTER_RULES = [
 function clustersOf(name, signals) {
   const out = [];
   for (const rule of CLUSTER_RULES) {
-    if (rule.name.test(name) || (rule.signal && rule.signal(signals))) out.push(rule.key);
+    if (rule.name.test(name) || (rule.signal && rule.signal(signals)))
+      out.push(rule.key);
   }
   return out;
 }
@@ -172,7 +186,15 @@ for (const full of files) {
   const props = extractProps(script);
 
   // Bypass = a feature/page/shared file reinventing what a primitive provides.
-  const isAppCode = ["feature", "container", "shared", "shared-modal", "page", "layout", "component"].includes(tier);
+  const isAppCode = [
+    "feature",
+    "container",
+    "shared",
+    "shared-modal",
+    "page",
+    "layout",
+    "component",
+  ].includes(tier);
   const bypass = [];
   if (signals.rawButton) bypass.push(`raw <button> ×${signals.rawButton}`);
   if (signals.rawInput) bypass.push(`raw <input> ×${signals.rawInput}`);
@@ -180,7 +202,8 @@ for (const full of files) {
   if (signals.rawHeading) bypass.push(`raw <h1-6> ×${signals.rawHeading}`);
   if (signals.overlayScaffold) bypass.push("ad-hoc overlay");
   if (signals.cardChrome) bypass.push("hand-rolled card chrome");
-  if (isAppCode && nuxtUi.length) bypass.push(`direct Nuxt UI: ${nuxtUi.join(",")}`);
+  if (isAppCode && nuxtUi.length)
+    bypass.push(`direct Nuxt UI: ${nuxtUi.join(",")}`);
 
   records.push({
     file: rel,
@@ -196,7 +219,9 @@ for (const full of files) {
   });
 }
 
-records.sort((a, b) => a.tier.localeCompare(b.tier) || a.file.localeCompare(b.file));
+records.sort(
+  (a, b) => a.tier.localeCompare(b.tier) || a.file.localeCompare(b.file),
+);
 
 // ---------------------------------------------------------------------------
 // Rollups
@@ -205,7 +230,8 @@ const byTier = {};
 for (const r of records) (byTier[r.tier] ||= []).push(r);
 
 const clusterMembers = {};
-for (const r of records) for (const c of r.clusters) (clusterMembers[c] ||= []).push(r);
+for (const r of records)
+  for (const c of r.clusters) (clusterMembers[c] ||= []).push(r);
 
 // Same component name living in 2+ locations — usually a stale duplicate from
 // the components/<feature>/ → features/<feature>/components/ migration. The most
@@ -225,6 +251,142 @@ const bypassFiles = records.filter((r) => r.bypass.length);
 const directNuxtUi = records.filter((r) => r.isAppCode && r.nuxtUi.length);
 
 // ---------------------------------------------------------------------------
+// Reachability. This is intentionally a static component graph: explicit Vue
+// imports are authoritative, while unique component-tag aliases cover Nuxt
+// auto-imports. The report is an audit aid, not a bundler replacement.
+// ---------------------------------------------------------------------------
+function pascal(value) {
+  return value
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join("");
+}
+
+const recordByFile = new Map(records.map((record) => [record.file, record]));
+const aliases = new Map();
+function addAlias(name, file) {
+  if (!name) return;
+  const files = aliases.get(name) || new Set();
+  files.add(file);
+  aliases.set(name, files);
+}
+for (const record of records) {
+  const base = record.name;
+  addAlias(base, record.file);
+  addAlias(pascal(base), record.file);
+  if (record.tier === "primitive" && !base.startsWith("Ui"))
+    addAlias(`Ui${pascal(base)}`, record.file);
+  const componentMatch = record.file.match(
+    /app\/components\/([^/]+)\/([^/]+)\.vue$/,
+  );
+  if (componentMatch)
+    addAlias(
+      `${pascal(componentMatch[1])}${pascal(componentMatch[2])}`,
+      record.file,
+    );
+}
+
+function resolveVueImport(fromFile, specifier) {
+  let candidate;
+  if (specifier.startsWith("~/") || specifier.startsWith("@/")) {
+    candidate = path.join(root, "app", specifier.slice(2));
+  } else if (specifier.startsWith(".")) {
+    candidate = path.resolve(root, path.dirname(fromFile), specifier);
+  } else {
+    return null;
+  }
+  for (const full of [
+    candidate,
+    `${candidate}.vue`,
+    path.join(candidate, "index.vue"),
+  ]) {
+    const rel = path.relative(root, full);
+    if (recordByFile.has(rel)) return rel;
+  }
+  return null;
+}
+
+const edges = new Map();
+for (const record of records) {
+  const full = path.join(root, record.file);
+  const source = fs.readFileSync(full, "utf8");
+  const targets = new Set();
+  for (const match of source.matchAll(/from\s+["']([^"']+)["']/g)) {
+    const resolved = resolveVueImport(record.file, match[1]);
+    if (resolved) targets.add(resolved);
+  }
+  const template = stripHtmlComments(sectionBetween(source, "template") || "");
+  for (const match of template.matchAll(
+    /<([A-Z][A-Za-z0-9]*|ui-[a-z0-9-]+|shared-[a-z0-9-]+)/g,
+  )) {
+    const tag = match[1].includes("-") ? pascal(match[1]) : match[1];
+    const candidates = aliases.get(tag);
+    if (candidates?.size === 1) targets.add([...candidates][0]);
+  }
+  edges.set(record.file, [...targets].sort());
+}
+
+const surfaceRoots = {
+  // Root Nuxt component + layouts: always mounted regardless of route, so
+  // anything they render directly (e.g. a globally-mounted modal) is live
+  // even though no page file imports it.
+  shell: records
+    .filter((r) => r.tier === "layout" || r.file === "app/app.vue")
+    .map((r) => r.file),
+  launcher: ["app/pages/index.vue"],
+  daily: records
+    .filter((r) => r.file.startsWith("app/pages/day/"))
+    .map((r) => r.file),
+  learning: records
+    .filter((r) =>
+      /^app\/pages\/(learn|language|materials|review|workspaces)(\/|\.vue)/.test(
+        r.file,
+      ),
+    )
+    .map((r) => r.file),
+  account: records
+    .filter((r) => r.file.startsWith("app/pages/account/"))
+    .map((r) => r.file),
+  // Auth-flow pages living directly under pages/user/ (profile, settings,
+  // review deep-link, logout, etc.) — distinct from the account/ settings tree.
+  user: records
+    .filter((r) => r.file.startsWith("app/pages/user/"))
+    .map((r) => r.file),
+  platform: records
+    .filter((r) => /^app\/pages\/(board|notes)(\/|\.vue)/.test(r.file))
+    .map((r) => r.file),
+};
+
+function reachableFrom(roots) {
+  const seen = new Set();
+  const queue = roots.filter((file) => recordByFile.has(file));
+  while (queue.length) {
+    const file = queue.shift();
+    if (seen.has(file)) continue;
+    seen.add(file);
+    for (const target of edges.get(file) || [])
+      if (!seen.has(target)) queue.push(target);
+  }
+  return [...seen].sort();
+}
+
+const reachableBySurface = Object.fromEntries(
+  Object.entries(surfaceRoots).map(([surface, roots]) => [
+    surface,
+    reachableFrom(roots),
+  ]),
+);
+const reachableAnywhere = new Set(Object.values(reachableBySurface).flat());
+const orphanFeatures = records
+  .filter(
+    (record) =>
+      ["feature", "container"].includes(record.tier) &&
+      !reachableAnywhere.has(record.file),
+  )
+  .map((record) => record.file);
+
+// ---------------------------------------------------------------------------
 // Write outputs
 // ---------------------------------------------------------------------------
 fs.mkdirSync(OUT_DIR, { recursive: true });
@@ -235,30 +397,42 @@ fs.writeFileSync(
     {
       generatedFrom: "scripts/audit-components.cjs",
       total: records.length,
-      tiers: Object.fromEntries(Object.entries(byTier).map(([t, rs]) => [t, rs.length])),
+      tiers: Object.fromEntries(
+        Object.entries(byTier).map(([t, rs]) => [t, rs.length]),
+      ),
       bypassCount: bypassFiles.length,
       records,
     },
     null,
-    2
-  )
+    2,
+  ),
 );
 
 // components.md — per-tier inventory
 const c = [];
 c.push("# Component Inventory\n");
 c.push("> Generated by `yarn design:components`. Do not edit by hand.\n");
-c.push(`- Components: **${records.length}** across ${Object.keys(byTier).length} tiers`);
+c.push(
+  `- Components: **${records.length}** across ${Object.keys(byTier).length} tiers`,
+);
 c.push(`- Files with a primitive-bypass signal: **${bypassFiles.length}**`);
-c.push(`- App-code files using Nuxt UI \`U*\` directly: **${directNuxtUi.length}**\n`);
-c.push("Tiers: " + Object.entries(byTier).map(([t, rs]) => `${t} (${rs.length})`).join(" · ") + "\n");
+c.push(
+  `- App-code files using Nuxt UI \`U*\` directly: **${directNuxtUi.length}**\n`,
+);
+c.push(
+  "Tiers: " +
+    Object.entries(byTier)
+      .map(([t, rs]) => `${t} (${rs.length})`)
+      .join(" · ") +
+    "\n",
+);
 for (const [tier, rs] of Object.entries(byTier)) {
   c.push(`\n## ${tier} (${rs.length})\n`);
   c.push("| Component | uses Ui* | uses U* | bypass signals | props |");
   c.push("|---|---|---|---|---|");
   for (const r of rs) {
     c.push(
-      `| \`${r.name}\` | ${r.uiPrimitives.join(" ") || "—"} | ${r.nuxtUi.join(" ") || "—"} | ${r.bypass.join("; ") || "✅"} | ${r.props.slice(0, 8).join(", ") || "—"} |`
+      `| \`${r.name}\` | ${r.uiPrimitives.join(" ") || "—"} | ${r.nuxtUi.join(" ") || "—"} | ${r.bypass.join("; ") || "✅"} | ${r.props.slice(0, 8).join(", ") || "—"} |`,
     );
   }
 }
@@ -267,17 +441,30 @@ fs.writeFileSync(path.join(OUT_DIR, "components.md"), c.join("\n") + "\n");
 // duplication.md — clusters
 const d = [];
 d.push("# Component Duplication & Consolidation Candidates\n");
-d.push("> Generated by `yarn design:components`. Heuristic clustering by name + structure.\n");
-d.push("Each cluster lists components that likely reimplement the same pattern. The");
-d.push("target primitive is the consolidation candidate (see docs/COMPONENT_SYSTEM.md).\n");
+d.push(
+  "> Generated by `yarn design:components`. Heuristic clustering by name + structure.\n",
+);
+d.push(
+  "Each cluster lists components that likely reimplement the same pattern. The",
+);
+d.push(
+  "target primitive is the consolidation candidate (see docs/COMPONENT_SYSTEM.md).\n",
+);
 
-d.push(`## ⚠️ Duplicate component names — ${dupeNames.length} (resolve location first)\n`);
-d.push("Same name in multiple files — usually a stale `components/<feature>/` copy");
-d.push("paralleling the canonical `features/<feature>/components/`. Pick one, delete the rest.\n");
+d.push(
+  `## ⚠️ Duplicate component names — ${dupeNames.length} (resolve location first)\n`,
+);
+d.push(
+  "Same name in multiple files — usually a stale `components/<feature>/` copy",
+);
+d.push(
+  "paralleling the canonical `features/<feature>/components/`. Pick one, delete the rest.\n",
+);
 if (dupeNames.length) {
   d.push("| Name | locations |");
   d.push("|---|---|");
-  for (const [n, rs] of dupeNames) d.push(`| \`${n}\` | ${rs.map((r) => r.file).join("<br>")} |`);
+  for (const [n, rs] of dupeNames)
+    d.push(`| \`${n}\` | ${rs.map((r) => r.file).join("<br>")} |`);
 } else {
   d.push("_none_");
 }
@@ -291,8 +478,12 @@ const TARGET = {
   "empty-state": "UiEmptyState",
   "skeleton/loading": "UiSkeleton",
 };
-for (const [cluster, rs] of Object.entries(clusterMembers).sort((a, b) => b[1].length - a[1].length)) {
-  d.push(`\n## ${cluster} — ${rs.length} components → \`${TARGET[cluster] || "?"}\`\n`);
+for (const [cluster, rs] of Object.entries(clusterMembers).sort(
+  (a, b) => b[1].length - a[1].length,
+)) {
+  d.push(
+    `\n## ${cluster} — ${rs.length} components → \`${TARGET[cluster] || "?"}\`\n`,
+  );
   d.push("| Component | tier | signals |");
   d.push("|---|---|---|");
   for (const r of rs.sort((a, b) => a.tier.localeCompare(b.tier))) {
@@ -301,14 +492,61 @@ for (const [cluster, rs] of Object.entries(clusterMembers).sort((a, b) => b[1].l
       r.signals.cardChrome && "card-chrome",
       r.signals.rawButton && `btn×${r.signals.rawButton}`,
       r.signals.rawInput && `input×${r.signals.rawInput}`,
-    ].filter(Boolean).join(", ");
+    ]
+      .filter(Boolean)
+      .join(", ");
     d.push(`| \`${r.name}\` | ${r.tier} | ${sig || "—"} |`);
   }
 }
 fs.writeFileSync(path.join(OUT_DIR, "duplication.md"), d.join("\n") + "\n");
 
+fs.writeFileSync(
+  path.join(OUT_DIR, "reachability.json"),
+  JSON.stringify(
+    {
+      generatedFrom: "scripts/audit-components.cjs",
+      roots: surfaceRoots,
+      reachableBySurface,
+      orphanFeatures,
+      edges: Object.fromEntries(edges),
+    },
+    null,
+    2,
+  ),
+);
+
+const reachability = [];
+reachability.push("# Component Reachability\n");
+reachability.push(
+  "> Generated by `yarn design:components`. Static Vue import and unique auto-import-tag analysis.\n",
+);
+reachability.push(
+  "Legacy feature components are reported here, not deleted automatically.\n",
+);
+reachability.push("| Surface | Route roots | Reachable components |");
+reachability.push("|---|---:|---:|");
+for (const [surface, files] of Object.entries(reachableBySurface)) {
+  reachability.push(
+    `| ${surface} | ${surfaceRoots[surface].length} | ${files.length} |`,
+  );
+}
+reachability.push(
+  `\n## Orphan feature components (${orphanFeatures.length})\n`,
+);
+if (orphanFeatures.length) {
+  for (const file of orphanFeatures) reachability.push(`- \`${file}\``);
+} else {
+  reachability.push("_None._");
+}
+fs.writeFileSync(
+  path.join(OUT_DIR, "reachability.md"),
+  reachability.join("\n") + "\n",
+);
+
 console.log(
   `[design-components] ${records.length} components · ${bypassFiles.length} with bypass signals · ` +
-    `${Object.keys(clusterMembers).length} duplication clusters.`
+    `${Object.keys(clusterMembers).length} duplication clusters.`,
 );
-console.log("[design-components] wrote docs/component-audit/{components.json,components.md,duplication.md}");
+console.log(
+  "[design-components] wrote inventory, duplication, and reachability reports in docs/component-audit/",
+);

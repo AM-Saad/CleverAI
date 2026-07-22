@@ -1,27 +1,31 @@
 <template>
   <div class="mats">
+    <AppPageHeader
+      title="Materials"
+      subtitle="Sources for your learning workspace"
+      back-to="/learn"
+    >
+      <template #actions>
+        <UiButton
+          size="sm"
+          tone="primary"
+          leading-icon="i-lucide-upload"
+          :disabled="uploading"
+          @click="pick"
+        >
+          Upload
+        </UiButton>
+      </template>
+    </AppPageHeader>
     <WorkspacePill class="mats__wspill" />
-    <header class="mats__header">
-      <ui-title tag="h1" class="mats__title">Materials</ui-title>
-      <UiButton
-        size="sm"
-        pill
-        tone="primary"
-        leading-icon="i-lucide-upload"
-        :disabled="uploading"
-        @click="pick"
-      >
-        Upload
-      </UiButton>
-      <input
-        ref="fileInput"
-        type="file"
-        accept=".pdf,.txt,.md,.docx,image/*"
-        class="mats__file"
-        @change="onFile"
-      />
-      <!-- design-allow: native file input -->
-    </header>
+    <input
+      ref="fileInput"
+      type="file"
+      accept=".pdf,.txt,.md,.docx,image/*"
+      class="mats__file"
+      @change="onFile"
+    />
+    <!-- design-allow: native file input -->
 
     <div v-if="uploading" class="mats__uploading">
       <UiSkeleton class="h-3 w-full rounded-[var(--radius-full)]" />
@@ -33,30 +37,27 @@
       <UiSkeleton
         v-for="i in 3"
         :key="i"
-        class="h-16 w-full rounded-[var(--radius-2xl)]"
+        class="h-16 w-full rounded-[var(--radius-lg)]"
       />
     </div>
-    <div v-else-if="!materials.length && !uploading" class="mats__empty">
-      <UiIcon
-        name="i-lucide-file-stack"
-        class="h-10 w-10 text-content-disabled"
-      />
-      <p class="mats__empty-title">No materials yet</p>
-      <p class="mats__empty-sub">
-        Upload a PDF or doc to generate cards from it.
-      </p>
-    </div>
+    <UiEmptyState
+      v-else-if="!materials.length && !uploading"
+      icon="i-lucide-file-stack"
+      title="No materials yet"
+      description="Upload a PDF or document to generate study cards."
+      action-label="Upload material"
+      action-icon="i-lucide-upload"
+      @action="pick"
+    />
     <ul v-else class="mats__list">
       <li v-for="m in materials" :key="m.id">
         <UiListCard
           clickable
           :description="`${typeLabel(m)} · ${metaFor(m)}`"
-          :leading-background="tint(tileColor(m), 16)"
-          :leading-color="tileColor(m)"
           @click="open(m.id)"
         >
           <template #title>
-            <span dir="auto">{{ m.title || 'Untitled material' }}</span>
+            <span dir="auto">{{ m.title || "Untitled material" }}</span>
           </template>
           <template #leading>
             <span class="mats__tile-label" aria-hidden="true">{{
@@ -78,7 +79,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
-import { tint } from "~/composables/useAccentColor";
+import AppPageHeader from "~/components/patterns/AppPageHeader.vue";
 import WorkspacePill from "~/components/shell/WorkspacePill.vue";
 import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace";
 import type { Material } from "~/shared/utils/material.contract";
@@ -128,12 +129,6 @@ function typeLabel(m: Material) {
   if (t.includes("image") || t.includes("png") || t.includes("jpg"))
     return "IMG";
   return "DOC";
-}
-function tileColor(m: Material) {
-  const l = typeLabel(m);
-  if (l === "PDF") return "var(--color-error)";
-  if (l === "IMG") return "var(--color-accent-purple)";
-  return "var(--color-accent-blue)";
 }
 function metaFor(m: Material) {
   const meta = m.metadata as Record<string, unknown> | undefined;
@@ -200,17 +195,6 @@ onMounted(async () => {
   align-self: flex-start;
   margin-top: var(--space-2);
 }
-.mats__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-.mats__title {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.6px;
-  color: var(--color-content-on-surface-strong);
-}
 .mats__file {
   display: none;
 }
@@ -219,7 +203,7 @@ onMounted(async () => {
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-4);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--radius-lg);
   background: var(--color-surface-subtle);
   font-size: 13px;
   color: var(--color-content-secondary);
@@ -236,23 +220,5 @@ onMounted(async () => {
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.5px;
-}
-.mats__empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-16) var(--space-6);
-  text-align: center;
-}
-.mats__empty-title {
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: -0.4px;
-  color: var(--color-content-on-surface-strong);
-}
-.mats__empty-sub {
-  font-size: 14px;
-  color: var(--color-content-secondary);
 }
 </style>

@@ -117,7 +117,7 @@ onMounted(() => refresh());
   text-align: left;
 }
 .inbox__row--unread {
-  background: var(--color-primary-50);
+  background: var(--color-primary-soft);
 }
 .inbox__row:active {
   background: var(--color-surface-subtle);

@@ -21,7 +21,7 @@
  * UiIconButton — a square, icon-only button. Wraps UiButton with `square` and a
  * required accessible label. Consolidates the many bespoke toolbar/icon buttons.
  */
-import type { Size, Tone } from "./variants";
+import type { ActionTone, ControlSize } from "./variants";
 import { focusRing } from "./variants";
 
 const {
@@ -39,9 +39,9 @@ const {
   icon: string;
   /** Accessible label — required (icon-only has no text). */
   label: string;
-  tone?: Tone;
+  tone?: ActionTone;
   variant?: "solid" | "soft" | "ghost" | "link";
-  size?: Size;
+  size?: ControlSize;
   loading?: boolean;
   disabled?: boolean;
   active?: boolean;

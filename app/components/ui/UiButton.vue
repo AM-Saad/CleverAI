@@ -1,6 +1,6 @@
 <template>
   <UButton
-    :color="color"
+    :color="tone"
     :variant="variant"
     :size="size"
     :icon="icon"
@@ -10,11 +10,9 @@
     :loading-auto="loadingAuto"
     :disabled="disabled"
     :active="active"
-    :active-color="activeColor"
     :active-variant="activeVariant"
     :block="block"
     :square="square"
-    :class="pill ? 'rounded-[var(--radius-full)]' : undefined"
     v-bind="$attrs"
   >
     <!-- Forward every slot (default + named leading/trailing) so the wrapper is
@@ -31,14 +29,10 @@
  * `UButton` (see app/app.config.ts) exposing the canonical `tone`/`size`
  * vocabulary. Feature code should use this, not `UButton` directly.
  */
-import { computed } from "vue";
-import type { Size, Tone } from "./variants";
-
-type LegacyTone = Tone | "secondary";
+import type { ActionTone, ControlSize } from "./variants";
 
 const {
   tone = "primary",
-  color: legacyColor,
   variant = "solid",
   size = "md",
   icon,
@@ -48,22 +42,18 @@ const {
   loadingAuto = false,
   disabled = false,
   active,
-  activeColor,
   activeVariant,
   block = false,
   square = false,
-  pill = false,
 } = defineProps<{
   /** Semantic color role. */
-  tone?: Tone;
-  /** @deprecated Use `tone`. Kept as a migration bridge for legacy call sites. */
-  color?: LegacyTone;
+  tone?: ActionTone;
   /**
    * Emphasis level — the system uses a 4-variant ladder:
    * `solid` (primary) → `soft` (secondary) → `ghost` (tertiary) → `link` (inline).
    */
   variant?: "solid" | "soft" | "ghost" | "link";
-  size?: Size;
+  size?: ControlSize;
   icon?: string;
   leadingIcon?: string;
   trailingIcon?: string;
@@ -71,19 +61,10 @@ const {
   loadingAuto?: boolean;
   disabled?: boolean;
   active?: boolean;
-  activeColor?: LegacyTone;
   activeVariant?: "solid" | "soft" | "ghost" | "link";
   block?: boolean;
   square?: boolean;
-  /** Pill shape (full-radius) — used for CTAs in the mobile design. */
-  pill?: boolean;
 }>();
 
 defineOptions({ inheritAttrs: false });
-
-// `tone` maps 1:1 to Nuxt UI color names (neutral is aliased to `secondary`
-// in app.config.ts).
-const color = computed(() =>
-  legacyColor === "secondary" ? "neutral" : (legacyColor ?? tone),
-);
 </script>

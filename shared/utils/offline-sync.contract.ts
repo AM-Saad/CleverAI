@@ -21,6 +21,10 @@ export const OfflineEntitySchema = z.enum([
   "review",
   "languageReview",
   "studyContent",
+  "dailyNote",
+  "actionItem",
+  "actionOccurrence",
+  "actionPlacement",
 ]);
 export type OfflineEntity = z.infer<typeof OfflineEntitySchema>;
 

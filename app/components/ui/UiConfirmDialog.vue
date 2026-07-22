@@ -19,13 +19,19 @@
           v-if="requiresDoubleTap"
           :tone="tone"
           :loading="loading"
+          :disabled="confirmDisabled"
           :label="confirmLabel"
           :armed-label="effectiveConfirmArmedLabel"
           @confirm="$emit('confirm')"
         />
-        <UiButton v-else :tone="tone" :loading="loading" @click="$emit('confirm')">{{
-          confirmLabel
-        }}</UiButton>
+        <UiButton
+          v-else
+          :tone="tone"
+          :loading="loading"
+          :disabled="confirmDisabled"
+          @click="$emit('confirm')"
+          >{{ confirmLabel }}</UiButton
+        >
       </div>
     </template>
   </UiModal>
@@ -35,9 +41,9 @@
 /**
  * UiConfirmDialog — confirm/cancel dialog. Composes UiModal + UiButton. The
  * single primitive for destructive/confirmation prompts (consolidates the
- * various DeleteConfirmationModal-style components). Control with `v-model:open`.
+ * feature-specific confirmation adapters). Control with `v-model:open`.
  */
-import type { Tone } from "./variants";
+import type { ActionTone } from "./variants";
 import type { IconName } from "~/utils/icons.generated";
 import { computed } from "vue";
 
@@ -51,6 +57,7 @@ const {
   cancelLabel = "Cancel",
   tone = "error",
   loading = false,
+  confirmDisabled = false,
   requiresDoubleTap = false,
 } = defineProps<{
   title?: string;
@@ -60,8 +67,9 @@ const {
   confirmArmedLabel?: string;
   cancelLabel?: string;
   /** Tone of the confirm button (error for destructive, primary otherwise). */
-  tone?: Tone;
+  tone?: ActionTone;
   loading?: boolean;
+  confirmDisabled?: boolean;
   /** Require two activations on the confirm button before emitting confirm. */
   requiresDoubleTap?: boolean;
 }>();

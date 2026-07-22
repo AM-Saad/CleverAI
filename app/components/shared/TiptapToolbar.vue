@@ -1,7 +1,7 @@
 <template>
   <SharedNoteToolbarControls :controls="toolbarControls" />
 
-  <shared-dialog-modal :show="showImageModal" title="Add Image from URL" @close="showImageModal = false">
+  <UiModal :open="showImageModal" title="Add Image from URL" @close="showImageModal = false">
     <template #body>
       <div class="space-y-4 pt-2">
         <UiLabel tag="label" for="image-url-input">Image URL</UiLabel>
@@ -16,11 +16,11 @@
     </template>
     <template #footer>
       <div class="flex justify-end gap-2">
-        <ui-button variant="ghost" color="neutral" @click="showImageModal = false">Cancel</ui-button>
-        <ui-button color="primary" :disabled="!imageUrlInput.trim()" @click="confirmAddImage">Add Image</ui-button>
+        <ui-button variant="ghost" tone="neutral" @click="showImageModal = false">Cancel</ui-button>
+        <ui-button tone="primary" :disabled="!imageUrlInput.trim()" @click="confirmAddImage">Add Image</ui-button>
       </div>
     </template>
-  </shared-dialog-modal>
+  </UiModal>
 </template>
 
 <script setup lang="ts">

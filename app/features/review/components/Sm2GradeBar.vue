@@ -97,7 +97,7 @@ const grades = computed(() =>
   gap: 2px;
   min-height: var(--target-touch);
   padding: 11px 6px;
-  border-radius: var(--radius-2xl);
+  border-radius: var(--component-card-radius);
   background: color-mix(in srgb, var(--g) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--g) 28%, transparent);
   transition:

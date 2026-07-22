@@ -1,7 +1,7 @@
 <template>
   <div class="inline-flex m-auto w-full justify-center items-center gap-6 p-4">
     <motion.article class=" rounded-xl w-full max-w-md h-64 overflow-hidden  shadow-sm relative bg-white dark:bg-dark"
-      :animate="step === 'converted' ? { borderColor: 'var(--color-primary)', scale: 1.02 } : { borderColor: 'var(--color-muted)', scale: 1 }"
+      :animate="step === 'converted' ? { borderColor: 'var(--color-primary)', scale: 1.02 } : { borderColor: 'var(--color-secondary)', scale: 1 }"
       :transition="{ duration: 0.5, ease: 'easeInOut' }">
       <landing-glow-border :color="['#A07CFE', '#FE8FB5', '#FFBE7B']" :border-radius="8" />
 

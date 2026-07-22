@@ -25,11 +25,11 @@
 
             <!-- Actions -->
             <div v-if="!isUpdating" class="flex items-center space-x-2">
-              <UiButton size="xs" variant="solid" color="primary" :loading="isUpdating" @click="handleUpdate">
+              <UiButton size="xs" variant="solid" tone="primary" :loading="isUpdating" @click="handleUpdate">
                 Update Now
               </UiButton>
 
-              <UiButton size="xs" variant="ghost" color="neutral" @click="handleDismiss">
+              <UiButton size="xs" variant="ghost" tone="neutral" @click="handleDismiss">
                 Later
               </UiButton>
             </div>
@@ -72,11 +72,11 @@
             Service Worker
           </ui-title>
           <div class="flex items-center gap-2">
-            <UiBadge :color="updateAvailable ? 'warning' : (isControlling ? 'success' : 'neutral')" variant="subtle"
+            <UiBadge :tone="updateAvailable ? 'warning' : (isControlling ? 'success' : 'neutral')" variant="subtle"
               size="xs">
               {{ swStateBadge }}
             </UiBadge>
-            <UiBadge v-if="version" color="neutral" variant="outline" size="xs">
+            <UiBadge v-if="version" tone="neutral" variant="outline" size="xs">
               v{{ version }}
             </UiBadge>
             <UiButton size="xs" variant="ghost" @click="toggleDebugPanel">
@@ -133,7 +133,7 @@
             <UiButton size="xs" @click="manualRefresh" variant="soft">
               Manual Refresh
             </UiButton>
-            <UiButton size="xs" @click="resetUpdateState" variant="soft" color="error">
+            <UiButton size="xs" @click="resetUpdateState" variant="soft" tone="error">
               Reset State
             </UiButton>
           </div>

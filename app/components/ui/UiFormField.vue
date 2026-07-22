@@ -24,7 +24,7 @@
  * UiFormField — label + description/hint + error wrapper around a form control
  * (`UiInput`/`UiTextarea`/`UiSelect`/...). Thin wrapper over the themed
  * `UFormField`; replaces the deprecated `UFormGroup` and the legacy
- * `InputField` component. Error text is tokenized via the theme.
+ * Nuxt UI form-field implementation. Error text is tokenized via the theme.
  */
 const { label, description, hint, error, required = false, name } = defineProps<{
   label?: string;

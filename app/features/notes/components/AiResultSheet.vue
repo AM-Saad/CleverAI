@@ -21,7 +21,7 @@
     <div v-else-if="error" class="ai-res__error">
       <UiIcon name="i-lucide-triangle-alert" class="h-6 w-6 text-error-text" />
       <p>{{ error }}</p>
-      <UiButton pill size="sm" @click="emit('retry')">Try again</UiButton>
+      <UiButton size="sm" @click="emit('retry')">Try again</UiButton>
     </div>
 
     <ul v-else class="ai-res__list">
@@ -36,7 +36,7 @@
     <template #footer>
       <div class="ai-res__footer">
         <UiButton variant="ghost" tone="neutral" :disabled="loading" @click="emit('edit')">Edit</UiButton>
-        <UiButton pill tone="primary" block :loading="committing" :disabled="loading || !cards.length" @click="emit('commit')">
+        <UiButton tone="primary" block :loading="committing" :disabled="loading || !cards.length" @click="emit('commit')">
           Add {{ cards.length }} to review
         </UiButton>
       </div>

@@ -17,6 +17,17 @@ import {
   isPositionKey,
   positionBetween,
 } from "../../../../shared/utils/position-key";
+import {
+  CompleteOccurrenceDTO,
+  CreateActionItemDTO,
+  DailyNoteUpsertDTO,
+  OccurrenceCommandDTO,
+  RescheduleOccurrenceDTO,
+  UpdateActionItemDTO,
+} from "../../../../shared/utils/daily.contract";
+import { placementStateAfterMove } from "../../../../shared/utils/daily-placement";
+import { occurrenceKey as occurrenceKeyFor } from "../../../../shared/utils/daily-recurrence";
+import { ensureOccurrence, ownedActionItem } from "../../daily/domain/ensureOccurrence";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -230,6 +241,27 @@ async function currentSnapshot(
     case "languageReview":
       return json(
         await prisma.languageCardReview.findFirst({
+          where: { id: entityId, userId },
+        }),
+      );
+    case "dailyNote":
+      return json(
+        await prisma.dailyNote.findFirst({ where: { id: entityId, userId } }),
+      );
+    case "actionItem":
+      return json(
+        await prisma.actionItem.findFirst({ where: { id: entityId, userId } }),
+      );
+    case "actionOccurrence":
+      return json(
+        await prisma.actionOccurrence.findFirst({
+          where: { id: entityId, userId },
+          include: { placements: true },
+        }),
+      );
+    case "actionPlacement":
+      return json(
+        await prisma.actionPlacement.findFirst({
           where: { id: entityId, userId },
         }),
       );
@@ -1021,6 +1053,246 @@ async function applyDomainMutation(input: {
           : undefined,
     };
   }
+  if (mutation.entity === "dailyNote") {
+    const data = DailyNoteUpsertDTO.parse(payload);
+    const existing = await prisma.dailyNote.findUnique({
+      where: { userId_dateKey: { userId, dateKey: data.dateKey } },
+    });
+    const row = existing
+      ? await prisma.dailyNote.update({
+          where: { id: existing.id },
+          data: { content: json(data.content), version: { increment: 1 } },
+        })
+      : await prisma.dailyNote.create({
+          data: {
+            id: data.id,
+            userId,
+            dateKey: data.dateKey,
+            content: json(data.content),
+            contentFormat: "TIPTAP_JSON",
+          },
+        });
+    return { entityId: row.id, canonical: json(row) };
+  }
+
+  if (mutation.entity === "actionItem") {
+    if (create) {
+      const data = CreateActionItemDTO.parse(payload);
+      const key = occurrenceKeyFor(data.id, data.startDate);
+      const row = await prisma.actionItem.create({
+        data: {
+          id: data.id,
+          userId,
+          title: data.title,
+          description: data.description ?? null,
+          timingMode: data.timingMode,
+          startDate: data.startDate,
+          localTime: data.localTime ?? null,
+          timezone: data.timezone ?? null,
+          recurrence: data.recurrence ? json(data.recurrence) : undefined,
+          occurrences: {
+            create: {
+              id: data.occurrenceId,
+              userId,
+              occurrenceKey: key,
+              originalDateKey: data.startDate,
+              currentPlacementId: data.placementId,
+              placements: {
+                create: {
+                  id: data.placementId,
+                  userId,
+                  occurrenceKey: key,
+                  dateKey: data.startDate,
+                  timingMode: data.timingMode,
+                  localTime: data.localTime ?? null,
+                  timezone: data.timezone ?? null,
+                  position: data.position,
+                },
+              },
+            },
+          },
+        },
+        include: { occurrences: { include: { placements: true } } },
+      });
+      const occurrence = row.occurrences[0];
+      const placement = occurrence?.placements[0];
+      const relatedChanges: RelatedDomainChange[] = [];
+      if (occurrence)
+        relatedChanges.push({
+          entity: "actionOccurrence",
+          entityId: occurrence.id,
+          changedFields: ["status", "completedAt", "currentPlacementId"],
+          canonical: json(occurrence),
+        });
+      if (placement)
+        relatedChanges.push({
+          entity: "actionPlacement",
+          entityId: placement.id,
+          changedFields: ["state", "dateKey", "position"],
+          canonical: json(placement),
+        });
+      return {
+        entityId: row.id,
+        canonical: json(row),
+        relatedChanges: relatedChanges.length ? relatedChanges : undefined,
+      };
+    }
+    const item = await ownedActionItem(prisma, userId, mutation.entityId);
+    if (mutation.operation === "actionItem.archive") {
+      const row = await prisma.actionItem.update({
+        where: { id: item.id },
+        data: { lifecycle: "ARCHIVED" },
+      });
+      return { entityId: row.id, canonical: json(row) };
+    }
+    const data = UpdateActionItemDTO.parse(payload);
+    const row = await prisma.actionItem.update({
+      where: { id: item.id },
+      data,
+    });
+    return { entityId: row.id, canonical: json(row) };
+  }
+
+  if (mutation.entity === "actionOccurrence") {
+    if (mutation.operation === "occurrence.reschedule") {
+      const data = RescheduleOccurrenceDTO.parse(payload);
+      const occurrence = await ensureOccurrence(prisma, userId, {
+        ...data,
+        occurrenceId: mutation.entityId,
+      });
+      const currentId = occurrence.currentPlacementId;
+      if (!currentId)
+        throw Object.assign(
+          new Error("This occurrence has no active placement"),
+          { statusCode: 409 },
+        );
+      if (currentId === data.targetPlacementId)
+        return { entityId: occurrence.id, canonical: json(occurrence) };
+      const movedFrom = await prisma.actionPlacement.update({
+        where: { id: currentId },
+        data: {
+          state: "MOVED",
+          movedToPlacementId: data.targetPlacementId,
+        },
+      });
+      const target = await prisma.actionPlacement.create({
+        data: {
+          id: data.targetPlacementId,
+          userId,
+          occurrenceId: occurrence.id,
+          occurrenceKey: occurrence.occurrenceKey,
+          dateKey: data.targetDateKey,
+          timingMode: data.targetTimingMode,
+          localTime: data.targetLocalTime ?? null,
+          timezone: data.targetTimezone ?? null,
+          position: data.targetPosition,
+          state: placementStateAfterMove(occurrence.status),
+        },
+      });
+      const row = await prisma.actionOccurrence.update({
+        where: { id: occurrence.id },
+        data: { currentPlacementId: target.id, version: { increment: 1 } },
+        include: { placements: true },
+      });
+      return {
+        entityId: row.id,
+        canonical: json(row),
+        relatedChanges: [
+          {
+            entity: "actionPlacement",
+            entityId: movedFrom.id,
+            changedFields: ["state", "movedToPlacementId"],
+            canonical: json(movedFrom),
+          },
+          {
+            entity: "actionPlacement",
+            entityId: target.id,
+            changedFields: ["state", "dateKey", "position"],
+            canonical: json(target),
+          },
+        ],
+      };
+    }
+
+    if (mutation.operation === "occurrence.complete") {
+      const data = CompleteOccurrenceDTO.parse(payload);
+      const occurrence = await ensureOccurrence(prisma, userId, {
+        ...data,
+        occurrenceId: mutation.entityId,
+      });
+      if (occurrence.status === "COMPLETED")
+        return { entityId: occurrence.id, canonical: json(occurrence) };
+      if (!occurrence.currentPlacementId)
+        throw Object.assign(
+          new Error("This occurrence has no active placement"),
+          { statusCode: 409 },
+        );
+      const placement = await prisma.actionPlacement.update({
+        where: { id: occurrence.currentPlacementId },
+        data: { state: "COMPLETED" },
+      });
+      const row = await prisma.actionOccurrence.update({
+        where: { id: occurrence.id },
+        data: {
+          status: "COMPLETED",
+          completedAt: new Date(data.completedAt),
+          version: { increment: 1 },
+        },
+        include: { placements: true },
+      });
+      return {
+        entityId: row.id,
+        canonical: json(row),
+        relatedChanges: [
+          {
+            entity: "actionPlacement",
+            entityId: placement.id,
+            changedFields: ["state"],
+            canonical: json(placement),
+          },
+        ],
+      };
+    }
+
+    // occurrence.reopen: a reopened occurrence must already be a durable row
+    // (you cannot reopen something that was never completed), so this never
+    // materializes a virtual occurrence the way the operations above do.
+    OccurrenceCommandDTO.parse(payload);
+    const existing = await prisma.actionOccurrence.findFirst({
+      where: { id: mutation.entityId, userId },
+    });
+    if (!existing)
+      throw Object.assign(new Error("Occurrence not found"), {
+        statusCode: 404,
+      });
+    if (!existing.currentPlacementId)
+      throw Object.assign(
+        new Error("This occurrence has no active placement"),
+        { statusCode: 409 },
+      );
+    const placement = await prisma.actionPlacement.update({
+      where: { id: existing.currentPlacementId },
+      data: { state: "ACTIVE" },
+    });
+    const row = await prisma.actionOccurrence.update({
+      where: { id: existing.id },
+      data: { status: "OPEN", completedAt: null, version: { increment: 1 } },
+      include: { placements: true },
+    });
+    return {
+      entityId: row.id,
+      canonical: json(row),
+      relatedChanges: [
+        {
+          entity: "actionPlacement",
+          entityId: placement.id,
+          changedFields: ["state"],
+          canonical: json(placement),
+        },
+      ],
+    };
+  }
+
   throw Object.assign(
     new Error(`Unsupported offline mutation ${mutation.operation}`),
     { statusCode: 400 },

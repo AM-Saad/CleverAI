@@ -126,7 +126,7 @@ const ambientTitle = computed(() => {
     <UiButton
       size="xs"
       variant="ghost"
-      color="error"
+      tone="error"
       class="shrink-0"
       :disabled="actionDisabled"
       @click="emit('action')"
@@ -152,7 +152,7 @@ const ambientTitle = computed(() => {
       v-if="status === 'offline'"
       size="xs"
       variant="ghost"
-      color="neutral"
+      tone="neutral"
       class="ml-1 shrink-0"
       :disabled="actionDisabled"
       @click="emit('action')"

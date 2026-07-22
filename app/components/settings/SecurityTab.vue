@@ -9,18 +9,18 @@
             </template>
             <div class="space-y-4">
                 <UiSubtitle size="lg">Password Management</UiSubtitle>
-                <UiButton color="primary" variant="soft" class="mt-3" @click="showChangePasswordModal = true">
+                <UiButton tone="primary" variant="soft" class="mt-3" @click="showChangePasswordModal = true">
                     Change Password
                 </UiButton>
 
                 <div class="border-t border-muted pt-4 space-y-4">
-                    <UiSubtitle size="xl" color="danger" weight="bold">
+                    <UiSubtitle size="xl" color="error" weight="bold">
                         Danger Zone
                     </UiSubtitle>
                     <UiParagraph color="content-secondary">
                         Permanently delete your account and all data
                     </UiParagraph>
-                    <UiButton color="error" variant="soft" @click="showDeleteModal = true">
+                    <UiButton tone="error" variant="soft" @click="showDeleteModal = true">
                         Delete Account
                     </UiButton>
                 </div>

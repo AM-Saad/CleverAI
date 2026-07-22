@@ -50,7 +50,7 @@ function containsValue(value: unknown, target: string): boolean {
   return false;
 }
 
-function comparableOfflineValue(value: unknown): unknown {
+export function comparableOfflineValue(value: unknown): unknown {
   if (value instanceof Date) return value.toISOString();
   if (Array.isArray(value)) return value.map(comparableOfflineValue);
   if (value && typeof value === "object")

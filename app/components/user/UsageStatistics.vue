@@ -153,7 +153,7 @@ onMounted(async () => {
         </div>
       </template>
       <div class="flex flex-col gap-6">
-        <ui-loader v-if="isLlmUsageLoading" :is-fetching="isLlmUsageLoading" />
+        <UiLoadingState v-if="isLlmUsageLoading" :active="isLlmUsageLoading" />
         <div v-else-if="llmUsageError" class="text-center py-8">
           <p class="text-error-text">{{ llmUsageError }}</p>
           <ui-button class="mt-4" @click="fetchLlmUsage">

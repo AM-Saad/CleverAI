@@ -16,12 +16,22 @@ export { tv };
 export type { VariantProps };
 
 // Canonical scales — keep prop unions in sync with these.
-export const SIZES = ["xs", "sm", "md", "lg", "xl"] as const;
-export type Size = (typeof SIZES)[number];
+export const CONTROL_SIZES = ["xs", "sm", "md", "lg"] as const;
+export type ControlSize = (typeof CONTROL_SIZES)[number];
 
 // Semantic tones map 1:1 to the color token families.
-export const TONES = ["primary", "neutral", "success", "warning", "error", "info"] as const;
-export type Tone = (typeof TONES)[number];
+export const ACTION_TONES = ["primary", "neutral", "error"] as const;
+export type ActionTone = (typeof ACTION_TONES)[number];
+
+export const SEMANTIC_TONES = [
+  "primary",
+  "neutral",
+  "success",
+  "warning",
+  "error",
+  "info",
+] as const;
+export type SemanticTone = (typeof SEMANTIC_TONES)[number];
 
 // Tone → color is owned by the Nuxt UI theme in app/app.config.ts — the single
 // source for button/field tone classes (with hover/active states). Custom

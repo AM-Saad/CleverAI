@@ -3,12 +3,12 @@
        the Today hub when signed in. Each side is its own component so its data
        fetching only runs under the matching auth state. -->
   <LandingHome v-if="status === 'unauthenticated' && !hasAppAccess" />
-  <HomeHub v-else-if="hasAppAccess" />
+  <AppLauncher v-else-if="hasAppAccess" />
 </template>
 
 <script setup lang="ts">
 import LandingHome from "~/components/landing/LandingHome.vue";
-import HomeHub from "~/components/home/HomeHub.vue";
+import AppLauncher from "~/components/home/AppLauncher.vue";
 import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 
 const { status } = useAuth();

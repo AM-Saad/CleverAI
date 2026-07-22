@@ -15,12 +15,8 @@
     <!-- Autocomplete floating dropdown -->
     <Transition name="auto-suggestions">
       <UiOverlaySurface v-if="autoPosition && autoSuggestions.length"
-        :style="{ top: autoPosition.top + 'px', left: autoPosition.left + 'px' }"
-        kind="popover"
-        layer="popover"
-        size="xs"
-        class-name="absolute min-w-36 overflow-hidden p-0"
-        role="listbox" aria-label="Suggestions">
+        :style="{ top: autoPosition.top + 'px', left: autoPosition.left + 'px' }" kind="popover" layer="popover"
+        size="xs" class-name="absolute min-w-36 overflow-hidden p-0" role="listbox" aria-label="Suggestions">
         <!-- design-allow: ARIA listbox option, not a standard action button -->
         <button v-for="(item, i) in autoSuggestions" :key="item" type="button" role="option"
           :aria-selected="i === autoActiveIndex" :class="[
@@ -1138,6 +1134,7 @@ function getSelectedText(): string | null {
   word-break: normal;
 }
 
+
 .ProseMirror p,
 .ProseMirror h1,
 .ProseMirror h2,
@@ -1256,7 +1253,7 @@ function getSelectedText(): string | null {
   right: 0;
   top: 0;
   bottom: 0;
-  background: var(--color-primary-50);
+  background: var(--color-primary-soft);
   pointer-events: none;
 }
 

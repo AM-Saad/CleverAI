@@ -48,7 +48,7 @@
         <p class="text-sm text-content-secondary">
           Click the button below to reactivate your account and restore access to all your data.
         </p>
-        <UiButton color="primary" class="w-full justify-center" :disabled="pending" @click="handleReactivate">
+        <UiButton tone="primary" class="w-full justify-center" :disabled="pending" @click="handleReactivate">
           {{ pending ? "Reactivating..." : "Reactivate Account" }}
         </UiButton>
 

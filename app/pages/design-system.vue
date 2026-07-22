@@ -247,36 +247,16 @@
         </div>
       </section>
 
-      <section class="grid gap-6 lg:grid-cols-2">
-        <div class="flex flex-col gap-4">
-          <UiSubtitle size="lg" weight="semibold">UiTabs</UiSubtitle>
-          <UiTabs
-            id-prefix="catalog-tabs"
-            v-model="tabVal"
-            :items="tabItems"
-            aria-label="Catalog tabs"
-            direction="row"
-          />
-          <div
-            :id="tabItems[tabVal]?.panelId"
-            role="tabpanel"
-            :aria-labelledby="`catalog-tabs-tab-${tabItems[tabVal]?.key}`"
-            class="rounded-[var(--radius-lg)] border border-secondary bg-surface p-4 text-sm text-content-secondary"
-          >
-            {{ tabItems[tabVal]?.name }} tab panel
-          </div>
-        </div>
-        <div class="flex flex-col gap-4">
-          <UiSubtitle size="lg" weight="semibold">Toolbar + icon actions</UiSubtitle>
-          <UiToolbar label="Catalog toolbar">
-            <UiToolbarButton icon="i-lucide-bold" label="Bold" :active="true" />
-            <UiToolbarButton icon="i-lucide-italic" label="Italic" />
-            <UiToolbarButton icon="i-lucide-link" label="Add link" />
-          </UiToolbar>
-        </div>
+      <section class="flex flex-col gap-4">
+        <UiSubtitle size="lg" weight="semibold">Toolbar + icon actions</UiSubtitle>
+        <UiToolbar label="Catalog toolbar">
+          <UiToolbarButton icon="i-lucide-bold" label="Bold" :active="true" />
+          <UiToolbarButton icon="i-lucide-italic" label="Italic" />
+          <UiToolbarButton icon="i-lucide-link" label="Add link" />
+        </UiToolbar>
       </section>
 
-      <section class="grid sm:grid-cols-2 gap-6">
+      <section class="grid sm:grid-cols-3 gap-6">
         <div class="flex flex-col gap-4">
           <UiSubtitle size="lg" weight="semibold">UiSkeleton</UiSubtitle>
           <div class="flex flex-col gap-2">
@@ -286,6 +266,12 @@
               <UiSkeleton shape="circle" width="2.5rem" height="2.5rem" />
               <UiSkeleton shape="rect" width="8rem" height="2.5rem" />
             </div>
+          </div>
+        </div>
+        <div class="flex flex-col gap-4">
+          <UiSubtitle size="lg" weight="semibold">UiLoadingState</UiSubtitle>
+          <div class="rounded-[var(--radius-lg)] border border-secondary bg-surface">
+            <UiLoadingState label="Loading…" />
           </div>
         </div>
         <div class="flex flex-col gap-4">
@@ -304,21 +290,20 @@
 
       <!-- ── Form controls ──────────────────────────────── -->
       <section class="flex flex-col gap-4">
-        <UiSubtitle size="lg" weight="semibold">Form-control variant matrix</UiSubtitle>
+        <UiSubtitle size="lg" weight="semibold">Form controls</UiSubtitle>
         <UiParagraph size="sm" color="content-secondary">
           Click or keyboard-focus each control. Every field uses one inset focus indicator and the same disabled/error semantics.
         </UiParagraph>
 
-        <div v-for="variant in fieldVariants" :key="variant" class="grid gap-3 rounded-[var(--radius-xl)] border border-secondary bg-surface p-4 lg:grid-cols-3">
-          <UiSubtitle class="lg:col-span-3" size="sm" weight="semibold">{{ variant }}</UiSubtitle>
-          <UiFormField :label="`Input · ${variant}`">
-            <UiInput v-model="textVal" :variant="variant" placeholder="Type here…" icon="i-lucide-search" />
+        <div class="grid gap-3 rounded-[var(--radius-lg)] border border-secondary bg-surface p-4 lg:grid-cols-3">
+          <UiFormField label="Input">
+            <UiInput v-model="textVal" placeholder="Type here…" icon="i-lucide-search" />
           </UiFormField>
-          <UiFormField :label="`Select · ${variant}`">
-            <UiSelect v-model="selectVal" :variant="variant" :items="selectItems" placeholder="Choose a theme" />
+          <UiFormField label="Select">
+            <UiSelect v-model="selectVal" :items="selectItems" placeholder="Choose a theme" />
           </UiFormField>
-          <UiFormField :label="`Textarea · ${variant}`">
-            <UiTextarea v-model="areaVal" :variant="variant" :rows="2" placeholder="Multi-line…" />
+          <UiFormField label="Textarea">
+            <UiTextarea v-model="areaVal" :rows="2" placeholder="Multi-line…" />
           </UiFormField>
         </div>
 
@@ -339,8 +324,8 @@
           <UiFormField label="Invalid through FormField" error="This field is required">
             <UiInput placeholder="Errored input" />
           </UiFormField>
-          <UiFormField label="Explicit warning highlight">
-            <UiInput tone="warning" highlight model-value="Needs attention" />
+          <UiFormField label="Explicit error" error="Needs attention">
+            <UiInput model-value="Needs attention" error="Needs attention" />
           </UiFormField>
           <UiFormField label="Disabled textarea">
             <UiTextarea model-value="Disabled copy" disabled />
@@ -353,35 +338,22 @@
           </UiFormField>
         </div>
 
-        <UiSubtitle size="base" weight="semibold">Semantic highlights</UiSubtitle>
-        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-          <UiInput
-            v-for="tone in tones"
-            :key="`input-tone-${tone}`"
-            :tone="tone"
-            highlight
-            :model-value="`${tone} highlight`"
-            :aria-label="`${tone} highlighted input`"
-          />
-        </div>
-
         <UiSubtitle size="base" weight="semibold">Checkbox and switch states</UiSubtitle>
         <div class="grid gap-4 lg:grid-cols-2">
           <UiPanel size="sm" variant="subtle">
             <template #header>Checkbox</template>
             <div class="grid gap-3 sm:grid-cols-2">
-              <UiCheckbox v-for="tone in tones" :key="`checkbox-${tone}`" v-model="checked" :tone="tone" :label="tone" />
+              <UiCheckbox v-model="checked" label="Checked" />
               <UiCheckbox v-model="unchecked" label="Unchecked" />
               <UiCheckbox v-model="indeterminate" label="Indeterminate" />
               <UiCheckbox v-model="checked" label="Disabled checked" disabled />
-              <UiCheckbox v-model="checked" variant="card" label="Card variant" description="Selectable card treatment" />
               <UiCheckbox v-model="checked" indicator="end" label="Indicator at end" />
             </div>
           </UiPanel>
           <UiPanel size="sm" variant="subtle">
             <template #header>Switch</template>
             <div class="grid gap-3 sm:grid-cols-2">
-              <UiSwitch v-for="tone in tones" :key="`switch-${tone}`" v-model="switchOn" :tone="tone" :label="tone" />
+              <UiSwitch v-model="switchOn" label="Checked" />
               <UiSwitch v-model="switchOff" label="Unchecked" />
               <UiSwitch v-model="switchOn" label="Disabled checked" disabled />
               <UiSwitch v-model="switchOn" label="Loading" loading />
@@ -389,6 +361,13 @@
             </div>
           </UiPanel>
         </div>
+
+        <UiSubtitle size="base" weight="semibold">Segmented control</UiSubtitle>
+        <UiSegmentedControl
+          v-model="segmentValue"
+          label="Catalog view"
+          :items="segmentItems"
+        />
 
         <UiSubtitle size="base" weight="semibold">Action-menu states</UiSubtitle>
         <div class="flex flex-wrap items-center gap-3">
@@ -405,11 +384,6 @@
         <UiSubtitle size="lg" weight="semibold">Feedback</UiSubtitle>
         <div class="flex flex-col gap-3 max-w-2xl">
           <UiAlert v-for="tone in tones" :key="tone" :tone="tone" :title="`${tone} alert`" description="Inline status message." />
-          <div class="flex flex-col gap-2 pt-2">
-            <UiProgress :value="35" />
-            <UiProgress :value="70" tone="success" />
-            <UiProgress :value="null" />
-          </div>
           <UiTooltip text="Tooltip content">
             <UiButton variant="soft" size="sm">Hover for tooltip</UiButton>
           </UiTooltip>
@@ -473,7 +447,7 @@
  * across its variants/sizes/states. Update when adding a primitive.
  */
 import { designTokenValues } from "~/design-system/tokens.generated";
-import type { Size, Tone } from "~/components/ui/variants";
+import type { ActionTone, ControlSize, SemanticTone } from "~/components/ui/variants";
 
 definePageMeta({ layout: false });
 
@@ -500,14 +474,17 @@ const motionTokens = pick("--duration-").concat(pick("--ease-"));
 const layerTokens = pick("--z-");
 const targetTokens = pick("--target-");
 
-const tones: Tone[] = ["primary", "neutral", "success", "warning", "error", "info"];
-const sizes: Size[] = ["xs", "sm", "md", "lg", "xl"];
-// Canonical 4-variant emphasis ladder (outline/subtle are deprecated aliases of soft).
+const tones: SemanticTone[] = ["primary", "neutral", "success", "warning", "error", "info"];
+const sizes: ControlSize[] = ["xs", "sm", "md", "lg"];
+// Canonical action emphasis ladder.
 const buttonVariants = ["solid", "soft", "ghost", "link"] as const;
-// Buttons are actions → 4 tones. warning/info are status colors (badges/alerts).
-const buttonTones: Tone[] = ["primary", "neutral", "error", "success"];
-const fieldVariants = ["outline", "soft", "subtle", "ghost", "none"] as const;
-const badgeVariants = ["solid", "outline", "soft", "subtle"] as const;
+const buttonTones: ActionTone[] = ["primary", "neutral", "error"];
+const badgeVariants = ["outline", "soft", "subtle"] as const;
+const segmentValue = ref("list");
+const segmentItems = [
+  { value: "list", label: "List", icon: "i-lucide-list" },
+  { value: "grid", label: "Grid", icon: "i-lucide-grid-2x2" },
+] as const;
 const pillVariants = ["soft", "fill", "outline", "dashed", "ghost"] as const;
 const cardVariants = ["default", "outline", "ghost", "surface"] as const;
 
@@ -546,11 +523,5 @@ const catalogMenuItems = [
       confirmLabel: "Tap again to delete",
     },
   ],
-];
-const tabVal = ref(0);
-const tabItems = [
-  { key: "overview", name: "Overview", icon: "i-lucide-layout", panelId: "catalog-tabs-panel-overview" },
-  { key: "states", name: "States", icon: "i-lucide-circle-dot", panelId: "catalog-tabs-panel-states" },
-  { key: "a11y", name: "A11y", icon: "i-lucide-accessibility", panelId: "catalog-tabs-panel-a11y" },
 ];
 </script>

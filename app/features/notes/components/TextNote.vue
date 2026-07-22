@@ -52,7 +52,7 @@
             </div>
           </div>
           <div class="mt-3 flex flex-wrap justify-center gap-2">
-            <UiButton size="xs" tone="warning" variant="soft" @click="resolveConflict('keep-local')">
+            <UiButton size="xs" tone="primary" variant="soft" @click="resolveConflict('keep-local')">
               Keep mine
             </UiButton>
             <UiButton size="xs" tone="neutral" variant="soft" @click="resolveConflict('keep-server')">

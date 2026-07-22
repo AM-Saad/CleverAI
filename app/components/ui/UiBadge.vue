@@ -1,6 +1,6 @@
 <template>
   <UBadge
-    :color="color"
+    :color="tone"
     :variant="variant"
     :size="size"
     :icon="icon"
@@ -18,30 +18,20 @@
  * `UBadge` with the canonical `tone` vocabulary. Pill shape (`rounded-full`) is
  * reserved for avatars/status dots — badges use the chip radius from the theme.
  */
-import { computed } from "vue";
-import type { Tone } from "./variants";
-
-type LegacyTone = Tone | "secondary";
+import type { SemanticTone } from "./variants";
 
 const {
   tone = "neutral",
-  color: legacyColor,
   variant = "soft",
   size = "sm",
   icon,
 } = defineProps<{
   /** Semantic color role. */
-  tone?: Tone;
-  /** @deprecated Use `tone`. Kept as a migration bridge for legacy call sites. */
-  color?: LegacyTone;
-  variant?: "solid" | "outline" | "soft" | "subtle";
+  tone?: SemanticTone;
+  variant?: "outline" | "soft" | "subtle";
   size?: "xs" | "sm" | "md" | "lg";
   icon?: string;
 }>();
 
 defineOptions({ inheritAttrs: false });
-
-const color = computed(() =>
-  legacyColor === "secondary" ? "neutral" : (legacyColor ?? tone),
-);
 </script>

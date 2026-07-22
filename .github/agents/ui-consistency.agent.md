@@ -26,9 +26,9 @@ For any text, container, or interactive element, determine its role:
 - Is this **body/description text**? → Must use `<UiParagraph>` (or `text-content-on-surface text-sm leading-relaxed`)
 - Is this **metadata, timestamp, caption**? → `<UiParagraph size="xs" color="content-secondary">` (or `text-xs text-content-secondary`)
 - Is this a **form label**? → `<UiLabel tag="label">`
-- Is this a **card or modal container**? → `<UiCard>` or `rounded-[var(--radius-2xl)]`
-- Is this a **button**? → `<UButton>` — never `<button>` with manual classes
-- Is this an **interactive input**? → `<UInput>` / `<Input>` — never raw `<input>`
+- Is this a **card or panel container**? → `<UiCard>` / `<UiPanel>` using `--component-card-radius`
+- Is this a **button**? → `<UiButton>` — never `<UButton>` or `<button>` in product code
+- Is this an **interactive input**? → `<UiInput>` — raw inputs are reserved for documented native controls
 
 ### Step 2 — Check the implementation matches
 | Expected | Violation to fix |
@@ -40,20 +40,19 @@ For any text, container, or interactive element, determine its role:
 | `text-content-on-surface` for card body | `text-gray-700`, `text-gray-800` |
 | `text-content-on-surface-strong` for card headings | `text-gray-900`, `dark:text-gray-100` |
 | `rounded-[var(--radius-lg)]` on buttons/inputs | `rounded-md`, `rounded-lg` (raw Tailwind) |
-| `rounded-[var(--radius-xl)]` on panels/dropdowns | `rounded-xl`, `rounded-lg` (raw Tailwind) |
-| `rounded-[var(--radius-2xl)]` on cards/modals | `rounded-2xl`, `rounded-xl`, `rounded-lg` (raw Tailwind) |
+| `rounded-[var(--component-card-radius)]` on cards/panels/list rows | Raw Tailwind radius or a one-off card radius |
 | `bg-surface` or `bg-surface-subtle` | `bg-gray-50`, `bg-gray-100`, `dark:bg-gray-800` |
 | `border-secondary` | `border-gray-200`, `border-gray-300`, `dark:border-gray-700` |
 | `bg-primary/10 text-primary` for active/selected states | `bg-blue-50 text-blue-700` or `bg-indigo-50 text-indigo-700` |
-| `bg-success/10 text-success` | `bg-green-50 text-green-700`; also `text-green-400 border-green-400` for success indicators |
-| `bg-error/10 text-error` | `bg-red-50 text-red-700`; also `bg-red-500`, `text-red-200`, `text-red-600` |
-| `bg-warning/10 text-warning` | `bg-yellow-50 text-yellow-700`, `bg-amber-50`, `text-yellow-500` |
+| `bg-success/10 text-success-text` | `bg-green-50 text-green-700`; also `text-green-400 border-green-400` for success indicators |
+| `bg-error/10 text-error-text` | `bg-red-50 text-red-700`; also `bg-red-500`, `text-red-200`, `text-red-600` |
+| `bg-warning/10 text-warning-text` | `bg-yellow-50 text-yellow-700`, `bg-amber-50`, `text-yellow-500` |
 | No shadow on static elements | `shadow`, `shadow-md` on non-hoverable containers |
 | `hover:shadow-lg hover:-translate-y-0.5` for card hover | `hover:shadow` without translate |
 | `var(--color-success)` / `var(--color-warning)` / `var(--color-error)` in inline styles | Hex colors `#16a34a`, `#f59e0b`, `#ef4444` (or any hex literal) in `:style="{}"` |
 | `conic-gradient(var(--color-primary) ...%, var(--color-secondary) ...)` | `conic-gradient(#30c3c6 ...%, #e5e7eb ...)` — hex in gradients |
 | `bg-secondary rounded-[var(--radius-sm)]` for progress bars | `bg-gray-200 rounded` for thin fill bars |
-| `<UButton>` for all clickable buttons | Raw `<button>` with manual `bg-blue-600`, `bg-gray-200`, `bg-red-600` etc. |
+| `<UiButton>` for all clickable buttons | Direct `<UButton>` or raw `<button>` with manual colors |
 
 ### Step 3 — Fix using tokens/components, not utilities
 Always prefer the design component over a raw Tailwind class. If no component exists for a pattern, use the CSS variable token directly: `text-[color:var(--color-primary)]`, `rounded-[var(--radius-lg)]`, etc.
@@ -68,10 +67,10 @@ Always prefer the design component over a raw Tailwind class. If no component ex
 | Token | Purpose |
 |---|---|
 | `text-primary` / `bg-primary` | Interactive CTAs, active states, focus rings |
-| `text-success` / `bg-success/10` | Positive: enrolled, complete, correct |
-| `text-warning` / `bg-warning/10` | Caution: due soon, pending |
-| `text-error` / `bg-error/10` | Negative: failed, destructive, wrong |
-| `text-info` / `bg-info/10` | Neutral info: new cards, callouts |
+| `text-success-text` / `bg-success/10` | Positive: enrolled, complete, correct |
+| `text-warning-text` / `bg-warning/10` | Caution: due soon, pending |
+| `text-error-text` / `bg-error/10` | Negative: failed, destructive, wrong |
+| `text-info-text` / `bg-info/10` | Neutral info: new cards, callouts |
 | `text-content-on-background` | Primary text directly on page background |
 | `text-content-on-surface` | Body text inside cards/panels |
 | `text-content-on-surface-strong` | Subheadings inside cards/panels |
@@ -90,8 +89,8 @@ Always prefer the design component over a raw Tailwind class. If no component ex
 | `rounded-[var(--radius-sm)]` | 2px | Status dots, progress bars |
 | `rounded-[var(--radius-md)]` | 4px | Chips, tags, `UBadge` |
 | `rounded-[var(--radius-lg)]` | 6px | Buttons, inputs |
-| `rounded-[var(--radius-xl)]` | 8px | Dropdowns, small panels |
-| `rounded-[var(--radius-2xl)]` | 12px | `UiCard`, modals, search bar |
+| `rounded-[var(--component-card-radius)]` | compact | Cards, panels, list rows, settings groups |
+| `rounded-[var(--radius-2xl)]` | 12px | Sheets and overlay-specific large corners only |
 | `rounded-full` | pill | Avatars, tier badge pills, status dots ONLY |
 
 ### Typography Components
@@ -132,4 +131,3 @@ These files intentionally deviate from the design system and must NOT be audited
 
 **Rule:** If a file is in `debug/` or named `*.old.vue`, skip it entirely.
 **Rule:** Intentional dark-theme pages (`offline.vue`) — still fix semantic color violations (`bg-red-500` → `bg-error`) but do NOT change intentional dark structural colors (`bg-gray-700`, `bg-gray-800/50`).
-

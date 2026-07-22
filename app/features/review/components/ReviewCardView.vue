@@ -27,7 +27,12 @@
     <div class="rc__flip" :class="{ 'rc__flip--revealed': revealed }">
       <div class="rc__inner">
         <!-- FRONT: question -->
-        <button type="button" class="rc__face rc__front" @click="!revealed && emit('reveal')"> <!-- design-allow: full-card native tap target to reveal -->
+        <button
+          type="button"
+          class="rc__face rc__front"
+          @click="!revealed && emit('reveal')"
+        >
+          <!-- design-allow: full-card native tap target to reveal -->
           <span class="rc__eyebrow">{{ eyebrow }}</span>
           <p class="rc__question" dir="auto">{{ question }}</p>
           <span v-if="!revealed" class="rc__hint">Tap to reveal answer</span>
@@ -150,7 +155,7 @@ function onCancel() {
   position: absolute;
   inset: 0;
   z-index: 2;
-  border-radius: 18px;
+  border-radius: var(--component-card-radius);
   display: flex;
   align-items: flex-start;
   padding: var(--space-4);
@@ -188,7 +193,6 @@ function onCancel() {
   border-radius: var(--radius-full);
   background: var(--color-background);
   color: var(--color-primary);
-  box-shadow: var(--shadow-card-hover);
   pointer-events: none;
 }
 
@@ -208,10 +212,9 @@ function onCancel() {
   display: flex;
   flex-direction: column;
   width: 100%;
-  border-radius: 18px;
+  border-radius: var(--component-card-radius);
   background: var(--color-background);
   border: 1px solid var(--color-secondary);
-  box-shadow: var(--shadow-card-hover);
   padding: var(--space-6);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;

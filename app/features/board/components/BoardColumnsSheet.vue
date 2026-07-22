@@ -34,7 +34,6 @@
       <div v-if="adding" class="bcols__add-row">
         <input ref="addEl" v-model="newName" class="bcols__name bcols__name--add" placeholder="New column name" @keydown.enter.prevent="commitAdd" /> <!-- design-allow: native add field -->
         <UiButton
-          pill
           size="sm"
           tone="primary"
           :loading="busy"

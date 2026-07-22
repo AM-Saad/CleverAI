@@ -2,50 +2,31 @@
   <div class="ds-shell">
     <a href="#main-content" class="ds-skip">Skip to main content</a>
 
-    <div
-      class="ds-shell__frame"
-      :class="{ 'ds-shell__frame--wide': isMarketingLanding }"
-    >
-      <main
-        id="main-content"
-        tabindex="-1"
-        class="ds-shell__main"
-        :class="{ 'ds-shell__main--tabbar': showChrome }"
-      >
+    <div class="ds-shell__frame" :class="{ 'ds-shell__frame--wide': isMarketingLanding }">
+      <main id="main-content" tabindex="-1" class="ds-shell__main" :class="{ 'ds-shell__main--tabbar': showChrome }">
         <ServiceWorkerUpdateNotification mode="banner" />
         <slot />
       </main>
 
       <template v-if="showChrome">
-        <MobileTabBar
-          :capture-open="captureOpen"
-          @capture="captureOpen = true"
-        />
-        <CaptureSheet v-model:open="captureOpen" @select="onCapture" />
+        <MobileTabBar />
       </template>
 
       <!-- Global quick-switch (opened from any scoped screen's workspace pill). -->
-      <WorkspaceSwitcherSheet v-if="hasAppAccess && !isBareRoute" />
+      <WorkspaceSwitcherSheet v-if="hasAppAccess && isLearningRoute && !isBareRoute" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import MobileTabBar from "~/components/shell/MobileTabBar.vue";
-import CaptureSheet from "~/components/shell/CaptureSheet.vue";
 import WorkspaceSwitcherSheet from "~/components/shell/WorkspaceSwitcherSheet.vue";
 import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 
 const { status } = useAuth();
 const offline = useOfflineRuntime();
 const route = useRoute();
-const { setActive } = useActiveWorkspace();
-
-const captureOpen = ref(false);
-const captureRequest = ref(0);
-type CaptureAction = "note" | "word" | "board" | "ai" | "dictate";
-type CaptureSelection = { key: CaptureAction; workspaceId: string | null };
 
 // Chrome (tab bar + capture) only for the authenticated app — auth/marketing
 // routes render the bare page.
@@ -72,6 +53,11 @@ const hasAppAccess = computed(
 const showChrome = computed(
   () => hasAppAccess.value && !isBareRoute.value && !isImmersiveRoute.value,
 );
+const isLearningRoute = computed(() =>
+  ["/learn", "/language", "/materials", "/review", "/workspaces"].some(
+    (path) => route.path === path || route.path.startsWith(`${path}/`),
+  ),
+);
 // The signed-out home is the full-width marketing landing, not the phone column.
 const isMarketingLanding = computed(
   () =>
@@ -79,59 +65,14 @@ const isMarketingLanding = computed(
     status.value === "unauthenticated" &&
     !hasAppAccess.value,
 );
-
-function nextCaptureToken() {
-  captureRequest.value += 1;
-  return String(captureRequest.value);
-}
-
-function commitWorkspaceTarget(payload: CaptureSelection) {
-  if (payload.key === "word") return true;
-  if (!payload.workspaceId) {
-    void navigateTo("/workspaces?new=1");
-    return false;
-  }
-  setActive(payload.workspaceId);
-  return true;
-}
-
-function onCapture(payload: CaptureSelection) {
-  if (!commitWorkspaceTarget(payload)) return;
-
-  switch (payload.key) {
-    case "note":
-      // Only reached when no workspace exists yet (CaptureSheet captures notes
-      // in place otherwise); commitWorkspaceTarget already routed to create one.
-      return;
-    case "word":
-      return navigateTo({
-        path: "/language",
-        query: { compose: "1", capture: nextCaptureToken() },
-      });
-    case "board":
-      return navigateTo({
-        path: "/board",
-        query: { compose: "card", capture: nextCaptureToken() },
-      });
-    case "ai":
-      return navigateTo({
-        path: "/notes",
-        query: { compose: "ai", capture: nextCaptureToken() },
-      });
-    case "dictate":
-      return navigateTo({
-        path: "/notes",
-        query: { compose: "dictate", capture: nextCaptureToken() },
-      });
-  }
-}
 </script>
 
 <style scoped>
 .ds-shell {
-  min-height: 100dvh;
+  height: calc(100svh - calc(74px + env(safe-area-inset-bottom)));
   background: var(--color-background);
   color: var(--color-content-on-background);
+  display: flex
 }
 
 /* Mobile-first column, centered on wider viewports so the PWA reads as a phone
@@ -140,8 +81,9 @@ function onCapture(payload: CaptureSelection) {
   position: relative;
   margin: 0 auto;
   width: 100%;
-  max-width: 580px;
-  min-height: 100dvh;
+  max-width: 680px;
+  flex-grow: 1;
+  display: flex;
 }
 
 .ds-shell__frame--wide {
@@ -151,7 +93,8 @@ function onCapture(payload: CaptureSelection) {
 .ds-shell__main {
   display: flex;
   flex-direction: column;
-  min-height: 100dvh;
+  flex-grow: 1;
+  padding: var(--space-2);
 }
 
 .ds-shell__main--tabbar {

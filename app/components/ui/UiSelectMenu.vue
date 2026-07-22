@@ -4,9 +4,10 @@
     :size="size"
     :placeholder="placeholder"
     :disabled="disabled"
-    :color="resolvedColor"
-    :variant="variant"
-    :highlight="highlight || Boolean(error)"
+    :required="required"
+    :color="error ? 'error' : 'primary'"
+    variant="outline"
+    :highlight="Boolean(error)"
     :loading="loading"
     :multiple="multiple"
     :aria-invalid="error ? 'true' : undefined"
@@ -23,33 +24,25 @@
  * UiSelectMenu — searchable/richer choice combobox (vs. the simpler
  * `UiSelect`). Thin wrapper over the themed `USelectMenu`.
  */
-import { computed } from "vue";
-import type { Size, Tone } from "./variants";
-
-type FieldVariant = "outline" | "soft" | "subtle" | "ghost" | "none";
+import type { ControlSize } from "./variants";
 
 const model = defineModel<unknown>();
 const {
   size = "md",
   placeholder,
-  tone = "primary",
-  variant = "outline",
   disabled = false,
-  highlight = false,
+  required = false,
   loading = false,
   multiple = false,
   error = false,
 } = defineProps<{
-  size?: Size;
+  size?: ControlSize;
   placeholder?: string;
-  tone?: Tone;
-  variant?: FieldVariant;
   disabled?: boolean;
-  highlight?: boolean;
+  required?: boolean;
   loading?: boolean;
   multiple?: boolean;
   error?: boolean | string;
 }>();
-const resolvedColor = computed(() => (error ? "error" : tone));
 defineOptions({ inheritAttrs: false });
 </script>

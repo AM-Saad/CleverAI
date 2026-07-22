@@ -360,7 +360,7 @@ onMounted(async () => {
 .home__wspill {
   align-self: flex-start;
   margin-top: var(--space-2);
-  margin-bottom: calc(-1 * var(--space-5));
+  margin-bottom: calc(-1 * var(--space-4));
 }
 
 .home__greet {

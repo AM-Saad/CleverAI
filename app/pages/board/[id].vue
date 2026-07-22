@@ -99,7 +99,7 @@
     <div v-else class="bd__missing">
       <UiIcon name="i-lucide-file-x" class="h-9 w-9 text-content-disabled" />
       <p>Card not found.</p>
-      <UiButton pill @click="goBack">Back to board</UiButton>
+      <UiButton @click="goBack">Back to board</UiButton>
     </div>
   </div>
 </template>

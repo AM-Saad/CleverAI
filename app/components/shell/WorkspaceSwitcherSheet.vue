@@ -39,14 +39,16 @@
             :selected="w.id === activeId"
             :title="w.title"
             :description="metaFor(w.id)"
-            :leading-background="gradientFor(w)"
-            leading-color="var(--color-white)"
+            leading-background="var(--color-surface-subtle)"
+            :leading-color="accentFor(w)"
             @click="select(w)"
           >
             <template #leading>
-              <span class="wss__initial" aria-hidden="true">{{
-                initial(w.title)
-              }}</span>
+              <span
+                class="wss__dot"
+                :style="{ background: accentFor(w) }"
+                aria-hidden="true"
+              />
             </template>
             <template v-if="caughtUp(w.id)" #trailing>
               <UiPill
@@ -121,7 +123,7 @@
  * activeId) — no navigation. Management (edit/delete/reorder) stays on /workspaces.
  */
 import { ref, computed, watch } from "vue";
-import { ACCENT_TOKENS, accentVarFor } from "~/composables/useAccentColor";
+import { accentVarFor } from "~/composables/useAccentColor";
 import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace";
 import type { WorkspaceSummary } from "#shared/utils/workspace.contract";
 import type { ReviewWorkspaceStats } from "@shared/utils/review.contract";
@@ -149,12 +151,6 @@ const filtered = computed(() => {
 });
 const recentChips = computed(() => recentWorkspaces.value.slice(0, 4));
 
-function initial(name: string) {
-  return (name?.trim()?.[0] ?? "W").toUpperCase();
-}
-function gradientFromToken(token: string) {
-  return `linear-gradient(135deg, var(${token}), color-mix(in srgb, var(${token}) 62%, black))`;
-}
 function accentTokenFromVar(v: string) {
   return v.match(/var\((--[a-z-]+)\)/)?.[1] ?? "--color-accent-indigo";
 }
@@ -163,9 +159,6 @@ function tokenFor(w: WorkspaceSummary) {
   return typeof meta?.color === "string" && meta.color.startsWith("--")
     ? meta.color
     : accentTokenFromVar(accentVarFor(w.id));
-}
-function gradientFor(w: WorkspaceSummary) {
-  return gradientFromToken(tokenFor(w));
 }
 function accentFor(w: WorkspaceSummary) {
   return `var(${tokenFor(w)})`;
@@ -215,9 +208,6 @@ watch(isSwitcherOpen, (open) => {
     setTimeout(loadStats, 360);
   }
 });
-
-// Silence unused-import lint; ACCENT_TOKENS kept for parity with the switcher page.
-void ACCENT_TOKENS;
 </script>
 
 <style scoped>
@@ -240,9 +230,10 @@ void ACCENT_TOKENS;
   padding: 0;
   margin: 0;
 }
-.wss__initial {
-  font-weight: 800;
-  font-size: 17px;
+.wss__dot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-full);
 }
 .wss__empty {
   padding: var(--space-4);

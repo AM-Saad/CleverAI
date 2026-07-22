@@ -30,7 +30,7 @@
 
         <div class="flex gap-2">
           <UiButton
-            color="error"
+            tone="error"
             :loading="clearing"
             @click="clearAll"
           >
@@ -38,7 +38,7 @@
           </UiButton>
 
           <UiButton
-            color="warning"
+            tone="neutral"
             variant="soft"
             :loading="clearing"
             @click="clearWorkboxOnly"

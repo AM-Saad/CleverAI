@@ -23,7 +23,7 @@
             <slot name="default" />
         </div>
     </div>
-    <ui-loader v-else :is-fetching="isPageLoading" label="Loading Workspace..." />
+    <UiLoadingState v-else :active="isPageLoading" label="Loading Workspace..." />
 
 </template>
 

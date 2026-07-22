@@ -25,9 +25,9 @@ function requireText(rel, source, text, label = text) {
 
 const configRel = "app/app.config.ts";
 const config = read(configRel);
-const tones = ["primary", "neutral", "success", "warning", "error", "info"];
+const tones = ["primary", "neutral", "error"];
 const buttonVariants = ["solid", "soft", "ghost", "link"];
-const fieldVariants = ["outline", "soft", "subtle", "ghost", "none"];
+const fieldVariants = ["outline"];
 
 for (const tone of tones) {
   for (const variant of buttonVariants) {
@@ -40,8 +40,22 @@ for (const tone of tones) {
   }
 }
 
-for (const primitive of ["input", "textarea", "select", "checkbox", "switch", "button", "dropdownMenu", "popover"]) {
-  requireText(configRel, config, `${primitive}: {`, `${primitive} theme section`);
+for (const primitive of [
+  "input",
+  "textarea",
+  "select",
+  "checkbox",
+  "switch",
+  "button",
+  "dropdownMenu",
+  "popover",
+]) {
+  requireText(
+    configRel,
+    config,
+    `${primitive}: {`,
+    `${primitive} theme section`,
+  );
 }
 
 for (const variant of fieldVariants) {
@@ -55,7 +69,12 @@ for (const stateClass of [
   "data-disabled:opacity-60",
   "text-error-text",
 ]) {
-  requireText(configRel, config, stateClass, `canonical state class ${stateClass}`);
+  requireText(
+    configRel,
+    config,
+    stateClass,
+    `canonical state class ${stateClass}`,
+  );
 }
 
 const wrapperRequirements = {
@@ -63,40 +82,31 @@ const wrapperRequirements = {
     "loadingAuto?: boolean",
     "active?: boolean",
     "activeVariant?:",
-    ":disabled=\"disabled\"",
-    ":loading=\"loading\"",
+    ':disabled="disabled"',
+    ':loading="loading"',
   ],
   "app/components/ui/UiInput.vue": [
-    "variant?: FieldVariant",
-    "tone?: Tone",
     "readonly?: boolean",
     "loading?: boolean",
     "error?: boolean | string",
     ":aria-invalid=",
   ],
   "app/components/ui/UiTextarea.vue": [
-    "variant?: FieldVariant",
-    "tone?: Tone",
     "readonly?: boolean",
     "loading?: boolean",
     "error?: boolean | string",
   ],
   "app/components/ui/UiSelect.vue": [
-    "variant?: FieldVariant",
-    "tone?: Tone",
     "loading?: boolean",
     "error?: boolean | string",
-    ":content=\"content\"",
+    ':content="content"',
   ],
   "app/components/ui/UiCheckbox.vue": [
-    "boolean | \"indeterminate\"",
-    "variant?: \"list\" | \"card\"",
-    "indicator?: \"start\" | \"end\" | \"hidden\"",
-    "tone?: Tone",
+    'boolean | "indeterminate"',
+    'indicator?: "start" | "end" | "hidden"',
     "error?: boolean | string",
   ],
   "app/components/ui/UiSwitch.vue": [
-    "tone?: Tone",
     "loading?: boolean",
     "checkedIcon?: string",
     "uncheckedIcon?: string",
@@ -112,12 +122,11 @@ for (const [rel, requirements] of Object.entries(wrapperRequirements)) {
 const catalogRel = "app/pages/design-system.vue";
 const catalog = read(catalogRel);
 for (const marker of [
-  "Form-control variant matrix",
+  "Form controls",
   "Field states",
-  "Semantic highlights",
   "Checkbox and switch states",
+  "Segmented control",
   "Action-menu states",
-  'const fieldVariants = ["outline", "soft", "subtle", "ghost", "none"]',
   'ref<boolean | "indeterminate">("indeterminate")',
 ]) {
   requireText(catalogRel, catalog, marker);
@@ -126,11 +135,13 @@ for (const marker of [
 if (failures.length) {
   console.error("Primitive state coverage check failed:\n");
   failures.forEach((failure) => console.error(`- ${failure}`));
-  console.error(`\n${failures.length} missing primitive-state contract item(s).`);
+  console.error(
+    `\n${failures.length} missing primitive-state contract item(s).`,
+  );
   process.exit(1);
 }
 
 console.log(
   `[design-primitives] OK: ${tones.length * buttonVariants.length} button combinations, ` +
-    `${fieldVariants.length} field variants, wrapper state APIs, and catalog matrices are covered.`,
+    `${fieldVariants.length} field appearance, wrapper state APIs, and catalog states are covered.`,
 );

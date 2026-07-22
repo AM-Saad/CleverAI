@@ -157,7 +157,7 @@ const leadingStyle = computed(() => ({
 const listCard = tv({
   slots: {
     root: [
-      "flex w-full min-w-0 items-center gap-3 rounded-[var(--radius-2xl)] border text-left outline-none",
+      "flex w-full min-w-0 items-center gap-3 rounded-[var(--component-card-radius)] border text-left outline-none",
       "text-content-on-surface",
       disabledState,
     ].join(" "),
@@ -174,7 +174,7 @@ const listCard = tv({
   variants: {
     variant: {
       card: {
-        root: "border-secondary bg-[var(--ds-surface-card)] shadow-[var(--shadow-card)]",
+        root: "border-secondary bg-[var(--ds-surface-card)] shadow-none",
       },
       soft: {
         root: "border-secondary bg-surface-subtle",

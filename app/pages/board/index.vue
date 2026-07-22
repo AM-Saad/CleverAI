@@ -105,14 +105,14 @@
         class="h-10 w-10 text-content-disabled"
       />
       <p class="board__empty-title">Choose a workspace first</p>
-      <UiButton pill tone="primary" to="/workspaces">Open workspaces</UiButton>
+      <UiButton tone="primary" to="/workspaces">Open workspaces</UiButton>
     </div>
 
     <!-- setup empty state -->
     <div v-else-if="!columns.length && !loading" class="board__empty">
       <UiIcon name="i-lucide-kanban" class="h-10 w-10 text-content-disabled" />
       <p class="board__empty-title">No board yet</p>
-      <UiButton pill tone="primary" :loading="settingUp" @click="setupBoard"
+      <UiButton tone="primary" :loading="settingUp" @click="setupBoard"
         >Set up board</UiButton
       >
     </div>

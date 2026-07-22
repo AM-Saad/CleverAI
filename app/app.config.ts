@@ -1,48 +1,23 @@
 const buttonStateVariants = [
   { color: "primary", variant: "solid", class: "bg-primary! text-on-primary! hover:bg-primary-hover! active:bg-primary-active!" },
   { color: "neutral", variant: "solid", class: "bg-surface-strong! text-content-on-surface-strong! hover:bg-border-strong! active:bg-border-strong!" },
-  { color: "success", variant: "solid", class: "bg-success! text-on-success! hover:bg-success/85! active:bg-success/75!" },
-  { color: "warning", variant: "solid", class: "bg-warning! text-on-warning! hover:bg-warning/85! active:bg-warning/75!" },
   { color: "error", variant: "solid", class: "bg-error! text-on-error! hover:bg-error/85! active:bg-error/75!" },
-  { color: "info", variant: "solid", class: "bg-info! text-on-info! hover:bg-info/85! active:bg-info/75!" },
 
   { color: "primary", variant: "soft", class: "bg-primary/10! text-primary! hover:bg-primary/15! active:bg-primary/20!" },
   { color: "neutral", variant: "soft", class: "bg-surface-subtle! text-content-on-surface! hover:bg-surface-strong! active:bg-border-strong!" },
-  { color: "success", variant: "soft", class: "bg-success/10! text-success-text! hover:bg-success/15! active:bg-success/20!" },
-  { color: "warning", variant: "soft", class: "bg-warning/10! text-warning-text! hover:bg-warning/15! active:bg-warning/20!" },
   { color: "error", variant: "soft", class: "bg-error/10! text-error-text! hover:bg-error/15! active:bg-error/20!" },
-  { color: "info", variant: "soft", class: "bg-info/10! text-info-text! hover:bg-info/15! active:bg-info/20!" },
 
   { color: "primary", variant: "ghost", class: "bg-transparent! text-primary! hover:bg-primary/10! active:bg-primary/15!" },
   { color: "neutral", variant: "ghost", class: "bg-transparent! text-content-secondary! hover:bg-surface-subtle! hover:text-content-on-surface! active:bg-surface-strong!" },
-  { color: "success", variant: "ghost", class: "bg-transparent! text-success-text! hover:bg-success/10! active:bg-success/15!" },
-  { color: "warning", variant: "ghost", class: "bg-transparent! text-warning-text! hover:bg-warning/10! active:bg-warning/15!" },
   { color: "error", variant: "ghost", class: "bg-transparent! text-error-text! hover:bg-error/10! active:bg-error/15!" },
-  { color: "info", variant: "ghost", class: "bg-transparent! text-info-text! hover:bg-info/10! active:bg-info/15!" },
 
   { color: "primary", variant: "link", class: "bg-transparent! p-0! text-primary! hover:underline! active:opacity-70!" },
   { color: "neutral", variant: "link", class: "bg-transparent! p-0! text-content-secondary! hover:underline! active:opacity-70!" },
-  { color: "success", variant: "link", class: "bg-transparent! p-0! text-success-text! hover:underline! active:opacity-70!" },
-  { color: "warning", variant: "link", class: "bg-transparent! p-0! text-warning-text! hover:underline! active:opacity-70!" },
   { color: "error", variant: "link", class: "bg-transparent! p-0! text-error-text! hover:underline! active:opacity-70!" },
-  { color: "info", variant: "link", class: "bg-transparent! p-0! text-info-text! hover:underline! active:opacity-70!" },
-] as const;
-
-const fieldHighlightVariants = [
-  { color: "primary", highlight: true, class: "ring-primary!" },
-  { color: "neutral", highlight: true, class: "ring-border-strong!" },
-  { color: "success", highlight: true, class: "ring-success!" },
-  { color: "warning", highlight: true, class: "ring-warning!" },
-  { color: "error", highlight: true, class: "ring-error!" },
-  { color: "info", highlight: true, class: "ring-info!" },
 ] as const;
 
 const fieldVariants = {
   outline: "bg-surface! ring-1! ring-inset ring-secondary!",
-  soft: "bg-surface-subtle! ring-0! hover:bg-surface-strong! focus:bg-surface-subtle!",
-  subtle: "bg-surface-subtle! ring-1! ring-inset ring-secondary!",
-  ghost: "bg-transparent! ring-0! hover:bg-surface-subtle! focus:bg-transparent!",
-  none: "bg-transparent! ring-0!",
 } as const;
 
 export default defineAppConfig({
@@ -104,7 +79,6 @@ export default defineAppConfig({
       variants: {
         variant: fieldVariants,
       },
-      compoundVariants: [...fieldHighlightVariants],
     },
     textarea: {
       slots: {
@@ -115,7 +89,6 @@ export default defineAppConfig({
       variants: {
         variant: fieldVariants,
       },
-      compoundVariants: [...fieldHighlightVariants],
     },
     select: {
       slots: {
@@ -135,7 +108,6 @@ export default defineAppConfig({
       variants: {
         variant: fieldVariants,
       },
-      compoundVariants: [...fieldHighlightVariants],
     },
     checkbox: {
       slots: {
@@ -147,15 +119,10 @@ export default defineAppConfig({
       variants: {
         color: {
           primary: { base: "focus-visible:outline-[var(--ds-focus-outline-color)]!", indicator: "bg-primary" },
-          neutral: { base: "focus-visible:outline-[var(--ds-focus-outline-color)]!", indicator: "bg-content-on-surface" },
-          success: { base: "focus-visible:outline-[var(--ds-focus-outline-color)]!", indicator: "bg-success text-on-success" },
-          warning: { base: "focus-visible:outline-[var(--ds-focus-outline-color)]!", indicator: "bg-warning text-on-warning" },
           error: { base: "focus-visible:outline-[var(--ds-focus-outline-color)]!", indicator: "bg-error text-on-error" },
-          info: { base: "focus-visible:outline-[var(--ds-focus-outline-color)]!", indicator: "bg-info text-on-info" },
         },
         variant: {
           list: { root: "" },
-          card: { root: "rounded-[var(--radius-lg)] border border-secondary bg-surface p-3 has-data-[state=checked]:border-primary has-data-[state=checked]:bg-primary/5" },
         },
         disabled: {
           true: {
@@ -177,11 +144,7 @@ export default defineAppConfig({
       variants: {
         color: {
           primary: { base: "data-[state=checked]:bg-primary focus-visible:outline-[var(--ds-focus-outline-color)]!", icon: "group-data-[state=checked]:text-primary" },
-          neutral: { base: "data-[state=checked]:bg-content-on-surface focus-visible:outline-[var(--ds-focus-outline-color)]!", icon: "group-data-[state=checked]:text-content-on-surface" },
-          success: { base: "data-[state=checked]:bg-success focus-visible:outline-[var(--ds-focus-outline-color)]!", icon: "group-data-[state=checked]:text-success-text" },
-          warning: { base: "data-[state=checked]:bg-warning focus-visible:outline-[var(--ds-focus-outline-color)]!", icon: "group-data-[state=checked]:text-warning-text" },
           error: { base: "data-[state=checked]:bg-error focus-visible:outline-[var(--ds-focus-outline-color)]!", icon: "group-data-[state=checked]:text-error-text" },
-          info: { base: "data-[state=checked]:bg-info focus-visible:outline-[var(--ds-focus-outline-color)]!", icon: "group-data-[state=checked]:text-info-text" },
         },
         disabled: {
           true: {

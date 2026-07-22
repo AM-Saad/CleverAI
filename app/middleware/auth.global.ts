@@ -9,9 +9,16 @@ export default defineNuxtRouteMiddleware(async (to) => {
 
   // Handle unauthenticatedOnly pages (like signin, signup)
   // If user is authenticated and tries to access these pages, redirect them away
-  
-  const authMeta = to.meta.auth as { unauthenticatedOnly?: boolean; navigateAuthenticatedTo?: string } | false | undefined;
-  if (authMeta && typeof authMeta === 'object' && authMeta.unauthenticatedOnly) {
+
+  const authMeta = to.meta.auth as
+    | { unauthenticatedOnly?: boolean; navigateAuthenticatedTo?: string }
+    | false
+    | undefined;
+  if (
+    authMeta &&
+    typeof authMeta === "object" &&
+    authMeta.unauthenticatedOnly
+  ) {
     if (status.value === "authenticated") {
       return navigateTo(authMeta.navigateAuthenticatedTo || "/");
     }
@@ -35,10 +42,12 @@ export default defineNuxtRouteMiddleware(async (to) => {
     // Never fake a server session: this only permits local core routes while
     // the browser itself reports offline.
     if (import.meta.client && !navigator.onLine) {
-      const { getOfflineSession } = await import("~/utils/offline-v2/repository");
+      const { getOfflineSession } =
+        await import("~/utils/offline-v2/repository");
       const cached = await getOfflineSession();
       const isOfflineCoreRoute = [
         /^\/$/,
+        /^\/(day|learn)(?:\/|$)/,
         /^\/(workspaces|notes|board|materials)(?:\/|$)/,
         /^\/(review|offline|account\/offline)$/,
         /^\/language(?:\/review|\/settings)?$/,

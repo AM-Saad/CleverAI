@@ -122,7 +122,6 @@
       :refresh="loadLanguagePreferences"
     />
     <UiButton
-      pill
       block
       size="lg"
       :loading="languageSaving"

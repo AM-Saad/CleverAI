@@ -847,6 +847,9 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
             // Try network first
             log("Fetching navigation request:", req.url);
             const response = await fetch(req);
+            if ([502, 503, 504].includes(response.status)) {
+              throw new Error(`App process unavailable (${response.status})`);
+            }
 
             // Cache only the neutral shell. Workspace/board/account HTML can
             // contain an authenticated SSR payload and must never be used as

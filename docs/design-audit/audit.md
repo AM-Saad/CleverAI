@@ -48,174 +48,16 @@ _violation 0 · review 14 · legacy 0 · ok 23_ · typo: 0 Ui* / raw h0 p0 label
 | ✅ | typography | `tracking-wide` |  |
 | ✅ | typography | `tracking-wider` |  |
 
-## ⚠️ app/features/language-learning/components/QuickCaptureModal.vue
-_violation 0 · review 14 · legacy 0 · ok 65_ · typo: 3 Ui* / raw h0 p10 label1
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `from-accent-teal` |  |
-| ✅ | color | `via-accent-blue` |  |
-| ✅ | color | `to-accent-purple` |  |
-| ✅ | color | `bg-primary/10` |  ×4 |
-| ✅ | color | `text-primary` |  ×12 |
-| ✅ | color | `text-content-on-surface` |  ×8 |
-| ✅ | color | `bg-secondary` |  |
-| ✅ | color | `bg-surface` |  ×4 |
-| ✅ | color | `border-primary` |  |
-| ✅ | color | `border-secondary` |  ×3 |
-| ✅ | color | `text-content-secondary` |  ×7 |
-| ✅ | color | `bg-error` |  |
-| ✅ | color | `text-white` |  |
-| ✅ | color | `text-content-disabled` |  ×4 |
-| ✅ | color | `bg-primary` |  |
-| ✅ | color | `text-on-primary` |  |
-| ✅ | color | `border-primary/20` |  |
-| ✅ | color | `from-primary/8` |  |
-| ✅ | color | `via-primary` |  |
-| ✅ | color | `border-primary/15` |  |
-| ✅ | color | `bg-primary/50` |  |
-| ✅ | color | `border-success/20` |  |
-| ✅ | color | `bg-success/8` |  |
-| ✅ | color | `bg-primary/20` |  |
-| ✅ | color | `var(--ds-backdrop-dim)` |  |
-| ✅ | color | `var(--ds-focus-outline-color)` |  ×4 |
-| ⚠️ | radius | `rounded-full` | pill — avatars/dots only ×9 |
-| ✅ | radius | `rounded-[var(--radius-2xl)]` |  |
-| ✅ | radius | `rounded-[var(--radius-md)]` |  ×2 |
-| ✅ | radius | `rounded-[var(--radius-lg)]` |  ×2 |
-| ✅ | shadow | `shadow-[var(--shadow-dropdown)]` |  |
-| ⚠️ | spacing | `px-5` | off-grid |
-| ⚠️ | spacing | `pb-5` | off-grid |
-| ✅ | spacing | `pt-0` |  |
-| ⚠️ | spacing | `pt-5` | off-grid |
-| ✅ | spacing | `pb-4` |  |
-| ✅ | spacing | `gap-3` |  ×2 |
-| ✅ | spacing | `px-2` |  |
-| ⚠️ | spacing | `py-0.5` | off-grid |
-| ⚠️ | spacing | `py-5` | off-grid |
-| ✅ | spacing | `space-y-4` |  ×3 |
-| ✅ | spacing | `gap-2` |  ×9 |
-| ⚠️ | spacing | `p-1.5` | off-grid |
-| ✅ | spacing | `p-0` |  |
-| ✅ | spacing | `space-y-1` |  |
-| ✅ | spacing | `gap-1` |  ×2 |
-| ✅ | spacing | `pt-3` |  |
-| ✅ | spacing | `mt-2` |  ×2 |
-| ✅ | spacing | `gap-4` |  |
-| ✅ | spacing | `py-12` |  ×2 |
-| ⚠️ | spacing | `mt-0.5` | off-grid ×3 |
-| ⚠️ | spacing | `gap-1.5` | off-grid ×2 |
-| ✅ | spacing | `mt-1` |  ×3 |
-| ✅ | spacing | `mt-4` |  |
-| ✅ | spacing | `pt-4` |  |
-| ⚠️ | spacing | `mt-1.5` | off-grid |
-| ✅ | spacing | `space-y-3` |  |
-| ✅ | spacing | `space-y-2` |  ×2 |
-| ✅ | spacing | `px-3` |  |
-| ✅ | spacing | `py-2` |  |
-| ✅ | spacing | `mb-2` |  ×2 |
-| ⚠️ | spacing | `mr-1.5` | off-grid ×6 |
-| ⚠️ | spacing | `gap-5` | off-grid |
-| ⚠️ | spacing | `gap-2.5` | off-grid |
-| ✅ | spacing | `p-3` |  |
-| ✅ | spacing | `mt-3` |  |
-| ⚠️ | spacing | `px-0.5` | off-grid |
-| ✅ | typography | `text-base` | size |
-| ✅ | typography | `text-xs` | size ×15 |
-| ✅ | typography | `text-sm` | size ×6 |
-| ✅ | typography | `text-2xl` | size |
-| ✅ | typography | `text-xl` | size |
-| ✅ | typography | `font-semibold` | weight ×5 |
-| ✅ | typography | `font-medium` | weight ×2 |
-| ✅ | typography | `tracking-tight` |  |
-| ✅ | typography | `leading-tight` |  |
-| ✅ | typography | `leading-snug` |  |
-| ✅ | typography | `tracking-wide` |  |
-| ✅ | typography | `leading-relaxed` |  ×2 |
-
-## ⚠️ app/features/language-learning/components/TranslatePanel.vue
-_violation 0 · review 11 · legacy 0 · ok 52_ · typo: 3 Ui* / raw h0 p4 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `from-primary/40` |  |
-| ✅ | color | `via-primary` |  |
-| ✅ | color | `to-primary/40` |  |
-| ✅ | color | `bg-primary/10` |  ×4 |
-| ✅ | color | `text-primary` |  ×6 |
-| ✅ | color | `text-content-on-surface` |  ×4 |
-| ✅ | color | `bg-secondary` |  |
-| ✅ | color | `bg-surface` |  |
-| ✅ | color | `border-secondary` |  |
-| ✅ | color | `border-primary/50` |  |
-| ✅ | color | `text-content-secondary` |  ×4 |
-| ✅ | color | `bg-error/10` |  |
-| ✅ | color | `border-error` |  |
-| ✅ | color | `border-primary/20` |  |
-| ✅ | color | `border-primary/15` |  |
-| ✅ | color | `from-primary/5` |  |
-| ✅ | color | `to-primary/2` |  |
-| ✅ | color | `border-primary/10` |  |
-| ✅ | color | `text-content-disabled` |  ×2 |
-| ✅ | color | `bg-primary/40` |  |
-| ✅ | color | `border-success/20` |  |
-| ✅ | color | `bg-success/10` |  |
-| ✅ | color | `bg-primary/20` |  |
-| ✅ | color | `var(--ds-focus-outline-color)` |  |
-| ⚠️ | radius | `rounded-full` | pill — avatars/dots only ×5 |
-| ✅ | radius | `rounded-[var(--radius-2xl)]` |  |
-| ✅ | radius | `rounded-[var(--radius-md)]` |  |
-| ✅ | spacing | `p-0` |  |
-| ✅ | spacing | `px-4` |  ×2 |
-| ✅ | spacing | `pt-4` |  ×2 |
-| ✅ | spacing | `pb-3` |  |
-| ⚠️ | spacing | `gap-2.5` | off-grid |
-| ✅ | spacing | `mx-4` |  |
-| ⚠️ | spacing | `pb-5` | off-grid |
-| ✅ | spacing | `space-y-3` |  ×4 |
-| ✅ | spacing | `gap-2` |  ×5 |
-| ⚠️ | spacing | `px-5` | off-grid |
-| ⚠️ | spacing | `py-2.5` | off-grid |
-| ✅ | spacing | `gap-1` |  |
-| ✅ | spacing | `mt-2` |  |
-| ⚠️ | spacing | `mr-1.5` | off-grid ×6 |
-| ✅ | spacing | `gap-4` |  ×2 |
-| ⚠️ | spacing | `py-10` | off-grid ×2 |
-| ✅ | spacing | `gap-3` |  |
-| ⚠️ | spacing | `mt-0.5` | off-grid ×2 |
-| ✅ | spacing | `pt-3` |  |
-| ✅ | spacing | `space-y-1` |  |
-| ✅ | spacing | `mb-2` |  |
-| ⚠️ | spacing | `gap-1.5` | off-grid |
-| ⚠️ | spacing | `space-y-1.5` | off-grid |
-| ✅ | spacing | `mt-1` |  |
-| ⚠️ | spacing | `px-0.5` | off-grid |
-| ✅ | typography | `text-base` | size |
-| ✅ | typography | `text-sm` | size ×2 |
-| ✅ | typography | `text-xs` | size ×6 |
-| ✅ | typography | `text-xl` | size |
-| ✅ | typography | `text-lg` | size |
-| ✅ | typography | `font-semibold` | weight ×3 |
-| ✅ | typography | `font-medium` | weight |
-| ✅ | typography | `tracking-tight` |  |
-| ✅ | typography | `leading-snug` |  |
-| ✅ | typography | `tracking-wide` |  |
-| ✅ | typography | `leading-relaxed` |  |
-
 ## ⚠️ app/components/shared/PaperComponent.vue
-_violation 0 · review 10 · legacy 0 · ok 12_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 10 · legacy 0 · ok 8_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
 | ✅ | color | `var(--color-surface-subtle)` |  ×2 |
 | ✅ | color | `var(--color-secondary)` |  ×3 |
-| ✅ | color | `var(--color-content-secondary)` |  ×4 |
-| ✅ | color | `var(--color-surface-strong)` |  ×2 |
-| ✅ | color | `var(--color-content-on-surface)` |  ×2 |
-| ✅ | color | `var(--color-primary)` |  ×6 |
-| ✅ | color | `var(--color-on-primary)` |  |
 | ✅ | color | `var(--color-content-on-background)` |  |
-| ✅ | color | `var(--color-error)` |  ×2 |
+| ✅ | color | `var(--color-primary)` |  ×3 |
+| ✅ | color | `var(--color-content-secondary)` |  ×2 |
 | ✅ | color | `var(--color-background)` |  |
 | ✅ | color | `var(--color-content-disabled)` |  ×2 |
 | ✅ | color | `var(--color-dark)` |  ×3 |
@@ -302,21 +144,8 @@ _violation 0 · review 7 · legacy 0 · ok 45_ · typo: 0 Ui* / raw h0 p10 label
 | ✅ | typography | `tracking-widest` |  ×6 |
 | ✅ | typography | `leading-relaxed` |  |
 
-## ⚠️ app/components/ui/color-picker.vue
-_violation 0 · review 6 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `var(--color-content-on-background)` |  |
-| ⚠️ | color | `hsl(0, 0%, 100%)` | raw color fn |
-| ⚠️ | color | `hsl(${normalizedHue.value}, 60%, 85%)` | raw color fn |
-| ⚠️ | color | `hsl(${normalizedHue.value}, 90%, 60%)` | raw color fn |
-| ⚠️ | color | `hsla(${normalizedHue.value}, 90%, 60%, 1)` | raw color fn |
-| ⚠️ | color | `hsla(${normalizedHue.value}, 90%, 60%, 0)` | raw color fn |
-| ⚠️ | color | `hsl(${i}, 90%, 60%)` | raw color fn |
-
 ## ⚠️ app/features/integrations/components/WorkspaceImportDialog.vue
-_violation 0 · review 6 · legacy 0 · ok 38_ · typo: 0 Ui* / raw h1 p20 label5
+_violation 0 · review 6 · legacy 0 · ok 38_ · typo: 0 Ui* / raw h0 p20 label5
 
 | | category | value | note |
 |---|---|---|---|
@@ -366,21 +195,19 @@ _violation 0 · review 6 · legacy 0 · ok 38_ · typo: 0 Ui* / raw h1 p20 label
 | ✅ | typography | `tracking-widest` |  |
 
 ## ⚠️ app/components/ui/UiCard.vue
-_violation 0 · review 5 · legacy 0 · ok 17_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 5 · legacy 0 · ok 15_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
 | ✅ | color | `text-content-on-surface` |  |
-| ✅ | color | `bg-surface` |  ×3 |
+| ✅ | color | `bg-surface` |  ×2 |
 | ✅ | color | `border-secondary` |  ×4 |
-| ✅ | color | `border-surface` |  ×4 |
+| ✅ | color | `border-surface` |  ×2 |
 | ✅ | color | `var(--ds-card-spine)` |  |
 | ✅ | color | `var(--color-secondary)` |  |
 | ✅ | shadow | `shadow-[var(--shadow-card)]` |  |
 | ✅ | shadow | `shadow-[var(--shadow-dropdown)]` |  |
-| ✅ | shadow | `shadow-[var(--shadow-card-hover)]` |  ×2 |
-| ✅ | shadow | `shadow-[var(--shadow-modal)]` |  |
-| ✅ | shadow | `shadow-[var(--shadow-primary-glow)]` |  |
+| ✅ | shadow | `shadow-[var(--shadow-card-hover)]` |  |
 | ✅ | spacing | `mb-1` |  |
 | ⚠️ | spacing | `p-[var(--component-card-padding-xs)]` | arbitrary spacing ×2 |
 | ⚠️ | spacing | `p-[var(--component-card-padding-sm)]` | arbitrary spacing ×2 |
@@ -394,13 +221,14 @@ _violation 0 · review 5 · legacy 0 · ok 17_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | typography | `font-medium` | weight ×4 |
 
 ## ⚠️ app/components/workspace/hub/flashcards/index.vue
-_violation 0 · review 5 · legacy 0 · ok 9_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 5 · legacy 0 · ok 13_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
 | ✅ | color | `bg-primary` |  |
 | ✅ | color | `text-on-primary` |  |
 | ✅ | color | `bg-primary/10` |  |
+| ✅ | color | `border-secondary` |  |
 | ⚠️ | color | `rgb(251 146 60 / 0.5)` | raw color fn |
 | ⚠️ | color | `rgb(255 247 237 / 0.3)` | raw color fn |
 | ⚠️ | color | `rgb(251 146 60 / 0.3)` | raw color fn |
@@ -408,9 +236,12 @@ _violation 0 · review 5 · legacy 0 · ok 9_ · typo: 0 Ui* / raw h0 p0 label0
 | ⚠️ | radius | `rounded-full` | pill — avatars/dots only ×2 |
 | ✅ | spacing | `mb-2` |  |
 | ✅ | spacing | `mr-1` |  ×3 |
+| ✅ | spacing | `gap-3` |  |
 | ✅ | spacing | `mt-4` |  |
 | ✅ | spacing | `gap-2` |  |
-| ✅ | typography | `text-xs` | size ×4 |
+| ✅ | spacing | `mt-3` |  |
+| ✅ | spacing | `pt-3` |  |
+| ✅ | typography | `text-xs` | size ×3 |
 | ✅ | typography | `font-light` | weight |
 
 ## ⚠️ app/components/workspace/hub/Questions.vue
@@ -442,7 +273,7 @@ _violation 0 · review 5 · legacy 0 · ok 17_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | typography | `font-medium` | weight ×2 |
 
 ## ⚠️ app/features/language-learning/components/WordBankList.vue
-_violation 0 · review 5 · legacy 0 · ok 30_ · typo: 0 Ui* / raw h0 p2 label0
+_violation 0 · review 5 · legacy 0 · ok 29_ · typo: 0 Ui* / raw h0 p2 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -457,7 +288,6 @@ _violation 0 · review 5 · legacy 0 · ok 30_ · typo: 0 Ui* / raw h0 p2 label0
 | ✅ | color | `var(--color-primary)` |  ×2 |
 | ✅ | color | `var(--color-success)` |  |
 | ✅ | radius | `rounded-[var(--radius-sm)]` |  |
-| ✅ | shadow | `shadow-[var(--shadow-card)]` |  |
 | ✅ | spacing | `space-y-4` |  |
 | ✅ | spacing | `gap-3` |  ×2 |
 | ✅ | spacing | `gap-2` |  ×4 |
@@ -483,7 +313,7 @@ _violation 0 · review 5 · legacy 0 · ok 30_ · typo: 0 Ui* / raw h0 p2 label0
 | ✅ | typography | `leading-relaxed` |  |
 
 ## ⚠️ app/components/ServiceWorkerUpdateNotification.vue
-_violation 0 · review 4 · legacy 0 · ok 36_ · typo: 0 Ui* / raw h3 p3 label0
+_violation 0 · review 4 · legacy 0 · ok 34_ · typo: 0 Ui* / raw h0 p3 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -498,7 +328,6 @@ _violation 0 · review 4 · legacy 0 · ok 36_ · typo: 0 Ui* / raw h3 p3 label0
 | ✅ | color | `border-warning/20` |  |
 | ✅ | color | `bg-warning/10` |  |
 | ✅ | color | `text-content-secondary` |  |
-| ✅ | color | `text-content-on-background` |  ×2 |
 | ✅ | color | `var(--color-accent-blue)` |  ×2 |
 | ✅ | color | `var(--color-accent-indigo)` |  |
 | ✅ | color | `var(--color-success)` |  ×5 |
@@ -523,10 +352,9 @@ _violation 0 · review 4 · legacy 0 · ok 36_ · typo: 0 Ui* / raw h3 p3 label0
 | ✅ | spacing | `mb-4` |  |
 | ✅ | spacing | `mb-2` |  |
 | ✅ | spacing | `pt-2` |  |
-| ✅ | typography | `text-sm` | size ×2 |
 | ✅ | typography | `text-xs` | size ×4 |
-| ✅ | typography | `font-semibold` | weight ×2 |
-| ✅ | typography | `font-medium` | weight ×3 |
+| ✅ | typography | `text-sm` | size |
+| ✅ | typography | `font-medium` | weight ×2 |
 
 ## ⚠️ app/components/shared/NoteToolbar.vue
 _violation 0 · review 4 · legacy 0 · ok 8_ · typo: 0 Ui* / raw h0 p0 label0
@@ -570,7 +398,7 @@ _violation 0 · review 4 · legacy 0 · ok 13_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | typography | `text-sm` | size |
 
 ## ⚠️ app/features/notifications/components/NotificationPreferences.vue
-_violation 0 · review 4 · legacy 0 · ok 37_ · typo: 0 Ui* / raw h1 p1 label0
+_violation 0 · review 4 · legacy 0 · ok 38_ · typo: 0 Ui* / raw h0 p1 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -580,16 +408,17 @@ _violation 0 · review 4 · legacy 0 · ok 37_ · typo: 0 Ui* / raw h1 p1 label0
 | ✅ | color | `text-primary` |  ×3 |
 | ✅ | color | `bg-success/10` |  ×2 |
 | ✅ | color | `bg-warning/10` |  ×2 |
-| ✅ | color | `text-content-secondary` |  ×18 |
+| ✅ | color | `text-content-secondary` |  ×16 |
 | ✅ | color | `bg-secondary` |  |
 | ✅ | color | `border-primary` |  |
 | ✅ | color | `bg-primary/10` |  |
 | ✅ | color | `bg-surface` |  ×8 |
-| ✅ | color | `text-content-on-surface` |  ×8 |
+| ✅ | color | `text-content-on-surface` |  ×7 |
 | ✅ | color | `bg-white` |  ×6 |
+| ✅ | color | `var(--ds-focus-outline-color)` |  ×5 |
 | ⚠️ | radius | `rounded-full` | pill — avatars/dots only ×3 |
 | ✅ | radius | `rounded-[var(--radius-md)]` |  ×7 |
-| ✅ | spacing | `gap-2` |  ×15 |
+| ✅ | spacing | `gap-2` |  ×14 |
 | ✅ | spacing | `space-y-6` |  |
 | ✅ | spacing | `gap-4` |  ×3 |
 | ⚠️ | spacing | `px-2.5` | off-grid ×2 |
@@ -602,19 +431,19 @@ _violation 0 · review 4 · legacy 0 · ok 37_ · typo: 0 Ui* / raw h1 p1 label0
 | ✅ | spacing | `gap-3` |  ×4 |
 | ✅ | spacing | `px-2` |  ×3 |
 | ⚠️ | spacing | `py-0.5` | off-grid ×2 |
-| ✅ | spacing | `mt-1` |  ×4 |
+| ✅ | spacing | `mt-1` |  ×3 |
 | ✅ | spacing | `space-y-3` |  ×4 |
-| ✅ | spacing | `gap-1` |  ×5 |
 | ✅ | spacing | `pl-4` |  ×3 |
 | ✅ | spacing | `px-3` |  ×5 |
 | ✅ | spacing | `py-2` |  ×5 |
+| ✅ | spacing | `gap-1` |  ×4 |
 | ⚠️ | spacing | `py-1.5` | off-grid |
 | ✅ | spacing | `my-1` |  |
-| ✅ | typography | `text-xs` | size ×10 |
+| ✅ | typography | `text-xs` | size ×9 |
 | ✅ | typography | `text-xl` | size |
 | ✅ | typography | `text-2xl` | size |
 | ✅ | typography | `text-sm` | size ×3 |
-| ✅ | typography | `font-medium` | weight ×4 |
+| ✅ | typography | `font-medium` | weight ×3 |
 
 ## ⚠️ app/pages/about.vue
 _violation 0 · review 4 · legacy 0 · ok 28_ · typo: 0 Ui* / raw h0 p0 label0
@@ -685,25 +514,6 @@ _violation 0 · review 3 · legacy 0 · ok 22_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | typography | `text-sm` | size ×2 |
 | ✅ | typography | `font-medium` | weight ×2 |
 
-## ⚠️ app/components/shared/CreditsPill.vue
-_violation 0 · review 3 · legacy 0 · ok 10_ · typo: 0 Ui* / raw h0 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `bg-surface/70` |  |
-| ✅ | color | `border-primary/50` |  |
-| ✅ | color | `from-primary` |  |
-| ✅ | color | `to-accent-blue` |  |
-| ✅ | color | `text-primary` |  |
-| ✅ | color | `var(--ds-focus-outline-color)` |  |
-| ⚠️ | radius | `rounded-full` | pill — avatars/dots only |
-| ⚠️ | spacing | `gap-1.5` | off-grid |
-| ✅ | spacing | `px-3` |  |
-| ⚠️ | spacing | `py-1.5` | off-grid |
-| ✅ | spacing | `gap-1` |  |
-| ✅ | typography | `text-sm` | size |
-| ✅ | typography | `font-medium` | weight |
-
 ## ⚠️ app/components/shared/LocalSyncStatus.vue
 _violation 0 · review 3 · legacy 0 · ok 13_ · typo: 0 Ui* / raw h0 p1 label0
 
@@ -744,41 +554,6 @@ _violation 0 · review 3 · legacy 0 · ok 10_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | spacing | `mt-1` |  |
 | ✅ | spacing | `p-0` |  |
 | ✅ | typography | `text-sm` | size ×2 |
-
-## ⚠️ app/components/ui/CardStack.vue
-_violation 0 · review 3 · legacy 0 · ok 26_ · typo: 0 Ui* / raw h0 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `text-white` |  |
-| ✅ | color | `border-success` |  |
-| ✅ | color | `border-error` |  |
-| ✅ | color | `border-surface` |  ×4 |
-| ✅ | color | `text-content-secondary` |  ×5 |
-| ✅ | color | `bg-surface` |  ×2 |
-| ✅ | color | `bg-primary` |  |
-| ✅ | color | `bg-secondary` |  |
-| ✅ | color | `var(--color-content-on-background)` |  |
-| ✅ | color | `var(--ds-focus-outline-color)` |  ×2 |
-| ⚠️ | radius | `rounded-full` | pill — avatars/dots only ×3 |
-| ✅ | radius | `rounded-[var(--radius-lg)]` |  ×2 |
-| ✅ | radius | `rounded-[var(--radius-2xl)]` |  ×2 |
-| ✅ | shadow | `shadow-[var(--shadow-card-hover)]` |  |
-| ✅ | shadow | `shadow-[var(--shadow-dropdown)]` |  ×3 |
-| ✅ | spacing | `p-4` |  |
-| ✅ | spacing | `pt-16` |  |
-| ✅ | spacing | `px-4` |  ×2 |
-| ⚠️ | spacing | `py-1.5` | off-grid ×2 |
-| ✅ | spacing | `gap-6` |  |
-| ✅ | spacing | `mb-3` |  |
-| ✅ | spacing | `gap-8` |  |
-| ✅ | spacing | `mt-4` |  |
-| ⚠️ | spacing | `gap-2.5` | off-grid |
-| ✅ | typography | `text-xl` | size |
-| ✅ | typography | `text-sm` | size |
-| ✅ | typography | `font-bold` | weight ×2 |
-| ✅ | typography | `tracking-tight` |  |
-| ✅ | typography | `tracking-widest` |  ×2 |
 
 ## ⚠️ app/components/ui/UiPill.vue
 _violation 0 · review 3 · legacy 0 · ok 16_ · typo: 0 Ui* / raw h0 p0 label0
@@ -859,46 +634,6 @@ _violation 0 · review 3 · legacy 0 · ok 24_ · typo: 0 Ui* / raw h0 p4 label2
 | ✅ | typography | `font-medium` | weight ×3 |
 | ✅ | typography | `tracking-widest` |  ×4 |
 
-## ⚠️ app/features/board/components/BoardKanbanView.vue
-_violation 0 · review 3 · legacy 0 · ok 31_ · typo: 1 Ui* / raw h0 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `border-secondary` |  |
-| ✅ | color | `bg-surface` |  ×3 |
-| ✅ | color | `text-primary` |  ×4 |
-| ✅ | color | `bg-primary/10` |  ×2 |
-| ✅ | color | `ring-primary/30` |  ×2 |
-| ✅ | color | `bg-secondary` |  ×2 |
-| ✅ | color | `text-content-secondary` |  ×4 |
-| ✅ | color | `text-content-on-surface` |  ×2 |
-| ✅ | color | `ring-primary` |  |
-| ✅ | color | `border-surface` |  |
-| ✅ | color | `border-primary` |  |
-| ⚠️ | radius | `rounded-full` | pill — avatars/dots only ×2 |
-| ✅ | shadow | `shadow-[var(--shadow-dropdown)]` |  ×3 |
-| ✅ | shadow | `shadow-[var(--shadow-modal)]` |  |
-| ✅ | spacing | `p-0` |  |
-| ✅ | spacing | `gap-2` |  ×5 |
-| ✅ | spacing | `p-2` |  |
-| ✅ | spacing | `px-3` |  ×2 |
-| ⚠️ | spacing | `py-1.5` | off-grid ×2 |
-| ⚠️ | spacing | `gap-1.5` | off-grid ×3 |
-| ✅ | spacing | `gap-4` |  ×4 |
-| ✅ | spacing | `p-4` |  |
-| ✅ | spacing | `mb-3` |  |
-| ✅ | spacing | `my-3` |  |
-| ✅ | spacing | `mb-4` |  |
-| ✅ | spacing | `space-y-2` |  |
-| ✅ | spacing | `gap-3` |  |
-| ✅ | spacing | `gap-1` |  |
-| ✅ | spacing | `pt-2` |  |
-| ✅ | typography | `text-sm` | size ×3 |
-| ✅ | typography | `text-xs` | size ×2 |
-| ✅ | typography | `font-medium` | weight ×3 |
-| ✅ | typography | `font-semibold` | weight |
-| ✅ | typography | `tracking-wider` |  |
-
 ## ⚠️ app/features/board/containers/BoardNotesSection.vue
 _violation 0 · review 3 · legacy 0 · ok 24_ · typo: 0 Ui* / raw h0 p2 label0
 
@@ -932,25 +667,8 @@ _violation 0 · review 3 · legacy 0 · ok 24_ · typo: 0 Ui* / raw h0 p2 label0
 | ✅ | typography | `font-semibold` | weight |
 | ✅ | typography | `font-medium` | weight ×2 |
 
-## ⚠️ app/features/language-learning/components/ConsentSheet.vue
-_violation 0 · review 3 · legacy 0 · ok 8_ · typo: 0 Ui* / raw h0 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `bg-primary/10` |  |
-| ✅ | color | `text-primary` |  |
-| ✅ | color | `var(--ds-backdrop-dim)` |  |
-| ⚠️ | radius | `rounded-full` | pill — avatars/dots only |
-| ✅ | radius | `rounded-t-[var(--radius-2xl)]` |  |
-| ✅ | radius | `rounded-[var(--radius-2xl)]` |  |
-| ✅ | spacing | `p-4` |  |
-| ⚠️ | spacing | `space-y-5` | off-grid |
-| ✅ | spacing | `gap-3` |  |
-| ⚠️ | spacing | `gap-2.5` | off-grid |
-| ✅ | spacing | `mr-1` |  |
-
 ## ⚠️ app/features/materials/components/SpeechRecorder.vue
-_violation 0 · review 3 · legacy 0 · ok 15_ · typo: 0 Ui* / raw h0 p2 label0
+_violation 0 · review 3 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h0 p2 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -962,7 +680,6 @@ _violation 0 · review 3 · legacy 0 · ok 15_ · typo: 0 Ui* / raw h0 p2 label0
 | ✅ | color | `text-content-on-surface` |  |
 | ✅ | color | `text-content-secondary` |  |
 | ⚠️ | radius | `rounded-full` | pill — avatars/dots only ×2 |
-| ✅ | shadow | `shadow-[var(--shadow-dropdown)]` |  |
 | ✅ | spacing | `gap-2` |  ×3 |
 | ✅ | spacing | `mb-1` |  |
 | ⚠️ | spacing | `gap-1.5` | off-grid |
@@ -1018,19 +735,8 @@ _violation 0 · review 3 · legacy 0 · ok 11_ · typo: 0 Ui* / raw h0 p2 label0
 | ✅ | spacing | `mt-1` |  |
 | ✅ | typography | `text-xs` | size |
 
-## ⚠️ app/components/auth/AuthenticationStatus.vue
-_violation 0 · review 2 · legacy 0 · ok 3_ · typo: 0 Ui* / raw h2 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ⚠️ | radius | `rounded-full` | pill — avatars/dots only |
-| ✅ | shadow | `shadow-[var(--shadow-modal)]` |  |
-| ✅ | spacing | `space-x-2` |  |
-| ⚠️ | spacing | `pt-0.5` | off-grid |
-| ✅ | typography | `text-lg` | size |
-
 ## ⚠️ app/components/shared/CreditsWallet.vue
-_violation 0 · review 2 · legacy 0 · ok 45_ · typo: 1 Ui* / raw h2 p2 label0
+_violation 0 · review 2 · legacy 0 · ok 45_ · typo: 1 Ui* / raw h0 p2 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -1096,7 +802,7 @@ _violation 0 · review 2 · legacy 0 · ok 34_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | color | `var(--color-content-disabled)` |  |
 | ✅ | color | `var(--color-secondary)` |  ×2 |
 | ✅ | color | `var(--color-surface-strong)` |  ×2 |
-| ✅ | color | `var(--color-primary-50)` |  |
+| ✅ | color | `var(--color-primary-soft)` |  |
 | ✅ | color | `var(--color-primary)` |  ×2 |
 | ✅ | color | `var(--color-accent-purple)` |  ×3 |
 | ✅ | color | `var(--syntax-bg)` |  |
@@ -1124,7 +830,22 @@ _violation 0 · review 2 · legacy 0 · ok 34_ · typo: 0 Ui* / raw h0 p0 label0
 | ⚠️ | spacing | `py-0.5` | off-grid |
 | ✅ | typography | `text-sm` | size |
 
-## ⚠️ app/components/ui/Drawer.vue
+## ⚠️ app/components/ui/UiColorModeToggle.vue
+_violation 0 · review 2 · legacy 0 · ok 7_ · typo: 0 Ui* / raw h0 p0 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `border-secondary` |  |
+| ✅ | color | `bg-primary` |  |
+| ✅ | color | `text-on-primary` |  |
+| ✅ | color | `text-content-secondary` |  |
+| ✅ | color | `bg-surface` |  |
+| ✅ | radius | `rounded-[var(--radius-lg)]` |  |
+| ✅ | radius | `rounded-[var(--radius-md)]` |  |
+| ⚠️ | spacing | `gap-0.5` | off-grid |
+| ⚠️ | spacing | `p-0.5` | off-grid |
+
+## ⚠️ app/components/ui/UiDrawer.vue
 _violation 0 · review 2 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h1 p0 label0
 
 | | category | value | note |
@@ -1145,21 +866,6 @@ _violation 0 · review 2 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h1 p0 label0
 | ✅ | spacing | `mt-2` |  |
 | ✅ | typography | `text-lg` | size |
 | ✅ | typography | `font-semibold` | weight |
-
-## ⚠️ app/components/ui/UiColorModeToggle.vue
-_violation 0 · review 2 · legacy 0 · ok 7_ · typo: 0 Ui* / raw h0 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `border-secondary` |  |
-| ✅ | color | `bg-primary` |  |
-| ✅ | color | `text-on-primary` |  |
-| ✅ | color | `text-content-secondary` |  |
-| ✅ | color | `bg-surface` |  |
-| ✅ | radius | `rounded-[var(--radius-lg)]` |  |
-| ✅ | radius | `rounded-[var(--radius-md)]` |  |
-| ⚠️ | spacing | `gap-0.5` | off-grid |
-| ⚠️ | spacing | `p-0.5` | off-grid |
 
 ## ⚠️ app/components/ui/UiTabs.vue
 _violation 0 · review 2 · legacy 0 · ok 11_ · typo: 0 Ui* / raw h0 p0 label0
@@ -1271,31 +977,6 @@ _violation 0 · review 2 · legacy 0 · ok 9_ · typo: 0 Ui* / raw h0 p0 label0
 | ⚠️ | spacing | `gap-1.5` | off-grid |
 | ✅ | typography | `text-xs` | size ×3 |
 
-## ⚠️ app/features/language-learning/components/StoryCard.vue
-_violation 0 · review 2 · legacy 0 · ok 17_ · typo: 7 Ui* / raw h0 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `text-content-on-surface` |  |
-| ✅ | color | `text-content-secondary` |  ×2 |
-| ✅ | color | `text-primary` |  ×3 |
-| ✅ | color | `bg-primary/20` |  |
-| ✅ | radius | `rounded-[var(--radius-md)]` |  |
-| ✅ | spacing | `space-y-4` |  |
-| ✅ | spacing | `space-y-1` |  ×2 |
-| ✅ | spacing | `gap-1` |  |
-| ⚠️ | spacing | `space-y-5` | off-grid |
-| ✅ | spacing | `space-y-2` |  |
-| ✅ | spacing | `gap-2` |  |
-| ✅ | spacing | `mr-1` |  ×2 |
-| ⚠️ | spacing | `px-0.5` | off-grid |
-| ✅ | typography | `text-lg` | size ×2 |
-| ✅ | typography | `text-xs` | size |
-| ✅ | typography | `font-medium` | weight |
-| ✅ | typography | `font-semibold` | weight |
-| ✅ | typography | `tracking-wide` |  ×2 |
-| ✅ | typography | `leading-relaxed` |  ×2 |
-
 ## ⚠️ app/features/notes/components/CanvasNoteToolbar.vue
 _violation 0 · review 2 · legacy 0 · ok 3_ · typo: 0 Ui* / raw h0 p0 label0
 
@@ -1372,13 +1053,12 @@ _violation 0 · review 2 · legacy 0 · ok 16_ · typo: 0 Ui* / raw h0 p1 label0
 | ✅ | typography | `leading-relaxed` |  |
 
 ## ⚠️ app/pages/auth/reactivate.vue
-_violation 0 · review 2 · legacy 0 · ok 21_ · typo: 0 Ui* / raw h1 p5 label0
+_violation 0 · review 2 · legacy 0 · ok 18_ · typo: 0 Ui* / raw h0 p5 label0
 
 | | category | value | note |
 |---|---|---|---|
 | ✅ | color | `bg-background` |  |
 | ✅ | color | `text-primary` |  ×2 |
-| ✅ | color | `text-content-on-surface` |  |
 | ✅ | color | `text-content-secondary` |  ×2 |
 | ✅ | color | `border-success/20` |  |
 | ✅ | color | `bg-success/10` |  |
@@ -1395,40 +1075,29 @@ _violation 0 · review 2 · legacy 0 · ok 21_ · typo: 0 Ui* / raw h1 p5 label0
 | ⚠️ | spacing | `mt-0.5` | off-grid ×2 |
 | ✅ | spacing | `py-8` |  |
 | ✅ | spacing | `space-y-4` |  |
-| ✅ | typography | `text-2xl` | size |
 | ✅ | typography | `text-sm` | size ×5 |
-| ✅ | typography | `font-bold` | weight |
 | ✅ | typography | `font-semibold` | weight |
 
 ## ⚠️ app/app.vue
-_violation 0 · review 1 · legacy 0 · ok 24_ · typo: 0 Ui* / raw h1 p2 label0
+_violation 0 · review 1 · legacy 0 · ok 15_ · typo: 0 Ui* / raw h0 p2 label0
 
 | | category | value | note |
 |---|---|---|---|
 | ✅ | color | `bg-background` |  |
 | ✅ | color | `text-content-on-surface` |  |
-| ✅ | color | `border-secondary` |  ×2 |
+| ✅ | color | `border-secondary` |  |
 | ✅ | color | `text-content-secondary` |  ×2 |
-| ✅ | color | `bg-primary` |  |
-| ✅ | color | `text-on-primary` |  |
-| ✅ | color | `var(--ds-focus-outline-color)` |  ×2 |
 | ✅ | color | `var(--color-accent-orange)` |  |
 | ✅ | radius | `rounded-[var(--radius-xl)]` |  |
-| ✅ | radius | `rounded-[var(--radius-md)]` |  ×2 |
 | ✅ | shadow | `shadow-[var(--shadow-dropdown)]` |  |
 | ✅ | spacing | `px-6` |  |
 | ✅ | spacing | `p-6` |  |
 | ✅ | spacing | `mt-2` |  ×2 |
 | ⚠️ | spacing | `mt-5` | off-grid |
 | ✅ | spacing | `gap-2` |  |
-| ✅ | spacing | `px-3` |  ×2 |
-| ✅ | spacing | `py-2` |  ×2 |
 | ✅ | typography | `text-xs` | size |
-| ✅ | typography | `text-xl` | size |
-| ✅ | typography | `text-sm` | size ×3 |
+| ✅ | typography | `text-sm` | size |
 | ✅ | typography | `font-bold` | weight |
-| ✅ | typography | `font-semibold` | weight |
-| ✅ | typography | `font-medium` | weight ×2 |
 | ✅ | typography | `tracking-widest` |  |
 
 ## ⚠️ app/components/icons/StarsGenerative.vue
@@ -1438,6 +1107,26 @@ _violation 0 · review 1 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
 |---|---|---|---|
 | ✅ | color | `fill-primary` |  |
 | ⚠️ | spacing | `ml-0.5` | off-grid |
+
+## ⚠️ app/components/offline/OfflineSyncCenter.vue
+_violation 0 · review 1 · legacy 0 · ok 13_ · typo: 0 Ui* / raw h0 p6 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `text-content-secondary` |  ×10 |
+| ✅ | color | `border-secondary` |  ×3 |
+| ⚠️ | spacing | `space-y-5` | off-grid |
+| ✅ | spacing | `gap-3` |  ×5 |
+| ✅ | spacing | `gap-2` |  ×4 |
+| ✅ | spacing | `space-y-3` |  ×3 |
+| ✅ | spacing | `pt-3` |  ×3 |
+| ✅ | spacing | `pt-0` |  ×3 |
+| ✅ | spacing | `mb-2` |  |
+| ✅ | spacing | `mt-1` |  |
+| ✅ | spacing | `mt-2` |  |
+| ✅ | typography | `text-sm` | size ×5 |
+| ✅ | typography | `font-semibold` | weight ×5 |
+| ✅ | typography | `font-medium` | weight ×2 |
 
 ## ⚠️ app/components/review-kit/GradeBar.vue
 _violation 0 · review 1 · legacy 0 · ok 7_ · typo: 0 Ui* / raw h0 p2 label0
@@ -1452,37 +1141,6 @@ _violation 0 · review 1 · legacy 0 · ok 7_ · typo: 0 Ui* / raw h0 p2 label0
 | ✅ | typography | `text-xs` | size ×2 |
 | ✅ | typography | `font-medium` | weight |
 | ✅ | typography | `leading-tight` |  |
-
-## ⚠️ app/components/shared/DeleteConfirmationModal.vue
-_violation 0 · review 1 · legacy 0 · ok 8_ · typo: 1 Ui* / raw h0 p2 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `border-warning/20` |  |
-| ✅ | color | `bg-warning/10` |  |
-| ✅ | color | `text-content-secondary` |  |
-| ✅ | spacing | `space-y-4` |  |
-| ✅ | spacing | `gap-3` |  |
-| ⚠️ | spacing | `mt-0.5` | off-grid |
-| ✅ | spacing | `mt-1` |  |
-| ✅ | typography | `text-sm` | size |
-| ✅ | typography | `font-medium` | weight |
-
-## ⚠️ app/components/shared/DialogModal.vue
-_violation 0 · review 1 · legacy 0 · ok 9_ · typo: 0 Ui* / raw h0 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `text-content-on-surface` |  |
-| ✅ | color | `border-secondary` |  |
-| ✅ | color | `bg-surface` |  |
-| ✅ | color | `var(--ds-backdrop-strong)` |  |
-| ✅ | spacing | `p-0` |  |
-| ⚠️ | spacing | `p-3.5` | off-grid |
-| ✅ | spacing | `pb-2` |  |
-| ✅ | spacing | `gap-1` |  ×2 |
-| ✅ | spacing | `p-3` |  ×2 |
-| ✅ | typography | `font-medium` | weight |
 
 ## ⚠️ app/components/shared/InAppNotificationsPanel.vue
 _violation 0 · review 1 · legacy 0 · ok 15_ · typo: 0 Ui* / raw h0 p0 label0
@@ -1505,15 +1163,6 @@ _violation 0 · review 1 · legacy 0 · ok 15_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | spacing | `mt-2` |  ×2 |
 | ✅ | spacing | `py-3` |  |
 | ✅ | spacing | `mt-1` |  ×2 |
-
-## ⚠️ app/components/shared/Notifications.vue
-_violation 0 · review 1 · legacy 0 · ok 2_ · typo: 0 Ui* / raw h0 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `var(--color-surface)` |  |
-| ✅ | color | `var(--color-secondary)` |  |
-| ⚠️ | color | `rgba(0,0,0,0.1)` | raw color fn |
 
 ## ⚠️ app/components/shared/TiptapToolbar.vue
 _violation 0 · review 1 · legacy 0 · ok 3_ · typo: 1 Ui* / raw h0 p0 label0
@@ -1547,7 +1196,7 @@ _violation 0 · review 1 · legacy 0 · ok 29_ · typo: 0 Ui* / raw h1 p0 label0
 | ✅ | color | `bg-primary/10` |  |
 | ✅ | color | `var(--ds-surface-card)` |  |
 | ✅ | color | `var(--ui-item-card-spine)` |  |
-| ✅ | radius | `rounded-[var(--radius-2xl)]` |  |
+| ✅ | radius | `rounded-[var(--component-card-radius)]` |  |
 | ✅ | shadow | `shadow-[var(--shadow-card)]` |  ×2 |
 | ✅ | shadow | `shadow-[var(--shadow-card-hover)]` |  |
 | ✅ | spacing | `gap-3` |  ×2 |
@@ -1585,10 +1234,10 @@ _violation 0 · review 1 · legacy 0 · ok 26_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | color | `var(--color-surface-subtle)` |  |
 | ✅ | color | `var(--color-content-secondary)` |  |
 | ✅ | color | `var(--ds-surface-card)` |  |
-| ✅ | radius | `rounded-[var(--radius-2xl)]` |  |
+| ✅ | radius | `rounded-[var(--component-card-radius)]` |  |
 | ✅ | radius | `rounded-[var(--radius-lg)]` |  |
-| ✅ | shadow | `shadow-[var(--shadow-card)]` |  ×2 |
 | ✅ | shadow | `shadow-[var(--shadow-card-hover)]` |  |
+| ✅ | shadow | `shadow-[var(--shadow-card)]` |  |
 | ✅ | spacing | `gap-3` |  |
 | ⚠️ | spacing | `gap-1.5` | off-grid |
 | ✅ | spacing | `px-3` |  ×3 |
@@ -1602,7 +1251,7 @@ _violation 0 · review 1 · legacy 0 · ok 26_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | typography | `font-bold` | weight |
 
 ## ⚠️ app/components/ui/UiSettingsGroup.vue
-_violation 0 · review 1 · legacy 0 · ok 13_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 1 · legacy 0 · ok 12_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -1611,8 +1260,7 @@ _violation 0 · review 1 · legacy 0 · ok 13_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | color | `bg-surface` |  |
 | ✅ | color | `var(--ds-surface-card)` |  |
 | ✅ | color | `var(--color-secondary)` |  |
-| ✅ | radius | `rounded-[var(--radius-2xl)]` |  |
-| ✅ | shadow | `shadow-[var(--shadow-card)]` |  |
+| ✅ | radius | `rounded-[var(--component-card-radius)]` |  |
 | ✅ | spacing | `mt-4` |  |
 | ✅ | spacing | `mb-2` |  |
 | ⚠️ | spacing | `gap-0.5` | off-grid |
@@ -1631,45 +1279,24 @@ _violation 0 · review 1 · legacy 0 · ok 3_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | radius | `rounded-[var(--radius-md)]` |  |
 | ✅ | radius | `rounded-[var(--radius-sm)]` |  |
 
-## ⚠️ app/components/ui/WatchVideo.vue
-_violation 0 · review 1 · legacy 0 · ok 8_ · typo: 0 Ui* / raw h0 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `text-content-on-background` |  ×2 |
-| ✅ | color | `border-secondary` |  |
-| ✅ | color | `bg-surface` |  |
-| ✅ | color | `var(--ds-focus-outline-color)` |  |
-| ✅ | color | `var(--color-accent-cyan)` |  |
-| ⚠️ | radius | `rounded-full` | pill — avatars/dots only |
-| ✅ | radius | `rounded-[var(--radius-md)]` |  |
-| ✅ | typography | `text-sm` | size |
-| ✅ | typography | `font-light` | weight |
-
 ## ⚠️ app/components/user/DeleteAccountModal.vue
-_violation 0 · review 1 · legacy 0 · ok 19_ · typo: 0 Ui* / raw h1 p2 label2
+_violation 0 · review 1 · legacy 0 · ok 13_ · typo: 0 Ui* / raw h0 p2 label1
 
 | | category | value | note |
 |---|---|---|---|
 | ✅ | color | `border-error/20` |  |
 | ✅ | color | `bg-error/10` |  |
-| ✅ | color | `text-content-on-surface` |  ×2 |
-| ✅ | color | `accent-error` |  |
-| ✅ | color | `border-secondary` |  |
+| ✅ | color | `text-content-on-surface` |  |
 | ✅ | color | `text-content-secondary` |  |
-| ✅ | color | `var(--ds-focus-outline-color)` |  |
-| ✅ | radius | `rounded-[var(--radius-md)]` |  |
 | ✅ | spacing | `space-y-4` |  |
 | ✅ | spacing | `mr-3` |  |
 | ⚠️ | spacing | `mt-0.5` | off-grid |
 | ✅ | spacing | `mb-1` |  |
 | ✅ | spacing | `space-x-3` |  |
-| ✅ | spacing | `mt-1` |  ×2 |
-| ✅ | spacing | `gap-3` |  |
-| ✅ | spacing | `pt-2` |  |
-| ✅ | typography | `text-sm` | size ×4 |
+| ✅ | spacing | `mt-1` |  |
+| ✅ | typography | `text-sm` | size ×2 |
 | ✅ | typography | `text-xs` | size |
-| ✅ | typography | `font-medium` | weight ×4 |
+| ✅ | typography | `font-medium` | weight ×2 |
 | ✅ | typography | `font-bold` | weight |
 
 ## ⚠️ app/components/workspace/hub/FloatingLearningHubButton.vue
@@ -1684,10 +1311,10 @@ _violation 0 · review 1 · legacy 0 · ok 15_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | color | `bg-white/90` |  |
 | ✅ | color | `text-white` |  ×2 |
 | ✅ | color | `via-white/20` |  |
-| ✅ | color | `var(--color-primary-rgb)` |  |
 | ✅ | color | `var(--ds-focus-outline-color)` |  |
 | ✅ | radius | `rounded-[var(--radius-lg)]` |  ×2 |
 | ✅ | radius | `rounded-[var(--radius-md)]` |  |
+| ✅ | shadow | `shadow-[var(--shadow-primary-glow)]` |  |
 | ✅ | spacing | `gap-2` |  |
 | ✅ | spacing | `px-3` |  |
 | ✅ | spacing | `py-2` |  |
@@ -1725,7 +1352,7 @@ _violation 0 · review 1 · legacy 0 · ok 8_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | spacing | `p-0` |  |
 
 ## ⚠️ app/components/workspace/WorkspaceLayout.vue
-_violation 0 · review 1 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 1 · legacy 0 · ok 13_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -1736,9 +1363,8 @@ _violation 0 · review 1 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | color | `var(--ui-bg)` |  ×3 |
 | ✅ | color | `var(--ui-border)` |  ×3 |
 | ✅ | color | `var(--ui-bg-elevated)` |  |
-| ✅ | color | `var(--color-primary)` |  ×12 |
+| ✅ | color | `var(--color-primary)` |  ×11 |
 | ✅ | color | `var(--ui-text-dimmed)` |  ×3 |
-| ✅ | color | `var(--color-on-primary)` |  |
 | ⚠️ | color | `rgba(0, 0, 0, 0.08)` | raw color fn |
 | ✅ | radius | `rounded-[var(--radius-md)]` |  |
 | ✅ | spacing | `gap-1` |  |
@@ -1751,21 +1377,9 @@ _violation 0 · review 1 · legacy 0 · ok 3_ · typo: 3 Ui* / raw h0 p0 label0
 | | category | value | note |
 |---|---|---|---|
 | ✅ | spacing | `space-y-4` |  ×2 |
-| ✅ | spacing | `gap-4` |  ×3 |
+| ✅ | spacing | `gap-4` |  ×4 |
 | ⚠️ | spacing | `space-y-1.5` | off-grid ×3 |
 | ✅ | spacing | `mr-1` |  |
-
-## ⚠️ app/features/language-learning/components/QuickCaptureButton.vue
-_violation 0 · review 1 · legacy 0 · ok 5_ · typo: 0 Ui* / raw h0 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `bg-primary` |  ×2 |
-| ✅ | color | `text-on-primary` |  |
-| ✅ | color | `var(--ds-focus-outline-color)` |  |
-| ⚠️ | radius | `rounded-full` | pill — avatars/dots only |
-| ✅ | shadow | `shadow-[var(--shadow-card-hover)]` |  |
-| ✅ | spacing | `var(--space-6)` |  |
 
 ## ⚠️ app/features/materials/components/MaterialsList.vue
 _violation 0 · review 1 · legacy 0 · ok 17_ · typo: 0 Ui* / raw h0 p0 label0
@@ -1939,11 +1553,10 @@ _violation 0 · review 1 · legacy 0 · ok 15_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | typography | `font-medium` | weight ×4 |
 
 ## ⚠️ app/features/review/components/ReviewAnalyticsSummary.vue
-_violation 0 · review 1 · legacy 0 · ok 30_ · typo: 0 Ui* / raw h4 p0 label0
+_violation 0 · review 1 · legacy 0 · ok 27_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | color | `text-content-on-surface` |  ×4 |
 | ✅ | color | `text-primary` |  ×3 |
 | ✅ | color | `text-content-secondary` |  ×7 |
 | ✅ | color | `border-secondary` |  |
@@ -1957,7 +1570,6 @@ _violation 0 · review 1 · legacy 0 · ok 30_ · typo: 0 Ui* / raw h4 p0 label0
 | ✅ | color | `bg-success` |  |
 | ✅ | color | `bg-content-secondary` |  |
 | ⚠️ | radius | `rounded-full` | pill — avatars/dots only |
-| ✅ | shadow | `shadow-[var(--shadow-card-hover)]` |  |
 | ✅ | spacing | `mb-6` |  ×3 |
 | ✅ | spacing | `gap-6` |  ×2 |
 | ✅ | spacing | `mb-4` |  ×3 |
@@ -1967,13 +1579,12 @@ _violation 0 · review 1 · legacy 0 · ok 30_ · typo: 0 Ui* / raw h4 p0 label0
 | ✅ | spacing | `mt-6` |  |
 | ✅ | spacing | `pt-6` |  |
 | ✅ | spacing | `gap-4` |  |
-| ✅ | typography | `text-xl` | size ×5 |
 | ✅ | typography | `text-3xl` | size ×4 |
 | ✅ | typography | `text-sm` | size ×12 |
-| ✅ | typography | `text-lg` | size ×3 |
+| ✅ | typography | `text-xl` | size ×4 |
 | ✅ | typography | `text-xs` | size ×4 |
-| ✅ | typography | `font-bold` | weight ×9 |
-| ✅ | typography | `font-medium` | weight ×7 |
+| ✅ | typography | `font-bold` | weight ×8 |
+| ✅ | typography | `font-medium` | weight ×4 |
 
 ## ⚠️ app/features/review/components/ReviewStatusCard.vue
 _violation 0 · review 1 · legacy 0 · ok 17_ · typo: 0 Ui* / raw h0 p0 label0
@@ -2000,7 +1611,7 @@ _violation 0 · review 1 · legacy 0 · ok 17_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | typography | `text-sm` | size |
 
 ## ⚠️ app/pages/design-system.vue
-_violation 0 · review 1 · legacy 0 · ok 30_ · typo: 45 Ui* / raw h0 p6 label0
+_violation 0 · review 1 · legacy 0 · ok 30_ · typo: 46 Ui* / raw h0 p6 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -2015,9 +1626,8 @@ _violation 0 · review 1 · legacy 0 · ok 30_ · typo: 45 Ui* / raw h0 p6 label
 | ✅ | color | `var(--color-primary)` |  ×7 |
 | ✅ | color | `var(--color-accent-indigo)` |  ×2 |
 | ✅ | color | `var(--color-success)` |  |
-| ✅ | radius | `rounded-[var(--radius-lg)]` |  ×5 |
+| ✅ | radius | `rounded-[var(--radius-lg)]` |  ×6 |
 | ✅ | radius | `rounded-[var(--radius-sm)]` |  ×2 |
-| ✅ | radius | `rounded-[var(--radius-xl)]` |  |
 | ✅ | spacing | `p-6` |  |
 | ⚠️ | spacing | `p-10` | off-grid |
 | ✅ | spacing | `gap-12` |  |
@@ -2028,16 +1638,17 @@ _violation 0 · review 1 · legacy 0 · ok 30_ · typo: 45 Ui* / raw h0 p6 label
 | ✅ | spacing | `p-3` |  |
 | ✅ | spacing | `mt-1` |  |
 | ✅ | spacing | `mt-2` |  ×3 |
-| ✅ | spacing | `gap-2` |  ×13 |
+| ✅ | spacing | `gap-2` |  ×14 |
 | ✅ | spacing | `gap-8` |  |
 | ✅ | spacing | `p-4` |  ×2 |
 | ✅ | spacing | `pt-2` |  |
+| ✅ | spacing | `py-2` |  |
 | ✅ | typography | `text-sm` | size ×3 |
 | ✅ | typography | `text-xs` | size ×18 |
 | ✅ | typography | `font-medium` | weight |
 
 ## ⚠️ app/pages/error.vue
-_violation 0 · review 1 · legacy 0 · ok 19_ · typo: 0 Ui* / raw h1 p2 label0
+_violation 0 · review 1 · legacy 0 · ok 17_ · typo: 0 Ui* / raw h0 p2 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -2055,15 +1666,13 @@ _violation 0 · review 1 · legacy 0 · ok 19_ · typo: 0 Ui* / raw h1 p2 label0
 | ✅ | spacing | `px-3` |  |
 | ✅ | spacing | `py-2` |  |
 | ✅ | typography | `text-xs` | size |
-| ✅ | typography | `text-2xl` | size |
 | ✅ | typography | `text-sm` | size ×2 |
 | ✅ | typography | `font-bold` | weight |
-| ✅ | typography | `font-semibold` | weight |
 | ✅ | typography | `font-medium` | weight |
 | ✅ | typography | `tracking-widest` |  |
 
 ## ⚠️ app/pages/offline.vue
-_violation 0 · review 1 · legacy 0 · ok 33_ · typo: 0 Ui* / raw h2 p3 label0
+_violation 0 · review 1 · legacy 0 · ok 31_ · typo: 0 Ui* / raw h0 p3 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -2075,7 +1684,7 @@ _violation 0 · review 1 · legacy 0 · ok 33_ · typo: 0 Ui* / raw h2 p3 label0
 | ✅ | color | `text-content-disabled` |  ×3 |
 | ✅ | color | `bg-error` |  ×2 |
 | ✅ | color | `border-white` |  |
-| ✅ | color | `text-white` |  ×3 |
+| ✅ | color | `text-white` |  |
 | ✅ | color | `bg-content-on-background/50` |  |
 | ✅ | color | `text-primary/80` |  |
 | ✅ | color | `text-primary` |  |
@@ -2095,15 +1704,13 @@ _violation 0 · review 1 · legacy 0 · ok 33_ · typo: 0 Ui* / raw h2 p3 label0
 | ✅ | spacing | `space-y-2` |  |
 | ✅ | spacing | `space-x-2` |  |
 | ✅ | spacing | `mt-2` |  |
-| ✅ | typography | `text-4xl` | size |
-| ✅ | typography | `text-lg` | size ×2 |
+| ✅ | typography | `text-lg` | size |
 | ✅ | typography | `text-sm` | size ×2 |
 | ✅ | typography | `text-xs` | size |
-| ✅ | typography | `font-bold` | weight |
-| ✅ | typography | `font-semibold` | weight ×4 |
+| ✅ | typography | `font-semibold` | weight ×3 |
 
 ## ⚠️ app/pages/pricing.vue
-_violation 0 · review 1 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h5 p4 label0
+_violation 0 · review 1 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h0 p4 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -2114,16 +1721,13 @@ _violation 0 · review 1 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h5 p4 label0
 | ⚠️ | color | `rgba(0, 0, 0, 0.1)` | raw color fn ×2 |
 
 ## ✅ app/components/account/AccountPageFrame.vue
-_violation 0 · review 0 · legacy 0 · ok 6_ · typo: 0 Ui* / raw h1 p1 label0
+_violation 0 · review 0 · legacy 0 · ok 3_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | color | `var(--color-content-on-surface-strong)` |  |
-| ✅ | color | `var(--color-content-secondary)` |  |
-| ✅ | spacing | `var(--space-4)` |  ×4 |
+| ✅ | spacing | `var(--space-6)` |  |
+| ✅ | spacing | `var(--space-4)` |  ×3 |
 | ✅ | spacing | `var(--space-8)` |  |
-| ✅ | spacing | `var(--space-2)` |  ×3 |
-| ✅ | spacing | `var(--space-1)` |  |
 
 ## ✅ app/components/auth/AuthStepFieldStack.vue
 _violation 0 · review 0 · legacy 0 · ok 8_ · typo: 0 Ui* / raw h0 p0 label0
@@ -2169,8 +1773,30 @@ _violation 0 · review 0 · legacy 0 · ok 3_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | color | `text-white` |  |
 | ✅ | radius | `rounded-[var(--radius-md)]` |  |
 
+## ✅ app/components/home/AppLauncher.vue
+_violation 0 · review 0 · legacy 0 · ok 16_ · typo: 0 Ui* / raw h0 p2 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--color-primary)` |  ×3 |
+| ✅ | color | `var(--color-secondary)` |  ×2 |
+| ✅ | color | `var(--color-surface)` |  ×2 |
+| ✅ | color | `var(--color-content-secondary)` |  ×2 |
+| ✅ | color | `var(--color-content-on-surface)` |  |
+| ✅ | color | `var(--color-primary-soft)` |  |
+| ✅ | color | `var(--color-surface-strong)` |  |
+| ✅ | color | `var(--color-accent-indigo)` |  |
+| ✅ | color | `var(--color-content-disabled)` |  ×2 |
+| ✅ | color | `var(--color-warning)` |  |
+| ✅ | spacing | `var(--space-6)` |  ×2 |
+| ✅ | spacing | `var(--space-4)` |  ×6 |
+| ✅ | spacing | `var(--space-1)` |  ×2 |
+| ✅ | spacing | `var(--space-2)` |  ×2 |
+| ✅ | typography | `text-xs` | size ×4 |
+| ✅ | typography | `text-2xl` | size ×2 |
+
 ## ✅ app/components/home/HomeHub.vue
-_violation 0 · review 0 · legacy 0 · ok 25_ · typo: 0 Ui* / raw h3 p2 label0
+_violation 0 · review 0 · legacy 0 · ok 24_ · typo: 0 Ui* / raw h0 p2 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -2194,10 +1820,9 @@ _violation 0 · review 0 · legacy 0 · ok 25_ · typo: 0 Ui* / raw h3 p2 label0
 | ✅ | color | `var(--color-surface-subtle)` |  ×3 |
 | ✅ | color | `var(--color-accent-blue)` |  |
 | ✅ | spacing | `var(--space-6)` |  |
-| ✅ | spacing | `var(--space-4)` |  ×3 |
+| ✅ | spacing | `var(--space-4)` |  ×4 |
 | ✅ | spacing | `var(--space-8)` |  |
 | ✅ | spacing | `var(--space-2)` |  ×4 |
-| ✅ | spacing | `var(--space-5)` |  |
 | ✅ | spacing | `var(--space-3)` |  ×10 |
 
 ## ✅ app/components/icons/Arrowback.vue
@@ -2256,24 +1881,14 @@ _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 
 _no design values detected_
 
-## ✅ app/components/Loading.vue
-_violation 0 · review 0 · legacy 0 · ok 2_ · typo: 0 Ui* / raw h1 p1 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `var(--color-surface-subtle)` |  |
-| ✅ | color | `var(--color-accent-blue)` |  |
-
 ## ✅ app/components/modals/GuideDialog.vue
-_violation 0 · review 0 · legacy 0 · ok 8_ · typo: 0 Ui* / raw h0 p0 label1
+_violation 0 · review 0 · legacy 0 · ok 6_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
 | ✅ | color | `text-content-secondary` |  |
-| ✅ | color | `text-content-on-surface` |  |
 | ✅ | spacing | `my-2` |  ×2 |
 | ✅ | spacing | `gap-3` |  |
-| ✅ | spacing | `gap-2` |  |
 | ✅ | typography | `text-xl` | size |
 | ✅ | typography | `text-sm` | size |
 | ✅ | typography | `font-bold` | weight |
@@ -2291,7 +1906,7 @@ _violation 0 · review 0 · legacy 0 · ok 6_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | typography | `font-bold` | weight |
 
 ## ✅ app/components/NetworkStatusIndicator.vue
-_violation 0 · review 0 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 0 · legacy 0 · ok 15_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -2299,6 +1914,7 @@ _violation 0 · review 0 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | color | `text-white` |  |
 | ✅ | color | `bg-white/20` |  |
 | ✅ | color | `bg-white/30` |  |
+| ✅ | color | `var(--ds-focus-outline-color)` |  |
 | ✅ | radius | `rounded-[var(--radius-md)]` |  |
 | ✅ | spacing | `px-4` |  |
 | ✅ | spacing | `py-2` |  |
@@ -2309,6 +1925,19 @@ _violation 0 · review 0 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | typography | `text-sm` | size |
 | ✅ | typography | `text-xs` | size |
 | ✅ | typography | `font-medium` | weight |
+
+## ✅ app/components/patterns/AppPageHeader.vue
+_violation 0 · review 0 · legacy 0 · ok 7_ · typo: 2 Ui* / raw h0 p1 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--color-content-secondary)` |  ×2 |
+| ✅ | color | `var(--color-secondary)` |  |
+| ✅ | color | `var(--color-primary)` |  |
+| ✅ | spacing | `var(--space-3)` |  |
+| ✅ | spacing | `var(--space-2)` |  ×3 |
+| ✅ | typography | `text-sm` | size |
+| ✅ | typography | `text-xs` | size |
 
 ## ✅ app/components/settings/AccountTab.vue
 _violation 0 · review 0 · legacy 0 · ok 5_ · typo: 4 Ui* / raw h0 p0 label0
@@ -2376,13 +2005,17 @@ _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 
 _no design values detected_
 
-## ✅ app/components/shared/EmptyState.vue
-_violation 0 · review 0 · legacy 0 · ok 2_ · typo: 0 Ui* / raw h0 p0 label0
+## ✅ app/components/shared/CreditsPill.vue
+_violation 0 · review 0 · legacy 0 · ok 6_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | spacing | `gap-2` |  ×2 |
-| ✅ | spacing | `mb-0` |  |
+| ✅ | color | `from-primary` |  |
+| ✅ | color | `to-accent-blue` |  |
+| ✅ | color | `text-primary` |  |
+| ✅ | spacing | `gap-1` |  |
+| ✅ | typography | `text-sm` | size |
+| ✅ | typography | `font-medium` | weight |
 
 ## ✅ app/components/shared/ErrorMessage.vue
 _violation 0 · review 0 · legacy 0 · ok 8_ · typo: 0 Ui* / raw h0 p1 label0
@@ -2500,7 +2133,7 @@ _violation 0 · review 0 · legacy 0 · ok 9_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | typography | `font-medium` | weight |
 
 ## ✅ app/components/shell/CaptureSheet.vue
-_violation 0 · review 0 · legacy 0 · ok 17_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 0 · legacy 0 · ok 18_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -2509,35 +2142,29 @@ _violation 0 · review 0 · legacy 0 · ok 17_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | color | `var(--color-accent-teal)` |  |
 | ✅ | color | `var(--color-accent-orange)` |  |
 | ✅ | color | `var(--color-primary)` |  ×3 |
+| ✅ | color | `var(--color-content-secondary)` |  ×3 |
 | ✅ | color | `var(--color-secondary)` |  ×4 |
 | ✅ | color | `var(--color-surface-subtle)` |  ×3 |
 | ✅ | color | `var(--color-surface-strong)` |  ×3 |
 | ✅ | color | `var(--color-content-disabled)` |  |
 | ✅ | color | `var(--color-content-on-surface-strong)` |  ×4 |
-| ✅ | color | `var(--color-content-secondary)` |  ×2 |
 | ✅ | color | `var(--color-surface)` |  |
 | ✅ | spacing | `gap-3` |  |
 | ✅ | spacing | `pb-1` |  |
+| ✅ | spacing | `var(--space-2)` |  ×6 |
+| ✅ | spacing | `var(--space-1)` |  |
 | ✅ | spacing | `var(--space-3)` |  ×3 |
-| ✅ | spacing | `var(--space-2)` |  |
 | ✅ | spacing | `var(--space-4)` |  |
 
 ## ✅ app/components/shell/MobileTabBar.vue
-_violation 0 · review 0 · legacy 0 · ok 11_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 0 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | color | `var(--color-primary)` |  ×2 |
-| ✅ | color | `var(--color-accent-blue)` |  |
-| ✅ | color | `var(--color-accent-teal)` |  |
-| ✅ | color | `var(--color-accent-indigo)` |  |
-| ✅ | color | `var(--color-content-secondary)` |  |
-| ✅ | color | `var(--color-background)` |  ×2 |
+| ✅ | color | `var(--color-background)` |  |
 | ✅ | color | `var(--color-secondary)` |  |
 | ✅ | color | `var(--color-content-disabled)` |  |
-| ✅ | color | `var(--ds-gradient-fab)` |  |
-| ✅ | color | `var(--color-on-primary)` |  |
-| ✅ | spacing | `var(--space-2)` |  |
+| ✅ | color | `var(--color-primary)` |  |
 
 ## ✅ app/components/shell/NotificationsInboxSheet.vue
 _violation 0 · review 0 · legacy 0 · ok 12_ · typo: 0 Ui* / raw h1 p1 label0
@@ -2548,7 +2175,7 @@ _violation 0 · review 0 · legacy 0 · ok 12_ · typo: 0 Ui* / raw h1 p1 label0
 | ✅ | color | `var(--color-content-on-surface-strong)` |  ×2 |
 | ✅ | color | `var(--color-primary)` |  ×2 |
 | ✅ | color | `var(--color-content-secondary)` |  ×2 |
-| ✅ | color | `var(--color-primary-50)` |  |
+| ✅ | color | `var(--color-primary-soft)` |  |
 | ✅ | color | `var(--color-surface-subtle)` |  |
 | ✅ | color | `var(--color-content-disabled)` |  |
 | ✅ | radius | `rounded-[var(--radius-xl)]` |  |
@@ -2597,21 +2224,13 @@ _violation 0 · review 0 · legacy 0 · ok 7_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | color | `var(--color-white)` |  |
+| ✅ | color | `var(--color-surface-subtle)` |  |
 | ✅ | color | `var(--color-success)` |  |
 | ✅ | color | `var(--color-primary)` |  |
 | ✅ | color | `var(--color-content-secondary)` |  ×2 |
 | ✅ | spacing | `var(--space-3)` |  |
 | ✅ | spacing | `var(--space-2)` |  ×3 |
 | ✅ | spacing | `var(--space-4)` |  |
-
-## ✅ app/components/SpaLoading.vue
-_violation 0 · review 0 · legacy 0 · ok 2_ · typo: 0 Ui* / raw h1 p1 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `var(--color-surface-subtle)` |  |
-| ✅ | color | `var(--color-accent-blue)` |  |
 
 ## ✅ app/components/ui/AiShimmer.vue
 _violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
@@ -2624,53 +2243,6 @@ _violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
 _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 
 _no design values detected_
-
-## ✅ app/components/ui/DropdownMenu.vue
-_violation 0 · review 0 · legacy 0 · ok 11_ · typo: 0 Ui* / raw h0 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `text-content-on-surface` |  ×8 |
-| ✅ | color | `bg-surface` |  ×5 |
-| ✅ | color | `border-secondary` |  |
-| ✅ | color | `ring-white` |  |
-| ✅ | color | `bg-error/10` |  |
-| ✅ | color | `var(--ds-focus-outline-color)` |  |
-| ✅ | radius | `rounded-[var(--radius-xl)]` |  ×2 |
-| ✅ | shadow | `shadow-[var(--shadow-dropdown)]` |  |
-| ✅ | spacing | `gap-3` |  ×4 |
-| ✅ | typography | `text-sm` | size ×5 |
-| ✅ | typography | `font-semibold` | weight |
-
-## ✅ app/components/ui/flip-card/FlipCard.vue
-_violation 0 · review 0 · legacy 0 · ok 9_ · typo: 0 Ui* / raw h0 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `bg-success` |  |
-| ✅ | color | `text-dark` |  |
-| ✅ | color | `bg-surface` |  |
-| ✅ | color | `bg-background` |  |
-| ✅ | color | `text-content-on-background` |  |
-| ✅ | radius | `rounded-[var(--radius-2xl)]` |  ×3 |
-| ✅ | spacing | `mb-4` |  |
-| ✅ | spacing | `mb-0` |  |
-| ✅ | spacing | `p-4` |  ×2 |
-
-## ✅ app/components/ui/GradientBg.vue
-_violation 0 · review 0 · legacy 0 · ok 9_ · typo: 0 Ui* / raw h0 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `to-error/40` |  |
-| ✅ | color | `to-error/50` |  |
-| ✅ | color | `var(--color-accent-cyan)` |  ×2 |
-| ✅ | color | `var(--color-accent-blue)` |  |
-| ✅ | color | `var(--color-accent-purple)` |  |
-| ✅ | color | `var(--color-accent-pink)` |  |
-| ✅ | radius | `rounded-[var(--radius-lg)]` |  |
-| ✅ | radius | `rounded-[var(--radius-xl)]` |  |
-| ✅ | radius | `rounded-[var(--radius-2xl)]` |  |
 
 ## ✅ app/components/ui/InputField.vue
 _violation 0 · review 0 · legacy 0 · ok 11_ · typo: 0 Ui* / raw h0 p0 label1
@@ -2689,33 +2261,12 @@ _violation 0 · review 0 · legacy 0 · ok 11_ · typo: 0 Ui* / raw h0 p0 label1
 | ✅ | typography | `text-sm` | size |
 | ✅ | typography | `text-xs` | size ×2 |
 
-## ✅ app/components/ui/Loader.vue
-_violation 0 · review 0 · legacy 0 · ok 2_ · typo: 0 Ui* / raw h0 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | spacing | `gap-2` |  |
-| ✅ | typography | `text-sm` | size |
-
 ## ✅ app/components/ui/RewardGradient.vue
 _violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
 | ✅ | color | `var(--ds-brand-gradient)` |  ×2 |
-
-## ✅ app/components/ui/spinning-text/SpinningText.vue
-_violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
-
-_no design values detected_
-
-## ✅ app/components/ui/text-highlight/TextHighlight.vue
-_violation 0 · review 0 · legacy 0 · ok 2_ · typo: 0 Ui* / raw h0 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | spacing | `px-1` |  |
-| ✅ | spacing | `pb-1` |  |
 
 ## ✅ app/components/ui/UiActionMenu.vue
 _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
@@ -2727,14 +2278,27 @@ _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 
 _no design values detected_
 
-## ✅ app/components/ui/UiButton.vue
-_violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
+## ✅ app/components/ui/UiAnimatedText.vue
+_violation 0 · review 0 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | radius | `rounded-[var(--radius-full)]` |  |
+| ✅ | color | `var(--ui-animated-text-width-duration)` |  |
+| ✅ | color | `var(--ui-animated-text-duration)` |  ×2 |
+| ✅ | color | `var(--ui-animated-text-delay)` |  ×2 |
+| ✅ | color | `var(--ui-animated-text-direction)` |  ×2 |
+
+## ✅ app/components/ui/UiButton.vue
+_violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
+
+_no design values detected_
 
 ## ✅ app/components/ui/UiCheckbox.vue
+_violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
+
+_no design values detected_
+
+## ✅ app/components/ui/UiCollapsible.vue
 _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 
 _no design values detected_
@@ -2745,6 +2309,11 @@ _violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
 | | category | value | note |
 |---|---|---|---|
 | ✅ | spacing | `gap-2` |  |
+
+## ✅ app/components/ui/UiContextMenu.vue
+_violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
+
+_no design values detected_
 
 ## ✅ app/components/ui/UiDoubleTapDeleteButton.vue
 _violation 0 · review 0 · legacy 0 · ok 2_ · typo: 0 Ui* / raw h0 p0 label0
@@ -2767,6 +2336,11 @@ _violation 0 · review 0 · legacy 0 · ok 7_ · typo: 2 Ui* / raw h0 p0 label0
 | ✅ | spacing | `mt-2` |  |
 | ✅ | spacing | `gap-2` |  |
 
+## ✅ app/components/ui/UiForm.vue
+_violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
+
+_no design values detected_
+
 ## ✅ app/components/ui/UiFormField.vue
 _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 
@@ -2788,16 +2362,15 @@ _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 _no design values detected_
 
 ## ✅ app/components/ui/UiInteractiveCard.vue
-_violation 0 · review 0 · legacy 0 · ok 19_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 0 · legacy 0 · ok 18_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
 | ✅ | color | `text-content-on-surface` |  ×2 |
 | ✅ | color | `border-secondary` |  ×5 |
 | ✅ | color | `text-content-secondary` |  |
-| ✅ | color | `bg-surface` |  ×5 |
-| ✅ | color | `border-border` |  ×4 |
-| ✅ | color | `border-surface` |  ×4 |
+| ✅ | color | `bg-surface` |  ×2 |
+| ✅ | color | `border-border` |  ×2 |
 | ✅ | color | `border-primary` |  |
 | ✅ | color | `bg-primary/10` |  |
 | ✅ | radius | `rounded-[var(--component-card-radius)]` |  |
@@ -2813,30 +2386,42 @@ _violation 0 · review 0 · legacy 0 · ok 19_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | typography | `font-medium` | weight ×2 |
 
 ## ✅ app/components/ui/UiLabel.vue
-_violation 0 · review 0 · legacy 0 · ok 15_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 0 · legacy 0 · ok 8_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | color | `text-primary` |  |
-| ✅ | color | `text-content-on-surface` |  ×2 |
-| ✅ | color | `text-content-on-background` |  |
-| ✅ | color | `text-content-secondary` |  |
-| ✅ | color | `text-white` |  |
-| ✅ | color | `text-content-disabled` |  |
+| ✅ | color | `text-content-on-surface` |  |
 | ✅ | spacing | `m-0` |  |
 | ✅ | typography | `text-xs` | size |
 | ✅ | typography | `text-sm` | size |
 | ✅ | typography | `text-base` | size |
-| ✅ | typography | `font-light` | weight |
-| ✅ | typography | `font-normal` | weight |
 | ✅ | typography | `font-medium` | weight |
 | ✅ | typography | `font-semibold` | weight |
-| ✅ | typography | `font-bold` | weight |
+| ✅ | typography | `leading-normal` |  |
+
+## ✅ app/components/ui/UiLoadingState.vue
+_violation 0 · review 0 · legacy 0 · ok 5_ · typo: 0 Ui* / raw h0 p0 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `text-content-secondary` |  |
+| ✅ | color | `text-primary` |  |
+| ✅ | spacing | `gap-2` |  |
+| ✅ | spacing | `py-6` |  |
+| ✅ | typography | `text-sm` | size |
 
 ## ✅ app/components/ui/UiModal.vue
-_violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 0 · legacy 0 · ok 7_ · typo: 2 Ui* / raw h0 p0 label0
 
-_no design values detected_
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--ds-backdrop-strong)` |  |
+| ✅ | color | `var(--color-secondary)` |  ×2 |
+| ✅ | spacing | `p-0` |  |
+| ✅ | spacing | `gap-1` |  |
+| ✅ | spacing | `gap-2` |  |
+| ✅ | spacing | `var(--space-4)` |  |
+| ✅ | spacing | `var(--space-3)` |  ×3 |
 
 ## ✅ app/components/ui/UiOverlaySurface.vue
 _violation 0 · review 0 · legacy 0 · ok 16_ · typo: 0 Ui* / raw h0 p0 label0
@@ -2868,7 +2453,7 @@ _violation 0 · review 0 · legacy 0 · ok 11_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | color | `border-secondary` |  ×5 |
 | ✅ | color | `text-content-on-surface` |  |
 | ✅ | color | `bg-surface` |  ×2 |
-| ✅ | radius | `rounded-[var(--radius-xl)]` |  |
+| ✅ | radius | `rounded-[var(--component-card-radius)]` |  |
 | ✅ | spacing | `gap-3` |  |
 | ✅ | spacing | `p-2` |  ×3 |
 | ✅ | spacing | `p-3` |  ×3 |
@@ -2878,26 +2463,21 @@ _violation 0 · review 0 · legacy 0 · ok 11_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | typography | `font-semibold` | weight |
 
 ## ✅ app/components/ui/UiParagraph.vue
-_violation 0 · review 0 · legacy 0 · ok 17_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 0 · legacy 0 · ok 12_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
 | ✅ | color | `text-primary` |  |
-| ✅ | color | `text-content-on-surface` |  ×2 |
+| ✅ | color | `text-content-on-surface` |  |
 | ✅ | color | `text-content-on-background` |  |
 | ✅ | color | `text-content-secondary` |  |
-| ✅ | color | `text-white` |  |
 | ✅ | color | `text-content-disabled` |  |
 | ✅ | typography | `text-xs` | size |
 | ✅ | typography | `text-sm` | size |
 | ✅ | typography | `text-base` | size |
 | ✅ | typography | `text-lg` | size |
-| ✅ | typography | `font-light` | weight |
 | ✅ | typography | `font-normal` | weight |
-| ✅ | typography | `font-medium` | weight |
-| ✅ | typography | `font-semibold` | weight |
-| ✅ | typography | `font-bold` | weight |
-| ✅ | typography | `leading-normal` |  |
+| ✅ | typography | `leading-normal` |  ×2 |
 | ✅ | typography | `leading-relaxed` |  ×3 |
 
 ## ✅ app/components/ui/UiPillIcon.vue
@@ -2924,7 +2504,31 @@ _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 
 _no design values detected_
 
+## ✅ app/components/ui/UiSegmentedControl.vue
+_violation 0 · review 0 · legacy 0 · ok 13_ · typo: 0 Ui* / raw h0 p0 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `border-secondary` |  |
+| ✅ | color | `bg-surface` |  ×2 |
+| ✅ | color | `text-content-secondary` |  |
+| ✅ | color | `text-content-on-surface` |  |
+| ✅ | color | `bg-primary` |  ×2 |
+| ✅ | color | `text-on-primary` |  ×2 |
+| ✅ | radius | `rounded-[var(--radius-lg)]` |  ×2 |
+| ✅ | spacing | `p-1` |  |
+| ✅ | spacing | `gap-2` |  |
+| ✅ | spacing | `px-3` |  |
+| ✅ | spacing | `px-4` |  |
+| ✅ | typography | `text-sm` | size ×2 |
+| ✅ | typography | `font-medium` | weight |
+
 ## ✅ app/components/ui/UiSelect.vue
+_violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
+
+_no design values detected_
+
+## ✅ app/components/ui/UiSelectMenu.vue
 _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 
 _no design values detected_
@@ -2954,29 +2558,24 @@ _violation 0 · review 0 · legacy 0 · ok 7_ · typo: 0 Ui* / raw h1 p0 label0
 | ✅ | typography | `font-bold` | weight |
 
 ## ✅ app/components/ui/UiSubtitle.vue
-_violation 0 · review 0 · legacy 0 · ok 19_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 0 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | color | `text-primary` |  |
 | ✅ | color | `text-content-on-surface` |  ×2 |
 | ✅ | color | `text-content-on-background` |  |
-| ✅ | color | `text-white` |  |
-| ✅ | color | `text-content-disabled` |  |
 | ✅ | spacing | `m-0` |  |
-| ✅ | typography | `text-xs` | size |
 | ✅ | typography | `text-sm` | size |
 | ✅ | typography | `text-base` | size ×2 |
 | ✅ | typography | `text-lg` | size |
 | ✅ | typography | `text-xl` | size |
 | ✅ | typography | `text-2xl` | size |
-| ✅ | typography | `font-light` | weight |
-| ✅ | typography | `font-normal` | weight |
 | ✅ | typography | `font-medium` | weight |
 | ✅ | typography | `font-semibold` | weight |
 | ✅ | typography | `font-bold` | weight |
 | ✅ | typography | `tracking-normal` |  |
-| ✅ | typography | `leading-snug` |  ×6 |
+| ✅ | typography | `leading-snug` |  ×5 |
+| ✅ | typography | `leading-normal` |  |
 
 ## ✅ app/components/ui/UiSwitch.vue
 _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
@@ -2989,17 +2588,14 @@ _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 _no design values detected_
 
 ## ✅ app/components/ui/UiTitle.vue
-_violation 0 · review 0 · legacy 0 · ok 22_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 0 · legacy 0 · ok 17_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | color | `text-primary` |  |
 | ✅ | color | `text-content-on-surface` |  ×2 |
 | ✅ | color | `text-content-on-background` |  |
 | ✅ | color | `text-white` |  |
-| ✅ | color | `text-content-disabled` |  |
 | ✅ | spacing | `m-0` |  |
-| ✅ | typography | `text-xs` | size |
 | ✅ | typography | `text-sm` | size |
 | ✅ | typography | `text-base` | size |
 | ✅ | typography | `text-lg` | size |
@@ -3008,8 +2604,6 @@ _violation 0 · review 0 · legacy 0 · ok 22_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | typography | `text-3xl` | size |
 | ✅ | typography | `text-4xl` | size |
 | ✅ | typography | `text-5xl` | size |
-| ✅ | typography | `font-light` | weight |
-| ✅ | typography | `font-normal` | weight |
 | ✅ | typography | `font-medium` | weight |
 | ✅ | typography | `font-semibold` | weight |
 | ✅ | typography | `font-bold` | weight |
@@ -3017,18 +2611,14 @@ _violation 0 · review 0 · legacy 0 · ok 22_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | typography | `leading-tight` |  ×9 |
 
 ## ✅ app/components/ui/UiToolbar.vue
-_violation 0 · review 0 · legacy 0 · ok 8_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 0 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | color | `border-secondary` |  |
-| ✅ | color | `bg-surface` |  |
 | ✅ | radius | `rounded-[var(--radius-lg)]` |  |
 | ✅ | radius | `rounded-[var(--radius-xl)]` |  |
 | ✅ | spacing | `gap-1` |  |
-| ✅ | spacing | `p-1` |  |
 | ✅ | spacing | `gap-2` |  |
-| ✅ | spacing | `p-2` |  |
 
 ## ✅ app/components/ui/UiToolbarButton.vue
 _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
@@ -3039,20 +2629,6 @@ _no design values detected_
 _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 
 _no design values detected_
-
-## ✅ app/components/ui/UpgradeToPro.vue
-_violation 0 · review 0 · legacy 0 · ok 8_ · typo: 0 Ui* / raw h2 p1 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `var(--color-white)` |  |
-| ✅ | color | `var(--color-surface-subtle)` |  |
-| ✅ | color | `var(--color-accent-blue)` |  ×5 |
-| ✅ | color | `var(--color-content-on-background)` |  ×2 |
-| ✅ | color | `var(--color-content-secondary)` |  ×2 |
-| ✅ | color | `var(--color-secondary)` |  ×2 |
-| ✅ | color | `var(--color-success)` |  |
-| ✅ | color | `var(--color-on-primary)` |  |
 
 ## ✅ app/components/user/ChangePasswordModal.vue
 _violation 0 · review 0 · legacy 0 · ok 5_ · typo: 0 Ui* / raw h0 p2 label0
@@ -3099,13 +2675,6 @@ _violation 0 · review 0 · legacy 0 · ok 19_ · typo: 2 Ui* / raw h0 p7 label0
 | ✅ | typography | `text-sm` | size ×4 |
 | ✅ | typography | `font-bold` | weight ×2 |
 
-## ✅ app/components/workspace/Editor.vue
-_violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h1 p0 label0
-
-| | category | value | note |
-|---|---|---|---|
-| ✅ | color | `var(--color-success)` |  |
-
 ## ✅ app/components/workspace/hub/flashcards/CreateFlashcardModal.vue
 _violation 0 · review 0 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h0 p0 label0
 
@@ -3117,9 +2686,18 @@ _violation 0 · review 0 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | spacing | `mr-1` |  |
 
 ## ✅ app/components/workspace/hub/flashcards/DeleteFlashcardModal.vue
-_violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 0 · legacy 0 · ok 8_ · typo: 1 Ui* / raw h0 p2 label0
 
-_no design values detected_
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `border-warning/20` |  |
+| ✅ | color | `bg-warning/10` |  |
+| ✅ | color | `text-content-secondary` |  |
+| ✅ | spacing | `mt-4` |  |
+| ✅ | spacing | `gap-3` |  |
+| ✅ | spacing | `mt-1` |  |
+| ✅ | typography | `text-sm` | size |
+| ✅ | typography | `font-medium` | weight |
 
 ## ✅ app/components/workspace/hub/NoteContextViewer.vue
 _violation 0 · review 0 · legacy 0 · ok 7_ · typo: 0 Ui* / raw h0 p0 label0
@@ -3182,6 +2760,38 @@ _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 
 _no design values detected_
 
+## ✅ app/features/board/components/BoardKanbanView.vue
+_violation 0 · review 0 · legacy 0 · ok 26_ · typo: 1 Ui* / raw h0 p0 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `border-secondary` |  |
+| ✅ | color | `bg-surface` |  |
+| ✅ | color | `text-primary` |  ×2 |
+| ✅ | color | `ring-primary` |  |
+| ✅ | color | `border-surface` |  |
+| ✅ | color | `border-primary` |  |
+| ✅ | color | `text-content-secondary` |  ×2 |
+| ✅ | shadow | `shadow-[var(--shadow-dropdown)]` |  ×3 |
+| ✅ | shadow | `shadow-[var(--shadow-modal)]` |  |
+| ✅ | spacing | `p-0` |  |
+| ✅ | spacing | `gap-2` |  ×5 |
+| ✅ | spacing | `p-2` |  |
+| ✅ | spacing | `gap-4` |  ×4 |
+| ✅ | spacing | `p-4` |  |
+| ✅ | spacing | `mb-3` |  |
+| ✅ | spacing | `my-3` |  |
+| ✅ | spacing | `mb-4` |  |
+| ✅ | spacing | `space-y-2` |  |
+| ✅ | spacing | `gap-3` |  |
+| ✅ | spacing | `gap-1` |  |
+| ✅ | spacing | `pt-2` |  |
+| ✅ | typography | `text-xs` | size ×2 |
+| ✅ | typography | `text-sm` | size |
+| ✅ | typography | `font-semibold` | weight |
+| ✅ | typography | `font-medium` | weight |
+| ✅ | typography | `tracking-wider` |  |
+
 ## ✅ app/features/board/components/BoardListView.vue
 _violation 0 · review 0 · legacy 0 · ok 18_ · typo: 0 Ui* / raw h0 p0 label0
 
@@ -3234,6 +2844,137 @@ _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 
 _no design values detected_
 
+## ✅ app/features/board/components/QuickBoardItemEditor.vue
+_violation 0 · review 0 · legacy 0 · ok 5_ · typo: 0 Ui* / raw h0 p0 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--color-content-secondary)` |  |
+| ✅ | color | `var(--color-content-on-surface)` |  |
+| ✅ | color | `var(--color-content-disabled)` |  |
+| ✅ | spacing | `var(--space-2)` |  ×4 |
+| ✅ | spacing | `var(--space-1)` |  |
+
+## ✅ app/features/daily/components/ActionItemForm.vue
+_violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | spacing | `var(--space-3)` |  |
+
+## ✅ app/features/daily/components/ActionItemSheet.vue
+_violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
+
+_no design values detected_
+
+## ✅ app/features/daily/components/DailyActionList.vue
+_violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--color-surface-subtle)` |  |
+
+## ✅ app/features/daily/components/DailyActionRow.vue
+_violation 0 · review 0 · legacy 0 · ok 9_ · typo: 0 Ui* / raw h0 p1 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--color-error)` |  ×2 |
+| ✅ | color | `var(--color-content-secondary)` |  ×2 |
+| ✅ | color | `var(--color-secondary)` |  |
+| ✅ | color | `var(--color-content-on-surface)` |  |
+| ✅ | color | `var(--color-content-disabled)` |  |
+| ✅ | spacing | `var(--space-3)` |  |
+| ✅ | spacing | `var(--space-2)` |  ×2 |
+| ✅ | spacing | `var(--space-1)` |  ×2 |
+| ✅ | typography | `text-xs` | size |
+
+## ✅ app/features/daily/components/DailyActionSection.vue
+_violation 0 · review 0 · legacy 0 · ok 8_ · typo: 1 Ui* / raw h0 p2 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--color-content-secondary)` |  ×2 |
+| ✅ | color | `var(--color-secondary)` |  |
+| ✅ | color | `var(--color-content-disabled)` |  |
+| ✅ | spacing | `var(--space-3)` |  ×3 |
+| ✅ | spacing | `var(--space-2)` |  |
+| ✅ | typography | `text-xs` | size ×2 |
+| ✅ | typography | `text-lg` | size |
+| ✅ | typography | `text-sm` | size |
+
+## ✅ app/features/daily/components/DailyDateNavigation.vue
+_violation 0 · review 0 · legacy 0 · ok 11_ · typo: 1 Ui* / raw h0 p1 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--color-content-secondary)` |  ×3 |
+| ✅ | color | `var(--color-secondary)` |  |
+| ✅ | color | `var(--color-primary)` |  |
+| ✅ | color | `var(--color-on-primary)` |  |
+| ✅ | spacing | `var(--space-4)` |  |
+| ✅ | spacing | `var(--space-2)` |  |
+| ✅ | spacing | `var(--space-1)` |  ×2 |
+| ✅ | typography | `text-sm` | size |
+| ✅ | typography | `text-xs` | size ×2 |
+| ✅ | typography | `text-xl` | size |
+| ✅ | typography | `text-base` | size |
+
+## ✅ app/features/daily/components/DailyNoteConflictPanel.vue
+_violation 0 · review 0 · legacy 0 · ok 13_ · typo: 0 Ui* / raw h0 p1 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `text-content-on-surface` |  |
+| ✅ | color | `bg-surface` |  ×2 |
+| ✅ | color | `text-content-secondary` |  ×2 |
+| ✅ | color | `var(--color-warning)` |  ×2 |
+| ✅ | radius | `rounded-[var(--radius-md)]` |  ×2 |
+| ✅ | spacing | `mb-2` |  |
+| ✅ | spacing | `gap-3` |  |
+| ✅ | spacing | `mb-1` |  ×2 |
+| ✅ | spacing | `p-2` |  ×2 |
+| ✅ | spacing | `mt-3` |  |
+| ✅ | spacing | `gap-2` |  |
+| ✅ | typography | `text-xs` | size ×5 |
+| ✅ | typography | `font-semibold` | weight ×3 |
+
+## ✅ app/features/daily/components/DailyNoteSection.vue
+_violation 0 · review 0 · legacy 0 · ok 4_ · typo: 1 Ui* / raw h0 p1 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--color-content-secondary)` |  |
+| ✅ | spacing | `var(--space-3)` |  |
+| ✅ | typography | `text-xs` | size |
+| ✅ | typography | `text-lg` | size |
+
+## ✅ app/features/daily/components/DailyRichEditor.vue
+_violation 0 · review 0 · legacy 0 · ok 8_ · typo: 0 Ui* / raw h0 p0 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--color-secondary)` |  ×2 |
+| ✅ | color | `var(--color-surface)` |  ×2 |
+| ✅ | color | `var(--color-content-on-surface)` |  |
+| ✅ | color | `var(--color-content-disabled)` |  |
+| ✅ | spacing | `var(--space-2)` |  ×3 |
+| ✅ | spacing | `var(--space-1)` |  |
+| ✅ | spacing | `var(--space-6)` |  |
+| ✅ | typography | `text-xl` | size |
+
+## ✅ app/features/daily/components/RescheduleActionForm.vue
+_violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p1 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--color-content-secondary)` |  |
+
+## ✅ app/features/daily/components/RescheduleActionSheet.vue
+_violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
+
+_no design values detected_
+
 ## ✅ app/features/integrations/components/IntegrationAppsIcon.vue
 _violation 0 · review 0 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h0 p0 label0
 
@@ -3254,40 +2995,101 @@ _violation 0 · review 0 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | color | `var(--color-accent-blue)` |  |
 | ✅ | color | `var(--color-content-on-surface)` |  ×2 |
 
+## ✅ app/features/language-learning/components/LanguageCapturePanel.vue
+_violation 0 · review 0 · legacy 0 · ok 16_ · typo: 3 Ui* / raw h0 p3 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--color-success)` |  |
+| ✅ | color | `var(--color-secondary)` |  |
+| ✅ | color | `var(--ds-surface-card)` |  |
+| ✅ | color | `var(--color-primary-soft)` |  |
+| ✅ | color | `var(--color-primary)` |  ×2 |
+| ✅ | color | `var(--color-content-secondary)` |  ×5 |
+| ✅ | color | `var(--color-content-on-surface-strong)` |  ×3 |
+| ✅ | color | `var(--color-surface-subtle)` |  |
+| ✅ | spacing | `var(--space-4)` |  ×4 |
+| ✅ | spacing | `var(--space-3)` |  ×3 |
+| ✅ | spacing | `var(--space-2)` |  |
+| ✅ | spacing | `var(--space-1)` |  |
+| ✅ | spacing | `var(--space-6)` |  |
+| ✅ | typography | `text-xs` | size |
+| ✅ | typography | `text-sm` | size ×2 |
+| ✅ | typography | `leading-normal` |  |
+
 ## ✅ app/features/language-learning/components/LanguageSessionView.vue
 _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 
 _no design values detected_
 
-## ✅ app/features/language-learning/components/StoryReader.vue
-_violation 0 · review 0 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h0 p3 label0
+## ✅ app/features/language-learning/components/LanguageWordBankList.vue
+_violation 0 · review 0 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | color | `var(--color-background)` |  |
-| ✅ | color | `var(--color-surface)` |  |
-| ✅ | color | `var(--color-content-on-surface)` |  ×2 |
-| ✅ | color | `var(--color-content-on-surface-strong)` |  ×4 |
+| ✅ | color | `text-primary` |  |
+| ✅ | color | `var(--color-secondary)` |  |
+| ✅ | color | `var(--ds-surface-card)` |  |
+| ✅ | color | `var(--color-content-on-surface-strong)` |  |
 | ✅ | color | `var(--color-content-secondary)` |  |
-| ✅ | color | `var(--color-primary)` |  ×2 |
-| ✅ | color | `var(--color-dark)` |  ×3 |
-| ✅ | color | `var(--color-white)` |  ×7 |
-| ✅ | color | `var(--color-accent-indigo)` |  |
-| ✅ | color | `var(--color-accent-cyan)` |  |
-| ✅ | color | `var(--color-accent-pink)` |  |
+| ✅ | color | `var(--color-error)` |  |
+| ✅ | color | `var(--color-background)` |  |
+| ✅ | color | `var(--color-error-text)` |  |
+| ✅ | radius | `rounded-[var(--component-card-radius)]` |  |
 | ✅ | spacing | `var(--space-2)` |  ×2 |
-| ✅ | spacing | `var(--space-4)` |  ×2 |
+| ✅ | spacing | `var(--space-3)` |  ×6 |
+| ✅ | spacing | `var(--space-4)` |  |
+| ✅ | spacing | `var(--space-1)` |  |
+| ✅ | typography | `text-xs` | size |
+
+## ✅ app/features/language-learning/components/LanguageWordBankToolbar.vue
+_violation 0 · review 0 · legacy 0 · ok 6_ · typo: 0 Ui* / raw h0 p0 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--color-primary)` |  ×3 |
+| ✅ | color | `var(--color-secondary)` |  |
+| ✅ | color | `var(--ds-surface-card)` |  |
+| ✅ | color | `var(--color-content-on-background)` |  |
+| ✅ | spacing | `var(--space-2)` |  |
 | ✅ | spacing | `var(--space-3)` |  |
 
-## ✅ app/features/language-learning/containers/LanguageHomeContainer.vue
-_violation 0 · review 0 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h0 p0 label0
+## ✅ app/features/language-learning/components/LanguageWordDetailModal.vue
+_violation 0 · review 0 · legacy 0 · ok 11_ · typo: 18 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | spacing | `space-y-6` |  |
-| ✅ | spacing | `mt-6` |  |
-| ✅ | spacing | `gap-2` |  |
-| ✅ | spacing | `mr-1` |  ×2 |
+| ✅ | color | `var(--color-primary)` |  ×2 |
+| ✅ | color | `var(--color-success)` |  |
+| ✅ | color | `var(--color-warning)` |  |
+| ✅ | color | `var(--color-content-secondary)` |  ×2 |
+| ✅ | color | `var(--ds-surface-card)` |  |
+| ✅ | color | `var(--color-content-disabled)` |  |
+| ✅ | color | `var(--color-secondary)` |  |
+| ✅ | color | `var(--color-content-on-surface)` |  |
+| ✅ | spacing | `var(--space-4)` |  ×2 |
+| ✅ | spacing | `var(--space-3)` |  ×3 |
+| ✅ | spacing | `var(--space-2)` |  ×6 |
+
+## ✅ app/features/language-learning/components/QuickWordCapture.vue
+_violation 0 · review 0 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h0 p4 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--color-accent-teal)` |  |
+| ✅ | color | `var(--color-content-secondary)` |  ×4 |
+| ✅ | color | `var(--color-secondary)` |  ×2 |
+| ✅ | color | `var(--color-surface-strong)` |  |
+| ✅ | color | `var(--color-content-on-surface)` |  |
+| ✅ | color | `var(--color-content-disabled)` |  ×2 |
+| ✅ | color | `var(--color-surface-subtle)` |  ×2 |
+| ✅ | color | `var(--color-content-on-surface-strong)` |  |
+| ✅ | color | `var(--color-primary)` |  |
+| ✅ | color | `var(--color-success)` |  ×2 |
+| ✅ | spacing | `var(--space-3)` |  ×3 |
+| ✅ | spacing | `var(--space-2)` |  ×10 |
+| ✅ | spacing | `var(--space-1)` |  |
+| ✅ | spacing | `var(--space-4)` |  |
 
 ## ✅ app/features/language-learning/containers/LanguageReviewContainer.vue
 _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
@@ -3301,6 +3103,20 @@ _violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
 |---|---|---|---|
 | ✅ | spacing | `mt-6` |  |
 
+## ✅ app/features/learning-shell/components/LearningHome.vue
+_violation 0 · review 0 · legacy 0 · ok 8_ · typo: 0 Ui* / raw h0 p1 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--color-primary-soft)` |  |
+| ✅ | color | `var(--color-primary)` |  |
+| ✅ | color | `var(--color-content-secondary)` |  |
+| ✅ | color | `var(--color-content-on-surface-strong)` |  |
+| ✅ | spacing | `var(--space-6)` |  |
+| ✅ | spacing | `var(--space-2)` |  |
+| ✅ | spacing | `var(--space-3)` |  |
+| ✅ | typography | `text-xs` | size |
+
 ## ✅ app/features/materials/components/GenerateButton.vue
 _violation 0 · review 0 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h0 p2 label0
 
@@ -3312,7 +3128,7 @@ _violation 0 · review 0 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h0 p2 label0
 | ✅ | typography | `text-sm` | size ×3 |
 
 ## ✅ app/features/materials/components/UploadMaterialForm.vue
-_violation 0 · review 0 · legacy 0 · ok 29_ · typo: 0 Ui* / raw h0 p1 label2
+_violation 0 · review 0 · legacy 0 · ok 29_ · typo: 0 Ui* / raw h0 p1 label1
 
 | | category | value | note |
 |---|---|---|---|
@@ -3327,7 +3143,7 @@ _violation 0 · review 0 · legacy 0 · ok 29_ · typo: 0 Ui* / raw h0 p1 label2
 | ✅ | spacing | `gap-2` |  ×3 |
 | ✅ | spacing | `mb-4` |  |
 | ✅ | spacing | `space-y-2` |  ×3 |
-| ✅ | spacing | `gap-3` |  ×4 |
+| ✅ | spacing | `gap-3` |  ×3 |
 | ✅ | spacing | `pt-2` |  ×2 |
 | ✅ | spacing | `space-y-4` |  ×3 |
 | ✅ | spacing | `py-3` |  |
@@ -3341,13 +3157,13 @@ _violation 0 · review 0 · legacy 0 · ok 29_ · typo: 0 Ui* / raw h0 p1 label2
 | ✅ | spacing | `mb-2` |  |
 | ✅ | spacing | `space-y-1` |  |
 | ✅ | spacing | `gap-1` |  |
-| ✅ | typography | `text-sm` | size ×10 |
+| ✅ | typography | `text-sm` | size ×9 |
 | ✅ | typography | `text-xs` | size ×3 |
 | ✅ | typography | `font-semibold` | weight |
-| ✅ | typography | `font-medium` | weight ×7 |
+| ✅ | typography | `font-medium` | weight ×6 |
 
 ## ✅ app/features/notes/components/AiResultSheet.vue
-_violation 0 · review 0 · legacy 0 · ok 10_ · typo: 0 Ui* / raw h1 p4 label0
+_violation 0 · review 0 · legacy 0 · ok 10_ · typo: 0 Ui* / raw h0 p4 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -3420,6 +3236,25 @@ _violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
 |---|---|---|---|
 | ✅ | color | `var(--color-primary)` |  ×7 |
 
+## ✅ app/features/notes/components/QuickNoteEditor.vue
+_violation 0 · review 0 · legacy 0 · ok 6_ · typo: 0 Ui* / raw h0 p0 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--color-content-on-surface-strong)` |  |
+| ✅ | color | `var(--color-content-disabled)` |  ×2 |
+| ✅ | color | `var(--color-content-on-surface)` |  |
+| ✅ | color | `var(--color-primary)` |  |
+| ✅ | spacing | `var(--space-1)` |  |
+| ✅ | spacing | `var(--space-2)` |  |
+
+## ✅ app/features/notes/components/QuickNoteSheet.vue
+_violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | spacing | `var(--space-2)` |  |
+
 ## ✅ app/features/notes/components/SelectionAiBubble.vue
 _violation 0 · review 0 · legacy 0 · ok 3_ · typo: 0 Ui* / raw h0 p0 label0
 
@@ -3475,12 +3310,11 @@ _violation 0 · review 0 · legacy 0 · ok 2_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | spacing | `ml-1` |  |
 
 ## ✅ app/features/review/components/ReviewAnalytics.vue
-_violation 0 · review 0 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h0 p1 label0
+_violation 0 · review 0 · legacy 0 · ok 3_ · typo: 0 Ui* / raw h0 p1 label0
 
 | | category | value | note |
 |---|---|---|---|
 | ✅ | color | `text-content-secondary` |  |
-| ✅ | shadow | `shadow-[var(--shadow-card-hover)]` |  |
 | ✅ | spacing | `mb-6` |  |
 | ✅ | spacing | `mt-4` |  |
 
@@ -3521,7 +3355,7 @@ _violation 0 · review 0 · legacy 0 · ok 10_ · typo: 0 Ui* / raw h0 p4 label0
 | ✅ | color | `var(--color-content-secondary)` |  ×2 |
 | ✅ | color | `var(--color-content-on-surface-strong)` |  |
 | ✅ | color | `var(--color-content-disabled)` |  |
-| ✅ | radius | `rounded-[var(--radius-2xl)]` |  |
+| ✅ | radius | `rounded-[var(--component-card-radius)]` |  |
 | ✅ | spacing | `var(--space-4)` |  ×3 |
 | ✅ | spacing | `var(--space-6)` |  |
 | ✅ | spacing | `var(--space-3)` |  ×2 |
@@ -3533,36 +3367,39 @@ _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 _no design values detected_
 
 ## ✅ app/features/review/components/ReviewStats.vue
-_violation 0 · review 0 · legacy 0 · ok 6_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 0 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | color | `text-content-secondary` |  ×4 |
-| ✅ | color | `text-content-on-surface` |  |
-| ✅ | radius | `rounded-[var(--radius-lg)]` |  ×2 |
+| ✅ | color | `text-content-secondary` |  ×3 |
 | ✅ | spacing | `space-x-4` |  ×2 |
 | ✅ | typography | `text-sm` | size |
 | ✅ | typography | `font-semibold` | weight ×3 |
 
 ## ✅ app/features/review/components/SessionSummary.vue
-_violation 0 · review 0 · legacy 0 · ok 11_ · typo: 0 Ui* / raw h0 p2 label0
+_violation 0 · review 0 · legacy 0 · ok 16_ · typo: 0 Ui* / raw h0 p1 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | color | `var(--ds-gradient-summary)` |  |
-| ✅ | color | `var(--color-white)` |  ×4 |
-| ✅ | color | `var(--ds-gradient-fab)` |  |
-| ✅ | color | `var(--color-content-secondary)` |  |
-| ✅ | color | `var(--color-content-on-surface-strong)` |  |
+| ✅ | color | `var(--color-background)` |  |
+| ✅ | color | `var(--color-content-on-background)` |  ×2 |
+| ✅ | color | `var(--color-content-secondary)` |  ×3 |
+| ✅ | color | `var(--color-content-on-surface-strong)` |  ×2 |
+| ✅ | color | `var(--color-primary-soft)` |  |
+| ✅ | color | `var(--color-primary)` |  |
 | ✅ | spacing | `var(--space-6)` |  ×2 |
 | ✅ | spacing | `var(--space-12)` |  |
 | ✅ | spacing | `var(--space-8)` |  ×2 |
 | ✅ | spacing | `var(--space-2)` |  ×2 |
 | ✅ | spacing | `var(--space-3)` |  ×2 |
-| ✅ | spacing | `var(--space-4)` |  ×2 |
+| ✅ | spacing | `var(--space-1)` |  |
+| ✅ | typography | `text-xs` | size ×2 |
+| ✅ | typography | `text-4xl` | size |
+| ✅ | typography | `text-sm` | size ×2 |
+| ✅ | typography | `text-2xl` | size |
 
 ## ✅ app/features/review/components/Sm2GradeBar.vue
-_violation 0 · review 0 · legacy 0 · ok 9_ · typo: 0 Ui* / raw h0 p0 label0
+_violation 0 · review 0 · legacy 0 · ok 11_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -3573,7 +3410,9 @@ _violation 0 · review 0 · legacy 0 · ok 9_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | color | `var(--color-success)` |  |
 | ✅ | color | `var(--color-success-text)` |  |
 | ✅ | color | `var(--color-primary)` |  ×2 |
-| ✅ | color | `var(--color-content-secondary)` |  |
+| ✅ | color | `var(--color-content-secondary)` |  ×2 |
+| ✅ | color | `var(--color-secondary)` |  |
+| ✅ | color | `var(--color-background)` |  |
 | ✅ | spacing | `var(--space-2)` |  |
 
 ## ✅ app/features/review/containers/ReviewPageContainer.vue
@@ -3595,13 +3434,11 @@ _violation 0 · review 0 · legacy 0 · ok 7_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | spacing | `var(--space-3)` |  |
 
 ## ✅ app/pages/404.vue
-_violation 0 · review 0 · legacy 0 · ok 3_ · typo: 0 Ui* / raw h1 p1 label0
+_violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p1 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | typography | `text-4xl` | size |
 | ✅ | typography | `text-lg` | size |
-| ✅ | typography | `font-bold` | weight |
 
 ## ✅ app/pages/account/about.vue
 _violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
@@ -3621,16 +3458,15 @@ _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 _no design values detected_
 
 ## ✅ app/pages/account/index.vue
-_violation 0 · review 0 · legacy 0 · ok 11_ · typo: 0 Ui* / raw h1 p1 label0
+_violation 0 · review 0 · legacy 0 · ok 10_ · typo: 0 Ui* / raw h0 p1 label0
 
 | | category | value | note |
 |---|---|---|---|
 | ✅ | color | `text-content-disabled` |  |
-| ✅ | color | `var(--color-primary)` |  |
+| ✅ | color | `var(--color-primary)` |  ×2 |
 | ✅ | color | `var(--color-secondary)` |  |
 | ✅ | color | `var(--ds-surface-card)` |  |
-| ✅ | color | `var(--ds-gradient-fab)` |  |
-| ✅ | color | `var(--color-on-primary)` |  |
+| ✅ | color | `var(--color-primary-soft)` |  |
 | ✅ | color | `var(--color-content-on-surface-strong)` |  |
 | ✅ | color | `var(--color-content-secondary)` |  |
 | ✅ | spacing | `var(--space-3)` |  ×2 |
@@ -3656,6 +3492,11 @@ _violation 0 · review 0 · legacy 0 · ok 8_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | spacing | `var(--space-1)` |  |
 | ✅ | spacing | `var(--space-2)` |  ×4 |
 
+## ✅ app/pages/account/offline.vue
+_violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
+
+_no design values detected_
+
 ## ✅ app/pages/account/plan.vue
 _violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
 
@@ -3668,8 +3509,8 @@ _violation 0 · review 0 · legacy 0 · ok 2_ · typo: 0 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | color | `var(--ds-gradient-fab)` |  |
-| ✅ | color | `var(--color-on-primary)` |  |
+| ✅ | color | `var(--color-primary-soft)` |  |
+| ✅ | color | `var(--color-primary)` |  |
 
 ## ✅ app/pages/account/security.vue
 _violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
@@ -3692,7 +3533,7 @@ _violation 0 · review 0 · legacy 0 · ok 7_ · typo: 2 Ui* / raw h0 p0 label0
 | ✅ | typography | `text-xs` | size |
 
 ## ✅ app/pages/auth/error.vue
-_violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h1 p1 label0
+_violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p1 label0
 
 _no design values detected_
 
@@ -3742,8 +3583,25 @@ _violation 0 · review 0 · legacy 0 · ok 7_ · typo: 2 Ui* / raw h0 p0 label0
 | ✅ | spacing | `pr-12` |  ×2 |
 | ✅ | typography | `text-xs` | size |
 
-## ✅ app/pages/board.vue
-_violation 0 · review 0 · legacy 0 · ok 17_ · typo: 0 Ui* / raw h1 p4 label0
+## ✅ app/pages/board/[id].vue
+_violation 0 · review 0 · legacy 0 · ok 11_ · typo: 0 Ui* / raw h0 p5 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `text-content-disabled` |  |
+| ✅ | color | `var(--color-primary)` |  |
+| ✅ | color | `var(--color-background)` |  |
+| ✅ | color | `var(--color-secondary)` |  |
+| ✅ | color | `var(--color-content-secondary)` |  ×3 |
+| ✅ | color | `var(--color-error-text)` |  |
+| ✅ | color | `var(--color-error)` |  |
+| ✅ | spacing | `var(--space-3)` |  ×5 |
+| ✅ | spacing | `var(--space-4)` |  ×3 |
+| ✅ | spacing | `var(--space-2)` |  ×7 |
+| ✅ | spacing | `var(--space-1)` |  |
+
+## ✅ app/pages/board/index.vue
+_violation 0 · review 0 · legacy 0 · ok 17_ · typo: 0 Ui* / raw h0 p4 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -3765,41 +3623,37 @@ _violation 0 · review 0 · legacy 0 · ok 17_ · typo: 0 Ui* / raw h1 p4 label0
 | ✅ | spacing | `var(--space-2)` |  ×7 |
 | ✅ | spacing | `var(--space-6)` |  |
 
+## ✅ app/pages/day/[date].vue
+_violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | spacing | `var(--space-6)` |  |
+
+## ✅ app/pages/day/index.vue
+_violation 0 · review 0 · legacy 0 · ok 1_ · typo: 0 Ui* / raw h0 p0 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | color | `var(--color-content-secondary)` |  |
+
 ## ✅ app/pages/index.vue
 _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 
 _no design values detected_
 
 ## ✅ app/pages/language/index.vue
-_violation 0 · review 0 · legacy 0 · ok 25_ · typo: 0 Ui* / raw h2 p7 label0
+_violation 0 · review 0 · legacy 0 · ok 7_ · typo: 2 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | color | `text-content-disabled` |  |
-| ✅ | color | `var(--color-primary)` |  ×10 |
-| ✅ | color | `var(--color-success)` |  |
-| ✅ | color | `var(--color-warning)` |  ×4 |
-| ✅ | color | `var(--color-content-secondary)` |  ×11 |
-| ✅ | color | `var(--color-content-on-surface-strong)` |  ×4 |
-| ✅ | color | `var(--color-warning-text)` |  |
-| ✅ | color | `var(--color-surface-subtle)` |  ×3 |
-| ✅ | color | `var(--color-background)` |  ×4 |
-| ✅ | color | `var(--color-primary-50)` |  |
-| ✅ | color | `var(--color-white)` |  ×4 |
-| ✅ | color | `var(--color-secondary)` |  ×3 |
-| ✅ | color | `var(--color-error-text)` |  ×2 |
-| ✅ | color | `var(--ds-gradient-due)` |  |
-| ✅ | color | `var(--ds-surface-card)` |  ×2 |
-| ✅ | color | `var(--color-content-on-background)` |  |
-| ✅ | color | `var(--color-error)` |  |
-| ✅ | radius | `rounded-[var(--radius-2xl)]` |  |
-| ✅ | spacing | `var(--space-4)` |  ×10 |
+| ✅ | color | `var(--color-primary-soft)` |  |
+| ✅ | color | `var(--color-primary)` |  |
+| ✅ | spacing | `var(--space-4)` |  ×4 |
 | ✅ | spacing | `var(--space-8)` |  |
-| ✅ | spacing | `var(--space-2)` |  ×6 |
-| ✅ | spacing | `var(--space-3)` |  ×4 |
-| ✅ | spacing | `var(--space-6)` |  ×3 |
-| ✅ | spacing | `var(--space-1)` |  |
-| ✅ | spacing | `var(--space-16)` |  |
+| ✅ | spacing | `var(--space-2)` |  |
+| ✅ | spacing | `var(--space-3)` |  ×2 |
+| ✅ | typography | `text-xs` | size |
 
 ## ✅ app/pages/language/review.vue
 _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
@@ -3816,6 +3670,15 @@ _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 
 _no design values detected_
 
+## ✅ app/pages/learn/index.vue
+_violation 0 · review 0 · legacy 0 · ok 3_ · typo: 0 Ui* / raw h0 p0 label0
+
+| | category | value | note |
+|---|---|---|---|
+| ✅ | spacing | `var(--space-6)` |  |
+| ✅ | spacing | `var(--space-4)` |  ×2 |
+| ✅ | spacing | `var(--space-8)` |  |
+
 ## ✅ app/pages/logout.vue
 _violation 0 · review 0 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h0 p0 label0
 
@@ -3827,56 +3690,45 @@ _violation 0 · review 0 · legacy 0 · ok 4_ · typo: 0 Ui* / raw h0 p0 label0
 | ✅ | spacing | `mt-4` |  |
 
 ## ✅ app/pages/materials/[id].vue
-_violation 0 · review 0 · legacy 0 · ok 25_ · typo: 0 Ui* / raw h1 p7 label2
+_violation 0 · review 0 · legacy 0 · ok 21_ · typo: 2 Ui* / raw h0 p6 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | color | `text-content-disabled` |  |
-| ✅ | color | `var(--color-error)` |  |
-| ✅ | color | `var(--color-accent-blue)` |  |
-| ✅ | color | `var(--color-content-on-surface-strong)` |  ×4 |
+| ✅ | color | `var(--color-primary-soft)` |  |
+| ✅ | color | `var(--color-primary)` |  ×4 |
+| ✅ | color | `var(--color-content-on-surface-strong)` |  ×3 |
 | ✅ | color | `var(--color-content-secondary)` |  ×8 |
 | ✅ | color | `var(--color-surface-subtle)` |  ×3 |
-| ✅ | color | `var(--color-secondary)` |  ×4 |
-| ✅ | color | `var(--color-content-on-surface)` |  ×3 |
+| ✅ | color | `var(--color-secondary)` |  ×5 |
+| ✅ | color | `var(--color-content-on-surface)` |  |
 | ✅ | color | `var(--color-surface-strong)` |  |
 | ✅ | color | `var(--ds-surface-card)` |  |
-| ✅ | color | `var(--color-background)` |  ×2 |
-| ✅ | color | `var(--color-surface)` |  |
-| ✅ | color | `var(--color-primary)` |  ×6 |
-| ✅ | color | `var(--color-on-primary)` |  |
-| ✅ | color | `var(--color-primary-50)` |  |
+| ✅ | color | `var(--color-background)` |  ×3 |
+| ✅ | color | `var(--ds-focus-outline-color)` |  |
 | ✅ | color | `var(--color-warning)` |  |
 | ✅ | color | `var(--color-warning-text)` |  |
 | ✅ | color | `var(--color-success)` |  |
 | ✅ | color | `var(--color-on-success)` |  |
-| ✅ | radius | `rounded-[var(--radius-2xl)]` |  ×2 |
+| ✅ | radius | `rounded-[var(--component-card-radius)]` |  ×2 |
 | ✅ | spacing | `var(--space-4)` |  ×10 |
 | ✅ | spacing | `var(--space-8)` |  |
-| ✅ | spacing | `var(--space-2)` |  ×11 |
 | ✅ | spacing | `var(--space-3)` |  ×9 |
+| ✅ | spacing | `var(--space-2)` |  ×6 |
 | ✅ | spacing | `var(--space-6)` |  |
 
 ## ✅ app/pages/materials/index.vue
-_violation 0 · review 0 · legacy 0 · ok 15_ · typo: 0 Ui* / raw h1 p3 label0
+_violation 0 · review 0 · legacy 0 · ok 8_ · typo: 0 Ui* / raw h0 p1 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | color | `text-content-disabled` |  |
-| ✅ | color | `var(--color-error)` |  |
-| ✅ | color | `var(--color-accent-purple)` |  |
-| ✅ | color | `var(--color-accent-blue)` |  |
-| ✅ | color | `var(--color-content-on-surface-strong)` |  ×2 |
 | ✅ | color | `var(--color-surface-subtle)` |  |
-| ✅ | color | `var(--color-content-secondary)` |  ×2 |
+| ✅ | color | `var(--color-content-secondary)` |  |
 | ✅ | radius | `rounded-[var(--radius-full)]` |  ×2 |
-| ✅ | radius | `rounded-[var(--radius-2xl)]` |  |
+| ✅ | radius | `rounded-[var(--radius-lg)]` |  |
 | ✅ | spacing | `var(--space-4)` |  ×4 |
 | ✅ | spacing | `var(--space-8)` |  |
-| ✅ | spacing | `var(--space-2)` |  ×2 |
+| ✅ | spacing | `var(--space-2)` |  |
 | ✅ | spacing | `var(--space-3)` |  ×2 |
-| ✅ | spacing | `var(--space-16)` |  |
-| ✅ | spacing | `var(--space-6)` |  |
 
 ## ✅ app/pages/notes/[id].vue
 _violation 0 · review 0 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h0 p2 label0
@@ -3887,7 +3739,7 @@ _violation 0 · review 0 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h0 p2 label0
 | ✅ | color | `var(--color-content-secondary)` |  ×4 |
 | ✅ | color | `var(--color-surface-subtle)` |  ×3 |
 | ✅ | color | `var(--color-primary)` |  ×6 |
-| ✅ | color | `var(--color-primary-50)` |  ×2 |
+| ✅ | color | `var(--color-primary-soft)` |  ×2 |
 | ✅ | color | `var(--color-content-on-surface-strong)` |  ×3 |
 | ✅ | color | `var(--color-content-disabled)` |  |
 | ✅ | color | `var(--color-border-strong)` |  ×2 |
@@ -3899,7 +3751,7 @@ _violation 0 · review 0 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h0 p2 label0
 | ✅ | spacing | `var(--space-4)` |  ×2 |
 
 ## ✅ app/pages/notes/index.vue
-_violation 0 · review 0 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h1 p2 label0
+_violation 0 · review 0 · legacy 0 · ok 14_ · typo: 0 Ui* / raw h0 p2 label0
 
 | | category | value | note |
 |---|---|---|---|
@@ -3949,48 +3801,42 @@ _violation 0 · review 0 · legacy 0 · ok 0_ · typo: 0 Ui* / raw h0 p0 label0
 _no design values detected_
 
 ## ✅ app/pages/workspaces/[id].vue
-_violation 0 · review 0 · legacy 0 · ok 19_ · typo: 0 Ui* / raw h2 p3 label0
+_violation 0 · review 0 · legacy 0 · ok 16_ · typo: 3 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
-| ✅ | color | `text-content-disabled` |  |
-| ✅ | color | `var(--color-content-secondary)` |  ×7 |
-| ✅ | color | `var(--color-white)` |  |
-| ✅ | color | `var(--color-content-on-surface-strong)` |  ×3 |
-| ✅ | color | `var(--ds-surface-card)` |  ×3 |
+| ✅ | color | `var(--color-content-secondary)` |  ×3 |
+| ✅ | color | `var(--color-primary)` |  ×2 |
 | ✅ | color | `var(--color-secondary)` |  ×2 |
-| ✅ | color | `var(--color-primary)` |  ×5 |
-| ✅ | color | `var(--color-accent-indigo)` |  ×2 |
-| ✅ | color | `var(--color-accent-orange)` |  ×2 |
-| ✅ | color | `var(--color-content-disabled)` |  |
-| ✅ | color | `var(--color-surface-subtle)` |  |
-| ✅ | radius | `rounded-[var(--radius-2xl)]` |  ×2 |
-| ✅ | radius | `rounded-[var(--radius-lg)]` |  |
-| ✅ | spacing | `var(--space-4)` |  ×4 |
-| ✅ | spacing | `var(--space-8)` |  |
-| ✅ | spacing | `var(--space-2)` |  ×6 |
-| ✅ | spacing | `var(--space-3)` |  ×7 |
+| ✅ | color | `var(--ds-surface-card)` |  |
+| ✅ | color | `var(--color-content-on-surface-strong)` |  ×2 |
+| ✅ | color | `var(--color-primary-soft)` |  |
+| ✅ | radius | `rounded-[var(--radius-lg)]` |  ×3 |
 | ✅ | spacing | `var(--space-6)` |  |
+| ✅ | spacing | `var(--space-4)` |  ×3 |
+| ✅ | spacing | `var(--space-8)` |  |
+| ✅ | spacing | `var(--space-3)` |  ×5 |
+| ✅ | spacing | `var(--space-2)` |  ×2 |
 | ✅ | spacing | `var(--space-1)` |  |
+| ✅ | typography | `text-xl` | size |
+| ✅ | typography | `text-xs` | size ×2 |
+| ✅ | typography | `text-sm` | size |
 
 ## ✅ app/pages/workspaces/index.vue
-_violation 0 · review 0 · legacy 0 · ok 16_ · typo: 0 Ui* / raw h1 p1 label2
+_violation 0 · review 0 · legacy 0 · ok 13_ · typo: 2 Ui* / raw h0 p0 label0
 
 | | category | value | note |
 |---|---|---|---|
 | ✅ | color | `var(--color-success)` |  |
-| ✅ | color | `var(--color-content-on-surface-strong)` |  ×4 |
-| ✅ | color | `var(--color-content-secondary)` |  ×4 |
-| ✅ | color | `var(--ds-surface-card)` |  |
-| ✅ | color | `var(--color-secondary)` |  |
-| ✅ | color | `var(--color-primary)` |  ×4 |
-| ✅ | color | `var(--color-surface-subtle)` |  ×3 |
+| ✅ | color | `var(--color-content-on-surface-strong)` |  ×2 |
+| ✅ | color | `var(--color-surface-subtle)` |  ×2 |
 | ✅ | color | `var(--color-error-text)` |  |
 | ✅ | color | `var(--color-error)` |  |
-| ✅ | color | `var(--color-white)` |  ×2 |
-| ✅ | color | `var(--color-border-strong)` |  |
-| ✅ | radius | `rounded-[var(--radius-2xl)]` |  |
+| ✅ | color | `var(--color-primary)` |  |
+| ✅ | color | `var(--ds-focus-outline-color)` |  |
+| ✅ | color | `var(--color-content-secondary)` |  ×2 |
+| ✅ | radius | `rounded-[var(--component-card-radius)]` |  |
 | ✅ | spacing | `var(--space-4)` |  ×4 |
 | ✅ | spacing | `var(--space-8)` |  |
-| ✅ | spacing | `var(--space-2)` |  ×10 |
-| ✅ | spacing | `var(--space-3)` |  ×10 |
+| ✅ | spacing | `var(--space-3)` |  ×7 |
+| ✅ | spacing | `var(--space-2)` |  ×7 |
