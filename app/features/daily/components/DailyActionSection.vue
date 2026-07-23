@@ -2,33 +2,41 @@
   <section class="action-section" aria-labelledby="actions-title">
     <div class="action-section__head">
       <div>
-        <UiTitle id="actions-title" tag="h2">Action items</UiTitle>
+        <div class="action-section__title-row">
+          <UiTitle id="actions-title" tag="h2">Action items</UiTitle>
+          <UiIconButton :icon="isExpanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'"
+            :label="isExpanded ? 'Collapse action items' : 'Expand action items'" size="xs" variant="ghost"
+            class="action-section__chevron-btn" @click="isExpanded = !isExpanded" />
+        </div>
         <p>{{ openCount }} open · {{ completedCount }} completed</p>
       </div>
-      <UiButton icon="i-lucide-plus" size="sm" @click="$emit('add')">Add</UiButton>
+      <UiButton icon="i-lucide-plus" size="sm" @click="$emit('add')"></UiButton>
     </div>
 
-    <DailyActionList v-if="items.length" :items="items" @toggle="emit('toggle', $event.occurrenceKey, $event.completed)"
-      @move="emit('move', $event)" />
-    <UiEmptyState v-else-if="!loading" icon="i-lucide-list-checks" title="No action items"
-      description="Plan something for this day, or leave it open.">
-      <UiButton variant="soft" @click="$emit('add')">Add an action</UiButton>
-    </UiEmptyState>
-    <UiSkeleton v-else class="h-24" />
+    <template v-if="isExpanded">
+      <DailyActionList v-if="items.length" :items="items"
+        @toggle="emit('toggle', $event.occurrenceKey, $event.completed)" @move="emit('move', $event)" />
+      <UiEmptyState v-else-if="!loading" icon="i-lucide-list"
+        description="Plan something for this day, or leave it open.">
+      </UiEmptyState>
+      <UiSkeleton v-else class="h-24" />
 
-    <div v-if="movedItems.length" class="moved-list">
-      <p class="moved-list__label">Moved from this day</p>
-      <div v-for="item in movedItems" :key="item.occurrenceKey" class="moved-row">
-        <span>{{ item.title }}</span>
-        <span>Moved to {{ item.movedDateLabel }}</span>
+      <div v-if="movedItems.length" class="moved-list">
+        <p class="moved-list__label">Moved from this day</p>
+        <div v-for="item in movedItems" :key="item.occurrenceKey" class="moved-row">
+          <span>{{ item.title }}</span>
+          <span>Moved to {{ item.movedDateLabel }}</span>
+        </div>
       </div>
-    </div>
+    </template>
   </section>
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
 import type { DailyActionViewModel } from "../presentation/dailyActionViewModel";
 import DailyActionList from "~/features/daily/components/DailyActionList.vue";
+import UiIconButton from "~/components/ui/UiIconButton.vue";
 
 defineProps<{
   items: readonly DailyActionViewModel[];
@@ -42,6 +50,8 @@ const emit = defineEmits<{
   toggle: [occurrenceKey: string, completed: boolean];
   move: [occurrenceKey: string];
 }>();
+
+const isExpanded = ref(true);
 </script>
 
 <style scoped>
@@ -52,6 +62,7 @@ const emit = defineEmits<{
 }
 
 .action-section__head,
+.action-section__title-row,
 .moved-row {
   display: flex;
   align-items: center;
@@ -59,6 +70,10 @@ const emit = defineEmits<{
 
 .action-section__head {
   justify-content: space-between;
+}
+
+.action-section__title-row {
+  gap: var(--space-1);
 }
 
 .action-section__head p {

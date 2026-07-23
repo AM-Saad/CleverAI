@@ -1,6 +1,6 @@
 <template>
   <div class="flex flex-col items-center justify-center text-center gap-3 py-12 px-4">
-    <Icon v-if="icon" :name="icon" :size="40" class="text-content-disabled" />
+    <Icon v-if="icon" :name="icon" :size="20" class="text-content-disabled" />
     <div class="flex flex-col gap-1">
       <UiSubtitle v-if="title" size="lg" color="content-on-surface-strong">{{ title }}</UiSubtitle>
       <UiParagraph v-if="description" size="sm" color="content-secondary">
@@ -8,14 +8,8 @@
       </UiParagraph>
     </div>
     <div v-if="actionLabel || $slots.actions" class="mt-2 flex items-center justify-center gap-2">
-      <UiButton
-        v-if="actionLabel"
-        :icon="actionIcon"
-        :loading="actionLoading"
-        :disabled="actionDisabled"
-        size="sm"
-        @click="$emit('action')"
-      >
+      <UiButton v-if="actionLabel" :icon="actionIcon" :loading="actionLoading" :disabled="actionDisabled" size="sm"
+        @click="$emit('action')">
         {{ actionLabel }}
       </UiButton>
       <slot name="actions" />

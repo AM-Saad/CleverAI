@@ -13,10 +13,12 @@ import {
 } from "@@/shared/utils/sm2";
 import { listOfflineEntities } from "~/utils/offline-v2/repository";
 import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
+import { useAppBadging } from "~/composables/pwa/useAppBadging";
 
 export const useCardReview = () => {
   const { $api } = useNuxtApp();
   const offline = useOfflineRuntime();
+  const badging = useAppBadging();
 
   const reviewQueue = ref<ReviewCard[]>([]);
   const currentCard = ref<ReviewCard | null>(null);
@@ -27,6 +29,14 @@ export const useCardReview = () => {
     due: 0,
     learning: 0,
   });
+
+  watch(
+    () => queueStats.value.due,
+    (dueCount) => {
+      badging.setBadge(dueCount);
+    },
+    { immediate: true }
+  );
   const gradedCardIds = ref<Set<string>>(new Set());
   const requestIdsByCard = new Map<string, string>();
   let optimisticMutationId = 0;

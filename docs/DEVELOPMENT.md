@@ -99,13 +99,16 @@ Missing vars show warnings but don't fail startup.
 ### Development
 
 ```bash
-# Start dev server (builds SW first)
+# Start dev server (builds AI worker first) — single-surface, port 8080
 yarn dev
 
-# Build for production
-yarn build
-# or with SW injection
-yarn build:inject
+# Surface-scoped dev servers (see docs/architecture/app-surfaces.md)
+yarn dev:platform   # APP_SURFACE=platform, port 8080
+yarn dev:daily      # APP_SURFACE=daily, port 8081
+yarn dev:learning   # APP_SURFACE=learning, port 8082
+
+# Static site generation
+yarn generate
 
 # Preview production build
 yarn preview
@@ -114,11 +117,53 @@ yarn preview
 yarn typecheck
 ```
 
+### Building & Running
+
+```bash
+# Production build (SW + AI worker build/check, icons, nuxt build, SW injection)
+yarn build
+# same command, explicit name:
+yarn build:inject
+
+# Surface-scoped production builds
+yarn build:platform
+yarn build:daily
+yarn build:learning
+
+# Runs sw:build/sw:check/ai-worker:build/ai-worker:check/generate:icons
+# (invoked automatically by build:inject/preview; rarely run standalone)
+yarn prebuild
+
+# Run an already-built app
+yarn start
+yarn start:platform
+yarn start:daily
+yarn start:learning
+
+# Runs automatically after `yarn install`: generates the Prisma client + `nuxt prepare`
+yarn postinstall
+
+# Installs Husky git hooks (also invoked by yarn pre-commit)
+yarn prepare
+```
+
+### Realtime Collaboration
+
+```bash
+# Hocuspocus/Yjs collab server (server/collab-server.ts) — run this locally
+# alongside `yarn dev` for realtime note collaboration to work
+yarn collab:dev
+yarn collab:start
+```
+
 ### Database
 
 ```bash
-# Sync schema to MongoDB (no migrations)
+# Generate Prisma client + push schema to MongoDB (no migrations)
 yarn db:sync
+
+# Generate Prisma client only
+yarn db:generate
 
 # Open Prisma Studio
 yarn db:studio
@@ -127,30 +172,91 @@ yarn db:studio
 yarn db:seed
 ```
 
-### Service Worker
+### Service Worker & AI Worker
 
 ```bash
-# Build service worker only
+# Build service worker only (sw-src/index.ts -> public/sw.js)
 yarn sw:build
 
-# Check SW placeholder exists
-yarn sw:check-placeholder
+# Verify the SW placeholder comment is present (scripts/check-sw-placeholder.cjs)
+yarn sw:check
+
+# Build the AI worker bundle (sw-src/ai-worker.ts -> public/ai-worker.js)
+yarn ai-worker:build
+
+# Verify the AI worker build (scripts/check-ai-worker.cjs)
+yarn ai-worker:check
+```
+
+### Code Generation
+
+```bash
+# Regenerate PWA icons
+yarn generate:icons
+
+# Regenerate the typed API client from server routes/contracts
+yarn generate:api
+
+# Regenerate sitemap
+yarn sitemap
 ```
 
 ### Code Quality
 
 ```bash
-# Lint check
+# Lint check (eslint + prettier --check)
 yarn lint
+yarn lint:eslint
+yarn lint:prettier
 
-# Lint fix
+# Lint fix (eslint --fix + prettier --write)
 yarn lintfix
 
 # Format code
 yarn format
 
-# Pre-commit checks
+# Install hooks + run lint-staged (what Husky's pre-commit hook runs)
 yarn pre-commit
+
+# Layer/import boundary check (scripts/check-architecture-boundaries.cjs)
+yarn arch:check
+
+# Unit tests
+yarn test:unit
+```
+
+### Design System
+
+See [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) and [COMPONENT_SYSTEM.md](./COMPONENT_SYSTEM.md) for what each gate enforces.
+
+```bash
+# Regenerate tokens.generated.{css,ts} from app/design-system/tokens/index.cjs
+yarn design:tokens
+# Check generated tokens are up to date, without writing
+yarn design:tokens:check
+
+# Token-usage gate (no raw hex/palette classes/built-in rounded|shadow)
+yarn design:check
+
+# Component-boundary gate (Ui* wrappers vs raw Nuxt UI / raw HTML elements)
+yarn design:boundaries
+
+# Interactive-state coverage check
+yarn design:states
+
+# Primitive state-coverage / unused-primitive checks
+yarn design:primitives
+yarn design:primitives:unused
+
+# Component API-contract check
+yarn design:api
+
+# WCAG AA contrast check
+yarn design:contrast
+
+# Reports (docs/component-audit/, etc.)
+yarn design:audit
+yarn design:components
 ```
 
 ### Testing
@@ -161,6 +267,16 @@ yarn test:pwa-offline
 
 # Run specific test file
 npx playwright test tests/auth-flow.spec.ts
+```
+
+### Maintenance Scripts
+
+```bash
+# Backfill offline-v2 entities (scripts/migrations/backfill-offline-v2.ts)
+yarn offline:backfill
+
+# Clean up stale push-notification subscriptions
+yarn notifications:cleanup
 ```
 
 ---
@@ -174,31 +290,37 @@ app/                    # Nuxt srcDir - all frontend code
 ├── components/         # Vue components (auto-imported)
 ├── composables/        # Vue composables (auto-imported)
 ├── domain/             # DDD domain logic
+├── features/           # Feature-local code (components/composables/domain/services) — see below
 ├── layouts/            # Page layouts
 ├── middleware/         # Route middleware
 ├── pages/              # File-based routing
 ├── plugins/            # Nuxt plugins
-├── services/           # API service layer
+├── services/           # API service layer (older flat/type-first layout)
 ├── types/              # TypeScript definitions
 └── utils/              # Utility functions
 
 server/                 # Nitro server
 ├── api/                # API routes (/api/*)
 ├── middleware/         # Server middleware
+├── modules/            # Feature-local server code, mirrors app/features/ — see below
 ├── plugins/            # Server plugins
-├── prisma/             # Prisma schema
-├── services/           # Business logic services
+├── services/           # Business logic services (older flat layout)
 ├── tasks/              # Scheduled tasks
 └── utils/              # Server utilities
 
+prisma/                 # Prisma schema + seed — root-level, NOT under server/
+└── schema.prisma       # MongoDB schema, synced via `yarn db:sync` (db push, no migrations)
+
 shared/                 # Shared between client/server
-├── *.contract.ts       # Zod schemas
+├── utils/*.contract.ts # Zod schemas (authoritative request/response shapes)
 ├── types/              # Shared types
 └── utils/              # Shared utilities
 
 sw-src/                 # Service worker source
 └── index.ts            # Workbox + push handlers
 ```
+
+`app/features/<feature>/` and `server/modules/<feature>/` are the canonical, newer home for feature code — e.g. `board`, `daily`, `notes`, `review`, `language-learning`, `materials`, `notifications` — each with its own `components/`, `composables/`, `domain/`, `presentation/`, `repositories/`/`application/`, instead of the older flat `app/components/`, `app/composables/`, `app/services/`, `server/services/` layout. `app/features/**` is **not** auto-imported (unlike `app/components/**`); import explicitly from `~/features/<feature>/...`. See [Adding a New Feature](#adding-a-new-feature) below for the worked example.
 
 ### Key Configuration Files
 
@@ -207,7 +329,7 @@ sw-src/                 # Service worker source
 | `nuxt.config.ts` | Nuxt configuration |
 | `package.json` | Dependencies and scripts |
 | `tsconfig.json` | TypeScript config |
-| `server/prisma/schema.prisma` | Database schema |
+| `prisma/schema.prisma` | Database schema (root-level — there is no `server/prisma/`) |
 | `playwright.config.ts` | E2E test config |
 | `eslint.config.mjs` | Linting rules |
 | `components.json` | shadcn-vue config |
@@ -218,17 +340,19 @@ sw-src/                 # Service worker source
 
 ### Adding a New Feature
 
-1. **Define contract** in `shared/*.contract.ts`:
+New features live under `app/features/<feature>/` (client) and `server/modules/<feature>/` (server) — **not** the older flat `app/services/` / `app/composables/` / `app/components/` layout. The worked example below follows `daily`, the newest feature (`app/features/daily/`, `server/modules/daily/`).
+
+1. **Define the contract** in `shared/utils/<feature>.contract.ts` (Zod schema, authoritative for both client and server — see `shared/utils/daily.contract.ts`):
 ```typescript
-// shared/feature.contract.ts
+// shared/utils/feature.contract.ts
 export const FeatureSchema = z.object({
   id: z.string(),
   name: z.string(),
 })
-export type Feature = z.infer<typeof FeatureSchema>
+export type FeatureDTO = z.infer<typeof FeatureSchema>
 ```
 
-2. **Add database model** in `server/prisma/schema.prisma`:
+2. **Add a database model** in `prisma/schema.prisma` (root-level — there is no `server/prisma/`):
 ```prisma
 model Feature {
   id   String @id @default(auto()) @map("_id") @db.ObjectId
@@ -236,48 +360,48 @@ model Feature {
 }
 ```
 
-3. **Create API endpoint** in `server/api/`:
+3. **Add server-side domain/application logic** in `server/modules/<feature>/domain/` and `server/modules/<feature>/application/` (e.g. `server/modules/daily/domain/ensureOccurrence.ts`), then call it from an API route in `server/api/<feature>/`:
 ```typescript
 // server/api/features/index.get.ts
 export default defineEventHandler(async (event) => {
   const user = event.context.user
   if (!user) throw createError({ statusCode: 401 })
-  
+
   return prisma.feature.findMany({ where: { userId: user.id } })
 })
 ```
 
-4. **Add service** in `app/services/`:
+4. **Add a local repository + composable** in `app/features/<feature>/repositories/` and `app/features/<feature>/composables/` (mirrors `app/features/daily/repositories/dailyLocalRepository.ts` + `app/features/daily/composables/useDaily.ts`). Feature-internal files use **explicit imports** for anything outside Nuxt/Vue's own globals — sibling subfolders via relative paths, shared contracts via the `@shared`/`~/shared` alias:
 ```typescript
-// app/services/FeatureService.ts
-export class FeatureService {
-  constructor(private fetch: FetchFactory) {}
-  
-  async getAll() {
-    return this.fetch.call(() => 
-      $fetch('/api/features')
-    )
-  }
-}
-```
+// app/features/feature/composables/useFeature.ts
+import type { FeatureDTO } from "@shared/utils/feature.contract"
+import { getFeatureSnapshot } from "../repositories/featureLocalRepository"
 
-5. **Create composable** in `app/composables/`:
-```typescript
-// app/composables/useFeatures.ts
-export function useFeatures() {
-  const { $api } = useNuxtApp()
-  
+export function useFeature() {
+  const { $api } = useNuxtApp() // Nuxt/Vue globals (ref, useNuxtApp, ...) stay auto-imported everywhere
   return useDataFetch('features', () => $api.features.getAll())
 }
 ```
 
-6. **Build UI component** in `app/components/`:
+5. **Add domain/presentation helpers** where useful — pure logic in `app/features/<feature>/domain/` (e.g. `projectLocalDay.ts`), view-model shaping in `app/features/<feature>/presentation/` (e.g. `dailyActionViewModel.ts`).
+
+6. **Build the UI component** in `app/features/<feature>/components/`. `app/features/**` is **not** auto-imported (unlike `app/components/**`), so pages/containers import it explicitly by path — the real pattern used in `app/pages/day/[date].vue`:
 ```vue
-<!-- app/components/feature/FeatureList.vue -->
 <script setup lang="ts">
-const { data: features, pending } = useFeatures()
+import DailyActionSection from "~/features/daily/components/DailyActionSection.vue"
+import { useDaily } from "~/features/daily/composables/useDaily"
 </script>
 ```
+
+7. **Keep an old auto-imported name working, if one existed**: if the feature previously had an auto-imported composable/service under the flat layout, leave a thin re-export shim in the old location instead of touching every call site. This is a real existing pattern — `app/composables/board/useBoardColumnsStore.ts` in full:
+```typescript
+export {
+  useBoardColumnsStore,
+  cleanupBoardColumnsStore,
+  type BoardColumnState,
+} from "~/features/board/composables/useBoardColumnsStore";
+```
+A brand-new feature with no pre-existing name to preserve (e.g. `daily`) skips this step entirely.
 
 ### Modifying Existing Code
 
@@ -348,8 +472,8 @@ mongosh
 ### Console Helpers
 
 ```javascript
-// Check IndexedDB stores
-const db = await indexedDB.open('cognilo-ai-db', 8)
+// Check IndexedDB stores (name/version source of truth: app/utils/constants/pwa.ts DB_CONFIG)
+const db = await indexedDB.open('recwide_db', 20)
 db.onsuccess = (e) => {
   const stores = e.target.result.objectStoreNames
   console.log('Stores:', Array.from(stores))
@@ -389,11 +513,10 @@ npx playwright test --debug
 
 ```
 tests/
-├── auth-flow.spec.ts       # Authentication flows
-├── pwa-offline-basic.spec.ts  # Basic offline tests
-├── pwa-offline.spec.ts     # Comprehensive PWA tests
-├── auth/                   # Auth-specific tests
-└── server/                 # API tests
+├── auth-flow.spec.ts          # Authentication flows
+├── pwa-offline-basic.spec.ts  # Basic offline tests (run by yarn test:pwa-offline)
+├── pwa-offline.spec.ts        # Comprehensive PWA tests
+└── server/                    # Server-side/service tests (notifications, review, sm2, ...)
 ```
 
 ### Manual Testing Scenarios
@@ -470,15 +593,20 @@ self.addEventListener('sync', (event) => {
 ### IndexedDB Management
 
 ```typescript
-// SW IndexedDB stores
-const DB_NAME = 'cognilo-ai-db'
-const DB_VERSION = 8
+// IndexedDB name/version/stores — single source of truth is
+// app/utils/constants/pwa.ts (DB_CONFIG). Do not hardcode these elsewhere.
+import { DB_CONFIG } from '~/utils/constants/pwa'
 
-const stores = {
-  forms: 'forms',           // Offline form queue
-  notes: 'notes',           // Notes cache
-  pendingNotes: 'pendingNotes' // Unsaved changes
-}
+DB_CONFIG.NAME    // 'recwide_db'
+DB_CONFIG.VERSION // 20 — bump whenever a store is added/changed; see the
+                  // version-history comment above DB_CONFIG in that file
+DB_CONFIG.STORES  // 19 stores as of this writing: FORMS, NOTES, NOTE_GROUPS,
+                  // PENDING_NOTES, PENDING_NOTE_GROUP_CHANGES,
+                  // PENDING_NOTE_LAYOUTS, NOTE_SYNC_CONFLICTS, BOARD_ITEMS,
+                  // PENDING_BOARD_ITEMS, BOARD_COLUMNS, USER_TAGS,
+                  // OFFLINE_ENTITIES, OFFLINE_MUTATIONS, OFFLINE_CONFLICTS,
+                  // OFFLINE_PACKS, OFFLINE_BLOBS, OFFLINE_SESSIONS,
+                  // OFFLINE_SYNC_META, OFFLINE_LEGACY_RECOVERY
 ```
 
 ---
@@ -511,15 +639,21 @@ yarn db:seed
 
 ### Migration Scripts
 
-Located in `scripts/`:
-- `cleanup-orphaned-cardreviews.ts`
-- `cleanup-orphaned-preferences.ts`
+One-off data-migration script in `scripts/`:
 - `annotate-cardreview-resourcetype.ts`
-- `update-notes-order.ts`
+
+Versioned migrations in `scripts/migrations/`:
+- `backfill-offline-v2.ts` (also runnable via `yarn offline:backfill`)
+- `dedupe-offline-mutation-receipts.ts`
+- `migrate-board-notes-to-board-items.ts`
+- `migrate-note-types.ts`
+- `migrate-workspace.ts`
 
 Run with:
 ```bash
 npx tsx scripts/script-name.ts
+# or, for scripts/migrations/:
+npx tsx scripts/migrations/script-name.ts
 ```
 
 ---
@@ -707,7 +841,7 @@ npx prisma generate
 **IndexedDB errors**:
 ```javascript
 // Delete database
-indexedDB.deleteDatabase('cognilo-ai-db')
+indexedDB.deleteDatabase('recwide_db')
 // Refresh page
 ```
 
@@ -718,3 +852,7 @@ indexedDB.deleteDatabase('cognilo-ai-db')
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System design
 - **[FEATURES.md](./FEATURES.md)** - Feature documentation
 - **[MAINTENANCE.md](./MAINTENANCE.md)** - Operations and known issues
+- **[DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md)** - Design-token architecture and enforcement (`yarn design:*` gates)
+- **[COMPONENT_SYSTEM.md](./COMPONENT_SYSTEM.md)** - Component ownership, `Ui*` wrappers, and boundary rules
+- **[architecture/app-surfaces.md](./architecture/app-surfaces.md)** - Platform/Daily/Learning app-surface split
+- **[MODULE_SYSTEM_DIAGRAMS.md](./MODULE_SYSTEM_DIAGRAMS.md)** - Architecture map for the modular monolith

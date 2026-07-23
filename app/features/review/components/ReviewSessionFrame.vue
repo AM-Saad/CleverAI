@@ -115,9 +115,8 @@ const currentCountLabel = computed(() => {
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
-  padding: var(--space-4) var(--space-4)
-    calc(var(--space-6) + env(safe-area-inset-bottom));
-  gap: var(--space-4);
+  padding: var(--space-2) 0 calc(var(--space-6) + env(safe-area-inset-bottom));
+  gap: var(--space-3);
 }
 .rev__bar {
   display: flex;

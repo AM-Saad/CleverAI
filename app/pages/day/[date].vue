@@ -1,43 +1,20 @@
 <template>
   <div class="day-page">
-    <DailyDateNavigation
-      :active-date-key="dateKey"
-      :eyebrow="eyebrow"
-      :title="dayTitle"
-      :days="weekDays"
-      :account-link="accountLink"
-      @navigate="go"
-    />
+    <DailyDateNavigation :active-date-key="dateKey" :eyebrow="eyebrow" :title="dayTitle" :days="weekDays"
+      :account-link="accountLink" @navigate="go" />
 
     <UiAlert v-if="daily.error.value" tone="error" :title="daily.error.value" />
 
-    <DailyActionSection
-      :items="activeActionModels"
-      :moved-items="movedActionModels"
-      :open-count="openCount"
-      :completed-count="completedCount"
-      :loading="Boolean(daily.loadingDates.value[dateKey])"
-      @add="actionSheetOpen = true"
-      @toggle="toggleAction"
-      @move="openMove"
-    />
+    <DailyActionSection :items="activeActionModels" :moved-items="movedActionModels" :open-count="openCount"
+      :completed-count="completedCount" :loading="Boolean(daily.loadingDates.value[dateKey])"
+      @add="actionSheetOpen = true" @toggle="toggleAction" @move="openMove" />
 
-    <DailyNoteSection
-      :date-key="dateKey"
-      :model-value="noteContent"
-      :save-state="noteSaveState"
-      :conflict="noteConflict"
-      @update:model-value="onNoteChange"
-      @blur="flushPendingSave()"
-      @resolve="resolveNoteConflict"
-    />
+    <DailyNoteSection :date-key="dateKey" :model-value="noteContent" :save-state="noteSaveState"
+      :conflict="noteConflict" @update:model-value="onNoteChange" @blur="flushPendingSave()"
+      @resolve="resolveNoteConflict" />
 
     <ActionItemSheet v-model:open="actionSheetOpen" :initial-date="dateKey" />
-    <RescheduleActionSheet
-      v-model:open="moveSheetOpen"
-      :visible-date="dateKey"
-      :item="movingItem"
-    />
+    <RescheduleActionSheet v-model:open="moveSheetOpen" :visible-date="dateKey" :item="movingItem" />
   </div>
 </template>
 
@@ -62,6 +39,7 @@ import { toDailyActionViewModel } from "~/features/daily/presentation/dailyActio
 definePageMeta({ middleware: "auth" });
 
 const route = useRoute();
+const toast = useToast();
 const daily = useDaily();
 const routeDateKey = computed(() => String(route.params.date));
 const timeZone = import.meta.client
@@ -158,6 +136,34 @@ watch(
   { immediate: true },
 );
 
+// Share-target's "Add to Today's Plan" lands here as ?addTask=; materialize it
+// once the account is known, then drop the param so it can't replay.
+const lastAddTaskToken = ref("");
+async function consumeAddTaskRoute() {
+  const raw = route.query.addTask;
+  const title = String(Array.isArray(raw) ? raw[0] : (raw ?? "")).trim();
+  if (!title || !daily.accountId.value) return;
+  const token = `${title}:${dateKey.value}`;
+  if (lastAddTaskToken.value === token) return;
+  lastAddTaskToken.value = token;
+  await daily.createAction({
+    title,
+    dateKey: dateKey.value,
+    timingMode: "ALL_DAY",
+  });
+  toast.add({ title: "Added to today's plan", color: "success" });
+  const { addTask: _addTask, ...query } = route.query;
+  void _addTask;
+  await navigateTo({ path: route.path, query }, { replace: true });
+}
+watch(
+  [() => route.query.addTask, () => daily.accountId.value, dateKey],
+  () => {
+    void consumeAddTaskRoute();
+  },
+  { immediate: true },
+);
+
 function go(amount: number) {
   return navigateTo(`/day/${addDateKeyDays(dateKey.value, amount)}`);
 }
@@ -187,5 +193,12 @@ function openMove(occurrenceKey: string) {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
+  padding-bottom: var(--space-6);
+  /* Exactly fill .ds-shell__main: grow into leftover height AND shrink to it.
+     min-height:0 lifts the content floor (min-height:auto) so shrink can win;
+     overflow-y makes overflowing content scroll inside this box, not the page. */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 </style>

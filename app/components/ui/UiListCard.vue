@@ -1,26 +1,12 @@
 <template>
-  <component
-    :is="componentType"
-    :to="to"
-    :href="href"
-    :target="href ? target : undefined"
-    :rel="href && target === '_blank' ? resolvedRel : undefined"
-    :type="isButton ? type : undefined"
-    :disabled="isButton ? disabled : undefined"
-    :aria-disabled="!isButton && disabled ? 'true' : undefined"
+  <component :is="componentType" :to="to" :href="href" :target="href ? target : undefined"
+    :rel="href && target === '_blank' ? resolvedRel : undefined" :type="isButton ? type : undefined"
+    :disabled="isButton ? disabled : undefined" :aria-disabled="!isButton && disabled ? 'true' : undefined"
     :aria-pressed="isButton && selectable ? String(selected) : undefined"
-    :aria-current="isLink && selected ? 'page' : undefined"
-    :aria-labelledby="ariaLabelledby"
-    :aria-describedby="ariaDescribedby"
-    :tabindex="!isButton && disabled ? -1 : undefined"
-    :class="ui.root({ class: className })"
-    @click="handleClick"
-  >
-    <span
-      v-if="$slots.leading"
-      :class="ui.leading({ class: leadingClass })"
-      :style="leadingStyle"
-    >
+    :aria-current="isLink && selected ? 'page' : undefined" :aria-labelledby="ariaLabelledby"
+    :aria-describedby="ariaDescribedby" :tabindex="!isButton && disabled ? -1 : undefined"
+    :class="ui.root({ class: className })" @click="handleClick">
+    <span v-if="$slots.leading" :class="ui.leading({ class: leadingClass })" :style="leadingStyle">
       <slot name="leading" />
     </span>
 
@@ -28,20 +14,13 @@
       <span v-if="$slots.title || title" :id="titleId" :class="ui.title()">
         <slot name="title">{{ title }}</slot>
       </span>
-      <span
-        v-if="$slots.description || description"
-        :id="descriptionId"
-        :class="ui.description()"
-      >
+      <span v-if="$slots.description || description" :id="descriptionId" :class="ui.description()">
         <slot name="description">{{ description }}</slot>
       </span>
       <slot />
     </span>
 
-    <span
-      v-if="$slots.trailing || trailingText"
-      :class="ui.trailing({ class: trailingClass })"
-    >
+    <span v-if="$slots.trailing || trailingText" :class="ui.trailing({ class: trailingClass })">
       <slot name="trailing">{{ trailingText }}</slot>
     </span>
 

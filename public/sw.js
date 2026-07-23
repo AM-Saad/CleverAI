@@ -4977,6 +4977,11 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
                 { action: "dismiss", title: "\u274C Dismiss" }
               ]
             };
+            const badgeNumber = typeof data.dueCount === "number" ? data.dueCount : typeof data.badgeCount === "number" ? data.badgeCount : void 0;
+            if (typeof badgeNumber === "number" && typeof navigator.setAppBadge === "function") {
+              navigator.setAppBadge(badgeNumber).catch(() => {
+              });
+            }
             await swSelf.registration.showNotification(title, options);
             log("Notification shown:", title);
           } catch (err) {

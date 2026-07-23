@@ -373,7 +373,6 @@ onBeforeUnmount(() => {
 <style>
 .paper-block-wrapper {
   margin: 1.25rem 0;
-  border-radius: var(--radius-2xl);
   overflow: hidden;
   /* border: 1px solid var(--color-secondary, rgba(0,0,0,0.08)); */
   /* box-shadow: 0 2px 8px rgba(0,0,0,0.06); */

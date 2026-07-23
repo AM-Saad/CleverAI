@@ -1,7 +1,7 @@
 # Cognilo Maintenance & Operations
 
 > Known issues, technical debt, security considerations, and roadmap.  
-> **Last Updated**: Based on source code analysis
+> **Last Updated**: 2026-07-23 (re-audited against live codebase)
 
 ---
 
@@ -57,26 +57,43 @@ runtimeConfig: {
 
 ---
 
-### 🟡 HIGH: Rate Limit Header Bug
+### ✅ RESOLVED: Rate Limit Header Bug
 
 **Location**: `server/utils/llm/rateLimit.ts`
 
-**Issue**: `Retry-After` header calculation mixes units:
+**Previous issue**: `Retry-After` header calculation mixed units:
 ```typescript
 // resetTime is in milliseconds, but Retry-After expects seconds
 headers.set('Retry-After', String(resetTime))
 ```
 
-**Impact**:
-- Clients wait way too long (1000x intended)
-- Poor rate-limited user experience
-
-**Fix**:
+**Current status**: `setRateLimitHeaders()` computes `resetSeconds` in seconds and uses it for both headers; this item is retained as historical context only.
 ```typescript
-headers.set('Retry-After', String(Math.ceil(resetTime / 1000)))
+const resetSeconds = Math.ceil(
+  WINDOW_SEC - (now % (WINDOW_SEC * 1000)) / 1000
+);
+event.node.res.setHeader("X-RateLimit-Reset", String(resetSeconds));
+if (overallRemaining === 0)
+  event.node.res.setHeader("Retry-After", String(resetSeconds));
 ```
 
-**Priority**: P1 - Fix soon
+**Priority**: None.
+
+---
+
+### 🟢 MEDIUM: Board and Notes Unreachable from Primary Navigation
+
+**Location**: `app/components/shell/MobileTabBar.vue`, `app/components/home/AppLauncher.vue`
+
+**Issue**: Board (`/board`) and standalone Notes (`/notes`) are fully functional routes but have zero entries in primary navigation. The tab bar is hardcoded to Apps/Daily/Learning/Account, and the app launcher only surfaces Daily and Learning cards.
+
+**Impact**:
+- Both routes are reachable only by typing the URL directly or via an external deep link
+- Shipped, working functionality is effectively invisible to users
+
+**Recommendation**: Add Board/Notes entries to the tab bar and/or app launcher, or explicitly fold them under an existing surface (e.g. Learning) if they're meant to stay secondary.
+
+**Priority**: P2 - Product/discoverability gap, not a crash or data-loss bug
 
 ---
 
@@ -147,7 +164,7 @@ export function estimateTokens(text: string): number {
 ```
 
 #### 2. Monolithic Service Worker
-**Location**: `sw-src/index.ts` (1011 lines)
+**Location**: `sw-src/index.ts` (1423 lines)
 
 **Issue**: Single file handling caching, push, sync, IndexedDB
 
@@ -327,18 +344,6 @@ npx prisma generate
 # 4. Restart server
 ```
 
-#### Data Cleanup Scripts
-```bash
-# Remove orphaned CardReviews
-npx tsx scripts/cleanup-orphaned-cardreviews.ts
-
-# Clean orphaned preferences
-npx tsx scripts/cleanup-orphaned-preferences.ts
-
-# Fix note ordering
-npx tsx scripts/update-notes-order.ts
-```
-
 ### Service Worker Management
 
 #### Force Update for All Users
@@ -452,6 +457,8 @@ export default defineEventHandler(async () => {
 
 ## Roadmap
 
+> **Note (2026-07-23)**: This roadmap has not been fully re-audited against current source. Given how much has shipped recently — the mobile PWA redesign, the Platform/Daily/Learning app-surface split, the new Daily feature, a large design-system rework, and a ~64-file dead-code cleanup — other rows below may already be done or stale. Only the "Collaborative workspaces" row was verified and removed in this pass; the rest need a fresh sweep.
+
 ### Phase 1: Stability (Immediate)
 
 | Task | Priority | Effort |
@@ -483,7 +490,6 @@ export default defineEventHandler(async () => {
 
 | Feature | Description |
 |---------|-------------|
-| Collaborative workspaces | Share workspaces with other users |
 | AI study plans | Auto-generated study schedules |
 | Mobile apps | React Native or Flutter |
 | Offline flashcard review | Full SR functionality offline |
@@ -567,7 +573,7 @@ caches.keys().then(keys => {
 })
 
 // 3. Clear IndexedDB
-indexedDB.deleteDatabase('cognilo-ai-db')
+indexedDB.deleteDatabase('recwide_db')
 
 // 4. Hard refresh
 location.reload(true)
@@ -605,3 +611,6 @@ curl -I "$PUSH_ENDPOINT"
 - **[ARCHITECTURE.md](./ARCHITECTURE.md)** - System design
 - **[DEVELOPMENT.md](./DEVELOPMENT.md)** - Setup and debugging
 - **[FEATURES.md](./FEATURES.md)** - Feature documentation
+- **[DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md)** - Design token architecture and enforcement
+- **[COMPONENT_SYSTEM.md](./COMPONENT_SYSTEM.md)** - Component layers and ownership boundaries
+- **[architecture/app-surfaces.md](./architecture/app-surfaces.md)** - Platform/Daily/Learning app-surface split

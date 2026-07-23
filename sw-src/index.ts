@@ -718,6 +718,11 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
             actions?: Array<{ action: string; title: string }>;
           };
 
+          const badgeNumber = typeof data.dueCount === 'number' ? data.dueCount : (typeof data.badgeCount === 'number' ? data.badgeCount : undefined);
+          if (typeof badgeNumber === 'number' && typeof (navigator as Navigator & { setAppBadge?: (n: number) => Promise<void> }).setAppBadge === 'function') {
+            (navigator as Navigator & { setAppBadge: (n: number) => Promise<void> }).setAppBadge(badgeNumber).catch(() => {});
+          }
+
           await swSelf.registration.showNotification(title, options);
           log("Notification shown:", title);
         } catch (err) {

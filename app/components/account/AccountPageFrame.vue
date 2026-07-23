@@ -1,14 +1,13 @@
 <template>
   <div class="account-frame">
-    <AppPageHeader
-      :title="title"
-      :subtitle="subtitle"
-      :back-to="effectiveBackTo"
-      :back-label="effectiveBackLabel"
-    >
-      <template v-if="$slots.action" #actions><slot name="action" /></template>
+    <AppPageHeader :title="title" :subtitle="subtitle" :back-to="effectiveBackTo" :back-label="effectiveBackLabel">
+      <template v-if="$slots.action" #actions>
+        <slot name="action" />
+      </template>
     </AppPageHeader>
-    <main class="account-frame__content"><slot /></main>
+    <main class="account-frame__content">
+      <slot />
+    </main>
   </div>
 </template>
 
@@ -36,12 +35,13 @@ const effectiveBackLabel = computed(() => props.backLabel ?? "Back to account");
 .account-frame {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
-  padding: var(--space-4) var(--space-4) var(--space-8);
+  gap: var(--space-3);
+  padding-bottom: var(--space-6);
 }
+
 .account-frame__content {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 </style>

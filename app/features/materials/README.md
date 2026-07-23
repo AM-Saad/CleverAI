@@ -1,16 +1,25 @@
 # Materials Feature
 
-Owns workspace material upload, material listing, speech capture inside material upload, and material-driven generation UI.
+Owns material generation workflow state for a specific material. Upload and
+listing UI live directly in the page layer; there is no feature-local
+components/ directory.
 
 ## Boundaries
 
-- `components/*` owns material upload/list/generate UI.
-- `composables/useGenerateFromMaterial.ts` owns material generation workflow state.
-- Existing workspace hub component paths and `app/composables/materials/useGenerateFromMaterial.ts` remain compatibility wrappers.
-- Feature internals import feature-local composables explicitly instead of using legacy wrappers.
+- `composables/useGenerateFromMaterial.ts` owns material generation workflow
+  state (flashcards/quiz generation, existing-content check, and the
+  replace/append regeneration confirmation flow). Used directly by
+  `app/pages/materials/[id].vue`.
+- `app/pages/materials/index.vue` implements upload (native file input) and
+  listing UI inline — no dedicated feature component. There is no speech/mic
+  capture in the upload flow (that claim in the old README was stale).
+- `app/composables/materials/useGenerateFromMaterial.ts` remains a
+  compatibility wrapper.
 
 ## Manual QA
 
-1. Upload a text or PDF material and confirm it appears in the workspace hub.
-2. Generate flashcards and questions from a material through the existing UI.
-3. Regenerate existing content and confirm replace/append behavior still follows the confirmation dialog.
+1. Upload a text or PDF material from `/materials` and confirm it appears in
+   the materials list, then navigates to `/materials/[id]`.
+2. Generate flashcards and questions from a material's detail page.
+3. Regenerate existing content and confirm replace/append behavior still
+   follows the confirmation dialog.

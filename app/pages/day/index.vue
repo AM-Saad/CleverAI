@@ -6,12 +6,18 @@
 import { dateKeyInTimeZone } from "@shared/utils/daily-recurrence";
 
 definePageMeta({ middleware: "auth" });
+const route = useRoute();
 const timeZone = import.meta.client
   ? Intl.DateTimeFormat().resolvedOptions().timeZone
   : "UTC";
-await navigateTo(`/day/${dateKeyInTimeZone(new Date(), timeZone)}`, {
-  replace: true,
-});
+const addTask = route.query.addTask;
+await navigateTo(
+  {
+    path: `/day/${dateKeyInTimeZone(new Date(), timeZone)}`,
+    query: addTask ? { addTask } : undefined,
+  },
+  { replace: true },
+);
 </script>
 
 <style scoped>

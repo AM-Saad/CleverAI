@@ -8,7 +8,7 @@
       :style="{ '--g': g.color, '--gt': g.text }"
       :disabled="disabled"
       :aria-label="`${g.label}, next review ${g.interval}, shortcut ${g.shortcut}`"
-      @click="emit('grade', g.key)"
+      @click="handleGrade(g.key)"
     >
       <!-- design-allow: per-tone tinted native grade controls -->
       <span class="gradebar__label">{{ g.label }}</span>
@@ -31,6 +31,7 @@ import {
   type GradeKey,
   type Sm2State,
 } from "~/composables/review/useSm2Preview";
+import { useHaptics } from "~/composables/pwa/useHaptics";
 
 const props = defineProps<{
   state: Sm2State;
@@ -38,6 +39,12 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{ (e: "grade", key: GradeKey): void }>();
+const haptics = useHaptics();
+
+const handleGrade = (key: GradeKey) => {
+  haptics.rating(key);
+  emit("grade", key);
+};
 
 const grades = computed(() =>
   (

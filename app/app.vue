@@ -98,8 +98,17 @@ const toast = useToast()
 const OFFLINE_TOAST_ID = 'network-status-toast-offline'
 const ONLINE_TOAST_ID = 'network-status-toast-online'
 
+const route = useRoute()
+const router = useRouter()
+
 onMounted(() => {
     if (import.meta.client) {
+        // Handle App Shortcut action query param
+        if (route.query.action === 'quick-capture') {
+            const initialVal = (route.query.initialValue as string) || ''
+            router.replace({ path: '/notes', query: { action: 'quick-capture', initialValue: initialVal } })
+        }
+
         onOffline(() => {
             toast.add({
                 id: OFFLINE_TOAST_ID,

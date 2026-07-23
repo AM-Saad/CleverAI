@@ -5,7 +5,7 @@
         <UiTitle id="note-title" tag="h2">Daily note</UiTitle>
         <p>One continuous note for this day</p>
       </div>
-      <span class="note-section__save-state">{{ saveState }}</span>
+      <!-- <span class="note-section__save-state">{{ saveState }}</span> -->
     </div>
 
     <DailyNoteConflictPanel v-if="conflict" :conflict="conflict" @resolve="$emit('resolve', $event)" />
@@ -38,6 +38,12 @@ defineEmits<{
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  /* Fill the day page's leftover height, and shrink back to it when the note
+     is long — the editor content scrolls internally instead of growing here.
+     min-height:0 is required at every level of the shrink chain; the editor's
+     own min-height:320px remains the usability floor. */
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .note-section__head {
