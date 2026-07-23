@@ -111,7 +111,7 @@ export default defineAppConfig({
     },
     checkbox: {
       slots: {
-        base: "rounded-[var(--radius-sm)] ring-1 ring-inset ring-secondary focus-visible:outline-2! focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--ds-focus-outline-color)]!",
+        base: "rounded-[var(--radius-full)] ring-1 ring-inset ring-secondary focus-visible:outline-2! focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--ds-focus-outline-color)]!",
         indicator: "text-on-primary",
         label: "text-content-on-surface",
         description: "text-content-secondary",

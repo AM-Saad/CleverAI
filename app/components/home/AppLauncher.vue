@@ -96,8 +96,8 @@ onMounted(async () => {
   display: flex;
   min-height: calc(100dvh - 74px);
   flex-direction: column;
-  gap: var(--space-6);
-  padding: var(--space-6) var(--space-4);
+  gap: var(--space-3);
+  padding-bottom: var(--space-6);
 }
 
 .launcher__header {

@@ -4,9 +4,9 @@ Owns workspace notes UI, local-first note state, and the notes API client.
 
 ## Boundaries
 
-- `containers/NotesSection.vue` orchestrates the workspace notes panel.
-- `components/NotesDrawer.vue`, `NoteGroupSection.vue`, and `NoteRow.vue` own the grouped drawer UI. They emit explicit row intents; they do not write IndexedDB or build note-content sync changes.
-- `components/*` owns note search and text/math/canvas editors.
+- `components/NoteListRow.vue` is the single-click list row rendered by `notes/index.vue` (title, snippet, sync badge, card-count/note-type pills, relative time — no drag/split affordances). `components/NoteGroupsSheet.vue` and `QuickNoteSheet.vue` (+ `useQuickNoteCapture.ts`) drive the mobile list page. `components/MobileNoteEditor.vue` and `AiResultSheet.vue` (+ `useNoteDraft.ts`) drive the mobile detail page (`notes/[id].vue`).
+- `components/*` also owns note search and text/math/canvas editors.
+- `app/composables/ui/useSplitNotes.ts` is currently unused — the composable still exists and is re-exported from `app/composables/ui/index.ts`'s barrel, but nothing references it now that the split-pane row UI it backed is gone.
 - `composables/notesWorkspaceRuntime.ts` owns the workspace-scoped runtime shared by note and group facades.
 - `composables/useNotesStore.ts` is the compatibility facade for note state, commands, sync status, and legacy callers.
 - `composables/notesContentQueue.ts` owns debounced content saves, draft flushing, content queue writes, and online/offline scheduling for note edits.
@@ -22,7 +22,6 @@ Feature internals should import local components and composables explicitly inst
 
 ## Sync UX
 
-- `containers/NotesSection.vue` surfaces content and layout sync state with a status bar.
 - Note rows expose `Local` only for queued content edits and `Retry` for failed note saves.
 - Layout changes use one workspace-level status such as `layout saved locally`, `layout syncing`, or `layout conflict`; reorder/move must not mark every note row as `Local`.
 - The workspace runtime is the source of truth for group state and the note/group sync bridge; `notesSyncRuntime.ts` is the only note-side queue drainer.
@@ -37,18 +36,6 @@ Feature internals should import local components and composables explicitly inst
 - When `NUXT_PUBLIC_NOTES_COLLAB_ENABLED=true`, existing non-temp `TEXT` note bodies use Yjs/Tiptap collaboration over the self-hosted Hocuspocus server. `note.content` and `note.title` become debounced read/search projections, while the Yjs document is authoritative for rich-text body edits.
 - Collaborative body edits are not written to `pendingNotes`; IndexedDB-backed Yjs state and the Hocuspocus websocket own body sync. `pendingNotes`, group queues, layout queues, and explicit conflicts still own metadata, deletes, non-text notes, groups, and layout.
 - Layout changes are applied atomically on the server. A failed reorder/move should remain pending locally rather than partially persisting.
-
-## Interaction Invariants
-
-- `NoteRow.vue` is a visual row with four independent zones: `drag`, `title`, `split`, and `actions`.
-- The row wrapper has no click handler. Opening a note is owned only by the title/link zone.
-- The drag zone uses `data-note-drag-handle` and emits reorder/move intent only.
-- The split zone uses `data-no-drag`; click opens/replaces split panes, while drag starts the split-drop flow.
-- The actions zone uses `data-no-drag` and emits action intent only.
-- Split state is local UI state persisted by `useSplitNotes`; it is not note content and is not synced to the server.
-- Menu button opens actions only.
-- UI watchers may hydrate drag lists from props, but they must not queue layout changes.
-- Manual sync, reconnect sync, and background sync follow the same order: flush editor drafts, drain content changes, remap temp IDs, drain layout changes, then refresh notes and groups.
 
 ## Manual QA
 

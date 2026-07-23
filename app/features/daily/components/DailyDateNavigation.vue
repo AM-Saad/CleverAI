@@ -95,7 +95,7 @@ defineEmits<{ navigate: [amount: number] }>();
   align-items: center;
   justify-content: center;
   gap: var(--space-1);
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-md);
   color: var(--color-content-secondary);
   font-size: var(--text-xs);
   padding: 0 var(--space-1)

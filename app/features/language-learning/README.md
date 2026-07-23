@@ -5,15 +5,15 @@ This feature module owns the frontend language-learning slice.
 Nuxt auto-import guidance:
 
 - Feature internals use explicit imports when they need feature-local code.
-- Existing `app/components/language/*` component names remain compatibility wrappers so current templates keep working.
 - Existing auto-imported composables in `app/composables/language/*` and `app/composables/useSpeechCapture.ts` remain wrappers.
 - Shared prediction utilities such as `usePredictionaryInput` stay in `app/composables` because they are also used by the shared editor.
 
 Current public entrypoints:
 
 - `containers/LanguageReviewContainer.vue`
-- `containers/LanguageSettingsContainer.vue`
+- `/language/settings` (`app/pages/language/settings.vue`) is now a redirect stub to `/account/language`, which implements settings inline via the `languageLearningRuntime`/`useLanguageLearningRuntime` composable directly — settings is no longer a container-owned surface of this feature.
 - `components/*`
+- `presentation/languageWordRowViewModel.ts` is the view-model mapper feeding `LanguageWordBankList.vue`.
 
 Page composition:
 

@@ -158,6 +158,9 @@ import NoteListRow from "~/features/notes/components/NoteListRow.vue";
 import NoteGroupsSheet from "~/features/notes/components/NoteGroupsSheet.vue";
 import QuickNoteSheet from "~/features/notes/components/QuickNoteSheet.vue";
 import { useQuickNoteCapture } from "~/features/notes/composables/useQuickNoteCapture";
+import { useHaptics } from "~/composables/pwa/useHaptics";
+
+const haptics = useHaptics();
 import { useViewTransitionMorph } from "~/composables/ui/useViewTransitionMorph";
 import WorkspacePill from "~/components/shell/WorkspacePill.vue";
 import SaveLocalBar from "~/components/shell/SaveLocalBar.vue";
@@ -347,11 +350,17 @@ function firstQueryValue(value: typeof route.query.compose) {
 
 async function consumeComposeRoute(value: typeof route.query.compose) {
   const compose = firstQueryValue(value);
-  if (!compose || !store.value || creating.value) return;
+  const isQuickCaptureAction = route.query.action === "quick-capture";
+  if ((!compose && !isQuickCaptureAction) || !store.value || creating.value) return;
 
-  const token = `${compose}:${route.query.capture ?? ""}:${activeId.value ?? ""}`;
+  const token = `${compose ?? "action"}:${route.query.capture ?? ""}:${route.query.action ?? ""}:${activeId.value ?? ""}`;
   if (lastComposeToken.value === token) return;
   lastComposeToken.value = token;
+
+  const initialVal = (route.query.initialValue as string) || "";
+  if (initialVal) {
+    quick.onContent(initialVal);
+  }
 
   // Ask AI / Dictate need the full editor (AI bubble, dictation); a plain
   // "New note" from the capture sheet opens quick capture in place.
@@ -411,7 +420,7 @@ function onNotePointerDown(e: PointerEvent, id: string) {
     dragMoved.value = true;
     draggingNoteId.value = noteDrag.id;
     window.getSelection?.()?.removeAllRanges();
-    (navigator as Navigator & { vibrate?: (n: number) => void }).vibrate?.(8);
+    haptics.selection();
   }, 280);
   window.addEventListener("pointermove", onNotePointerMove);
   window.addEventListener("pointerup", onNotePointerUp, { once: true });
@@ -497,7 +506,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-4) var(--space-6);
+  padding-bottom: var(--space-6);
 }
 .notes__wspill {
   align-self: flex-start;

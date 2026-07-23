@@ -830,7 +830,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-4) var(--space-8);
+  padding-bottom: var(--space-6);
   min-height: calc(100dvh - 74px + env(safe-area-inset-bottom));
   background: var(--color-surface-subtle);
 }

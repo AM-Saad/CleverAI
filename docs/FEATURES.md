@@ -1,24 +1,120 @@
 # Cognilo Features Documentation
 
 > Detailed documentation of all major features and their implementations.
-> **Last Updated**: March 2026
+> **Last Updated**: 2026-07-23
 
 ---
 
 ## Table of Contents
-1. [Notes System](#notes-system)
-2. [Spaced Repetition (SM-2)](#spaced-repetition-sm-2)
-3. [XP & Gamification](#xp--gamification)
-4. [LLM Content Generation](#llm-content-generation)
-5. [Materials Management](#materials-management)
-6. [Workspaces & Organization](#workspaces--organization)
-7. [Kanban Board](#kanban-board)
-8. [User Tags](#user-tags)
-9. [On-Device AI](#on-device-ai)
-10. [Push Notifications](#push-notifications)
-11. [PWA & Offline Support](#pwa--offline-support)
-12. [Subscription & Quota](#subscription--quota)
-13. [Authentication](#authentication)
+1. [Daily](#daily)
+2. [Notes System](#notes-system)
+3. [Spaced Repetition (SM-2)](#spaced-repetition-sm-2)
+4. [XP & Gamification](#xp--gamification)
+5. [LLM Content Generation](#llm-content-generation)
+6. [Materials Management](#materials-management)
+7. [Workspaces & Organization](#workspaces--organization)
+8. [Kanban Board](#kanban-board)
+9. [User Tags](#user-tags)
+10. [On-Device AI](#on-device-ai)
+11. [Push Notifications](#push-notifications)
+12. [PWA & Offline Support](#pwa--offline-support)
+13. [Subscription & Quota](#subscription--quota)
+14. [Authentication](#authentication)
+
+---
+
+## Daily
+
+### Overview
+
+Day-planner feature: recurring or one-off action items placed on calendar days, plus one continuous rich-text note per day. It's product-prominent — the first tab in the mobile nav and the first card in the app launcher.
+
+Routed at `/day/[date]` (`app/pages/day/[date].vue`); `/day` redirects to today's date. There is **no** `/daily` route.
+
+> Daily and Learning are also independently-deployable Nitro surfaces (selected via the `APP_SURFACE` env var), not just feature groupings — see [architecture/app-surfaces.md](./architecture/app-surfaces.md).
+
+### Data Models
+
+```typescript
+interface DailyNote {
+  id: string
+  userId: string
+  dateKey: string        // Calendar day key, e.g. "2026-07-23"
+  content: Json          // Tiptap JSON
+  contentFormat: string  // Default "TIPTAP_JSON"
+  version: number
+  createdAt: Date
+  updatedAt: Date
+  // @@unique([userId, dateKey])
+}
+
+interface ActionItem {
+  id: string
+  userId: string
+  title: string
+  description?: string
+  timingMode: ActionTimingMode        // "ALL_DAY" | "TIMED"
+  startDate: string
+  localTime?: string
+  timezone?: string
+  recurrence?: Json                   // Recurrence rule
+  lifecycle: ActionItemLifecycle      // ACTIVE | ARCHIVED
+  createdAt: Date
+  updatedAt: Date
+}
+
+interface ActionOccurrence {
+  id: string
+  occurrenceKey: string
+  userId: string
+  actionItemId: string
+  originalDateKey: string
+  currentPlacementId?: string
+  status: ActionOccurrenceStatus      // OPEN | COMPLETED | SKIPPED | CANCELLED
+  completedAt?: Date
+  version: number
+  createdAt: Date
+  updatedAt: Date
+  // @@unique([userId, occurrenceKey])
+}
+
+interface ActionPlacement {
+  id: string
+  userId: string
+  occurrenceId: string
+  occurrenceKey: string
+  dateKey: string                     // Where this occurrence currently sits
+  timingMode: ActionTimingMode
+  localTime?: string
+  timezone?: string
+  position: string
+  state: ActionPlacementState         // ACTIVE | MOVED | COMPLETED
+  movedToPlacementId?: string
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+`ActionItem` is the definition of a one-time action or recurring series; individual recurring appearances stay virtual until completion, movement, or another override requires a durable row. `ActionOccurrence` is one materialized instance of an item on a given day. `ActionPlacement` is where an occurrence currently sits — **rescheduling creates a new placement** (the old one marked `state: "MOVED"`, `movedToPlacementId` pointing at the new one) rather than mutating one in place.
+
+### API Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/daily/bootstrap` | GET | Bulk action items/occurrences for offline seeding |
+| `/api/daily/day/[date]` | GET | Projected day (action items + note) for a date |
+
+Backed by `server/modules/daily/` (`application/projectDailyDay.ts`, `domain/ensureOccurrence.ts`).
+
+### Client Architecture
+
+All paths relative to `app/features/daily/`:
+
+| File | Purpose |
+|------|---------|
+| `composables/useDaily.ts` | CRUD/offline-mutation surface — `loadDay`, `createAction`, `setCompleted`, `reschedule`, `saveNote`, note-conflict `getNoteConflict`/`resolveNoteConflict` — via the generic Offline V2 queue |
+| `domain/projectLocalDay.ts` | Pure function expanding recurrence into a day's projected items |
+| `repositories/dailyLocalRepository.ts` | Local snapshot + server-merge reconciliation + note-conflict auto-resolution |
 
 ---
 
@@ -33,6 +129,8 @@ A local-first rich text notes system with:
 - Background sync
 - Drag-and-drop reordering
 - Conflict detection
+
+> **Note**: The standalone `/notes` route currently has no entry in the mobile tab bar (`app/components/shell/MobileTabBar.vue`) or the app launcher (`app/components/home/AppLauncher.vue`). The route still works fully when reached directly — it's just not linked from primary navigation right now.
 
 ### Data Model
 
@@ -431,6 +529,8 @@ Deleting a workspace removes all contained notes, materials, flashcards, and que
 
 Drag-and-drop Kanban board for task organization with customizable columns and tagged items.
 
+> **Note**: `/board` currently has no entry in the mobile tab bar (`app/components/shell/MobileTabBar.vue`) or the app launcher (`app/components/home/AppLauncher.vue`). The route still works fully when reached directly — it's just not linked from primary navigation right now.
+
 ### Data Models
 
 ```typescript
@@ -475,6 +575,32 @@ interface BoardItem {
 | `/api/board-items/[id]` | PATCH | Update item |
 | `/api/board-items/[id]` | DELETE | Delete item |
 | `/api/board-items/reorder` | PATCH | Reorder items |
+
+**Board Item Comments**:
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/board-item-comments` | GET | List comments on a board item |
+| `/api/board-item-comments` | POST | Add a comment to a board item |
+
+**Board Item Links**:
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/board-item-links` | GET | List links for a board item |
+| `/api/board-item-links` | POST | Link two board items together |
+| `/api/board-item-links/[linkId]` | DELETE | Remove a link |
+
+**Board Integrations** — connecting external providers (OAuth accounts) and importing their items onto the board:
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/board-integrations/accounts` | GET | List connected integration accounts |
+| `/api/board-integrations/accounts/[id]` | DELETE | Disconnect an integration account |
+| `/api/board-integrations/oauth/[provider]/start` | GET | Begin OAuth connect flow |
+| `/api/board-integrations/oauth/[provider]/callback` | GET | OAuth callback handler |
+| `/api/board-integrations/sources` | GET | List importable sources for a connected account |
+| `/api/board-integrations/import` | POST | Import external items onto the board |
+| `/api/board-integrations/item-refs` | GET | Look up board items linked to external references |
+| `/api/board-integrations/mappings` | GET/POST | Get/create field mappings for a provider |
+| `/api/board-integrations/diagnostics` | GET | Integration health diagnostics |
 
 ### Composables
 
@@ -667,15 +793,20 @@ sw-src/ai-worker.ts → esbuild → public/ai-worker.js (AI web worker)
 
 ### IndexedDB Structure
 
+Source of truth: [`app/utils/constants/pwa.ts`](../app/utils/constants/pwa.ts) (`DB_CONFIG`) — don't hand-copy the full store list here, it drifts. Currently: database `recwide_db`, version 20, with 19 object stores spanning notes, board, tags, and the generic Offline V2 sync queue, e.g.:
+
 ```typescript
-const DB_CONFIG = {
-  name: 'cognilo-ai-db',
-  stores: {
-    forms: 'forms',               // Queued form submissions
-    notes: 'notes',               // Notes cache
-    pendingNotes: 'pendingNotes'  // Unsaved changes
-  }
-}
+export const DB_CONFIG = {
+  NAME: "recwide_db",
+  VERSION: 20,
+  STORES: {
+    NOTES: "notes",
+    BOARD_ITEMS: "boardItems",
+    OFFLINE_ENTITIES: "offlineEntities",    // generic Offline V2 sync queue
+    OFFLINE_MUTATIONS: "offlineMutations",
+    // ...15 more — see the source file for the full, current list
+  },
+} as const
 ```
 
 ### Background Sync

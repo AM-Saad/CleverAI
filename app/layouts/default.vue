@@ -84,6 +84,11 @@ const isMarketingLanding = computed(
   max-width: 680px;
   flex-grow: 1;
   display: flex;
+  /* Flex items default to min-width:auto and refuse to shrink below their
+     content's intrinsic width — nowrap (truncate) text inside pages would
+     inflate the whole shell past the viewport. min-width:0 restores the
+     viewport as the width constraint so truncation can actually happen. */
+  min-width: 0;
 }
 
 .ds-shell__frame--wide {
@@ -94,12 +99,15 @@ const isMarketingLanding = computed(
   display: flex;
   flex-direction: column;
   flex-grow: 1;
-  padding: var(--space-2);
+  /* Same auto-minimum escape as the frame — see comment above. */
+  min-width: 0;
+  /* The shell owns the page gutter — pages must not add horizontal padding. */
+  padding: var(--space-2) var(--space-3);
 }
 
-.ds-shell__main--tabbar {
+/* .ds-shell__main--tabbar {
   padding-bottom: calc(74px + env(safe-area-inset-bottom));
-}
+} */
 
 .ds-skip {
   position: absolute;

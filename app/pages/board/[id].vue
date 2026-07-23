@@ -235,8 +235,7 @@ onMounted(() => void loadCurrentItem());
   display: flex;
   flex-direction: column;
   min-height: 100dvh;
-  padding: var(--space-3) var(--space-4)
-    calc(var(--space-4) + env(safe-area-inset-bottom));
+  padding: var(--space-3) 0 calc(var(--space-4) + env(safe-area-inset-bottom));
   background: var(--color-background);
 }
 .bd__bar {

@@ -1,11 +1,11 @@
 # Notifications Feature
 
-Owns client-side notification subscription, prompt timing, and notification preferences UI.
+Owns client-side notification subscription and prompt timing.
 
 ## Boundaries
 
 - `components/NotificationSubscriptionModal.vue` handles the opt-in prompt and local dismissal state.
-- `components/NotificationPreferences.vue` handles user-facing notification delivery preferences.
+- Delivery-preferences UI now lives directly in `app/pages/account/notifications.vue` (inline `notificationPrefs` state, `loadNotificationPreferences()`/`saveNotificationPreferences()`) — not in this feature.
 - `composables/useNotifications.ts` owns browser Push API registration and subscription refresh.
 - `composables/useNotificationPrompt.ts` owns prompt timing and review-session trigger behavior.
 

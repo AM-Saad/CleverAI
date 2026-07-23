@@ -77,7 +77,7 @@ const destinations = [
 .learning-dashboard {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
+  gap: var(--space-3);
 }
 .learning-dashboard__workspace {
   align-self: flex-start;

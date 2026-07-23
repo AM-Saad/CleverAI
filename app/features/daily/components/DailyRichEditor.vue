@@ -103,6 +103,11 @@ onBeforeUnmount(() => editor.value?.destroy());
   /* border-radius: var(--component-card-radius); */
   /* background: var(--color-surface); */
   overflow: hidden;
+  /* Column so the toolbar keeps its height and the content area below takes
+     (and scrolls within) whatever height the note section hands us. */
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
 }
 
 .daily-editor__toolbar {
@@ -114,9 +119,12 @@ onBeforeUnmount(() => editor.value?.destroy());
 }
 
 .daily-editor__content {
-  height: 270px;
   padding: var(--space-1);
-  overflow: auto
+  /* The one true scroll container for note content: flex to the editor's
+     height, min-height:0 so long documents shrink us instead of growing us. */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .daily-editor__content :deep(.tiptap) {

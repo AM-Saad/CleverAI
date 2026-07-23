@@ -316,6 +316,14 @@ onMounted(async () => {
   } finally {
     loading.value = false;
   }
+
+  // Land straight in the generate sheet when arriving from share-target.
+  if (route.query.openGenerate) {
+    openGenerate();
+    const { openGenerate: _openGenerate, ...query } = route.query;
+    void _openGenerate;
+    await navigateTo({ path: route.path, query }, { replace: true });
+  }
 });
 </script>
 
@@ -323,8 +331,9 @@ onMounted(async () => {
 .md {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-4) calc(var(--space-8) + 64px);
+  gap: var(--space-3);
+  /* Extra 64px clears the fixed generate bar. */
+  padding-bottom: calc(var(--space-6) + 64px);
   min-height: 100dvh;
 }
 .md__list {

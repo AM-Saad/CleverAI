@@ -1,7 +1,7 @@
 # Cognilo Architecture
 
 > System design reference for the Cognilo AI-powered learning platform.
-> **Last Updated**: June 2026 (providers, IndexedDB stores reconciled against code)
+> **Last Updated**: 2026-07-23 (Daily module, application surfaces, service bindings, IndexedDB version reconciled against code)
 
 ---
 
@@ -27,6 +27,10 @@ Cognilo is a **Nuxt 4** application providing AI-powered flashcard generation, q
 - **Strategy Pattern LLM**: Pluggable AI providers (OpenAI, Google Gemini, DeepSeek, Groq, OpenRouter)
 - **PWA-Native**: Full offline support via Workbox service worker
 - **On-Device AI**: Web worker–based math recognition, speech-to-text, summarization
+- **Realtime Collaboration**: Hocuspocus + Yjs per-note collaboration rooms (`server/collab-server.ts`, `yarn collab:dev`)
+- **Independently-Deployable Surfaces**: the same codebase can run as one process (default) or split into `platform`/`daily`/`learning` Nitro surfaces via `APP_SURFACE` — see [architecture/app-surfaces.md](./architecture/app-surfaces.md)
+
+The mobile UI (all routes, all widths) was fully rebuilt in June 2026 as a single mobile-first shell — there is no separate desktop layout.
 
 ### High-Level Architecture
 
@@ -82,8 +86,9 @@ Cognilo is a **Nuxt 4** application providing AI-powered flashcard generation, q
 | TypeScript | 5.x | Type safety |
 | TailwindCSS | 4.x | Utility-first CSS |
 | Pinia | 2.x | State management |
-| shadcn-vue / Nuxt UI | 4.x | Component library |
+| Nuxt UI | 4.x | Component library, wrapped by ~50 token-driven `Ui*` primitives — see [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) / [COMPONENT_SYSTEM.md](./COMPONENT_SYSTEM.md) |
 | Tiptap | 3.x | Rich text editor |
+| Hocuspocus / Yjs | 3.x | Realtime per-note collaboration |
 | KaTeX | - | Math rendering |
 | @huggingface/transformers | 3.8 | On-device AI models |
 | motion-v | - | Animations |
@@ -124,11 +129,10 @@ Cognilo is a **Nuxt 4** application providing AI-powered flashcard generation, q
 ```
 cognilo/
 ├── app/                          # Nuxt app source (srcDir)
-│   ├── components/               # Vue components
-│   │   ├── workspace/               # Workspace-specific (NotesSection, etc.)
-│   │   ├── materials/            # Materials UI (GenerateButton, etc.)
-│   │   ├── review/               # SR review UI
-│   │   └── ui/                   # Base UI components (shadcn-vue)
+│   ├── components/               # Vue components (auto-imported)
+│   │   ├── workspace/               # UpsertWorkspaceForm only — the old desktop "workspace hub" side panel was removed
+│   │   ├── shell/                # Mobile app shell chrome (tab bar, sheets)
+│   │   └── ui/                   # ~50 token-driven Ui* primitives — see DESIGN_SYSTEM.md / COMPONENT_SYSTEM.md
 │   ├── composables/              # Vue composables
 │   │   ├── ai/                   # AI-related composables
 │   │   │   ├── useAIStore.ts     # AI worker management
@@ -156,40 +160,46 @@ cognilo/
 │   │   └── user/                 # User composables
 │   ├── domain/                   # Domain logic (DDD)
 │   │   └── sr/                   # Spaced repetition domain
-│   ├── features/                 # Incremental frontend feature modules
+│   ├── features/                 # Frontend feature modules (NOT auto-imported — explicit imports only)
+│   │   ├── daily/                # Day-planner: action items + one rich-text note per day
+│   │   │   ├── components/       # DailyDateNavigation, DailyActionSection/List/Row, DailyNoteSection, sheets
+│   │   │   ├── composables/      # useDaily (CRUD/offline-mutation surface), dailyDraftCommitter, dailyEditorRuntimeState
+│   │   │   ├── domain/           # projectLocalDay — pure recurrence/placement projection, no I/O
+│   │   │   ├── presentation/     # dailyActionViewModel — display mapping
+│   │   │   └── repositories/     # dailyLocalRepository — Offline V2 snapshot + conflict resolution
 │   │   ├── review/               # Review feature slice
-│   │   │   ├── containers/       # Route/page orchestration components
-│   │   │   ├── components/       # Feature-owned UI
+│   │   │   ├── containers/       # ReviewPageContainer (used by /user/review; /review renders ReviewSessionView directly)
+│   │   │   ├── components/       # ReviewSessionView/Card/Frame, ReviewCardView, Sm2GradeBar, SessionSummary
 │   │   │   ├── composables/      # Feature workflows and state
 │   │   │   └── services/         # Feature API service implementation
 │   │   ├── language-learning/    # Language capture, word bank, and language review
-│   │   │   ├── containers/
-│   │   │   ├── components/
+│   │   │   ├── containers/       # LanguageReviewContainer only
+│   │   │   ├── components/       # LanguageCapturePanel, LanguageWordBankList/Toolbar, LanguageWordDetailModal
 │   │   │   ├── composables/
+│   │   │   ├── presentation/     # languageWordRowViewModel
 │   │   │   └── services/
-│   │   ├── notifications/        # Push subscription, prompts, and preferences UI
-│   │   │   ├── components/
+│   │   ├── notifications/        # Push subscription + prompt timing (delivery-preferences UI now lives in app/pages/account/notifications.vue)
+│   │   │   ├── components/       # NotificationSubscriptionModal (mounted globally in app/app.vue, not page-routed)
 │   │   │   └── composables/
-│   │   ├── materials/            # Material upload/listing and generation UI
-│   │   │   ├── components/
-│   │   │   └── composables/
+│   │   ├── materials/            # Material generation workflow state (no components/ dir — upload/list UI lives directly in app/pages/materials/*)
+│   │   │   └── composables/      # useGenerateFromMaterial
 │   │   ├── notes/                # Workspace notes UI, local-first state, notes API client
-│   │   │   ├── containers/
-│   │   │   ├── components/
-│   │   │   ├── composables/
+│   │   │   ├── components/       # NoteListRow, NoteGroupsSheet, QuickNoteSheet, MobileNoteEditor, AiResultSheet, note-type editors
+│   │   │   ├── composables/      # useNotesStore + a decomposed sync engine (queue/coordinator/engine/repository/resolver)
 │   │   │   └── services/
-│   │   └── board/                # Board UI, board state, board API clients
-│   │       ├── containers/
-│   │       ├── components/
-│   │       ├── composables/
-│   │       └── services/
+│   │   ├── board/                # Board UI, board state, board API clients (no containers/ dir — app/pages/board/index.vue owns layout directly)
+│   │   │   ├── components/       # BoardCardSheet, BoardColumnsSheet (mobile sheets only)
+│   │   │   ├── composables/      # useBoardColumnsStore/useBoardItemsStore, rank.ts (fractional ordering), useQuickBoardItemCapture
+│   │   │   ├── repositories/     # boardOfflineRepository
+│   │   │   └── services/
+│   │   └── integrations/         # REMOVED (2026-07-23) — the entire feature was confirmed dead and deleted
 │   ├── layouts/                  # Page layouts
 │   ├── middleware/               # Route middleware
 │   ├── pages/                    # File-based routing
 │   ├── plugins/                  # Nuxt plugins
 │   ├── services/                 # API service layer
 │   │   ├── FetchFactory.ts       # HTTP client with Result pattern
-│   │   ├── ServiceFactory.ts     # Service bindings (10 services)
+│   │   ├── ServiceFactory.ts     # Service bindings (14 services)
 │   │   ├── GatewayService.ts     # LLM gateway client
 │   │   ├── Workspace.ts
 │   │   ├── Material.ts
@@ -295,18 +305,18 @@ Nuxt auto-import policy:
 
 Current frontend slice:
 
-- `review` owns `ReviewPageContainer`, `ReviewService`, review queue workflow, review stats, and session summary.
-- Legacy entrypoints such as `useCardReview`, `useReviewStats`, `useSessionSummary`, and `app/services/ReviewService.ts` remain as compatibility wrappers.
-- `language-learning` owns language pages, language service, language capture/review/stats workflows, speech capture, and language UI components.
+- `daily` owns the day-planner: action items, per-day placements/rescheduling, and one rich-text note per day. Routed at `/day/[date]` (there is no `/daily` route). See [Daily Module](#daily-module).
+- `review` owns `ReviewSessionView`/`ReviewSessionCard`/`ReviewCardView`/`Sm2GradeBar`/`SessionSummary`, `ReviewService`, review queue workflow, review stats, and session summary. `containers/ReviewPageContainer.vue` wraps `ReviewSessionView` with workspace scoping for the `/user/review` server-push notification deep link; `/review` renders `ReviewSessionView` directly.
+- Legacy entrypoints such as `useCardReview`, `useReviewStats`, `useSessionSummary`, and `app/services/ReviewService.ts` remain as compatibility wrappers. Note: `app/composables/review/*` also holds composables the feature depends on directly (e.g. `useSm2Preview`), not purely compatibility shims.
+- `language-learning` owns language pages, language service, language capture/review/stats workflows, speech capture, and language UI components. `/language/settings` is now a redirect stub to `/account/language`, which implements settings inline via the `languageLearningRuntime` composable (not a feature container).
 - Legacy entrypoints such as `useLanguageCapture`, `useLanguageReview`, `useLanguageStats`, `useSpeechCapture`, and `app/services/LanguageService.ts` remain as compatibility wrappers.
-- `notifications` owns push subscription, prompt timing, and notification preferences UI.
-- Legacy entrypoints such as `useNotifications`, `useNotificationPrompt`, `NotificationSubscriptionModal`, and `NotificationPreferences` remain as compatibility wrappers.
-- `materials` owns material upload/listing UI and material generation workflow state.
-- Legacy entrypoints such as workspace hub material components and `useGenerateFromMaterial` remain as compatibility wrappers.
-- `notes` owns the workspace notes panel, grouped notes drawer, note search, text/math/canvas note editors, local-first note state, note group state, and the notes API clients.
-- Legacy entrypoints such as `WorkspaceNotesSection`, workspace note editor components, `useNotesStore`, and `app/services/Note.ts` remain as compatibility wrappers. Note groups use feature-owned frontend entrypoints plus `app/services/NoteGroup.ts` as the service compatibility wrapper.
-- `board` owns the workspace board panel, kanban/list views, board cards, filters, board item/column stores, and board API clients.
-- Legacy entrypoints such as `BoardNotesSection`, `app/components/board/*`, `useBoardItemsStore`, `useBoardColumnsStore`, `app/services/BoardItem.ts`, and `app/services/BoardColumn.ts` remain as compatibility wrappers.
+- `notifications` owns push subscription and prompt timing only — delivery-preferences UI now lives directly in `app/pages/account/notifications.vue`, not in this feature.
+- Legacy entrypoints such as `useNotifications` and `useNotificationPrompt` remain as compatibility wrappers. `NotificationSubscriptionModal` is mounted globally in `app/app.vue`, not page-routed.
+- `materials` owns material generation workflow state (`useGenerateFromMaterial`, used by `app/pages/materials/[id].vue`). Upload/listing UI lives directly in `app/pages/materials/*` — there is no feature-local `components/` dir; the old desktop "workspace hub" side panel that used to host this UI was removed.
+- `notes` owns the mobile notes list/detail UI (`NoteListRow`, `NoteGroupsSheet`, `QuickNoteSheet`, `MobileNoteEditor`, text/math/canvas note editors), local-first note state (now a decomposed queue/coordinator/engine/repository/resolver, not a single store), note group state, and the notes API clients. The old split-pane desktop drawer (`NotesSection`/`NotesDrawer`/`NoteRow`) was removed when the UI went mobile-only single-pane.
+- Legacy entrypoints such as `useNotesStore` and `app/services/Note.ts` remain as compatibility wrappers. Note groups use feature-owned frontend entrypoints plus `app/services/NoteGroup.ts` as the service compatibility wrapper.
+- `board` owns the mobile board page's card/column sheets, board item/column stores, and board API clients. `app/pages/board/index.vue` itself owns the tab-pager/overview layout and within-column drag-reorder directly (no dedicated kanban/list view components).
+- Legacy entrypoints such as `useBoardItemsStore`, `useBoardColumnsStore`, `app/services/BoardItem.ts`, and `app/services/BoardColumn.ts` remain as compatibility wrappers. The old `BoardNotesSection` container and `app/components/board/*` legacy path were removed (2026-07-23) — confirmed dead, not compatibility wrappers.
 
 Architecture fitness:
 
@@ -319,6 +329,8 @@ Architecture fitness:
 ## Data Model
 
 ### Core Entities (Prisma Schema)
+
+> The diagram below predates the Daily module and Hocuspocus collaboration; see the Key Models table for `DailyNote`/`ActionItem`/`ActionOccurrence`/`ActionPlacement`, which relate to `User` the same way `Note`/`BoardItem` do (one-to-many, `userId`-scoped, no `Workspace` relation — Daily is workspace-independent).
 
 ```
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
@@ -401,6 +413,10 @@ Architecture fitness:
 | `NotificationSubscription` | Push subscriptions | endpoint, keys, userId, failureCount |
 | `ScheduledNotification` | Due reminders | scheduledFor, sent, type, metadata |
 | `UserNotificationPreferences` | Notification config | timezone, quietHours, activeHours, snoozedUntil |
+| `DailyNote` | One rich-text note per user per day | userId, dateKey, content (Tiptap JSON), version; `@@unique([userId, dateKey])` |
+| `ActionItem` | One-time or recurring action definition | userId, title, timingMode, startDate, recurrence (JSON), lifecycle (enum) |
+| `ActionOccurrence` | A single instance of an ActionItem | actionItemId, occurrenceKey, originalDateKey, status (enum), currentPlacementId |
+| `ActionPlacement` | Where an occurrence currently sits (today or rescheduled) | occurrenceId, dateKey, position, state (enum), movedToPlacementId |
 
 ### Constraints & Indexes
 
@@ -433,6 +449,7 @@ Cognilo remains one Nuxt/Nitro deployment, but backend business logic is now mov
 ```
 server/modules/
 ├── shared-kernel/        # events and cross-feature primitives
+├── daily/                # action item + daily note application/domain use cases
 ├── review/               # SM-2, enrollment, grading, review ports
 ├── language-learning/    # language word enrollment/review adapters
 ├── notifications/        # scheduling and delivery ports/adapters
@@ -476,18 +493,18 @@ server/modules/
 
 **Purpose**: Rich-text notes with local-first architecture using Tiptap editor.
 
-**Architecture**:
+**Architecture** (single-pane mobile: `notes/index.vue` list → `notes/[id].vue` detail; the old split-pane desktop drawer was removed):
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│  NotesSection   │────>│  useNotesStore  │────>│    IndexedDB    │
-│ + NotesDrawer   │     │ + layout ctrl   │     │ notes + queues  │
+│  NoteListRow    │────>│  useNotesStore  │────>│    IndexedDB    │
+│ (notes/index)   │     │ + sync engine   │     │ notes + queues  │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
         │                       │                       │
         │                       │ content + layout sync │
         ▼                       ▼                       ▼
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
-│ Grouped drawer  │     │ /api/notes/*    │────>│    MongoDB      │
-│ Move/reorder    │     │ /api/note-groups│     │  notes/groups   │
+│ MobileNoteEditor│     │ /api/notes/*    │────>│    MongoDB      │
+│ NoteGroupsSheet │     │ /api/note-groups│     │  notes/groups   │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
@@ -662,26 +679,44 @@ Request → Auth → Quota Check → Rate Limit → Validate → Cache Lookup
 
 **Server proxy**: `POST /api/ai/myscript` — MyScript Cloud API with HMAC-SHA512 signing
 
+### 8. Daily Module
+
+**Purpose**: Day-planner — recurring/one-off action items placed on calendar days, plus one rich-text note per day. Routed at `/day/[date]` (`app/pages/day/[date].vue`) — there is no `/daily` route.
+
+**Data Model**: `DailyNote` (one per user per day), `ActionItem` (the recurring/one-off definition), `ActionOccurrence` (one instance of an ActionItem), `ActionPlacement` (where an occurrence currently sits — rescheduling materializes a new placement rather than mutating one row in place).
+
+**Architecture**: same Offline V2 pattern as Notes/Board — `useDaily.ts` is the CRUD/mutation entry point, `dailyLocalRepository.ts` handles local snapshot + server-merge reconciliation + note-conflict detection (equivalent-content conflicts auto-resolve; real conflicts surface via `DailyNoteConflictPanel`), and `domain/projectLocalDay.ts` is a pure function that expands recurrence rules into a projected day view with no I/O.
+
+**API Endpoints**: `server/api/daily/**` (day snapshot, action CRUD, reschedule, note save, conflict resolution).
+
+**Known gap**: the tab bar and app launcher (`app/components/shell/MobileTabBar.vue`, `app/components/home/AppLauncher.vue`) currently expose Daily as a primary tab, but Board and standalone Notes have zero navigation entry points anywhere in the current IA — see MAINTENANCE.md.
+
 ---
 
 ## Service Architecture
 
 ### Frontend Services
 
-**ServiceFactory** (`app/services/ServiceFactory.ts`) — 10 service bindings:
+**ServiceFactory** (`app/services/ServiceFactory.ts`) — 14 service bindings:
 
 | Service Key | Class | Purpose |
 |-------------|-------|---------|
 | `workspaces` | `WorkspacesModule` | Workspace CRUD |
 | `materials` | `MaterialService` | Materials CRUD |
 | `notes` | `NoteService` | Notes CRUD |
+| `noteGroups` | `NoteGroupService` | Note group CRUD |
 | `boardItems` | `BoardItemService` | Board items CRUD |
 | `boardColumns` | `BoardColumnService` | Board columns CRUD |
+| `boardIntegrations` | `BoardIntegrationService` | Board integration links |
 | `review` | `ReviewService` | Spaced repetition |
 | `auth` | `AuthModule` | Authentication |
 | `user` | `UserService` | User management |
 | `userTags` | `UserTagService` | Tag management |
 | `gateway` | `GatewayService` | LLM generation |
+| `language` | `LanguageService` | Language learning |
+| `notifications` | `NotificationsService` | Push notification prefs |
+
+Note: there is no `daily` entry — the Daily feature talks to `server/api/daily/**` directly through `dailyLocalRepository.ts` rather than through `ServiceFactory`/`$api`.
 
 **FetchFactory** (`app/services/FetchFactory.ts`):
 - Result pattern — never throws
@@ -752,7 +787,7 @@ sw-src/ai-worker.ts → esbuild → public/ai-worker.js (AI web worker)
 | Static assets | CacheFirst | Immutable files |
 | Pages | StaleWhileRevalidate | Balance freshness/speed |
 
-**IndexedDB Stores** (`DB_CONFIG`, `app/utils/constants/pwa.ts`, currently `VERSION: 18`):
+**IndexedDB Stores** (`DB_CONFIG`, `app/utils/constants/pwa.ts`, currently `VERSION: 20`):
 - `forms` — Offline form submissions
 - `notes` — Local notes cache
 - `noteGroups` — Local note-group cache
@@ -856,6 +891,9 @@ All API contracts defined in `shared/utils/` using Zod 4:
 
 ## Related Documentation
 
+- **[architecture/app-surfaces.md](./architecture/app-surfaces.md)** — Platform/Daily/Learning deployable-surface split
+- **[DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md)** — Design tokens: authoring, generation, enforcement gates
+- **[COMPONENT_SYSTEM.md](./COMPONENT_SYSTEM.md)** — Component layers, primitives, boundary enforcement
 - **[FEATURES.md](./FEATURES.md)** — Detailed feature documentation
 - **[LLM_GENERATION_FLOW.md](./LLM_GENERATION_FLOW.md)** — End-to-end LLM generation trace
 - **[DEVELOPMENT.md](./DEVELOPMENT.md)** — Setup, commands, debugging

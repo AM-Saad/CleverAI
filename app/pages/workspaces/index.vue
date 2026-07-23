@@ -382,8 +382,8 @@ watch(
 .ws {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-4) var(--space-8);
+  gap: var(--space-3);
+  padding-bottom: var(--space-6);
 }
 .ws__list {
   display: flex;

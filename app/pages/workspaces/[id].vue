@@ -221,8 +221,8 @@ onMounted(() => void loadData());
 .workspace-overview {
   display: flex;
   flex-direction: column;
-  gap: var(--space-6);
-  padding: var(--space-4) var(--space-4) var(--space-8);
+  gap: var(--space-3);
+  padding-bottom: var(--space-6);
 }
 .workspace-overview__loading {
   display: flex;

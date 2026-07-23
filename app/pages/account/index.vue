@@ -1,20 +1,9 @@
 <template>
-  <AccountPageFrame
-    id="settings"
-    title="Account"
-    :subtitle="accountSubtitle"
-    :back-to="returnTo"
-    :back-label="`Back to ${appLabel}`"
-  >
+  <AccountPageFrame id="settings" title="Account" :subtitle="accountSubtitle" :back-to="returnTo"
+    :back-label="`Back to ${appLabel}`">
     <template #action>
-      <UiPill
-        v-if="unreadCount > 0"
-        size="sm"
-        :label="String(unreadCount)"
-        color="var(--color-primary)"
-        variant="fill"
-        max-width="60px"
-      />
+      <UiPill v-if="unreadCount > 0" size="sm" :label="String(unreadCount)" color="var(--color-primary)" variant="fill"
+        max-width="60px" />
     </template>
 
     <section class="account-hub__profile" aria-label="Account summary">
@@ -30,46 +19,24 @@
       </div>
     </section>
 
-    <UiAlert
-      v-if="appContext"
-      tone="info"
-      variant="subtle"
+    <UiAlert v-if="appContext" tone="info" variant="subtle"
       :title="`${appContext === 'daily' ? 'Daily' : 'Learning'} settings context`"
-      description="Shared account controls stay here; app-specific options are filtered to where you came from."
-    />
+      description="Shared account controls stay here; app-specific options are filtered to where you came from." />
 
     <nav aria-label="Account sections" class="account-hub__list">
-      <UiListCard
-        v-for="item in accountItems"
-        :key="item.to"
-        clickable
-        :title="item.title"
-        :description="item.description"
-        :trailing-text="item.trailing"
-        size="lg"
-        @click="openAccountSection(item.to)"
-      >
+      <UiListCard v-for="item in accountItems" :key="item.to" clickable :title="item.title"
+        :description="item.description" :trailing-text="item.trailing" size="lg" @click="openAccountSection(item.to)">
         <template #leading>
           <UiIcon :name="item.icon" class="h-5 w-5" />
         </template>
         <template #action>
-          <UiIcon
-            name="i-lucide-chevron-right"
-            class="h-4 w-4 text-content-disabled"
-          />
+          <UiIcon name="i-lucide-chevron-right" class="h-4 w-4 text-content-disabled" />
         </template>
       </UiListCard>
     </nav>
 
-    <UiButton
-      block
-      tone="error"
-      variant="soft"
-      size="lg"
-      :loading="signingOut"
-      class="account-hub__logout"
-      @click="logout"
-    >
+    <UiButton block tone="error" variant="soft" size="lg" :loading="signingOut" class="account-hub__logout"
+      @click="logout">
       Log out
     </UiButton>
   </AccountPageFrame>
@@ -143,13 +110,13 @@ const accountItems = computed(() =>
       icon: "i-lucide-sun-moon",
       to: "/account/appearance",
     },
-    {
-      title: "Plan & usage",
-      description: `${balance.value} credits available`,
-      trailing: subscriptionInfo.value.tier,
-      icon: "i-lucide-wallet",
-      to: "/account/plan",
-    },
+    // {
+    //   title: "Plan & usage",
+    //   description: `${balance.value} credits available`,
+    //   trailing: subscriptionInfo.value.tier,
+    //   icon: "i-lucide-wallet",
+    //   to: "/account/plan",
+    // },
     {
       title: "Reminders",
       description:
@@ -182,13 +149,13 @@ const accountItems = computed(() =>
       icon: "i-lucide-shield-check",
       to: "/account/security",
     },
-    {
-      title: "Data & privacy",
-      description: "Export, import, and privacy controls",
-      trailing: "Coming soon",
-      icon: "i-lucide-database",
-      to: "/account/data",
-    },
+    // {
+    //   title: "Data & privacy",
+    //   description: "Export, import, and privacy controls",
+    //   trailing: "Coming soon",
+    //   icon: "i-lucide-database",
+    //   to: "/account/data",
+    // },
     {
       title: "About",
       description: "Product information and pricing",

@@ -13,6 +13,7 @@ Cognilo is an AI-powered learning platform built with **Nuxt 4 + TypeScript**. I
 | **XP & Gamification** | Experience points, achievements, streaks, daily targets |
 | **Notes** | Rich-text local-first notes with IndexedDB persistence and background sync |
 | **Materials Management** | Upload PDFs, paste URLs or text; auto-extract content for generation |
+| **Daily** | Day-planner: recurring/one-off action items placed on calendar days, plus one rich-text note per day |
 | **Kanban Board** | Drag-and-drop columns and items for task organization |
 | **User Tags** | Color-coded tags for organizing board items |
 | **On-Device AI** | Local math recognition, speech-to-text, text-to-speech, text summarization via web workers |
@@ -30,15 +31,16 @@ Cognilo is an AI-powered learning platform built with **Nuxt 4 + TypeScript**. I
 
 | Layer | Technologies |
 |-------|-------------|
-| **Framework** | Nuxt 4, Vue 3 (Composition API), TypeScript 5 |
-| **Styling** | TailwindCSS v4, shadcn-vue / Nuxt UI |
+| **Framework** | Nuxt 4, Vue 3.5 (Composition API), TypeScript 5 |
+| **Styling** | TailwindCSS v4 + Nuxt UI v4 — see [DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md) / [COMPONENT_SYSTEM.md](./docs/COMPONENT_SYSTEM.md) |
 | **State** | Pinia, IndexedDB (offline) |
 | **Editor** | Tiptap v3 (rich text), KaTeX (math rendering), mathjs |
+| **Realtime collab** | Hocuspocus + Yjs (per-note collaboration rooms) |
 | **Server** | Nitro (H3), Prisma 4.8, MongoDB |
 | **Auth** | @sidebase/nuxt-auth (NextAuth.js), bcrypt, SimpleWebAuthn (passkeys) |
 | **Caching** | Redis (rate limiting, semantic caching) — in-memory fallback |
 | **Validation** | Zod 4 (shared contracts client + server) |
-| **AI Providers** | OpenAI SDK, @google/generative-ai, DeepSeek API, Groq API | OpenRouter
+| **AI Providers** | OpenAI SDK, @google/generative-ai, DeepSeek API, Groq API, OpenRouter |
 | **On-Device AI** | @huggingface/transformers (web worker) |
 | **PWA** | Workbox 7, web-push, Background Sync |
 | **Testing** | Playwright |
@@ -47,7 +49,7 @@ Cognilo is an AI-powered learning platform built with **Nuxt 4 + TypeScript**. I
 
 ## LLM Providers
 
-Four provider strategies are implemented via the Strategy pattern:
+Five provider strategies are implemented via the Strategy pattern:
 
 | Provider | Strategy File | Models |
 |----------|--------------|--------|
@@ -55,6 +57,7 @@ Four provider strategies are implemented via the Strategy pattern:
 | **Google** | `GeminiStrategy.ts` | gemini-2.0-flash-lite, gemini-1.5-flash-8b |
 | **DeepSeek** | `DeepSeekStrategy.ts` | deepseek-chat, deepseek-reasoner |
 | **Groq** | `GroqStrategy.ts` | llama-3.1-8b-instant, qwen-qwq-32b, llama-4-scout-17b |
+| **OpenRouter** | `OpenRouterStrategy.ts` | routes to third-party-hosted models |
 
 Models are managed via the `LlmModelRegistry` database table. The gateway (`/api/llm.gateway`) selects the best model automatically using a scoring algorithm that weighs cost, latency, health, and capability.
 
@@ -89,6 +92,16 @@ Models are managed via the `LlmModelRegistry` database table. The gateway (`/api
    yarn start
    ```
 
+### Application Surfaces
+
+The app can also run as three independently-deployable Nitro surfaces (`platform`, `daily`, `learning`) selected via `APP_SURFACE` — default is `all` (today's single process). See [docs/architecture/app-surfaces.md](./docs/architecture/app-surfaces.md).
+
+```bash
+yarn dev:platform   # yarn dev:daily / yarn dev:learning
+yarn build:platform # yarn build:daily / yarn build:learning
+yarn start:platform  # yarn start:daily / yarn start:learning
+```
+
 ### Key Scripts
 
 | Script | Purpose |
@@ -101,7 +114,11 @@ Models are managed via the `LlmModelRegistry` database table. The gateway (`/api
 | `yarn db:studio` | Open Prisma Studio GUI |
 | `yarn typecheck` | Run TypeScript type checking |
 | `yarn lint` | ESLint + Prettier check |
+| `yarn test:unit` | Run unit tests |
 | `yarn test:pwa-offline` | Playwright PWA offline test |
+| `yarn arch:check` | Enforce layer import boundaries |
+| `yarn design:check` / `design:boundaries` / `design:contrast` | Design-system gates — see [DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md) |
+| `yarn collab:dev` | Run the Hocuspocus realtime-collab server |
 
 > **Note**: MongoDB uses `@map("_id")` for IDs and `BigInt` for micro-dollar pricing fields. Use `yarn db:sync` instead of migrations — MongoDB ignores Prisma migrations.
 
@@ -125,14 +142,14 @@ Detailed documentation in `docs/`:
 | Document | Description |
 |----------|-------------|
 | [ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System design, data model, module architecture |
+| [architecture/app-surfaces.md](./docs/architecture/app-surfaces.md) | Platform/Daily/Learning deployable-surface split |
+| [DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md) | Design tokens: authoring, generation, enforcement gates |
+| [COMPONENT_SYSTEM.md](./docs/COMPONENT_SYSTEM.md) | Component layers, primitives, boundary enforcement |
 | [FEATURES.md](./docs/FEATURES.md) | Detailed feature documentation |
 | [LLM_GENERATION_FLOW.md](./docs/LLM_GENERATION_FLOW.md) | End-to-end LLM generation trace |
 | [DEVELOPMENT.md](./docs/DEVELOPMENT.md) | Testing, debugging, developer workflows |
 | [MAINTENANCE.md](./docs/MAINTENANCE.md) | Known issues, tech debt, roadmap |
 | [PWA.md](./docs/PWA.md) | PWA implementation and caching strategy |
-| [SPACED_REPETITION.md](./docs/SPACED_REPETITION.md) | SM-2 algorithm details |
-| [NOTIFICATIONS.md](./docs/NOTIFICATIONS.md) | Push notification system |
-| [CRON_TIMING.md](./docs/CRON_TIMING.md) | Timezone-aware cron scheduling |
 
 ---
 
