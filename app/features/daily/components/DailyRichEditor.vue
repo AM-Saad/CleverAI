@@ -20,8 +20,15 @@ import type { JSONContent } from "@tiptap/core";
 import { TaskItem, TaskList } from "@tiptap/extension-list";
 import Placeholder from "@tiptap/extension-placeholder";
 import StarterKit from "@tiptap/starter-kit";
-import { Editor, EditorContent } from "@tiptap/vue-3";
+import { Editor, EditorContent, VueNodeViewRenderer } from "@tiptap/vue-3";
 import Paper from "~/components/shared/Paper.js";
+import TaskItemNode from "~/components/shared/TaskItemNode.vue";
+
+const CustomTaskItem = TaskItem.extend({
+  addNodeView() {
+    return VueNodeViewRenderer(TaskItemNode);
+  },
+});
 
 const props = defineProps<{ modelValue?: unknown; readonly?: boolean }>();
 const emit = defineEmits<{
@@ -50,7 +57,7 @@ onMounted(() => {
     extensions: [
       StarterKit,
       TaskList,
-      TaskItem.configure({ nested: true }),
+      CustomTaskItem.configure({ nested: true }),
       Placeholder.configure({ placeholder: "Write down what matters today…" }),
       Paper,
     ],

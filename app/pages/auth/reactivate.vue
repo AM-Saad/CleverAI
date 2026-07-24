@@ -1,6 +1,6 @@
 <template>
   <div class="flex items-center justify-center min-h-screen bg-background">
-    <UiPanel variant="surface" size="lg" class-name="w-full max-w-md rounded-[var(--radius-2xl)] shadow-[var(--shadow-card-hover)]">
+    <UiPanel variant="surface" size="lg" radius="2xl" shadow="lg" class-name="w-full max-w-md">
       <div class="text-center mb-6">
         <icon name="mdi:account-reactivate" class="text-primary mx-auto mb-4" size="64"></icon>
         <ui-title tag="h1" size="2xl" weight="bold" color="content-on-surface-strong">
@@ -12,7 +12,7 @@
       </div>
 
       <!-- Success message -->
-      <UiPanel v-if="successMessage" variant="subtle" size="md" class-name="mb-4 border-success/20 bg-success/10">
+      <UiPanel v-if="successMessage" variant="subtle" size="md" tone="success" class-name="mb-4">
         <div class="flex items-start">
           <icon name="mdi:check-circle" class="text-success-text mr-3 mt-0.5" size="20"></icon>
           <div>
@@ -29,7 +29,7 @@
       </UiPanel>
 
       <!-- Error message -->
-      <UiPanel v-if="errorMessage" variant="subtle" size="md" role="alert" class-name="mb-4 border-error/20 bg-error/10">
+      <UiPanel v-if="errorMessage" variant="subtle" size="md" tone="error" role="alert" class-name="mb-4">
         <div class="flex items-start">
           <icon name="mdi:alert-circle" class="text-error-text mr-3 mt-0.5" size="20"></icon>
           <p class="text-sm text-error-text">

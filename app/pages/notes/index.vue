@@ -640,8 +640,8 @@ onMounted(async () => {
 }
 .notes__fab {
   position: fixed;
-  /* Anchor to the centered 480px app column on wide viewports. */
-  right: max(var(--space-4), calc((100vw - 480px) / 2 + var(--space-4)));
+  /* Anchor to the centered shell column (max-width: 680px in layouts/default.vue) on wide viewports. */
+  right: max(var(--space-4), calc((100vw - 680px) / 2 + var(--space-4)));
   bottom: calc(74px + env(safe-area-inset-bottom) + var(--space-4));
   display: grid;
   place-items: center;

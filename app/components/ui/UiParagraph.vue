@@ -23,6 +23,7 @@ interface Props {
   color?:
     | "primary"
     | "content-on-surface"
+    | "content-on-surface-strong"
     | "content-on-background"
     | "content-secondary"
     | "disabled"
@@ -31,7 +32,7 @@ interface Props {
   /**
    * Font weight
    */
-  weight?: "normal";
+  weight?: "normal" | "medium" | "semibold" | "bold";
   /**
    * Center alignment
    */
@@ -62,10 +63,14 @@ const paragraph = tv({
     },
     weight: {
       normal: "font-normal",
+      medium: "font-medium",
+      semibold: "font-semibold",
+      bold: "font-bold",
     },
     color: {
       primary: "text-primary",
       "content-on-surface": "text-content-on-surface",
+      "content-on-surface-strong": "text-content-on-surface-strong",
       "content-on-background": "text-content-on-background",
       "content-secondary": "text-content-secondary",
       error: "text-error-text",

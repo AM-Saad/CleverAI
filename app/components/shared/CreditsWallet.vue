@@ -162,11 +162,16 @@ function invokeAd() {
     </template>
 
     <div class="flex flex-col gap-6 px-2 pb-6">
-      <!-- Hero Section -->
+      <!-- Hero Section. The gradient/border tint here is a deliberate one-off
+           promotional treatment (this wallet balance display), not a reusable
+           pattern — kept as an explicit class-name rather than a new UiPanel
+           variant that only one consumer would ever use. -->
       <UiPanel
         variant="subtle"
         size="lg"
-        class-name="relative mt-2 rounded-[var(--radius-2xl)] border-primary/20 bg-gradient-to-br from-primary/50 to-primary/10 shadow-[var(--shadow-dropdown)]"
+        radius="2xl"
+        shadow="md"
+        class-name="relative mt-2 border-primary/20 bg-gradient-to-br from-primary/50 to-primary/10"
         content-class="relative overflow-hidden text-center">
         <div class="absolute -top-10 -right-10 w-32 h-32 bg-primary/90 rounded-[var(--radius-2xl)] blur-3xl"></div>
         <div class="absolute -bottom-10 -left-10 w-32 h-32 bg-accent-blue/90 rounded-[var(--radius-2xl)] blur-3xl"></div>
@@ -181,9 +186,9 @@ function invokeAd() {
 
       <!-- AppLixir Section -->
       <div class="flex flex-col gap-3">
-        <ui-title tag="h3" class="text-sm font-semibold uppercase tracking-wider">Earn Free Credits</ui-title>
+        <UiTitle tag="h3" size="sm" weight="semibold" uppercase>Earn Free Credits</UiTitle>
         <UiButton @click="invokeAd"
-          class="w-full flex items-center justify-center gap-2 hover:bg-dark transition-colors">
+          class="w-full flex items-center justify-center gap-2">
           <UiIcon v-if="adLoading" name="i-lucide-refresh-cw" class="w-5 h-5 animate-spin" />
           <UiIcon v-else name="i-lucide-circle-play" class="w-5 h-5" />
           Watch Video (+1 Credit)
@@ -200,12 +205,14 @@ function invokeAd() {
 
       <!-- Stripe Top-up Section -->
       <div>
-        <ui-title tag="h3" class="text-sm font-semibold uppercase tracking-wider mb-4">Top Up Credits</ui-title>
+        <UiTitle tag="h3" size="sm" weight="semibold" uppercase class="mb-4">Top Up Credits</UiTitle>
 
         <UiPanel v-if="clientSecret"
           variant="surface"
           size="md"
-          class-name="relative rounded-[var(--radius-2xl)] shadow-[var(--shadow-dropdown)] focus-within:ring-2 focus-within:ring-inset focus-within:ring-[var(--ds-focus-outline-color)]">
+          radius="2xl"
+          shadow="md"
+          class-name="relative focus-within:ring-2 focus-within:ring-inset focus-within:ring-[var(--ds-focus-outline-color)]">
           <UiIconButton v-if="!isPaymentProcessing"
             icon="i-lucide-arrow-left"
             label="Back to credit packs"
@@ -224,14 +231,14 @@ function invokeAd() {
             </span>
             <span v-else>Pay Now</span>
           </UiButton>
-          <UiPanel v-if="paymentError" variant="subtle" size="xs" role="alert" class-name="mt-3 border-error/20 bg-error/10" content-class="text-center text-sm text-error-text">
+          <UiPanel v-if="paymentError" variant="subtle" size="xs" tone="error" role="alert" class-name="mt-3" content-class="text-center text-sm text-error-text">
             {{
               paymentError }}
           </UiPanel>
         </UiPanel>
 
         <div v-else class="grid grid-cols-1 gap-3">
-          <UiPanel v-if="paymentError && !clientSecret" variant="subtle" size="sm" role="alert" class-name="mb-2 border-error/20 bg-error/10" content-class="text-sm text-error-text">
+          <UiPanel v-if="paymentError && !clientSecret" variant="subtle" size="sm" tone="error" role="alert" class-name="mb-2" content-class="text-sm text-error-text">
             {{ paymentError }}
           </UiPanel>
 
@@ -239,7 +246,9 @@ function invokeAd() {
             :aria-label="`Select ${pack.credits} credits pack for ${pack.displayPrice}`" :disabled="!!checkoutLoading"
             variant="default"
             size="md"
-            class-name="relative rounded-[var(--radius-2xl)] border-transparent shadow-[var(--shadow-dropdown)] hover:border-primary/50 hover:shadow-[var(--shadow-card-hover)]"
+            radius="2xl"
+            shadow="md"
+            class-name="relative border-transparent"
             content-class="flex items-center justify-between"
             @click="initCheckout(pack.id)">
             <div class="flex flex-col">

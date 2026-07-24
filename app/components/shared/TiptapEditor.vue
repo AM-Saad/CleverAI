@@ -71,6 +71,7 @@ import {
 import { KeyboardShortcutsExtension } from '~/extensions/tiptap/KeyboardShortcuts';
 
 import CodeBlockNode from './CodeBlockNode.vue';
+import TaskItemNode from './TaskItemNode.vue';
 import Paper from './Paper.js';
 
 // Create lowlight instance with common languages (~35 languages)
@@ -159,6 +160,9 @@ const WorkspaceNoteBehavior = Extension.create({
 
 const CustomTaskItem = TaskItem.extend({
   content: "paragraph block*",
+  addNodeView() {
+    return VueNodeViewRenderer(TaskItemNode);
+  },
 });
 
 // const CustomPaper = Document.extend({
@@ -1624,13 +1628,6 @@ ul[data-type="taskList"] li[data-checked="true"]>div p {
 /* content wrapper (the editable text) */
 ul[data-type="taskList"] li>div {
   flex: 1 1 auto;
-}
-
-/* checkbox style */
-ul[data-type="taskList"] input[type="checkbox"] {
-  width: 1rem;
-  height: 1rem;
-  cursor: pointer;
 }
 
 /* images */

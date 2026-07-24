@@ -27,12 +27,7 @@
     <div class="rc__flip" :class="{ 'rc__flip--revealed': revealed }">
       <div class="rc__inner">
         <!-- FRONT: question -->
-        <button
-          type="button"
-          class="rc__face rc__front"
-          @click="!revealed && emit('reveal')"
-        >
-          <!-- design-allow: full-card native tap target to reveal -->
+        <button type="button" class="rc__face rc__front" @click="!revealed && emit('reveal')"> <!-- design-allow: full-card native tap target to reveal -->
           <span class="rc__eyebrow">{{ eyebrow }}</span>
           <p class="rc__question" dir="auto">{{ question }}</p>
           <span v-if="!revealed" class="rc__hint">Tap to reveal answer</span>

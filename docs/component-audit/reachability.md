@@ -6,12 +6,12 @@ Legacy feature components are reported here, not deleted automatically.
 
 | Surface | Route roots | Reachable components |
 |---|---:|---:|
-| shell | 2 | 27 |
-| launcher | 1 | 4 |
-| daily | 2 | 35 |
-| learning | 9 | 51 |
-| account | 10 | 36 |
-| user | 3 | 15 |
+| shell | 2 | 29 |
+| launcher | 1 | 5 |
+| daily | 2 | 38 |
+| learning | 9 | 54 |
+| account | 10 | 37 |
+| user | 3 | 16 |
 | platform | 4 | 57 |
 
 ## Orphan feature components (0)

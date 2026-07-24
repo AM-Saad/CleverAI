@@ -13,7 +13,7 @@ paralleling the canonical `features/<feature>/components/`. Pick one, delete the
 _none_
 
 
-## input/form field — 26 components → `UiFormField (label+error+UInput)`
+## input/form field — 24 components → `UiFormField (label+error+UInput)`
 
 | Component | tier | signals |
 |---|---|---|
@@ -27,10 +27,9 @@ _none_
 | `NoteGroupsSheet` | feature | btn×3, input×2 |
 | `QuickNoteEditor` | feature | input×1 |
 | `SelectionAiBubble` | feature | btn×3 |
-| `[id]` | page | input×1 |
-| `index` | page | input×1 |
 | `[id]` | page | btn×5, input×1 |
 | `InputField` | primitive | input×1 |
+| `UiFileInput` | primitive | input×1 |
 | `UiForm` | primitive | — |
 | `UiFormField` | primitive | — |
 | `UiInput` | primitive | — |
@@ -41,10 +40,9 @@ _none_
 | `CodeBlockNode` | shared | — |
 | `NoteColorPickerButton` | shared | input×1 |
 | `PaperComponent` | shared | btn×1, input×2 |
-| `TagInput` | shared | card-chrome, input×1 |
 | `TiptapBubbleMenu` | shared | input×1 |
 
-## card/panel — 25 components → `UiCard`
+## card/panel — 22 components → `UiCard`
 
 | Component | tier | signals |
 |---|---|---|
@@ -57,8 +55,6 @@ _none_
 | `TextNote` | feature | card-chrome |
 | `ReviewCardView` | feature | btn×1 |
 | `ReviewSessionCard` | feature | — |
-| `app` | other | card-chrome |
-| `reactivate` | page | card-chrome |
 | `design-system` | page | card-chrome |
 | `UiCard` | primitive | — |
 | `UiColorModeToggle` | primitive | card-chrome, btn×1 |
@@ -71,7 +67,6 @@ _none_
 | `LocalSyncStatus` | shared | card-chrome |
 | `NoteToolbar` | shared | card-chrome |
 | `SplitPaneLayout` | shared | — |
-| `TagInput` | shared | card-chrome, input×1 |
 | `TiptapEditor` | shared | card-chrome, btn×1 |
 
 ## modal/dialog/drawer — 21 components → `UiModal / UiConfirmDialog / UiDrawer`
@@ -100,7 +95,7 @@ _none_
 | `AIModalStatus` | shared | — |
 | `GuideDialog` | shared-modal | — |
 
-## pill/chip/badge/tag — 8 components → `UiBadge / UiChip`
+## pill/chip/badge/tag — 7 components → `UiBadge / UiChip`
 
 | Component | tier | signals |
 |---|---|---|
@@ -111,7 +106,6 @@ _none_
 | `UiPillIcon` | primitive | btn×1 |
 | `UiPillIndicator` | primitive | — |
 | `CreditsPill` | shared | — |
-| `TagInput` | shared | card-chrome, input×1 |
 
 ## icon/toolbar button — 6 components → `UiButton / UiIconButton`
 

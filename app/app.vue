@@ -5,22 +5,21 @@
         <NuxtErrorBoundary @error="ErrorLogger">
             <template #error="{ error, clearError }">
                 <div class="min-h-screen bg-background text-content-on-surface flex items-center justify-center px-6">
-                    <div class="w-full  rounded-[var(--radius-xl)] border border-secondary p-6 shadow-[var(--shadow-dropdown)]">
-                        <p class="text-xs font-bold uppercase tracking-widest text-content-secondary">Application Error
-                        </p>
-                        <ui-title tag="h1" size="xl" weight="semibold" class="mt-2">Something went wrong</ui-title>
+                    <UiCard variant="outline" shadow="md" class-name="w-full">
+                        <UiLabel tag="p" size="sm" weight="bold" color="content-secondary" uppercase>Application Error</UiLabel>
+                        <UiTitle tag="h1" size="xl" weight="semibold" class="mt-2">Something went wrong</UiTitle>
                         <p class="mt-2 text-sm text-content-secondary break-words">
                             {{ error?.message || 'The app hit an unexpected rendering error.' }}
                         </p>
                         <div class="mt-5 flex gap-2">
-                            <ui-button tone="primary" @click="() => { clearError(); reloadApp(); }">
+                            <UiButton tone="primary" @click="() => { clearError(); reloadApp(); }">
                                 Reload
-                            </ui-button>
-                            <ui-button tone="neutral" variant="soft" @click="() => { clearError(); goHome(); }">
+                            </UiButton>
+                            <UiButton tone="neutral" variant="soft" @click="() => { clearError(); goHome(); }">
                                 Home
-                            </ui-button>
+                            </UiButton>
                         </div>
-                    </div>
+                    </UiCard>
                 </div>
             </template>
 

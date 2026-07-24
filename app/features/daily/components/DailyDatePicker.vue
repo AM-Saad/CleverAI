@@ -1,5 +1,12 @@
 <template>
-  <div class="daily-date-picker" role="dialog" aria-label="Date picker" @keydown="onKeydown">
+  <div
+    ref="pickerRef"
+    class="daily-date-picker"
+    role="dialog"
+    aria-label="Date picker"
+    tabindex="-1"
+    @keydown="onKeydown"
+  >
     <!-- Header: Navigation & Month/Year Display -->
     <div class="daily-date-picker__header">
       <div class="daily-date-picker__title-group">
@@ -34,13 +41,14 @@
     </div>
 
     <!-- Quick Presets Bar -->
-    <div class="daily-date-picker__presets">
+    <div class="daily-date-picker__presets" role="group" aria-label="Quick date selections">
       <UiButton
         v-for="preset in presets"
         :key="preset.id"
         size="xs"
         :variant="preset.dateKey === activeDateKey ? 'solid' : 'soft'"
         :tone="preset.dateKey === activeDateKey ? 'primary' : 'neutral'"
+        class="daily-date-picker__preset-btn"
         @click="selectDateKey(preset.dateKey)"
       >
         {{ preset.label }}
@@ -58,7 +66,7 @@
           tone="neutral"
           @click="viewYear -= 1"
         />
-        <span class="daily-date-picker__year-display">{{ viewYear }}</span>
+        <UiTitle tag="div" size="base" weight="bold" color="content-on-surface-strong">{{ viewYear }}</UiTitle>
         <UiIconButton
           icon="i-lucide-chevron-right"
           label="Next year"
@@ -76,7 +84,7 @@
       </div>
 
       <div class="daily-date-picker__direct-jump">
-        <span class="daily-date-picker__jump-label">Jump to date</span>
+        <UiLabel size="sm" weight="semibold" color="content-secondary">Jump to date</UiLabel>
         <UiInput
           type="date"
           :model-value="displayDateKey"
@@ -90,14 +98,17 @@
     <div v-else class="daily-date-picker__calendar-view">
       <!-- Weekday Headers -->
       <div class="daily-date-picker__weekdays" role="row">
-        <span
+        <UiLabel
           v-for="w in weekdayHeaders"
           :key="w"
-          class="daily-date-picker__weekday"
+          size="sm"
+          weight="bold"
+          color="content-secondary"
+          class="py-1"
           role="columnheader"
         >
           {{ w }}
-        </span>
+        </UiLabel>
       </div>
 
       <!-- Days Grid -->
@@ -124,15 +135,32 @@ import {
   isDateKey,
   parseDateKey,
 } from "@shared/utils/daily-recurrence";
+import { useFocusTrap } from "~/composables/ui/useFocusTrap";
 
-const props = defineProps<{
-  activeDateKey: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    activeDateKey: string;
+    open?: boolean;
+  }>(),
+  {
+    open: true,
+  },
+);
 
 const emit = defineEmits<{
   (e: "select-date", dateKey: string): void;
   (e: "close"): void;
 }>();
+
+const pickerRef = ref<HTMLElement | null>(null);
+const isOpenRef = computed(() => props.open);
+
+// Activate focus trap while date picker is open
+useFocusTrap(isOpenRef, pickerRef, {
+  onEscape: () => emit("close"),
+  restoreFocus: true,
+  preventScroll: true,
+});
 
 const timeZone = import.meta.client
   ? Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -406,6 +434,23 @@ function onKeydown(e: KeyboardEvent) {
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-dropdown);
   user-select: none;
+  animation: daily-date-picker-enter var(--duration-fast) var(--ease-spring);
+  transform-origin: top center;
+}
+
+@keyframes daily-date-picker-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.daily-date-picker:focus-visible {
+  outline: none;
 }
 
 /* Header */
@@ -440,7 +485,8 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 .daily-date-picker__month-toggle:focus-visible {
-  outline: 2px solid var(--ds-focus-outline-color);
+  outline: 2px solid var(--ds-focus-outline-color) !important;
+  outline-offset: 1px !important;
 }
 
 .daily-date-picker__chevron {
@@ -467,12 +513,34 @@ function onKeydown(e: KeyboardEvent) {
   gap: var(--space-1);
 }
 
+.daily-date-picker__preset-btn {
+  transition: transform var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.daily-date-picker__preset-btn:focus,
+.daily-date-picker__preset-btn:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
 /* Month/Year Direct Selector View */
 .daily-date-picker__selector-view {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-2) 0;
+  animation: daily-date-picker-fade var(--duration-fast) var(--ease-standard);
+}
+
+@keyframes daily-date-picker-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .daily-date-picker__year-row {
@@ -480,12 +548,6 @@ function onKeydown(e: KeyboardEvent) {
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--space-2);
-}
-
-.daily-date-picker__year-display {
-  font-size: var(--text-base);
-  font-weight: 700;
-  color: var(--color-content-on-surface-strong);
 }
 
 .daily-date-picker__months-grid {
@@ -514,6 +576,11 @@ function onKeydown(e: KeyboardEvent) {
   color: var(--color-content-on-surface-strong);
 }
 
+.daily-date-picker__month-cell:focus-visible {
+  outline: 2px solid var(--ds-focus-outline-color) !important;
+  outline-offset: 1px !important;
+}
+
 .daily-date-picker__month-cell--active {
   background: var(--color-primary);
   color: var(--color-on-primary);
@@ -528,17 +595,12 @@ function onKeydown(e: KeyboardEvent) {
   border-top: 1px solid var(--color-secondary);
 }
 
-.daily-date-picker__jump-label {
-  font-size: var(--text-xs);
-  color: var(--color-content-secondary);
-  font-weight: 650;
-}
-
 /* Standard Calendar Grid */
 .daily-date-picker__calendar-view {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  animation: daily-date-picker-fade var(--duration-fast) var(--ease-standard);
 }
 
 .daily-date-picker__weekdays {
@@ -546,13 +608,6 @@ function onKeydown(e: KeyboardEvent) {
   grid-template-columns: repeat(7, 1fr);
   gap: var(--space-1);
   text-align: center;
-}
-
-.daily-date-picker__weekday {
-  font-size: var(--text-xs);
-  font-weight: 700;
-  color: var(--color-content-secondary);
-  padding: var(--space-1) 0;
 }
 
 .daily-date-picker__days-grid {
@@ -589,8 +644,8 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 .daily-date-picker__day-cell:focus-visible {
-  outline: 2px solid var(--ds-focus-outline-color);
-  outline-offset: -1px;
+  outline: 2px solid var(--ds-focus-outline-color) !important;
+  outline-offset: -1px !important;
   z-index: 1;
 }
 
@@ -610,5 +665,13 @@ function onKeydown(e: KeyboardEvent) {
   color: var(--color-on-primary);
   font-weight: 700;
   box-shadow: var(--shadow-card);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .daily-date-picker,
+  .daily-date-picker__selector-view,
+  .daily-date-picker__calendar-view {
+    animation: none;
+  }
 }
 </style>

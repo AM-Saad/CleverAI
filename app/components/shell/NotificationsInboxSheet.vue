@@ -2,7 +2,7 @@
   <UiSheet :open="open" @update:open="emit('update:open', $event)">
     <template #header>
       <div class="inbox__head">
-        <h2 class="inbox__title">Notifications</h2>
+        <UiTitle tag="h2" size="lg" weight="bold" color="content-on-surface-strong" class="inbox__title">Notifications</UiTitle>
         <button v-if="unreadCount > 0" type="button" class="inbox__mark" @click="markAllRead"> <!-- design-allow: native text action -->
           Mark all read
         </button>
@@ -74,10 +74,7 @@ onMounted(() => refresh());
   width: 100%;
 }
 .inbox__title {
-  font-size: 19px;
-  font-weight: 800;
   letter-spacing: -0.3px;
-  color: var(--color-content-on-surface-strong);
 }
 .inbox__mark {
   font-size: 12px;

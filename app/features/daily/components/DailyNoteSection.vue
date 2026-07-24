@@ -2,8 +2,8 @@
   <section class="note-section" aria-labelledby="note-title">
     <div class="note-section__head">
       <div>
-        <UiTitle id="note-title" tag="h2">Daily note</UiTitle>
-        <p>One continuous note for this day</p>
+        <UiTitle id="note-title" tag="h2" size="base">Daily note</UiTitle>
+        <!-- <p>One continuous note for this day</p> -->
       </div>
       <!-- <span class="note-section__save-state">{{ saveState }}</span> -->
     </div>
@@ -52,13 +52,9 @@ defineEmits<{
   justify-content: space-between;
 }
 
-.note-section__head p,
+/* .note-section__head p,
 .note-section__save-state {
   color: var(--color-content-secondary);
   font-size: var(--text-xs);
-}
-
-.note-section__head :deep(h2) {
-  font-size: var(--text-lg);
-}
+} */
 </style>

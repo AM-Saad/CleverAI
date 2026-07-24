@@ -1,20 +1,20 @@
 {
   "generatedFrom": "scripts/audit-components.cjs",
-  "total": 201,
+  "total": 204,
   "tiers": {
     "component": 26,
     "container": 2,
-    "feature": 37,
+    "feature": 38,
     "icon": 11,
     "layout": 1,
     "other": 1,
-    "page": 45,
+    "page": 46,
     "pattern": 1,
-    "primitive": 50,
-    "shared": 25,
+    "primitive": 52,
+    "shared": 24,
     "shared-modal": 2
   },
-  "bypassCount": 40,
+  "bypassCount": 38,
   "records": [
     {
       "file": "app/components/account/AccountPageFrame.vue",
@@ -135,6 +135,7 @@
       "nuxtUi": [],
       "uiPrimitives": [
         "UiIcon",
+        "UiLabel",
         "ui-title"
       ],
       "signals": {
@@ -418,7 +419,8 @@
       "uiPrimitives": [
         "UiIcon",
         "UiSheet",
-        "UiSkeleton"
+        "UiSkeleton",
+        "UiTitle"
       ],
       "signals": {
         "rawButton": 2,
@@ -426,13 +428,12 @@
         "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
-        "rawHeading": 1,
+        "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
       "bypass": [
-        "raw <button> ×2",
-        "raw <h1-6> ×1"
+        "raw <button> ×2"
       ],
       "clusters": [
         "modal/dialog/drawer"
@@ -951,6 +952,7 @@
         "UiCheckbox",
         "UiIcon",
         "UiIconButton",
+        "UiParagraph",
         "UiPill"
       ],
       "signals": {
@@ -982,6 +984,8 @@
       "uiPrimitives": [
         "UiButton",
         "UiEmptyState",
+        "UiIconButton",
+        "UiLabel",
         "UiSkeleton",
         "UiTitle"
       ],
@@ -1012,11 +1016,13 @@
       ],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiIcon",
         "UiIconButton",
+        "UiPopover",
         "UiTitle"
       ],
       "signals": {
-        "rawButton": 0,
+        "rawButton": 1,
         "rawDialog": 0,
         "rawInput": 0,
         "rawLabel": 0,
@@ -1025,7 +1031,41 @@
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [],
+      "bypass": [
+        "raw <button> ×1"
+      ],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/features/daily/components/DailyDatePicker.vue",
+      "name": "DailyDatePicker",
+      "tier": "feature",
+      "props": [
+        "activeDateKey"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiButton",
+        "UiIcon",
+        "UiIconButton",
+        "UiInput",
+        "UiLabel",
+        "UiTitle"
+      ],
+      "signals": {
+        "rawButton": 3,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <button> ×3"
+      ],
       "clusters": [],
       "isAppCode": true
     },
@@ -1125,7 +1165,8 @@
       "uiPrimitives": [
         "UiButton",
         "UiFormField",
-        "UiInput"
+        "UiInput",
+        "UiParagraph"
       ],
       "signals": {
         "rawButton": 0,
@@ -1194,13 +1235,10 @@
         "UiButton",
         "UiCard",
         "UiCheckbox",
-        "UiIcon",
         "UiIconButton",
         "UiInput",
         "UiPanel",
-        "UiParagraph",
         "UiPill",
-        "UiSubtitle",
         "UiTitle"
       ],
       "signals": {
@@ -1290,8 +1328,12 @@
       ],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiButton",
         "UiInput",
-        "UiPill"
+        "UiLabel",
+        "UiPill",
+        "UiSegmentedControl",
+        "UiSelect"
       ],
       "signals": {
         "rawButton": 0,
@@ -1908,6 +1950,7 @@
       "uiPrimitives": [
         "UiButton",
         "UiIcon",
+        "UiLabel",
         "UiPanel"
       ],
       "signals": {
@@ -2211,8 +2254,10 @@
         "UApp"
       ],
       "uiPrimitives": [
-        "ui-button",
-        "ui-title"
+        "UiButton",
+        "UiCard",
+        "UiLabel",
+        "UiTitle"
       ],
       "signals": {
         "rawButton": 0,
@@ -2222,14 +2267,10 @@
         "rawSelect": 0,
         "rawHeading": 0,
         "overlayScaffold": false,
-        "cardChrome": true
+        "cardChrome": false
       },
-      "bypass": [
-        "hand-rolled card chrome"
-      ],
-      "clusters": [
-        "card/panel"
-      ],
+      "bypass": [],
+      "clusters": [],
       "isAppCode": false
     },
     {
@@ -2614,14 +2655,10 @@
         "rawSelect": 0,
         "rawHeading": 0,
         "overlayScaffold": false,
-        "cardChrome": true
+        "cardChrome": false
       },
-      "bypass": [
-        "hand-rolled card chrome"
-      ],
-      "clusters": [
-        "card/panel"
-      ],
+      "bypass": [],
+      "clusters": [],
       "isAppCode": true
     },
     {
@@ -2877,8 +2914,10 @@
       ],
       "nuxtUi": [],
       "uiPrimitives": [
+        "UiButton",
+        "UiLabel",
         "UiPanel",
-        "ui-title"
+        "UiTitle"
       ],
       "signals": {
         "rawButton": 0,
@@ -2923,7 +2962,6 @@
       "nuxtUi": [],
       "uiPrimitives": [
         "UiIcon",
-        "UiParagraph",
         "UiSubtitle"
       ],
       "signals": {
@@ -3062,24 +3100,21 @@
         "UiLabel",
         "UiSegmentedControl",
         "UiSheet",
-        "UiSkeleton"
+        "UiSkeleton",
+        "UiSlider"
       ],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
-        "rawInput": 1,
+        "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
         "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [
-        "raw <input> ×1"
-      ],
-      "clusters": [
-        "input/form field"
-      ],
+      "bypass": [],
+      "clusters": [],
       "isAppCode": true
     },
     {
@@ -3091,6 +3126,7 @@
       "uiPrimitives": [
         "UiButton",
         "UiEmptyState",
+        "UiFileInput",
         "UiIcon",
         "UiListCard",
         "UiSkeleton"
@@ -3098,19 +3134,15 @@
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
-        "rawInput": 1,
+        "rawInput": 0,
         "rawLabel": 0,
         "rawSelect": 0,
         "rawHeading": 0,
         "overlayScaffold": false,
         "cardChrome": false
       },
-      "bypass": [
-        "raw <input> ×1"
-      ],
-      "clusters": [
-        "input/form field"
-      ],
+      "bypass": [],
+      "clusters": [],
       "isAppCode": true
     },
     {
@@ -3250,6 +3282,32 @@
       "props": [],
       "nuxtUi": [],
       "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": true
+    },
+    {
+      "file": "app/pages/share-target.vue",
+      "name": "share-target",
+      "tier": "page",
+      "props": [],
+      "nuxtUi": [],
+      "uiPrimitives": [
+        "UiIcon",
+        "ui-button",
+        "ui-card",
+        "ui-title"
+      ],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
@@ -3434,6 +3492,7 @@
       "uiPrimitives": [
         "UiIcon",
         "UiIconButton",
+        "UiLabel",
         "UiParagraph",
         "UiTitle"
       ],
@@ -3964,6 +4023,34 @@
       "isAppCode": false
     },
     {
+      "file": "app/components/ui/UiFileInput.vue",
+      "name": "UiFileInput",
+      "tier": "primitive",
+      "props": [
+        "accept",
+        "multiple"
+      ],
+      "nuxtUi": [],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 1,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [
+        "raw <input> ×1"
+      ],
+      "clusters": [
+        "input/form field"
+      ],
+      "isAppCode": false
+    },
+    {
       "file": "app/components/ui/UiForm.vue",
       "name": "UiForm",
       "tier": "primitive",
@@ -4133,6 +4220,8 @@
         "disabled",
         "variant",
         "size",
+        "radius",
+        "shadow",
         "className",
         "contentClass"
       ],
@@ -4362,6 +4451,9 @@
         "tag",
         "variant",
         "size",
+        "radius",
+        "shadow",
+        "tone",
         "className",
         "contentClass"
       ],
@@ -4797,6 +4889,35 @@
       "isAppCode": false
     },
     {
+      "file": "app/components/ui/UiSlider.vue",
+      "name": "UiSlider",
+      "tier": "primitive",
+      "props": [
+        "min",
+        "max",
+        "step",
+        "size",
+        "disabled"
+      ],
+      "nuxtUi": [
+        "USlider"
+      ],
+      "uiPrimitives": [],
+      "signals": {
+        "rawButton": 0,
+        "rawDialog": 0,
+        "rawInput": 0,
+        "rawLabel": 0,
+        "rawSelect": 0,
+        "rawHeading": 0,
+        "overlayScaffold": false,
+        "cardChrome": false
+      },
+      "bypass": [],
+      "clusters": [],
+      "isAppCode": false
+    },
+    {
       "file": "app/components/ui/UiSubtitle.vue",
       "name": "UiSubtitle",
       "tier": "primitive",
@@ -5002,7 +5123,9 @@
       "tier": "shared",
       "props": [],
       "nuxtUi": [],
-      "uiPrimitives": [],
+      "uiPrimitives": [
+        "UiBadge"
+      ],
       "signals": {
         "rawButton": 0,
         "rawDialog": 0,
@@ -5115,7 +5238,7 @@
         "UiInteractiveCard",
         "UiPanel",
         "UiSubtitle",
-        "ui-title"
+        "UiTitle"
       ],
       "signals": {
         "rawButton": 0,
@@ -5589,42 +5712,6 @@
       },
       "bypass": [],
       "clusters": [],
-      "isAppCode": true
-    },
-    {
-      "file": "app/components/shared/TagInput.vue",
-      "name": "TagInput",
-      "tier": "shared",
-      "props": [
-        "modelValue",
-        "placeholder"
-      ],
-      "nuxtUi": [],
-      "uiPrimitives": [
-        "UiBadge",
-        "UiButton",
-        "UiOverlaySurface",
-        "UiPanel"
-      ],
-      "signals": {
-        "rawButton": 0,
-        "rawDialog": 0,
-        "rawInput": 1,
-        "rawLabel": 0,
-        "rawSelect": 0,
-        "rawHeading": 0,
-        "overlayScaffold": false,
-        "cardChrome": true
-      },
-      "bypass": [
-        "raw <input> ×1",
-        "hand-rolled card chrome"
-      ],
-      "clusters": [
-        "pill/chip/badge/tag",
-        "card/panel",
-        "input/form field"
-      ],
       "isAppCode": true
     },
     {

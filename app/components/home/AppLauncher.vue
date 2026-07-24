@@ -2,14 +2,10 @@
   <div class="launcher">
     <header class="launcher__header">
       <div>
-        <p class="launcher__eyebrow">Your apps</p>
+        <UiLabel tag="p" size="sm" weight="bold" color="primary" uppercase class="mb-1">Your apps</UiLabel>
         <ui-title tag="h1">Where do you want to focus?</ui-title>
       </div>
-      <NuxtLink
-        to="/account"
-        class="launcher__account"
-        aria-label="Account settings"
-      >
+      <NuxtLink to="/account" class="launcher__account" aria-label="Account settings">
         <UiIcon name="i-lucide-user-round" class="h-5 w-5" />
       </NuxtLink>
     </header>
@@ -20,13 +16,10 @@
           <UiIcon name="i-lucide-calendar-check-2" class="h-7 w-7" />
         </span>
         <span class="launcher-card__main">
-          <span class="launcher-card__eyebrow">Today · {{ todayLabel }}</span>
+          <UiLabel size="sm" weight="bold" color="content-disabled" uppercase>Today · {{ todayLabel }}</UiLabel>
           <strong>Daily</strong>
           <span>Action items and one continuous daily note.</span>
-          <span
-            v-if="serviceStatus && !serviceStatus.daily"
-            class="launcher-card__status"
-          >
+          <span v-if="serviceStatus && !serviceStatus.daily" class="launcher-card__status">
             <UiIcon name="i-lucide-cloud-off" class="h-3.5 w-3.5" />
             Process offline · cached days remain available
           </span>
@@ -39,13 +32,10 @@
           <UiIcon name="i-lucide-graduation-cap" class="h-7 w-7" />
         </span>
         <span class="launcher-card__main">
-          <span class="launcher-card__eyebrow">Workspaces · Review</span>
+          <UiLabel size="sm" weight="bold" color="content-disabled" uppercase>Workspaces · Review</UiLabel>
           <strong>Learning</strong>
           <span>Languages, materials, flashcards, and spaced repetition.</span>
-          <span
-            v-if="serviceStatus && !serviceStatus.learning"
-            class="launcher-card__status"
-          >
+          <span v-if="serviceStatus && !serviceStatus.learning" class="launcher-card__status">
             <UiIcon name="i-lucide-cloud-off" class="h-3.5 w-3.5" />
             Process offline · downloaded learning stays available
           </span>
@@ -94,10 +84,8 @@ onMounted(async () => {
 <style scoped>
 .launcher {
   display: flex;
-  min-height: calc(100dvh - 74px);
   flex-direction: column;
   gap: var(--space-3);
-  padding-bottom: var(--space-6);
 }
 
 .launcher__header {
@@ -105,15 +93,6 @@ onMounted(async () => {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-4);
-}
-
-.launcher__eyebrow {
-  margin-bottom: var(--space-1);
-  color: var(--color-primary);
-  font-size: var(--text-xs);
-  font-weight: 750;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 
 .launcher__header h1 {
@@ -184,18 +163,10 @@ onMounted(async () => {
   font-size: var(--text-2xl);
 }
 
-.launcher-card__main > span:last-child,
+.launcher-card__main>span:last-child,
 .launcher__shared {
   color: var(--color-content-secondary);
   line-height: 1.5;
-}
-
-.launcher-card__eyebrow {
-  color: var(--color-content-disabled);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .launcher-card__status {

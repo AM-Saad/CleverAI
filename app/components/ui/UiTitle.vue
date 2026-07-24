@@ -13,11 +13,11 @@ interface Props {
   /**
    * Title size variant
    */
-  size?: "sm" | "base" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl";
+  size?: "xs" | "sm" | "base" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl";
   /**
    * Font weight
    */
-  weight?: "medium" | "semibold" | "bold";
+  weight?: "medium" | "semibold" | "bold" | "extrabold";
   /**
    * Text color variant
    */
@@ -28,6 +28,17 @@ interface Props {
     | "white"
     | "error"
     | "warning";
+
+  /**
+   * Uppercase eyebrow/section-heading treatment (adds letter-spacing to match).
+   */
+  uppercase?: boolean;
+
+  /**
+   * Tight tracking for large hero numbers/words. Mutually exclusive with
+   * `uppercase` — nothing needs both wide and tight tracking at once.
+   */
+  tight?: boolean;
 
   /**
    * Center alignment
@@ -43,6 +54,8 @@ const {
   size = "2xl",
   weight = "medium",
   color = "content-on-background",
+  uppercase = false,
+  tight = false,
   center = false,
 } = defineProps<Props>();
 
@@ -50,6 +63,7 @@ const title = tv({
   base: "ui-title m-0 tracking-normal",
   variants: {
     size: {
+      xs: "text-xs leading-tight",
       sm: "text-sm leading-tight",
       base: "text-base leading-tight",
       lg: "text-lg leading-tight",
@@ -63,6 +77,7 @@ const title = tv({
       medium: "font-medium",
       semibold: "font-semibold",
       bold: "font-bold",
+      extrabold: "font-extrabold",
     },
     color: {
       "content-on-surface": "text-content-on-surface",
@@ -72,11 +87,26 @@ const title = tv({
       error: "text-error-text",
       warning: "text-warning-text",
     },
+    uppercase: {
+      true: "uppercase tracking-wide",
+      false: "",
+    },
+    tight: {
+      true: "tracking-tight",
+      false: "",
+    },
   },
 });
 
 const ui = computed(() =>
-  title({ size, weight, color, class: center ? "text-center" : "" }),
+  title({
+    size,
+    weight,
+    color,
+    uppercase,
+    tight,
+    class: center ? "text-center" : "",
+  }),
 );
 </script>
 

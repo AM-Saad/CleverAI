@@ -3,7 +3,7 @@
     class="move-form"
     @submit.prevent="$emit('submit', targetDate, targetTime || null)"
   >
-    <p class="move-form__title">{{ title }}</p>
+    <UiParagraph tag="p" size="base" weight="semibold" color="content-secondary">{{ title }}</UiParagraph>
     <UiFormField label="New date">
       <UiInput v-model="targetDate" type="date" required />
     </UiFormField>
@@ -37,9 +37,5 @@ watch(
 .move-form {
   display: flex;
   flex-direction: column;
-}
-.move-form__title {
-  color: var(--color-content-secondary);
-  font-weight: 600;
 }
 </style>

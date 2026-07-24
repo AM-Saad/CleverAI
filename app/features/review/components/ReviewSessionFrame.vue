@@ -29,7 +29,7 @@
           :style="{ width: progressPct + '%' }"
         />
       </div>
-      <span class="rev__count">{{ currentCountLabel }}</span>
+      <UiLabel size="sm" weight="bold" color="content-secondary" class="tabular-nums">{{ currentCountLabel }}</UiLabel>
     </header>
 
     <div v-if="loading" class="rev__center">
@@ -46,8 +46,8 @@
 
     <div v-else-if="!hasCard" class="rev__center rev__msg">
       <UiIcon name="i-lucide-party-popper" class="h-9 w-9 text-success-text" />
-      <p class="rev__msg-title">{{ emptyTitle }}</p>
-      <p class="rev__msg-sub">{{ emptySubtitle }}</p>
+      <UiTitle tag="div" size="xl" weight="extrabold" tight color="content-on-surface-strong">{{ emptyTitle }}</UiTitle>
+      <UiParagraph size="sm" color="content-secondary">{{ emptySubtitle }}</UiParagraph>
       <UiButton tone="primary" @click="emit('close')">
         {{ emptyActionLabel }}
       </UiButton>
@@ -60,7 +60,7 @@
 
       <footer class="rev__footer">
         <slot name="footer">
-          <p class="rev__swipe-hint">Tap the card to reveal · swipe to grade</p>
+          <UiParagraph size="sm" color="disabled" center>Tap the card to reveal · swipe to grade</UiParagraph>
         </slot>
       </footer>
     </template>
@@ -141,12 +141,6 @@ const currentCountLabel = computed(() => {
   background: var(--color-primary);
   transition: width var(--duration-normal) var(--ease-standard);
 }
-.rev__count {
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--color-content-secondary);
-  font-variant-numeric: tabular-nums;
-}
 .rev__body {
   flex: 1;
   display: flex;
@@ -164,21 +158,7 @@ const currentCountLabel = computed(() => {
   text-align: center;
   color: var(--color-content-secondary);
 }
-.rev__msg-title {
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.4px;
-  color: var(--color-content-on-surface-strong);
-}
-.rev__msg-sub {
-  font-size: 14px;
-}
 .rev__footer {
   min-height: 72px;
-}
-.rev__swipe-hint {
-  text-align: center;
-  font-size: 13px;
-  color: var(--color-content-disabled);
 }
 </style>

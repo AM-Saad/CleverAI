@@ -22,6 +22,6 @@ defineEmits<{
 <style scoped>
 .action-list {
   overflow: hidden;
-  background: var(--color-surface-subtle);
+  /* background: var(--color-surface-subtle); */
 }
 </style>

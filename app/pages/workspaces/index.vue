@@ -128,18 +128,9 @@
         />
 
         <div class="ws-create__swatches">
-          <button
-            v-for="c in accentTokens"
-            :key="c"
-            type="button"
-            class="ws-create__swatch"
-            :class="{ 'ws-create__swatch--on': form.color === c }"
-            :style="{ background: `var(${c})` }"
-            :aria-label="`Color ${c}`"
-            :aria-pressed="form.color === c"
-            @click="form.color = c"
-          />
-          <!-- design-allow: native color swatch -->
+          <button v-for="c in accentTokens" :key="c" type="button" class="ws-create__swatch"
+            :class="{ 'ws-create__swatch--on': form.color === c }" :style="{ background: `var(${c})` }"
+            :aria-label="`Color ${c}`" :aria-pressed="form.color === c" @click="form.color = c" /> <!-- design-allow: native color swatch -->
         </div>
 
         <UiLabel tag="label" class="ws-create__label" for="workspace-name"

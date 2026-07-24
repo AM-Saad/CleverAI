@@ -17,15 +17,14 @@ const message = computed(() =>
 
 <template>
   <main class="min-h-screen bg-background text-content-on-background flex items-center justify-center px-6">
-    <UiPanel tag="section" variant="surface" size="lg" class-name="w-full shadow-[var(--shadow-dropdown)]">
-      <p class="text-xs font-bold uppercase tracking-widest text-content-secondary">Error</p>
-      <ui-title tag="h1" size="2xl" weight="semibold" class="mt-2">Something went wrong</ui-title>
+    <UiPanel tag="section" variant="surface" size="lg" shadow="md" class-name="w-full">
+      <UiLabel tag="p" size="sm" weight="bold" color="content-secondary" uppercase>Error</UiLabel>
+      <UiTitle tag="h1" size="2xl" weight="semibold" class="mt-2">Something went wrong</UiTitle>
       <p class="mt-3 text-sm text-content-secondary break-words">{{ message }}</p>
 
-      <NuxtLink class="mt-5 inline-flex rounded-[var(--radius-md)] bg-primary px-3 py-2 text-sm font-medium text-white"
-        to="/">
+      <UiButton class="mt-5" tone="primary" to="/">
         Home
-      </NuxtLink>
+      </UiButton>
     </UiPanel>
   </main>
 </template>

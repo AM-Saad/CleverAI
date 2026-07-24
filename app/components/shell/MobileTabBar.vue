@@ -1,13 +1,7 @@
 <template>
   <nav class="ds-tabbar" aria-label="Primary">
-    <NuxtLink
-      v-for="item in items"
-      :key="item.label"
-      :to="item.to"
-      class="ds-tab"
-      :class="{ 'ds-tab--active': isActive(item.path) }"
-      :aria-current="isActive(item.path) ? 'page' : undefined"
-    >
+    <NuxtLink v-for="item in items" :key="item.label" :to="item.to" class="ds-tab"
+      :class="{ 'ds-tab--active': isActive(item.path) }" :aria-current="isActive(item.path) ? 'page' : undefined">
       <UiIcon :name="item.icon" class="ds-tab__icon" />
       <span class="ds-tab__label">{{ item.label }}</span>
     </NuxtLink>
@@ -22,24 +16,24 @@ const items = computed(() => {
   const context = route.path.startsWith("/day")
     ? "daily"
     : ["/learn", "/language", "/materials", "/review", "/workspaces"].some(
-          (path) => route.path === path || route.path.startsWith(`${path}/`),
-        )
+      (path) => route.path === path || route.path.startsWith(`${path}/`),
+    )
       ? "learning"
       : route.query.app === "daily" || route.query.app === "learning"
         ? route.query.app
         : null;
   const accountTo = context
     ? {
-        path: "/account",
-        query: {
-          app: context,
-          returnTo:
-            route.path.startsWith("/account") &&
+      path: "/account",
+      query: {
+        app: context,
+        returnTo:
+          route.path.startsWith("/account") &&
             typeof route.query.returnTo === "string"
-              ? route.query.returnTo
-              : route.fullPath,
-        },
-      }
+            ? route.query.returnTo
+            : route.fullPath,
+      },
+    }
     : "/account";
 
   return [
@@ -83,11 +77,7 @@ function isActive(to: string) {
 
 <style scoped>
 .ds-tabbar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: var(--z-drawer);
+  flex-shrink: 0;
   height: calc(74px + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   display: grid;
@@ -96,6 +86,7 @@ function isActive(to: string) {
   background: var(--color-background);
   border-top: 1px solid var(--color-secondary);
 }
+
 .ds-tab {
   display: flex;
   flex-direction: column;
@@ -106,15 +97,18 @@ function isActive(to: string) {
   color: var(--color-content-disabled);
   transition: color var(--duration-fast) var(--ease-standard);
 }
+
 .ds-tab__icon {
   width: 22px;
   height: 22px;
 }
+
 .ds-tab__label {
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.2px;
 }
+
 .ds-tab--active {
   color: var(--color-primary);
 }
