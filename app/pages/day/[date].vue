@@ -1,7 +1,7 @@
 <template>
   <div class="day-page">
     <DailyDateNavigation :active-date-key="dateKey" :eyebrow="eyebrow" :title="dayTitle" :days="weekDays"
-      :account-link="accountLink" @navigate="go" />
+      :account-link="accountLink" @navigate="go" @select-date="goDate" />
 
     <UiAlert v-if="daily.error.value" tone="error" :title="daily.error.value" />
 
@@ -132,6 +132,7 @@ watch(
       return;
     }
     await daily.loadDay(value);
+    daily.prefetchAdjacentDays(value);
   },
   { immediate: true },
 );
@@ -166,6 +167,10 @@ watch(
 
 function go(amount: number) {
   return navigateTo(`/day/${addDateKeyDays(dateKey.value, amount)}`);
+}
+
+function goDate(targetDateKey: string) {
+  return navigateTo(`/day/${targetDateKey}`);
 }
 
 function itemByOccurrenceKey(occurrenceKey: string) {

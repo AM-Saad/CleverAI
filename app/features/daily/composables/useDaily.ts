@@ -9,7 +9,7 @@ import type {
   DayProjectionDTO,
   RecurrenceRuleDTO,
 } from "@shared/utils/daily.contract";
-import { occurrenceKey } from "@shared/utils/daily-recurrence";
+import { addDateKeyDays, occurrenceKey } from "@shared/utils/daily-recurrence";
 import { placementStateAfterMove } from "@shared/utils/daily-placement";
 import { positionBetween } from "@shared/utils/position-key";
 import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
@@ -50,6 +50,29 @@ const OCCURRENCE_FIELDS = ["status", "completedAt", "currentPlacementId"];
 let listenersInstalled = false;
 const bootstrappedAccounts = new Set<string>();
 
+const DAILY_REFRESH_TTL_MS = 20_000;
+
+type DailyRefreshGuard = { promise: Promise<void> | null; lastSuccessAt: number };
+const dailyRefreshGuards = new Map<string, DailyRefreshGuard>();
+
+function getDailyRefreshGuard(key: string): DailyRefreshGuard {
+  let state = dailyRefreshGuards.get(key);
+  if (!state) {
+    state = { promise: null, lastSuccessAt: 0 };
+    dailyRefreshGuards.set(key, state);
+  }
+  return state;
+}
+
+/** Only entries with no in-flight promise and past the TTL are dropped; once
+ * outside the TTL an entry has no remaining purpose (see refreshFromServer). */
+function pruneDailyRefreshGuards() {
+  const cutoff = Date.now() - DAILY_REFRESH_TTL_MS;
+  for (const [key, state] of dailyRefreshGuards) {
+    if (!state.promise && state.lastSuccessAt < cutoff) dailyRefreshGuards.delete(key);
+  }
+}
+
 const uid = () =>
   globalThis.crypto?.randomUUID?.() ??
   `local:${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -85,14 +108,54 @@ export function useDaily() {
     );
   }
 
-  async function refreshFromServer(dateKey: string) {
-    if (!accountId.value || !offline.isOnline.value) return;
-    await autoResolveEquivalentNoteConflicts(accountId.value);
-    const response = await $fetch<ApiSuccess<DayProjectionDTO>>(
-      `/api/daily/day/${dateKey}`,
-    );
-    await mergeServerDay(accountId.value, response.data);
-    await projectDate(dateKey);
+  async function refreshFromServer(
+    dateKey: string,
+    options: { allowCached?: boolean } = {},
+  ): Promise<void> {
+    const currentAccountId = accountId.value;
+    if (!currentAccountId || !offline.isOnline.value) return;
+    await autoResolveEquivalentNoteConflicts(currentAccountId);
+
+    const guard = getDailyRefreshGuard(`${currentAccountId}:${dateKey}`);
+    if (guard.promise) return guard.promise; // always join an in-flight request
+    if (
+      options.allowCached &&
+      Date.now() - guard.lastSuccessAt < DAILY_REFRESH_TTL_MS
+    ) {
+      return; // caller opted into trusting a recently-confirmed date
+    }
+
+    const run = (async () => {
+      const response = await $fetch<ApiSuccess<DayProjectionDTO>>(
+        `/api/daily/day/${dateKey}`,
+      );
+      await mergeServerDay(currentAccountId, response.data);
+      await projectDate(dateKey);
+      guard.lastSuccessAt = Date.now();
+    })();
+
+    const tracked: Promise<void> = run.finally(() => {
+      if (guard.promise === tracked) guard.promise = null;
+      pruneDailyRefreshGuards();
+    });
+    guard.promise = tracked;
+    return tracked;
+  }
+
+  /** Best-effort background warm-up for the +/-1 neighbor dates. Fire-and-
+   * forget: callers must not await this. Goes through refreshFromServer's
+   * own guard/merge path rather than a parallel reimplementation, so a real
+   * navigation landing on a date that's already been prefetched joins the
+   * same in-flight request instead of firing a duplicate one. */
+  function prefetchAdjacentDays(centerDateKey: string): void {
+    for (const neighbor of [
+      addDateKeyDays(centerDateKey, -1),
+      addDateKeyDays(centerDateKey, 1),
+    ]) {
+      void refreshFromServer(neighbor, { allowCached: true }).catch(
+        () => undefined,
+      );
+    }
   }
 
   async function bootstrap() {
@@ -111,14 +174,26 @@ export function useDaily() {
 
   async function loadDay(dateKey: string) {
     if (!accountId.value) return;
-    loadingDates.value = { ...loadingDates.value, [dateKey]: true };
+    // Only surface the loading flag on a genuine first look at this date.
+    // A date we already have a projection for (an earlier visit, or a
+    // background prefetch) has something correct to show immediately —
+    // flipping the flag on then off around fast, already-warm local/network
+    // no-ops just flickers the skeleton/empty-state UI for no reason.
+    const isFirstLook = !projections.value[dateKey];
+    if (isFirstLook) {
+      loadingDates.value = { ...loadingDates.value, [dateKey]: true };
+    }
     error.value = null;
     try {
       await projectDate(dateKey);
       if (offline.isOnline.value) {
         await offline.sync();
         await bootstrap();
-        await refreshFromServer(dateKey);
+        // Trust a recently-confirmed date (whether that confirmation came
+        // from an earlier visit or a background prefetch) — repeat
+        // navigation shouldn't re-hit the network every time. Mutation
+        // follow-up refreshes below still always force a fresh check.
+        await refreshFromServer(dateKey, { allowCached: true });
       }
     } catch (loadError) {
       error.value =
@@ -126,7 +201,9 @@ export function useDaily() {
           ? loadError.message
           : "Unable to load this day";
     } finally {
-      loadingDates.value = { ...loadingDates.value, [dateKey]: false };
+      if (isFirstLook) {
+        loadingDates.value = { ...loadingDates.value, [dateKey]: false };
+      }
     }
   }
 
@@ -501,6 +578,7 @@ export function useDaily() {
     error,
     isSyncing: offline.isSyncing,
     loadDay,
+    prefetchAdjacentDays,
     createAction,
     saveNote,
     getNoteConflict,

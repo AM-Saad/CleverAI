@@ -57,3 +57,11 @@ Owns the day-planner slice: recurring action items, per-day placements
    and resolves correctly.
 5. Create a recurring action item and confirm it projects onto the correct
    future dates via `projectLocalDay`.
+6. Open today, wait a moment, and check the Network tab: two additional
+   `/api/daily/day/*` requests should fire (yesterday + tomorrow) once
+   today's own load finishes — not before, not in parallel with it. Tap the
+   next-day chevron and confirm the note/action items render with no
+   empty-flash, with either no new request (prefetch already resolved) or a
+   single joined request, never a duplicate. Tap next several times rapidly
+   and confirm no console errors and the final landed date shows correct
+   content (`useDaily.ts`'s `prefetchAdjacentDays`/`refreshFromServer` guard).
