@@ -13,7 +13,7 @@
         Apps
       </NuxtLink>
       <div class="min-w-0">
-        <p v-if="eyebrow" class="app-page-header__eyebrow">{{ eyebrow }}</p>
+        <UiLabel v-if="eyebrow" tag="p" size="sm" weight="bold" color="primary" uppercase>{{ eyebrow }}</UiLabel>
         <UiTitle tag="h1" size="xl" weight="bold" color="content-on-background">
           {{ title }}
         </UiTitle>
@@ -86,12 +86,5 @@ defineProps<{
   border: 1px solid var(--color-secondary);
   border-radius: var(--radius-full);
   color: var(--color-content-secondary);
-}
-.app-page-header__eyebrow {
-  color: var(--color-primary);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 </style>

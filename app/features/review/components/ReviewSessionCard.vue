@@ -42,7 +42,7 @@
         :disabled="disabled"
         @grade="emit('grade', $event)"
       />
-      <p v-else class="review-hint">{{ hint }}</p>
+      <UiParagraph v-else size="sm" color="disabled" center>{{ hint }}</UiParagraph>
     </template>
   </ReviewSessionFrame>
 </template>
@@ -171,12 +171,6 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
 .review-card-swap-leave-to {
   opacity: 0;
   transform: translateY(-14px) scale(0.985);
-}
-
-.review-hint {
-  text-align: center;
-  font-size: 13px;
-  color: var(--color-content-disabled);
 }
 
 @media (prefers-reduced-motion: reduce) {

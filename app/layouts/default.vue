@@ -3,7 +3,7 @@
     <a href="#main-content" class="ds-skip">Skip to main content</a>
 
     <div class="ds-shell__frame" :class="{ 'ds-shell__frame--wide': isMarketingLanding }">
-      <main id="main-content" tabindex="-1" class="ds-shell__main" :class="{ 'ds-shell__main--tabbar': showChrome }">
+      <main id="main-content" tabindex="-1" class="ds-shell__main">
         <ServiceWorkerUpdateNotification mode="banner" />
         <slot />
       </main>
@@ -69,7 +69,7 @@ const isMarketingLanding = computed(
 
 <style scoped>
 .ds-shell {
-  height: calc(100svh - calc(74px + env(safe-area-inset-bottom)));
+  height: 100svh;
   background: var(--color-background);
   color: var(--color-content-on-background);
   display: flex
@@ -84,6 +84,7 @@ const isMarketingLanding = computed(
   max-width: 680px;
   flex-grow: 1;
   display: flex;
+  flex-direction: column;
   /* Flex items default to min-width:auto and refuse to shrink below their
      content's intrinsic width — nowrap (truncate) text inside pages would
      inflate the whole shell past the viewport. min-width:0 restores the
@@ -101,13 +102,14 @@ const isMarketingLanding = computed(
   flex-grow: 1;
   /* Same auto-minimum escape as the frame — see comment above. */
   min-width: 0;
+  /* Vertical twin of the min-width escape above: without this, a page taller
+     than the available space grows the whole shell — dragging the tab bar
+     off screen with it — instead of scrolling internally. */
+  min-height: 0;
+  overflow-y: auto;
   /* The shell owns the page gutter — pages must not add horizontal padding. */
   padding: var(--space-2) var(--space-3);
 }
-
-/* .ds-shell__main--tabbar {
-  padding-bottom: calc(74px + env(safe-area-inset-bottom));
-} */
 
 .ds-skip {
   position: absolute;

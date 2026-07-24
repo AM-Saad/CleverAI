@@ -18,14 +18,11 @@
       </template>
     </AppPageHeader>
     <WorkspacePill class="mats__wspill" />
-    <input
+    <UiFileInput
       ref="fileInput"
-      type="file"
       accept=".pdf,.txt,.md,.docx,image/*"
-      class="mats__file"
-      @change="onFile"
+      @select="onFile"
     />
-    <!-- design-allow: native file input -->
 
     <div v-if="uploading" class="mats__uploading">
       <UiSkeleton class="h-3 w-full rounded-[var(--radius-full)]" />
@@ -60,9 +57,9 @@
             <span dir="auto">{{ m.title || "Untitled material" }}</span>
           </template>
           <template #leading>
-            <span class="mats__tile-label" aria-hidden="true">{{
+            <UiLabel size="sm" weight="bold" color="content-secondary" aria-hidden="true">{{
               typeLabel(m)
-            }}</span>
+            }}</UiLabel>
           </template>
           <template #action>
             <UiIcon
@@ -92,15 +89,15 @@ const { activeId } = useActiveWorkspace();
 const materials = ref<Material[]>([]);
 const loading = ref(true);
 const uploading = ref(false);
-const fileInput = ref<HTMLInputElement | null>(null);
+const fileInput = ref<{ pick: () => void } | null>(null);
 const lastUploadToken = ref("");
 
 function pick() {
-  fileInput.value?.click();
+  fileInput.value?.pick();
 }
 
-async function onFile(e: Event) {
-  const file = (e.target as HTMLInputElement).files?.[0];
+async function onFile(files: FileList) {
+  const file = files[0];
   if (!file || !activeId.value) return;
   uploading.value = true;
   try {
@@ -116,7 +113,6 @@ async function onFile(e: Event) {
     }
   } finally {
     uploading.value = false;
-    if (fileInput.value) fileInput.value.value = "";
   }
 }
 
@@ -195,9 +191,6 @@ onMounted(async () => {
   align-self: flex-start;
   margin-top: var(--space-2);
 }
-.mats__file {
-  display: none;
-}
 .mats__uploading {
   display: flex;
   flex-direction: column;
@@ -215,10 +208,5 @@ onMounted(async () => {
   list-style: none;
   padding: 0;
   margin: 0;
-}
-.mats__tile-label {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
 }
 </style>

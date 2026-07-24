@@ -1,21 +1,21 @@
 <template>
   <div class="summary">
     <div class="summary__top">
-      <span class="summary__eyebrow">Session complete</span>
-      <div class="summary__xp">+{{ xp }} XP</div>
-      <p class="summary__sub">{{ cards }} cards · {{ minutes }} min</p>
+      <UiLabel size="sm" weight="bold" color="content-secondary" uppercase>Session complete</UiLabel>
+      <UiTitle tag="div" size="4xl" weight="extrabold" tight color="content-on-background" class="summary__xp">+{{ xp }} XP</UiTitle>
+      <UiParagraph size="sm" color="content-secondary" class="summary__sub">{{ cards }} cards · {{ minutes }} min</UiParagraph>
     </div>
 
     <div class="summary__stats">
       <UiPanel variant="subtle" size="md">
         <div class="summary__stat">
-          <span>Streak</span>
+          <UiLabel size="sm" color="content-secondary">Streak</UiLabel>
           <strong>{{ streak }} <small>days</small></strong>
         </div>
       </UiPanel>
       <UiPanel variant="subtle" size="md">
         <div class="summary__stat">
-          <span>Accuracy</span>
+          <UiLabel size="sm" color="content-secondary">Accuracy</UiLabel>
           <strong>{{ accuracy }}<small>%</small></strong>
         </div>
       </UiPanel>
@@ -27,7 +27,7 @@
           ><UiIcon name="i-lucide-medal" class="h-5 w-5"
         /></span>
         <div>
-          <span>Achievement unlocked</span>
+          <UiLabel size="sm" color="content-secondary">Achievement unlocked</UiLabel>
           <strong>{{ achievement }}</strong>
         </div>
       </div>
@@ -68,24 +68,11 @@ const emit = defineEmits<{ done: [] }>();
 .summary__top {
   margin-top: var(--space-8);
 }
-.summary__eyebrow {
-  color: var(--color-content-secondary);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
 .summary__xp {
   margin-top: var(--space-2);
-  color: var(--color-content-on-background);
-  font-size: var(--text-4xl);
-  font-weight: 800;
-  letter-spacing: -0.04em;
 }
 .summary__sub {
   margin-top: var(--space-2);
-  color: var(--color-content-secondary);
-  font-size: var(--text-sm);
 }
 .summary__stats {
   display: grid;
@@ -96,11 +83,6 @@ const emit = defineEmits<{ done: [] }>();
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
-}
-.summary__stat span,
-.summary__achievement span {
-  color: var(--color-content-secondary);
-  font-size: var(--text-xs);
 }
 .summary__stat strong {
   color: var(--color-content-on-surface-strong);

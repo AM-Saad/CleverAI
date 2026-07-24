@@ -91,6 +91,13 @@ function getStatusLabel(model: { isDownloading: boolean; isLoading: boolean; isR
   if (model.isReady) return 'Ready';
   return 'Idle';
 }
+
+function getStatusTone(model: { isDownloading: boolean; isLoading: boolean; isReady?: boolean; progress: number }) {
+  if (model.isDownloading) return 'info' as const;
+  if (model.isLoading) return 'warning' as const;
+  if (model.isReady) return 'success' as const;
+  return 'neutral' as const;
+}
 </script>
 
 <template>
@@ -137,13 +144,14 @@ function getStatusLabel(model: { isDownloading: boolean; isLoading: boolean; isR
             <span class="text-xs font-medium text-white/90 truncate" :title="model.modelId">
               {{ getFriendlyName(model.modelId) }}
             </span>
-            <span class="text-[10px] font-semibold uppercase tracking-wider shrink-0 px-1.5 py-0.5 rounded-[var(--radius-md)]" :class="{
-              'ai-dl-badge-downloading': model.isDownloading,
-              'ai-dl-badge-loading': model.isLoading && !model.isDownloading,
-              'ai-dl-badge-ready': model.isReady && !model.isDownloading && !model.isLoading,
-            }">
+            <UiBadge
+              :tone="getStatusTone(model)"
+              size="xs"
+              class="shrink-0"
+              :class="{ 'ai-dl-badge-pulse': model.isLoading && !model.isDownloading }"
+            >
               {{ getStatusLabel(model) }}
-            </span>
+            </UiBadge>
           </div>
 
           <!-- Progress bar (for downloading) -->
@@ -215,20 +223,8 @@ function getStatusLabel(model: { isDownloading: boolean; isLoading: boolean; isR
 }
 
 /* Badges */
-.ai-dl-badge-downloading {
-  background: color-mix(in srgb, var(--color-accent-blue) 15%, transparent);
-  color: var(--color-accent-blue);
-}
-
-.ai-dl-badge-loading {
-  background: color-mix(in srgb, var(--color-warning) 15%, transparent);
-  color: var(--color-warning);
+.ai-dl-badge-pulse {
   animation: ai-badge-blink 1.4s ease-in-out infinite;
-}
-
-.ai-dl-badge-ready {
-  background: color-mix(in srgb, var(--color-success) 15%, transparent);
-  color: var(--color-success);
 }
 
 @keyframes ai-badge-blink {
@@ -316,7 +312,7 @@ function getStatusLabel(model: { isDownloading: boolean; isLoading: boolean; isR
   .ai-dl-progress-fill::after,
   .ai-dl-shimmer,
   .ai-dl-icon-wrap,
-  .ai-dl-badge-loading {
+  .ai-dl-badge-pulse {
     animation: none !important;
     transition: none !important;
   }

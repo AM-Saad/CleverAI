@@ -63,6 +63,10 @@ const props = withDefaults(
     disabled?: boolean;
     variant?: "default" | "outline";
     size?: "xs" | "sm" | "md" | "lg";
+    /** Corner radius — "lg" (default) matches the standard card radius. */
+    radius?: "lg" | "xl" | "2xl";
+    /** Resting shadow elevation — "none" (default) is flat. */
+    shadow?: "none" | "sm" | "md" | "lg";
     className?: string;
     contentClass?: string;
   }>(),
@@ -75,6 +79,8 @@ const props = withDefaults(
     disabled: false,
     variant: "outline",
     size: "md",
+    radius: "lg",
+    shadow: "none",
     className: "",
     contentClass: "",
   },
@@ -93,7 +99,7 @@ const resolvedRel = computed(() => props.rel ?? "noopener noreferrer");
 const interactiveCard = tv({
   slots: {
     root: [
-      "group flex w-full min-w-0 flex-col overflow-hidden rounded-[var(--component-card-radius)] border text-left",
+      "group flex w-full min-w-0 flex-col overflow-hidden border text-left",
       interactiveTransition,
       pressedScale,
       disabledState,
@@ -143,6 +149,17 @@ const interactiveCard = tv({
       },
       false: {},
     },
+    radius: {
+      lg: { root: "rounded-[var(--component-card-radius)]" },
+      xl: { root: "rounded-[var(--radius-xl)]" },
+      "2xl": { root: "rounded-[var(--radius-2xl)]" },
+    },
+    shadow: {
+      none: {},
+      sm: { root: "shadow-[var(--shadow-card)]" },
+      md: { root: "shadow-[var(--shadow-dropdown)]" },
+      lg: { root: "shadow-[var(--shadow-card-hover)]" },
+    },
   },
 });
 
@@ -151,6 +168,8 @@ const ui = computed(() =>
     variant: props.variant,
     size: props.size,
     selected: props.selected,
+    radius: props.radius,
+    shadow: props.shadow,
   }),
 );
 

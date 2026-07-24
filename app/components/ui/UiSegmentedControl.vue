@@ -24,7 +24,12 @@
         class="h-4 w-4"
         aria-hidden="true"
       />
-      <span>{{ item.label }}</span>
+      <span class="whitespace-nowrap">{{ item.label }}</span>
+      <span
+        v-if="item.count !== undefined"
+        :class="ui.count({ selected: model === item.value })"
+        >{{ item.count }}</span
+      >
     </button>
   </div>
 </template>
@@ -43,6 +48,7 @@ export interface SegmentedControlItem {
   value: string;
   label: string;
   icon?: string;
+  count?: number;
   disabled?: boolean;
 }
 
@@ -68,6 +74,8 @@ const segmented = tv({
       focusRing,
       "hover:bg-surface hover:text-content-on-surface-strong",
     ].join(" "),
+    count:
+      "inline-flex min-w-[18px] shrink-0 items-center justify-center rounded-full px-1 text-[10px] font-bold",
   },
   variants: {
     size: {
@@ -77,8 +85,13 @@ const segmented = tv({
     selected: {
       true: {
         item: "bg-primary text-on-primary hover:bg-primary-hover hover:text-on-primary",
+        count:
+          "bg-[color-mix(in_srgb,var(--color-on-primary)_20%,transparent)] text-on-primary",
       },
-      false: {},
+      false: {
+        count:
+          "bg-[color-mix(in_srgb,var(--color-content-on-background)_7%,transparent)] text-content-secondary",
+      },
     },
   },
 });

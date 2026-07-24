@@ -97,8 +97,8 @@ const {
 
 const dayTitle = computed(() =>
   formatDateKey(dateKey.value, undefined, {
-    weekday: "long",
-    month: "long",
+    weekday: "short",
+    month: "short",
     day: "numeric",
   }),
 );
@@ -108,17 +108,18 @@ const eyebrow = computed(() => {
   if (dateKey.value === addDateKeyDays(today.value, -1)) return "Yesterday";
   return formatDateKey(dateKey.value, undefined, { year: "numeric" });
 });
-const weekDays = computed(() =>
-  Array.from({ length: 7 }, (_, index) => {
-    const key = addDateKeyDays(dateKey.value, index - 3);
+const weekDays = computed(() => {
+  const anchor = dateKey.value;
+  return Array.from({ length: 91 }, (_, index) => {
+    const key = addDateKeyDays(anchor, index - 45);
     const value = parseDateKey(key)!;
     return {
       dateKey: key,
       weekday: formatDateKey(key, undefined, { weekday: "narrow" }),
       day: value.getUTCDate(),
     };
-  }),
-);
+  });
+});
 const accountLink = computed(() => ({
   path: "/account",
   query: { app: "daily", returnTo: `/day/${dateKey.value}` },

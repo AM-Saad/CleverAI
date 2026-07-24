@@ -3,7 +3,8 @@
     <UiCheckbox :model-value="item.completed" :aria-label="`Mark ${item.title} complete`"
       @update:model-value="$emit('toggle', Boolean($event))" />
     <div class="action-row__main">
-      <p class="action-row__title">{{ item.title }}</p>
+      <UiParagraph tag="p" size="base" :color="item.completed ? 'disabled' : 'content-on-surface'"
+        class="truncate leading-none" :class="{ 'line-through': item.completed }">{{ item.title }}</UiParagraph>
       <div class="action-row__meta">
         <UiPill v-if="item.timingLabel" size="sm" :label="item.timingLabel" :color="item.overdue
           ? 'var(--color-error)'
@@ -47,19 +48,6 @@ defineEmits<{ toggle: [completed: boolean]; move: [] }>();
 .action-row__main {
   min-width: 0;
   flex: 1;
-}
-
-.action-row__title {
-  overflow: hidden;
-  color: var(--color-content-on-surface);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  line-height: 1
-}
-
-.action-row--completed .action-row__title {
-  color: var(--color-content-disabled);
-  text-decoration: line-through;
 }
 
 .action-row__meta {

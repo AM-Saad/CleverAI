@@ -1,81 +1,39 @@
 <template>
   <div class="language-page">
-    <AppPageHeader
-      title="Language"
-      subtitle="Capture vocabulary and practice it"
-      back-to="/learn"
-    />
+    <AppPageHeader title="Language" subtitle="Capture vocabulary and practice it" back-to="/learn" />
 
-    <LanguageCapturePanel
-      v-model:word="queryWord"
-      v-model:translate="translateCapturedWord"
-      :capturing="capturing"
-      :result="result"
-      :error="captureErrorMessage"
-      :input-placeholder="inputPlaceholder"
-      :direction-label="directionLabel"
-      :native-language-label="getLanguageLabel(nativeLanguage)"
-      :translation-label="translationLabel"
-      :example-text="firstExample?.text"
-      :example-translation="firstExample?.translation"
-      :highlighted-example-html="highlightedExampleHtml"
-      @submit="capture"
-      @reset="resetCapture"
-      @speak="speak"
-    />
+    <LanguageCapturePanel v-model:word="queryWord" v-model:translate="translateCapturedWord" :capturing="capturing"
+      :result="result" :error="captureErrorMessage" :input-placeholder="inputPlaceholder"
+      :direction-label="directionLabel" :native-language-label="getLanguageLabel(nativeLanguage)"
+      :translation-label="translationLabel" :example-text="firstExample?.text"
+      :example-translation="firstExample?.translation" :highlighted-example-html="highlightedExampleHtml"
+      @submit="capture" @reset="resetCapture" @speak="speak" />
 
     <section class="language-bank" aria-labelledby="language-bank-title">
       <div class="language-bank__header">
         <div>
-          <UiSubtitle id="language-bank-title" tag="h2" size="base"
-            >Word bank</UiSubtitle
-          >
-          <UiParagraph size="sm" color="content-secondary">
+          <UiSubtitle id="language-bank-title" tag="h2" size="base">Word bank</UiSubtitle>
+          <!-- <UiParagraph size="sm" color="content-secondary">
             Browse, enrich, and add saved words to review.
-          </UiParagraph>
+          </UiParagraph> -->
         </div>
-        <NuxtLink
-          v-if="dueCount"
-          to="/language/review"
-          class="language-bank__review"
-        >
+        <NuxtLink v-if="dueCount" to="/language/review" class="language-bank__review">
           Review {{ dueCount }}
           <UiIcon name="i-lucide-arrow-right" class="h-4 w-4" />
         </NuxtLink>
       </div>
 
-      <LanguageWordBankToolbar
-        v-model:search="wordSearch"
-        v-model:status="statusFilter"
-        v-model:story-only="storyOnly"
-        v-model:category="categoryFilter"
-        :status-filters="statusFilters"
-        :categories="categoryFilters"
-      />
+      <LanguageWordBankToolbar v-model:search="wordSearch" v-model:status="statusFilter" v-model:story-only="storyOnly"
+        v-model:category="categoryFilter" :status-filters="statusFilters" :categories="categoryFilters" />
 
-      <LanguageWordBankList
-        :rows="wordRows"
-        :loading="loadingWords"
-        :loading-more="loadingMoreWords"
-        :has-more="hasMoreWords"
-        :error="wordBankError"
-        :empty-message="wordBankEmptyMessage"
-        :deleting-id="deletingId"
-        @open="openWordDetails"
-        @enroll="enrollWord"
-        @delete="deleteWord"
-        @load-more="loadMoreWords"
-      />
+      <LanguageWordBankList :rows="wordRows" :loading="loadingWords" :loading-more="loadingMoreWords"
+        :has-more="hasMoreWords" :error="wordBankError" :empty-message="wordBankEmptyMessage" :deleting-id="deletingId"
+        @open="openWordDetails" @enroll="enrollWord" @delete="deleteWord" @load-more="loadMoreWords" />
     </section>
 
-    <LanguageWordDetailModal
-      v-model:open="detailOpen"
-      :word="selectedWord"
-      :generating-story="storyBusyId === selectedWord?.id"
-      :enrolling="enrollingId === selectedWord?.id"
-      @generate-story="generateStoryFor"
-      @enroll="enrollWord"
-    />
+    <LanguageWordDetailModal v-model:open="detailOpen" :word="selectedWord"
+      :generating-story="storyBusyId === selectedWord?.id" :enrolling="enrollingId === selectedWord?.id"
+      @generate-story="generateStoryFor" @enroll="enrollWord" />
   </div>
 </template>
 
@@ -213,8 +171,11 @@ const statusFilters = computed(() => [
   },
 ]);
 const categoryFilters = computed(() => [
-  "all",
-  ...categories.value.slice(0, 5),
+  { value: "all", label: "All categories" },
+  ...categories.value.map((category) => ({
+    value: category,
+    label: category,
+  })),
 ]);
 const hasActiveWordFilters = computed(
   () =>
@@ -442,18 +403,21 @@ onBeforeUnmount(() => {
   gap: var(--space-3);
   padding-bottom: var(--space-6);
 }
+
 .language-bank {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   padding-top: var(--space-2);
 }
+
 .language-bank__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
 }
+
 .language-bank__review {
   display: inline-flex;
   min-height: var(--target-touch);
@@ -467,6 +431,7 @@ onBeforeUnmount(() => {
   font-size: var(--text-xs);
   font-weight: 800;
 }
+
 @media (max-width: 639px) {
   .language-bank__header {
     align-items: flex-start;

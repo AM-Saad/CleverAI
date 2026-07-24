@@ -16,17 +16,17 @@
       <div class="md__source">
         <span class="md__source-tile">{{ typeLabel }}</span>
         <div>
-          <p class="md__source-name" dir="auto">
+          <UiTitle tag="div" size="base" weight="bold" tight color="content-on-surface-strong" dir="auto">
             {{ material.title || "Untitled material" }}
-          </p>
-          <p class="md__source-meta">{{ sourceMeta }}</p>
+          </UiTitle>
+          <UiParagraph size="xs" color="content-secondary">{{ sourceMeta }}</UiParagraph>
         </div>
       </div>
 
       <!-- preview -->
       <section class="md__preview">
-        <span class="md__preview-label">SOURCE PREVIEW</span>
-        <p class="md__preview-text" dir="auto">{{ previewText }}</p>
+        <UiLabel size="sm" weight="bold" color="content-secondary" uppercase>Source preview</UiLabel>
+        <UiParagraph size="sm" dir="auto" class="md__preview-text">{{ previewText }}</UiParagraph>
         <div class="md__skeleton">
           <span style="width: 92%" /><span style="width: 78%" /><span
             style="width: 60%"
@@ -37,12 +37,12 @@
       <!-- stats -->
       <div class="md__stats">
         <div class="md__stat">
-          <span class="md__stat-num">{{ counts.flashcardsCount }}</span
-          ><span class="md__stat-label">Flashcards</span>
+          <UiTitle tag="div" size="2xl" weight="extrabold" tight color="content-on-surface-strong">{{ counts.flashcardsCount }}</UiTitle
+          ><UiLabel size="sm" color="content-secondary">Flashcards</UiLabel>
         </div>
         <div class="md__stat">
-          <span class="md__stat-num">{{ counts.questionsCount }}</span
-          ><span class="md__stat-label">Quiz</span>
+          <UiTitle tag="div" size="2xl" weight="extrabold" tight color="content-on-surface-strong">{{ counts.questionsCount }}</UiTitle
+          ><UiLabel size="sm" color="content-secondary">Quiz</UiLabel>
         </div>
       </div>
 
@@ -84,22 +84,19 @@
             :items="genTypeItems"
           />
 
-          <UiLabel tag="label" for="generation-count" class="gen__label"
+          <UiLabel tag="label" for="generation-count" size="sm" weight="bold" color="content-secondary" class="gen__label"
             >{{ maxItems }}
             {{ genType === "quiz" ? "questions" : "cards" }}</UiLabel
           >
-          <input
+          <UiSlider
             id="generation-count"
-            v-model.number="maxItems"
-            type="range"
-            min="4"
-            max="30"
-            step="1"
-            class="gen__slider"
+            v-model="maxItems"
+            :min="4"
+            :max="30"
+            :step="1"
           />
-          <!-- design-allow: native count slider -->
 
-          <UiLabel class="gen__label">Difficulty</UiLabel>
+          <UiLabel size="sm" weight="bold" color="content-secondary" class="gen__label">Difficulty</UiLabel>
           <UiSegmentedControl
             v-model="depth"
             label="Difficulty"
@@ -123,10 +120,10 @@
         <div v-if="phase === 'generating'" class="gen__loading">
           <AiShimmer />
           <AiShimmer />
-          <p class="gen__loading-text">
+          <UiParagraph size="sm" color="content-secondary" center>
             Generating {{ maxItems }}
             {{ genType === "quiz" ? "questions" : "cards" }}…
-          </p>
+          </UiParagraph>
         </div>
         <ul v-else class="gen__result">
           <li v-for="(c, i) in resultCards" :key="i" class="gen__card">
@@ -134,8 +131,8 @@
               ><UiIcon name="i-lucide-check" class="h-3 w-3"
             /></span>
             <div>
-              <p class="gen__q" dir="auto">{{ c.front }}</p>
-              <p class="gen__a" dir="auto">{{ c.back }}</p>
+              <UiParagraph size="sm" weight="bold" color="content-on-surface-strong" dir="auto">{{ c.front }}</UiParagraph>
+              <UiParagraph size="sm" color="content-secondary" dir="auto" class="gen__a">{{ c.back }}</UiParagraph>
             </div>
           </li>
         </ul>
@@ -359,32 +356,13 @@ onMounted(async () => {
   background: var(--color-primary-soft);
   color: var(--color-primary);
 }
-.md__source-name {
-  font-size: 16px;
-  font-weight: 700;
-  letter-spacing: -0.3px;
-  color: var(--color-content-on-surface-strong);
-}
-.md__source-meta {
-  font-size: 12.5px;
-  color: var(--color-content-secondary);
-}
 .md__preview {
   padding: var(--space-4);
   border-radius: var(--radius-lg);
   background: var(--color-surface-subtle);
   border: 1px solid var(--color-secondary);
 }
-.md__preview-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  color: var(--color-content-secondary);
-}
 .md__preview-text {
-  font-size: 13.5px;
-  line-height: 1.6;
-  color: var(--color-content-on-surface);
   margin-top: var(--space-2);
 }
 .md__skeleton {
@@ -414,22 +392,13 @@ onMounted(async () => {
   background: var(--ds-surface-card);
   border: 1px solid var(--color-secondary);
 }
-.md__stat-num {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  color: var(--color-content-on-surface-strong);
-}
-.md__stat-label {
-  font-size: 12px;
-  color: var(--color-content-secondary);
-}
 .md__pinned {
   position: fixed;
   left: 0;
   right: 0;
   bottom: calc(74px + env(safe-area-inset-bottom));
-  max-width: 480px;
+  /* Match the shell column's max-width (layouts/default.vue) so this doesn't look narrower than the page content on wide viewports. */
+  max-width: 680px;
   margin: 0 auto;
   padding: var(--space-3) var(--space-4) var(--space-4);
   background: var(--color-background);
@@ -452,52 +421,7 @@ onMounted(async () => {
   padding-bottom: var(--space-2);
 }
 .gen__label {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  color: var(--color-content-secondary);
   margin-top: var(--space-2);
-}
-.gen__slider {
-  height: var(--target-compact);
-  width: 100%;
-  appearance: none;
-  background: transparent;
-  outline: none;
-}
-.gen__slider::-webkit-slider-runnable-track {
-  height: 4px;
-  border-radius: var(--radius-full);
-  background: var(--color-secondary);
-}
-.gen__slider::-webkit-slider-thumb {
-  width: 18px;
-  height: 18px;
-  margin-top: -7px;
-  appearance: none;
-  border: 2px solid var(--color-background);
-  border-radius: var(--radius-full);
-  background: var(--color-primary);
-}
-.gen__slider::-moz-range-track {
-  height: 4px;
-  border-radius: var(--radius-full);
-  background: var(--color-secondary);
-}
-.gen__slider::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
-  border: 2px solid var(--color-background);
-  border-radius: var(--radius-full);
-  background: var(--color-primary);
-}
-.gen__slider:focus-visible {
-  outline: 2px solid var(--ds-focus-outline-color);
-  outline-offset: 3px;
-}
-.gen__slider:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
 }
 .gen__quota {
   display: flex;
@@ -525,11 +449,6 @@ onMounted(async () => {
   gap: var(--space-6);
   padding: var(--space-4) 0;
 }
-.gen__loading-text {
-  font-size: 13px;
-  color: var(--color-content-secondary);
-  text-align: center;
-}
 .gen__result {
   display: flex;
   flex-direction: column;
@@ -556,14 +475,7 @@ onMounted(async () => {
   color: var(--color-on-success);
   flex-shrink: 0;
 }
-.gen__q {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--color-content-on-surface-strong);
-}
 .gen__a {
-  font-size: 13px;
-  color: var(--color-content-secondary);
   margin-top: 2px;
 }
 .gen__footer {

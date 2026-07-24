@@ -239,8 +239,8 @@ watch(
   left: 0;
   right: 0;
   bottom: 0;
-  /* Align with the centered mobile app column on wider viewports. */
-  max-width: 480px;
+  /* Align with the centered shell column (max-width: 680px in layouts/default.vue) on wider viewports. */
+  max-width: 680px;
   margin: 0 auto;
   z-index: var(--z-modal);
   display: flex;

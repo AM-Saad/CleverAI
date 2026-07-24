@@ -20,11 +20,19 @@ interface Props {
   /**
    * Font weight
    */
-  weight?: "medium" | "semibold";
+  weight?: "medium" | "semibold" | "bold";
   /**
    * Text color variant
    */
-  color?: "content-on-surface";
+  color?:
+    | "content-on-surface"
+    | "content-secondary"
+    | "content-disabled"
+    | "primary";
+  /**
+   * Uppercase eyebrow/caption treatment (adds letter-spacing to match).
+   */
+  uppercase?: boolean;
 
   /**
    * Center alignment
@@ -37,6 +45,7 @@ const {
   size = "base",
   weight = "medium",
   color = "content-on-surface",
+  uppercase = false,
   center = false,
 } = defineProps<Props>();
 
@@ -51,15 +60,29 @@ const label = tv({
     weight: {
       medium: "font-medium",
       semibold: "font-semibold",
+      bold: "font-bold",
     },
     color: {
       "content-on-surface": "text-content-on-surface",
+      "content-secondary": "text-content-secondary",
+      "content-disabled": "text-content-disabled",
+      primary: "text-primary",
+    },
+    uppercase: {
+      true: "uppercase tracking-wide",
+      false: "",
     },
   },
 });
 
 const ui = computed(() =>
-  label({ size, weight, color, class: center ? "text-center" : "" }),
+  label({
+    size,
+    weight,
+    color,
+    uppercase,
+    class: center ? "text-center" : "",
+  }),
 );
 </script>
 
