@@ -1,7 +1,7 @@
 const buttonStateVariants = [
-  { color: "primary", variant: "solid", class: "bg-primary! text-on-primary! hover:bg-primary-hover! active:bg-primary-active!" },
+  { color: "primary", variant: "solid", class: "bg-primary! text-on-primary! hover:bg-primary-hover! active:bg-primary-active! focus-visible:outline-[var(--ds-focus-outline-on-primary)]!" },
   { color: "neutral", variant: "solid", class: "bg-surface-strong! text-content-on-surface-strong! hover:bg-border-strong! active:bg-border-strong!" },
-  { color: "error", variant: "solid", class: "bg-error! text-on-error! hover:bg-error/85! active:bg-error/75!" },
+  { color: "error", variant: "solid", class: "bg-error! text-on-error! hover:bg-error/85! active:bg-error/75! focus-visible:ring-2! focus-visible:ring-inset! focus-visible:ring-offset-surface!" },
 
   { color: "primary", variant: "soft", class: "bg-primary/10! text-primary! hover:bg-primary/15! active:bg-primary/20!" },
   { color: "neutral", variant: "soft", class: "bg-surface-subtle! text-content-on-surface! hover:bg-surface-strong! active:bg-border-strong!" },
@@ -92,7 +92,7 @@ export default defineAppConfig({
     },
     select: {
       slots: {
-        base: "text-content-on-surface! rounded-[var(--radius-lg)] disabled:cursor-not-allowed disabled:opacity-60! focus:outline-none focus:ring-2! focus:ring-inset focus:ring-[var(--ds-focus-outline-color)]! transition-[background-color,box-shadow,opacity] duration-[var(--duration-fast)] ease-[var(--ease-standard)]",
+        base: "text-content-on-surface! rounded-[var(--radius-lg)] disabled:cursor-not-allowed disabled:opacity-60! focus:outline-none focus:ring-2! focus:ring-inset focus:ring-[var(--ds-focus-outline-color)]! focus-visible:ring-2! focus-visible:ring-inset focus-visible:ring-[var(--ds-focus-outline-color)]! transition-[background-color,box-shadow,opacity] duration-[var(--duration-fast)] ease-[var(--ease-standard)]",
         placeholder: "text-content-disabled!",
         leadingIcon: "text-content-secondary!",
         trailingIcon: "text-content-secondary!",
@@ -111,15 +111,16 @@ export default defineAppConfig({
     },
     checkbox: {
       slots: {
-        base: "rounded-[var(--radius-full)] ring-1 ring-inset ring-secondary focus-visible:outline-2! focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--ds-focus-outline-color)]!",
-        indicator: "text-on-primary",
-        label: "text-content-on-surface",
+        base: "rounded-[var(--radius-md)] ring-1 ring-inset ring-secondary focus-visible:outline-2! focus-visible:outline-offset-[-2px]! focus-visible:outline-[var(--ds-focus-outline-color)]! active:scale-[0.98] transition-[background-color,border-color,box-shadow,transform] duration-[var(--duration-normal)] ease-[var(--ease-standard)]",
+        indicator: "text-on-primary flex items-center justify-center transition-[opacity,transform] duration-[var(--duration-normal)] ease-[var(--ease-spring)] data-[state=unchecked]:opacity-0 data-[state=unchecked]:scale-50 data-[state=checked]:opacity-100 data-[state=checked]:scale-100",
+        icon: "transition-transform duration-[var(--duration-normal)] ease-[var(--ease-spring)]",
+        label: "text-content-on-surface cursor-pointer select-none",
         description: "text-content-secondary",
       },
       variants: {
         color: {
-          primary: { base: "focus-visible:outline-[var(--ds-focus-outline-color)]!", indicator: "bg-primary" },
-          error: { base: "focus-visible:outline-[var(--ds-focus-outline-color)]!", indicator: "bg-error text-on-error" },
+          primary: { base: "focus-visible:outline-[var(--ds-focus-outline-color)]! data-[state=checked]:focus-visible:outline-[var(--ds-focus-outline-on-primary)]!", indicator: "bg-primary text-on-primary" },
+          error: { base: "focus-visible:outline-[var(--ds-focus-outline-color)]! data-[state=checked]:focus-visible:ring-2! data-[state=checked]:focus-visible:ring-inset! data-[state=checked]:focus-visible:ring-offset-surface!", indicator: "bg-error text-on-error" },
         },
         variant: {
           list: { root: "" },
@@ -134,17 +135,39 @@ export default defineAppConfig({
         },
       },
     },
+    radio: {
+      slots: {
+        base: "rounded-full ring-1 ring-inset ring-secondary focus-visible:outline-2! focus-visible:outline-offset-[-2px]! focus-visible:outline-[var(--ds-focus-outline-color)]!",
+        indicator: "bg-primary",
+        label: "text-content-on-surface",
+        description: "text-content-secondary",
+      },
+      variants: {
+        color: {
+          primary: { base: "focus-visible:outline-[var(--ds-focus-outline-color)]! data-[state=checked]:focus-visible:outline-[var(--ds-focus-outline-on-primary)]!", indicator: "bg-primary" },
+          error: { base: "focus-visible:outline-[var(--ds-focus-outline-color)]! data-[state=checked]:focus-visible:ring-2! data-[state=checked]:focus-visible:ring-inset! data-[state=checked]:focus-visible:ring-offset-surface!", indicator: "bg-error" },
+        },
+        disabled: {
+          true: {
+            root: "opacity-60!",
+            base: "cursor-not-allowed",
+            label: "cursor-not-allowed",
+            description: "cursor-not-allowed",
+          },
+        },
+      },
+    },
     switch: {
       slots: {
-        base: "border-2 border-transparent focus-visible:outline-2! focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--ds-focus-outline-color)]! data-[state=unchecked]:bg-surface-strong transition-[background-color] duration-[var(--duration-fast)] ease-[var(--ease-standard)]",
+        base: "border-2 border-transparent focus-visible:outline-2! focus-visible:outline-offset-[-2px]! focus-visible:outline-[var(--ds-focus-outline-color)]! data-[state=unchecked]:bg-surface-strong transition-[background-color] duration-[var(--duration-fast)] ease-[var(--ease-standard)]",
         thumb: "bg-surface shadow-[var(--shadow-dropdown)] transition-transform duration-[var(--duration-fast)] ease-[var(--ease-standard)]",
         label: "text-content-on-surface",
         description: "text-content-secondary",
       },
       variants: {
         color: {
-          primary: { base: "data-[state=checked]:bg-primary focus-visible:outline-[var(--ds-focus-outline-color)]!", icon: "group-data-[state=checked]:text-primary" },
-          error: { base: "data-[state=checked]:bg-error focus-visible:outline-[var(--ds-focus-outline-color)]!", icon: "group-data-[state=checked]:text-error-text" },
+          primary: { base: "data-[state=checked]:bg-primary focus-visible:outline-[var(--ds-focus-outline-color)]! data-[state=checked]:focus-visible:outline-[var(--ds-focus-outline-on-primary)]!", icon: "group-data-[state=checked]:text-primary" },
+          error: { base: "data-[state=checked]:bg-error focus-visible:outline-[var(--ds-focus-outline-color)]! data-[state=checked]:focus-visible:ring-2! data-[state=checked]:focus-visible:ring-inset! data-[state=checked]:focus-visible:ring-offset-surface!", icon: "group-data-[state=checked]:text-error-text" },
         },
         disabled: {
           true: {

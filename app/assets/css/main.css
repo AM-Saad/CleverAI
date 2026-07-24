@@ -45,6 +45,11 @@ input:not(:placeholder-shown) {
   caret-color: var(--color-content-on-background);
 }
 
+html,
+body {
+  overscroll-behavior-x: none;
+}
+
 body {
   /* font-family: "Source Sans 3", sans-serif; */
   /* font-family: "Sen", sans-serif; */
@@ -280,3 +285,48 @@ div[data-reka-popper-content-wrapper] {
     }
   }
 }
+
+/* Checkbox cross-fade & micro-spring animations */
+:where([role="checkbox"]) {
+  transition: background-color var(--duration-normal) var(--ease-standard),
+              border-color var(--duration-normal) var(--ease-standard),
+              box-shadow var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-standard) !important;
+}
+
+:where([role="checkbox"]):active {
+  transform: scale(0.92) !important;
+}
+
+:where([role="checkbox"]) svg,
+:where([role="checkbox"]) [data-slot="icon"],
+:where([role="checkbox"]) span {
+  transition: opacity var(--duration-normal) var(--ease-standard),
+              transform var(--duration-normal) var(--ease-spring) !important;
+}
+
+:where([role="checkbox"][data-state="unchecked"]) svg,
+:where([role="checkbox"][data-state="unchecked"]) [data-slot="icon"] {
+  opacity: 0 !important;
+  transform: scale(0.4) rotate(-10deg) !important;
+}
+
+:where([role="checkbox"][data-state="checked"]) svg,
+:where([role="checkbox"][data-state="checked"]) [data-slot="icon"] {
+  animation: checkbox-check-pop var(--duration-normal) var(--ease-spring) forwards !important;
+}
+
+@keyframes checkbox-check-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) rotate(-10deg);
+  }
+  65% {
+    transform: scale(1.18) rotate(3deg);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+}
+

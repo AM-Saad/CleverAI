@@ -29,6 +29,7 @@ const rootTokens = [
       "linear-gradient(90deg, rgb(49 165 217) 0%, rgb(248 54 145) 46%, rgb(255 184 0) 100%)",
   },
   { name: "--ds-focus-outline-color", value: "var(--color-primary)" },
+  { name: "--ds-focus-outline-on-primary", value: "#606771" },
   { name: "--ds-backdrop-strong", value: "rgb(2 6 23 / 0.8)" },
   { name: "--ds-backdrop-dim", value: "rgb(0 0 0 / 0.4)" },
   { name: "--ds-sheet-scrim", value: "rgb(2 6 23 / 0.45)" },
@@ -56,6 +57,7 @@ const rootTokens = [
 
 const darkTokens = [
   { name: "--ds-surface-card", value: "var(--color-surface)" },
+  { name: "--ds-focus-outline-on-primary", value: "#4b5563" },
 ];
 
 module.exports = { rootTokens, darkTokens };

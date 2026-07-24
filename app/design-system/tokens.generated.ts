@@ -93,6 +93,7 @@ export const designTokenValues = {
   "--ui-border": "var(--color-secondary)",
   "--ds-brand-gradient": "linear-gradient(90deg, rgb(49 165 217) 0%, rgb(248 54 145) 46%, rgb(255 184 0) 100%)",
   "--ds-focus-outline-color": "var(--color-primary)",
+  "--ds-focus-outline-on-primary": "#606771",
   "--ds-backdrop-strong": "rgb(2 6 23 / 0.8)",
   "--ds-backdrop-dim": "rgb(0 0 0 / 0.4)",
   "--ds-sheet-scrim": "rgb(2 6 23 / 0.45)",

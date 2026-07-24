@@ -58,6 +58,7 @@ function isAllowedFocusRing(token, sourceLine) {
 
   // The visible focus color: opaque and contrast-checked in `design:contrast`.
   if (suffix === "[var(--ds-focus-outline-color)]") return true;
+  if (suffix === "[var(--ds-focus-outline-on-primary)]") return true;
 
   // Offset utilities keep the ring separated from same-colored surfaces.
   if (suffix === "offset-0") return true;

@@ -132,6 +132,7 @@ onBeforeUnmount(() => editor.value?.destroy());
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .daily-editor__content :deep(.tiptap) {

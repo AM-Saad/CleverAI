@@ -18,7 +18,7 @@
         pressedScale,
         focusRing,
         colorMode.preference === opt.value
-          ? 'bg-primary text-on-primary scale-110'
+          ? 'bg-primary text-on-primary scale-110 aria-checked:focus-visible:outline-[var(--ds-focus-outline-on-primary)]!'
           : 'text-content-secondary hover:bg-surface-strong',
       ]"
       @click="colorMode.preference = opt.value"

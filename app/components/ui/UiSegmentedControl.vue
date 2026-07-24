@@ -84,7 +84,7 @@ const segmented = tv({
     },
     selected: {
       true: {
-        item: "bg-primary text-on-primary hover:bg-primary-hover hover:text-on-primary",
+        item: "bg-primary text-on-primary hover:bg-primary-hover hover:text-on-primary aria-checked:focus-visible:outline-[var(--ds-focus-outline-on-primary)]!",
         count:
           "bg-[color-mix(in_srgb,var(--color-on-primary)_20%,transparent)] text-on-primary",
       },

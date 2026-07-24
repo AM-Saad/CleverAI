@@ -72,6 +72,7 @@ const PAIRS = [
   ["--color-primary", "--color-surface", 3.0, "primary as UI/link on surface"],
   ["--ds-focus-outline-color", "--color-background", 3.0, "focus indicator on background"],
   ["--ds-focus-outline-color", "--color-surface", 3.0, "focus indicator on surface"],
+  ["--ds-focus-outline-on-primary", "--color-primary", 3.0, "gray focus indicator on primary fill"],
 ];
 
 const failures = [];

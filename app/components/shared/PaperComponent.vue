@@ -2,7 +2,8 @@
   <NodeViewWrapper class="paper-block-wrapper" :class="{ 'paper-block-wrapper--resizing': isResizing }"
     :style="{ width: `${W}px`, marginLeft: xOffset ? `${xOffset}px` : undefined }" data-type="paper">
     <!-- Header bar -->
-    <div class="paper-block-header" contenteditable="false">
+    <div class="paper-block-header" :class="{ 'paper-block-header--compact': isCompact }" contenteditable="false"
+      v-if="isActive">
       <div class="paper-block-controls">
         <!-- Tool selector -->
         <div class="paper-tool-group">
@@ -20,22 +21,15 @@
             <input type="color" v-model="color" class="paper-color-input" title="Stroke color" />
           </div>
 
-          <!-- design-allow: 14px color-swatch selectors, no shared style contract with Ui* buttons applies at this scale -->
-          <!-- <div class="paper-presets">
-            <button v-for="c in presetColors" :key="c" type="button" class="paper-preset-btn"
-              :class="{ 'paper-preset-btn--active': color === c }" :style="{ backgroundColor: c }"
-              :aria-label="`Use color ${c}`" :aria-pressed="color === c" @click="color = c" />
-          </div> -->
-
-          <span class="paper-sep" />
-
-          <!-- design-allow: native range slider — no Ui primitive wraps type=range -->
-          <input type="range" min="1" max="12" v-model.number="size" class="paper-range" title="Stroke width" />
-          <span class="paper-size-label">{{ size }}px</span>
+          <template v-if="!isCompact">
+            <span class="paper-sep" />
+            <input type="range" min="1" max="12" v-model.number="size" class="paper-range" title="Stroke width" />
+            <span class="paper-size-label">{{ size }}px</span>
+          </template>
         </template>
 
         <template v-if="activeTool === 'eraser'">
-          <span class="paper-hint">Click a stroke to erase it</span>
+          <span class="paper-hint">Click stroke to erase</span>
         </template>
       </div>
 
@@ -50,47 +44,56 @@
         <UiToolbarButton icon="i-lucide-grid-3x3" label="Toggle grid" :active="gridType !== 'none'"
           @click="cycleGrid" />
 
-        <span class="paper-sep" />
+        <!-- Full mode controls -->
+        <template v-if="!isCompact">
+          <span class="paper-sep" />
 
-        <!-- Zoom -->
-        <div class="paper-zoom-group">
-          <UiToolbarButton icon="i-lucide-minus" label="Zoom out" tooltip="Zoom out" :disabled="!canZoomOut"
-            @click="zoomOut" />
-          <UiToolbarButton :icon-only="false" :label="zoomPercentLabel" tooltip="Reset zoom" @click="resetZoom" />
-          <UiToolbarButton icon="i-lucide-plus" label="Zoom in" tooltip="Zoom in" :disabled="!canZoomIn"
-            @click="zoomIn" />
-        </div>
+          <!-- Zoom -->
+          <div class="paper-zoom-group">
+            <UiToolbarButton icon="i-lucide-minus" label="Zoom out" tooltip="Zoom out" :disabled="!canZoomOut"
+              @click="zoomOut" />
+            <UiToolbarButton :icon-only="false" :label="zoomPercentLabel" tooltip="Reset zoom" @click="resetZoom" />
+            <UiToolbarButton icon="i-lucide-plus" label="Zoom in" tooltip="Zoom in" :disabled="!canZoomIn"
+              @click="zoomIn" />
+          </div>
 
-        <span class="paper-sep" />
+          <span class="paper-sep" />
 
-        <!-- Download PNG -->
-        <UiToolbarButton icon="i-lucide-download" label="Export as PNG" @click="exportPng" />
+          <!-- Download PNG -->
+          <UiToolbarButton icon="i-lucide-download" label="Export as PNG" @click="exportPng" />
 
-        <span class="paper-sep" />
+          <span class="paper-sep" />
 
-        <!-- Clear -->
-        <UiToolbarButton icon="i-lucide-eraser" label="Clear all" @click="clearDrawing" />
-        <!-- Delete block -->
-        <UiToolbarButton icon="i-lucide-trash-2" label="Delete sketch" tone="error" @click="props.deleteNode()" />
+          <!-- Clear -->
+          <UiToolbarButton icon="i-lucide-eraser" label="Clear all" @click="clearDrawing" />
+          <!-- Delete block -->
+          <UiToolbarButton icon="i-lucide-trash-2" label="Delete sketch" tone="error" @click="props.deleteNode()" />
+        </template>
+
+        <!-- Compact mode overflow menu -->
+        <template v-else>
+          <span class="paper-sep" />
+          <UiActionMenu :items="compactMenuItems" size="xs" label="More options" />
+        </template>
       </div>
     </div>
 
     <!-- Canvas frame: fixed-size viewport. Content pans/zooms inside it via
          .paper-canvas-stage; the frame's own box never changes size. -->
-    <div class="paper-canvas-frame" ref="frameRef" @wheel="onWheel" @dblclick="onDoubleClick"
-      @touchstart="onFrameTouchStart" @touchmove="onFrameTouchMove" @touchend="onFrameTouchEnd"
-      @touchcancel="onFrameTouchEnd">
+    <div class="paper-canvas-frame" :class="{ 'paper-canvas-frame--active': isActive }" ref="frameRef"
+      :style="{ height: `${H}px` }" @wheel="onWheel" @dblclick="onDoubleClick" @touchstart="onFrameTouchStart"
+      @touchmove="onFrameTouchMove" @touchend="onFrameTouchEnd" @touchcancel="onFrameTouchEnd">
       <!-- Zoomable/pannable stage — only the drawing surface scales; hints,
            badges and buttons below stay outside it so they stay legible. -->
       <div class="paper-canvas-stage" :class="{ 'paper-canvas-stage--gesturing': isGesturing }" :style="stageStyle">
         <!-- Drawing surface -->
-        <svg ref="canvasRef" class="paper-canvas" :style="{ width: '100%', height: `${H}px` }" :class="[
+        <svg ref="canvasRef" class="paper-canvas" :style="{ width: `${canvasW}px`, height: `${canvasH}px` }" :class="[
           `paper-grid--${gridType}`,
           activeTool === 'eraser' ? 'paper-canvas--eraser' : '',
           isActive ? 'paper-canvas--active' : '',
           isResizing ? 'paper-canvas--resizing' : '',
-        ]" :viewBox="`0 0 ${W} ${H}`" preserveAspectRatio="xMinYMin slice" @mousedown="onPointerDown"
-          @touchstart.prevent="onPointerDown">
+        ]" :viewBox="`${minCanvasX} ${minCanvasY} ${canvasW} ${canvasH}`" preserveAspectRatio="xMinYMin slice"
+          @mousedown="onPointerDown" @touchstart="onPointerDown">
           <!-- Existing strokes (clickable for eraser) -->
           <path v-for="line in currentLines" :key="line.id" :d="line.path" :stroke="line.color"
             :stroke-width="line.size" fill="none" stroke-linecap="round" stroke-linejoin="round"
@@ -113,20 +116,27 @@
         <span>Hold to sketch</span>
       </div>
 
-      <!-- Live zoom readout while actively pinching / ctrl+scrolling -->
-      <div v-if="isGesturing" class="paper-zoom-indicator">{{ zoomPercentLabel }}</div>
+    </div>
 
-      <!-- Activation state: hold-to-draw hint (inactive) / explicit exit (active) -->
-      <div v-if="!isActive" class="paper-hold-hint" :class="{ 'paper-hold-hint--pressing': isPressPending }"
-        contenteditable="false">
-        <UiIcon name="i-lucide-hand" class="h-3 w-3" />
-        <span>Hold to draw</span>
+    <!-- Floating Overlay Chrome (pinned over canvas viewport, independent of scroll) -->
+    <div class="paper-floating-chrome" contenteditable="false">
+      <div class="paper-chrome-left">
+        <!-- Live zoom indicator -->
+        <div v-if="isGesturing" class="paper-zoom-indicator">{{ zoomPercentLabel }}</div>
       </div>
-      <UiButton v-else type="button" tone="primary" variant="soft" size="xs" class="paper-done-btn" @pointerdown.stop
-        @click="deactivate">
-        <UiIcon name="i-lucide-check" class="h-3.5 w-3.5" />
-        Done
-      </UiButton>
+
+      <div class="paper-chrome-right">
+        <!-- Hold-to-draw hint (inactive) / Done button (active) -->
+        <div v-if="!isActive" class="paper-hold-hint" :class="{ 'paper-hold-hint--pressing': isPressPending }">
+          <UiIcon name="i-lucide-hand" class="h-3 w-3" />
+          <span>Hold to draw</span>
+        </div>
+        <UiButton v-else type="button" tone="primary" variant="soft" size="xs" class="paper-done-btn" @pointerdown.stop
+          @click="deactivate">
+          <UiIcon name="i-lucide-check" class="h-3.5 w-3.5" />
+          Done
+        </UiButton>
+      </div>
     </div>
 
     <!-- Resize handles (attached to paper-block-wrapper card) -->
@@ -170,6 +180,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
 import { NodeViewWrapper, nodeViewProps } from "@tiptap/vue-3";
+import UiActionMenu from "~/components/ui/UiActionMenu.vue";
 import {
   designTokenValues,
   type DesignTokenName,
@@ -203,7 +214,7 @@ const MAX_HEIGHT = 2000;
 const EXPAND_EDGE_THRESHOLD = 36;
 const EXPAND_STEP = 96;
 const RESIZE_DIRS: ResizeDir[] = ["n", "s", "e", "w", "ne", "nw", "se", "sw"];
-const MIN_ZOOM = 0.5;
+const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 4;
 const ZOOM_STEP = 0.25;
 
@@ -217,17 +228,32 @@ const localXOffset = ref<number | null>(null);
 // `activeTool` or `gridType` rather than a persisted node attribute.
 const frameRef = ref<HTMLDivElement | null>(null);
 const zoom = ref(1);
+const targetPanX = ref(0);
+const targetPanY = ref(0);
 const panX = ref(0);
 const panY = ref(0);
+const velocityX = ref(0);
+const velocityY = ref(0);
+const isPanning = ref(false);
+const isSpacePressed = ref(false);
+
 const isPinching = ref(false);
 const isWheelZooming = ref(false);
 let wheelIdleTimer: ReturnType<typeof setTimeout> | null = null;
-const isGesturing = computed(() => isPinching.value || isWheelZooming.value);
+let animFrameId: number | null = null;
+let lastDragTime = 0;
+let lastDragX = 0;
+let lastDragY = 0;
+
+const isGesturing = computed(() => isPinching.value || isWheelZooming.value || isPanning.value);
 const canZoomIn = computed(() => zoom.value < MAX_ZOOM - 0.001);
 const canZoomOut = computed(() => zoom.value > MIN_ZOOM + 0.001);
 const zoomPercentLabel = computed(() => `${Math.round(zoom.value * 100)}%`);
+
 const stageStyle = computed(() => ({
-  transform: `translate(${panX.value}px, ${panY.value}px) scale(${zoom.value})`,
+  transform: `translate3d(${panX.value.toFixed(2)}px, ${panY.value.toFixed(2)}px, 0px) scale(${zoom.value.toFixed(3)})`,
+  transformOrigin: "0 0",
+  willChange: "transform",
 }));
 
 const W = computed(() => {
@@ -245,6 +271,98 @@ const xOffset = computed<number>(() => {
   }
   return props.node.attrs.xOffset ?? 0;
 });
+
+const isCompact = computed(() => W.value < 460);
+
+const compactMenuItems = computed(() => [
+  [
+    {
+      label: `Zoom (${zoomPercentLabel.value})`,
+      icon: "i-lucide-search",
+      onSelect: resetZoom,
+    },
+    {
+      label: "Zoom In",
+      icon: "i-lucide-plus",
+      disabled: !canZoomIn.value,
+      onSelect: zoomIn,
+    },
+    {
+      label: "Zoom Out",
+      icon: "i-lucide-minus",
+      disabled: !canZoomOut.value,
+      onSelect: zoomOut,
+    },
+  ],
+  [
+    {
+      label: "Export PNG",
+      icon: "i-lucide-download",
+      onSelect: exportPng,
+    },
+    {
+      label: "Clear All",
+      icon: "i-lucide-eraser",
+      onSelect: clearDrawing,
+    },
+  ],
+  [
+    {
+      label: "Delete Sketch",
+      icon: "i-lucide-trash-2",
+      requiresDoubleTap: true,
+      onSelect: () => props.deleteNode(),
+    },
+  ],
+]);
+
+const liveExpandLeft = ref(0);
+const liveExpandTop = ref(0);
+const liveExpandRight = ref(0);
+const liveExpandBottom = ref(0);
+
+const strokeExtent = computed(() => {
+  let minX = 0;
+  let minY = 0;
+  let maxX = 0;
+  let maxY = 0;
+  const lines = (props.node.attrs.lines || []) as StrokeLine[];
+  for (const line of lines) {
+    const numbers = line.path.match(/[-+]?\d*\.?\d+/g);
+    if (numbers) {
+      for (let i = 0; i < numbers.length; i += 2) {
+        const px = parseFloat(numbers[i] || "0");
+        const py = parseFloat(numbers[i + 1] || "0");
+        if (px < minX) minX = px;
+        if (py < minY) minY = py;
+        if (px > maxX) maxX = px;
+        if (py > maxY) maxY = py;
+      }
+    }
+  }
+  return { minX, minY, maxX, maxY };
+});
+
+const minCanvasX = computed(() => {
+  const leftBound = strokeExtent.value.minX < 0 ? strokeExtent.value.minX - 40 : 0;
+  return Math.floor(Math.min(0, leftBound, liveExpandLeft.value));
+});
+
+const minCanvasY = computed(() => {
+  const topBound = strokeExtent.value.minY < 0 ? strokeExtent.value.minY - 40 : 0;
+  return Math.floor(Math.min(0, topBound, liveExpandTop.value));
+});
+
+const maxCanvasX = computed(() => {
+  return Math.ceil(Math.max(W.value, strokeExtent.value.maxX, liveExpandRight.value));
+});
+
+const maxCanvasY = computed(() => {
+  return Math.ceil(Math.max(H.value, strokeExtent.value.maxY, liveExpandBottom.value));
+});
+
+const canvasW = computed(() => maxCanvasX.value - minCanvasX.value);
+const canvasH = computed(() => maxCanvasY.value - minCanvasY.value);
 
 function clamp(value: number, min: number, max: number) {
   return Math.min(Math.max(value, min), max);
@@ -282,6 +400,7 @@ function loadSwatches() {
 
 const tools = [
   { id: "pen" as Tool, label: "Pen", icon: "i-lucide-pencil" },
+  { id: "pan" as Tool, label: "Pan canvas", icon: "i-lucide-hand" },
   { id: "eraser" as Tool, label: "Eraser", icon: "i-lucide-eraser" },
 ];
 
@@ -301,7 +420,7 @@ const canvasRef = ref<SVGSVGElement | null>(null);
 // is unaffected either way), so it activates immediately on click.
 const isActive = ref(false);
 const isPressPending = ref(false);
-const HOLD_ACTIVATE_MS = 500;
+const HOLD_ACTIVATE_MS = 300;
 const HOLD_CANCEL_DISTANCE_PX = 10;
 let holdTimer: ReturnType<typeof setTimeout> | null = null;
 let holdStartX = 0;
@@ -348,9 +467,12 @@ let currentId = crypto.randomUUID();
 function toSvgCoords(clientX: number, clientY: number): [number, number] | null {
   if (!canvasRef.value) return null;
   const rect = canvasRef.value.getBoundingClientRect();
-  // rect is the post-zoom (visually scaled) box; divide back into SVG
-  // viewBox/user-space units so strokes land under the pointer at any zoom.
-  return [(clientX - rect.left) / zoom.value, (clientY - rect.top) / zoom.value];
+  const scaleX = canvasW.value / rect.width;
+  const scaleY = canvasH.value / rect.height;
+  return [
+    minCanvasX.value + (clientX - rect.left) * scaleX,
+    minCanvasY.value + (clientY - rect.top) * scaleY,
+  ];
 }
 
 function svgCoords(event: MouseEvent | TouchEvent): [number, number] | null {
@@ -364,6 +486,40 @@ function svgCoords(event: MouseEvent | TouchEvent): [number, number] | null {
 function onPointerDown(event: MouseEvent | TouchEvent) {
   if ("touches" in event && event.touches.length > 1) {
     // Multi-touch is reserved for pinch-to-zoom (handled on the frame).
+    return;
+  }
+
+  if (activeTool.value === "pan" || isSpacePressed.value || (!("touches" in event) && event.button === 1)) {
+    event.preventDefault();
+    const cx = "touches" in event ? (event.touches[0]?.clientX ?? 0) : event.clientX;
+    const cy = "touches" in event ? (event.touches[0]?.clientY ?? 0) : event.clientY;
+    onPanStart(cx, cy);
+
+    if ("touches" in event) {
+      const onTouchPanMove = (e: TouchEvent) => {
+        if (e.touches.length === 1) {
+          onPanMove(e.touches[0]?.clientX ?? 0, e.touches[0]?.clientY ?? 0);
+        }
+      };
+      const onTouchPanEnd = () => {
+        onPanEnd();
+        window.removeEventListener("touchmove", onTouchPanMove);
+        window.removeEventListener("touchend", onTouchPanEnd);
+        window.removeEventListener("touchcancel", onTouchPanEnd);
+      };
+      window.addEventListener("touchmove", onTouchPanMove, { passive: false });
+      window.addEventListener("touchend", onTouchPanEnd);
+      window.addEventListener("touchcancel", onTouchPanEnd);
+    } else {
+      const onPanDragMove = (e: MouseEvent) => onPanMove(e.clientX, e.clientY);
+      const onPanDragEnd = () => {
+        onPanEnd();
+        window.removeEventListener("mousemove", onPanDragMove);
+        window.removeEventListener("mouseup", onPanDragEnd);
+      };
+      window.addEventListener("mousemove", onPanDragMove);
+      window.addEventListener("mouseup", onPanDragEnd);
+    }
     return;
   }
 
@@ -507,25 +663,41 @@ function buildPath(pts: [number, number][]): string {
   return d3.line().curve(d3.curveBasis)(pts) || "";
 }
 
-/** Grows the wrapper (never the stroke data) once ink nears the right or
- *  bottom edge, so writing never hits a hard wall mid-stroke. */
+/** Grows the inner canvas surface in all 4 directions (left, right, top, bottom)
+ *  once ink nears any edge, and auto-scrolls the viewport frame. */
 function maybeExpandForPoint(x: number, y: number) {
-  const maxWidth = containerWidth.value || W.value;
-  let nextWidth = W.value;
-  let nextHeight = H.value;
-
-  if (x > nextWidth - EXPAND_EDGE_THRESHOLD && nextWidth < maxWidth) {
-    nextWidth = Math.min(nextWidth + EXPAND_STEP, maxWidth);
+  if (x < minCanvasX.value + EXPAND_EDGE_THRESHOLD) {
+    liveExpandLeft.value = Math.min(liveExpandLeft.value, Math.round(x - EXPAND_STEP));
   }
-  if (y > nextHeight - EXPAND_EDGE_THRESHOLD && nextHeight < MAX_HEIGHT) {
-    nextHeight = Math.min(nextHeight + EXPAND_STEP, MAX_HEIGHT);
+  if (x > maxCanvasX.value - EXPAND_EDGE_THRESHOLD) {
+    liveExpandRight.value = Math.max(liveExpandRight.value, Math.round(x + EXPAND_STEP));
+  }
+  if (y < minCanvasY.value + EXPAND_EDGE_THRESHOLD) {
+    liveExpandTop.value = Math.min(liveExpandTop.value, Math.round(y - EXPAND_STEP));
+  }
+  if (y > maxCanvasY.value - EXPAND_EDGE_THRESHOLD) {
+    liveExpandBottom.value = Math.max(liveExpandBottom.value, Math.round(y + EXPAND_STEP));
   }
 
-  if (nextWidth !== W.value || nextHeight !== H.value) {
-    props.updateAttributes({
-      width: Math.round(nextWidth),
-      height: Math.round(nextHeight),
-    });
+  if (isDrawing.value && frameRef.value && canvasRef.value) {
+    const frame = frameRef.value;
+    const margin = 40;
+    const rect = canvasRef.value.getBoundingClientRect();
+    const screenX = rect.left + ((x - minCanvasX.value) / canvasW.value) * rect.width;
+    const screenY = rect.top + ((y - minCanvasY.value) / canvasH.value) * rect.height;
+    const frameRect = frame.getBoundingClientRect();
+
+    if (screenX > frameRect.right - margin) {
+      frame.scrollLeft += (screenX - (frameRect.right - margin));
+    } else if (screenX < frameRect.left + margin) {
+      frame.scrollLeft -= ((frameRect.left + margin) - screenX);
+    }
+
+    if (screenY > frameRect.bottom - margin) {
+      frame.scrollTop += (screenY - (frameRect.bottom - margin));
+    } else if (screenY < frameRect.top + margin) {
+      frame.scrollTop -= ((frameRect.top + margin) - screenY);
+    }
   }
 }
 
@@ -681,27 +853,86 @@ function relToFrame(clientX: number, clientY: number): { x: number; y: number } 
 }
 
 function clampPan() {
-  if (zoom.value <= 1) {
-    // Shrunk below 100%: center it instead of leaving it pinned to the
-    // top-left corner with dead space at the bottom/right.
-    panX.value = (W.value - W.value * zoom.value) / 2;
-    panY.value = (H.value - H.value * zoom.value) / 2;
-    return;
-  }
-  panX.value = clamp(panX.value, W.value * (1 - zoom.value), 0);
-  panY.value = clamp(panY.value, H.value * (1 - zoom.value), 0);
+  // Pan is unconstrained in all 4 directions (infinite canvas)
+}
+
+// ─── Smooth Kinetic Pan Animation Loop ─────────────────────────
+function startPanAnimationLoop() {
+  if (animFrameId) return;
+
+  const step = () => {
+    if (isPanning.value) {
+      panX.value += (targetPanX.value - panX.value) * 0.35;
+      panY.value += (targetPanY.value - panY.value) * 0.35;
+    } else if (Math.abs(velocityX.value) > 0.05 || Math.abs(velocityY.value) > 0.05) {
+      targetPanX.value += velocityX.value * 16;
+      targetPanY.value += velocityY.value * 16;
+      clampPan();
+      velocityX.value *= 0.88;
+      velocityY.value *= 0.88;
+      panX.value += (targetPanX.value - panX.value) * 0.35;
+      panY.value += (targetPanY.value - panY.value) * 0.35;
+    } else {
+      velocityX.value = 0;
+      velocityY.value = 0;
+      panX.value = targetPanX.value;
+      panY.value = targetPanY.value;
+      animFrameId = null;
+      return;
+    }
+
+    animFrameId = requestAnimationFrame(step);
+  };
+
+  animFrameId = requestAnimationFrame(step);
+}
+
+function onPanStart(clientX: number, clientY: number) {
+  isPanning.value = true;
+  velocityX.value = 0;
+  velocityY.value = 0;
+  lastDragX = clientX;
+  lastDragY = clientY;
+  lastDragTime = performance.now();
+  startPanAnimationLoop();
+}
+
+function onPanMove(clientX: number, clientY: number) {
+  if (!isPanning.value) return;
+  const now = performance.now();
+  const dt = Math.max(now - lastDragTime, 1);
+  const dx = clientX - lastDragX;
+  const dy = clientY - lastDragY;
+
+  targetPanX.value += dx;
+  targetPanY.value += dy;
+
+  velocityX.value = dx / dt;
+  velocityY.value = dy / dt;
+
+  lastDragX = clientX;
+  lastDragY = clientY;
+  lastDragTime = now;
+}
+
+function onPanEnd() {
+  if (!isPanning.value) return;
+  isPanning.value = false;
+  velocityX.value = clamp(velocityX.value, -1.8, 1.8);
+  velocityY.value = clamp(velocityY.value, -1.8, 1.8);
 }
 
 /** Rescale to `nextZoom`, keeping whatever content sits under frame-relative
  *  point (relX, relY) pinned under that same point afterward. */
 function applyZoom(nextZoom: number, relX: number, relY: number) {
   const clamped = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
-  const contentX = (relX - panX.value) / zoom.value;
-  const contentY = (relY - panY.value) / zoom.value;
+  const contentX = (relX - targetPanX.value) / zoom.value;
+  const contentY = (relY - targetPanY.value) / zoom.value;
   zoom.value = clamped;
-  panX.value = relX - contentX * clamped;
-  panY.value = relY - contentY * clamped;
+  targetPanX.value = relX - contentX * clamped;
+  targetPanY.value = relY - contentY * clamped;
   clampPan();
+  startPanAnimationLoop();
 }
 
 function zoomIn() {
@@ -714,8 +945,12 @@ function zoomOut() {
 
 function resetZoom() {
   zoom.value = 1;
+  targetPanX.value = 0;
+  targetPanY.value = 0;
   panX.value = 0;
   panY.value = 0;
+  velocityX.value = 0;
+  velocityY.value = 0;
   haptics.selection();
 }
 
@@ -728,8 +963,6 @@ function onDoubleClick(event: MouseEvent) {
   applyZoom(2, rel.x, rel.y);
 }
 
-// Only ctrl/cmd+wheel zooms (trackpad pinch reports as this too); plain
-// wheel/scroll passes through untouched so the note keeps scrolling normally.
 function onWheel(event: WheelEvent) {
   if (!event.ctrlKey && !event.metaKey) return;
   event.preventDefault();
@@ -756,17 +989,18 @@ function touchMid(touches: TouchList): { x: number; y: number } {
 }
 
 let lastPinchDist = 0;
+let lastTouchMid = { x: 0, y: 0 };
 
 function onFrameTouchStart(event: TouchEvent) {
   if (event.touches.length !== 2) return;
   event.preventDefault();
-  // A second finger means "pinch," not "draw" — hand off cleanly from
-  // whatever the first finger was doing (pending hold or an in-progress
-  // stroke; onPointerUp finalizes it exactly like a normal pen-lift).
   onHoldCancel();
   onPointerUp();
   isPinching.value = true;
   lastPinchDist = touchDist(event.touches);
+  const mid = touchMid(event.touches);
+  lastTouchMid = mid;
+  onPanStart(mid.x, mid.y);
 }
 
 function onFrameTouchMove(event: TouchEvent) {
@@ -774,13 +1008,23 @@ function onFrameTouchMove(event: TouchEvent) {
   event.preventDefault();
   const dist = touchDist(event.touches);
   const mid = touchMid(event.touches);
-  const rel = relToFrame(mid.x, mid.y);
-  applyZoom(zoom.value * (dist / lastPinchDist), rel.x, rel.y);
-  lastPinchDist = dist;
+
+  if (Math.abs(dist - lastPinchDist) > 2) {
+    const rel = relToFrame(mid.x, mid.y);
+    applyZoom(zoom.value * (dist / lastPinchDist), rel.x, rel.y);
+    lastPinchDist = dist;
+    lastDragX = mid.x;
+    lastDragY = mid.y;
+  } else {
+    onPanMove(mid.x, mid.y);
+  }
 }
 
 function onFrameTouchEnd(event: TouchEvent) {
-  if (event.touches.length < 2) isPinching.value = false;
+  if (event.touches.length < 2) {
+    isPinching.value = false;
+    onPanEnd();
+  }
 }
 
 // Re-clamp if the wrapper is resized (via drag handles or edge-expansion)
@@ -803,6 +1047,18 @@ function measureContainerWidth() {
   }
 }
 
+function onKeyDown(e: KeyboardEvent) {
+  if (e.code === "Space" && !isSpacePressed.value && !["INPUT", "TEXTAREA"].includes((e.target as HTMLElement)?.tagName)) {
+    isSpacePressed.value = true;
+  }
+}
+
+function onKeyUp(e: KeyboardEvent) {
+  if (e.code === "Space") {
+    isSpacePressed.value = false;
+  }
+}
+
 onMounted(() => {
   loadSwatches();
   color.value = resolveToken("--color-accent-indigo");
@@ -813,6 +1069,9 @@ onMounted(() => {
     containerResizeObserver = new ResizeObserver(() => measureContainerWidth());
     containerResizeObserver.observe(outer);
   }
+
+  window.addEventListener("keydown", onKeyDown);
+  window.addEventListener("keyup", onKeyUp);
 });
 
 onBeforeUnmount(() => {
@@ -821,6 +1080,9 @@ onBeforeUnmount(() => {
   window.removeEventListener("touchmove", onPointerMove);
   window.removeEventListener("touchend", onPointerUp);
   window.removeEventListener("touchcancel", onPointerUp);
+  window.removeEventListener("keydown", onKeyDown);
+  window.removeEventListener("keyup", onKeyUp);
+  if (animFrameId) cancelAnimationFrame(animFrameId);
   onHoldCancel();
   onResizeEnd();
   if (wheelIdleTimer) clearTimeout(wheelIdleTimer);
@@ -835,10 +1097,7 @@ onBeforeUnmount(() => {
   display: block;
   box-sizing: border-box;
   max-width: 100%;
-  /* border: 1px solid var(--color-secondary); */
   border-radius: var(--radius-xl);
-  /* background: var(--color-surface); */
-  /* box-shadow: var(--shadow-card, 0 2px 8px rgba(0, 0, 0, 0.04)); */
   transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -851,26 +1110,30 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  padding: 0.4rem 0.75rem;
-  /* background: var(--color-surface-subtle); */
+  gap: 0.35rem;
+  padding: 0.35rem 0.6rem;
   border-bottom: 1px solid var(--color-secondary);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
   user-select: none;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+}
+
+.paper-block-header--compact {
+  padding: 0.25rem 0.5rem;
 }
 
 .paper-block-controls {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
 .paper-block-actions {
   display: flex;
   align-items: center;
   gap: 2px;
+  flex-shrink: 0;
 }
 
 /* Tool buttons */
@@ -969,6 +1232,13 @@ onBeforeUnmount(() => {
   width: 100%;
   border-radius: 0 0 var(--radius-xl) var(--radius-xl);
   overflow: hidden;
+  touch-action: pan-y;
+  scrollbar-width: thin;
+}
+
+.paper-canvas-frame--active {
+  overflow: auto;
+  touch-action: none;
 }
 
 .paper-canvas-stage {
@@ -1058,11 +1328,30 @@ onBeforeUnmount(() => {
 
 
 
-/* Hold-to-draw hint / Done button (top-right of the canvas frame) */
-.paper-hold-hint {
+/* ─── Floating Overlay Chrome (Outside scroll container) ───────── */
+.paper-floating-chrome {
   position: absolute;
-  top: 8px;
+  top: 44px;
+  left: 8px;
   right: 8px;
+  z-index: 10;
+  pointer-events: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.paper-chrome-left,
+.paper-chrome-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+/* Hold-to-draw hint / Done button */
+.paper-hold-hint {
+  position: relative;
   z-index: 4;
   display: inline-flex;
   align-items: center;
@@ -1075,6 +1364,7 @@ onBeforeUnmount(() => {
   font-weight: 600;
   pointer-events: none;
   opacity: 0.85;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
@@ -1085,18 +1375,15 @@ onBeforeUnmount(() => {
 }
 
 .paper-done-btn {
-  position: absolute;
-  top: 8px;
-  right: 8px;
+  position: relative;
   z-index: 4;
+  pointer-events: auto;
   box-shadow: var(--shadow-dropdown);
 }
 
-/* Live zoom readout (top-left, mirrors the hold-hint's top-right chrome) */
+/* Live zoom readout */
 .paper-zoom-indicator {
-  position: absolute;
-  top: 8px;
-  left: 8px;
+  position: relative;
   z-index: 4;
   padding: 4px 8px;
   border-radius: var(--radius-full);
@@ -1107,6 +1394,7 @@ onBeforeUnmount(() => {
   font-family: monospace;
   pointer-events: none;
   opacity: 0.9;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 /* ─── Dark Mode ────────────────────────────────────────────────── */
