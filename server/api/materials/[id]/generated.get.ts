@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
+import { MaterialGeneratedContentSchema } from "@@/shared/utils/material.contract";
 
 const ParamSchema = z.object({
   id: z
@@ -44,14 +45,44 @@ export default defineEventHandler(async (event) => {
     throw Errors.forbidden("You do not have access to this material.");
   }
 
-  // Count generated content for this material
-  const [flashcardsCount, questionsCount] = await Promise.all([
-    prisma.flashcard.count({ where: { materialId: params.id } }),
-    prisma.question.count({ where: { materialId: params.id } }),
+  const [flashcards, questions] = await Promise.all([
+    prisma.flashcard.findMany({
+      where: { materialId: params.id },
+      select: {
+        id: true,
+        front: true,
+        back: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.question.findMany({
+      where: { materialId: params.id },
+      select: {
+        id: true,
+        question: true,
+        choices: true,
+        answerIndex: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+    }),
   ]);
 
-  return success({
-    flashcardsCount,
-    questionsCount,
-  });
+  const data = {
+    flashcardsCount: flashcards.length,
+    questionsCount: questions.length,
+    flashcards,
+    questions,
+  };
+
+  if (process.env.NODE_ENV === "development") {
+    MaterialGeneratedContentSchema.parse(data);
+  }
+
+  return success(data);
 });

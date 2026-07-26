@@ -1,10 +1,6 @@
 <template>
   <div class="md">
-    <AppPageHeader
-      title="Material"
-      subtitle="Source and generated study content"
-      back-to="/materials"
-    />
+    <AppPageHeader title="Material" subtitle="Source and generated study content" back-to="/materials" />
 
     <div v-if="loading" class="md__list">
       <UiSkeleton class="h-16 w-full rounded-[var(--component-card-radius)]" />
@@ -19,98 +15,86 @@
           <UiTitle tag="div" size="base" weight="bold" tight color="content-on-surface-strong" dir="auto">
             {{ material.title || "Untitled material" }}
           </UiTitle>
-          <UiParagraph size="xs" color="content-secondary">{{ sourceMeta }}</UiParagraph>
+          <UiParagraph size="xs" color="content-secondary">{{
+            sourceMeta
+            }}</UiParagraph>
         </div>
       </div>
 
       <!-- preview -->
       <section class="md__preview">
         <UiLabel size="sm" weight="bold" color="content-secondary" uppercase>Source preview</UiLabel>
-        <UiParagraph size="sm" dir="auto" class="md__preview-text">{{ previewText }}</UiParagraph>
-        <div class="md__skeleton">
-          <span style="width: 92%" /><span style="width: 78%" /><span
-            style="width: 60%"
-          />
+        <div id="material-source-preview" class="md__preview-body"
+          :class="{ 'md__preview-body--expanded': previewExpanded }">
+          <UiParagraph size="sm" dir="auto" class="md__preview-text">{{
+            previewText
+            }}</UiParagraph>
         </div>
+        <UiButton v-if="previewCanExpand" tone="neutral" variant="link" size="sm" :trailing-icon="previewExpanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'
+          " :aria-expanded="previewExpanded" aria-controls="material-source-preview"
+          @click="previewExpanded = !previewExpanded">
+          {{ previewExpanded ? "See less" : "See more" }}
+        </UiButton>
       </section>
 
       <!-- stats -->
-      <div class="md__stats">
+      <!-- <div class="md__stats">
         <div class="md__stat">
-          <UiTitle tag="div" size="2xl" weight="extrabold" tight color="content-on-surface-strong">{{ counts.flashcardsCount }}</UiTitle
+          <UiTitle
+            tag="div"
+            size="2xl"
+            weight="extrabold"
+            tight
+            color="content-on-surface-strong"
+            >{{ counts.flashcardsCount }}</UiTitle
           ><UiLabel size="sm" color="content-secondary">Flashcards</UiLabel>
         </div>
         <div class="md__stat">
-          <UiTitle tag="div" size="2xl" weight="extrabold" tight color="content-on-surface-strong">{{ counts.questionsCount }}</UiTitle
+          <UiTitle
+            tag="div"
+            size="2xl"
+            weight="extrabold"
+            tight
+            color="content-on-surface-strong"
+            >{{ counts.questionsCount }}</UiTitle
           ><UiLabel size="sm" color="content-secondary">Quiz</UiLabel>
         </div>
-      </div>
+      </div> -->
+
+      <MaterialStudyContent v-if="counts.flashcardsCount > 0 || counts.questionsCount > 0"
+        :flashcards="generatedContent.flashcards" :questions="generatedContent.questions" />
 
       <!-- pinned generate -->
       <div class="md__pinned">
-        <UiButton
-          block
-          tone="primary"
-          size="lg"
-          leading-icon="i-lucide-sparkles"
-          @click="openGenerate"
-        >
+        <UiButton block tone="primary" size="lg" leading-icon="i-lucide-sparkles" @click="openGenerate">
           Generate from this
         </UiButton>
       </div>
     </template>
 
-    <UiEmptyState
-      v-else
-      icon="i-lucide-file-x"
-      title="Material not found"
-      description="This material may have been removed or is not available offline."
-      action-label="Back to materials"
-      @action="navigateTo('/materials')"
-    />
+    <UiEmptyState v-else icon="i-lucide-file-x" title="Material not found"
+      description="This material may have been removed or is not available offline." action-label="Back to materials"
+      @action="navigateTo('/materials')" />
 
     <!-- generate / result sheet -->
-    <UiSheet
-      v-model:open="sheetOpen"
-      :title="phase === 'result' ? 'Review before adding' : 'Generate'"
-    >
+    <UiSheet v-model:open="sheetOpen" :title="phase === 'result' ? 'Review before adding' : 'Generate'">
       <!-- config -->
       <template v-if="phase === 'config'">
         <div class="gen">
-          <UiSegmentedControl
-            v-model="genType"
-            label="Generation type"
-            full-width
-            :items="genTypeItems"
-          />
+          <UiSegmentedControl v-model="genType" label="Generation type" full-width :items="genTypeItems" />
 
-          <UiLabel tag="label" for="generation-count" size="sm" weight="bold" color="content-secondary" class="gen__label"
-            >{{ maxItems }}
-            {{ genType === "quiz" ? "questions" : "cards" }}</UiLabel
-          >
-          <UiSlider
-            id="generation-count"
-            v-model="maxItems"
-            :min="4"
-            :max="30"
-            :step="1"
-          />
+          <UiLabel tag="label" for="generation-count" size="sm" weight="bold" color="content-secondary"
+            class="gen__label">{{ maxItems }}
+            {{ genType === "quiz" ? "questions" : "cards" }}</UiLabel>
+          <UiSlider id="generation-count" v-model="maxItems" :min="4" :max="30" :step="1" />
 
           <UiLabel size="sm" weight="bold" color="content-secondary" class="gen__label">Difficulty</UiLabel>
-          <UiSegmentedControl
-            v-model="depth"
-            label="Difficulty"
-            size="sm"
-            full-width
-            :items="difficultyItems"
-          />
+          <UiSegmentedControl v-model="depth" label="Difficulty" size="sm" full-width :items="difficultyItems" />
 
           <div class="gen__quota" :class="{ 'gen__quota--warn': lowQuota }">
             <UiIcon name="i-lucide-info" class="h-4 w-4" />
             <span>{{ quotaText }}</span>
-            <NuxtLink v-if="lowQuota" to="/pricing" class="gen__pro"
-              >Go Pro</NuxtLink
-            >
+            <NuxtLink v-if="lowQuota" to="/pricing" class="gen__pro">Go Pro</NuxtLink>
           </div>
         </div>
       </template>
@@ -127,11 +111,12 @@
         </div>
         <ul v-else class="gen__result">
           <li v-for="(c, i) in resultCards" :key="i" class="gen__card">
-            <span class="gen__check"
-              ><UiIcon name="i-lucide-check" class="h-3 w-3"
-            /></span>
+            <span class="gen__check">
+              <UiIcon name="i-lucide-check" class="h-3 w-3" />
+            </span>
             <div>
-              <UiParagraph size="sm" weight="bold" color="content-on-surface-strong" dir="auto">{{ c.front }}</UiParagraph>
+              <UiParagraph size="sm" weight="bold" color="content-on-surface-strong" dir="auto">{{ c.front }}
+              </UiParagraph>
               <UiParagraph size="sm" color="content-secondary" dir="auto" class="gen__a">{{ c.back }}</UiParagraph>
             </div>
           </li>
@@ -140,25 +125,15 @@
 
       <template #footer>
         <div v-if="phase === 'config'">
-          <UiButton
-            block
-            tone="primary"
-            size="lg"
-            leading-icon="i-lucide-sparkles"
-            :disabled="quotaExceeded"
-            @click="runGenerate"
-          >
+          <UiButton block tone="primary" size="lg" leading-icon="i-lucide-sparkles" :disabled="quotaExceeded"
+            @click="runGenerate">
             Generate {{ maxItems }}
             {{ genType === "quiz" ? "questions" : "cards" }}
           </UiButton>
         </div>
         <div v-else-if="phase === 'result'" class="gen__footer">
-          <UiButton variant="ghost" tone="neutral" @click="discard"
-            >Discard</UiButton
-          >
-          <UiButton block tone="primary" :loading="adding" @click="addAll"
-            >Add all to review</UiButton
-          >
+          <UiButton variant="ghost" tone="neutral" @click="discard">Discard</UiButton>
+          <UiButton block tone="primary" :loading="adding" @click="addAll">Add all to review</UiButton>
         </div>
       </template>
     </UiSheet>
@@ -169,9 +144,13 @@
 import { ref, computed, watch, onMounted } from "vue";
 import AiShimmer from "~/components/ui/AiShimmer.vue";
 import AppPageHeader from "~/components/patterns/AppPageHeader.vue";
+import MaterialStudyContent from "~/features/materials/components/MaterialStudyContent.vue";
 import { useGenerateFromMaterial } from "~/features/materials/composables/useGenerateFromMaterial";
 import { useSubscriptionStore } from "~/composables/shared/useSubscription";
-import type { Material } from "~/shared/utils/material.contract";
+import type {
+  Material,
+  MaterialGeneratedContent,
+} from "~/shared/utils/material.contract";
 
 const { $api } = useNuxtApp();
 const route = useRoute();
@@ -180,7 +159,16 @@ const toast = useToast();
 const materialId = computed(() => String(route.params.id));
 const material = ref<Material | null>(null);
 const loading = ref(true);
-const counts = ref({ flashcardsCount: 0, questionsCount: 0 });
+const generatedContent = ref<MaterialGeneratedContent>({
+  flashcardsCount: 0,
+  questionsCount: 0,
+  flashcards: [],
+  questions: [],
+});
+const counts = computed(() => ({
+  flashcardsCount: generatedContent.value.flashcardsCount,
+  questionsCount: generatedContent.value.questionsCount,
+}));
 
 const gen = useGenerateFromMaterial(materialId);
 const subscription = useSubscriptionStore();
@@ -191,6 +179,7 @@ const genType = ref<"flashcards" | "quiz">("flashcards");
 const maxItems = ref(12);
 const depth = ref<"quick" | "balanced" | "deep">("balanced");
 const adding = ref(false);
+const previewExpanded = ref(false);
 
 const genTypeItems = [
   { value: "flashcards", label: "Flashcards" },
@@ -234,14 +223,18 @@ const sourceMeta = computed(() => {
     typeof meta?.pageCount === "number" ? `${meta.pageCount} pages · ` : "";
   const date = material.value?.createdAt
     ? new Date(material.value.createdAt as string).toLocaleDateString(
-        undefined,
-        { month: "short", day: "numeric" },
-      )
+      undefined,
+      { month: "short", day: "numeric" },
+    )
     : "";
   return `${pages}uploaded ${date}`;
 });
+const fullSourceText = computed(() => material.value?.content ?? "");
+const previewCanExpand = computed(() => fullSourceText.value.length > 280);
 const previewText = computed(() =>
-  (material.value?.content ?? "").slice(0, 280),
+  previewExpanded.value
+    ? fullSourceText.value
+    : fullSourceText.value.slice(0, 280),
 );
 
 function openGenerate() {
@@ -263,8 +256,11 @@ watch(
   (now, was) => {
     if (was && !now) {
       phase.value = gen.lastResult.value ? "result" : "config";
-      if (gen.genError.value)
+      if (gen.genError.value) {
         toast.add({ title: gen.genError.value, color: "error" });
+      } else if (gen.lastResult.value) {
+        void loadGeneratedContent();
+      }
     }
   },
 );
@@ -282,7 +278,7 @@ async function addAll() {
         color: "success",
       });
       sheetOpen.value = false;
-      await loadCounts();
+      await loadGeneratedContent();
     } else {
       toast.add({ title: "Couldn't add to review", color: "error" });
     }
@@ -296,9 +292,9 @@ function discard() {
   phase.value = "config";
 }
 
-async function loadCounts() {
+async function loadGeneratedContent() {
   const res = await $api.materials.getGeneratedContent(materialId.value);
-  if (res.success) counts.value = res.data;
+  if (res.success) generatedContent.value = res.data;
 }
 
 onMounted(async () => {
@@ -307,7 +303,7 @@ onMounted(async () => {
     const [mat] = await Promise.all([
       $api.materials.getMaterial(materialId.value),
       subscription.fetchSubscriptionStatus(),
-      loadCounts(),
+      loadGeneratedContent(),
     ]);
     if (mat.success) material.value = mat.data;
   } finally {
@@ -333,16 +329,19 @@ onMounted(async () => {
   padding-bottom: calc(var(--space-6) + 64px);
   min-height: 100dvh;
 }
+
 .md__list {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
+
 .md__source {
   display: flex;
   align-items: center;
   gap: var(--space-3);
 }
+
 .md__source-tile {
   display: grid;
   place-items: center;
@@ -356,32 +355,33 @@ onMounted(async () => {
   background: var(--color-primary-soft);
   color: var(--color-primary);
 }
+
 .md__preview {
   padding: var(--space-4);
   border-radius: var(--radius-lg);
   background: var(--color-surface-subtle);
   border: 1px solid var(--color-secondary);
 }
+
 .md__preview-text {
   margin-top: var(--space-2);
+  white-space: pre-wrap;
 }
-.md__skeleton {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: var(--space-3);
+
+.md__preview-body--expanded {
+  max-height: 320px;
+  padding-right: var(--space-2);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
-.md__skeleton span {
-  height: 8px;
-  border-radius: var(--radius-full);
-  background: var(--color-surface-strong);
-  display: block;
-}
+
 .md__stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
 }
+
 .md__stat {
   display: flex;
   flex-direction: column;
@@ -392,6 +392,7 @@ onMounted(async () => {
   background: var(--ds-surface-card);
   border: 1px solid var(--color-secondary);
 }
+
 .md__pinned {
   position: fixed;
   left: 0;
@@ -403,6 +404,7 @@ onMounted(async () => {
   padding: var(--space-3) var(--space-4) var(--space-4);
   background: var(--color-background);
 }
+
 .md__empty {
   display: flex;
   flex-direction: column;
@@ -420,9 +422,11 @@ onMounted(async () => {
   gap: var(--space-2);
   padding-bottom: var(--space-2);
 }
+
 .gen__label {
   margin-top: var(--space-2);
 }
+
 .gen__quota {
   display: flex;
   align-items: center;
@@ -434,21 +438,25 @@ onMounted(async () => {
   color: var(--color-content-secondary);
   font-size: 12.5px;
 }
+
 .gen__quota--warn {
   background: color-mix(in srgb, var(--color-warning) 14%, transparent);
   color: var(--color-warning-text);
 }
+
 .gen__pro {
   margin-left: auto;
   font-weight: 800;
   color: var(--color-primary);
 }
+
 .gen__loading {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
   padding: var(--space-4) 0;
 }
+
 .gen__result {
   display: flex;
   flex-direction: column;
@@ -457,6 +465,7 @@ onMounted(async () => {
   padding: var(--space-2) 0;
   margin: 0;
 }
+
 .gen__card {
   display: flex;
   gap: var(--space-3);
@@ -465,6 +474,7 @@ onMounted(async () => {
   background: var(--color-surface-subtle);
   border: 1px solid var(--color-secondary);
 }
+
 .gen__check {
   display: grid;
   place-items: center;
@@ -475,9 +485,11 @@ onMounted(async () => {
   color: var(--color-on-success);
   flex-shrink: 0;
 }
+
 .gen__a {
   margin-top: 2px;
 }
+
 .gen__footer {
   display: flex;
   align-items: center;

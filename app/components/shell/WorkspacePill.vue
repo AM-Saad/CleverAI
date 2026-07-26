@@ -17,6 +17,24 @@
       <UiPillIcon name="i-lucide-chevron-down" />
     </template>
   </UiPill>
+
+  <UiPill
+    v-else-if="loading"
+    variant="ghost"
+    class-name="wpill wpill--loading"
+    max-width="132px"
+    role="status"
+    aria-label="Loading workspace"
+  >
+    <UiSkeleton shape="text" width="76px" height="12px" />
+
+    <template #indicator>
+      <UiSkeleton shape="circle" width="8px" height="8px" />
+    </template>
+    <template #icon>
+      <UiSkeleton shape="circle" width="14px" height="14px" />
+    </template>
+  </UiPill>
 </template>
 
 <script setup lang="ts">
@@ -29,7 +47,7 @@ import { computed } from "vue";
 import { accentVarFor } from "~/composables/useAccentColor";
 import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace";
 
-const { activeWorkspace, openSwitcher } = useActiveWorkspace();
+const { activeWorkspace, loading, openSwitcher } = useActiveWorkspace();
 
 const accent = computed(() => {
   const w = activeWorkspace.value;
@@ -40,3 +58,10 @@ const accent = computed(() => {
   return accentVarFor(w.id);
 });
 </script>
+
+<style scoped>
+:deep(.wpill--loading) {
+  width: 132px;
+  pointer-events: none;
+}
+</style>

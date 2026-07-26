@@ -26,19 +26,21 @@
       <UiIconButton icon="i-lucide-chevron-right" label="Next day" @click="$emit('navigate', 1)" />
     </div>
 
-    <!-- 3D Cylindrical Dial Container with Fixed Center Selector -->
+    <!-- Date dial. The strip scrolls natively (so momentum and snapping are the
+         platform's), and every chip's position is a pure function of its index,
+         so nothing here has to measure the DOM per frame. -->
     <nav class="day-header__dial-wrapper" aria-label="Nearby days">
-      <!-- Stationary center selector frame -->
       <div class="day-header__fixed-selector" aria-hidden="true" />
 
-      <!-- Scrollable 3D Dial Strip -->
-      <div ref="weekContainerRef" class="day-header__dial-strip" @scroll.passive="onScroll" @scrollend="onScrollEnd"
-        @wheel="handleWheelScroll" @pointerdown.passive="onPointerDown" @pointerup.passive="onPointerUp"
+      <div ref="stripRef" class="day-header__dial-strip"
+        :class="{ 'day-header__dial-strip--seeking': isProgrammaticScroll }" @scroll.passive="onScroll"
+        @scrollend="onScrollEnd" @wheel="onWheel" @pointerdown.passive="onPointerDown" @pointerup.passive="onPointerUp"
         @pointercancel.passive="onPointerUp" @keydown="onDialKeydown">
-        <NuxtLink v-for="day in days" :key="day.dateKey" :ref="(el) => setChipRef(el, day.dateKey)"
-          :to="`/day/${day.dateKey}`" :prefetch="false" class="day-header__dial-item" :class="{
-            'day-header__dial-item--active': day.dateKey === activeDateKey,
-          }" :tabindex="day.dateKey === activeDateKey ? 0 : -1"
+        <NuxtLink v-for="(day, index) in days" :key="day.dateKey"
+          v-memo="[falloff(index), day.dateKey === activeDateKey]" :to="`/day/${day.dateKey}`" :prefetch="false"
+          class="day-header__dial-item" :data-falloff="falloff(index)"
+          :class="{ 'day-header__dial-item--active': day.dateKey === activeDateKey }"
+          :tabindex="index === focusedIndex ? 0 : -1" :aria-label="day.label"
           :aria-current="day.dateKey === activeDateKey ? 'date' : undefined">
           <span>{{ day.weekday }}</span>
           <strong>{{ day.day }}</strong>
@@ -49,15 +51,29 @@
 </template>
 
 <script setup lang="ts">
-import { nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useHaptics } from "~/composables/pwa/useHaptics";
 import DailyDatePicker from "./DailyDatePicker.vue";
+
+/**
+ * The dial is a scroll position, and everything else is derived from it.
+ *
+ *   focusedIndex = round(scrollLeft / pitch)
+ *
+ * Chips are uniformly sized, so the day under the selector is arithmetic — no
+ * per-frame DOM measurement, and no element refs that can go stale while the
+ * 91-day window slides underneath.
+ *
+ * Selection is deliberately separate from routing: the highlight and haptics
+ * follow the finger immediately, and the route commits once exactly, after
+ * motion settles. Scrubbing past six days is one navigation, not six.
+ */
 
 const props = defineProps<{
   activeDateKey: string;
   eyebrow: string;
   title: string;
-  days: readonly { dateKey: string; weekday: string; day: number }[];
+  days: readonly { dateKey: string; weekday: string; day: number; label?: string }[];
   accountLink: string | Record<string, unknown>;
 }>();
 
@@ -66,32 +82,90 @@ const emit = defineEmits<{
   selectDate: [dateKey: string];
 }>();
 
+/** Quiet time after the last scroll before the route commits. */
+const SETTLE_MS = 140;
+/** Wheel delta that equals one day. */
+const WHEEL_STEP_PX = 40;
+/** Chips beyond this distance from centre all share the faded resting style. */
+const FALLOFF_LIMIT = 4;
+
 const haptics = useHaptics();
-let lastHapticKey: string | null = null;
 
 const pickerOpen = ref(false);
-const weekContainerRef = ref<HTMLElement | null>(null);
-const chipRefs = ref<Record<string, HTMLElement | null>>({});
+const stripRef = ref<HTMLElement | null>(null);
+const focusedIndex = ref(0);
+const isProgrammaticScroll = ref(false);
 
-let isProgrammaticScroll = false;
-let scrollAnimationId: number | null = null;
-let isPointerDown = false;
-let scrolledSincePointerDown = false;
-let commitDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+/** Distance between adjacent chip centres, measured from the real DOM so the
+ *  dial keeps working under browser text scaling or a token change. */
+const pitch = ref(0);
 
-function setChipRef(el: unknown, dateKey: string) {
-  if (!el) {
-    // Vue calls the ref callback with null on unmount. The day window now
-    // recenters on navigation (see weekDays in pages/day/[date].vue), so
-    // chips actually unmount as they scroll out of range — without this,
-    // stale entries would keep pointing at detached (0,0) nodes and could
-    // skew the "closest chip to center" search in commitClosestDay.
-    delete chipRefs.value[dateKey];
-    return;
-  }
-  const node = (el as { $el?: HTMLElement }).$el ?? (el as HTMLElement);
-  chipRefs.value[dateKey] = node;
+const activeIndex = computed(() =>
+  props.days.findIndex((day) => day.dateKey === props.activeDateKey),
+);
+
+/** The day the user is currently pointing at — not necessarily the route yet. */
+const focusedKey = computed(() => props.days[focusedIndex.value]?.dateKey ?? props.activeDateKey);
+
+function falloff(index: number) {
+  return Math.min(FALLOFF_LIMIT, Math.abs(index - focusedIndex.value));
 }
+
+function clampIndex(index: number) {
+  return Math.max(0, Math.min(props.days.length - 1, index));
+}
+
+/**
+ * The day sitting under the selector, captured as the index moves rather than
+ * derived from one afterwards.
+ *
+ * It has to be recorded here because `days` is renumbered on every commit: a
+ * computed over the array would silently change meaning the moment the window
+ * recentres, and the post-commit repositioning below would then slide away
+ * from a day the user never chose.
+ */
+let centeredKey = props.activeDateKey;
+
+function setFocusedIndex(index: number) {
+  const next = clampIndex(index);
+  if (next === focusedIndex.value) return false;
+  focusedIndex.value = next;
+  const key = props.days[next]?.dateKey;
+  if (key) centeredKey = key;
+  return true;
+}
+
+// ── Geometry ─────────────────────────────────────────────────────
+// The strip is padded by half its width minus half a chip, so chip 0 sits dead
+// centre at scrollLeft 0 and chip i at scrollLeft i * pitch.
+
+function measurePitch() {
+  const strip = stripRef.value;
+  const first = strip?.firstElementChild as HTMLElement | null;
+  const second = first?.nextElementSibling as HTMLElement | null;
+  if (!first) return;
+  const next = second ? second.offsetLeft - first.offsetLeft : first.offsetWidth;
+  if (next > 0) pitch.value = next;
+}
+
+function scrollLeftFor(index: number) {
+  return index * pitch.value;
+}
+
+function indexFromScroll(scrollLeft: number) {
+  if (pitch.value <= 0) return focusedIndex.value;
+  return clampIndex(Math.round(scrollLeft / pitch.value));
+}
+
+// ── Programmatic scrolling ───────────────────────────────────────
+// Driven here rather than via scrollTo({behavior:'smooth'}) because retargeting
+// a native smooth scroll mid-flight snaps to the new target instead of blending
+// — visible when prev/next is tapped repeatedly. A generation token means an
+// interrupted run can never clear the flag belonging to a newer one.
+
+let scrollGeneration = 0;
+let scrollAnimationId: number | null = null;
+let resolveScrollAnimation: (() => void) | null = null;
 
 function prefersReducedMotion() {
   return (
@@ -101,289 +175,299 @@ function prefersReducedMotion() {
 }
 
 function easeOutCubic(t: number) {
-  return 1 - Math.pow(1 - t, 3);
+  return 1 - (1 - t) ** 3;
 }
 
-// We drive the recenter animation ourselves instead of container.scrollTo({behavior:'smooth'}):
-// passing behavior:'auto' still defers to the CSS scroll-behavior of the element (so an
-// "instant" reposition wasn't actually instant), and retargeting a native smooth scrollTo
-// mid-flight snaps to the new target instead of blending, which is visible when the user
-// taps prev/next repeatedly. Owning it lets us guarantee instant-when-asked and a clean
-// redirect from wherever the strip currently sits.
-function animateScrollLeft(container: HTMLElement, target: number, duration: number) {
+function stopScrollAnimation() {
   if (scrollAnimationId !== null) {
     cancelAnimationFrame(scrollAnimationId);
     scrollAnimationId = null;
   }
+  // Always settle the promise — a cancelled animation used to leave its awaiter
+  // suspended forever.
+  resolveScrollAnimation?.();
+  resolveScrollAnimation = null;
+}
 
-  const start = container.scrollLeft;
+function animateScrollLeft(strip: HTMLElement, target: number, duration: number) {
+  stopScrollAnimation();
+
+  const start = strip.scrollLeft;
   const distance = target - start;
   if (duration <= 0 || Math.abs(distance) < 1) {
-    container.scrollLeft = target;
+    strip.scrollLeft = target;
     return Promise.resolve();
   }
 
   const startTime = performance.now();
   return new Promise<void>((resolve) => {
-    function step(now: number) {
+    resolveScrollAnimation = resolve;
+    const step = (now: number) => {
       const t = Math.min(1, (now - startTime) / duration);
-      container.scrollLeft = start + distance * easeOutCubic(t);
+      strip.scrollLeft = start + distance * easeOutCubic(t);
       if (t < 1) {
         scrollAnimationId = requestAnimationFrame(step);
-      } else {
-        scrollAnimationId = null;
-        resolve();
+        return;
       }
-    }
+      scrollAnimationId = null;
+      resolveScrollAnimation = null;
+      resolve();
+    };
     scrollAnimationId = requestAnimationFrame(step);
   });
 }
 
+/**
+ * `scroll` and `scrollend` are dispatched asynchronously, so they arrive after
+ * the move that caused them has already finished and cleared its flag. Without
+ * a short tail the component reads its own scrolling as user input — which made
+ * a single wheel gesture commit once per step instead of once in total.
+ */
+const SELF_DRIVEN_TAIL_MS = 160;
+let selfDrivenUntil = 0;
+
+function isSelfDriven() {
+  return isProgrammaticScroll.value || performance.now() < selfDrivenUntil;
+}
+
 function cancelProgrammaticScroll() {
-  if (scrollAnimationId !== null) {
-    cancelAnimationFrame(scrollAnimationId);
-    scrollAnimationId = null;
-  }
-  isProgrammaticScroll = false;
+  scrollGeneration += 1;
+  stopScrollAnimation();
+  isProgrammaticScroll.value = false;
+  // A real gesture takes precedence immediately.
+  selfDrivenUntil = 0;
 }
 
-async function scrollToActiveDay(smooth = true) {
-  isProgrammaticScroll = true;
+async function seekToIndex(index: number, animate: boolean) {
+  const strip = stripRef.value;
+  if (!strip || pitch.value <= 0) return;
 
+  // Any glide still in flight is superseded — otherwise it keeps writing
+  // scrollLeft after this one has set its own, and the older target wins.
+  stopScrollAnimation();
+
+  const generation = ++scrollGeneration;
+  isProgrammaticScroll.value = true;
+  setFocusedIndex(index);
+
+  // Snapping has to stand down while we drive scrollLeft ourselves: every
+  // assignment is its own scroll operation, and a mandatory snap container
+  // would re-snap each one and stutter the animation. We land exactly on a
+  // snap point, so re-enabling it is invisible.
   await nextTick();
-  const activeEl = chipRefs.value[props.activeDateKey];
-  const container = weekContainerRef.value;
-  if (!activeEl || !container) {
-    isProgrammaticScroll = false;
-    return;
-  }
 
-  const activeElCenter = activeEl.offsetLeft + activeEl.offsetWidth / 2;
-  const targetLeft = Math.max(0, activeElCenter - container.clientWidth / 2);
-
-  if (!smooth || prefersReducedMotion()) {
-    await animateScrollLeft(container, targetLeft, 0);
+  const target = scrollLeftFor(clampIndex(index));
+  if (!animate || prefersReducedMotion()) {
+    strip.scrollLeft = target;
   } else {
-    // Clamp duration so a 1-day nudge feels snappy and a 40-day date-picker
-    // jump doesn't glide for multiple seconds.
-    const distance = Math.abs(targetLeft - container.scrollLeft);
-    const duration = Math.min(420, Math.max(220, distance * 0.85));
-    await animateScrollLeft(container, targetLeft, duration);
+    // Snappy for a one-day nudge, still brisk for a month-long jump.
+    const distance = Math.abs(target - strip.scrollLeft);
+    const duration = Math.min(420, Math.max(200, distance * 0.9));
+    await animateScrollLeft(strip, target, duration);
   }
 
-  isProgrammaticScroll = false;
-}
-
-function commitClosestDay() {
-  const container = weekContainerRef.value;
-  if (!container) return;
-
-  const cCenter = container.scrollLeft + container.clientWidth / 2;
-  let closestKey = props.activeDateKey;
-  let minDistance = Infinity;
-
-  for (const dateKey in chipRefs.value) {
-    const el = chipRefs.value[dateKey];
-    if (el) {
-      const itemCenter = el.offsetLeft + el.offsetWidth / 2;
-      const dist = Math.abs(itemCenter - cCenter);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestKey = dateKey;
-      }
-    }
-  }
-
-  if (closestKey && closestKey !== props.activeDateKey) {
-    onSelectDate(closestKey);
+  if (generation === scrollGeneration) {
+    selfDrivenUntil = performance.now() + SELF_DRIVEN_TAIL_MS;
+    isProgrammaticScroll.value = false;
   }
 }
 
-function checkHapticTick() {
-  const container = weekContainerRef.value;
-  if (!container) return;
+// ── Commit ───────────────────────────────────────────────────────
 
-  const cCenter = container.scrollLeft + container.clientWidth / 2;
-  let closestKey: string | null = null;
-  let minDistance = Infinity;
+let settleTimer: ReturnType<typeof setTimeout> | null = null;
+let isPointerDown = false;
 
-  for (const dateKey in chipRefs.value) {
-    const el = chipRefs.value[dateKey];
-    if (el) {
-      const itemCenter = el.offsetLeft + el.offsetWidth / 2;
-      const dist = Math.abs(itemCenter - cCenter);
-      if (dist < minDistance) {
-        minDistance = dist;
-        closestKey = dateKey;
-      }
-    }
+function clearSettleTimer() {
+  if (settleTimer !== null) {
+    clearTimeout(settleTimer);
+    settleTimer = null;
   }
+}
 
-  if (closestKey && closestKey !== lastHapticKey) {
-    if (lastHapticKey !== null) {
-      haptics.selection();
-    }
-    lastHapticKey = closestKey;
-  }
+/**
+ * A flick crosses several detents in one motion; committing at each would
+ * navigate through every day passed over. So the route only moves once the
+ * strip has been quiet AND the finger is off it — a pause mid-drag is not a
+ * decision.
+ */
+function scheduleCommit() {
+  clearSettleTimer();
+  settleTimer = setTimeout(() => {
+    settleTimer = null;
+    commitFocused();
+  }, SETTLE_MS);
+}
+
+function commitFocused() {
+  if (isPointerDown) return;
+  const key = focusedKey.value;
+  if (key && key !== props.activeDateKey) emit("selectDate", key);
+}
+
+// ── Input ────────────────────────────────────────────────────────
+
+function onScroll() {
+  const strip = stripRef.value;
+  if (!strip) return;
+
+  // A move we started already knows its destination. Reading the index back out
+  // of a mid-flight scroll position would drag it to wherever the animation
+  // currently is, which silently undid queued steps when they arrived faster
+  // than the glide could finish.
+  if (isSelfDriven()) return;
+
+  // The detent the user just crossed.
+  if (setFocusedIndex(indexFromScroll(strip.scrollLeft))) haptics.selection();
+  scheduleCommit();
+}
+
+/** The precise end-of-scroll signal where it exists; the debounce above is the
+ *  fallback on browsers without it, so both paths land on the same commit. */
+function onScrollEnd() {
+  if (isSelfDriven() || isPointerDown) return;
+  clearSettleTimer();
+  commitFocused();
+}
+
+function onPointerDown() {
+  isPointerDown = true;
+  // The finger takes over from any glide already in flight.
+  cancelProgrammaticScroll();
+  clearSettleTimer();
+}
+
+function onPointerUp() {
+  if (!isPointerDown) return;
+  isPointerDown = false;
+  // Momentum may still be running; the settle timer is what decides, not the
+  // distance the finger happened to travel.
+  scheduleCommit();
+}
+
+function onWheel(event: WheelEvent) {
+  const strip = stripRef.value;
+  if (!strip) return;
+  event.preventDefault();
+
+  const raw =
+    Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+  if (Math.abs(raw) < 1) return;
+
+  wheelAccumulator += raw;
+  const steps = Math.trunc(wheelAccumulator / WHEEL_STEP_PX);
+  if (steps === 0) return;
+
+  wheelAccumulator -= steps * WHEEL_STEP_PX;
+  stepFocus(steps);
 }
 
 let wheelAccumulator = 0;
-let wheelResetTimer: ReturnType<typeof setTimeout> | null = null;
-let pointerStartX = 0;
 
-function navigateByOffset(offset: number) {
-  const currentIndex = props.days.findIndex(
-    (day) => day.dateKey === props.activeDateKey
-  );
-  if (currentIndex === -1) return;
-
-  const targetIndex = Math.max(
-    0,
-    Math.min(props.days.length - 1, currentIndex + offset)
-  );
-  const targetDay = props.days[targetIndex];
-  if (targetDay && targetDay.dateKey !== props.activeDateKey) {
-    onSelectDate(targetDay.dateKey);
-  }
-}
-
-// A single flick can hop across several snap points in one continuous motion —
-// committing on every intermediate settle would navigate through each day in
-// between, not just the one the user meant to land on. So instead of trusting
-// any single scroll/scrollend pulse, we debounce: only commit once movement
-// has been quiet for a bit AND the pointer isn't still down (a brief pause
-// mid-drag with the finger still on the screen isn't "done" yet).
-function scheduleCommitCheck() {
-  if (commitDebounceTimer !== null) clearTimeout(commitDebounceTimer);
-  commitDebounceTimer = setTimeout(() => {
-    commitDebounceTimer = null;
-    if (isProgrammaticScroll || isPointerDown) return;
-    commitClosestDay();
-  }, 150);
-}
-
-function onScroll() {
-  if (isProgrammaticScroll) return;
-  scrolledSincePointerDown = true;
-  checkHapticTick();
-  scheduleCommitCheck();
-}
-
-function onScrollEnd() {
-  if (isProgrammaticScroll || isPointerDown) return;
-  if (commitDebounceTimer !== null) {
-    clearTimeout(commitDebounceTimer);
-    commitDebounceTimer = null;
-  }
-  commitClosestDay();
-}
-
-function onPointerDown(event: PointerEvent) {
-  isPointerDown = true;
-  pointerStartX = event.clientX;
-  scrolledSincePointerDown = false;
-  cancelProgrammaticScroll();
-}
-
-function onPointerUp(event: PointerEvent) {
-  if (!isPointerDown) return;
-  isPointerDown = false;
-
-  const dragDeltaX = pointerStartX - event.clientX;
-  const absDrag = Math.abs(dragDeltaX);
-
-  if (absDrag >= 12) {
-    const chipWidth = 64;
-    const direction = Math.sign(dragDeltaX);
-    let steps = Math.max(1, Math.round(absDrag / chipWidth));
-    steps = Math.min(5, steps); // Hard-cap at 5 days max per drag gesture
-
-    navigateByOffset(direction * steps);
-  } else if (scrolledSincePointerDown && commitDebounceTimer === null && !isProgrammaticScroll) {
-    commitClosestDay();
-  }
-}
-
-function handleWheelScroll(event: WheelEvent) {
-  const container = weekContainerRef.value;
-  if (!container) return;
-  event.preventDefault();
-
-  const rawDelta =
-    Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
-  if (Math.abs(rawDelta) < 1) return;
-
-  wheelAccumulator += rawDelta;
-
-  if (wheelResetTimer !== null) {
-    clearTimeout(wheelResetTimer);
-  }
-
-  // Reset accumulator if user pauses scroll gesture for 120ms
-  wheelResetTimer = setTimeout(() => {
-    wheelAccumulator = 0;
-    wheelResetTimer = null;
-  }, 120);
-
-  const threshold = 40; // 40px delta threshold per 1-day step
-  if (Math.abs(wheelAccumulator) >= threshold) {
-    const direction = Math.sign(wheelAccumulator);
-    const absAcc = Math.abs(wheelAccumulator);
-
-    // Calculate step count and hard-cap at 5 days per gesture pulse
-    let steps = Math.floor(absAcc / threshold);
-    steps = Math.min(5, Math.max(1, steps));
-
-    const offset = direction * steps;
-    wheelAccumulator -= direction * steps * threshold;
-
-    navigateByOffset(offset);
-  }
+/** Moves the dial without committing; the settle timer does that once. */
+function stepFocus(delta: number) {
+  const next = clampIndex(focusedIndex.value + delta);
+  if (next === focusedIndex.value) return;
+  haptics.selection();
+  void seekToIndex(next, true);
+  scheduleCommit();
 }
 
 function onDialKeydown(event: KeyboardEvent) {
   if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
   event.preventDefault();
-  const currentIndex = props.days.findIndex(
-    (day) => day.dateKey === props.activeDateKey
-  );
-  const nextDay = props.days[currentIndex + (event.key === "ArrowLeft" ? -1 : 1)];
-  if (!nextDay) return;
-  onSelectDate(nextDay.dateKey);
-  chipRefs.value[nextDay.dateKey]?.focus();
+
+  const next = clampIndex(focusedIndex.value + (event.key === "ArrowLeft" ? -1 : 1));
+  if (next === focusedIndex.value) return;
+
+  haptics.selection();
+  void seekToIndex(next, true);
+  scheduleCommit();
+
+  // preventScroll: focusing a child of a scroll container otherwise scrolls it
+  // into view and fights the animation we just started.
+  void nextTick(() => {
+    const chip = stripRef.value?.children[next] as HTMLElement | undefined;
+    chip?.focus({ preventScroll: true });
+  });
 }
 
 function onSelectDate(dateKey: string) {
   pickerOpen.value = false;
+  // Emit only. The page owns navigation; doing both here fired two identical
+  // router pushes for every selection.
   emit("selectDate", dateKey);
-  void navigateTo(`/day/${dateKey}`);
 }
+
+// ── Keeping the dial and the route in step ───────────────────────
+// The 91-day window recentres on the active date, so every commit renumbers
+// every chip and the strip's contents shift under a scroll offset the browser
+// leaves untouched. Re-anchoring on the day that was centred before the
+// renumber cancels that shift exactly: when the dial itself made the choice the
+// two indices match and nothing moves, and when the choice came from elsewhere
+// what's left is a clean slide from where the user was looking.
 
 watch(
   () => props.activeDateKey,
-  (newKey) => {
-    lastHapticKey = newKey;
-    const container = weekContainerRef.value;
-    const activeEl = chipRefs.value[props.activeDateKey];
-    if (container && activeEl) {
-      const activeElCenter = activeEl.offsetLeft + activeEl.offsetWidth / 2;
-      const currentCenter = container.scrollLeft + container.clientWidth / 2;
-      if (Math.abs(activeElCenter - currentCenter) < 3) {
-        return;
-      }
+  async () => {
+    const strip = stripRef.value;
+    const target = activeIndex.value;
+    if (!strip || target < 0 || pitch.value <= 0) {
+      if (target >= 0) setFocusedIndex(target);
+      return;
     }
-    void scrollToActiveDay(true);
+
+    const from = props.days.findIndex((day) => day.dateKey === centeredKey);
+
+    // Jumped clean out of the old window — there is no position to slide from.
+    if (from < 0) {
+      await seekToIndex(target, false);
+      return;
+    }
+
+    stopScrollAnimation();
+    scrollGeneration += 1;
+    isProgrammaticScroll.value = true;
+    strip.scrollLeft = scrollLeftFor(from);
+    await seekToIndex(target, from !== target);
   },
-  { immediate: true }
+  { flush: "post" },
 );
 
-onMounted(() => {
-  void scrollToActiveDay(false);
+// ── Lifecycle ────────────────────────────────────────────────────
+
+let resizeObserver: ResizeObserver | null = null;
+
+onMounted(async () => {
+  await nextTick();
+  measurePitch();
+
+  const index = activeIndex.value;
+  if (index >= 0) {
+    focusedIndex.value = index;
+    centeredKey = props.activeDateKey;
+    if (stripRef.value && pitch.value > 0) {
+      stripRef.value.scrollLeft = scrollLeftFor(index);
+    }
+  }
+
+  if (stripRef.value) {
+    resizeObserver = new ResizeObserver(() => {
+      const before = pitch.value;
+      measurePitch();
+      // A layout change moves every snap point; re-anchor so the selector keeps
+      // framing the same day instead of drifting between two.
+      if (pitch.value !== before && stripRef.value) {
+        stripRef.value.scrollLeft = scrollLeftFor(focusedIndex.value);
+      }
+    });
+    resizeObserver.observe(stripRef.value);
+  }
 });
 
 onBeforeUnmount(() => {
   cancelProgrammaticScroll();
-  if (commitDebounceTimer !== null) clearTimeout(commitDebounceTimer);
+  clearSettleTimer();
+  resizeObserver?.disconnect();
 });
 </script>
 
@@ -484,7 +568,7 @@ onBeforeUnmount(() => {
   transform: scale(1.1);
 }
 
-/* 3D Cylindrical Dial Wrapper */
+/* ─── Dial ─────────────────────────────────────────────────────── */
 .day-header__dial-wrapper {
   position: relative;
   flex: 1 1 auto;
@@ -505,7 +589,7 @@ onBeforeUnmount(() => {
       transparent 100%);
 }
 
-/* Fixed Center Selector Frame: Positioned ABOVE dates (z-index: 5) */
+/* The selector never moves; the strip moves under it. */
 .day-header__fixed-selector {
   position: absolute;
   top: 50%;
@@ -515,12 +599,11 @@ onBeforeUnmount(() => {
   height: 2.5rem;
   border-radius: var(--radius-lg);
   background: var(--color-primary);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-content-on-background) 18%, transparent);
   pointer-events: none;
   z-index: 2;
 }
 
-/* Native Scrollable Dial Strip (z-index: 2) */
 .day-header__dial-strip {
   position: relative;
   z-index: 2;
@@ -531,21 +614,32 @@ onBeforeUnmount(() => {
   height: 100%;
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  /* proximity (not mandatory): mandatory fights momentum on tightly-packed
-     snap points and can cap a flick to moving one item at a time. Our own
-     JS still re-centers precisely on settle, so proximity only loosens the
-     drag feel, not the final selected position. */
-  scroll-snap-type: none;
+  /* Chips are added and removed at both ends as the window recentres. Scroll
+     anchoring would silently adjust scrollLeft to compensate, which collides
+     with the re-anchoring this component does deliberately — turning it off
+     keeps the position a value we own outright. */
+  overflow-anchor: none;
+  /* Detents come from the platform, so a flick keeps its native momentum and
+     still lands square under the selector. */
+  scroll-snap-type: x mandatory;
+  /* Ours is the only smooth scrolling here; an inherited `smooth` would animate
+     on top of the rAF drive and make every seek mushy. */
+  scroll-behavior: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   padding: 0 calc(50% - 1.75rem);
+}
+
+/* While we drive scrollLeft ourselves, snapping has to stand down: each
+   assignment is its own scroll operation and would otherwise be re-snapped. */
+.day-header__dial-strip--seeking {
+  scroll-snap-type: none;
 }
 
 .day-header__dial-strip::-webkit-scrollbar {
   display: none;
 }
 
-/* Date Chip Items */
 .day-header__dial-item {
   position: relative;
   z-index: 6;
@@ -566,25 +660,60 @@ onBeforeUnmount(() => {
   user-select: none;
   -webkit-tap-highlight-color: transparent;
   transition: color var(--duration-fast) var(--ease-standard),
-    transform var(--duration-fast) var(--ease-standard),
-    opacity var(--duration-fast) var(--ease-standard);
-  opacity: 0.55;
-  transform: scale(0.85);
+    transform var(--duration-normal) var(--ease-standard),
+    opacity var(--duration-normal) var(--ease-standard);
 }
 
-.day-header__dial-item:hover {
-  opacity: 0.85;
-}
-
-.day-header__dial-item--active {
-  color: var(--color-on-primary);
+/* Falloff from the selector. The step values do the shaping; the transition
+   above interpolates as the index under the selector changes, which is what
+   reads as a dial rather than an on/off highlight. */
+.day-header__dial-item[data-falloff="0"] {
   opacity: 1;
   transform: scale(1.05);
+  color: var(--color-on-primary);
+}
+
+.day-header__dial-item[data-falloff="1"] {
+  opacity: 0.78;
+  transform: scale(0.94);
+}
+
+.day-header__dial-item[data-falloff="2"] {
+  opacity: 0.6;
+  transform: scale(0.88);
+}
+
+.day-header__dial-item[data-falloff="3"] {
+  opacity: 0.46;
+  transform: scale(0.84);
+}
+
+.day-header__dial-item[data-falloff="4"] {
+  opacity: 0.36;
+  transform: scale(0.82);
+}
+
+.day-header__dial-item:hover:not([data-falloff="0"]) {
+  opacity: 0.9;
+}
+
+.day-header__dial-item:focus-visible {
+  outline: 2px solid var(--ds-focus-outline-color);
+  outline-offset: 2px;
 }
 
 .day-header__dial-item strong {
   font-size: var(--text-base);
   font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .day-header__dial-item,
+  .day-header__calendar-icon,
+  .day-header__date-trigger {
+    transition: none;
+  }
 }
 
 @media (max-width: 639px) {

@@ -1,19 +1,13 @@
 <template>
   <div class="learning-home">
-
     <LearningHome />
   </div>
 </template>
 
 <script setup lang="ts">
-import AppPageHeader from "~/components/patterns/AppPageHeader.vue";
 import LearningHome from "~/features/learning-shell/components/LearningHome.vue";
 
 definePageMeta({ middleware: "auth" });
-const accountLink = {
-  path: "/account",
-  query: { app: "learning", returnTo: "/learn" },
-};
 </script>
 
 <style scoped>

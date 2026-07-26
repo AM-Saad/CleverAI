@@ -5,15 +5,14 @@
 
     <UiAlert v-if="daily.error.value" tone="error" :title="daily.error.value" />
 
-    <DailyActionSection :items="activeActionModels" :moved-items="movedActionModels" :open-count="openCount"
-      :completed-count="completedCount" :loading="Boolean(daily.loadingDates.value[dateKey])"
-      @add="actionSheetOpen = true" @toggle="toggleAction" @move="openMove" />
+    <DailyActionSection :date-key="dateKey" :items="activeActionModels" :moved-items="movedActionModels"
+      :open-count="openCount" :completed-count="completedCount"
+      :loading="Boolean(daily.loadingDates.value[dateKey])" @toggle="toggleAction" @move="openMove" />
 
     <DailyNoteSection :date-key="dateKey" :model-value="noteContent" :save-state="noteSaveState"
       :conflict="noteConflict" @update:model-value="onNoteChange" @blur="flushPendingSave()"
       @resolve="resolveNoteConflict" />
 
-    <ActionItemSheet v-model:open="actionSheetOpen" :initial-date="dateKey" />
     <RescheduleActionSheet v-model:open="moveSheetOpen" :visible-date="dateKey" :item="movingItem" />
   </div>
 </template>
@@ -27,7 +26,6 @@ import {
   isDateKey,
   parseDateKey,
 } from "@shared/utils/daily-recurrence";
-import ActionItemSheet from "~/features/daily/components/ActionItemSheet.vue";
 import DailyActionSection from "~/features/daily/components/DailyActionSection.vue";
 import DailyDateNavigation from "~/features/daily/components/DailyDateNavigation.vue";
 import DailyNoteSection from "~/features/daily/components/DailyNoteSection.vue";
@@ -50,7 +48,6 @@ const dateKey = computed(() =>
   isDateKey(routeDateKey.value) ? routeDateKey.value : today.value,
 );
 const projection = computed(() => daily.projections.value[dateKey.value]);
-const actionSheetOpen = ref(false);
 const moveSheetOpen = ref(false);
 const movingItem = ref<DayItemDTO | null>(null);
 
@@ -108,17 +105,45 @@ const eyebrow = computed(() => {
   if (dateKey.value === addDateKeyDays(today.value, -1)) return "Yesterday";
   return formatDateKey(dateKey.value, undefined, { year: "numeric" });
 });
+// The dial's 91-day window recentres on every navigation, so each one rebuilt
+// and re-formatted all 91 chips. `toLocaleDateString` is expensive enough that
+// ~180 calls per dial tick is felt on a phone — and consecutive windows share
+// 90 of their 91 days, so caching per date key turns nearly all of it into
+// lookups. Lives in setup (not module scope) so it dies with the page.
+const dayChipCache = new Map<
+  string,
+  { dateKey: string; weekday: string; day: number; label: string }
+>();
+const DAY_CHIP_CACHE_LIMIT = 400;
+
+function dayChip(key: string) {
+  const cached = dayChipCache.get(key);
+  if (cached) return cached;
+
+  const value = parseDateKey(key)!;
+  const chip = {
+    dateKey: key,
+    weekday: formatDateKey(key, undefined, { weekday: "narrow" }),
+    day: value.getUTCDate(),
+    // A screen reader announcing "M 3" is useless; the dial reads this instead.
+    label: formatDateKey(key, undefined, {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }),
+  };
+
+  if (dayChipCache.size >= DAY_CHIP_CACHE_LIMIT) dayChipCache.clear();
+  dayChipCache.set(key, chip);
+  return chip;
+}
+
 const weekDays = computed(() => {
   const anchor = dateKey.value;
-  return Array.from({ length: 91 }, (_, index) => {
-    const key = addDateKeyDays(anchor, index - 45);
-    const value = parseDateKey(key)!;
-    return {
-      dateKey: key,
-      weekday: formatDateKey(key, undefined, { weekday: "narrow" }),
-      day: value.getUTCDate(),
-    };
-  });
+  return Array.from({ length: 91 }, (_, index) =>
+    dayChip(addDateKeyDays(anchor, index - 45)),
+  );
 });
 const accountLink = computed(() => ({
   path: "/account",

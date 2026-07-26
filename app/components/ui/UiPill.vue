@@ -1,20 +1,10 @@
 <template>
-  <component
-    :is="componentType"
-    :to="to"
-    :href="href"
-    :target="href ? target : undefined"
-    :rel="href && target === '_blank' ? resolvedRel : undefined"
-    :type="isButton ? type : undefined"
-    :disabled="isButton ? disabled : undefined"
-    :aria-disabled="!isButton && disabled ? 'true' : undefined"
+  <component :is="componentType" :to="to" :href="href" :target="href ? target : undefined"
+    :rel="href && target === '_blank' ? resolvedRel : undefined" :type="isButton ? type : undefined"
+    :disabled="isButton ? disabled : undefined" :aria-disabled="!isButton && disabled ? 'true' : undefined"
     :aria-pressed="isButton && selectable ? String(active) : undefined"
-    :aria-current="isLink && active ? 'page' : undefined"
-    :tabindex="!isButton && disabled ? -1 : undefined"
-    :class="ui.root({ class: className })"
-    :style="pillStyle"
-    @click="handleClick"
-  >
+    :aria-current="isLink && active ? 'page' : undefined" :tabindex="!isButton && disabled ? -1 : undefined"
+    :class="ui.root({ class: className })" :style="pillStyle" @click="handleClick">
     <span v-if="$slots.indicator" :class="ui.indicator()">
       <slot name="indicator" />
     </span>
@@ -202,22 +192,18 @@ function handleClick(event: MouseEvent) {
 }
 
 .ui-pill--outline {
-  border-color: color-mix(
-    in srgb,
-    var(--ui-pill-color) 55%,
-    var(--color-secondary)
-  );
+  border-color: color-mix(in srgb,
+      var(--ui-pill-color) 55%,
+      var(--color-secondary));
   background: transparent;
   color: var(--ui-pill-color);
 }
 
 .ui-pill--dashed {
   border-style: dashed;
-  border-color: color-mix(
-    in srgb,
-    var(--ui-pill-color) 60%,
-    var(--color-border-strong)
-  );
+  border-color: color-mix(in srgb,
+      var(--ui-pill-color) 60%,
+      var(--color-border-strong));
   background: transparent;
   color: var(--ui-pill-color);
 }
@@ -229,23 +215,19 @@ function handleClick(event: MouseEvent) {
 }
 
 .ui-pill--active:not(.ui-pill--fill) {
-  border-width: 1.5px;
+  border-width: 1px;
   border-color: var(--ui-pill-color);
   background: color-mix(in srgb, var(--ui-pill-color) 12%, transparent);
   color: var(--ui-pill-color);
   font-weight: 700;
 }
 
-.ui-pill--interactive:not(.ui-pill--active):not(.ui-pill--fill):hover:not(
-    :disabled
-  ):not([aria-disabled="true"]) {
+.ui-pill--interactive:not(.ui-pill--active):not(.ui-pill--fill):hover:not( :disabled):not([aria-disabled="true"]) {
   border-color: var(--color-border-strong);
   background: var(--color-surface-strong);
 }
 
-.ui-pill--interactive.ui-pill--fill:hover:not(:disabled):not(
-    [aria-disabled="true"]
-  ) {
+.ui-pill--interactive.ui-pill--fill:hover:not(:disabled):not([aria-disabled="true"]) {
   border-color: var(--ui-pill-color);
   background: var(--ui-pill-color);
   color: var(--ui-pill-fill-text);

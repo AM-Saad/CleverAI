@@ -1146,11 +1146,61 @@ async function applyDomainMutation(input: {
       return { entityId: row.id, canonical: json(row) };
     }
     const data = UpdateActionItemDTO.parse(payload);
+    const placement = data.placementId
+      ? await prisma.actionPlacement.findFirst({
+          where: {
+            id: data.placementId,
+            userId,
+            occurrence: { actionItemId: item.id },
+          },
+        })
+      : null;
+    if (data.placementId && !placement) {
+      throw Object.assign(new Error("Action placement not found"), {
+        statusCode: 404,
+      });
+    }
     const row = await prisma.actionItem.update({
       where: { id: item.id },
-      data,
+      data: {
+        title: data.title,
+        description: data.description,
+        timingMode: data.timingMode,
+        localTime: data.localTime,
+        timezone: data.timezone,
+        recurrence:
+          data.recurrence === undefined
+            ? undefined
+            : data.recurrence
+              ? json(data.recurrence)
+              : null,
+      },
     });
-    return { entityId: row.id, canonical: json(row) };
+    const updatedPlacement =
+      placement && data.timingMode
+        ? await prisma.actionPlacement.update({
+            where: { id: placement.id },
+            data: {
+              timingMode: data.timingMode,
+              localTime: data.localTime ?? null,
+              timezone: data.timezone ?? null,
+            },
+          })
+        : null;
+    return {
+      entityId: row.id,
+      canonical: json(row),
+      relatedChanges: updatedPlacement
+        ? [
+            {
+              entity: "actionPlacement",
+              entityId: updatedPlacement.id,
+              changedFields: ["timingMode", "localTime", "timezone"],
+              canonical: json(updatedPlacement),
+            },
+          ]
+        : undefined,
+    };
   }
 
   if (mutation.entity === "actionOccurrence") {

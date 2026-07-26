@@ -9,5 +9,6 @@ export * from "./useSplitNotes";
 export * from "./useAdaptiveToolbar";
 export * from "./useCanvasHistory";
 export * from './useInfiniteCanvas'
+export * from './usePaperCamera'
 export * from './useWorkspaceLayout'
 export * from './useResponsive'

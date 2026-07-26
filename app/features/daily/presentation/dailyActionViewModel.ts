@@ -1,10 +1,20 @@
-import type { DayItemDTO } from "@shared/utils/daily.contract";
+import type {
+  DayItemDTO,
+  RecurrenceRuleDTO,
+} from "@shared/utils/daily.contract";
 import { formatDateKey } from "@shared/utils/daily-recurrence";
 
 export interface DailyActionViewModel {
   occurrenceKey: string;
+  actionItemId: string;
+  startDate: string;
   title: string;
   completed: boolean;
+  timingMode: "ALL_DAY" | "TIMED";
+  localTime: string | null;
+  timezone: string | null;
+  recurrence: RecurrenceRuleDTO | null;
+  activePlacementId: string | null;
   timingLabel: string;
   recurrenceLabel: string | null;
   overdue: boolean;
@@ -44,10 +54,18 @@ export function toDailyActionViewModel(
 ): DailyActionViewModel {
   const frequency = item.actionItem.recurrence?.frequency ?? "";
   const movedDate = item.activePlacement?.dateKey;
+  const placement = activePlacement(item, dateKey);
   return {
     occurrenceKey: item.occurrenceKey,
+    actionItemId: item.actionItem.id,
+    startDate: item.actionItem.startDate,
     title: item.actionItem.title,
     completed: item.occurrence?.status === "COMPLETED",
+    timingMode: placement?.timingMode ?? item.actionItem.timingMode,
+    localTime: placement?.localTime ?? item.actionItem.localTime ?? null,
+    timezone: placement?.timezone ?? item.actionItem.timezone ?? null,
+    recurrence: item.actionItem.recurrence ?? null,
+    activePlacementId: placement?.id ?? null,
     timingLabel: timingLabel(item, dateKey),
     recurrenceLabel: frequency
       ? frequency.charAt(0) + frequency.slice(1).toLowerCase()

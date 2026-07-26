@@ -143,10 +143,25 @@ export const CreateActionItemDTO = z
     }
   });
 
-export const UpdateActionItemDTO = z.object({
-  title: z.string().trim().min(1).max(500).optional(),
-  description: z.string().max(20_000).nullable().optional(),
-});
+export const UpdateActionItemDTO = z
+  .object({
+    title: z.string().trim().min(1).max(500).optional(),
+    description: z.string().max(20_000).nullable().optional(),
+    timingMode: TimingModeSchema.optional(),
+    localTime: LocalTimeSchema.nullable().optional(),
+    timezone: z.string().nullable().optional(),
+    recurrence: RecurrenceRuleSchema.nullable().optional(),
+    placementId: z.string().min(1).optional(),
+  })
+  .superRefine((item, context) => {
+    if (item.timingMode === "TIMED" && !item.localTime) {
+      context.addIssue({
+        code: "custom",
+        path: ["localTime"],
+        message: "Timed items require a time",
+      });
+    }
+  });
 
 export const RescheduleOccurrenceDTO = z.object({
   actionItemId: z.string().min(1),
@@ -235,6 +250,7 @@ export type ActionItemDTO = z.infer<typeof ActionItemSchema>;
 export type ActionOccurrenceDTO = z.infer<typeof ActionOccurrenceSchema>;
 export type ActionPlacementDTO = z.infer<typeof ActionPlacementSchema>;
 export type CreateActionItemDTO = z.infer<typeof CreateActionItemDTO>;
+export type UpdateActionItemDTO = z.infer<typeof UpdateActionItemDTO>;
 export type RescheduleOccurrenceDTO = z.infer<typeof RescheduleOccurrenceDTO>;
 export type DayItemDTO = z.infer<typeof DayItemSchema>;
 export type DayProjectionDTO = z.infer<typeof DayProjectionSchema>;

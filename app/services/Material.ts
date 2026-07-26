@@ -2,17 +2,13 @@ import FetchFactory from "./FetchFactory";
 import type { Result } from "@/types/Result";
 import type {
   Material,
+  MaterialGeneratedContent,
   CreateMaterialDTO,
   UpdateMaterialDTO,
 } from "~/shared/utils/material.contract";
 import type { UploadMaterialResponse } from "~/shared/utils/llm-generate.contract";
 
 export type { UploadMaterialResponse } from "~/shared/utils/llm-generate.contract";
-
-export interface MaterialGeneratedContent {
-  flashcardsCount: number;
-  questionsCount: number;
-}
 
 export class MaterialService extends FetchFactory {
   private readonly RESOURCE = "/api/materials";
@@ -24,7 +20,7 @@ export class MaterialService extends FetchFactory {
   async getByWorkspace(workspaceId: string): Promise<Result<Material[]>> {
     return this.call<Material[]>(
       "GET",
-      `${this.RESOURCE}?workspaceId=${workspaceId}`
+      `${this.RESOURCE}?workspaceId=${workspaceId}`,
     );
   }
 
@@ -43,14 +39,14 @@ export class MaterialService extends FetchFactory {
   }
 
   /**
-   * Get generated content counts for a material
+   * Get generated flashcards and questions for a material.
    */
   async getGeneratedContent(
-    materialId: string
+    materialId: string,
   ): Promise<Result<MaterialGeneratedContent>> {
     return this.call<MaterialGeneratedContent>(
       "GET",
-      `${this.RESOURCE}/${materialId}/generated`
+      `${this.RESOURCE}/${materialId}/generated`,
     );
   }
 
@@ -66,7 +62,7 @@ export class MaterialService extends FetchFactory {
    */
   async update(
     id: string,
-    payload: UpdateMaterialDTO
+    payload: UpdateMaterialDTO,
   ): Promise<Result<Material>> {
     return this.call<Material>("PATCH", this.RESOURCE, { id, ...payload });
   }
@@ -75,12 +71,12 @@ export class MaterialService extends FetchFactory {
    * Delete a material
    */
   async delete(
-    id: string
+    id: string,
   ): Promise<Result<{ success: boolean; message: string }>> {
     return this.call<{ success: boolean; message: string }>(
       "DELETE",
       this.RESOURCE,
-      { id }
+      { id },
     );
   }
 
@@ -90,7 +86,7 @@ export class MaterialService extends FetchFactory {
   async uploadFile(
     file: File,
     workspaceId: string,
-    title?: string
+    title?: string,
   ): Promise<Result<UploadMaterialResponse>> {
     const formData = new FormData();
     formData.append("file", file);
@@ -103,7 +99,7 @@ export class MaterialService extends FetchFactory {
       formData,
       {
         timeout: 120000, // 2 minutes for large files
-      }
+      },
     );
   }
 }

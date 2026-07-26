@@ -91,6 +91,7 @@ export async function mergeServerDay(
   const pendingNoteDates = new Set<string>();
   const pendingItemIds = new Set<string>();
   const pendingOccurrences = new Set<string>();
+  const pendingPlacements = new Set<string>();
   for (const mutation of active) {
     const payload = mutation.payload as Record<string, unknown>;
     if (mutation.operation === "dailyNote.upsert")
@@ -100,9 +101,11 @@ export async function mergeServerDay(
     else if (
       mutation.operation === "actionItem.update" ||
       mutation.operation === "actionItem.archive"
-    )
+    ) {
       pendingItemIds.add(mutation.entityId);
-    else if (
+      if (mutation.operation === "actionItem.update" && payload.placementId)
+        pendingPlacements.add(String(payload.placementId));
+    } else if (
       mutation.operation === "occurrence.reschedule" ||
       mutation.operation === "occurrence.complete" ||
       mutation.operation === "occurrence.reopen"
@@ -135,7 +138,7 @@ export async function mergeServerDay(
         ),
       );
       for (const placement of [row.activePlacement, row.historyPlacement]) {
-        if (placement)
+        if (placement && !pendingPlacements.has(placement.id))
           records.push(dailyEntityRecord(accountId, "actionPlacement", placement));
       }
     }
@@ -150,6 +153,7 @@ export async function mergeServerBootstrap(
   const active = await activeDailyMutations(accountId);
   const pendingItems = new Set<string>();
   const pendingOccurrences = new Set<string>();
+  const pendingPlacements = new Set<string>();
   for (const mutation of active) {
     const payload = mutation.payload as Record<string, unknown>;
     if (mutation.operation === "actionItem.create")
@@ -157,9 +161,11 @@ export async function mergeServerBootstrap(
     else if (
       mutation.operation === "actionItem.update" ||
       mutation.operation === "actionItem.archive"
-    )
+    ) {
       pendingItems.add(mutation.entityId);
-    else if (
+      if (mutation.operation === "actionItem.update" && payload.placementId)
+        pendingPlacements.add(String(payload.placementId));
+    } else if (
       mutation.operation === "occurrence.reschedule" ||
       mutation.operation === "occurrence.complete" ||
       mutation.operation === "occurrence.reopen"
@@ -183,7 +189,8 @@ export async function mergeServerBootstrap(
       ),
     );
     for (const placement of row.placements) {
-      records.push(dailyEntityRecord(accountId, "actionPlacement", placement));
+      if (!pendingPlacements.has(placement.id))
+        records.push(dailyEntityRecord(accountId, "actionPlacement", placement));
     }
   }
   await putOfflineEntities(records);

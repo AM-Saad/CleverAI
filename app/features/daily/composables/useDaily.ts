@@ -8,6 +8,7 @@ import type {
   DayItemDTO,
   DayProjectionDTO,
   RecurrenceRuleDTO,
+  UpdateActionItemDTO,
 } from "@shared/utils/daily.contract";
 import { addDateKeyDays, occurrenceKey } from "@shared/utils/daily-recurrence";
 import { placementStateAfterMove } from "@shared/utils/daily-placement";
@@ -33,6 +34,17 @@ export type DailyNewActionInput = {
   localTime?: string | null;
   timezone?: string | null;
   recurrence?: RecurrenceRuleDTO | null;
+};
+
+export type DailyUpdateActionInput = {
+  id: string;
+  visibleDateKey: string;
+  title: string;
+  timingMode: "ALL_DAY" | "TIMED";
+  localTime?: string | null;
+  timezone?: string | null;
+  recurrence?: RecurrenceRuleDTO | null;
+  placementId?: string | null;
 };
 
 const ACTION_ITEM_FIELDS = [
@@ -291,6 +303,71 @@ export function useDaily() {
     void offline
       .sync()
       .then(() => refreshFromServer(input.dateKey))
+      .catch(() => undefined);
+  }
+
+  async function updateAction(input: DailyUpdateActionInput) {
+    if (!accountId.value) throw new Error("Sign in once before saving offline");
+    const snapshot = await getDailyLocalSnapshot(accountId.value);
+    const current = snapshot.actionItems.find((item) => item.id === input.id);
+    if (!current) throw new Error("Action item not found");
+
+    const now = new Date().toISOString();
+    const localTime =
+      input.timingMode === "TIMED" ? (input.localTime ?? "09:00") : null;
+    const actionItem: ActionItemDTO = {
+      ...current,
+      title: input.title.trim(),
+      timingMode: input.timingMode,
+      localTime,
+      timezone: input.timezone ?? null,
+      recurrence: input.recurrence ?? null,
+      updatedAt: now,
+    };
+    const placement = input.placementId
+      ? snapshot.placements.find((item) => item.id === input.placementId)
+      : null;
+    const updatedPlacement: ActionPlacementDTO | null = placement
+      ? {
+          ...placement,
+          timingMode: input.timingMode,
+          localTime,
+          timezone: input.timezone ?? null,
+          updatedAt: now,
+        }
+      : null;
+    const payload: UpdateActionItemDTO = {
+      title: actionItem.title,
+      timingMode: actionItem.timingMode,
+      localTime: actionItem.localTime,
+      timezone: actionItem.timezone,
+      recurrence: actionItem.recurrence,
+      placementId: updatedPlacement?.id,
+    };
+
+    if (updatedPlacement) {
+      await putOfflineEntities([
+        dailyEntityRecord(accountId.value, "actionPlacement", updatedPlacement),
+      ]);
+    }
+    await offline.queue({
+      entity: "actionItem",
+      operation: "actionItem.update",
+      entityId: actionItem.id,
+      changedFields: ACTION_ITEM_FIELDS,
+      payload,
+      localData: actionItem as unknown as Record<string, unknown>,
+      deferSync: true,
+    });
+
+    const dates = new Set([
+      input.visibleDateKey,
+      ...Object.keys(projections.value),
+    ]);
+    await Promise.all([...dates].map((dateKey) => projectDate(dateKey)));
+    void offline
+      .sync()
+      .then(() => refreshFromServer(input.visibleDateKey))
       .catch(() => undefined);
   }
 
@@ -580,6 +657,7 @@ export function useDaily() {
     loadDay,
     prefetchAdjacentDays,
     createAction,
+    updateAction,
     saveNote,
     getNoteConflict,
     resolveNoteConflict,

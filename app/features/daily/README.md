@@ -26,8 +26,10 @@ Owns the day-planner slice: recurring action items, per-day placements
 - `components/*`: `DailyDateNavigation` (header/week strip) →
   `DailyActionSection` → `DailyActionList` → `DailyActionRow`;
   `DailyNoteSection` → `DailyNoteConflictPanel` + `DailyRichEditor`;
-  `ActionItemSheet` → `ActionItemForm`; `RescheduleActionSheet` →
-  `RescheduleActionForm`.
+  `ActionItemInlineForm` handles quick create/edit with timing and recurrence
+  in place; `ActionItemListSkeleton` mirrors the action-row layout and can be
+  reused anywhere action items load;
+  `RescheduleActionSheet` → `RescheduleActionForm`.
 
 ## Sync UX / Conflict Policy
 

@@ -28,6 +28,41 @@ export const MaterialSchema = z.object({
 });
 export type Material = z.infer<typeof MaterialSchema>;
 
+export const MaterialGeneratedFlashcardSchema = z.object({
+  id: z.string(),
+  front: z.string(),
+  back: z.string(),
+  status: z.string(),
+  createdAt: z.string().datetime().or(z.date()).or(z.string()),
+  updatedAt: z.string().datetime().or(z.date()).or(z.string()),
+});
+export type MaterialGeneratedFlashcard = z.infer<
+  typeof MaterialGeneratedFlashcardSchema
+>;
+
+export const MaterialGeneratedQuestionSchema = z.object({
+  id: z.string(),
+  question: z.string(),
+  choices: z.array(z.string()),
+  answerIndex: z.number().int().nonnegative(),
+  status: z.string(),
+  createdAt: z.string().datetime().or(z.date()).or(z.string()),
+  updatedAt: z.string().datetime().or(z.date()).or(z.string()),
+});
+export type MaterialGeneratedQuestion = z.infer<
+  typeof MaterialGeneratedQuestionSchema
+>;
+
+export const MaterialGeneratedContentSchema = z.object({
+  flashcardsCount: z.number().int().nonnegative(),
+  questionsCount: z.number().int().nonnegative(),
+  flashcards: z.array(MaterialGeneratedFlashcardSchema),
+  questions: z.array(MaterialGeneratedQuestionSchema),
+});
+export type MaterialGeneratedContent = z.infer<
+  typeof MaterialGeneratedContentSchema
+>;
+
 export const CreateMaterialDTO = z.object({
   workspaceId: z.string(),
   title: z.preprocess(trim, z.string().min(1)),

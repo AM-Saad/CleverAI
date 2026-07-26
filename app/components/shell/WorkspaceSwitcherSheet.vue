@@ -1,75 +1,35 @@
 <template>
-  <UiSheet
-    :open="isSwitcherOpen"
-    title="Switch workspace"
-    @update:open="onOpenChange"
-  >
+  <UiSheet :open="isSwitcherOpen" title="Switch workspace" @update:open="onOpenChange">
     <div class="wss">
       <!-- recents quick-hop chips -->
       <div v-if="recentChips.length > 1" class="wss__recents">
-        <UiPill
-          v-for="w in recentChips"
-          :key="w.id"
-          clickable
-          selectable
-          variant="outline"
-          :active="w.id === activeId"
-          :label="w.title"
-          :color="accentFor(w)"
-          @click="select(w)"
-        >
+        <UiPill v-for="w in recentChips" :key="w.id" clickable selectable :active="w.id === activeId" :label="w.title"
+          @click="select(w)">
           <template #indicator>
             <UiPillIndicator :color="accentFor(w)" />
           </template>
         </UiPill>
       </div>
 
-      <UiInput
-        v-if="workspaces.length > 6"
-        v-model="query"
-        placeholder="Search workspaces…"
-        icon="i-lucide-search"
-      />
+      <UiInput v-if="workspaces.length > 6" v-model="query" placeholder="Search workspaces…" icon="i-lucide-search" />
 
       <ul class="wss__list">
         <li v-for="w in filtered" :key="w.id">
-          <UiListCard
-            clickable
-            selectable
-            :selected="w.id === activeId"
-            :title="w.title"
-            :description="metaFor(w.id)"
-            leading-background="var(--color-surface-subtle)"
-            :leading-color="accentFor(w)"
-            @click="select(w)"
-          >
+          <UiListCard clickable selectable :selected="w.id === activeId" :title="w.title" :description="metaFor(w.id)"
+            leading-background="var(--color-surface-subtle)" :leading-color="accentFor(w)" @click="select(w)">
             <template #leading>
-              <span
-                class="wss__dot"
-                :style="{ background: accentFor(w) }"
-                aria-hidden="true"
-              />
+              <span class="wss__dot" :style="{ background: accentFor(w) }" aria-hidden="true" />
             </template>
             <template v-if="caughtUp(w.id)" #trailing>
-              <UiPill
-                size="sm"
-                label="caught up"
-                color="var(--color-success)"
-                variant="outline"
-                active
-                max-width="120px"
-              >
+              <UiPill size="sm" label="caught up" color="var(--color-success)" variant="outline" active
+                max-width="120px">
                 <template #icon>
                   <UiPillIcon name="i-lucide-check" size="sm" />
                 </template>
               </UiPill>
             </template>
             <template v-if="w.id === activeId" #action>
-              <UiIcon
-                name="i-lucide-check"
-                class="h-[18px] w-[18px]"
-                aria-hidden="true"
-              />
+              <UiIcon name="i-lucide-check" class="h-[18px] w-[18px]" aria-hidden="true" />
             </template>
           </UiListCard>
         </li>
@@ -78,37 +38,19 @@
         </li>
       </ul>
 
-      <UiListCard
-        clickable
-        variant="dashed"
-        title="New workspace"
-        leading-color="var(--color-primary)"
-        @click="createNew"
-      >
+      <UiListCard clickable variant="dashed" title="New workspace" leading-color="var(--color-primary)"
+        @click="createNew">
         <template #leading>
           <UiIcon name="i-lucide-plus" class="h-4 w-4" aria-hidden="true" />
         </template>
       </UiListCard>
-      <UiListCard
-        clickable
-        variant="soft"
-        title="Manage all workspaces"
-        leading-color="var(--color-content-secondary)"
-        @click="openWorkspaces"
-      >
+      <UiListCard clickable variant="soft" title="Manage all workspaces" leading-color="var(--color-content-secondary)"
+        @click="openWorkspaces">
         <template #leading>
-          <UiIcon
-            name="i-lucide-folder-kanban"
-            class="h-4 w-4"
-            aria-hidden="true"
-          />
+          <UiIcon name="i-lucide-folder-kanban" class="h-4 w-4" aria-hidden="true" />
         </template>
         <template #action>
-          <UiIcon
-            name="i-lucide-chevron-right"
-            class="h-4 w-4"
-            aria-hidden="true"
-          />
+          <UiIcon name="i-lucide-chevron-right" class="h-4 w-4" aria-hidden="true" />
         </template>
       </UiListCard>
     </div>
@@ -217,11 +159,13 @@ watch(isSwitcherOpen, (open) => {
   gap: var(--space-3);
   padding-bottom: var(--space-2);
 }
+
 .wss__recents {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
 }
+
 .wss__list {
   display: flex;
   flex-direction: column;
@@ -230,11 +174,13 @@ watch(isSwitcherOpen, (open) => {
   padding: 0;
   margin: 0;
 }
+
 .wss__dot {
   width: 10px;
   height: 10px;
   border-radius: var(--radius-full);
 }
+
 .wss__empty {
   padding: var(--space-4);
   text-align: center;

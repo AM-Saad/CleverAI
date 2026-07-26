@@ -1,8 +1,7 @@
 # Materials Feature
 
-Owns material generation workflow state for a specific material. Upload and
-listing UI live directly in the page layer; there is no feature-local
-components/ directory.
+Owns material generation workflow state and generated-content presentation for
+a specific material. Upload and listing UI live directly in the page layer.
 
 ## Boundaries
 
@@ -10,6 +9,11 @@ components/ directory.
   state (flashcards/quiz generation, existing-content check, and the
   replace/append regeneration confirmation flow). Used directly by
   `app/pages/materials/[id].vue`.
+- `components/MaterialStudyContent.vue` presents material-scoped flashcards and
+  quiz questions. Flashcards reuse the restored
+  `app/components/ui/CardStack.vue` swipe/swap interaction and
+  `app/components/ui/flip-card/FlipCard.vue` primitive; quiz choices reveal
+  immediate answer feedback.
 - `app/pages/materials/index.vue` implements upload (native file input) and
   listing UI inline — no dedicated feature component. There is no speech/mic
   capture in the upload flow (that claim in the old README was stale).
