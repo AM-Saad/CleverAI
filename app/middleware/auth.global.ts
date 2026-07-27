@@ -41,7 +41,10 @@ export default defineNuxtRouteMiddleware(async (to) => {
     // An installed app may have a last verified account and a downloaded pack.
     // Never fake a server session: this only permits local core routes while
     // the browser itself reports offline.
-    if (import.meta.client && !navigator.onLine) {
+    const { isVerifiedOnline, verifyConnection } = useNetworkStatus();
+    const serverReachable =
+      import.meta.client && navigator.onLine ? await verifyConnection() : false;
+    if (import.meta.client && (!serverReachable || !isVerifiedOnline.value)) {
       const { getOfflineSession } =
         await import("~/utils/offline-v2/repository");
       const cached = await getOfflineSession();

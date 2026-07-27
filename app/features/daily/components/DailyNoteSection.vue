@@ -5,12 +5,27 @@
         <UiTitle id="note-title" tag="h2" size="base">Daily note</UiTitle>
         <!-- <p>One continuous note for this day</p> -->
       </div>
-      <!-- <span class="note-section__save-state">{{ saveState }}</span> -->
+      <span class="note-section__save-state">{{ saveState }}</span>
     </div>
 
-    <DailyNoteConflictPanel v-if="conflict" :conflict="conflict" @resolve="$emit('resolve', $event)" />
-    <DailyRichEditor :key="dateKey" :model-value="modelValue" :readonly="Boolean(conflict)"
-      @update:model-value="$emit('update:modelValue', $event)" @blur="$emit('blur')" />
+    <DailyNoteConflictPanel
+      v-if="conflict"
+      :conflict="conflict"
+      @resolve="$emit('resolve', $event)"
+    />
+    <UiAlert
+      v-else-if="syncIssue"
+      tone="warning"
+      title="Note saved locally"
+      :description="syncIssue"
+    />
+    <DailyRichEditor
+      :key="dateKey"
+      :model-value="modelValue"
+      :readonly="Boolean(conflict)"
+      @update:model-value="$emit('update:modelValue', $event)"
+      @blur="$emit('blur')"
+    />
   </section>
 </template>
 
@@ -19,12 +34,12 @@ import type { DailyNoteConflict } from "../repositories/dailyLocalRepository";
 import DailyNoteConflictPanel from "~/features/daily/components/DailyNoteConflictPanel.vue";
 import DailyRichEditor from "~/features/daily/components/DailyRichEditor.vue";
 
-
 defineProps<{
   dateKey: string;
   modelValue: unknown;
   saveState: string;
   conflict: DailyNoteConflict | null;
+  syncIssue?: string | null;
 }>();
 defineEmits<{
   "update:modelValue": [value: unknown];
@@ -52,9 +67,8 @@ defineEmits<{
   justify-content: space-between;
 }
 
-/* .note-section__head p,
 .note-section__save-state {
   color: var(--color-content-secondary);
   font-size: var(--text-xs);
-} */
+}
 </style>

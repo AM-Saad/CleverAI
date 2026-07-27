@@ -43,6 +43,7 @@ export type OfflineRuntimeState = {
   pending: number;
   retrying: number;
   blocked: number;
+  waiting: number;
   rejected: number;
   conflicts: number;
   lastSyncAt?: number;

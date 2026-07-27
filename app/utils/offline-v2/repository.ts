@@ -13,6 +13,7 @@ import type {
   StoredOfflineMutation,
   OfflineSyncMetadata,
 } from "./types";
+import { migrateLegacySequentialChain } from "./sequentialMutation";
 
 type StoreName = (typeof DB_CONFIG.STORES)[keyof typeof DB_CONFIG.STORES];
 
@@ -206,9 +207,14 @@ export async function replaceOfflinePackEntities(input: {
       .filter(
         (mutation) =>
           mutation.accountId === input.accountId &&
-          ["pending", "syncing", "retry", "blocked", "conflict"].includes(
-            mutation.status,
-          ),
+          [
+            "pending",
+            "syncing",
+            "retry",
+            "blocked",
+            "waiting",
+            "conflict",
+          ].includes(mutation.status),
       )
       .map((mutation) =>
         scopedId(input.accountId, mutation.entity, mutation.entityId),
@@ -326,9 +332,14 @@ export async function removeOfflinePack(input: {
       .filter(
         (mutation) =>
           mutation.accountId === input.accountId &&
-          ["pending", "syncing", "retry", "blocked", "conflict"].includes(
-            mutation.status,
-          ),
+          [
+            "pending",
+            "syncing",
+            "retry",
+            "blocked",
+            "waiting",
+            "conflict",
+          ].includes(mutation.status),
       )
       .map((mutation) =>
         scopedId(input.accountId, mutation.entity, mutation.entityId),
@@ -388,11 +399,120 @@ export async function listOfflineConflicts(
   return all.filter((conflict) => conflict.accountId === accountId);
 }
 
+/**
+ * A state edit queued during an older in-flight revision becomes a second row.
+ * If the first request later retries, chain both rows before the next drain so
+ * the server rebases them as same-device intent instead of concurrent writers.
+ */
+export async function chainPendingSameEntityMutations(
+  accountId: string,
+): Promise<number> {
+  const db = await openUnifiedDB();
+  const tx = db.transaction(stores.OFFLINE_MUTATIONS, "readwrite");
+  const store = tx.objectStore(stores.OFFLINE_MUTATIONS);
+  const all = (await request(store.getAll())) as StoredOfflineMutation[];
+  const groups = new Map<string, StoredOfflineMutation[]>();
+  for (const mutation of all) {
+    if (
+      mutation.accountId !== accountId ||
+      mutation.sequence ||
+      !["pending", "retry"].includes(mutation.status)
+    )
+      continue;
+    const key = `${mutation.entity}:${mutation.entityId}`;
+    const group = groups.get(key) ?? [];
+    group.push(mutation);
+    groups.set(key, group);
+  }
+
+  let repaired = 0;
+  for (const group of groups.values()) {
+    group.sort(
+      (left, right) =>
+        left.createdAt - right.createdAt || left.id.localeCompare(right.id),
+    );
+    for (let index = 1; index < group.length; index += 1) {
+      const predecessor = group[index - 1]!;
+      const mutation = group[index]!;
+      if (mutation.dependsOn.includes(predecessor.id)) continue;
+      store.put(
+        sanitizeForIDB({
+          ...mutation,
+          dependsOn: [...new Set([...mutation.dependsOn, predecessor.id])],
+          updatedAt: now(),
+        }),
+      );
+      repaired += 1;
+    }
+  }
+  await complete(tx);
+  return repaired;
+}
+
+/**
+ * Upgrade occurrence commands queued before baseVersion was tied to
+ * OfflineEntityState. Server bootstrap supplies the canonical starting
+ * revisions; commands keep their external dependencies and become one
+ * immediate-predecessor chain. In-flight/conflicted chains are left alone.
+ */
+export async function migrateLegacyDailyOccurrenceMutations(
+  accountId: string,
+  serverVersions: ReadonlyMap<string, number>,
+): Promise<number> {
+  const db = await openUnifiedDB();
+  const tx = db.transaction(stores.OFFLINE_MUTATIONS, "readwrite");
+  const store = tx.objectStore(stores.OFFLINE_MUTATIONS);
+  const all = (await request(store.getAll())) as StoredOfflineMutation[];
+  const groups = new Map<string, StoredOfflineMutation[]>();
+  for (const mutation of all) {
+    if (
+      mutation.accountId !== accountId ||
+      mutation.entity !== "actionOccurrence" ||
+      ![
+        "pending",
+        "retry",
+        "blocked",
+        "waiting",
+        "syncing",
+        "conflict",
+      ].includes(mutation.status)
+    )
+      continue;
+    const group = groups.get(mutation.entityId) ?? [];
+    group.push(mutation);
+    groups.set(mutation.entityId, group);
+  }
+
+  let migratedCount = 0;
+  for (const [entityId, group] of groups) {
+    if (
+      !group.some((mutation) => !mutation.revisionScheme) ||
+      group.some(
+        (mutation) =>
+          mutation.status === "syncing" || mutation.status === "conflict",
+      )
+    )
+      continue;
+    for (const mutation of migrateLegacySequentialChain({
+      mutations: group,
+      serverVersion: serverVersions.get(entityId) ?? 0,
+    })) {
+      store.put(sanitizeForIDB(mutation));
+      migratedCount += 1;
+    }
+  }
+  await complete(tx);
+  return migratedCount;
+}
+
 /** Applies the visible local write and queues its mutation atomically. */
 export async function commitOfflineMutation(input: {
   accountId: string;
   mutation: OfflineMutation;
   localRecord?: Omit<OfflineEntityRecord, "id" | "accountId" | "updatedAt">;
+  localRecords?: Array<
+    Omit<OfflineEntityRecord, "id" | "accountId" | "updatedAt">
+  >;
 }): Promise<StoredOfflineMutation> {
   const db = await openUnifiedDB();
   const tx = db.transaction(
@@ -414,6 +534,24 @@ export async function commitOfflineMutation(input: {
     const all = (await request(
       mutationStore.getAll(),
     )) as StoredOfflineMutation[];
+    const inFlightPredecessor = all
+      .filter(
+        (candidate) =>
+          candidate.accountId === input.accountId &&
+          candidate.entity === mutation.entity &&
+          candidate.entityId === mutation.entityId &&
+          candidate.status === "syncing",
+      )
+      .sort(
+        (left, right) =>
+          left.createdAt - right.createdAt || left.id.localeCompare(right.id),
+      )
+      .at(-1);
+    if (inFlightPredecessor) {
+      mutation.dependsOn = [
+        ...new Set([...mutation.dependsOn, inFlightPredecessor.id]),
+      ];
+    }
     const existing = all.find(
       (candidate) =>
         candidate.accountId === input.accountId &&
@@ -457,6 +595,8 @@ export async function commitOfflineMutation(input: {
         ];
         mutation.attempts = existing.attempts;
         mutation.rollbackData = rollbackData;
+        mutation.rollbackRecords =
+          existing.rollbackRecords ?? mutation.rollbackRecords;
         mutationStore.put(sanitizeForIDB(mutation));
       }
     } else {
@@ -490,20 +630,21 @@ export async function commitOfflineMutation(input: {
     }
   }
 
-  if (input.localRecord) {
+  const localRecords = [
+    ...(input.localRecord ? [input.localRecord] : []),
+    ...(input.localRecords ?? []),
+  ];
+  for (const localRecord of localRecords) {
     const record: OfflineEntityRecord = {
-      ...input.localRecord,
-      id: scopedId(
-        input.accountId,
-        input.localRecord.entity,
-        input.localRecord.entityId,
-      ),
+      ...localRecord,
+      id: scopedId(input.accountId, localRecord.entity, localRecord.entityId),
       accountId: input.accountId,
       updatedAt: now(),
       localDirty: false,
     };
     entityStore.put(sanitizeForIDB(record));
-  } else if (mutation.operation.endsWith(".delete")) {
+  }
+  if (!localRecords.length && mutation.operation.endsWith(".delete")) {
     const key = scopedId(input.accountId, mutation.entity, mutation.entityId);
     const existing = (await request(entityStore.get(key))) as
       | OfflineEntityRecord
@@ -713,13 +854,14 @@ export async function applySyncResult(input: {
   accountId: string;
   mutation: StoredOfflineMutation;
   result: {
-    status: "applied" | "retry" | "rejected" | "conflict";
+    status: "applied" | "retry" | "waiting" | "rejected" | "conflict";
     entity?: OfflineEntity;
     entityId?: string;
     version?: number;
     canonical?: Record<string, unknown> | null;
     related?: OfflineRelatedEntityResult[];
     conflict?: Record<string, unknown>;
+    blockedBy?: string;
     message?: string;
   };
 }): Promise<OfflineSyncProjectionResult> {
@@ -770,7 +912,7 @@ export async function applySyncResult(input: {
         candidate.id !== input.mutation.id &&
         candidate.entity === input.mutation.entity &&
         candidate.entityId === canonicalEntityId &&
-        ["pending", "retry", "blocked"].includes(candidate.status),
+        ["pending", "retry", "blocked", "waiting"].includes(candidate.status),
     );
     if (!ownsCurrentRevision && current) successors.push(current);
     const entityKey = scopedId(
@@ -788,11 +930,21 @@ export async function applySyncResult(input: {
     projection.hasPendingSuccessor = successors.length > 0 || hasNewerDraft;
     if (result.version !== undefined) {
       for (const successor of successors) {
+        if (
+          successor.sequence &&
+          !successor.dependsOn.includes(input.mutation.id)
+        )
+          continue;
         if (successor.operation.endsWith(".create")) continue;
         mutations.put(
           sanitizeForIDB({
             ...successor,
             baseVersion: result.version,
+            rollbackData: result.canonical ?? successor.rollbackData,
+            status:
+              successor.status === "waiting" ? "pending" : successor.status,
+            lastError:
+              successor.status === "waiting" ? undefined : successor.lastError,
             updatedAt: now(),
           }),
         );
@@ -835,7 +987,7 @@ export async function applySyncResult(input: {
           candidate.accountId === input.accountId &&
           candidate.entity === related.entity &&
           candidate.entityId === related.entityId &&
-          ["pending", "retry", "blocked"].includes(candidate.status),
+          ["pending", "retry", "blocked", "waiting"].includes(candidate.status),
       );
       const hasRelatedDraft = Boolean(
         relatedEntity?.localDirty &&
@@ -950,6 +1102,26 @@ export async function applySyncResult(input: {
         createdAt: now(),
       }),
     );
+    const queued = (await request(
+      mutations.getAll(),
+    )) as StoredOfflineMutation[];
+    for (const successor of queued) {
+      if (
+        successor.accountId !== input.accountId ||
+        successor.id === input.mutation.id ||
+        !successor.dependsOn.includes(input.mutation.id) ||
+        !["pending", "retry"].includes(successor.status)
+      )
+        continue;
+      mutations.put(
+        sanitizeForIDB({
+          ...successor,
+          status: "waiting",
+          lastError: "Waiting for an earlier conflict to be resolved.",
+          updatedAt: now(),
+        }),
+      );
+    }
   } else if (result.status === "rejected") {
     if (!ownsCurrentRevision) {
       await complete(tx);
@@ -971,7 +1143,10 @@ export async function applySyncResult(input: {
       rejected.entity,
       rejected.entityId,
     );
-    if (rejected.rollbackData) {
+    if (result.blockedBy) {
+      // A rejected predecessor already restored canonical state. Replaying this
+      // successor's intermediate rollback would resurrect the rejected edit.
+    } else if (rejected.rollbackData) {
       entities.put(
         sanitizeForIDB({
           id: entityKey,
@@ -986,8 +1161,38 @@ export async function applySyncResult(input: {
           data: rejected.rollbackData,
         }),
       );
-    } else if (rejected.operation.endsWith(".create")) {
+    } else if (
+      rejected.rollbackData === null ||
+      rejected.operation.endsWith(".create")
+    ) {
       entities.delete(entityKey);
+    }
+    if (!result.blockedBy) {
+      for (const rollback of rejected.rollbackRecords ?? []) {
+        const key = scopedId(
+          input.accountId,
+          rollback.entity,
+          rollback.entityId,
+        );
+        if (rollback.data === null) {
+          entities.delete(key);
+          continue;
+        }
+        entities.put(
+          sanitizeForIDB({
+            id: key,
+            accountId: input.accountId,
+            entity: rollback.entity,
+            entityId: rollback.entityId,
+            workspaceId: rollback.workspaceId,
+            version: rollback.version,
+            updatedAt: now(),
+            localDirty: false,
+            deleted: false,
+            data: rollback.data,
+          }),
+        );
+      }
     }
   } else {
     if (!ownsCurrentRevision) {
@@ -1134,6 +1339,10 @@ export async function resolveOfflineConflict(input: {
   accountId: string;
   mutationId: string;
   strategy: "keep-local" | "keep-server";
+  /** Optional feature-specific rebase onto the latest server snapshot. */
+  rebasedPayload?: Record<string, unknown>;
+  rebasedChangedFields?: string[];
+  rebasedLocalData?: Record<string, unknown>;
 }): Promise<void> {
   const db = await openUnifiedDB();
   const tx = db.transaction(
@@ -1154,25 +1363,44 @@ export async function resolveOfflineConflict(input: {
     conflictStore.get(scopedId(input.accountId, input.mutationId)),
   )) as StoredOfflineConflict | undefined;
   if (mutation?.accountId === input.accountId) {
+    const allMutations = (await request(
+      mutationStore.getAll(),
+    )) as StoredOfflineMutation[];
+    const directSuccessors = allMutations.filter(
+      (candidate) =>
+        candidate.accountId === input.accountId &&
+        candidate.id !== mutation.id &&
+        candidate.entity === mutation.entity &&
+        candidate.entityId === mutation.entityId &&
+        candidate.dependsOn.includes(mutation.id) &&
+        ["pending", "retry", "blocked", "waiting"].includes(candidate.status),
+    );
     if (input.strategy === "keep-server") {
       mutationStore.delete(mutation.id);
       const snapshot = conflict?.serverSnapshot;
       const key = scopedId(input.accountId, mutation.entity, mutation.entityId);
       if (snapshot) {
+        const existing = (await request(entityStore.get(key))) as
+          | OfflineEntityRecord
+          | undefined;
         entityStore.put(
           sanitizeForIDB({
-            id: key,
-            accountId: input.accountId,
-            entity: mutation.entity,
-            entityId: mutation.entityId,
-            workspaceId:
-              typeof snapshot.workspaceId === "string"
-                ? snapshot.workspaceId
-                : mutation.workspaceId,
+            ...(directSuccessors.length && existing
+              ? existing
+              : {
+                  id: key,
+                  accountId: input.accountId,
+                  entity: mutation.entity,
+                  entityId: mutation.entityId,
+                  workspaceId:
+                    typeof snapshot.workspaceId === "string"
+                      ? snapshot.workspaceId
+                      : mutation.workspaceId,
+                  data: snapshot,
+                }),
             version: conflict?.serverVersion ?? 0,
             updatedAt: now(),
             localDirty: false,
-            data: snapshot,
           }),
         );
       } else {
@@ -1188,11 +1416,57 @@ export async function resolveOfflineConflict(input: {
             updatedAt: now(),
           });
       }
+      for (const successor of directSuccessors) {
+        mutationStore.put(
+          sanitizeForIDB({
+            ...successor,
+            status:
+              successor.status === "waiting" ? "pending" : successor.status,
+            baseVersion: conflict?.serverVersion ?? successor.baseVersion,
+            rollbackData: snapshot ?? successor.rollbackData,
+            dependsOn: successor.dependsOn.filter(
+              (dependency) => dependency !== mutation.id,
+            ),
+            lastError:
+              successor.status === "waiting" ? undefined : successor.lastError,
+            updatedAt: now(),
+          }),
+        );
+      }
+      if (!directSuccessors.length) {
+        for (const rollback of mutation.rollbackRecords ?? []) {
+          const rollbackKey = scopedId(
+            input.accountId,
+            rollback.entity,
+            rollback.entityId,
+          );
+          if (rollback.data === null) {
+            entityStore.delete(rollbackKey);
+            continue;
+          }
+          entityStore.put(
+            sanitizeForIDB({
+              id: rollbackKey,
+              accountId: input.accountId,
+              entity: rollback.entity,
+              entityId: rollback.entityId,
+              workspaceId: rollback.workspaceId,
+              version: rollback.version,
+              updatedAt: now(),
+              localDirty: false,
+              deleted: false,
+              data: rollback.data,
+            }),
+          );
+        }
+      }
     } else {
       mutationStore.put({
         ...mutation,
         status: "pending",
         baseVersion: conflict?.serverVersion,
+        payload: input.rebasedPayload ?? mutation.payload,
+        changedFields: input.rebasedChangedFields ?? mutation.changedFields,
         lastError: undefined,
         updatedAt: now(),
       });
@@ -1201,7 +1475,12 @@ export async function resolveOfflineConflict(input: {
         | OfflineEntityRecord
         | undefined;
       if (existing)
-        entityStore.put({ ...existing, localDirty: false, updatedAt: now() });
+        entityStore.put({
+          ...existing,
+          data: input.rebasedLocalData ?? existing.data,
+          localDirty: false,
+          updatedAt: now(),
+        });
     }
   }
   conflictStore.delete(scopedId(input.accountId, input.mutationId));

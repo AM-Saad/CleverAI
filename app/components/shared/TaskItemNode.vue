@@ -16,7 +16,7 @@ import { NodeViewWrapper, NodeViewContent, nodeViewProps } from "@tiptap/vue-3";
 
 const props = defineProps(nodeViewProps);
 
-function onCheckChange(val: boolean | "indeterminate") {
+function onCheckChange(val: boolean | "indeterminate" | undefined) {
   if (typeof props.updateAttributes === "function") {
     props.updateAttributes({ checked: Boolean(val) });
   }

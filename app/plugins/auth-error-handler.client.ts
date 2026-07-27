@@ -1,5 +1,6 @@
 // plugins/auth-error-handler.client.ts
 import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
+import { clearDailyMemoryState } from "~/features/daily/composables/useDaily";
 
 export default defineNuxtPlugin({
   name: "auth-error-handler",
@@ -20,6 +21,7 @@ export default defineNuxtPlugin({
           // Drop SSR/useAsyncData memory so no account-scoped response can
           // survive into the next login. Durable IndexedDB data is preserved.
           clearNuxtData();
+          clearDailyMemoryState();
           await navigateTo("/auth/signin?reason=session_invalid", {
             replace: true,
           });
@@ -46,10 +48,7 @@ export default defineNuxtPlugin({
       { immediate: true },
     );
 
-    window.addEventListener(
-      "auth-session-invalidated",
-      onSessionInvalidated,
-    );
+    window.addEventListener("auth-session-invalidated", onSessionInvalidated);
     onScopeDispose(() => {
       window.removeEventListener(
         "auth-session-invalidated",

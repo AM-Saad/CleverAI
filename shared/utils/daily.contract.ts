@@ -76,6 +76,7 @@ export const ActionItemSchema = z
     timezone: z.string().nullable().optional(),
     recurrence: RecurrenceRuleSchema.nullable().optional(),
     lifecycle: ActionLifecycleSchema,
+    version: z.number().int().nonnegative(),
     createdAt: z.string().or(z.date()),
     updatedAt: z.string().or(z.date()),
   })
@@ -98,7 +99,7 @@ export const ActionOccurrenceSchema = z.object({
   currentPlacementId: z.string().nullable().optional(),
   status: OccurrenceStatusSchema,
   completedAt: z.string().or(z.date()).nullable().optional(),
-  version: z.number().int().positive(),
+  version: z.number().int().nonnegative(),
   createdAt: z.string().or(z.date()),
   updatedAt: z.string().or(z.date()),
 });
@@ -231,6 +232,7 @@ export const DayItemSchema = z.object({
 export const DayProjectionSchema = z.object({
   dateKey: DateKeySchema,
   note: DailyNoteSchema.nullable(),
+  actionItems: z.array(ActionItemSchema),
   items: z.array(DayItemSchema),
 });
 

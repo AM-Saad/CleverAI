@@ -112,6 +112,7 @@ export default defineAppConfig({
     checkbox: {
       slots: {
         base: "rounded-[var(--radius-md)] ring-1 ring-inset ring-secondary focus-visible:outline-2! focus-visible:outline-offset-[-2px]! focus-visible:outline-[var(--ds-focus-outline-color)]! active:scale-[0.98] transition-[background-color,border-color,box-shadow,transform] duration-[var(--duration-normal)] ease-[var(--ease-standard)]",
+        container: 'h-auto!',
         indicator: "text-on-primary flex items-center justify-center transition-[opacity,transform] duration-[var(--duration-normal)] ease-[var(--ease-spring)] data-[state=unchecked]:opacity-0 data-[state=unchecked]:scale-50 data-[state=checked]:opacity-100 data-[state=checked]:scale-100",
         icon: "transition-transform duration-[var(--duration-normal)] ease-[var(--ease-spring)]",
         label: "text-content-on-surface cursor-pointer select-none",

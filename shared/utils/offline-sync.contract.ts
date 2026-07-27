@@ -34,6 +34,8 @@ export const OfflineMutationStatusSchema = z.enum([
   "retry",
   /** The account must authenticate before this mutation can be sent again. */
   "blocked",
+  /** A prior ordered mutation must be resolved or applied first. */
+  "waiting",
   "rejected",
   "conflict",
 ]);
@@ -50,12 +52,27 @@ export const OfflineMutationSchema = z.object({
   payload: z.record(z.string(), z.unknown()).default({}),
   /** Canonical local snapshot from before this coalesced command began. */
   rollbackData: z.record(z.string(), z.unknown()).nullable().optional(),
+  /** Related local records restored together when this command is rejected. */
+  rollbackRecords: z
+    .array(
+      z.object({
+        entity: OfflineEntitySchema,
+        entityId: z.string().min(1),
+        workspaceId: z.string().min(1).optional(),
+        version: z.number().int().nonnegative(),
+        data: z.record(z.string(), z.unknown()).nullable(),
+      }),
+    )
+    .max(16)
+    .optional(),
   dependsOn: z.array(z.string().min(1)).max(32).default([]),
   occurredAt: z.string().datetime(),
   createdAt: z.number().int().nonnegative(),
   attempts: z.number().int().nonnegative().default(0),
   status: OfflineMutationStatusSchema.default("pending"),
   lastError: z.string().max(1000).optional(),
+  /** Meaning used by baseVersion. Missing means a legacy client revision. */
+  revisionScheme: z.literal("offline-entity-v1").optional(),
   /** Grades and other audit events must never be coalesced. */
   sequence: z.boolean().default(false),
 });
@@ -77,11 +94,13 @@ export const OfflineRelatedEntityResultSchema = z.object({
   version: z.number().int().nonnegative(),
   canonical: z.record(z.string(), z.unknown()).nullable().optional(),
 });
-export type OfflineRelatedEntityResult = z.infer<typeof OfflineRelatedEntityResultSchema>;
+export type OfflineRelatedEntityResult = z.infer<
+  typeof OfflineRelatedEntityResultSchema
+>;
 
 export const OfflineSyncResultSchema = z.object({
   id: z.string(),
-  status: z.enum(["applied", "retry", "rejected", "conflict"]),
+  status: z.enum(["applied", "retry", "waiting", "rejected", "conflict"]),
   entity: OfflineEntitySchema.optional(),
   entityId: z.string().optional(),
   version: z.number().int().nonnegative().optional(),
@@ -89,6 +108,7 @@ export const OfflineSyncResultSchema = z.object({
   idMap: z.record(z.string(), z.string()).optional(),
   related: z.array(OfflineRelatedEntityResultSchema).optional(),
   conflict: OfflineConflictSchema.optional(),
+  blockedBy: z.string().optional(),
   message: z.string().optional(),
 });
 export type OfflineSyncResult = z.infer<typeof OfflineSyncResultSchema>;

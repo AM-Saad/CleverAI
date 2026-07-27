@@ -10,7 +10,7 @@ const conflicts = ref<Awaited<ReturnType<typeof offline.conflictsList>>>([]);
 const mutations = ref<StoredOfflineMutation[]>([]);
 const busy = ref(false);
 const selectedWorkspaceId = computed(() => typeof route.query.workspaceId === "string" ? route.query.workspaceId : undefined);
-const needsAttention = computed(() => offline.rejected.value + offline.conflicts.value + offline.blocked.value);
+const needsAttention = computed(() => offline.rejected.value + offline.conflicts.value + offline.blocked.value + offline.waiting.value);
 const lastSyncLabel = computed(() => offline.lastSyncAt.value ? new Date(offline.lastSyncAt.value).toLocaleString() : "Not yet");
 
 const refresh = async () => {
@@ -44,10 +44,11 @@ onMounted(() => { void refresh(); });
     </div>
 
     <ui-panel variant="subtle" size="md">
-      <dl class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+      <dl class="grid grid-cols-2 gap-3 text-sm sm:grid-cols-5">
         <div><dt class="text-content-secondary">Pending</dt><dd class="font-semibold">{{ offline.pending }}</dd></div>
         <div><dt class="text-content-secondary">Retrying</dt><dd class="font-semibold">{{ offline.retrying }}</dd></div>
         <div><dt class="text-content-secondary">Sign in to sync</dt><dd class="font-semibold">{{ offline.blocked }}</dd></div>
+        <div><dt class="text-content-secondary">Waiting on conflict</dt><dd class="font-semibold">{{ offline.waiting }}</dd></div>
         <div><dt class="text-content-secondary">Needs attention</dt><dd class="font-semibold">{{ needsAttention }}</dd></div>
         <div><dt class="text-content-secondary">Last sync</dt><dd class="font-semibold">{{ lastSyncLabel }}</dd></div>
       </dl>

@@ -13,6 +13,7 @@ import { PrismaXpPort } from "../../review/infrastructure/PrismaXpPort";
 import { LanguagePreferencesDTO } from "../../../../shared/utils/language.contract";
 import { NotificationPreferencesDTO } from "../../../../shared/utils/notification.contract";
 import { orderOfflineMutations } from "../../../../shared/utils/offline-mutation-order";
+import { rebaseFromAppliedDependency } from "../../../../shared/utils/offline-sequence";
 import {
   isPositionKey,
   positionBetween,
@@ -27,7 +28,10 @@ import {
 } from "../../../../shared/utils/daily.contract";
 import { placementStateAfterMove } from "../../../../shared/utils/daily-placement";
 import { occurrenceKey as occurrenceKeyFor } from "../../../../shared/utils/daily-recurrence";
-import { ensureOccurrence, ownedActionItem } from "../../daily/domain/ensureOccurrence";
+import {
+  ensureOccurrence,
+  ownedActionItem,
+} from "../../daily/domain/ensureOccurrence";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -1176,14 +1180,24 @@ async function applyDomainMutation(input: {
               : null,
       },
     });
+    const hasPlacementTimingUpdate =
+      data.timingMode !== undefined ||
+      data.localTime !== undefined ||
+      data.timezone !== undefined;
     const updatedPlacement =
-      placement && data.timingMode
+      placement && hasPlacementTimingUpdate
         ? await prisma.actionPlacement.update({
             where: { id: placement.id },
             data: {
-              timingMode: data.timingMode,
-              localTime: data.localTime ?? null,
-              timezone: data.timezone ?? null,
+              timingMode: data.timingMode ?? placement.timingMode,
+              localTime:
+                data.localTime === undefined
+                  ? placement.localTime
+                  : data.localTime,
+              timezone:
+                data.timezone === undefined
+                  ? placement.timezone
+                  : data.timezone,
             },
           })
         : null;
@@ -1320,6 +1334,8 @@ async function applyDomainMutation(input: {
         new Error("This occurrence has no active placement"),
         { statusCode: 409 },
       );
+    if (existing.status === "OPEN")
+      return { entityId: existing.id, canonical: json(existing) };
     const placement = await prisma.actionPlacement.update({
       where: { id: existing.currentPlacementId },
       data: { state: "ACTIVE" },
@@ -1381,6 +1397,18 @@ function isRejectedMutationError(error: unknown): boolean {
   ].includes(code);
 }
 
+function retryMessage(error: unknown): string {
+  const message = String(
+    (error as { message?: unknown } | undefined)?.message ?? "",
+  );
+  if (
+    message.includes("Transaction already closed") ||
+    message.includes("Transaction API error")
+  )
+    return "Server transaction timed out. Your saved local change will retry.";
+  return "Server could not sync this saved local change yet. It will retry.";
+}
+
 async function persistedResult(
   prisma: any,
   userId: string,
@@ -1400,6 +1428,17 @@ async function syncOne(input: {
   const { prisma, userId, mutation } = input;
   const replay = await persistedResult(prisma, userId, mutation.id);
   if (replay) return replay;
+
+  if (mutation.entity === "actionOccurrence" && !mutation.revisionScheme) {
+    return {
+      id: mutation.id,
+      status: "retry",
+      entity: mutation.entity,
+      entityId: mutation.entityId,
+      message:
+        "This queued occurrence needs a Daily bootstrap before it can sync.",
+    };
+  }
 
   if (!isCreate(mutation) && mutation.baseVersion === undefined) {
     return {
@@ -1437,6 +1476,12 @@ async function syncOne(input: {
             (field) => (versions[field] ?? 0) > mutation.baseVersion!,
           );
           if (overlappingFields.length || state.deletedAt) {
+            const snapshot = await currentSnapshot(
+              tx,
+              userId,
+              mutation.entity,
+              mutation.entityId,
+            );
             const conflict: OfflineConflict = {
               entity: mutation.entity,
               entityId: mutation.entityId,
@@ -1444,12 +1489,10 @@ async function syncOne(input: {
               overlappingFields: state.deletedAt
                 ? ["deleted"]
                 : overlappingFields,
-              serverSnapshot: await currentSnapshot(
-                tx,
-                userId,
-                mutation.entity,
-                mutation.entityId,
-              ),
+              serverSnapshot:
+                mutation.entity === "actionOccurrence" && snapshot
+                  ? { ...snapshot, version: state.version }
+                  : snapshot,
               reason: state.deletedAt
                 ? "This item was deleted on another device."
                 : "The same fields changed on another device.",
@@ -1572,7 +1615,12 @@ async function syncOne(input: {
           entity: mutation.entity,
           entityId: stateEntityId,
           version,
-          canonical: applied.canonical,
+          canonical:
+            (mutation.entity === "actionItem" ||
+              mutation.entity === "actionOccurrence") &&
+            applied.canonical
+              ? { ...applied.canonical, version }
+              : applied.canonical,
           idMap: applied.idMap,
           related: relatedResults.length ? relatedResults : undefined,
         };
@@ -1588,7 +1636,7 @@ async function syncOne(input: {
         });
         return result;
       },
-      { maxWait: 5_000, timeout: 15_000 },
+      { maxWait: 10_000, timeout: 30_000 },
     );
   } catch (error: any) {
     if (isDuplicateReceiptError(error)) {
@@ -1601,7 +1649,10 @@ async function syncOne(input: {
       status,
       entity: mutation.entity,
       entityId: mutation.entityId,
-      message: error?.message ?? "Offline sync failed",
+      message:
+        status === "rejected"
+          ? (error?.message ?? "Offline sync rejected this change")
+          : retryMessage(error),
     };
     if (status === "rejected") {
       try {
@@ -1646,12 +1697,16 @@ export async function syncOfflineMutations(input: {
       .map((dependency) => resultsById.get(dependency))
       .find((result) => result && result.status !== "applied");
     if (completedDependency) {
+      const dependencyRejected = completedDependency.status === "rejected";
       const result: OfflineSyncResult = {
         id: original.id,
-        status: "rejected",
+        status: dependencyRejected ? "rejected" : "waiting",
         entity: original.entity,
         entityId: original.entityId,
-        message: `A required local change (${completedDependency.id}) was not applied.`,
+        blockedBy: completedDependency.id,
+        message: dependencyRejected
+          ? `A required local change (${completedDependency.id}) was rejected.`
+          : `Waiting for an earlier local change (${completedDependency.id}).`,
       };
       results.push(result);
       resultsById.set(result.id, result);
@@ -1660,22 +1715,31 @@ export async function syncOfflineMutations(input: {
     const dependenciesOutsideBatch = original.dependsOn.filter(
       (dependency) => !resultsById.has(dependency),
     );
+    const receipts = dependenciesOutsideBatch.length
+      ? await Promise.all(
+          dependenciesOutsideBatch.map((mutationId) =>
+            persistedResult(input.prisma, input.userId, mutationId),
+          ),
+        )
+      : [];
     if (dependenciesOutsideBatch.length) {
-      const receipts = await Promise.all(
-        dependenciesOutsideBatch.map((mutationId) =>
-          persistedResult(input.prisma, input.userId, mutationId),
-        ),
-      );
       const missing = receipts.some((receipt) => !receipt);
       const failed = receipts.find(
         (receipt) => receipt && receipt.status !== "applied",
       );
       if (missing || failed) {
+        const dependencyId =
+          dependenciesOutsideBatch[
+            failed
+              ? receipts.indexOf(failed)
+              : receipts.findIndex((row) => !row)
+          ];
         const result: OfflineSyncResult = {
           id: original.id,
-          status: missing ? "retry" : "rejected",
+          status: missing ? "waiting" : "rejected",
           entity: original.entity,
           entityId: original.entityId,
+          blockedBy: dependencyId,
           message: missing
             ? "Waiting for a required local change to sync."
             : "A required local change was rejected.",
@@ -1690,10 +1754,24 @@ export async function syncOfflineMutations(input: {
       entityId: String(remap(original.entityId, idMap)),
       payload: remap(original.payload, idMap) as JsonRecord,
     };
+    const appliedDependencies = [
+      ...original.dependsOn
+        .map((dependency) => resultsById.get(dependency))
+        .filter((result): result is OfflineSyncResult =>
+          Boolean(result && result.status === "applied"),
+        ),
+      ...receipts.filter((result): result is OfflineSyncResult =>
+        Boolean(result && result.status === "applied"),
+      ),
+    ];
+    const effectiveMutation = rebaseFromAppliedDependency(
+      mutation,
+      appliedDependencies,
+    );
     const result = await syncOne({
       prisma: input.prisma,
       userId: input.userId,
-      mutation,
+      mutation: effectiveMutation,
     });
     results.push(result);
     resultsById.set(result.id, result);

@@ -333,7 +333,7 @@ function selectDateKey(dKey: string) {
   emit("close");
 }
 
-function onDirectDateInput(val: string | number) {
+function onDirectDateInput(val: string | number | null | undefined) {
   const strVal = String(val);
   if (isDateKey(strVal)) {
     selectDateKey(strVal);

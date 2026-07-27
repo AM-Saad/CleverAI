@@ -9,13 +9,17 @@ export type DailyEditorSaveState =
   | "editing"
   | "saved-local"
   | "syncing"
-  | "conflict";
+  | "sync-delayed"
+  | "conflict"
+  | "error";
 
 export interface DailyNoteDraftCommit {
   content: unknown;
 }
 
-export function buildDailyNoteDraftCommit(content: unknown): DailyNoteDraftCommit {
+export function buildDailyNoteDraftCommit(
+  content: unknown,
+): DailyNoteDraftCommit {
   return { content };
 }
 
@@ -23,9 +27,13 @@ export function resolveDailyEditorSaveState(input: {
   hasLocalDraft: boolean;
   isSyncing?: boolean;
   isConflicted?: boolean;
+  hasError?: boolean;
+  hasSyncIssue?: boolean;
 }): DailyEditorSaveState {
   if (input.isConflicted) return "conflict";
+  if (input.hasError) return "error";
   if (input.hasLocalDraft) return "editing";
+  if (input.hasSyncIssue) return "sync-delayed";
   if (input.isSyncing) return "syncing";
   return "saved-local";
 }
@@ -36,8 +44,12 @@ export function dailySaveStateLabel(state: DailyEditorSaveState): string {
       return "Editing";
     case "syncing":
       return "Syncing…";
+    case "sync-delayed":
+      return "Saved locally · sync delayed";
     case "conflict":
       return "Conflict";
+    case "error":
+      return "Save failed — retrying";
     case "saved-local":
     default:
       return "Saved locally";

@@ -66,7 +66,7 @@ export function projectLocalDay(
     const actionItem = snapshot.actionItems.find(
       (item) => item.id === occurrence.actionItemId,
     );
-    if (!actionItem) continue;
+    if (!actionItem || actionItem.lifecycle !== "ACTIVE") continue;
     const placements =
       placementsByOccurrence.get(occurrence.occurrenceKey) ?? [];
     const current = occurrence.currentPlacementId
@@ -123,6 +123,7 @@ export function projectLocalDay(
   return {
     dateKey,
     note: snapshot.notes.find((note) => note.dateKey === dateKey) ?? null,
+    actionItems: snapshot.actionItems,
     items,
   };
 }

@@ -1,19 +1,50 @@
 <template>
   <div class="day-page">
-    <DailyDateNavigation :active-date-key="dateKey" :eyebrow="eyebrow" :title="dayTitle" :days="weekDays"
-      :account-link="accountLink" @navigate="go" @select-date="goDate" />
+    <DailyDateNavigation
+      :active-date-key="dateKey"
+      :eyebrow="eyebrow"
+      :title="dayTitle"
+      :days="weekDays"
+      :account-link="accountLink"
+      @navigate="go"
+      @select-date="goDate"
+    />
 
     <UiAlert v-if="daily.error.value" tone="error" :title="daily.error.value" />
 
-    <DailyActionSection :date-key="dateKey" :items="activeActionModels" :moved-items="movedActionModels"
-      :open-count="openCount" :completed-count="completedCount"
-      :loading="Boolean(daily.loadingDates.value[dateKey])" @toggle="toggleAction" @move="openMove" />
+    <DailyActionSection
+      :date-key="dateKey"
+      :items="activeActionModels"
+      :moved-items="movedActionModels"
+      :open-count="openCount"
+      :completed-count="completedCount"
+      :loading="Boolean(daily.loadingDates.value[dateKey])"
+      :conflicts="actionConflicts"
+      :occurrence-conflicts="occurrenceConflicts"
+      :resolving-action-item-id="resolvingActionItemId"
+      :resolving-occurrence-id="resolvingOccurrenceId"
+      @toggle="toggleAction"
+      @move="openMove"
+      @resolve-conflict="resolveActionConflict"
+      @resolve-occurrence-conflict="resolveOccurrenceConflict"
+    />
 
-    <DailyNoteSection :date-key="dateKey" :model-value="noteContent" :save-state="noteSaveState"
-      :conflict="noteConflict" @update:model-value="onNoteChange" @blur="flushPendingSave()"
-      @resolve="resolveNoteConflict" />
+    <DailyNoteSection
+      :date-key="dateKey"
+      :model-value="noteContent"
+      :save-state="noteSaveState"
+      :conflict="noteConflict"
+      :sync-issue="noteSyncIssue"
+      @update:model-value="onNoteChange"
+      @blur="flushPendingSave()"
+      @resolve="resolveNoteConflict"
+    />
 
-    <RescheduleActionSheet v-model:open="moveSheetOpen" :visible-date="dateKey" :item="movingItem" />
+    <RescheduleActionSheet
+      v-model:open="moveSheetOpen"
+      :visible-date="dateKey"
+      :item="movingItem"
+    />
   </div>
 </template>
 
@@ -32,6 +63,8 @@ import DailyNoteSection from "~/features/daily/components/DailyNoteSection.vue";
 import RescheduleActionSheet from "~/features/daily/components/RescheduleActionSheet.vue";
 import { useDaily } from "~/features/daily/composables/useDaily";
 import { useDailyNoteDraft } from "~/features/daily/composables/useDailyNoteDraft";
+import type { DailyActionConflict } from "~/features/daily/repositories/dailyLocalRepository";
+import type { DailyOccurrenceConflict } from "~/features/daily/repositories/dailyLocalRepository";
 import { toDailyActionViewModel } from "~/features/daily/presentation/dailyActionViewModel";
 
 definePageMeta({ middleware: "auth" });
@@ -50,6 +83,25 @@ const dateKey = computed(() =>
 const projection = computed(() => daily.projections.value[dateKey.value]);
 const moveSheetOpen = ref(false);
 const movingItem = ref<DayItemDTO | null>(null);
+const actionConflicts = ref<DailyActionConflict[]>([]);
+const occurrenceConflicts = ref<DailyOccurrenceConflict[]>([]);
+const resolvingActionItemId = ref<string | null>(null);
+const resolvingOccurrenceId = ref<string | null>(null);
+const onDailyLocalStateChanged = () => {
+  void refreshActionConflicts();
+};
+onMounted(() => {
+  window.addEventListener(
+    "daily-local-state-changed",
+    onDailyLocalStateChanged,
+  );
+});
+onBeforeUnmount(() => {
+  window.removeEventListener(
+    "daily-local-state-changed",
+    onDailyLocalStateChanged,
+  );
+});
 
 const activeItems = computed(() =>
   (projection.value?.items ?? []).filter(
@@ -83,6 +135,7 @@ const openCount = computed(
 const {
   noteContent,
   noteConflict,
+  noteSyncIssue,
   noteSaveState,
   onNoteChange,
   flushPendingSave,
@@ -91,6 +144,26 @@ const {
   dateKey,
   projectedContent: computed(() => projection.value?.note?.content),
 });
+
+async function ensureDraftDurableBeforeNavigation() {
+  try {
+    await flushPendingSave(dateKey.value, true);
+    return true;
+  } catch (saveError) {
+    toast.add({
+      title: "Note wasn’t saved locally",
+      description:
+        saveError instanceof Error
+          ? saveError.message
+          : "Stay on this day and try again.",
+      color: "error",
+    });
+    return false;
+  }
+}
+
+onBeforeRouteUpdate(ensureDraftDurableBeforeNavigation);
+onBeforeRouteLeave(ensureDraftDurableBeforeNavigation);
 
 const dayTitle = computed(() =>
   formatDateKey(dateKey.value, undefined, {
@@ -151,16 +224,25 @@ const accountLink = computed(() => ({
 }));
 
 watch(
-  routeDateKey,
-  async (value) => {
+  [routeDateKey, () => daily.accountId.value],
+  async ([value, currentAccountId]) => {
     if (!isDateKey(value)) {
       await navigateTo(`/day/${today.value}`, { replace: true });
       return;
     }
+    if (!currentAccountId) return;
     await daily.loadDay(value);
+    await refreshActionConflicts();
     daily.prefetchAdjacentDays(value);
   },
   { immediate: true },
+);
+
+watch(
+  () => daily.isSyncing.value,
+  (isSyncing, wasSyncing) => {
+    if (wasSyncing && !isSyncing) void refreshActionConflicts();
+  },
 );
 
 // Share-target's "Add to Today's Plan" lands here as ?addTask=; materialize it
@@ -206,9 +288,21 @@ function itemByOccurrenceKey(occurrenceKey: string) {
   );
 }
 
-function toggleAction(occurrenceKey: string, completed: boolean) {
+async function toggleAction(occurrenceKey: string, completed: boolean) {
   const item = itemByOccurrenceKey(occurrenceKey);
-  if (item) void daily.setCompleted(dateKey.value, item, completed);
+  if (!item) return;
+  try {
+    await daily.setCompleted(dateKey.value, item, completed);
+  } catch (toggleError) {
+    toast.add({
+      title: "Couldn’t save action state",
+      description:
+        toggleError instanceof Error
+          ? toggleError.message
+          : "Your previous state was kept.",
+      color: "error",
+    });
+  }
 }
 
 function openMove(occurrenceKey: string) {
@@ -216,6 +310,107 @@ function openMove(occurrenceKey: string) {
   if (!item) return;
   movingItem.value = item;
   moveSheetOpen.value = true;
+}
+
+async function refreshActionConflicts() {
+  const itemIds = new Set(
+    (projection.value?.items ?? []).map((item) => item.actionItem.id),
+  );
+  const occurrenceKeys = new Set(
+    (projection.value?.items ?? []).map((item) => item.occurrenceKey),
+  );
+  const [actions, occurrences] = await Promise.all([
+    daily.getActionConflicts(),
+    daily.getOccurrenceConflicts(),
+  ]);
+  actionConflicts.value = actions.filter((conflict) =>
+    itemIds.has(conflict.actionItemId),
+  );
+  occurrenceConflicts.value = occurrences.filter((conflict) =>
+    occurrenceKeys.has(conflict.occurrenceKey),
+  );
+}
+
+async function resolveActionConflict(payload: {
+  actionItemId: string;
+  strategy: "keep-local" | "keep-server";
+}) {
+  if (resolvingActionItemId.value) return;
+  resolvingActionItemId.value = payload.actionItemId;
+  try {
+    const synced = await daily.resolveActionConflict(
+      dateKey.value,
+      payload.actionItemId,
+      payload.strategy,
+    );
+    await refreshActionConflicts();
+    const stillConflicted = actionConflicts.value.some(
+      (conflict) => conflict.actionItemId === payload.actionItemId,
+    );
+    toast.add({
+      title: stillConflicted
+        ? "Server changed again — review latest versions"
+        : payload.strategy === "keep-server"
+          ? "Server version restored"
+          : synced
+            ? "Your action item was synced"
+            : "Your choice was saved and will sync when connected",
+      color: stillConflicted ? "warning" : "success",
+    });
+  } catch (resolveError) {
+    toast.add({
+      title: "Couldn’t resolve action item",
+      description:
+        resolveError instanceof Error
+          ? resolveError.message
+          : "Try again while connected.",
+      color: "error",
+    });
+    await refreshActionConflicts();
+  } finally {
+    resolvingActionItemId.value = null;
+  }
+}
+
+async function resolveOccurrenceConflict(payload: {
+  occurrenceId: string;
+  strategy: "keep-local" | "keep-server";
+}) {
+  if (resolvingOccurrenceId.value) return;
+  resolvingOccurrenceId.value = payload.occurrenceId;
+  try {
+    const synced = await daily.resolveOccurrenceConflict(
+      dateKey.value,
+      payload.occurrenceId,
+      payload.strategy,
+    );
+    await refreshActionConflicts();
+    const stillConflicted = occurrenceConflicts.value.some(
+      (conflict) => conflict.occurrenceId === payload.occurrenceId,
+    );
+    toast.add({
+      title: stillConflicted
+        ? "Server changed again — review latest versions"
+        : payload.strategy === "keep-server"
+          ? "Server occurrence restored"
+          : synced
+            ? "Your occurrence was synced"
+            : "Your choice was saved and will sync when connected",
+      color: stillConflicted ? "warning" : "success",
+    });
+  } catch (resolveError) {
+    toast.add({
+      title: "Couldn’t resolve action occurrence",
+      description:
+        resolveError instanceof Error
+          ? resolveError.message
+          : "Try again while connected.",
+      color: "error",
+    });
+    await refreshActionConflicts();
+  } finally {
+    resolvingOccurrenceId.value = null;
+  }
 }
 </script>
 

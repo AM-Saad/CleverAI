@@ -34,6 +34,7 @@ import {
 } from "../app/utils/idb";
 import {
   applySyncResult as applyOfflineSyncResult,
+  chainPendingSameEntityMutations,
   claimOfflineMutations,
   getOfflineSession,
   listOfflineMutations,
@@ -718,9 +719,27 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
             actions?: Array<{ action: string; title: string }>;
           };
 
-          const badgeNumber = typeof data.dueCount === 'number' ? data.dueCount : (typeof data.badgeCount === 'number' ? data.badgeCount : undefined);
-          if (typeof badgeNumber === 'number' && typeof (navigator as Navigator & { setAppBadge?: (n: number) => Promise<void> }).setAppBadge === 'function') {
-            (navigator as Navigator & { setAppBadge: (n: number) => Promise<void> }).setAppBadge(badgeNumber).catch(() => {});
+          const badgeNumber =
+            typeof data.dueCount === "number"
+              ? data.dueCount
+              : typeof data.badgeCount === "number"
+                ? data.badgeCount
+                : undefined;
+          if (
+            typeof badgeNumber === "number" &&
+            typeof (
+              navigator as Navigator & {
+                setAppBadge?: (n: number) => Promise<void>;
+              }
+            ).setAppBadge === "function"
+          ) {
+            (
+              navigator as Navigator & {
+                setAppBadge: (n: number) => Promise<void>;
+              }
+            )
+              .setAppBadge(badgeNumber)
+              .catch(() => {});
           }
 
           await swSelf.registration.showNotification(title, options);
@@ -1317,10 +1336,16 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
     const session = await getOfflineSession();
     if (!session) return;
     await recoverInterruptedMutations(session.accountId);
+    await chainPendingSameEntityMutations(session.accountId);
     const pending = (await listOfflineMutations(session.accountId))
       .filter(
         (mutation) =>
           mutation.entity !== "note" && mutation.entity !== "noteGroup",
+      )
+      .filter(
+        (mutation) =>
+          mutation.entity !== "actionOccurrence" ||
+          mutation.revisionScheme === "offline-entity-v1",
       )
       .filter(
         (mutation) =>

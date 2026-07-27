@@ -5,6 +5,7 @@ import type {
 } from "@shared/utils/daily.contract";
 import {
   ActionItemSchema,
+  ActionOccurrenceSchema,
   DailyNoteSchema,
   RecurrenceRuleSchema,
 } from "@shared/utils/daily.contract";
@@ -12,6 +13,7 @@ import {
   occurrenceKey,
   recurrenceMatchesDate,
 } from "@shared/utils/daily-recurrence";
+import { offlineVersions } from "./actionItemOfflineVersions";
 
 export async function projectDailyDay(input: {
   prisma: PrismaClient;
@@ -19,12 +21,12 @@ export async function projectDailyDay(input: {
   dateKey: string;
 }): Promise<DayProjectionDTO> {
   const { prisma, userId, dateKey } = input;
-  const [note, definitions, touchedOccurrences] = await Promise.all([
+  const [note, actionItems, touchedOccurrences] = await Promise.all([
     prisma.dailyNote.findUnique({
       where: { userId_dateKey: { userId, dateKey } },
     }),
     prisma.actionItem.findMany({
-      where: { userId, lifecycle: "ACTIVE", startDate: { lte: dateKey } },
+      where: { userId },
       orderBy: { createdAt: "asc" },
     }),
     prisma.actionOccurrence.findMany({
@@ -41,6 +43,9 @@ export async function projectDailyDay(input: {
       },
     }),
   ]);
+  const definitions = actionItems.filter(
+    (item) => item.lifecycle === "ACTIVE" && item.startDate <= dateKey,
+  );
 
   const touchedByKey = new Map(
     touchedOccurrences.map((occurrence) => [
@@ -48,6 +53,32 @@ export async function projectDailyDay(input: {
       occurrence,
     ]),
   );
+  const [actionItemVersions, occurrenceVersions] = await Promise.all([
+    offlineVersions(prisma, userId, "actionItem", [
+      ...actionItems.map((item) => item.id),
+      ...touchedOccurrences.map((occurrence) => occurrence.actionItem.id),
+    ]),
+    offlineVersions(
+      prisma,
+      userId,
+      "actionOccurrence",
+      touchedOccurrences.map((occurrence) => occurrence.id),
+    ),
+  ]);
+  const parseActionItem = (actionItem: (typeof actionItems)[number]) =>
+    ActionItemSchema.parse({
+      ...actionItem,
+      version: actionItemVersions.get(actionItem.id) ?? 0,
+    });
+  const parseOccurrence = (
+    occurrence: (typeof touchedOccurrences)[number] | null,
+  ) =>
+    occurrence
+      ? ActionOccurrenceSchema.parse({
+          ...occurrence,
+          version: occurrenceVersions.get(occurrence.id) ?? 0,
+        })
+      : null;
   const rows = new Map<string, DayItemDTO>();
 
   for (const actionItem of definitions) {
@@ -77,8 +108,8 @@ export async function projectDailyDay(input: {
     rows.set(key, {
       occurrenceKey: key,
       originalDateKey: dateKey,
-      actionItem: ActionItemSchema.parse(actionItem),
-      occurrence,
+      actionItem: parseActionItem(actionItem),
+      occurrence: parseOccurrence(occurrence),
       activePlacement: current,
       historyPlacement: history,
       virtual: !occurrence,
@@ -100,13 +131,13 @@ export async function projectDailyDay(input: {
             placement.dateKey === dateKey && placement.id !== current?.id,
         ) ?? null;
     const belongsToDay = current?.dateKey === dateKey || Boolean(history);
-    if (!belongsToDay) continue;
+    if (!belongsToDay || occurrence.actionItem.lifecycle !== "ACTIVE") continue;
 
     rows.set(occurrence.occurrenceKey, {
       occurrenceKey: occurrence.occurrenceKey,
       originalDateKey: occurrence.originalDateKey,
-      actionItem: ActionItemSchema.parse(occurrence.actionItem),
-      occurrence,
+      actionItem: parseActionItem(occurrence.actionItem),
+      occurrence: parseOccurrence(occurrence),
       activePlacement: current,
       historyPlacement: history,
       virtual: false,
@@ -138,5 +169,10 @@ export async function projectDailyDay(input: {
     );
   });
 
-  return { dateKey, note: note ? DailyNoteSchema.parse(note) : null, items };
+  return {
+    dateKey,
+    note: note ? DailyNoteSchema.parse(note) : null,
+    actionItems: actionItems.map(parseActionItem),
+    items,
+  };
 }

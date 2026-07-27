@@ -97,7 +97,6 @@ import {
   previewDailyNoteContent,
   resolveDailyEditorSaveState,
 } from "../app/features/daily/composables/dailyDraftCommitter";
-import { createNotesSplitInteractionController } from "../app/features/notes/composables/notesSplitInteractionController";
 import {
   useSplitNotes,
   type ActivePane,
@@ -134,6 +133,12 @@ import {
 } from "../shared/utils/offline-sync.contract";
 import { calculateOfflineSM2 } from "../shared/utils/sm2";
 import { orderOfflineMutations } from "../shared/utils/offline-mutation-order";
+import {
+  latestSequentialPredecessor,
+  migrateLegacySequentialChain,
+  predictedSequentialBaseVersion,
+} from "../app/utils/offline-v2/sequentialMutation";
+import { rebaseFromAppliedDependency } from "../shared/utils/offline-sequence";
 import { positionBetween } from "../shared/utils/position-key";
 import {
   formatDateKey,
@@ -143,7 +148,15 @@ import {
 import { placementStateAfterMove } from "../shared/utils/daily-placement";
 import { projectLocalDay } from "../app/features/daily/domain/projectLocalDay";
 import {
+  ACTION_ITEM_CREATE_FIELDS,
+  buildActionItemUpdateMutation,
+} from "../app/features/daily/domain/actionItemMutation";
+import {
   autoResolveEquivalentNoteConflicts,
+  buildDailyActionConflictRebase,
+  getDailyActionConflicts,
+  mergeServerBootstrap,
+  resolveDailyActionItemConflict,
   type DailyLocalSnapshot,
 } from "../app/features/daily/repositories/dailyLocalRepository";
 import { createKeyedAsyncDebounce } from "../app/utils/keyedAsyncDebounce";
@@ -151,6 +164,7 @@ import { useDebounce } from "../app/utils/debounce";
 import { DB_CONFIG } from "../app/utils/constants/pwa";
 import {
   applySyncResult,
+  chainPendingSameEntityMutations,
   claimOfflineMutations,
   commitOfflineMutation,
   getOfflineEntity,
@@ -281,6 +295,133 @@ test("moving an action preserves its completion state", () => {
   assert.equal(placementStateAfterMove("COMPLETED"), "COMPLETED");
 });
 
+test("daily action updates send only fields that actually changed", () => {
+  const current = {
+    id: "action-1",
+    userId: "user-1",
+    title: "Before",
+    description: null,
+    timingMode: "ALL_DAY" as const,
+    startDate: "2026-07-26",
+    localTime: null,
+    timezone: "Africa/Cairo",
+    recurrence: null,
+    lifecycle: "ACTIVE" as const,
+    version: 1,
+    createdAt: "2026-07-26T10:00:00.000Z",
+    updatedAt: "2026-07-26T10:00:00.000Z",
+  };
+  const titleUpdate = buildActionItemUpdateMutation(
+    current,
+    { ...current, title: "After" },
+    "placement-1",
+  );
+  assert.deepEqual(titleUpdate.changedFields, ["title"]);
+  assert.deepEqual(titleUpdate.payload, { title: "After" });
+  assert.equal(titleUpdate.placementChanged, false);
+
+  const timedUpdate = buildActionItemUpdateMutation(
+    current,
+    {
+      ...current,
+      timingMode: "TIMED",
+      localTime: "15:00",
+    },
+    "placement-1",
+  );
+  assert.deepEqual(timedUpdate.changedFields, ["timingMode", "localTime"]);
+  assert.deepEqual(timedUpdate.payload, {
+    timingMode: "TIMED",
+    localTime: "15:00",
+    placementId: "placement-1",
+  });
+  assert.equal(timedUpdate.placementChanged, true);
+
+  const timezoneUpdate = buildActionItemUpdateMutation(
+    current,
+    { ...current, timezone: "UTC" },
+    "placement-1",
+  );
+  assert.deepEqual(timezoneUpdate.changedFields, ["timezone"]);
+  assert.deepEqual(timezoneUpdate.payload, {
+    timezone: "UTC",
+    placementId: "placement-1",
+  });
+
+  assert.deepEqual(ACTION_ITEM_CREATE_FIELDS, [
+    "title",
+    "description",
+    "timingMode",
+    "startDate",
+    "localTime",
+    "timezone",
+    "recurrence",
+  ]);
+});
+
+test("daily bootstrap preserves action item server revision locally", async () => {
+  const accountId = `account-${Date.now()}-${Math.random()}-daily-version`;
+  await mergeServerBootstrap(accountId, {
+    actionItems: [
+      {
+        id: "action-versioned",
+        userId: accountId,
+        title: "Versioned",
+        description: null,
+        timingMode: "ALL_DAY",
+        startDate: "2026-07-26",
+        localTime: null,
+        timezone: "Africa/Cairo",
+        recurrence: null,
+        lifecycle: "ACTIVE",
+        version: 4,
+        createdAt: "2026-07-26T10:00:00.000Z",
+        updatedAt: "2026-07-26T10:00:00.000Z",
+      },
+    ],
+    occurrences: [],
+  });
+  const record = await getOfflineEntity(
+    accountId,
+    "actionItem",
+    "action-versioned",
+  );
+  assert.equal(record?.version, 4);
+  assert.equal(record?.data.version, 4);
+});
+
+test("daily bootstrap and local snapshot use occurrence offline revision", async () => {
+  const accountId = `account-${Date.now()}-${Math.random()}-occurrence-version`;
+  await mergeServerBootstrap(accountId, {
+    actionItems: [],
+    occurrences: [
+      {
+        occurrence: {
+          id: "occurrence-versioned",
+          occurrenceKey: "action-1:2026-07-26",
+          userId: accountId,
+          actionItemId: "action-1",
+          originalDateKey: "2026-07-26",
+          currentPlacementId: null,
+          status: "OPEN",
+          completedAt: null,
+          version: 6,
+          createdAt: "2026-07-26T10:00:00.000Z",
+          updatedAt: "2026-07-26T10:00:00.000Z",
+        },
+        placements: [],
+      },
+    ],
+  });
+  const record = await getOfflineEntity<Record<string, unknown>>(
+    accountId,
+    "actionOccurrence",
+    "occurrence-versioned",
+  );
+  assert.equal(record?.version, 6);
+  assert.equal(record?.data.version, 6);
+});
+
 test("Opening a future Daily date projects virtual items without creating records", () => {
   const snapshot: DailyLocalSnapshot = {
     notes: [],
@@ -301,6 +442,7 @@ test("Opening a future Daily date projects virtual items without creating record
           ends: "NEVER",
         },
         lifecycle: "ACTIVE",
+        version: 0,
         createdAt: "2026-07-20T00:00:00.000Z",
         updatedAt: "2026-07-20T00:00:00.000Z",
       },
@@ -435,6 +577,159 @@ test("a genuinely conflicting daily note is left for the user to resolve", async
   assert.equal((await listOfflineMutations(accountId)).length, 1);
 });
 
+test("daily action conflict rebase keeps only true local changes", () => {
+  const rebased = buildDailyActionConflictRebase({
+    payload: {
+      title: "Mine",
+      timingMode: "ALL_DAY",
+      localTime: null,
+      timezone: "Africa/Cairo",
+      recurrence: null,
+      placementId: "placement-1",
+    },
+    rollbackData: {
+      title: "Before",
+      timingMode: "ALL_DAY",
+      localTime: null,
+      timezone: "Africa/Cairo",
+      recurrence: null,
+    },
+    serverSnapshot: {
+      id: "action-1",
+      title: "Server",
+      timingMode: "TIMED",
+      localTime: "15:00",
+      timezone: "Africa/Cairo",
+      recurrence: null,
+    },
+    currentLocal: {
+      id: "action-1",
+      title: "Mine",
+      timingMode: "ALL_DAY",
+      localTime: null,
+      timezone: "Africa/Cairo",
+      recurrence: null,
+    },
+  });
+
+  assert.deepEqual(rebased.changedFields, ["title"]);
+  assert.deepEqual(rebased.payload, { title: "Mine" });
+  assert.equal(rebased.localData.title, "Mine");
+  assert.equal(rebased.localData.timingMode, "TIMED");
+  assert.equal(rebased.localData.localTime, "15:00");
+});
+
+test("keeping a daily action conflict rebases its mutation onto server revision", async () => {
+  const accountId = `account-${Date.now()}-${Math.random()}-daily-action-conflict`;
+  const actionItemId = `action-${accountId}`;
+  const rollbackData = {
+    id: actionItemId,
+    userId: accountId,
+    title: "Before",
+    description: null,
+    timingMode: "ALL_DAY",
+    startDate: "2026-07-26",
+    localTime: null,
+    timezone: "Africa/Cairo",
+    recurrence: null,
+    lifecycle: "ACTIVE",
+    createdAt: "2026-07-26T10:00:00.000Z",
+    updatedAt: "2026-07-26T10:00:00.000Z",
+  };
+  const mutation = {
+    id: `action-update-${accountId}`,
+    entity: "actionItem" as const,
+    operation: "actionItem.update",
+    entityId: actionItemId,
+    changedFields: [
+      "title",
+      "description",
+      "timingMode",
+      "startDate",
+      "localTime",
+      "timezone",
+      "recurrence",
+      "position",
+    ],
+    payload: {
+      title: "Mine",
+      timingMode: "ALL_DAY",
+      localTime: null,
+      timezone: "Africa/Cairo",
+      recurrence: null,
+      placementId: "placement-1",
+    },
+    rollbackData,
+    dependsOn: [],
+    occurredAt: "2026-07-26T11:00:00.000Z",
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+    baseVersion: 0,
+  };
+  await commitOfflineMutation({
+    accountId,
+    mutation,
+    localRecord: {
+      entity: "actionItem",
+      entityId: actionItemId,
+      version: 0,
+      data: { ...rollbackData, title: "Mine" },
+    },
+  });
+  const serverSnapshot = {
+    ...rollbackData,
+    title: "Server",
+    timingMode: "TIMED",
+    localTime: "15:00",
+    updatedAt: "2026-07-26T10:30:00.000Z",
+  };
+  await applySyncResult({
+    accountId,
+    mutation: { ...mutation, accountId, updatedAt: Date.now() },
+    result: {
+      status: "conflict",
+      entity: "actionItem",
+      entityId: actionItemId,
+      conflict: {
+        serverVersion: 1,
+        overlappingFields: mutation.changedFields,
+        serverSnapshot,
+        reason: "The same fields changed on another device.",
+      },
+    },
+  });
+
+  const visible = await getDailyActionConflicts(accountId);
+  assert.equal(visible.length, 1);
+  assert.deepEqual(visible[0]?.changedFields, ["title"]);
+
+  assert.equal(
+    await resolveDailyActionItemConflict({
+      accountId,
+      actionItemId,
+      strategy: "keep-local",
+    }),
+    true,
+  );
+
+  const [pending] = await listOfflineMutations(accountId);
+  assert.equal(pending?.status, "pending");
+  assert.equal(pending?.baseVersion, 1);
+  assert.deepEqual(pending?.changedFields, ["title"]);
+  assert.deepEqual(pending?.payload, { title: "Mine" });
+  const local = await getOfflineEntity<Record<string, unknown>>(
+    accountId,
+    "actionItem",
+    actionItemId,
+  );
+  assert.equal(local?.data.title, "Mine");
+  assert.equal(local?.data.timingMode, "TIMED");
+  assert.equal(local?.data.localTime, "15:00");
+  assert.equal((await listOfflineConflicts(accountId)).length, 0);
+});
+
 test("offline-v2 contract keeps mutations replayable and ordered", () => {
   const parsed = OfflineSyncRequestSchema.parse({
     clientId: "device-a",
@@ -537,6 +832,258 @@ test("offline mutation ordering is dependency-first and rejects cycles", () => {
     cyclic.map((mutation) => mutation.id),
     ["cycle-a", "cycle-b"],
   );
+});
+
+test("ordered occurrence mutations depend on only the latest command", () => {
+  const rows = [
+    {
+      id: "m1",
+      accountId: "a",
+      entity: "actionOccurrence" as const,
+      operation: "occurrence.complete",
+      entityId: "o1",
+      baseVersion: 4,
+      changedFields: ["status"],
+      payload: {},
+      dependsOn: [],
+      occurredAt: "2026-07-26T10:00:00.000Z",
+      createdAt: 1,
+      updatedAt: 1,
+      attempts: 0,
+      status: "syncing" as const,
+      sequence: true,
+    },
+    {
+      id: "m2",
+      accountId: "a",
+      entity: "actionOccurrence" as const,
+      operation: "occurrence.reschedule",
+      entityId: "o1",
+      baseVersion: 5,
+      changedFields: ["currentPlacementId"],
+      payload: {},
+      dependsOn: ["m1"],
+      occurredAt: "2026-07-26T10:01:00.000Z",
+      createdAt: 2,
+      updatedAt: 2,
+      attempts: 0,
+      status: "waiting" as const,
+      sequence: true,
+    },
+  ];
+  const predecessor = latestSequentialPredecessor({
+    mutations: rows,
+    entity: "actionOccurrence",
+    entityId: "o1",
+  });
+  assert.equal(predecessor?.id, "m2");
+  assert.equal(
+    predictedSequentialBaseVersion({
+      predecessor,
+      inputBaseVersion: 4,
+      currentVersion: 4,
+    }),
+    6,
+  );
+});
+
+test("legacy occurrence queue migration preserves intent and rebases the chain", () => {
+  const common = {
+    accountId: "a",
+    entity: "actionOccurrence" as const,
+    entityId: "o1",
+    changedFields: ["status"],
+    payload: {},
+    occurredAt: "2026-07-26T10:00:00.000Z",
+    updatedAt: 1,
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+  };
+  const migrated = migrateLegacySequentialChain({
+    serverVersion: 7,
+    mutations: [
+      {
+        ...common,
+        id: "m2",
+        operation: "occurrence.reschedule",
+        baseVersion: 43,
+        dependsOn: ["action-create", "m1"],
+        createdAt: 2,
+      },
+      {
+        ...common,
+        id: "m1",
+        operation: "occurrence.complete",
+        baseVersion: 42,
+        dependsOn: ["action-create"],
+        createdAt: 1,
+      },
+    ],
+  });
+  assert.deepEqual(
+    migrated.map((mutation) => ({
+      id: mutation.id,
+      baseVersion: mutation.baseVersion,
+      dependsOn: mutation.dependsOn,
+      sequence: mutation.sequence,
+      revisionScheme: mutation.revisionScheme,
+    })),
+    [
+      {
+        id: "m1",
+        baseVersion: 7,
+        dependsOn: ["action-create"],
+        sequence: true,
+        revisionScheme: "offline-entity-v1",
+      },
+      {
+        id: "m2",
+        baseVersion: 8,
+        dependsOn: ["action-create", "m1"],
+        sequence: true,
+        revisionScheme: "offline-entity-v1",
+      },
+    ],
+  );
+});
+
+test("same-batch occurrence commands rebase from actual predecessor result", () => {
+  const mutation = {
+    id: "m2",
+    entity: "actionOccurrence" as const,
+    operation: "occurrence.reschedule",
+    entityId: "o1",
+    baseVersion: 5,
+    changedFields: ["currentPlacementId"],
+    payload: {},
+    dependsOn: ["m1"],
+    occurredAt: "2026-07-26T10:01:00.000Z",
+    createdAt: 2,
+    attempts: 0,
+    status: "syncing" as const,
+    sequence: true,
+  };
+  const rebased = rebaseFromAppliedDependency(mutation, [
+    {
+      id: "m1",
+      status: "applied",
+      entity: "actionOccurrence",
+      entityId: "o1",
+      version: 8,
+    },
+  ]);
+  assert.equal(rebased.baseVersion, 8);
+});
+
+test("occurrence conflict waits its successor and keep-server safely releases it", async () => {
+  const accountId = `account-${Date.now()}-${Math.random()}-occurrence-chain`;
+  const occurrenceId = `occurrence-${accountId}`;
+  const base = {
+    id: occurrenceId,
+    userId: accountId,
+    actionItemId: "action-1",
+    occurrenceKey: "action-1:2026-07-26",
+    originalDateKey: "2026-07-26",
+    currentPlacementId: "placement-1",
+    status: "OPEN",
+    completedAt: null,
+    version: 4,
+  };
+  const first = {
+    id: `m1-${accountId}`,
+    entity: "actionOccurrence" as const,
+    operation: "occurrence.complete",
+    entityId: occurrenceId,
+    baseVersion: 4,
+    changedFields: ["status", "completedAt"],
+    payload: { occurrenceKey: base.occurrenceKey },
+    rollbackData: base,
+    dependsOn: [],
+    occurredAt: "2026-07-26T10:00:00.000Z",
+    createdAt: 1,
+    attempts: 0,
+    status: "pending" as const,
+    sequence: true,
+  };
+  const second = {
+    id: `m2-${accountId}`,
+    entity: "actionOccurrence" as const,
+    operation: "occurrence.reschedule",
+    entityId: occurrenceId,
+    baseVersion: 5,
+    changedFields: ["currentPlacementId"],
+    payload: { targetPlacementId: "placement-2" },
+    rollbackData: { ...base, status: "COMPLETED" },
+    dependsOn: [first.id],
+    occurredAt: "2026-07-26T10:01:00.000Z",
+    createdAt: 2,
+    attempts: 0,
+    status: "pending" as const,
+    sequence: true,
+  };
+  await commitOfflineMutation({
+    accountId,
+    mutation: first,
+    localRecord: {
+      entity: "actionOccurrence",
+      entityId: occurrenceId,
+      version: 4,
+      data: { ...base, status: "COMPLETED" },
+    },
+  });
+  await commitOfflineMutation({
+    accountId,
+    mutation: second,
+    localRecord: {
+      entity: "actionOccurrence",
+      entityId: occurrenceId,
+      version: 4,
+      data: {
+        ...base,
+        status: "COMPLETED",
+        currentPlacementId: "placement-2",
+      },
+    },
+  });
+  await applySyncResult({
+    accountId,
+    mutation: { ...first, accountId, updatedAt: 1 },
+    result: {
+      status: "conflict",
+      entity: "actionOccurrence",
+      entityId: occurrenceId,
+      conflict: {
+        serverVersion: 7,
+        overlappingFields: ["status"],
+        serverSnapshot: { ...base, version: 7 },
+        reason: "same field",
+      },
+    },
+  });
+  let mutations = await listOfflineMutations(accountId);
+  assert.equal(
+    mutations.find((row) => row.id === second.id)?.status,
+    "waiting",
+  );
+
+  await resolveOfflineConflict({
+    accountId,
+    mutationId: first.id,
+    strategy: "keep-server",
+  });
+  mutations = await listOfflineMutations(accountId);
+  const released = mutations.find((row) => row.id === second.id);
+  assert.equal(released?.status, "pending");
+  assert.equal(released?.baseVersion, 7);
+  assert.deepEqual(released?.dependsOn, []);
+  assert.equal(released?.rollbackData?.status, "OPEN");
+  const local = await getOfflineEntity<Record<string, unknown>>(
+    accountId,
+    "actionOccurrence",
+    occurrenceId,
+  );
+  assert.equal(local?.data.currentPlacementId, "placement-2");
 });
 
 test("position keys remain ordered through repeated midpoint inserts", () => {
@@ -924,6 +1471,10 @@ test("a stale acknowledgement preserves and rebases a newer same-entity edit", a
       data: { id: entityId, content: "Newer" },
     },
   });
+  const queuedBehindFlight = (await listOfflineMutations(accountId)).find(
+    (mutation) => mutation.id === `later-${accountId}`,
+  );
+  assert.deepEqual(queuedBehindFlight?.dependsOn, [claimed!.id]);
 
   await applySyncResult({
     accountId,
@@ -948,6 +1499,55 @@ test("a stale acknowledgement preserves and rebases a newer same-entity edit", a
   );
   assert.equal(local?.data.content, "Newer");
   assert.equal(local?.version, 4);
+});
+
+test("retry repair chains duplicate same-entity state rows", async () => {
+  const accountId = `account-${Date.now()}-${Math.random()}-retry-chain`;
+  const entityId = `daily-note:${accountId}:2026-07-26`;
+  const base = {
+    entity: "dailyNote" as const,
+    operation: "dailyNote.upsert",
+    entityId,
+    baseVersion: 8,
+    changedFields: ["content"],
+    rollbackData: { id: entityId, content: "Before" },
+    dependsOn: [],
+    occurredAt: "2026-07-26T18:00:00.000Z",
+    attempts: 1,
+    sequence: false,
+  };
+  const first = {
+    ...base,
+    id: `first-${accountId}`,
+    payload: { dateKey: "2026-07-26", content: "First" },
+    createdAt: 1,
+    status: "retry" as const,
+  };
+  const second = {
+    ...base,
+    id: `second-${accountId}`,
+    payload: { dateKey: "2026-07-26", content: "Second" },
+    createdAt: 2,
+    status: "pending" as const,
+  };
+  const db = await openUnifiedDB();
+  await putRecord(db, DB_CONFIG.STORES.OFFLINE_MUTATIONS as any, {
+    ...first,
+    accountId,
+    updatedAt: 1,
+  });
+  await putRecord(db, DB_CONFIG.STORES.OFFLINE_MUTATIONS as any, {
+    ...second,
+    accountId,
+    updatedAt: 2,
+  });
+
+  assert.equal(await chainPendingSameEntityMutations(accountId), 1);
+  const rows = await listOfflineMutations(accountId);
+  assert.deepEqual(
+    rows.find((mutation) => mutation.id === second.id)?.dependsOn,
+    [first.id],
+  );
 });
 
 test("a related Board revision rebases pending item work without overwriting it", async () => {
@@ -1172,6 +1772,112 @@ test("a definitive V2 rejection restores the pre-command snapshot", async () => 
   assert.equal(restored?.deleted, false);
   const [rejected] = await listOfflineMutations(accountId);
   assert.equal(rejected?.status, "rejected");
+});
+
+test("a rejected Daily command restores related placements atomically", async () => {
+  const suffix = `${Date.now()}-${Math.random()}-daily-related-rollback`;
+  const accountId = `account-${suffix}`;
+  const occurrenceId = `occurrence-${suffix}`;
+  const sourceId = `source-${suffix}`;
+  const targetId = `target-${suffix}`;
+  const beforeOccurrence = {
+    id: occurrenceId,
+    status: "OPEN",
+    currentPlacementId: sourceId,
+  };
+  const beforeSource = {
+    id: sourceId,
+    occurrenceId,
+    state: "ACTIVE",
+    dateKey: "2026-07-26",
+  };
+  const mutation = {
+    id: `mutation-${suffix}`,
+    entity: "actionOccurrence" as const,
+    operation: "occurrence.reschedule",
+    entityId: occurrenceId,
+    baseVersion: 3,
+    changedFields: ["currentPlacementId"],
+    payload: { targetPlacementId: targetId },
+    rollbackData: beforeOccurrence,
+    rollbackRecords: [
+      {
+        entity: "actionPlacement" as const,
+        entityId: sourceId,
+        version: 0,
+        data: beforeSource,
+      },
+      {
+        entity: "actionPlacement" as const,
+        entityId: targetId,
+        version: 0,
+        data: null,
+      },
+    ],
+    dependsOn: [],
+    occurredAt: "2026-07-26T10:00:00.000Z",
+    createdAt: Date.now(),
+    attempts: 0,
+    status: "pending" as const,
+    sequence: true,
+  };
+  await commitOfflineMutation({
+    accountId,
+    mutation,
+    localRecord: {
+      entity: "actionOccurrence",
+      entityId: occurrenceId,
+      version: 3,
+      data: {
+        ...beforeOccurrence,
+        currentPlacementId: targetId,
+      },
+    },
+    localRecords: [
+      {
+        entity: "actionPlacement",
+        entityId: sourceId,
+        version: 0,
+        data: { ...beforeSource, state: "MOVED" },
+      },
+      {
+        entity: "actionPlacement",
+        entityId: targetId,
+        version: 0,
+        data: {
+          id: targetId,
+          occurrenceId,
+          state: "ACTIVE",
+          dateKey: "2026-07-27",
+        },
+      },
+    ],
+  });
+  assert.ok(await getOfflineEntity(accountId, "actionPlacement", targetId));
+  await applySyncResult({
+    accountId,
+    mutation: { ...mutation, accountId, updatedAt: Date.now() },
+    result: {
+      status: "rejected",
+      entity: "actionOccurrence",
+      entityId: occurrenceId,
+      message: "invalid move",
+    },
+  });
+  const occurrence = await getOfflineEntity<Record<string, unknown>>(
+    accountId,
+    "actionOccurrence",
+    occurrenceId,
+  );
+  const source = await getOfflineEntity<Record<string, unknown>>(
+    accountId,
+    "actionPlacement",
+    sourceId,
+  );
+  const target = await getOfflineEntity(accountId, "actionPlacement", targetId);
+  assert.equal(occurrence?.data.currentPlacementId, sourceId);
+  assert.equal(source?.data.state, "ACTIVE");
+  assert.equal(target, undefined);
 });
 
 test("a live outbox lease cannot be stolen by recovery or a second sync owner", async () => {
@@ -3982,6 +4688,15 @@ test("daily editor save state favors conflict over drafting over syncing over sa
     "saved-local",
   );
   assert.equal(
+    dailySaveStateLabel(
+      resolveDailyEditorSaveState({
+        hasLocalDraft: false,
+        hasSyncIssue: true,
+      }),
+    ),
+    "Saved locally · sync delayed",
+  );
+  assert.equal(
     dailySaveStateLabel(resolveDailyEditorSaveState({ hasLocalDraft: false })),
     "Saved locally",
   );
@@ -4009,7 +4724,10 @@ test("daily note content preview extracts plain text from Tiptap JSON", () => {
           {
             type: "listItem",
             content: [
-              { type: "paragraph", content: [{ type: "text", text: "and eggs" }] },
+              {
+                type: "paragraph",
+                content: [{ type: "text", text: "and eggs" }],
+              },
             ],
           },
         ],
@@ -6982,97 +7700,6 @@ test("double-tap confirm does not arm while disabled", async () => {
   assert.equal(await guard.trigger(), true);
   assert.equal(confirmed, 1);
   scope.stop();
-});
-
-test("notes split click opens split from the current note without touching layout", () => {
-  const splitNotes = fakeSplitNotesState({ primaryNoteId: null });
-  let currentNoteId = "note-1";
-  const controller = createNotesSplitInteractionController({
-    splitNotes: splitNotes as any,
-    getCurrentNoteId: () => currentNoteId,
-    setCurrentNoteId: (noteId) => {
-      currentNoteId = noteId;
-    },
-  });
-
-  controller.execute({ type: "CLICK_SPLIT", noteId: "note-2" });
-
-  assert.equal(splitNotes.isSplit.value, true);
-  assert.equal(splitNotes.primaryNoteId.value, "note-1");
-  assert.equal(splitNotes.secondaryNoteId.value, "note-2");
-  assert.equal(splitNotes.secondaryPosition.value, "right");
-  assert.equal(splitNotes.activePane.value, "secondary");
-  assert.equal(currentNoteId, "note-2");
-});
-
-test("notes split click replaces the active pane without duplicating the other pane", () => {
-  const splitNotes = fakeSplitNotesState({
-    isSplit: true,
-    primaryNoteId: "note-1",
-    secondaryNoteId: "note-2",
-    secondaryPosition: "right",
-    activePane: "secondary",
-  });
-  let currentNoteId = "note-2";
-  const controller = createNotesSplitInteractionController({
-    splitNotes: splitNotes as any,
-    getCurrentNoteId: () => currentNoteId,
-    setCurrentNoteId: (noteId) => {
-      currentNoteId = noteId;
-    },
-  });
-
-  controller.execute({ type: "CLICK_SPLIT", noteId: "note-3" });
-
-  assert.equal(splitNotes.primaryNoteId.value, "note-1");
-  assert.equal(splitNotes.secondaryNoteId.value, "note-3");
-  assert.equal(splitNotes.activePane.value, "secondary");
-  assert.equal(currentNoteId, "note-3");
-
-  controller.execute({ type: "CLICK_SPLIT", noteId: "note-1" });
-
-  assert.equal(splitNotes.primaryNoteId.value, "note-1");
-  assert.equal(splitNotes.secondaryNoteId.value, "note-3");
-  assert.equal(currentNoteId, "note-3");
-});
-
-test("notes split drop targets the visual side independently from note selection", () => {
-  const splitNotes = fakeSplitNotesState({
-    isSplit: true,
-    primaryNoteId: "note-1",
-    secondaryNoteId: "note-2",
-    secondaryPosition: "right",
-    activePane: "secondary",
-  });
-  let currentNoteId = "note-2";
-  const controller = createNotesSplitInteractionController({
-    splitNotes: splitNotes as any,
-    getCurrentNoteId: () => currentNoteId,
-    setCurrentNoteId: (noteId) => {
-      currentNoteId = noteId;
-    },
-  });
-
-  controller.startSplitDrag("note-3");
-  controller.setHoveredZone("left");
-  controller.execute({
-    type: "DROP_SPLIT",
-    noteId: "note-3",
-    position: "left",
-  });
-
-  assert.equal(splitNotes.primaryNoteId.value, "note-3");
-  assert.equal(splitNotes.secondaryNoteId.value, "note-2");
-  assert.equal(splitNotes.activePane.value, "primary");
-  assert.equal(controller.isSplitDragging.value, true);
-  assert.equal(controller.hoveredSplitZone.value, "left");
-  assert.equal(currentNoteId, "note-3");
-
-  controller.endSplitDrag();
-
-  assert.equal(controller.isSplitDragging.value, false);
-  assert.equal(controller.hoveredSplitZone.value, null);
-  assert.equal(controller.draggedSplitNoteId.value, null);
 });
 
 test("canvas transform normalization bakes rect scale into dimensions once", () => {

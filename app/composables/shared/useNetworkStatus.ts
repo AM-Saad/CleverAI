@@ -26,13 +26,14 @@ let initialised = false;
 let transitionTimer: ReturnType<typeof setTimeout> | null = null;
 let periodicPingTimer: ReturnType<typeof setInterval> | null = null;
 let pingController: AbortController | null = null;
+let verificationPromise: Promise<boolean> | null = null;
 
 // Callbacks registered via onOnline / onOffline
 const onlineCallbacks = new Set<() => void | Promise<void>>();
 const offlineCallbacks = new Set<() => void | Promise<void>>();
 
 // ─── Config ──────────────────────────────────────────────────────────────────
-const PING_URL = '/api/health'; // lightweight unauthenticated endpoint
+const PING_URL = "/api/health"; // lightweight unauthenticated endpoint
 const PING_TIMEOUT_MS = 5_000;
 // Poll only while reachability is unverified. Five seconds keeps durable
 // outboxes from appearing stuck after a transient API/network failure without
@@ -45,15 +46,19 @@ const TRANSITION_DEBOUNCE_MS = 2_000;
 async function ping(): Promise<boolean> {
   // Cancel any in-flight ping
   if (pingController) {
-    try { pingController.abort(); } catch { /* ignore */ }
+    try {
+      pingController.abort();
+    } catch {
+      /* ignore */
+    }
   }
   pingController = new AbortController();
   const timer = setTimeout(() => pingController?.abort(), PING_TIMEOUT_MS);
 
   try {
     const resp = await fetch(PING_URL, {
-      method: 'GET',
-      cache: 'no-store',
+      method: "GET",
+      cache: "no-store",
       signal: pingController.signal,
     });
     return resp.ok;
@@ -98,7 +103,11 @@ function stopPeriodicPing() {
 
 function fireCallbacks(cbs: Set<() => void | Promise<void>>) {
   for (const cb of cbs) {
-    try { Promise.resolve(cb()).catch(() => {}); } catch { /* ignore */ }
+    try {
+      Promise.resolve(cb()).catch(() => {});
+    } catch {
+      /* ignore */
+    }
   }
 }
 
@@ -109,37 +118,46 @@ function init() {
   initialised = true;
 
   isOnline.value = navigator.onLine;
-  // Assume initially verified if navigator says online — first real API call will correct if wrong
-  isVerifiedOnline.value = navigator.onLine;
+  isVerifiedOnline.value = false;
 
   // Signal 1: navigator.onLine events
-  window.addEventListener('online', handleBrowserOnline);
-  window.addEventListener('offline', handleBrowserOffline);
+  window.addEventListener("online", handleBrowserOnline);
+  window.addEventListener("offline", handleBrowserOffline);
 
-  // Start periodic ping if not verified
-  if (isOnline.value && !isVerifiedOnline.value) {
-    startPeriodicPing();
+  if (isOnline.value) void verifyConnection();
+}
+
+async function verifyConnection(): Promise<boolean> {
+  if (!import.meta.client) return true;
+  if (!navigator.onLine) {
+    handleBrowserOffline();
+    return false;
   }
+  if (verificationPromise) return verificationPromise;
+  const wasVerified = isVerifiedOnline.value;
+  isConnecting.value = true;
+  const run = ping().then((ok) => {
+    const verified = ok && navigator.onLine;
+    isVerifiedOnline.value = verified;
+    isConnecting.value = false;
+    if (verified) {
+      stopPeriodicPing();
+      if (!wasVerified) fireCallbacks(onlineCallbacks);
+    } else {
+      startPeriodicPing();
+    }
+    return verified;
+  });
+  verificationPromise = run.finally(() => {
+    verificationPromise = null;
+  });
+  return verificationPromise;
 }
 
 async function handleBrowserOnline() {
   isOnline.value = true;
-  isConnecting.value = true;
   startTransitionDebounce();
-
-  // Verify with a ping before marking verified
-  const ok = await ping();
-  isConnecting.value = false;
-
-  if (ok) {
-    isVerifiedOnline.value = true;
-    stopPeriodicPing();
-    fireCallbacks(onlineCallbacks);
-  } else {
-    // Browser says online but server unreachable — start polling
-    isVerifiedOnline.value = false;
-    startPeriodicPing();
-  }
+  await verifyConnection();
 }
 
 function handleBrowserOffline() {
@@ -176,7 +194,9 @@ async function reportFailure(): Promise<void> {
  */
 function onOnline(cb: () => void | Promise<void>): () => void {
   onlineCallbacks.add(cb);
-  return () => { onlineCallbacks.delete(cb); };
+  return () => {
+    onlineCallbacks.delete(cb);
+  };
 }
 
 /**
@@ -185,7 +205,9 @@ function onOnline(cb: () => void | Promise<void>): () => void {
  */
 function onOffline(cb: () => void | Promise<void>): () => void {
   offlineCallbacks.add(cb);
-  return () => { offlineCallbacks.delete(cb); };
+  return () => {
+    offlineCallbacks.delete(cb);
+  };
 }
 
 /**
@@ -223,14 +245,16 @@ async function retryWithBackoff<T>(
       console.warn(`Attempt ${attempt + 1} failed:`, error);
 
       if (attempt === maxRetries - 1) {
-        console.error('All retry attempts failed');
+        console.error("All retry attempts failed");
         return null;
       }
 
       if (!isVerifiedOnline.value) {
-        const connected = await waitForConnection(baseDelay * Math.pow(2, attempt));
+        const connected = await waitForConnection(
+          baseDelay * Math.pow(2, attempt),
+        );
         if (!connected) {
-          console.warn('Network timeout, continuing with retry');
+          console.warn("Network timeout, continuing with retry");
         }
       } else {
         await new Promise((resolve) =>
@@ -259,6 +283,8 @@ export const useNetworkStatus = () => {
     isConnecting: readonly(isConnecting),
     /** Call when FetchFactory sees FETCH_ERROR / TIMEOUT. */
     reportFailure,
+    /** Run or join a server reachability check. */
+    verifyConnection,
     /** Register callback for verified-online transition. Returns cleanup fn. */
     onOnline,
     /** Register callback for offline transition. Returns cleanup fn. */

@@ -5,6 +5,7 @@ import type {
 } from "../../../shared/utils/offline-sync.contract";
 import {
   applySyncResult,
+  chainPendingSameEntityMutations,
   clearOfflineAccount,
   clearOfflineSession,
   clearOfflineSessions,
@@ -39,6 +40,10 @@ import {
 } from "../../utils/idb";
 import { getServiceWorkerReadyRegistration } from "../../utils/serviceWorkerRuntime";
 import { orderOfflineMutations } from "../../../shared/utils/offline-mutation-order";
+import {
+  latestSequentialPredecessor,
+  predictedSequentialBaseVersion,
+} from "../../utils/offline-v2/sequentialMutation";
 
 const clientIdKey = "cognilo-offline-client-id";
 const states = new Map<string, ReturnType<typeof createRuntimeState>>();
@@ -62,6 +67,7 @@ function createRuntimeState() {
     pending: ref(0),
     retrying: ref(0),
     blocked: ref(0),
+    waiting: ref(0),
     rejected: ref(0),
     conflicts: ref(0),
     lastSyncAt: ref<number | undefined>(),
@@ -175,9 +181,7 @@ function packRecords(
   return records;
 }
 
-async function hydrateFeatureOwnedCaches(
-  data: Record<string, unknown>,
-) {
+async function hydrateFeatureOwnedCaches(data: Record<string, unknown>) {
   const db = await openUnifiedDB();
   const copy = async (
     key: string,
@@ -282,14 +286,12 @@ async function downloadPackFiles(
 
 export function useOfflineRuntime() {
   const { data: authData, status } = useAuth();
-  const { isOnline } = useNetworkStatus();
+  const { isOnline, isVerifiedOnline, onOnline } = useNetworkStatus();
   const runtimeConfig = useRuntimeConfig();
   const enabled = computed(() => runtimeConfig.public.offlineV2 !== false);
   const authenticatedAccountId = computed(() =>
     status.value === "authenticated"
-      ? String(
-          (authData.value?.user as { id?: string } | undefined)?.id ?? "",
-        )
+      ? String((authData.value?.user as { id?: string } | undefined)?.id ?? "")
       : "",
   );
   const verifiedOfflineAccountId = useState<string | null>(
@@ -299,7 +301,7 @@ export function useOfflineRuntime() {
   const accountId = computed(
     () =>
       authenticatedAccountId.value ||
-      (!isOnline.value ? (verifiedOfflineAccountId.value ?? "") : ""),
+      (!isVerifiedOnline.value ? (verifiedOfflineAccountId.value ?? "") : ""),
   );
   const activeState = computed(() => {
     const id = accountId.value || "anonymous";
@@ -310,7 +312,7 @@ export function useOfflineRuntime() {
   const loadVerifiedOfflineIdentity = async () => {
     if (
       !import.meta.client ||
-      isOnline.value ||
+      isVerifiedOnline.value ||
       authenticatedAccountId.value
     ) {
       return accountId.value || null;
@@ -355,6 +357,9 @@ export function useOfflineRuntime() {
     state.blocked.value = ownedMutations.filter(
       (mutation) => mutation.status === "blocked",
     ).length;
+    state.waiting.value = ownedMutations.filter(
+      (mutation) => mutation.status === "waiting",
+    ).length;
     state.rejected.value = ownedMutations.filter(
       (mutation) => mutation.status === "rejected",
     ).length;
@@ -363,7 +368,7 @@ export function useOfflineRuntime() {
 
   const initialize = async () => {
     if (!import.meta.client || !enabled.value) return;
-    if (!isOnline.value && !authenticatedAccountId.value) {
+    if (!isVerifiedOnline.value && !authenticatedAccountId.value) {
       await loadVerifiedOfflineIdentity();
     }
 
@@ -373,7 +378,7 @@ export function useOfflineRuntime() {
     if (
       status.value === "authenticated" &&
       authenticatedAccountId.value &&
-      isOnline.value
+      isVerifiedOnline.value
     ) {
       // A browser-reported offline session is never enough to establish a new
       // offline identity. It must have been observed during a live session.
@@ -403,7 +408,7 @@ export function useOfflineRuntime() {
     state.lastSyncAt.value = metadata?.lastSuccessfulSyncAt;
     await refreshStatus();
     state.initialized.value = true;
-    if (isOnline.value && status.value === "authenticated") void sync();
+    if (isVerifiedOnline.value && status.value === "authenticated") void sync();
   };
 
   const queue = async (input: {
@@ -418,6 +423,10 @@ export function useOfflineRuntime() {
     sequence?: boolean;
     localData?: Record<string, unknown>;
     rollbackData?: Record<string, unknown> | null;
+    localRecords?: Array<
+      Omit<OfflineEntityRecord, "id" | "accountId" | "updatedAt">
+    >;
+    rollbackRecords?: OfflineMutation["rollbackRecords"];
     /** Queue several related commands before starting one network drain. */
     deferSync?: boolean;
   }) => {
@@ -460,9 +469,16 @@ export function useOfflineRuntime() {
     ]);
     const dependencyIds = existingMutations
       .filter((candidate) =>
-        ["pending", "retry", "blocked"].includes(candidate.status),
+        [
+          "pending",
+          "syncing",
+          "retry",
+          "blocked",
+          "waiting",
+          "conflict",
+        ].includes(candidate.status),
       )
-      .filter((candidate) => /^(temp-|local:)/.test(candidate.entityId))
+      .filter((candidate) => candidate.operation.endsWith(".create"))
       .filter((candidate) => {
         const referencesParent = (value: unknown): boolean => {
           if (value === candidate.entityId) return true;
@@ -484,20 +500,13 @@ export function useOfflineRuntime() {
     // the base revision and add a receipt dependency for each predecessor.
     // Without this, two offline grades for the same card would make the second
     // grade look like a remote same-field collision after the first is applied.
-    const sequentialPredecessors = input.sequence
-      ? existingMutations
-          .filter(
-            (candidate) =>
-              candidate.entity === input.entity &&
-              candidate.entityId === entityId,
-          )
-          .filter(
-            (candidate) =>
-              candidate.sequence &&
-              ["pending", "retry", "blocked"].includes(candidate.status),
-          )
-          .sort((left, right) => left.createdAt - right.createdAt)
-      : [];
+    const sequentialPredecessor = input.sequence
+      ? latestSequentialPredecessor({
+          mutations: existingMutations,
+          entity: input.entity,
+          entityId,
+        })
+      : undefined;
     const localData =
       input.localData ??
       (!input.operation.endsWith(".delete")
@@ -513,24 +522,31 @@ export function useOfflineRuntime() {
       // snapshot. A missing snapshot means the initial server revision is 0.
       baseVersion: isCreate
         ? undefined
-        : (input.baseVersion ?? current?.version ?? 0) +
-          sequentialPredecessors.length,
+        : predictedSequentialBaseVersion({
+            predecessor: sequentialPredecessor,
+            inputBaseVersion: input.baseVersion,
+            currentVersion: current?.version,
+          }),
       changedFields: input.changedFields,
       payload: input.payload,
       rollbackData: isCreate
         ? undefined
-        : (input.rollbackData ?? current?.data ?? undefined),
+        : input.rollbackData !== undefined
+          ? input.rollbackData
+          : (current?.data ?? undefined),
+      rollbackRecords: input.rollbackRecords,
       dependsOn: [
         ...new Set([
           ...(input.dependsOn ?? []),
           ...dependencyIds,
-          ...sequentialPredecessors.map((mutation) => mutation.id),
+          ...(sequentialPredecessor ? [sequentialPredecessor.id] : []),
         ]),
       ],
       occurredAt: new Date().toISOString(),
       createdAt: Date.now(),
       attempts: 0,
       status: "pending",
+      revisionScheme: "offline-entity-v1",
       sequence: Boolean(input.sequence),
     };
     await commitOfflineMutation({
@@ -545,6 +561,7 @@ export function useOfflineRuntime() {
             data: { ...localData, id: entityId },
           }
         : undefined,
+      localRecords: input.localRecords,
     });
     if (import.meta.client) {
       window.dispatchEvent(
@@ -559,21 +576,22 @@ export function useOfflineRuntime() {
     }
     await refreshStatus();
     void registerOfflineV2BackgroundSync();
-    if (isOnline.value && !input.deferSync) void sync();
+    if (isVerifiedOnline.value && !input.deferSync) void sync();
     return { mutation, entityId };
   };
 
   const sync = async (): Promise<boolean> => {
-    if (!enabled.value || !accountId.value || !isOnline.value) return false;
+    if (!enabled.value || !accountId.value || !isVerifiedOnline.value)
+      return false;
     const syncAccountId = accountId.value;
-    const scheduleRetry = () => {
+    const scheduleRetry = (delayMs = 500) => {
       if (syncRetryTimers.has(syncAccountId)) return;
       syncRetryTimers.set(
         syncAccountId,
         setTimeout(() => {
           syncRetryTimers.delete(syncAccountId);
           void sync();
-        }, 500),
+        }, delayMs),
       );
     };
     if (activeState.value.isSyncing.value) {
@@ -581,10 +599,19 @@ export function useOfflineRuntime() {
       return false;
     }
     const state = activeState.value;
+    await chainPendingSameEntityMutations(accountId.value);
     const queued = (await listOfflineMutations(accountId.value))
       // Notes and note groups are owned by the feature-specific V1 outbox.
       // Keeping them out of the generic drain prevents a second sync owner.
       .filter((mutation) => isOwnedOfflineV2Entity(mutation.entity))
+      // Old Daily occurrence rows used a domain revision. They must wait for
+      // Daily bootstrap to migrate baseVersion from authoritative offline
+      // revisions before any runtime or service-worker drain can claim them.
+      .filter(
+        (mutation) =>
+          mutation.entity !== "actionOccurrence" ||
+          mutation.revisionScheme === "offline-entity-v1",
+      )
       .filter(
         (mutation) =>
           mutation.status === "pending" || mutation.status === "retry",
@@ -653,6 +680,15 @@ export function useOfflineRuntime() {
               result.idMap?.[mutation.entityId] ??
               mutation.entityId;
             const hasPendingSuccessor = projectionResult.hasPendingSuccessor;
+            if (result.status === "applied" && hasPendingSuccessor)
+              scheduleRetry();
+            if (result.status === "retry") {
+              const retryDelay = Math.min(
+                30_000,
+                1_000 * 2 ** Math.min(mutation.attempts, 4),
+              );
+              scheduleRetry(retryDelay);
+            }
             if (result.idMap) {
               if (entity === "boardItem") {
                 window.dispatchEvent(
@@ -688,7 +724,11 @@ export function useOfflineRuntime() {
                 }),
               );
             }
-            if (entity === "boardItem" && result.status === "applied" && !result.idMap) {
+            if (
+              entity === "boardItem" &&
+              result.status === "applied" &&
+              !result.idMap
+            ) {
               window.dispatchEvent(
                 new CustomEvent("offline-v2-board-item-applied", {
                   detail: {
@@ -702,7 +742,11 @@ export function useOfflineRuntime() {
                 }),
               );
             }
-            if (entity === "boardColumn" && result.status === "applied" && !result.idMap) {
+            if (
+              entity === "boardColumn" &&
+              result.status === "applied" &&
+              !result.idMap
+            ) {
               window.dispatchEvent(
                 new CustomEvent("offline-v2-board-column-applied", {
                   detail: {
@@ -718,7 +762,8 @@ export function useOfflineRuntime() {
             }
             if (result.status === "applied") {
               for (const related of result.related ?? []) {
-                if (related.entity !== "boardItem" || !related.canonical) continue;
+                if (related.entity !== "boardItem" || !related.canonical)
+                  continue;
                 const relatedHasSuccessor = Boolean(
                   projectionResult.relatedPendingSuccessors[
                     `${related.entity}:${related.entityId}`
@@ -753,7 +798,14 @@ export function useOfflineRuntime() {
                 },
               }),
             );
-            if (result.status !== "applied") fullyApplied = false;
+            if (result.status !== "applied") {
+              fullyApplied = false;
+              failureMessage ??=
+                result.message ??
+                (result.status === "conflict"
+                  ? "A local change needs conflict review."
+                  : "Some local changes are waiting to sync.");
+            }
           }
           const missing = batch.filter(
             (mutation) => !returned.has(mutation.id),
@@ -796,9 +848,13 @@ export function useOfflineRuntime() {
       const timestamp = Date.now();
       const metadata = await updateOfflineSyncMetadata(accountId.value, {
         lastAttemptAt: timestamp,
-        ...(reachedSyncService
+        ...(reachedSyncService && fullyApplied
           ? { lastSuccessfulSyncAt: timestamp, lastError: undefined }
-          : { lastError: failureMessage }),
+          : {
+              lastError:
+                failureMessage ??
+                "Some saved local changes still need attention.",
+            }),
       });
       state.lastSyncAt.value = metadata.lastSuccessfulSyncAt;
       return fullyApplied;
@@ -809,7 +865,7 @@ export function useOfflineRuntime() {
   };
 
   const downloadWorkspace = async (workspaceId?: string) => {
-    if (!accountId.value || !isOnline.value)
+    if (!accountId.value || !isVerifiedOnline.value)
       throw new Error("Connect to download a workspace for offline use.");
     const packId = `${accountId.value}:${workspaceId ?? "account"}`;
     await putOfflinePack({
@@ -946,7 +1002,7 @@ export function useOfflineRuntime() {
     if (!accountId.value) return;
     await setMutationStatus(accountId.value, [id], "pending");
     await refreshStatus();
-    if (isOnline.value) await sync();
+    if (isVerifiedOnline.value) await sync();
   };
   const exportRecovery = async () => {
     if (!accountId.value || !import.meta.client) return;
@@ -997,12 +1053,10 @@ export function useOfflineRuntime() {
     if (
       mutation &&
       conflict &&
-      (
-        mutation.entity === "boardItem" ||
+      (mutation.entity === "boardItem" ||
         mutation.entity === "boardColumn" ||
         mutation.entity === "boardLink" ||
-        mutation.entity === "boardComment"
-      )
+        mutation.entity === "boardComment")
     ) {
       window.dispatchEvent(
         new CustomEvent("offline-v2-board-conflict-resolved", {
@@ -1017,13 +1071,13 @@ export function useOfflineRuntime() {
       );
     }
     await refreshStatus();
-    if (strategy === "keep-local" && isOnline.value) void sync();
+    if (strategy === "keep-local" && isVerifiedOnline.value) void sync();
   };
 
   if (import.meta.client && !runtimeLifecycleInstalled) {
     runtimeLifecycleInstalled = true;
     watch(
-      [accountId, status, isOnline],
+      [accountId, status, isVerifiedOnline],
       () => {
         void initialize();
       },
@@ -1036,7 +1090,7 @@ export function useOfflineRuntime() {
         void clearRuntimeCaches();
       }
     });
-    window.addEventListener("online", () => {
+    onOnline(() => {
       void sync();
     });
     document.addEventListener("visibilitychange", () => {
@@ -1048,6 +1102,7 @@ export function useOfflineRuntime() {
     accountId,
     enabled,
     isOnline,
+    isVerifiedOnline,
     initialize,
     queue,
     sync,
@@ -1065,6 +1120,7 @@ export function useOfflineRuntime() {
     pending: computed(() => activeState.value.pending.value),
     retrying: computed(() => activeState.value.retrying.value),
     blocked: computed(() => activeState.value.blocked.value),
+    waiting: computed(() => activeState.value.waiting.value),
     rejected: computed(() => activeState.value.rejected.value),
     conflicts: computed(() => activeState.value.conflicts.value),
     isSyncing: computed(() => activeState.value.isSyncing.value),

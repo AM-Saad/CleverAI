@@ -42,9 +42,17 @@
         v-if="items.length"
         :date-key="dateKey"
         :items="items"
+        :conflicts="conflicts"
+        :occurrence-conflicts="occurrenceConflicts"
+        :resolving-action-item-id="resolvingActionItemId"
+        :resolving-occurrence-id="resolvingOccurrenceId"
         @edit="quickAddOpen = false"
         @toggle="emit('toggle', $event.occurrenceKey, $event.completed)"
         @move="emit('move', $event)"
+        @resolve-conflict="emit('resolve-conflict', $event)"
+        @resolve-occurrence-conflict="
+          emit('resolve-occurrence-conflict', $event)
+        "
       />
       <ActionItemListSkeleton v-else-if="loading" />
       <UiEmptyState
@@ -78,6 +86,8 @@
 
 <script setup lang="ts">
 import { useStorage } from "@vueuse/core";
+import type { DailyActionConflict } from "../repositories/dailyLocalRepository";
+import type { DailyOccurrenceConflict } from "../repositories/dailyLocalRepository";
 import type { DailyActionViewModel } from "../presentation/dailyActionViewModel";
 import ActionItemListSkeleton from "~/features/daily/components/ActionItemListSkeleton.vue";
 import ActionItemInlineForm from "~/features/daily/components/ActionItemInlineForm.vue";
@@ -91,10 +101,26 @@ const props = defineProps<{
   openCount: number;
   completedCount: number;
   loading: boolean;
+  conflicts: readonly DailyActionConflict[];
+  occurrenceConflicts: readonly DailyOccurrenceConflict[];
+  resolvingActionItemId?: string | null;
+  resolvingOccurrenceId?: string | null;
 }>();
 const emit = defineEmits<{
   toggle: [occurrenceKey: string, completed: boolean];
   move: [occurrenceKey: string];
+  "resolve-conflict": [
+    payload: {
+      actionItemId: string;
+      strategy: "keep-local" | "keep-server";
+    },
+  ];
+  "resolve-occurrence-conflict": [
+    payload: {
+      occurrenceId: string;
+      strategy: "keep-local" | "keep-server";
+    },
+  ];
 }>();
 
 const isExpanded = useStorage("daily:action-section-expanded", true);
