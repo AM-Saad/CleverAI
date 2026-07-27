@@ -1009,8 +1009,47 @@
     );
     return all.filter((mutation) => mutation.accountId === accountId).sort((a, b) => a.createdAt - b.createdAt);
   }
-  async function setMutationStatus(accountId, ids, status, lastError, expectedClaimToken) {
+  async function chainPendingSameEntityMutations(accountId) {
+    var _a;
+    const db = await openUnifiedDB();
+    const tx = db.transaction(stores.OFFLINE_MUTATIONS, "readwrite");
+    const store = tx.objectStore(stores.OFFLINE_MUTATIONS);
+    const all = await request(store.getAll());
+    const groups = /* @__PURE__ */ new Map();
+    for (const mutation of all) {
+      if (mutation.accountId !== accountId || mutation.sequence || !["pending", "retry"].includes(mutation.status))
+        continue;
+      const key = `${mutation.entity}:${mutation.entityId}`;
+      const group = (_a = groups.get(key)) != null ? _a : [];
+      group.push(mutation);
+      groups.set(key, group);
+    }
+    let repaired = 0;
+    for (const group of groups.values()) {
+      group.sort(
+        (left, right) => left.createdAt - right.createdAt || left.id.localeCompare(right.id)
+      );
+      for (let index = 1; index < group.length; index += 1) {
+        const predecessor = group[index - 1];
+        const mutation = group[index];
+        if (mutation.dependsOn.includes(predecessor.id)) continue;
+        store.put(
+          sanitizeForIDB({
+            ...mutation,
+            dependsOn: [.../* @__PURE__ */ new Set([...mutation.dependsOn, predecessor.id])],
+            updatedAt: now()
+          })
+        );
+        repaired += 1;
+      }
+    }
+    await complete(tx);
+    return repaired;
+  }
+  async function setMutationStatus(accountId, ids, status, lastError, expectedClaimToken, options) {
+    var _a;
     if (!ids.length) return;
+    const countAttempt = (_a = options == null ? void 0 : options.countAttempt) != null ? _a : true;
     const db = await openUnifiedDB();
     const tx = db.transaction(stores.OFFLINE_MUTATIONS, "readwrite");
     const store = tx.objectStore(stores.OFFLINE_MUTATIONS);
@@ -1023,7 +1062,7 @@
             status,
             lastError,
             updatedAt: now(),
-            attempts: status === "retry" ? existing.attempts + 1 : existing.attempts,
+            attempts: status === "retry" && countAttempt ? existing.attempts + 1 : existing.attempts,
             ...status === "syncing" ? {} : { claimToken: void 0, claimedAt: void 0 }
           })
         );
@@ -1131,7 +1170,7 @@
     return next;
   }
   async function applySyncResult(input) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j, _k, _l, _m, _n, _o, _p, _q, _r, _s, _t, _u;
     const db = await openUnifiedDB();
     const tx = db.transaction(
       [
@@ -1167,7 +1206,7 @@
       const canonicalEntity = (_f = result.entity) != null ? _f : input.mutation.entity;
       projection.entityId = canonicalEntityId;
       const successors = allMutations.filter(
-        (candidate) => candidate.accountId === input.accountId && candidate.id !== input.mutation.id && candidate.entity === input.mutation.entity && candidate.entityId === canonicalEntityId && ["pending", "retry", "blocked"].includes(candidate.status)
+        (candidate) => candidate.accountId === input.accountId && candidate.id !== input.mutation.id && candidate.entity === input.mutation.entity && candidate.entityId === canonicalEntityId && ["pending", "retry", "blocked", "waiting"].includes(candidate.status)
       );
       if (!ownsCurrentRevision && current) successors.push(current);
       const entityKey = scopedId(
@@ -1182,11 +1221,16 @@
       projection.hasPendingSuccessor = successors.length > 0 || hasNewerDraft;
       if (result.version !== void 0) {
         for (const successor of successors) {
+          if (successor.sequence && !successor.dependsOn.includes(input.mutation.id))
+            continue;
           if (successor.operation.endsWith(".create")) continue;
           mutations.put(
             sanitizeForIDB({
               ...successor,
               baseVersion: result.version,
+              rollbackData: (_g = result.canonical) != null ? _g : successor.rollbackData,
+              status: successor.status === "waiting" ? "pending" : successor.status,
+              lastError: successor.status === "waiting" ? void 0 : successor.lastError,
               updatedAt: now()
             })
           );
@@ -1200,8 +1244,8 @@
             accountId: input.accountId,
             entity: canonicalEntity,
             entityId: canonicalEntityId,
-            workspaceId: preserveNewerLocalState ? localEntity.workspaceId : (_g = result.canonical.workspaceId) != null ? _g : input.mutation.workspaceId,
-            version: (_h = result.version) != null ? _h : 0,
+            workspaceId: preserveNewerLocalState ? localEntity.workspaceId : (_h = result.canonical.workspaceId) != null ? _h : input.mutation.workspaceId,
+            version: (_i = result.version) != null ? _i : 0,
             updatedAt: now(),
             localDirty: preserveNewerLocalState ? localEntity.localDirty : false,
             deleted: preserveNewerLocalState ? localEntity.deleted : input.mutation.operation.endsWith(".delete"),
@@ -1209,7 +1253,7 @@
           })
         );
       }
-      for (const related of (_i = result.related) != null ? _i : []) {
+      for (const related of (_j = result.related) != null ? _j : []) {
         const relatedKey = scopedId(
           input.accountId,
           related.entity,
@@ -1217,7 +1261,7 @@
         );
         const relatedEntity = await request(entities.get(relatedKey));
         const relatedSuccessors = allMutations.filter(
-          (candidate) => candidate.accountId === input.accountId && candidate.entity === related.entity && candidate.entityId === related.entityId && ["pending", "retry", "blocked"].includes(candidate.status)
+          (candidate) => candidate.accountId === input.accountId && candidate.entity === related.entity && candidate.entityId === related.entityId && ["pending", "retry", "blocked", "waiting"].includes(candidate.status)
         );
         const hasRelatedDraft = Boolean(
           (relatedEntity == null ? void 0 : relatedEntity.localDirty) && related.canonical && !snapshotMatchesPayload(
@@ -1244,7 +1288,7 @@
             sanitizeForIDB({
               ...relatedConflict,
               serverVersion: related.version,
-              serverSnapshot: (_j = related.canonical) != null ? _j : relatedConflict.serverSnapshot
+              serverSnapshot: (_k = related.canonical) != null ? _k : relatedConflict.serverSnapshot
             })
           );
         }
@@ -1298,15 +1342,30 @@
           mutationId: input.mutation.id,
           entity: input.mutation.entity,
           entityId: input.mutation.entityId,
-          serverVersion: Number((_l = (_k = result.conflict) == null ? void 0 : _k.serverVersion) != null ? _l : 0),
-          overlappingFields: Array.isArray((_m = result.conflict) == null ? void 0 : _m.overlappingFields) ? (_n = result.conflict) == null ? void 0 : _n.overlappingFields : [],
-          serverSnapshot: (_p = (_o = result.conflict) == null ? void 0 : _o.serverSnapshot) != null ? _p : null,
+          serverVersion: Number((_m = (_l = result.conflict) == null ? void 0 : _l.serverVersion) != null ? _m : 0),
+          overlappingFields: Array.isArray((_n = result.conflict) == null ? void 0 : _n.overlappingFields) ? (_o = result.conflict) == null ? void 0 : _o.overlappingFields : [],
+          serverSnapshot: (_q = (_p = result.conflict) == null ? void 0 : _p.serverSnapshot) != null ? _q : null,
           reason: String(
-            (_r = (_q = result.conflict) == null ? void 0 : _q.reason) != null ? _r : "The same fields changed on another device."
+            (_s = (_r = result.conflict) == null ? void 0 : _r.reason) != null ? _s : "The same fields changed on another device."
           ),
           createdAt: now()
         })
       );
+      const queued = await request(
+        mutations.getAll()
+      );
+      for (const successor of queued) {
+        if (successor.accountId !== input.accountId || successor.id === input.mutation.id || !successor.dependsOn.includes(input.mutation.id) || !["pending", "retry"].includes(successor.status))
+          continue;
+        mutations.put(
+          sanitizeForIDB({
+            ...successor,
+            status: "waiting",
+            lastError: "Waiting for an earlier conflict to be resolved.",
+            updatedAt: now()
+          })
+        );
+      }
     } else if (result.status === "rejected") {
       if (!ownsCurrentRevision) {
         await complete(tx);
@@ -1328,7 +1387,8 @@
         rejected.entity,
         rejected.entityId
       );
-      if (rejected.rollbackData) {
+      if (result.blockedBy) {
+      } else if (rejected.rollbackData) {
         entities.put(
           sanitizeForIDB({
             id: entityKey,
@@ -1336,15 +1396,42 @@
             entity: rejected.entity,
             entityId: rejected.entityId,
             workspaceId: rejected.workspaceId,
-            version: (_s = rejected.baseVersion) != null ? _s : 0,
+            version: (_t = rejected.baseVersion) != null ? _t : 0,
             updatedAt: now(),
             localDirty: false,
             deleted: false,
             data: rejected.rollbackData
           })
         );
-      } else if (rejected.operation.endsWith(".create")) {
+      } else if (rejected.rollbackData === null || rejected.operation.endsWith(".create")) {
         entities.delete(entityKey);
+      }
+      if (!result.blockedBy) {
+        for (const rollback of (_u = rejected.rollbackRecords) != null ? _u : []) {
+          const key = scopedId(
+            input.accountId,
+            rollback.entity,
+            rollback.entityId
+          );
+          if (rollback.data === null) {
+            entities.delete(key);
+            continue;
+          }
+          entities.put(
+            sanitizeForIDB({
+              id: key,
+              accountId: input.accountId,
+              entity: rollback.entity,
+              entityId: rollback.entityId,
+              workspaceId: rollback.workspaceId,
+              version: rollback.version,
+              updatedAt: now(),
+              localDirty: false,
+              deleted: false,
+              data: rollback.data
+            })
+          );
+        }
       }
     } else {
       if (!ownsCurrentRevision) {
@@ -5462,8 +5549,11 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       const session = await getOfflineSession();
       if (!session) return;
       await recoverInterruptedMutations(session.accountId);
+      await chainPendingSameEntityMutations(session.accountId);
       const pending = (await listOfflineMutations(session.accountId)).filter(
         (mutation) => mutation.entity !== "note" && mutation.entity !== "noteGroup"
+      ).filter(
+        (mutation) => mutation.entity !== "actionOccurrence" || mutation.revisionScheme === "offline-entity-v1"
       ).filter(
         (mutation) => mutation.status === "pending" || mutation.status === "retry"
       );
@@ -5545,7 +5635,8 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           batch.map((mutation) => mutation.id),
           statusCode === 401 || statusCode === 403 ? "blocked" : "retry",
           statusCode === 401 || statusCode === 403 ? "Sign in to sync your saved local changes." : message,
-          claimToken
+          claimToken,
+          { countAttempt: statusCode > 0 }
         );
         await updateOfflineSyncMetadata(session.accountId, {
           lastAttemptAt: Date.now(),

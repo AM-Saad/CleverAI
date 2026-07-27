@@ -662,8 +662,18 @@ export async function setMutationStatus(
   status: StoredOfflineMutation["status"],
   lastError?: string,
   expectedClaimToken?: string,
+  options?: {
+    /**
+     * Whether this re-queue counts as a delivery attempt. Pass false when the
+     * request never reached the server: a long offline stretch would otherwise
+     * inflate `attempts`, stretching the backoff and burning the retry ceiling
+     * on work that was never actually rejected.
+     */
+    countAttempt?: boolean;
+  },
 ): Promise<void> {
   if (!ids.length) return;
+  const countAttempt = options?.countAttempt ?? true;
   const db = await openUnifiedDB();
   const tx = db.transaction(stores.OFFLINE_MUTATIONS, "readwrite");
   const store = tx.objectStore(stores.OFFLINE_MUTATIONS);
@@ -682,7 +692,9 @@ export async function setMutationStatus(
           lastError,
           updatedAt: now(),
           attempts:
-            status === "retry" ? existing.attempts + 1 : existing.attempts,
+            status === "retry" && countAttempt
+              ? existing.attempts + 1
+              : existing.attempts,
           ...(status === "syncing"
             ? {}
             : { claimToken: undefined, claimedAt: undefined }),

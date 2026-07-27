@@ -26,6 +26,13 @@
             <NuxtLoadingIndicator color="var(--color-accent-orange)" :duration="10000" :throttle="6000" :reset-delay="5000" />
             <UApp>
 
+                <!-- Persistent connectivity state. The toasts are transient and
+                     miss the app opening while already offline, so the banner is
+                     the standing signal. -->
+                <ClientOnly>
+                    <NetworkStatusIndicator show-retry />
+                </ClientOnly>
+
                 <NuxtLayout>
 
                     <NuxtPage />
@@ -108,10 +115,10 @@ onMounted(() => {
             router.replace({ path: '/notes', query: { action: 'quick-capture', initialValue: initialVal } })
         }
 
-        onOffline(() => {
+        onOffline(({ reason }) => {
             toast.add({
                 id: OFFLINE_TOAST_ID,
-                title: "You are offline",
+                title: reason === 'unreachable' ? "Can't reach the server" : "You are offline",
                 description: "You can continue working. Changes will sync when you reconnect.",
                 color: "warning",
                 icon: "i-lucide-wifi",
@@ -121,7 +128,10 @@ onMounted(() => {
             toast.remove(ONLINE_TOAST_ID)
         })
 
-        onOnline(() => {
+        onOnline(({ isRecovery }) => {
+            // The monitor boots unverified, so its first successful ping is not a
+            // reconnection. Announcing it made every cold start say "Back online".
+            if (!isRecovery) return
             toast.add({
                 id: ONLINE_TOAST_ID,
                 title: "Back online",

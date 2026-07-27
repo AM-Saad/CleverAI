@@ -140,6 +140,10 @@ function dailyRollbackRecord(
 
 export function useDaily() {
   const offline = useOfflineRuntime();
+  // Daily reads go through raw $fetch, which bypasses the service layer's
+  // failure hook — report network-class failures so a silent connectivity drop
+  // still flips the monitor instead of only failing this one request.
+  const { reportFetchError } = useNetworkStatus();
   const accountId = computed(() => offline.accountId.value);
   const projectionsByAccount = useState<
     Record<string, Record<string, DayProjectionDTO>>
@@ -225,12 +229,17 @@ export function useDaily() {
     }
 
     const run = (async () => {
-      const response = await $fetch<ApiSuccess<DayProjectionDTO>>(
-        `/api/daily/day/${dateKey}`,
-      );
-      await mergeServerDay(currentAccountId, response.data);
-      await projectDate(dateKey);
-      guard.lastSuccessAt = Date.now();
+      try {
+        const response = await $fetch<ApiSuccess<DayProjectionDTO>>(
+          `/api/daily/day/${dateKey}`,
+        );
+        await mergeServerDay(currentAccountId, response.data);
+        await projectDate(dateKey);
+        guard.lastSuccessAt = Date.now();
+      } catch (refreshError) {
+        void reportFetchError(refreshError);
+        throw refreshError;
+      }
     })();
 
     const tracked: Promise<void> = run.finally(() => {
@@ -264,11 +273,16 @@ export function useDaily() {
       bootstrappedAccounts.has(accountId.value)
     )
       return;
-    const response = await $fetch<ApiSuccess<DailyBootstrapDTO>>(
-      "/api/daily/bootstrap",
-    );
-    await mergeServerBootstrap(accountId.value, response.data);
-    bootstrappedAccounts.add(accountId.value);
+    try {
+      const response = await $fetch<ApiSuccess<DailyBootstrapDTO>>(
+        "/api/daily/bootstrap",
+      );
+      await mergeServerBootstrap(accountId.value, response.data);
+      bootstrappedAccounts.add(accountId.value);
+    } catch (bootstrapError) {
+      void reportFetchError(bootstrapError);
+      throw bootstrapError;
+    }
   }
 
   async function loadDay(dateKey: string) {

@@ -134,6 +134,11 @@ onBeforeUnmount(() => titleResizeObserver?.disconnect());
   padding: var(--space-2);
   border-bottom: 1px solid var(--color-secondary);
   justify-content: space-between;
+  /* Title/meta here are read-only display, not editable text — don't let a
+     long-press or drag turn them into a selection/Copy target. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .action-row:last-child {

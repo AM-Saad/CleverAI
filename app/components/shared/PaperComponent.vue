@@ -8,6 +8,9 @@
     }"
     :style="{ width: `${W}px`, marginLeft: xOffset ? `${xOffset}px` : undefined }"
     data-type="paper"
+    contenteditable="false"
+    @touchstart.stop
+    @mousedown.stop
     @pointerenter="isHovered = true"
     @pointerleave="isHovered = false"
   >
@@ -1554,6 +1557,12 @@ watch([W, H], () => {
   margin: 1.25rem 0;
   border-radius: var(--radius-xl);
   transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  /* Every readout in this block (chips, labels, hints) is display-only —
+     nothing here is meant to be selected or copied. touch-callout is the
+     separate switch that suppresses iOS's long-press "Copy" menu. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .paper--resizing {

@@ -1429,6 +1429,9 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       const message =
         err instanceof Error ? err.message : "Background sync failed";
       const statusCode = Number(err?.statusCode ?? 0);
+      // Background Sync fires precisely when connectivity is unreliable. Those
+      // failures must not consume the retry ceiling the foreground drain
+      // enforces, so only count attempts that reached the server.
       await setMutationStatus(
         session.accountId,
         batch.map((mutation) => mutation.id),
@@ -1437,6 +1440,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
           ? "Sign in to sync your saved local changes."
           : message,
         claimToken,
+        { countAttempt: statusCode > 0 },
       );
       await updateOfflineSyncMetadata(session.accountId, {
         lastAttemptAt: Date.now(),

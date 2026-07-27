@@ -187,5 +187,8 @@ function toggleQuickAdd() {
   gap: var(--space-3);
   color: var(--color-content-disabled);
   font-size: var(--text-sm);
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 </style>

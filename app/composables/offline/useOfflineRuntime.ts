@@ -44,8 +44,14 @@ import {
   latestSequentialPredecessor,
   predictedSequentialBaseVersion,
 } from "../../utils/offline-v2/sequentialMutation";
+import { isNetworkClassError } from "../../utils/networkErrors";
 
 const clientIdKey = "cognilo-offline-client-id";
+/**
+ * Delivery attempts that reached the server before a command is parked as
+ * rejected. Connectivity failures do not count toward this.
+ */
+const MAX_SYNC_ATTEMPTS = 10;
 const states = new Map<string, ReturnType<typeof createRuntimeState>>();
 let runtimeLifecycleInstalled = false;
 let offlineIdentityLoadPromise: Promise<string | null> | null = null;
@@ -286,7 +292,8 @@ async function downloadPackFiles(
 
 export function useOfflineRuntime() {
   const { data: authData, status } = useAuth();
-  const { isOnline, isVerifiedOnline, onOnline } = useNetworkStatus();
+  const { isOnline, isVerifiedOnline, onOnline, reportFetchError } =
+    useNetworkStatus();
   const runtimeConfig = useRuntimeConfig();
   const enabled = computed(() => runtimeConfig.public.offlineV2 !== false);
   const authenticatedAccountId = computed(() =>
@@ -298,10 +305,15 @@ export function useOfflineRuntime() {
     "verified-offline-account-id",
     () => null,
   );
+  // The last verified identity is the fallback whenever no server session can be
+  // read — not only once reachability has already been marked unverified. A
+  // silent network drop can leave isVerifiedOnline true while /api/auth/session
+  // degrades to `{}`, which used to zero out accountId and make queue() refuse
+  // local writes in exactly the degraded state offline support exists for.
+  // Establishing this identity still requires a live session (see initialize).
   const accountId = computed(
     () =>
-      authenticatedAccountId.value ||
-      (!isVerifiedOnline.value ? (verifiedOfflineAccountId.value ?? "") : ""),
+      authenticatedAccountId.value || (verifiedOfflineAccountId.value ?? ""),
   );
   const activeState = computed(() => {
     const id = accountId.value || "anonymous";
@@ -310,11 +322,7 @@ export function useOfflineRuntime() {
   });
 
   const loadVerifiedOfflineIdentity = async () => {
-    if (
-      !import.meta.client ||
-      isVerifiedOnline.value ||
-      authenticatedAccountId.value
-    ) {
+    if (!import.meta.client || authenticatedAccountId.value) {
       return accountId.value || null;
     }
     const generation = offlineIdentityGeneration;
@@ -368,7 +376,7 @@ export function useOfflineRuntime() {
 
   const initialize = async () => {
     if (!import.meta.client || !enabled.value) return;
-    if (!isVerifiedOnline.value && !authenticatedAccountId.value) {
+    if (!authenticatedAccountId.value) {
       await loadVerifiedOfflineIdentity();
     }
 
@@ -616,7 +624,24 @@ export function useOfflineRuntime() {
         (mutation) =>
           mutation.status === "pending" || mutation.status === "retry",
       );
-    const { ordered, cyclic } = orderOfflineMutations(queued);
+    // A command the server keeps failing on must stop re-POSTing forever. Only
+    // attempts that actually reached the server count (see the catch below), so
+    // reaching the ceiling means real repeated server-side failure, not a long
+    // offline stretch. The row stays durable and retryable from the Sync Center.
+    const exhausted = queued.filter(
+      (mutation) => mutation.attempts >= MAX_SYNC_ATTEMPTS,
+    );
+    if (exhausted.length)
+      await setMutationStatus(
+        accountId.value,
+        exhausted.map((mutation) => mutation.id),
+        "rejected",
+        `Sync failed ${MAX_SYNC_ATTEMPTS} times. Retry this change from the Sync Center.`,
+      );
+    const exhaustedIds = new Set(exhausted.map((mutation) => mutation.id));
+    const { ordered, cyclic } = orderOfflineMutations(
+      queued.filter((mutation) => !exhaustedIds.has(mutation.id)),
+    );
     if (cyclic.length)
       await setMutationStatus(
         accountId.value,
@@ -625,11 +650,15 @@ export function useOfflineRuntime() {
         "Cyclic offline dependency",
       );
     const pending = ordered;
-    if (!pending.length) return cyclic.length === 0;
+    const settledCleanly = cyclic.length === 0 && exhausted.length === 0;
+    if (!pending.length) {
+      if (!settledCleanly) await refreshStatus();
+      return settledCleanly;
+    }
     state.isSyncing.value = true;
     let reachedSyncService = false;
     let failureMessage: string | undefined;
-    let fullyApplied = cyclic.length === 0;
+    let fullyApplied = settledCleanly;
     try {
       for (let offset = 0; offset < pending.length; offset += 50) {
         const candidates = pending.slice(offset, offset + 50);
@@ -825,6 +854,11 @@ export function useOfflineRuntime() {
             error?.response?.status ?? error?.statusCode ?? 0,
           );
           const isAuthFailure = statusCode === 401 || statusCode === 403;
+          // This drain uses raw $fetch, so it bypasses the service layer's
+          // failure hook. Without reporting it the monitor could stay
+          // "verified online" through an entire outage.
+          const isConnectivityFailure = isNetworkClassError(error);
+          if (isConnectivityFailure) void reportFetchError(error);
           await setMutationStatus(
             accountId.value,
             batch.map((mutation) => mutation.id),
@@ -835,6 +869,7 @@ export function useOfflineRuntime() {
                 ? error.message
                 : "Unable to reach the sync service",
             claimToken,
+            { countAttempt: !isConnectivityFailure },
           );
           failureMessage = isAuthFailure
             ? "Sign in to sync your saved local changes."
@@ -920,6 +955,9 @@ export function useOfflineRuntime() {
       });
       return records.length;
     } catch (error) {
+      // Raw $fetch again — report it so a pack download failing mid-outage
+      // updates connectivity state instead of silently only failing itself.
+      void reportFetchError(error);
       await putOfflinePack({
         id: packId,
         accountId: accountId.value,
