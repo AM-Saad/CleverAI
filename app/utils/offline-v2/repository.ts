@@ -3,6 +3,13 @@ import type {
   OfflineMutation,
   OfflineRelatedEntityResult,
 } from "@@/shared/utils/offline-sync.contract";
+import {
+  analyzeOfflineRetryQueue,
+  collectTransitiveDependentIds,
+  isOfflineV2DrainCandidate,
+  MAX_OFFLINE_SYNC_ATTEMPTS,
+  type OfflineRetryQueueAnalysis,
+} from "../../../shared/utils/offline-retry-policy";
 // Relative imports keep this repository usable by both Nuxt and the raw
 // esbuild service-worker bundle (which does not know Nuxt's `~` alias).
 import { DB_CONFIG } from "../constants/pwa";
@@ -73,6 +80,42 @@ function snapshotMatchesPayload(
       JSON.stringify(comparableOfflineValue(snapshot[field])) ===
       JSON.stringify(comparableOfflineValue(value)),
   );
+}
+
+function parkTransitiveDependents(
+  store: IDBObjectStore,
+  mutations: readonly StoredOfflineMutation[],
+  accountId: string,
+  rootIds: Iterable<string>,
+  lastError: string,
+): number {
+  const accountMutations = mutations.filter(
+    (mutation) => mutation.accountId === accountId,
+  );
+  const dependentIds = collectTransitiveDependentIds(accountMutations, rootIds);
+  const updatedAt = now();
+  let parked = 0;
+
+  for (const mutation of accountMutations) {
+    if (
+      !dependentIds.has(mutation.id) ||
+      !["pending", "retry"].includes(mutation.status)
+    )
+      continue;
+    store.put(
+      sanitizeForIDB({
+        ...mutation,
+        status: "waiting",
+        lastError,
+        updatedAt,
+        claimToken: undefined,
+        claimedAt: undefined,
+      }),
+    );
+    parked += 1;
+  }
+
+  return parked;
 }
 
 /**
@@ -670,6 +713,8 @@ export async function setMutationStatus(
      * on work that was never actually rejected.
      */
     countAttempt?: boolean;
+    /** Reset the delivery budget after an explicit user-requested retry. */
+    resetAttempts?: boolean;
   },
 ): Promise<void> {
   if (!ids.length) return;
@@ -692,9 +737,11 @@ export async function setMutationStatus(
           lastError,
           updatedAt: now(),
           attempts:
-            status === "retry" && countAttempt
-              ? existing.attempts + 1
-              : existing.attempts,
+            options?.resetAttempts === true
+              ? 0
+              : status === "retry" && countAttempt
+                ? existing.attempts + 1
+                : existing.attempts,
           ...(status === "syncing"
             ? {}
             : { claimToken: undefined, claimedAt: undefined }),
@@ -703,6 +750,61 @@ export async function setMutationStatus(
     }
   }
   await complete(tx);
+}
+
+/**
+ * Apply the shared retry ceiling and dependency blocking rules atomically.
+ *
+ * Both the foreground runtime and service worker call this immediately before
+ * listing claimable mutations, so neither sync owner can bypass the policy.
+ */
+export async function prepareOfflineMutationQueue(
+  accountId: string,
+  maxAttempts = MAX_OFFLINE_SYNC_ATTEMPTS,
+): Promise<OfflineRetryQueueAnalysis> {
+  const db = await openUnifiedDB();
+  const tx = db.transaction(stores.OFFLINE_MUTATIONS, "readwrite");
+  const store = tx.objectStore(stores.OFFLINE_MUTATIONS);
+  const all = (await request(store.getAll())) as StoredOfflineMutation[];
+  const accountMutations = all.filter(
+    (mutation) =>
+      mutation.accountId === accountId && isOfflineV2DrainCandidate(mutation),
+  );
+  const analysis = analyzeOfflineRetryQueue(accountMutations, maxAttempts);
+  const exhausted = new Set(analysis.exhaustedIds);
+  const waiting = new Set(analysis.waitingIds);
+  const updatedAt = now();
+
+  for (const mutation of accountMutations) {
+    if (exhausted.has(mutation.id)) {
+      store.put(
+        sanitizeForIDB({
+          ...mutation,
+          status: "rejected",
+          lastError: `Sync failed ${maxAttempts} times. Retry this change from the Sync Center.`,
+          updatedAt,
+          claimToken: undefined,
+          claimedAt: undefined,
+        }),
+      );
+      continue;
+    }
+    if (waiting.has(mutation.id)) {
+      store.put(
+        sanitizeForIDB({
+          ...mutation,
+          status: "waiting",
+          lastError: "Waiting for an earlier local change to be resolved.",
+          updatedAt,
+          claimToken: undefined,
+          claimedAt: undefined,
+        }),
+      );
+    }
+  }
+
+  await complete(tx);
+  return analysis;
 }
 
 /**
@@ -926,6 +1028,13 @@ export async function applySyncResult(input: {
         candidate.entityId === canonicalEntityId &&
         ["pending", "retry", "blocked", "waiting"].includes(candidate.status),
     );
+    const directWaitingDependents = allMutations.filter(
+      (candidate) =>
+        candidate.accountId === input.accountId &&
+        candidate.id !== input.mutation.id &&
+        candidate.status === "waiting" &&
+        candidate.dependsOn.includes(input.mutation.id),
+    );
     if (!ownsCurrentRevision && current) successors.push(current);
     const entityKey = scopedId(
       input.accountId,
@@ -940,6 +1049,7 @@ export async function applySyncResult(input: {
       !snapshotMatchesPayload(localEntity.data, input.mutation.payload),
     );
     projection.hasPendingSuccessor = successors.length > 0 || hasNewerDraft;
+    const rebasedSuccessorIds = new Set<string>();
     if (result.version !== undefined) {
       for (const successor of successors) {
         if (
@@ -948,6 +1058,7 @@ export async function applySyncResult(input: {
         )
           continue;
         if (successor.operation.endsWith(".create")) continue;
+        rebasedSuccessorIds.add(successor.id);
         mutations.put(
           sanitizeForIDB({
             ...successor,
@@ -961,6 +1072,19 @@ export async function applySyncResult(input: {
           }),
         );
       }
+    }
+    // Cross-entity dependencies do not share a base version, but they still
+    // need to leave `waiting` once their direct predecessor is applied.
+    for (const successor of directWaitingDependents) {
+      if (rebasedSuccessorIds.has(successor.id)) continue;
+      mutations.put(
+        sanitizeForIDB({
+          ...successor,
+          status: "pending",
+          lastError: undefined,
+          updatedAt: now(),
+        }),
+      );
     }
     if (result.canonical) {
       const preserveNewerLocalState =
@@ -1117,23 +1241,13 @@ export async function applySyncResult(input: {
     const queued = (await request(
       mutations.getAll(),
     )) as StoredOfflineMutation[];
-    for (const successor of queued) {
-      if (
-        successor.accountId !== input.accountId ||
-        successor.id === input.mutation.id ||
-        !successor.dependsOn.includes(input.mutation.id) ||
-        !["pending", "retry"].includes(successor.status)
-      )
-        continue;
-      mutations.put(
-        sanitizeForIDB({
-          ...successor,
-          status: "waiting",
-          lastError: "Waiting for an earlier conflict to be resolved.",
-          updatedAt: now(),
-        }),
-      );
-    }
+    parkTransitiveDependents(
+      mutations,
+      queued,
+      input.accountId,
+      [input.mutation.id],
+      "Waiting for an earlier conflict to be resolved.",
+    );
   } else if (result.status === "rejected") {
     if (!ownsCurrentRevision) {
       await complete(tx);
@@ -1149,6 +1263,16 @@ export async function applySyncResult(input: {
         lastError: result.message,
         updatedAt: now(),
       }),
+    );
+    const queued = (await request(
+      mutations.getAll(),
+    )) as StoredOfflineMutation[];
+    parkTransitiveDependents(
+      mutations,
+      queued,
+      input.accountId,
+      [input.mutation.id],
+      "Waiting for an earlier rejected change to be retried.",
     );
     const entityKey = scopedId(
       input.accountId,
@@ -1378,14 +1502,20 @@ export async function resolveOfflineConflict(input: {
     const allMutations = (await request(
       mutationStore.getAll(),
     )) as StoredOfflineMutation[];
-    const directSuccessors = allMutations.filter(
+    const directDependents = allMutations.filter(
       (candidate) =>
         candidate.accountId === input.accountId &&
         candidate.id !== mutation.id &&
-        candidate.entity === mutation.entity &&
-        candidate.entityId === mutation.entityId &&
         candidate.dependsOn.includes(mutation.id) &&
         ["pending", "retry", "blocked", "waiting"].includes(candidate.status),
+    );
+    const directSuccessors = directDependents.filter(
+      (candidate) =>
+        candidate.entity === mutation.entity &&
+        candidate.entityId === mutation.entityId,
+    );
+    const crossEntityDependents = directDependents.filter(
+      (candidate) => !directSuccessors.includes(candidate),
     );
     if (input.strategy === "keep-server") {
       mutationStore.delete(mutation.id);
@@ -1441,6 +1571,24 @@ export async function resolveOfflineConflict(input: {
             ),
             lastError:
               successor.status === "waiting" ? undefined : successor.lastError,
+            updatedAt: now(),
+          }),
+        );
+      }
+      // A cross-entity child does not share the predecessor's revision, but
+      // choosing the server version still resolves the local dependency. Remove
+      // that discarded dependency and let the child continue with its own base.
+      for (const dependent of crossEntityDependents) {
+        mutationStore.put(
+          sanitizeForIDB({
+            ...dependent,
+            status:
+              dependent.status === "waiting" ? "pending" : dependent.status,
+            dependsOn: dependent.dependsOn.filter(
+              (dependency) => dependency !== mutation.id,
+            ),
+            lastError:
+              dependent.status === "waiting" ? undefined : dependent.lastError,
             updatedAt: now(),
           }),
         );

@@ -19,6 +19,7 @@ import {
   getOfflineSyncMetadata,
   removeOfflinePack,
   putOfflinePack,
+  prepareOfflineMutationQueue,
   replaceOfflinePackEntities,
   remapOfflineIds,
   resolveOfflineConflict,
@@ -40,6 +41,7 @@ import {
 } from "../../utils/idb";
 import { getServiceWorkerReadyRegistration } from "../../utils/serviceWorkerRuntime";
 import { orderOfflineMutations } from "../../../shared/utils/offline-mutation-order";
+import { isOfflineV2DrainCandidate } from "../../../shared/utils/offline-retry-policy";
 import {
   latestSequentialPredecessor,
   predictedSequentialBaseVersion,
@@ -47,11 +49,6 @@ import {
 import { isNetworkClassError } from "../../utils/networkErrors";
 
 const clientIdKey = "cognilo-offline-client-id";
-/**
- * Delivery attempts that reached the server before a command is parked as
- * rejected. Connectivity failures do not count toward this.
- */
-const MAX_SYNC_ATTEMPTS = 10;
 const states = new Map<string, ReturnType<typeof createRuntimeState>>();
 let runtimeLifecycleInstalled = false;
 let offlineIdentityLoadPromise: Promise<string | null> | null = null;
@@ -608,40 +605,14 @@ export function useOfflineRuntime() {
     }
     const state = activeState.value;
     await chainPendingSameEntityMutations(accountId.value);
+    const queuePreparation = await prepareOfflineMutationQueue(accountId.value);
     const queued = (await listOfflineMutations(accountId.value))
-      // Notes and note groups are owned by the feature-specific V1 outbox.
-      // Keeping them out of the generic drain prevents a second sync owner.
-      .filter((mutation) => isOwnedOfflineV2Entity(mutation.entity))
-      // Old Daily occurrence rows used a domain revision. They must wait for
-      // Daily bootstrap to migrate baseVersion from authoritative offline
-      // revisions before any runtime or service-worker drain can claim them.
-      .filter(
-        (mutation) =>
-          mutation.entity !== "actionOccurrence" ||
-          mutation.revisionScheme === "offline-entity-v1",
-      )
+      .filter(isOfflineV2DrainCandidate)
       .filter(
         (mutation) =>
           mutation.status === "pending" || mutation.status === "retry",
       );
-    // A command the server keeps failing on must stop re-POSTing forever. Only
-    // attempts that actually reached the server count (see the catch below), so
-    // reaching the ceiling means real repeated server-side failure, not a long
-    // offline stretch. The row stays durable and retryable from the Sync Center.
-    const exhausted = queued.filter(
-      (mutation) => mutation.attempts >= MAX_SYNC_ATTEMPTS,
-    );
-    if (exhausted.length)
-      await setMutationStatus(
-        accountId.value,
-        exhausted.map((mutation) => mutation.id),
-        "rejected",
-        `Sync failed ${MAX_SYNC_ATTEMPTS} times. Retry this change from the Sync Center.`,
-      );
-    const exhaustedIds = new Set(exhausted.map((mutation) => mutation.id));
-    const { ordered, cyclic } = orderOfflineMutations(
-      queued.filter((mutation) => !exhaustedIds.has(mutation.id)),
-    );
+    const { ordered, cyclic } = orderOfflineMutations(queued);
     if (cyclic.length)
       await setMutationStatus(
         accountId.value,
@@ -650,7 +621,8 @@ export function useOfflineRuntime() {
         "Cyclic offline dependency",
       );
     const pending = ordered;
-    const settledCleanly = cyclic.length === 0 && exhausted.length === 0;
+    const settledCleanly =
+      cyclic.length === 0 && queuePreparation.exhaustedIds.length === 0;
     if (!pending.length) {
       if (!settledCleanly) await refreshStatus();
       return settledCleanly;
@@ -670,9 +642,27 @@ export function useOfflineRuntime() {
         });
         if (!batch.length) {
           fullyApplied = false;
-          scheduleRetry();
+          // A result from an earlier batch can park these candidates while this
+          // loop still holds its original snapshot. Only retry rows that remain
+          // sendable; waiting/rejected work must not create a 500 ms loop.
+          const candidateIds = new Set(
+            candidates.map((mutation) => mutation.id),
+          );
+          const stillQueued = (
+            await listOfflineMutations(accountId.value)
+          ).some(
+            (mutation) =>
+              candidateIds.has(mutation.id) &&
+              (mutation.status === "pending" || mutation.status === "retry"),
+          );
+          if (stillQueued) scheduleRetry();
           continue;
         }
+        if (batch.length < candidates.length) {
+          fullyApplied = false;
+          scheduleRetry();
+        }
+        let receivedResponse = false;
         try {
           const response = await $fetch<{
             success?: boolean;
@@ -681,9 +671,10 @@ export function useOfflineRuntime() {
             method: "POST",
             body: { clientId: localId(), mutations: batch },
           });
+          receivedResponse = true;
+          reachedSyncService = true;
           if (!response?.data)
             throw new Error("Offline sync returned no result");
-          reachedSyncService = true;
           const byId = new Map(
             batch.map((mutation) => [mutation.id, mutation]),
           );
@@ -857,7 +848,8 @@ export function useOfflineRuntime() {
           // This drain uses raw $fetch, so it bypasses the service layer's
           // failure hook. Without reporting it the monitor could stay
           // "verified online" through an entire outage.
-          const isConnectivityFailure = isNetworkClassError(error);
+          const isConnectivityFailure =
+            !receivedResponse && isNetworkClassError(error);
           if (isConnectivityFailure) void reportFetchError(error);
           await setMutationStatus(
             accountId.value,
@@ -914,6 +906,7 @@ export function useOfflineRuntime() {
       bytes: 0,
       failures: [],
     });
+    let receivedResponse = false;
     try {
       const query = workspaceId
         ? `?workspaceId=${encodeURIComponent(workspaceId)}`
@@ -922,6 +915,7 @@ export function useOfflineRuntime() {
         success?: boolean;
         data?: { revision: string; data: Record<string, unknown> };
       }>(`/api/offline/pack${query}`);
+      receivedResponse = true;
       if (!response?.data) throw new Error("Offline pack was not available");
       const records = packRecords(
         accountId.value,
@@ -957,7 +951,7 @@ export function useOfflineRuntime() {
     } catch (error) {
       // Raw $fetch again — report it so a pack download failing mid-outage
       // updates connectivity state instead of silently only failing itself.
-      void reportFetchError(error);
+      if (!receivedResponse) void reportFetchError(error);
       await putOfflinePack({
         id: packId,
         accountId: accountId.value,
@@ -1038,7 +1032,16 @@ export function useOfflineRuntime() {
     accountId.value ? listOfflineMutations(accountId.value) : [];
   const retryMutation = async (id: string) => {
     if (!accountId.value) return;
-    await setMutationStatus(accountId.value, [id], "pending");
+    await setMutationStatus(
+      accountId.value,
+      [id],
+      "pending",
+      undefined,
+      undefined,
+      {
+        resetAttempts: true,
+      },
+    );
     await refreshStatus();
     if (isVerifiedOnline.value) await sync();
   };

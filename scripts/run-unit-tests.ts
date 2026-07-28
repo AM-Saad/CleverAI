@@ -73,6 +73,7 @@ import { createNotesMemoryStore } from "../app/features/notes/composables/notesM
 import { createNotesSyncEngine } from "../app/features/notes/composables/notesSyncEngine";
 import { createNotesTempId } from "../app/features/notes/composables/tempIds";
 import { createClientTempId } from "../app/utils/local-first/tempIds";
+import { isNetworkClassError } from "../app/utils/networkErrors";
 import {
   createLocalFirstErrorPolicy,
   isLocalFirstConflict,
@@ -134,6 +135,10 @@ import {
 import { calculateOfflineSM2 } from "../shared/utils/sm2";
 import { orderOfflineMutations } from "../shared/utils/offline-mutation-order";
 import {
+  isOfflineV2DrainCandidate,
+  MAX_OFFLINE_SYNC_ATTEMPTS,
+} from "../shared/utils/offline-retry-policy";
+import {
   latestSequentialPredecessor,
   migrateLegacySequentialChain,
   predictedSequentialBaseVersion,
@@ -172,10 +177,12 @@ import {
   listOfflineConflicts,
   listOfflineMutations,
   listOfflineEntities,
+  prepareOfflineMutationQueue,
   putOfflineEntities,
   recoverInterruptedMutations,
   remapOfflineIds,
   resolveOfflineConflict,
+  setMutationStatus,
   updateOfflineSyncMetadata,
 } from "../app/utils/offline-v2/repository";
 import {
@@ -754,6 +761,80 @@ test("offline-v2 contract keeps mutations replayable and ordered", () => {
   assert.equal(parsed.mutations[0]?.status, "pending");
 });
 
+test("network errors exclude HTTP, protocol, and local processing failures", () => {
+  const nativeNetworkFailure = new TypeError("Failed to fetch");
+  const wrappedNetworkFailure = Object.assign(
+    new Error('[GET] "/api/daily/bootstrap": <no response> Failed to fetch'),
+    {
+      name: "FetchError",
+      cause: nativeNetworkFailure,
+    },
+  );
+  const httpFailure = Object.assign(
+    new Error('[GET] "/api/daily/bootstrap": 503 Service Unavailable'),
+    {
+      name: "FetchError",
+      response: { status: 503 },
+      status: 503,
+      statusCode: 503,
+    },
+  );
+  const aborted = Object.assign(new Error("Request timed out"), {
+    name: "AbortError",
+  });
+
+  assert.equal(isNetworkClassError(nativeNetworkFailure), true);
+  assert.equal(isNetworkClassError(wrappedNetworkFailure), true);
+  assert.equal(isNetworkClassError(aborted), true);
+  assert.equal(isNetworkClassError({ code: "ENETUNREACH" }), true);
+  assert.equal(isNetworkClassError(httpFailure), false);
+  assert.equal(
+    isNetworkClassError(new Error("Offline sync returned no result")),
+    false,
+  );
+  assert.equal(
+    isNetworkClassError(
+      new TypeError("Cannot read properties of undefined (reading 'data')"),
+    ),
+    false,
+  );
+});
+
+test("generic offline drain ownership excludes Notes and legacy Daily rows", () => {
+  assert.equal(
+    isOfflineV2DrainCandidate({ entity: "note", revisionScheme: undefined }),
+    false,
+  );
+  assert.equal(
+    isOfflineV2DrainCandidate({
+      entity: "noteGroup",
+      revisionScheme: undefined,
+    }),
+    false,
+  );
+  assert.equal(
+    isOfflineV2DrainCandidate({
+      entity: "actionOccurrence",
+      revisionScheme: undefined,
+    }),
+    false,
+  );
+  assert.equal(
+    isOfflineV2DrainCandidate({
+      entity: "actionOccurrence",
+      revisionScheme: "offline-entity-v1",
+    }),
+    true,
+  );
+  assert.equal(
+    isOfflineV2DrainCandidate({
+      entity: "material",
+      revisionScheme: undefined,
+    }),
+    true,
+  );
+});
+
 test("offline-v2 results carry revisions for indirectly changed Board rows", () => {
   const result = OfflineSyncResultSchema.parse({
     id: "delete-column-1",
@@ -831,6 +912,164 @@ test("offline mutation ordering is dependency-first and rejects cycles", () => {
   assert.deepEqual(
     cyclic.map((mutation) => mutation.id),
     ["cycle-a", "cycle-b"],
+  );
+});
+
+test("retry preparation parks exhausted branches and releases them in order", async () => {
+  const suffix = `${Date.now()}-${Math.random()}-retry-policy`;
+  const accountId = `account-${suffix}`;
+  const occurredAt = "2026-07-28T10:00:00.000Z";
+  const root = {
+    id: `root-${suffix}`,
+    entity: "workspace" as const,
+    operation: "workspace.update",
+    entityId: `workspace-${suffix}`,
+    changedFields: ["title"],
+    payload: { title: "Local workspace" },
+    dependsOn: [],
+    occurredAt,
+    createdAt: 1,
+    attempts: MAX_OFFLINE_SYNC_ATTEMPTS,
+    status: "retry" as const,
+    sequence: false,
+    baseVersion: 1,
+  };
+  const child = {
+    id: `child-${suffix}`,
+    entity: "material" as const,
+    operation: "material.create",
+    entityId: `material-${suffix}`,
+    workspaceId: root.entityId,
+    changedFields: ["title"],
+    payload: { workspaceId: root.entityId, title: "Local material" },
+    dependsOn: [root.id],
+    occurredAt,
+    createdAt: 2,
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+  };
+  const grandchild = {
+    id: `grandchild-${suffix}`,
+    entity: "review" as const,
+    operation: "review.create",
+    entityId: `review-${suffix}`,
+    workspaceId: root.entityId,
+    changedFields: ["materialId"],
+    payload: { materialId: child.entityId },
+    dependsOn: [child.id],
+    occurredAt,
+    createdAt: 3,
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+  };
+  const unrelated = {
+    id: `unrelated-${suffix}`,
+    entity: "userTag" as const,
+    operation: "userTag.create",
+    entityId: `tag-${suffix}`,
+    changedFields: ["name"],
+    payload: { name: "Independent" },
+    dependsOn: [],
+    occurredAt,
+    createdAt: 4,
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+  };
+
+  for (const mutation of [root, child, grandchild, unrelated]) {
+    await commitOfflineMutation({ accountId, mutation });
+  }
+
+  const preparation = await prepareOfflineMutationQueue(accountId);
+  assert.deepEqual(preparation.exhaustedIds, [root.id]);
+  assert.deepEqual(
+    new Set(preparation.waitingIds),
+    new Set([child.id, grandchild.id]),
+  );
+
+  let rows = await listOfflineMutations(accountId);
+  const byId = new Map(rows.map((mutation) => [mutation.id, mutation]));
+  assert.equal(byId.get(root.id)?.status, "rejected");
+  assert.equal(byId.get(child.id)?.status, "waiting");
+  assert.equal(byId.get(grandchild.id)?.status, "waiting");
+  assert.equal(byId.get(unrelated.id)?.status, "pending");
+  assert.deepEqual(
+    (
+      await claimOfflineMutations({
+        accountId,
+        ids: [root.id, child.id, grandchild.id, unrelated.id],
+        claimToken: `independent-claim-${suffix}`,
+      })
+    ).map((mutation) => mutation.id),
+    [unrelated.id],
+  );
+
+  await setMutationStatus(
+    accountId,
+    [root.id],
+    "pending",
+    undefined,
+    undefined,
+    { resetAttempts: true },
+  );
+  rows = await listOfflineMutations(accountId);
+  assert.equal(rows.find((mutation) => mutation.id === root.id)?.attempts, 0);
+  const [claimedRoot] = await claimOfflineMutations({
+    accountId,
+    ids: [root.id],
+    claimToken: `root-claim-${suffix}`,
+  });
+  assert.ok(claimedRoot);
+  await applySyncResult({
+    accountId,
+    mutation: claimedRoot,
+    result: {
+      status: "applied",
+      entity: root.entity,
+      entityId: root.entityId,
+      version: 2,
+      canonical: { id: root.entityId, title: "Local workspace" },
+    },
+  });
+
+  rows = await listOfflineMutations(accountId);
+  assert.equal(
+    rows.find((mutation) => mutation.id === child.id)?.status,
+    "pending",
+  );
+  assert.equal(
+    rows.find((mutation) => mutation.id === grandchild.id)?.status,
+    "waiting",
+  );
+
+  const [claimedChild] = await claimOfflineMutations({
+    accountId,
+    ids: [child.id],
+    claimToken: `child-claim-${suffix}`,
+  });
+  assert.ok(claimedChild);
+  await applySyncResult({
+    accountId,
+    mutation: claimedChild,
+    result: {
+      status: "applied",
+      entity: child.entity,
+      entityId: child.entityId,
+      version: 1,
+      canonical: {
+        id: child.entityId,
+        workspaceId: root.entityId,
+        title: "Local material",
+      },
+    },
+  });
+  rows = await listOfflineMutations(accountId);
+  assert.equal(
+    rows.find((mutation) => mutation.id === grandchild.id)?.status,
+    "pending",
   );
 });
 
@@ -1022,6 +1261,33 @@ test("occurrence conflict waits its successor and keep-server safely releases it
     status: "pending" as const,
     sequence: true,
   };
+  const third = {
+    ...second,
+    id: `m3-${accountId}`,
+    payload: { targetPlacementId: "placement-3" },
+    rollbackData: {
+      ...base,
+      status: "COMPLETED",
+      currentPlacementId: "placement-2",
+    },
+    dependsOn: [second.id],
+    occurredAt: "2026-07-26T10:02:00.000Z",
+    createdAt: 3,
+  };
+  const crossEntityChild = {
+    id: `placement-${accountId}`,
+    entity: "actionPlacement" as const,
+    operation: "actionPlacement.create",
+    entityId: `placement-dependent-${accountId}`,
+    changedFields: ["state"],
+    payload: { state: "ACTIVE" },
+    dependsOn: [first.id],
+    occurredAt: "2026-07-26T10:03:00.000Z",
+    createdAt: 4,
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+  };
   await commitOfflineMutation({
     accountId,
     mutation: first,
@@ -1046,6 +1312,24 @@ test("occurrence conflict waits its successor and keep-server safely releases it
       },
     },
   });
+  await commitOfflineMutation({
+    accountId,
+    mutation: third,
+    localRecord: {
+      entity: "actionOccurrence",
+      entityId: occurrenceId,
+      version: 4,
+      data: {
+        ...base,
+        status: "COMPLETED",
+        currentPlacementId: "placement-3",
+      },
+    },
+  });
+  await commitOfflineMutation({
+    accountId,
+    mutation: crossEntityChild,
+  });
   await applySyncResult({
     accountId,
     mutation: { ...first, accountId, updatedAt: 1 },
@@ -1066,6 +1350,11 @@ test("occurrence conflict waits its successor and keep-server safely releases it
     mutations.find((row) => row.id === second.id)?.status,
     "waiting",
   );
+  assert.equal(mutations.find((row) => row.id === third.id)?.status, "waiting");
+  assert.equal(
+    mutations.find((row) => row.id === crossEntityChild.id)?.status,
+    "waiting",
+  );
 
   await resolveOfflineConflict({
     accountId,
@@ -1078,12 +1367,18 @@ test("occurrence conflict waits its successor and keep-server safely releases it
   assert.equal(released?.baseVersion, 7);
   assert.deepEqual(released?.dependsOn, []);
   assert.equal(released?.rollbackData?.status, "OPEN");
+  assert.equal(mutations.find((row) => row.id === third.id)?.status, "waiting");
+  const releasedCrossEntity = mutations.find(
+    (row) => row.id === crossEntityChild.id,
+  );
+  assert.equal(releasedCrossEntity?.status, "pending");
+  assert.deepEqual(releasedCrossEntity?.dependsOn, []);
   const local = await getOfflineEntity<Record<string, unknown>>(
     accountId,
     "actionOccurrence",
     occurrenceId,
   );
-  assert.equal(local?.data.currentPlacementId, "placement-2");
+  assert.equal(local?.data.currentPlacementId, "placement-3");
 });
 
 test("position keys remain ordered through repeated midpoint inserts", () => {

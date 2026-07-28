@@ -958,6 +958,50 @@
     throw lastErr;
   }
 
+  // shared/utils/offline-retry-policy.ts
+  var MAX_OFFLINE_SYNC_ATTEMPTS = 10;
+  function isOfflineV2DrainCandidate(mutation) {
+    return mutation.entity !== "note" && mutation.entity !== "noteGroup" && (mutation.entity !== "actionOccurrence" || mutation.revisionScheme === "offline-entity-v1");
+  }
+  var SENDABLE_STATUSES = /* @__PURE__ */ new Set(["pending", "retry"]);
+  var DEPENDENCY_BLOCKING_STATUSES = /* @__PURE__ */ new Set([
+    "conflict",
+    "rejected",
+    "waiting"
+  ]);
+  function collectTransitiveDependentIds(mutations, rootIds) {
+    const blocked = new Set(rootIds);
+    const descendants = /* @__PURE__ */ new Set();
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const mutation of mutations) {
+        if (blocked.has(mutation.id)) continue;
+        if (!mutation.dependsOn.some((dependency) => blocked.has(dependency)))
+          continue;
+        blocked.add(mutation.id);
+        descendants.add(mutation.id);
+        changed = true;
+      }
+    }
+    return descendants;
+  }
+  function analyzeOfflineRetryQueue(mutations, maxAttempts = MAX_OFFLINE_SYNC_ATTEMPTS) {
+    const exhaustedIds = mutations.filter(
+      (mutation) => SENDABLE_STATUSES.has(mutation.status) && mutation.attempts >= maxAttempts
+    ).map((mutation) => mutation.id);
+    const exhausted = new Set(exhaustedIds);
+    const blockingRoots = /* @__PURE__ */ new Set([
+      ...exhaustedIds,
+      ...mutations.filter((mutation) => DEPENDENCY_BLOCKING_STATUSES.has(mutation.status)).map((mutation) => mutation.id)
+    ]);
+    const descendants = collectTransitiveDependentIds(mutations, blockingRoots);
+    const waitingIds = mutations.filter(
+      (mutation) => !exhausted.has(mutation.id) && descendants.has(mutation.id) && SENDABLE_STATUSES.has(mutation.status)
+    ).map((mutation) => mutation.id);
+    return { exhaustedIds, waitingIds };
+  }
+
   // app/utils/offline-v2/repository.ts
   var stores = DB_CONFIG.STORES;
   var now = () => Date.now();
@@ -1000,6 +1044,30 @@
     return Object.entries(payload).every(
       ([field, value]) => JSON.stringify(comparableOfflineValue(snapshot[field])) === JSON.stringify(comparableOfflineValue(value))
     );
+  }
+  function parkTransitiveDependents(store, mutations, accountId, rootIds, lastError) {
+    const accountMutations = mutations.filter(
+      (mutation) => mutation.accountId === accountId
+    );
+    const dependentIds = collectTransitiveDependentIds(accountMutations, rootIds);
+    const updatedAt = now();
+    let parked = 0;
+    for (const mutation of accountMutations) {
+      if (!dependentIds.has(mutation.id) || !["pending", "retry"].includes(mutation.status))
+        continue;
+      store.put(
+        sanitizeForIDB({
+          ...mutation,
+          status: "waiting",
+          lastError,
+          updatedAt,
+          claimToken: void 0,
+          claimedAt: void 0
+        })
+      );
+      parked += 1;
+    }
+    return parked;
   }
   async function listOfflineMutations(accountId) {
     const db = await openUnifiedDB();
@@ -1062,13 +1130,55 @@
             status,
             lastError,
             updatedAt: now(),
-            attempts: status === "retry" && countAttempt ? existing.attempts + 1 : existing.attempts,
+            attempts: (options == null ? void 0 : options.resetAttempts) === true ? 0 : status === "retry" && countAttempt ? existing.attempts + 1 : existing.attempts,
             ...status === "syncing" ? {} : { claimToken: void 0, claimedAt: void 0 }
           })
         );
       }
     }
     await complete(tx);
+  }
+  async function prepareOfflineMutationQueue(accountId, maxAttempts = MAX_OFFLINE_SYNC_ATTEMPTS) {
+    const db = await openUnifiedDB();
+    const tx = db.transaction(stores.OFFLINE_MUTATIONS, "readwrite");
+    const store = tx.objectStore(stores.OFFLINE_MUTATIONS);
+    const all = await request(store.getAll());
+    const accountMutations = all.filter(
+      (mutation) => mutation.accountId === accountId && isOfflineV2DrainCandidate(mutation)
+    );
+    const analysis = analyzeOfflineRetryQueue(accountMutations, maxAttempts);
+    const exhausted = new Set(analysis.exhaustedIds);
+    const waiting = new Set(analysis.waitingIds);
+    const updatedAt = now();
+    for (const mutation of accountMutations) {
+      if (exhausted.has(mutation.id)) {
+        store.put(
+          sanitizeForIDB({
+            ...mutation,
+            status: "rejected",
+            lastError: `Sync failed ${maxAttempts} times. Retry this change from the Sync Center.`,
+            updatedAt,
+            claimToken: void 0,
+            claimedAt: void 0
+          })
+        );
+        continue;
+      }
+      if (waiting.has(mutation.id)) {
+        store.put(
+          sanitizeForIDB({
+            ...mutation,
+            status: "waiting",
+            lastError: "Waiting for an earlier local change to be resolved.",
+            updatedAt,
+            claimToken: void 0,
+            claimedAt: void 0
+          })
+        );
+      }
+    }
+    await complete(tx);
+    return analysis;
   }
   async function claimOfflineMutations(input) {
     var _a, _b;
@@ -1208,6 +1318,9 @@
       const successors = allMutations.filter(
         (candidate) => candidate.accountId === input.accountId && candidate.id !== input.mutation.id && candidate.entity === input.mutation.entity && candidate.entityId === canonicalEntityId && ["pending", "retry", "blocked", "waiting"].includes(candidate.status)
       );
+      const directWaitingDependents = allMutations.filter(
+        (candidate) => candidate.accountId === input.accountId && candidate.id !== input.mutation.id && candidate.status === "waiting" && candidate.dependsOn.includes(input.mutation.id)
+      );
       if (!ownsCurrentRevision && current) successors.push(current);
       const entityKey = scopedId(
         input.accountId,
@@ -1219,11 +1332,13 @@
         (localEntity == null ? void 0 : localEntity.localDirty) && !snapshotMatchesPayload(localEntity.data, input.mutation.payload)
       );
       projection.hasPendingSuccessor = successors.length > 0 || hasNewerDraft;
+      const rebasedSuccessorIds = /* @__PURE__ */ new Set();
       if (result.version !== void 0) {
         for (const successor of successors) {
           if (successor.sequence && !successor.dependsOn.includes(input.mutation.id))
             continue;
           if (successor.operation.endsWith(".create")) continue;
+          rebasedSuccessorIds.add(successor.id);
           mutations.put(
             sanitizeForIDB({
               ...successor,
@@ -1235,6 +1350,17 @@
             })
           );
         }
+      }
+      for (const successor of directWaitingDependents) {
+        if (rebasedSuccessorIds.has(successor.id)) continue;
+        mutations.put(
+          sanitizeForIDB({
+            ...successor,
+            status: "pending",
+            lastError: void 0,
+            updatedAt: now()
+          })
+        );
       }
       if (result.canonical) {
         const preserveNewerLocalState = Boolean(localEntity) && (successors.length > 0 || hasNewerDraft);
@@ -1354,18 +1480,13 @@
       const queued = await request(
         mutations.getAll()
       );
-      for (const successor of queued) {
-        if (successor.accountId !== input.accountId || successor.id === input.mutation.id || !successor.dependsOn.includes(input.mutation.id) || !["pending", "retry"].includes(successor.status))
-          continue;
-        mutations.put(
-          sanitizeForIDB({
-            ...successor,
-            status: "waiting",
-            lastError: "Waiting for an earlier conflict to be resolved.",
-            updatedAt: now()
-          })
-        );
-      }
+      parkTransitiveDependents(
+        mutations,
+        queued,
+        input.accountId,
+        [input.mutation.id],
+        "Waiting for an earlier conflict to be resolved."
+      );
     } else if (result.status === "rejected") {
       if (!ownsCurrentRevision) {
         await complete(tx);
@@ -1381,6 +1502,16 @@
           lastError: result.message,
           updatedAt: now()
         })
+      );
+      const queued = await request(
+        mutations.getAll()
+      );
+      parkTransitiveDependents(
+        mutations,
+        queued,
+        input.accountId,
+        [input.mutation.id],
+        "Waiting for an earlier rejected change to be retried."
       );
       const entityKey = scopedId(
         input.accountId,
@@ -5550,11 +5681,8 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       if (!session) return;
       await recoverInterruptedMutations(session.accountId);
       await chainPendingSameEntityMutations(session.accountId);
-      const pending = (await listOfflineMutations(session.accountId)).filter(
-        (mutation) => mutation.entity !== "note" && mutation.entity !== "noteGroup"
-      ).filter(
-        (mutation) => mutation.entity !== "actionOccurrence" || mutation.revisionScheme === "offline-entity-v1"
-      ).filter(
+      await prepareOfflineMutationQueue(session.accountId);
+      const pending = (await listOfflineMutations(session.accountId)).filter(isOfflineV2DrainCandidate).filter(
         (mutation) => mutation.status === "pending" || mutation.status === "retry"
       );
       const { ordered, cyclic } = orderOfflineMutations(pending);
@@ -5574,6 +5702,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         claimToken
       });
       if (!batch.length) return;
+      let receivedResponse = false;
       try {
         const response = await fetch("/api/offline/sync", {
           method: "POST",
@@ -5581,6 +5710,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           credentials: "same-origin",
           body: JSON.stringify({ clientId: "service-worker", mutations: batch })
         });
+        receivedResponse = true;
         if (!response.ok)
           throw Object.assign(
             new Error(`Offline sync failed (${response.status})`),
@@ -5622,7 +5752,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           lastError: void 0
         });
         const remaining = (await listOfflineMutations(session.accountId)).some(
-          (mutation) => mutation.entity !== "note" && mutation.entity !== "noteGroup" && (mutation.status === "pending" || mutation.status === "retry")
+          (mutation) => isOfflineV2DrainCandidate(mutation) && (mutation.status === "pending" || mutation.status === "retry")
         );
         if (remaining && "sync" in swSelf.registration) {
           await swSelf.registration.sync.register(SYNC_TAGS.OFFLINE_V2);
@@ -5636,7 +5766,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
           statusCode === 401 || statusCode === 403 ? "blocked" : "retry",
           statusCode === 401 || statusCode === 403 ? "Sign in to sync your saved local changes." : message,
           claimToken,
-          { countAttempt: statusCode > 0 }
+          { countAttempt: receivedResponse }
         );
         await updateOfflineSyncMetadata(session.accountId, {
           lastAttemptAt: Date.now(),

@@ -229,17 +229,18 @@ export function useDaily() {
     }
 
     const run = (async () => {
+      let response: ApiSuccess<DayProjectionDTO>;
       try {
-        const response = await $fetch<ApiSuccess<DayProjectionDTO>>(
+        response = await $fetch<ApiSuccess<DayProjectionDTO>>(
           `/api/daily/day/${dateKey}`,
         );
-        await mergeServerDay(currentAccountId, response.data);
-        await projectDate(dateKey);
-        guard.lastSuccessAt = Date.now();
       } catch (refreshError) {
         void reportFetchError(refreshError);
         throw refreshError;
       }
+      await mergeServerDay(currentAccountId, response.data);
+      await projectDate(dateKey);
+      guard.lastSuccessAt = Date.now();
     })();
 
     const tracked: Promise<void> = run.finally(() => {
@@ -273,16 +274,17 @@ export function useDaily() {
       bootstrappedAccounts.has(accountId.value)
     )
       return;
+    let response: ApiSuccess<DailyBootstrapDTO>;
     try {
-      const response = await $fetch<ApiSuccess<DailyBootstrapDTO>>(
+      response = await $fetch<ApiSuccess<DailyBootstrapDTO>>(
         "/api/daily/bootstrap",
       );
-      await mergeServerBootstrap(accountId.value, response.data);
-      bootstrappedAccounts.add(accountId.value);
     } catch (bootstrapError) {
       void reportFetchError(bootstrapError);
       throw bootstrapError;
     }
+    await mergeServerBootstrap(accountId.value, response.data);
+    bootstrappedAccounts.add(accountId.value);
   }
 
   async function loadDay(dateKey: string) {

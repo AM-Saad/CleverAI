@@ -38,6 +38,7 @@ import {
   claimOfflineMutations,
   getOfflineSession,
   listOfflineMutations,
+  prepareOfflineMutationQueue,
   remapOfflineIds,
   recoverInterruptedMutations,
   setMutationStatus,
@@ -50,6 +51,7 @@ import type {
   PendingNoteGroupChange,
 } from "../shared/utils/note-sync.contract";
 import { orderOfflineMutations } from "../shared/utils/offline-mutation-order";
+import { isOfflineV2DrainCandidate } from "../shared/utils/offline-retry-policy";
 import type {
   IncomingSWMessage,
   OutgoingSWMessage,
@@ -1337,16 +1339,9 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
     if (!session) return;
     await recoverInterruptedMutations(session.accountId);
     await chainPendingSameEntityMutations(session.accountId);
+    await prepareOfflineMutationQueue(session.accountId);
     const pending = (await listOfflineMutations(session.accountId))
-      .filter(
-        (mutation) =>
-          mutation.entity !== "note" && mutation.entity !== "noteGroup",
-      )
-      .filter(
-        (mutation) =>
-          mutation.entity !== "actionOccurrence" ||
-          mutation.revisionScheme === "offline-entity-v1",
-      )
+      .filter(isOfflineV2DrainCandidate)
       .filter(
         (mutation) =>
           mutation.status === "pending" || mutation.status === "retry",
@@ -1368,6 +1363,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       claimToken,
     });
     if (!batch.length) return;
+    let receivedResponse = false;
     try {
       const response = await fetch("/api/offline/sync", {
         method: "POST",
@@ -1375,6 +1371,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
         credentials: "same-origin",
         body: JSON.stringify({ clientId: "service-worker", mutations: batch }),
       });
+      receivedResponse = true;
       if (!response.ok)
         throw Object.assign(
           new Error(`Offline sync failed (${response.status})`),
@@ -1417,8 +1414,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       });
       const remaining = (await listOfflineMutations(session.accountId)).some(
         (mutation) =>
-          mutation.entity !== "note" &&
-          mutation.entity !== "noteGroup" &&
+          isOfflineV2DrainCandidate(mutation) &&
           (mutation.status === "pending" || mutation.status === "retry"),
       );
       if (remaining && "sync" in swSelf.registration) {
@@ -1429,9 +1425,9 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
       const message =
         err instanceof Error ? err.message : "Background sync failed";
       const statusCode = Number(err?.statusCode ?? 0);
-      // Background Sync fires precisely when connectivity is unreliable. Those
-      // failures must not consume the retry ceiling the foreground drain
-      // enforces, so only count attempts that reached the server.
+      // Background Sync fires precisely when connectivity is unreliable.
+      // Failures before a response must not consume the shared retry ceiling;
+      // protocol/JSON/local-processing failures after a response must.
       await setMutationStatus(
         session.accountId,
         batch.map((mutation) => mutation.id),
@@ -1440,7 +1436,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
           ? "Sign in to sync your saved local changes."
           : message,
         claimToken,
-        { countAttempt: statusCode > 0 },
+        { countAttempt: receivedResponse },
       );
       await updateOfflineSyncMetadata(session.accountId, {
         lastAttemptAt: Date.now(),

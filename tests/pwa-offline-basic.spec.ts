@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { CACHE_NAMES, SW_CONFIG } from '../app/utils/constants/pwa';
 
 // Basic offline smoke test to ensure core shell loads when offline.
 // Assumes build already completed and service worker registered on /.
@@ -64,9 +65,38 @@ test.describe('PWA offline basic', () => {
     page.on('console', (message) => workerMessages.push(`[page:${message.type()}] ${message.text()}`));
 
     await page.goto('/');
-    // A precache can take longer than an arbitrary sleep on a cold install.
-    // A protocol upgrade intentionally reloads once on controllerchange, so
-    // poll outside the page execution context and tolerate that navigation.
+    // Make first-install activation deterministic. Production intentionally
+    // leaves ordinary updates waiting, but this isolated profile has no active
+    // worker or user who can accept that update.
+    await page.evaluate(async (syncProtocol) => {
+      const registration = await navigator.serviceWorker.register(`/sw.js?syncProtocol=${encodeURIComponent(syncProtocol)}`);
+      const installing = registration.installing;
+      if (installing && installing.state === 'installing') {
+        await new Promise<void>((resolve, reject) => {
+          installing.addEventListener('statechange', () => {
+            if (installing.state === 'installed' || installing.state === 'activated') resolve();
+            if (installing.state === 'redundant') reject(new Error('production worker became redundant'));
+          });
+        });
+      }
+      const waiting = registration.waiting ?? (installing?.state === 'installed' ? installing : null);
+      waiting?.postMessage({ type: 'SKIP_WAITING' });
+      await navigator.serviceWorker.ready;
+    }, SW_CONFIG.SYNC_PROTOCOL);
+    await page.waitForLoadState('domcontentloaded');
+    let hasController = false;
+    try {
+      hasController = await page.evaluate(() => Boolean(navigator.serviceWorker.controller));
+    } catch {
+      // A critical protocol activation deliberately reloads on controllerchange.
+      await page.waitForLoadState('domcontentloaded');
+      hasController = await page.evaluate(() => Boolean(navigator.serviceWorker.controller));
+    }
+    if (!hasController) {
+      await page.reload();
+    }
+    // A precache can take longer than an arbitrary sleep on a cold install, so
+    // poll outside the page execution context and tolerate activation reloads.
     await expect.poll(async () => {
       try {
         return await page.evaluate(() => navigator.serviceWorker.controller?.scriptURL ?? null);
@@ -92,13 +122,23 @@ test.describe('PWA offline basic', () => {
     }
     expect(serviceWorkerState.controller).toContain('/sw.js');
 
-    // Navigate to a secondary route to warm caches (choose an existing route)
+    // The worker deliberately caches only the neutral root shell. Visit it
+    // under active control and verify the write before testing another route.
+    await page.goto('/');
+    await expect.poll(() => page.evaluate(async (cacheName) => {
+      const cache = await caches.open(cacheName);
+      return Boolean(await cache.match('/', { ignoreSearch: true }));
+    }, CACHE_NAMES.PAGES)).toBe(true);
+
+    // Navigate to a secondary route after the neutral shell is durable.
     await page.goto('/about');
     await expect(page).toHaveURL(/\/about$/);
     await expect(page.locator('body')).toBeVisible();
+    await expect.poll(() => page.evaluate(() => navigator.serviceWorker.controller?.scriptURL ?? null)).toContain('/sw.js');
 
     // Go offline
     await context.setOffline(true);
+    await expect(page.getByText('No internet connection. Your changes are saved locally.', { exact: true })).toBeVisible();
 
     // Auth.js checks this endpoint during every cold start/window refresh.
     // Offline is a valid "no live session" state, not a server failure.
@@ -121,5 +161,6 @@ test.describe('PWA offline basic', () => {
 
     // Restore online
     await context.setOffline(false);
+    await expect(page.getByText('No internet connection. Your changes are saved locally.', { exact: true })).toBeHidden({ timeout: 10_000 });
   });
 });
