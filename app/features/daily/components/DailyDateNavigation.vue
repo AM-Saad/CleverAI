@@ -34,8 +34,10 @@
 
       <div ref="stripRef" class="day-header__dial-strip"
         :class="{ 'day-header__dial-strip--seeking': isProgrammaticScroll }" @scroll.passive="onScroll"
-        @scrollend="onScrollEnd" @wheel="onWheel" @pointerdown.passive="onPointerDown" @pointerup.passive="onPointerUp"
-        @pointercancel.passive="onPointerUp" @keydown="onDialKeydown">
+        @scrollend="onScrollEnd" @wheel="onWheel" @pointerdown.passive="onPointerDown"
+        @pointerup.passive="onPointerUp" @pointercancel.passive="onPointerCancel"
+        @touchstart.passive="onTouchChange" @touchend.passive="onTouchChange"
+        @touchcancel.passive="onTouchChange" @keydown="onDialKeydown">
         <NuxtLink v-for="(day, index) in days" :key="day.dateKey"
           v-memo="[falloff(index), day.dateKey === activeDateKey]" :to="`/day/${day.dateKey}`" :prefetch="false"
           class="day-header__dial-item" :data-falloff="falloff(index)"
@@ -53,6 +55,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useHaptics } from "~/composables/pwa/useHaptics";
+import { createDateDialInteractionGate } from "../presentation/dateDialInteraction";
 import DailyDatePicker from "./DailyDatePicker.vue";
 
 /**
@@ -275,7 +278,7 @@ async function seekToIndex(index: number, animate: boolean) {
 // ── Commit ───────────────────────────────────────────────────────
 
 let settleTimer: ReturnType<typeof setTimeout> | null = null;
-let isPointerDown = false;
+const interactionGate = createDateDialInteractionGate();
 
 function clearSettleTimer() {
   if (settleTimer !== null) {
@@ -291,15 +294,17 @@ function clearSettleTimer() {
  * decision.
  */
 function scheduleCommit() {
+  interactionGate.markScrolling();
   clearSettleTimer();
   settleTimer = setTimeout(() => {
     settleTimer = null;
+    interactionGate.markScrollSettled();
     commitFocused();
   }, SETTLE_MS);
 }
 
 function commitFocused() {
-  if (isPointerDown) return;
+  if (!interactionGate.isReadyToCommit()) return;
   const key = focusedKey.value;
   if (key && key !== props.activeDateKey) emit("selectDate", key);
 }
@@ -324,24 +329,39 @@ function onScroll() {
 /** The precise end-of-scroll signal where it exists; the debounce above is the
  *  fallback on browsers without it, so both paths land on the same commit. */
 function onScrollEnd() {
-  if (isSelfDriven() || isPointerDown) return;
+  if (isSelfDriven()) return;
   clearSettleTimer();
+  interactionGate.markScrollSettled();
   commitFocused();
 }
 
-function onPointerDown() {
-  isPointerDown = true;
+function onPointerDown(event: PointerEvent) {
+  interactionGate.startPointer(event.pointerId);
+  const strip = event.currentTarget;
+  if (strip instanceof HTMLElement) {
+    strip.setPointerCapture?.(event.pointerId);
+  }
   // The finger takes over from any glide already in flight.
   cancelProgrammaticScroll();
-  clearSettleTimer();
 }
 
-function onPointerUp() {
-  if (!isPointerDown) return;
-  isPointerDown = false;
-  // Momentum may still be running; the settle timer is what decides, not the
-  // distance the finger happened to travel.
-  scheduleCommit();
+function onPointerUp(event: PointerEvent) {
+  interactionGate.endPointer(event.pointerId);
+  // If scrollend arrived while the pointer was held, both conditions are now
+  // satisfied. If momentum is still running, its settle signal commits later.
+  commitFocused();
+}
+
+function onPointerCancel(event: PointerEvent) {
+  interactionGate.endPointer(event.pointerId);
+  // Touch scrolling often cancels its pointer before the finger is lifted.
+  // The independent touch count keeps the commit blocked in that interval.
+  commitFocused();
+}
+
+function onTouchChange(event: TouchEvent) {
+  interactionGate.setActiveTouchCount(event.touches.length);
+  commitFocused();
 }
 
 function onWheel(event: WheelEvent) {
@@ -467,6 +487,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   cancelProgrammaticScroll();
   clearSettleTimer();
+  interactionGate.reset();
   resizeObserver?.disconnect();
 });
 </script>

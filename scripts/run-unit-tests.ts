@@ -156,6 +156,7 @@ import {
   ACTION_ITEM_CREATE_FIELDS,
   buildActionItemUpdateMutation,
 } from "../app/features/daily/domain/actionItemMutation";
+import { createDateDialInteractionGate } from "../app/features/daily/presentation/dateDialInteraction";
 import {
   autoResolveEquivalentNoteConflicts,
   buildDailyActionConflictRebase,
@@ -295,6 +296,35 @@ test("Daily calendar labels do not shift across local timezones", () => {
     "Wednesday, July 22",
   );
   assert.equal(formatDateKey("not-a-date", "en-US"), "not-a-date");
+});
+
+test("Daily date dial waits for touch release after native pointer cancellation", () => {
+  const gate = createDateDialInteractionGate();
+
+  gate.startPointer(1);
+  gate.setActiveTouchCount(1);
+  gate.markScrolling();
+
+  // The browser takes ownership of native scrolling and cancels its pointer.
+  gate.endPointer(1);
+  gate.markScrollSettled();
+  assert.equal(gate.isReadyToCommit(), false);
+
+  // Selection becomes eligible only when the physical touch has also ended.
+  gate.setActiveTouchCount(0);
+  assert.equal(gate.isReadyToCommit(), true);
+});
+
+test("Daily date dial waits for scrolling to settle after pointer release", () => {
+  const gate = createDateDialInteractionGate();
+
+  gate.startPointer(1);
+  gate.markScrolling();
+  gate.endPointer(1);
+  assert.equal(gate.isReadyToCommit(), false);
+
+  gate.markScrollSettled();
+  assert.equal(gate.isReadyToCommit(), true);
 });
 
 test("moving an action preserves its completion state", () => {
