@@ -7,7 +7,7 @@
       class="ui-settings-stepper__button"
       @click="update(value - step)"
     >
-      <UiIcon name="i-lucide-minus" class="h-4 w-4" />
+      <UiIcon name="minus" class="h-4 w-4" />
     </button>
     <span class="ui-settings-stepper__value">{{ value }}</span>
     <button
@@ -17,7 +17,7 @@
       class="ui-settings-stepper__button"
       @click="update(value + step)"
     >
-      <UiIcon name="i-lucide-plus" class="h-4 w-4" />
+      <UiIcon name="plus" class="h-4 w-4" />
     </button>
   </div>
 </template>

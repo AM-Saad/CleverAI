@@ -1,6 +1,6 @@
 <template>
   <shared-note-toolbar-button :title="title" class="relative overflow-hidden cursor-pointer" :icon-only="iconOnly">
-    <shared-icon :name="icon" class="w-[18px] h-[18px] shrink-0"
+    <UiIcon :name="icon" :size="18" class="shrink-0"
       :style="{ color: isValidColor ? modelValue : fallbackColor }" />
     <span v-if="!iconOnly && label" class="hidden sm:inline">{{ label }}</span>
     <!-- design-allow: native color picker — no Ui primitive wraps type=color -->

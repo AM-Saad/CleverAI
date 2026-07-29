@@ -10,7 +10,7 @@
         trailing-text="Coming soon"
       >
         <template #leading>
-          <UiIcon name="i-lucide-download" class="h-4 w-4" />
+          <UiIcon name="download" class="h-4 w-4" />
         </template>
       </UiSettingsRow>
       <UiSettingsRow
@@ -19,7 +19,7 @@
         trailing-text="Coming soon"
       >
         <template #leading>
-          <UiIcon name="i-lucide-upload" class="h-4 w-4" />
+          <UiIcon name="upload" class="h-4 w-4" />
         </template>
       </UiSettingsRow>
       <UiSettingsRow
@@ -28,7 +28,7 @@
         trailing-text="Unavailable"
       >
         <template #leading>
-          <UiIcon name="i-lucide-shield" class="h-4 w-4" />
+          <UiIcon name="shield" class="h-4 w-4" />
         </template>
       </UiSettingsRow>
     </UiSettingsGroup>

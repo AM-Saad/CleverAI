@@ -298,7 +298,7 @@ const panelStyle = computed(() => ({
               emit('closed');
             }
           ">
-            <u-icon name="i-lucide-x" class="w-4 h-4" />
+            <UiIcon name="x" size="sm" />
           </u-button>
         </div>
       </div>

@@ -1,7 +1,7 @@
 <template>
   <header class="day-header">
     <div class="day-header__date-nav">
-      <UiIconButton icon="i-lucide-chevron-left" label="Previous day" @click="$emit('navigate', -1)" />
+      <UiIconButton icon="chevron-left" label="Previous day" @click="$emit('navigate', -1)" />
 
       <UiPopover v-model:open="pickerOpen" :content="{ align: 'center', side: 'bottom', sideOffset: 8 }">
         <button type="button" class="day-header__date-trigger" :class="{ 'day-header__date-trigger--open': pickerOpen }"
@@ -11,7 +11,7 @@
             <p>{{ eyebrow }}</p>
             <div class="day-header__title-row">
               <UiTitle tag="h1" size="xs">{{ title }}</UiTitle>
-              <UiIcon name="i-lucide-calendar" class="day-header__calendar-icon"
+              <UiIcon name="calendar" class="day-header__calendar-icon"
                 :class="{ 'day-header__calendar-icon--active': pickerOpen }" />
             </div>
           </div>
@@ -23,7 +23,7 @@
         </template>
       </UiPopover>
 
-      <UiIconButton icon="i-lucide-chevron-right" label="Next day" @click="$emit('navigate', 1)" />
+      <UiIconButton icon="chevron-right" label="Next day" @click="$emit('navigate', 1)" />
     </div>
 
     <!-- Date dial. The strip scrolls natively (so momentum and snapping are the
@@ -35,7 +35,6 @@
       <div ref="stripRef" class="day-header__dial-strip"
         :class="{ 'day-header__dial-strip--seeking': isProgrammaticScroll }" @scroll.passive="onScroll"
         @scrollend="onScrollEnd" @wheel="onWheel" @pointerdown.passive="onPointerDown"
-        @pointerup.passive="onPointerUp" @pointercancel.passive="onPointerCancel"
         @touchstart.passive="onTouchChange" @touchend.passive="onTouchChange"
         @touchcancel.passive="onTouchChange" @keydown="onDialKeydown">
         <NuxtLink v-for="(day, index) in days" :key="day.dateKey"
@@ -337,23 +336,19 @@ function onScrollEnd() {
 
 function onPointerDown(event: PointerEvent) {
   interactionGate.startPointer(event.pointerId);
-  const strip = event.currentTarget;
-  if (strip instanceof HTMLElement) {
-    strip.setPointerCapture?.(event.pointerId);
-  }
   // The finger takes over from any glide already in flight.
   cancelProgrammaticScroll();
 }
 
 function onPointerUp(event: PointerEvent) {
-  interactionGate.endPointer(event.pointerId);
+  if (!interactionGate.endPointer(event.pointerId)) return;
   // If scrollend arrived while the pointer was held, both conditions are now
   // satisfied. If momentum is still running, its settle signal commits later.
   commitFocused();
 }
 
 function onPointerCancel(event: PointerEvent) {
-  interactionGate.endPointer(event.pointerId);
+  if (!interactionGate.endPointer(event.pointerId)) return;
   // Touch scrolling often cancels its pointer before the finger is lifted.
   // The independent touch count keeps the commit blocked in that interval.
   commitFocused();
@@ -482,6 +477,11 @@ onMounted(async () => {
     });
     resizeObserver.observe(stripRef.value);
   }
+
+  // Listen at the window boundary so releasing a mouse drag outside the strip
+  // still completes the interaction without capturing clicks away from links.
+  window.addEventListener("pointerup", onPointerUp, { passive: true });
+  window.addEventListener("pointercancel", onPointerCancel, { passive: true });
 });
 
 onBeforeUnmount(() => {
@@ -489,6 +489,8 @@ onBeforeUnmount(() => {
   clearSettleTimer();
   interactionGate.reset();
   resizeObserver?.disconnect();
+  window.removeEventListener("pointerup", onPointerUp);
+  window.removeEventListener("pointercancel", onPointerCancel);
 });
 </script>
 

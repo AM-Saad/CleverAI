@@ -56,12 +56,12 @@
         :description="email || 'No email on this account'"
       >
         <template #leading>
-          <UiIcon name="i-lucide-mail" class="h-4 w-4" />
+          <UiIcon name="mail" class="h-4 w-4" />
         </template>
       </UiSettingsRow>
       <UiSettingsRow title="Member since" :description="createdAtLabel">
         <template #leading>
-          <UiIcon name="i-lucide-calendar-days" class="h-4 w-4" />
+          <UiIcon name="calendar-days" class="h-4 w-4" />
         </template>
       </UiSettingsRow>
     </UiSettingsGroup>

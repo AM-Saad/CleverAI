@@ -24,7 +24,7 @@
     <UiPanel v-if="achievement" variant="subtle" size="md">
       <div class="summary__achievement">
         <span class="summary__medal"
-          ><UiIcon name="i-lucide-medal" class="h-5 w-5"
+          ><UiIcon name="medal" class="h-5 w-5"
         /></span>
         <div>
           <UiLabel size="sm" color="content-secondary">Achievement unlocked</UiLabel>

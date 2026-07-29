@@ -8,14 +8,14 @@
       aria-label="AI actions for selection"
     >
       <button type="button" class="ai-bubble__seg ai-bubble__seg--accent" @click="emit('action', 'explain')"> <!-- design-allow: anchored AI bubble segments are native controls -->
-        <UiIcon name="i-lucide-sparkles" class="h-3.5 w-3.5" />
+        <UiIcon name="sparkles" class="h-3.5 w-3.5" />
         Explain
       </button>
       <span class="ai-bubble__div" />
       <button type="button" class="ai-bubble__seg" @click="emit('action', 'rewrite')">Rewrite</button> <!-- design-allow: anchored AI bubble segment -->
       <span class="ai-bubble__div" />
       <button type="button" class="ai-bubble__seg" @click="emit('action', 'cards')"> <!-- design-allow: anchored AI bubble segment -->
-        <UiIcon name="i-lucide-arrow-right" class="h-3.5 w-3.5" />
+        <UiIcon name="arrow-right" class="h-3.5 w-3.5" />
         Cards
       </button>
     </div>

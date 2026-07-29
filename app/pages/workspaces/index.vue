@@ -39,16 +39,16 @@
           max-width="132px"
         >
           <template #icon>
-            <UiPillIcon name="i-lucide-check" size="sm" />
+            <UiPillIcon name="check" size="sm" />
           </template>
         </UiPill>
         <UiIcon
           v-if="w.id === activeId"
-          name="i-lucide-circle-check-big"
+          name="circle-check-big"
           class="ws__active-icon"
         />
         <UiIconButton
-          icon="i-lucide-more-vertical"
+          icon="more-vertical"
           label="Workspace actions"
           size="sm"
           @click="openActions(w)"
@@ -63,7 +63,7 @@
           @click="startCreate"
         >
           <template #leading
-            ><UiIcon name="i-lucide-plus" class="h-4 w-4"
+            ><UiIcon name="plus" class="h-4 w-4"
           /></template>
         </UiListCard>
       </li>
@@ -82,7 +82,7 @@
           @click="openOverview"
         >
           <template #leading>
-            <UiIcon name="i-lucide-layout-dashboard" class="h-5 w-5" />
+            <UiIcon name="layout-dashboard" class="h-5 w-5" />
           </template>
         </UiListCard>
         <UiListCard
@@ -92,12 +92,12 @@
           @click="openSelected"
         >
           <template #leading>
-            <UiIcon name="i-lucide-arrow-up-right" class="h-5 w-5" />
+            <UiIcon name="arrow-up-right" class="h-5 w-5" />
           </template>
         </UiListCard>
         <UiListCard clickable variant="soft" title="Edit" @click="startEdit">
           <template #leading>
-            <UiIcon name="i-lucide-pencil" class="h-5 w-5" />
+            <UiIcon name="pencil" class="h-5 w-5" />
           </template>
         </UiListCard>
         <UiDoubleTapDeleteButton
@@ -109,7 +109,7 @@
           @confirm="onDeleteTap"
         >
           <template #default="{ label }">
-            <UiIcon name="i-lucide-trash-2" class="h-5 w-5" />
+            <UiIcon name="trash-2" class="h-5 w-5" />
             {{ label }}
           </template>
         </UiDoubleTapDeleteButton>
@@ -157,7 +157,7 @@
         />
 
         <div class="ws-create__info">
-          <UiIcon name="i-lucide-users" class="h-4 w-4" />
+          <UiIcon name="users" class="h-4 w-4" />
           You can invite collaborators after creating.
         </div>
       </div>

@@ -103,7 +103,7 @@ const props = withDefaults(
     variant: "ghost",
     size: "sm",
     icon: undefined,
-    armedIcon: "i-lucide-alert-triangle",
+    armedIcon: "alert-triangle",
     leadingIcon: undefined,
     armedLeadingIcon: undefined,
     trailingIcon: undefined,

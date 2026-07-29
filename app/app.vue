@@ -121,7 +121,7 @@ onMounted(() => {
                 title: reason === 'unreachable' ? "Can't reach the server" : "You are offline",
                 description: "You can continue working. Changes will sync when you reconnect.",
                 color: "warning",
-                icon: "i-lucide-wifi",
+                icon: "wifi",
                 duration: 5000,
             })
             // Remove the online toast if it's showing
@@ -137,7 +137,7 @@ onMounted(() => {
                 title: "Back online",
                 description: "Connection restored.",
                 color: "success",
-                icon: "i-lucide-wifi",
+                icon: "wifi",
                 duration: 3000,
             })
             // Remove the offline toast if it's showing

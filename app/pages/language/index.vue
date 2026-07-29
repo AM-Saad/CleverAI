@@ -19,7 +19,7 @@
         </div>
         <NuxtLink v-if="dueCount" to="/language/review" class="language-bank__review">
           Review {{ dueCount }}
-          <UiIcon name="i-lucide-arrow-right" class="h-4 w-4" />
+          <UiIcon name="arrow-right" class="h-4 w-4" />
         </NuxtLink>
       </div>
 

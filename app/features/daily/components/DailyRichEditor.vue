@@ -1,15 +1,15 @@
 <template>
   <div class="daily-editor">
     <UiToolbar v-if="editor" aria-label="Daily note formatting" class="daily-editor__toolbar">
-      <UiToolbarButton icon="i-lucide-bold" label="Bold" :active="editor.isActive('bold')"
+      <UiToolbarButton icon="bold" label="Bold" :active="editor.isActive('bold')"
         @click="editor.chain().focus().toggleBold().run()" />
-      <UiToolbarButton icon="i-lucide-heading-2" label="Heading" :active="editor.isActive('heading', { level: 2 })"
+      <UiToolbarButton icon="heading-2" label="Heading" :active="editor.isActive('heading', { level: 2 })"
         @click="editor.chain().focus().toggleHeading({ level: 2 }).run()" />
-      <UiToolbarButton icon="i-lucide-list" label="Bullet list" :active="editor.isActive('bulletList')"
+      <UiToolbarButton icon="list" label="Bullet list" :active="editor.isActive('bulletList')"
         @click="editor.chain().focus().toggleBulletList().run()" />
-      <UiToolbarButton icon="i-lucide-square-check-big" label="Task list" :active="editor.isActive('taskList')"
+      <UiToolbarButton icon="square-check-big" label="Task list" :active="editor.isActive('taskList')"
         @click="editor.chain().focus().toggleTaskList().run()" />
-      <UiToolbarButton icon="i-lucide-pencil-ruler" label="Insert sketch" @click="insertSketch" />
+      <UiToolbarButton icon="pencil-ruler" label="Insert sketch" @click="insertSketch" />
     </UiToolbar>
     <EditorContent :editor="editor ?? undefined" class="daily-editor__content" />
   </div>

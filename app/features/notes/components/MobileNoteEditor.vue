@@ -3,19 +3,19 @@
     <!-- top bar -->
     <header class="editor__bar">
       <UiIconButton
-        icon="i-lucide-chevron-left"
+        icon="chevron-left"
         label="Back to notes"
         @click="emit('back')"
       />
       <SyncBadge :state="syncState" />
       <div class="editor__bar-actions">
         <UiIconButton
-          icon="i-lucide-share"
+          icon="share"
           label="Share"
           @click="emit('share')"
         />
         <UiIconButton
-          icon="i-lucide-more-horizontal"
+          icon="more-horizontal"
           label="More"
           @click="emit('more')"
         />
@@ -46,7 +46,7 @@
       >
         <template #icon>
           <UiPillIcon
-            name="i-lucide-x"
+            name="x"
             button
             size="sm"
             :label="`Remove ${t}`"
@@ -69,7 +69,7 @@
         clickable
         size="sm"
         label="tag"
-        icon="i-lucide-plus"
+        icon="plus"
         color="var(--color-content-secondary)"
         variant="dashed"
         max-width="82px"
@@ -223,9 +223,9 @@ const formats: FormatAction[] = [
   { cmd: "italic", label: "Italic", glyph: "I" },
   { cmd: "underline", label: "Underline", glyph: "U" },
   { cmd: "math", label: "Math", glyph: "∑" },
-  { cmd: "list", label: "List", icon: "i-lucide-list" },
-  { cmd: "canvas", label: "Canvas", icon: "i-lucide-pen-tool" },
-  { cmd: "ai", label: "AI", icon: "i-lucide-sparkles" },
+  { cmd: "list", label: "List", icon: "list" },
+  { cmd: "canvas", label: "Canvas", icon: "pen-tool" },
+  { cmd: "ai", label: "AI", icon: "sparkles" },
 ];
 
 function setBodyHtml(html: string) {

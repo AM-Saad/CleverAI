@@ -19,7 +19,7 @@
         <UCard>
           <template #header>
             <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-bell" class="w-5 h-5" />
+              <UiIcon name="bell" class="w-5 h-5" />
               <span class="font-semibold">Notifications</span>
             </div>
           </template>
@@ -45,7 +45,7 @@
         <UCard>
           <template #header>
             <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-settings" class="w-5 h-5" />
+              <UiIcon name="settings" class="w-5 h-5" />
               <span class="font-semibold">Service Worker</span>
             </div>
           </template>
@@ -68,7 +68,7 @@
         <UCard>
           <template #header>
             <div class="flex items-center gap-2">
-              <UIcon name="i-lucide-clock" class="w-5 h-5" />
+              <UiIcon name="clock" class="w-5 h-5" />
               <span class="font-semibold">Cron Tasks</span>
             </div>
           </template>
@@ -379,14 +379,14 @@ interface LastResultState {
 // Tab configuration
 const selectedTab = ref(0);
 const tabs = [
-  { key: "notifications", label: "Notifications", icon: "i-lucide-bell" },
+  { key: "notifications", label: "Notifications", icon: "bell" },
   {
     key: "service-worker",
     label: "Service Worker",
-    icon: "i-lucide-settings",
+    icon: "settings",
   },
-  { key: "cron", label: "Cron & Timing", icon: "i-lucide-clock" },
-  { key: "logs", label: "Live Logs", icon: "i-lucide-file-text" },
+  { key: "cron", label: "Cron & Timing", icon: "clock" },
+  { key: "logs", label: "Live Logs", icon: "file-text" },
 ];
 
 // Loading states

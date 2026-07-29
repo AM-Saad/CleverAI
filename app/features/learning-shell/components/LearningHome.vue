@@ -54,7 +54,7 @@
               </span>
             </template>
             <template #action>
-              <UiIcon name="i-lucide-chevron-right" class="h-4 w-4" aria-hidden="true" />
+              <UiIcon name="chevron-right" class="h-4 w-4" aria-hidden="true" />
             </template>
           </UiListCard>
         </nav>
@@ -94,9 +94,9 @@ const reviewDescription = computed(() => {
   return "Keep memory fresh with a quick review.";
 });
 const reviewIcon = computed(() => {
-  if (reviewState.value === "done") return "i-lucide-circle-check";
-  if (reviewState.value === "error") return "i-lucide-circle-alert";
-  return "i-lucide-brain";
+  if (reviewState.value === "done") return "circle-check";
+  if (reviewState.value === "error") return "circle-alert";
+  return "brain";
 });
 const reviewTone = computed(() => {
   if (reviewState.value === "done") return "success" as const;
@@ -109,13 +109,13 @@ const destinations = [
     to: "/materials",
     title: "Materials",
     description: "Read and organize source content",
-    icon: "i-lucide-file-stack",
+    icon: "file-stack",
   },
   {
     to: "/language",
     title: "Language",
     description: "Word bank, stories, and shadowing",
-    icon: "i-lucide-languages",
+    icon: "languages",
   },
 ];
 </script>

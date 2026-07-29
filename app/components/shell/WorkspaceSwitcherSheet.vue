@@ -11,7 +11,7 @@
         </UiPill>
       </div>
 
-      <UiInput v-if="workspaces.length > 6" v-model="query" placeholder="Search workspaces…" icon="i-lucide-search" />
+      <UiInput v-if="workspaces.length > 6" v-model="query" placeholder="Search workspaces…" icon="search" />
 
       <ul class="wss__list">
         <li v-for="w in filtered" :key="w.id">
@@ -24,12 +24,12 @@
               <UiPill size="sm" label="caught up" color="var(--color-success)" variant="outline" active
                 max-width="120px">
                 <template #icon>
-                  <UiPillIcon name="i-lucide-check" size="sm" />
+                  <UiPillIcon name="check" size="sm" />
                 </template>
               </UiPill>
             </template>
             <template v-if="w.id === activeId" #action>
-              <UiIcon name="i-lucide-check" class="h-[18px] w-[18px]" aria-hidden="true" />
+              <UiIcon name="check" class="h-[18px] w-[18px]" aria-hidden="true" />
             </template>
           </UiListCard>
         </li>
@@ -41,16 +41,16 @@
       <UiListCard clickable variant="dashed" title="New workspace" leading-color="var(--color-primary)"
         @click="createNew">
         <template #leading>
-          <UiIcon name="i-lucide-plus" class="h-4 w-4" aria-hidden="true" />
+          <UiIcon name="plus" class="h-4 w-4" aria-hidden="true" />
         </template>
       </UiListCard>
       <UiListCard clickable variant="soft" title="Manage all workspaces" leading-color="var(--color-content-secondary)"
         @click="openWorkspaces">
         <template #leading>
-          <UiIcon name="i-lucide-folder-kanban" class="h-4 w-4" aria-hidden="true" />
+          <UiIcon name="folder-kanban" class="h-4 w-4" aria-hidden="true" />
         </template>
         <template #action>
-          <UiIcon name="i-lucide-chevron-right" class="h-4 w-4" aria-hidden="true" />
+          <UiIcon name="chevron-right" class="h-4 w-4" aria-hidden="true" />
         </template>
       </UiListCard>
     </div>

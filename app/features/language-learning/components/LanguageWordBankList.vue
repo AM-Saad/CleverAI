@@ -14,7 +14,7 @@
   />
   <UiEmptyState
     v-else-if="!rows.length"
-    icon="i-lucide-book-open"
+    icon="book-open"
     title="No words yet"
     :description="emptyMessage"
   />
@@ -43,7 +43,7 @@
             </span>
           </span>
           <UiIcon
-            name="i-lucide-chevron-right"
+            name="chevron-right"
             class="h-4 w-4 shrink-0 text-primary"
           />
         </UiButton>

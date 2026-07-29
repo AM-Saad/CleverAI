@@ -4,14 +4,14 @@
       <!-- top bar -->
       <header class="bd__bar">
         <UiIconButton
-          icon="i-lucide-chevron-left"
+          icon="chevron-left"
           label="Back to board"
           @click="goBack"
         />
         <SyncBadge :state="item.isDirty ? 'local' : 'synced'" />
         <div class="bd__bar-actions">
           <UiIconButton
-            icon="i-lucide-more-horizontal"
+            icon="more-horizontal"
             label="More"
             @click="moreOpen = true"
           />
@@ -88,7 +88,7 @@
             @confirm="deleteCard"
           >
             <template #default="{ label }">
-              <UiIcon name="i-lucide-trash-2" class="h-5 w-5" />
+              <UiIcon name="trash-2" class="h-5 w-5" />
               {{ label }}
             </template>
           </UiDoubleTapDeleteButton>
@@ -97,7 +97,7 @@
     </template>
 
     <div v-else class="bd__missing">
-      <UiIcon name="i-lucide-file-x" class="h-9 w-9 text-content-disabled" />
+      <UiIcon name="file-x" class="h-9 w-9 text-content-disabled" />
       <p>Card not found.</p>
       <UiButton @click="goBack">Back to board</UiButton>
     </div>

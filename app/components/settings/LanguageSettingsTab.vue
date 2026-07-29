@@ -14,7 +14,7 @@
         to="/account/language"
         tone="primary"
         variant="solid"
-        leading-icon="i-lucide-settings"
+        leading-icon="settings"
       >
         Open Language Settings
       </UiButton>

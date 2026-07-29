@@ -13,7 +13,7 @@
             <div class="flex items-center space-x-3">
               <!-- Update icon -->
               <div class="flex-shrink-0">
-                <Icon :name="iconName" class="w-6 h-6" :class="isUpdating ? 'animate-spin' : ''" />
+                <UiIcon :name="iconName" class="w-6 h-6" :class="isUpdating ? 'animate-spin' : ''" />
               </div>
 
               <!-- Message -->
@@ -68,7 +68,7 @@
         content-class="text-sm space-y-3">
         <header class="flex items-center justify-between">
           <ui-title tag="h3" size="base" weight="semibold" color="content-on-surface" class="flex items-center gap-2">
-            <Icon name="i-lucide-cloud" class="w-4 h-4 text-primary" />
+            <UiIcon name="cloud" class="w-4 h-4 text-primary" />
             Service Worker
           </ui-title>
           <div class="flex items-center gap-2">
@@ -80,7 +80,7 @@
               v{{ version }}
             </UiBadge>
             <UiButton size="xs" variant="ghost" @click="toggleDebugPanel">
-              <Icon name="i-lucide-x" class="w-3 h-3" />
+              <UiIcon name="x" class="w-3 h-3" />
             </UiButton>
           </div>
         </header>
@@ -114,7 +114,7 @@
         <!-- Debug Controls (Development Mode) -->
         <UiPanel variant="subtle" size="md" class-name="mb-4 border-warning/20 bg-warning/10">
           <ui-title tag="h4" size="base" weight="medium" color="warning" class="mb-2 flex items-center gap-2">
-            <Icon name="i-lucide-wrench" class="w-4 h-4" />
+            <UiIcon name="wrench" class="w-4 h-4" />
             Debug Controls
           </ui-title>
           <div class="flex flex-wrap gap-2">
@@ -294,7 +294,7 @@ const bannerTitle = computed(() => isUpdating.value ? 'Updating App...' : 'New V
 const bannerSubtitle = computed(() => isUpdating.value ? 'Please wait while we update the app...' : `Get the latest features and improvements${version.value ? ` (v${version.value})` : ''}.`);
 const progressPercent = computed(() => refreshing.value ? 100 : 60);
 const swStateBadge = computed(() => updateAvailable.value ? 'Update' : (isControlling.value ? 'Active' : 'Inactive'));
-const iconName = computed(() => isUpdating.value ? 'i-lucide-refresh-cw' : 'i-lucide-sparkles');
+const iconName = computed(() => isUpdating.value ? 'refresh-cw' : 'sparkles');
 
 if (isDev) {
   onMounted(() => console.debug('[SW Update] mounted'));

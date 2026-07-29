@@ -83,7 +83,7 @@ const closeModal = (): void => {
       >
         <div class="flex">
           <UiIcon
-            name="i-lucide-alert-circle"
+            name="alert-circle"
             class="text-error-text mr-3 mt-0.5"
             size="20"
           ></UiIcon>

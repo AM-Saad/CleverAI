@@ -2,7 +2,7 @@
   <div class="flex items-center justify-center min-h-screen bg-background">
     <UiPanel variant="surface" size="lg" radius="2xl" shadow="lg" class-name="w-full max-w-md">
       <div class="text-center mb-6">
-        <icon name="mdi:account-reactivate" class="text-primary mx-auto mb-4" size="64"></icon>
+        <UiIcon name="user-round" class="text-primary mx-auto mb-4" :size="64" />
         <ui-title tag="h1" size="2xl" weight="bold" color="content-on-surface-strong">
           Reactivate Your Account
         </ui-title>
@@ -14,7 +14,7 @@
       <!-- Success message -->
       <UiPanel v-if="successMessage" variant="subtle" size="md" tone="success" class-name="mb-4">
         <div class="flex items-start">
-          <icon name="mdi:check-circle" class="text-success-text mr-3 mt-0.5" size="20"></icon>
+          <UiIcon name="circle-check" class="text-success-text mr-3 mt-0.5" :size="20" />
           <div>
             <p class="text-sm text-success-text">
               {{ successMessage }}
@@ -31,7 +31,7 @@
       <!-- Error message -->
       <UiPanel v-if="errorMessage" variant="subtle" size="md" tone="error" role="alert" class-name="mb-4">
         <div class="flex items-start">
-          <icon name="mdi:alert-circle" class="text-error-text mr-3 mt-0.5" size="20"></icon>
+          <UiIcon name="alert-circle" class="text-error-text mr-3 mt-0.5" :size="20" />
           <p class="text-sm text-error-text">
             {{ errorMessage }}
           </p>

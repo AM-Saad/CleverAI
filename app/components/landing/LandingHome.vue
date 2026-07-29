@@ -57,7 +57,7 @@
             <span class="font-light text-sm text-dark dark:text-light">Watch us</span>
             <div
               class="w-10 h-10 rounded-full border dark:border-light flex items-center justify-center hover:bg-surface-subtle dark:hover:bg-surface cursor-pointer">
-              <u-icon name="mdi:play" class="m-auto dark:text-light" />
+              <UiIcon name="play" size="md" class="m-auto dark:text-light" />
             </div>
           </div>
         </motion.div>
@@ -116,8 +116,8 @@
               class="group px-8 py-4 relative overflow-hidden transition-all hover:scale-105 hover:shadow-[var(--shadow-card-hover)] hover:shadow-primary/20">
               <router-link to="/auth/signup" class="flex items-center gap-3 text-lg">
                 Start Your First Loop
-                <u-icon name="i-lucide-arrow-right"
-                  class="w-6 h-6 transition-transform group-hover:translate-x-1" />
+                <UiIcon name="arrow-right" size="lg"
+                  class="transition-transform group-hover:translate-x-1" />
               </router-link>
             </ui-button>
           </div>

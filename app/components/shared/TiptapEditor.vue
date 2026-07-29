@@ -561,7 +561,7 @@ const contextMenuItems = computed(() => {
   if (!props.readonly) {
     aiAndCustomActions.push({
       label: 'Add To Material',
-      icon: 'i-lucide-book-marked',
+      icon: 'book-marked',
       disabled: !hasSelection,
       onSelect: () => {
         if (selectedText) {
@@ -574,7 +574,7 @@ const contextMenuItems = computed(() => {
   // Read Aloud
   aiAndCustomActions.push({
     label: isSpeaking.value ? 'Stop Reading' : ttsError.value ? 'TTS Unavailable' : 'Read Aloud',
-    icon: isSpeaking.value ? 'i-lucide-volume-x' : ttsError.value ? 'i-lucide-alert-circle' : 'i-lucide-volume-2',
+    icon: isSpeaking.value ? 'volume-x' : ttsError.value ? 'alert-circle' : 'volume-2',
     disabled: !hasSelection || !ttsAvailable.value,
     onSelect: isSpeaking.value ? stopSpeaking : handleReadAloud,
   });
@@ -587,10 +587,10 @@ const contextMenuItems = computed(() => {
         ? 'Downloading Model...'
         : 'Summarize Text',
     icon: isSummarizing.value
-      ? 'i-lucide-loader'
+      ? 'loader'
       : isDownloading.value
-        ? 'i-lucide-download'
-        : 'i-lucide-sparkles',
+        ? 'download'
+        : 'sparkles',
     disabled: !hasSelection || isSummarizing.value || isDownloading.value,
     onSelect: handleSummarize,
   });
@@ -610,7 +610,7 @@ const contextMenuItems = computed(() => {
   if (!props.readonly) {
     clipboardActions.push({
       label: 'Select All',
-      icon: 'i-lucide-check-square',
+      icon: 'check-square',
       onSelect: () => {
         ed.commands.selectAll();
       },
@@ -619,7 +619,7 @@ const contextMenuItems = computed(() => {
 
   clipboardActions.push({
     label: 'Copy',
-    icon: 'i-lucide-copy',
+    icon: 'copy',
     disabled: !hasSelection,
     onSelect: () => {
       document.execCommand('copy');
@@ -629,7 +629,7 @@ const contextMenuItems = computed(() => {
   if (!props.readonly) {
     clipboardActions.push({
       label: 'Cut',
-      icon: 'i-lucide-scissors',
+      icon: 'scissors',
       disabled: !hasSelection,
       onSelect: () => {
         document.execCommand('cut');
@@ -638,7 +638,7 @@ const contextMenuItems = computed(() => {
 
     clipboardActions.push({
       label: 'Paste',
-      icon: 'i-lucide-clipboard',
+      icon: 'clipboard',
       onSelect: async () => {
         try {
           if (navigator.clipboard && navigator.clipboard.readText) {

@@ -6,7 +6,7 @@
         description="Use the app in light, dark, or system mode"
       >
         <template #leading>
-          <UiIcon name="i-lucide-sun-moon" class="h-4 w-4" />
+          <UiIcon name="sun-moon" class="h-4 w-4" />
         </template>
         <template #control>
           <UiColorModeToggle class="account-appearance__theme" />

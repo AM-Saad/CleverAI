@@ -4,7 +4,7 @@
 
             <template #header>
                 <div class="flex items-center gap-2">
-                    <UiIcon name="i-lucide-user" class="w-5 h-5" />
+                    <UiIcon name="user" class="w-5 h-5" />
                     Account Information
                 </div>
                 <ui-button size="sm" variant="soft" tone="primary" @click="showUpdateModal = true">

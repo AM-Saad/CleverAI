@@ -16,7 +16,7 @@
           description="Show the Word action in global capture"
         >
           <template #leading>
-            <UiIcon name="i-lucide-languages" class="h-4 w-4" />
+            <UiIcon name="languages" class="h-4 w-4" />
           </template>
           <template #control>
             <UiSwitch v-model="languageForm.enabled" />
@@ -27,7 +27,7 @@
           description="Language you are learning"
         >
           <template #leading>
-            <UiIcon name="i-lucide-book-open-text" class="h-4 w-4" />
+            <UiIcon name="book-open-text" class="h-4 w-4" />
           </template>
           <template #control>
             <UiSelect
@@ -46,7 +46,7 @@
           description="Used for translations"
         >
           <template #leading>
-            <UiIcon name="i-lucide-message-circle" class="h-4 w-4" />
+            <UiIcon name="message-circle" class="h-4 w-4" />
           </template>
           <template #control>
             <UiSelect
@@ -65,7 +65,7 @@
           description="Default the capture translation checkbox to on"
         >
           <template #leading>
-            <UiIcon name="i-lucide-languages" class="h-4 w-4" />
+            <UiIcon name="languages" class="h-4 w-4" />
           </template>
           <template #control>
             <UiSwitch v-model="languageForm.translateOnCapture" />
@@ -76,7 +76,7 @@
           description="Add newly saved words to the review queue"
         >
           <template #leading>
-            <UiIcon name="i-lucide-book-plus" class="h-4 w-4" />
+            <UiIcon name="book-plus" class="h-4 w-4" />
           </template>
           <template #control>
             <UiSwitch v-model="languageForm.autoEnroll" />
@@ -87,7 +87,7 @@
           :description="`${languageForm.sessionCardLimit} cards per session`"
         >
           <template #leading>
-            <UiIcon name="i-lucide-rectangle-stack" class="h-4 w-4" />
+            <UiIcon name="rectangle-stack" class="h-4 w-4" />
           </template>
           <template #control>
             <UiSettingsStepper

@@ -30,7 +30,7 @@
           <UiIcon :name="item.icon" class="h-5 w-5" />
         </template>
         <template #action>
-          <UiIcon name="i-lucide-chevron-right" class="h-4 w-4 text-content-disabled" />
+          <UiIcon name="chevron-right" class="h-4 w-4 text-content-disabled" />
         </template>
       </UiListCard>
     </nav>
@@ -100,21 +100,21 @@ const accountItems = computed(() =>
       trailing: profile.value?.gender
         ? capitalize(profile.value.gender)
         : "Details",
-      icon: "i-lucide-user",
+      icon: "user",
       to: "/account/profile",
     },
     {
       title: "Appearance",
       description: "Theme and display preference",
       trailing: "Theme",
-      icon: "i-lucide-sun-moon",
+      icon: "sun-moon",
       to: "/account/appearance",
     },
     // {
     //   title: "Plan & usage",
     //   description: `${balance.value} credits available`,
     //   trailing: subscriptionInfo.value.tier,
-    //   icon: "i-lucide-wallet",
+    //   icon: "wallet",
     //   to: "/account/plan",
     // },
     {
@@ -125,42 +125,42 @@ const accountItems = computed(() =>
           : "Browser delivery and study notification timing",
       trailing:
         unreadCount.value > 0 ? `${unreadCount.value} unread` : "Settings",
-      icon: "i-lucide-bell",
+      icon: "bell",
       to: "/account/notifications",
     },
     {
       title: "Language",
       description: "Quick capture, translation, and session defaults",
       trailing: "Learning",
-      icon: "i-lucide-languages",
+      icon: "languages",
       to: "/account/language",
     },
     {
       title: "Offline sync",
       description: "Downloads, pending changes, and conflict resolution",
       trailing: "Manage",
-      icon: "i-lucide-cloud-off",
+      icon: "cloud-off",
       to: "/account/offline",
     },
     {
       title: "Security",
       description: "Password and account deletion",
       trailing: "Account",
-      icon: "i-lucide-shield-check",
+      icon: "shield-check",
       to: "/account/security",
     },
     // {
     //   title: "Data & privacy",
     //   description: "Export, import, and privacy controls",
     //   trailing: "Coming soon",
-    //   icon: "i-lucide-database",
+    //   icon: "database",
     //   to: "/account/data",
     // },
     {
       title: "About",
       description: "Product information and pricing",
       trailing: "Info",
-      icon: "i-lucide-info",
+      icon: "info",
       to: "/account/about",
     },
   ].filter(

@@ -13,7 +13,7 @@
         <button type="button" class="daily-date-picker__month-toggle" :aria-expanded="showMonthYearSelector" aria-label="Toggle month and year selector" @click="showMonthYearSelector = !showMonthYearSelector"> <!-- design-allow: date picker month/year toggle -->
           <span class="daily-date-picker__month-label">{{ currentMonthLabel }}</span>
           <UiIcon
-            name="i-lucide-chevron-down"
+            name="chevron-down"
             class="daily-date-picker__chevron"
             :class="{ 'daily-date-picker__chevron--open': showMonthYearSelector }"
           />
@@ -22,7 +22,7 @@
 
       <div class="daily-date-picker__nav-actions">
         <UiIconButton
-          icon="i-lucide-chevron-left"
+          icon="chevron-left"
           label="Previous month"
           size="sm"
           variant="ghost"
@@ -30,7 +30,7 @@
           @click="changeMonth(-1)"
         />
         <UiIconButton
-          icon="i-lucide-chevron-right"
+          icon="chevron-right"
           label="Next month"
           size="sm"
           variant="ghost"
@@ -59,7 +59,7 @@
     <div v-if="showMonthYearSelector" class="daily-date-picker__selector-view">
       <div class="daily-date-picker__year-row">
         <UiIconButton
-          icon="i-lucide-chevron-left"
+          icon="chevron-left"
           label="Previous year"
           size="sm"
           variant="ghost"
@@ -68,7 +68,7 @@
         />
         <UiTitle tag="div" size="base" weight="bold" color="content-on-surface-strong">{{ viewYear }}</UiTitle>
         <UiIconButton
-          icon="i-lucide-chevron-right"
+          icon="chevron-right"
           label="Next year"
           size="sm"
           variant="ghost"

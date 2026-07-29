@@ -25,7 +25,7 @@ export function createDateDialInteractionGate() {
     },
 
     endPointer(pointerId: number) {
-      activePointerIds.delete(pointerId);
+      return activePointerIds.delete(pointerId);
     },
 
     setActiveTouchCount(count: number) {

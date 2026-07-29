@@ -4,11 +4,11 @@
     <div class="inline-action__main">
       <UiInput v-model="title" aria-label="Action item title" placeholder="What needs to happen?" autocomplete="off"
         :disabled="saving" />
-      <UiButton type="submit" size="sm" :icon="item ? 'i-lucide-check' : 'i-lucide-plus'" :loading="saving"
+      <UiButton type="submit" size="sm" :icon="item ? 'check' : 'plus'" :loading="saving"
         :disabled="!title.trim()">
         {{ item ? "Save" : "Add" }}
       </UiButton>
-      <UiIconButton type="button" icon="i-lucide-x" label="Cancel" size="sm" :disabled="saving"
+      <UiIconButton type="button" icon="x" label="Cancel" size="sm" :disabled="saving"
         @click="emit('cancel')" />
     </div>
 
@@ -58,8 +58,8 @@ const saving = ref(false);
 const error = ref<string | null>(null);
 
 const timingOptions = [
-  { value: "ALL_DAY", label: "All day", icon: "i-lucide-sun" },
-  { value: "TIMED", label: "Time", icon: "i-lucide-clock-3" },
+  { value: "ALL_DAY", label: "All day", icon: "sun" },
+  { value: "TIMED", label: "Time", icon: "clock-3" },
 ] as const;
 const repeatOptions = [
   { value: "NONE", label: "No repeat" },

@@ -30,7 +30,7 @@
             previewText
             }}</UiParagraph>
         </div>
-        <UiButton v-if="previewCanExpand" tone="neutral" variant="link" size="sm" :trailing-icon="previewExpanded ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'
+        <UiButton v-if="previewCanExpand" tone="neutral" variant="link" size="sm" :trailing-icon="previewExpanded ? 'chevron-up' : 'chevron-down'
           " :aria-expanded="previewExpanded" aria-controls="material-source-preview"
           @click="previewExpanded = !previewExpanded">
           {{ previewExpanded ? "See less" : "See more" }}
@@ -66,13 +66,13 @@
 
       <!-- pinned generate -->
       <div class="md__pinned">
-        <UiButton block tone="primary" size="lg" leading-icon="i-lucide-sparkles" @click="openGenerate">
+        <UiButton block tone="primary" size="lg" leading-icon="sparkles" @click="openGenerate">
           Generate from this
         </UiButton>
       </div>
     </template>
 
-    <UiEmptyState v-else icon="i-lucide-file-x" title="Material not found"
+    <UiEmptyState v-else icon="file-x" title="Material not found"
       description="This material may have been removed or is not available offline." action-label="Back to materials"
       @action="navigateTo('/materials')" />
 
@@ -92,7 +92,7 @@
           <UiSegmentedControl v-model="depth" label="Difficulty" size="sm" full-width :items="difficultyItems" />
 
           <div class="gen__quota" :class="{ 'gen__quota--warn': lowQuota }">
-            <UiIcon name="i-lucide-info" class="h-4 w-4" />
+            <UiIcon name="info" class="h-4 w-4" />
             <span>{{ quotaText }}</span>
             <NuxtLink v-if="lowQuota" to="/pricing" class="gen__pro">Go Pro</NuxtLink>
           </div>
@@ -112,7 +112,7 @@
         <ul v-else class="gen__result">
           <li v-for="(c, i) in resultCards" :key="i" class="gen__card">
             <span class="gen__check">
-              <UiIcon name="i-lucide-check" class="h-3 w-3" />
+              <UiIcon name="check" class="h-3 w-3" />
             </span>
             <div>
               <UiParagraph size="sm" weight="bold" color="content-on-surface-strong" dir="auto">{{ c.front }}
@@ -125,7 +125,7 @@
 
       <template #footer>
         <div v-if="phase === 'config'">
-          <UiButton block tone="primary" size="lg" leading-icon="i-lucide-sparkles" :disabled="quotaExceeded"
+          <UiButton block tone="primary" size="lg" leading-icon="sparkles" :disabled="quotaExceeded"
             @click="runGenerate">
             Generate {{ maxItems }}
             {{ genType === "quiz" ? "questions" : "cards" }}

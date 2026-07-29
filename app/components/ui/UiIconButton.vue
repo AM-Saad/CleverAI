@@ -35,7 +35,7 @@ const {
   active = false,
   pressed = undefined,
 } = defineProps<{
-  /** Icon name (e.g. 'i-lucide-trash'). */
+  /** Icon name (e.g. 'trash'). */
   icon: string;
   /** Accessible label — required (icon-only has no text). */
   label: string;

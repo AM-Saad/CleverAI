@@ -16,7 +16,7 @@
         aria-label="Open notification inbox"
         @click="inboxOpen = true"
       >
-        <UiIcon name="i-lucide-inbox" class="h-4 w-4" />
+        <UiIcon name="inbox" class="h-4 w-4" />
       </UiButton>
       <UiPill
         v-if="unreadCount > 0"
@@ -35,7 +35,7 @@
         :trailing-text="currentDeviceStatusLabel"
       >
         <template #leading>
-          <UiIcon name="i-lucide-smartphone" class="h-4 w-4" />
+          <UiIcon name="smartphone" class="h-4 w-4" />
         </template>
         <template #control>
           <div class="account-notifications__inline-actions">
@@ -67,7 +67,7 @@
               aria-label="Refresh notification devices"
               @click="loadDeviceDeliveryState"
             >
-              <UiIcon name="i-lucide-rotate-cw" class="h-4 w-4" />
+              <UiIcon name="rotate-cw" class="h-4 w-4" />
             </UiButton>
           </div>
         </template>
@@ -75,7 +75,7 @@
 
       <UiSettingsRow title="Saved devices" :description="savedDeviceSummary">
         <template #leading>
-          <UiIcon name="i-lucide-monitor-smartphone" class="h-4 w-4" />
+          <UiIcon name="monitor-smartphone" class="h-4 w-4" />
         </template>
         <template #default>
           <div
@@ -120,7 +120,7 @@
               />
               <UiDoubleTapDeleteButton
                 hide-label
-                icon="i-lucide-trash-2"
+                icon="trash-2"
                 label="Remove saved notification device"
                 armed-label="Tap again to remove device"
                 size="xs"
@@ -157,7 +157,7 @@
         :description="`Daily reminder time ${notificationPrefs.cardDueTime}`"
       >
         <template #leading>
-          <UiIcon name="i-lucide-layers-3" class="h-4 w-4" />
+          <UiIcon name="layers-3" class="h-4 w-4" />
         </template>
         <template #control>
           <UiSwitch v-model="notificationPrefs.cardDueEnabled" />
@@ -168,7 +168,7 @@
         :description="`Notify when ${notificationPrefs.cardDueThreshold}+ cards are due`"
       >
         <template #leading>
-          <UiIcon name="i-lucide-bell-ring" class="h-4 w-4" />
+          <UiIcon name="bell-ring" class="h-4 w-4" />
         </template>
         <template #control>
           <UiSettingsStepper
@@ -183,7 +183,7 @@
         description="When the daily reminder fires"
       >
         <template #leading>
-          <UiIcon name="i-lucide-clock" class="h-4 w-4" />
+          <UiIcon name="clock" class="h-4 w-4" />
         </template>
         <template #control>
           <UiInput
@@ -198,7 +198,7 @@
         description="A separate daily nudge to study"
       >
         <template #leading>
-          <UiIcon name="i-lucide-calendar-clock" class="h-4 w-4" />
+          <UiIcon name="calendar-clock" class="h-4 w-4" />
         </template>
         <template #control>
           <UiSwitch v-model="notificationPrefs.dailyReminderEnabled" />
@@ -225,7 +225,7 @@
         :description="`${notificationPrefs.quietHoursStart}-${notificationPrefs.quietHoursEnd}`"
       >
         <template #leading>
-          <UiIcon name="i-lucide-moon" class="h-4 w-4" />
+          <UiIcon name="moon" class="h-4 w-4" />
         </template>
         <template #control>
           <UiSwitch v-model="notificationPrefs.quietHoursEnabled" />
@@ -256,7 +256,7 @@
         description="Allow reminders any time outside quiet hours"
       >
         <template #leading>
-          <UiIcon name="i-lucide-send" class="h-4 w-4" />
+          <UiIcon name="send" class="h-4 w-4" />
         </template>
         <template #control>
           <UiSwitch v-model="notificationPrefs.sendAnytimeOutsideQuietHours" />
@@ -267,7 +267,7 @@
         :description="`${notificationPrefs.activeHoursStart}-${notificationPrefs.activeHoursEnd}`"
       >
         <template #leading>
-          <UiIcon name="i-lucide-sun" class="h-4 w-4" />
+          <UiIcon name="sun" class="h-4 w-4" />
         </template>
         <template #control>
           <UiSwitch v-model="notificationPrefs.activeHoursEnabled" />
@@ -298,7 +298,7 @@
         :description="`Current local time ${currentUserTime}`"
       >
         <template #leading>
-          <UiIcon name="i-lucide-globe" class="h-4 w-4" />
+          <UiIcon name="globe" class="h-4 w-4" />
         </template>
         <template #control>
           <UiSelect

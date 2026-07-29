@@ -39,7 +39,7 @@
                 </div>
               </slot>
               <UiIconButton
-                icon="i-lucide-x"
+                icon="x"
                 label="Close dialog"
                 size="xs"
                 variant="ghost"

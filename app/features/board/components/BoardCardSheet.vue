@@ -62,7 +62,7 @@
           clickable
           size="sm"
           label="New tag"
-          icon="i-lucide-plus"
+          icon="plus"
           color="var(--color-content-secondary)"
           variant="dashed"
           max-width="120px"
@@ -107,14 +107,14 @@
           @confirm="emit('delete')"
         >
           <template #default="{ label }">
-            <UiIcon name="i-lucide-trash-2" class="h-4 w-4" /> {{ label }}
+            <UiIcon name="trash-2" class="h-4 w-4" /> {{ label }}
           </template>
         </UiDoubleTapDeleteButton>
         <UiButton
           v-if="live"
           variant="ghost"
           tone="neutral"
-          leading-icon="i-lucide-maximize-2"
+          leading-icon="maximize-2"
           class="shrink-0"
           @click="onOpenFull"
         >
@@ -206,7 +206,7 @@ type FormatAction = {
 const FORMATS: FormatAction[] = [
   { cmd: "bold", label: "Bold", glyph: "B" },
   { cmd: "italic", label: "Italic", glyph: "I" },
-  { cmd: "insertUnorderedList", label: "List", icon: "i-lucide-list" },
+  { cmd: "insertUnorderedList", label: "List", icon: "list" },
 ];
 
 const bodyEl = ref<HTMLElement | null>(null);

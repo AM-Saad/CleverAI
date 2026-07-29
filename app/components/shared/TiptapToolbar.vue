@@ -125,42 +125,42 @@ function toggleTaskItem(): void {
 const headingsItems = computed<any[][]>(() => [[
   {
     label: "Paragraph",
-    icon: "i-lucide-text",
+    icon: "text",
     onSelect: () => props.editor.chain().focus().setParagraph().run(),
   },
   {
     label: "H1",
-    icon: "i-lucide-hash",
+    icon: "hash",
     onSelect: () => props.editor.chain().focus().toggleHeading({ level: 1 }).run(),
   },
   {
     label: "H2",
-    icon: "i-lucide-hash",
+    icon: "hash",
     onSelect: () => props.editor.chain().focus().toggleHeading({ level: 2 }).run(),
   },
   {
     label: "H3",
-    icon: "i-lucide-hash",
+    icon: "hash",
     onSelect: () => props.editor.chain().focus().toggleHeading({ level: 3 }).run(),
   },
   {
     label: "Bold",
-    icon: "i-lucide-bold",
+    icon: "bold",
     onSelect: () => toggleInlineMark(props.editor, "bold"),
   },
   {
     label: "Italic",
-    icon: "i-lucide-italic",
+    icon: "italic",
     onSelect: () => toggleInlineMark(props.editor, "italic"),
   },
   {
     label: "Strike",
-    icon: "i-lucide-strikethrough",
+    icon: "strikethrough",
     onSelect: () => toggleInlineMark(props.editor, "strike"),
   },
   {
     label: "Clear formatting",
-    icon: "i-lucide-remove-formatting",
+    icon: "remove-formatting",
     onSelect: () => clearFormatting(props.editor),
   },
 ]]);
@@ -168,27 +168,27 @@ const headingsItems = computed<any[][]>(() => [[
 const tasksItems = computed<any[][]>(() => [[
   {
     label: "Toggle Todo List",
-    icon: "i-lucide-list-check",
+    icon: "list-check",
     onSelect: () => props.editor.chain().focus().toggleTaskList().run(),
   },
   {
     label: "Add Task Item",
-    icon: "i-lucide-plus",
+    icon: "plus",
     onSelect: () => addTaskItem(),
   },
   {
     label: "Toggle Complete",
-    icon: "i-lucide-check",
+    icon: "check",
     onSelect: () => toggleTaskItem(),
   },
   {
     label: "Indent Task",
-    icon: "i-lucide-indent",
+    icon: "indent",
     onSelect: () => props.editor.chain().focus().sinkListItem("taskItem").run(),
   },
   {
     label: "Outdent Task",
-    icon: "i-lucide-outdent",
+    icon: "outdent",
     onSelect: () => props.editor.chain().focus().liftListItem("taskItem").run(),
   },
 ]]);
@@ -196,17 +196,17 @@ const tasksItems = computed<any[][]>(() => [[
 const blocksItems = computed<any[][]>(() => [[
   {
     label: "Code block",
-    icon: "i-lucide-code",
+    icon: "code",
     onSelect: () => props.editor.chain().focus().toggleCodeBlock().run(),
   },
   {
     label: "Blockquote",
-    icon: "i-lucide-quote",
+    icon: "quote",
     onSelect: () => props.editor.chain().focus().toggleBlockquote().run(),
   },
   {
     label: "Horizontal rule",
-    icon: "i-lucide-minus",
+    icon: "minus",
     onSelect: () => props.editor.chain().focus().setHorizontalRule().run(),
   },
 ]]);
@@ -214,12 +214,12 @@ const blocksItems = computed<any[][]>(() => [[
 const listsItems = computed<any[][]>(() => [[
   {
     label: "Bullet list",
-    icon: "i-lucide-list",
+    icon: "list",
     onSelect: () => props.editor.chain().focus().toggleBulletList().run(),
   },
   {
     label: "Ordered list",
-    icon: "i-lucide-list-number",
+    icon: "list-number",
     onSelect: () => props.editor.chain().focus().toggleOrderedList().run(),
   },
 ]]);
@@ -227,12 +227,12 @@ const listsItems = computed<any[][]>(() => [[
 const insertItems = computed<any[][]>(() => [[
   {
     label: "Add image from URL",
-    icon: "i-lucide-image",
+    icon: "image",
     onSelect: () => addImage(),
   },
   {
     label: "Insert table",
-    icon: "i-lucide-table",
+    icon: "table",
     onSelect: () => props.editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
   },
 ]]);
@@ -240,49 +240,49 @@ const insertItems = computed<any[][]>(() => [[
 const tableItems = computed<any[][]>(() => [[
   {
     label: "Add row before",
-    icon: "i-lucide-row-spacing",
+    icon: "row-spacing",
     onSelect: () => props.editor.chain().focus().addRowBefore().run(),
   },
   {
     label: "Add row after",
-    icon: "i-lucide-row-spacing",
+    icon: "row-spacing",
     onSelect: () => props.editor.chain().focus().addRowAfter().run(),
   },
   {
     label: "Delete row",
-    icon: "i-lucide-trash-2",
+    icon: "trash-2",
     onSelect: () => props.editor.chain().focus().deleteRow().run(),
   },
 ], [
   {
     label: "Add column before",
-    icon: "i-lucide-columns",
+    icon: "columns",
     onSelect: () => props.editor.chain().focus().addColumnBefore().run(),
   },
   {
     label: "Add column after",
-    icon: "i-lucide-columns",
+    icon: "columns",
     onSelect: () => props.editor.chain().focus().addColumnAfter().run(),
   },
   {
     label: "Delete column",
-    icon: "i-lucide-trash-2",
+    icon: "trash-2",
     onSelect: () => props.editor.chain().focus().deleteColumn().run(),
   },
 ], [
   {
     label: "Toggle header row",
-    icon: "i-lucide-table-2",
+    icon: "table-2",
     onSelect: () => props.editor.chain().focus().toggleHeaderRow().run(),
   },
   {
     label: "Merge/split cells",
-    icon: "i-lucide-combine",
+    icon: "combine",
     onSelect: () => props.editor.chain().focus().mergeOrSplit().run(),
   },
   {
     label: "Delete table",
-    icon: "i-lucide-x",
+    icon: "x",
     onSelect: () => props.editor.chain().focus().deleteTable().run(),
   },
 ]]);

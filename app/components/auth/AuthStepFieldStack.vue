@@ -29,8 +29,8 @@
         :aria-label="submitLabel"
         :aria-busy="loading ? 'true' : undefined"
       >
-        <Icon
-          :name="loading ? 'uil:redo' : submitIcon"
+        <UiIcon
+          :name="loading ? 'loader-circle' : submitIcon"
           class="auth-step-field-stack__submit-icon"
           aria-hidden="true"
         />
@@ -78,7 +78,7 @@ const {
   loading = false,
   submitDisabled = false,
   submitLabel = "Continue",
-  submitIcon = "i-lucide-arrow-right",
+  submitIcon = "arrow-right",
   progress = 0,
   progressVisible = false,
   progressLabel = "Progress",

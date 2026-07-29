@@ -22,7 +22,7 @@
         <UiButton type="button" variant="ghost" tone="neutral" size="sm" :aria-label="currentBlockLabel"
           @mousedown.prevent>
           <span class="text-xs font-medium">{{ currentBlockLabel }}</span>
-          <UiIcon name="i-lucide-chevron-down" class="w-3 h-3 opacity-60" />
+          <UiIcon name="chevron-down" class="w-3 h-3 opacity-60" />
         </UiButton>
       </UiActionMenu>
 
@@ -30,7 +30,7 @@
 
       <!-- Color picker -->
       <div class="bubble-btn bubble-btn--color relative overflow-hidden" title="Text Color">
-        <UiIcon name="i-lucide-palette" class="w-4 h-4" :style="{ color: currentColor || 'currentColor' }" />
+        <UiIcon name="palette" class="w-4 h-4" :style="{ color: currentColor || 'currentColor' }" />
         <!-- design-allow: native color picker — no Ui primitive wraps type=color -->
         <input type="color" :value="currentColor || defaultColorValue" @input="handleColorInput"
           class="absolute inset-[-10px] w-[200%] h-[200%] opacity-0 cursor-pointer" />
@@ -137,8 +137,8 @@ const formattingActions = computed(() =>
 const showAiActions = computed(() => props.context.hasSelection && props.context.selectionLength > 10);
 
 const aiActions = computed<Array<{ id: string; label: string; icon: string }>>(() => [
-  { id: "summarize", label: "Summarize", icon: "i-lucide-sparkles" },
-  { id: "readAloud", label: "Read Aloud", icon: "i-lucide-volume-2" },
+  { id: "summarize", label: "Summarize", icon: "sparkles" },
+  { id: "readAloud", label: "Read Aloud", icon: "volume-2" },
 ]);
 
 // ─── Current block label for the heading dropdown ───────────────

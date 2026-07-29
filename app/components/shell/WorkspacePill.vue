@@ -14,7 +14,7 @@
       <UiPillIndicator :color="accent" />
     </template>
     <template #icon>
-      <UiPillIcon name="i-lucide-chevron-down" />
+      <UiPillIcon name="chevron-down" />
     </template>
   </UiPill>
 

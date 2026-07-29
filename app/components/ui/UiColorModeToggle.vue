@@ -23,7 +23,7 @@
       ]"
       @click="colorMode.preference = opt.value"
     >
-      <Icon :name="opt.icon" class="w-4 h-4" />
+      <UiIcon :name="opt.icon" class="w-4 h-4" />
     </button>
   </div>
 </template>
@@ -38,8 +38,8 @@ import { focusRing, interactiveTransition, pressedScale } from "./variants";
 const colorMode = useColorMode();
 
 const options = [
-  { value: "light", label: "Light", icon: "i-lucide-sun" },
-  { value: "dark", label: "Dark", icon: "i-lucide-moon" },
-  { value: "system", label: "System", icon: "i-lucide-monitor" },
+  { value: "light", label: "Light", icon: "sun" },
+  { value: "dark", label: "Dark", icon: "moon" },
+  { value: "system", label: "System", icon: "monitor" },
 ] as const;
 </script>

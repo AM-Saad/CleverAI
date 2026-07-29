@@ -7,7 +7,7 @@
     >
       <template #actions>
         <UiIconButton
-          icon="i-lucide-pencil"
+          icon="pencil"
           label="Edit workspace"
           size="sm"
           variant="soft"
@@ -51,7 +51,7 @@
           variant="soft"
         >
           <template #icon
-            ><UiPillIcon name="i-lucide-lock" size="sm"
+            ><UiPillIcon name="lock" size="sm"
           /></template>
         </UiPill>
       </section>
@@ -88,7 +88,7 @@
         </ul>
         <UiEmptyState
           v-else
-          icon="i-lucide-activity"
+          icon="activity"
           title="No learning activity yet"
           description="Add a material or start reviewing in this workspace."
         />
@@ -101,7 +101,7 @@
 
     <UiEmptyState
       v-else
-      icon="i-lucide-folder-x"
+      icon="folder-x"
       title="Workspace not found"
       action-label="Back to workspaces"
       @action="navigateTo('/workspaces')"
@@ -157,7 +157,7 @@ const activity = computed<ActivityEvent[]>(() => {
         ? [
             {
               key: `material-${material.id}`,
-              icon: "i-lucide-file-stack",
+              icon: "file-stack",
               label: material.title || "Material",
               sub: "Material added",
               ts,
@@ -170,7 +170,7 @@ const activity = computed<ActivityEvent[]>(() => {
     if (Number.isFinite(ts)) {
       events.push({
         key: "last-review",
-        icon: "i-lucide-brain",
+        icon: "brain",
         label: "Reviewed cards",
         sub: `${stats.value.total} card${stats.value.total === 1 ? "" : "s"} in this workspace`,
         ts,

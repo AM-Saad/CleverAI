@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "yarn ai-worker:build && nuxt dev --port 8080",
+    "dev": "yarn build:icons && yarn ai-worker:build && nuxt dev --port 8080",
     "dev:platform": "yarn ai-worker:build && APP_SURFACE=platform nuxt dev --port 8080",
     "dev:daily": "APP_SURFACE=daily nuxt dev --port 8081",
     "dev:learning": "APP_SURFACE=learning nuxt dev --port 8082",
@@ -20,7 +20,7 @@
     "ai-worker:check": "node scripts/check-ai-worker.cjs",
     "prebuild": "yarn sw:build && yarn sw:check && yarn ai-worker:build && yarn ai-worker:check",
     "test:pwa-offline": "playwright test tests/pwa-offline-basic.spec.ts --project=chromium",
-    "build:inject": "yarn sw:build && yarn sw:check && yarn ai-worker:build && yarn ai-worker:check && yarn generate:icons && nuxt build && node scripts/inject-sw.cjs && node scripts/check-injected-sw.cjs",
+    "build:inject": "yarn sw:build && yarn sw:check && yarn ai-worker:build && yarn ai-worker:check && yarn build:icons && nuxt build && node scripts/inject-sw.cjs && node scripts/check-injected-sw.cjs",
     "postinstall": "prisma generate --schema=prisma/schema.prisma && nuxt prepare",
     "start": "node .output/server/index.mjs",
     "start:platform": "node .output/platform/server/index.mjs",
@@ -56,7 +56,11 @@
     "design:api": "node scripts/check-component-api-contracts.cjs",
     "design:audit": "node scripts/audit-design-usage.cjs",
     "design:components": "node scripts/audit-components.cjs",
-    "design:contrast": "node scripts/check-contrast.cjs"
+    "design:contrast": "node scripts/check-contrast.cjs",
+    "icons:check": "tsx scripts/generate-icons.ts --check && tsx scripts/build-icon-sprite.ts --check",
+    "sync:lucide-icons": "tsx scripts/sync-lucide-icons.ts && yarn build:icons",
+    "build:icon-sprite": "tsx scripts/build-icon-sprite.ts",
+    "build:icons": "yarn generate:icons && yarn build:icon-sprite"
   },
   "dependencies": {
     "@formkit/drag-and-drop": "^0.5.3",
@@ -123,7 +127,6 @@
     "konva": "^10.2.3",
     "lottie-web": "^5.13.0",
     "lowlight": "^3.3.0",
-    "lucide-vue-next": "^0.525.0",
     "mammoth": "^1.11.0",
     "mathjs": "^15.1.0",
     "mock-aws-s3": "^4.0.2",
@@ -166,6 +169,7 @@
   "devDependencies": {
     "@commitlint/cli": "^18.5.0",
     "@commitlint/config-conventional": "^18.5.0",
+    "@iconify-json/lucide": "^1.2.120",
     "@nuxt/devtools": "^2.6.3",
     "@nuxt/schema": "^4.2.2",
     "@nuxt/types": "^2.18.1",
@@ -183,6 +187,7 @@
     "globals": "^15.9.0",
     "husky": "^9.1.4",
     "lint-staged": "^15.2.8",
+    "lucide-vue-next": "^0.525.0",
     "prettier": "^3.3.3",
     "prettier-plugin-tailwindcss": "0.2.7",
     "prisma": "4.8.1",

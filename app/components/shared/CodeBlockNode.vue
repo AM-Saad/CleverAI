@@ -36,7 +36,7 @@
 
       <UiToolbarButton
         class="code-block-copy-btn"
-        :icon="copied ? 'i-lucide-check' : 'i-lucide-copy'"
+        :icon="copied ? 'check' : 'copy'"
         label="Copy code"
         @click="copyCode"
       />

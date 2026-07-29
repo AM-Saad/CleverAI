@@ -19,7 +19,7 @@
         <UiButton
           variant="ghost"
           tone="neutral"
-          leading-icon="i-lucide-maximize-2"
+          leading-icon="maximize-2"
           :disabled="morphing"
           @click="emit('open-full')"
         >

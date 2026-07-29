@@ -22,7 +22,7 @@
     />
 
     <div v-else class="note-missing">
-      <UiIcon name="i-lucide-file-x" class="h-9 w-9 text-content-disabled" />
+      <UiIcon name="file-x" class="h-9 w-9 text-content-disabled" />
       <p>Note not found.</p>
       <UiButton @click="goBack">Back to notes</UiButton>
     </div>
@@ -50,10 +50,10 @@
         </div>
 
         <button type="button" class="note-actions__row" @click="openGroupPicker"> <!-- design-allow: native action row -->
-          <UiIcon name="i-lucide-folder" class="h-5 w-5" />
+          <UiIcon name="folder" class="h-5 w-5" />
           <span class="note-actions__row-grow">Group</span>
           <span class="note-actions__row-value">{{ currentGroupName }}</span>
-          <UiIcon name="i-lucide-chevron-right" class="note-actions__row-chev h-4 w-4" />
+          <UiIcon name="chevron-right" class="note-actions__row-chev h-4 w-4" />
         </button>
 
         <UiDoubleTapDeleteButton
@@ -65,7 +65,7 @@
           @confirm="deleteNote"
         >
           <template #default="{ label }">
-            <UiIcon name="i-lucide-trash-2" class="h-5 w-5" />
+            <UiIcon name="trash-2" class="h-5 w-5" />
             {{ label }}
           </template>
         </UiDoubleTapDeleteButton>
@@ -78,12 +78,12 @@
         <button type="button" class="note-groups__row" :class="{ 'note-groups__row--on': !currentGroupId }" @click="setGroup(null)"> <!-- design-allow: native group option -->
           <span class="note-groups__none" />
           <span class="note-groups__name">None</span>
-          <UiIcon v-if="!currentGroupId" name="i-lucide-check" class="h-[18px] w-[18px] note-groups__check" />
+          <UiIcon v-if="!currentGroupId" name="check" class="h-[18px] w-[18px] note-groups__check" />
         </button>
         <button v-for="g in editorGroups" :key="g.id" type="button" class="note-groups__row" :class="{ 'note-groups__row--on': currentGroupId === g.id }" @click="setGroup(g.id)"> <!-- design-allow: native group option -->
           <span class="note-groups__dot" :style="{ background: dotFor(g.id) }" />
           <span class="note-groups__name">{{ g.title }}</span>
-          <UiIcon v-if="currentGroupId === g.id" name="i-lucide-check" class="h-[18px] w-[18px] note-groups__check" />
+          <UiIcon v-if="currentGroupId === g.id" name="check" class="h-[18px] w-[18px] note-groups__check" />
         </button>
 
         <div v-if="addingGroup" class="note-groups__new">
@@ -91,7 +91,7 @@
           <UiButton size="sm" tone="primary" :loading="creatingGroup" :disabled="!newGroupName.trim()" @click="createAndAssign">Add</UiButton>
         </div>
         <button v-else type="button" class="note-groups__add" @click="startAddGroup"> <!-- design-allow: native dashed add control -->
-          <UiIcon name="i-lucide-plus" class="h-4 w-4" /> New group
+          <UiIcon name="plus" class="h-4 w-4" /> New group
         </button>
       </div>
     </UiSheet>
@@ -133,9 +133,9 @@ const {
 } = useNoteDraft(store, routeId);
 
 const NOTE_TYPES = [
-  { value: "TEXT", label: "Text", icon: "i-lucide-type" },
-  { value: "MATH", label: "Math", icon: "i-lucide-sigma" },
-  { value: "CANVAS", label: "Canvas", icon: "i-lucide-pen-tool" },
+  { value: "TEXT", label: "Text", icon: "type" },
+  { value: "MATH", label: "Math", icon: "sigma" },
+  { value: "CANVAS", label: "Canvas", icon: "pen-tool" },
 ] as const;
 
 async function onConvert(type: "TEXT" | "CANVAS" | "MATH") {

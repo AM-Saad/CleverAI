@@ -10,7 +10,7 @@
           </UiParagraph>
         </div>
         <UiButton
-          :icon="isDark ? 'i-lucide-sun' : 'i-lucide-moon'"
+          :icon="isDark ? 'sun' : 'moon'"
           tone="neutral"
           variant="soft"
           size="sm"
@@ -136,7 +136,7 @@
             <span class="w-16 text-xs text-content-secondary">state</span>
             <UiButton loading>loading</UiButton>
             <UiButton disabled>disabled</UiButton>
-            <UiButton icon="i-lucide-plus">with icon</UiButton>
+            <UiButton icon="plus">with icon</UiButton>
           </div>
         </div>
       </section>
@@ -177,7 +177,7 @@
             </UiPill>
             <UiPill label="caught up" color="var(--color-success)" variant="outline" active>
               <template #icon>
-                <UiPillIcon name="i-lucide-check" size="sm" />
+                <UiPillIcon name="check" size="sm" />
               </template>
             </UiPill>
           </div>
@@ -185,7 +185,7 @@
             <span class="w-16 text-xs text-content-secondary">removable</span>
             <UiPill label="# tag" color="var(--color-primary)" variant="outline" active>
               <template #icon>
-                <UiPillIcon name="i-lucide-x" button size="sm" label="Remove tag" />
+                <UiPillIcon name="x" button size="sm" label="Remove tag" />
               </template>
             </UiPill>
           </div>
@@ -250,9 +250,9 @@
       <section class="flex flex-col gap-4">
         <UiSubtitle size="lg" weight="semibold">Toolbar + icon actions</UiSubtitle>
         <UiToolbar label="Catalog toolbar">
-          <UiToolbarButton icon="i-lucide-bold" label="Bold" :active="true" />
-          <UiToolbarButton icon="i-lucide-italic" label="Italic" />
-          <UiToolbarButton icon="i-lucide-link" label="Add link" />
+          <UiToolbarButton icon="bold" label="Bold" :active="true" />
+          <UiToolbarButton icon="italic" label="Italic" />
+          <UiToolbarButton icon="link" label="Add link" />
         </UiToolbar>
       </section>
 
@@ -278,11 +278,11 @@
           <UiSubtitle size="lg" weight="semibold">UiEmptyState</UiSubtitle>
           <UiCard variant="outline">
             <UiEmptyState
-              icon="i-lucide-inbox"
+              icon="inbox"
               title="Nothing here yet"
               description="Empty states share one primitive."
               action-label="Create"
-              action-icon="i-lucide-plus"
+              action-icon="plus"
             />
           </UiCard>
         </div>
@@ -297,7 +297,7 @@
 
         <div class="grid gap-3 rounded-[var(--radius-lg)] border border-secondary bg-surface p-4 lg:grid-cols-3">
           <UiFormField label="Input">
-            <UiInput v-model="textVal" placeholder="Type here…" icon="i-lucide-search" />
+            <UiInput v-model="textVal" placeholder="Type here…" icon="search" />
           </UiFormField>
           <UiFormField label="Select">
             <UiSelect v-model="selectVal" :items="selectItems" placeholder="Choose a theme" />
@@ -357,7 +357,7 @@
               <UiSwitch v-model="switchOff" label="Unchecked" />
               <UiSwitch v-model="switchOn" label="Disabled checked" disabled />
               <UiSwitch v-model="switchOn" label="Loading" loading />
-              <UiSwitch v-model="switchOn" label="With icons" checked-icon="i-lucide-check" unchecked-icon="i-lucide-x" />
+              <UiSwitch v-model="switchOn" label="With icons" checked-icon="check" unchecked-icon="x" />
             </div>
           </UiPanel>
         </div>
@@ -482,8 +482,8 @@ const buttonTones: ActionTone[] = ["primary", "neutral", "error"];
 const badgeVariants = ["outline", "soft", "subtle"] as const;
 const segmentValue = ref("list");
 const segmentItems = [
-  { value: "list", label: "List", icon: "i-lucide-list" },
-  { value: "grid", label: "Grid", icon: "i-lucide-grid-2x2" },
+  { value: "list", label: "List", icon: "list" },
+  { value: "grid", label: "Grid", icon: "grid-2x2" },
 ] as const;
 const pillVariants = ["soft", "fill", "outline", "dashed", "ghost"] as const;
 const cardVariants = ["default", "outline", "ghost", "surface"] as const;
@@ -508,16 +508,16 @@ const interactiveSelected = ref(true);
 const selectItems = ["Light", "Sepia", "Dark"];
 const catalogMenuItems = [
   [
-    { label: "Open", icon: "i-lucide-folder-open" },
-    { label: "Selected", icon: "i-lucide-check", active: true },
-    { label: "Loading", icon: "i-lucide-loader-2", loading: true },
-    { label: "Disabled", icon: "i-lucide-ban", disabled: true },
+    { label: "Open", icon: "folder-open" },
+    { label: "Selected", icon: "check", active: true },
+    { label: "Loading", icon: "loader-2", loading: true },
+    { label: "Disabled", icon: "ban", disabled: true },
   ],
   [
     {
       id: "catalog-delete",
       label: "Delete",
-      icon: "i-lucide-trash-2",
+      icon: "trash-2",
       color: "error",
       requiresDoubleTap: true,
       confirmLabel: "Tap again to delete",

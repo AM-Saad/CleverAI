@@ -7,7 +7,7 @@
     aria-busy="true"
   >
     <UiIcon
-      name="i-lucide-loader-circle"
+      name="loader-circle"
       class="h-5 w-5 animate-spin text-primary"
     />
     <span>{{ label }}</span>

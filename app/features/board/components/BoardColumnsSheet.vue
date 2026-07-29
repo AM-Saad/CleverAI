@@ -9,10 +9,10 @@
         <li v-for="(col, i) in draft" :key="col.id" class="bcols__row">
           <div class="bcols__reorder">
             <button type="button" class="bcols__move" :disabled="i === 0" aria-label="Move up" @click="move(i, -1)"> <!-- design-allow: native reorder control -->
-              <UiIcon name="i-lucide-chevron-up" class="h-4 w-4" />
+              <UiIcon name="chevron-up" class="h-4 w-4" />
             </button>
             <button type="button" class="bcols__move" :disabled="i === draft.length - 1" aria-label="Move down" @click="move(i, 1)"> <!-- design-allow: native reorder control -->
-              <UiIcon name="i-lucide-chevron-down" class="h-4 w-4" />
+              <UiIcon name="chevron-down" class="h-4 w-4" />
             </button>
           </div>
           <input v-model="col.name" class="bcols__name" :placeholder="`Column ${i + 1}`" @change="onRename(col)" /> <!-- design-allow: native rename field -->
@@ -26,7 +26,7 @@
             :reset-key="col.id"
             @confirm="onDelete(col)"
           >
-            <UiIcon name="i-lucide-trash-2" class="h-[18px] w-[18px]" />
+            <UiIcon name="trash-2" class="h-[18px] w-[18px]" />
           </UiDoubleTapDeleteButton>
         </li>
       </ul>
@@ -46,7 +46,7 @@
         v-else
         clickable
         label="Add column"
-        icon="i-lucide-plus"
+        icon="plus"
         color="var(--color-primary)"
         variant="dashed"
         class-name="bcols__add"

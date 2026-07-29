@@ -132,7 +132,7 @@ watch(
               Blank
             </ui-button>
             <ui-button type="button" size="xs" :variant="mode === 'content' ? 'soft' : 'ghost'" tone="neutral"
-              leading-icon="i-lucide-sparkles" :aria-pressed="mode === 'content'" @click="mode = 'content'">
+              leading-icon="sparkles" :aria-pressed="mode === 'content'" @click="mode = 'content'">
               From a topic / paste
             </ui-button>
           </div>

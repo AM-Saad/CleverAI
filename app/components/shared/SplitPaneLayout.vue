@@ -194,16 +194,16 @@ function load() {
 // ─── Collapse icons ───────────────────────────────────────────────
 const leftCollapseIcon = computed(() => {
   if (isVertical.value) {
-    return collapsedSide.value === 'left' ? 'i-lucide-chevron-down' : 'i-lucide-chevron-up';
+    return collapsedSide.value === 'left' ? 'chevron-down' : 'chevron-up';
   }
-  return collapsedSide.value === 'left' ? 'i-lucide-chevron-right' : 'i-lucide-chevron-left';
+  return collapsedSide.value === 'left' ? 'chevron-right' : 'chevron-left';
 });
 
 const rightCollapseIcon = computed(() => {
   if (isVertical.value) {
-    return collapsedSide.value === 'right' ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down';
+    return collapsedSide.value === 'right' ? 'chevron-up' : 'chevron-down';
   }
-  return collapsedSide.value === 'right' ? 'i-lucide-chevron-left' : 'i-lucide-chevron-right';
+  return collapsedSide.value === 'right' ? 'chevron-left' : 'chevron-right';
 });
 
 // ─── Lifecycle ────────────────────────────────────────────────────

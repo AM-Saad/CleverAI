@@ -158,14 +158,14 @@
 
           <div class="paper-toolbar-group">
             <UiToolbarButton
-              icon="i-lucide-undo-2"
+              icon="undo-2"
               label="Undo"
               tooltip="Undo (⌘Z)"
               :disabled="!canUndo"
               @click="undo"
             />
             <UiToolbarButton
-              icon="i-lucide-redo-2"
+              icon="redo-2"
               label="Redo"
               tooltip="Redo (⌘⇧Z)"
               :disabled="!canRedo"
@@ -176,7 +176,7 @@
           <span class="paper-sep" />
 
           <UiToolbarButton
-            icon="i-lucide-grid-3x3"
+            icon="grid-3x3"
             label="Toggle grid"
             :tooltip="`Grid: ${gridType}`"
             :active="gridType !== 'none'"
@@ -187,7 +187,7 @@
             <span class="paper-sep" />
             <div class="paper-toolbar-group">
               <UiToolbarButton
-                icon="i-lucide-minus"
+                icon="minus"
                 label="Zoom out"
                 tooltip="Zoom out (−)"
                 :disabled="!canZoomOut"
@@ -201,14 +201,14 @@
                 @click="resetZoom"
               />
               <UiToolbarButton
-                icon="i-lucide-plus"
+                icon="plus"
                 label="Zoom in"
                 tooltip="Zoom in (+)"
                 :disabled="!canZoomIn"
                 @click="zoomIn"
               />
               <UiToolbarButton
-                icon="i-lucide-scan"
+                icon="scan"
                 label="Fit sketch"
                 tooltip="Fit sketch (1)"
                 @click="fitSketch"
@@ -217,15 +217,15 @@
 
             <span class="paper-sep" />
 
-            <UiToolbarButton icon="i-lucide-download" label="Export as PNG" @click="exportPng" />
+            <UiToolbarButton icon="download" label="Export as PNG" @click="exportPng" />
             <UiToolbarButton
-              icon="i-lucide-eraser"
+              icon="eraser"
               label="Clear all"
               :disabled="!lines.length"
               @click="clearDrawing"
             />
             <UiToolbarButton
-              icon="i-lucide-trash-2"
+              icon="trash-2"
               label="Delete sketch"
               tone="error"
               @click="props.deleteNode()"
@@ -234,7 +234,12 @@
 
           <template v-else>
             <span class="paper-sep" />
-            <UiActionMenu :items="compactMenuItems" size="xs" label="More options" />
+            <UiActionMenu
+              :items="compactMenuItems"
+              :ui="{ content: 'paper-toolbar-menu' }"
+              size="xs"
+              label="More options"
+            />
           </template>
         </div>
       </Transition>
@@ -263,7 +268,7 @@
             @pointerdown.stop
             @click="fitSketch"
           >
-            <UiIcon name="i-lucide-locate-fixed" class="h-3.5 w-3.5" />
+            <UiIcon name="locate-fixed" class="h-3.5 w-3.5" />
             Recenter
           </UiButton>
         </Transition>
@@ -273,7 +278,7 @@
           class="paper-chip paper-chip--hint"
           :class="{ 'paper-chip--pressing': isPressPending }"
         >
-          <UiIcon name="i-lucide-hand" class="h-3 w-3" />
+          <UiIcon name="hand" class="h-3 w-3" />
           <span>{{ activationHint }}</span>
         </div>
         <UiButton
@@ -286,13 +291,13 @@
           @pointerdown.stop
           @click="deactivate"
         >
-          <UiIcon name="i-lucide-check" class="h-3.5 w-3.5" />
+          <UiIcon name="check" class="h-3.5 w-3.5" />
           Done
         </UiButton>
       </div>
 
       <div v-if="!lines.length && !isDrawing" class="paper-empty-hint" contenteditable="false">
-        <UiIcon name="i-lucide-pencil-line" class="h-5 w-5 opacity-40" />
+        <UiIcon name="pencil-line" class="h-5 w-5 opacity-40" />
         <span>{{ activationHint }} to sketch</span>
       </div>
     </div>
@@ -394,9 +399,9 @@ const gridPatternRef = ref<SVGPatternElement | null>(null);
 
 // ── Tools & appearance ───────────────────────────────────────────
 const TOOLS = [
-  { id: "pen" as Tool, label: "Pen", tooltip: "Pen (P)", icon: "i-lucide-pencil" },
-  { id: "pan" as Tool, label: "Pan canvas", tooltip: "Pan (H, or hold Space)", icon: "i-lucide-hand" },
-  { id: "eraser" as Tool, label: "Eraser", tooltip: "Eraser (E)", icon: "i-lucide-eraser" },
+  { id: "pen" as Tool, label: "Pen", tooltip: "Pen (P)", icon: "pencil" },
+  { id: "pan" as Tool, label: "Pan canvas", tooltip: "Pan (H, or hold Space)", icon: "hand" },
+  { id: "eraser" as Tool, label: "Eraser", tooltip: "Eraser (E)", icon: "eraser" },
 ];
 
 const activeTool = ref<Tool>("pen");
@@ -1350,19 +1355,19 @@ function resolveToken(name: DesignTokenName): string {
 
 const compactMenuItems = computed(() => [
   [
-    { label: `Zoom (${zoomPercentLabel.value})`, icon: "i-lucide-search", onSelect: resetZoom },
-    { label: "Zoom In", icon: "i-lucide-plus", disabled: !canZoomIn.value, onSelect: zoomIn },
-    { label: "Zoom Out", icon: "i-lucide-minus", disabled: !canZoomOut.value, onSelect: zoomOut },
-    { label: "Fit Sketch", icon: "i-lucide-scan", onSelect: fitSketch },
+    { label: `Zoom (${zoomPercentLabel.value})`, icon: "search", onSelect: resetZoom },
+    { label: "Zoom In", icon: "plus", disabled: !canZoomIn.value, onSelect: zoomIn },
+    { label: "Zoom Out", icon: "minus", disabled: !canZoomOut.value, onSelect: zoomOut },
+    { label: "Fit Sketch", icon: "scan", onSelect: fitSketch },
   ],
   [
-    { label: "Export PNG", icon: "i-lucide-download", onSelect: exportPng },
-    { label: "Clear All", icon: "i-lucide-eraser", disabled: !lines.value.length, onSelect: clearDrawing },
+    { label: "Export PNG", icon: "download", onSelect: exportPng },
+    { label: "Clear All", icon: "eraser", disabled: !lines.value.length, onSelect: clearDrawing },
   ],
   [
     {
       label: "Delete Sketch",
-      icon: "i-lucide-trash-2",
+      icon: "trash-2",
       requiresDoubleTap: true,
       onSelect: () => props.deleteNode(),
     },
@@ -1453,7 +1458,15 @@ function onKeyUp(event: KeyboardEvent) {
 function onDocumentPointerDown(event: PointerEvent) {
   if (!isActive.value) return;
   const wrapper = frameRef.value?.closest(".paper");
-  if (wrapper && event.target instanceof Node && wrapper.contains(event.target)) return;
+  const target = event.target;
+  if (wrapper && target instanceof Node && wrapper.contains(target)) return;
+
+  // UiActionMenu teleports its content to the document body. Keep presses on
+  // that overlay inside this interaction boundary so the toolbar survives
+  // long enough for the selected action to run.
+  const targetElement = target instanceof Element ? target : target instanceof Node ? target.parentElement : null;
+  if (targetElement?.closest(".paper-toolbar-menu")) return;
+
   deactivate();
 }
 

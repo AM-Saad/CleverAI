@@ -2,7 +2,7 @@
   <nav class="ds-tabbar" aria-label="Primary">
     <NuxtLink v-for="item in items" :key="item.label" :to="item.to" class="ds-tab"
       :class="{ 'ds-tab--active': isActive(item.path) }" :aria-current="isActive(item.path) ? 'page' : undefined">
-      <UiIcon :name="item.icon" class="ds-tab__icon" />
+      <AppIcon :name="item.icon" interactive class="ds-tab__icon" />
       <span class="ds-tab__label">{{ item.label }}</span>
     </NuxtLink>
   </nav>
@@ -10,9 +10,18 @@
 
 <script setup lang="ts">
 import { useRoute } from "vue-router";
+import AppIcon from "~/components/AppIcon.vue";
+import type { IconName } from "~/utils/icons.generated";
+
+interface TabItem {
+  path: string;
+  to: string | object;
+  label: string;
+  icon: IconName;
+}
 
 const route = useRoute();
-const items = computed(() => {
+const items = computed<TabItem[]>(() => {
   const context = route.path.startsWith("/day")
     ? "daily"
     : ["/learn", "/language", "/materials", "/review", "/workspaces"].some(
@@ -37,24 +46,24 @@ const items = computed(() => {
     : "/account";
 
   return [
-    { path: "/", to: "/", label: "Apps", icon: "i-lucide-layout-grid" },
+    { path: "/", to: "/", label: "Apps", icon: "layout-grid" },
     {
       path: "/day",
       to: "/day",
       label: "Daily",
-      icon: "i-lucide-calendar-check-2",
+      icon: "calendar-check-2",
     },
     {
       path: "/learn",
       to: "/learn",
       label: "Learning",
-      icon: "i-lucide-graduation-cap",
+      icon: "graduation-cap",
     },
     {
       path: "/account",
       to: accountTo,
       label: "Account",
-      icon: "i-lucide-user-round",
+      icon: "user-round",
     },
   ];
 });
@@ -98,9 +107,12 @@ function isActive(to: string) {
   transition: color var(--duration-fast) var(--ease-standard);
 }
 
-.ds-tab__icon {
+.ds-tab__icon,
+:deep(.ds-tab__icon),
+:deep(.ds-tab__icon svg) {
   width: 22px;
   height: 22px;
+  stroke: currentColor;
 }
 
 .ds-tab__label {

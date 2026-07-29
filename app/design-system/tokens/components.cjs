@@ -53,6 +53,13 @@ const rootTokens = [
   },
   { name: "--component-toast-shadow", value: "var(--shadow-modal)" },
   { name: "--component-drawer-shadow", value: "var(--shadow-dropdown)" },
+  // Icon stroke weight is the set's signature. Sprite symbols deliberately omit
+  // stroke-width so this value inherits into them; an icon that bakes its own
+  // (e.g. grid.svg) overrides this, since a presentation attribute on the symbol
+  // beats an inherited value.
+  { name: "--component-icon-stroke-width", value: "1.5" },
+  // Optical compensation: 1.5 goes faint below ~18px on low-DPI screens.
+  { name: "--component-icon-stroke-width-dense", value: "1.75" },
 ];
 
 const darkTokens = [

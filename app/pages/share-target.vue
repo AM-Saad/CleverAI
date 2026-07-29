@@ -10,7 +10,7 @@
       <!-- Header -->
       <div class="flex items-center gap-3">
         <div class="p-2.5 rounded-full bg-accent-orange/10 text-accent-orange">
-          <UiIcon name="i-lucide-share-2" class="h-6 w-6" />
+          <UiIcon name="share-2" class="h-6 w-6" />
         </div>
         <div>
           <ui-title tag="h1" size="xl" weight="semibold">Content Received</ui-title>
@@ -30,7 +30,7 @@
           "{{ sharedText }}"
         </div>
         <div v-if="fileName" class="text-xs text-success-text flex items-center gap-1">
-          <UiIcon name="i-lucide-file-text" class="h-4 w-4" /> {{ fileName }}
+          <UiIcon name="file-text" class="h-4 w-4" /> {{ fileName }}
         </div>
       </ui-card>
 
@@ -39,7 +39,7 @@
         <ui-button
           tone="primary"
           class="w-full justify-center"
-          icon="i-lucide-sparkles"
+          icon="sparkles"
           :loading="creating"
           @click="generateFlashcards"
         >
@@ -50,7 +50,7 @@
           tone="neutral"
           variant="soft"
           class="w-full justify-center"
-          icon="i-lucide-bookmark"
+          icon="bookmark"
           @click="captureAsWord"
         >
           Capture as Word / Note
@@ -60,7 +60,7 @@
           tone="neutral"
           variant="ghost"
           class="w-full justify-center"
-          icon="i-lucide-calendar"
+          icon="calendar"
           @click="addToToday"
         >
           Add to Today's Plan
@@ -102,7 +102,7 @@ onMounted(() => {
     title: 'Content Captured',
     description: 'Choose how you would like to study this shared item.',
     color: 'success',
-    icon: 'i-lucide-share-2',
+    icon: 'share-2',
   })
 })
 

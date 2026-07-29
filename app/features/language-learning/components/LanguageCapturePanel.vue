@@ -5,19 +5,19 @@
         <UiTitle tag="h2" size="base">Capture a word</UiTitle>
       </div>
       <!-- <span class="language-capture__icon" aria-hidden="true">
-        <UiIcon name="i-lucide-bookmark-plus" class="h-5 w-5" />
+        <UiIcon name="bookmark-plus" class="h-5 w-5" />
       </span> -->
     </div>
 
     <form class="language-capture__form" @submit.prevent="$emit('submit')">
       <div class="language-capture__search">
-        <UiInput v-model="word" :placeholder="inputPlaceholder" icon="i-lucide-bookmark-plus"
+        <UiInput v-model="word" :placeholder="inputPlaceholder" icon="bookmark-plus"
           class="language-capture__search-input" aria-label="Word or phrase to capture" />
         <span class="language-capture__direction">{{ directionLabel }}</span>
       </div>
       <div class="language-capture__options">
         <UiCheckbox v-model="translate" :label="`Translate into ${nativeLanguageLabel}`" :disabled="capturing" />
-        <UiButton type="submit" leading-icon="i-lucide-bookmark-plus" :loading="capturing" :disabled="!word.trim()">
+        <UiButton type="submit" leading-icon="bookmark-plus" :loading="capturing" :disabled="!word.trim()">
           Capture word
         </UiButton>
       </div>
@@ -36,7 +36,7 @@
       </div>
       <div v-if="result.phonetic" class="language-capture__phonetic">
         {{ result.phonetic }}
-        <UiIconButton icon="i-lucide-volume-2" label="Play pronunciation" size="xs"
+        <UiIconButton icon="volume-2" label="Play pronunciation" size="xs"
           @click="$emit('speak', result.word)" />
       </div>
 
@@ -57,7 +57,7 @@
 
       <div class="language-capture__saved">
         <UiPill label="Saved to word bank" color="var(--color-success)" variant="soft" active max-width="180px" />
-        <UiButton tone="neutral" variant="ghost" leading-icon="i-lucide-rotate-ccw" @click="$emit('reset')">
+        <UiButton tone="neutral" variant="ghost" leading-icon="rotate-ccw" @click="$emit('reset')">
           Capture another
         </UiButton>
       </div>

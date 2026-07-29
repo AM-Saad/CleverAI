@@ -111,6 +111,8 @@
   --component-card-padding-xl: calc(var(--space-4) + var(--space-1));
   --component-toast-shadow: var(--shadow-modal);
   --component-drawer-shadow: var(--shadow-dropdown);
+  --component-icon-stroke-width: 1.5;
+  --component-icon-stroke-width-dense: 1.75;
   --syntax-bg: #1e2030;
   --syntax-bg-inline: #1f1e24;
   --syntax-text: #c0c8e0;

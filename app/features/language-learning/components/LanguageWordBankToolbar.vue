@@ -4,7 +4,7 @@
       <UiInput
         v-model="search"
         type="search"
-        icon="i-lucide-search"
+        icon="search"
         placeholder="Search saved words…"
         class="word-bank-toolbar__search"
       />
@@ -14,7 +14,7 @@
           size="xs"
           variant="ghost"
           tone="neutral"
-          leading-icon="i-lucide-x"
+          leading-icon="x"
           @click="clearFilters"
         >
           Clear
@@ -41,7 +41,7 @@
           clickable
           selectable
           :active="storyOnly"
-          icon="i-lucide-sparkles"
+          icon="sparkles"
           label="Stories only"
           color="var(--color-primary)"
           variant="outline"

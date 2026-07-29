@@ -1,7 +1,7 @@
 <template>
   <UiPill clickable variant="soft" class-name="backdrop-blur-md" @click="creditsStore.openWallet()">
     <span class="text-sm font-medium bg-linear-to-r from-primary to-accent-blue bg-clip-text text-transparent flex items-center gap-1">
-      <shared-icon name="generate" class="w-4 h-4 inline-block text-primary" />
+      <UiIcon name="generate" size="sm" class="inline-block text-primary" />
       {{ balance }}
     </span>
   </UiPill>

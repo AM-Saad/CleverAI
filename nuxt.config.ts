@@ -102,6 +102,34 @@ export default defineNuxtConfig({
     "@nuxt/devtools",
     "@vueuse/nuxt",
   ],
+  // App icons are local SVGs in a sprite; @nuxt/icon exists only for Nuxt UI's
+  // own internal `i-lucide-*` defaults (select chevrons, checkbox ticks, ...).
+  // Inline those into the client bundle: the server-bundle route would be an
+  // `/api/` call, and the service worker deliberately never caches `/api/`, so
+  // they would break offline. `scan` also walks Nuxt UI's runtime templates.
+  // Nuxt UI's defaults live in node_modules, which `scan` does not walk, so they
+  // are listed explicitly. Regenerate with:
+  //   grep -rho "i-lucide-[a-z0-9-]*" node_modules/@nuxt/ui/dist/ | sort -u
+  icon: {
+    clientBundle: {
+      icons: [
+        "lucide:arrow-down", "lucide:arrow-left", "lucide:arrow-right",
+        "lucide:arrow-up", "lucide:arrow-up-right", "lucide:check",
+        "lucide:chevron-down", "lucide:chevron-left", "lucide:chevron-right",
+        "lucide:chevron-up", "lucide:chevrons-left", "lucide:chevrons-right",
+        "lucide:circle-alert", "lucide:circle-check", "lucide:circle-x",
+        "lucide:copy", "lucide:copy-check", "lucide:ellipsis", "lucide:eye",
+        "lucide:eye-off", "lucide:file", "lucide:folder", "lucide:folder-open",
+        "lucide:grip-vertical", "lucide:hash", "lucide:info", "lucide:lightbulb",
+        "lucide:loader-circle", "lucide:menu", "lucide:minus", "lucide:monitor",
+        "lucide:moon", "lucide:panel-left-close", "lucide:panel-left-open",
+        "lucide:plus", "lucide:rotate-ccw", "lucide:search", "lucide:square",
+        "lucide:sun", "lucide:terminal", "lucide:triangle-alert",
+        "lucide:upload", "lucide:x",
+      ],
+      scan: true,
+    },
+  },
   future: {
     typescriptBundlerResolution: true,
     compatibilityVersion: 4,

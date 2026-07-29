@@ -3,9 +3,6 @@
     :color="tone"
     :variant="variant"
     :size="size"
-    :icon="icon"
-    :leading-icon="leadingIcon"
-    :trailing-icon="trailingIcon"
     :loading="loading"
     :loading-auto="loadingAuto"
     :disabled="disabled"
@@ -15,8 +12,15 @@
     :square="square"
     v-bind="$attrs"
   >
-    <!-- Forward every slot (default + named leading/trailing) so the wrapper is
-         a drop-in for UButton. -->
+    <template #leading v-if="computedLeading && !$slots.leading">
+      <UiIcon :name="computedLeading" class="shrink-0" />
+    </template>
+    
+    <template #trailing v-if="computedTrailing && !$slots.trailing">
+      <UiIcon :name="computedTrailing" class="shrink-0" />
+    </template>
+
+    <!-- Forward every slot (default + named leading/trailing) so the wrapper is a drop-in for UButton -->
     <template v-for="(_, name) in $slots" #[name]="slotProps">
       <slot :name="name" v-bind="slotProps ?? {}" />
     </template>
@@ -25,46 +29,42 @@
 
 <script setup lang="ts">
 /**
- * UiButton — the design-system button. Thin wrapper over the themed Nuxt UI
- * `UButton` (see app/app.config.ts) exposing the canonical `tone`/`size`
- * vocabulary. Feature code should use this, not `UButton` directly.
+ * UiButton — design system button. Intercepts icon props to route through
+ * UiIcon and AppIcon, ensuring 100% single-source local SVG icon rendering.
  */
+import { computed } from "vue";
 import type { ActionTone, ControlSize } from "./variants";
 
-const {
-  tone = "primary",
-  variant = "solid",
-  size = "md",
-  icon,
-  leadingIcon,
-  trailingIcon,
-  loading = false,
-  loadingAuto = false,
-  disabled = false,
-  active,
-  activeVariant,
-  block = false,
-  square = false,
-} = defineProps<{
-  /** Semantic color role. */
-  tone?: ActionTone;
-  /**
-   * Emphasis level — the system uses a 4-variant ladder:
-   * `solid` (primary) → `soft` (secondary) → `ghost` (tertiary) → `link` (inline).
-   */
-  variant?: "solid" | "soft" | "ghost" | "link";
-  size?: ControlSize;
-  icon?: string;
-  leadingIcon?: string;
-  trailingIcon?: string;
-  loading?: boolean;
-  loadingAuto?: boolean;
-  disabled?: boolean;
-  active?: boolean;
-  activeVariant?: "solid" | "soft" | "ghost" | "link";
-  block?: boolean;
-  square?: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    tone?: ActionTone;
+    variant?: "solid" | "soft" | "ghost" | "link";
+    size?: ControlSize;
+    icon?: string;
+    leadingIcon?: string;
+    trailingIcon?: string;
+    loading?: boolean;
+    loadingAuto?: boolean;
+    disabled?: boolean;
+    active?: boolean;
+    activeVariant?: "solid" | "soft" | "ghost" | "link";
+    block?: boolean;
+    square?: boolean;
+  }>(),
+  {
+    tone: "primary",
+    variant: "solid",
+    size: "md",
+    loading: false,
+    loadingAuto: false,
+    disabled: false,
+    block: false,
+    square: false,
+  }
+);
+
+const computedLeading = computed(() => props.leadingIcon || props.icon || null);
+const computedTrailing = computed(() => props.trailingIcon || null);
 
 defineOptions({ inheritAttrs: false });
 </script>

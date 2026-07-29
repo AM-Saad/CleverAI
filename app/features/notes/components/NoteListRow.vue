@@ -25,7 +25,7 @@
         max-width="92px"
       >
         <template #icon>
-          <UiPillIcon name="i-lucide-layers" size="sm" />
+          <UiPillIcon name="layers" size="sm" />
         </template>
       </UiPill>
       <UiPill

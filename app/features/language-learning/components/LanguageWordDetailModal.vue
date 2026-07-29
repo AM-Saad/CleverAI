@@ -12,7 +12,7 @@
             {{ word.phonetic }}
           </UiParagraph>
         </div>
-        <UiIconButton icon="i-lucide-volume-2" :label="`Hear ${word.word}`" :loading="speakingWord" @click="hearWord" />
+        <UiIconButton icon="volume-2" :label="`Hear ${word.word}`" :loading="speakingWord" @click="hearWord" />
       </div>
 
       <UiPanel v-if="word.translation" variant="subtle" size="sm">
@@ -61,7 +61,7 @@
               Written in {{ learnedLanguage }}
             </UiParagraph>
           </div>
-          <UiButton size="sm" variant="soft" tone="primary" leading-icon="i-lucide-sparkles" :loading="generatingStory"
+          <UiButton size="sm" variant="soft" tone="primary" leading-icon="sparkles" :loading="generatingStory"
             @click="emit('generate-story', word)">
             {{ story ? "Regenerate story" : "Generate story" }}
           </UiButton>
@@ -70,7 +70,7 @@
         <UiPanel v-if="story" variant="surface" size="sm">
           <div class="word-detail__story-head">
             <UiPill label="Learning story" color="var(--color-primary)" size="sm" max-width="140px" />
-            <UiIconButton icon="i-lucide-book-audio" label="Hear story" size="sm" :loading="speakingStory"
+            <UiIconButton icon="book-audio" label="Hear story" size="sm" :loading="speakingStory"
               @click="hearStory" />
           </div>
           <UiParagraph class="word-detail__story" dir="auto">
@@ -105,7 +105,7 @@
         <UiButton variant="ghost" tone="neutral" @click="open = false">
           Close
         </UiButton>
-        <UiButton v-if="canEnroll" tone="primary" leading-icon="i-lucide-book-plus" :loading="enrolling"
+        <UiButton v-if="canEnroll" tone="primary" leading-icon="book-plus" :loading="enrolling"
           @click="emit('enroll', word)">
           Add to review
         </UiButton>

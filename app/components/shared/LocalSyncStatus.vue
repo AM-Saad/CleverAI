@@ -120,7 +120,7 @@ const ambientTitle = computed(() => {
     class="flex h-7 items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-error/30 px-2.5 text-error-text"
   >
     <div class="flex min-w-0 items-center gap-2">
-      <Icon name="i-lucide-alert-triangle" class="h-3.5 w-3.5 shrink-0" />
+      <UiIcon name="alert-triangle" class="h-3.5 w-3.5 shrink-0" />
       <p class="truncate text-xs leading-5">{{ errorLabel }}</p>
     </div>
     <UiButton

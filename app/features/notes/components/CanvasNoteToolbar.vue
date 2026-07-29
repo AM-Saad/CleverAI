@@ -54,12 +54,12 @@ const modeTools: Tool[] = [
 ];
 
 const shapeTools: Tool[] = [
-  { id: "rect", label: "Rectangle", icon: "stop", menuIcon: "i-lucide-square" },
-  { id: "circle", label: "Circle", icon: "sun", menuIcon: "i-lucide-circle" },
-  { id: "ellipse", label: "Ellipse", icon: "ellipse", menuIcon: "i-lucide-ellipse" },
-  { id: "line", label: "Line", icon: "minus", menuIcon: "i-lucide-minus" },
-  { id: "arrow", label: "Arrow", icon: "arrow-up-right", menuIcon: "i-lucide-arrow-up-right" },
-  { id: "star", label: "Star", icon: "star", menuIcon: "i-lucide-star" },
+  { id: "rect", label: "Rectangle", icon: "square", menuIcon: "square" },
+  { id: "circle", label: "Circle", icon: "circle", menuIcon: "circle" },
+  { id: "ellipse", label: "Ellipse", icon: "ellipse", menuIcon: "ellipse" },
+  { id: "line", label: "Line", icon: "minus", menuIcon: "minus" },
+  { id: "arrow", label: "Arrow", icon: "arrow-up-right", menuIcon: "arrow-up-right" },
+  { id: "star", label: "Star", icon: "star", menuIcon: "star" },
 ];
 
 // Swatch paint colors resolved from design tokens (canvas needs literal color
@@ -119,7 +119,7 @@ const toolControls = computed<NoteToolbarControl[]>(() => [
     hideLabelOnMobile: true,
     active: isShapeToolActive.value,
     icon: currentShapeTool.value.icon,
-    trailingIcon: "i-lucide-chevron-down",
+    trailingIcon: "chevron-down",
     items: shapeDropdownItems.value,
   },
 ]);
@@ -148,7 +148,7 @@ const styleControls = computed<NoteToolbarControl[]>(() => [
     id: "border-thickness",
     title: "Border Thickness",
     label: "Border thickness",
-    icon: "i-lucide-hash",
+    icon: "hash",
     valueLabel: props.strokeWidth,
     inputValue: props.strokeWidthInput,
     min: props.strokeWidthMin,

@@ -24,7 +24,7 @@ onUnmounted(() => {
       <UiOverlaySurface kind="popover" layer="popover" size="sm" class-name="mt-2">
         <div class="flex justify-between">
           <slot name="header">default header</slot>
-          <UiIconButton icon="i-lucide-x" label="Close notifications" size="xs" variant="ghost" @click="$emit('close')" />
+          <UiIconButton icon="x" label="Close notifications" size="xs" variant="ghost" @click="$emit('close')" />
         </div>
         <slot name="body"> default body </slot>
       </UiOverlaySurface>

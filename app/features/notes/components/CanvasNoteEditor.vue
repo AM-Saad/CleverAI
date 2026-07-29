@@ -714,7 +714,7 @@ const interactionHint = computed(() => {
         class="absolute bottom-2 right-2 z-10 bg-surface/95 shadow-[var(--shadow-dropdown)] backdrop-blur-sm active:scale-[0.98]"
         @click.stop="toggleMinimap"
       >
-        <UiIcon name="i-lucide-map" class="w-3.5 h-3.5" />
+        <UiIcon name="map" class="w-3.5 h-3.5" />
         <span>Map</span>
       </UiButton>
 
@@ -740,7 +740,7 @@ const interactionHint = computed(() => {
               Focus
             </UiButton>
             <UiIconButton
-              icon="i-lucide-minus"
+              icon="minus"
               label="Minimize minimap"
               tone="neutral"
               variant="ghost"
@@ -808,7 +808,7 @@ const interactionHint = computed(() => {
           variant="ghost"
           size="sm"
           class="w-full justify-start"
-          leading-icon="i-lucide-arrow-up"
+          leading-icon="arrow-up"
           @click="bringToFront"
         >
           Bring to Front
@@ -818,7 +818,7 @@ const interactionHint = computed(() => {
           variant="ghost"
           size="sm"
           class="w-full justify-start"
-          leading-icon="i-lucide-chevron-up"
+          leading-icon="chevron-up"
           @click="bringForward"
         >
           Bring Forward
@@ -828,7 +828,7 @@ const interactionHint = computed(() => {
           variant="ghost"
           size="sm"
           class="w-full justify-start"
-          leading-icon="i-lucide-chevron-down"
+          leading-icon="chevron-down"
           @click="sendBackward"
         >
           Send Backward
@@ -838,7 +838,7 @@ const interactionHint = computed(() => {
           variant="ghost"
           size="sm"
           class="w-full justify-start"
-          leading-icon="i-lucide-arrow-down"
+          leading-icon="arrow-down"
           @click="sendToBack"
         >
           Send to Back
@@ -849,7 +849,7 @@ const interactionHint = computed(() => {
           variant="ghost"
           size="sm"
           class="w-full justify-start"
-          leading-icon="i-lucide-copy"
+          leading-icon="copy"
           @click="duplicateShape"
         >
           Duplicate
@@ -859,7 +859,7 @@ const interactionHint = computed(() => {
           variant="ghost"
           size="sm"
           class="w-full justify-start"
-          leading-icon="i-lucide-trash-2"
+          leading-icon="trash-2"
           @click="deleteSelected"
         >
           Delete

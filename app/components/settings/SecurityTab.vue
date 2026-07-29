@@ -3,7 +3,7 @@
         <UiPanel size="md" variant="surface">
             <template #header>
                 <div class="flex items-center gap-2">
-                    <UiIcon name="i-lucide-shield-check" class="w-5 h-5" />
+                    <UiIcon name="shield-check" class="w-5 h-5" />
                     Security Settings
                 </div>
             </template>

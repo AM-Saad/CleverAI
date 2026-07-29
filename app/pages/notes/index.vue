@@ -5,12 +5,12 @@
       <ui-title tag="h1" class="notes__title">Notes</ui-title>
       <div class="notes__actions">
         <UiIconButton
-          icon="i-lucide-folders"
+          icon="folders"
           label="Manage groups"
           @click="groupsOpen = true"
         />
         <UiIconButton
-          icon="i-lucide-search"
+          icon="search"
           label="Search notes"
           :active="searching"
           :pressed="searching"
@@ -23,7 +23,7 @@
       v-if="searching"
       v-model="query"
       placeholder="Search notes…"
-      icon="i-lucide-search"
+      icon="search"
       class="notes__search"
       autofocus
     />
@@ -42,7 +42,7 @@
     <!-- empty -->
     <div v-else-if="!filtered.length" class="notes__empty">
       <UiIcon
-        name="i-lucide-notebook-pen"
+        name="notebook-pen"
         class="h-10 w-10 text-content-disabled"
       />
       <p class="notes__empty-title">
@@ -76,7 +76,7 @@
           >
             <!-- design-allow: native collapsible group header -->
             <UiIcon
-              name="i-lucide-chevron-down"
+              name="chevron-down"
               class="h-3.5 w-3.5 notes__group-caret"
               :class="{
                 'notes__group-caret--collapsed': isCollapsed(group.id),
@@ -98,7 +98,7 @@
             @click="openQuickNote(group.id, $event)"
           >
             <!-- design-allow: native add-to-group control -->
-            <UiIcon name="i-lucide-plus" class="h-4 w-4" />
+            <UiIcon name="plus" class="h-4 w-4" />
           </button>
         </div>
         <ul v-show="!isCollapsed(group.id)" class="notes__list">
@@ -126,7 +126,7 @@
       @click="openQuickNote(null, $event)"
     >
       <!-- design-allow: gradient create FAB (shell chrome) -->
-      <UiIcon name="i-lucide-plus" class="h-6 w-6" />
+      <UiIcon name="plus" class="h-6 w-6" />
     </button>
 
     <NoteGroupsSheet

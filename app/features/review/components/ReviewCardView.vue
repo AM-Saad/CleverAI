@@ -19,7 +19,7 @@
       :style="{ opacity: Math.max(trailLeft, trailRight) }"
     >
       <UiIcon
-        :name="dragX < 0 ? 'i-lucide-rotate-ccw' : 'i-lucide-check'"
+        :name="dragX < 0 ? 'rotate-ccw' : 'check'"
         class="h-7 w-7"
       />
     </div>

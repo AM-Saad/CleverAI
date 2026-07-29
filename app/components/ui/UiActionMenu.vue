@@ -51,7 +51,7 @@ const props = withDefaults(
   {
     content: () => ({ align: "end", side: "bottom", sideOffset: 4 }),
     modal: false,
-    icon: "i-lucide-more-horizontal",
+    icon: "more-horizontal",
     label: "Actions",
     size: "sm",
     disabled: false,
@@ -95,7 +95,7 @@ function enhanceItem(item: ActionMenuItem, path: string): ActionMenuItem {
   return {
     ...item,
     label: isArmed ? (item.confirmLabel ?? "Select again to delete") : item.label,
-    icon: isArmed ? (item.confirmIcon ?? "i-lucide-alert-triangle") : item.icon,
+    icon: isArmed ? (item.confirmIcon ?? "alert-triangle") : item.icon,
     onSelect: (event?: ActionMenuSelectEvent) => {
       if (item.disabled) return;
 

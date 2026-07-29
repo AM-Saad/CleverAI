@@ -19,10 +19,11 @@
       ]"
       @click="emit('click', $event)"
     >
-      <shared-icon
+      <UiIcon
         v-if="icon"
         :name="icon"
-        class="w-[18px] h-[18px] shrink-0"
+        :size="18"
+        class="shrink-0"
       />
       <span v-if="label" :class="{ 'hidden sm:inline': hideLabelOnMobile }">{{
         label

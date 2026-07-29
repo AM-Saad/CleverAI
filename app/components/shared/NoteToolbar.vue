@@ -65,7 +65,7 @@ const emit = defineEmits<{
           class="h-8 w-8"
           @confirm="emit('delete')"
         >
-          <shared-icon name="delete" class="w-4 h-4 group-hover:scale-110 transition-transform" />
+          <UiIcon name="delete" size="sm" class="group-hover:scale-110 transition-transform" />
         </UiDoubleTapDeleteButton>
       </UiTooltip>
     </div>

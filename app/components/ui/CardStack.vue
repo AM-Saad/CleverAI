@@ -290,7 +290,7 @@ const CardItem = {
         v-if="!deck.length"
         class="absolute inset-0 flex flex-col items-center justify-center text-sm text-content-secondary"
       >
-        <UiIcon name="i-lucide-layers" class="mb-3 h-12 w-12 opacity-50" />
+        <UiIcon name="layers" class="mb-3 h-12 w-12 opacity-50" />
         No cards
       </div>
     </div>
@@ -300,7 +300,7 @@ const CardItem = {
       class="relative z-10 mt-4 flex items-center gap-8"
     >
       <UiIconButton
-        icon="i-lucide-arrow-left"
+        icon="arrow-left"
         label="Previous"
         variant="soft"
         size="xs"
@@ -320,7 +320,7 @@ const CardItem = {
       </div>
 
       <UiIconButton
-        icon="i-lucide-arrow-right"
+        icon="arrow-right"
         label="Next"
         variant="soft"
         size="xs"

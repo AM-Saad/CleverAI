@@ -10,7 +10,7 @@
         :trailing-text="subscriptionInfo.tier"
       >
         <template #leading>
-          <UiIcon name="i-lucide-wallet" class="h-4 w-4" />
+          <UiIcon name="wallet" class="h-4 w-4" />
         </template>
         <template #control>
           <UiButton
@@ -29,7 +29,7 @@
         :trailing-text="`${subscriptionInfo.remaining} left`"
       >
         <template #leading>
-          <UiIcon name="i-lucide-sparkles" class="h-4 w-4" />
+          <UiIcon name="sparkles" class="h-4 w-4" />
         </template>
       </UiSettingsRow>
       <UiSettingsRow
@@ -43,11 +43,11 @@
         @click="usageOpen = !usageOpen"
       >
         <template #leading>
-          <UiIcon name="i-lucide-chart-no-axes-column" class="h-4 w-4" />
+          <UiIcon name="chart-no-axes-column" class="h-4 w-4" />
         </template>
         <template #control>
           <UiIcon
-            :name="usageOpen ? 'i-lucide-chevron-up' : 'i-lucide-chevron-down'"
+            :name="usageOpen ? 'chevron-up' : 'chevron-down'"
             class="h-4 w-4 text-content-secondary"
           />
         </template>

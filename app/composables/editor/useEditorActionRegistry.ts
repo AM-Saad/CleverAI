@@ -54,7 +54,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "format.bold",
       label: "Bold",
-      icon: "i-lucide-bold",
+      icon: "bold",
       shortcut: "Mod-b",
       category: "formatting",
       isAvailable: (ctx) => !ctx.isInCodeBlock,
@@ -64,7 +64,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "format.italic",
       label: "Italic",
-      icon: "i-lucide-italic",
+      icon: "italic",
       shortcut: "Mod-i",
       category: "formatting",
       isAvailable: (ctx) => !ctx.isInCodeBlock,
@@ -74,7 +74,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "format.strike",
       label: "Strikethrough",
-      icon: "i-lucide-strikethrough",
+      icon: "strikethrough",
       shortcut: "Mod-Shift-x",
       category: "formatting",
       isAvailable: (ctx) => !ctx.isInCodeBlock,
@@ -84,7 +84,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "format.code",
       label: "Inline Code",
-      icon: "i-lucide-code",
+      icon: "code",
       shortcut: "Mod-e",
       category: "formatting",
       isAvailable: (ctx) => !ctx.isInCodeBlock,
@@ -94,7 +94,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "format.clear",
       label: "Clear Formatting",
-      icon: "i-lucide-remove-formatting",
+      icon: "remove-formatting",
       category: "formatting",
       isAvailable: (ctx) => ctx.hasSelection && !ctx.isInCodeBlock,
       execute: (ed) =>
@@ -105,7 +105,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "heading.paragraph",
       label: "Paragraph",
-      icon: "i-lucide-text",
+      icon: "text",
       category: "heading",
       isAvailable: (ctx) => !ctx.isInCodeBlock && !ctx.isInTable,
       isActive: (ed) =>
@@ -117,7 +117,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "heading.h1",
       label: "Heading 1",
-      icon: "i-lucide-heading-1",
+      icon: "heading-1",
       shortcut: "Mod-Shift-1",
       category: "heading",
       isAvailable: (ctx) => !ctx.isInCodeBlock && !ctx.isInTable,
@@ -128,7 +128,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "heading.h2",
       label: "Heading 2",
-      icon: "i-lucide-heading-2",
+      icon: "heading-2",
       shortcut: "Mod-Shift-2",
       category: "heading",
       isAvailable: (ctx) => !ctx.isInCodeBlock && !ctx.isInTable,
@@ -139,7 +139,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "heading.h3",
       label: "Heading 3",
-      icon: "i-lucide-heading-3",
+      icon: "heading-3",
       shortcut: "Mod-Shift-3",
       category: "heading",
       isAvailable: (ctx) => !ctx.isInCodeBlock && !ctx.isInTable,
@@ -152,7 +152,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "block.codeBlock",
       label: "Code Block",
-      icon: "i-lucide-file-code",
+      icon: "file-code",
       shortcut: "Mod-Shift-c",
       category: "block",
       isAvailable: () => true,
@@ -162,7 +162,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "block.blockquote",
       label: "Blockquote",
-      icon: "i-lucide-quote",
+      icon: "quote",
       shortcut: "Mod-Shift-q",
       category: "block",
       isAvailable: (ctx) => !ctx.isInCodeBlock,
@@ -172,7 +172,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "block.horizontalRule",
       label: "Horizontal Rule",
-      icon: "i-lucide-minus",
+      icon: "minus",
       category: "block",
       isAvailable: (ctx) => !ctx.isInCodeBlock,
       execute: (ed) => ed.chain().focus().setHorizontalRule().run(),
@@ -182,7 +182,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "list.bullet",
       label: "Bullet List",
-      icon: "i-lucide-list",
+      icon: "list",
       shortcut: "Mod-Shift-8",
       category: "list",
       isAvailable: (ctx) => !ctx.isInCodeBlock,
@@ -192,7 +192,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "list.ordered",
       label: "Ordered List",
-      icon: "i-lucide-list-ordered",
+      icon: "list-ordered",
       shortcut: "Mod-Shift-9",
       category: "list",
       isAvailable: (ctx) => !ctx.isInCodeBlock,
@@ -204,7 +204,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "task.toggleList",
       label: "Todo List",
-      icon: "i-lucide-list-checks",
+      icon: "list-checks",
       category: "task",
       isAvailable: (ctx) => !ctx.isInCodeBlock,
       isActive: (ed) => ed.isActive("taskList"),
@@ -213,7 +213,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "task.toggleComplete",
       label: "Toggle Complete",
-      icon: "i-lucide-check",
+      icon: "check",
       shortcut: "Mod-Shift-m",
       category: "task",
       isAvailable: (ctx) => ctx.isInTaskItem,
@@ -231,7 +231,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "task.indent",
       label: "Indent Task",
-      icon: "i-lucide-indent-increase",
+      icon: "indent-increase",
       category: "task",
       isAvailable: (ctx) => ctx.isInTaskItem,
       execute: (ed) =>
@@ -240,7 +240,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "task.outdent",
       label: "Outdent Task",
-      icon: "i-lucide-indent-decrease",
+      icon: "indent-decrease",
       category: "task",
       isAvailable: (ctx) => ctx.isInTaskItem,
       execute: (ed) =>
@@ -251,7 +251,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "table.addRowBefore",
       label: "Add Row Before",
-      icon: "i-lucide-table-rows-split",
+      icon: "table-rows-split",
       category: "table",
       isAvailable: (ctx) => ctx.isInTable,
       execute: (ed) => ed.chain().focus().addRowBefore().run(),
@@ -259,7 +259,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "table.addRowAfter",
       label: "Add Row After",
-      icon: "i-lucide-table-rows-split",
+      icon: "table-rows-split",
       category: "table",
       isAvailable: (ctx) => ctx.isInTable,
       execute: (ed) => ed.chain().focus().addRowAfter().run(),
@@ -267,7 +267,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "table.deleteRow",
       label: "Delete Row",
-      icon: "i-lucide-trash-2",
+      icon: "trash-2",
       category: "table",
       isAvailable: (ctx) => ctx.isInTable,
       execute: (ed) => ed.chain().focus().deleteRow().run(),
@@ -275,7 +275,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "table.addColumnBefore",
       label: "Add Column Before",
-      icon: "i-lucide-columns-3",
+      icon: "columns-3",
       category: "table",
       isAvailable: (ctx) => ctx.isInTable,
       execute: (ed) => ed.chain().focus().addColumnBefore().run(),
@@ -283,7 +283,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "table.addColumnAfter",
       label: "Add Column After",
-      icon: "i-lucide-columns-3",
+      icon: "columns-3",
       category: "table",
       isAvailable: (ctx) => ctx.isInTable,
       execute: (ed) => ed.chain().focus().addColumnAfter().run(),
@@ -291,7 +291,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "table.deleteColumn",
       label: "Delete Column",
-      icon: "i-lucide-trash-2",
+      icon: "trash-2",
       category: "table",
       isAvailable: (ctx) => ctx.isInTable,
       execute: (ed) => ed.chain().focus().deleteColumn().run(),
@@ -299,7 +299,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "table.toggleHeaderRow",
       label: "Toggle Header Row",
-      icon: "i-lucide-table",
+      icon: "table",
       category: "table",
       isAvailable: (ctx) => ctx.isInTable,
       execute: (ed) => ed.chain().focus().toggleHeaderRow().run(),
@@ -307,7 +307,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "table.mergeOrSplit",
       label: "Merge / Split Cells",
-      icon: "i-lucide-combine",
+      icon: "combine",
       category: "table",
       isAvailable: (ctx) => ctx.isInTable,
       execute: (ed) => ed.chain().focus().mergeOrSplit().run(),
@@ -315,7 +315,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "table.delete",
       label: "Delete Table",
-      icon: "i-lucide-x",
+      icon: "x",
       category: "table",
       isAvailable: (ctx) => ctx.isInTable,
       execute: (ed) => ed.chain().focus().deleteTable().run(),
@@ -325,7 +325,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "insert.table",
       label: "Insert Table",
-      icon: "i-lucide-table",
+      icon: "table",
       shortcut: "Mod-Shift-t",
       category: "insert",
       isAvailable: (ctx) => !ctx.isInCodeBlock && !ctx.isInTable,
@@ -339,7 +339,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "insert.image",
       label: "Insert Image",
-      icon: "i-lucide-image",
+      icon: "image",
       category: "insert",
       isAvailable: (ctx) => !ctx.isInCodeBlock,
       execute: (ed) => {
@@ -350,7 +350,7 @@ export function createEditorActions(): EditorAction[] {
     {
       id: "insert.paper",
       label: "Insert Sketch",
-      icon: "i-lucide-pen-tool",
+      icon: "pen-tool",
       shortcut: "Mod-Shift-d",
       category: "insert",
       isAvailable: (ctx) => !ctx.isInCodeBlock && !ctx.isInTable,

@@ -17,9 +17,9 @@ const TRANSITION_MS = 250;
 
 /** Panel metadata */
 const PANELS: { id: PanelId; label: string; icon: string }[] = [
-  { id: "hub", label: "Learning Hub", icon: "i-lucide-graduation-cap" },
-  { id: "notes", label: "Notes", icon: "i-lucide-notebook-pen" },
-  { id: "board", label: "Board", icon: "i-lucide-kanban" },
+  { id: "hub", label: "Learning Hub", icon: "graduation-cap" },
+  { id: "notes", label: "Notes", icon: "notebook-pen" },
+  { id: "board", label: "Board", icon: "kanban" },
 ];
 
 function snapToStep(value: number): number {

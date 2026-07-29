@@ -41,19 +41,19 @@
         </template>
       </UiPill>
       <UiIconButton
-        icon="i-lucide-search"
+        icon="search"
         label="Search cards"
         @click="toggleSearch"
       />
       <UiIconButton
-        :icon="overview ? 'i-lucide-columns-3' : 'i-lucide-layout-grid'"
+        :icon="overview ? 'columns-3' : 'layout-grid'"
         label="Toggle overview"
         :active="overview"
         :pressed="overview"
         @click="overview = !overview"
       />
       <UiIconButton
-        icon="i-lucide-more-vertical"
+        icon="more-vertical"
         label="Board menu"
         @click="menuOpen = true"
       />
@@ -63,7 +63,7 @@
       v-if="searching"
       v-model="query"
       placeholder="Search cards…"
-      icon="i-lucide-search"
+      icon="search"
       class="board__search"
       autofocus
     />
@@ -101,7 +101,7 @@
     <!-- no workspace selected yet -->
     <div v-else-if="!activeId && !loading" class="board__empty">
       <UiIcon
-        name="i-lucide-folder-open"
+        name="folder-open"
         class="h-10 w-10 text-content-disabled"
       />
       <p class="board__empty-title">Choose a workspace first</p>
@@ -110,7 +110,7 @@
 
     <!-- setup empty state -->
     <div v-else-if="!columns.length && !loading" class="board__empty">
-      <UiIcon name="i-lucide-kanban" class="h-10 w-10 text-content-disabled" />
+      <UiIcon name="kanban" class="h-10 w-10 text-content-disabled" />
       <p class="board__empty-title">No board yet</p>
       <UiButton tone="primary" :loading="settingUp" @click="setupBoard"
         >Set up board</UiButton
@@ -189,7 +189,7 @@
               @click.stop="retry(item)"
             >
               <template #icon>
-                <UiPillIcon name="i-lucide-rotate-cw" size="sm" />
+                <UiPillIcon name="rotate-cw" size="sm" />
               </template>
             </UiPill>
             <UiPill
@@ -229,7 +229,7 @@
         </UiItemCard>
 
         <button type="button" class="board__add" @click="addCard($event)"> <!-- design-allow: native dashed add control -->
-          <UiIcon name="i-lucide-plus" class="h-4 w-4" /> Add a card
+          <UiIcon name="plus" class="h-4 w-4" /> Add a card
         </button>
       </div>
 
@@ -279,7 +279,7 @@
           @click="openColumns"
         >
           <template #leading>
-            <UiIcon name="i-lucide-columns-3" class="h-5 w-5" />
+            <UiIcon name="columns-3" class="h-5 w-5" />
           </template>
         </UiListCard>
         <UiListCard
@@ -294,7 +294,7 @@
           <template #leading>
             <UiIcon
               :name="
-                failedCount > 0 ? 'i-lucide-rotate-cw' : 'i-lucide-refresh-cw'
+                failedCount > 0 ? 'rotate-cw' : 'refresh-cw'
               "
               class="h-5 w-5"
             />

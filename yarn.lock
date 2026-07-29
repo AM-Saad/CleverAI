@@ -1823,6 +1823,13 @@
   resolved "https://registry.yarnpkg.com/@humanwhocodes/retry/-/retry-0.4.3.tgz#c2b9d2e374ee62c586d3adbea87199b1d7a7a6ba"
   integrity sha512-bV0Tgo9K4hfPCek+aMAn81RppFKv2ySDQeMoSZuvTASywNTnVJCArCZE2FWqpvIatKu7VMRLWlR1EazvVhDyhQ==
 
+"@iconify-json/lucide@^1.2.120":
+  version "1.2.120"
+  resolved "https://registry.yarnpkg.com/@iconify-json/lucide/-/lucide-1.2.120.tgz#0ba1638d4c5fe36e102443c1e2660f064ea9a808"
+  integrity sha512-4ECF24fxag1n5tZlPGrbWuCGqhkwD0rvAzfCXretqQb4KEC8Y6ja3khF8qmvpR1Mk0NQDhBTRK3Fr/YoV8QyJw==
+  dependencies:
+    "@iconify/types" "*"
+
 "@iconify/collections@^1.0.628":
   version "1.0.631"
   resolved "https://registry.yarnpkg.com/@iconify/collections/-/collections-1.0.631.tgz#ce2004684bc38f2aa0975c566b4b2c4a50fed378"

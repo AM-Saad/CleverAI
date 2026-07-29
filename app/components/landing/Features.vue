@@ -6,32 +6,34 @@ const featuresList = [
   {
     title: "Notes + Study Together",
     description: "Jot text. Structure workspaces.",
-    icon: 'mdi:note-plus-outline'
+    icon: 'notebook-pen'
   },
   {
     title: 'Smart Flashcard Generator',
     description: 'Select any text and auto-generate using AI.',
-    icon: 'mdi:card-text-outline'
+    // The sparkle badge marks the AI-generated counterpart of 'Manual Card Mode'
+    // below, which uses the same deck mark without it.
+    icon: 'layers-ai'
   },
   {
     title: 'Spaced Repetition',
     description: 'Automated review intervals based on your performance.',
-    icon: 'mdi:calendar-repeat-outline'
+    icon: 'calendar-clock'
   },
   {
     title: 'Manual Card Mode',
     description: 'Create your own cards anytime.',
-    icon: 'mdi:card-plus-outline'
+    icon: 'layers'
   },
   {
     title: 'Timing Config',
     description: 'Control when reminders arrive.',
-    icon: 'mdi:clock-outline'
+    icon: 'clock'
   },
   {
     title: 'AI Chat Assistant',
     description: 'Get help understanding and memorizing content.',
-    icon: 'mdi:robot-outline'
+    icon: 'sparkles'
   },
 ]
 </script>
@@ -67,7 +69,7 @@ const featuresList = [
         <div class="relative z-10 flex flex-col h-full">
           <div
             class="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center mb-6 text-primary  group-hover:rotate-6 transition-transform duration-300">
-            <u-icon :name="feature.icon" class="text-3xl" />
+            <UiIcon :name="feature.icon" size="xl" />
           </div>
 
           <h3 class="text-xl font-bold text-dark mb-3 group-hover:text-primary transition-colors">

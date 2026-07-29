@@ -1,42 +1,18 @@
 <template>
-  <article
-    class="action-row"
-    :class="{ 'action-row--completed': item.completed }"
-  >
+  <article class="action-row" :class="{ 'action-row--completed': item.completed }">
     <div class="action-row_content">
-      <UiCheckbox
-        :model-value="item.completed"
-        :aria-label="`Mark ${item.title} complete`"
-        @update:model-value="$emit('toggle', Boolean($event))"
-      />
-      <UiButton
-        type="button"
-        tone="neutral"
-        variant="link"
-        class="action-row__main"
-        :aria-label="
-          conflicted
-            ? `${item.title} has a sync conflict`
-            : `Edit ${item.title}`
-        "
-        :disabled="conflicted"
-        @click="$emit('edit')"
-      >
+      <UiCheckbox :model-value="item.completed" :aria-label="`Mark ${item.title} complete`"
+        @update:model-value="$emit('toggle', Boolean($event))" />
+      <UiButton type="button" tone="neutral" variant="link" class="action-row__main" :aria-label="conflicted
+        ? `${item.title} has a sync conflict`
+        : `Edit ${item.title}`
+        " :disabled="conflicted" @click="$emit('edit')">
         <div ref="titleViewport" class="action-row__title" :title="item.title">
-          <UiParagraph
-            tag="p"
-            size="base"
-            :color="item.completed ? 'disabled' : 'content-on-surface'"
-            class="leading-none"
-            :class="{ 'line-through': item.completed }"
-          >
-            <span
-              class="action-row__title-track"
-              :class="{
-                'action-row__title-track--scrolling': isTitleOverflowing,
-              }"
-              aria-hidden="true"
-            >
+          <UiParagraph tag="p" size="base" :color="item.completed ? 'disabled' : 'content-on-surface'"
+            class="leading-none" :class="{ 'line-through': item.completed }">
+            <span class="action-row__title-track" :class="{
+              'action-row__title-track--scrolling': isTitleOverflowing,
+            }" aria-hidden="true">
               <span class="action-row__title-copy">
                 <span ref="titleText">{{ item.title }}</span>
               </span>
@@ -46,41 +22,25 @@
             </span>
           </UiParagraph>
         </div>
-        <div class="action-row__meta">
-          <UiPill
-            v-if="item.timingLabel"
-            size="sm"
-            :label="item.timingLabel"
-            :color="
-              item.overdue
-                ? 'var(--color-error)'
-                : 'var(--color-content-secondary)'
-            "
-            variant="soft"
-          />
-          <span v-if="item.recurrenceLabel" class="action-row__repeat">
-            <UiIcon name="i-lucide-repeat-2" class="h-3.5 w-3.5" />
-            {{ item.recurrenceLabel }}
-          </span>
-          <span v-if="item.overdue" class="action-row__overdue">Overdue</span>
-        </div>
+
       </UiButton>
     </div>
 
     <div class="action-row__actions">
-      <UiIconButton
-        icon="i-lucide-pencil"
-        label="Edit action item"
-        size="sm"
-        :disabled="conflicted"
-        @click="$emit('edit')"
-      />
-      <UiIconButton
-        icon="i-lucide-calendar-clock"
-        label="Move action item"
-        size="sm"
-        @click="$emit('move')"
-      />
+      <div class="action-row__meta">
+        <UiPill v-if="item.timingLabel" size="sm" :label="item.timingLabel" :color="item.overdue
+          ? 'var(--color-error)'
+          : 'var(--color-content-secondary)'
+          " variant="soft" />
+        <span v-if="item.recurrenceLabel" class="action-row__repeat">
+          <UiIcon name="repeat-2" class="h-3.5 w-3.5" />
+          {{ item.recurrenceLabel }}
+        </span>
+        <span v-if="item.overdue" class="action-row__overdue">Overdue</span>
+      </div>
+      <UiIconButton icon="pencil" label="Edit action item" size="sm" :disabled="conflicted"
+        @click="$emit('edit')" />
+      <UiIconButton icon="calendar-clock" label="Move action item" size="sm" @click="$emit('move')" />
     </div>
   </article>
 </template>
@@ -127,6 +87,9 @@ onBeforeUnmount(() => titleResizeObserver?.disconnect());
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  flex: 2 1 auto;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .action-row {
@@ -143,6 +106,20 @@ onBeforeUnmount(() => titleResizeObserver?.disconnect());
 
 .action-row:last-child {
   border-bottom: 0;
+}
+
+.action-row--completed {
+  opacity: 0.6;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.action-row--completed .action-row__actions {
+  opacity: 0.5;
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.action-row--completed:hover .action-row__actions {
+  opacity: 1;
 }
 
 .action-row__main {
@@ -222,7 +199,7 @@ onBeforeUnmount(() => titleResizeObserver?.disconnect());
     text-overflow: ellipsis;
   }
 
-  .action-row__title-copy + .action-row__title-copy {
+  .action-row__title-copy+.action-row__title-copy {
     display: none;
   }
 }
@@ -230,9 +207,10 @@ onBeforeUnmount(() => titleResizeObserver?.disconnect());
 .action-row__meta {
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-top: var(--space-1);
   color: var(--color-content-secondary);
   font-size: var(--text-xs);
+  /* flex: 1 1 auto; */
+
 }
 
 .action-row__repeat {
@@ -245,6 +223,7 @@ onBeforeUnmount(() => titleResizeObserver?.disconnect());
   display: flex;
   align-items: center;
   gap: var(--space-1);
+  flex: 1 0 auto;
 }
 
 .action-row__overdue {

@@ -14,7 +14,7 @@
     <header class="rev__bar">
       <UiIconButton
         class="rev__close"
-        icon="i-lucide-x"
+        icon="x"
         label="Close review"
         @click="emit('close')"
       />
@@ -39,13 +39,13 @@
     </div>
 
     <div v-else-if="error" class="rev__center rev__msg">
-      <UiIcon name="i-lucide-triangle-alert" class="h-8 w-8 text-error-text" />
+      <UiIcon name="triangle-alert" class="h-8 w-8 text-error-text" />
       <p>{{ error }}</p>
       <UiButton @click="emit('retry')">Try again</UiButton>
     </div>
 
     <div v-else-if="!hasCard" class="rev__center rev__msg">
-      <UiIcon name="i-lucide-party-popper" class="h-9 w-9 text-success-text" />
+      <UiIcon name="party-popper" class="h-9 w-9 text-success-text" />
       <UiTitle tag="div" size="xl" weight="extrabold" tight color="content-on-surface-strong">{{ emptyTitle }}</UiTitle>
       <UiParagraph size="sm" color="content-secondary">{{ emptySubtitle }}</UiParagraph>
       <UiButton tone="primary" @click="emit('close')">

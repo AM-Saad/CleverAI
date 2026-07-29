@@ -3,13 +3,13 @@
     <div class="app-page-header__leading">
       <UiIconButton
         v-if="backTo"
-        icon="i-lucide-chevron-left"
+        icon="chevron-left"
         :label="backLabel ?? 'Back'"
         size="sm"
         @click="navigateTo(backTo)"
       />
       <NuxtLink v-else to="/" class="app-page-header__apps">
-        <UiIcon name="i-lucide-layout-grid" class="h-4 w-4" />
+        <UiIcon name="layout-grid" class="h-4 w-4" />
         Apps
       </NuxtLink>
       <div class="min-w-0">
@@ -30,7 +30,7 @@
         class="app-page-header__account"
         :aria-label="accountLabel ?? 'Account settings'"
       >
-        <UiIcon name="i-lucide-user-round" class="h-5 w-5" />
+        <UiIcon name="user-round" class="h-5 w-5" />
       </NuxtLink>
     </div>
   </header>

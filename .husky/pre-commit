@@ -9,3 +9,6 @@ yarn design:primitives
 yarn design:primitives:unused
 yarn design:api
 yarn design:boundaries
+# Reject malformed icon path data and a stale sprite. Browsers drop broken SVG
+# paths silently, so nothing downstream of this catches them.
+yarn icons:check

@@ -14,11 +14,11 @@
         @click="showChangePassword = true"
       >
         <template #leading>
-          <UiIcon name="i-lucide-lock-keyhole" class="h-4 w-4" />
+          <UiIcon name="lock-keyhole" class="h-4 w-4" />
         </template>
         <template #control>
           <UiIcon
-            name="i-lucide-chevron-right"
+            name="chevron-right"
             class="h-4 w-4 text-content-disabled"
           />
         </template>
@@ -29,7 +29,7 @@
         :description="`Managed by ${authProviderLabel}`"
       >
         <template #leading>
-          <UiIcon name="i-lucide-shield-check" class="h-4 w-4" />
+          <UiIcon name="shield-check" class="h-4 w-4" />
         </template>
       </UiSettingsRow>
     </UiSettingsGroup>
@@ -41,7 +41,7 @@
       >
         <template #leading>
           <UiIcon
-            name="i-lucide-alert-triangle"
+            name="alert-triangle"
             class="h-4 w-4 text-error-text"
           />
         </template>

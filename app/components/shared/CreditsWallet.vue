@@ -156,7 +156,7 @@ function invokeAd() {
     widthClasses="w-full sm:w-[28rem] max-w-[90vw]" title="Credits Wallet" :backdrop="true" :handleVisible="0">
     <template #header>
       <div class="flex items-center gap-2 px-2 py-1">
-        <UiIcon name="i-lucide-wallet" class="w-6 h-6 text-primary" />
+        <UiIcon name="wallet" class="w-6 h-6 text-primary" />
         Wallet
       </div>
     </template>
@@ -179,7 +179,7 @@ function invokeAd() {
         <p class="font-medium mb-2 relative text-white text-xl z-10">Current Balance</p>
         <div
           class="text-6xl font-bold bg-gradient-to-r from-primary to-accent-blue bg-clip-text text-transparent z-10 relative flex items-center justify-center gap-2">
-          <UiIcon name="i-lucide-sparkles" class="w-10 h-10 text-primary" />
+          <UiIcon name="sparkles" class="w-10 h-10 text-primary" />
           {{ balance }}
         </div>
       </UiPanel>
@@ -189,8 +189,8 @@ function invokeAd() {
         <UiTitle tag="h3" size="sm" weight="semibold" uppercase>Earn Free Credits</UiTitle>
         <UiButton @click="invokeAd"
           class="w-full flex items-center justify-center gap-2">
-          <UiIcon v-if="adLoading" name="i-lucide-refresh-cw" class="w-5 h-5 animate-spin" />
-          <UiIcon v-else name="i-lucide-circle-play" class="w-5 h-5" />
+          <UiIcon v-if="adLoading" name="refresh-cw" class="w-5 h-5 animate-spin" />
+          <UiIcon v-else name="circle-play" class="w-5 h-5" />
           Watch Video (+1 Credit)
         </UiButton>
         <p class="text-xs text-content-secondary text-center">Support us by watching a short ad.</p>
@@ -214,7 +214,7 @@ function invokeAd() {
           shadow="md"
           class-name="relative focus-within:ring-2 focus-within:ring-inset focus-within:ring-[var(--ds-focus-outline-color)]">
           <UiIconButton v-if="!isPaymentProcessing"
-            icon="i-lucide-arrow-left"
+            icon="arrow-left"
             label="Back to credit packs"
             size="xs"
             variant="soft"
@@ -226,7 +226,7 @@ function invokeAd() {
           <UiButton class="w-full py-3 rounded-[var(--radius-xl)] flex items-center justify-center"
             @click="submitPayment">
             <span v-if="isPaymentProcessing" class="flex items-center gap-2">
-              <UiIcon name="i-lucide-refresh-cw" class="w-4 h-4 animate-spin" />
+              <UiIcon name="refresh-cw" class="w-4 h-4 animate-spin" />
               Processing...
             </span>
             <span v-else>Pay Now</span>
@@ -264,7 +264,7 @@ function invokeAd() {
 
             <div v-if="checkoutLoading === pack.id"
               class="absolute inset-0 bg-white/60 backdrop-blur-sm rounded-[var(--radius-2xl)] flex items-center justify-center">
-              <UiIcon name="i-lucide-refresh-cw" class="w-6 h-6 animate-spin text-primary" />
+              <UiIcon name="refresh-cw" class="w-6 h-6 animate-spin text-primary" />
             </div>
           </UiInteractiveCard>
         </div>

@@ -9,7 +9,7 @@
         <UiButton
           size="sm"
           tone="primary"
-          leading-icon="i-lucide-upload"
+          leading-icon="upload"
           :disabled="uploading"
           @click="pick"
         >
@@ -39,11 +39,11 @@
     </div>
     <UiEmptyState
       v-else-if="!materials.length && !uploading"
-      icon="i-lucide-file-stack"
+      icon="file-stack"
       title="No materials yet"
       description="Upload a PDF or document to generate study cards."
       action-label="Upload material"
-      action-icon="i-lucide-upload"
+      action-icon="upload"
       @action="pick"
     />
     <ul v-else class="mats__list">
@@ -63,7 +63,7 @@
           </template>
           <template #action>
             <UiIcon
-              name="i-lucide-chevron-right"
+              name="chevron-right"
               class="h-4 w-4"
               aria-hidden="true"
             />

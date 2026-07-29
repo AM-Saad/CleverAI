@@ -48,7 +48,7 @@
               </UiParagraph>
               <span class="study-content__flip-hint">
                 <UiIcon
-                  name="i-lucide-refresh-cw"
+                  name="refresh-cw"
                   class="h-4 w-4"
                   aria-hidden="true"
                 />
@@ -74,7 +74,7 @@
               </UiParagraph>
               <span class="study-content__flip-hint">
                 <UiIcon
-                  name="i-lucide-refresh-cw"
+                  name="refresh-cw"
                   class="h-4 w-4"
                   aria-hidden="true"
                 />
@@ -124,13 +124,13 @@
                   <template v-if="selectedChoice !== null" #action>
                     <UiIcon
                       v-if="choiceIndex === currentQuestion.answerIndex"
-                      name="i-lucide-circle-check"
+                      name="circle-check"
                       class="h-5 w-5 text-success-text"
                       aria-label="Correct answer"
                     />
                     <UiIcon
                       v-else-if="choiceIndex === selectedChoice"
-                      name="i-lucide-circle-x"
+                      name="circle-x"
                       class="h-5 w-5 text-error-text"
                       aria-label="Incorrect answer"
                     />
@@ -143,7 +143,7 @@
               v-if="selectedChoice !== null"
               :tone="answerIsCorrect ? 'success' : 'error'"
               :icon="
-                answerIsCorrect ? 'i-lucide-circle-check' : 'i-lucide-circle-x'
+                answerIsCorrect ? 'circle-check' : 'circle-x'
               "
               :title="answerIsCorrect ? 'Correct' : 'Not quite'"
               :description="answerFeedback"
@@ -154,7 +154,7 @@
 
       <div class="study-content__pager" aria-label="Quiz navigation">
         <UiIconButton
-          icon="i-lucide-chevron-left"
+          icon="chevron-left"
           label="Previous question"
           variant="soft"
           :disabled="questionIndex === 0"
@@ -164,7 +164,7 @@
           {{ questionIndex + 1 }} / {{ questions.length }}
         </UiParagraph>
         <UiIconButton
-          icon="i-lucide-chevron-right"
+          icon="chevron-right"
           label="Next question"
           variant="soft"
           :disabled="questionIndex === questions.length - 1"
@@ -201,14 +201,14 @@ const contentTypes = computed(() => [
   {
     value: "flashcards",
     label: "Flashcards",
-    icon: "i-lucide-copy",
+    icon: "copy",
     count: props.flashcards.length,
     disabled: props.flashcards.length === 0,
   },
   {
     value: "quiz",
     label: "Quiz",
-    icon: "i-lucide-list-checks",
+    icon: "list-checks",
     count: props.questions.length,
     disabled: props.questions.length === 0,
   },

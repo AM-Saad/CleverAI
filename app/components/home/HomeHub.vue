@@ -33,7 +33,7 @@
       <span class="home__hero-deco" aria-hidden="true" />
       <span class="home__hero-icon" aria-hidden="true">
         <UiIcon
-          :name="dueCount ? 'i-lucide-layers-3' : 'i-lucide-check-check'"
+          :name="dueCount ? 'layers-3' : 'check-check'"
           class="h-5 w-5"
         />
       </span>
@@ -51,7 +51,7 @@
         <span class="home__hero-sub">{{ heroSub }}</span>
       </span>
       <span class="home__hero-cta" aria-hidden="true">
-        <UiIcon name="i-lucide-arrow-right" class="h-4 w-4" />
+        <UiIcon name="arrow-right" class="h-4 w-4" />
       </span>
     </NuxtLink>
 
@@ -301,9 +301,9 @@ function spineFor(t?: string) {
   return noteSpineVar(t ?? "TEXT");
 }
 function iconFor(t?: string) {
-  if (t === "MATH") return "i-lucide-sigma";
-  if (t === "CANVAS") return "i-lucide-pen-tool";
-  return "i-lucide-file-text";
+  if (t === "MATH") return "sigma";
+  if (t === "CANVAS") return "pen-tool";
+  return "file-text";
 }
 function openNote(id: string) {
   navigateTo(`/notes/${id}`);

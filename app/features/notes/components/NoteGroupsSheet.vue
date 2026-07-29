@@ -5,10 +5,10 @@
         <li v-for="(g, i) in draft" :key="g.id" class="ngs__row">
           <div class="ngs__reorder">
             <button type="button" class="ngs__move" :disabled="i === 0" aria-label="Move up" @click="move(i, -1)"> <!-- design-allow: native reorder control -->
-              <UiIcon name="i-lucide-chevron-up" class="h-4 w-4" />
+              <UiIcon name="chevron-up" class="h-4 w-4" />
             </button>
             <button type="button" class="ngs__move" :disabled="i === draft.length - 1" aria-label="Move down" @click="move(i, 1)"> <!-- design-allow: native reorder control -->
-              <UiIcon name="i-lucide-chevron-down" class="h-4 w-4" />
+              <UiIcon name="chevron-down" class="h-4 w-4" />
             </button>
           </div>
           <span class="ngs__dot" :style="{ background: dotFor(g.id) }" />
@@ -23,7 +23,7 @@
             :reset-key="g.id"
             @confirm="onDelete(g)"
           >
-            <UiIcon name="i-lucide-trash-2" class="h-[18px] w-[18px]" />
+            <UiIcon name="trash-2" class="h-[18px] w-[18px]" />
           </UiDoubleTapDeleteButton>
         </li>
       </ul>
@@ -34,7 +34,7 @@
         <UiButton size="sm" tone="primary" :loading="busy" :disabled="!newName.trim()" @click="commitAdd">Add</UiButton>
       </div>
       <button v-else type="button" class="ngs__add" @click="startAdd"> <!-- design-allow: native dashed add control -->
-        <UiIcon name="i-lucide-plus" class="h-4 w-4" /> New group
+        <UiIcon name="plus" class="h-4 w-4" /> New group
       </button>
     </div>
   </UiSheet>

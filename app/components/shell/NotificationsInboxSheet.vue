@@ -14,7 +14,7 @@
     </div>
 
     <div v-else-if="!notifications.length" class="inbox__empty">
-      <UiIcon name="i-lucide-bell-off" class="h-8 w-8 text-content-disabled" />
+      <UiIcon name="bell-off" class="h-8 w-8 text-content-disabled" />
       <p>You're all caught up.</p>
     </div>
 

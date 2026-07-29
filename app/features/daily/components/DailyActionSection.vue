@@ -3,12 +3,13 @@
     <div class="action-section__head">
       <div>
         <div class="action-section__title-row">
+          <UiIcon name="action-items-sketch" size="22px" color="secondary" />
           <UiTitle id="actions-title" tag="h2" size="base"
             >Action items</UiTitle
           >
           <UiIconButton
             :icon="
-              isExpanded ? 'i-lucide-chevron-down' : 'i-lucide-chevron-right'
+              isExpanded ? 'chevron-down' : 'chevron-right'
             "
             :label="
               isExpanded ? 'Collapse action items' : 'Expand action items'
@@ -22,7 +23,7 @@
         <!-- <UiParagraph>{{ openCount }} open · {{ completedCount }} completed</UiParagraph> -->
       </div>
       <UiIconButton
-        :icon="quickAddOpen ? 'i-lucide-x' : 'i-lucide-plus'"
+        :icon="quickAddOpen ? 'x' : 'plus'"
         :label="quickAddOpen ? 'Close quick add' : 'Add action item'"
         size="sm"
         :pressed="quickAddOpen"
@@ -57,7 +58,7 @@
       <ActionItemListSkeleton v-else-if="loading" />
       <UiEmptyState
         v-else-if="!quickAddOpen"
-        icon="i-lucide-list"
+        icon="list"
         description="Plan something for this day, or leave it open."
       >
       </UiEmptyState>
@@ -162,7 +163,7 @@ function toggleQuickAdd() {
 }
 
 .action-section__title-row {
-  gap: var(--space-1);
+  gap: var(--space-2);
 }
 
 /* .action-section__head p {

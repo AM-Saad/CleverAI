@@ -3,7 +3,7 @@
     <template #header>
       <div class="ai-res__head">
         <RewardGradient class="ai-res__tile">
-          <UiIcon name="i-lucide-sparkles" class="h-4 w-4 text-white" />
+          <UiIcon name="sparkles" class="h-4 w-4 text-white" />
         </RewardGradient>
         <div>
           <ui-title tag="h2" class="ai-res__title">AI · Generated cards</ui-title>
@@ -19,7 +19,7 @@
     </div>
 
     <div v-else-if="error" class="ai-res__error">
-      <UiIcon name="i-lucide-triangle-alert" class="h-6 w-6 text-error-text" />
+      <UiIcon name="triangle-alert" class="h-6 w-6 text-error-text" />
       <p>{{ error }}</p>
       <UiButton size="sm" @click="emit('retry')">Try again</UiButton>
     </div>
