@@ -64,10 +64,12 @@ body {
 .ds-save-pulse {
   animation: ds-save-pulse var(--duration-slow) var(--ease-standard);
 }
+
 @keyframes ds-save-pulse {
   0% {
     box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-success) 60%, transparent);
   }
+
   100% {
     box-shadow: 0 0 0 6px transparent;
   }
@@ -88,6 +90,7 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   *,
   *::before,
   *::after {
@@ -105,6 +108,7 @@ body {
   animation-duration: var(--duration-spring);
   animation-timing-function: var(--ease-spring);
 }
+
 ::view-transition-old(quick-capture),
 ::view-transition-new(quick-capture) {
   height: 100%;
@@ -122,6 +126,7 @@ body {
   animation-duration: var(--duration-spring);
   animation-timing-function: var(--ease-spring);
 }
+
 ::view-transition-old(capture-sheet),
 ::view-transition-new(capture-sheet) {
   height: 100%;
@@ -289,9 +294,9 @@ div[data-reka-popper-content-wrapper] {
 /* Checkbox cross-fade & micro-spring animations */
 :where([role="checkbox"]) {
   transition: background-color var(--duration-normal) var(--ease-standard),
-              border-color var(--duration-normal) var(--ease-standard),
-              box-shadow var(--duration-fast) var(--ease-standard),
-              transform var(--duration-fast) var(--ease-standard) !important;
+    border-color var(--duration-normal) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard) !important;
 }
 
 :where([role="checkbox"]):active {
@@ -302,7 +307,7 @@ div[data-reka-popper-content-wrapper] {
 :where([role="checkbox"]) [data-slot="icon"],
 :where([role="checkbox"]) span {
   transition: opacity var(--duration-normal) var(--ease-standard),
-              transform var(--duration-normal) var(--ease-spring) !important;
+    transform var(--duration-normal) var(--ease-spring) !important;
 }
 
 :where([role="checkbox"][data-state="unchecked"]) svg,
@@ -321,9 +326,11 @@ div[data-reka-popper-content-wrapper] {
     opacity: 0;
     transform: scale(0.4) rotate(-10deg);
   }
+
   65% {
     transform: scale(1.18) rotate(3deg);
   }
+
   100% {
     opacity: 1;
     transform: scale(1) rotate(0deg);
@@ -339,7 +346,7 @@ div[data-reka-popper-content-wrapper] {
   transition: transform var(--duration-fast, 0.2s) var(--ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1)), color var(--duration-fast, 0.15s) ease;
 }
 
-.app-icon > svg {
+.app-icon>svg {
   width: 100%;
   height: 100%;
   stroke: currentColor;
@@ -352,7 +359,7 @@ div[data-reka-popper-content-wrapper] {
 }
 
 /* Below ~18px the signature weight goes faint, so step it up optically. */
-.app-icon--dense > svg {
+.app-icon--dense>svg {
   stroke-width: var(--component-icon-stroke-width-dense);
 }
 
@@ -367,3 +374,12 @@ div[data-reka-popper-content-wrapper] {
   transform: scale(0.92);
 }
 
+
+.unselectable {
+  -webkit-user-select: none;
+  /* Safari */
+  -ms-user-select: none;
+  /* IE 10 and IE 11 */
+  user-select: none;
+  /* Standard syntax */
+}

@@ -3,80 +3,36 @@
     <div class="action-section__head">
       <div>
         <div class="action-section__title-row">
-          <UiIcon name="action-items-sketch" size="22px" color="secondary" />
-          <UiTitle id="actions-title" tag="h2" size="base"
-            >Action items</UiTitle
-          >
-          <UiIconButton
-            :icon="
-              isExpanded ? 'chevron-down' : 'chevron-right'
-            "
-            :label="
-              isExpanded ? 'Collapse action items' : 'Expand action items'
-            "
-            size="xs"
-            variant="ghost"
-            class="action-section__chevron-btn"
-            @click="isExpanded = !isExpanded"
-          />
+          <UiIcon name="action-items-sketch" size="26px" color="secondary" />
+          <UiTitle id="actions-title" class="unselectable" tag="h2" size="base" @click="isExpanded = !isExpanded">Action
+            items</UiTitle>
+          <UiIconButton :icon="isExpanded ? 'chevron-down' : 'chevron-right'
+            " :label="isExpanded ? 'Collapse action items' : 'Expand action items'
+              " size="xs" variant="ghost" class="action-section__chevron-btn" @click="isExpanded = !isExpanded" />
         </div>
         <!-- <UiParagraph>{{ openCount }} open · {{ completedCount }} completed</UiParagraph> -->
       </div>
-      <UiIconButton
-        :icon="quickAddOpen ? 'x' : 'plus'"
-        :label="quickAddOpen ? 'Close quick add' : 'Add action item'"
-        size="sm"
-        :pressed="quickAddOpen"
-        @click="toggleQuickAdd"
-      />
+      <UiIconButton :icon="quickAddOpen ? 'x' : 'plus'" :label="quickAddOpen ? 'Close quick add' : 'Add action item'"
+        size="sm" :pressed="quickAddOpen" @click="toggleQuickAdd" />
     </div>
 
     <template v-if="isExpanded">
-      <ActionItemInlineForm
-        v-if="quickAddOpen"
-        ref="quickAdd"
-        :date-key="dateKey"
-        @cancel="quickAddOpen = false"
-      />
+      <ActionItemInlineForm v-if="quickAddOpen" ref="quickAdd" :date-key="dateKey" @cancel="quickAddOpen = false" />
 
-      <DailyActionList
-        v-if="items.length"
-        :date-key="dateKey"
-        :items="items"
-        :conflicts="conflicts"
-        :occurrence-conflicts="occurrenceConflicts"
-        :resolving-action-item-id="resolvingActionItemId"
-        :resolving-occurrence-id="resolvingOccurrenceId"
-        @edit="quickAddOpen = false"
-        @toggle="emit('toggle', $event.occurrenceKey, $event.completed)"
-        @move="emit('move', $event)"
-        @resolve-conflict="emit('resolve-conflict', $event)"
-        @resolve-occurrence-conflict="
+      <DailyActionList v-if="items.length" :date-key="dateKey" :items="items" :conflicts="conflicts"
+        :occurrence-conflicts="occurrenceConflicts" :resolving-action-item-id="resolvingActionItemId"
+        :resolving-occurrence-id="resolvingOccurrenceId" @edit="quickAddOpen = false"
+        @toggle="emit('toggle', $event.occurrenceKey, $event.completed)" @move="emit('move', $event)"
+        @resolve-conflict="emit('resolve-conflict', $event)" @resolve-occurrence-conflict="
           emit('resolve-occurrence-conflict', $event)
-        "
-      />
+          " />
       <ActionItemListSkeleton v-else-if="loading" />
-      <UiEmptyState
-        v-else-if="!quickAddOpen"
-        icon="list"
-        description="Plan something for this day, or leave it open."
-      >
+      <UiEmptyState v-else-if="!quickAddOpen" icon="list" description="Plan something for this day, or leave it open.">
       </UiEmptyState>
 
       <div v-if="movedItems.length" class="moved-list">
-        <UiLabel
-          tag="p"
-          size="sm"
-          weight="bold"
-          color="content-secondary"
-          uppercase
-          >Moved from this day</UiLabel
-        >
-        <div
-          v-for="item in movedItems"
-          :key="item.occurrenceKey"
-          class="moved-row"
-        >
+        <UiLabel tag="p" size="sm" weight="bold" color="content-secondary" uppercase>Moved from this day</UiLabel>
+        <div v-for="item in movedItems" :key="item.occurrenceKey" class="moved-row">
           <span>{{ item.title }}</span>
           <span>Moved to {{ item.movedDateLabel }}</span>
         </div>

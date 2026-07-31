@@ -3,32 +3,18 @@
     <div class="note-section__head">
       <div>
         <div class="note-section__title-row">
-          <UiIcon name="daily-note-sketch" size="22px" color="secondary" />
-          <UiTitle id="note-title" tag="h2" size="base">Daily note</UiTitle>
+          <UiIcon name="daily-note-sketch" size="26px" color="secondary" />
+          <UiTitle id="note-title" class="unselectable" tag="h2" size="base">Daily note</UiTitle>
         </div>
         <!-- <p>One continuous note for this day</p> -->
       </div>
       <span class="note-section__save-state">{{ saveState }}</span>
     </div>
 
-    <DailyNoteConflictPanel
-      v-if="conflict"
-      :conflict="conflict"
-      @resolve="$emit('resolve', $event)"
-    />
-    <UiAlert
-      v-else-if="syncIssue"
-      tone="warning"
-      title="Note saved locally"
-      :description="syncIssue"
-    />
-    <DailyRichEditor
-      :key="dateKey"
-      :model-value="modelValue"
-      :readonly="Boolean(conflict)"
-      @update:model-value="$emit('update:modelValue', $event)"
-      @blur="$emit('blur')"
-    />
+    <DailyNoteConflictPanel v-if="conflict" :conflict="conflict" @resolve="$emit('resolve', $event)" />
+    <UiAlert v-else-if="syncIssue" tone="warning" title="Note saved locally" :description="syncIssue" />
+    <DailyRichEditor :key="dateKey" :model-value="modelValue" :readonly="Boolean(conflict)"
+      @update:model-value="$emit('update:modelValue', $event)" @blur="$emit('blur')" />
   </section>
 </template>
 

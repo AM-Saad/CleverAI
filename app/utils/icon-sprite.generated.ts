@@ -7,4 +7,4 @@
 export const ICON_SPRITE_URL = '/icons.svg'
 
 /** Content hash of the sprite, for debugging which build a client is running. */
-export const ICON_SPRITE_HASH = '09d374f3'
+export const ICON_SPRITE_HASH = '5657e936'

@@ -22,6 +22,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   interactive: false,
+  size: 'xs'
 });
 
 defineOptions({ inheritAttrs: false });
