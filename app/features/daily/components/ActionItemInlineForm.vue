@@ -4,19 +4,17 @@
     <div class="inline-action__main">
       <UiInput v-model="title" aria-label="Action item title" placeholder="What needs to happen?" autocomplete="off"
         :disabled="saving" />
-      <UiButton type="submit" size="sm" :icon="item ? 'check' : 'plus'" :loading="saving"
-        :disabled="!title.trim()">
+      <UiButton type="submit" size="sm" :icon="item ? 'check' : 'plus'" :loading="saving" :disabled="!title.trim()">
         {{ item ? "Save" : "Add" }}
       </UiButton>
-      <UiIconButton type="button" icon="x" label="Cancel" size="sm" :disabled="saving"
-        @click="emit('cancel')" />
+      <UiIconButton type="button" icon="x" label="Cancel" size="sm" :disabled="saving" @click="emit('cancel')" />
     </div>
 
     <div class="inline-action__options">
-      <UiSegmentedControl v-model="timingMode" label="Action timing" size="sm" :items="timingOptions" />
+      <UiSegmentedControl v-model="timingMode" label="Action timing" :items="timingOptions" />
       <UiInput v-if="timingMode === 'TIMED'" v-model="localTime" class="inline-action__time" aria-label="Action time"
         type="time" size="xs" required />
-      <UiSelect v-model="frequency" class="inline-action__repeat" aria-label="Repeat" size="xs" :items="repeatOptions"
+      <UiSelect v-model="frequency" class="inline-action__repeat" aria-label="Repeat" size="sm" :items="repeatOptions"
         value-key="value" label-key="label" />
     </div>
 
@@ -151,9 +149,9 @@ defineExpose({ focus });
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  border: 1px solid var(--color-border);
+  /* border: 1px solid var(--color-border); */
   border-radius: var(--radius-lg);
-  background: var(--color-surface-subtle);
+  /* background: var(--color-surface-subtle); */
 }
 
 .inline-action__main,

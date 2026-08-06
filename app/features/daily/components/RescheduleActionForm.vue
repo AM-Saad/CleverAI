@@ -1,21 +1,16 @@
 <template>
-  <form
-    class="move-form"
-    @submit.prevent="$emit('submit', targetDate, targetTime || null)"
-  >
-    <UiParagraph
-      tag="p"
-      size="base"
-      weight="semibold"
-      color="content-secondary"
-      >{{ title }}</UiParagraph
-    >
-    <UiFormField label="New date">
-      <UiInput v-model="targetDate" type="date" required />
-    </UiFormField>
-    <UiFormField label="Time" hint="Leave empty to make it an all-day item">
-      <UiInput v-model="targetTime" type="time" />
-    </UiFormField>
+  <form class="move-form" @submit.prevent="$emit('submit', targetDate, targetTime || null)">
+    <UiParagraph tag="p" size="base" weight="semibold" color="content-secondary">{{ title }}</UiParagraph>
+    <div class="move-form_controls">
+
+      <UiFormField label="New date">
+        <UiInput v-model="targetDate" type="date" required />
+      </UiFormField>
+      <UiFormField label="Time" hint="Leave empty to make it an all-day item">
+        <UiInput v-model="targetTime" type="time" />
+      </UiFormField>
+    </div>
+
     <UiButton type="submit" block :loading="saving">Move item</UiButton>
   </form>
 </template>
@@ -44,5 +39,13 @@ watch(
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.move-form_controls {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  gap: var(--space-3);
+
 }
 </style>

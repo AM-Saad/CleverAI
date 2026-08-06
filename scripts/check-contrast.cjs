@@ -64,7 +64,6 @@ const PAIRS = [
   ["--color-info-text", "--color-background", 4.5, "info text on background"],
   // Solid-fill control labels are UI-component text — WCAG AA threshold 3.0.
   ["--color-on-primary", "--color-primary", 3.0, "text on primary fill (UI)"],
-  ["--color-on-success", "--color-success", 3.0, "text on success fill (UI)"],
   ["--color-on-warning", "--color-warning", 3.0, "text on warning fill (UI)"],
   ["--color-on-error", "--color-error", 3.0, "text on error fill (UI)"],
   ["--color-on-info", "--color-info", 3.0, "text on info fill (UI)"],

@@ -2,6 +2,7 @@
 import { z } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
+import { MaterialSchema } from "@@/shared/utils/material.contract";
 
 const ParamSchema = z.object({
   id: z

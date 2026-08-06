@@ -1,12 +1,16 @@
-import FetchFactory from "./FetchFactory";
-import type { Result } from "@/types/Result";
+import FetchFactory, { APIError } from "./FetchFactory";
+import { Result as R, type Result } from "../types/Result";
 import type {
   Material,
   MaterialGeneratedContent,
   CreateMaterialDTO,
   UpdateMaterialDTO,
 } from "~/shared/utils/material.contract";
-import type { UploadMaterialResponse } from "~/shared/utils/llm-generate.contract";
+import type {
+  CommitMaterialGenerationRequest,
+  CommitMaterialGenerationResponse,
+  UploadMaterialResponse,
+} from "~/shared/utils/llm-generate.contract";
 
 export type { UploadMaterialResponse } from "~/shared/utils/llm-generate.contract";
 
@@ -51,6 +55,20 @@ export class MaterialService extends FetchFactory {
   }
 
   /**
+   * Persist reviewed AI output and add those selected items to the review queue.
+   */
+  async commitGeneratedContent(
+    materialId: string,
+    payload: CommitMaterialGenerationRequest,
+  ): Promise<Result<CommitMaterialGenerationResponse>> {
+    return this.call<CommitMaterialGenerationResponse>(
+      "POST",
+      `${this.RESOURCE}/${materialId}/generated`,
+      payload,
+    );
+  }
+
+  /**
    * Create a new material
    */
   async create(payload: CreateMaterialDTO): Promise<Result<Material>> {
@@ -64,7 +82,7 @@ export class MaterialService extends FetchFactory {
     id: string,
     payload: UpdateMaterialDTO,
   ): Promise<Result<Material>> {
-    return this.call<Material>("PATCH", this.RESOURCE, { id, ...payload });
+    return this.call<Material>("PATCH", `${this.RESOURCE}/${id}`, payload);
   }
 
   /**
@@ -87,11 +105,16 @@ export class MaterialService extends FetchFactory {
     file: File,
     workspaceId: string,
     title?: string,
+    onProgress?: (progress: number) => void,
   ): Promise<Result<UploadMaterialResponse>> {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("workspaceId", workspaceId);
     if (title) formData.append("title", title);
+
+    if (onProgress && typeof XMLHttpRequest !== "undefined") {
+      return this.uploadFileWithProgress(formData, onProgress);
+    }
 
     return this.call<UploadMaterialResponse>(
       "POST",
@@ -101,5 +124,87 @@ export class MaterialService extends FetchFactory {
         timeout: 120000, // 2 minutes for large files
       },
     );
+  }
+
+  private uploadFileWithProgress(
+    formData: FormData,
+    onProgress: (progress: number) => void,
+  ): Promise<Result<UploadMaterialResponse>> {
+    return new Promise((resolve) => {
+      const request = new XMLHttpRequest();
+      request.open("POST", this.UPLOAD_RESOURCE);
+      request.withCredentials = true;
+      request.timeout = 120000;
+
+      request.upload.onprogress = (event) => {
+        if (!event.lengthComputable) return;
+        onProgress(Math.round((event.loaded / event.total) * 100));
+      };
+      request.upload.onload = () => onProgress(100);
+      request.onerror = () =>
+        resolve(
+          R.error(
+            new APIError(
+              "Upload failed. Check your connection and try again.",
+              {
+                status: 0,
+                code: "FETCH_ERROR",
+              },
+            ),
+          ),
+        );
+      request.ontimeout = () =>
+        resolve(
+          R.error(
+            new APIError("Upload timed out. Try again.", {
+              status: 408,
+              code: "TIMEOUT",
+            }),
+          ),
+        );
+      request.onload = () => {
+        let payload: unknown;
+        try {
+          payload = JSON.parse(request.responseText);
+        } catch {
+          resolve(
+            R.error(
+              new APIError("Upload returned an invalid response.", {
+                status: request.status,
+                code: "INVALID_RESPONSE",
+              }),
+            ),
+          );
+          return;
+        }
+
+        const envelope = payload as {
+          success?: boolean;
+          data?: UploadMaterialResponse;
+          error?: { message?: string; code?: string; statusCode?: number };
+        };
+        if (
+          request.status >= 200 &&
+          request.status < 300 &&
+          envelope.success === true &&
+          envelope.data
+        ) {
+          resolve(R.success(envelope.data));
+          return;
+        }
+
+        resolve(
+          R.error(
+            new APIError(envelope.error?.message ?? "Upload failed.", {
+              status: envelope.error?.statusCode ?? request.status,
+              code: envelope.error?.code ?? "UPLOAD_ERROR",
+            }),
+          ),
+        );
+      };
+
+      onProgress(0);
+      request.send(formData);
+    });
   }
 }

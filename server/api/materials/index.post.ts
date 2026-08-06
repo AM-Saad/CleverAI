@@ -2,6 +2,10 @@ import { ZodError } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
+import {
+  CreateMaterialDTO,
+  MaterialSchema,
+} from "@@/shared/utils/material.contract";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -15,7 +19,7 @@ export default defineEventHandler(async (event) => {
     if (err instanceof ZodError) {
       throw Errors.badRequest(
         "Invalid request body",
-        err.issues.map((i) => ({ path: i.path, message: i.message }))
+        err.issues.map((i) => ({ path: i.path, message: i.message })),
       );
     }
     throw Errors.badRequest("Invalid request body");
@@ -40,7 +44,13 @@ export default defineEventHandler(async (event) => {
         : null,
     },
   });
-  await advanceOfflineEntityState({ prisma, userId: user.id, entity: "material", entityId: material.id, changedFields: ["title", "content", "type", "metadata"] });
+  await advanceOfflineEntityState({
+    prisma,
+    userId: user.id,
+    entity: "material",
+    entityId: material.id,
+    changedFields: ["title", "content", "type", "metadata"],
+  });
 
   if (process.env.NODE_ENV === "development") {
     MaterialSchema.parse(material);

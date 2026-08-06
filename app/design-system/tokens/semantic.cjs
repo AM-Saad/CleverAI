@@ -50,7 +50,6 @@ const themeTokens = [
     name: "--color-primary-active",
     value: "color-mix(in srgb, black 18%, var(--color-primary))",
   },
-  { name: "--color-on-success", value: "#043a28" },
   { name: "--color-on-error", value: "#ffffff" },
   { name: "--color-border-strong", value: "#c7cbd2" },
   { name: "--color-accent-blue", value: "#3b82f6" },

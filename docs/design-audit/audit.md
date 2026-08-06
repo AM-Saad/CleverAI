@@ -3708,7 +3708,6 @@ _violation 0 · review 0 · legacy 0 · ok 21_ · typo: 2 Ui* / raw h0 p6 label0
 | ✅ | color | `var(--color-warning)` |  |
 | ✅ | color | `var(--color-warning-text)` |  |
 | ✅ | color | `var(--color-success)` |  |
-| ✅ | color | `var(--color-on-success)` |  |
 | ✅ | radius | `rounded-[var(--component-card-radius)]` |  ×2 |
 | ✅ | spacing | `var(--space-4)` |  ×10 |
 | ✅ | spacing | `var(--space-8)` |  |

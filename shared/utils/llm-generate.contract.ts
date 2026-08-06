@@ -3,10 +3,12 @@ import { z } from "zod";
 import { LLMEnum } from "./llm";
 
 // Source metadata for Context Bridge feature
-export const SourceMetadataSchema = z.object({
-  anchor: z.string(), // blockId for notes, page number for PDFs
-  contextSnippet: z.string().optional(), // For fuzzy matching
-}).optional();
+export const SourceMetadataSchema = z
+  .object({
+    anchor: z.string(), // blockId for notes, page number for PDFs
+    contextSnippet: z.string().optional(), // For fuzzy matching
+  })
+  .optional();
 
 export const GeneratedFlashcardSchema = z.object({
   front: z.string(),
@@ -113,10 +115,60 @@ export const GatewayGenerateResponse = z.union([
 ]);
 export type GatewayGenerateResponse = z.infer<typeof GatewayGenerateResponse>;
 
+export const MaterialGenerationCommitModeSchema = z.enum(["append", "replace"]);
+export type MaterialGenerationCommitMode = z.infer<
+  typeof MaterialGenerationCommitModeSchema
+>;
+
+const CommitGeneratedFlashcardSchema = GeneratedFlashcardSchema.extend({
+  front: z.string().trim().min(1).max(10_000),
+  back: z.string().trim().min(1).max(20_000),
+});
+const CommitQuizQuestionSchema = z
+  .object({
+    question: z.string().trim().min(1).max(10_000),
+    choices: z.array(z.string().trim().min(1).max(10_000)).length(4),
+    answerIndex: z.number().int().nonnegative(),
+    sourceMetadata: SourceMetadataSchema,
+  })
+  .refine((question) => question.answerIndex < question.choices.length, {
+    message: "answerIndex out of bounds",
+  });
+
+export const CommitMaterialGenerationRequestSchema = z.discriminatedUnion(
+  "task",
+  [
+    z.object({
+      task: z.literal("flashcards"),
+      mode: MaterialGenerationCommitModeSchema,
+      items: z.array(CommitGeneratedFlashcardSchema).min(1).max(30),
+    }),
+    z.object({
+      task: z.literal("quiz"),
+      mode: MaterialGenerationCommitModeSchema,
+      items: z.array(CommitQuizQuestionSchema).min(1).max(30),
+    }),
+  ],
+);
+export type CommitMaterialGenerationRequest = z.infer<
+  typeof CommitMaterialGenerationRequestSchema
+>;
+
+export const CommitMaterialGenerationResponseSchema = z.object({
+  savedCount: z.number().int().nonnegative(),
+  deletedCount: z.number().int().nonnegative().optional(),
+  deletedReviewsCount: z.number().int().nonnegative().optional(),
+});
+export type CommitMaterialGenerationResponse = z.infer<
+  typeof CommitMaterialGenerationResponseSchema
+>;
+
 export interface UploadMaterialResponse {
   materialId: string;
   tokenEstimate: number;
   charCount: number;
+  originalCharCount: number;
+  truncated: boolean;
   pageCount?: number;
   title: string;
 }

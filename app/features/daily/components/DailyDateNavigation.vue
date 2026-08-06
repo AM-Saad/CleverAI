@@ -35,8 +35,8 @@
       <div ref="stripRef" class="day-header__dial-strip"
         :class="{ 'day-header__dial-strip--seeking': isProgrammaticScroll }" @scroll.passive="onScroll"
         @scrollend="onScrollEnd" @wheel="onWheel" @pointerdown.passive="onPointerDown"
-        @touchstart.passive="onTouchChange" @touchend.passive="onTouchChange"
-        @touchcancel.passive="onTouchChange" @keydown="onDialKeydown">
+        @touchstart.passive="onTouchChange" @touchend.passive="onTouchChange" @touchcancel.passive="onTouchChange"
+        @keydown="onDialKeydown">
         <NuxtLink v-for="(day, index) in days" :key="day.dateKey"
           v-memo="[falloff(index), day.dateKey === activeDateKey]" :to="`/day/${day.dateKey}`" :prefetch="false"
           class="day-header__dial-item" :data-falloff="falloff(index)"
@@ -618,9 +618,9 @@ onBeforeUnmount(() => {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 3.5rem;
+  width: 3.29rem;
   height: 2.5rem;
-  border-radius: var(--radius-lg);
+  border-radius: calc(var(--radius-lg) - 2px);
   background: var(--color-primary);
   box-shadow: 0 4px 16px color-mix(in srgb, var(--color-content-on-background) 18%, transparent);
   pointer-events: none;

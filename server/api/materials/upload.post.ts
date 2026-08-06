@@ -8,8 +8,10 @@ import { z } from "zod";
 import { estimateTokensFromText } from "@server/utils/llm/tokenEstimate";
 
 const UploadRequestSchema = z.object({
-  workspaceId: z.string(),
-  title: z.string().optional(),
+  workspaceId: z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, "Workspace ID must be a valid ObjectId"),
+  title: z.string().trim().min(1).max(240).optional(),
 });
 
 const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".txt"];
@@ -33,7 +35,7 @@ function sanitizeText(text: string): string {
  * Extract text from PDF buffer
  */
 async function extractPdfText(
-  buffer: Buffer
+  buffer: Buffer,
 ): Promise<{ text: string; pageCount?: number }> {
   try {
     // pdf-parse v2+ uses PDFParse class, not a function
@@ -103,30 +105,38 @@ export default defineEventHandler(async (event) => {
 
   const [fields, files] = await new Promise<[Fields, Files]>(
     (resolve, reject) => {
-      form.parse(event.node.req, (err: Error | null, fields: Fields, files: Files) => {
-        if (err) reject(err);
-        else resolve([fields, files]);
-      });
-    }
+      form.parse(
+        event.node.req,
+        (err: Error | null, fields: Fields, files: Files) => {
+          if (err) reject(err);
+          else resolve([fields, files]);
+        },
+      );
+    },
   );
 
   // Validate fields
-  const workspaceId = Array.isArray(fields.workspaceId) ? fields.workspaceId[0] : fields.workspaceId;
-  const title = Array.isArray(fields.title) ? fields.title[0] : fields.title;
-
-  if (!workspaceId) {
+  const parsedFields = UploadRequestSchema.safeParse({
+    workspaceId: Array.isArray(fields.workspaceId)
+      ? fields.workspaceId[0]
+      : fields.workspaceId,
+    title: Array.isArray(fields.title) ? fields.title[0] : fields.title,
+  });
+  if (!parsedFields.success) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'workspaceId is required',
+      statusMessage: "Invalid upload details",
+      data: parsedFields.error.issues,
     });
   }
+  const { workspaceId, title } = parsedFields.data;
 
   // Get uploaded file
   const fileArray = files.file;
   if (!fileArray || fileArray.length === 0) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'No file uploaded',
+      statusMessage: "No file uploaded",
     });
   }
 
@@ -137,12 +147,12 @@ export default defineEventHandler(async (event) => {
       statusMessage: "No file uploaded",
     });
   }
-  const ext = path.extname(file.originalFilename || '').toLowerCase();
+  const ext = path.extname(file.originalFilename || "").toLowerCase();
 
   if (!ALLOWED_EXTENSIONS.includes(ext)) {
     throw createError({
       statusCode: 400,
-      statusMessage: `Unsupported file type. Allowed: ${ALLOWED_EXTENSIONS.join(', ')}`,
+      statusMessage: `Unsupported file type. Allowed: ${ALLOWED_EXTENSIONS.join(", ")}`,
     });
   }
 
@@ -155,7 +165,7 @@ export default defineEventHandler(async (event) => {
   if (!workspace || workspace.userId !== userId) {
     throw createError({
       statusCode: 403,
-      statusMessage: 'Workspace not found or access denied',
+      statusMessage: "Workspace not found or access denied",
     });
   }
 
@@ -163,19 +173,19 @@ export default defineEventHandler(async (event) => {
   const buffer = await fs.readFile(file.filepath);
 
   // Extract text based on file type
-  let extractedText = '';
+  let extractedText = "";
   let pageCount: number | undefined;
 
   if (ext === ".pdf") {
-      const pdfResult = await extractPdfText(buffer);
-      extractedText = pdfResult.text;
-      pageCount = pdfResult.pageCount;
+    const pdfResult = await extractPdfText(buffer);
+    extractedText = pdfResult.text;
+    pageCount = pdfResult.pageCount;
   } else if (ext === ".docx") {
-      const docxResult = await extractDocxText(buffer);
-      extractedText = docxResult.text;
+    const docxResult = await extractDocxText(buffer);
+    extractedText = docxResult.text;
   } else if (ext === ".txt") {
-      const txtResult = extractTxtText(buffer);
-      extractedText = txtResult.text;
+    const txtResult = extractTxtText(buffer);
+    extractedText = txtResult.text;
   } else {
     throw createError({
       statusCode: 400,
@@ -187,13 +197,17 @@ export default defineEventHandler(async (event) => {
   if (!extractedText || extractedText.length < 10) {
     throw createError({
       statusCode: 400,
-      statusMessage: 'Extracted text is too short. The file may be empty or unreadable.',
+      statusMessage:
+        "Extracted text is too short. The file may be empty or unreadable.",
     });
   }
 
-  // Limit text length (100k chars = ~28k tokens)
+  // Limit text length (100k chars = ~28k tokens), and disclose that reduction
+  // in both the stored metadata and response.
   const MAX_CHARS = 100000;
-  if (extractedText.length > MAX_CHARS) {
+  const originalCharCount = extractedText.length;
+  const truncated = originalCharCount > MAX_CHARS;
+  if (truncated) {
     extractedText = extractedText.substring(0, MAX_CHARS);
   }
 
@@ -211,6 +225,8 @@ export default defineEventHandler(async (event) => {
       metadata: {
         tokenEstimate,
         charCount,
+        originalCharCount,
+        truncated,
         pageCount: pageCount ?? null,
       },
     },
@@ -220,13 +236,15 @@ export default defineEventHandler(async (event) => {
   try {
     await fs.unlink(file.filepath);
   } catch (error) {
-    console.warn('Failed to cleanup temp file:', error);
+    console.warn("Failed to cleanup temp file:", error);
   }
 
   return {
     materialId: material.id,
     tokenEstimate,
     charCount: extractedText.length,
+    originalCharCount,
+    truncated,
     pageCount,
     title: material.title,
   };

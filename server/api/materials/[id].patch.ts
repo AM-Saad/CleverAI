@@ -2,13 +2,23 @@ import { z } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
+import {
+  MaterialSchema,
+  UpdateMaterialDTO,
+} from "@@/shared/utils/material.contract";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
   const prisma = event.context.prisma;
   const id = getRouterParam(event, "id");
 
-  if (!id || !z.string().uuid().safeParse(id).success) {
+  if (
+    !id ||
+    !z
+      .string()
+      .regex(/^[0-9a-fA-F]{24}$/)
+      .safeParse(id).success
+  ) {
     throw Errors.badRequest("Invalid material id");
   }
 
@@ -46,7 +56,13 @@ export default defineEventHandler(async (event) => {
     where: { id },
     data: updateData,
   });
-  await advanceOfflineEntityState({ prisma, userId: user.id, entity: "material", entityId: id, changedFields: Object.keys(updateData) });
+  await advanceOfflineEntityState({
+    prisma,
+    userId: user.id,
+    entity: "material",
+    entityId: id,
+    changedFields: Object.keys(updateData),
+  });
 
   if (process.env.NODE_ENV === "development") {
     MaterialSchema.parse(updated);

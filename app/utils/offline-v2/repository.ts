@@ -221,6 +221,73 @@ export async function putOfflineEntities(
 }
 
 /**
+ * Replaces one server-owned child collection inside an offline workspace
+ * without treating the rest of that workspace pack as stale.
+ */
+export async function replaceOfflineEntityCollection(input: {
+  accountId: string;
+  entity: OfflineEntity;
+  workspaceId?: string;
+  foreignKey: string;
+  foreignId: string;
+  records: OfflineEntityRecord[];
+}): Promise<void> {
+  const db = await openUnifiedDB();
+  const tx = db.transaction(
+    [stores.OFFLINE_ENTITIES, stores.OFFLINE_MUTATIONS],
+    "readwrite",
+  );
+  const entities = tx.objectStore(stores.OFFLINE_ENTITIES);
+  const mutations = tx.objectStore(stores.OFFLINE_MUTATIONS);
+  const [existing, pending] = await Promise.all([
+    request(entities.getAll()) as Promise<OfflineEntityRecord[]>,
+    request(mutations.getAll()) as Promise<StoredOfflineMutation[]>,
+  ]);
+  const incomingIds = new Set(input.records.map((record) => record.id));
+  const protectedIds = new Set(
+    pending
+      .filter(
+        (mutation) =>
+          mutation.accountId === input.accountId &&
+          [
+            "pending",
+            "syncing",
+            "retry",
+            "blocked",
+            "waiting",
+            "conflict",
+          ].includes(mutation.status),
+      )
+      .map((mutation) =>
+        scopedId(input.accountId, mutation.entity, mutation.entityId),
+      ),
+  );
+
+  for (const record of existing) {
+    if (
+      record.accountId !== input.accountId ||
+      record.entity !== input.entity ||
+      record.workspaceId !== input.workspaceId ||
+      record.data?.[input.foreignKey] !== input.foreignId ||
+      incomingIds.has(record.id) ||
+      protectedIds.has(record.id) ||
+      record.localDirty
+    ) {
+      continue;
+    }
+    entities.put(
+      sanitizeForIDB({ ...record, deleted: true, updatedAt: now() }),
+    );
+  }
+  for (const record of input.records) {
+    if (!protectedIds.has(record.id)) {
+      entities.put(sanitizeForIDB(record));
+    }
+  }
+  await complete(tx);
+}
+
+/**
  * Reconcile a completed workspace-pack download as an authoritative snapshot.
  * Records with pending local work are retained; everything else absent from the
  * replacement pack is tombstoned so deleted server rows cannot resurrect while
@@ -308,6 +375,7 @@ export async function saveOfflineBlob(input: {
   type: string;
   blob: Blob;
   url?: string;
+  status?: "draft" | "cached";
 }): Promise<string> {
   const id = `blob:${globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
   const db = await openUnifiedDB();
@@ -322,10 +390,69 @@ export async function saveOfflineBlob(input: {
     size: input.blob.size,
     blob: input.blob,
     createdAt: now(),
-    status: "draft",
+    status: input.status ?? (input.url ? "cached" : "draft"),
   });
   await complete(tx);
   return id;
+}
+
+export type OfflineBlobRecord = {
+  id: string;
+  accountId: string;
+  workspaceId?: string;
+  name: string;
+  type: string;
+  url?: string;
+  size: number;
+  blob: Blob;
+  createdAt: number;
+  status: "draft" | "cached";
+};
+
+/** User-selected files waiting for a manual material upload. */
+export async function listOfflineUploadDrafts(
+  accountId: string,
+  workspaceId?: string,
+): Promise<OfflineBlobRecord[]> {
+  const db = await openUnifiedDB();
+  const all = await getAllRecords<OfflineBlobRecord>(
+    db,
+    stores.OFFLINE_BLOBS as StoreName,
+  );
+  return all
+    .filter(
+      (record) =>
+        record.accountId === accountId &&
+        record.status === "draft" &&
+        !record.url &&
+        (workspaceId ? record.workspaceId === workspaceId : true),
+    )
+    .sort((left, right) => right.createdAt - left.createdAt);
+}
+
+/** Remove one local upload draft without allowing cross-account deletion. */
+export async function deleteOfflineUploadDraft(
+  accountId: string,
+  id: string,
+): Promise<boolean> {
+  const db = await openUnifiedDB();
+  const tx = db.transaction(stores.OFFLINE_BLOBS, "readwrite");
+  const store = tx.objectStore(stores.OFFLINE_BLOBS);
+  const existing = (await request(store.get(id))) as
+    | OfflineBlobRecord
+    | undefined;
+  if (
+    !existing ||
+    existing.accountId !== accountId ||
+    existing.status !== "draft" ||
+    existing.url
+  ) {
+    await complete(tx);
+    return false;
+  }
+  store.delete(id);
+  await complete(tx);
+  return true;
 }
 
 export async function listOfflinePacks(

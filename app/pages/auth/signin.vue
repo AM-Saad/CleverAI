@@ -76,7 +76,7 @@ const submitLogin = async () => {
       <p class="text-center text-content-on-background text-xs mt-4 mb-2">
         Or sign in with a social account below 👇
       </p>
-      <ui-button v-for="provider in mappedProviders" :key="provider?.id" class="border border-error justify-center"
+      <ui-button v-for="provider in mappedProviders" :key="provider?.id" class="ring-1 ring-inset ring-error justify-center"
         :disabled="loading" variant="ghost" tone="error" type="button" tabindex="5" @click="signIn(provider?.id)">
         Sign in with {{ provider?.name }}
       </ui-button>

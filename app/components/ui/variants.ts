@@ -39,7 +39,11 @@ export type SemanticTone = (typeof SEMANTIC_TONES)[number];
 // text-success-text, …); there is intentionally no second tone map here.
 
 /**
- * Tokenized inset focus ring — primitives compose this for keyboard focus.
+ * Tokenized inset focus ring — the single focus treatment for every interactive
+ * control in the app. Custom primitives compose it directly; the Nuxt UI-backed
+ * ones (button, input, textarea, select, checkbox, radio, switch) get it because
+ * `app/app.config.ts` imports this same constant into their theme `base` slots.
+ * Change it here and every control moves together.
  *
  * `focus-visible:[outline-style:solid]!` is required, not `focus-visible:outline!`.
  * In Tailwind v4 the bare `outline` utility resolves through a CSS custom

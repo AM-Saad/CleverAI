@@ -2,6 +2,7 @@ import { z } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 import { advanceOfflineEntityState } from "@server/modules/offline/application/advanceOfflineEntityState";
+import { deleteOwnedMaterial } from "@server/modules/materials/application/deleteOwnedMaterial";
 
 export default defineEventHandler(async (event) => {
   const user = await requireRole(event, ["USER"]);
@@ -15,14 +16,30 @@ export default defineEventHandler(async (event) => {
   }
   const { id } = parsed.data;
 
-  const material = await prisma.material.findFirst({
-    where: { id, workspace: { userId: user.id } },
+  const deleted = await prisma.$transaction(async (tx: any) => {
+    const result = await deleteOwnedMaterial({
+      prisma: tx,
+      userId: user.id,
+      materialId: id,
+    });
+    if (result) {
+      await advanceOfflineEntityState({
+        prisma: tx,
+        userId: user.id,
+        entity: "material",
+        entityId: id,
+        changedFields: ["deleted"],
+        deleted: true,
+      });
+    }
+    return result;
   });
-  if (!material) {
+  if (!deleted) {
     throw Errors.notFound("Material");
   }
 
-  await prisma.material.delete({ where: { id } });
-  await advanceOfflineEntityState({ prisma, userId: user.id, entity: "material", entityId: id, changedFields: ["deleted"], deleted: true });
-  return success({ message: "Material deleted successfully" });
+  return success({
+    message: "Material deleted successfully",
+    deletedReviewsCount: deleted.deletedReviewsCount,
+  });
 });

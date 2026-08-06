@@ -1,35 +1,14 @@
 <template>
-  <div
-    role="radiogroup"
-    :aria-label="label"
-    :class="ui.root({ class: fullWidth ? 'w-full' : '' })"
-  >
-    <button
-      v-for="(item, index) in items"
-      :key="item.value"
-      :ref="(element) => setButtonRef(element, index)"
-      type="button"
-      role="radio"
-      :aria-checked="model === item.value"
-      :aria-disabled="item.disabled ? 'true' : undefined"
-      :disabled="item.disabled"
-      :tabindex="tabIndexFor(item, index)"
-      :class="ui.item({ selected: model === item.value })"
-      @click="select(item, index)"
-      @keydown="onKeydown($event, index)"
-    >
-      <UiIcon
-        v-if="item.icon"
-        :name="item.icon"
-        class="h-4 w-4"
-        aria-hidden="true"
-      />
+  <div role="radiogroup" :aria-label="label" :class="ui.root({ class: fullWidth ? 'w-full' : '' })">
+    <button v-for="(item, index) in items" :key="item.value" :ref="(element) => setButtonRef(element, index)"
+      type="button" role="radio" :aria-checked="model === item.value"
+      :aria-disabled="item.disabled ? 'true' : undefined" :disabled="item.disabled" :tabindex="tabIndexFor(item, index)"
+      :class="ui.item({ selected: model === item.value })" @click="select(item, index)"
+      @keydown="onKeydown($event, index)">
+      <UiIcon v-if="item.icon" :name="item.icon" class="h-2 w-2" aria-hidden="true" />
       <span class="whitespace-nowrap">{{ item.label }}</span>
-      <span
-        v-if="item.count !== undefined"
-        :class="ui.count({ selected: model === item.value })"
-        >{{ item.count }}</span
-      >
+      <span v-if="item.count !== undefined" :class="ui.count({ selected: model === item.value })">{{ item.count
+        }}</span>
     </button>
   </div>
 </template>
@@ -57,16 +36,16 @@ const props = withDefaults(
   defineProps<{
     label: string;
     items: readonly SegmentedControlItem[];
-    size?: "sm" | "md";
+    size?: "xs";
     fullWidth?: boolean;
   }>(),
-  { size: "md", fullWidth: false },
+  { size: "xs", fullWidth: false },
 );
 
 const buttonRefs = ref<Array<HTMLButtonElement | null>>([]);
 const segmented = tv({
   slots: {
-    root: "inline-flex items-stretch rounded-[var(--radius-lg)] border border-secondary bg-surface-subtle p-1",
+    root: "inline-flex items-stretch rounded-[var(--radius-lg)] border border-secondary bg-surface-subtle",
     item: [
       "inline-flex min-w-0 flex-1 items-center justify-center gap-2 rounded-[var(--radius-lg)] font-medium text-content-secondary",
       interactiveTransition,
@@ -79,8 +58,8 @@ const segmented = tv({
   },
   variants: {
     size: {
-      sm: { item: "min-h-[var(--target-compact)] px-3 text-sm" },
-      md: { item: "min-h-[var(--target-touch)] px-4 text-sm" },
+      xs: { item: "h-7 px-3 text-xs" },
+
     },
     selected: {
       true: {

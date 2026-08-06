@@ -14,6 +14,7 @@ import { LanguagePreferencesDTO } from "../../../../shared/utils/language.contra
 import { NotificationPreferencesDTO } from "../../../../shared/utils/notification.contract";
 import { orderOfflineMutations } from "../../../../shared/utils/offline-mutation-order";
 import { rebaseFromAppliedDependency } from "../../../../shared/utils/offline-sequence";
+import { deleteOwnedMaterial } from "../../materials/application/deleteOwnedMaterial";
 import {
   isPositionKey,
   positionBetween,
@@ -379,7 +380,15 @@ async function applyDomainMutation(input: {
     if (!existing)
       throw Object.assign(new Error("Material not found"), { statusCode: 404 });
     if (remove) {
-      await prisma.material.delete({ where: { id: existing.id } });
+      const deleted = await deleteOwnedMaterial({
+        prisma,
+        userId,
+        materialId: existing.id,
+      });
+      if (!deleted)
+        throw Object.assign(new Error("Material not found"), {
+          statusCode: 404,
+        });
       return {
         entityId: existing.id,
         canonical: { id: existing.id, deleted: true },

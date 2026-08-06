@@ -23,6 +23,7 @@ import { createStripeCreditCheckout } from "../server/modules/subscription/appli
 import { rewardAdCredit } from "../server/modules/subscription/application/rewardAdCredit";
 import { grantStripePurchaseCredits } from "../server/modules/subscription/application/grantStripePurchaseCredits";
 import { saveGeneratedArtifacts } from "../server/modules/ai-generation/application/saveGeneratedArtifacts";
+import { deleteOwnedMaterial } from "../server/modules/materials/application/deleteOwnedMaterial";
 import { prepareGatewayGeneration } from "../server/modules/ai-generation/application/prepareGatewayGeneration";
 import { completeGatewayCacheHit } from "../server/modules/ai-generation/application/completeGatewayGeneration";
 import { quotaHeaders } from "../server/modules/subscription/infrastructure/http/quotaHttp";
@@ -116,6 +117,8 @@ import { maybeAutoEnrollLanguageWord } from "../server/modules/language-learning
 import { saveLanguageWord } from "../server/modules/language-learning/application/saveLanguageWord";
 import { createLanguageLearningRuntime } from "../app/features/language-learning/composables/languageLearningRuntime";
 import FetchFactory from "../app/services/FetchFactory";
+import { MaterialService } from "../app/services/Material";
+import { CommitMaterialGenerationRequestSchema } from "../shared/utils/llm-generate.contract";
 import { PrismaLanguageReviewRepository } from "../server/modules/language-learning/infrastructure/PrismaLanguageReviewRepository";
 import type {
   ReviewCardRecord,
@@ -173,16 +176,20 @@ import {
   chainPendingSameEntityMutations,
   claimOfflineMutations,
   commitOfflineMutation,
+  deleteOfflineUploadDraft,
   getOfflineEntity,
   getOfflineSyncMetadata,
   listOfflineConflicts,
   listOfflineMutations,
   listOfflineEntities,
+  listOfflineUploadDrafts,
   prepareOfflineMutationQueue,
   putOfflineEntities,
   recoverInterruptedMutations,
   remapOfflineIds,
+  replaceOfflineEntityCollection,
   resolveOfflineConflict,
+  saveOfflineBlob,
   setMutationStatus,
   updateOfflineSyncMetadata,
 } from "../app/utils/offline-v2/repository";
@@ -2956,6 +2963,88 @@ function fakeGenerationSavePrisma() {
             },
           },
         }),
+    },
+  };
+}
+
+function fakeMaterialDeletePrisma() {
+  const materials = new Map<string, any>([
+    [
+      "material-1",
+      {
+        id: "material-1",
+        userId: "user-1",
+      },
+    ],
+  ]);
+  const flashcards = [
+    { id: "flashcard-1", materialId: "material-1" },
+    { id: "flashcard-other", materialId: "material-other" },
+  ];
+  const questions = [{ id: "question-1", materialId: "material-1" }];
+  const reviews = [
+    { cardId: "material-1", resourceType: "material" },
+    { cardId: "flashcard-1", resourceType: "flashcard" },
+    { cardId: "question-1", resourceType: "question" },
+    { cardId: "flashcard-other", resourceType: "flashcard" },
+  ];
+
+  const matchesReviewTarget = (review: any, target: any) => {
+    if (target.resourceType && review.resourceType !== target.resourceType) {
+      return false;
+    }
+    if (target.materialId && review.materialId !== target.materialId) {
+      return false;
+    }
+    if (target.cardId?.in) return target.cardId.in.includes(review.cardId);
+    if (typeof target.cardId === "string") {
+      return review.cardId === target.cardId;
+    }
+    return Boolean(target.materialId);
+  };
+
+  return {
+    materials,
+    reviews,
+    prisma: {
+      material: {
+        findFirst: async ({ where }: any) => {
+          const row = materials.get(where.id);
+          return row && row.userId === where.workspace.userId
+            ? { id: row.id }
+            : null;
+        },
+        delete: async ({ where }: any) => {
+          const row = materials.get(where.id);
+          materials.delete(where.id);
+          return row;
+        },
+      },
+      flashcard: {
+        findMany: async ({ where }: any) =>
+          flashcards
+            .filter((item) => item.materialId === where.materialId)
+            .map((item) => ({ id: item.id })),
+      },
+      question: {
+        findMany: async ({ where }: any) =>
+          questions
+            .filter((item) => item.materialId === where.materialId)
+            .map((item) => ({ id: item.id })),
+      },
+      cardReview: {
+        deleteMany: async ({ where }: any) => {
+          const before = reviews.length;
+          const retained = reviews.filter(
+            (review) =>
+              !where.OR.some((target: any) =>
+                matchesReviewTarget(review, target),
+              ),
+          );
+          reviews.splice(0, reviews.length, ...retained);
+          return { count: before - reviews.length };
+        },
+      },
     },
   };
 }
@@ -8578,6 +8667,277 @@ test("generated flashcards save through shared ai-generation service", async () 
   assert.deepEqual(
     reviews.map((review) => review.resourceType),
     ["flashcard", "flashcard"],
+  );
+});
+
+test("material generation commits require a non-empty reviewed selection", () => {
+  const valid = CommitMaterialGenerationRequestSchema.safeParse({
+    task: "flashcards",
+    mode: "append",
+    items: [{ front: "Question", back: "Answer" }],
+  });
+  const empty = CommitMaterialGenerationRequestSchema.safeParse({
+    task: "flashcards",
+    mode: "append",
+    items: [],
+  });
+  const invalidQuiz = CommitMaterialGenerationRequestSchema.safeParse({
+    task: "quiz",
+    mode: "replace",
+    items: [
+      {
+        question: "Question",
+        choices: ["A", "B", "C", "D"],
+        answerIndex: 4,
+      },
+    ],
+  });
+
+  assert.equal(valid.success, true);
+  assert.equal(empty.success, false);
+  assert.equal(invalidQuiz.success, false);
+});
+
+test("material service routes updates and reviewed commits to the material id", async () => {
+  const calls: Array<{ url: string; method: string; body: unknown }> = [];
+  const service = new MaterialService((async (url: string, options: any) => {
+    calls.push({
+      url,
+      method: String(options.method),
+      body: options.body,
+    });
+    if (options.method === "PATCH") {
+      return {
+        success: true,
+        data: {
+          id: "material-1",
+          workspaceId: "workspace-1",
+          title: "Updated",
+          content: "Material content",
+          type: "text",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      };
+    }
+    return {
+      success: true,
+      data: { savedCount: 1 },
+    };
+  }) as any);
+
+  await service.update("material-1", { title: "Updated" });
+  await service.commitGeneratedContent("material-1", {
+    task: "flashcards",
+    mode: "append",
+    items: [{ front: "Q", back: "A" }],
+  });
+
+  assert.equal(calls[0]?.method, "PATCH");
+  assert.equal(calls[0]?.url, "/api/materials/material-1");
+  assert.deepEqual(calls[0]?.body, { title: "Updated" });
+  assert.equal(calls[1]?.method, "POST");
+  assert.equal(calls[1]?.url, "/api/materials/material-1/generated");
+});
+
+test("material upload reports real transport progress and parses the API envelope", async () => {
+  const originalXMLHttpRequest = globalThis.XMLHttpRequest;
+  const progress: number[] = [];
+  const opened: Array<{ method: string; url: string }> = [];
+
+  class FakeXMLHttpRequest {
+    status = 200;
+    responseText = JSON.stringify({
+      success: true,
+      data: {
+        materialId: "material-uploaded",
+        tokenEstimate: 12,
+        charCount: 48,
+        originalCharCount: 48,
+        truncated: false,
+        title: "biology.txt",
+      },
+    });
+    timeout = 0;
+    withCredentials = false;
+    upload: {
+      onprogress?: (event: {
+        lengthComputable: boolean;
+        loaded: number;
+        total: number;
+      }) => void;
+      onload?: () => void;
+    } = {};
+    onerror?: () => void;
+    ontimeout?: () => void;
+    onload?: () => void;
+
+    open(method: string, url: string) {
+      opened.push({ method, url });
+    }
+
+    send() {
+      this.upload.onprogress?.({
+        lengthComputable: true,
+        loaded: 5,
+        total: 10,
+      });
+      this.upload.onload?.();
+      this.onload?.();
+    }
+  }
+
+  (globalThis as any).XMLHttpRequest = FakeXMLHttpRequest;
+  try {
+    const service = new MaterialService((async () => {
+      throw new Error("fetch fallback should not run");
+    }) as any);
+    const result = await service.uploadFile(
+      new File(["biology"], "biology.txt", { type: "text/plain" }),
+      "workspace-1",
+      "biology.txt",
+      (value) => progress.push(value),
+    );
+
+    assert.equal(result.success, true);
+    assert.deepEqual(opened, [
+      { method: "POST", url: "/api/materials/upload" },
+    ]);
+    assert.deepEqual(progress, [0, 50, 100]);
+  } finally {
+    (globalThis as any).XMLHttpRequest = originalXMLHttpRequest;
+  }
+});
+
+test("material deletion removes generated review rows before the material", async () => {
+  const { materials, reviews, prisma } = fakeMaterialDeletePrisma();
+
+  const result = await deleteOwnedMaterial({
+    prisma,
+    userId: "user-1",
+    materialId: "material-1",
+  });
+
+  assert.deepEqual(result, {
+    materialId: "material-1",
+    deletedReviewsCount: 3,
+  });
+  assert.equal(materials.has("material-1"), false);
+  assert.deepEqual(reviews, [
+    { cardId: "flashcard-other", resourceType: "flashcard" },
+  ]);
+});
+
+test("material deletion does not reveal or mutate another user's material", async () => {
+  const { materials, reviews, prisma } = fakeMaterialDeletePrisma();
+
+  const result = await deleteOwnedMaterial({
+    prisma,
+    userId: "user-2",
+    materialId: "material-1",
+  });
+
+  assert.equal(result, null);
+  assert.equal(materials.has("material-1"), true);
+  assert.equal(reviews.length, 4);
+});
+
+test("offline material content replacement only removes that material's stale items", async () => {
+  const suffix = `${Date.now()}-${Math.random()}`;
+  const accountId = `materials-account-${suffix}`;
+  const workspaceId = `materials-workspace-${suffix}`;
+  const base = {
+    accountId,
+    entity: "studyContent" as const,
+    workspaceId,
+    version: 0,
+    updatedAt: Date.now(),
+  };
+
+  await putOfflineEntities([
+    {
+      ...base,
+      id: `${accountId}:studyContent:old`,
+      entityId: "old",
+      data: { id: "old", materialId: "material-1", front: "Old" },
+    },
+    {
+      ...base,
+      id: `${accountId}:studyContent:other`,
+      entityId: "other",
+      data: { id: "other", materialId: "material-2", front: "Other" },
+    },
+  ]);
+
+  await replaceOfflineEntityCollection({
+    accountId,
+    entity: "studyContent",
+    workspaceId,
+    foreignKey: "materialId",
+    foreignId: "material-1",
+    records: [
+      {
+        ...base,
+        id: `${accountId}:studyContent:new`,
+        entityId: "new",
+        data: { id: "new", materialId: "material-1", front: "New" },
+      },
+    ],
+  });
+
+  const stored = await listOfflineEntities<Record<string, unknown>>(
+    accountId,
+    "studyContent",
+    workspaceId,
+  );
+  assert.deepEqual(stored.map((record) => record.entityId).sort(), [
+    "new",
+    "other",
+  ]);
+});
+
+test("offline material upload drafts are workspace scoped and ownership protected", async () => {
+  const suffix = `${Date.now()}-${Math.random()}`;
+  const accountId = `draft-account-${suffix}`;
+  const otherAccountId = `draft-other-${suffix}`;
+  const workspaceId = `draft-workspace-${suffix}`;
+  const draftId = await saveOfflineBlob({
+    accountId,
+    workspaceId,
+    name: "biology.pdf",
+    type: "application/pdf",
+    blob: new Blob(["biology"]),
+  });
+  await saveOfflineBlob({
+    accountId,
+    workspaceId: `other-${workspaceId}`,
+    name: "other.txt",
+    type: "text/plain",
+    blob: new Blob(["other"]),
+  });
+  await saveOfflineBlob({
+    accountId,
+    workspaceId,
+    name: "cached.pdf",
+    type: "application/pdf",
+    blob: new Blob(["cached"]),
+    url: "/cached.pdf",
+  });
+
+  const drafts = await listOfflineUploadDrafts(accountId, workspaceId);
+  assert.deepEqual(
+    drafts.map((draft) => draft.name),
+    ["biology.pdf"],
+  );
+  assert.equal(await deleteOfflineUploadDraft(otherAccountId, draftId), false);
+  assert.equal(
+    (await listOfflineUploadDrafts(accountId, workspaceId)).length,
+    1,
+  );
+  assert.equal(await deleteOfflineUploadDraft(accountId, draftId), true);
+  assert.equal(
+    (await listOfflineUploadDrafts(accountId, workspaceId)).length,
+    0,
   );
 });
 

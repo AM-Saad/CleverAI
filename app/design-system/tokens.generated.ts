@@ -72,7 +72,6 @@ export const designTokenValues = {
   "--color-primary-soft": "color-mix(in srgb, var(--color-primary) 10%, transparent)",
   "--color-primary-hover": "color-mix(in srgb, black 10%, var(--color-primary))",
   "--color-primary-active": "color-mix(in srgb, black 18%, var(--color-primary))",
-  "--color-on-success": "#043a28",
   "--color-on-error": "#ffffff",
   "--color-border-strong": "#c7cbd2",
   "--color-accent-blue": "#3b82f6",

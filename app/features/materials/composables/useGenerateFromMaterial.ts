@@ -1,17 +1,20 @@
 // app/features/materials/composables/useGenerateFromMaterial.ts
-import { ref, computed, watch, type Ref, type ComputedRef } from "vue";
+import { ref, computed, type Ref, type ComputedRef } from "vue";
 import { APIError } from "~/services/FetchFactory";
-import type { GatewayGenerateResponse } from "~/shared/utils/llm-generate.contract";
+import type {
+  FlashcardDTO,
+  GatewayGenerateResponse,
+  GenerationConfig,
+  MaterialGenerationCommitMode,
+  QuizQuestionDTO,
+} from "~/shared/utils/llm-generate.contract";
 
 export type GenerationType = "flashcards" | "quiz";
 
 export interface GenerationResult {
   type: GenerationType;
-  savedCount?: number;
-  deletedCount?: number;
-  deletedReviewsCount?: number;
-  flashcards?: Array<{ front: string; back: string }>;
-  quiz?: Array<{ question: string; choices: string[]; answerIndex: number }>;
+  flashcards?: FlashcardDTO[];
+  quiz?: QuizQuestionDTO[];
 }
 
 export interface MaterialGenerationState {
@@ -26,21 +29,23 @@ export interface MaterialGenerationState {
  * Supports regeneration with confirmation dialog.
  */
 export function useGenerateFromMaterial(
-  materialId: Ref<string> | ComputedRef<string>
+  materialId: Ref<string> | ComputedRef<string>,
 ) {
   const { $api } = useNuxtApp();
   const toast = useToast();
 
   // Generation state
   const generating = ref(false);
+  const preparing = ref(false);
   const generationType = ref<GenerationType | null>(null);
   const genError = ref<string | null>(null);
   const lastResult = ref<GenerationResult | null>(null);
+  const generationMode = ref<MaterialGenerationCommitMode>("append");
 
   // Confirmation dialog state
   const showConfirmDialog = ref(false);
   const pendingGenerationType = ref<GenerationType | null>(null);
-  const pendingGenerationConfig = ref<any>(null);
+  const pendingGenerationConfig = ref<GenerationConfig | undefined>();
   const existingCounts = ref<MaterialGenerationState>({
     hasFlashcards: false,
     hasQuestions: false,
@@ -52,43 +57,34 @@ export function useGenerateFromMaterial(
   const { subscriptionInfo, isQuotaExceeded, updateFromData, handleApiError } =
     useSubscriptionStore();
 
-  const creditsStore = useCreditsStore()
+  const creditsStore = useCreditsStore();
 
   /**
    * Check if material already has generated content
    */
   async function checkExistingContent(): Promise<MaterialGenerationState> {
-    try {
-      const response = await $api.materials.getGeneratedContent(
-        materialId.value
-      );
-
-      if (response.success && response.data) {
-        const state: MaterialGenerationState = {
-          hasFlashcards: (response.data.flashcardsCount || 0) > 0,
-          hasQuestions: (response.data.questionsCount || 0) > 0,
-          flashcardsCount: response.data.flashcardsCount || 0,
-          questionsCount: response.data.questionsCount || 0,
-        };
-        existingCounts.value = state;
-        return state;
-      }
-    } catch (err) {
-      console.error("Failed to check existing content:", err);
+    const response = await $api.materials.getGeneratedContent(materialId.value);
+    if (!response.success) {
+      throw response.error;
     }
 
-    return {
-      hasFlashcards: false,
-      hasQuestions: false,
-      flashcardsCount: 0,
-      questionsCount: 0,
+    const state: MaterialGenerationState = {
+      hasFlashcards: response.data.flashcardsCount > 0,
+      hasQuestions: response.data.questionsCount > 0,
+      flashcardsCount: response.data.flashcardsCount,
+      questionsCount: response.data.questionsCount,
     };
+    existingCounts.value = state;
+    return state;
   }
 
   /**
    * Start generation - checks for existing content and shows confirmation if needed
    */
-  async function startGenerate(type: GenerationType, config?: any) {
+  async function startGenerate(
+    type: GenerationType,
+    config?: GenerationConfig,
+  ) {
     genError.value = null;
     pendingGenerationType.value = type;
     pendingGenerationConfig.value = config;
@@ -97,23 +93,32 @@ export function useGenerateFromMaterial(
     // We do NOT call the spend endpoint here; that would double-deduct credits
     // because the server's incrementGenerationCount already spends when needed.
     if (!creditsStore.hasCredits && isQuotaExceeded.value) {
-      creditsStore.openWallet()
-      return
+      creditsStore.openWallet();
+      pendingGenerationType.value = null;
+      return;
     }
 
+    preparing.value = true;
+    try {
+      const existing = await checkExistingContent();
+      const hasExisting =
+        type === "flashcards" ? existing.hasFlashcards : existing.hasQuestions;
 
-    // Check for existing content
-    const existing = await checkExistingContent();
+      if (hasExisting) {
+        showConfirmDialog.value = true;
+        return;
+      }
 
-    const hasExisting =
-      type === "flashcards" ? existing.hasFlashcards : existing.hasQuestions;
-
-    if (hasExisting) {
-      // Show confirmation dialog
-      showConfirmDialog.value = true;
-    } else {
-      // No existing content, proceed directly
-      await executeGeneration(type, false, config);
+      generationMode.value = "append";
+      await executeGeneration(type, config);
+    } catch (err) {
+      genError.value =
+        err instanceof APIError
+          ? err.message
+          : "Couldn't check existing study items. Please try again.";
+      pendingGenerationType.value = null;
+    } finally {
+      preparing.value = false;
     }
   }
 
@@ -123,7 +128,11 @@ export function useGenerateFromMaterial(
   async function confirmRegenerate(replace: boolean) {
     showConfirmDialog.value = false;
     if (pendingGenerationType.value) {
-      await executeGeneration(pendingGenerationType.value, replace, pendingGenerationConfig.value);
+      generationMode.value = replace ? "replace" : "append";
+      await executeGeneration(
+        pendingGenerationType.value,
+        pendingGenerationConfig.value,
+      );
     }
   }
 
@@ -133,12 +142,16 @@ export function useGenerateFromMaterial(
   function cancelRegenerate() {
     showConfirmDialog.value = false;
     pendingGenerationType.value = null;
+    pendingGenerationConfig.value = undefined;
   }
 
   /**
    * Execute the actual generation
    */
-  async function executeGeneration(type: GenerationType, replace = false, config?: any) {
+  async function executeGeneration(
+    type: GenerationType,
+    config?: GenerationConfig,
+  ) {
     genError.value = null;
     generating.value = true;
     generationType.value = type;
@@ -148,7 +161,7 @@ export function useGenerateFromMaterial(
       let text = "";
       try {
         const materialResponse = await $api.materials.getMaterial(
-          materialId.value
+          materialId.value,
         );
         if (materialResponse.success && materialResponse.data) {
           text = materialResponse.data.content?.trim() || "";
@@ -164,21 +177,23 @@ export function useGenerateFromMaterial(
         if (type === "flashcards") {
           result = await $api.gateway.generateFlashcards(text, {
             materialId: materialId.value,
-            save: true,
-            replace,
+            save: false,
             generationConfig: config,
           });
         } else {
           result = await $api.gateway.generateQuiz(text, {
             materialId: materialId.value,
-            save: true,
-            replace,
+            save: false,
             generationConfig: config,
           });
         }
       } catch (apiErr: any) {
         // Server returns 402 when free quota is exhausted AND creditBalance = 0
-        if (apiErr?.statusCode === 402 || apiErr?.data?.statusCode === 402) {
+        if (
+          apiErr?.status === 402 ||
+          apiErr?.statusCode === 402 ||
+          apiErr?.data?.statusCode === 402
+        ) {
           creditsStore.openWallet();
           return;
         }
@@ -193,30 +208,23 @@ export function useGenerateFromMaterial(
       // Build result
       lastResult.value = {
         type,
-        savedCount: result.savedCount,
-        deletedCount: result.deletedCount,
-        deletedReviewsCount: result.deletedReviewsCount,
         ...(type === "flashcards" && "flashcards" in result
           ? { flashcards: result.flashcards }
           : {}),
         ...(type === "quiz" && "quiz" in result ? { quiz: result.quiz } : {}),
       };
 
-      // Show success toast
+      const count =
+        type === "flashcards" && "flashcards" in result
+          ? result.flashcards.length
+          : type === "quiz" && "quiz" in result
+            ? result.quiz.length
+            : 0;
       const itemType = type === "flashcards" ? "flashcards" : "questions";
-      let message = `Generated ${result.savedCount || 0} ${itemType}`;
-
-      if (result.deletedCount && result.deletedCount > 0) {
-        message += ` (replaced ${result.deletedCount} old ${itemType}`;
-        if (result.deletedReviewsCount && result.deletedReviewsCount > 0) {
-          message += `, ${result.deletedReviewsCount} review${result.deletedReviewsCount > 1 ? "s" : ""} removed`;
-        }
-        message += ")";
-      }
 
       toast.add({
-        title: "Generation Complete",
-        description: message,
+        title: "Draft ready",
+        description: `Review ${count} ${itemType} before adding them.`,
         color: "success",
       });
 
@@ -242,16 +250,17 @@ export function useGenerateFromMaterial(
       generating.value = false;
       generationType.value = null;
       pendingGenerationType.value = null;
+      pendingGenerationConfig.value = undefined;
     }
   }
 
   // Computed helpers
   const isGeneratingFlashcards = computed(
-    () => generating.value && generationType.value === "flashcards"
+    () => generating.value && generationType.value === "flashcards",
   );
 
   const isGeneratingQuiz = computed(
-    () => generating.value && generationType.value === "quiz"
+    () => generating.value && generationType.value === "quiz",
   );
 
   const rateLimitRemaining = computed(() => subscriptionInfo.value.remaining);
@@ -259,9 +268,11 @@ export function useGenerateFromMaterial(
   return {
     // State
     generating,
+    preparing,
     generationType,
     genError,
     lastResult,
+    generationMode,
 
     // Confirmation dialog
     showConfirmDialog,

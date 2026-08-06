@@ -9,6 +9,8 @@ export const MaterialTypeEnum = z.enum([
   "video",
   "audio",
   "pdf",
+  "docx",
+  "txt",
   "url",
   "document",
 ]);
@@ -65,7 +67,7 @@ export type MaterialGeneratedContent = z.infer<
 
 export const CreateMaterialDTO = z.object({
   workspaceId: z.string(),
-  title: z.preprocess(trim, z.string().min(1)),
+  title: z.preprocess(trim, z.string().min(1).max(240)),
   content: z.preprocess(trim, z.string().min(1)),
   type: MaterialTypeEnum.optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
@@ -75,7 +77,7 @@ export const CreateMaterialDTO = z.object({
 export type CreateMaterialDTO = z.infer<typeof CreateMaterialDTO>;
 
 export const UpdateMaterialDTO = z.object({
-  title: z.preprocess(trim, z.string().min(1)).optional(),
+  title: z.preprocess(trim, z.string().min(1).max(240)).optional(),
   content: z.preprocess(trim, z.string().min(1)).optional(),
   type: MaterialTypeEnum.optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),

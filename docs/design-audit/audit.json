@@ -16582,11 +16582,6 @@
           "status": "ok"
         },
         {
-          "value": "var(--color-on-success)",
-          "category": "color",
-          "status": "ok"
-        },
-        {
           "value": "rounded-[var(--component-card-radius)]",
           "category": "radius",
           "status": "ok",
