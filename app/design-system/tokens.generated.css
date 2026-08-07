@@ -29,6 +29,7 @@
   --duration-spring: 420ms; /* Springy size/position changes */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1); /* Default easing */
   --ease-emphasized: cubic-bezier(0.2, 0, 0, 1.2); /* Small emphasized entrance */
+  --ease-exit: cubic-bezier(0.4, 0, 0.2, 1); /* Collapse and dismissal — evenly paced, no snap */
   --ease-spring: cubic-bezier(0.32, 1.4, 0.45, 1); /* Gentle overshoot */
   --target-min: 1.5rem; /* WCAG 2.2 minimum target size */
   --target-compact: 2rem; /* Compact controls */
@@ -85,6 +86,9 @@
 }
 
 :root {
+  --mask-fade-y: linear-gradient(to top, transparent 0%, black 18%, black 92%, transparent 100%); /* Vertical scroll-fade for scrollable panes (18% bottom, 8% top) */
+  --mask-fade-x: linear-gradient(to right, transparent 0%, black 18%, black 82%, transparent 100%); /* Horizontal edge fade for scrolling strips (18% both ends) */
+  --mask-fade-bottom: linear-gradient(to bottom, black 0%, black 82%, transparent 100%); /* Bottom-only fade for clamped/truncated content (18% tail) */
   --ui-container: var(--container-8xl);
   --ui-primary: var(--color-primary);
   --ui-bg: var(--color-background);

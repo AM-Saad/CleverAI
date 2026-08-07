@@ -578,8 +578,8 @@ onBeforeUnmount(() => {
 }
 
 .day-header__calendar-icon {
-  width: 0.875rem;
-  height: 0.875rem;
+  width: 0.8rem;
+  height: 0.7rem;
   color: var(--color-content-secondary);
   transition: color var(--duration-fast) var(--ease-standard),
     transform var(--duration-fast) var(--ease-standard);
@@ -600,16 +600,8 @@ onBeforeUnmount(() => {
   height: 3rem;
   display: flex;
   align-items: center;
-  mask-image: linear-gradient(to right,
-      transparent 0%,
-      black 18%,
-      black 82%,
-      transparent 100%);
-  -webkit-mask-image: linear-gradient(to right,
-      transparent 0%,
-      black 18%,
-      black 82%,
-      transparent 100%);
+  mask-image: var(--mask-fade-x);
+  -webkit-mask-image: var(--mask-fade-x);
 }
 
 /* The selector never moves; the strip moves under it. */
@@ -619,10 +611,10 @@ onBeforeUnmount(() => {
   left: 50%;
   transform: translate(-50%, -50%);
   width: 3.29rem;
-  height: 2.5rem;
+  height: 1.8rem;
   border-radius: calc(var(--radius-lg) - 2px);
   background: var(--color-primary);
-  box-shadow: 0 4px 16px color-mix(in srgb, var(--color-content-on-background) 18%, transparent);
+  box-shadow: 0 0px 10px color-mix(in srgb, var(--color-content-on-background) 30%, transparent);
   pointer-events: none;
   z-index: 2;
 }

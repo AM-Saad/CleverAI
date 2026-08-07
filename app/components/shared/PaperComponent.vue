@@ -1,135 +1,57 @@
 <template>
-  <NodeViewWrapper
-    class="paper"
-    :class="{
-      'paper--active': isActive,
-      'paper--resizing': isResizing,
-      'paper--compact': isCompact,
-    }"
-    :style="{ width: `${W}px`, marginLeft: xOffset ? `${xOffset}px` : undefined }"
-    data-type="paper"
-    contenteditable="false"
-    @touchstart.stop
-    @mousedown.stop
-    @pointerenter="isHovered = true"
-    @pointerleave="isHovered = false"
-  >
+  <NodeViewWrapper class="paper" :class="{
+    'paper--active': isActive,
+    'paper--resizing': isResizing,
+    'paper--compact': isCompact,
+  }" :style="{ width: `${W}px`, marginLeft: xOffset ? `${xOffset}px` : undefined }" data-type="paper"
+    contenteditable="false" @touchstart.stop @mousedown.stop @pointerenter="isHovered = true"
+    @pointerleave="isHovered = false">
     <!-- Viewport. Fixed box; the camera decides which part of the unbounded
          world it shows. Its size never affects stroke coordinates. -->
-    <div
-      ref="frameRef"
-      class="paper-frame"
-      tabindex="-1"
-      role="application"
-      aria-label="Sketch canvas"
-      :style="{ height: `${H}px`, cursor: frameCursor }"
-      @keydown="onFrameKeydown"
-      @pointerdown="onPointerDown"
-      @pointermove="onPointerMove"
-      @pointerup="onPointerUp"
-      @pointercancel="onPointerCancel"
-      @pointerenter="refreshFrameRect"
-      @pointerleave="onPointerLeave"
-      @wheel="onWheel"
-      @dblclick="onDoubleClick"
-      @contextmenu="onContextMenu"
-    >
+    <div ref="frameRef" class="paper-frame" tabindex="-1" role="application" aria-label="Sketch canvas"
+      :style="{ height: `${H}px`, cursor: frameCursor }" @keydown="onFrameKeydown" @pointerdown="onPointerDown"
+      @pointermove="onPointerMove" @pointerup="onPointerUp" @pointercancel="onPointerCancel"
+      @pointerenter="refreshFrameRect" @pointerleave="onPointerLeave" @wheel="onWheel" @dblclick="onDoubleClick"
+      @contextmenu="onContextMenu">
       <svg class="paper-canvas" shape-rendering="geometricPrecision">
         <defs>
-          <pattern
-            :id="gridId"
-            ref="gridPatternRef"
-            :width="gridStep"
-            :height="gridStep"
-            patternUnits="userSpaceOnUse"
-          >
-            <circle
-              v-if="gridType === 'dots'"
-              class="paper-grid-mark"
-              :cx="gridStep / 2"
-              :cy="gridStep / 2"
-              r="1"
-            />
-            <path
-              v-else-if="gridType === 'lines'"
-              class="paper-grid-mark paper-grid-mark--stroke"
-              :d="`M 0 ${gridStep - 0.5} H ${gridStep}`"
-            />
-            <path
-              v-else-if="gridType === 'graph'"
-              class="paper-grid-mark paper-grid-mark--stroke"
-              :d="`M ${gridStep - 0.5} 0 V ${gridStep} M 0 ${gridStep - 0.5} H ${gridStep}`"
-            />
+          <pattern :id="gridId" ref="gridPatternRef" :width="gridStep" :height="gridStep" patternUnits="userSpaceOnUse">
+            <circle v-if="gridType === 'dots'" class="paper-grid-mark" :cx="gridStep / 2" :cy="gridStep / 2" r="1" />
+            <path v-else-if="gridType === 'lines'" class="paper-grid-mark paper-grid-mark--stroke"
+              :d="`M 0 ${gridStep - 0.5} H ${gridStep}`" />
+            <path v-else-if="gridType === 'graph'" class="paper-grid-mark paper-grid-mark--stroke"
+              :d="`M ${gridStep - 0.5} 0 V ${gridStep} M 0 ${gridStep - 0.5} H ${gridStep}`" />
           </pattern>
         </defs>
 
-        <rect
-          v-if="gridType !== 'none'"
-          class="paper-grid"
-          width="100%"
-          height="100%"
-          :fill="`url(#${gridId})`"
-        />
+        <rect v-if="gridType !== 'none'" class="paper-grid" width="100%" height="100%" :fill="`url(#${gridId})`" />
 
         <!-- World layer. Its transform is written imperatively during gestures
              so a pan/zoom frame never re-diffs the stroke list. -->
         <g ref="worldRef">
-          <path
-            v-for="line in lines"
-            :key="line.id"
-            v-memo="[line.path, line.color, line.size, pendingErase.has(line.id)]"
-            class="paper-stroke"
-            :class="{ 'paper-stroke--erasing': pendingErase.has(line.id) }"
-            :d="line.path"
-            :stroke="line.color"
-            :stroke-width="line.size"
-            fill="none"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-          <path
-            v-if="livePath"
-            class="paper-stroke"
-            :d="livePath"
-            :stroke="color"
-            :stroke-width="size"
-            fill="none"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
+          <path v-for="line in lines" :key="line.id"
+            v-memo="[line.path, line.color, line.size, pendingErase.has(line.id)]" class="paper-stroke"
+            :class="{ 'paper-stroke--erasing': pendingErase.has(line.id) }" :d="line.path" :stroke="line.color"
+            :stroke-width="line.size" fill="none" stroke-linecap="round" stroke-linejoin="round" />
+          <path v-if="livePath" class="paper-stroke" :d="livePath" :stroke="color" :stroke-width="size" fill="none"
+            stroke-linecap="round" stroke-linejoin="round" />
         </g>
 
         <!-- Eraser ring lives in screen space so it stays a constant size. -->
-        <circle
-          v-if="eraserCursor"
-          class="paper-eraser-ring"
-          :cx="eraserCursor.x"
-          :cy="eraserCursor.y"
-          :r="ERASER_RADIUS_PX"
-        />
+        <circle v-if="eraserCursor" class="paper-eraser-ring" :cx="eraserCursor.x" :cy="eraserCursor.y"
+          :r="ERASER_RADIUS_PX" />
       </svg>
 
       <!-- Edge glow: the canvas is scrolling itself to keep up with the pen. -->
-      <div
-        v-for="side in EDGES"
-        :key="side"
-        class="paper-edge"
-        :class="[`paper-edge--${side}`, { 'paper-edge--on': edgeGlow[side] }]"
-      />
+      <div v-for="side in EDGES" :key="side" class="paper-edge"
+        :class="[`paper-edge--${side}`, { 'paper-edge--on': edgeGlow[side] }]" />
 
       <!-- Toolbar floats over the canvas, so activating never reflows the note. -->
       <Transition name="paper-fade">
         <div v-if="isActive" class="paper-toolbar" contenteditable="false" @pointerdown.stop>
           <div class="paper-toolbar-group">
-            <UiToolbarButton
-              v-for="tool in TOOLS"
-              :key="tool.id"
-              :icon="tool.icon"
-              :label="tool.label"
-              :tooltip="tool.tooltip"
-              :active="activeTool === tool.id"
-              @click="selectTool(tool.id)"
-            />
+            <UiToolbarButton v-for="tool in TOOLS" :key="tool.id" :icon="tool.icon" :label="tool.label"
+              :tooltip="tool.tooltip" :active="activeTool === tool.id" @click="selectTool(tool.id)" />
           </div>
 
           <span class="paper-sep" />
@@ -138,108 +60,50 @@
             <div class="paper-color-swatch-wrapper">
               <span class="paper-color-swatch" :style="{ backgroundColor: color }" />
               <!-- design-allow: native color picker — no Ui primitive wraps the OS color-picker UX -->
-              <input v-model="color" type="color" class="paper-color-input" title="Stroke color" >
+              <input v-model="color" type="color" class="paper-color-input" title="Stroke color">
             </div>
 
             <template v-if="!isCompact">
               <!-- design-allow: native range input — no Ui primitive wraps a slider -->
-              <input
-                v-model.number="size"
-                type="range"
-                min="1"
-                max="12"
-                class="paper-range"
-                title="Stroke width"
-              >
+              <input v-model.number="size" type="range" min="1" max="12" class="paper-range" title="Stroke width">
               <span class="paper-size-label">{{ size }}px</span>
             </template>
             <span class="paper-sep" />
           </template>
 
           <div class="paper-toolbar-group">
-            <UiToolbarButton
-              icon="undo-2"
-              label="Undo"
-              tooltip="Undo (⌘Z)"
-              :disabled="!canUndo"
-              @click="undo"
-            />
-            <UiToolbarButton
-              icon="redo-2"
-              label="Redo"
-              tooltip="Redo (⌘⇧Z)"
-              :disabled="!canRedo"
-              @click="redo"
-            />
+            <UiToolbarButton icon="undo-2" label="Undo" tooltip="Undo (⌘Z)" :disabled="!canUndo" @click="undo" />
+            <UiToolbarButton icon="redo-2" label="Redo" tooltip="Redo (⌘⇧Z)" :disabled="!canRedo" @click="redo" />
           </div>
 
           <span class="paper-sep" />
 
-          <UiToolbarButton
-            icon="grid-3x3"
-            label="Toggle grid"
-            :tooltip="`Grid: ${gridType}`"
-            :active="gridType !== 'none'"
-            @click="cycleGrid"
-          />
+          <UiToolbarButton icon="grid-3x3" label="Toggle grid" :tooltip="`Grid: ${gridType}`"
+            :active="gridType !== 'none'" @click="cycleGrid" />
 
           <template v-if="!isCompact">
             <span class="paper-sep" />
             <div class="paper-toolbar-group">
-              <UiToolbarButton
-                icon="minus"
-                label="Zoom out"
-                tooltip="Zoom out (−)"
-                :disabled="!canZoomOut"
-                @click="zoomOut"
-              />
-              <UiToolbarButton
-                :icon-only="false"
-                :label="zoomPercentLabel"
-                tooltip="Reset to 100% (0)"
-                class="paper-zoom-label"
-                @click="resetZoom"
-              />
-              <UiToolbarButton
-                icon="plus"
-                label="Zoom in"
-                tooltip="Zoom in (+)"
-                :disabled="!canZoomIn"
-                @click="zoomIn"
-              />
-              <UiToolbarButton
-                icon="scan"
-                label="Fit sketch"
-                tooltip="Fit sketch (1)"
-                @click="fitSketch"
-              />
+              <UiToolbarButton icon="minus" label="Zoom out" tooltip="Zoom out (−)" :disabled="!canZoomOut"
+                @click="zoomOut" />
+              <UiToolbarButton :icon-only="false" :label="zoomPercentLabel" tooltip="Reset to 100% (0)"
+                class="paper-zoom-label" @click="resetZoom" />
+              <UiToolbarButton icon="plus" label="Zoom in" tooltip="Zoom in (+)" :disabled="!canZoomIn"
+                @click="zoomIn" />
+              <UiToolbarButton icon="scan" label="Fit sketch" tooltip="Fit sketch (1)" @click="fitSketch" />
             </div>
 
             <span class="paper-sep" />
 
             <UiToolbarButton icon="download" label="Export as PNG" @click="exportPng" />
-            <UiToolbarButton
-              icon="eraser"
-              label="Clear all"
-              :disabled="!lines.length"
-              @click="clearDrawing"
-            />
-            <UiToolbarButton
-              icon="trash-2"
-              label="Delete sketch"
-              tone="error"
-              @click="props.deleteNode()"
-            />
+            <UiToolbarButton icon="eraser" label="Clear all" :disabled="!lines.length" @click="clearDrawing" />
+            <UiToolbarButton icon="trash-2" label="Delete sketch" tone="error" @click="props.deleteNode()" />
           </template>
 
           <template v-else>
             <span class="paper-sep" />
-            <UiActionMenu
-              :items="compactMenuItems"
-              :ui="{ content: 'paper-toolbar-menu' }"
-              size="xs"
-              label="More options"
-            />
+            <UiActionMenu :items="compactMenuItems" :ui="{ content: 'paper-toolbar-menu' }" size="xs"
+              label="More options" />
           </template>
         </div>
       </Transition>
@@ -258,39 +122,19 @@
 
       <div class="paper-hud paper-hud--right" contenteditable="false">
         <Transition name="paper-fade">
-          <UiButton
-            v-if="isActive && contentOffscreen"
-            type="button"
-            tone="neutral"
-            variant="soft"
-            size="xs"
-            class="paper-action-btn"
-            @pointerdown.stop
-            @click="fitSketch"
-          >
+          <UiButton v-if="isActive && contentOffscreen" type="button" tone="neutral" variant="soft" size="xs"
+            class="paper-action-btn" @pointerdown.stop @click="fitSketch">
             <UiIcon name="locate-fixed" class="h-3.5 w-3.5" />
             Recenter
           </UiButton>
         </Transition>
 
-        <div
-          v-if="!isActive"
-          class="paper-chip paper-chip--hint"
-          :class="{ 'paper-chip--pressing': isPressPending }"
-        >
+        <div v-if="!isActive" class="paper-chip paper-chip--hint" :class="{ 'paper-chip--pressing': isPressPending }">
           <UiIcon name="hand" class="h-3 w-3" />
           <span>{{ activationHint }}</span>
         </div>
-        <UiButton
-          v-else
-          type="button"
-          tone="primary"
-          variant="soft"
-          size="xs"
-          class="paper-action-btn"
-          @pointerdown.stop
-          @click="deactivate"
-        >
+        <UiButton v-else type="button" tone="primary" variant="soft" size="xs" class="paper-action-btn"
+          @pointerdown.stop @click="deactivate">
           <UiIcon name="check" class="h-3.5 w-3.5" />
           Done
         </UiButton>
@@ -304,14 +148,9 @@
 
     <!-- Resize handles. Reachable on touch (shown whenever the block is active
          or selected) with a hit area far larger than the visible grip. -->
-    <div
-      v-for="dir in RESIZE_DIRS"
-      :key="dir"
-      class="paper-handle"
+    <div v-for="dir in RESIZE_DIRS" :key="dir" class="paper-handle"
       :class="[`paper-handle--${dir}`, { 'paper-handle--visible': handlesVisible }]"
-      :aria-label="`Resize sketch (${dir})`"
-      @pointerdown="onResizeStart(dir, $event)"
-    >
+      :aria-label="`Resize sketch (${dir})`" @pointerdown="onResizeStart(dir, $event)">
       <span class="paper-handle-grip" />
     </div>
 
@@ -1946,34 +1785,35 @@ watch([W, H], () => {
 .paper-handle--sw .paper-handle-grip {
   width: 9px;
   height: 9px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-full);
 }
 
 .paper-handle--nw {
-  top: -13px;
-  left: -13px;
+  top: -10px;
+  left: -10px;
   cursor: nwse-resize;
 }
 
 .paper-handle--ne {
-  top: -13px;
-  right: -13px;
+  top: -10px;
+  right: -10px;
   cursor: nesw-resize;
 }
 
 .paper-handle--sw {
-  bottom: -13px;
-  left: -13px;
+  bottom: -10px;
+  left: -10px;
   cursor: nesw-resize;
 }
 
 .paper-handle--se {
-  bottom: -13px;
-  right: -13px;
+  bottom: -10px;
+  right: -10px;
   cursor: nwse-resize;
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .paper,
   .paper-frame,
   .paper-stroke,

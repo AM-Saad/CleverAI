@@ -72,27 +72,44 @@ async function activeDailyMutations(accountId: string) {
   );
 }
 
+/** Read every Daily entity in one pass and partition in memory.
+ *
+ * `listOfflineEntities` has no per-entity index — it reads the whole
+ * offline-entities store and filters in JS — so asking for the four Daily
+ * entities separately scanned that store four times. This runs on every
+ * re-projection (each mutation, each visible date), so the single scan is the
+ * difference between a snappy list update and a stutter. */
 export async function getDailyLocalSnapshot(
   accountId: string,
 ): Promise<DailyLocalSnapshot> {
-  const [notes, actionItems, occurrences, placements] = await Promise.all([
-    listOfflineEntities<DailyNoteDTO>(accountId, "dailyNote"),
-    listOfflineEntities<ActionItemDTO>(accountId, "actionItem"),
-    listOfflineEntities<ActionOccurrenceDTO>(accountId, "actionOccurrence"),
-    listOfflineEntities<ActionPlacementDTO>(accountId, "actionPlacement"),
-  ]);
-  return {
-    notes: notes.map((record) => record.data),
-    actionItems: actionItems.map((record) => ({
-      ...record.data,
-      version: record.version,
-    })),
-    occurrences: occurrences.map((record) => ({
-      ...record.data,
-      version: record.version,
-    })),
-    placements: placements.map((record) => record.data),
+  const records = await listOfflineEntities<Record<string, unknown>>(accountId);
+  const snapshot: DailyLocalSnapshot = {
+    notes: [],
+    actionItems: [],
+    occurrences: [],
+    placements: [],
   };
+  for (const record of records) {
+    // Action items and occurrences carry the record revision into the DTO —
+    // conflict detection and mutation baseVersion both read it from there.
+    const versioned = () =>
+      ({ ...record.data, version: record.version }) as unknown;
+    switch (record.entity) {
+      case "dailyNote":
+        snapshot.notes.push(record.data as unknown as DailyNoteDTO);
+        break;
+      case "actionItem":
+        snapshot.actionItems.push(versioned() as ActionItemDTO);
+        break;
+      case "actionOccurrence":
+        snapshot.occurrences.push(versioned() as ActionOccurrenceDTO);
+        break;
+      case "actionPlacement":
+        snapshot.placements.push(record.data as unknown as ActionPlacementDTO);
+        break;
+    }
+  }
+  return snapshot;
 }
 
 /** Merge a fetched day projection into the local cache without clobbering

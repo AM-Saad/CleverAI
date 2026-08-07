@@ -1,19 +1,8 @@
 <template>
-  <UDropdownMenu
-    :items="confirmedItems"
-    :content="props.content"
-    :modal="props.modal"
-    v-bind="$attrs"
-  >
+  <UDropdownMenu :items="confirmedItems" :content="props.content" :modal="props.modal" v-bind="$attrs" @click.stop>
     <slot>
-      <UiIconButton
-        :icon="props.icon"
-        :label="props.label"
-        :size="props.size"
-        variant="ghost"
-        tone="neutral"
-        :disabled="props.disabled"
-      />
+      <UiIconButton :icon="props.icon" :label="props.label" :size="props.size" variant="ghost" tone="neutral"
+        :disabled="props.disabled" />
     </slot>
   </UDropdownMenu>
 </template>

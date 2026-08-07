@@ -1,21 +1,12 @@
 <template>
   <div class="flip-card" :style="{ '--flip-card-min-height': minHeight }">
-    <button
-      type="button"
-      class="flip-card__rotor"
-      :style="{ transform: wrapperTransform }"
-      :aria-label="resolvedLabel"
-      :aria-pressed="flipped"
-      @click="flipped = !flipped"
-    >
+    <button type="button" class="flip-card__rotor" :style="{ transform: wrapperTransform }" :aria-label="resolvedLabel"
+      :aria-pressed="flipped" @click="flipped = !flipped">
       <span class="flip-card__face flip-card__face--front">
         <slot name="front" />
       </span>
 
-      <span
-        class="flip-card__face flip-card__face--back"
-        :style="{ transform: backTransform }"
-      >
+      <span class="flip-card__face flip-card__face--back" :style="{ transform: backTransform }">
         <slot name="back" />
       </span>
     </button>
@@ -61,6 +52,7 @@ const resolvedLabel = computed(
   width: 100%;
   min-height: var(--flip-card-min-height);
   perspective: 1100px;
+  display: flex
 }
 
 .flip-card__rotor {

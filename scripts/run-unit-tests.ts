@@ -152,18 +152,22 @@ import {
   formatDateKey,
   occurrenceKey as dailyOccurrenceKey,
   recurrenceMatchesDate,
+  weekdayForDateKey as dailyWeekdayForDateKey,
 } from "../shared/utils/daily-recurrence";
 import { placementStateAfterMove } from "../shared/utils/daily-placement";
 import { projectLocalDay } from "../app/features/daily/domain/projectLocalDay";
 import {
   ACTION_ITEM_CREATE_FIELDS,
   buildActionItemUpdateMutation,
+  buildRecurrenceRule,
 } from "../app/features/daily/domain/actionItemMutation";
 import { createDateDialInteractionGate } from "../app/features/daily/presentation/dateDialInteraction";
 import {
   autoResolveEquivalentNoteConflicts,
   buildDailyActionConflictRebase,
+  dailyEntityRecord,
   getDailyActionConflicts,
+  getDailyLocalSnapshot,
   mergeServerBootstrap,
   resolveDailyActionItemConflict,
   type DailyLocalSnapshot,
@@ -339,6 +343,72 @@ test("moving an action preserves its completion state", () => {
   assert.equal(placementStateAfterMove("COMPLETED"), "COMPLETED");
 });
 
+test("recurrence rules derive their schedule from the item's start date", () => {
+  // Shared by the quick-add form and the inline row editor. The weekday /
+  // monthDay / month derivation is the part that would quietly diverge if
+  // either editor kept its own copy, so pin it here rather than in a component.
+  assert.equal(
+    buildRecurrenceRule({ frequency: "NONE", startDate: "2026-08-05" }),
+    null,
+  );
+
+  // 2026-08-05 is a Wednesday.
+  const weekly = buildRecurrenceRule({
+    frequency: "WEEKLY",
+    startDate: "2026-08-05",
+  });
+  assert.deepEqual(weekly?.weekdays, [dailyWeekdayForDateKey("2026-08-05")]);
+  assert.equal(weekly?.monthDay, undefined);
+  assert.equal(weekly?.month, undefined);
+
+  const monthly = buildRecurrenceRule({
+    frequency: "MONTHLY",
+    startDate: "2026-08-05",
+  });
+  assert.equal(monthly?.monthDay, 5);
+  assert.equal(monthly?.month, undefined);
+  assert.equal(monthly?.weekdays, undefined);
+
+  const yearly = buildRecurrenceRule({
+    frequency: "YEARLY",
+    startDate: "2026-08-05",
+  });
+  assert.equal(yearly?.monthDay, 5);
+  assert.equal(yearly?.month, 8); // 1-based, not the Date object's 0-based month
+});
+
+test("re-saving an action with an unchanged frequency keeps its existing rule", () => {
+  // Editors call this on every save. Rebuilding an equivalent-but-new rule
+  // would make buildActionItemUpdateMutation see `recurrence` as changed and
+  // ship a pointless write — and would flatten any interval/ends the rule
+  // carries that the dropdown cannot express.
+  const existing = {
+    frequency: "WEEKLY" as const,
+    interval: 3,
+    weekdays: [1, 4],
+    missingDayPolicy: "LAST_DAY" as const,
+    ends: "NEVER" as const,
+  };
+  assert.equal(
+    buildRecurrenceRule({
+      frequency: "WEEKLY",
+      startDate: "2026-08-05",
+      existing,
+    }),
+    existing,
+  );
+
+  // Switching frequency must not reuse it.
+  assert.notEqual(
+    buildRecurrenceRule({
+      frequency: "DAILY",
+      startDate: "2026-08-05",
+      existing,
+    }),
+    existing,
+  );
+});
+
 test("daily action updates send only fields that actually changed", () => {
   const current = {
     id: "action-1",
@@ -464,6 +534,173 @@ test("daily bootstrap and local snapshot use occurrence offline revision", async
   );
   assert.equal(record?.version, 6);
   assert.equal(record?.data.version, 6);
+});
+
+test("the daily local snapshot partitions every entity type in one store pass", async () => {
+  const accountId = `account-${Date.now()}-${Math.random()}-snapshot-partition`;
+  const stamp = "2026-07-26T10:00:00.000Z";
+  await putOfflineEntities([
+    dailyEntityRecord(accountId, "dailyNote", {
+      id: "note-1",
+      userId: accountId,
+      dateKey: "2026-07-26",
+      content: { type: "doc" },
+      contentFormat: "TIPTAP_JSON",
+      version: 3,
+      createdAt: stamp,
+      updatedAt: stamp,
+    }),
+    dailyEntityRecord(
+      accountId,
+      "actionItem",
+      {
+        id: "item-1",
+        userId: accountId,
+        title: "Partitioned",
+        description: null,
+        timingMode: "ALL_DAY",
+        startDate: "2026-07-26",
+        localTime: null,
+        timezone: null,
+        recurrence: null,
+        lifecycle: "ACTIVE",
+        version: 0,
+        createdAt: stamp,
+        updatedAt: stamp,
+      },
+      4,
+    ),
+    dailyEntityRecord(
+      accountId,
+      "actionOccurrence",
+      {
+        id: "occurrence-1",
+        occurrenceKey: "item-1:2026-07-26",
+        userId: accountId,
+        actionItemId: "item-1",
+        originalDateKey: "2026-07-26",
+        currentPlacementId: "placement-1",
+        status: "OPEN",
+        completedAt: null,
+        version: 0,
+        createdAt: stamp,
+        updatedAt: stamp,
+      },
+      6,
+    ),
+    dailyEntityRecord(accountId, "actionPlacement", {
+      id: "placement-1",
+      userId: accountId,
+      occurrenceId: "occurrence-1",
+      occurrenceKey: "item-1:2026-07-26",
+      dateKey: "2026-07-26",
+      timingMode: "ALL_DAY",
+      localTime: null,
+      timezone: null,
+      position: "a0",
+      state: "ACTIVE",
+      movedToPlacementId: null,
+      createdAt: stamp,
+      updatedAt: stamp,
+    }),
+    // A non-Daily entity sharing the store must not leak into any bucket.
+    dailyEntityRecord(accountId, "boardCard", {
+      id: "card-1",
+      userId: accountId,
+      title: "Unrelated",
+    }),
+  ]);
+
+  const snapshot = await getDailyLocalSnapshot(accountId);
+  assert.deepEqual(
+    [
+      snapshot.notes.length,
+      snapshot.actionItems.length,
+      snapshot.occurrences.length,
+      snapshot.placements.length,
+    ],
+    [1, 1, 1, 1],
+  );
+  assert.equal(snapshot.notes[0]?.id, "note-1");
+  assert.equal(snapshot.placements[0]?.id, "placement-1");
+  // Action items and occurrences take the *record* revision, not the stale one
+  // embedded in the payload — conflict detection and baseVersion depend on it.
+  assert.equal(snapshot.actionItems[0]?.version, 4);
+  assert.equal(snapshot.occurrences[0]?.version, 6);
+});
+
+test("the daily local snapshot keeps accounts isolated", async () => {
+  const suffix = `${Date.now()}-${Math.random()}`;
+  const mine = `account-${suffix}-snapshot-mine`;
+  const theirs = `account-${suffix}-snapshot-theirs`;
+  const stamp = "2026-07-26T10:00:00.000Z";
+  const item = (id: string, userId: string) => ({
+    id,
+    userId,
+    title: id,
+    description: null,
+    timingMode: "ALL_DAY" as const,
+    startDate: "2026-07-26",
+    localTime: null,
+    timezone: null,
+    recurrence: null,
+    lifecycle: "ACTIVE" as const,
+    version: 0,
+    createdAt: stamp,
+    updatedAt: stamp,
+  });
+  await putOfflineEntities([
+    dailyEntityRecord(mine, "actionItem", item("item-mine", mine)),
+    dailyEntityRecord(theirs, "actionItem", item("item-theirs", theirs)),
+  ]);
+
+  const snapshot = await getDailyLocalSnapshot(mine);
+  assert.deepEqual(
+    snapshot.actionItems.map((entry) => entry.id),
+    ["item-mine"],
+  );
+});
+
+test("re-projecting an unchanged day serializes identically, so repeat renders can be dropped", () => {
+  // useDaily drops a projection write when its serialization matches the last
+  // one published for that date — that is what collapses the four re-projections
+  // a single add triggers (queue event, explicit call, sync event, server
+  // refresh) down to one render. The guard only works if projectLocalDay is
+  // deterministic, so pin that here: same snapshot in, byte-identical out.
+  const stamp = "2026-07-26T10:00:00.000Z";
+  const snapshot: DailyLocalSnapshot = {
+    notes: [],
+    actionItems: [
+      {
+        id: "item-1",
+        userId: "user-1",
+        title: "Practice",
+        description: null,
+        timingMode: "ALL_DAY",
+        startDate: "2026-07-26",
+        localTime: null,
+        timezone: null,
+        recurrence: null,
+        lifecycle: "ACTIVE",
+        version: 0,
+        createdAt: stamp,
+        updatedAt: stamp,
+      },
+    ],
+    occurrences: [],
+    placements: [],
+  };
+
+  const first = JSON.stringify(projectLocalDay(snapshot, "2026-07-26"));
+  const second = JSON.stringify(projectLocalDay(snapshot, "2026-07-26"));
+  assert.equal(first, second);
+
+  // ...and a real edit must still change it, or the guard would swallow updates.
+  const edited: DailyLocalSnapshot = {
+    ...snapshot,
+    actionItems: [{ ...snapshot.actionItems[0]!, title: "Practice more" }],
+  };
+  assert.notEqual(JSON.stringify(projectLocalDay(edited, "2026-07-26")), first);
 });
 
 test("Opening a future Daily date projects virtual items without creating records", () => {

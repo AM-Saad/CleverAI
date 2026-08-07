@@ -1,5 +1,23 @@
 <template>
   <UiSheet :open="isSwitcherOpen" title="Switch workspace" @update:open="onOpenChange">
+    <template #header>
+      <div class="wss__head">
+        <UiTitle tag="h2" size="lg" weight="bold" color="content-on-surface-strong" class="wss__title">
+          Switch workspace
+        </UiTitle>
+        <div class="wss__actions">
+          <UiButton size="xs" variant="soft" tone="primary" icon="plus" aria-label="Create new workspace"
+            @click="createNew">
+            New
+          </UiButton>
+          <UiButton size="xs" variant="ghost" tone="neutral" icon="folder-kanban" aria-label="Manage all workspaces"
+            @click="openWorkspaces">
+            Manage
+          </UiButton>
+        </div>
+      </div>
+    </template>
+
     <div class="wss">
       <!-- recents quick-hop chips -->
       <div v-if="recentChips.length > 1" class="wss__recents">
@@ -37,22 +55,6 @@
           No workspaces match “{{ query.trim() }}”.
         </li>
       </ul>
-
-      <UiListCard clickable variant="dashed" title="New workspace" leading-color="var(--color-primary)"
-        @click="createNew">
-        <template #leading>
-          <UiIcon name="plus" class="h-4 w-4" aria-hidden="true" />
-        </template>
-      </UiListCard>
-      <UiListCard clickable variant="soft" title="Manage all workspaces" leading-color="var(--color-content-secondary)"
-        @click="openWorkspaces">
-        <template #leading>
-          <UiIcon name="folder-kanban" class="h-4 w-4" aria-hidden="true" />
-        </template>
-        <template #action>
-          <UiIcon name="chevron-right" class="h-4 w-4" aria-hidden="true" />
-        </template>
-      </UiListCard>
     </div>
   </UiSheet>
 </template>
@@ -153,6 +155,25 @@ watch(isSwitcherOpen, (open) => {
 </script>
 
 <style scoped>
+.wss__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.wss__title {
+  letter-spacing: -0.3px;
+}
+
+.wss__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1, 6px);
+  flex-shrink: 0;
+}
+
 .wss {
   display: flex;
   flex-direction: column;

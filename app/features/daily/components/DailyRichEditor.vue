@@ -108,13 +108,18 @@ onBeforeUnmount(() => editor.value?.destroy());
   min-height: 320px;
   /* border: 1px solid var(--color-secondary); */
   /* border-radius: var(--component-card-radius); */
-  /* background: var(--color-surface); */
+  background: var(--color-background);
   overflow: hidden;
   /* Column so the toolbar keeps its height and the content area below takes
      (and scrolls within) whatever height the note section hands us. */
   display: flex;
   flex-direction: column;
   flex: 1 1 auto;
+  /* box-shadow: var(--shadow-card); */
+  margin: var(--space-1);
+  border-radius: var(--radius-xl);
+  /* padding: var(--space-2); */
+
 }
 
 .daily-editor__toolbar {
@@ -125,14 +130,24 @@ onBeforeUnmount(() => editor.value?.destroy());
   padding: var(--space-2) 0;
 }
 
+
 .daily-editor__content {
-  padding: var(--space-1);
+  padding: var(--space-2) var(--space-1);
   /* The one true scroll container for note content: flex to the editor's
      height, min-height:0 so long documents shrink us instead of growing us. */
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  mask-image: var(--mask-fade-y);
+  -webkit-mask-image: var(--mask-fade-y);
+
+
+}
+
+.daily-editor__content :deep(p.is-editor-empty) {
+  font-size: var(--text-sm);
+  color: var(--color-content-secondary)
 }
 
 .daily-editor__content :deep(.tiptap) {

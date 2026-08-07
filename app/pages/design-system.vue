@@ -348,6 +348,7 @@
               <UiCheckbox v-model="indeterminate" label="Indeterminate" />
               <UiCheckbox v-model="checked" label="Disabled checked" disabled />
               <UiCheckbox v-model="checked" indicator="end" label="Indicator at end" />
+              <UiCheckbox v-model="unchecked" overdue label="Overdue" />
             </div>
           </UiPanel>
           <UiPanel size="sm" variant="subtle">

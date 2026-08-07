@@ -1,26 +1,31 @@
 <template>
   <div class="action-list">
     <template v-for="item in items" :key="item.occurrenceKey">
-      <ActionItemInlineForm
-        v-if="editingKey === item.occurrenceKey"
-        :date-key="dateKey"
-        :item="item"
-        @cancel="editingKey = null"
-        @saved="editingKey = null"
-      />
-      <DailyActionRow
-        v-else
-        :item="item"
-        :conflicted="Boolean(conflictByActionItemId[item.actionItemId])"
-        @toggle="
-          $emit('toggle', {
-            occurrenceKey: item.occurrenceKey,
-            completed: $event,
-          })
-        "
-        @edit="startEdit(item.occurrenceKey)"
-        @move="$emit('move', item.occurrenceKey)"
-      />
+      <!-- out-in so the row and the editor never occupy the list at the same
+      time — overlapping them makes the whole list jump by the height
+      difference mid-swap. -->
+      <Transition name="row-swap" mode="out-in">
+        <ActionItemRowEditor
+          v-if="editingKey === item.occurrenceKey"
+          :date-key="dateKey"
+          :item="item"
+          @cancel="editingKey = null"
+          @saved="editingKey = null"
+        />
+        <DailyActionRow
+          v-else
+          :item="item"
+          :conflicted="Boolean(conflictByActionItemId[item.actionItemId])"
+          @toggle="
+            $emit('toggle', {
+              occurrenceKey: item.occurrenceKey,
+              completed: $event,
+            })
+          "
+          @edit="startEdit(item.occurrenceKey)"
+          @move="$emit('move', item.occurrenceKey)"
+        />
+      </Transition>
       <DailyActionConflictPanel
         v-if="conflictByActionItemId[item.actionItemId]"
         :conflict="conflictByActionItemId[item.actionItemId]!"
@@ -57,7 +62,7 @@ import type { DailyOccurrenceConflict } from "../repositories/dailyLocalReposito
 import type { DailyActionViewModel } from "../presentation/dailyActionViewModel";
 import DailyActionConflictPanel from "~/features/daily/components/DailyActionConflictPanel.vue";
 import DailyOccurrenceConflictPanel from "~/features/daily/components/DailyOccurrenceConflictPanel.vue";
-import ActionItemInlineForm from "~/features/daily/components/ActionItemInlineForm.vue";
+import ActionItemRowEditor from "~/features/daily/components/ActionItemRowEditor.vue";
 import DailyActionRow from "~/features/daily/components/DailyActionRow.vue";
 
 const props = defineProps<{
@@ -134,5 +139,35 @@ watch(
 .action-list {
   overflow: hidden;
   /* background: var(--color-surface-subtle); */
+}
+
+/* Row ⇄ editor swap. Fires on every edit tap, so it stays short and flat.
+ *
+ * No transform on purpose: the row and the editor are different heights, so the
+ * swap already moves everything below it. A scale on top of that reads as a
+ * wobble, and sub-pixel scaling blurs the title mid-transition. A plain
+ * crossfade is the one thing that doesn't fight the height change.
+ *
+ * Leave is shorter than enter. `out-in` runs the two phases back to back, so
+ * their sum is what the finger feels — trimming the outgoing half keeps the tap
+ * responsive while the incoming editor still gets a soft landing. */
+.row-swap-enter-active {
+  transition: opacity var(--duration-fast) var(--ease-standard);
+}
+
+.row-swap-leave-active {
+  transition: opacity 90ms var(--ease-exit);
+}
+
+.row-swap-enter-from,
+.row-swap-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-swap-enter-active,
+  .row-swap-leave-active {
+    transition-duration: 0.01ms;
+  }
 }
 </style>

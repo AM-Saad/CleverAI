@@ -3,12 +3,12 @@
     <div class="note-section__head">
       <div>
         <div class="note-section__title-row">
-          <UiIcon name="daily-note-sketch" size="26px" color="secondary" />
-          <UiTitle id="note-title" class="unselectable" tag="h2" size="base">Daily note</UiTitle>
+          <UiIcon name="daily-note-sketch" size="20px" color="primary" />
+          <UiTitle id="note-title" class="unselectable" tag="h2" size="sm" :weight="'extrabold'">Daily note</UiTitle>
         </div>
         <!-- <p>One continuous note for this day</p> -->
       </div>
-      <span class="note-section__save-state">{{ saveState }}</span>
+      <!-- <span class="note-section__save-state">{{ saveState }}</span> -->
     </div>
 
     <DailyNoteConflictPanel v-if="conflict" :conflict="conflict" @resolve="$emit('resolve', $event)" />

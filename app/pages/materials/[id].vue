@@ -70,7 +70,10 @@
         <div
           id="material-source-preview"
           class="md__preview-body"
-          :class="{ 'md__preview-body--expanded': previewExpanded }"
+          :class="{
+            'md__preview-body--expanded': previewExpanded,
+            'md__preview-body--clipped': previewCanExpand && !previewExpanded,
+          }"
         >
           <UiParagraph size="sm" dir="auto" class="md__preview-text">{{
             previewText
@@ -1343,12 +1346,23 @@ watch(isOffline, (now, was) => {
   white-space: pre-wrap;
 }
 
+/* Collapsed previews are sliced at a fixed character count, so they stop
+   mid-word with nothing to say so. Fading the tail reads as "cut off, there is
+   more" and pairs with the See more button below. Only applied when there is
+   actually more — a short source that fits needs no signal. */
+.md__preview-body--clipped {
+  mask-image: var(--mask-fade-bottom);
+  -webkit-mask-image: var(--mask-fade-bottom);
+}
+
 .md__preview-body--expanded {
   max-height: 320px;
   padding-right: var(--space-2);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+  mask-image: var(--mask-fade-y);
+  -webkit-mask-image: var(--mask-fade-y);
 }
 
 .md__stats {
@@ -1378,6 +1392,7 @@ watch(isOffline, (now, was) => {
   margin: 0 auto;
   padding: var(--space-3) var(--space-4) var(--space-4);
   background: var(--color-background);
+  z-index: var(--z-popover);
 }
 
 .md__empty {

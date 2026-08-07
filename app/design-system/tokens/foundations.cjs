@@ -68,6 +68,16 @@ const themeTokens = [
     comment: "Small emphasized entrance",
   },
   {
+    name: "--ease-exit",
+    // The other curves here are all decelerations: ~75% of the travel lands in
+    // the first quarter of the duration. That is right for an entrance, and
+    // wrong for a collapse — the surrounding content snaps most of the way and
+    // then crawls. This one spreads the movement evenly with both ends eased,
+    // so leaving elements and the layout they release move at one steady rate.
+    value: "cubic-bezier(0.4, 0, 0.2, 1)",
+    comment: "Collapse and dismissal — evenly paced, no snap",
+  },
+  {
     name: "--ease-spring",
     value: "cubic-bezier(0.32, 1.4, 0.45, 1)",
     comment: "Gentle overshoot",
@@ -98,4 +108,50 @@ const themeTokens = [
   { name: "--space-16", value: "4rem", comment: "64px" },
 ];
 
-module.exports = { themeTokens };
+/* Plain `:root` variables rather than `@theme` entries.
+ *
+ * These are complete CSS values, not scale steps — Tailwind derives utilities
+ * from recognised `@theme` namespaces (--color-*, --shadow-*, --ease-*, ...),
+ * and there is no utility to generate from a gradient. Authoring them here
+ * keeps them out of the utility surface while still governing the value. */
+/* Two tokens rather than one parameterised template, deliberately.
+ *
+ * `linear-gradient(to var(--dir), ... black var(--end) ...)` authored here does
+ * NOT pick up per-element overrides of `--dir`/`--end`: a custom property's
+ * `var()`s resolve at computed-value time on the element that *declares* it, so
+ * a `:root` template bakes in `:root`'s parameters and descendants inherit the
+ * already-substituted result. Verified in-browser, not assumed.
+ *
+ * The two values are also genuinely different shapes, not drift — see each. */
+const rootTokens = [
+  {
+    name: "--mask-fade-y",
+    // A custom property can hold a whole gradient, so the fade is one token
+    // instead of four stops repeated per consumer. Asymmetric on purpose:
+    // `to top` puts 0% at the bottom, so this fades 18% at the bottom and only
+    // 8% at the top — a scrolling pane hides its overflow without dimming the
+    // first line of text. Apply to `mask-image` and `-webkit-mask-image` both.
+    value:
+      "linear-gradient(to top, transparent 0%, black 18%, black 92%, transparent 100%)",
+    comment: "Vertical scroll-fade for scrollable panes (18% bottom, 8% top)",
+  },
+  {
+    name: "--mask-fade-x",
+    // Symmetric 18% at each end: a horizontally scrolling strip has no leading
+    // edge to protect, so both sides fade equally.
+    value:
+      "linear-gradient(to right, transparent 0%, black 18%, black 82%, transparent 100%)",
+    comment: "Horizontal edge fade for scrolling strips (18% both ends)",
+  },
+  {
+    name: "--mask-fade-bottom",
+    // Trailing edge only — the top stays solid. For clamped content where the
+    // fade means "this is cut off, there is more", rather than the scroll fade
+    // above where it means "this pane scrolls". Same 18% fade distance so the
+    // two read as the same family.
+    value: "linear-gradient(to bottom, black 0%, black 82%, transparent 100%)",
+    comment: "Bottom-only fade for clamped/truncated content (18% tail)",
+  },
+];
+
+module.exports = { themeTokens, rootTokens };

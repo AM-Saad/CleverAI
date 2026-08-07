@@ -1,50 +1,22 @@
 <template>
   <div class="day-page">
-    <DailyDateNavigation
-      :active-date-key="dateKey"
-      :eyebrow="eyebrow"
-      :title="dayTitle"
-      :days="weekDays"
-      :account-link="accountLink"
-      @navigate="go"
-      @select-date="goDate"
-    />
+    <DailyDateNavigation :active-date-key="dateKey" :eyebrow="eyebrow" :title="dayTitle" :days="weekDays"
+      :account-link="accountLink" @navigate="go" @select-date="goDate" />
 
     <UiAlert v-if="daily.error.value" tone="error" :title="daily.error.value" />
 
-    <DailyActionSection
-      :date-key="dateKey"
-      :items="activeActionModels"
-      :moved-items="movedActionModels"
-      :open-count="openCount"
-      :completed-count="completedCount"
-      :loading="Boolean(daily.loadingDates.value[dateKey])"
-      :conflicts="actionConflicts"
-      :occurrence-conflicts="occurrenceConflicts"
-      :resolving-action-item-id="resolvingActionItemId"
-      :resolving-occurrence-id="resolvingOccurrenceId"
-      @toggle="toggleAction"
-      @move="openMove"
-      @resolve-conflict="resolveActionConflict"
-      @resolve-occurrence-conflict="resolveOccurrenceConflict"
-    />
+    <DailyActionSection :date-key="dateKey" :items="activeActionModels" :moved-items="movedActionModels"
+      :open-count="openCount" :completed-count="completedCount" :loading="Boolean(daily.loadingDates.value[dateKey])"
+      :conflicts="actionConflicts" :occurrence-conflicts="occurrenceConflicts"
+      :resolving-action-item-id="resolvingActionItemId" :resolving-occurrence-id="resolvingOccurrenceId"
+      @toggle="toggleAction" @move="openMove" @resolve-conflict="resolveActionConflict"
+      @resolve-occurrence-conflict="resolveOccurrenceConflict" />
 
-    <DailyNoteSection
-      :date-key="dateKey"
-      :model-value="noteContent"
-      :save-state="noteSaveState"
-      :conflict="noteConflict"
-      :sync-issue="noteSyncIssue"
-      @update:model-value="onNoteChange"
-      @blur="flushPendingSave()"
-      @resolve="resolveNoteConflict"
-    />
+    <DailyNoteSection :date-key="dateKey" :model-value="noteContent" :save-state="noteSaveState"
+      :conflict="noteConflict" :sync-issue="noteSyncIssue" @update:model-value="onNoteChange" @blur="flushPendingSave()"
+      @resolve="resolveNoteConflict" />
 
-    <RescheduleActionSheet
-      v-model:open="moveSheetOpen"
-      :visible-date="dateKey"
-      :item="movingItem"
-    />
+    <RescheduleActionSheet v-model:open="moveSheetOpen" :visible-date="dateKey" :item="movingItem" />
   </div>
 </template>
 
@@ -85,6 +57,16 @@ const moveSheetOpen = ref(false);
 const movingItem = ref<DayItemDTO | null>(null);
 const actionConflicts = ref<DailyActionConflict[]>([]);
 const occurrenceConflicts = ref<DailyOccurrenceConflict[]>([]);
+
+/** Assign only when the contents actually differ, so a recomputed-but-identical
+ * list doesn't churn prop identity and re-render everything downstream. */
+function publishIfChanged<T>(target: Ref<T[]>, next: T[]) {
+  if (target.value.length === next.length) {
+    if (!next.length) return;
+    if (JSON.stringify(target.value) === JSON.stringify(next)) return;
+  }
+  target.value = next;
+}
 const resolvingActionItemId = ref<string | null>(null);
 const resolvingOccurrenceId = ref<string | null>(null);
 const onDailyLocalStateChanged = () => {
@@ -323,11 +305,18 @@ async function refreshActionConflicts() {
     daily.getActionConflicts(),
     daily.getOccurrenceConflicts(),
   ]);
-  actionConflicts.value = actions.filter((conflict) =>
-    itemIds.has(conflict.actionItemId),
+  // This runs after every sync, and on almost every day both lists are empty.
+  // Assigning a fresh [] over an existing [] still changes the prop identity,
+  // which re-renders every action row — so only publish a real change.
+  publishIfChanged(
+    actionConflicts,
+    actions.filter((conflict) => itemIds.has(conflict.actionItemId)),
   );
-  occurrenceConflicts.value = occurrences.filter((conflict) =>
-    occurrenceKeys.has(conflict.occurrenceKey),
+  publishIfChanged(
+    occurrenceConflicts,
+    occurrences.filter((conflict) =>
+      occurrenceKeys.has(conflict.occurrenceKey),
+    ),
   );
 }
 
@@ -419,7 +408,7 @@ async function resolveOccurrenceConflict(payload: {
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  padding-bottom: var(--space-6);
+  /* padding-bottom: var(--space-6); */
   /* Exactly fill .ds-shell__main: grow into leftover height AND shrink to it.
      min-height:0 lifts the content floor (min-height:auto) so shrink can win;
      overflow-y makes overflowing content scroll inside this box, not the page. */

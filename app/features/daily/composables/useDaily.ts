@@ -72,6 +72,10 @@ type DailyRefreshGuard = {
   lastSuccessAt: number;
 };
 const dailyRefreshGuards = new Map<string, DailyRefreshGuard>();
+/** `${accountId}:${dateKey}` → serialized projection last published to state.
+ * Lets repeat projections of unchanged days be dropped before they trigger a
+ * render (see projectDates). */
+const projectionSignatures = new Map<string, string>();
 const DAILY_PROJECTIONS_STATE_KEY = "daily-projections-by-account";
 const DAILY_LOADING_STATE_KEY = "daily-loading-by-account";
 const DAILY_ERRORS_STATE_KEY = "daily-errors-by-account";
@@ -86,6 +90,7 @@ export function clearDailyMemoryState(): void {
   useState<Record<string, string | null>>(DAILY_ERRORS_STATE_KEY).value = {};
   bootstrappedAccounts.clear();
   dailyRefreshGuards.clear();
+  projectionSignatures.clear();
 }
 
 function getDailyRefreshGuard(key: string): DailyRefreshGuard {
@@ -187,28 +192,77 @@ export function useDaily() {
     },
   });
 
+  /** True when this projection differs from the last one published for the
+   * date; records the new signature as a side effect. */
+  const projectionIsNew = (projection: DayProjectionDTO) => {
+    const key = `${accountId.value}:${projection.dateKey}`;
+    const signature = JSON.stringify(projection);
+    if (
+      projectionSignatures.get(key) === signature &&
+      projections.value[projection.dateKey]
+    ) {
+      return false;
+    }
+    projectionSignatures.set(key, signature);
+    return true;
+  };
+
   const setProjection = (projection: DayProjectionDTO) => {
+    if (!projectionIsNew(projection)) return;
     projections.value = {
       ...projections.value,
       [projection.dateKey]: projection,
     };
   };
 
-  async function projectDate(dateKey: string) {
+  /** Re-project several dates from a single snapshot read, publishing them in
+   * one state write.
+   *
+   * Both halves matter for smoothness. Projecting each date separately re-reads
+   * the whole local snapshot per date; publishing each separately re-renders
+   * the whole day per date. And a single add reaches this path four times over
+   * (queue event, the explicit call in createAction, sync event, then the
+   * server refresh) — each covering today plus both prefetched neighbours —
+   * with every pass after the first producing byte-identical data. Dropping the
+   * no-op writes collapses that to one render, so the list stops juddering
+   * underneath the open/collapse animations. */
+  async function projectDates(dateKeys: Iterable<string>) {
     if (!accountId.value) return;
-    setProjection(
-      projectLocalDay(await getDailyLocalSnapshot(accountId.value), dateKey),
-    );
+    const dates = [...new Set(dateKeys)];
+    if (!dates.length) return;
+    const snapshot = await getDailyLocalSnapshot(accountId.value);
+    const changed: Record<string, DayProjectionDTO> = {};
+    for (const dateKey of dates) {
+      const projection = projectLocalDay(snapshot, dateKey);
+      if (projectionIsNew(projection)) changed[dateKey] = projection;
+    }
+    if (!Object.keys(changed).length) return;
+    projections.value = { ...projections.value, ...changed };
   }
 
-  async function settleOnlineActionSave(dateKeys: Iterable<string>) {
+  function projectDate(dateKey: string) {
+    return projectDates([dateKey]);
+  }
+
+  /** Push the queued mutation and re-confirm the affected days from the server.
+   *
+   * Deliberately fire-and-forget: by the time this runs the mutation is already
+   * durable in the outbox and the day has been re-projected, so the user is
+   * looking at the final state. Awaiting it only pins the UI to two network
+   * round-trips before the next interaction can start. Delivery is the outbox's
+   * job — it retries on its own, and genuine divergence surfaces through the
+   * conflict panels. Mirrors `saveNote`, which already settles this way. */
+  function settleOnlineActionSave(dateKeys: Iterable<string>): void {
     if (!offline.isVerifiedOnline.value) return;
-    await offline.sync();
-    await Promise.all(
-      [...new Set(dateKeys)].map((dateKey) =>
-        refreshFromServer(dateKey).catch(() => undefined),
-      ),
-    );
+    const dates = [...new Set(dateKeys)];
+    void (async () => {
+      await offline.sync();
+      await Promise.all(
+        dates.map((dateKey) =>
+          refreshFromServer(dateKey).catch(() => undefined),
+        ),
+      );
+    })().catch(() => undefined);
   }
 
   async function refreshFromServer(
@@ -415,7 +469,7 @@ export function useDaily() {
       deferSync: true,
     });
     await projectDate(input.dateKey);
-    await settleOnlineActionSave([input.dateKey]);
+    settleOnlineActionSave([input.dateKey]);
   }
 
   async function updateAction(input: DailyUpdateActionInput) {
@@ -487,12 +541,11 @@ export function useDaily() {
       deferSync: true,
     });
 
-    const dates = new Set([
+    await projectDates([
       input.visibleDateKey,
       ...Object.keys(projections.value),
     ]);
-    await Promise.all([...dates].map((dateKey) => projectDate(dateKey)));
-    await settleOnlineActionSave([input.visibleDateKey]);
+    settleOnlineActionSave([input.visibleDateKey]);
   }
 
   async function saveNote(
@@ -733,7 +786,7 @@ export function useDaily() {
       });
     }
     await projectDate(dateKey);
-    await settleOnlineActionSave([dateKey]);
+    settleOnlineActionSave([dateKey]);
   }
 
   async function reschedule(
@@ -853,11 +906,8 @@ export function useDaily() {
       deferSync: true,
       sequence: true,
     });
-    await Promise.all([
-      projectDate(visibleDateKey),
-      projectDate(targetDateKey),
-    ]);
-    await settleOnlineActionSave([visibleDateKey, targetDateKey]);
+    await projectDates([visibleDateKey, targetDateKey]);
+    settleOnlineActionSave([visibleDateKey, targetDateKey]);
   }
 
   if (import.meta.client && !listenersInstalled) {
@@ -870,7 +920,7 @@ export function useDaily() {
     ]);
     const refreshVisibleDates = async (fetchServer: boolean) => {
       const dates = Object.keys(projections.value);
-      await Promise.all(dates.map((dateKey) => projectDate(dateKey)));
+      await projectDates(dates);
       if (fetchServer && offline.isVerifiedOnline.value) {
         await offline.sync();
         await Promise.all(

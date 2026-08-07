@@ -26,10 +26,17 @@ Owns the day-planner slice: recurring action items, per-day placements
 - `components/*`: `DailyDateNavigation` (header/week strip) →
   `DailyActionSection` → `DailyActionList` → `DailyActionRow`;
   `DailyNoteSection` → `DailyNoteConflictPanel` + `DailyRichEditor`;
-  `ActionItemInlineForm` handles quick create/edit with timing and recurrence
-  in place; `ActionItemListSkeleton` mirrors the action-row layout and can be
+  `ActionItemQuickAddForm` is the stacked create form (timing + recurrence
+  reveal once a title is typed, and reset after each add);
+  `ActionItemRowEditor` edits an existing item in place, mirroring
+  `DailyActionRow`'s geometry so the row's own controls appear to switch rather
+  than being replaced by a form. Both build their recurrence rule through
+  `domain/actionItemMutation.ts#buildRecurrenceRule` — don't re-derive it.
+  `ActionItemListSkeleton` mirrors the action-row layout and can be
   reused anywhere action items load;
   `RescheduleActionSheet` → `RescheduleActionForm`.
+- `composables/useReflowEase.ts` eases a container across a layout change CSS
+  can't animate (flex re-wraps, line-count changes), which land in one frame.
 
 ## Sync UX / Conflict Policy
 

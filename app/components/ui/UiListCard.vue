@@ -24,7 +24,7 @@
       <slot name="trailing">{{ trailingText }}</slot>
     </span>
 
-    <span v-if="$slots.action" :class="ui.action({ class: actionClass })">
+    <span v-if="$slots.action" data-slot="action" :class="ui.action({ class: actionClass })" @click.stop>
       <slot name="action" />
     </span>
   </component>
@@ -194,6 +194,7 @@ const listCard = tv({
           "cursor-pointer",
           interactiveTransition,
           pressedScale,
+          "has-[[data-slot=action]:active]:scale-100",
           focusRing,
           "hover:border-border-strong hover:bg-surface-subtle hover:shadow-[var(--shadow-card-hover)]",
           "active:bg-surface-subtle",

@@ -1,19 +1,8 @@
 <template>
-  <UiButton
-    :tone="tone"
-    :variant="variant"
-    :size="size"
-    :icon="icon"
-    :loading="loading"
-    :disabled="disabled"
-    :active="active"
-    square
-    :aria-label="label"
-    :aria-pressed="pressed === undefined ? undefined : String(pressed)"
-    :title="label"
-    v-bind="$attrs"
-    :class="focusRing"
-  />
+  <UiButton :tone="tone" :variant="variant" :size="size" :icon="icon" :loading="loading" :disabled="disabled"
+    :active="active" square :aria-label="label" :aria-pressed="pressed === undefined ? undefined : String(pressed)"
+    :title="label" v-bind="$attrs" :class="focusRing" />
+  <slot></slot>
 </template>
 
 <script setup lang="ts">

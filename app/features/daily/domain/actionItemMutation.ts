@@ -1,7 +1,51 @@
 import type {
   ActionItemDTO,
+  RecurrenceRuleDTO,
   UpdateActionItemDTO,
 } from "@shared/utils/daily.contract";
+// Relative, not the `@shared` alias: this is a runtime import, and the unit
+// runner resolves these files without Nuxt's alias map (the type-only imports
+// above are erased, so they can keep the alias). Matches projectLocalDay.ts.
+import {
+  parseDateKey,
+  weekdayForDateKey,
+} from "../../../../shared/utils/daily-recurrence";
+
+export type RecurrenceFrequency = RecurrenceRuleDTO["frequency"];
+export type RecurrenceChoice = RecurrenceFrequency | "NONE";
+
+/** Turn a picked frequency into a full rule.
+ *
+ * Shared by every editor that offers the repeat dropdown — the weekday/monthDay/
+ * month derivation is subtle enough that a second copy would drift. An unchanged
+ * frequency returns the item's existing rule untouched, so re-saving an item
+ * never rewrites fields the user didn't touch (and never marks them changed). */
+export function buildRecurrenceRule({
+  frequency,
+  startDate,
+  existing = null,
+}: {
+  frequency: RecurrenceChoice;
+  startDate: string;
+  existing?: RecurrenceRuleDTO | null;
+}): RecurrenceRuleDTO | null {
+  if (frequency === "NONE") return null;
+  if (existing && existing.frequency === frequency) return existing;
+
+  const date = parseDateKey(startDate)!;
+  return {
+    frequency,
+    interval: 1,
+    weekdays:
+      frequency === "WEEKLY" ? [weekdayForDateKey(startDate)] : undefined,
+    monthDay: ["MONTHLY", "YEARLY"].includes(frequency)
+      ? date.getUTCDate()
+      : undefined,
+    month: frequency === "YEARLY" ? date.getUTCMonth() + 1 : undefined,
+    missingDayPolicy: "LAST_DAY",
+    ends: "NEVER",
+  };
+}
 
 export const ACTION_ITEM_CREATE_FIELDS = [
   "title",

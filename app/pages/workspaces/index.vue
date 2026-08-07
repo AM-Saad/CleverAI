@@ -1,35 +1,24 @@
 <template>
   <div class="ws">
-    <AppPageHeader
-      title="Workspaces"
-      :subtitle="`${workspaces.length} workspace${workspaces.length === 1 ? '' : 's'}`"
-      back-to="/learn"
-    />
+    <AppPageHeader title="Workspaces" :subtitle="`${workspaces.length} workspace${workspaces.length === 1 ? '' : 's'}`"
+      back-to="/learn" />
 
     <div v-if="loading && !workspaces.length" class="ws__list">
-      <UiSkeleton
-        v-for="i in 3"
-        :key="i"
-        class="h-[68px] w-full rounded-[var(--component-card-radius)]"
-      />
+      <UiSkeleton v-for="i in 3" :key="i" class="h-[68px] w-full rounded-[var(--component-card-radius)]" />
     </div>
 
     <ul v-else class="ws__list">
       <li v-for="w in workspaces" :key="w.id" class="ws__row">
-        <UiListCard
-          clickable
-          selectable
-          :selected="w.id === activeId"
-          :title="w.title"
-          :description="metaFor(w.id)"
-          class-name="ws__row-select"
-          @click="select(w.id)"
-        >
+        <UiListCard clickable selectable :selected="w.id === activeId" :title="w.title" :description="metaFor(w.id)"
+          class-name="ws__row-select" @click="select(w.id)">
           <template #leading>
             <span class="ws__tile" :style="{ background: workspaceColor(w) }" />
           </template>
+          <template #action>
+            <UiIconButton icon="more-vertical" label="Workspace actions" size="sm" @click="openActions(w)" />
+          </template>
         </UiListCard>
-        <UiPill
+        <!-- <UiPill
           v-if="caughtUp(w.id)"
           size="sm"
           label="all caught up"
@@ -41,56 +30,29 @@
           <template #icon>
             <UiPillIcon name="check" size="sm" />
           </template>
-        </UiPill>
-        <UiIcon
-          v-if="w.id === activeId"
-          name="circle-check-big"
-          class="ws__active-icon"
-        />
-        <UiIconButton
-          icon="more-vertical"
-          label="Workspace actions"
-          size="sm"
-          @click="openActions(w)"
-        />
+        </UiPill> -->
+        <!-- <UiIcon v-if="w.id === activeId" name="circle-check-big" class="ws__active-icon" /> -->
+
       </li>
 
       <li>
-        <UiListCard
-          clickable
-          variant="dashed"
-          title="New workspace"
-          @click="startCreate"
-        >
-          <template #leading
-            ><UiIcon name="plus" class="h-4 w-4"
-          /></template>
+        <UiListCard clickable variant="dashed" title="New workspace" @click="startCreate">
+          <template #leading>
+            <UiIcon name="plus" class="h-4 w-4" />
+          </template>
         </UiListCard>
       </li>
     </ul>
 
     <!-- workspace actions (⋯) -->
-    <UiSheet
-      v-model:open="actionsOpen"
-      :title="actionTarget?.title ?? 'Workspace'"
-    >
+    <UiSheet v-model:open="actionsOpen" :title="actionTarget?.title ?? 'Workspace'">
       <div class="ws-actions">
-        <UiListCard
-          clickable
-          variant="soft"
-          title="Overview"
-          @click="openOverview"
-        >
+        <UiListCard clickable variant="soft" title="Overview" @click="openOverview">
           <template #leading>
             <UiIcon name="layout-dashboard" class="h-5 w-5" />
           </template>
         </UiListCard>
-        <UiListCard
-          clickable
-          variant="soft"
-          title="Use workspace"
-          @click="openSelected"
-        >
+        <UiListCard clickable variant="soft" title="Use workspace" @click="openSelected">
           <template #leading>
             <UiIcon name="arrow-up-right" class="h-5 w-5" />
           </template>
@@ -100,14 +62,8 @@
             <UiIcon name="pencil" class="h-5 w-5" />
           </template>
         </UiListCard>
-        <UiDoubleTapDeleteButton
-          unstyled
-          class="ws-actions__row ws-actions__row--danger"
-          label="Delete workspace"
-          armed-label="Tap again to delete workspace"
-          :reset-key="actionTarget?.id ?? null"
-          @confirm="onDeleteTap"
-        >
+        <UiDoubleTapDeleteButton unstyled class="ws-actions__row ws-actions__row--danger" label="Delete workspace"
+          armed-label="Tap again to delete workspace" :reset-key="actionTarget?.id ?? null" @confirm="onDeleteTap">
           <template #default="{ label }">
             <UiIcon name="trash-2" class="h-5 w-5" />
             {{ label }}
@@ -117,44 +73,23 @@
     </UiSheet>
 
     <!-- create / edit flow -->
-    <UiSheet
-      v-model:open="createOpen"
-      :title="editingId ? 'Edit workspace' : 'New workspace'"
-    >
+    <UiSheet v-model:open="createOpen" :title="editingId ? 'Edit workspace' : 'New workspace'">
       <div class="ws-create">
-        <div
-          class="ws-create__preview"
-          :style="{ background: `var(${form.color})` }"
-        />
+        <div class="ws-create__preview" :style="{ background: `var(${form.color})` }" />
 
         <div class="ws-create__swatches">
           <button v-for="c in accentTokens" :key="c" type="button" class="ws-create__swatch"
             :class="{ 'ws-create__swatch--on': form.color === c }" :style="{ background: `var(${c})` }"
-            :aria-label="`Color ${c}`" :aria-pressed="form.color === c" @click="form.color = c" /> <!-- design-allow: native color swatch -->
+            :aria-label="`Color ${c}`" :aria-pressed="form.color === c" @click="form.color = c" />
+          <!-- design-allow: native color swatch -->
         </div>
 
-        <UiLabel tag="label" class="ws-create__label" for="workspace-name"
-          >NAME</UiLabel
-        >
-        <UiInput
-          id="workspace-name"
-          v-model="form.title"
-          placeholder="e.g. Biology"
-          autofocus
-        />
+        <UiLabel tag="label" class="ws-create__label" for="workspace-name">NAME</UiLabel>
+        <UiInput id="workspace-name" v-model="form.title" placeholder="e.g. Biology" autofocus />
 
-        <UiLabel
-          tag="label"
-          class="ws-create__label"
-          for="workspace-description"
-          >DESCRIPTION (optional)</UiLabel
-        >
-        <UiTextarea
-          id="workspace-description"
-          v-model="form.description"
-          placeholder="What's this space for?"
-          :rows="2"
-        />
+        <UiLabel tag="label" class="ws-create__label" for="workspace-description">DESCRIPTION (optional)</UiLabel>
+        <UiTextarea id="workspace-description" v-model="form.description" placeholder="What's this space for?"
+          :rows="2" />
 
         <div class="ws-create__info">
           <UiIcon name="users" class="h-4 w-4" />
@@ -163,14 +98,8 @@
       </div>
 
       <template #footer>
-        <UiButton
-          block
-          tone="primary"
-          size="lg"
-          :loading="creating || updating"
-          :disabled="!form.title.trim()"
-          @click="submit"
-        >
+        <UiButton block tone="primary" size="lg" :loading="creating || updating" :disabled="!form.title.trim()"
+          @click="submit">
           {{ editingId ? "Save changes" : "Create workspace" }}
         </UiButton>
       </template>
@@ -376,6 +305,7 @@ watch(
   gap: var(--space-3);
   padding-bottom: var(--space-6);
 }
+
 .ws__list {
   display: flex;
   flex-direction: column;
@@ -384,6 +314,7 @@ watch(
   padding: 0;
   margin: 0;
 }
+
 .ws__row {
   display: flex;
   align-items: center;
@@ -391,16 +322,19 @@ watch(
   width: 100%;
   text-align: left;
 }
+
 .ws__row-select {
   flex: 1;
   min-width: 0;
 }
+
 .ws-actions {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   padding-bottom: var(--space-2);
 }
+
 .ws-actions__row {
   display: flex;
   align-items: center;
@@ -413,10 +347,12 @@ watch(
   color: var(--color-content-on-surface-strong);
   background: var(--color-surface-subtle);
 }
+
 .ws-actions__row--danger {
   color: var(--color-error-text);
   background: color-mix(in srgb, var(--color-error) 10%, transparent);
 }
+
 .ws__tile {
   display: grid;
   place-items: center;
@@ -425,44 +361,52 @@ watch(
   border-radius: var(--radius-full);
   flex-shrink: 0;
 }
+
 .ws__active-icon {
   width: 22px;
   height: 22px;
   color: var(--color-primary);
   flex-shrink: 0;
 }
+
 .ws-create {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
   padding-bottom: var(--space-2);
 }
+
 .ws-create__preview {
   width: 40px;
   height: 6px;
   margin: var(--space-2) auto;
   border-radius: var(--radius-full);
 }
+
 .ws-create__swatches {
   display: flex;
   justify-content: center;
   gap: var(--space-2);
   margin-bottom: var(--space-3);
 }
+
 .ws-create__swatch {
   width: 28px;
   height: 28px;
   border-radius: var(--radius-full);
   border: 2px solid transparent;
 }
+
 .ws-create__swatch--on {
   border-color: var(--color-content-on-surface-strong);
   transform: scale(1.1);
 }
+
 .ws-create__swatch:focus-visible {
   outline: 2px solid var(--ds-focus-outline-color);
   outline-offset: 2px;
 }
+
 .ws-create__label {
   font-size: 11px;
   font-weight: 700;
@@ -470,6 +414,7 @@ watch(
   color: var(--color-content-secondary);
   margin-top: var(--space-2);
 }
+
 .ws-create__info {
   display: flex;
   align-items: center;

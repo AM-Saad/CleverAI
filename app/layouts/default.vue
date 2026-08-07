@@ -108,7 +108,7 @@ const isMarketingLanding = computed(
   min-height: 0;
   overflow-y: auto;
   /* The shell owns the page gutter — pages must not add horizontal padding. */
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-2) 0;
 }
 
 .ds-skip {
@@ -125,5 +125,12 @@ const isMarketingLanding = computed(
   background: var(--color-primary);
   color: var(--color-on-primary);
   font-weight: 600;
+}
+
+@media (max-width: 45rem) {
+  .ds-shell__main {
+    padding: var(--space-2) var(--space-3);
+
+  }
 }
 </style>

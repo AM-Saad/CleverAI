@@ -116,8 +116,7 @@
               class="group px-8 py-4 relative overflow-hidden transition-all hover:scale-105 hover:shadow-[var(--shadow-card-hover)] hover:shadow-primary/20">
               <router-link to="/auth/signup" class="flex items-center gap-3 text-lg">
                 Start Your First Loop
-                <UiIcon name="arrow-right" size="lg"
-                  class="transition-transform group-hover:translate-x-1" />
+                <UiIcon name="arrow-right" size="lg" class="transition-transform group-hover:translate-x-1" />
               </router-link>
             </ui-button>
           </div>
@@ -131,6 +130,7 @@
 import { motion } from "motion-v";
 import { useScroll, useWindowSize } from "@vueuse/core";
 import aiLogoAnimationData from '~/assets/AI logo Foriday.json';
+import { getServiceWorkerReadyRegistration } from "~/utils/serviceWorkerRuntime";
 
 const aiLogoAnimation = aiLogoAnimationData;
 
@@ -223,4 +223,3 @@ body {
   background-color: var(--color-white) !important;
 }
 </style>
-import { getServiceWorkerReadyRegistration } from "~/utils/serviceWorkerRuntime";

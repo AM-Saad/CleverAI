@@ -1,128 +1,89 @@
 <template>
-  <div
-    ref="pickerRef"
-    class="daily-date-picker"
-    role="dialog"
-    aria-label="Date picker"
-    tabindex="-1"
-    @keydown="onKeydown"
-  >
+  <div ref="pickerRef" class="daily-date-picker" role="dialog" aria-label="Date picker" tabindex="-1"
+    @keydown="onKeydown">
     <!-- Header: Navigation & Month/Year Display -->
     <div class="daily-date-picker__header">
       <div class="daily-date-picker__title-group">
-        <button type="button" class="daily-date-picker__month-toggle" :aria-expanded="showMonthYearSelector" aria-label="Toggle month and year selector" @click="showMonthYearSelector = !showMonthYearSelector"> <!-- design-allow: date picker month/year toggle -->
-          <span class="daily-date-picker__month-label">{{ currentMonthLabel }}</span>
-          <UiIcon
-            name="chevron-down"
-            class="daily-date-picker__chevron"
-            :class="{ 'daily-date-picker__chevron--open': showMonthYearSelector }"
-          />
+        <button type="button" class="daily-date-picker__month-toggle" :aria-expanded="showMonthYearSelector"
+          aria-label="Toggle month and year selector" @click="showMonthYearSelector = !showMonthYearSelector">
+          <!-- design-allow: date picker month/year toggle -->
+          <Transition name="month-label-fade" mode="out-in">
+            <span :key="currentMonthKey" class="daily-date-picker__month-label">{{ currentMonthLabel }}</span>
+          </Transition>
+          <UiIcon name="chevron-down" class="daily-date-picker__chevron"
+            :class="{ 'daily-date-picker__chevron--open': showMonthYearSelector }" />
         </button>
       </div>
 
       <div class="daily-date-picker__nav-actions">
-        <UiIconButton
-          icon="chevron-left"
-          label="Previous month"
-          size="sm"
-          variant="ghost"
-          tone="neutral"
-          @click="changeMonth(-1)"
-        />
-        <UiIconButton
-          icon="chevron-right"
-          label="Next month"
-          size="sm"
-          variant="ghost"
-          tone="neutral"
-          @click="changeMonth(1)"
-        />
+        <UiIconButton icon="chevron-left" label="Previous month" size="sm" variant="ghost" tone="neutral"
+          @click="changeMonth(-1)" />
+        <UiIconButton icon="chevron-right" label="Next month" size="sm" variant="ghost" tone="neutral"
+          @click="changeMonth(1)" />
       </div>
     </div>
 
     <!-- Quick Presets Bar -->
     <div class="daily-date-picker__presets" role="group" aria-label="Quick date selections">
-      <UiButton
-        v-for="preset in presets"
-        :key="preset.id"
-        size="xs"
+      <UiButton v-for="preset in presets" :key="preset.id" size="xs"
         :variant="preset.dateKey === activeDateKey ? 'solid' : 'soft'"
-        :tone="preset.dateKey === activeDateKey ? 'primary' : 'neutral'"
-        class="daily-date-picker__preset-btn"
-        @click="selectDateKey(preset.dateKey)"
-      >
+        :tone="preset.dateKey === activeDateKey ? 'primary' : 'neutral'" class="daily-date-picker__preset-btn"
+        @click="selectDateKey(preset.dateKey)">
         {{ preset.label }}
       </UiButton>
     </div>
 
-    <!-- View Mode 1: Month/Year Direct Selector Grid -->
-    <div v-if="showMonthYearSelector" class="daily-date-picker__selector-view">
-      <div class="daily-date-picker__year-row">
-        <UiIconButton
-          icon="chevron-left"
-          label="Previous year"
-          size="sm"
-          variant="ghost"
-          tone="neutral"
-          @click="viewYear -= 1"
-        />
-        <UiTitle tag="div" size="base" weight="bold" color="content-on-surface-strong">{{ viewYear }}</UiTitle>
-        <UiIconButton
-          icon="chevron-right"
-          label="Next year"
-          size="sm"
-          variant="ghost"
-          tone="neutral"
-          @click="viewYear += 1"
-        />
+    <!-- View Mode Switcher Transition -->
+    <Transition name="picker-view" mode="out-in">
+      <!-- View Mode 1: Month/Year Direct Selector Grid -->
+      <div v-if="showMonthYearSelector" key="selector" class="daily-date-picker__selector-view">
+        <div class="daily-date-picker__year-row">
+          <UiIconButton icon="chevron-left" label="Previous year" size="sm" variant="ghost" tone="neutral"
+            @click="viewYear -= 1" />
+          <UiTitle tag="div" size="base" weight="bold" color="content-on-surface-strong">{{ viewYear }}</UiTitle>
+          <UiIconButton icon="chevron-right" label="Next year" size="sm" variant="ghost" tone="neutral"
+            @click="viewYear += 1" />
+        </div>
+
+        <div class="daily-date-picker__months-grid">
+          <button v-for="(mName, idx) in monthNamesShort" :key="mName" type="button" class="daily-date-picker__month-cell"
+            :class="{ 'daily-date-picker__month-cell--active': idx === viewMonth }" @click="selectMonth(idx)">
+            <!-- design-allow: date picker month grid cell -->
+            {{ mName }}
+          </button>
+        </div>
+
+        <div class="daily-date-picker__direct-jump">
+          <UiLabel size="sm" weight="semibold" color="content-secondary">Jump to date</UiLabel>
+          <UiInput type="date" :model-value="displayDateKey" class="daily-date-picker__jump-input"
+            @update:model-value="onDirectDateInput" />
+        </div>
       </div>
 
-      <div class="daily-date-picker__months-grid">
-        <button v-for="(mName, idx) in monthNamesShort" :key="mName" type="button" class="daily-date-picker__month-cell" :class="{ 'daily-date-picker__month-cell--active': idx === viewMonth }" @click="selectMonth(idx)"> <!-- design-allow: date picker month grid cell -->
-          {{ mName }}
-        </button>
-      </div>
+      <!-- View Mode 2: Standard 7-Day Month Grid -->
+      <div v-else key="calendar" class="daily-date-picker__calendar-view">
+        <!-- Weekday Headers -->
+        <div class="daily-date-picker__weekdays" role="row">
+          <UiLabel v-for="w in weekdayHeaders" :key="w" size="sm" weight="bold" color="content-secondary" class="py-1"
+            role="columnheader">
+            {{ w }}
+          </UiLabel>
+        </div>
 
-      <div class="daily-date-picker__direct-jump">
-        <UiLabel size="sm" weight="semibold" color="content-secondary">Jump to date</UiLabel>
-        <UiInput
-          type="date"
-          :model-value="displayDateKey"
-          class="daily-date-picker__jump-input"
-          @update:model-value="onDirectDateInput"
-        />
+        <!-- Days Grid -->
+        <Transition name="month-fade" mode="out-in">
+          <div :key="currentMonthKey" ref="gridRef" class="daily-date-picker__days-grid" role="grid" aria-label="Calendar dates">
+            <button v-for="cell in calendarCells" :key="cell.dateKey" type="button" class="daily-date-picker__day-cell"
+              :class="{ 'daily-date-picker__day-cell--selected': cell.dateKey === activeDateKey, 'daily-date-picker__day-cell--today': cell.isToday && cell.dateKey !== activeDateKey, 'daily-date-picker__day-cell--outside': !cell.isCurrentMonth, 'daily-date-picker__day-cell--focused': cell.dateKey === focusedDateKey }"
+              :tabindex="cell.dateKey === focusedDateKey ? 0 : -1" :aria-selected="cell.dateKey === activeDateKey"
+              :aria-label="cell.fullLabel" @click="selectDateKey(cell.dateKey)" @focus="focusedDateKey = cell.dateKey">
+              <!-- design-allow: date picker calendar day grid cell -->
+              <span class="daily-date-picker__day-number">{{ cell.dayNumber }}</span>
+            </button>
+          </div>
+        </Transition>
       </div>
-    </div>
-
-    <!-- View Mode 2: Standard 7-Day Month Grid -->
-    <div v-else class="daily-date-picker__calendar-view">
-      <!-- Weekday Headers -->
-      <div class="daily-date-picker__weekdays" role="row">
-        <UiLabel
-          v-for="w in weekdayHeaders"
-          :key="w"
-          size="sm"
-          weight="bold"
-          color="content-secondary"
-          class="py-1"
-          role="columnheader"
-        >
-          {{ w }}
-        </UiLabel>
-      </div>
-
-      <!-- Days Grid -->
-      <div
-        ref="gridRef"
-        class="daily-date-picker__days-grid"
-        role="grid"
-        aria-label="Calendar dates"
-      >
-        <button v-for="cell in calendarCells" :key="cell.dateKey" type="button" class="daily-date-picker__day-cell" :class="{ 'daily-date-picker__day-cell--selected': cell.dateKey === activeDateKey, 'daily-date-picker__day-cell--today': cell.isToday && cell.dateKey !== activeDateKey, 'daily-date-picker__day-cell--outside': !cell.isCurrentMonth, 'daily-date-picker__day-cell--focused': cell.dateKey === focusedDateKey }" :tabindex="cell.dateKey === focusedDateKey ? 0 : -1" :aria-selected="cell.dateKey === activeDateKey" :aria-label="cell.fullLabel" @click="selectDateKey(cell.dateKey)" @focus="focusedDateKey = cell.dateKey"> <!-- design-allow: date picker calendar day grid cell -->
-          <span class="daily-date-picker__day-number">{{ cell.dayNumber }}</span>
-        </button>
-      </div>
-    </div>
+    </Transition>
   </div>
 </template>
 
@@ -215,6 +176,8 @@ const currentMonthLabel = computed(() => {
     timeZone: "UTC",
   });
 });
+
+const currentMonthKey = computed(() => `${viewYear.value}-${viewMonth.value}`);
 
 // Quick Jump Presets
 const presets = computed(() => {
@@ -430,7 +393,7 @@ function onKeydown(e: KeyboardEvent) {
   width: 320px;
   max-width: 90vw;
   background: var(--color-surface);
-  border: 1px solid var(--color-secondary);
+  /* border: 1px solid var(--color-secondary); */
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-dropdown);
   user-select: none;
@@ -443,6 +406,7 @@ function onKeydown(e: KeyboardEvent) {
     opacity: 0;
     transform: scale(0.95) translateY(-6px);
   }
+
   to {
     opacity: 1;
     transform: scale(1) translateY(0);
@@ -525,22 +489,69 @@ function onKeydown(e: KeyboardEvent) {
   box-shadow: none !important;
 }
 
+/* Cross-Fade View Switcher Transition */
+.picker-view-enter-active,
+.picker-view-leave-active {
+  transition: opacity var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-standard);
+}
+
+.picker-view-enter-from {
+  opacity: 0;
+  transform: scale(0.96) translateY(-2px);
+}
+
+.picker-view-leave-to {
+  opacity: 0;
+  transform: scale(0.96) translateY(2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .picker-view-enter-active,
+  .picker-view-leave-active,
+  .month-fade-enter-active,
+  .month-fade-leave-active,
+  .month-label-fade-enter-active,
+  .month-label-fade-leave-active {
+    transition: none;
+  }
+}
+
+/* Month Switch Cross-Fade Transitions */
+.month-fade-enter-active,
+.month-fade-leave-active,
+.month-label-fade-enter-active,
+.month-label-fade-leave-active {
+  transition: opacity var(--duration-fast) var(--ease-standard),
+              transform var(--duration-fast) var(--ease-standard);
+}
+
+.month-fade-enter-from {
+  opacity: 0;
+  transform: translateY(3px) scale(0.98);
+}
+
+.month-fade-leave-to {
+  opacity: 0;
+  transform: translateY(-3px) scale(0.98);
+}
+
+.month-label-fade-enter-from {
+  opacity: 0;
+  transform: translateY(-3px);
+}
+
+.month-label-fade-leave-to {
+  opacity: 0;
+  transform: translateY(3px);
+}
+
 /* Month/Year Direct Selector View */
 .daily-date-picker__selector-view {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
   padding: var(--space-2) 0;
-  animation: daily-date-picker-fade var(--duration-fast) var(--ease-standard);
-}
-
-@keyframes daily-date-picker-fade {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
 
 .daily-date-picker__year-row {
@@ -600,7 +611,6 @@ function onKeydown(e: KeyboardEvent) {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  animation: daily-date-picker-fade var(--duration-fast) var(--ease-standard);
 }
 
 .daily-date-picker__weekdays {
@@ -668,6 +678,7 @@ function onKeydown(e: KeyboardEvent) {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .daily-date-picker,
   .daily-date-picker__selector-view,
   .daily-date-picker__calendar-view {

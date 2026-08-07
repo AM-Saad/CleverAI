@@ -1,19 +1,9 @@
 <template>
   <div class="mats">
-    <AppPageHeader
-      title="Materials"
-      subtitle="Sources for your learning workspace"
-      back-to="/learn"
-    >
+    <AppPageHeader title="Materials" subtitle="Sources for your learning workspace" back-to="/learn">
       <template #actions>
-        <UiButton
-          size="sm"
-          tone="primary"
-          leading-icon="upload"
-          :loading="uploading"
-          :disabled="!canUpload"
-          @click="pick"
-        >
+        <UiButton size="sm" tone="primary" leading-icon="upload" :loading="uploading" :disabled="!canUpload"
+          @click="pick">
           {{ isOffline ? "Save file" : "Upload" }}
         </UiButton>
       </template>
@@ -21,13 +11,8 @@
     <WorkspacePill class="mats__wspill" />
     <UiFileInput ref="fileInput" accept=".pdf,.docx,.txt" @select="onFile" />
 
-    <UiAlert
-      v-if="isOffline && activeId"
-      tone="info"
-      icon="cloud-off"
-      title="Offline materials"
-      description="Showing saved materials. New files stay on this device until you upload them after reconnecting."
-    />
+    <UiAlert v-if="isOffline && activeId" tone="info" icon="cloud-off" title="Offline materials"
+      description="Showing saved materials. New files stay on this device until you upload them after reconnecting." />
 
     <div v-if="uploading" class="mats__uploading">
       <div class="mats__upload-head">
@@ -35,17 +20,10 @@
           {{ uploadingName }}
         </UiLabel>
         <UiParagraph size="xs" color="content-secondary">
-          {{ uploadProgress < 100 ? `${uploadProgress}%` : "Extracting text…" }}
-        </UiParagraph>
+          {{ uploadProgress < 100 ? `${uploadProgress}%` : "Extracting text…" }} </UiParagraph>
       </div>
-      <div
-        class="mats__progress"
-        role="progressbar"
-        aria-label="Material upload progress"
-        aria-valuemin="0"
-        aria-valuemax="100"
-        :aria-valuenow="uploadProgress"
-      >
+      <div class="mats__progress" role="progressbar" aria-label="Material upload progress" aria-valuemin="0"
+        aria-valuemax="100" :aria-valuenow="uploadProgress">
         <span :style="{ width: `${uploadProgress}%` }" />
       </div>
     </div>
@@ -66,34 +44,19 @@
       </div>
       <ul class="mats__list">
         <li v-for="draft in uploadDrafts" :key="draft.id">
-          <UiListCard
-            :title="draft.name"
-            :description="`${formatBytes(draft.size)} · saved ${formatDraftDate(draft.createdAt)}`"
-          >
+          <UiListCard :title="draft.name"
+            :description="`${formatBytes(draft.size)} · saved ${formatDraftDate(draft.createdAt)}`">
             <template #leading>
               <UiIcon name="file" class="h-4 w-4" aria-hidden="true" />
             </template>
             <template #action>
               <div class="mats__draft-actions">
-                <UiButton
-                  v-if="!isOffline"
-                  size="xs"
-                  tone="primary"
-                  variant="soft"
-                  :disabled="uploading"
-                  @click="uploadDraft(draft)"
-                >
+                <UiButton v-if="!isOffline" size="xs" tone="primary" variant="soft" :disabled="uploading"
+                  @click="uploadDraft(draft)">
                   Upload
                 </UiButton>
-                <UiIconButton
-                  icon="trash-2"
-                  label="Remove saved file draft"
-                  size="xs"
-                  tone="neutral"
-                  variant="ghost"
-                  :disabled="uploading"
-                  @click="askRemoveDraft(draft)"
-                />
+                <UiIconButton icon="trash-2" label="Remove saved file draft" size="xs" tone="neutral" variant="ghost"
+                  :disabled="uploading" @click="askRemoveDraft(draft)" />
               </div>
             </template>
           </UiListCard>
@@ -101,131 +64,60 @@
       </ul>
     </section>
 
-    <div
-      v-if="(workspaceLoading || loading) && !materials.length"
-      class="mats__list"
-    >
-      <UiSkeleton
-        v-for="i in 3"
-        :key="i"
-        class="h-16 w-full rounded-[var(--radius-lg)]"
-      />
+    <div v-if="(workspaceLoading || loading) && !materials.length" class="mats__list">
+      <UiSkeleton v-for="i in 3" :key="i" class="h-16 w-full rounded-[var(--radius-lg)]" />
     </div>
-    <UiEmptyState
-      v-else-if="workspaceError"
-      icon="triangle-alert"
-      title="Couldn't load your workspaces"
-      :description="workspaceErrorMessage"
-      action-label="Try again"
-      @action="refreshWorkspaceState"
-    />
-    <UiEmptyState
-      v-else-if="!activeId"
-      icon="layers"
-      title="Create a workspace first"
+    <UiEmptyState v-else-if="workspaceError" icon="triangle-alert" title="Couldn't load your workspaces"
+      :description="workspaceErrorMessage" action-label="Try again" @action="refreshWorkspaceState" />
+    <UiEmptyState v-else-if="!activeId" icon="layers" title="Create a workspace first"
       description="Materials need a workspace so generated study content stays organized."
-      action-label="Create workspace"
-      action-icon="plus"
-      @action="navigateTo('/workspaces?new=1')"
-    />
-    <UiEmptyState
-      v-else-if="loadError"
-      icon="triangle-alert"
-      title="Couldn't load materials"
-      :description="loadError"
-      action-label="Try again"
-      @action="load"
-    />
-    <UiEmptyState
-      v-else-if="!materials.length && !uploading"
-      icon="file-stack"
-      :title="isOffline ? 'No saved materials offline' : 'No materials yet'"
-      :description="
-        isOffline
-          ? 'Download this workspace while online to make its materials available here.'
-          : 'Upload a PDF, DOCX, or TXT file (up to 50 MB) to generate study content.'
-      "
-      :action-label="isOffline ? 'Save a file draft' : 'Upload material'"
-      action-icon="upload"
-      @action="pick"
-    />
+      action-label="Create workspace" action-icon="plus" @action="navigateTo('/workspaces?new=1')" />
+    <UiEmptyState v-else-if="loadError" icon="triangle-alert" title="Couldn't load materials" :description="loadError"
+      action-label="Try again" @action="load" />
+    <UiEmptyState v-else-if="!materials.length && !uploading" icon="file-stack"
+      :title="isOffline ? 'No saved materials offline' : 'No materials yet'" :description="isOffline
+        ? 'Download this workspace while online to make its materials available here.'
+        : 'Upload a PDF, DOCX, or TXT file (up to 50 MB) to generate study content.'
+        " :action-label="isOffline ? 'Save a file draft' : 'Upload material'" action-icon="upload" @action="pick" />
     <ul v-else class="mats__list">
       <li v-for="m in materials" :key="m.id" class="mats__row">
-        <UiListCard
-          clickable
-          :description="`${typeLabel(m)} · ${metaFor(m)}`"
-          @click="open(m.id)"
-        >
+        <UiListCard clickable :description="`${typeLabel(m)} · ${metaFor(m)}`" @click="open(m.id)">
           <template #title>
             <span dir="auto">{{ m.title || "Untitled material" }}</span>
           </template>
           <template #leading>
-            <UiLabel
-              size="sm"
-              weight="bold"
-              color="content-secondary"
-              aria-hidden="true"
-              >{{ typeLabel(m) }}</UiLabel
-            >
+            <UiLabel size="sm" weight="bold" color="content-secondary" aria-hidden="true">{{ typeLabel(m) }}</UiLabel>
           </template>
+          <template #action>
+            <UiActionMenu :items="materialMenuItems(m)" :label="`Actions for ${m.title || 'untitled material'}`" />
+          </template>
+
         </UiListCard>
-        <UiActionMenu
-          :items="materialMenuItems(m)"
-          :label="`Actions for ${m.title || 'untitled material'}`"
-        />
       </li>
     </ul>
 
-    <UiModal
-      v-model:open="renameOpen"
-      title="Rename material"
-      description="Use a clear name you can recognize later."
-      icon="pencil"
-      @close="clearRename"
-    >
-      <UiFormField
-        label="Material name"
-        :error="renameError ?? undefined"
-        required
-      >
-        <UiInput
-          v-model="renameTitle"
-          autofocus
-          maxlength="240"
-          :error="Boolean(renameError)"
-          @keydown.enter="saveRename"
-        />
+    <UiModal v-model:open="renameOpen" title="Rename material" description="Use a clear name you can recognize later."
+      icon="pencil" @close="clearRename">
+      <UiFormField label="Material name" :error="renameError ?? undefined" required>
+        <UiInput v-model="renameTitle" autofocus maxlength="240" :error="Boolean(renameError)"
+          @keydown.enter="saveRename" />
       </UiFormField>
       <template #footer>
         <div class="mats__modal-actions">
           <UiButton tone="neutral" variant="ghost" @click="clearRename">
             Cancel
           </UiButton>
-          <UiButton
-            tone="primary"
-            :loading="savingName"
-            :disabled="!renameTitle.trim()"
-            @click="saveRename"
-          >
+          <UiButton tone="primary" :loading="savingName" :disabled="!renameTitle.trim()" @click="saveRename">
             Save name
           </UiButton>
         </div>
       </template>
     </UiModal>
 
-    <UiModal
-      v-model:open="deleteOpen"
-      title="Delete this material?"
-      :description="deleteDescription"
-      icon="trash-2"
-      @close="clearDelete"
-    >
-      <UiAlert
-        tone="warning"
-        icon="triangle-alert"
-        title="Study data will be removed"
-        description="Generated flashcards, quiz questions, and their review progress are deleted with this material."
-      />
+    <UiModal v-model:open="deleteOpen" title="Delete this material?" :description="deleteDescription" icon="trash-2"
+      @close="clearDelete">
+      <UiAlert tone="warning" icon="triangle-alert" title="Study data will be removed"
+        description="Generated flashcards, quiz questions, and their review progress are deleted with this material." />
       <template #footer>
         <div class="mats__modal-actions">
           <UiButton tone="neutral" variant="ghost" @click="clearDelete">
@@ -238,17 +130,10 @@
       </template>
     </UiModal>
 
-    <UiModal
-      v-model:open="removeDraftOpen"
-      title="Remove saved file?"
-      :description="
-        draftToRemove
-          ? `${draftToRemove.name} will be removed from this device.`
-          : undefined
-      "
-      icon="trash-2"
-      @close="clearDraftRemoval"
-    >
+    <UiModal v-model:open="removeDraftOpen" title="Remove saved file?" :description="draftToRemove
+      ? `${draftToRemove.name} will be removed from this device.`
+      : undefined
+      " icon="trash-2" @close="clearDraftRemoval">
       <UiParagraph size="sm" color="content-secondary">
         This local file has not been uploaded. Removing it cannot be undone
         inside Clever.
@@ -862,10 +747,12 @@ onMounted(async () => {
   gap: var(--space-3);
   padding-bottom: var(--space-6);
 }
+
 .mats__wspill {
   align-self: flex-start;
   margin-top: var(--space-2);
 }
+
 .mats__uploading {
   display: flex;
   flex-direction: column;
@@ -875,6 +762,7 @@ onMounted(async () => {
   background: var(--color-surface-subtle);
   border: 1px solid var(--color-secondary);
 }
+
 .mats__upload-head,
 .mats__section-head,
 .mats__draft-actions,
@@ -883,16 +771,19 @@ onMounted(async () => {
   align-items: center;
   gap: var(--space-2);
 }
+
 .mats__upload-head,
 .mats__section-head {
   justify-content: space-between;
 }
+
 .mats__progress {
   height: 8px;
   overflow: hidden;
   border-radius: var(--radius-full);
   background: var(--color-secondary);
 }
+
 .mats__progress span {
   display: block;
   height: 100%;
@@ -900,6 +791,7 @@ onMounted(async () => {
   background: var(--color-primary);
   transition: width var(--duration-normal) var(--ease-standard);
 }
+
 .mats__drafts {
   display: flex;
   flex-direction: column;
@@ -909,6 +801,7 @@ onMounted(async () => {
   border-radius: var(--radius-lg);
   background: var(--color-surface-subtle);
 }
+
 .mats__list {
   display: flex;
   flex-direction: column;
@@ -917,12 +810,14 @@ onMounted(async () => {
   padding: 0;
   margin: 0;
 }
+
 .mats__row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--space-1);
 }
+
 .mats__modal-actions {
   justify-content: flex-end;
 }

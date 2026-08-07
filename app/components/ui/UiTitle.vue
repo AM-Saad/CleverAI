@@ -22,12 +22,12 @@ interface Props {
    * Text color variant
    */
   color?:
-    | "content-on-surface"
-    | "content-on-surface-strong"
-    | "content-on-background"
-    | "white"
-    | "error"
-    | "warning";
+  | "content-on-surface"
+  | "content-on-surface-strong"
+  | "content-on-background"
+  | "white"
+  | "error"
+  | "warning";
 
   /**
    * Uppercase eyebrow/section-heading treatment (adds letter-spacing to match).
@@ -53,7 +53,7 @@ const {
   tag = "h2",
   size = "2xl",
   weight = "medium",
-  color = "content-on-background",
+  color = "content-on-surface-strong",
   uppercase = false,
   tight = false,
   center = false,
