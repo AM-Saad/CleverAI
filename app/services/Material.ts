@@ -3,6 +3,9 @@ import { Result as R, type Result } from "../types/Result";
 import type {
   Material,
   MaterialGeneratedContent,
+  MaterialLibraryPage,
+  MaterialLibrarySort,
+  MaterialLibraryTypeFilter,
   CreateMaterialDTO,
   UpdateMaterialDTO,
 } from "~/shared/utils/material.contract";
@@ -13,6 +16,14 @@ import type {
 } from "~/shared/utils/llm-generate.contract";
 
 export type { UploadMaterialResponse } from "~/shared/utils/llm-generate.contract";
+
+export interface MaterialLibraryOptions {
+  search?: string;
+  type?: MaterialLibraryTypeFilter;
+  sort?: MaterialLibrarySort;
+  limit?: number;
+  cursor?: string;
+}
 
 export class MaterialService extends FetchFactory {
   private readonly RESOURCE = "/api/materials";
@@ -25,6 +36,31 @@ export class MaterialService extends FetchFactory {
     return this.call<Material[]>(
       "GET",
       `${this.RESOURCE}?workspaceId=${workspaceId}`,
+    );
+  }
+
+  /**
+   * Get a lightweight, searchable page for the materials library.
+   */
+  async listLibrary(
+    workspaceId: string,
+    options: MaterialLibraryOptions = {},
+  ): Promise<Result<MaterialLibraryPage>> {
+    const params = new URLSearchParams({ workspaceId });
+    const search = options.search?.trim();
+    if (search) params.set("search", search);
+    if (options.type && options.type !== "all") {
+      params.set("type", options.type);
+    }
+    if (options.sort && options.sort !== "newest") {
+      params.set("sort", options.sort);
+    }
+    if (options.limit) params.set("limit", String(options.limit));
+    if (options.cursor) params.set("cursor", options.cursor);
+
+    return this.call<MaterialLibraryPage>(
+      "GET",
+      `${this.RESOURCE}/library?${params.toString()}`,
     );
   }
 

@@ -50,51 +50,20 @@ const closeModal = (): void => {
 </script>
 
 <template>
-  <UiConfirmDialog
-    :open="props.show"
-    title="Delete Account"
-    icon="delete"
-    description="This action will remove all your data"
-    :confirm-label="
-      state.permanentDelete ? 'Delete Permanently' : 'Schedule Deletion'
-    "
-    :confirm-armed-label="
-      state.permanentDelete
+  <UiConfirmDialog :open="props.show" title="Delete Account" icon="delete"
+    description="This action will remove all your data" :confirm-label="state.permanentDelete ? 'Delete Permanently' : 'Schedule Deletion'
+      " :confirm-armed-label="state.permanentDelete
         ? 'Tap again to delete permanently'
         : 'Tap again to schedule deletion'
-    "
-    :confirm-disabled="!canSubmit"
-    requires-double-tap
-    @update:open="$event || closeModal()"
-    @confirm="confirmDelete"
-  >
-    <UiForm
-      :schema="schema"
-      :state="state"
-      class="space-y-4"
-      @submit="onSubmit"
-    >
+      " :confirm-disabled="!canSubmit" requires-double-tap @update:open="$event || closeModal()"
+    @confirm="confirmDelete">
+    <UiForm :schema="schema" :state="state" class="space-y-4" @submit="onSubmit">
       <!-- Warning Banner -->
-      <UiPanel
-        variant="subtle"
-        size="md"
-        role="alert"
-        class-name="border-error/20 bg-error/10"
-      >
+      <UiPanel variant="subtle" size="md" role="alert" class-name="border-error/20 bg-error/10">
         <div class="flex">
-          <UiIcon
-            name="alert-circle"
-            class="text-error-text mr-3 mt-0.5"
-            size="20"
-          ></UiIcon>
+          <UiIcon name="alert-circle" class="text-error-text mr-3 mt-0.5" size="20"></UiIcon>
           <div>
-            <ui-title
-              tag="h4"
-              size="sm"
-              weight="medium"
-              color="error"
-              class="mb-1"
-            >
+            <ui-title tag="h4" size="sm" weight="medium" color="error" class="mb-1">
               Warning: This action cannot be undone
             </ui-title>
             <p class="text-sm text-error-text/80">
@@ -112,22 +81,13 @@ const closeModal = (): void => {
             confirm
           </label>
         </template>
-        <ui-input
-          v-model="state.confirmationText"
-          placeholder="DELETE"
-          :ui="{
-            root: 'w-full',
-          }"
-          autofocus
-        />
+        <ui-input v-model="state.confirmationText" placeholder="DELETE" :ui="{
+          root: 'w-full',
+        }" autofocus />
       </UiFormField>
 
-      <div class="flex items-start space-x-3">
-        <UiCheckbox
-          v-model="state.permanentDelete"
-          indicator="start"
-          label="Delete immediately and permanently"
-        />
+      <div class=" items-start space-x-3">
+        <UiCheckbox v-model="state.permanentDelete" indicator="start" label="Delete immediately and permanently" />
         <div class="flex-1">
           <p class="text-xs text-content-secondary mt-1">
             <span v-if="!state.permanentDelete">

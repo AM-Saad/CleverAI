@@ -15,8 +15,11 @@ a specific material. Upload and listing UI live directly in the page layer.
   `app/components/ui/flip-card/FlipCard.vue` primitive; quiz choices reveal
   immediate answer feedback.
 - `app/pages/materials/index.vue` implements upload (native file input) and
-  listing UI inline — no dedicated feature component. There is no speech/mic
-  capture in the upload flow (that claim in the old README was stale).
+  library UI inline — no dedicated feature component. Library rows use the
+  lightweight `/api/materials/library` response with server search, type
+  filtering, sorting, and cursor pagination. Full material content remains in
+  the detail and offline-pack flows. There is no speech/mic capture in the
+  upload flow (that claim in the old README was stale).
 - `app/composables/materials/useGenerateFromMaterial.ts` remains a
   compatibility wrapper.
 
@@ -24,6 +27,10 @@ a specific material. Upload and listing UI live directly in the page layer.
 
 1. Upload a text or PDF material from `/materials` and confirm it appears in
    the materials list, then navigates to `/materials/[id]`.
-2. Generate flashcards and questions from a material's detail page.
-3. Regenerate existing content and confirm replace/append behavior still
+2. Search by title, filter each file type, sort by name, reset the view, and
+   load another page when the workspace has more than 20 matching materials.
+3. Open a row and its adjacent action menu using both pointer and keyboard;
+   confirm Rename/Delete never navigate the row.
+4. Generate flashcards and questions from a material's detail page.
+5. Regenerate existing content and confirm replace/append behavior still
    follows the confirmation dialog.

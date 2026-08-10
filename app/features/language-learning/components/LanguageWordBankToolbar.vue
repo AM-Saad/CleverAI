@@ -1,22 +1,11 @@
 <template>
   <section class="word-bank-toolbar" aria-label="Word bank filters">
     <div class="word-bank-toolbar__search-row">
-      <UiInput
-        v-model="search"
-        type="search"
-        icon="search"
-        placeholder="Search saved words…"
-        class="word-bank-toolbar__search"
-      />
+      <UiInput v-model="search" type="search" icon="search" placeholder="Search saved words…"
+        class="word-bank-toolbar__search" />
       <Transition name="word-bank-toolbar__clear">
-        <UiButton
-          v-if="hasActiveFilters"
-          size="xs"
-          variant="ghost"
-          tone="neutral"
-          leading-icon="x"
-          @click="clearFilters"
-        >
+        <UiButton v-if="hasActiveFilters" size="xs" variant="ghost" tone="neutral" leading-icon="x"
+          @click="clearFilters">
           Clear
         </UiButton>
       </Transition>
@@ -25,38 +14,18 @@
     <div class="word-bank-toolbar__group">
       <UiLabel size="sm" weight="bold" color="content-secondary" uppercase>Status</UiLabel>
       <div class="word-bank-toolbar__status-scroll">
-        <UiSegmentedControl
-          v-model="status"
-          label="Word status"
-          size="sm"
-          :items="statusFilters"
-        />
+        <UiSegmentedControl v-model="status" label="Word status" :items="statusFilters" />
       </div>
     </div>
 
     <div class="word-bank-toolbar__group">
       <UiLabel size="sm" weight="bold" color="content-secondary" uppercase>Refine</UiLabel>
       <div class="word-bank-toolbar__refine-row">
-        <UiPill
-          clickable
-          selectable
-          :active="storyOnly"
-          icon="sparkles"
-          label="Stories only"
-          color="var(--color-primary)"
-          variant="outline"
-          size="sm"
-          class="word-bank-toolbar__story-pill"
-          @click="storyOnly = !storyOnly"
-        />
-        <UiSelect
-          v-model="selectedCategory"
-          :items="categories"
-          value-key="value"
-          label-key="label"
-          size="sm"
-          class="word-bank-toolbar__category"
-        />
+        <UiPill clickable selectable :active="storyOnly" icon="sparkles" label="Stories only"
+          color="var(--color-primary)" variant="outline" size="sm" class="word-bank-toolbar__story-pill"
+          @click="storyOnly = !storyOnly" />
+        <UiSelect v-model="selectedCategory" :items="categories" value-key="value" label-key="label" size="sm"
+          class="word-bank-toolbar__category" />
       </div>
     </div>
   </section>
@@ -110,20 +79,24 @@ function clearFilters() {
   border-radius: var(--component-card-radius);
   background: var(--ds-surface-card);
 }
+
 .word-bank-toolbar__search-row {
   display: flex;
   align-items: center;
   gap: var(--space-2);
 }
+
 .word-bank-toolbar__search {
   min-width: 0;
   flex: 1 1 auto;
 }
+
 .word-bank-toolbar__group {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
 }
+
 .word-bank-toolbar__status-scroll {
   overflow-x: auto;
   scrollbar-width: none;
@@ -131,27 +104,33 @@ function clearFilters() {
      crop — five segments + counts can outgrow a narrow viewport. */
   mask-image: linear-gradient(to right, black calc(100% - 24px), transparent);
 }
+
 .word-bank-toolbar__status-scroll::-webkit-scrollbar {
   display: none;
 }
+
 .word-bank-toolbar__refine-row {
   display: flex;
   align-items: center;
   gap: var(--space-2);
 }
+
 .word-bank-toolbar__story-pill {
   flex-shrink: 0;
 }
+
 .word-bank-toolbar__category {
   min-width: 0;
   flex: 1 1 auto;
 }
+
 .word-bank-toolbar__clear-enter-active,
 .word-bank-toolbar__clear-leave-active {
   transition:
     opacity var(--duration-fast) var(--ease-standard),
     transform var(--duration-fast) var(--ease-standard);
 }
+
 .word-bank-toolbar__clear-enter-from,
 .word-bank-toolbar__clear-leave-to {
   opacity: 0;

@@ -1,37 +1,30 @@
 <template>
   <div class="ws">
-    <AppPageHeader title="Workspaces" :subtitle="`${workspaces.length} workspace${workspaces.length === 1 ? '' : 's'}`"
-      back-to="/learn" />
+    <AppPageHeader title="Workspaces" subtitle="Choose a workspace to continue" back-to="/learn" />
 
     <div v-if="loading && !workspaces.length" class="ws__list">
       <UiSkeleton v-for="i in 3" :key="i" class="h-[68px] w-full rounded-[var(--component-card-radius)]" />
     </div>
 
+    <UiEmptyState v-else-if="workspaceError" icon="triangle-alert" title="Couldn't load your workspaces"
+      :description="workspaceErrorMessage" action-label="Try again" @action="refresh" />
+
+    <UiEmptyState v-else-if="!workspaces.length" icon="layers" title="Create your first workspace"
+      description="Give one subject, course, or project a focused home for its materials and study tools."
+      action-label="New workspace" action-icon="plus" @action="startCreate" />
+
     <ul v-else class="ws__list">
       <li v-for="w in workspaces" :key="w.id" class="ws__row">
-        <UiListCard clickable selectable :selected="w.id === activeId" :title="w.title" :description="metaFor(w.id)"
+        <UiListCard clickable selectable :selected="w.id === activeId" :title="w.title" :description="metaFor(w)"
           class-name="ws__row-select" @click="select(w.id)">
           <template #leading>
             <span class="ws__tile" :style="{ background: workspaceColor(w) }" />
           </template>
           <template #action>
-            <UiIconButton icon="more-vertical" label="Workspace actions" size="sm" @click="openActions(w)" />
+            <UiIconButton icon="more-vertical" :label="`Actions for ${w.title}`" size="sm" tone="neutral"
+              variant="ghost" @click="openActions(w)" />
           </template>
         </UiListCard>
-        <!-- <UiPill
-          v-if="caughtUp(w.id)"
-          size="sm"
-          label="all caught up"
-          color="var(--color-success)"
-          variant="outline"
-          active
-          max-width="132px"
-        >
-          <template #icon>
-            <UiPillIcon name="check" size="sm" />
-          </template>
-        </UiPill> -->
-        <!-- <UiIcon v-if="w.id === activeId" name="circle-check-big" class="ws__active-icon" /> -->
 
       </li>
 
@@ -47,14 +40,9 @@
     <!-- workspace actions (⋯) -->
     <UiSheet v-model:open="actionsOpen" :title="actionTarget?.title ?? 'Workspace'">
       <div class="ws-actions">
-        <UiListCard clickable variant="soft" title="Overview" @click="openOverview">
+        <UiListCard clickable variant="soft" title="Open workspace" @click="openSelected">
           <template #leading>
-            <UiIcon name="layout-dashboard" class="h-5 w-5" />
-          </template>
-        </UiListCard>
-        <UiListCard clickable variant="soft" title="Use workspace" @click="openSelected">
-          <template #leading>
-            <UiIcon name="arrow-up-right" class="h-5 w-5" />
+            <UiIcon name="arrow-right" class="h-5 w-5" />
           </template>
         </UiListCard>
         <UiListCard clickable variant="soft" title="Edit" @click="startEdit">
@@ -126,6 +114,7 @@ const toast = useToast();
 const {
   workspaces: wsList,
   loading,
+  error: workspaceError,
   activeId,
   setActive,
   refresh,
@@ -135,6 +124,11 @@ const { updateWorkspace, updating } = useUpdateWorkspace();
 const { deleteWorkspace } = useDeleteWorkspace(refresh);
 
 const workspaces = computed<WorkspaceSummary[]>(() => wsList.value ?? []);
+const workspaceErrorMessage = computed(
+  () =>
+    workspaceError.value?.message ??
+    "Check your connection and try loading your workspaces again.",
+);
 const createOpen = ref(false);
 const accentTokens = ACCENT_TOKENS;
 const statsById = ref<Record<string, ReviewWorkspaceStats>>({});
@@ -165,19 +159,19 @@ function workspaceColor(w: WorkspaceSummary) {
 function accentTokenFromVar(v: string) {
   return v.match(/var\((--[a-z-]+)\)/)?.[1] ?? "--color-accent-indigo";
 }
-function metaFor(id: string) {
-  const s = statsById.value[id];
-  if (!s) return "—";
-  return `${s.total} card${s.total === 1 ? "" : "s"} · ${s.due} due`;
-}
-function caughtUp(id: string) {
-  const s = statsById.value[id];
-  return !!s && s.total > 0 && s.due === 0;
+function metaFor(workspace: WorkspaceSummary) {
+  const stats = statsById.value[workspace.id];
+  if (stats?.due) {
+    return `${stats.due} ${stats.due === 1 ? "card" : "cards"} ready to review`;
+  }
+  if (workspace.description?.trim()) return workspace.description;
+  if (stats?.total) return "Review is up to date";
+  return "Add materials and create study content";
 }
 
 function select(id: string) {
   setActive(id);
-  navigateTo("/learn");
+  navigateTo(`/workspaces/${id}`);
 }
 
 async function submit() {
@@ -206,7 +200,7 @@ async function submit() {
     form.title = "";
     form.description = "";
     setActive(created.id);
-    await loadStats();
+    await navigateTo(`/workspaces/${created.id}`);
   }
 }
 
@@ -226,11 +220,6 @@ function openActions(w: WorkspaceSummary) {
 function openSelected() {
   if (actionTarget.value) select(actionTarget.value.id);
   actionsOpen.value = false;
-}
-function openOverview() {
-  const w = actionTarget.value;
-  actionsOpen.value = false;
-  if (w) navigateTo(`/workspaces/${w.id}`);
 }
 function startEdit() {
   const w = actionTarget.value;
@@ -316,9 +305,10 @@ watch(
 }
 
 .ws__row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-1);
   width: 100%;
   text-align: left;
 }

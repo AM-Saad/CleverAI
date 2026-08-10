@@ -1,7 +1,7 @@
 <template>
-  <ReviewSessionView />
+  <ReviewPageContainer />
 </template>
 
 <script setup lang="ts">
-import ReviewSessionView from "~/features/review/components/ReviewSessionView.vue";
+import ReviewPageContainer from "~/features/review/containers/ReviewPageContainer.vue";
 </script>

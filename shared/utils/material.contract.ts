@@ -30,6 +30,56 @@ export const MaterialSchema = z.object({
 });
 export type Material = z.infer<typeof MaterialSchema>;
 
+export const MaterialSummarySchema = MaterialSchema.omit({
+  content: true,
+  llmModel: true,
+  llmPrompt: true,
+});
+export type MaterialSummary = z.infer<typeof MaterialSummarySchema>;
+
+export const MaterialLibraryTypeFilterEnum = z.enum([
+  "all",
+  "pdf",
+  "docx",
+  "txt",
+  "other",
+]);
+export type MaterialLibraryTypeFilter = z.infer<
+  typeof MaterialLibraryTypeFilterEnum
+>;
+
+export const MaterialLibrarySortEnum = z.enum(["newest", "name"]);
+export type MaterialLibrarySort = z.infer<typeof MaterialLibrarySortEnum>;
+
+export const MaterialLibraryQuerySchema = z.object({
+  workspaceId: z
+    .string()
+    .regex(
+      /^[0-9a-fA-F]{24}$/,
+      "Workspace ID must be a valid MongoDB ObjectId",
+    ),
+  search: z.preprocess(
+    trim,
+    z.string().max(120, "Search is too long").default(""),
+  ),
+  type: MaterialLibraryTypeFilterEnum.default("all"),
+  sort: MaterialLibrarySortEnum.default("newest"),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  cursor: z
+    .string()
+    .regex(/^[0-9a-fA-F]{24}$/, "Cursor must be a valid MongoDB ObjectId")
+    .optional(),
+});
+export type MaterialLibraryQuery = z.infer<typeof MaterialLibraryQuerySchema>;
+
+export const MaterialLibraryPageSchema = z.object({
+  items: z.array(MaterialSummarySchema),
+  total: z.number().int().nonnegative(),
+  nextCursor: z.string().nullable(),
+  hasMore: z.boolean(),
+});
+export type MaterialLibraryPage = z.infer<typeof MaterialLibraryPageSchema>;
+
 export const MaterialGeneratedFlashcardSchema = z.object({
   id: z.string(),
   front: z.string(),

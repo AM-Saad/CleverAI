@@ -1,9 +1,19 @@
 <template>
   <div class="mats">
-    <AppPageHeader title="Materials" subtitle="Sources for your learning workspace" back-to="/learn">
+    <AppPageHeader
+      title="Materials"
+      subtitle="Sources for your learning workspace"
+      :back-to="materialsBackTo"
+    >
       <template #actions>
-        <UiButton size="sm" tone="primary" leading-icon="upload" :loading="uploading" :disabled="!canUpload"
-          @click="pick">
+        <UiButton
+          size="sm"
+          tone="primary"
+          leading-icon="upload"
+          :loading="uploading"
+          :disabled="!canUpload"
+          @click="pick"
+        >
           {{ isOffline ? "Save file" : "Upload" }}
         </UiButton>
       </template>
@@ -11,8 +21,13 @@
     <WorkspacePill class="mats__wspill" />
     <UiFileInput ref="fileInput" accept=".pdf,.docx,.txt" @select="onFile" />
 
-    <UiAlert v-if="isOffline && activeId" tone="info" icon="cloud-off" title="Offline materials"
-      description="Showing saved materials. New files stay on this device until you upload them after reconnecting." />
+    <UiAlert
+      v-if="isOffline && activeId"
+      tone="info"
+      icon="cloud-off"
+      title="Offline materials"
+      description="Showing saved materials. New files stay on this device until you upload them after reconnecting."
+    />
 
     <div v-if="uploading" class="mats__uploading">
       <div class="mats__upload-head">
@@ -20,10 +35,17 @@
           {{ uploadingName }}
         </UiLabel>
         <UiParagraph size="xs" color="content-secondary">
-          {{ uploadProgress < 100 ? `${uploadProgress}%` : "Extracting text…" }} </UiParagraph>
+          {{ uploadProgress < 100 ? `${uploadProgress}%` : "Extracting text…" }}
+        </UiParagraph>
       </div>
-      <div class="mats__progress" role="progressbar" aria-label="Material upload progress" aria-valuemin="0"
-        aria-valuemax="100" :aria-valuenow="uploadProgress">
+      <div
+        class="mats__progress"
+        role="progressbar"
+        aria-label="Material upload progress"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        :aria-valuenow="uploadProgress"
+      >
         <span :style="{ width: `${uploadProgress}%` }" />
       </div>
     </div>
@@ -44,19 +66,34 @@
       </div>
       <ul class="mats__list">
         <li v-for="draft in uploadDrafts" :key="draft.id">
-          <UiListCard :title="draft.name"
-            :description="`${formatBytes(draft.size)} · saved ${formatDraftDate(draft.createdAt)}`">
+          <UiListCard
+            :title="draft.name"
+            :description="`${formatBytes(draft.size)} · saved ${formatDraftDate(draft.createdAt)}`"
+          >
             <template #leading>
               <UiIcon name="file" class="h-4 w-4" aria-hidden="true" />
             </template>
             <template #action>
               <div class="mats__draft-actions">
-                <UiButton v-if="!isOffline" size="xs" tone="primary" variant="soft" :disabled="uploading"
-                  @click="uploadDraft(draft)">
+                <UiButton
+                  v-if="!isOffline"
+                  size="xs"
+                  tone="primary"
+                  variant="soft"
+                  :disabled="uploading"
+                  @click="uploadDraft(draft)"
+                >
                   Upload
                 </UiButton>
-                <UiIconButton icon="trash-2" label="Remove saved file draft" size="xs" tone="neutral" variant="ghost"
-                  :disabled="uploading" @click="askRemoveDraft(draft)" />
+                <UiIconButton
+                  icon="trash-2"
+                  label="Remove saved file draft"
+                  size="xs"
+                  tone="neutral"
+                  variant="ghost"
+                  :disabled="uploading"
+                  @click="askRemoveDraft(draft)"
+                />
               </div>
             </template>
           </UiListCard>
@@ -64,60 +101,207 @@
       </ul>
     </section>
 
-    <div v-if="(workspaceLoading || loading) && !materials.length" class="mats__list">
-      <UiSkeleton v-for="i in 3" :key="i" class="h-16 w-full rounded-[var(--radius-lg)]" />
+    <div
+      v-if="(workspaceLoading || loading) && !materials.length"
+      class="mats__list"
+    >
+      <UiSkeleton
+        v-for="i in 3"
+        :key="i"
+        class="h-16 w-full rounded-[var(--radius-lg)]"
+      />
     </div>
-    <UiEmptyState v-else-if="workspaceError" icon="triangle-alert" title="Couldn't load your workspaces"
-      :description="workspaceErrorMessage" action-label="Try again" @action="refreshWorkspaceState" />
-    <UiEmptyState v-else-if="!activeId" icon="layers" title="Create a workspace first"
+    <UiEmptyState
+      v-else-if="workspaceError"
+      icon="triangle-alert"
+      title="Couldn't load your workspaces"
+      :description="workspaceErrorMessage"
+      action-label="Try again"
+      @action="refreshWorkspaceState"
+    />
+    <UiEmptyState
+      v-else-if="!activeId"
+      icon="layers"
+      title="Create a workspace first"
       description="Materials need a workspace so generated study content stays organized."
-      action-label="Create workspace" action-icon="plus" @action="navigateTo('/workspaces?new=1')" />
-    <UiEmptyState v-else-if="loadError" icon="triangle-alert" title="Couldn't load materials" :description="loadError"
-      action-label="Try again" @action="load" />
-    <UiEmptyState v-else-if="!materials.length && !uploading" icon="file-stack"
-      :title="isOffline ? 'No saved materials offline' : 'No materials yet'" :description="isOffline
-        ? 'Download this workspace while online to make its materials available here.'
-        : 'Upload a PDF, DOCX, or TXT file (up to 50 MB) to generate study content.'
-        " :action-label="isOffline ? 'Save a file draft' : 'Upload material'" action-icon="upload" @action="pick" />
-    <ul v-else class="mats__list">
-      <li v-for="m in materials" :key="m.id" class="mats__row">
-        <UiListCard clickable :description="`${typeLabel(m)} · ${metaFor(m)}`" @click="open(m.id)">
-          <template #title>
-            <span dir="auto">{{ m.title || "Untitled material" }}</span>
-          </template>
-          <template #leading>
-            <UiLabel size="sm" weight="bold" color="content-secondary" aria-hidden="true">{{ typeLabel(m) }}</UiLabel>
-          </template>
-          <template #action>
-            <UiActionMenu :items="materialMenuItems(m)" :label="`Actions for ${m.title || 'untitled material'}`" />
-          </template>
+      action-label="Create workspace"
+      action-icon="plus"
+      @action="navigateTo('/workspaces?new=1')"
+    />
+    <UiEmptyState
+      v-else-if="loadError"
+      icon="triangle-alert"
+      title="Couldn't load materials"
+      :description="loadError"
+      action-label="Try again"
+      @action="load"
+    />
+    <template v-else>
+      <section
+        v-if="showLibraryTools"
+        class="mats__library-tools"
+        aria-label="Material library filters"
+      >
+        <div class="mats__search-row">
+          <UiInput
+            v-model="searchQuery"
+            type="search"
+            icon="search"
+            maxlength="120"
+            placeholder="Search materials…"
+            aria-label="Search materials"
+            :loading="loading && Boolean(materials.length)"
+            class="mats__search"
+          />
+          <UiButton
+            v-if="hasCustomView"
+            size="xs"
+            tone="neutral"
+            variant="ghost"
+            leading-icon="x"
+            @click="resetLibraryView"
+          >
+            Reset
+          </UiButton>
+        </div>
+        <div class="mats__filters">
+          <UiSelect
+            v-model="typeFilter"
+            :items="typeOptions"
+            value-key="value"
+            label-key="label"
+            size="sm"
+            aria-label="Filter materials by type"
+            class="mats__filter"
+          />
+          <UiSelect
+            v-model="sortOption"
+            :items="sortOptions"
+            value-key="value"
+            label-key="label"
+            size="sm"
+            aria-label="Sort materials"
+            class="mats__filter"
+          />
+        </div>
+        <UiParagraph size="xs" color="content-secondary" aria-live="polite">
+          {{ resultSummary }}
+        </UiParagraph>
+      </section>
 
-        </UiListCard>
-      </li>
-    </ul>
+      <UiEmptyState
+        v-if="!materials.length && !hasActiveFilters && !uploading"
+        icon="file-stack"
+        :title="isOffline ? 'No saved materials offline' : 'No materials yet'"
+        :description="
+          isOffline
+            ? 'Download this workspace while online to make its materials available here.'
+            : 'Upload a PDF, DOCX, or TXT file (up to 50 MB) to generate study content.'
+        "
+        :action-label="isOffline ? 'Save a file draft' : 'Upload material'"
+        action-icon="upload"
+        @action="pick"
+      />
+      <UiEmptyState
+        v-else-if="!materials.length && hasActiveFilters"
+        icon="search"
+        title="No matching materials"
+        description="Try another search or reset your filters."
+        action-label="Reset filters"
+        action-icon="x"
+        @action="resetLibraryView"
+      />
+      <template v-else>
+        <ul class="mats__list">
+          <li v-for="m in materials" :key="m.id" class="mats__row">
+            <UiListCard
+              clickable
+              :description="`${typeLabel(m)} · ${metaFor(m)}`"
+              @click="open(m.id)"
+            >
+              <template #title>
+                <span dir="auto">{{ m.title || "Untitled material" }}</span>
+              </template>
+              <template #leading>
+                <UiLabel
+                  size="sm"
+                  weight="bold"
+                  color="content-secondary"
+                  aria-hidden="true"
+                  >{{ typeLabel(m) }}</UiLabel
+                >
+              </template>
+            </UiListCard>
+            <UiActionMenu
+              :items="materialMenuItems(m)"
+              :label="`Actions for ${m.title || 'untitled material'}`"
+            />
+          </li>
+        </ul>
+        <UiButton
+          v-if="hasMore"
+          tone="neutral"
+          variant="soft"
+          :loading="loadingMore"
+          :disabled="loadingMore"
+          class="mats__load-more"
+          @click="loadMore"
+        >
+          Load more
+        </UiButton>
+      </template>
+    </template>
 
-    <UiModal v-model:open="renameOpen" title="Rename material" description="Use a clear name you can recognize later."
-      icon="pencil" @close="clearRename">
-      <UiFormField label="Material name" :error="renameError ?? undefined" required>
-        <UiInput v-model="renameTitle" autofocus maxlength="240" :error="Boolean(renameError)"
-          @keydown.enter="saveRename" />
+    <UiModal
+      v-model:open="renameOpen"
+      title="Rename material"
+      description="Use a clear name you can recognize later."
+      icon="pencil"
+      @close="clearRename"
+    >
+      <UiFormField
+        label="Material name"
+        :error="renameError ?? undefined"
+        required
+      >
+        <UiInput
+          v-model="renameTitle"
+          autofocus
+          maxlength="240"
+          :error="Boolean(renameError)"
+          @keydown.enter="saveRename"
+        />
       </UiFormField>
       <template #footer>
         <div class="mats__modal-actions">
           <UiButton tone="neutral" variant="ghost" @click="clearRename">
             Cancel
           </UiButton>
-          <UiButton tone="primary" :loading="savingName" :disabled="!renameTitle.trim()" @click="saveRename">
+          <UiButton
+            tone="primary"
+            :loading="savingName"
+            :disabled="!renameTitle.trim()"
+            @click="saveRename"
+          >
             Save name
           </UiButton>
         </div>
       </template>
     </UiModal>
 
-    <UiModal v-model:open="deleteOpen" title="Delete this material?" :description="deleteDescription" icon="trash-2"
-      @close="clearDelete">
-      <UiAlert tone="warning" icon="triangle-alert" title="Study data will be removed"
-        description="Generated flashcards, quiz questions, and their review progress are deleted with this material." />
+    <UiModal
+      v-model:open="deleteOpen"
+      title="Delete this material?"
+      :description="deleteDescription"
+      icon="trash-2"
+      @close="clearDelete"
+    >
+      <UiAlert
+        tone="warning"
+        icon="triangle-alert"
+        title="Study data will be removed"
+        description="Generated flashcards, quiz questions, and their review progress are deleted with this material."
+      />
       <template #footer>
         <div class="mats__modal-actions">
           <UiButton tone="neutral" variant="ghost" @click="clearDelete">
@@ -130,10 +314,17 @@
       </template>
     </UiModal>
 
-    <UiModal v-model:open="removeDraftOpen" title="Remove saved file?" :description="draftToRemove
-      ? `${draftToRemove.name} will be removed from this device.`
-      : undefined
-      " icon="trash-2" @close="clearDraftRemoval">
+    <UiModal
+      v-model:open="removeDraftOpen"
+      title="Remove saved file?"
+      :description="
+        draftToRemove
+          ? `${draftToRemove.name} will be removed from this device.`
+          : undefined
+      "
+      icon="trash-2"
+      @close="clearDraftRemoval"
+    >
       <UiParagraph size="sm" color="content-secondary">
         This local file has not been uploaded. Removing it cannot be undone
         inside Clever.
@@ -156,16 +347,21 @@ import AppPageHeader from "~/components/patterns/AppPageHeader.vue";
 import WorkspacePill from "~/components/shell/WorkspacePill.vue";
 import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace";
 import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
+import { useDebounce } from "~/utils/debounce";
 import {
   deleteOfflineUploadDraft,
   listOfflineEntities,
   listOfflineUploadDrafts,
   putOfflineEntities,
-  replaceOfflineEntityCollection,
   saveOfflineBlob,
   type OfflineBlobRecord,
 } from "~/utils/offline-v2/repository";
-import type { Material } from "~/shared/utils/material.contract";
+import type {
+  Material,
+  MaterialLibrarySort,
+  MaterialLibraryTypeFilter,
+  MaterialSummary,
+} from "~/shared/utils/material.contract";
 
 const { $api } = useNuxtApp();
 const route = useRoute();
@@ -178,9 +374,17 @@ const {
   refresh: refreshWorkspaces,
 } = useActiveWorkspace();
 
-const materials = ref<Material[]>([]);
+const materials = ref<MaterialSummary[]>([]);
 const loading = ref(true);
+const loadingMore = ref(false);
 const loadError = ref<string | null>(null);
+const total = ref(0);
+const workspaceMaterialCount = ref(0);
+const nextCursor = ref<string | null>(null);
+const hasMore = ref(false);
+const searchQuery = ref("");
+const typeFilter = ref<MaterialLibraryTypeFilter>("all");
+const sortOption = ref<MaterialLibrarySort>("newest");
 const uploading = ref(false);
 const uploadingName = ref("");
 const uploadProgress = ref(0);
@@ -188,18 +392,59 @@ const uploadDrafts = ref<OfflineBlobRecord[]>([]);
 const fileInput = ref<{ pick: () => void } | null>(null);
 const lastUploadToken = ref("");
 const renameOpen = ref(false);
-const renameTarget = ref<Material | null>(null);
+const renameTarget = ref<MaterialSummary | null>(null);
 const renameTitle = ref("");
 const renameError = ref<string | null>(null);
 const savingName = ref(false);
 const deleteOpen = ref(false);
-const deleteTarget = ref<Material | null>(null);
+const deleteTarget = ref<MaterialSummary | null>(null);
 const deleting = ref(false);
 const removeDraftOpen = ref(false);
 const draftToRemove = ref<OfflineBlobRecord | null>(null);
 let loadSequence = 0;
+let loadedWorkspaceId: string | null = null;
+
+const typeOptions: ReadonlyArray<{
+  label: string;
+  value: MaterialLibraryTypeFilter;
+}> = [
+  { label: "All types", value: "all" },
+  { label: "PDF", value: "pdf" },
+  { label: "DOCX", value: "docx" },
+  { label: "TXT", value: "txt" },
+  { label: "Other", value: "other" },
+];
+const sortOptions: ReadonlyArray<{
+  label: string;
+  value: MaterialLibrarySort;
+}> = [
+  { label: "Newest first", value: "newest" },
+  { label: "Name A–Z", value: "name" },
+];
 
 const isOffline = computed(() => !offline.isOnline.value);
+const materialsBackTo = computed(() =>
+  activeId.value ? `/workspaces/${activeId.value}` : "/workspaces",
+);
+const hasActiveFilters = computed(
+  () => Boolean(searchQuery.value.trim()) || typeFilter.value !== "all",
+);
+const hasCustomView = computed(
+  () => hasActiveFilters.value || sortOption.value !== "newest",
+);
+const showLibraryTools = computed(
+  () =>
+    Boolean(materials.value.length) ||
+    workspaceMaterialCount.value > 0 ||
+    hasCustomView.value,
+);
+const resultSummary = computed(() => {
+  const noun = total.value === 1 ? "material" : "materials";
+  if (hasMore.value || materials.value.length < total.value) {
+    return `Showing ${materials.value.length} of ${total.value} ${noun}`;
+  }
+  return `${total.value} ${noun}`;
+});
 const canUpload = computed(
   () =>
     Boolean(activeId.value) &&
@@ -435,7 +680,7 @@ function open(id: string) {
   navigateTo(`/materials/${id}`);
 }
 
-function materialMenuItems(item: Material) {
+function materialMenuItems(item: MaterialSummary) {
   return [
     [
       {
@@ -457,7 +702,7 @@ function materialMenuItems(item: Material) {
   ];
 }
 
-function askRename(item: Material) {
+function askRename(item: MaterialSummary) {
   renameTarget.value = item;
   renameTitle.value = item.title ?? "";
   renameError.value = null;
@@ -487,7 +732,7 @@ async function saveRename() {
   savingName.value = true;
   renameError.value = null;
   try {
-    let updated: Material;
+    let updated: MaterialSummary;
     if (isOffline.value) {
       const next = { ...target, title, updatedAt: new Date().toISOString() };
       await offline.queue({
@@ -507,13 +752,16 @@ async function saveRename() {
         return;
       }
       updated = response.data;
-      await cacheMaterialSnapshot(updated);
+      await cacheMaterialSnapshot(response.data);
     }
 
     materials.value = materials.value.map((item) =>
       item.id === updated.id ? updated : item,
     );
     clearRename();
+    if (hasActiveFilters.value || sortOption.value === "name") {
+      await load();
+    }
     toast.add({
       title: "Material renamed",
       description: isOffline.value
@@ -529,7 +777,7 @@ async function saveRename() {
   }
 }
 
-function askDelete(item: Material) {
+function askDelete(item: MaterialSummary) {
   deleteTarget.value = item;
   deleteOpen.value = true;
 }
@@ -555,6 +803,11 @@ async function deleteMaterial() {
         payload: {},
       });
       materials.value = materials.value.filter((item) => item.id !== target.id);
+      total.value = Math.max(0, total.value - 1);
+      workspaceMaterialCount.value = Math.max(
+        0,
+        workspaceMaterialCount.value - 1,
+      );
       toast.add({
         title: "Material removed",
         description: "Deletion will sync after you reconnect.",
@@ -571,6 +824,10 @@ async function deleteMaterial() {
         return;
       }
       materials.value = materials.value.filter((item) => item.id !== target.id);
+      workspaceMaterialCount.value = Math.max(
+        0,
+        workspaceMaterialCount.value - 1,
+      );
       await load();
       toast.add({ title: "Material deleted", color: "success" });
     }
@@ -587,7 +844,7 @@ async function deleteMaterial() {
   }
 }
 
-function typeLabel(m: Material) {
+function typeLabel(m: MaterialSummary) {
   const t = (m.type ?? "").toLowerCase();
   if (t.includes("pdf")) return "PDF";
   if (t.includes("docx") || t.includes("document")) return "DOCX";
@@ -614,7 +871,7 @@ async function cacheMaterialSnapshot(item: Material) {
     console.warn("Couldn't refresh offline material snapshot", error);
   }
 }
-function metaFor(m: Material) {
+function metaFor(m: MaterialSummary) {
   const meta = m.metadata as Record<string, unknown> | undefined;
   const pages =
     typeof meta?.pageCount === "number" ? `${meta.pageCount} pages · ` : "";
@@ -622,26 +879,87 @@ function metaFor(m: Material) {
   return `${pages}${limited}${new Date(m.createdAt as string).toLocaleDateString(undefined, { month: "short", day: "numeric" })}`;
 }
 
-async function load() {
+function matchesType(
+  material: MaterialSummary,
+  filter: MaterialLibraryTypeFilter,
+) {
+  if (filter === "all") return true;
+  const type = (material.type ?? "").toLowerCase();
+  if (filter === "pdf") return type === "pdf";
+  if (filter === "docx") return type === "docx" || type === "document";
+  if (filter === "txt") return type === "txt" || type === "text";
+  return !["pdf", "docx", "document", "txt", "text"].includes(type);
+}
+
+function filterOfflineMaterials(items: Material[]) {
+  const search = searchQuery.value.trim().toLocaleLowerCase();
+  const filtered = items.filter(
+    (item) =>
+      matchesType(item, typeFilter.value) &&
+      (!search || item.title.toLocaleLowerCase().includes(search)),
+  );
+
+  return filtered.sort((left, right) => {
+    if (sortOption.value === "name") {
+      return left.title.localeCompare(right.title, undefined, {
+        sensitivity: "base",
+      });
+    }
+    return (
+      new Date(right.createdAt as string).getTime() -
+      new Date(left.createdAt as string).getTime()
+    );
+  });
+}
+
+function resetLibraryState() {
+  materials.value = [];
+  total.value = 0;
+  nextCursor.value = null;
+  hasMore.value = false;
+}
+
+function resetLibraryView() {
+  searchQuery.value = "";
+  typeFilter.value = "all";
+  sortOption.value = "newest";
+}
+
+async function load(options: { append?: boolean } = {}) {
+  const append = options.append === true;
   const workspaceId = activeId.value;
   const sequence = ++loadSequence;
   if (!workspaceId) {
-    materials.value = [];
+    resetLibraryState();
+    workspaceMaterialCount.value = 0;
+    loadedWorkspaceId = null;
     uploadDrafts.value = [];
     loadError.value = null;
     loading.value = false;
+    loadingMore.value = false;
     return;
   }
 
-  loading.value = true;
-  loadError.value = null;
-  await loadUploadDrafts();
+  if (loadedWorkspaceId !== workspaceId) {
+    resetLibraryState();
+    workspaceMaterialCount.value = 0;
+    loadedWorkspaceId = workspaceId;
+  }
+
+  if (append) {
+    loadingMore.value = true;
+  } else {
+    loading.value = true;
+    loadingMore.value = false;
+    loadError.value = null;
+    await loadUploadDrafts();
+  }
   try {
     if (isOffline.value) {
       if (!offline.accountId.value) {
         loadError.value =
           "Sign in while online once before using saved materials offline.";
-        materials.value = [];
+        resetLibraryState();
         return;
       }
       const cached = await listOfflineEntities<Material>(
@@ -650,55 +968,77 @@ async function load() {
         workspaceId,
       );
       if (sequence === loadSequence) {
-        materials.value = cached.map((record) => record.data);
+        const filtered = filterOfflineMaterials(
+          cached.map((record) => record.data),
+        );
+        materials.value = filtered;
+        total.value = filtered.length;
+        workspaceMaterialCount.value = cached.length;
+        nextCursor.value = null;
+        hasMore.value = false;
       }
       return;
     }
 
-    const response = await $api.materials.getByWorkspace(workspaceId);
+    const response = await $api.materials.listLibrary(workspaceId, {
+      search: searchQuery.value,
+      type: typeFilter.value,
+      sort: sortOption.value,
+      limit: 20,
+      cursor: append ? (nextCursor.value ?? undefined) : undefined,
+    });
     if (sequence !== loadSequence) return;
     if (!response.success) {
-      materials.value = [];
-      loadError.value = response.error.message;
+      if (append && materials.value.length) {
+        toast.add({
+          title: "Couldn't load more materials",
+          description: response.error.message,
+          color: "error",
+        });
+      } else {
+        resetLibraryState();
+        loadError.value = response.error.message;
+      }
       return;
     }
 
-    materials.value = response.data;
-    if (offline.accountId.value) {
-      const accountId = offline.accountId.value;
-      try {
-        await replaceOfflineEntityCollection({
-          accountId,
-          entity: "material",
-          workspaceId,
-          foreignKey: "workspaceId",
-          foreignId: workspaceId,
-          records: response.data.map((item) => ({
-            id: `${accountId}:material:${item.id}`,
-            accountId,
-            entity: "material" as const,
-            entityId: item.id,
-            workspaceId,
-            version: 0,
-            updatedAt: Date.now(),
-            data: item as unknown as Record<string, unknown>,
-          })),
-        });
-      } catch (error) {
-        console.warn("Couldn't refresh offline materials", error);
-      }
+    materials.value = append
+      ? [...materials.value, ...response.data.items]
+      : response.data.items;
+    total.value = response.data.total;
+    if (!hasActiveFilters.value) {
+      workspaceMaterialCount.value = response.data.total;
     }
+    nextCursor.value = response.data.nextCursor;
+    hasMore.value = response.data.hasMore;
   } catch (error) {
     if (sequence === loadSequence) {
-      materials.value = [];
-      loadError.value =
+      const message =
         error instanceof Error
           ? error.message
           : "Materials couldn't be loaded. Please try again.";
+      if (append && materials.value.length) {
+        toast.add({
+          title: "Couldn't load more materials",
+          description: message,
+          color: "error",
+        });
+      } else {
+        resetLibraryState();
+        loadError.value = message;
+      }
     }
   } finally {
-    if (sequence === loadSequence) loading.value = false;
+    if (sequence === loadSequence) {
+      loading.value = false;
+      loadingMore.value = false;
+    }
   }
+}
+
+function loadMore() {
+  if (!hasMore.value || !nextCursor.value || loadingMore.value) return;
+  void load({ append: true });
 }
 
 async function refreshWorkspaceState() {
@@ -726,7 +1066,18 @@ function consumeUploadRoute(value: typeof route.query.upload) {
   clearUploadIntent();
 }
 
-watch([activeId, () => offline.isOnline.value], () => void load());
+const { debouncedFunc: scheduleSearchLoad, cancel: cancelSearchLoad } =
+  useDebounce(() => void load(), 300);
+
+watch(searchQuery, () => scheduleSearchLoad());
+watch([typeFilter, sortOption], () => {
+  cancelSearchLoad();
+  void load();
+});
+watch([activeId, () => offline.isOnline.value], () => {
+  cancelSearchLoad();
+  void load();
+});
 watch(
   [() => route.query.upload, () => route.query.capture, activeId],
   ([upload]) => {
@@ -802,6 +1153,33 @@ onMounted(async () => {
   background: var(--color-surface-subtle);
 }
 
+.mats__library-tools {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-secondary);
+  border-radius: var(--component-card-radius);
+  background: var(--ds-surface-card);
+}
+
+.mats__search-row,
+.mats__filters {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mats__search {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.mats__filter {
+  min-width: 0;
+  flex: 1 1 0;
+}
+
 .mats__list {
   display: flex;
   flex-direction: column;
@@ -820,6 +1198,11 @@ onMounted(async () => {
 
 .mats__modal-actions {
   justify-content: flex-end;
+}
+
+.mats__load-more {
+  align-self: center;
+  min-width: 9rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -204,7 +204,7 @@ export default defineAppConfig({
     },
     button: {
       slots: {
-        base: `rounded-[var(--radius-lg)] cursor-pointer ${focusRing} disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60! aria-disabled:pointer-events-none aria-disabled:cursor-not-allowed aria-disabled:opacity-60! active:scale-[0.98] transition-[background-color,border-color,color,box-shadow,transform,opacity] duration-[var(--duration-fast)] ease-[var(--ease-standard)]`,
+        base: `rounded-[var(--radius-lg)] cursor-pointer ${focusRing} disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-60! aria-disabled:pointer-events-none aria-disabled:cursor-not-allowed aria-disabled:opacity-60! active:scale-[0.98] transition-[background-color,border-color,color,box-shadow,transform,opacity] duration-[var(--duration-fast)] ease-[var(--ease-standard)] text-center! justify-center`,
       },
       compoundVariants: [...buttonStateVariants],
     },

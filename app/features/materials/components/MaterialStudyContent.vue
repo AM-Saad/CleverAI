@@ -2,7 +2,14 @@
   <section class="study-content" aria-labelledby="study-content-title">
     <div class="study-content__heading">
       <div>
-        <UiTitle id="study-content-title" tag="h2" size="lg" weight="bold" color="content-on-surface-strong" tight>
+        <UiTitle
+          id="study-content-title"
+          tag="h2"
+          size="lg"
+          weight="bold"
+          color="content-on-surface-strong"
+          tight
+        >
           Study content
         </UiTitle>
         <UiParagraph size="xs" color="content-secondary">
@@ -14,8 +21,12 @@
       </UiBadge>
     </div>
 
-    <UiSegmentedControl :model-value="mode" label="Study content type" :items="contentTypes"
-      @update:model-value="selectMode" />
+    <UiSegmentedControl
+      :model-value="mode"
+      label="Study content type"
+      :items="contentTypes"
+      @update:model-value="selectMode"
+    />
 
     <div v-if="mode === 'flashcards'" class="study-content__viewer">
       <CardStack :items="flashcards" class="study-content__stack">
@@ -23,8 +34,14 @@
           <FlipCard min-height="100%">
             <template #front>
               <span class="study-content__eyebrow">Flashcard</span>
-              <UiParagraph tag="span" class-name="study-content__card-copy" size="base" weight="bold"
-                color="content-on-surface-strong" dir="auto">
+              <UiParagraph
+                tag="span"
+                class-name="study-content__card-copy"
+                size="base"
+                weight="bold"
+                color="content-on-surface-strong"
+                dir="auto"
+              >
                 {{ card.front }}
               </UiParagraph>
               <span class="study-content__flip-hint">
@@ -34,11 +51,19 @@
             </template>
 
             <template #back>
-              <span class="study-content__eyebrow study-content__eyebrow--answer">
+              <span
+                class="study-content__eyebrow study-content__eyebrow--answer"
+              >
                 Answer
               </span>
-              <UiParagraph tag="span" class-name="study-content__card-copy" size="sm" weight="semibold"
-                color="content-on-surface-strong" dir="auto">
+              <UiParagraph
+                tag="span"
+                class-name="study-content__card-copy"
+                size="sm"
+                weight="semibold"
+                color="content-on-surface-strong"
+                dir="auto"
+              >
                 {{ card.back }}
               </UiParagraph>
               <span class="study-content__flip-hint">
@@ -58,43 +83,81 @@
             <span class="study-content__eyebrow">
               Question {{ questionIndex + 1 }} of {{ questions.length }}
             </span>
-            <UiParagraph size="lg" weight="bold" color="content-on-surface-strong" dir="auto">
+            <UiParagraph
+              size="lg"
+              weight="bold"
+              color="content-on-surface-strong"
+              dir="auto"
+            >
               {{ currentQuestion.question }}
             </UiParagraph>
 
             <ul class="study-content__choices">
-              <li v-for="(choice, choiceIndex) in currentQuestion.choices" :key="choiceIndex">
-                <UiListCard clickable selectable size="sm" :selected="selectedChoice === choiceIndex" :title="choice"
-                  :aria-label="`Answer ${choiceLetter(choiceIndex)}: ${choice}`" @click="chooseAnswer(choiceIndex)">
+              <li
+                v-for="(choice, choiceIndex) in currentQuestion.choices"
+                :key="choiceIndex"
+              >
+                <UiListCard
+                  clickable
+                  selectable
+                  size="sm"
+                  :selected="selectedChoice === choiceIndex"
+                  :title="choice"
+                  :aria-label="`Answer ${choiceLetter(choiceIndex)}: ${choice}`"
+                  @click="chooseAnswer(choiceIndex)"
+                >
                   <template #leading>
                     <span aria-hidden="true">{{
                       choiceLetter(choiceIndex)
-                      }}</span>
+                    }}</span>
                   </template>
                   <template v-if="selectedChoice !== null" #action>
-                    <UiIcon v-if="choiceIndex === currentQuestion.answerIndex" name="circle-check"
-                      class="h-5 w-5 text-success-text" aria-label="Correct answer" />
-                    <UiIcon v-else-if="choiceIndex === selectedChoice" name="circle-x" class="h-5 w-5 text-error-text"
-                      aria-label="Incorrect answer" />
+                    <UiIcon
+                      v-if="choiceIndex === currentQuestion.answerIndex"
+                      name="circle-check"
+                      class="h-5 w-5 text-success-text"
+                      aria-label="Correct answer"
+                    />
+                    <UiIcon
+                      v-else-if="choiceIndex === selectedChoice"
+                      name="circle-x"
+                      class="h-5 w-5 text-error-text"
+                      aria-label="Incorrect answer"
+                    />
                   </template>
                 </UiListCard>
               </li>
             </ul>
 
-            <UiAlert v-if="selectedChoice !== null" :tone="answerIsCorrect ? 'success' : 'error'" :icon="answerIsCorrect ? 'circle-check' : 'circle-x'
-              " :title="answerIsCorrect ? 'Correct' : 'Not quite'" :description="answerFeedback" />
+            <UiAlert
+              v-if="selectedChoice !== null"
+              :tone="answerIsCorrect ? 'success' : 'error'"
+              :icon="answerIsCorrect ? 'circle-check' : 'circle-x'"
+              :title="answerIsCorrect ? 'Correct' : 'Not quite'"
+              :description="answerFeedback"
+            />
           </div>
         </UiPanel>
       </Transition>
 
       <div class="study-content__pager" aria-label="Quiz navigation">
-        <UiIconButton icon="chevron-left" label="Previous question" variant="soft" :disabled="questionIndex === 0"
-          @click="questionIndex -= 1" />
+        <UiIconButton
+          icon="chevron-left"
+          label="Previous question"
+          variant="soft"
+          :disabled="questionIndex === 0"
+          @click="questionIndex -= 1"
+        />
         <UiParagraph size="sm" weight="semibold" color="content-secondary">
           {{ questionIndex + 1 }} / {{ questions.length }}
         </UiParagraph>
-        <UiIconButton icon="chevron-right" label="Next question" variant="soft"
-          :disabled="questionIndex === questions.length - 1" @click="questionIndex += 1" />
+        <UiIconButton
+          icon="chevron-right"
+          label="Next question"
+          variant="soft"
+          :disabled="questionIndex === questions.length - 1"
+          @click="questionIndex += 1"
+        />
       </div>
     </div>
   </section>
@@ -150,8 +213,9 @@ const answerFeedback = computed(() => {
   if (answerIsCorrect.value) return "Nice work.";
   const question = currentQuestion.value;
   if (!question) return "";
-  return `Correct answer: ${question.choices[question.answerIndex] ?? "Answer unavailable"
-    }`;
+  return `Correct answer: ${
+    question.choices[question.answerIndex] ?? "Answer unavailable"
+  }`;
 });
 
 watch(
@@ -280,7 +344,6 @@ function choiceLetter(index: number) {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
   .study-card-swap-enter-active,
   .study-card-swap-leave-active {
     transition-duration: 0.01ms;

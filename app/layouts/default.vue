@@ -2,7 +2,10 @@
   <div class="ds-shell">
     <a href="#main-content" class="ds-skip">Skip to main content</a>
 
-    <div class="ds-shell__frame" :class="{ 'ds-shell__frame--wide': isMarketingLanding }">
+    <div
+      class="ds-shell__frame"
+      :class="{ 'ds-shell__frame--wide': isMarketingLanding }"
+    >
       <main id="main-content" tabindex="-1" class="ds-shell__main">
         <ServiceWorkerUpdateNotification mode="banner" />
         <slot />
@@ -13,7 +16,9 @@
       </template>
 
       <!-- Global quick-switch (opened from any scoped screen's workspace pill). -->
-      <WorkspaceSwitcherSheet v-if="hasAppAccess && isLearningRoute && !isBareRoute" />
+      <WorkspaceSwitcherSheet
+        v-if="hasAppAccess && showWorkspaceSwitcher && !isBareRoute"
+      />
     </div>
   </div>
 </template>
@@ -53,10 +58,11 @@ const hasAppAccess = computed(
 const showChrome = computed(
   () => hasAppAccess.value && !isBareRoute.value && !isImmersiveRoute.value,
 );
-const isLearningRoute = computed(() =>
-  ["/learn", "/language", "/materials", "/review", "/workspaces"].some(
-    (path) => route.path === path || route.path.startsWith(`${path}/`),
-  ),
+const showWorkspaceSwitcher = computed(
+  () =>
+    route.path === "/materials" ||
+    route.path.startsWith("/materials/") ||
+    /^\/workspaces\/[^/]+$/.test(route.path),
 );
 // The signed-out home is the full-width marketing landing, not the phone column.
 const isMarketingLanding = computed(
@@ -72,7 +78,7 @@ const isMarketingLanding = computed(
   height: 100svh;
   background: var(--color-background);
   color: var(--color-content-on-background);
-  display: flex
+  display: flex;
 }
 
 /* Mobile-first column, centered on wider viewports so the PWA reads as a phone
@@ -130,7 +136,6 @@ const isMarketingLanding = computed(
 @media (max-width: 45rem) {
   .ds-shell__main {
     padding: var(--space-2) var(--space-3);
-
   }
 }
 </style>

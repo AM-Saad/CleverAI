@@ -225,6 +225,8 @@ model Material {
   questions   Question[]
 
   @@index([workspaceId])
+  @@index([workspaceId, createdAt, id])
+  @@index([workspaceId, title, id])
 }
 
 model Note {

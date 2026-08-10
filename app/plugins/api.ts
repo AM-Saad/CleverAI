@@ -33,7 +33,6 @@
 //   };
 // });
 
-
 // [File]: plugins/api.ts
 
 import { ServiceFactory } from "@/services/ServiceFactory";
@@ -44,7 +43,9 @@ export default defineNuxtPlugin((_nuxtApp) => {
 
   const baseURL = useRuntimeConfig().public.APP_BASE_URL;
 
-  const headers = import.meta.server ? useRequestHeaders(["cookie"]) : undefined;
+  const headers = import.meta.server
+    ? useRequestHeaders(["cookie"])
+    : undefined;
 
   const apiFetcher = $fetch.create({
     baseURL: baseURL,
@@ -89,6 +90,7 @@ export default defineNuxtPlugin((_nuxtApp) => {
     userTags: apiServiceFactory.create("userTags"),
     gateway: apiServiceFactory.create("gateway"),
     language: apiServiceFactory.create("language"),
+    learning: apiServiceFactory.create("learning"),
     notifications: apiServiceFactory.create("notifications"),
   };
 

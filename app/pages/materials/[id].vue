@@ -13,6 +13,8 @@
       </template>
     </AppPageHeader>
 
+    <WorkspacePill v-if="material" class="md__wspill" />
+
     <div v-if="loading" class="md__list">
       <UiSkeleton class="h-16 w-full rounded-[var(--component-card-radius)]" />
       <UiSkeleton class="h-40 w-full rounded-[var(--component-card-radius)]" />
@@ -218,7 +220,6 @@
           <UiSegmentedControl
             v-model="depth"
             label="Difficulty"
-            size="sm"
             full-width
             :items="difficultyItems"
           />
@@ -594,6 +595,8 @@
 import { computed, onMounted, ref, watch } from "vue";
 import AiShimmer from "~/components/ui/AiShimmer.vue";
 import AppPageHeader from "~/components/patterns/AppPageHeader.vue";
+import WorkspacePill from "~/components/shell/WorkspacePill.vue";
+import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace";
 import MaterialStudyContent from "~/features/materials/components/MaterialStudyContent.vue";
 import { useGenerateFromMaterial } from "~/features/materials/composables/useGenerateFromMaterial";
 import { useSubscriptionStore } from "~/composables/shared/useSubscription";
@@ -621,6 +624,7 @@ const { $api } = useNuxtApp();
 const route = useRoute();
 const toast = useToast();
 const offline = useOfflineRuntime();
+const { setActive } = useActiveWorkspace();
 
 const materialId = computed(() => String(route.params.id));
 const material = ref<Material | null>(null);
@@ -1249,6 +1253,7 @@ async function loadMaterial() {
         return;
       }
       material.value = cached.data;
+      setActive(cached.data.workspaceId);
     } else {
       const response = await $api.materials.getMaterial(materialId.value);
       if (!response.success) {
@@ -1258,6 +1263,7 @@ async function loadMaterial() {
         return;
       }
       material.value = response.data;
+      setActive(response.data.workspaceId);
       await cacheMaterialSnapshot(response.data);
     }
 
@@ -1312,6 +1318,10 @@ watch(isOffline, (now, was) => {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+
+.md__wspill {
+  align-self: flex-start;
 }
 
 .md__source {

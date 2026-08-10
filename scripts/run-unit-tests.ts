@@ -118,6 +118,14 @@ import { saveLanguageWord } from "../server/modules/language-learning/applicatio
 import { createLanguageLearningRuntime } from "../app/features/language-learning/composables/languageLearningRuntime";
 import FetchFactory from "../app/services/FetchFactory";
 import { MaterialService } from "../app/services/Material";
+import {
+  buildLearningHomeSnapshot,
+  tomorrowWindow,
+} from "../server/modules/learning-home/application/buildLearningHomeSnapshot";
+import {
+  MaterialLibraryPageSchema,
+  MaterialLibraryQuerySchema,
+} from "../shared/utils/material.contract";
 import { CommitMaterialGenerationRequestSchema } from "../shared/utils/llm-generate.contract";
 import { PrismaLanguageReviewRepository } from "../server/modules/language-learning/infrastructure/PrismaLanguageReviewRepository";
 import type {
@@ -257,6 +265,140 @@ function notesSyncSuccess(overrides: Record<string, unknown> = {}) {
     },
   };
 }
+
+test("learning home respects the client's local tomorrow boundary", () => {
+  const window = tomorrowWindow(new Date("2026-08-11T21:30:00.000Z"), -180);
+
+  assert.equal(window.date, "2026-08-13");
+  assert.equal(window.start.toISOString(), "2026-08-12T21:00:00.000Z");
+  assert.equal(window.end.toISOString(), "2026-08-13T20:59:59.999Z");
+});
+
+test("learning home picks the oldest real due source and builds history", async () => {
+  const now = new Date("2026-08-11T12:00:00.000Z");
+  const workspaceReviews = [
+    {
+      id: "review-oldest",
+      cardId: "flashcard-oldest",
+      resourceType: "flashcard",
+      workspaceId: "workspace-design",
+      repetitions: 4,
+      intervalDays: 30,
+      nextReviewAt: new Date("2026-08-08T09:00:00.000Z"),
+      lastReviewedAt: new Date("2026-07-09T09:00:00.000Z"),
+    },
+    {
+      id: "review-physics",
+      cardId: "flashcard-physics",
+      resourceType: "flashcard",
+      workspaceId: "workspace-physics",
+      repetitions: 2,
+      intervalDays: 6,
+      nextReviewAt: new Date("2026-08-10T09:00:00.000Z"),
+      lastReviewedAt: new Date("2026-08-04T09:00:00.000Z"),
+    },
+    {
+      id: "review-postcard",
+      cardId: "material-history",
+      resourceType: "material",
+      workspaceId: "workspace-physics",
+      repetitions: 7,
+      intervalDays: 80,
+      nextReviewAt: new Date("2026-10-01T09:00:00.000Z"),
+      lastReviewedAt: new Date("2026-06-01T09:00:00.000Z"),
+    },
+  ];
+  const languageReviews = [
+    {
+      id: "language-tomorrow",
+      wordId: "word-tomorrow",
+      storyId: null,
+      repetitions: 1,
+      intervalDays: 1,
+      nextReviewAt: new Date("2026-08-12T08:00:00.000Z"),
+      lastReviewedAt: new Date("2026-08-11T08:00:00.000Z"),
+    },
+  ];
+  const prisma = {
+    workspace: {
+      findMany: async () => [
+        { id: "workspace-physics", title: "Physics" },
+        { id: "workspace-design", title: "Design" },
+      ],
+    },
+    cardReview: { findMany: async () => workspaceReviews },
+    languageCardReview: {
+      findMany: async () => languageReviews,
+      findFirst: async () => null,
+    },
+    languageWord: {
+      count: async ({ where }: { where: { status?: string } }) =>
+        where.status === "mastered" ? 1 : 2,
+    },
+    material: {
+      findFirst: async ({ where }: { where: { id: string } }) =>
+        where.id === "material-history"
+          ? {
+              id: "material-history",
+              title: "Long-term Memory",
+              content: "Knowledge strengthened over many successful reviews.",
+              createdAt: new Date("2026-02-01T09:00:00.000Z"),
+            }
+          : null,
+    },
+    flashcard: {
+      findFirst: async ({ where }: { where: { id: string } }) => ({
+        front:
+          where.id === "flashcard-oldest"
+            ? "What makes a design legible?"
+            : "State Newton's second law.",
+        back:
+          where.id === "flashcard-oldest"
+            ? "Clear hierarchy and contrast."
+            : "Force equals mass times acceleration.",
+        sourceRef: { anchor: "Section 2" },
+        createdAt: new Date("2026-03-01T09:00:00.000Z"),
+        material: { id: "source-material", title: "Source Notes" },
+      }),
+    },
+    question: { findFirst: async () => null },
+  };
+
+  const snapshot = await buildLearningHomeSnapshot({
+    prisma: prisma as never,
+    userId: "user-1",
+    timezoneOffsetMinutes: 0,
+    now,
+  });
+
+  assert.deepEqual(snapshot.nextAction, {
+    kind: "workspace",
+    workspaceId: "workspace-design",
+    workspaceTitle: "Design",
+    dueCount: 1,
+    oldestDueAt: "2026-08-08T09:00:00.000Z",
+    otherDueCount: 1,
+    to: "/review?workspaceId=workspace-design",
+  });
+  assert.equal(
+    snapshot.workspaceStatuses.find(
+      (workspace) => workspace.id === "workspace-physics",
+    )?.due,
+    1,
+  );
+  assert.deepEqual(snapshot.tomorrow, {
+    date: "2026-08-12",
+    total: 1,
+    workspace: 0,
+    language: 1,
+  });
+  assert.equal(snapshot.spark?.source, "workspace");
+  assert.equal(snapshot.spark?.sourceDetail, "Source Notes · Section 2");
+  assert.equal(snapshot.spark?.sourceHref, "/materials/source-material");
+  assert.equal(snapshot.postcard?.sourceDetail, "Long-term Memory");
+  assert.equal(snapshot.postcard?.intervalDays, 80);
+  assert.equal(snapshot.postcard?.sourceHref, "/materials/material-history");
+});
 
 test("Daily recurrence clamps missing month days to the last day", () => {
   const monthly = {
@@ -8933,6 +9075,82 @@ test("material generation commits require a non-empty reviewed selection", () =>
   assert.equal(valid.success, true);
   assert.equal(empty.success, false);
   assert.equal(invalidQuiz.success, false);
+});
+
+test("material library query applies safe defaults and limits", () => {
+  const parsed = MaterialLibraryQuerySchema.parse({
+    workspaceId: "507f1f77bcf86cd799439011",
+  });
+  assert.deepEqual(parsed, {
+    workspaceId: "507f1f77bcf86cd799439011",
+    search: "",
+    type: "all",
+    sort: "newest",
+    limit: 20,
+  });
+
+  assert.equal(
+    MaterialLibraryQuerySchema.safeParse({
+      workspaceId: "507f1f77bcf86cd799439011",
+      limit: 51,
+    }).success,
+    false,
+  );
+  assert.equal(
+    MaterialLibraryQuerySchema.safeParse({
+      workspaceId: "507f1f77bcf86cd799439011",
+      search: "x".repeat(121),
+    }).success,
+    false,
+  );
+});
+
+test("material library page excludes source content", () => {
+  const page = MaterialLibraryPageSchema.parse({
+    items: [
+      {
+        id: "material-1",
+        workspaceId: "workspace-1",
+        title: "Biology",
+        content: "Large source text must not reach library rows",
+        type: "pdf",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ],
+    total: 1,
+    nextCursor: null,
+    hasMore: false,
+  });
+
+  assert.equal("content" in page.items[0]!, false);
+});
+
+test("material service builds encoded library discovery queries", async () => {
+  const calls: Array<{ url: string; method: string }> = [];
+  const service = new MaterialService((async (url: string, options: any) => {
+    calls.push({ url, method: String(options.method) });
+    return {
+      success: true,
+      data: { items: [], total: 0, nextCursor: null, hasMore: false },
+    };
+  }) as any);
+
+  const result = await service.listLibrary("507f1f77bcf86cd799439011", {
+    search: "cell biology",
+    type: "pdf",
+    sort: "name",
+    limit: 20,
+    cursor: "507f191e810c19729de860ea",
+  });
+
+  assert.equal(result.success, true);
+  assert.deepEqual(calls, [
+    {
+      method: "GET",
+      url: "/api/materials/library?workspaceId=507f1f77bcf86cd799439011&search=cell+biology&type=pdf&sort=name&limit=20&cursor=507f191e810c19729de860ea",
+    },
+  ]);
 });
 
 test("material service routes updates and reviewed commits to the material id", async () => {

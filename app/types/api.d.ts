@@ -11,6 +11,7 @@ import type { UserService } from "~/services/UserService";
 import type { UserTagService } from "~/services/UserTagService";
 import type GatewayService from "~/services/GatewayService";
 import type { LanguageService } from "~/services/LanguageService";
+import type { LearningService } from "~/services/LearningService";
 import type { NotificationsService } from "~/services/Notifications";
 
 export interface IApiInstance {
@@ -27,5 +28,6 @@ export interface IApiInstance {
   userTags: UserTagService;
   gateway: GatewayService;
   language: LanguageService;
+  learning: LearningService;
   notifications: NotificationsService;
 }
