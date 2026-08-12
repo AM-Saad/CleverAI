@@ -164,6 +164,7 @@ import {
 } from "../shared/utils/daily-recurrence";
 import { placementStateAfterMove } from "../shared/utils/daily-placement";
 import { projectLocalDay } from "../app/features/daily/domain/projectLocalDay";
+import { dueActionReminders } from "../server/modules/daily/domain/dueActionReminders";
 import {
   ACTION_ITEM_CREATE_FIELDS,
   buildActionItemUpdateMutation,
@@ -10373,6 +10374,120 @@ test("notes collaboration tokens verify the expected room payload", () => {
   assert.equal(verified.workspaceId, "workspace-1");
   assert.equal(verified.noteId, "note-1");
   assert.equal(verified.roomName, roomName);
+});
+
+test("timed action reminders fire once, in-window, and only for live rows", () => {
+  const stamp = "2026-08-12T08:00:00.000Z";
+  const dateKey = "2026-08-12";
+  const item = (id: string, localTime: string | null) => ({
+    id,
+    userId: "user-1",
+    title: `Action ${id}`,
+    description: null,
+    timingMode: localTime ? ("TIMED" as const) : ("ALL_DAY" as const),
+    startDate: dateKey,
+    localTime,
+    timezone: "Europe/Berlin",
+    recurrence: null,
+    lifecycle: "ACTIVE" as const,
+    version: 0,
+    createdAt: stamp,
+    updatedAt: stamp,
+  });
+  const row = (
+    id: string,
+    localTime: string | null,
+    overrides: Record<string, unknown> = {},
+  ) => ({
+    occurrenceKey: `${id}:${dateKey}`,
+    originalDateKey: dateKey,
+    actionItem: item(id, localTime),
+    occurrence: null,
+    activePlacement: null,
+    historyPlacement: null,
+    virtual: true,
+    ...overrides,
+  });
+  const placement = (overrides: Record<string, unknown>) => ({
+    id: "placement-1",
+    userId: "user-1",
+    occurrenceId: "occurrence-1",
+    occurrenceKey: "x",
+    dateKey,
+    timingMode: "TIMED" as const,
+    localTime: "09:00",
+    timezone: "Europe/Berlin",
+    position: "a",
+    state: "ACTIVE" as const,
+    movedToPlacementId: null,
+    createdAt: stamp,
+    updatedAt: stamp,
+    ...overrides,
+  });
+  const day = {
+    dateKey,
+    note: null,
+    actionItems: [],
+    items: [
+      row("due-now", "09:00"),
+      row("all-day", null),
+      row("later-today", "17:00"),
+      row("already-passed", "07:00"),
+      row("completed", "09:00", {
+        occurrence: { status: "COMPLETED" },
+      }),
+      row("moved-to-tomorrow", "09:00", {
+        activePlacement: placement({ dateKey: "2026-08-13" }),
+      }),
+      row("rescheduled-later-today", "09:00", {
+        activePlacement: placement({ localTime: "21:00" }),
+      }),
+    ],
+  } as never;
+
+  // 09:00 local, no lead time: only the row actually starting now.
+  const atStart = dueActionReminders({ day, nowMinutes: 9 * 60, leadMinutes: 0 });
+  assert.deepEqual(
+    atStart.map((reminder) => reminder.actionItemId),
+    ["due-now"],
+  );
+
+  // A tick 6 minutes late still delivers (catch-up window), 11 minutes does not.
+  assert.equal(
+    dueActionReminders({ day, nowMinutes: 9 * 60 + 6, leadMinutes: 0 }).length,
+    1,
+  );
+  assert.equal(
+    dueActionReminders({ day, nowMinutes: 9 * 60 + 11, leadMinutes: 0 }).length,
+    0,
+  );
+
+  // Lead time shifts the whole window earlier, and a placement's own time wins.
+  const withLead = dueActionReminders({
+    day,
+    nowMinutes: 8 * 60 + 45,
+    leadMinutes: 15,
+  });
+  assert.deepEqual(
+    withLead.map((reminder) => reminder.actionItemId),
+    ["due-now"],
+  );
+  assert.deepEqual(
+    dueActionReminders({ day, nowMinutes: 21 * 60, leadMinutes: 0 }).map(
+      (reminder) => reminder.actionItemId,
+    ),
+    ["rescheduled-later-today"],
+  );
+
+  // Lead time never spills into the previous day.
+  const midnight = {
+    ...(day as unknown as { items: unknown[] }),
+    items: [row("midnight", "00:10")],
+  } as never;
+  assert.equal(
+    dueActionReminders({ day: midnight, nowMinutes: 0, leadMinutes: 30 }).length,
+    1,
+  );
 });
 
 let failed = 0;

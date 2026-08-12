@@ -88,6 +88,9 @@ export const NotificationPreferencesDTO = z.object({
     .string()
     .regex(timeRegex, "Time must be in HH:MM format"),
 
+  actionReminderEnabled: z.boolean().default(true),
+  actionReminderLeadMinutes: z.number().int().min(0).max(1440).default(0),
+
   timezone: z.string(),
   quietHoursEnabled: z.boolean(),
   quietHoursStart: z.string().regex(timeRegex, "Time must be in HH:MM format"),

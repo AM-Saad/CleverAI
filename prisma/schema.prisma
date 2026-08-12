@@ -829,6 +829,10 @@ model UserNotificationPreferences {
   dailyReminderEnabled Boolean @default(false)
   dailyReminderTime    String  @default("19:00")
 
+  // Timed action item reminders
+  actionReminderEnabled     Boolean @default(true)
+  actionReminderLeadMinutes Int     @default(0) // 0 = at start time
+
   // General settings
   timezone          String  @default("UTC")
   quietHoursEnabled Boolean @default(false)

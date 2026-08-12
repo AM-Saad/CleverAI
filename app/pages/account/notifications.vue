@@ -219,6 +219,40 @@
       </UiSettingsRow>
     </UiSettingsGroup>
 
+    <UiSettingsGroup title="Action reminders">
+      <UiSettingsRow
+        title="Timed actions"
+        description="Get notified when a timed action is about to start"
+      >
+        <template #leading>
+          <UiIcon name="clock-3" class="h-4 w-4" />
+        </template>
+        <template #control>
+          <UiSwitch v-model="notificationPrefs.actionReminderEnabled" />
+        </template>
+      </UiSettingsRow>
+      <UiSettingsRow
+        v-if="notificationPrefs.actionReminderEnabled"
+        title="Remind me"
+        description="How far ahead of the start time to notify"
+      >
+        <template #leading>
+          <UiIcon name="clock" class="h-4 w-4" />
+        </template>
+        <template #control>
+          <UiSelect
+            v-model="notificationPrefs.actionReminderLeadMinutes"
+            :items="actionLeadOptions"
+            value-key="value"
+            label-key="label"
+            size="sm"
+            class="account-notifications__timezone"
+            aria-label="Action reminder lead time"
+          />
+        </template>
+      </UiSettingsRow>
+    </UiSettingsGroup>
+
     <UiSettingsGroup title="Delivery window">
       <UiSettingsRow
         title="Quiet hours"
@@ -365,6 +399,8 @@ const notificationPrefs = reactive<NotificationPreferencesDTO>({
   cardDueThreshold: 5,
   dailyReminderEnabled: false,
   dailyReminderTime: "09:00",
+  actionReminderEnabled: true,
+  actionReminderLeadMinutes: 0,
   timezone: "UTC",
   quietHoursEnabled: false,
   quietHoursStart: "22:00",
@@ -384,6 +420,14 @@ const savedSubscriptions = ref<
   NotificationSubscriptionsResponse["subscriptions"]
 >([]);
 
+const actionLeadOptions = [
+  { value: 0, label: "At start time" },
+  { value: 5, label: "5 minutes before" },
+  { value: 10, label: "10 minutes before" },
+  { value: 15, label: "15 minutes before" },
+  { value: 30, label: "30 minutes before" },
+  { value: 60, label: "1 hour before" },
+];
 const timezoneOptions = ref([
   { value: "UTC", label: "UTC" },
   { value: "America/New_York", label: "Eastern Time" },
