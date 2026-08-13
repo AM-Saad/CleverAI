@@ -16,6 +16,7 @@ export type DueActionReminder = {
 
 function toMinutes(localTime: string): number | null {
   const [hour, minute] = localTime.split(":").map(Number);
+  if (hour === undefined || minute === undefined) return null;
   if (!Number.isInteger(hour) || !Number.isInteger(minute)) return null;
   return hour * 60 + minute;
 }

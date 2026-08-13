@@ -163,6 +163,7 @@ import {
   weekdayForDateKey as dailyWeekdayForDateKey,
 } from "../shared/utils/daily-recurrence";
 import { placementStateAfterMove } from "../shared/utils/daily-placement";
+import { CreateActionItemDTO } from "../shared/utils/daily.contract";
 import { projectLocalDay } from "../app/features/daily/domain/projectLocalDay";
 import { dueActionReminders } from "../server/modules/daily/domain/dueActionReminders";
 import {
@@ -912,6 +913,207 @@ test("Opening a future Daily date projects virtual items without creating record
   assert.equal(snapshot.occurrences.length, 0);
 });
 
+test("Daily create contract carries an archived lifecycle after local coalescing", () => {
+  const parsed = CreateActionItemDTO.parse({
+    id: "action-archived-create",
+    occurrenceId: "occurrence-archived-create",
+    placementId: "placement-archived-create",
+    title: "Created then removed offline",
+    timingMode: "ALL_DAY",
+    startDate: "2026-08-01",
+    localTime: null,
+    timezone: "Africa/Cairo",
+    recurrence: null,
+    lifecycle: "ARCHIVED",
+    position: "a0",
+  });
+  assert.equal(parsed.lifecycle, "ARCHIVED");
+});
+
+test("a cancelled recurring occurrence is hidden without deleting its placement history", () => {
+  const stamp = "2026-08-01T08:00:00.000Z";
+  const dateKey = "2026-08-01";
+  const occurrenceKey = dailyOccurrenceKey("series-cancelled", dateKey);
+  const snapshot: DailyLocalSnapshot = {
+    notes: [],
+    actionItems: [
+      {
+        id: "series-cancelled",
+        userId: "user-1",
+        title: "Practice",
+        description: null,
+        timingMode: "ALL_DAY",
+        startDate: dateKey,
+        localTime: null,
+        timezone: "Africa/Cairo",
+        recurrence: {
+          frequency: "DAILY",
+          interval: 1,
+          missingDayPolicy: "LAST_DAY",
+          ends: "NEVER",
+        },
+        lifecycle: "ACTIVE",
+        version: 3,
+        createdAt: stamp,
+        updatedAt: stamp,
+      },
+    ],
+    occurrences: [
+      {
+        id: "occurrence-cancelled",
+        occurrenceKey,
+        userId: "user-1",
+        actionItemId: "series-cancelled",
+        originalDateKey: dateKey,
+        currentPlacementId: null,
+        status: "CANCELLED",
+        completedAt: null,
+        version: 4,
+        createdAt: stamp,
+        updatedAt: stamp,
+      },
+    ],
+    placements: [
+      {
+        id: "placement-preserved",
+        userId: "user-1",
+        occurrenceId: "occurrence-cancelled",
+        occurrenceKey,
+        dateKey,
+        timingMode: "ALL_DAY",
+        localTime: null,
+        timezone: "Africa/Cairo",
+        position: "a0",
+        state: "ACTIVE",
+        movedToPlacementId: null,
+        createdAt: stamp,
+        updatedAt: stamp,
+      },
+    ],
+  };
+
+  const projection = projectLocalDay(snapshot, dateKey);
+  assert.equal(projection.items.length, 0);
+  assert.equal(projection.actionItems.length, 1);
+  assert.equal(snapshot.placements[0]?.id, "placement-preserved");
+});
+
+test("archiving an action hides every appearance but keeps the definition", () => {
+  const stamp = "2026-08-01T08:00:00.000Z";
+  const snapshot: DailyLocalSnapshot = {
+    notes: [],
+    actionItems: [
+      {
+        id: "archived-action",
+        userId: "user-1",
+        title: "Archived",
+        description: null,
+        timingMode: "ALL_DAY",
+        startDate: "2026-08-01",
+        localTime: null,
+        timezone: null,
+        recurrence: null,
+        lifecycle: "ARCHIVED",
+        version: 2,
+        createdAt: stamp,
+        updatedAt: stamp,
+      },
+    ],
+    occurrences: [],
+    placements: [],
+  };
+  const projection = projectLocalDay(snapshot, "2026-08-01");
+  assert.equal(projection.items.length, 0);
+  assert.equal(projection.actionItems[0]?.lifecycle, "ARCHIVED");
+});
+
+test("a local create followed by archive coalesces into an archived create", async () => {
+  const suffix = `${Date.now()}-${Math.random()}`;
+  const accountId = `account-daily-create-archive-${suffix}`;
+  const actionItemId = `action-${suffix}`;
+  const now = Date.now();
+  const payload = {
+    id: actionItemId,
+    occurrenceId: `occurrence-${suffix}`,
+    placementId: `placement-${suffix}`,
+    title: "Remove before first sync",
+    timingMode: "ALL_DAY" as const,
+    startDate: "2026-08-01",
+    localTime: null,
+    timezone: null,
+    recurrence: null,
+    lifecycle: "ACTIVE" as const,
+    position: "a0",
+  };
+  const item = {
+    id: actionItemId,
+    userId: accountId,
+    title: payload.title,
+    description: null,
+    timingMode: payload.timingMode,
+    startDate: payload.startDate,
+    localTime: null,
+    timezone: null,
+    recurrence: null,
+    lifecycle: "ACTIVE" as const,
+    version: 0,
+    createdAt: new Date(now).toISOString(),
+    updatedAt: new Date(now).toISOString(),
+  };
+  const create = {
+    id: `create-${suffix}`,
+    entity: "actionItem" as const,
+    operation: "actionItem.create",
+    entityId: actionItemId,
+    changedFields: ["title", "lifecycle"],
+    payload,
+    dependsOn: [],
+    occurredAt: new Date(now).toISOString(),
+    createdAt: now,
+    attempts: 0,
+    status: "pending" as const,
+    sequence: false,
+  };
+  await commitOfflineMutation({
+    accountId,
+    mutation: create,
+    localRecord: {
+      entity: "actionItem",
+      entityId: actionItemId,
+      version: 0,
+      data: item,
+    },
+  });
+  await commitOfflineMutation({
+    accountId,
+    mutation: {
+      ...create,
+      id: `archive-${suffix}`,
+      operation: "actionItem.archive",
+      baseVersion: 0,
+      changedFields: ["lifecycle"],
+      payload: { lifecycle: "ARCHIVED" },
+      createdAt: now + 1,
+    },
+    localRecord: {
+      entity: "actionItem",
+      entityId: actionItemId,
+      version: 0,
+      data: { ...item, lifecycle: "ARCHIVED" },
+    },
+  });
+
+  const mutations = await listOfflineMutations(accountId);
+  assert.equal(mutations.length, 1);
+  assert.equal(mutations[0]?.operation, "actionItem.create");
+  assert.equal(mutations[0]?.payload.lifecycle, "ARCHIVED");
+  assert.equal(
+    (await getOfflineEntity(accountId, "actionItem", actionItemId))?.data
+      .lifecycle,
+    "ARCHIVED",
+  );
+});
+
 test("an equivalent daily note conflict is auto-resolved without user interruption", async () => {
   const accountId = `account-${Date.now()}-${Math.random()}-daily-note-converge`;
   const noteId = `daily-note-${accountId}`;
@@ -1069,6 +1271,19 @@ test("daily action conflict rebase keeps only true local changes", () => {
   assert.equal(rebased.localData.title, "Mine");
   assert.equal(rebased.localData.timingMode, "TIMED");
   assert.equal(rebased.localData.localTime, "15:00");
+});
+
+test("daily archive conflicts rebase lifecycle as explicit user intent", () => {
+  const rebased = buildDailyActionConflictRebase({
+    payload: { lifecycle: "ARCHIVED" },
+    rollbackData: { lifecycle: "ACTIVE", title: "Before" },
+    serverSnapshot: { lifecycle: "ACTIVE", title: "Renamed elsewhere" },
+    currentLocal: { lifecycle: "ARCHIVED", title: "Before" },
+  });
+  assert.deepEqual(rebased.changedFields, ["lifecycle"]);
+  assert.deepEqual(rebased.payload, { lifecycle: "ARCHIVED" });
+  assert.equal(rebased.localData.title, "Renamed elsewhere");
+  assert.equal(rebased.localData.lifecycle, "ARCHIVED");
 });
 
 test("keeping a daily action conflict rebases its mutation onto server revision", async () => {
@@ -10464,6 +10679,9 @@ test("timed action reminders fire once, in-window, and only for live rows", () =
       row("completed", "09:00", {
         occurrence: { status: "COMPLETED" },
       }),
+      row("cancelled", "09:00", {
+        occurrence: { status: "CANCELLED" },
+      }),
       row("moved-to-tomorrow", "09:00", {
         activePlacement: placement({ dateKey: "2026-08-13" }),
       }),
@@ -10474,7 +10692,11 @@ test("timed action reminders fire once, in-window, and only for live rows", () =
   } as never;
 
   // 09:00 local, no lead time: only the row actually starting now.
-  const atStart = dueActionReminders({ day, nowMinutes: 9 * 60, leadMinutes: 0 });
+  const atStart = dueActionReminders({
+    day,
+    nowMinutes: 9 * 60,
+    leadMinutes: 0,
+  });
   assert.deepEqual(
     atStart.map((reminder) => reminder.actionItemId),
     ["due-now"],
@@ -10513,7 +10735,8 @@ test("timed action reminders fire once, in-window, and only for live rows", () =
     items: [row("midnight", "00:10")],
   } as never;
   assert.equal(
-    dueActionReminders({ day: midnight, nowMinutes: 0, leadMinutes: 30 }).length,
+    dueActionReminders({ day: midnight, nowMinutes: 0, leadMinutes: 30 })
+      .length,
     1,
   );
 });

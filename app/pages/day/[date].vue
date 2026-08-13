@@ -1,16 +1,36 @@
 <template>
   <div class="day-page">
-    <DailyDateNavigation :active-date-key="dateKey" :today-date-key="today" :eyebrow="eyebrow" :title="dayTitle"
-      :days="weekDays" :account-link="accountLink" :needs-attention="showDayRolloverNotice" @navigate="go"
-      @select-date="goDate" />
+    <DailyDateNavigation
+      :active-date-key="dateKey"
+      :today-date-key="today"
+      :eyebrow="eyebrow"
+      :title="dayTitle"
+      :days="weekDays"
+      :account-link="accountLink"
+      :needs-attention="showDayRolloverNotice"
+      @navigate="go"
+      @select-date="goDate"
+    />
 
-    <UiAlert v-if="showDayRolloverNotice" tone="warning" variant="soft" icon="calendar" title="A new day has started"
-      :description="dayRolloverDescription" role="status">
+    <UiAlert
+      v-if="showDayRolloverNotice"
+      tone="warning"
+      variant="soft"
+      icon="calendar"
+      title="A new day has started"
+      :description="dayRolloverDescription"
+      role="status"
+    >
       <template #actions>
         <UiButton size="xs" tone="primary" variant="solid" @click="goToToday">
           Go to today
         </UiButton>
-        <UiButton size="xs" tone="neutral" variant="ghost" @click="dismissDayRolloverNotice">
+        <UiButton
+          size="xs"
+          tone="neutral"
+          variant="ghost"
+          @click="dismissDayRolloverNotice"
+        >
           Stay here
         </UiButton>
       </template>
@@ -18,18 +38,48 @@
 
     <UiAlert v-if="daily.error.value" tone="error" :title="daily.error.value" />
 
-    <DailyActionSection :date-key="dateKey" :items="activeActionModels" :moved-items="movedActionModels"
-      :open-count="openCount" :completed-count="completedCount" :loading="Boolean(daily.loadingDates.value[dateKey])"
-      :conflicts="actionConflicts" :occurrence-conflicts="occurrenceConflicts"
-      :resolving-action-item-id="resolvingActionItemId" :resolving-occurrence-id="resolvingOccurrenceId"
-      @toggle="toggleAction" @move="openMove" @resolve-conflict="resolveActionConflict"
-      @resolve-occurrence-conflict="resolveOccurrenceConflict" />
+    <DailyActionSection
+      :date-key="dateKey"
+      :items="activeActionModels"
+      :moved-items="movedActionModels"
+      :open-count="openCount"
+      :completed-count="completedCount"
+      :loading="Boolean(daily.loadingDates.value[dateKey])"
+      :conflicts="actionConflicts"
+      :occurrence-conflicts="occurrenceConflicts"
+      :resolving-action-item-id="resolvingActionItemId"
+      :resolving-occurrence-id="resolvingOccurrenceId"
+      @toggle="toggleAction"
+      @move="openMove"
+      @remove="openDelete"
+      @resolve-conflict="resolveActionConflict"
+      @resolve-occurrence-conflict="resolveOccurrenceConflict"
+    />
 
-    <DailyNoteSection :date-key="dateKey" :model-value="noteContent" :save-state="noteSaveState"
-      :conflict="noteConflict" :sync-issue="noteSyncIssue" @update:model-value="onNoteChange" @blur="flushPendingSave()"
-      @resolve="resolveNoteConflict" />
+    <DailyNoteSection
+      :date-key="dateKey"
+      :model-value="noteContent"
+      :save-state="noteSaveState"
+      :conflict="noteConflict"
+      :sync-issue="noteSyncIssue"
+      @update:model-value="onNoteChange"
+      @blur="flushPendingSave()"
+      @resolve="resolveNoteConflict"
+    />
 
-    <RescheduleActionSheet v-model:open="moveSheetOpen" :visible-date="dateKey" :item="movingItem" />
+    <RescheduleActionSheet
+      v-model:open="moveSheetOpen"
+      :visible-date="dateKey"
+      :item="movingItem"
+    />
+    <DeleteActionItemDialog
+      v-model:open="deleteDialogOpen"
+      :title="deletingItem?.actionItem.title ?? ''"
+      :repeating="Boolean(deletingItem?.actionItem.recurrence)"
+      :loading="deleteSaving"
+      @delete-occurrence="performDelete('occurrence')"
+      @delete-series="performDelete('series')"
+    />
   </div>
 </template>
 
@@ -44,6 +94,7 @@ import {
 } from "@shared/utils/daily-recurrence";
 import DailyActionSection from "~/features/daily/components/DailyActionSection.vue";
 import DailyDateNavigation from "~/features/daily/components/DailyDateNavigation.vue";
+import DeleteActionItemDialog from "~/features/daily/components/DeleteActionItemDialog.vue";
 import DailyNoteSection from "~/features/daily/components/DailyNoteSection.vue";
 import RescheduleActionSheet from "~/features/daily/components/RescheduleActionSheet.vue";
 import { useDaily } from "~/features/daily/composables/useDaily";
@@ -63,9 +114,7 @@ const timeZone = import.meta.client
   ? Intl.DateTimeFormat().resolvedOptions().timeZone
   : "UTC";
 const currentInstant = ref(new Date());
-const today = computed(() =>
-  dateKeyInTimeZone(currentInstant.value, timeZone),
-);
+const today = computed(() => dateKeyInTimeZone(currentInstant.value, timeZone));
 const dateKey = computed(() =>
   isDateKey(routeDateKey.value) ? routeDateKey.value : today.value,
 );
@@ -73,6 +122,9 @@ const showDayRolloverNotice = ref(false);
 const projection = computed(() => daily.projections.value[dateKey.value]);
 const moveSheetOpen = ref(false);
 const movingItem = ref<DayItemDTO | null>(null);
+const deleteDialogOpen = ref(false);
+const deletingItem = ref<DayItemDTO | null>(null);
+const deleteSaving = ref(false);
 const actionConflicts = ref<DailyActionConflict[]>([]);
 const occurrenceConflicts = ref<DailyOccurrenceConflict[]>([]);
 
@@ -105,7 +157,9 @@ onBeforeUnmount(() => {
 
 const activeItems = computed(() =>
   (projection.value?.items ?? []).filter(
-    (item) => item.activePlacement?.dateKey === dateKey.value || item.virtual,
+    (item) =>
+      item.occurrence?.status !== "CANCELLED" &&
+      (item.activePlacement?.dateKey === dateKey.value || item.virtual),
   ),
 );
 const movedItems = computed(() =>
@@ -374,9 +428,86 @@ function openMove(occurrenceKey: string) {
   moveSheetOpen.value = true;
 }
 
+function openDelete(occurrenceKey: string) {
+  const item = itemByOccurrenceKey(occurrenceKey);
+  if (!item) return;
+  deletingItem.value = item;
+  deleteDialogOpen.value = true;
+}
+
+async function undoActionDelete(input: {
+  scope: "occurrence" | "series";
+  actionItemId: string;
+  occurrenceKey: string;
+  visibleDateKey: string;
+}) {
+  try {
+    if (input.scope === "occurrence") {
+      await daily.restoreOccurrence(input.visibleDateKey, input.occurrenceKey);
+    } else {
+      await daily.restoreAction(input.visibleDateKey, input.actionItemId);
+    }
+    toast.add({ title: "Action item restored", color: "success" });
+  } catch (undoError) {
+    toast.add({
+      title: "Couldn’t restore action item",
+      description:
+        undoError instanceof Error ? undoError.message : "Try again.",
+      color: "error",
+    });
+  }
+}
+
+async function performDelete(scope: "occurrence" | "series") {
+  const item = deletingItem.value;
+  if (!item || deleteSaving.value) return;
+  deleteSaving.value = true;
+  const visibleDateKey = dateKey.value;
+  try {
+    if (scope === "occurrence" && item.actionItem.recurrence) {
+      await daily.cancelOccurrence(visibleDateKey, item);
+    } else {
+      scope = "series";
+      await daily.archiveAction(visibleDateKey, item.actionItem.id);
+    }
+    deleteDialogOpen.value = false;
+    const undoInput = {
+      scope,
+      actionItemId: item.actionItem.id,
+      occurrenceKey: item.occurrenceKey,
+      visibleDateKey,
+    } as const;
+    toast.add({
+      title:
+        scope === "occurrence"
+          ? "Occurrence removed"
+          : item.actionItem.recurrence
+            ? "Repeating series removed"
+            : "Action item removed",
+      description: "History was preserved.",
+      color: "neutral",
+      actions: [
+        {
+          label: "Undo",
+          onClick: () => undoActionDelete(undoInput),
+        },
+      ],
+    });
+  } catch (deleteError) {
+    toast.add({
+      title: "Couldn’t remove action item",
+      description:
+        deleteError instanceof Error ? deleteError.message : "Try again.",
+      color: "error",
+    });
+  } finally {
+    deleteSaving.value = false;
+  }
+}
+
 async function refreshActionConflicts() {
   const itemIds = new Set(
-    (projection.value?.items ?? []).map((item) => item.actionItem.id),
+    (projection.value?.actionItems ?? []).map((item) => item.id),
   );
   const occurrenceKeys = new Set(
     (projection.value?.items ?? []).map((item) => item.occurrenceKey),
@@ -394,9 +525,23 @@ async function refreshActionConflicts() {
   );
   publishIfChanged(
     occurrenceConflicts,
-    occurrences.filter((conflict) =>
-      occurrenceKeys.has(conflict.occurrenceKey),
-    ),
+    occurrences.filter((conflict) => {
+      if (occurrenceKeys.has(conflict.occurrenceKey)) return true;
+      const localDate = String(conflict.localOccurrence.originalDateKey ?? "");
+      const serverDate = String(
+        conflict.serverOccurrence.originalDateKey ?? "",
+      );
+      const localPlacementDate = String(conflict.localPlacement?.dateKey ?? "");
+      const serverPlacementDate = String(
+        conflict.serverPlacement?.dateKey ?? "",
+      );
+      return [
+        localDate,
+        serverDate,
+        localPlacementDate,
+        serverPlacementDate,
+      ].includes(dateKey.value);
+    }),
   );
 }
 

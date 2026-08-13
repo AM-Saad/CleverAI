@@ -38,9 +38,12 @@ const DAILY_MUTATION_OPERATIONS = new Set([
   "actionItem.create",
   "actionItem.update",
   "actionItem.archive",
+  "actionItem.restore",
   "occurrence.reschedule",
   "occurrence.complete",
   "occurrence.reopen",
+  "occurrence.cancel",
+  "occurrence.restore",
 ]);
 
 /** Build a generic offline-v2 entity record for one of Daily's DTOs. */
@@ -131,7 +134,8 @@ export async function mergeServerDay(
       pendingItemIds.add(String(payload.id));
     else if (
       mutation.operation === "actionItem.update" ||
-      mutation.operation === "actionItem.archive"
+      mutation.operation === "actionItem.archive" ||
+      mutation.operation === "actionItem.restore"
     ) {
       pendingItemIds.add(mutation.entityId);
       if (mutation.operation === "actionItem.update" && payload.placementId)
@@ -139,7 +143,9 @@ export async function mergeServerDay(
     } else if (
       mutation.operation === "occurrence.reschedule" ||
       mutation.operation === "occurrence.complete" ||
-      mutation.operation === "occurrence.reopen"
+      mutation.operation === "occurrence.reopen" ||
+      mutation.operation === "occurrence.cancel" ||
+      mutation.operation === "occurrence.restore"
     )
       pendingOccurrences.add(String(payload.occurrenceKey));
   }
@@ -206,7 +212,8 @@ export async function mergeServerBootstrap(
       pendingItems.add(String(payload.id));
     else if (
       mutation.operation === "actionItem.update" ||
-      mutation.operation === "actionItem.archive"
+      mutation.operation === "actionItem.archive" ||
+      mutation.operation === "actionItem.restore"
     ) {
       pendingItems.add(mutation.entityId);
       if (mutation.operation === "actionItem.update" && payload.placementId)
@@ -214,7 +221,9 @@ export async function mergeServerBootstrap(
     } else if (
       mutation.operation === "occurrence.reschedule" ||
       mutation.operation === "occurrence.complete" ||
-      mutation.operation === "occurrence.reopen"
+      mutation.operation === "occurrence.reopen" ||
+      mutation.operation === "occurrence.cancel" ||
+      mutation.operation === "occurrence.restore"
     )
       pendingOccurrences.add(String(payload.occurrenceKey));
   }
@@ -303,6 +312,7 @@ const ACTION_ITEM_UPDATE_FIELDS = [
   "localTime",
   "timezone",
   "recurrence",
+  "lifecycle",
 ] as const;
 const ACTION_ITEM_PLACEMENT_FIELDS = new Set([
   "timingMode",

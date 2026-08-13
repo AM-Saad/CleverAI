@@ -1,51 +1,96 @@
 <template>
-  <article class="action-row" :class="{ 'action-row--completed': item.completed }">
+  <article
+    class="action-row"
+    :class="{ 'action-row--completed': item.completed }"
+  >
     <div class="action-row_content">
-      <UiCheckbox :model-value="item.completed" :overdue="item.overdue" :aria-label="item.overdue
-        ? `Mark ${item.title} complete (overdue)`
-        : `Mark ${item.title} complete`
-        " @update:model-value="$emit('toggle', Boolean($event))" />
-      <UiButton type="button" tone="neutral" variant="link" class="action-row__main" :aria-label="conflicted
-        ? `${item.title} has a sync conflict`
-        : `Edit ${item.title}`
-        " :disabled="conflicted" @click="$emit('edit')">
+      <UiCheckbox
+        :model-value="item.completed"
+        :overdue="item.overdue"
+        :aria-label="
+          item.overdue
+            ? `Mark ${item.title} complete (overdue)`
+            : `Mark ${item.title} complete`
+        "
+        @update:model-value="$emit('toggle', Boolean($event))"
+      />
+      <UiButton
+        type="button"
+        tone="neutral"
+        variant="link"
+        class="action-row__main"
+        :aria-label="
+          conflicted
+            ? `${item.title} has a sync conflict`
+            : `Edit ${item.title}`
+        "
+        :disabled="conflicted"
+        @click="$emit('edit')"
+      >
         <div ref="titleViewport" class="action-row__title" :title="item.title">
-          <UiParagraph tag="p" size="sm" :color="item.completed ? 'disabled' : 'content-on-surface'"
-            class="leading-none" :class="{ 'line-through': item.completed }">
-            <span class="action-row__title-track" :class="{
-              'action-row__title-track--scrolling': isTitleOverflowing,
-            }" aria-hidden="true">
+          <UiParagraph
+            tag="p"
+            size="sm"
+            :color="item.completed ? 'disabled' : 'content-on-surface'"
+            class="leading-none"
+            :class="{ 'line-through': item.completed }"
+          >
+            <span
+              class="action-row__title-track"
+              :class="{
+                'action-row__title-track--scrolling': isTitleOverflowing,
+              }"
+              aria-hidden="true"
+            >
               <span class="action-row__title-copy">
                 <span ref="titleText">{{ item.title }}</span>
               </span>
               <span v-if="isTitleOverflowing" class="action-row__title-copy">{{
                 item.title
-                }}</span>
+              }}</span>
             </span>
             <!-- <span v-if="item.overdue" class="action-row__overdue">Overdue</span> -->
-
           </UiParagraph>
         </div>
-
       </UiButton>
     </div>
 
     <div class="action-row__actions">
       <div class="action-row__meta">
-        <span v-if="item.recurrenceLabel" class="action-row__repeat" :aria-label="item.recurrenceLabel"
-          :title="item.recurrenceLabel">
+        <span
+          v-if="item.recurrenceLabel"
+          class="action-row__repeat"
+          :aria-label="item.recurrenceLabel"
+          :title="item.recurrenceLabel"
+        >
           <UiIcon name="repeat-2" class="h-3.5 w-3.5" />
           <!-- {{ item.recurrenceLabel }} -->
         </span>
-        <UiPill v-if="item.timingLabel" size="sm" :label="item.timingLabel" :color="item.overdue
-          ? 'var(--color-error)'
-          : 'var(--color-content-secondary)'
-          " variant="soft" />
-
+        <UiPill
+          v-if="item.timingLabel"
+          size="sm"
+          :label="item.timingLabel"
+          :color="
+            item.overdue
+              ? 'var(--color-error)'
+              : 'var(--color-content-secondary)'
+          "
+          variant="soft"
+        />
       </div>
       <!-- <UiIconButton icon="pencil" label="Edit action item" size="sm" :disabled="conflicted"
         @click="$emit('edit')" /> -->
-      <UiIconButton icon="calendar-clock" label="Move action item" size="sm" @click="$emit('move')" />
+      <UiIconButton
+        icon="calendar-clock"
+        label="Move action item"
+        size="sm"
+        @click="$emit('move')"
+      />
+      <UiActionMenu
+        :items="actionMenuItems"
+        label="Action item options"
+        :disabled="conflicted"
+      />
     </div>
   </article>
 </template>
@@ -57,7 +102,21 @@ const props = defineProps<{
   item: DailyActionViewModel;
   conflicted?: boolean;
 }>();
-defineEmits<{ toggle: [completed: boolean]; edit: []; move: [] }>();
+const emit = defineEmits<{
+  toggle: [completed: boolean];
+  edit: [];
+  move: [];
+  remove: [];
+}>();
+
+const actionMenuItems = computed(() => [
+  {
+    id: "delete-action",
+    label: props.item.recurrence ? "Delete…" : "Delete action item",
+    icon: "trash-2",
+    onSelect: () => emit("remove"),
+  },
+]);
 
 const titleViewport = ref<HTMLElement | null>(null);
 const titleText = ref<HTMLElement | null>(null);
@@ -145,7 +204,6 @@ onBeforeUnmount(() => titleResizeObserver?.disconnect());
   border: 0;
   border-radius: var(--radius-md);
   background: transparent;
-
 }
 
 .action-row__main:focus-visible {
@@ -161,15 +219,27 @@ onBeforeUnmount(() => titleResizeObserver?.disconnect());
 }
 
 @property --mask-fade-left {
-  syntax: '<percentage>';
+  syntax: "<percentage>";
   inherits: false;
   initial-value: 0%;
 }
 
 .action-row__title:has(.action-row__title-track--scrolling) p {
   --mask-fade-left: 0%;
-  mask-image: linear-gradient(to right, transparent 0%, black var(--mask-fade-left), black 88%, transparent 100%);
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, black var(--mask-fade-left), black 88%, transparent 100%);
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black var(--mask-fade-left),
+    black 88%,
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    black var(--mask-fade-left),
+    black 88%,
+    transparent 100%
+  );
   transition: --mask-fade-left var(--duration-slow) var(--ease-standard);
   transition-delay: 0.5s;
 }
@@ -199,14 +269,12 @@ onBeforeUnmount(() => titleResizeObserver?.disconnect());
 .action-row__title-track--scrolling .action-row__title-copy {
   flex: none;
   padding-inline-end: var(--space-6);
-
 }
 
 .action-row__title:hover .action-row__title-track--scrolling,
 .action-row__main:focus-visible .action-row__title-track--scrolling {
   animation: action-title-scroll 12s ease-out infinite;
-  animation-delay: .5s;
-
+  animation-delay: 0.5s;
 }
 
 @keyframes action-title-scroll {
@@ -241,7 +309,7 @@ onBeforeUnmount(() => titleResizeObserver?.disconnect());
     text-overflow: ellipsis;
   }
 
-  .action-row__title-copy+.action-row__title-copy {
+  .action-row__title-copy + .action-row__title-copy {
     display: none;
   }
 }
@@ -252,7 +320,6 @@ onBeforeUnmount(() => titleResizeObserver?.disconnect());
   color: var(--color-content-secondary);
   font-size: var(--text-xs);
   flex: 0 1 auto;
-
 }
 
 .action-row__repeat {
@@ -271,7 +338,7 @@ onBeforeUnmount(() => titleResizeObserver?.disconnect());
 
 .action-row__overdue {
   color: var(--color-error);
-  font-size: var(--text-xs)
-    /* font-weight: 700; */
+  font-size: var(--text-xs);
+  /* font-weight: 700; */
 }
 </style>

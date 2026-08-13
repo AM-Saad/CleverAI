@@ -63,6 +63,33 @@ export async function checkDueActions() {
       }
 
       for (const reminder of due) {
+        // Projection and delivery are separate I/O steps. Re-read the two
+        // deletion tombstones immediately before creating a delivery record so
+        // an archive/cancel that lands during the cron tick suppresses it.
+        const [actionItem, occurrence] = await Promise.all([
+          prisma.actionItem.findFirst({
+            where: {
+              id: reminder.actionItemId,
+              userId: prefs.userId,
+              lifecycle: "ACTIVE",
+            },
+            select: { id: true },
+          }),
+          prisma.actionOccurrence.findUnique({
+            where: {
+              userId_occurrenceKey: {
+                userId: prefs.userId,
+                occurrenceKey: reminder.occurrenceKey,
+              },
+            },
+            select: { status: true },
+          }),
+        ]);
+        if (!actionItem || (occurrence && occurrence.status !== "OPEN")) {
+          results.skipped++;
+          continue;
+        }
+
         // occurrenceKey is `${actionItemId}:${dateKey}` — unique per day, so this
         // doubles as the "already reminded" marker.
         const alreadySent = await prisma.scheduledNotification.findFirst({
@@ -100,6 +127,15 @@ export async function checkDueActions() {
           });
           results.notificationsSent++;
         } else {
+          // Keep the failed attempt available to an operational retry instead
+          // of leaving an opaque unsent row with no error marker.
+          await prisma.scheduledNotification.update({
+            where: { id: record.id },
+            data: {
+              failureCount: { increment: 1 },
+              lastError: "Notification delivery returned no success",
+            },
+          });
           results.errors++;
         }
       }

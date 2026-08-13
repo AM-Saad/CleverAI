@@ -38,6 +38,7 @@ export function projectLocalDay(
       continue;
     const key = occurrenceKey(actionItem.id, dateKey);
     const occurrence = occurrenceByKey.get(key) ?? null;
+    if (occurrence?.status === "CANCELLED") continue;
     const placements = placementsByOccurrence.get(key) ?? [];
     const current = occurrence?.currentPlacementId
       ? (placements.find(
@@ -63,6 +64,7 @@ export function projectLocalDay(
   }
 
   for (const occurrence of snapshot.occurrences) {
+    if (occurrence.status === "CANCELLED") continue;
     const actionItem = snapshot.actionItems.find(
       (item) => item.id === occurrence.actionItemId,
     );

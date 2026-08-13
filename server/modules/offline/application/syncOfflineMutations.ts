@@ -20,6 +20,7 @@ import {
   positionBetween,
 } from "../../../../shared/utils/position-key";
 import {
+  CancelOccurrenceDTO,
   CompleteOccurrenceDTO,
   CreateActionItemDTO,
   DailyNoteUpsertDTO,
@@ -1103,6 +1104,7 @@ async function applyDomainMutation(input: {
           localTime: data.localTime ?? null,
           timezone: data.timezone ?? null,
           recurrence: data.recurrence ? json(data.recurrence) : undefined,
+          lifecycle: data.lifecycle ?? "ACTIVE",
           occurrences: {
             create: {
               id: data.occurrenceId,
@@ -1155,6 +1157,13 @@ async function applyDomainMutation(input: {
       const row = await prisma.actionItem.update({
         where: { id: item.id },
         data: { lifecycle: "ARCHIVED" },
+      });
+      return { entityId: row.id, canonical: json(row) };
+    }
+    if (mutation.operation === "actionItem.restore") {
+      const row = await prisma.actionItem.update({
+        where: { id: item.id },
+        data: { lifecycle: "ACTIVE" },
       });
       return { entityId: row.id, canonical: json(row) };
     }
@@ -1240,7 +1249,14 @@ async function applyDomainMutation(input: {
           { statusCode: 409 },
         );
       if (currentId === data.targetPlacementId)
-        return { entityId: occurrence.id, canonical: json(occurrence) };
+        return {
+          entityId: occurrence.id,
+          canonical: json(occurrence),
+          idMap:
+            data.sourcePlacementId !== currentId
+              ? { [data.sourcePlacementId]: currentId }
+              : undefined,
+        };
       const movedFrom = await prisma.actionPlacement.update({
         where: { id: currentId },
         data: {
@@ -1270,6 +1286,10 @@ async function applyDomainMutation(input: {
       return {
         entityId: row.id,
         canonical: json(row),
+        idMap:
+          data.sourcePlacementId !== currentId
+            ? { [data.sourcePlacementId]: currentId }
+            : undefined,
         relatedChanges: [
           {
             entity: "actionPlacement",
@@ -1293,15 +1313,23 @@ async function applyDomainMutation(input: {
         ...data,
         occurrenceId: mutation.entityId,
       });
+      const currentId = occurrence.currentPlacementId;
       if (occurrence.status === "COMPLETED")
-        return { entityId: occurrence.id, canonical: json(occurrence) };
-      if (!occurrence.currentPlacementId)
+        return {
+          entityId: occurrence.id,
+          canonical: json(occurrence),
+          idMap:
+            currentId && data.sourcePlacementId !== currentId
+              ? { [data.sourcePlacementId]: currentId }
+              : undefined,
+        };
+      if (!currentId)
         throw Object.assign(
           new Error("This occurrence has no active placement"),
           { statusCode: 409 },
         );
       const placement = await prisma.actionPlacement.update({
-        where: { id: occurrence.currentPlacementId },
+        where: { id: currentId },
         data: { state: "COMPLETED" },
       });
       const row = await prisma.actionOccurrence.update({
@@ -1316,6 +1344,10 @@ async function applyDomainMutation(input: {
       return {
         entityId: row.id,
         canonical: json(row),
+        idMap:
+          data.sourcePlacementId !== currentId
+            ? { [data.sourcePlacementId]: currentId }
+            : undefined,
         relatedChanges: [
           {
             entity: "actionPlacement",
@@ -1327,16 +1359,102 @@ async function applyDomainMutation(input: {
       };
     }
 
+    if (mutation.operation === "occurrence.cancel") {
+      const data = CancelOccurrenceDTO.parse(payload);
+      const occurrence = await ensureOccurrence(prisma, userId, {
+        ...data,
+        occurrenceId: mutation.entityId,
+      });
+      const currentId = occurrence.currentPlacementId;
+      if (occurrence.status === "CANCELLED" && !currentId)
+        return { entityId: occurrence.id, canonical: json(occurrence) };
+      const row = await prisma.actionOccurrence.update({
+        where: { id: occurrence.id },
+        data: {
+          status: "CANCELLED",
+          currentPlacementId: null,
+          version: { increment: 1 },
+        },
+        include: { placements: true },
+      });
+      return {
+        entityId: row.id,
+        canonical: json(row),
+        idMap:
+          currentId && data.sourcePlacementId !== currentId
+            ? { [data.sourcePlacementId]: currentId }
+            : undefined,
+      };
+    }
+
+    if (mutation.operation === "occurrence.restore") {
+      const command = OccurrenceCommandDTO.parse(payload);
+      const existing = await prisma.actionOccurrence.findFirst({
+        where: { id: mutation.entityId, userId },
+        include: {
+          placements: { orderBy: { createdAt: "desc" } },
+        },
+      });
+      if (!existing)
+        throw Object.assign(new Error("Occurrence not found"), {
+          statusCode: 404,
+        });
+      if (existing.occurrenceKey !== command.occurrenceKey)
+        throw Object.assign(new Error("Occurrence command does not match"), {
+          statusCode: 400,
+        });
+      if (existing.status !== "CANCELLED")
+        return { entityId: existing.id, canonical: json(existing) };
+      const placement = existing.placements[0];
+      if (!placement)
+        throw Object.assign(
+          new Error("This occurrence has no placement to restore"),
+          { statusCode: 409 },
+        );
+      const restoredStatus = existing.completedAt ? "COMPLETED" : "OPEN";
+      const restoredPlacement = await prisma.actionPlacement.update({
+        where: { id: placement.id },
+        data: {
+          state: restoredStatus === "COMPLETED" ? "COMPLETED" : "ACTIVE",
+        },
+      });
+      const row = await prisma.actionOccurrence.update({
+        where: { id: existing.id },
+        data: {
+          status: restoredStatus,
+          currentPlacementId: placement.id,
+          version: { increment: 1 },
+        },
+        include: { placements: true },
+      });
+      return {
+        entityId: row.id,
+        canonical: json(row),
+        relatedChanges: [
+          {
+            entity: "actionPlacement",
+            entityId: restoredPlacement.id,
+            changedFields: ["state"],
+            canonical: json(restoredPlacement),
+          },
+        ],
+      };
+    }
+
     // occurrence.reopen: a reopened occurrence must already be a durable row
     // (you cannot reopen something that was never completed), so this never
     // materializes a virtual occurrence the way the operations above do.
-    OccurrenceCommandDTO.parse(payload);
+    const command = OccurrenceCommandDTO.parse(payload);
     const existing = await prisma.actionOccurrence.findFirst({
       where: { id: mutation.entityId, userId },
     });
     if (!existing)
       throw Object.assign(new Error("Occurrence not found"), {
         statusCode: 404,
+      });
+    if (existing.occurrenceKey !== command.occurrenceKey)
+      throw Object.assign(new Error("Occurrence command does not match"), {
+        statusCode: 400,
       });
     if (!existing.currentPlacementId)
       throw Object.assign(
@@ -1466,40 +1584,87 @@ async function syncOne(input: {
         const insideReplay = await persistedResult(tx, userId, mutation.id);
         if (insideReplay) return insideReplay;
 
+        // A recurring appearance is virtual until touched, so two clients can
+        // assign different provisional IDs to the same occurrenceKey. Resolve
+        // that stable key before revision checks and return an ID mapping for
+        // both the occurrence and its provisional source placement.
+        let effectiveMutation = mutation;
+        const canonicalIdMap: Record<string, string> = {};
+        if (
+          mutation.entity === "actionOccurrence" &&
+          typeof mutation.payload.occurrenceKey === "string"
+        ) {
+          const existingOccurrence = await tx.actionOccurrence.findUnique({
+            where: {
+              userId_occurrenceKey: {
+                userId,
+                occurrenceKey: mutation.payload.occurrenceKey,
+              },
+            },
+            include: {
+              placements: { orderBy: { createdAt: "desc" }, take: 1 },
+            },
+          });
+          if (
+            existingOccurrence &&
+            existingOccurrence.id !== mutation.entityId
+          ) {
+            canonicalIdMap[mutation.entityId] = existingOccurrence.id;
+          }
+          const provisionalPlacementId = mutation.payload.sourcePlacementId;
+          const canonicalPlacementId =
+            existingOccurrence?.currentPlacementId ??
+            existingOccurrence?.placements?.[0]?.id;
+          if (
+            typeof provisionalPlacementId === "string" &&
+            canonicalPlacementId &&
+            provisionalPlacementId !== canonicalPlacementId
+          ) {
+            canonicalIdMap[provisionalPlacementId] = canonicalPlacementId;
+          }
+          if (Object.keys(canonicalIdMap).length) {
+            effectiveMutation = {
+              ...mutation,
+              entityId: canonicalIdMap[mutation.entityId] ?? mutation.entityId,
+              payload: remap(mutation.payload, canonicalIdMap) as JsonRecord,
+            };
+          }
+        }
+
         const state = await tx.offlineEntityState.findUnique({
           where: {
             userId_entity_entityId: {
               userId,
-              entity: mutation.entity,
-              entityId: mutation.entityId,
+              entity: effectiveMutation.entity,
+              entityId: effectiveMutation.entityId,
             },
           },
         });
         if (
           state &&
-          !isCreate(mutation) &&
-          mutation.baseVersion !== state.version
+          !isCreate(effectiveMutation) &&
+          effectiveMutation.baseVersion !== state.version
         ) {
           const versions = fieldVersions(state.fieldVersions);
-          const overlappingFields = mutation.changedFields.filter(
-            (field) => (versions[field] ?? 0) > mutation.baseVersion!,
+          const overlappingFields = effectiveMutation.changedFields.filter(
+            (field) => (versions[field] ?? 0) > effectiveMutation.baseVersion!,
           );
           if (overlappingFields.length || state.deletedAt) {
             const snapshot = await currentSnapshot(
               tx,
               userId,
-              mutation.entity,
-              mutation.entityId,
+              effectiveMutation.entity,
+              effectiveMutation.entityId,
             );
             const conflict: OfflineConflict = {
-              entity: mutation.entity,
-              entityId: mutation.entityId,
+              entity: effectiveMutation.entity,
+              entityId: effectiveMutation.entityId,
               serverVersion: state.version,
               overlappingFields: state.deletedAt
                 ? ["deleted"]
                 : overlappingFields,
               serverSnapshot:
-                mutation.entity === "actionOccurrence" && snapshot
+                effectiveMutation.entity === "actionOccurrence" && snapshot
                   ? { ...snapshot, version: state.version }
                   : snapshot,
               reason: state.deletedAt
@@ -1509,8 +1674,11 @@ async function syncOne(input: {
             return {
               id: mutation.id,
               status: "conflict",
-              entity: mutation.entity,
-              entityId: mutation.entityId,
+              entity: effectiveMutation.entity,
+              entityId: effectiveMutation.entityId,
+              idMap: Object.keys(canonicalIdMap).length
+                ? canonicalIdMap
+                : undefined,
               conflict,
             };
           }
@@ -1519,14 +1687,14 @@ async function syncOne(input: {
         const applied = await applyDomainMutation({
           prisma: tx,
           userId,
-          mutation,
+          mutation: effectiveMutation,
         });
         const stateEntityId = applied.entityId;
         const previous = await tx.offlineEntityState.findUnique({
           where: {
             userId_entity_entityId: {
               userId,
-              entity: mutation.entity,
+              entity: effectiveMutation.entity,
               entityId: stateEntityId,
             },
           },
@@ -1535,31 +1703,31 @@ async function syncOne(input: {
         const nextFields = {
           ...fieldVersions(previous?.fieldVersions),
           ...Object.fromEntries(
-            mutation.changedFields.map((field) => [field, version]),
+            effectiveMutation.changedFields.map((field) => [field, version]),
           ),
         };
         await tx.offlineEntityState.upsert({
           where: {
             userId_entity_entityId: {
               userId,
-              entity: mutation.entity,
+              entity: effectiveMutation.entity,
               entityId: stateEntityId,
             },
           },
           update: {
             version,
             fieldVersions: nextFields,
-            deletedAt: mutation.operation.endsWith(".delete")
+            deletedAt: effectiveMutation.operation.endsWith(".delete")
               ? new Date()
               : null,
           },
           create: {
             userId,
-            entity: mutation.entity,
+            entity: effectiveMutation.entity,
             entityId: stateEntityId,
             version,
             fieldVersions: nextFields,
-            deletedAt: mutation.operation.endsWith(".delete")
+            deletedAt: effectiveMutation.operation.endsWith(".delete")
               ? new Date()
               : null,
           },
@@ -1621,16 +1789,19 @@ async function syncOne(input: {
         const result: OfflineSyncResult = {
           id: mutation.id,
           status: "applied",
-          entity: mutation.entity,
+          entity: effectiveMutation.entity,
           entityId: stateEntityId,
           version,
           canonical:
-            (mutation.entity === "actionItem" ||
-              mutation.entity === "actionOccurrence") &&
+            (effectiveMutation.entity === "actionItem" ||
+              effectiveMutation.entity === "actionOccurrence") &&
             applied.canonical
               ? { ...applied.canonical, version }
               : applied.canonical,
-          idMap: applied.idMap,
+          idMap:
+            Object.keys(canonicalIdMap).length || applied.idMap
+              ? { ...canonicalIdMap, ...applied.idMap }
+              : undefined,
           related: relatedResults.length ? relatedResults : undefined,
         };
         // The receipt is committed atomically with the domain write and entity

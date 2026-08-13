@@ -60,6 +60,7 @@ export type DailyUpdateActionInput = {
 
 const OCCURRENCE_COMPLETION_FIELDS = ["status", "completedAt"];
 const OCCURRENCE_RESCHEDULE_FIELDS = ["currentPlacementId"];
+const OCCURRENCE_CANCELLATION_FIELDS = ["status", "currentPlacementId"];
 
 let listenersInstalled = false;
 let lastLifecycleRefreshAt = 0;
@@ -399,6 +400,7 @@ export function useDaily() {
       localTime: input.timingMode === "TIMED" ? input.localTime : null,
       timezone: input.timezone ?? null,
       recurrence: input.recurrence ?? null,
+      lifecycle: "ACTIVE",
       position,
     };
     const actionItem: ActionItemDTO = {
@@ -546,6 +548,48 @@ export function useDaily() {
       ...Object.keys(projections.value),
     ]);
     settleOnlineActionSave([input.visibleDateKey]);
+  }
+
+  async function setActionArchived(
+    visibleDateKey: string,
+    actionItemId: string,
+    archived: boolean,
+  ) {
+    if (!accountId.value) throw new Error("Sign in once before saving offline");
+    const snapshot = await getDailyLocalSnapshot(accountId.value);
+    const current = snapshot.actionItems.find(
+      (item) => item.id === actionItemId,
+    );
+    if (!current) throw new Error("Action item not found");
+    const lifecycle = archived ? "ARCHIVED" : "ACTIVE";
+    if (current.lifecycle === lifecycle) return;
+    const actionItem: ActionItemDTO = {
+      ...current,
+      lifecycle,
+      updatedAt: new Date().toISOString(),
+    };
+    await offline.queue({
+      entity: "actionItem",
+      operation: archived ? "actionItem.archive" : "actionItem.restore",
+      entityId: current.id,
+      baseVersion: current.version,
+      changedFields: ["lifecycle"],
+      payload: { lifecycle },
+      localData: actionItem as unknown as Record<string, unknown>,
+      rollbackData: current as unknown as Record<string, unknown>,
+      deferSync: true,
+    });
+    const visibleDates = [visibleDateKey, ...Object.keys(projections.value)];
+    await projectDates(visibleDates);
+    settleOnlineActionSave(visibleDates);
+  }
+
+  function archiveAction(visibleDateKey: string, actionItemId: string) {
+    return setActionArchived(visibleDateKey, actionItemId, true);
+  }
+
+  function restoreAction(visibleDateKey: string, actionItemId: string) {
+    return setActionArchived(visibleDateKey, actionItemId, false);
   }
 
   async function saveNote(
@@ -789,6 +833,146 @@ export function useDaily() {
     settleOnlineActionSave([dateKey]);
   }
 
+  async function cancelOccurrence(dateKey: string, row: DayItemDTO) {
+    if (!accountId.value) throw new Error("Sign in once before saving offline");
+    const snapshot = await getDailyLocalSnapshot(accountId.value);
+    const position =
+      row.activePlacement?.position ??
+      positionBetween(
+        snapshot.placements
+          .filter((item) => item.dateKey === dateKey)
+          .sort((left, right) => left.position.localeCompare(right.position))
+          .at(-1)?.position,
+        null,
+      );
+    const base = materialization(row, position);
+    const now = new Date().toISOString();
+    const placement: ActionPlacementDTO = row.activePlacement
+      ? { ...row.activePlacement, updatedAt: now }
+      : {
+          id: base.sourcePlacementId,
+          userId: accountId.value,
+          occurrenceId: base.occurrenceId,
+          occurrenceKey: row.occurrenceKey,
+          dateKey: row.originalDateKey,
+          timingMode: base.sourceTimingMode,
+          localTime: base.sourceLocalTime,
+          timezone: base.sourceTimezone,
+          position,
+          state: row.occurrence?.completedAt ? "COMPLETED" : "ACTIVE",
+          movedToPlacementId: null,
+          createdAt: now,
+          updatedAt: now,
+        };
+    const occurrence: ActionOccurrenceDTO = {
+      id: base.occurrenceId,
+      occurrenceKey: row.occurrenceKey,
+      userId: accountId.value,
+      actionItemId: row.actionItem.id,
+      originalDateKey: row.originalDateKey,
+      currentPlacementId: null,
+      status: "CANCELLED",
+      // Keep completion data as audit/undo state. Status is authoritative for
+      // completion metrics and reminders while cancelled.
+      completedAt: row.occurrence?.completedAt ?? null,
+      version: row.occurrence?.version ?? 0,
+      createdAt: iso(row.occurrence?.createdAt) ?? now,
+      updatedAt: now,
+    };
+    await offline.queue({
+      entity: "actionOccurrence",
+      operation: "occurrence.cancel",
+      entityId: base.occurrenceId,
+      baseVersion: row.occurrence?.version ?? 0,
+      changedFields: OCCURRENCE_CANCELLATION_FIELDS,
+      payload: base,
+      localData: occurrence as unknown as Record<string, unknown>,
+      rollbackData: row.occurrence
+        ? (row.occurrence as unknown as Record<string, unknown>)
+        : null,
+      localRecords: [
+        queuedDailyRecord(
+          "actionPlacement",
+          placement as unknown as { id: string } & Record<string, unknown>,
+        ),
+      ],
+      rollbackRecords: [
+        dailyRollbackRecord(
+          "actionPlacement",
+          placement.id,
+          row.activePlacement
+            ? (row.activePlacement as unknown as Record<string, unknown>)
+            : null,
+        ),
+      ],
+      deferSync: true,
+      sequence: true,
+    });
+    await projectDate(dateKey);
+    settleOnlineActionSave([dateKey]);
+  }
+
+  async function restoreOccurrence(
+    dateKey: string,
+    occurrenceKeyValue: string,
+  ) {
+    if (!accountId.value) throw new Error("Sign in once before saving offline");
+    const snapshot = await getDailyLocalSnapshot(accountId.value);
+    const current = snapshot.occurrences.find(
+      (occurrence) => occurrence.occurrenceKey === occurrenceKeyValue,
+    );
+    if (!current || current.status !== "CANCELLED") return;
+    const placement = snapshot.placements
+      .filter((row) => row.occurrenceKey === occurrenceKeyValue)
+      .sort((left, right) =>
+        iso(right.createdAt)!.localeCompare(iso(left.createdAt)!),
+      )[0];
+    if (!placement) throw new Error("Occurrence placement not found");
+    const now = new Date().toISOString();
+    const restoredStatus = current.completedAt ? "COMPLETED" : "OPEN";
+    const occurrence: ActionOccurrenceDTO = {
+      ...current,
+      status: restoredStatus,
+      currentPlacementId: placement.id,
+      updatedAt: now,
+    };
+    const restoredPlacement: ActionPlacementDTO = {
+      ...placement,
+      state: restoredStatus === "COMPLETED" ? "COMPLETED" : "ACTIVE",
+      updatedAt: now,
+    };
+    await offline.queue({
+      entity: "actionOccurrence",
+      operation: "occurrence.restore",
+      entityId: current.id,
+      baseVersion: current.version,
+      changedFields: OCCURRENCE_CANCELLATION_FIELDS,
+      payload: { occurrenceKey: occurrenceKeyValue },
+      localData: occurrence as unknown as Record<string, unknown>,
+      rollbackData: current as unknown as Record<string, unknown>,
+      localRecords: [
+        queuedDailyRecord(
+          "actionPlacement",
+          restoredPlacement as unknown as { id: string } & Record<
+            string,
+            unknown
+          >,
+        ),
+      ],
+      rollbackRecords: [
+        dailyRollbackRecord(
+          "actionPlacement",
+          placement.id,
+          placement as unknown as Record<string, unknown>,
+        ),
+      ],
+      deferSync: true,
+      sequence: true,
+    });
+    await projectDate(dateKey);
+    settleOnlineActionSave([dateKey]);
+  }
+
   async function reschedule(
     visibleDateKey: string,
     row: DayItemDTO,
@@ -977,6 +1161,8 @@ export function useDaily() {
     prefetchAdjacentDays,
     createAction,
     updateAction,
+    archiveAction,
+    restoreAction,
     saveNote,
     getNoteConflict,
     getNoteSyncIssue,
@@ -986,6 +1172,8 @@ export function useDaily() {
     resolveActionConflict,
     resolveOccurrenceConflict,
     setCompleted,
+    cancelOccurrence,
+    restoreOccurrence,
     reschedule,
     sync: offline.sync,
   };

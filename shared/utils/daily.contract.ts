@@ -132,6 +132,10 @@ export const CreateActionItemDTO = z
     localTime: LocalTimeSchema.nullable().optional(),
     timezone: z.string().nullable().optional(),
     recurrence: RecurrenceRuleSchema.nullable().optional(),
+    // Included so a locally-created item can be archived/restored before its
+    // create mutation reaches the server; Offline V2 safely coalesces both
+    // writes into the original create command.
+    lifecycle: ActionLifecycleSchema.optional(),
     position: z.string().min(1),
   })
   .superRefine((item, context) => {
@@ -208,6 +212,8 @@ export const CompleteOccurrenceDTO = MaterializeOccurrenceDTO.safeExtend({
   completedAt: z.string().datetime(),
 });
 
+export const CancelOccurrenceDTO = MaterializeOccurrenceDTO;
+
 export const DailyNoteUpsertDTO = z.object({
   id: z.string().min(1),
   dateKey: DateKeySchema,
@@ -254,6 +260,7 @@ export type ActionPlacementDTO = z.infer<typeof ActionPlacementSchema>;
 export type CreateActionItemDTO = z.infer<typeof CreateActionItemDTO>;
 export type UpdateActionItemDTO = z.infer<typeof UpdateActionItemDTO>;
 export type RescheduleOccurrenceDTO = z.infer<typeof RescheduleOccurrenceDTO>;
+export type CancelOccurrenceDTO = z.infer<typeof CancelOccurrenceDTO>;
 export type DayItemDTO = z.infer<typeof DayItemSchema>;
 export type DayProjectionDTO = z.infer<typeof DayProjectionSchema>;
 export type DailyBootstrapDTO = z.infer<typeof DailyBootstrapSchema>;

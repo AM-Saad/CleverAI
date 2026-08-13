@@ -207,6 +207,9 @@ export async function deliverNotifications(
               // The service worker branches on this to decide whether the
               // card-review action buttons apply.
               type: input.type,
+              // Feature metadata lets the service worker suppress a stale push
+              // when a newer offline tombstone has already reached this device.
+              data: input.metadata,
             }),
           );
 

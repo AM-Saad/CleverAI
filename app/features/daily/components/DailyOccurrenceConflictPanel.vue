@@ -63,7 +63,16 @@ const props = defineProps<{
 defineEmits<{ resolve: [strategy: "keep-local" | "keep-server"] }>();
 
 function statusLabel(value: Record<string, unknown>) {
-  return value.status === "COMPLETED" ? "Completed" : "Open";
+  switch (value.status) {
+    case "COMPLETED":
+      return "Completed";
+    case "CANCELLED":
+      return "Removed";
+    case "SKIPPED":
+      return "Skipped";
+    default:
+      return "Open";
+  }
 }
 
 function dateLabel(value: Record<string, unknown> | null) {

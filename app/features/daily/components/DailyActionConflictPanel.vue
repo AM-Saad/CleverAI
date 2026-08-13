@@ -17,7 +17,7 @@
         <div class="conflict-version">
           <p class="font-medium">{{ localTitle }}</p>
           <p class="text-content-secondary">
-            {{ localTiming }} · {{ localRecurrence }}
+            {{ localTiming }} · {{ localRecurrence }} · {{ localLifecycle }}
           </p>
         </div>
       </div>
@@ -28,7 +28,7 @@
         <div class="conflict-version">
           <p class="font-medium">{{ serverTitle }}</p>
           <p class="text-content-secondary">
-            {{ serverTiming }} · {{ serverRecurrence }}
+            {{ serverTiming }} · {{ serverRecurrence }} · {{ serverLifecycle }}
           </p>
         </div>
       </div>
@@ -94,6 +94,10 @@ function recurrenceLabel(item: Record<string, unknown>) {
   return frequency.charAt(0) + frequency.slice(1).toLowerCase();
 }
 
+function lifecycleLabel(item: Record<string, unknown>) {
+  return item.lifecycle === "ARCHIVED" ? "Removed" : "Active";
+}
+
 const localTiming = computed(() => timingLabel(props.conflict.localItem));
 const serverTiming = computed(() => timingLabel(props.conflict.serverItem));
 const localRecurrence = computed(() =>
@@ -101,6 +105,10 @@ const localRecurrence = computed(() =>
 );
 const serverRecurrence = computed(() =>
   recurrenceLabel(props.conflict.serverItem),
+);
+const localLifecycle = computed(() => lifecycleLabel(props.conflict.localItem));
+const serverLifecycle = computed(() =>
+  lifecycleLabel(props.conflict.serverItem),
 );
 </script>
 

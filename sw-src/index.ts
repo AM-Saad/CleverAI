@@ -37,6 +37,7 @@ import {
   chainPendingSameEntityMutations,
   claimOfflineMutations,
   getOfflineSession,
+  listOfflineEntities,
   listOfflineMutations,
   prepareOfflineMutationQueue,
   remapOfflineIds,
@@ -653,6 +654,38 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
   });
 
   // --------------------- PUSH NOTIFICATIONS ---------------------
+  async function actionReminderWasRemoved(
+    data: Record<string, unknown>,
+  ): Promise<boolean> {
+    const actionItemId =
+      typeof data.actionItemId === "string" ? data.actionItemId : null;
+    const occurrenceKey =
+      typeof data.occurrenceKey === "string" ? data.occurrenceKey : null;
+    if (!actionItemId && !occurrenceKey) return false;
+    const session = await getOfflineSession();
+    if (!session) return false;
+    const [items, occurrences] = await Promise.all([
+      listOfflineEntities<Record<string, unknown>>(
+        session.accountId,
+        "actionItem",
+      ),
+      listOfflineEntities<Record<string, unknown>>(
+        session.accountId,
+        "actionOccurrence",
+      ),
+    ]);
+    const archived = items.some(
+      (item) =>
+        item.entityId === actionItemId && item.data.lifecycle === "ARCHIVED",
+    );
+    const cancelled = occurrences.some(
+      (occurrence) =>
+        occurrence.data.occurrenceKey === occurrenceKey &&
+        occurrence.data.status === "CANCELLED",
+    );
+    return archived || cancelled;
+  }
+
   swSelf.addEventListener("push", (event: PushEvent) => {
     log("Push event received");
     event.waitUntil(
@@ -700,6 +733,13 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
           // its parentheses, making the generated worker invalid in Chromium.
           const notificationData =
             data.data && typeof data.data === "object" ? data.data : {};
+          if (
+            data.type === "ACTION_DUE" &&
+            (await actionReminderWasRemoved(notificationData))
+          ) {
+            log("Suppressed removed action reminder", notificationData);
+            return;
+          }
           // Review actions belong to review reminders only. Snooze sets a global
           // snoozedUntil, so offering it on e.g. an action-item reminder would
           // let one notification silence every other kind.

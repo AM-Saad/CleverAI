@@ -1069,6 +1069,16 @@
     }
     return parked;
   }
+  async function listOfflineEntities(accountId, entity, workspaceId) {
+    const db = await openUnifiedDB();
+    const all = await getAllRecords(
+      db,
+      stores.OFFLINE_ENTITIES
+    );
+    return all.filter(
+      (record) => record.accountId === accountId && (!entity || record.entity === entity) && (!workspaceId || record.workspaceId === workspaceId) && !record.deleted
+    );
+  }
   async function listOfflineMutations(accountId) {
     const db = await openUnifiedDB();
     const all = await getAllRecords(
@@ -5145,6 +5155,30 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
         return;
       }
     });
+    async function actionReminderWasRemoved(data) {
+      const actionItemId = typeof data.actionItemId === "string" ? data.actionItemId : null;
+      const occurrenceKey = typeof data.occurrenceKey === "string" ? data.occurrenceKey : null;
+      if (!actionItemId && !occurrenceKey) return false;
+      const session = await getOfflineSession();
+      if (!session) return false;
+      const [items, occurrences] = await Promise.all([
+        listOfflineEntities(
+          session.accountId,
+          "actionItem"
+        ),
+        listOfflineEntities(
+          session.accountId,
+          "actionOccurrence"
+        )
+      ]);
+      const archived = items.some(
+        (item) => item.entityId === actionItemId && item.data.lifecycle === "ARCHIVED"
+      );
+      const cancelled = occurrences.some(
+        (occurrence) => occurrence.data.occurrenceKey === occurrenceKey && occurrence.data.status === "CANCELLED"
+      );
+      return archived || cancelled;
+    }
     swSelf.addEventListener("push", (event) => {
       log("Push event received");
       event.waitUntil(
@@ -5176,6 +5210,10 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
             }
             const title = data.title || "Card Review";
             const notificationData = data.data && typeof data.data === "object" ? data.data : {};
+            if (data.type === "ACTION_DUE" && await actionReminderWasRemoved(notificationData)) {
+              log("Suppressed removed action reminder", notificationData);
+              return;
+            }
             const isReviewReminder = !data.type || data.type === "CARD_DUE" || data.type === "DAILY_REMINDER";
             const options = {
               body: data.message || "You have cards to review!",

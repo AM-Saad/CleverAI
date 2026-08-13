@@ -4,11 +4,16 @@ import { checkDueActions } from "../tasks/check-due-actions";
 import { cleanupExpiredSubscriptions } from "../utils/cleanupSubscriptions";
 
 export default defineNitroPlugin(async (nitroApp) => {
-  // Only initialize cron jobs on the server side and not in development API routes
-  if (
-    process.env.NODE_ENV === "production" ||
-    process.env.ENABLE_CRON === "true"
-  ) {
+  const appSurface = process.env.APP_SURFACE || "all";
+  // In split deployment, Platform owns notifications. Starting this plugin on
+  // every surface duplicates sends; ENABLE_CRON remains an explicit override.
+  const ownsCron = appSurface === "all" || appSurface === "platform";
+  const cronEnabled =
+    process.env.ENABLE_CRON === "true" ||
+    (process.env.ENABLE_CRON !== "false" &&
+      process.env.NODE_ENV === "production" &&
+      ownsCron);
+  if (cronEnabled) {
     console.log("🕐 Initializing cron jobs...");
 
     try {
@@ -35,7 +40,8 @@ export default defineNitroPlugin(async (nitroApp) => {
         {
           name: "check-due-actions",
           // Keep the interval <= ACTION_REMINDER_WINDOW_MINUTES or reminders slip.
-          schedule: process.env.CRON_CHECK_DUE_ACTIONS_SCHEDULE || "*/5 * * * *",
+          schedule:
+            process.env.CRON_CHECK_DUE_ACTIONS_SCHEDULE || "*/5 * * * *",
           taskName: "check-due-actions" as const,
           timezone: "UTC",
           enabled: true,
@@ -63,6 +69,6 @@ export default defineNitroPlugin(async (nitroApp) => {
       cronManager.stopAll();
     });
   } else {
-    console.log("⏸️ Cron jobs disabled (development mode)");
+    console.log(`⏸️ Cron jobs disabled for ${appSurface} surface`);
   }
 });

@@ -91,6 +91,7 @@ export async function projectDailyDay(input: {
 
     const key = occurrenceKey(actionItem.id, dateKey);
     const occurrence = touchedByKey.get(key) ?? null;
+    if (occurrence?.status === "CANCELLED") continue;
     const placements = occurrence?.placements ?? [];
     const current = occurrence?.currentPlacementId
       ? (placements.find(
@@ -117,6 +118,7 @@ export async function projectDailyDay(input: {
   }
 
   for (const occurrence of touchedOccurrences) {
+    if (occurrence.status === "CANCELLED") continue;
     const placements = occurrence.placements;
     const current = occurrence.currentPlacementId
       ? (placements.find(

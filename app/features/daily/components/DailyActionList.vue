@@ -24,6 +24,7 @@
           "
           @edit="startEdit(item.occurrenceKey)"
           @move="$emit('move', item.occurrenceKey)"
+          @remove="$emit('remove', item.occurrenceKey)"
         />
       </Transition>
       <DailyActionConflictPanel
@@ -77,6 +78,7 @@ const emit = defineEmits<{
   edit: [];
   toggle: [payload: { occurrenceKey: string; completed: boolean }];
   move: [occurrenceKey: string];
+  remove: [occurrenceKey: string];
   "resolve-conflict": [
     payload: {
       actionItemId: string;
