@@ -171,6 +171,7 @@ import {
   buildRecurrenceRule,
 } from "../app/features/daily/domain/actionItemMutation";
 import { createDateDialInteractionGate } from "../app/features/daily/presentation/dateDialInteraction";
+import { shouldShowDayRolloverAttention } from "../app/features/daily/presentation/dayRolloverAttention";
 import {
   autoResolveEquivalentNoteConflicts,
   buildDailyActionConflictRebase,
@@ -479,6 +480,33 @@ test("Daily date dial waits for scrolling to settle after pointer release", () =
 
   gate.markScrollSettled();
   assert.equal(gate.isReadyToCommit(), true);
+});
+
+test("Daily day rollover attention warns without forcing intentional navigation", () => {
+  assert.equal(
+    shouldShowDayRolloverAttention({
+      previousTodayKey: "2026-08-12",
+      currentTodayKey: "2026-08-13",
+      visibleDateKey: "2026-08-12",
+    }),
+    true,
+  );
+  assert.equal(
+    shouldShowDayRolloverAttention({
+      previousTodayKey: "2026-08-13",
+      currentTodayKey: "2026-08-13",
+      visibleDateKey: "2026-08-12",
+    }),
+    false,
+  );
+  assert.equal(
+    shouldShowDayRolloverAttention({
+      previousTodayKey: "2026-08-12",
+      currentTodayKey: "2026-08-13",
+      visibleDateKey: "2026-08-13",
+    }),
+    false,
+  );
 });
 
 test("moving an action preserves its completion state", () => {

@@ -91,7 +91,6 @@
 import { computed, nextTick, ref, watch } from "vue";
 import {
   addDateKeyDays,
-  dateKeyInTimeZone,
   formatDateKey,
   isDateKey,
   parseDateKey,
@@ -101,6 +100,7 @@ import { useFocusTrap } from "~/composables/ui/useFocusTrap";
 const props = withDefaults(
   defineProps<{
     activeDateKey: string;
+    todayDateKey: string;
     open?: boolean;
   }>(),
   {
@@ -123,13 +123,8 @@ useFocusTrap(isOpenRef, pickerRef, {
   preventScroll: true,
 });
 
-const timeZone = import.meta.client
-  ? Intl.DateTimeFormat().resolvedOptions().timeZone
-  : "UTC";
-
-const todayKey = computed(() => dateKeyInTimeZone(new Date(), timeZone));
 const displayDateKey = computed(() =>
-  isDateKey(props.activeDateKey) ? props.activeDateKey : todayKey.value,
+  isDateKey(props.activeDateKey) ? props.activeDateKey : props.todayDateKey,
 );
 
 const activeDateParsed = computed(() => parseDateKey(displayDateKey.value));
@@ -181,7 +176,7 @@ const currentMonthKey = computed(() => `${viewYear.value}-${viewMonth.value}`);
 
 // Quick Jump Presets
 const presets = computed(() => {
-  const tKey = todayKey.value;
+  const tKey = props.todayDateKey;
   return [
     { id: "today", label: "Today", dateKey: tKey },
     { id: "tomorrow", label: "Tomorrow", dateKey: addDateKeyDays(tKey, 1) },
@@ -194,7 +189,7 @@ const presets = computed(() => {
 const calendarCells = computed(() => {
   const year = viewYear.value;
   const month = viewMonth.value;
-  const tKey = todayKey.value;
+  const tKey = props.todayDateKey;
 
   const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   const firstDay = new Date(Date.UTC(year, month, 1));

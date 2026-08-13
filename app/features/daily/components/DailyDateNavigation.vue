@@ -4,7 +4,8 @@
       <UiIconButton icon="chevron-left" label="Previous day" @click="$emit('navigate', -1)" />
 
       <UiPopover v-model:open="pickerOpen" :content="{ align: 'center', side: 'bottom', sideOffset: 8 }">
-        <button type="button" class="day-header__date-trigger" :class="{ 'day-header__date-trigger--open': pickerOpen }"
+        <button type="button" class="day-header__date-trigger"
+          :class="{ 'day-header__date-trigger--open': pickerOpen, 'day-header__date-trigger--attention': needsAttention }"
           :aria-expanded="pickerOpen" aria-haspopup="dialog" aria-label="Open date picker">
           <!-- design-allow: date navigation header popover trigger -->
           <div class="day-header__date-title">
@@ -18,8 +19,8 @@
         </button>
 
         <template #content>
-          <DailyDatePicker :active-date-key="activeDateKey" :open="pickerOpen" @select-date="onSelectDate"
-            @close="pickerOpen = false" />
+          <DailyDatePicker :active-date-key="activeDateKey" :today-date-key="todayDateKey" :open="pickerOpen"
+            @select-date="onSelectDate" @close="pickerOpen = false" />
         </template>
       </UiPopover>
 
@@ -73,10 +74,12 @@ import DailyDatePicker from "./DailyDatePicker.vue";
 
 const props = defineProps<{
   activeDateKey: string;
+  todayDateKey: string;
   eyebrow: string;
   title: string;
   days: readonly { dateKey: string; weekday: string; day: number; label?: string }[];
   accountLink: string | Record<string, unknown>;
+  needsAttention?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -556,6 +559,19 @@ onBeforeUnmount(() => {
   box-shadow: var(--shadow-card);
 }
 
+.day-header__date-trigger--attention {
+  border-color: var(--color-warning);
+  background: color-mix(in srgb, var(--color-warning) 10%, transparent);
+  animation: day-header-attention-pulse 900ms var(--ease-standard) 2;
+}
+
+@keyframes day-header-attention-pulse {
+  50% {
+    box-shadow: 0 0 0 0.35rem color-mix(in srgb, var(--color-warning) 24%, transparent);
+    transform: scale(1.035);
+  }
+}
+
 .day-header__date-trigger:focus-visible {
   outline: 2px solid var(--ds-focus-outline-color);
   outline-offset: 1px;
@@ -728,6 +744,10 @@ onBeforeUnmount(() => {
   .day-header__calendar-icon,
   .day-header__date-trigger {
     transition: none;
+  }
+
+  .day-header__date-trigger--attention {
+    animation: none;
   }
 }
 

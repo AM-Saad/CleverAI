@@ -1,7 +1,20 @@
 <template>
   <div class="day-page">
-    <DailyDateNavigation :active-date-key="dateKey" :eyebrow="eyebrow" :title="dayTitle" :days="weekDays"
-      :account-link="accountLink" @navigate="go" @select-date="goDate" />
+    <DailyDateNavigation :active-date-key="dateKey" :today-date-key="today" :eyebrow="eyebrow" :title="dayTitle"
+      :days="weekDays" :account-link="accountLink" :needs-attention="showDayRolloverNotice" @navigate="go"
+      @select-date="goDate" />
+
+    <UiAlert v-if="showDayRolloverNotice" tone="warning" variant="soft" icon="calendar" title="A new day has started"
+      :description="dayRolloverDescription" role="status">
+      <template #actions>
+        <UiButton size="xs" tone="primary" variant="solid" @click="goToToday">
+          Go to today
+        </UiButton>
+        <UiButton size="xs" tone="neutral" variant="ghost" @click="dismissDayRolloverNotice">
+          Stay here
+        </UiButton>
+      </template>
+    </UiAlert>
 
     <UiAlert v-if="daily.error.value" tone="error" :title="daily.error.value" />
 
@@ -38,6 +51,7 @@ import { useDailyNoteDraft } from "~/features/daily/composables/useDailyNoteDraf
 import type { DailyActionConflict } from "~/features/daily/repositories/dailyLocalRepository";
 import type { DailyOccurrenceConflict } from "~/features/daily/repositories/dailyLocalRepository";
 import { toDailyActionViewModel } from "~/features/daily/presentation/dailyActionViewModel";
+import { shouldShowDayRolloverAttention } from "~/features/daily/presentation/dayRolloverAttention";
 
 definePageMeta({ middleware: "auth" });
 
@@ -48,10 +62,14 @@ const routeDateKey = computed(() => String(route.params.date));
 const timeZone = import.meta.client
   ? Intl.DateTimeFormat().resolvedOptions().timeZone
   : "UTC";
-const today = computed(() => dateKeyInTimeZone(new Date(), timeZone));
+const currentInstant = ref(new Date());
+const today = computed(() =>
+  dateKeyInTimeZone(currentInstant.value, timeZone),
+);
 const dateKey = computed(() =>
   isDateKey(routeDateKey.value) ? routeDateKey.value : today.value,
 );
+const showDayRolloverNotice = ref(false);
 const projection = computed(() => daily.projections.value[dateKey.value]);
 const moveSheetOpen = ref(false);
 const movingItem = ref<DayItemDTO | null>(null);
@@ -113,6 +131,68 @@ const completedCount = computed(
 const openCount = computed(
   () => activeActionModels.value.length - completedCount.value,
 );
+
+const dayRolloverDescription = computed(() => {
+  const viewedLabel = formatDateKey(dateKey.value, undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
+  const todayLabel = formatDateKey(today.value, undefined, {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  });
+  return `You're viewing ${viewedLabel}. Today is ${todayLabel}.`;
+});
+
+function refreshCurrentDay() {
+  const previousTodayKey = today.value;
+  currentInstant.value = new Date();
+  const currentTodayKey = today.value;
+
+  if (
+    shouldShowDayRolloverAttention({
+      previousTodayKey,
+      currentTodayKey,
+      visibleDateKey: dateKey.value,
+    })
+  ) {
+    showDayRolloverNotice.value = true;
+  }
+}
+
+function onVisibilityChange() {
+  if (!document.hidden) refreshCurrentDay();
+}
+
+let currentDayInterval: ReturnType<typeof setInterval> | null = null;
+
+onMounted(() => {
+  window.addEventListener("focus", refreshCurrentDay);
+  document.addEventListener("visibilitychange", onVisibilityChange);
+  currentDayInterval = setInterval(() => {
+    if (!document.hidden) refreshCurrentDay();
+  }, 60_000);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("focus", refreshCurrentDay);
+  document.removeEventListener("visibilitychange", onVisibilityChange);
+  if (currentDayInterval !== null) clearInterval(currentDayInterval);
+});
+
+watch(dateKey, () => {
+  showDayRolloverNotice.value = false;
+});
+
+function dismissDayRolloverNotice() {
+  showDayRolloverNotice.value = false;
+}
+
+function goToToday() {
+  return navigateTo(`/day/${today.value}`);
+}
 
 const {
   noteContent,
