@@ -1,4 +1,8 @@
 import { dateKeyInTimeZone } from "@shared/utils/daily-recurrence";
+// Imported explicitly rather than relying on Nitro's auto-import: the transform
+// silently skipped this file in the production bundle, leaving a bare `prisma`
+// that threw "prisma is not defined" on every cron tick while dev worked fine.
+import { prisma } from "../utils/prisma";
 import { projectDailyDay } from "../modules/daily/application/projectDailyDay";
 import {
   dueActionReminders,
