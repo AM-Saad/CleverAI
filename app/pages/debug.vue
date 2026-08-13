@@ -331,6 +331,7 @@
 definePageMeta({
   title: "Debug Dashboard",
   layout: "default",
+  middleware: "auth",
 });
 
 type NotificationPermissionState = "default" | "denied" | "granted";

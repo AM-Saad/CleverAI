@@ -13,7 +13,9 @@ primary_region = 'cdg'
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
-  min_machines_running = 0
+  # Scheduled notifications run on an in-process cron (server/plugins/cron.server.ts).
+  # At 0 the machine sleeps when idle — i.e. exactly when reminders need to fire.
+  min_machines_running = 1
   processes = ['app']
 
 [[vm]]

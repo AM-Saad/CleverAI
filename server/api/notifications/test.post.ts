@@ -3,6 +3,7 @@ import webPush from "web-push";
 import { z } from "zod";
 import type { NotificationSubscription } from "@prisma/client";
 import { TestNotificationDTO } from "@@/shared/utils/notification.contract";
+import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
 
 type TestResult = {
@@ -16,6 +17,7 @@ export default defineEventHandler(async (event) => {
   if (process.env.NODE_ENV !== "development") {
     throw Errors.notFound("endpoint");
   }
+  const user = await requireRole(event, ["USER"]);
 
   webPush.setVapidDetails(
     process.env.VAPID_CONTACT_EMAIL || "mailto:abdelrhmanm525@gmail.com",
@@ -43,9 +45,10 @@ export default defineEventHandler(async (event) => {
 
     console.log("🧪 Test notification request:", validatedNotification);
 
-    // Get all active subscriptions from database
+    // The caller's own devices only — this used to fan out to every
+    // subscription in the database.
     const subscriptions = await prisma.notificationSubscription.findMany({
-      // Get all subscriptions for testing
+      where: { userId: user.id },
     });
 
     if (subscriptions.length === 0) {

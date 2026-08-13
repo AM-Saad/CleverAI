@@ -14,6 +14,10 @@ export async function cleanupExpiredSubscriptions() {
         OR: [
           {
             expiresAt: {
+              // `not: null` is load-bearing: MongoDB's BSON type ordering sorts
+              // Null before Date, so a bare `lt` matches every row with no
+              // expiry — i.e. every healthy subscription.
+              not: null,
               lt: now,
             },
           },
@@ -37,6 +41,27 @@ export async function cleanupExpiredSubscriptions() {
       `🗑️ Deleted ${expiredResult.count} expired/failed subscriptions`
     );
 
+    // Neither notification table had any retention policy, so both grew without
+    // bound. Read inbox entries are history; the scheduled ledger only exists to
+    // suppress duplicate sends, which no longer matters once the day has passed.
+    const [inbox, ledger] = await Promise.all([
+      prisma.notification.deleteMany({
+        where: {
+          isRead: true,
+          sentAt: { lt: new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000) },
+        },
+      }),
+      prisma.scheduledNotification.deleteMany({
+        where: {
+          scheduledFor: { lt: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) },
+        },
+      }),
+    ]);
+
+    console.log(
+      `🗑️ Deleted ${inbox.count} read notifications and ${ledger.count} scheduled records`
+    );
+
     // Get statistics
     const stats = await prisma.notificationSubscription.groupBy({
       by: ["isActive"],
@@ -48,6 +73,8 @@ export async function cleanupExpiredSubscriptions() {
 
     return {
       deleted: expiredResult.count,
+      deletedNotifications: inbox.count,
+      deletedScheduled: ledger.count,
       deactivated: 0,
       stats,
     };

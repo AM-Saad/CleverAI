@@ -1,6 +1,7 @@
 import { cronManager } from "../services/CronManager";
 import { checkDueCards } from "../tasks/check-due-cards";
 import { checkDueActions } from "../tasks/check-due-actions";
+import { cleanupExpiredSubscriptions } from "../utils/cleanupSubscriptions";
 
 export default defineNitroPlugin(async (nitroApp) => {
   // Only initialize cron jobs on the server side and not in development API routes
@@ -18,6 +19,9 @@ export default defineNitroPlugin(async (nitroApp) => {
       cronManager.registerTask("check-due-actions", async () => {
         await checkDueActions();
       });
+      cronManager.registerTask("cleanup-notifications", async () => {
+        await cleanupExpiredSubscriptions();
+      });
 
       // Add jobs with configuration from environment
       const jobConfigs = [
@@ -33,6 +37,13 @@ export default defineNitroPlugin(async (nitroApp) => {
           // Keep the interval <= ACTION_REMINDER_WINDOW_MINUTES or reminders slip.
           schedule: process.env.CRON_CHECK_DUE_ACTIONS_SCHEDULE || "*/5 * * * *",
           taskName: "check-due-actions" as const,
+          timezone: "UTC",
+          enabled: true,
+        },
+        {
+          name: "cleanup-notifications",
+          schedule: process.env.CRON_CLEANUP_SCHEDULE || "0 3 * * *", // Daily 03:00 UTC
+          taskName: "cleanup-notifications" as const,
           timezone: "UTC",
           enabled: true,
         },

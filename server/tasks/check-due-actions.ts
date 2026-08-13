@@ -4,11 +4,16 @@ import {
   dueActionReminders,
   type DueActionReminder,
 } from "../modules/daily/domain/dueActionReminders";
-import { isInQuietHours } from "../utils/timezone";
 
 /**
- * Fires reminders for timed action items whose start time has arrived, honouring
- * the user's general notification preferences (lead time, quiet hours, snooze).
+ * Fires reminders for timed action items whose start time has arrived.
+ *
+ * Deliberately ignores quiet hours and snooze, unlike the card reminders: the
+ * user picked this time themselves, so a 23:30 item must fire at 23:30. Those
+ * settings suppress *our* nudges, not the user's own commitments — and because
+ * the fire window is minutes wide with no catch-up, suppressing here would drop
+ * the reminder permanently rather than defer it. Opting out is per-item (delete
+ * the time) or global (actionReminderEnabled).
  */
 export async function checkDueActions() {
   const now = new Date();
@@ -28,22 +33,6 @@ export async function checkDueActions() {
     results.processed++;
 
     try {
-      if (prefs.snoozedUntil && prefs.snoozedUntil > now) {
-        results.skipped++;
-        continue;
-      }
-      if (
-        prefs.quietHoursEnabled &&
-        isInQuietHours(
-          prefs.timezone,
-          prefs.quietHoursStart,
-          prefs.quietHoursEnd,
-        )
-      ) {
-        results.skipped++;
-        continue;
-      }
-
       const dateKey = dateKeyInTimeZone(now, prefs.timezone);
       const localTime = new Intl.DateTimeFormat("en-GB", {
         timeZone: prefs.timezone,

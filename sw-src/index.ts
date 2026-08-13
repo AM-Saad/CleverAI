@@ -678,6 +678,7 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
             requireInteraction: boolean;
             silent: boolean;
             url: string;
+            type: string;
             data: Record<string, unknown>;
           }>;
 
@@ -699,24 +700,34 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
           // its parentheses, making the generated worker invalid in Chromium.
           const notificationData =
             data.data && typeof data.data === "object" ? data.data : {};
+          // Review actions belong to review reminders only. Snooze sets a global
+          // snoozedUntil, so offering it on e.g. an action-item reminder would
+          // let one notification silence every other kind.
+          const isReviewReminder =
+            !data.type ||
+            data.type === "CARD_DUE" ||
+            data.type === "DAILY_REMINDER";
           const options = {
             body: data.message || "You have cards to review!",
             icon: data.icon || "/icons/192x192.png",
             badge: "/icons/72x72.png",
             tag: data.tag || "card-review",
-            requireInteraction: false,
-            silent: false,
+            requireInteraction: data.requireInteraction === true,
+            silent: data.silent === true,
             renotify: true,
             data: {
-              url: data.url || "/review",
+              url: data.url || "/user/review",
               timestamp: Date.now(),
               ...notificationData,
             },
-            actions: [
-              { action: "review", title: "📚 Review Now" },
-              { action: "snooze", title: "⏰ Snooze 1hr" },
-              { action: "dismiss", title: "❌ Dismiss" },
-            ],
+            // ponytail: two actions, because Chrome renders at most
+            // Notification.maxActions (2) and silently drops the rest.
+            actions: isReviewReminder
+              ? [
+                  { action: "review", title: "📚 Review Now" },
+                  { action: "snooze", title: "⏰ Snooze 1hr" },
+                ]
+              : undefined,
           } as NotificationOptions & {
             actions?: Array<{ action: string; title: string }>;
           };

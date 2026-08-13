@@ -204,6 +204,9 @@ export async function deliverNotifications(
               tag: input.tag,
               requireInteraction: input.requireInteraction || false,
               url: input.url || "/user/review",
+              // The service worker branches on this to decide whether the
+              // card-review action buttons apply.
+              type: input.type,
             }),
           );
 

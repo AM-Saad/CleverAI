@@ -1,24 +1,18 @@
 import { defineEventHandler } from "h3";
-import { Errors, success } from "@server/utils/error";
+import { requireRole } from "~~/server/utils/auth";
+import { success } from "@server/utils/error";
 
+/**
+ * Debug helper: clears the caller's own CARD_DUE cooldown so the next cron tick
+ * can notify them again. Scoped to the requesting user — it used to delete every
+ * user's rows behind an unvalidated cookie-presence check.
+ */
 export default defineEventHandler(async (event) => {
-  const cronToken = getHeader(event, "x-cron-secret");
-  const isInternalCronCall = cronToken === process.env.CRON_SECRET_TOKEN;
-  const sessionCookie =
-    getCookie(event, "next-auth.session-token") ||
-    getCookie(event, "__Secure-next-auth.session-token");
-  const isAuthenticatedUser = !!sessionCookie;
-
-  if (
-    process.env.NODE_ENV === "production" &&
-    !isInternalCronCall &&
-    !isAuthenticatedUser
-  ) {
-    throw Errors.unauthorized("Authorization required");
-  }
+  const user = await requireRole(event, ["USER"]);
 
   const result = await prisma.scheduledNotification.deleteMany({
     where: {
+      userId: user.id,
       type: "CARD_DUE",
       scheduledFor: { gte: new Date(Date.now() - 6 * 60 * 60 * 1000) },
     },

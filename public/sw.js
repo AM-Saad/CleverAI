@@ -5176,24 +5176,26 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
             }
             const title = data.title || "Card Review";
             const notificationData = data.data && typeof data.data === "object" ? data.data : {};
+            const isReviewReminder = !data.type || data.type === "CARD_DUE" || data.type === "DAILY_REMINDER";
             const options = {
               body: data.message || "You have cards to review!",
               icon: data.icon || "/icons/192x192.png",
               badge: "/icons/72x72.png",
               tag: data.tag || "card-review",
-              requireInteraction: false,
-              silent: false,
+              requireInteraction: data.requireInteraction === true,
+              silent: data.silent === true,
               renotify: true,
               data: {
-                url: data.url || "/review",
+                url: data.url || "/user/review",
                 timestamp: Date.now(),
                 ...notificationData
               },
-              actions: [
+              // ponytail: two actions, because Chrome renders at most
+              // Notification.maxActions (2) and silently drops the rest.
+              actions: isReviewReminder ? [
                 { action: "review", title: "\u{1F4DA} Review Now" },
-                { action: "snooze", title: "\u23F0 Snooze 1hr" },
-                { action: "dismiss", title: "\u274C Dismiss" }
-              ]
+                { action: "snooze", title: "\u23F0 Snooze 1hr" }
+              ] : void 0
             };
             const badgeNumber = typeof data.dueCount === "number" ? data.dueCount : typeof data.badgeCount === "number" ? data.badgeCount : void 0;
             if (typeof badgeNumber === "number" && typeof navigator.setAppBadge === "function") {
