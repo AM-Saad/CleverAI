@@ -1,5 +1,9 @@
 import { Errors } from "@server/utils/error";
 import { domainEventBus } from "@server/modules/shared-kernel/events/DomainEventBus";
+import {
+  buildLanguageReviewPresentation,
+  reviewModeForLanguageWord,
+} from "../../../../shared/utils/language-review-card";
 
 export async function enrollLanguageWord(input: {
   prisma: any;
@@ -12,7 +16,7 @@ export async function enrollLanguageWord(input: {
       stories: {
         orderBy: { createdAt: "desc" },
         take: 1,
-        select: { id: true },
+        select: { id: true, storyText: true, sentences: true },
       },
     },
   });
@@ -22,6 +26,41 @@ export async function enrollLanguageWord(input: {
   }
 
   const story = word.stories[0] ?? null;
+  const reviewCard = buildLanguageReviewPresentation({
+    word,
+    story,
+    preferredMode: story ? "story_cloze" : undefined,
+  });
+  if (!reviewCard) {
+    throw Errors.badRequest(
+      "Word needs a translation or definition before review enrollment",
+    );
+  }
+  const reviewStory = reviewCard.mode === "story_cloze" ? story : null;
+  const existingReview =
+    typeof input.prisma.languageCardReview?.findUnique === "function"
+      ? await input.prisma.languageCardReview.findUnique({
+          where: {
+            userId_wordId: {
+              userId: input.userId,
+              wordId: input.wordId,
+            },
+          },
+          select: { storyId: true, mode: true, contentVersion: true },
+        })
+      : null;
+  const reviewContentChanged = Boolean(
+    existingReview &&
+    (existingReview.storyId !== (reviewStory?.id ?? null) ||
+      (existingReview.mode ??
+        (existingReview.storyId
+          ? "story_cloze"
+          : reviewModeForLanguageWord(word))) !== reviewCard.mode),
+  );
+  const status: "mastered" | "enrolled" =
+    word.status === "mastered" && !reviewContentChanged
+      ? "mastered"
+      : "enrolled";
 
   const persist = async (tx: any) => {
     const review: { id: string } = await tx.languageCardReview.upsert({
@@ -31,11 +70,29 @@ export async function enrollLanguageWord(input: {
           wordId: input.wordId,
         },
       },
-      update: { storyId: story?.id ?? undefined, suspended: false },
+      update: {
+        storyId: reviewStory?.id ?? null,
+        mode: reviewCard.mode,
+        suspended: false,
+        ...(reviewContentChanged
+          ? {
+              contentVersion: (existingReview?.contentVersion ?? 1) + 1,
+              intervalDays: 0,
+              easeFactor: 2.5,
+              repetitions: 0,
+              nextReviewAt: new Date(),
+              lastReviewedAt: null,
+              lastGrade: null,
+              streak: 0,
+            }
+          : {}),
+      },
       create: {
         userId: input.userId,
         wordId: input.wordId,
-        storyId: story?.id ?? null,
+        storyId: reviewStory?.id ?? null,
+        mode: reviewCard.mode,
+        contentVersion: 1,
         nextReviewAt: new Date(),
         repetitions: 0,
         easeFactor: 2.5,
@@ -46,7 +103,7 @@ export async function enrollLanguageWord(input: {
 
     await tx.languageWord.update({
       where: { id: input.wordId },
-      data: { status: "enrolled" },
+      data: { status },
     });
     return review;
   };
@@ -61,14 +118,14 @@ export async function enrollLanguageWord(input: {
     payload: {
       userId: input.userId,
       wordId: input.wordId,
-      storyId: story?.id ?? null,
+      storyId: reviewStory?.id ?? null,
     },
   });
 
   return {
     wordId: input.wordId,
-    status: "enrolled",
+    status,
     reviewId: review.id,
-    storyId: story?.id ?? null,
+    storyId: reviewStory?.id ?? null,
   };
 }

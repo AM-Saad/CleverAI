@@ -16,6 +16,7 @@
     :eyebrow="eyebrow"
     :question="qa.question"
     :answer="qa.answer"
+    :source-context="sourceContext"
     :revealed="revealed"
     :state="current?.reviewState ?? null"
     :disabled="submitting"
@@ -39,6 +40,7 @@ import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace"
 const props = withDefaults(
   defineProps<{
     workspaceId?: string;
+    materialId?: string;
     closeTo?: string;
     limit?: number;
   }>(),
@@ -92,6 +94,17 @@ const elapsedMinutes = computed(() =>
 );
 
 const qa = computed(() => extractQA(current.value));
+const sourceContext = computed(() => {
+  const resource = current.value?.resource as AnyResource | undefined;
+  const sourceRef = resource?.sourceRef as AnyResource | undefined;
+  if (typeof sourceRef?.contextSnippet === "string") {
+    return sourceRef.contextSnippet;
+  }
+  if (typeof sourceRef?.anchor !== "string") return null;
+  return sourceRef.type === "PDF"
+    ? `Source: page ${sourceRef.anchor}`
+    : `Source: section ${sourceRef.anchor}`;
+});
 const eyebrow = computed(() => {
   const type = current.value?.resourceType ?? "flashcard";
   const subject = activeWorkspace.value?.title ?? "Review";
@@ -184,7 +197,7 @@ async function load() {
   revealed.value = false;
   await Promise.all([
     sessionSummary.startSession(),
-    review.fetchQueue(props.workspaceId, props.limit),
+    review.fetchQueue(props.workspaceId, props.limit, props.materialId),
   ]);
   if (epoch !== sessionEpoch) return;
   sessionTotal.value = review.reviewQueue.value.length;
@@ -196,7 +209,7 @@ function goHome() {
 }
 
 watch(
-  () => props.workspaceId,
+  () => [props.workspaceId, props.materialId],
   () => {
     if (mounted.value) void load();
   },

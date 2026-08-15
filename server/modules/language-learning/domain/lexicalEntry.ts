@@ -103,15 +103,9 @@ export function parseLexicalEntry(rawText: string, fallbackWord: string) {
     partOfSpeech: asString(parsed.partOfSpeech) || "unknown",
     detectedLang: asString(parsed.detectedLang) || "auto",
     phonetic: asString(parsed.phonetic) || undefined,
-    meanings:
-      meanings.length > 0
-        ? meanings
-        : [
-            {
-              definition: translation || fallbackWord,
-              partOfSpeech: asString(parsed.partOfSpeech) || "unknown",
-            },
-          ],
+    // Never manufacture a definition from the source word. Callers need to
+    // distinguish a usable immersion card from an incomplete model response.
+    meanings,
     examples,
     category: asString(parsed.category) || meanings[0]?.category || undefined,
     difficulty: asString(parsed.difficulty) || undefined,

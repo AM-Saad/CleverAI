@@ -1,12 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { z } from "zod";
-import { LanguageSentenceSchema } from "@shared/utils/language.contract";
-
-// Story sentences are LLM-generated and persisted without strict per-sentence
-// validation, so stored data can drift from the contract shape. Validate here
-// so one malformed story can't break the whole review queue's client-side
-// response validation.
-const StorySentencesSchema = z.array(LanguageSentenceSchema);
+import { buildLanguageReviewPresentation } from "../../../../shared/utils/language-review-card";
 
 type GetLanguageReviewQueueInput = {
   prisma: any;
@@ -25,6 +18,11 @@ type LanguageQueueRow = Prisma.LanguageCardReviewGetPayload<{
         translation: true;
         sourceLang: true;
         translationLang: true;
+        partOfSpeech: true;
+        phonetic: true;
+        meanings: true;
+        examples: true;
+        sourceContext: true;
       };
     };
     story: {
@@ -54,16 +52,14 @@ export async function getLanguageReviewQueue(
   };
 
   const wordLangFilter = {
-    ...(targetLanguage && targetLanguage !== nativeLanguage
-      ? { sourceLang: targetLanguage }
-      : {}),
+    ...(targetLanguage ? { sourceLang: targetLanguage } : {}),
     ...(nativeLanguage ? { translationLang: nativeLanguage } : {}),
   };
   const hasLangFilter = Object.keys(wordLangFilter).length > 0;
 
   const queryArgs = (where: any) => ({
     where,
-    take: limit,
+    take: Math.min(limit * 3, 100),
     orderBy: { nextReviewAt: "asc" as const },
     include: {
       word: {
@@ -73,6 +69,11 @@ export async function getLanguageReviewQueue(
           translation: true,
           sourceLang: true,
           translationLang: true,
+          partOfSpeech: true,
+          phonetic: true,
+          meanings: true,
+          examples: true,
+          sourceContext: true,
         },
       },
       story: {
@@ -85,12 +86,9 @@ export async function getLanguageReviewQueue(
     },
   });
 
-  // Scope to the active language pair when set. But the pair comes from
-  // preferences (default "en"/"en") while captured words store an auto-detected
-  // sourceLang — so an exact-match filter can silently exclude everything.
-  // Resilient fallback: if the scoped query finds nothing due, return all the
-  // user's due cards so review is never mysteriously empty.
-  let cardReviews: LanguageQueueRow[] =
+  // Active language pair is a hard session boundary. Mixing another pair when
+  // no matching cards are due makes the session label and learner intent false.
+  const cardReviews: LanguageQueueRow[] =
     await input.prisma.languageCardReview.findMany(
       queryArgs({
         ...baseWhere,
@@ -98,45 +96,45 @@ export async function getLanguageReviewQueue(
       }),
     );
 
-  if (cardReviews.length === 0 && hasLangFilter) {
-    cardReviews = await input.prisma.languageCardReview.findMany(
-      queryArgs(baseWhere),
-    );
-  }
-
   return {
-    cards: cardReviews.map((cardReview) => {
-      // Only treat a card as a story-cloze card when its stored sentences match
-      // the contract; otherwise drop the story and fall back to plain word
-      // translation so a single malformed story doesn't fail validation for the
-      // entire queue.
-      const parsedSentences = cardReview.story
-        ? StorySentencesSchema.safeParse(cardReview.story.sentences)
-        : null;
-      const validStory =
-        cardReview.story && parsedSentences?.success ? cardReview.story : null;
+    cards: cardReviews
+      .flatMap((cardReview) => {
+        const reviewCard = buildLanguageReviewPresentation({
+          word: cardReview.word,
+          story: cardReview.story,
+          preferredMode: cardReview.mode,
+        });
+        // Legacy/incomplete records without a translation or definition are not
+        // reviewable. New enrollment rejects them before a review row is created.
+        if (!reviewCard) return [];
+        const validStory =
+          reviewCard.mode === "story_cloze" ? cardReview.story : null;
 
-      return {
-        cardId: cardReview.id,
-        wordId: cardReview.wordId,
-        word: cardReview.word.word,
-        translation: cardReview.word.translation,
-        sourceLang: cardReview.word.sourceLang,
-        translationLang: cardReview.word.translationLang,
-        storyId: validStory?.id ?? null,
-        storyText: validStory?.storyText ?? null,
-        sentences:
-          validStory && parsedSentences?.success ? parsedSentences.data : null,
-        mode: validStory ? "story_cloze" : "word_translation",
-        reviewState: {
-          intervalDays: cardReview.intervalDays,
-          easeFactor: cardReview.easeFactor,
-          repetitions: cardReview.repetitions,
-          nextReviewAt: cardReview.nextReviewAt,
-          lastGrade: cardReview.lastGrade,
-          streak: cardReview.streak,
-        },
-      };
-    }),
+        return [
+          {
+            cardId: cardReview.id,
+            wordId: cardReview.wordId,
+            word: cardReview.word.word,
+            translation: cardReview.word.translation,
+            sourceLang: cardReview.word.sourceLang,
+            translationLang: cardReview.word.translationLang,
+            storyId: validStory?.id ?? null,
+            storyText: validStory?.storyText ?? null,
+            sentences: validStory?.sentences ?? null,
+            mode: reviewCard.mode,
+            presentationVersion: cardReview.contentVersion ?? 1,
+            presentation: reviewCard.presentation,
+            reviewState: {
+              intervalDays: cardReview.intervalDays,
+              easeFactor: cardReview.easeFactor,
+              repetitions: cardReview.repetitions,
+              nextReviewAt: cardReview.nextReviewAt,
+              lastGrade: cardReview.lastGrade,
+              streak: cardReview.streak,
+            },
+          },
+        ];
+      })
+      .slice(0, limit),
   };
 }

@@ -28,7 +28,9 @@ export type EnrollmentStatusResponse = z.infer<
 export class ReviewService extends FetchFactory {
   private readonly RESOURCE = "/api/review";
 
-  async enroll(payload: EnrollCardRequest): Promise<Result<EnrollCardResponse>> {
+  async enroll(
+    payload: EnrollCardRequest,
+  ): Promise<Result<EnrollCardResponse>> {
     return this.call(
       "POST",
       `${this.RESOURCE}/enroll`,
@@ -51,9 +53,11 @@ export class ReviewService extends FetchFactory {
   async getQueue(
     workspaceId?: string,
     limit: number = 20,
+    materialId?: string,
   ): Promise<Result<ReviewQueueResponse>> {
     const params = new URLSearchParams();
     if (workspaceId) params.append("workspaceId", workspaceId);
+    if (materialId) params.append("materialId", materialId);
     params.append("limit", limit.toString());
 
     const queryString = params.toString();

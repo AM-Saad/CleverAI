@@ -14,7 +14,7 @@
  * Prompt version for cache key generation.
  * Increment when prompts change significantly to avoid stale cache hits.
  */
-export const PROMPT_VERSION = "v1";
+export const PROMPT_VERSION = "v2";
 
 /**
  * Estimate token count from text.

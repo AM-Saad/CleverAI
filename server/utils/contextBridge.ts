@@ -3,6 +3,44 @@
  * Injects markers into content before LLM processing
  */
 
+export interface PdfPageRange {
+  page: number;
+  start: number;
+  end: number;
+}
+
+export function joinPdfPageText(pages: Array<{ num: number; text: string }>): {
+  text: string;
+  pageRanges: PdfPageRange[];
+} {
+  let text = "";
+  const pageRanges: PdfPageRange[] = [];
+
+  for (const page of pages) {
+    if (text) text += "\n\n";
+    const start = text.length;
+    text += page.text;
+    pageRanges.push({ page: page.num, start, end: text.length });
+  }
+
+  return { text, pageRanges };
+}
+
+export function parsePdfPageRanges(value: unknown): PdfPageRange[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const ranges = value.filter(
+    (range): range is PdfPageRange =>
+      Boolean(range) &&
+      Number.isInteger(range.page) &&
+      Number.isInteger(range.start) &&
+      Number.isInteger(range.end) &&
+      range.page > 0 &&
+      range.start >= 0 &&
+      range.end >= range.start,
+  );
+  return ranges.length ? ranges : undefined;
+}
+
 /**
  * Inject [[BLOCK_ID:xyz]] markers into note content
  * Splits by paragraphs and adds markers at the start of each block
@@ -27,11 +65,24 @@ export function injectNoteBlockMarkers(content: string): string {
  */
 export function injectPdfPageMarkers(
   content: string,
-  pageCount?: number
+  pageCount?: number,
+  pageRanges?: PdfPageRange[],
 ): string {
   if (!content) return "";
 
-  // If pageCount is provided, split content into equal chunks
+  const validRanges = pageRanges?.filter(
+    (range) => range.start < content.length && range.end <= content.length,
+  );
+  if (validRanges?.length) {
+    return validRanges
+      .map(
+        (range) =>
+          `[[PAGE:${range.page}]]\n${content.substring(range.start, range.end)}`,
+      )
+      .join("\n\n");
+  }
+
+  // Legacy uploads stored only page count, so retain their old best-effort fallback.
   if (pageCount && pageCount > 1) {
     const chunkSize = Math.ceil(content.length / pageCount);
     const chunks: string[] = [];
@@ -57,14 +108,22 @@ export function injectPdfPageMarkers(
 export function extractSourceRef(
   sourceMetadata: { anchor: string; contextSnippet?: string } | undefined,
   sourceType: "NOTE" | "PDF",
-  materialId?: string
-): { type: string; anchor: string; materialId?: string } | null {
+  materialId?: string,
+): {
+  type: string;
+  anchor: string;
+  materialId?: string;
+  contextSnippet?: string;
+} | null {
   if (!sourceMetadata?.anchor) return null;
 
   return {
     type: sourceType,
     anchor: sourceMetadata.anchor,
     ...(materialId && { materialId }),
+    ...(sourceMetadata.contextSnippet?.trim() && {
+      contextSnippet: sourceMetadata.contextSnippet.trim(),
+    }),
   };
 }
 

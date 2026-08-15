@@ -5,7 +5,7 @@
  * - LLM output quality degrades with very large item counts
  * - Cost scales with output tokens; limiting items controls cost
  * - Different content densities require different coverage depths
- * - User preference (quick/balanced/deep) allows control over granularity
+ * - User preference (quick/balanced/deep) controls coverage granularity
  */
 
 import {
@@ -17,7 +17,7 @@ import {
  * Compute adaptive item count based on token estimate and depth preference
  *
  * @param tokenEstimate - Estimated tokens in the input text
- * @param depth - User's depth preference ("quick" | "balanced" | "deep")
+ * @param depth - User's coverage preference ("quick" | "balanced" | "deep")
  * @param maxItems - Optional override for maximum items
  * @returns Computed item count
  */

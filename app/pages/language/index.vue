@@ -1,39 +1,81 @@
 <template>
   <div class="language-page">
-    <AppPageHeader title="Language" subtitle="Capture vocabulary and practice it" back-to="/learn" />
+    <AppPageHeader
+      title="Language"
+      subtitle="Capture vocabulary and practice it"
+      back-to="/learn"
+    />
 
-    <LanguageCapturePanel v-model:word="queryWord" v-model:translate="translateCapturedWord" :capturing="capturing"
-      :result="result" :error="captureErrorMessage" :input-placeholder="inputPlaceholder"
-      :direction-label="directionLabel" :native-language-label="getLanguageLabel(nativeLanguage)"
-      :translation-label="translationLabel" :example-text="firstExample?.text"
-      :example-translation="firstExample?.translation" :highlighted-example-html="highlightedExampleHtml"
-      @submit="capture" @reset="resetCapture" @speak="speak" />
+    <LanguageCapturePanel
+      v-model:word="queryWord"
+      v-model:translate="translateCapturedWord"
+      :capturing="capturing"
+      :result="result"
+      :error="captureErrorMessage"
+      :input-placeholder="inputPlaceholder"
+      :direction-label="directionLabel"
+      :native-language-label="getLanguageLabel(nativeLanguage)"
+      :translation-label="translationLabel"
+      :example-text="firstExample?.text"
+      :example-translation="firstExample?.translation"
+      :highlighted-example-html="highlightedExampleHtml"
+      @submit="capture"
+      @reset="resetCapture"
+      @speak="speak"
+    />
 
     <section class="language-bank" aria-labelledby="language-bank-title">
       <div class="language-bank__header">
         <div>
-          <UiSubtitle id="language-bank-title" tag="h2" size="base">Word bank</UiSubtitle>
+          <UiSubtitle id="language-bank-title" tag="h2" size="base"
+            >Word bank</UiSubtitle
+          >
           <!-- <UiParagraph size="sm" color="content-secondary">
             Browse, enrich, and add saved words to review.
           </UiParagraph> -->
         </div>
-        <NuxtLink v-if="dueCount" to="/language/review" class="language-bank__review">
+        <NuxtLink
+          v-if="dueCount"
+          to="/language/review"
+          class="language-bank__review"
+        >
           Review {{ dueCount }}
           <UiIcon name="arrow-right" class="h-4 w-4" />
         </NuxtLink>
       </div>
 
-      <LanguageWordBankToolbar v-model:search="wordSearch" v-model:status="statusFilter" v-model:story-only="storyOnly"
-        v-model:category="categoryFilter" :status-filters="statusFilters" :categories="categoryFilters" />
+      <LanguageWordBankToolbar
+        v-model:search="wordSearch"
+        v-model:status="statusFilter"
+        v-model:story-only="storyOnly"
+        v-model:category="categoryFilter"
+        :status-filters="statusFilters"
+        :categories="categoryFilters"
+      />
 
-      <LanguageWordBankList :rows="wordRows" :loading="loadingWords" :loading-more="loadingMoreWords"
-        :has-more="hasMoreWords" :error="wordBankError" :empty-message="wordBankEmptyMessage" :deleting-id="deletingId"
-        @open="openWordDetails" @enroll="enrollWord" @delete="deleteWord" @load-more="loadMoreWords" />
+      <LanguageWordBankList
+        :rows="wordRows"
+        :loading="loadingWords"
+        :loading-more="loadingMoreWords"
+        :has-more="hasMoreWords"
+        :error="wordBankError"
+        :empty-message="wordBankEmptyMessage"
+        :deleting-id="deletingId"
+        @open="openWordDetails"
+        @enroll="enrollWord"
+        @delete="deleteWord"
+        @load-more="loadMoreWords"
+      />
     </section>
 
-    <LanguageWordDetailModal v-model:open="detailOpen" :word="selectedWord"
-      :generating-story="storyBusyId === selectedWord?.id" :enrolling="enrollingId === selectedWord?.id"
-      @generate-story="generateStoryFor" @enroll="enrollWord" />
+    <LanguageWordDetailModal
+      v-model:open="detailOpen"
+      :word="selectedWord"
+      :generating-story="storyBusyId === selectedWord?.id"
+      :enrolling="enrollingId === selectedWord?.id"
+      @generate-story="generateStoryFor"
+      @enroll="enrollWord"
+    />
   </div>
 </template>
 
@@ -281,7 +323,7 @@ async function generateStoryFor(word: LanguageWord) {
     if (story) {
       selectedWord.value = {
         ...word,
-        status: word.status === "mastered" ? "mastered" : "story_ready",
+        status: story.status,
         stories: [
           {
             id: story.storyId,

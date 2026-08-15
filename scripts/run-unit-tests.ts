@@ -23,6 +23,11 @@ import { createStripeCreditCheckout } from "../server/modules/subscription/appli
 import { rewardAdCredit } from "../server/modules/subscription/application/rewardAdCredit";
 import { grantStripePurchaseCredits } from "../server/modules/subscription/application/grantStripePurchaseCredits";
 import { saveGeneratedArtifacts } from "../server/modules/ai-generation/application/saveGeneratedArtifacts";
+import {
+  extractSourceRef,
+  injectPdfPageMarkers,
+  joinPdfPageText,
+} from "../server/utils/contextBridge";
 import { deleteOwnedMaterial } from "../server/modules/materials/application/deleteOwnedMaterial";
 import { prepareGatewayGeneration } from "../server/modules/ai-generation/application/prepareGatewayGeneration";
 import { completeGatewayCacheHit } from "../server/modules/ai-generation/application/completeGatewayGeneration";
@@ -108,10 +113,15 @@ import { normalizeShapeTransform } from "../app/utils/canvas/geometry";
 import { parseLexicalEntry } from "../server/modules/language-learning/domain/lexicalEntry";
 import { parseLanguageStoryResponse } from "../server/modules/language-learning/domain/storyResponse";
 import {
+  buildLanguageReviewPresentation,
+  selectPrimaryLanguageCloze,
+} from "../shared/utils/language-review-card";
+import {
   languageStoryPrompt,
   translationPrompt,
 } from "../server/utils/llm/languagePrompts";
 import { listLanguageWords } from "../server/modules/language-learning/application/listLanguageWords";
+import { getLanguageReviewQueue } from "../server/modules/language-learning/application/getLanguageReviewQueue";
 import { LanguageWordsResponseSchema } from "../shared/utils/language.contract";
 import { maybeAutoEnrollLanguageWord } from "../server/modules/language-learning/application/autoEnrollLanguageWord";
 import { saveLanguageWord } from "../server/modules/language-learning/application/saveLanguageWord";
@@ -126,7 +136,10 @@ import {
   MaterialLibraryPageSchema,
   MaterialLibraryQuerySchema,
 } from "../shared/utils/material.contract";
-import { CommitMaterialGenerationRequestSchema } from "../shared/utils/llm-generate.contract";
+import {
+  CommitMaterialGenerationRequestSchema,
+  normalizeSourceMetadata,
+} from "../shared/utils/llm-generate.contract";
 import { PrismaLanguageReviewRepository } from "../server/modules/language-learning/infrastructure/PrismaLanguageReviewRepository";
 import type {
   ReviewCardRecord,
@@ -3519,7 +3532,18 @@ function fakeGenerationSavePrisma() {
             findMany: async ({ where }: any) =>
               Array.from(flashcards.values())
                 .filter((item) => item.materialId === where.materialId)
-                .map((item) => ({ id: item.id })),
+                .map((item) => ({ ...item })),
+            updateMany: async ({ where, data }: any) => {
+              const ids = where.id.in as string[];
+              let count = 0;
+              for (const id of ids) {
+                const item = flashcards.get(id);
+                if (!item) continue;
+                flashcards.set(id, { ...item, ...data });
+                count += 1;
+              }
+              return { count };
+            },
             deleteMany: async ({ where }: any) => {
               const toDelete = Array.from(flashcards.values()).filter(
                 (item) => item.materialId === where.materialId,
@@ -3546,7 +3570,18 @@ function fakeGenerationSavePrisma() {
             findMany: async ({ where }: any) =>
               Array.from(questions.values())
                 .filter((item) => item.materialId === where.materialId)
-                .map((item) => ({ id: item.id })),
+                .map((item) => ({ ...item })),
+            updateMany: async ({ where, data }: any) => {
+              const ids = where.id.in as string[];
+              let count = 0;
+              for (const id of ids) {
+                const item = questions.get(id);
+                if (!item) continue;
+                questions.set(id, { ...item, ...data });
+                count += 1;
+              }
+              return { count };
+            },
             deleteMany: async ({ where }: any) => {
               const toDelete = Array.from(questions.values()).filter(
                 (item) => item.materialId === where.materialId,
@@ -3570,6 +3605,19 @@ function fakeGenerationSavePrisma() {
             },
           },
           cardReview: {
+            updateMany: async ({ where, data }: any) => {
+              let count = 0;
+              for (const review of reviews) {
+                if (
+                  where.cardId.in.includes(review.cardId) &&
+                  review.resourceType === where.resourceType
+                ) {
+                  Object.assign(review, data);
+                  count += 1;
+                }
+              }
+              return { count };
+            },
             deleteMany: async ({ where }: any) => {
               const before = reviews.length;
               const filtered = reviews.filter(
@@ -9250,15 +9298,66 @@ test("stripe checkout intent uses pack pricing from subscription module", async 
   assert.equal(createdIntents[0]?.metadata?.packId, "pack_120");
 });
 
-test("generated flashcards save through shared ai-generation service", async () => {
+test("PDF source markers use extracted page boundaries", () => {
+  const joined = joinPdfPageText([
+    { num: 1, text: "First page" },
+    { num: 2, text: "Second page" },
+  ]);
+
+  assert.equal(joined.text, "First page\n\nSecond page");
+  assert.equal(
+    injectPdfPageMarkers(joined.text, 2, joined.pageRanges),
+    "[[PAGE:1]]\nFirst page\n\n[[PAGE:2]]\nSecond page",
+  );
+  assert.deepEqual(
+    extractSourceRef(
+      { anchor: "2", contextSnippet: "  Second page  " },
+      "PDF",
+      "material-1",
+    ),
+    {
+      type: "PDF",
+      anchor: "2",
+      materialId: "material-1",
+      contextSnippet: "Second page",
+    },
+  );
+  assert.deepEqual(
+    normalizeSourceMetadata({
+      anchor: "2",
+      context_snippet: "  Second page  ",
+    }),
+    { anchor: "2", contextSnippet: "Second page" },
+  );
+});
+
+test("replacement preserves unchanged generated-card review progress", async () => {
   const { flashcards, reviews, prisma } = fakeGenerationSavePrisma();
-  flashcards.set("flashcard-old-1", {
-    id: "flashcard-old-1",
+  flashcards.set("flashcard-keep", {
+    id: "flashcard-keep",
     materialId: "material-1",
+    front: "Q1",
+    back: "A1",
+    status: "ENROLLED",
+  });
+  flashcards.set("flashcard-retire", {
+    id: "flashcard-retire",
+    materialId: "material-1",
+    front: "Old question",
+    back: "Old answer",
+    status: "ENROLLED",
   });
   reviews.push({
-    cardId: "flashcard-old-1",
+    cardId: "flashcard-keep",
     resourceType: "flashcard",
+    repetitions: 4,
+    suspended: false,
+  });
+  reviews.push({
+    cardId: "flashcard-retire",
+    resourceType: "flashcard",
+    repetitions: 2,
+    suspended: false,
   });
 
   const result = await saveGeneratedArtifacts({
@@ -9284,12 +9383,85 @@ test("generated flashcards save through shared ai-generation service", async () 
 
   assert.equal(result.savedCount, 2);
   assert.equal(result.deletedCount, 1);
-  assert.equal(result.deletedReviewsCount, 1);
-  assert.equal(flashcards.size, 2);
-  assert.equal(reviews.length, 2);
-  assert.deepEqual(
-    reviews.map((review) => review.resourceType),
-    ["flashcard", "flashcard"],
+  assert.equal(result.deletedReviewsCount, 0);
+  assert.equal(flashcards.size, 3);
+  assert.equal(reviews.length, 3);
+  assert.equal(flashcards.get("flashcard-keep")?.status, "ENROLLED");
+  assert.equal(flashcards.get("flashcard-retire")?.status, "DRAFT");
+  assert.equal(
+    reviews.find((review) => review.cardId === "flashcard-keep")?.repetitions,
+    4,
+  );
+  assert.equal(
+    reviews.find((review) => review.cardId === "flashcard-retire")?.suspended,
+    true,
+  );
+});
+
+test("replacement preserves unchanged generated-question review progress", async () => {
+  const { questions, reviews, prisma } = fakeGenerationSavePrisma();
+  questions.set("question-keep", {
+    id: "question-keep",
+    materialId: "material-1",
+    question: "Q1",
+    choices: ["A", "B", "C", "D"],
+    answerIndex: 1,
+    status: "ENROLLED",
+  });
+  questions.set("question-retire", {
+    id: "question-retire",
+    materialId: "material-1",
+    question: "Old question",
+    choices: ["A", "B", "C", "D"],
+    answerIndex: 0,
+    status: "ENROLLED",
+  });
+  reviews.push({
+    cardId: "question-keep",
+    resourceType: "question",
+    repetitions: 3,
+    suspended: false,
+  });
+  reviews.push({
+    cardId: "question-retire",
+    resourceType: "question",
+    repetitions: 1,
+    suspended: false,
+  });
+
+  const result = await saveGeneratedArtifacts({
+    prisma,
+    userId: "user-1",
+    task: "quiz",
+    workspaceId: "workspace-1",
+    materialId: "material-1",
+    replace: true,
+    loadedMaterialType: "txt",
+    result: [
+      {
+        question: "Q1",
+        choices: ["A", "B", "C", "D"],
+        answerIndex: 1,
+      },
+      {
+        question: "Q2",
+        choices: ["A", "B", "C", "D"],
+        answerIndex: 2,
+      },
+    ],
+  });
+
+  assert.equal(result.savedCount, 2);
+  assert.equal(result.deletedCount, 1);
+  assert.equal(questions.get("question-keep")?.status, "ENROLLED");
+  assert.equal(questions.get("question-retire")?.status, "DRAFT");
+  assert.equal(
+    reviews.find((review) => review.cardId === "question-keep")?.repetitions,
+    3,
+  );
+  assert.equal(
+    reviews.find((review) => review.cardId === "question-retire")?.suspended,
+    true,
   );
 });
 
@@ -9787,12 +9959,20 @@ test("language lexical parser never substitutes the source word for a missing tr
 });
 
 test("language prompts keep definitions and stories in the learned language", () => {
-  const lexicalPrompt = translationPrompt("hola", undefined, "English", false);
+  const lexicalPrompt = translationPrompt(
+    "hola",
+    undefined,
+    "English",
+    false,
+    "Spanish",
+  );
   assert.match(
     lexicalPrompt,
     /Write every definition and source example in the same language as the captured word/,
   );
   assert.match(lexicalPrompt, /Direct translation requested: no/);
+  assert.match(lexicalPrompt, /Expected source language: Spanish/);
+  assert.match(lexicalPrompt, /Put the meaning matching Context first/);
 
   const storyPrompt = languageStoryPrompt(
     "hola",
@@ -9815,6 +9995,170 @@ test("language prompts keep definitions and stories in the learned language", ()
     /Do not return a native-language version of the story/,
   );
   assert.match(storyPrompt, /Use English ONLY for glossary translations/);
+  assert.match(storyPrompt, /Exactly one sentence must set isPrimary true/);
+});
+
+test("language review presentation keeps casing and useful lexical support", () => {
+  const card = buildLanguageReviewPresentation({
+    word: {
+      word: "Haus",
+      translation: "house",
+      sourceLang: "de",
+      translationLang: "en",
+      partOfSpeech: "noun",
+      phonetic: "haʊs",
+      meanings: [{ definition: "Ein Gebäude zum Wohnen." }],
+      examples: [
+        { text: "Das Haus ist groß.", translation: "The house is large." },
+      ],
+      sourceContext: "Das Haus steht am See.",
+    },
+  });
+
+  assert.equal(card?.mode, "word_translation");
+  assert.equal(card?.presentation.question, "Haus");
+  assert.equal(card?.presentation.answer, "house");
+  assert.equal(card?.presentation.definition, "Ein Gebäude zum Wohnen.");
+  assert.equal(card?.presentation.context?.text, "Das Haus ist groß.");
+  assert.equal(card?.presentation.sourceContext, "Das Haus steht am See.");
+  assert.equal(card?.presentation.promptContext, "Das Haus steht am See.");
+
+  const leakyContextCard = buildLanguageReviewPresentation({
+    word: {
+      word: "Haus",
+      translation: "house",
+      sourceLang: "de",
+      translationLang: "en",
+      meanings: [{ definition: "Ein Gebäude zum Wohnen." }],
+      sourceContext: "Haus means house.",
+    },
+  });
+  assert.equal(leakyContextCard?.presentation.promptContext, null);
+});
+
+test("definition-only language capture builds a non-empty immersion card", () => {
+  const card = buildLanguageReviewPresentation({
+    word: {
+      word: "hola",
+      translation: "",
+      sourceLang: "es",
+      translationLang: "en",
+      meanings: [
+        {
+          definition: "Saludo usado al encontrarse.",
+          example: "Hola, Ana.",
+        },
+      ],
+      examples: [],
+    },
+  });
+
+  assert.equal(card?.mode, "word_definition");
+  assert.equal(card?.presentation.question, "hola");
+  assert.equal(card?.presentation.answer, "Saludo usado al encontrarse.");
+  assert.notEqual(card?.presentation.answer, "");
+  assert.equal(card?.presentation.context?.text, "Hola, Ana.");
+});
+
+test("language story cloze selects the captured word, never a substring match", () => {
+  const sentences = [
+    {
+      text: "A cat naps.",
+      clozeWord: "cat",
+      clozeBlank: "A ____ naps.",
+      clozeIndex: 0,
+    },
+    {
+      text: "I saw a bird.",
+      clozeWord: "a",
+      clozeBlank: "I saw ____ bird.",
+      clozeIndex: 1,
+      isPrimary: true,
+    },
+  ];
+
+  assert.equal(
+    selectPrimaryLanguageCloze(sentences, "a")?.clozeBlank,
+    "I saw ____ bird.",
+  );
+});
+
+test("language review queue keeps pair boundary and returns rich presentation", async () => {
+  const calls: any[] = [];
+  const dueAt = new Date("2026-08-01T00:00:00.000Z");
+  const prisma = {
+    userLanguagePreferences: {
+      findUnique: async () => ({
+        targetLanguage: "es",
+        nativeLanguage: "en",
+        sessionCardLimit: 12,
+      }),
+    },
+    languageCardReview: {
+      findMany: async (args: any) => {
+        calls.push(args);
+        return [
+          {
+            id: "review-1",
+            wordId: "word-1",
+            mode: "word_translation",
+            contentVersion: 3,
+            intervalDays: 1,
+            easeFactor: 2.5,
+            repetitions: 1,
+            nextReviewAt: dueAt,
+            lastGrade: 4,
+            streak: 1,
+            word: {
+              id: "word-1",
+              word: "hola",
+              translation: "hello",
+              sourceLang: "es",
+              translationLang: "en",
+              partOfSpeech: "interjection",
+              phonetic: "ˈola",
+              meanings: [{ definition: "Saludo breve." }],
+              examples: [{ text: "Hola, Ana.", translation: "Hello, Ana." }],
+              sourceContext: "Hola, ¿cómo estás?",
+            },
+            story: null,
+          },
+        ];
+      },
+    },
+  };
+
+  const result = await getLanguageReviewQueue({
+    prisma,
+    userId: "user-1",
+    limit: 20,
+    targetLanguage: "es",
+    nativeLanguage: "en",
+  });
+  await getLanguageReviewQueue({
+    prisma,
+    userId: "user-1",
+    limit: 20,
+    targetLanguage: "en",
+    nativeLanguage: "en",
+  });
+
+  assert.equal(calls.length, 2);
+  assert.deepEqual(calls[0]?.where.word, {
+    sourceLang: "es",
+    translationLang: "en",
+  });
+  assert.deepEqual(calls[1]?.where.word, {
+    sourceLang: "en",
+    translationLang: "en",
+  });
+  assert.equal(result.cards[0]?.presentationVersion, 3);
+  assert.equal(result.cards[0]?.presentation.question, "hola");
+  assert.equal(result.cards[0]?.presentation.definition, "Saludo breve.");
+  assert.equal(
+    result.cards[0]?.presentation.context?.translation,
+    "Hello, Ana.",
+  );
 });
 
 test("saving a generated translation is idempotent and performs no generation work", async () => {
@@ -9859,16 +10203,26 @@ test("saving a generated translation is idempotent and performs no generation wo
   const first = await saveLanguageWord({
     prisma,
     userId: "64a000000000000000000001",
-    data: { translationId: translation.id, sourceType: "manual" },
+    data: {
+      translationId: translation.id,
+      sourceText: "Hola",
+      sourceType: "manual",
+    },
   });
   const second = await saveLanguageWord({
     prisma,
     userId: "64a000000000000000000001",
-    data: { translationId: translation.id, sourceType: "manual" },
+    data: {
+      translationId: translation.id,
+      sourceText: "Hola",
+      sourceType: "manual",
+    },
   });
 
   assert.equal(creates, 1);
   assert.equal(first.wordId, second.wordId);
+  assert.equal(first.word, "Hola");
+  assert.equal(storedWord?.word, "Hola");
   assert.equal(first.saved, true);
   assert.equal(second.cached, true);
 });
@@ -9918,6 +10272,7 @@ test("translating a definition-only capture enriches its existing bank row", asy
   };
   let updatedWord: Record<string, any> | null = null;
   let creates = 0;
+  const reviewResets: any[] = [];
   const prisma = {
     languageTranslation: {
       findUnique: async () => translatedEntry,
@@ -9940,6 +10295,17 @@ test("translating a definition-only capture enriches its existing bank row", asy
     userLanguagePreferences: {
       findUnique: async () => ({ autoEnroll: false }),
     },
+    languageCardReview: {
+      findUnique: async () => ({
+        id: "review-1",
+        storyId: null,
+        contentVersion: null,
+      }),
+      update: async (input: any) => {
+        reviewResets.push(input);
+        return input;
+      },
+    },
   };
 
   const result = await saveLanguageWord({
@@ -9952,6 +10318,80 @@ test("translating a definition-only capture enriches its existing bank row", asy
   assert.equal(result.wordId, definitionOnlyWord.id);
   assert.equal(result.translation, "hello");
   assert.equal(updatedWord?.translationId, translatedEntry.id);
+  assert.equal(reviewResets[0]?.where.id, "review-1");
+  assert.equal(reviewResets[0]?.data.mode, "word_translation");
+  assert.equal(reviewResets[0]?.data.contentVersion, 2);
+  assert.equal(reviewResets[0]?.data.repetitions, 0);
+});
+
+test("lexical enrichment preserves a mastered story card schedule", async () => {
+  let storedWord: Record<string, any> = {
+    id: "64c000000000000000000002",
+    userId: "64a000000000000000000001",
+    translationId: "64b000000000000000000002",
+    word: "Haus",
+    translation: "home",
+    translationLang: "en",
+    sourceLang: "de",
+    sourceContext: null,
+    sourceType: "manual",
+    partOfSpeech: "noun",
+    phonetic: null,
+    meanings: [{ definition: "Ein Gebäude zum Wohnen." }],
+    examples: [],
+    category: "places",
+    difficulty: "A1",
+    isPhrase: false,
+    metadata: {},
+    status: "mastered",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  };
+  const translation = {
+    ...storedWord,
+    id: storedWord.translationId,
+    sourceText: storedWord.word,
+    translation: "house",
+  };
+  const reviewWrites: any[] = [];
+  const wordWrites: any[] = [];
+  const prisma = {
+    languageTranslation: { findUnique: async () => translation },
+    languageWord: {
+      findFirst: async () => storedWord,
+      update: async ({ data }: any) => {
+        wordWrites.push(data);
+        storedWord = { ...storedWord, ...data };
+        return storedWord;
+      },
+    },
+    userLanguagePreferences: {
+      findUnique: async () => ({ autoEnroll: false }),
+    },
+    languageCardReview: {
+      findUnique: async () => ({
+        id: "review-story",
+        storyId: "story-1",
+        contentVersion: 4,
+      }),
+      update: async (input: any) => {
+        reviewWrites.push(input);
+        return input;
+      },
+    },
+  };
+
+  const result = await saveLanguageWord({
+    prisma,
+    userId: storedWord.userId,
+    data: { translationId: translation.id, sourceType: "manual" },
+  });
+
+  assert.equal(result.status, "mastered");
+  assert.equal(result.translation, "house");
+  assert.equal(reviewWrites.length, 0);
+  assert.equal(wordWrites.length, 1);
+  assert.equal(wordWrites[0]?.status, undefined);
 });
 
 test("language story parser rejects incomplete LLM story responses", () => {
@@ -9968,12 +10408,47 @@ test("language story parser rejects incomplete LLM story responses", () => {
           clozeBlank: "____ Ana.",
           clozeIndex: 0,
         },
+        {
+          text: "Ana sonríe.",
+          clozeWord: "sonríe",
+          clozeBlank: "Ana ____.",
+          clozeIndex: 1,
+        },
+        {
+          text: "Empieza el día.",
+          clozeWord: "día",
+          clozeBlank: "Empieza el ____.",
+          clozeIndex: 2,
+        },
       ],
     })}`,
   );
 
-  assert.equal(story.storyText, "Hola Ana.");
+  assert.equal(story.storyText, "Hola Ana. Ana sonríe. Empieza el día.");
   assert.equal(story.sentences[0]?.clozeWord, "Hola");
+  const validatedStory = parseLanguageStoryResponse(
+    JSON.stringify({ sentences: story.sentences }),
+    "Hola",
+  );
+  assert.equal(validatedStory.sentences[0]?.isPrimary, true);
+
+  assert.throws(
+    () =>
+      parseLanguageStoryResponse(
+        JSON.stringify({ sentences: story.sentences }),
+        "adiós",
+      ),
+    /no valid primary cloze/,
+  );
+  assert.throws(() =>
+    parseLanguageStoryResponse(
+      JSON.stringify({
+        sentences: story.sentences.map((sentence, index) =>
+          index === 0 ? { ...sentence, clozeBlank: "Adiós ____." } : sentence,
+        ),
+      }),
+    ),
+  );
 });
 
 test("language words listing paginates after hasStory filtering", async () => {
@@ -10124,6 +10599,7 @@ test("language capture auto-enroll creates a due review card", async () => {
     wordId: "word-1",
     currentStatus: "captured",
     autoEnroll: true,
+    reviewMode: "word_translation",
   });
 
   assert.equal(status, "enrolled");
@@ -10131,6 +10607,9 @@ test("language capture auto-enroll creates a due review card", async () => {
   assert.equal(writes[0]?.input.where.userId_wordId.userId, "user-1");
   assert.equal(writes[0]?.input.where.userId_wordId.wordId, "word-1");
   assert.equal(writes[0]?.input.create.repetitions, 0);
+  assert.equal(writes[0]?.input.create.mode, "word_translation");
+  assert.equal(writes[0]?.input.create.contentVersion, 1);
+  assert.deepEqual(writes[0]?.input.update, { suspended: false });
   assert.ok(writes[0]?.input.create.nextReviewAt instanceof Date);
   assert.deepEqual(writes[1], {
     model: "languageWord",
@@ -10158,6 +10637,27 @@ test("language capture auto-enroll preserves mastered words", async () => {
   });
 
   assert.equal(status, "mastered");
+  assert.equal(transactionCalled, false);
+});
+
+test("language capture does not enroll a word without reviewable content", async () => {
+  let transactionCalled = false;
+  const prisma = {
+    $transaction: async () => {
+      transactionCalled = true;
+    },
+  };
+
+  const status = await maybeAutoEnrollLanguageWord({
+    prisma,
+    userId: "user-1",
+    wordId: "word-1",
+    currentStatus: "captured",
+    autoEnroll: true,
+    reviewMode: null,
+  });
+
+  assert.equal(status, "captured");
   assert.equal(transactionCalled, false);
 });
 
@@ -10316,8 +10816,8 @@ test("language runtime loads preferences before word and stats requests", async 
   assert.equal(calls[0]?.params.targetLanguage, undefined);
   assert.equal(calls[0]?.params.nativeLanguage, undefined);
   assert.equal(calls[1]?.type, "stats");
-  assert.equal(calls[1]?.params?.targetLanguage, undefined);
-  assert.equal(calls[1]?.params?.nativeLanguage, undefined);
+  assert.equal(calls[1]?.params?.targetLanguage, "fr");
+  assert.equal(calls[1]?.params?.nativeLanguage, "en");
 });
 
 test("language runtime does not language-filter the word bank when preferences are set", async () => {

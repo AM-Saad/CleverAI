@@ -428,7 +428,7 @@ DEEPSEEK_MOCK=1
 
 ### Overview
 
-Upload and manage learning materials (PDFs, URLs, text) with AI-powered flashcard/quiz generation.
+Upload and manage PDF, DOCX, and TXT learning materials with AI-powered flashcard/quiz generation.
 
 ### Data Model
 
@@ -471,7 +471,7 @@ const result = await gatewayService.generateFlashcards(material.content, {
 })
 ```
 
-When `replace=true`, old flashcards/questions and their CardReviews are cascade-deleted within a transaction.
+When `replace=true`, exact unchanged items retain their IDs and review progress. Removed items become suspended drafts, while changed/new items receive fresh review schedules.
 
 ---
 

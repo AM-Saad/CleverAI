@@ -1,6 +1,7 @@
 // shared/material.contract.ts
 import { z } from "zod";
 import { LLMEnum } from "./llm";
+import { SourceRefSchema } from "./flashcard.contract";
 
 const trim = (v: unknown) => (typeof v === "string" ? v.trim() : v);
 
@@ -84,6 +85,7 @@ export const MaterialGeneratedFlashcardSchema = z.object({
   id: z.string(),
   front: z.string(),
   back: z.string(),
+  sourceRef: SourceRefSchema.nullable().optional(),
   status: z.string(),
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),
@@ -97,6 +99,7 @@ export const MaterialGeneratedQuestionSchema = z.object({
   question: z.string(),
   choices: z.array(z.string()),
   answerIndex: z.number().int().nonnegative(),
+  sourceRef: SourceRefSchema.nullable().optional(),
   status: z.string(),
   createdAt: z.string().datetime().or(z.date()).or(z.string()),
   updatedAt: z.string().datetime().or(z.date()).or(z.string()),

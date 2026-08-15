@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SourceRefSchema } from "./flashcard.contract";
 
 // Review Grade enum values matching domain
 export const ReviewGradeSchema = z.enum([
@@ -35,7 +36,7 @@ export const EnrollCardRequestSchema = z
     {
       message:
         "Provide either materialId (deprecated) or resourceType+resourceId",
-    }
+    },
   );
 
 export type EnrollCardRequest =
@@ -81,6 +82,8 @@ export const ReviewCardSchema = z.object({
       hint: z.string().optional(),
       tags: z.array(z.string()).optional(),
       workspaceId: z.string(),
+      materialId: z.string().nullable().optional(),
+      sourceRef: SourceRefSchema.nullable().optional(),
     }),
     z.object({
       // material
@@ -95,6 +98,8 @@ export const ReviewCardSchema = z.object({
       choices: z.array(z.string()),
       answerIndex: z.number(),
       workspaceId: z.string(),
+      materialId: z.string().nullable().optional(),
+      sourceRef: SourceRefSchema.nullable().optional(),
     }),
   ]),
   reviewState: z.object({
@@ -129,7 +134,7 @@ export type ReviewErrorResponse = z.infer<typeof ReviewErrorResponseSchema>;
 
 // Success wrapper for type safety
 export const ReviewSuccessResponseSchema = <T extends z.ZodType>(
-  dataSchema: T
+  dataSchema: T,
 ) =>
   z.object({
     success: z.literal(true),
@@ -148,7 +153,7 @@ export const ReviewStatsSchema = z.object({
     z.object({
       date: z.string(), // ISO date string
       count: z.number(),
-    })
+    }),
   ),
   gradeDistribution: z.object({
     "0": z.number(),
@@ -227,10 +232,14 @@ export type ReviewWorkspaceStats = z.infer<typeof ReviewWorkspaceStatsSchema>;
 export const ReviewStatsBatchRequestSchema = z.object({
   workspaceIds: z.array(z.string().min(1)).min(1).max(200),
 });
-export type ReviewStatsBatchRequest = z.infer<typeof ReviewStatsBatchRequestSchema>;
+export type ReviewStatsBatchRequest = z.infer<
+  typeof ReviewStatsBatchRequestSchema
+>;
 
 /** Response: stats keyed by workspace id (every requested id is present). */
 export const ReviewStatsBatchResponseSchema = z.object({
   stats: z.record(z.string(), ReviewWorkspaceStatsSchema),
 });
-export type ReviewStatsBatchResponse = z.infer<typeof ReviewStatsBatchResponseSchema>;
+export type ReviewStatsBatchResponse = z.infer<
+  typeof ReviewStatsBatchResponseSchema
+>;

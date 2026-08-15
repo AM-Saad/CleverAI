@@ -1005,6 +1005,8 @@ model LanguageCardReview {
   word           LanguageWord   @relation(fields: [wordId], references: [id], onDelete: Cascade)
   storyId        String?        @db.ObjectId
   story          LanguageStory? @relation(fields: [storyId], references: [id], onDelete: SetNull)
+  mode           String?
+  contentVersion Int?           @default(1)
   intervalDays   Int            @default(0)
   easeFactor     Float          @default(2.5)
   repetitions    Int            @default(0)

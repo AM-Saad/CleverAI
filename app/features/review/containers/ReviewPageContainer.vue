@@ -1,5 +1,9 @@
 <template>
-  <ReviewSessionView :workspace-id="workspaceId" :close-to="closeTo" />
+  <ReviewSessionView
+    :workspace-id="workspaceId"
+    :material-id="materialId"
+    :close-to="closeTo"
+  />
 </template>
 
 <script setup lang="ts">
@@ -14,9 +18,21 @@ const workspaceId = computed(() => {
   const id = route.query.workspaceId;
   return typeof id === "string" ? id : undefined;
 });
-const closeTo = computed(() =>
-  workspaceId.value ? `/workspaces/${workspaceId.value}` : "/learn",
-);
+const materialId = computed(() => {
+  const id = route.query.materialId;
+  return typeof id === "string" ? id : undefined;
+});
+const closeTo = computed(() => {
+  const requested = route.query.closeTo;
+  if (
+    typeof requested === "string" &&
+    requested.startsWith("/") &&
+    !requested.startsWith("//")
+  ) {
+    return requested;
+  }
+  return workspaceId.value ? `/workspaces/${workspaceId.value}` : "/learn";
+});
 
 function syncActiveWorkspace(id: string | undefined) {
   if (id) setActive(id);

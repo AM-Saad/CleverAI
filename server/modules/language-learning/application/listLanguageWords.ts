@@ -95,7 +95,9 @@ const normalizeSentence = (value: unknown): LanguageSentence | null => {
     !text ||
     !clozeWord ||
     !clozeBlank ||
-    typeof source.clozeIndex !== "number"
+    typeof source.clozeIndex !== "number" ||
+    !Number.isInteger(source.clozeIndex) ||
+    source.clozeIndex < 0
   ) {
     return null;
   }
@@ -104,6 +106,9 @@ const normalizeSentence = (value: unknown): LanguageSentence | null => {
     clozeWord,
     clozeBlank,
     clozeIndex: source.clozeIndex,
+    ...(typeof source.isPrimary === "boolean"
+      ? { isPrimary: source.isPrimary }
+      : {}),
   };
 };
 

@@ -11,7 +11,7 @@ useHead({
     {
       name: "description",
       content:
-        "Upgrade to Cognilo Pro and unlock unlimited AI-powered spaced repetition learning, adaptive flashcards, priority support, and advanced study tools.",
+        "Upgrade to Cognilo Pro and unlock unlimited AI-powered spaced repetition learning, grounded flashcards, priority support, and advanced study tools.",
     },
     {
       property: "og:title",
@@ -20,7 +20,7 @@ useHead({
     {
       property: "og:description",
       content:
-        "Unlock unlimited AI-powered learning with Cognilo Pro. Access adaptive flashcards, priority support, and advanced study workflows.",
+        "Unlock unlimited AI-powered learning with Cognilo Pro. Access source-grounded flashcards, priority support, and advanced study workflows.",
     },
     {
       property: "og:type",

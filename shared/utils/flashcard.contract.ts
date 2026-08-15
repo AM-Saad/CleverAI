@@ -11,6 +11,7 @@ export const SourceRefSchema = z.object({
   type: z.enum(["NOTE", "PDF"]),
   materialId: z.string().optional(),
   anchor: z.string(), // blockId or page number
+  contextSnippet: z.string().optional(),
 });
 export type SourceRef = z.infer<typeof SourceRefSchema>;
 
@@ -39,11 +40,11 @@ export const CreateFlashcardDTO = z.object({
   workspaceId: z.string().min(1, "Workspace ID is required"),
   front: z.preprocess(
     trim,
-    z.string().min(1, "Front content is required").max(2000)
+    z.string().min(1, "Front content is required").max(2000),
   ),
   back: z.preprocess(
     trim,
-    z.string().min(1, "Back content is required").max(5000)
+    z.string().min(1, "Back content is required").max(5000),
   ),
   materialId: z.string().optional(),
 });

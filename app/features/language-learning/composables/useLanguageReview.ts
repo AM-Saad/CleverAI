@@ -16,6 +16,7 @@ import {
   listOfflineMutations,
 } from "~/utils/offline-v2/repository";
 import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
+import { buildLanguageReviewPresentation } from "../../../../shared/utils/language-review-card";
 
 export function useLanguageReview() {
   const { $api } = useNuxtApp();
@@ -89,13 +90,20 @@ export function useLanguageReview() {
         .map((record) => {
           const review = record.data;
           const word = wordsById.get(review.wordId);
-          if (!word) return null;
+          if (!word || typeof word.word !== "string") return null;
           offlineReviewDataById.set(record.entityId, review);
           const story = Array.isArray(word.stories)
             ? word.stories.find(
                 (candidate: any) => candidate.id === review.storyId,
               )
             : null;
+          const reviewCard = buildLanguageReviewPresentation({
+            word: { ...word, word: word.word },
+            story,
+            preferredMode: review.mode,
+          });
+          if (!reviewCard) return null;
+          const validStory = reviewCard.mode === "story_cloze" ? story : null;
           return {
             cardId: review.id,
             wordId: word.id,
@@ -103,10 +111,12 @@ export function useLanguageReview() {
             translation: word.translation,
             sourceLang: word.sourceLang,
             translationLang: word.translationLang,
-            storyId: story?.id ?? null,
-            storyText: story?.storyText ?? null,
-            sentences: story?.sentences ?? null,
-            mode: story ? "story_cloze" : "word_translation",
+            storyId: validStory?.id ?? null,
+            storyText: validStory?.storyText ?? null,
+            sentences: validStory?.sentences ?? null,
+            mode: reviewCard.mode,
+            presentationVersion: review.contentVersion ?? 1,
+            presentation: reviewCard.presentation,
             reviewState: {
               intervalDays: review.intervalDays,
               easeFactor: review.easeFactor,
@@ -121,12 +131,11 @@ export function useLanguageReview() {
       const scopedCards = allDueCards.filter(
         (card) =>
           (!preferences?.targetLanguage ||
-            preferences.targetLanguage === preferences.nativeLanguage ||
             card.sourceLang === preferences.targetLanguage) &&
           (!preferences?.nativeLanguage ||
             card.translationLang === preferences.nativeLanguage),
       );
-      const cards = (scopedCards.length > 0 ? scopedCards : allDueCards)
+      const cards = scopedCards
         .sort(
           (left, right) =>
             left.reviewState.nextReviewAt.getTime() -

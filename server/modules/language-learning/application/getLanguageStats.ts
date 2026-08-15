@@ -6,9 +6,7 @@ type GetLanguageStatsInput = {
 };
 
 const wordLanguageWhere = (input: GetLanguageStatsInput) => ({
-  ...(input.targetLanguage && input.targetLanguage !== input.nativeLanguage
-    ? { sourceLang: input.targetLanguage }
-    : {}),
+  ...(input.targetLanguage ? { sourceLang: input.targetLanguage } : {}),
   ...(input.nativeLanguage ? { translationLang: input.nativeLanguage } : {}),
 });
 

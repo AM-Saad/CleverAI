@@ -1,11 +1,18 @@
+import type { LanguageReviewMode } from "@shared/utils/language.contract";
+
 export async function maybeAutoEnrollLanguageWord(input: {
   prisma: any;
   userId: string;
   wordId: string;
   currentStatus?: string | null;
   autoEnroll: boolean;
+  reviewMode?: LanguageReviewMode | null;
 }) {
-  if (!input.autoEnroll || input.currentStatus === "mastered") {
+  if (
+    !input.autoEnroll ||
+    input.currentStatus === "mastered" ||
+    !input.reviewMode
+  ) {
     return input.currentStatus ?? "captured";
   }
 
@@ -23,6 +30,8 @@ export async function maybeAutoEnrollLanguageWord(input: {
       create: {
         userId: input.userId,
         wordId: input.wordId,
+        mode: input.reviewMode,
+        contentVersion: 1,
         nextReviewAt: new Date(),
         repetitions: 0,
         easeFactor: 2.5,

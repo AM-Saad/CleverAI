@@ -11,13 +11,27 @@
 
     <form class="language-capture__form" @submit.prevent="$emit('submit')">
       <div class="language-capture__search">
-        <UiInput v-model="word" :placeholder="inputPlaceholder" icon="bookmark-plus"
-          class="language-capture__search-input" aria-label="Word or phrase to capture" />
+        <UiInput
+          v-model="word"
+          :placeholder="inputPlaceholder"
+          icon="bookmark-plus"
+          class="language-capture__search-input"
+          aria-label="Word or phrase to capture"
+        />
         <span class="language-capture__direction">{{ directionLabel }}</span>
       </div>
       <div class="language-capture__options">
-        <UiCheckbox v-model="translate" :label="`Translate into ${nativeLanguageLabel}`" :disabled="capturing" />
-        <UiButton type="submit" leading-icon="bookmark-plus" :loading="capturing" :disabled="!word.trim()">
+        <UiCheckbox
+          v-model="translate"
+          :label="`Translate into ${nativeLanguageLabel}`"
+          :disabled="capturing"
+        />
+        <UiButton
+          type="submit"
+          leading-icon="bookmark-plus"
+          :loading="capturing"
+          :disabled="!word.trim()"
+        >
           Capture word
         </UiButton>
       </div>
@@ -27,43 +41,115 @@
       <AiShimmer :lines="2" />
     </div>
 
-    <UiCard v-else-if="result" variant="default" shadow="none" class-name="language-capture__result">
+    <UiCard
+      v-else-if="result"
+      variant="default"
+      shadow="none"
+      class-name="language-capture__result"
+    >
       <div class="language-capture__word-row">
-        <UiTitle tag="h2" size="3xl" weight="extrabold" tight color="content-on-surface-strong" dir="auto">{{
-          result.word
-          }}</UiTitle>
-        <UiPill v-if="result.partOfSpeech" :label="result.partOfSpeech" size="sm" variant="soft" />
+        <UiTitle
+          tag="h2"
+          size="3xl"
+          weight="extrabold"
+          tight
+          color="content-on-surface-strong"
+          dir="auto"
+          >{{ result.word }}</UiTitle
+        >
+        <UiPill
+          v-if="result.partOfSpeech"
+          :label="result.partOfSpeech"
+          size="sm"
+          variant="soft"
+        />
       </div>
       <div v-if="result.phonetic" class="language-capture__phonetic">
         {{ result.phonetic }}
-        <UiIconButton icon="volume-2" label="Play pronunciation" size="xs"
-          @click="$emit('speak', result.word)" />
+        <UiIconButton
+          icon="volume-2"
+          label="Play pronunciation"
+          size="xs"
+          @click="$emit('speak', result.word)"
+        />
       </div>
 
-      <UiPanel v-if="result.translation" variant="subtle" size="sm" class-name="language-capture__translation">
-        <UiLabel size="sm" weight="bold" color="content-secondary" uppercase>{{ translationLabel }}</UiLabel>
-        <UiTitle tag="div" size="2xl" weight="extrabold" tight color="content-on-surface-strong" dir="auto">
+      <UiPanel
+        v-if="result.translation"
+        variant="subtle"
+        size="sm"
+        class-name="language-capture__translation"
+      >
+        <UiLabel size="sm" weight="bold" color="content-secondary" uppercase>{{
+          translationLabel
+        }}</UiLabel>
+        <UiTitle
+          tag="div"
+          size="2xl"
+          weight="extrabold"
+          tight
+          color="content-on-surface-strong"
+          dir="auto"
+        >
           {{ result.translation }}
         </UiTitle>
       </UiPanel>
 
+      <UiPanel
+        v-if="primaryDefinition"
+        variant="surface"
+        size="sm"
+        class-name="language-capture__definition"
+      >
+        <UiLabel size="sm" weight="bold" color="content-secondary" uppercase
+          >Definition</UiLabel
+        >
+        <UiParagraph dir="auto">{{ primaryDefinition }}</UiParagraph>
+      </UiPanel>
+
       <div v-if="exampleText" class="language-capture__example">
-        <UiLabel size="sm" weight="bold" color="content-secondary" uppercase>Example</UiLabel>
-        <p class="language-capture__example-source" dir="auto" v-html="highlightedExampleHtml" />
-        <p v-if="exampleTranslation" class="language-capture__example-translation" dir="auto">
+        <UiLabel size="sm" weight="bold" color="content-secondary" uppercase
+          >Example</UiLabel
+        >
+        <p
+          class="language-capture__example-source"
+          dir="auto"
+          v-html="highlightedExampleHtml"
+        />
+        <p
+          v-if="exampleTranslation"
+          class="language-capture__example-translation"
+          dir="auto"
+        >
           {{ exampleTranslation }}
         </p>
       </div>
 
       <div class="language-capture__saved">
-        <UiPill label="Saved to word bank" color="var(--color-success)" variant="soft" active max-width="180px" />
-        <UiButton tone="neutral" variant="ghost" leading-icon="rotate-ccw" @click="$emit('reset')">
+        <UiPill
+          label="Saved to word bank"
+          color="var(--color-success)"
+          variant="soft"
+          active
+          max-width="180px"
+        />
+        <UiButton
+          tone="neutral"
+          variant="ghost"
+          leading-icon="rotate-ccw"
+          @click="$emit('reset')"
+        >
           Capture another
         </UiButton>
       </div>
     </UiCard>
 
-    <UiAlert v-else-if="error" tone="error" title="Couldn't capture word" :description="error" />
+    <UiAlert
+      v-else-if="error"
+      tone="error"
+      title="Couldn't capture word"
+      :description="error"
+    />
   </section>
 </template>
 
@@ -74,7 +160,7 @@ import AiShimmer from "~/components/ui/AiShimmer.vue";
 
 const word = defineModel<string>("word", { required: true });
 const translate = defineModel<boolean>("translate", { required: true });
-defineProps<{
+const props = defineProps<{
   capturing: boolean;
   result: DeepReadonly<CaptureWordResponse> | null;
   error?: string | null;
@@ -87,6 +173,10 @@ defineProps<{
   highlightedExampleHtml?: string;
 }>();
 defineEmits<{ submit: []; reset: []; speak: [text: string] }>();
+
+const primaryDefinition = computed(
+  () => props.result?.meanings?.[0]?.definition?.trim() || "",
+);
 </script>
 
 <style scoped>
@@ -165,6 +255,7 @@ defineEmits<{ submit: []; reset: []; speak: [text: string] }>();
 }
 
 .language-capture__translation,
+.language-capture__definition,
 .language-capture__example {
   margin-top: var(--space-4);
 }

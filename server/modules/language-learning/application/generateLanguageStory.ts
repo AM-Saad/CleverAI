@@ -107,7 +107,7 @@ export async function generateLanguageStory(input: {
   let didFinalize = false;
   try {
     rawText = await ctx.strategy.generateText(prompt);
-    const parsed = parseLanguageStoryResponse(rawText);
+    const parsed = parseLanguageStoryResponse(rawText, languageWord.word);
     const { updatedQuota } = await ctx.finalize({ outputText: rawText });
     didFinalize = true;
 
@@ -121,17 +121,29 @@ export async function generateLanguageStory(input: {
       },
     });
 
-    if (prefs.autoEnroll) {
-      await enrollLanguageWord({
+    const existingReview = await prisma.languageCardReview.findUnique({
+      where: {
+        userId_wordId: { userId: user.id, wordId: languageWord.id },
+      },
+      select: { id: true },
+    });
+    let status: "story_ready" | "enrolled" | "mastered";
+    // autoEnroll governs creating a card. Once a card exists, regenerated
+    // story content must replace its stale presentation regardless of that
+    // preference.
+    if (prefs.autoEnroll || existingReview) {
+      const enrollment = await enrollLanguageWord({
         prisma,
         userId: user.id,
         wordId: languageWord.id,
       });
+      status = enrollment.status;
     } else {
       await prisma.languageWord.update({
         where: { id: languageWord.id },
         data: { status: "story_ready" },
       });
+      status = "story_ready";
     }
 
     return {
@@ -140,6 +152,7 @@ export async function generateLanguageStory(input: {
       sentences: parsed.sentences,
       wordId: languageWord.id,
       language: learnedLanguage,
+      status,
       subscription: updatedQuota
         ? {
             tier: updatedQuota.tier,

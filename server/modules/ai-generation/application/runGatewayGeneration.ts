@@ -21,11 +21,12 @@ import {
   publishGenerationSucceeded,
 } from "./generationEvents";
 import { prepareGatewayGeneration } from "./prepareGatewayGeneration";
-import type {
-  FlashcardDTO,
-  GatewayGenerateRequest,
-  GatewayGenerateResponse,
-  QuizQuestionDTO,
+import {
+  normalizeSourceMetadata,
+  type FlashcardDTO,
+  type GatewayGenerateRequest,
+  type GatewayGenerateResponse,
+  type QuizQuestionDTO,
 } from "../../../../shared/utils/llm-generate.contract";
 
 type GatewayUser = { id: string; [key: string]: any };
@@ -223,6 +224,10 @@ export async function runGatewayGeneration(
     } else {
       result = await ctx.strategy.generateQuiz(text, { itemCount });
     }
+    result = result.map((item) => ({
+      ...item,
+      sourceMetadata: normalizeSourceMetadata(item.sourceMetadata),
+    })) as FlashcardDTO[] | QuizQuestionDTO[];
 
     console.info("[llm.gateway] Generation successful:", {
       requestId: ctx.requestId,

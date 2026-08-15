@@ -84,6 +84,33 @@ language.
 6. The server writes the story, updates the word, and advances offline revision
    state for both the word and its review when applicable.
 
+## Review presentation contract
+
+The review queue does not ask each UI to infer a card from raw word/story data.
+`shared/utils/language-review-card.ts` builds one versioned presentation used by
+the server queue, Offline V2, enrollment validation, and learning-home preview.
+
+- A translated word asks learned-language word -> native-language translation,
+  with definition, example, phonetic form, part of speech, and capture context
+  as supporting information.
+- The context-matched first meaning is the card's atomic learning target. Other
+  captured senses remain available in word details rather than making grading
+  ambiguous.
+- A definition-only word asks word -> learned-language definition. It cannot be
+  enrolled if no meaningful definition exists, so blank-answer cards cannot be
+  scheduled.
+- A story card uses the one explicit primary sentence whose cloze word exactly
+  matches the captured word. Substring matching is forbidden.
+- The learned/native language pair is a hard queue boundary. An empty queue for
+  that pair remains empty rather than leaking cards from another language.
+- Display casing is preserved separately from normalized cache identity.
+- Captured context is shown before reveal only when it does not contain the
+  answer. Raw context remains on the answer side for provenance.
+- Semantic answer or story changes increment `contentVersion` and reset the
+  schedule; mastered status is preserved only when review content is unchanged.
+- `autoEnroll` controls creation, not freshness. Regenerating a story updates an
+  already-enrolled card even if auto-enroll has since been disabled.
+
 ## Correct offline flow
 
 AI translation and story generation are deliberately unavailable offline. They

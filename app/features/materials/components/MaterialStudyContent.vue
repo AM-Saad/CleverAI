@@ -13,12 +13,17 @@
           Study content
         </UiTitle>
         <UiParagraph size="xs" color="content-secondary">
-          Practice what was generated from this material.
+          Preview items here. Study now tracks review progress.
         </UiParagraph>
       </div>
-      <UiBadge tone="neutral" variant="soft">
-        {{ flashcards.length + questions.length }} items
-      </UiBadge>
+      <div class="study-content__actions">
+        <UiBadge tone="neutral" variant="soft">
+          {{ flashcards.length + questions.length }} items
+        </UiBadge>
+        <UiButton size="xs" tone="primary" @click="emit('study')">
+          Study now
+        </UiButton>
+      </div>
     </div>
 
     <UiSegmentedControl
@@ -65,6 +70,23 @@
                 dir="auto"
               >
                 {{ card.back }}
+              </UiParagraph>
+              <UiParagraph
+                v-if="sourceLabel(card.sourceRef)"
+                size="xs"
+                color="content-secondary"
+                center
+              >
+                Source · {{ sourceLabel(card.sourceRef) }}
+              </UiParagraph>
+              <UiParagraph
+                v-if="sourceSnippet(card.sourceRef)"
+                size="xs"
+                color="content-secondary"
+                center
+                dir="auto"
+              >
+                “{{ sourceSnippet(card.sourceRef) }}”
               </UiParagraph>
               <span class="study-content__flip-hint">
                 <UiIcon name="refresh-cw" class="h-4 w-4" aria-hidden="true" />
@@ -136,6 +158,29 @@
               :title="answerIsCorrect ? 'Correct' : 'Not quite'"
               :description="answerFeedback"
             />
+            <UiParagraph
+              v-if="
+                selectedChoice !== null &&
+                sourceLabel(currentQuestion.sourceRef)
+              "
+              size="xs"
+              color="content-secondary"
+              center
+            >
+              Source · {{ sourceLabel(currentQuestion.sourceRef) }}
+            </UiParagraph>
+            <UiParagraph
+              v-if="
+                selectedChoice !== null &&
+                sourceSnippet(currentQuestion.sourceRef)
+              "
+              size="xs"
+              color="content-secondary"
+              center
+              dir="auto"
+            >
+              “{{ sourceSnippet(currentQuestion.sourceRef) }}”
+            </UiParagraph>
           </div>
         </UiPanel>
       </Transition>
@@ -171,11 +216,13 @@ import type {
   MaterialGeneratedFlashcard,
   MaterialGeneratedQuestion,
 } from "~/shared/utils/material.contract";
+import type { SourceRef } from "~/shared/utils/flashcard.contract";
 
 const props = defineProps<{
   flashcards: MaterialGeneratedFlashcard[];
   questions: MaterialGeneratedQuestion[];
 }>();
+const emit = defineEmits<{ study: [] }>();
 
 type ContentMode = "flashcards" | "quiz";
 
@@ -252,6 +299,17 @@ function chooseAnswer(index: number) {
 function choiceLetter(index: number) {
   return String.fromCharCode(65 + index);
 }
+
+function sourceLabel(sourceRef?: SourceRef | null) {
+  if (!sourceRef?.anchor) return "";
+  const number = sourceRef.anchor.match(/\d+/)?.[0];
+  if (sourceRef.type === "PDF") return `Page ${number ?? sourceRef.anchor}`;
+  return `Section ${number ? Number(number) + 1 : sourceRef.anchor}`;
+}
+
+function sourceSnippet(sourceRef?: SourceRef | null) {
+  return sourceRef?.contextSnippet?.trim() ?? "";
+}
 </script>
 
 <style scoped>
@@ -266,6 +324,12 @@ function choiceLetter(index: number) {
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-3);
+}
+
+.study-content__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 
 .study-content__viewer,

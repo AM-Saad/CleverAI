@@ -1,5 +1,5 @@
 import type { PrismaClient } from "@prisma/client";
-import { LanguageSentenceSchema } from "../../../../shared/utils/language.contract";
+import { buildLanguageReviewPresentation } from "../../../../shared/utils/language-review-card";
 import {
   LearningHomeSnapshotSchema,
   type LearningHomeLanguageStatus,
@@ -98,26 +98,6 @@ function orderedDailyCandidates(candidates: LearningCandidate[], seed: string) {
   );
   const start = stableHash(seed) % sorted.length;
   return [...sorted.slice(start), ...sorted.slice(0, start)];
-}
-
-function primaryCloze(
-  word: string,
-  sentencesValue: unknown,
-): { text: string; clozeBlank: string } | null {
-  const parsed = LanguageSentenceSchema.array().safeParse(sentencesValue);
-  if (!parsed.success || !parsed.data.length) return null;
-  const normalizedWord = word.trim().toLowerCase();
-  const sentence =
-    parsed.data.find((item) => {
-      const clozeWord = item.clozeWord.trim().toLowerCase();
-      return (
-        clozeWord === normalizedWord ||
-        item.text.toLowerCase().includes(normalizedWord)
-      );
-    }) ?? parsed.data[0];
-  return sentence
-    ? { text: sentence.text, clozeBlank: sentence.clozeBlank }
-    : null;
 }
 
 async function workspacePrompt(
@@ -219,6 +199,7 @@ async function languagePrompt(
   const review = await prisma.languageCardReview.findFirst({
     where: { id: candidate.reviewId, userId },
     select: {
+      mode: true,
       word: {
         select: {
           id: true,
@@ -226,23 +207,47 @@ async function languagePrompt(
           translation: true,
           sourceLang: true,
           translationLang: true,
+          partOfSpeech: true,
+          phonetic: true,
+          meanings: true,
+          examples: true,
+          sourceContext: true,
           sourceType: true,
           sourceRefId: true,
           createdAt: true,
         },
       },
-      story: { select: { sentences: true } },
+      story: { select: { storyText: true, sentences: true } },
     },
   });
   if (!review) return null;
 
   const word = review.word;
-  const cloze = primaryCloze(word.word, review.story?.sentences);
-  const question = cloze?.clozeBlank ?? `What does “${word.word}” mean?`;
-  const answer = cloze
-    ? `${cloze.text}\n${word.word} = ${word.translation}`
-    : word.translation;
-  let sourceDetail = review.story ? `Story for “${word.word}”` : "Word bank";
+  const reviewCard = buildLanguageReviewPresentation({
+    word,
+    story: review.story,
+    preferredMode: review.mode,
+  });
+  if (!reviewCard) return null;
+  const presentation = reviewCard.presentation;
+  const question = presentation.promptContext
+    ? `${presentation.question}\nContext: ${presentation.promptContext}`
+    : presentation.question;
+  const answer = [
+    presentation.answer,
+    presentation.translation,
+    presentation.definition,
+    presentation.context?.text,
+    presentation.context?.translation,
+  ]
+    .filter((value, index, all): value is string =>
+      Boolean(value && all.indexOf(value) === index),
+    )
+    .join("\n");
+  let sourceDetail =
+    reviewCard.mode === "story_cloze"
+      ? `Story for “${word.word}”`
+      : "Word bank";
   let sourceHref = "/language";
 
   if (word.sourceType === "material" && word.sourceRefId) {
@@ -262,12 +267,18 @@ async function languagePrompt(
   return {
     id: candidate.key,
     source: "language",
-    sourceLabel: `${word.sourceLang.toUpperCase()} → ${word.translationLang.toUpperCase()}`,
+    sourceLabel:
+      reviewCard.mode === "word_definition"
+        ? `${word.sourceLang.toUpperCase()} definition`
+        : `${word.sourceLang.toUpperCase()} → ${word.translationLang.toUpperCase()}`,
     sourceDetail,
     sourceHref,
     question,
     answer,
-    postcardText: `“${word.word}” means “${word.translation}”.`,
+    postcardText: `${truncate(question, 110)} — ${truncate(
+      presentation.answer,
+      220,
+    )}`,
     to: "/language/review",
     repetitions: candidate.repetitions,
     intervalDays: candidate.intervalDays,

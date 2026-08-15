@@ -64,9 +64,33 @@ export default defineEventHandler(async (event) => {
     const projection = await projectLanguageOfflineState({
       prisma: event.context.prisma,
       userId: user.id,
-      word: { id: result.wordId, changedFields: ["status"] },
+      word: {
+        id: result.wordId,
+        changedFields: [
+          "status",
+          "translationId",
+          "word",
+          "translation",
+          "translationLang",
+          "sourceLang",
+          "partOfSpeech",
+          "meanings",
+          "examples",
+          "phonetic",
+          "category",
+          "difficulty",
+          "isPhrase",
+          "metadata",
+          "sourceContext",
+          "sourceType",
+          "sourceRefId",
+        ],
+      },
       review: review
-        ? { id: review.id, changedFields: ["reviewState"] }
+        ? {
+            id: review.id,
+            changedFields: ["reviewState", "mode", "contentVersion"],
+          }
         : undefined,
     });
     return success({ ...result, projection });

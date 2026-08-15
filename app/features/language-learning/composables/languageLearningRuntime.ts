@@ -15,6 +15,7 @@ import {
   putOfflineEntities,
 } from "../../../utils/offline-v2/repository";
 import { useOfflineRuntime } from "../../../composables/offline/useOfflineRuntime";
+import { buildLanguageReviewPresentation } from "../../../../shared/utils/language-review-card";
 
 type WordBankFilters = {
   status: string;
@@ -387,6 +388,19 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
       if (!currentWord) {
         throw new Error("This word is not available in the offline pack.");
       }
+      const latestStory = currentWord.stories?.[0] ?? null;
+      const reviewCard = buildLanguageReviewPresentation({
+        word: currentWord,
+        story: latestStory,
+        preferredMode: latestStory ? "story_cloze" : undefined,
+      });
+      if (!reviewCard) {
+        throw new Error(
+          "Word needs a translation or definition before review enrollment.",
+        );
+      }
+      const reviewStory =
+        reviewCard.mode === "story_cloze" ? latestStory : null;
       const existingReviews = await listOfflineEntities<Record<string, any>>(
         offline.accountId.value,
         "languageReview",
@@ -408,7 +422,6 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
       });
       if (!existingReview) {
         const now = new Date().toISOString();
-        const latestStory = currentWord.stories?.[0] ?? null;
         await putOfflineEntities([
           {
             id: `${offline.accountId.value}:languageReview:${localReviewId}`,
@@ -424,7 +437,9 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
               id: localReviewId,
               userId: offline.accountId.value,
               wordId: id,
-              storyId: latestStory?.id ?? null,
+              storyId: reviewStory?.id ?? null,
+              mode: reviewCard.mode,
+              contentVersion: 1,
               intervalDays: 0,
               easeFactor: 2.5,
               repetitions: 0,
@@ -490,15 +505,31 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
           ),
         ]);
         if (requestId !== statsRequestId) return null;
+        const targetLanguage = preferences.value?.targetLanguage;
+        const nativeLanguage = preferences.value?.nativeLanguage;
+        const scopedWords = localWords.filter(
+          (record) =>
+            (!targetLanguage || record.data.sourceLang === targetLanguage) &&
+            (!nativeLanguage || record.data.translationLang === nativeLanguage),
+        );
+        const scopedWordIds = new Set(
+          scopedWords.map((record) => record.entityId),
+        );
+        const scopedReviews = localReviews.filter((record) =>
+          scopedWordIds.has(record.data.wordId),
+        );
         const data: LanguageStats = {
-          total: localWords.length,
-          enrolled: localWords.filter(
-            (record) => record.data.status === "enrolled",
+          total: scopedReviews.filter((record) => !record.data.suspended)
+            .length,
+          enrolled: scopedWords.filter(
+            (record) =>
+              record.data.status === "enrolled" ||
+              record.data.status === "mastered",
           ).length,
-          mastered: localWords.filter(
+          mastered: scopedWords.filter(
             (record) => record.data.status === "mastered",
           ).length,
-          due: localReviews.filter(
+          due: scopedReviews.filter(
             (record) =>
               !record.data.suspended &&
               new Date(record.data.nextReviewAt).getTime() <= Date.now(),
@@ -507,7 +538,10 @@ export function createLanguageLearningRuntime(deps: RuntimeDeps = {}) {
         stats.value = data;
         return data;
       }
-      const result = await getApi().getStats();
+      const result = await getApi().getStats({
+        targetLanguage: preferences.value?.targetLanguage,
+        nativeLanguage: preferences.value?.nativeLanguage,
+      });
       if (requestId !== statsRequestId) return null;
 
       if (!result.success) {

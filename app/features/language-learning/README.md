@@ -39,3 +39,24 @@ Runtime notes:
 - Bank cards open `LanguageWordDetailModal`; story generation is only available
   as a deliberate action inside word details.
 - Review grading uses stable per-card request IDs so repeated clicks do not grade the same visible card twice.
+
+Review presentation:
+
+- `shared/utils/language-review-card.ts` is the single presentation policy for
+  server queues, Offline V2 queues, enrollment validation, and learning-home
+  previews.
+- Translated words ask learned-language word -> native-language translation.
+  Definition-only words ask word -> learned-language definition. Story cards
+  ask the story's exact primary cloze -> lexical answer.
+- Cards use the context-matched primary meaning. Extra senses remain in word
+  details instead of turning one review card into several ambiguous facts.
+- Review queues enforce the active learned/native language pair. They never
+  fill an empty pair-specific queue with cards from another language.
+- Captured casing is preserved for display. Normalized lowercase text exists
+  only for lookup/cache identity.
+- Captured context appears on the question side only when it does not contain
+  the answer; otherwise it remains available after reveal.
+- Each card carries a content version. Meaningful answer or story changes reset
+  its schedule so a materially changed card is learned again.
+- Auto-enroll controls card creation. Once a card exists, regenerated story
+  content updates that card even when auto-enroll is later disabled.

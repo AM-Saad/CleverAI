@@ -47,11 +47,12 @@ export default defineEventHandler(async (event) => {
 
   const [flashcards, questions] = await Promise.all([
     prisma.flashcard.findMany({
-      where: { materialId: params.id },
+      where: { materialId: params.id, status: "ENROLLED" },
       select: {
         id: true,
         front: true,
         back: true,
+        sourceRef: true,
         status: true,
         createdAt: true,
         updatedAt: true,
@@ -59,12 +60,13 @@ export default defineEventHandler(async (event) => {
       orderBy: { createdAt: "desc" },
     }),
     prisma.question.findMany({
-      where: { materialId: params.id },
+      where: { materialId: params.id, status: "ENROLLED" },
       select: {
         id: true,
         question: true,
         choices: true,
         answerIndex: true,
+        sourceRef: true,
         status: true,
         createdAt: true,
         updatedAt: true,

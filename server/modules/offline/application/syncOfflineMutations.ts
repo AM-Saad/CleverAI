@@ -980,7 +980,7 @@ async function applyDomainMutation(input: {
           {
             entity: "languageReview",
             entityId: result.reviewId,
-            changedFields: ["reviewState", "storyId"],
+            changedFields: ["reviewState", "storyId", "mode", "contentVersion"],
             canonical: await currentSnapshot(
               prisma,
               userId,

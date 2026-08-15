@@ -8,11 +8,11 @@ Cognilo is an AI-powered learning platform built with **Nuxt 4 + TypeScript**. I
 
 | Area | Description |
 |------|-------------|
-| **Flashcards & Quizzes** | AI-generated from pasted text, uploaded PDFs, or URLs |
+| **Flashcards & Quizzes** | AI-generated from uploaded PDF, DOCX, or TXT materials |
 | **Spaced Repetition (SM-2)** | Optimal review scheduling for flashcards, materials, and questions |
 | **XP & Gamification** | Experience points, achievements, streaks, daily targets |
 | **Notes** | Rich-text local-first notes with IndexedDB persistence and background sync |
-| **Materials Management** | Upload PDFs, paste URLs or text; auto-extract content for generation |
+| **Materials Management** | Upload PDF, DOCX, or TXT files; auto-extract content for generation |
 | **Daily** | Day-planner: recurring/one-off action items placed on calendar days, plus one rich-text note per day |
 | **Kanban Board** | Drag-and-drop columns and items for task organization |
 | **User Tags** | Color-coded tags for organizing board items |

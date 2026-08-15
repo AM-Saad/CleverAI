@@ -112,13 +112,13 @@ export function useGenerateFromMaterial(materialId: Ref<string>) {
 |-----------|--------|
 | No existing content | Proceed directly to generation |
 | Has existing flashcards/questions | Show `RegenerateConfirmDialog` |
-| User confirms regeneration | Execute with `replace` checkbox value (user controls whether to delete old content) |
+| User confirms regeneration | Execute with append or progress-preserving replace mode |
 | User cancels | Return to idle state |
 
 **Regeneration Behavior:**
-- **`replace=false` (default)**: Append new items to existing collection (no deletion)
-- **`replace=true`**: Delete old items + CardReviews, create new items (user explicitly confirmed)
-- RegenerateConfirmDialog shows checkbox allowing user to choose deletion behavior
+- **`replace=false` (default)**: Append new items to existing collection
+- **`replace=true`**: Preserve exact matches, suspend removed items, create changed/new items
+- Review history stays attached to preserved and suspended items
 
 ---
 
@@ -431,117 +431,16 @@ export class OpenAIStrategy implements LLMStrategy {
 
 #### **Step 4.9: Database Transaction (Save/Replace)**
 
-```typescript
-if (canSave && effectiveWorkspaceId) {
-  try {
-    if (task === "flashcards") {
-      // Use transaction to ensure atomic delete + create
-      await prisma.$transaction(async (tx) => {
-        // If replacing for a specific material, delete old flashcards and their CardReviews
-        if (replace && materialId) {
-          // Get IDs of flashcards to be deleted for CardReview cleanup
-          const oldFlashcards = await tx.flashcard.findMany({
-            where: { materialId },
-            select: { id: true },
-          });
-          const oldFlashcardIds = oldFlashcards.map((f) => f.id);
+`saveGeneratedArtifacts` performs replacement in one transaction:
 
-          // Delete CardReviews for these flashcards
-          if (oldFlashcardIds.length > 0) {
-            const reviewsDeleted = await tx.cardReview.deleteMany({
-              where: {
-                cardId: { in: oldFlashcardIds },
-                resourceType: "flashcard",
-              },
-            });
-            deletedReviewsCount = reviewsDeleted.count;
-          }
-
-          // Delete old flashcards
-          const deleted = await tx.flashcard.deleteMany({
-            where: { materialId },
-          });
-          deletedCount = deleted.count;
-        }
-
-        // Create new flashcards
-        if (result.length) {
-          const res = await tx.flashcard.createMany({
-            data: (result as Flashcard[]).map((fc) => ({
-              workspaceId: effectiveWorkspaceId,
-              materialId: materialId || null,
-              front: fc.front,
-              back: fc.back,
-            })),
-          });
-          savedCount = res.count;
-        } else {
-          savedCount = 0;
-        }
-      });
-    } else {
-      // Quiz/Questions
-      await prisma.$transaction(async (tx) => {
-        // If replacing for a specific material, delete old questions and their CardReviews
-        if (replace && materialId) {
-          // Get IDs of questions to be deleted for CardReview cleanup
-          const oldQuestions = await tx.question.findMany({
-            where: { materialId },
-            select: { id: true },
-          });
-          const oldQuestionIds = oldQuestions.map((q) => q.id);
-
-          // Delete CardReviews for these questions
-          if (oldQuestionIds.length > 0) {
-            const reviewsDeleted = await tx.cardReview.deleteMany({
-              where: {
-                cardId: { in: oldQuestionIds },
-                resourceType: "question",
-              },
-            });
-            deletedReviewsCount = reviewsDeleted.count;
-          }
-
-          // Delete old questions
-          const deleted = await tx.question.deleteMany({
-            where: { materialId },
-          });
-          deletedCount = deleted.count;
-        }
-
-        // Create new questions
-        if (result.length) {
-          const res = await tx.question.createMany({
-            data: (result as QuizQuestion[]).map((q) => ({
-              workspaceId: effectiveWorkspaceId,
-              materialId: materialId || null,
-              question: q.question,
-              choices: q.choices,
-              answerIndex: q.answerIndex,
-            })),
-          });
-          savedCount = res.count;
-        } else {
-          savedCount = 0;
-        }
-      });
-    }
-  } catch (err) {
-    console.error("[llm.gateway] Failed to save to database:", {
-      requestId,
-      workspaceId: effectiveWorkspaceId,
-      materialId,
-      task,
-      error: err,
-    });
-    // Don't throw - generation succeeded even if save failed
-  }
-}
-```
+1. Match generated items to existing items using normalized content.
+2. Keep matching item IDs and unsuspend their review rows.
+3. Mark unmatched active items as drafts and suspend their review rows.
+4. Create and enroll only changed/new items.
 
 **Key Changes from Previous Implementation:**
-1. **Append-Only by Default**: `replace` parameter controls whether to delete existing content
-2. **CardReview Cascade Cleanup**: When `replace=true`, CardReviews are deleted alongside flashcards/questions
+1. **Append-Only by Default**: `replace` parameter controls active-set replacement
+2. **Progress Preservation**: replacement suspends stale reviews instead of deleting history
 3. **Questions Support**: Full transaction support for quiz questions with same pattern as flashcards
 4. **User-Controlled**: Frontend shows `RegenerateConfirmDialog` allowing users to choose replace behavior
 
@@ -771,12 +670,13 @@ User                UI                  Composable           Service            
 - **TTL:** 7 days
 - **Benefit:** Skips LLM call but **does not** bypass quota/cost accounting
 
-### 5. **User-Controlled Replace with CardReview Cascade**
-- **Default Behavior:** Append-only (no deletion) to preserve user progress
-- **Replace Option:** User can explicitly choose to delete old items via checkbox in RegenerateConfirmDialog
-- **Cascade Delete:** When `replace=true`, CardReview records are deleted alongside flashcards/questions
-- **Transaction:** Ensures atomicity (delete old + create new happens together or not at all)
-- **Supported Types:** Both flashcards and questions support replace with CardReview cleanup
+### 5. **User-Controlled, Progress-Preserving Replace**
+- **Default Behavior:** Append new content
+- **Replace Option:** Replace active material content after draft review
+- **Unchanged Items:** Keep IDs and SM-2 progress
+- **Removed Items:** Become suspended drafts; history remains
+- **Changed/New Items:** Receive fresh review rows
+- **Transaction:** Entire active-set update commits atomically
 
 ### 6. **Question Enrollment Integration**
 - **Polymorphic CardReview:** `resourceType` field supports "material", "flashcard", and "question"

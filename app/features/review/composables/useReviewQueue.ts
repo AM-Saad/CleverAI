@@ -35,7 +35,7 @@ export const useCardReview = () => {
     (dueCount) => {
       badging.setBadge(dueCount);
     },
-    { immediate: true }
+    { immediate: true },
   );
   const gradedCardIds = ref<Set<string>>(new Set());
   const requestIdsByCard = new Map<string, string>();
@@ -258,17 +258,26 @@ export const useCardReview = () => {
   const fetchQueue = async (
     workspaceId?: string,
     limit: number = 20,
+    materialId?: string,
   ): Promise<void> => {
     const epoch = ++queueEpoch;
-    const queueKey = workspaceId ?? "__global__";
+    const queueKey = materialId
+      ? `${workspaceId ?? "__global__"}:material:${materialId}`
+      : (workspaceId ?? "__global__");
     if (!offline.isOnline.value && offline.accountId.value) {
       const cached = await listOfflineEntities<Record<string, any>>(
         offline.accountId.value,
         "review",
         workspaceId,
       );
+      const activeCached = cached.filter((record) => !record.data.suspended);
+      const scopedCached = materialId
+        ? activeCached.filter(
+            (record) => record.data.offlineResource?.materialId === materialId,
+          )
+        : activeCached;
       if (epoch !== queueEpoch) return;
-      const cards: ReviewCard[] = cached
+      const cards: ReviewCard[] = scopedCached
         .map((record) => {
           const review = record.data;
           const resource = review.offlineResource;
@@ -290,6 +299,8 @@ export const useCardReview = () => {
                     choices: resource.choices,
                     answerIndex: resource.answerIndex,
                     workspaceId: resource.workspaceId,
+                    materialId: resource.materialId,
+                    sourceRef: resource.sourceRef,
                   }
                 : {
                     front: resource.front,
@@ -297,6 +308,8 @@ export const useCardReview = () => {
                     hint: undefined,
                     tags: [],
                     workspaceId: resource.workspaceId,
+                    materialId: resource.materialId,
+                    sourceRef: resource.sourceRef,
                   };
           return {
             cardId: review.id,
@@ -326,12 +339,12 @@ export const useCardReview = () => {
       activeQueueKey = queueKey;
       reviewQueue.value = cards;
       queueStats.value = {
-        total: cached.length,
-        new: cached.filter(
+        total: scopedCached.length,
+        new: scopedCached.filter(
           (record) => Number(record.data.repetitions ?? 0) === 0,
         ).length,
         due: cards.length,
-        learning: cached.filter(
+        learning: scopedCached.filter(
           (record) =>
             Number(record.data.repetitions ?? 0) > 0 &&
             Number(record.data.repetitions ?? 0) < 3,
@@ -342,7 +355,7 @@ export const useCardReview = () => {
       return;
     }
     const response = await fetchOp.execute(() =>
-      $api.review.getQueue(workspaceId, limit),
+      $api.review.getQueue(workspaceId, limit, materialId),
     );
 
     if (response && epoch === queueEpoch) {

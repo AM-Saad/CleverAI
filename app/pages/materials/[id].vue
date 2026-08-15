@@ -150,6 +150,7 @@
         v-if="counts.flashcardsCount > 0 || counts.questionsCount > 0"
         :flashcards="generatedContent.flashcards"
         :questions="generatedContent.questions"
+        @study="startMaterialReview"
       />
 
       <!-- pinned generate -->
@@ -215,11 +216,11 @@
             weight="bold"
             color="content-secondary"
             class="gen__label"
-            >Difficulty</UiLabel
+            >Coverage</UiLabel
           >
           <UiSegmentedControl
             v-model="depth"
-            label="Difficulty"
+            label="Coverage"
             full-width
             :items="difficultyItems"
           />
@@ -664,9 +665,9 @@ const genTypeItems = [
   { value: "quiz", label: "Quiz" },
 ] as const;
 const difficultyItems = [
-  { value: "quick", label: "Recall" },
-  { value: "balanced", label: "Balanced" },
-  { value: "deep", label: "Exam" },
+  { value: "quick", label: "Focused" },
+  { value: "balanced", label: "Standard" },
+  { value: "deep", label: "Detailed" },
 ] as const;
 
 const remaining = computed(() => subscription.subscriptionInfo.value.remaining);
@@ -799,7 +800,7 @@ const replaceDraftDescription = computed(() => {
       ? gen.existingCounts.value.questionsCount
       : gen.existingCounts.value.flashcardsCount;
   const noun = genType.value === "quiz" ? "questions" : "flashcards";
-  return `Adding this selection will remove ${count} existing ${noun} and their review progress.`;
+  return `Adding this selection will replace ${count} active ${noun}. Unchanged items keep their review progress.`;
 });
 
 function emptyGeneratedContent(): MaterialGeneratedContent {
@@ -826,6 +827,18 @@ function openGenerate() {
   editingIndex.value = null;
   reviewFilter.value = "all";
   sheetOpen.value = true;
+}
+
+function startMaterialReview() {
+  if (!material.value) return;
+  navigateTo({
+    path: "/review",
+    query: {
+      workspaceId: material.value.workspaceId,
+      materialId: material.value.id,
+      closeTo: route.fullPath,
+    },
+  });
 }
 
 function setSheetOpen(open: boolean) {

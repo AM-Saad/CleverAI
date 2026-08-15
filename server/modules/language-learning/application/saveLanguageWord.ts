@@ -6,6 +6,7 @@ import type {
   SaveLanguageWordDTO,
 } from "../../../../shared/utils/language.contract";
 import { maybeAutoEnrollLanguageWord } from "./autoEnrollLanguageWord";
+import { reviewModeForLanguageWord } from "../../../../shared/utils/language-review-card";
 
 const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
 
@@ -32,6 +33,9 @@ const deterministicWordId = (userId: string, translationId: string) =>
     .update(`language-word:${userId}:${translationId}`)
     .digest("hex")
     .slice(0, 24);
+
+const sameJson = (left: unknown, right: unknown) =>
+  JSON.stringify(left ?? null) === JSON.stringify(right ?? null);
 
 const serialize = (
   word: Record<string, any>,
@@ -71,6 +75,9 @@ export async function saveLanguageWord(input: {
     where: { id: input.data.translationId },
   });
   if (!translation) throw Errors.notFound("Translation");
+  const sourceText = (input.data.sourceText?.trim() || translation.sourceText)
+    .trim()
+    .replace(/\s+/g, " ");
 
   let word = await input.prisma.languageWord.findFirst({
     where: {
@@ -79,6 +86,51 @@ export async function saveLanguageWord(input: {
     },
   });
   let cached = Boolean(word);
+  let reviewContentChanged = false;
+
+  const semanticContentChanged = Boolean(
+    word &&
+    (word.translation !== translation.translation ||
+      !sameJson(word.meanings, translation.meanings)),
+  );
+  const mergedMetadata = word
+    ? {
+        ...jsonRecord(word.metadata),
+        ...jsonRecord(translation.metadata),
+        sharedTranslationId: translation.id,
+      }
+    : null;
+
+  if (
+    word &&
+    (word.word !== sourceText ||
+      semanticContentChanged ||
+      word.partOfSpeech !== (translation.partOfSpeech ?? "unknown") ||
+      word.phonetic !== (translation.phonetic ?? null) ||
+      !sameJson(word.meanings, translation.meanings) ||
+      !sameJson(word.examples, translation.examples) ||
+      word.category !== (translation.category ?? null) ||
+      word.difficulty !== (translation.difficulty ?? null) ||
+      word.isPhrase !== translation.isPhrase ||
+      !sameJson(word.metadata, mergedMetadata))
+  ) {
+    reviewContentChanged = semanticContentChanged;
+    word = await input.prisma.languageWord.update({
+      where: { id: word.id },
+      data: {
+        word: sourceText,
+        translation: translation.translation,
+        partOfSpeech: translation.partOfSpeech ?? "unknown",
+        phonetic: translation.phonetic ?? null,
+        meanings: translation.meanings ?? undefined,
+        examples: translation.examples ?? undefined,
+        category: translation.category ?? null,
+        difficulty: translation.difficulty ?? null,
+        isPhrase: translation.isPhrase,
+        metadata: mergedMetadata ?? undefined,
+      },
+    });
+  }
 
   // A word may first be captured with "Translate" disabled. When the user
   // later captures it with translation enabled, enrich that existing deck row
@@ -88,7 +140,7 @@ export async function saveLanguageWord(input: {
     const definitionOnlyWord = await input.prisma.languageWord.findFirst({
       where: {
         userId: input.userId,
-        word: translation.sourceText,
+        word: { equals: sourceText, mode: "insensitive" },
         sourceLang: translation.sourceLang,
         translationLang: translation.translationLang,
         sourceContext,
@@ -97,10 +149,12 @@ export async function saveLanguageWord(input: {
       orderBy: { createdAt: "desc" },
     });
     if (definitionOnlyWord) {
+      reviewContentChanged = true;
       word = await input.prisma.languageWord.update({
         where: { id: definitionOnlyWord.id },
         data: {
           translationId: translation.id,
+          word: sourceText,
           translation: translation.translation,
           partOfSpeech: translation.partOfSpeech ?? "unknown",
           phonetic: translation.phonetic ?? null,
@@ -138,7 +192,7 @@ export async function saveLanguageWord(input: {
           id: deterministicWordId(input.userId, translation.id),
           userId: input.userId,
           translationId: translation.id,
-          word: translation.sourceText,
+          word: sourceText,
           translation: translation.translation,
           translationLang: translation.translationLang,
           sourceLang: translation.sourceLang,
@@ -182,12 +236,57 @@ export async function saveLanguageWord(input: {
     where: { userId: input.userId },
     select: { autoEnroll: true },
   });
+  const reviewMode = reviewModeForLanguageWord(word);
+  let resetReviewCount = 0;
+  if (
+    reviewContentChanged &&
+    reviewMode &&
+    typeof input.prisma.languageCardReview?.findUnique === "function" &&
+    typeof input.prisma.languageCardReview?.update === "function"
+  ) {
+    const existingReview = await input.prisma.languageCardReview.findUnique({
+      where: {
+        userId_wordId: { userId: input.userId, wordId: word.id },
+      },
+      select: { id: true, storyId: true, contentVersion: true },
+    });
+    // A story card's answer is still the captured word. Translation and
+    // definition enrichment only changes supporting copy, so its learned
+    // schedule and chosen mode must survive.
+    if (existingReview && !existingReview.storyId) {
+      await input.prisma.languageCardReview.update({
+        where: { id: existingReview.id },
+        data: {
+          mode: reviewMode,
+          // Legacy Mongo rows may not have this newly introduced field.
+          contentVersion: (existingReview.contentVersion ?? 1) + 1,
+          intervalDays: 0,
+          easeFactor: 2.5,
+          repetitions: 0,
+          nextReviewAt: new Date(),
+          lastReviewedAt: null,
+          lastGrade: null,
+          streak: 0,
+        },
+      });
+      resetReviewCount = 1;
+    }
+  }
+
+  if (resetReviewCount > 0 && word.status === "mastered") {
+    word = await input.prisma.languageWord.update({
+      where: { id: word.id },
+      data: { status: "enrolled" },
+    });
+  }
+
   const status = await maybeAutoEnrollLanguageWord({
     prisma: input.prisma,
     userId: input.userId,
     wordId: word.id,
     currentStatus: word.status,
     autoEnroll: preferences?.autoEnroll ?? true,
+    reviewMode,
   });
 
   return serialize(word, status, cached);

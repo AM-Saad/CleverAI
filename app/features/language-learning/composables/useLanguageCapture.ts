@@ -144,6 +144,7 @@ export function useLanguageCapture() {
       const saved = await saveOperation.execute(() =>
         $api.language.saveWord({
           translationId: result.translationId!,
+          sourceText: result.word,
           sourceContext: options?.sourceContext,
           sourceType: options?.sourceType ?? "manual",
           sourceRefId: options?.sourceRefId,

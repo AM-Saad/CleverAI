@@ -34,7 +34,8 @@ export const LanguageSentenceSchema = z.object({
   text: z.string(),
   clozeWord: z.string(),
   clozeBlank: z.string(),
-  clozeIndex: z.number(),
+  clozeIndex: z.number().int().nonnegative(),
+  isPrimary: z.boolean().optional(),
 });
 
 export const LanguageStorySchema = z.object({
@@ -118,6 +119,7 @@ export const GenerateStoryDTO = z.object({
 
 export const SaveLanguageWordDTO = z.object({
   translationId: z.string().min(1),
+  sourceText: z.string().trim().min(1).max(200).optional(),
   sourceContext: z.string().max(500).optional(),
   sourceType: z
     .enum(["note", "material", "external", "manual"])
@@ -156,6 +158,38 @@ export const LanguageWordsQuerySchema = z.object({
   cursor: z.string().optional(),
 });
 
+export const LanguageReviewModeSchema = z.enum([
+  "story_cloze",
+  "word_translation",
+  "word_definition",
+]);
+export type LanguageReviewMode = z.infer<typeof LanguageReviewModeSchema>;
+
+export const LanguageReviewContextSchema = z.object({
+  label: z.string(),
+  text: z.string(),
+  translation: z.string().nullable().optional(),
+});
+
+export const LanguageReviewPresentationSchema = z.object({
+  question: z.string().trim().min(1),
+  answer: z.string().trim().min(1),
+  questionLang: z.string().trim().min(1),
+  answerLang: z.string().trim().min(1),
+  audioText: z.string().trim().min(1),
+  phonetic: z.string().nullable().optional(),
+  partOfSpeech: z.string().nullable().optional(),
+  translation: z.string().nullable().optional(),
+  definition: z.string().nullable().optional(),
+  context: LanguageReviewContextSchema.nullable().optional(),
+  promptContext: z.string().nullable().optional(),
+  sourceContext: z.string().nullable().optional(),
+  storyText: z.string().nullable().optional(),
+});
+export type LanguageReviewPresentation = z.infer<
+  typeof LanguageReviewPresentationSchema
+>;
+
 export const LanguageQueueCardSchema = z.object({
   cardId: z.string(),
   wordId: z.string(),
@@ -166,7 +200,9 @@ export const LanguageQueueCardSchema = z.object({
   storyId: z.string().nullable().optional(),
   storyText: z.string().nullable().optional(),
   sentences: z.array(LanguageSentenceSchema).nullable().optional(),
-  mode: z.enum(["story_cloze", "word_translation"]).default("word_translation"),
+  mode: LanguageReviewModeSchema.default("word_translation"),
+  presentationVersion: z.number().int().positive().default(1),
+  presentation: LanguageReviewPresentationSchema,
   reviewState: z.object({
     intervalDays: z.number(),
     easeFactor: z.number(),
@@ -238,6 +274,7 @@ export const GenerateStoryResponseSchema = z.object({
   sentences: z.array(LanguageSentenceSchema),
   wordId: z.string(),
   language: z.string(),
+  status: LanguageWordStatusSchema,
   subscription: SubscriptionInfoSchema.optional(),
   projection: CaptureWordResponseSchema.shape.projection,
 });
@@ -353,6 +390,7 @@ export interface GenerateStoryResponse {
   wordId: string;
   /** ISO code of the learned language used for story text and sentences. */
   language: string;
+  status: LanguageWordStatus;
   /** Present when story generation consumed a quota slot. */
   subscription?: Pick<
     SubscriptionInfo,

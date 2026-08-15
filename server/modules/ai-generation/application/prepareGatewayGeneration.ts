@@ -2,6 +2,7 @@ import { Errors } from "../../../utils/error";
 import {
   injectNoteBlockMarkers,
   injectPdfPageMarkers,
+  parsePdfPageRanges,
 } from "../../../utils/contextBridge";
 import type { GatewayGenerateRequest } from "../../../../shared/utils/llm-generate.contract";
 
@@ -34,18 +35,19 @@ export interface PrepareGatewayGenerationResult {
 
 function injectMaterialContext(material: LoadedMaterialRecord, text: string) {
   if (material.type === "pdf" && material.metadata) {
-    const pageCount = (material.metadata as { pageCount?: unknown })?.pageCount;
+    const metadata = material.metadata as {
+      pageCount?: unknown;
+      pageRanges?: unknown;
+    };
+    const pageCount = metadata.pageCount;
     return injectPdfPageMarkers(
       text,
       typeof pageCount === "number" ? pageCount : undefined,
+      parsePdfPageRanges(metadata.pageRanges),
     );
   }
 
-  if (material.type === "txt" || !material.type) {
-    return injectNoteBlockMarkers(text);
-  }
-
-  return text;
+  return injectNoteBlockMarkers(text);
 }
 
 async function loadOwnedMaterial(

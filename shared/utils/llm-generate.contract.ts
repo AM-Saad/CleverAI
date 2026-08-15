@@ -17,6 +17,20 @@ export const GeneratedFlashcardSchema = z.object({
 });
 export type FlashcardDTO = z.infer<typeof GeneratedFlashcardSchema>;
 
+export function normalizeSourceMetadata(value: unknown) {
+  if (!value || typeof value !== "object") return undefined;
+  const source = value as Record<string, unknown>;
+  const anchor = typeof source.anchor === "string" ? source.anchor.trim() : "";
+  if (!anchor) return undefined;
+  const rawSnippet = source.contextSnippet ?? source.context_snippet;
+  const contextSnippet =
+    typeof rawSnippet === "string" ? rawSnippet.trim() : "";
+  return {
+    anchor,
+    ...(contextSnippet && { contextSnippet }),
+  };
+}
+
 export const QuizQuestionSchema = z
   .object({
     question: z.string(),
@@ -82,8 +96,8 @@ export const GatewayGenerateResponse = z.union([
     task: z.literal("flashcards"),
     flashcards: z.array(GeneratedFlashcardSchema),
     savedCount: z.number().optional(),
-    deletedCount: z.number().optional(), // For regeneration: how many old items were deleted
-    deletedReviewsCount: z.number().optional(), // For regeneration: how many CardReviews were deleted
+    deletedCount: z.number().optional(), // For regeneration: old items removed from active set
+    deletedReviewsCount: z.number().optional(), // Compatibility field; replacement now preserves reviews
     subscription: SubscriptionInfoSchema.optional(),
     // Gateway metadata:
     requestId: z.string(),
@@ -99,8 +113,8 @@ export const GatewayGenerateResponse = z.union([
     task: z.literal("quiz"),
     quiz: z.array(QuizQuestionSchema),
     savedCount: z.number().optional(),
-    deletedCount: z.number().optional(), // For regeneration: how many old items were deleted
-    deletedReviewsCount: z.number().optional(), // For regeneration: how many CardReviews were deleted
+    deletedCount: z.number().optional(), // For regeneration: old items removed from active set
+    deletedReviewsCount: z.number().optional(), // Compatibility field; replacement now preserves reviews
     subscription: SubscriptionInfoSchema.optional(),
     // Gateway metadata:
     requestId: z.string(),

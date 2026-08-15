@@ -35,7 +35,10 @@ export default defineEventHandler(async (event) => {
     userId: user.id,
     word: { id: result.wordId, changedFields: ["stories", "status"] },
     review: review
-      ? { id: review.id, changedFields: ["storyId", "reviewState"] }
+      ? {
+          id: review.id,
+          changedFields: ["storyId", "reviewState", "mode", "contentVersion"],
+        }
       : undefined,
   });
   return success({ ...result, projection });

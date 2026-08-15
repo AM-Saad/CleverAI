@@ -9,8 +9,9 @@ a specific material. Upload and listing UI live directly in the page layer.
   state (flashcards/quiz generation, existing-content check, and the
   replace/append regeneration confirmation flow). Used directly by
   `app/pages/materials/[id].vue`.
-- `components/MaterialStudyContent.vue` presents material-scoped flashcards and
-  quiz questions. Flashcards reuse the restored
+- `components/MaterialStudyContent.vue` previews material-scoped flashcards and
+  quiz questions, shows generated source evidence, and routes `Study now` into
+  a material-filtered tracked review session. Flashcards reuse the restored
   `app/components/ui/CardStack.vue` swipe/swap interaction and
   `app/components/ui/flip-card/FlipCard.vue` primitive; quiz choices reveal
   immediate answer feedback.
@@ -32,5 +33,6 @@ a specific material. Upload and listing UI live directly in the page layer.
 3. Open a row and its adjacent action menu using both pointer and keyboard;
    confirm Rename/Delete never navigate the row.
 4. Generate flashcards and questions from a material's detail page.
-5. Regenerate existing content and confirm replace/append behavior still
-   follows the confirmation dialog.
+5. Start `Study now` and confirm only that material's due items enter tracked review.
+6. Regenerate existing content and confirm unchanged items retain review progress
+   while removed items leave the active set.

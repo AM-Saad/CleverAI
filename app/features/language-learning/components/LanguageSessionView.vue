@@ -12,10 +12,29 @@
     :loading="loading"
     :error="errorMsg"
     :has-card="Boolean(currentCard)"
-    :card-key="currentCard?.cardId"
+    :card-key="
+      currentCard
+        ? `${currentCard.cardId}:${currentCard.presentationVersion}`
+        : undefined
+    "
     :eyebrow="eyebrow"
     :question="qa.question"
     :answer="qa.answer"
+    :question-lang="qa.questionLang"
+    :answer-lang="qa.answerLang"
+    :translation-lang="currentCard?.translationLang"
+    :audio-text="qa.audioText"
+    :audio-enabled="Boolean(currentCard && qa.audioText)"
+    :audio-on-reveal="currentCard?.mode === 'story_cloze'"
+    :audio-loading="isSpeaking"
+    :phonetic="qa.phonetic"
+    :part-of-speech="qa.partOfSpeech"
+    :translation="qa.translation"
+    :definition="qa.definition"
+    :context="qa.context"
+    :prompt-context="qa.promptContext"
+    :source-context="qa.sourceContext"
+    :story-text="qa.storyText"
     :revealed="revealed"
     :state="currentCard?.reviewState ?? null"
     :disabled="isGrading || finishing"
@@ -25,6 +44,7 @@
     @done="goLanguageHome"
     @retry="load"
     @reveal="revealed = true"
+    @speak="onSpeak"
     @grade="onGrade"
   />
 </template>
@@ -36,10 +56,7 @@ import {
   type GradeKey,
 } from "~/composables/review/useSm2Preview";
 import { triggerNotificationPromptAfterReview } from "~/composables/shared/useNotificationPrompt";
-import type {
-  LanguageQueueCard,
-  LanguageSentence,
-} from "@shared/utils/language.contract";
+import type { LanguageReviewPresentation } from "@shared/utils/language.contract";
 
 const {
   currentCard,
@@ -51,6 +68,8 @@ const {
   gradeError,
   fetchQueue,
   grade,
+  isSpeaking,
+  speakWord,
 } = useLanguageReview();
 
 const sessionSummary = useSessionSummary();
@@ -88,41 +107,26 @@ const elapsedMinutes = computed(() =>
 );
 const eyebrow = computed(() =>
   currentCard.value
-    ? `LANGUAGE · ${currentCard.value.sourceLang.toUpperCase()}→${currentCard.value.translationLang.toUpperCase()}`
+    ? currentCard.value.mode === "word_definition"
+      ? `LANGUAGE · ${currentCard.value.sourceLang.toUpperCase()} · DEFINITION`
+      : currentCard.value.mode === "story_cloze"
+        ? `LANGUAGE · ${currentCard.value.sourceLang.toUpperCase()} · STORY CLOZE`
+        : `LANGUAGE · ${currentCard.value.sourceLang.toUpperCase()}→${currentCard.value.translationLang.toUpperCase()}`
     : "LANGUAGE",
 );
-const qa = computed(() => extractLanguageQA(currentCard.value));
+const emptyPresentation: LanguageReviewPresentation = {
+  question: "",
+  answer: "",
+  questionLang: "en",
+  answerLang: "en",
+  audioText: "",
+};
+const qa = computed(() => currentCard.value?.presentation ?? emptyPresentation);
 
-function primaryClozeSentence(
-  card: LanguageQueueCard,
-): LanguageSentence | null {
-  const sentences = card.sentences;
-  if (!sentences?.length) return null;
-
-  const word = card.word.trim().toLowerCase();
-  const matchingSentence = sentences.find((sentence) => {
-    const clozeWord = sentence.clozeWord.trim().toLowerCase();
-    return clozeWord === word || sentence.text.toLowerCase().includes(word);
-  });
-
-  return matchingSentence ?? sentences[0] ?? null;
-}
-
-function extractLanguageQA(card: LanguageQueueCard | null) {
-  if (!card) return { question: "", answer: "" };
-
-  const cloze = primaryClozeSentence(card);
-  if (cloze) {
-    return {
-      question: cloze.clozeBlank,
-      answer: `${cloze.text}\n${card.word} = ${card.translation}`,
-    };
-  }
-
-  return {
-    question: `What does "${card.word}" mean?`,
-    answer: card.translation,
-  };
+function onSpeak() {
+  const card = currentCard.value;
+  if (!card?.presentation.audioText) return;
+  void speakWord(card.presentation.audioText, card.sourceLang);
 }
 
 async function onGrade(key: GradeKey) {

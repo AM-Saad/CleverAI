@@ -3,9 +3,14 @@ import formidable, { type Fields, type Files, type Part } from "formidable";
 import fs from "fs/promises";
 import path from "path";
 import mammoth from "mammoth";
+import type { PDFParse as PdfParser } from "pdf-parse";
 import { requireRole } from "~~/server/utils/auth";
 import { z } from "zod";
 import { estimateTokensFromText } from "@server/utils/llm/tokenEstimate";
+import {
+  joinPdfPageText,
+  type PdfPageRange,
+} from "@server/utils/contextBridge";
 
 const UploadRequestSchema = z.object({
   workspaceId: z
@@ -34,21 +39,29 @@ function sanitizeText(text: string): string {
 /**
  * Extract text from PDF buffer
  */
-async function extractPdfText(
-  buffer: Buffer,
-): Promise<{ text: string; pageCount?: number }> {
+async function extractPdfText(buffer: Buffer): Promise<{
+  text: string;
+  pageCount?: number;
+  pageRanges: PdfPageRange[];
+}> {
+  let parser: PdfParser | undefined;
   try {
     // pdf-parse v2+ uses PDFParse class, not a function
     const { PDFParse } = await import("pdf-parse");
 
-    const parser = new PDFParse({ data: buffer });
+    parser = new PDFParse({ data: buffer });
     const textResult = await parser.getText();
-    const infoResult = await parser.getInfo();
-    await parser.destroy();
+    const joined = joinPdfPageText(
+      textResult.pages.map((page) => ({
+        num: page.num,
+        text: sanitizeText(page.text),
+      })),
+    );
 
     return {
-      text: sanitizeText(textResult.text),
-      pageCount: infoResult.total,
+      text: joined.text,
+      pageCount: textResult.total,
+      pageRanges: joined.pageRanges,
     };
   } catch (error) {
     console.error("PDF extraction error:", error);
@@ -57,6 +70,8 @@ async function extractPdfText(
       statusMessage:
         "Failed to extract text from PDF. The file may be corrupted or password-protected.",
     });
+  } finally {
+    await parser?.destroy();
   }
 }
 
@@ -175,11 +190,13 @@ export default defineEventHandler(async (event) => {
   // Extract text based on file type
   let extractedText = "";
   let pageCount: number | undefined;
+  let pageRanges: PdfPageRange[] | undefined;
 
   if (ext === ".pdf") {
     const pdfResult = await extractPdfText(buffer);
     extractedText = pdfResult.text;
     pageCount = pdfResult.pageCount;
+    pageRanges = pdfResult.pageRanges;
   } else if (ext === ".docx") {
     const docxResult = await extractDocxText(buffer);
     extractedText = docxResult.text;
@@ -209,6 +226,9 @@ export default defineEventHandler(async (event) => {
   const truncated = originalCharCount > MAX_CHARS;
   if (truncated) {
     extractedText = extractedText.substring(0, MAX_CHARS);
+    pageRanges = pageRanges
+      ?.filter((range) => range.start < MAX_CHARS)
+      .map((range) => ({ ...range, end: Math.min(range.end, MAX_CHARS) }));
   }
 
   // Estimate tokens
@@ -228,6 +248,13 @@ export default defineEventHandler(async (event) => {
         originalCharCount,
         truncated,
         pageCount: pageCount ?? null,
+        ...(pageRanges?.length && {
+          pageRanges: pageRanges.map(({ page, start, end }) => ({
+            page,
+            start,
+            end,
+          })),
+        }),
       },
     },
   });

@@ -3,12 +3,14 @@ export const translationPrompt = (
   context?: string,
   targetLang = "English",
   includeTranslation = true,
+  expectedSourceLang = "auto-detect",
 ) => `
 Analyze the word or phrase below for a vocabulary learning app. Respond ONLY with valid JSON, no prose.
 
 Word: "${word}"
 ${context ? `Context: "${context}"` : ""}
 Target language: ${targetLang}
+Expected source language: ${expectedSourceLang}
 Direct translation requested: ${includeTranslation ? "yes" : "no"}
 
 JSON shape (exact):
@@ -16,7 +18,11 @@ JSON shape (exact):
 
 Rules:
 - Write every definition and source example in the same language as the captured word.
+- Treat Expected source language as authoritative unless it is auto-detect.
+- Return detectedLang as a lowercase ISO-639 language code.
 - Use the target language only for direct translations and translated examples.
+- Put the meaning matching Context first. Without Context, put the strongest common meaning first.
+- Make the top-level translation match that first intended meaning.
 - Return 3 or 4 meanings when the item has multiple useful senses; otherwise return the strongest 1 or 2.
 - If it is a phrase, set isPhrase true and skip forced single-word grammar details.
 - If Direct translation requested is no, keep translation fields empty strings and still provide definitions/examples.
@@ -49,8 +55,10 @@ Requirements:
 - If ${learnedLanguage} and ${nativeLanguage} are the same, still keep story fields and glossary translation fields structurally separate
 - ${context ? `Draw inspiration from this context: "${context}"` : "Use an everyday scenario"}
 - Do not include raw [[CLOZE:...]] markers in storyText or sentence text
+- Exactly one sentence must set isPrimary true. That sentence must use "${word}" as clozeWord.
+- Other sentences must set isPrimary false.
 - clozeBlank must be the full sentence with the cloze word replaced by "____"
 
 Respond ONLY with valid minified JSON:
-{"title":"Short title","storyText":"Full story as one paragraph.","sentences":[{"text":"Full sentence with word.","clozeWord":"word","clozeBlank":"Sentence with ____ instead of word.","clozeIndex":0},{"text":"Full sentence 2.","clozeWord":"word2","clozeBlank":"Sentence 2 with ____.","clozeIndex":1},{"text":"Full sentence 3.","clozeWord":"word3","clozeBlank":"Sentence 3 with ____.","clozeIndex":2}],"glossary":[{"word":"${word}","translation":"${translation}"}],"ttsText":"Text to read aloud"}
+{"title":"Short title","storyText":"Full story as one paragraph.","sentences":[{"text":"Full sentence with ${word}.","clozeWord":"${word}","clozeBlank":"Full sentence with ____.","clozeIndex":0,"isPrimary":true},{"text":"Full sentence 2.","clozeWord":"word2","clozeBlank":"Sentence 2 with ____.","clozeIndex":1,"isPrimary":false},{"text":"Full sentence 3.","clozeWord":"word3","clozeBlank":"Sentence 3 with ____.","clozeIndex":2,"isPrimary":false}],"glossary":[{"word":"${word}","translation":"${translation}"}],"ttsText":"Text to read aloud"}
 `;

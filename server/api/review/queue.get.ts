@@ -1,9 +1,4 @@
-import type {
-  CardReview,
-  Flashcard,
-  Material,
-  Question,
-} from "@prisma/client";
+import type { CardReview, Flashcard, Material, Question } from "@prisma/client";
 import { z } from "zod";
 import { requireRole } from "~~/server/utils/auth";
 import { Errors, success } from "@server/utils/error";
@@ -11,12 +6,19 @@ import {
   type ReviewQueueResponse,
   ReviewQueueResponseSchema,
 } from "@shared/utils/review.contract";
+import { SourceRefSchema } from "@shared/utils/flashcard.contract";
 
 // Query validation
 const querySchema = z.object({
   workspaceId: z.string().min(1).optional(),
+  materialId: z.string().min(1).optional(),
   limit: z.coerce.number().min(1).max(100).default(20),
 });
+
+const sourceRef = (value: unknown) => {
+  const parsed = SourceRefSchema.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
+};
 
 export default defineEventHandler(async (event) => {
   // Auth
@@ -31,12 +33,12 @@ export default defineEventHandler(async (event) => {
     if (e instanceof z.ZodError) {
       throw Errors.badRequest(
         "Invalid query parameters",
-        e.issues.map((issue) => ({ path: issue.path, message: issue.message }))
+        e.issues.map((issue) => ({ path: issue.path, message: issue.message })),
       );
     }
     throw Errors.badRequest("Invalid query parameters");
   }
-  const { workspaceId, limit } = parsedQuery;
+  const { workspaceId, materialId, limit } = parsedQuery;
 
   // Validate workspace ownership if workspaceId provided
   if (workspaceId) {
@@ -50,13 +52,41 @@ export default defineEventHandler(async (event) => {
     }
   }
 
-  // Build where clause
-  const whereClause = {
+  let scopedWorkspaceId = workspaceId;
+  let materialCardIds: string[] | undefined;
+  if (materialId) {
+    const material = await prisma.material.findFirst({
+      where: { id: materialId, workspace: { userId: user.id } },
+      select: { workspaceId: true },
+    });
+    if (!material) throw Errors.notFound("Material");
+    if (workspaceId && workspaceId !== material.workspaceId) {
+      throw Errors.badRequest("Material does not belong to this workspace");
+    }
+    scopedWorkspaceId = material.workspaceId;
+    const [materialFlashcards, materialQuestions] = await Promise.all([
+      prisma.flashcard.findMany({
+        where: { materialId, status: "ENROLLED" },
+        select: { id: true },
+      }),
+      prisma.question.findMany({
+        where: { materialId, status: "ENROLLED" },
+        select: { id: true },
+      }),
+    ]);
+    materialCardIds = [
+      ...materialFlashcards.map((card: { id: string }) => card.id),
+      ...materialQuestions.map((card: { id: string }) => card.id),
+    ];
+  }
+
+  const scopeWhere = {
     userId: user.id,
-    nextReviewAt: { lte: new Date() },
     suspended: false, // Exclude suspended cards
-    ...(workspaceId ? { workspaceId } : {}),
+    ...(scopedWorkspaceId ? { workspaceId: scopedWorkspaceId } : {}),
+    ...(materialCardIds ? { cardId: { in: materialCardIds } } : {}),
   };
+  const whereClause = { ...scopeWhere, nextReviewAt: { lte: new Date() } };
 
   // Fetch due cardReviews
   let cardReviews: CardReview[];
@@ -71,12 +101,7 @@ export default defineEventHandler(async (event) => {
   }
 
   const cardIds = cardReviews.map((cardReview) => cardReview.cardId);
-  const workspaceIds = [
-    ...new Set(cardReviews.map((cardReview) => cardReview.workspaceId)),
-  ];
-
-  // Fetch all data in parallel - materials, flashcards, questions, AND workspaces separately
-  // This avoids N+1 query by fetching workspaces in one query
+  // Fetch all resource types in parallel to avoid N+1 reads.
   const [materials, flashcards, questions] = await Promise.all([
     prisma.material.findMany({
       where: { id: { in: cardIds } },
@@ -90,13 +115,13 @@ export default defineEventHandler(async (event) => {
   ]);
 
   const materialMap = new Map<string, Material>(
-    materials.map((material: Material) => [material.id, material])
+    materials.map((material: Material) => [material.id, material]),
   );
   const flashcardMap = new Map<string, Flashcard>(
-    flashcards.map((flashcard: Flashcard) => [flashcard.id, flashcard])
+    flashcards.map((flashcard: Flashcard) => [flashcard.id, flashcard]),
   );
   const questionMap = new Map<string, Question>(
-    questions.map((question: Question) => [question.id, question])
+    questions.map((question: Question) => [question.id, question]),
   );
 
   // Check for orphaned cards
@@ -113,7 +138,7 @@ export default defineEventHandler(async (event) => {
         id: cardReview.id,
         cardId: cardReview.cardId,
         resourceType: cardReview.resourceType,
-      }))
+      })),
     );
   }
 
@@ -162,6 +187,8 @@ export default defineEventHandler(async (event) => {
           hint: undefined,
           tags: [],
           workspaceId: flashcard.workspaceId,
+          materialId: flashcard.materialId,
+          sourceRef: sourceRef(flashcard.sourceRef),
         },
         reviewState,
       });
@@ -179,6 +206,8 @@ export default defineEventHandler(async (event) => {
         choices: question.choices,
         answerIndex: question.answerIndex,
         workspaceId: question.workspaceId,
+        materialId: question.materialId,
+        sourceRef: sourceRef(question.sourceRef),
       },
       reviewState,
     });
@@ -188,33 +217,25 @@ export default defineEventHandler(async (event) => {
   const [totalCards, newCards, learningCards, dueCards] = await Promise.all([
     prisma.cardReview.count({
       where: {
-        userId: user.id,
-        suspended: false,
-        ...(workspaceId ? { workspaceId } : {}),
+        ...scopeWhere,
       },
     }),
     prisma.cardReview.count({
       where: {
-        userId: user.id,
-        suspended: false,
+        ...scopeWhere,
         repetitions: 0,
-        ...(workspaceId ? { workspaceId } : {}),
       },
     }),
     prisma.cardReview.count({
       where: {
-        userId: user.id,
-        suspended: false,
+        ...scopeWhere,
         repetitions: { gt: 0, lt: 3 },
-        ...(workspaceId ? { workspaceId } : {}),
       },
     }),
     prisma.cardReview.count({
       where: {
-        userId: user.id,
-        suspended: false,
+        ...scopeWhere,
         nextReviewAt: { lte: new Date() },
-        ...(workspaceId ? { workspaceId } : {}),
       },
     }),
   ]);

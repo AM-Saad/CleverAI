@@ -70,7 +70,11 @@ export default defineEventHandler(async (event) => {
   try {
     [cardReviews, reviewEvents] = await Promise.all([
       prisma.cardReview.findMany({
-        where: { userId: user.id, ...(workspaceId ? { workspaceId } : {}) },
+        where: {
+          userId: user.id,
+          suspended: false,
+          ...(workspaceId ? { workspaceId } : {}),
+        },
       }),
       prisma.xpEvent.findMany({
         where: {

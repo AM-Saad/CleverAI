@@ -13,6 +13,7 @@ import type { QuotaPort } from "@server/modules/subscription/ports/QuotaPort";
 import { maybeAutoEnrollLanguageWord } from "./autoEnrollLanguageWord";
 import { createHash } from "node:crypto";
 import { saveLanguageWord } from "./saveLanguageWord";
+import { reviewModeForLanguageWord } from "../../../../shared/utils/language-review-card";
 
 const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
 
@@ -28,7 +29,7 @@ const safeSourceRefId = (sourceRefId?: string) =>
   sourceRefId && OBJECT_ID_RE.test(sourceRefId) ? sourceRefId : undefined;
 
 const normalizedContext = (sourceContext?: string) =>
-  sourceContext?.trim().replace(/\s+/g, " ") || undefined;
+  sourceContext?.normalize("NFC").trim().replace(/\s+/g, " ") || undefined;
 
 const translationContextKey = (
   sourceContext?: string,
@@ -36,7 +37,7 @@ const translationContextKey = (
 ) => {
   const context = normalizedContext(sourceContext);
   const base = context
-    ? createHash("sha256").update(context.toLowerCase()).digest("hex")
+    ? createHash("sha256").update(context).digest("hex")
     : "general";
   // A definition-only lexical entry must never overwrite or masquerade as a
   // translated entry for the same word and language pair.
@@ -103,9 +104,12 @@ export async function captureLanguageWord(input: {
   const prisma = input.event.context.prisma;
   const { data, user } = input;
   const targetLang = data.targetLang ?? "en";
-  const normalizedWord = data.word.trim().toLowerCase();
+  const sourceText = data.word.trim().replace(/\s+/g, " ");
+  const normalizedWord = sourceText.normalize("NFC").toLowerCase();
   const explicitSourceLang =
-    data.sourceLang && data.sourceLang !== "auto" ? data.sourceLang : undefined;
+    data.sourceLang && data.sourceLang !== "auto"
+      ? data.sourceLang.toLowerCase()
+      : undefined;
   const sourceContext = normalizedContext(data.sourceContext);
   const contextKey = translationContextKey(
     sourceContext,
@@ -130,7 +134,7 @@ export async function captureLanguageWord(input: {
     const existing = await prisma.languageWord.findFirst({
       where: {
         userId: user.id,
-        word: normalizedWord,
+        word: { equals: sourceText, mode: "insensitive" },
         translationLang: targetLang,
         sourceLang: explicitSourceLang,
         sourceContext: sourceContext ?? null,
@@ -146,6 +150,7 @@ export async function captureLanguageWord(input: {
         wordId: existing.id,
         currentStatus: existing.status,
         autoEnroll,
+        reviewMode: reviewModeForLanguageWord(existing),
       });
       return serializeCapturedWord({ ...existing, status }, true);
     }
@@ -165,7 +170,7 @@ export async function captureLanguageWord(input: {
       if (data.translateOnly) {
         return {
           translationId: sharedTranslation.id,
-          word: sharedTranslation.sourceText,
+          word: sourceText,
           translation: sharedTranslation.translation,
           partOfSpeech: sharedTranslation.partOfSpeech ?? "unknown",
           detectedLang: sharedTranslation.sourceLang,
@@ -186,6 +191,7 @@ export async function captureLanguageWord(input: {
         userId: user.id,
         data: {
           translationId: sharedTranslation.id,
+          sourceText,
           sourceContext,
           sourceType: data.sourceType ?? "manual",
           sourceRefId: data.sourceRefId,
@@ -195,10 +201,11 @@ export async function captureLanguageWord(input: {
   }
 
   const prompt = translationPrompt(
-    normalizedWord,
+    sourceText,
     data.sourceContext,
     getLanguageLabel(targetLang),
     data.includeTranslation,
+    explicitSourceLang ? getLanguageLabel(explicitSourceLang) : "auto-detect",
   );
 
   const { llmRequestPipeline } =
@@ -218,27 +225,44 @@ export async function captureLanguageWord(input: {
   let didFinalize = false;
   try {
     rawText = await ctx.strategy.generateText(prompt);
-    const entry = parseLexicalEntry(rawText, normalizedWord);
+    const entry = parseLexicalEntry(rawText, sourceText);
 
     if (data.includeTranslation && !entry.translation) {
       throw Errors.server("Translation response missing required fields");
+    }
+    if (!entry.meanings.length) {
+      throw Errors.server("Definition response missing required fields");
+    }
+
+    const modelDetectedLang = entry.detectedLang.toLowerCase();
+    const resolvedSourceLang = explicitSourceLang ?? modelDetectedLang;
+    if (!/^[a-z]{2,3}$/.test(resolvedSourceLang)) {
+      throw Errors.server("Source language response is invalid");
     }
 
     await ctx.finalize({ outputText: rawText });
     didFinalize = true;
 
-    const metadata = withSourceRefMetadata(entry.metadata, data.sourceRefId);
+    const metadata = withSourceRefMetadata(
+      {
+        ...entry.metadata,
+        ...(explicitSourceLang && modelDetectedLang !== explicitSourceLang
+          ? { modelDetectedLang }
+          : {}),
+      },
+      data.sourceRefId,
+    );
     const translationEntry = await prisma.languageTranslation.upsert({
       where: {
         normalizedSourceText_sourceLang_translationLang_contextKey: {
           normalizedSourceText: normalizedWord,
-          sourceLang: entry.detectedLang,
+          sourceLang: resolvedSourceLang,
           translationLang: targetLang,
           contextKey,
         },
       },
       update: {
-        sourceText: normalizedWord,
+        sourceText,
         contextKey,
         translation: entry.translation,
         partOfSpeech: entry.partOfSpeech,
@@ -252,9 +276,9 @@ export async function captureLanguageWord(input: {
         modelId: ctx.selectedModel.modelId,
       },
       create: {
-        sourceText: normalizedWord,
+        sourceText,
         normalizedSourceText: normalizedWord,
-        sourceLang: entry.detectedLang,
+        sourceLang: resolvedSourceLang,
         translationLang: targetLang,
         contextKey,
         translation: entry.translation,
@@ -283,10 +307,10 @@ export async function captureLanguageWord(input: {
       }
       return {
         translationId: translationEntry.id,
-        word: normalizedWord,
+        word: sourceText,
         translation: entry.translation,
         partOfSpeech: entry.partOfSpeech,
-        detectedLang: entry.detectedLang,
+        detectedLang: resolvedSourceLang,
         phonetic: entry.phonetic,
         meanings: entry.meanings,
         examples: entry.examples,
@@ -304,6 +328,7 @@ export async function captureLanguageWord(input: {
       userId: user.id,
       data: {
         translationId: translationEntry.id,
+        sourceText,
         sourceContext,
         sourceType: data.sourceType ?? "manual",
         sourceRefId: data.sourceRefId,

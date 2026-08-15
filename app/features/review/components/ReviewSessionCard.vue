@@ -27,9 +27,25 @@
           :eyebrow="eyebrow"
           :question="question"
           :answer="answer"
+          :question-lang="questionLang"
+          :answer-lang="answerLang"
+          :translation-lang="translationLang"
+          :audio-text="audioText"
+          :audio-enabled="audioEnabled"
+          :audio-on-reveal="audioOnReveal"
+          :audio-loading="audioLoading"
+          :phonetic="phonetic"
+          :part-of-speech="partOfSpeech"
+          :translation="translation"
+          :definition="definition"
+          :context="context"
+          :prompt-context="promptContext"
+          :source-context="sourceContext"
+          :story-text="storyText"
           :revealed="revealed"
           :swipe-enabled="swipeEnabled && !disabled"
           @reveal="emit('reveal')"
+          @speak="emit('speak')"
           @grade="emit('grade', $event)"
         />
       </Transition>
@@ -42,7 +58,9 @@
         :disabled="disabled"
         @grade="emit('grade', $event)"
       />
-      <UiParagraph v-else size="sm" color="disabled" center>{{ hint }}</UiParagraph>
+      <UiParagraph v-else size="sm" color="disabled" center>{{
+        hint
+      }}</UiParagraph>
     </template>
   </ReviewSessionFrame>
 </template>
@@ -53,6 +71,7 @@ import ReviewCardView from "~/features/review/components/ReviewCardView.vue";
 import ReviewSessionFrame from "~/features/review/components/ReviewSessionFrame.vue";
 import Sm2GradeBar from "~/features/review/components/Sm2GradeBar.vue";
 import type { GradeKey, Sm2State } from "~/composables/review/useSm2Preview";
+import type { ReviewCardSupportContext } from "~/features/review/types";
 
 const props = withDefaults(
   defineProps<{
@@ -72,6 +91,21 @@ const props = withDefaults(
     eyebrow: string;
     question: string;
     answer: string;
+    questionLang?: string;
+    answerLang?: string;
+    translationLang?: string;
+    audioText?: string;
+    audioEnabled?: boolean;
+    audioOnReveal?: boolean;
+    audioLoading?: boolean;
+    phonetic?: string | null;
+    partOfSpeech?: string | null;
+    translation?: string | null;
+    definition?: string | null;
+    context?: ReviewCardSupportContext | null;
+    promptContext?: string | null;
+    sourceContext?: string | null;
+    storyText?: string | null;
     revealed: boolean;
     state?: Sm2State | null;
     disabled?: boolean;
@@ -86,6 +120,21 @@ const props = withDefaults(
     loading: false,
     error: null,
     state: null,
+    questionLang: undefined,
+    answerLang: undefined,
+    translationLang: undefined,
+    audioText: undefined,
+    audioEnabled: false,
+    audioOnReveal: false,
+    audioLoading: false,
+    phonetic: null,
+    partOfSpeech: null,
+    translation: null,
+    definition: null,
+    context: null,
+    promptContext: null,
+    sourceContext: null,
+    storyText: null,
     disabled: false,
     swipeEnabled: true,
     hint: "Tap the card or press Space to reveal",
@@ -100,6 +149,7 @@ const emit = defineEmits<{
   done: [];
   retry: [];
   reveal: [];
+  speak: [];
   grade: [key: GradeKey];
 }>();
 

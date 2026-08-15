@@ -24,7 +24,7 @@ export default defineEventHandler(async (event) => {
     review: result.reviewId
       ? {
           id: result.reviewId,
-          changedFields: ["reviewState", "storyId"],
+          changedFields: ["reviewState", "storyId", "mode", "contentVersion"],
         }
       : undefined,
   });
