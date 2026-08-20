@@ -27,14 +27,14 @@ Content:
 ${text}
 """
 
-Respond ONLY with minified JSON (no prose), as an array with this exact shape:
-[
+Respond ONLY with minified JSON (no prose), as an object with this exact shape:
+{"items":[
   { 
     "front": "Question text...", 
     "back": "Answer text...",
     "source_metadata": { "anchor": "block-123", "context_snippet": "Exact supporting source text" }
   }
-]
+]}
 `;
 
 /**
@@ -60,7 +60,7 @@ Rules:
 5. Make distractors plausible, mutually distinct, and the same category/granularity as the answer.
 6. Never use "all of the above", "none of the above", trick wording, or outside facts.
 7. Preserve the source language unless translation is explicitly requested.
-8. Do not include any extra fields or text outside the JSON array.
+8. Do not include any extra fields or text outside the JSON object.
 
 Content:
 """
@@ -68,5 +68,5 @@ ${text}
 """
 
 Expected output format:
-[{"question":"...","choices":["...","...","...","..."],"answerIndex":0,"source_metadata":{"anchor":"block-123","context_snippet":"Exact supporting source text"}}]
+{"items":[{"question":"...","choices":["...","...","...","..."],"answerIndex":0,"source_metadata":{"anchor":"block-123","context_snippet":"Exact supporting source text"}}]}
 `;

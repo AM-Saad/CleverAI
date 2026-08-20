@@ -4,7 +4,7 @@ import type {
 } from "@shared/utils/language.contract";
 import type { ReviewGrade } from "@shared/utils/review.contract";
 import type { APIError } from "~/services/FetchFactory";
-import { useTextToSpeechWorker } from "~/composables/ai/useTextToSpeechWorker";
+import { useTextToSpeech } from "~/composables/ai/useTextToSpeech";
 import { useLanguageLearningRuntime } from "./languageLearningRuntime";
 import {
   calculateOfflineNextReviewDate,
@@ -366,8 +366,7 @@ export function useLanguageReview() {
     }
   };
 
-  // TTS helper — uses the existing TTS worker composable
-  const ttsWorker = useTextToSpeechWorker();
+  const ttsWorker = useTextToSpeech();
   let activeAudio: HTMLAudioElement | null = null;
 
   const speakWord = async (text: string, lang = "en") => {

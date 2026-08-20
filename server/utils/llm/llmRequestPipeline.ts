@@ -1,163 +1,86 @@
-/**
- * llmRequestPipeline — shared pre/post logic for every LLM generation endpoint.
- *
- * Encapsulates the cross-cutting concerns that previously only lived in
- * llm.gateway.post.ts but are equally required by the language endpoints:
- *   - Authentication (requireRole)
- *   - Quota gate (checkUserQuota)       — optional per call
- *   - Rate limiting (user + IP)
- *   - Central task model policy + routing OR a pinned model ID
- *   - Dev-model override (development env)
- *   - LLM strategy instantiation with onMeasure token capture
- *   - Post-generation: latency update, quota increment, LlmGatewayLog write
- *
- * DECISIONS ENCODED HERE
- * ─────────────────────────────────────────────────────────────────────────
- * D1  Rate-limit MemCounters are module-level singletons so gateway and
- *     language requests share the same IP/user buckets.
- * D2  language translate → cache hits and fresh calls may be billed by caller
- * D3  generate-story → checkQuota:true, incrementQuota:true (defaults)
- * D4  Frontend credit pre-check for story: handled in useLanguageCapture.
- *     Pipeline enforces server-side authoritatively regardless.
- */
-
-import { randomUUID } from "crypto";
-import { useRuntimeConfig } from "#imports";
+import { randomUUID } from "node:crypto";
 import type { H3Event } from "h3";
-import { Errors } from "../error";
+import { createError } from "h3";
 import { requireRole } from "../auth";
-import { publishGenerationQuotaConsumed } from "@server/modules/ai-generation/application/generationEvents";
-import {
-  setQuotaHeaders,
-  throwQuotaExceeded,
-} from "@server/modules/subscription/infrastructure/http/quotaHttp";
 import type {
   ConsumedQuota,
   QuotaPort,
   QuotaStatus,
 } from "@server/modules/subscription/ports/QuotaPort";
-import { enforceLlmRateLimit } from "./rateLimit";
-import { selectBestModel } from "./routing";
 import {
-  getDevLlmModelOverride,
-  getTaskModelPolicy,
-} from "./taskModelPolicy";
-import { getLLMStrategyFromRegistry } from "./LLMFactory";
-import { updateModelLatency } from "./modelRegistry";
-import { logGatewayRequest, logGatewayFailure } from "./gatewayLogger";
+  setQuotaHeaders,
+  throwQuotaExceeded,
+} from "@server/modules/subscription/infrastructure/http/quotaHttp";
+import { enforceLlmRateLimit } from "./rateLimit";
+import {
+  createOpenRouterAI,
+  OpenRouterRequestError,
+  type OpenRouterAI,
+  type OpenRouterGeneration,
+} from "./openRouter";
+import { logOpenRouterFailure, logOpenRouterSuccess } from "./usageLogger";
 import { estimateTokensFromText } from "./tokenEstimate";
-import { prisma } from "../prisma";
-import type { LlmModelRegistry } from "@prisma/client";
-import type { LlmMeasured } from "../llmCost";
-import type { LLMStrategy } from "./LLMStrategy";
-
-// Rate-limit buckets live in ./rateLimit (enforceLlmRateLimit) so they are
-// shared across ALL LLM entrypoints — gateway, language fresh translation, and
-// language shared-translation cache hits alike. A user cannot bypass one
-// endpoint's limit by hammering another.
-
-// ─── Public types ──────────────────────────────────────────────────────────
 
 export interface LlmPipelineOptions {
-  /** Injected adapter for quota checks and consumption. */
   quotaPort: QuotaPort;
-  /** Task label used for routing, logging, and LlmGatewayLog.task. */
   task: string;
-  /** Input text for token estimation and model routing. */
   inputText: string;
-  /** Rough estimate of output tokens for the routing scorer (default: 400). */
-  estimatedOutputTokens?: number;
-  /** Required model capability filter passed to selectBestModel. */
-  requiredCapability?: string;
-  /** Restrict routing and overrides to providers implemented by this server. */
-  providerAllowlist?: readonly string[];
-  /** Preferred model passed into routing. Falls back to normal routing if unavailable. */
-  preferredModelId?: string;
-  /**
-   * Bypass selectBestModel and use this exact model ID.
-   * The model must exist, be enabled, and not be health-status "down".
-   * Example: "gemini-2.0-flash-lite" for the translate endpoint.
-   */
-  pinnedModelId?: string;
-  /**
-   * Gate the request against UserSubscription.generationsQuota.
-   * Set to false for cheap/free tasks (e.g. word translation).
-   * Default: true.
-   */
   checkQuota?: boolean;
-  /**
-   * Call incrementGenerationCount after a successful generation.
-   * Set to false for tasks below the billing threshold.
-   * Default: true.
-   */
   incrementQuota?: boolean;
-  /** Per-user requests per 60-second window (default: 5). */
   rateLimitMax?: number;
-  /** Per-IP requests per 60-second window (default: 20). */
   ipRateLimitMax?: number;
-  /**
-   * Pre-authenticated user object. When provided, the pipeline skips
-   * calling requireRole a second time. Use when the endpoint already
-   * called requireRole for a DB lookup before invoking the pipeline.
-   */
-  user?: { id: string;[key: string]: any };
-  /**
-   * Quota status the caller already fetched (e.g. the gateway checks quota
-   * before its semantic-cache lookup). When provided with checkQuota=true, the
-   * pipeline reuses it instead of issuing a second checkGenerationQuota read,
-   * while still enforcing the canGenerate gate and exposing quota headers.
-   */
+  user?: { id: string; [key: string]: any };
   precheckedQuota?: QuotaStatus;
+  ai?: OpenRouterAI;
 }
 
-export interface LlmFinalizeOptions {
-  /** Raw LLM output — length used for fallback output token estimation. */
-  outputText?: string;
-  /** Pre-computed output token count (alternative to outputText). */
-  outputTokenEstimate?: number;
-  /** workspaceId stored in the LlmGatewayLog row (optional). */
+export interface LlmFinalizeOptions<T> {
+  generation: OpenRouterGeneration<T>;
   workspaceId?: string;
-  /** Depth tier for LlmGatewayLog analytics (optional). */
-  depth?: "quick" | "balanced" | "deep";
-  /** Adaptive item count for LlmGatewayLog analytics (optional). */
-  itemCount?: number;
 }
 
 export interface LlmFinalizeResult {
-  /**
-   * Updated quota returned by incrementGenerationCount.
-   * undefined when incrementQuota=false.
-   */
   updatedQuota: ConsumedQuota | undefined;
   totalLatencyMs: number;
   generationLatencyMs: number;
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
+  requestedModel: string;
+  actualModel: string;
+  costUsd?: number;
 }
 
 export interface LlmPipelineContext {
-  user: { id: string;[key: string]: any };
+  user: { id: string; [key: string]: any };
   requestId: string;
-  strategy: LLMStrategy;
-  selectedModel: LlmModelRegistry;
-  /** Populated when checkQuota=true, undefined otherwise. */
+  ai: OpenRouterAI;
+  requestedModel: string;
   quotaCheck: QuotaStatus | undefined;
-  /** Token estimate for inputText (for convenience — matches what finalize uses). */
+  reservedQuota: ConsumedQuota | undefined;
   tokenEstimate: number;
-  /**
-   * Call AFTER a successful generation.
-   * Handles: model latency update, quota increment, LlmGatewayLog success row.
-   */
-  finalize(opts?: LlmFinalizeOptions): Promise<LlmFinalizeResult>;
-  /**
-   * Call WHEN generation throws.
-   * Handles: model latency update, LlmGatewayLog failure row.
-   */
-  fail(error: unknown, workspaceId?: string): Promise<void>;
+  finalize<T>(opts: LlmFinalizeOptions<T>): Promise<LlmFinalizeResult>;
+  fail(
+    error: unknown,
+    options?: {
+      workspaceId?: string;
+      generation?: OpenRouterGeneration<unknown>;
+    },
+  ): Promise<void>;
 }
 
-// ─── Pipeline ──────────────────────────────────────────────────────────────
+function mapOpenRouterError(error: unknown): never {
+  if (!(error instanceof OpenRouterRequestError)) throw error;
+  throw createError({
+    statusCode: error.statusCode,
+    statusMessage: error.message,
+    data: {
+      provider: "openrouter",
+      code: error.upstreamCode,
+      details: error.details,
+    },
+  });
+}
 
 export async function llmRequestPipeline(
   event: H3Event,
@@ -165,41 +88,27 @@ export async function llmRequestPipeline(
 ): Promise<LlmPipelineContext> {
   const requestId = randomUUID();
   const requestStartTime = Date.now();
-
   const {
     task,
     inputText,
-    estimatedOutputTokens: optionEstimatedOutputTokens,
-    requiredCapability: optionRequiredCapability,
-    providerAllowlist: optionProviderAllowlist,
-    preferredModelId,
-    pinnedModelId,
     quotaPort,
     checkQuota = true,
     incrementQuota = true,
     rateLimitMax = 5,
     ipRateLimitMax = 20,
   } = options;
-  const taskModelPolicy = getTaskModelPolicy(task);
-  const estimatedOutputTokens =
-    optionEstimatedOutputTokens ?? taskModelPolicy.estimatedOutputTokens;
-  const requiredCapability =
-    optionRequiredCapability ?? taskModelPolicy.requiredCapability;
-  const providerAllowlist =
-    optionProviderAllowlist ?? taskModelPolicy.providerAllowlist;
-  const isProviderAllowed = (provider: string) =>
-    !providerAllowlist?.length ||
-    providerAllowlist.includes(provider.toLowerCase());
 
-  // ── Auth ────────────────────────────────────────────────────────────────
-  // requireRole caches the user on event.context.user, so calling it twice
-  // within the same request is idempotent (second call is a no-op DB hit).
   const user = options.user ?? (await requireRole(event, ["USER"]));
 
-  // ── Quota gate ──────────────────────────────────────────────────────────
-  let quotaCheck:
-    | QuotaStatus
-    | undefined;
+  await enforceLlmRateLimit(event, user.id, {
+    userMax: rateLimitMax,
+    ipMax: ipRateLimitMax,
+  });
+
+  const ai = options.ai ?? createOpenRouterAI();
+
+  let quotaCheck: QuotaStatus | undefined;
+  let reservedQuota: ConsumedQuota | undefined;
   if (checkQuota) {
     quotaCheck =
       options.precheckedQuota ??
@@ -211,246 +120,118 @@ export async function llmRequestPipeline(
         "Quota exceeded. Please upgrade to continue generating content.",
       );
     }
-    // Always expose current subscription state in headers on a passing check
     setQuotaHeaders(event, quotaCheck.subscription);
   }
 
-  // ── Rate limiting ────────────────────────────────────────────────────────
-  await enforceLlmRateLimit(event, user.id, {
-    userMax: rateLimitMax,
-    ipMax: ipRateLimitMax,
-  });
-
-  // ── Model selection ──────────────────────────────────────────────────────
-  let selectedModel: LlmModelRegistry | undefined;
-
-  // Development-only model override (env: DEV_LLM_MODEL_OVERRIDE)
-  const config = useRuntimeConfig();
-  const devModelOverride = getDevLlmModelOverride(config);
-
-  if (devModelOverride) {
-    const overrideModel = await prisma.llmModelRegistry.findUnique({
-      where: { modelId: devModelOverride },
-    });
-    console.log("[pipeline] DEV model override requested:", {
-      requestId,
-      overrideModelId: devModelOverride,
-    });
-    if (
-      overrideModel &&
-      overrideModel.enabled &&
-      overrideModel.healthStatus !== "down" &&
-      isProviderAllowed(overrideModel.provider)
-    ) {
-      selectedModel = overrideModel;
-      console.info("[pipeline] DEV override model:", {
-        requestId,
-        modelId: selectedModel.modelId,
-        provider: selectedModel.provider,
-        task,
-      });
-    } else {
-      console.warn(
-        "[pipeline] DEV_LLM_MODEL_OVERRIDE unavailable; falling back to task policy",
-        {
-          requestId,
-          overrideModelId: devModelOverride,
-          enabled: overrideModel?.enabled,
-          healthStatus: overrideModel?.healthStatus,
-          provider: overrideModel?.provider,
-          providerAllowlist,
-        },
-      );
-    }
-  }
-
-
-  if (!selectedModel) {
-    console.log(
-      "[pipeline] No DEV override, proceeding to normal model selection:",
-      {
-        requestId,
-        task,
-        pinnedModelId,
-        preferredModelId,
-        requiredCapability,
-        providerAllowlist,
-      },
-    );
-    if (pinnedModelId) {
-      // Caller specified an exact model — validate it is usable
-      const pinned = await prisma.llmModelRegistry.findUnique({
-        where: { modelId: pinnedModelId },
-      });
+  if (incrementQuota) {
+    try {
+      reservedQuota = await quotaPort.consumeGeneration(user.id);
+      setQuotaHeaders(event, reservedQuota);
+    } catch (error) {
       if (
-        !pinned ||
-        !pinned.enabled ||
-        pinned.healthStatus === "down" ||
-        !isProviderAllowed(pinned.provider)
+        error instanceof Error &&
+        error.message === "GENERATION_QUOTA_EXCEEDED"
       ) {
-        await logGatewayFailure(
-          requestId,
-          user.id,
-          task,
-          new Error(`Pinned model unavailable: ${pinnedModelId}`),
-          pinnedModelId,
-        );
-        throw Errors.server(
-          "Generation model is currently unavailable. Please try again.",
+        throwQuotaExceeded(
+          event,
+          quotaCheck?.subscription ?? {
+            tier: "FREE",
+            generationsUsed: 0,
+            generationsQuota: 0,
+            remaining: 0,
+            creditBalance: 0,
+          },
+          "Quota exceeded. Please upgrade to continue generating content.",
         );
       }
-      selectedModel = pinned;
-    } else {
-      // Normal routing: score all healthy models and pick the best
-      try {
-        const scored = await selectBestModel({
-          userId: user.id,
-          task: task as any,
-          inputText,
-          estimatedOutputTokens,
-          userTier: (quotaCheck?.subscription.tier ?? "FREE") as
-            | "FREE"
-            | "PRO"
-            | "ENTERPRISE",
-          requiredCapability,
-          preferredModelId,
-          providerAllowlist,
-        });
-        selectedModel = scored.model;
-        console.info("[pipeline] Model selected:", {
-          requestId,
-          modelId: selectedModel.modelId,
-          provider: selectedModel.provider,
-          task,
-        });
-      } catch (err) {
-        await logGatewayFailure(requestId, user.id, task, err);
-        throw Errors.server("Failed to select model. Please try again.");
-      }
+      throw error;
     }
   }
-
-
-  // ── Strategy instantiation ───────────────────────────────────────────────
-  // The measuredTokens holder is written by the onMeasure callback inside
-  // getLLMStrategyFromRegistry. It captures actual API token counts so that
-  // finalize() can write precise cost data to LlmGatewayLog.
-  const measuredTokens: {
-    value: {
-      promptTokens: number;
-      completionTokens: number;
-      totalTokens: number;
-    } | null;
-  } = { value: null };
-
-  const strategy = await getLLMStrategyFromRegistry(
-    selectedModel.modelId,
-    { userId: user.id, feature: task },
-    (m: LlmMeasured) => {
-      measuredTokens.value = {
-        promptTokens: m.promptTokens,
-        completionTokens: m.completionTokens,
-        totalTokens: m.totalTokens,
-      };
-    },
-  );
 
   const tokenEstimate = estimateTokensFromText(inputText);
-  // Record the time just before returning — caller starts generation immediately
   const generationStartTime = Date.now();
+  let settled = false;
 
-  // ── finalize closure ────────────────────────────────────────────────────
-  const finalize = async (
-    opts: LlmFinalizeOptions = {},
+  const finalize = async <T>(
+    opts: LlmFinalizeOptions<T>,
   ): Promise<LlmFinalizeResult> => {
-    const generationLatencyMs = Date.now() - generationStartTime;
+    if (settled) {
+      throw new Error(`LLM request ${requestId} already settled`);
+    }
+    settled = true;
     const totalLatencyMs = Date.now() - requestStartTime;
-
-    // Update rolling-average latency in model registry (used by routing scorer)
-    await updateModelLatency(selectedModel!.modelId, generationLatencyMs);
-
-    // Token resolution order: actual (onMeasure) > outputText heuristic > caller estimate > 0
-    let inputTokens: number;
-    let outputTokens: number;
-    let totalTokens: number;
-
-    if (measuredTokens.value) {
-      inputTokens = measuredTokens.value.promptTokens;
-      outputTokens = measuredTokens.value.completionTokens;
-      totalTokens = measuredTokens.value.totalTokens;
-    } else {
-      inputTokens = tokenEstimate;
-      outputTokens = opts.outputText
-        ? Math.ceil(opts.outputText.length / 3.5)
-        : (opts.outputTokenEstimate ?? 0);
-      totalTokens = inputTokens + outputTokens;
-    }
-
-    // Increment quota only for billed tasks
-    let updatedQuota: LlmFinalizeResult["updatedQuota"];
-    if (incrementQuota) {
-      updatedQuota = await quotaPort.consumeGeneration(user.id);
-      await publishGenerationQuotaConsumed({
-        userId: user.id,
-        requestId,
-        task,
-        creditSpent: updatedQuota.creditSpent,
-        remaining: updatedQuota.remaining,
-      });
-    }
-
-    // Write LlmGatewayLog row regardless of quota tracking
-    await logGatewayRequest({
-      requestId,
+    await logOpenRouterSuccess({
+      prisma: event.context.prisma,
+      appRequestId: requestId,
       userId: user.id,
       workspaceId: opts.workspaceId,
-      selectedModel: selectedModel!,
-      task,
-      inputTokens,
-      outputTokens,
-      totalTokens,
-      latencyMs: totalLatencyMs,
-      cached: false,
-      cacheHit: false,
-      status: "success",
-      itemCount: opts.itemCount,
-      tokenEstimate,
-      depth: opts.depth,
+      feature: task,
+      generation: opts.generation,
+      totalLatencyMs,
     });
 
     return {
-      updatedQuota,
+      updatedQuota: reservedQuota,
       totalLatencyMs,
-      generationLatencyMs,
-      inputTokens,
-      outputTokens,
-      totalTokens,
+      generationLatencyMs: Date.now() - generationStartTime,
+      inputTokens: opts.generation.measurement.promptTokens,
+      outputTokens: opts.generation.measurement.completionTokens,
+      totalTokens: opts.generation.measurement.totalTokens,
+      requestedModel: opts.generation.measurement.requestedModel,
+      actualModel: opts.generation.measurement.actualModel,
+      costUsd: opts.generation.measurement.costUsd,
     };
   };
 
-  // ── fail closure ────────────────────────────────────────────────────────
-  const fail = async (error: unknown, workspaceId?: string): Promise<void> => {
-    const generationLatencyMs = Date.now() - generationStartTime;
-    // Track degraded latency so routing scorer can deprioritize this model
-    await updateModelLatency(selectedModel!.modelId, generationLatencyMs);
-    await logGatewayFailure(
-      requestId,
-      user.id,
-      task,
+  const fail = async (
+    error: unknown,
+    failure?: {
+      workspaceId?: string;
+      generation?: OpenRouterGeneration<unknown>;
+    },
+  ): Promise<void> => {
+    if (settled) return;
+    settled = true;
+    if (reservedQuota) {
+      try {
+        await quotaPort.refundGeneration(user.id, reservedQuota);
+      } catch (refundError) {
+        console.error("[openrouter] Failed to refund quota reservation", {
+          requestId,
+          userId: user.id,
+          error:
+            refundError instanceof Error
+              ? refundError.message
+              : String(refundError),
+        });
+      }
+    }
+    await logOpenRouterFailure({
+      prisma: event.context.prisma,
+      appRequestId: requestId,
+      userId: user.id,
+      workspaceId: failure?.workspaceId,
+      feature: task,
+      requestedModel: ai.model,
+      generation: failure?.generation,
       error,
-      selectedModel!.modelId,
-      workspaceId,
-    );
+      totalLatencyMs: Date.now() - requestStartTime,
+    });
   };
 
   return {
     user,
     requestId,
-    strategy,
-    selectedModel,
+    ai,
+    requestedModel: ai.model,
     quotaCheck,
+    reservedQuota,
     tokenEstimate,
     finalize,
     fail,
   };
+}
+
+export function throwMappedOpenRouterError(error: unknown): never {
+  return mapOpenRouterError(error);
 }

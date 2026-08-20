@@ -9,11 +9,7 @@
       />
       <SyncBadge :state="syncState" />
       <div class="editor__bar-actions">
-        <UiIconButton
-          icon="share"
-          label="Share"
-          @click="emit('share')"
-        />
+        <UiIconButton icon="share" label="Share" @click="emit('share')" />
         <UiIconButton
           icon="more-horizontal"
           label="More"
@@ -157,6 +153,7 @@ import SelectionAiBubble from "./SelectionAiBubble.vue";
 import CanvasNoteEditor from "./CanvasNoteEditor.vue";
 import MathNoteEditor from "./MathNoteEditor.vue";
 import SyncBadge from "~/components/shell/SyncBadge.vue";
+import { useSpeechCapture } from "~/composables/useSpeechCapture";
 import type {
   CanvasNoteMetadata,
   MathNoteMetadata,
@@ -310,38 +307,28 @@ function run(f: { cmd: string }) {
   }
 }
 
-// ── Dictation (speech → note body) ──────────────────────────────────────────
-const dictating = ref(false);
-let recognition: any = null;
+// ── Dictation (recording → authenticated OpenRouter transcription) ──────────
+const {
+  isListening: dictating,
+  start: startSpeechCapture,
+  stop: stopSpeechCapture,
+} = useSpeechCapture({
+  lang: "en-US",
+  onResult(text) {
+    if (!body.value) return;
+    const separator = body.value.innerText.trim() ? " " : "";
+    body.value.innerHTML += separator + text;
+    onInput();
+  },
+});
+
 function startDictation(): boolean {
-  const SR =
-    (window as any).SpeechRecognition ||
-    (window as any).webkitSpeechRecognition;
-  if (!SR) return false;
-  recognition = new SR();
-  recognition.continuous = true;
-  recognition.interimResults = false;
-  recognition.lang = "en-US";
-  recognition.onresult = (e: any) => {
-    let text = "";
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) text += e.results[i][0].transcript;
-    }
-    if (text && body.value) {
-      const sep = body.value.innerText.trim() ? " " : "";
-      body.value.innerHTML += sep + text.trim();
-      onInput();
-    }
-  };
-  recognition.onend = () => (dictating.value = false);
-  recognition.onerror = () => (dictating.value = false);
-  recognition.start();
-  dictating.value = true;
+  startSpeechCapture();
   return true;
 }
+
 function stopDictation() {
-  recognition?.stop();
-  dictating.value = false;
+  stopSpeechCapture();
 }
 
 defineExpose({

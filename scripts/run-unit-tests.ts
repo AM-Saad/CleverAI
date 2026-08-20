@@ -18,7 +18,11 @@ import { syncBoardItems } from "../server/modules/board/application/syncBoardIte
 import { persistBoardItemOrders } from "../server/modules/board/application/persistBoardItemOrders";
 import { applyWorkspaceNoteLayout } from "../server/modules/notes/application/applyWorkspaceNoteLayout";
 import { syncWorkspaceNotes } from "../server/modules/notes/application/syncWorkspaceNotes";
-import { consumeGenerationQuota } from "../server/modules/subscription/application/generationQuota";
+import {
+  checkGenerationQuota,
+  consumeGenerationQuota,
+  refundGenerationQuota,
+} from "../server/modules/subscription/application/generationQuota";
 import { createStripeCreditCheckout } from "../server/modules/subscription/application/createStripeCreditCheckout";
 import { rewardAdCredit } from "../server/modules/subscription/application/rewardAdCredit";
 import { grantStripePurchaseCredits } from "../server/modules/subscription/application/grantStripePurchaseCredits";
@@ -30,7 +34,10 @@ import {
 } from "../server/utils/contextBridge";
 import { deleteOwnedMaterial } from "../server/modules/materials/application/deleteOwnedMaterial";
 import { prepareGatewayGeneration } from "../server/modules/ai-generation/application/prepareGatewayGeneration";
-import { completeGatewayCacheHit } from "../server/modules/ai-generation/application/completeGatewayGeneration";
+import {
+  OpenRouterAI,
+  OpenRouterRequestError,
+} from "../server/utils/llm/openRouter";
 import { quotaHeaders } from "../server/modules/subscription/infrastructure/http/quotaHttp";
 import { BoardItemsSyncRequestSchema } from "../shared/utils/boardItem.contract";
 import {
@@ -3481,6 +3488,11 @@ function fakeSubscriptionPrisma() {
             userSubscription: {
               findUnique: async ({ where }: any) =>
                 subscriptions.get(where.userId) ?? null,
+              create: async ({ data }: any) => {
+                const row = { creditBalance: 0, ...data };
+                subscriptions.set(data.userId, row);
+                return row;
+              },
               update: async ({ where, data }: any) => {
                 const existing = subscriptions.get(where.userId);
                 assert.ok(existing, "expected existing subscription");
@@ -3490,11 +3502,16 @@ function fakeSubscriptionPrisma() {
                     data.generationsUsed?.increment !== undefined
                       ? existing.generationsUsed +
                         data.generationsUsed.increment
-                      : existing.generationsUsed,
+                      : data.generationsUsed?.decrement !== undefined
+                        ? existing.generationsUsed -
+                          data.generationsUsed.decrement
+                        : existing.generationsUsed,
                   creditBalance:
                     data.creditBalance?.decrement !== undefined
                       ? existing.creditBalance - data.creditBalance.decrement
-                      : existing.creditBalance,
+                      : data.creditBalance?.increment !== undefined
+                        ? existing.creditBalance + data.creditBalance.increment
+                        : existing.creditBalance,
                 };
                 subscriptions.set(where.userId, row);
                 return row;
@@ -9196,9 +9213,152 @@ test("generation quota spends a credit after free quota is exhausted", async () 
   });
 
   assert.equal(result.creditSpent, true);
+  assert.equal(result.reservationKind, "credit");
   assert.equal(result.generationsUsed, 10);
   assert.equal(result.creditBalance, 1);
   assert.equal(creditTransactions.length, 1);
+});
+
+test("generation quota check does not create state before reservation", async () => {
+  const { subscriptions, prisma } = fakeSubscriptionPrisma();
+  const result = await checkGenerationQuota({ prisma, userId: "new-user" });
+  assert.equal(result.canGenerate, true);
+  assert.equal(result.subscription.remaining, 10);
+  assert.equal(subscriptions.size, 0);
+
+  const consumed = await consumeGenerationQuota({
+    prisma,
+    userId: "new-user",
+  });
+  assert.equal(consumed.generationsUsed, 1);
+  assert.equal(consumed.reservationKind, "quota");
+});
+
+test("failed generation refunds its reserved free quota", async () => {
+  const { subscriptions, prisma } = fakeSubscriptionPrisma();
+  subscriptions.set("user-1", {
+    userId: "user-1",
+    tier: "FREE",
+    generationsUsed: 0,
+    generationsQuota: 10,
+    creditBalance: 0,
+  });
+  const reservation = await consumeGenerationQuota({
+    prisma,
+    userId: "user-1",
+  });
+  await refundGenerationQuota({ prisma, userId: "user-1", reservation });
+  assert.equal(subscriptions.get("user-1")?.generationsUsed, 0);
+});
+
+test("OpenRouter client records actual model, native cost, and cache status", async () => {
+  const requests: Array<Record<string, any>> = [];
+  const ai = new OpenRouterAI({
+    apiKey: "test-key",
+    model: "openrouter/auto",
+    maxRetries: 0,
+    fetchImpl: (async (_url: string | URL | Request, init?: RequestInit) => {
+      requests.push(JSON.parse(String(init?.body)));
+      return new Response(
+        JSON.stringify({
+          id: "generation-1",
+          model: "provider/model-used",
+          choices: [
+            {
+              finish_reason: "stop",
+              message: {
+                content: JSON.stringify({
+                  items: [
+                    {
+                      front: "Question",
+                      back: "Answer",
+                      source_metadata: {
+                        anchor: "page-1",
+                        context_snippet: "Source",
+                      },
+                    },
+                  ],
+                }),
+              },
+            },
+          ],
+          usage: {
+            prompt_tokens: 10,
+            completion_tokens: 5,
+            total_tokens: 15,
+            cost: 0.00125,
+          },
+        }),
+        {
+          status: 200,
+          headers: { "x-openrouter-cache-status": "HIT" },
+        },
+      );
+    }) as typeof fetch,
+  });
+
+  const result = await ai.generateFlashcards("Enough source text", 1);
+  assert.deepEqual(result.value, [
+    {
+      front: "Question",
+      back: "Answer",
+      sourceMetadata: { anchor: "page-1", contextSnippet: "Source" },
+    },
+  ]);
+  assert.equal(result.measurement.actualModel, "provider/model-used");
+  assert.equal(result.measurement.costUsd, 0.00125);
+  assert.equal(result.measurement.cacheHit, true);
+  assert.equal(requests[0]?.usage?.include, true);
+  assert.equal(requests[0]?.provider?.data_collection, "deny");
+  assert.equal(requests[0]?.response_format?.type, "json_schema");
+});
+
+test("OpenRouter client rejects incomplete structured output", async () => {
+  const ai = new OpenRouterAI({
+    apiKey: "test-key",
+    maxRetries: 0,
+    fetchImpl: (async () =>
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              finish_reason: "stop",
+              message: {
+                content: JSON.stringify({
+                  items: [{ front: "Only one", back: "Answer" }],
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      )) as typeof fetch,
+  });
+  await assert.rejects(
+    () => ai.generateFlashcards("Enough source text", 2),
+    (error: unknown) =>
+      error instanceof OpenRouterRequestError &&
+      error.upstreamCode === "INVALID_FLASHCARDS",
+  );
+});
+
+test("OpenRouter client preserves upstream HTTP errors", async () => {
+  const ai = new OpenRouterAI({
+    apiKey: "test-key",
+    maxRetries: 0,
+    fetchImpl: (async () =>
+      new Response(
+        JSON.stringify({
+          error: { message: "Too many requests", code: "429" },
+        }),
+        { status: 429 },
+      )) as typeof fetch,
+  });
+  await assert.rejects(
+    () => ai.generateText("Return JSON"),
+    (error: unknown) =>
+      error instanceof OpenRouterRequestError && error.statusCode === 429,
+  );
 });
 
 test("quotaHeaders returns plain HTTP header data", () => {
@@ -9210,6 +9370,7 @@ test("quotaHeaders returns plain HTTP header data", () => {
       remaining: 6,
       creditBalance: 1,
       creditSpent: false,
+      reservationKind: "quota",
     }),
     {
       "x-subscription-tier": "FREE",
@@ -9810,49 +9971,6 @@ test("offline material upload drafts are workspace scoped and ownership protecte
     (await listOfflineUploadDrafts(accountId, workspaceId)).length,
     0,
   );
-});
-
-test("gateway cache hit consumes quota and returns cached payload metadata", async () => {
-  const consumed: string[] = [];
-
-  const result = await completeGatewayCacheHit({
-    quotaPort: {
-      getStatus: async () => {
-        throw new Error("not used");
-      },
-      consumeGeneration: async (userId: string) => {
-        consumed.push(userId);
-        return {
-          tier: "FREE",
-          generationsUsed: 2,
-          generationsQuota: 10,
-          remaining: 8,
-          creditBalance: 0,
-          creditSpent: false,
-        };
-      },
-    },
-    userId: "user-1",
-    requestId: "request-1",
-    task: "flashcards",
-    cachedValue: {
-      task: "flashcards",
-      modelId: "model-a",
-      provider: "provider-a",
-      flashcards: [{ front: "Q", back: "A" }],
-    },
-    itemCount: 1,
-    tokenEstimate: 12,
-    requestStartTime: Date.now(),
-  });
-
-  assert.deepEqual(consumed, ["user-1"]);
-  assert.equal(result.response.cached, true);
-  assert.equal(result.response.selectedModelId, "model-a");
-  assert.equal(result.response.provider, "provider-a");
-  assert.equal(result.response.task, "flashcards");
-  assert.equal(result.response.flashcards.length, 1);
-  assert.equal(result.updatedQuota.remaining, 8);
 });
 
 test("gateway generation prep injects PDF markers and derives save workspace", async () => {

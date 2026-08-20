@@ -4,6 +4,7 @@ import { Errors, success } from "@server/utils/error";
 import { CaptureWordDTO } from "@shared/utils/language.contract";
 import { captureLanguageWord } from "@server/modules/language-learning/application/captureLanguageWord";
 import { PrismaQuotaPort } from "@server/modules/subscription/infrastructure/PrismaQuotaPort";
+import type { ConsumedQuota } from "@server/modules/subscription/ports/QuotaPort";
 import {
   setQuotaHeaders,
   throwQuotaExceeded,
@@ -28,7 +29,22 @@ async function billSharedTranslationHit(event: any, userId: string) {
     );
   }
 
-  const updatedQuota = await quotaPort.consumeGeneration(userId);
+  let updatedQuota: ConsumedQuota;
+  try {
+    updatedQuota = await quotaPort.consumeGeneration(userId);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message === "GENERATION_QUOTA_EXCEEDED"
+    ) {
+      throwQuotaExceeded(
+        event,
+        quota.subscription,
+        "Quota exceeded. Please upgrade to continue translating.",
+      );
+    }
+    throw error;
+  }
   setQuotaHeaders(event, updatedQuota);
   return updatedQuota;
 }
