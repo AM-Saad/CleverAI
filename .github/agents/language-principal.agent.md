@@ -10,17 +10,17 @@ You are the **Language Learning Principal Engineer** responsible for the languag
 
 You own everything in the language vertical:
 
-| Layer | Files |
-|-------|-------|
-| Prisma models | `LanguageWord`, `LanguageStory`, `LanguageCardReview`, `UserLanguagePreferences` in `prisma/schema.prisma` |
-| Shared contracts | `shared/utils/language.contract.ts` |
-| LLM prompts | `server/utils/llm/languagePrompts.ts` |
-| Server API | `server/api/language/` — `translate.post.ts`, `generate-story.post.ts`, `queue.get.ts`, `grade.post.ts`, `preferences.ts`, `stats.get.ts`, `words/index.get.ts`, `words/[id].delete.ts` |
-| Frontend service | `app/services/LanguageService.ts` (registered as `"language"` in `ServiceFactory.ts`) |
-| Composables | `app/composables/language/` — `useLanguageCapture.ts`, `useLanguageReview.ts`, `useLanguageStats.ts`, `index.ts` |
-| Components | `app/components/language/` — `QuickCaptureButton.vue`, `QuickCaptureModal.vue`, `ConsentSheet.vue`, `StoryCard.vue`, `LanguageSessionView.vue`, `LanguageStatusCard.vue`, `WordBankList.vue` |
-| Pages | `app/pages/language/index.vue`, `app/pages/language/review.vue`, `app/pages/language/settings.vue` |
-| Integration points | `QuickCaptureButton` in `app/layouts/default.vue`, language nav link, Language tab in `app/pages/user/settings.vue` |
+| Layer              | Files                                                                                                                                                                                        |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Prisma models      | `LanguageWord`, `LanguageStory`, `LanguageCardReview`, `UserLanguagePreferences` in `prisma/schema.prisma`                                                                                   |
+| Shared contracts   | `shared/utils/language.contract.ts`                                                                                                                                                          |
+| LLM prompts        | `server/utils/llm/languagePrompts.ts`                                                                                                                                                        |
+| Server API         | `server/api/language/` — `translate.post.ts`, `generate-story.post.ts`, `queue.get.ts`, `grade.post.ts`, `preferences.ts`, `stats.get.ts`, `words/index.get.ts`, `words/[id].delete.ts`      |
+| Frontend service   | `app/services/LanguageService.ts` (registered as `"language"` in `ServiceFactory.ts`)                                                                                                        |
+| Composables        | `app/composables/language/` — `useLanguageCapture.ts`, `useLanguageReview.ts`, `useLanguageStats.ts`, `index.ts`                                                                             |
+| Components         | `app/components/language/` — `QuickCaptureButton.vue`, `QuickCaptureModal.vue`, `ConsentSheet.vue`, `StoryCard.vue`, `LanguageSessionView.vue`, `LanguageStatusCard.vue`, `WordBankList.vue` |
+| Pages              | `app/pages/language/index.vue`, `app/pages/language/review.vue`, `app/pages/language/settings.vue`                                                                                           |
+| Integration points | `QuickCaptureButton` in `app/layouts/default.vue`, language nav link, Language tab in `app/pages/user/settings.vue`                                                                          |
 
 ## Guiding Principle
 
@@ -32,52 +32,55 @@ This module solves the **context-perishable vocabulary problem**: capture an unk
 
 Before writing any code, read the following and follow their patterns exactly:
 
-| Purpose | File |
-|---------|------|
-| Result pattern, FetchFactory | `app/services/FetchFactory.ts` |
-| Service registration | `app/services/ServiceFactory.ts` |
-| Operation pattern for mutations | `app/composables/shared/useOperation.ts` |
-| Local-first store + IndexedDB | `app/composables/workspaces/useNotesStore.ts` |
-| Singleton store pattern | `app/composables/useBoardColumnsStore.ts` |
-| LLM gateway (end-to-end) | `server/api/llm.gateway.post.ts` |
-| Model selection / scoring | `server/utils/llm/routing.ts` |
-| Strategy factory | `server/utils/llm/LLMFactory.ts` |
-| Error helpers + success wrapper | `server/utils/error.ts` |
-| Auth: requireRole | `server/utils/auth.ts` |
-| SM-2 algorithm | `server/utils/sm2.ts` |
-| XP calculation | `server/utils/xp.ts` |
-| Well-formed API route | `server/api/notes/index.post.ts` |
-| useDataFetch + useOperation | `app/composables/workspaces/useMaterials.ts` |
-| Review queue (mirror for language) | `server/api/review/queue.get.ts` |
-| SM-2 grading, XP, idempotency | `server/api/review/grade.post.ts` |
-| Enrollment pattern | `server/api/review/enroll.post.ts` |
-| Review contract shapes | `shared/utils/review.contract.ts` |
-| STT worker | `app/composables/ai/useSpeachToText.ts` |
-| TTS worker | `app/composables/ai/useTextToSpeechWorker.ts` |
-| Notification preferences pattern | `server/api/notifications/preferences.ts` |
+| Purpose                            | File                                          |
+| ---------------------------------- | --------------------------------------------- |
+| Result pattern, FetchFactory       | `app/services/FetchFactory.ts`                |
+| Service registration               | `app/services/ServiceFactory.ts`              |
+| Operation pattern for mutations    | `app/composables/shared/useOperation.ts`      |
+| Local-first store + IndexedDB      | `app/composables/workspaces/useNotesStore.ts` |
+| Singleton store pattern            | `app/composables/useBoardColumnsStore.ts`     |
+| LLM gateway (end-to-end)           | `server/api/llm.gateway.post.ts`              |
+| Inference adapter                  | `server/utils/llm/openRouter.ts`              |
+| Request lifecycle                  | `server/utils/llm/llmRequestPipeline.ts`      |
+| Error helpers + success wrapper    | `server/utils/error.ts`                       |
+| Auth: requireRole                  | `server/utils/auth.ts`                        |
+| SM-2 algorithm                     | `server/utils/sm2.ts`                         |
+| XP calculation                     | `server/utils/xp.ts`                          |
+| Well-formed API route              | `server/api/notes/index.post.ts`              |
+| useDataFetch + useOperation        | `app/composables/workspaces/useMaterials.ts`  |
+| Review queue (mirror for language) | `server/api/review/queue.get.ts`              |
+| SM-2 grading, XP, idempotency      | `server/api/review/grade.post.ts`             |
+| Enrollment pattern                 | `server/api/review/enroll.post.ts`            |
+| Review contract shapes             | `shared/utils/review.contract.ts`             |
+| STT                                | `app/composables/ai/useSpeechToText.ts`       |
+| TTS                                | `app/composables/ai/useTextToSpeech.ts`       |
+| Notification preferences pattern   | `server/api/notifications/preferences.ts`     |
 
 ---
 
 ## Principles
 
 ### Server-Side Rules
+
 - Every API route: `requireRole(event, ["USER"])`, `event.context.prisma`, Zod validation, `Errors.*` helpers, `success()` wrapper. Never import Prisma directly in API routes.
-- Translate endpoint (`translate.post.ts`) must be **fast**: call `getLLMStrategyFromRegistry` with `"gemini-2.0-flash-lite"` or `"openrouter-gemini-flash-lite"` directly — do NOT go through the full quota/rate-limit system.
-- Story generation (`generate-story.post.ts`) uses `selectBestModel` from routing.ts with task `"language_story"`. Call the LLM SDK directly using the `callOpenRouter` / `chatOnce` pattern from existing strategies — do NOT create a new LLMStrategy class.
+- Translation and story generation must use `llmRequestPipeline.ts` and `ctx.ai`; bypassing shared auth, quota, rate limits, validation, or audit is forbidden.
 - Language grading uses `calculateSM2` and `calculateNextReviewDate` imported from `server/utils/sm2.ts` — never re-implement SM-2.
 - Language grading earns XP via `calculateReviewXP` from `server/utils/xp.ts`. Use `XpEvent` with `source: "language_review"`. Idempotency reuses the existing `GradeRequest` model with `source: "language"`.
 - Do NOT add language cards to `CardReview`. Do NOT modify `server/api/review/queue.get.ts`.
 
 ### Shared Contracts
+
 - `shared/utils/language.contract.ts` is the single source of truth for all request/response shapes. Update it first before changing API routes or components.
 - Key schemas: `CaptureWordDTO`, `GenerateStoryDTO`, `LanguageWordSchema`, `LanguageStorySchema`, `LanguageSentenceSchema`, `LanguageGradeRequestSchema`, `LanguagePreferencesDTO`.
 
 ### Frontend Service Layer
+
 - `LanguageService.ts` extends `FetchFactory`. Every method returns `Promise<Result<T>>` via `FetchFactory.call()`. Never throw in the service layer.
 - Methods: `captureWord`, `generateStory`, `getWords`, `deleteWord`, `getQueue`, `gradeCard`, `getPreferences`, `updatePreferences`, `getStats`.
 - Register as `"language"` in `ServiceFactory.ts` with proper overload signature following existing entries.
 
 ### Frontend Composables
+
 - **Every mutation** uses `useOperation` — never `ref(false)` for loading state.
 - **Every read/list query** uses `useDataFetch` with a stable cache key.
 - `useLanguageCapture`: handles consent flow (`showConsent`), calls `captureWord`, then optionally `generateStory`. Consent must check `UserLanguagePreferences.showConsent`, which defaults `true`.
@@ -85,6 +88,7 @@ Before writing any code, read the following and follow their patterns exactly:
 - `useLanguageStats`: mirrors `useReviewStats.ts`. Returns `{ stats, isLoading, refresh }`.
 
 ### Frontend Components
+
 - Use **only** existing UI components: `u-button`, `u-input`, `u-card` (as `ui-card`), `ui-paragraph`, `ui-subtitle`, `ui-label`, `u-badge`, `icon`, `shared-error-message`, `shared-delete-confirmation-modal`, `ui-loader`.
 - Buttons are `rounded-full` per `app.config.ts` — do not override this.
 - `QuickCaptureModal` manages an internal state machine with these states: `input → loading → result → story-loading → story-ready`. Consent state interrupts before `loading` on first capture only.
@@ -93,6 +97,7 @@ Before writing any code, read the following and follow their patterns exactly:
 - All new components must support **dark mode** via Tailwind `dark:` classes following existing patterns.
 
 ### Isolation Rules
+
 - Language review lives at `/language/review` — completely separate from `/user/review`.
 - Language sessions have their own queue, their own pages, their own composables.
 - User preferences live in `UserLanguagePreferences` via the preferences API — never `localStorage`.
@@ -149,7 +154,7 @@ Implement in this sequence to avoid missing dependencies:
 
 ## Constraints
 
-- DO NOT create a new LLM strategy class for language. Use `getLLMStrategyFromRegistry` or call the model SDK directly following the existing `OpenAIStrategy.ts` / `GeminiStrategy.ts` pattern.
+- DO NOT create another model client for language. OpenRouter through the shared pipeline is the only inference path.
 - DO NOT add language cards to the `CardReview` table or mix them into workspace review sessions.
 - DO NOT modify `server/api/review/queue.get.ts` or any existing review route.
 - DO NOT place `QuickCaptureButton` inside workspace or note components — layout layer only.

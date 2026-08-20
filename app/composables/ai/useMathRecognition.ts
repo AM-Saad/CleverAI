@@ -1,171 +1,111 @@
 import { latexToMathjsFull } from "~/utils/math/latexToMathjs";
 
-/**
- * Composable for handwritten-math recognition via MyScript REST API.
- *
- * ARCHITECTURE:
- *  - Component layer: owns the canvas / ink capture (MathNoteEditor.vue).
- *  - This composable: sends strokes to MyScript via server proxy, translates
- *    LaTeX→mathjs, and manages variable scope persistence across lines.
- *  - Server layer: HMAC signs and proxies to MyScript Cloud (myscript.post.ts).
- *
- * @example
- * ```ts
- * const { recognizeWithMyScript, getScope } = useMathRecognition();
- * const outcome = await recognizeWithMyScript(strokes, boundingBox);
- * console.log(outcome.latex, outcome.result);
- * ```
- */
+type Rect = { minX: number; minY: number; maxX: number; maxY: number };
+type Stroke = { x: number[]; y: number[]; t: number[]; id: number };
+
 export function useMathRecognition() {
-  /** Bounding box describing a sub-region of the canvas. */
-  type Rect = { minX: number; minY: number; maxX: number; maxY: number };
-
-  /** A single ink stroke with coordinate arrays. */
-  type Stroke = { x: number[]; y: number[]; t: number[]; id: number };
-
-  // ── Reactive state ──
   const isRecognizing = ref(false);
   const currentLatex = ref<string | null>(null);
   const currentResult = ref<string | null>(null);
   const recognitionError = ref<Error | null>(null);
+  let parser: {
+    evaluate: (expression: string) => unknown;
+    getAll: () => Record<string, unknown>;
+  } | null = null;
 
-  // ── Math scope (persists across strokes) ──
-  // Lazily initialised to avoid importing mathjs at module level.
-  let _parser: { evaluate: (expr: string) => any; getAll: () => Record<string, unknown> } | null = null;
-
-  /** Lazily initialise the mathjs parser. */
   async function getParser() {
-    if (_parser) return _parser;
+    if (parser) return parser;
     const { create, all } = await import("mathjs");
-    const math = create(all!);
-    _parser = math.parser();
-    return _parser;
+    parser = create(all!).parser();
+    return parser;
   }
 
-  /**
-   * Return the current variable scope (serialisable snapshot).
-   * Useful for persisting in note metadata.
-   */
-  async function getScope(): Promise<Record<string, unknown>> {
-    const parser = await getParser();
-    return { ...parser.getAll() };
+  async function getScope() {
+    return { ...(await getParser()).getAll() };
   }
 
-  /**
-   * Restore a previously saved scope (e.g. when reopening a note).
-   */
-  async function restoreScope(saved: Record<string, unknown>): Promise<void> {
-    const parser = await getParser();
+  async function restoreScope(saved: Record<string, unknown>) {
+    const mathParser = await getParser();
     for (const [key, value] of Object.entries(saved)) {
       try {
-        parser.evaluate(`${key} = ${JSON.stringify(value)}`);
+        mathParser.evaluate(`${key} = ${JSON.stringify(value)}`);
       } catch {
-        // skip non-assignable values
+        // Ignore values that cannot be restored as assignments.
       }
     }
   }
 
-  /**
-   * Recognise handwritten math from stroke data via the MyScript API proxy.
-   *
-   * @param strokes - Array of ink strokes captured from the canvas
-   * @param rect - Optional bounding box for overlay positioning
-   * @param canvasSize - Canvas dimensions in CSS pixels (for DPI mapping)
-   * @returns Object with `latex`, `expression`, `result`, and `boundingBox`.
-   */
-  async function recognizeWithMyScript(
+  function strokesToDataUrl(
+    strokes: Stroke[],
+    size: { width: number; height: number },
+  ) {
+    const padding = 20;
+    const sourceWidth = Math.max(size.width, 1);
+    const sourceHeight = Math.max(size.height, 1);
+    const scale = Math.min(1, 2_048 / Math.max(sourceWidth, sourceHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(100, Math.ceil(sourceWidth * scale + padding * 2));
+    canvas.height = Math.max(
+      100,
+      Math.ceil(sourceHeight * scale + padding * 2),
+    );
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Canvas is not available");
+    context.fillStyle = "white";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.translate(padding, padding);
+    context.scale(scale, scale);
+    context.lineWidth = 3 / scale;
+    context.lineCap = "round";
+    context.lineJoin = "round";
+    context.strokeStyle = "black";
+    for (const stroke of strokes) {
+      if (stroke.x.length < 2) continue;
+      context.beginPath();
+      context.moveTo(stroke.x[0]!, stroke.y[0]!);
+      for (let index = 1; index < stroke.x.length; index += 1) {
+        context.lineTo(stroke.x[index]!, stroke.y[index]!);
+      }
+      context.stroke();
+    }
+    return canvas.toDataURL("image/png");
+  }
+
+  async function recognizeWithOpenRouter(
     strokes: Stroke[],
     rect?: Rect,
-    canvasSize?: { width: number; height: number }
-  ): Promise<{
-    latex: string;
-    expression: string;
-    result: string | null;
-    boundingBox?: Rect;
-  }> {
-    console.log("[useMathRecognition] recognizeWithMyScript called with", strokes.length, "strokes");
-
-    if (!strokes.length) {
-      throw new Error("No strokes provided");
-    }
-
-    // Reset state
-    currentLatex.value = null;
-    currentResult.value = null;
-    recognitionError.value = null;
+    canvasSize = { width: 500, height: 300 },
+  ) {
+    if (!strokes.length) throw new Error("No strokes provided");
     isRecognizing.value = true;
-
+    recognitionError.value = null;
     try {
-      // ── Step 1: Call server proxy ──
-      const response = await $fetch<{
-        data: {
-          latex: string;
-          jiix: any;
-          solverResult: string | null;
-          boundingBox: Rect | null;
-        };
-      }>("/api/ai/myscript", {
-        method: "POST",
-        body: {
-          strokes,
-          width: canvasSize?.width,
-          height: canvasSize?.height,
+      const response = await $fetch<{ data: { latex: string } }>(
+        "/api/ai/math-recognize",
+        {
+          method: "POST",
+          body: { imageDataUrl: strokesToDataUrl(strokes, canvasSize) },
         },
-      });
-
-      const rawLatex = response.data.latex;
-      console.log("🔍 [useMathRecognition] MyScript raw LaTeX:", rawLatex);
-
-      // ── Step 2: Clean LaTeX ──
-      const cleanedLatex = rawLatex
-        .replace(/\\\[\\\[|\\\]\\\]|\\\[|\\\]|\\\(|\\\)/g, '')
-        .replace(/\\right\s*[.|)\]]/g, '')
-        .replace(/\\left\s*[.|([]/g, '')
-        .replace(/\\right/g, '')
-        .replace(/\\left/g, '')
+      );
+      const latex = response.data.latex
+        .replace(/\\\[\\\[|\\\]\\\]|\\\[|\\\]|\\\(|\\\)/g, "")
+        .replace(/\\right\s*[.|)\]]/g, "")
+        .replace(/\\left\s*[.|([]/g, "")
+        .replace(/\\right|\\left/g, "")
         .trim();
-
-      currentLatex.value = cleanedLatex;
-
-      // ── Step 3: Convert LaTeX → mathjs ──
-      const expression = latexToMathjsFull(cleanedLatex);
-
-      console.log("📐 [useMathRecognition] MyScript LaTeX → mathjs:", {
-        rawLatex,
-        cleanedLatex,
-        expression,
-        serverSolverResult: response.data.solverResult,
-      });
-
-      // ── Step 4: Evaluate with mathjs ──
-      let evalResult: string | null = null;
+      const expression = latexToMathjsFull(latex);
+      let result: string | null = null;
       try {
-        const parser = await getParser();
-        const raw = parser.evaluate(expression);
-        evalResult = raw != null ? String(raw) : null;
+        const value = (await getParser()).evaluate(expression);
+        result = value == null ? null : String(value);
       } catch {
-        // Fall back to server solver result if mathjs can't parse
-        evalResult = response.data.solverResult ?? null;
+        result = null;
       }
-
-      // If mathjs gave nothing, use MyScript's solver result
-      if (evalResult === null && response.data.solverResult) {
-        evalResult = response.data.solverResult;
-      }
-
-      currentResult.value = evalResult;
-
-      // Use bounding box from JIIX if available, otherwise fallback to provided rect
-      const resultBox = response.data.boundingBox ?? rect;
-
-      return {
-        latex: cleanedLatex,
-        expression,
-        result: evalResult,
-        boundingBox: resultBox ?? undefined,
-      };
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error(String(err));
+      currentLatex.value = latex;
+      currentResult.value = result;
+      return { latex, expression, result, boundingBox: rect };
+    } catch (cause) {
+      const error = cause instanceof Error ? cause : new Error(String(cause));
       recognitionError.value = error;
       throw error;
     } finally {
@@ -174,12 +114,9 @@ export function useMathRecognition() {
   }
 
   return {
-    // Actions
-    recognizeWithMyScript,
+    recognizeWithOpenRouter,
     getScope,
     restoreScope,
-
-    // Reactive state
     currentLatex: readonly(currentLatex),
     currentResult: readonly(currentResult),
     isRecognizing: readonly(isRecognizing),

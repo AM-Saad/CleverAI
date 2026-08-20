@@ -11,7 +11,7 @@
 import {
   MIN_TOKENS_FOR_FULL_GENERATION,
   MIN_ITEMS_FOR_TINY_INPUT,
-} from './tokenEstimate';
+} from "./tokenEstimate";
 
 /**
  * Compute adaptive item count based on token estimate and depth preference
@@ -24,7 +24,7 @@ import {
 export function computeAdaptiveItemCount(
   tokenEstimate: number,
   depth: "quick" | "balanced" | "deep" = "balanced",
-  maxItems?: number
+  maxItems?: number,
 ): number {
   // Defensive guard: very small inputs get reduced item count
   // to prevent low-quality overgeneration from sparse content
@@ -52,28 +52,4 @@ export function computeAdaptiveItemCount(
   const effectiveMax = maxItems ?? defaultMaxItems;
 
   return Math.min(baseItemCount, effectiveMax);
-}
-
-/**
- * Estimate cost based on token count and model pricing
- * (Simplified - real implementation should use actual model pricing from registry)
- *
- * @param tokenEstimate - Estimated input + output tokens
- * @param provider - LLM provider (openai, google)
- * @deprecated Use estimateCostMicros instead
- * @returns Estimated cost in USD
- */
-export function estimateCost(tokenEstimate: number, provider = "openai"): number {
-  // Rough estimates (cost per 1M tokens)
-  const pricing = {
-    openai: 0.5, // GPT-3.5 average
-    google: 0.25, // Gemini Flash average
-  };
-
-  const costPer1M = pricing[provider as keyof typeof pricing] || 0.5;
-
-  // Assume output tokens are ~40% of input
-  const totalTokens = tokenEstimate * 1.4;
-
-  return (totalTokens / 1_000_000) * costPer1M;
 }

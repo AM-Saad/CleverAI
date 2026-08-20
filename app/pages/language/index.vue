@@ -96,7 +96,7 @@ import LanguageWordDetailModal from "~/features/language-learning/components/Lan
 import { createLanguageWordRowViewModel } from "~/features/language-learning/presentation/languageWordRowViewModel";
 import { useLanguageCapture } from "~/features/language-learning/composables/useLanguageCapture";
 import { useLanguageLearningRuntime } from "~/features/language-learning/composables/languageLearningRuntime";
-import { useTextToSpeechWorker } from "~/composables/ai/useTextToSpeechWorker";
+import { useTextToSpeech } from "~/composables/ai/useTextToSpeech";
 import { useSanitize } from "~/composables/shared/useSanitize";
 import {
   getLanguageLabel,
@@ -117,7 +117,7 @@ const { sanitizeHtml } = useSanitize();
 const toast = useToast();
 const route = useRoute();
 const languageRuntime = useLanguageLearningRuntime();
-const ttsWorker = useTextToSpeechWorker();
+const ttsWorker = useTextToSpeech();
 const {
   state: captureState,
   captureResult: result,

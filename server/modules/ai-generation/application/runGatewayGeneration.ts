@@ -1,39 +1,32 @@
-import { randomUUID } from "crypto";
 import type { H3Event } from "h3";
 import { Errors } from "../../../utils/error";
 import { computeAdaptiveItemCount } from "../../../utils/llm/adaptiveCount";
-import { logGatewayCacheHit } from "../../../utils/llm/gatewayLogger";
-import type { LlmPipelineContext } from "../../../utils/llm/llmRequestPipeline";
+import {
+  llmRequestPipeline,
+  throwMappedOpenRouterError,
+} from "../../../utils/llm/llmRequestPipeline";
+import type { OpenRouterGeneration } from "../../../utils/llm/openRouter";
+import { OpenRouterRequestError } from "../../../utils/llm/openRouter";
+import { estimateTokensFromText } from "../../../utils/llm/tokenEstimate";
 import { PrismaQuotaPort } from "../../subscription/infrastructure/PrismaQuotaPort";
 import {
   quotaHeaders,
-  throwQuotaExceeded,
+  toSubscriptionSnapshot,
 } from "../../subscription/infrastructure/http/quotaHttp";
 import type { QuotaPort } from "../../subscription/ports/QuotaPort";
-import { SemanticGenerationCachePort } from "../infrastructure/SemanticGenerationCachePort";
-import type { GenerationCachePort } from "../ports/GenerationCachePort";
-import {
-  completeGatewayCacheHit,
-  completeGatewayGeneration,
-} from "./completeGatewayGeneration";
-import {
-  publishGenerationRequested,
-  publishGenerationSucceeded,
-} from "./generationEvents";
 import { prepareGatewayGeneration } from "./prepareGatewayGeneration";
-import {
-  normalizeSourceMetadata,
-  type FlashcardDTO,
-  type GatewayGenerateRequest,
-  type GatewayGenerateResponse,
-  type QuizQuestionDTO,
+import { saveGeneratedArtifacts } from "./saveGeneratedArtifacts";
+import type {
+  FlashcardDTO,
+  GatewayGenerateRequest,
+  GatewayGenerateResponse,
+  QuizQuestionDTO,
 } from "../../../../shared/utils/llm-generate.contract";
 
 type GatewayUser = { id: string; [key: string]: any };
-type GenerationTask = "flashcards" | "quiz";
+type GenerationResult = FlashcardDTO[] | QuizQuestionDTO[];
 
 const defaultQuotaPort = new PrismaQuotaPort();
-const defaultGenerationCachePort = new SemanticGenerationCachePort();
 
 export interface RunGatewayGenerationInput {
   event: H3Event;
@@ -42,7 +35,6 @@ export interface RunGatewayGenerationInput {
   request: GatewayGenerateRequest;
   requestStartTime?: number;
   quotaPort?: QuotaPort;
-  cachePort?: GenerationCachePort;
 }
 
 export interface RunGatewayGenerationResult {
@@ -60,22 +52,18 @@ export async function runGatewayGeneration(
     request,
     requestStartTime = Date.now(),
     quotaPort = defaultQuotaPort,
-    cachePort = defaultGenerationCachePort,
   } = input;
-
   const {
     task,
     workspaceId,
     materialId,
     save,
     replace,
-    requiredCapability,
-    preferredModelId,
     text: originalText,
     generationConfig,
   } = request;
 
-  const generationInput = await prepareGatewayGeneration({
+  const prepared = await prepareGatewayGeneration({
     prisma,
     userId: user.id,
     request: {
@@ -84,234 +72,114 @@ export async function runGatewayGeneration(
       materialId,
       save,
       replace,
-      requiredCapability,
       text: originalText,
       generationConfig,
     },
   });
-  const { text, canSave, saveWorkspaceId, loadedMaterialType } =
-    generationInput;
-
+  const { text, canSave, saveWorkspaceId, loadedMaterialType } = prepared;
+  const effectiveWorkspaceId = saveWorkspaceId || workspaceId;
   const tokenEstimate = estimateTokensFromText(text);
   const depth = generationConfig?.depth ?? "balanced";
-  const maxItems = generationConfig?.maxItems;
-  const itemCount = computeAdaptiveItemCount(tokenEstimate, depth, maxItems);
-
-  console.info("[llm.gateway] Adaptive generation:", {
+  const itemCount = computeAdaptiveItemCount(
     tokenEstimate,
     depth,
-    itemCount,
-    textLength: text.length,
-  });
-
-  // Quota gate up-front: cache hits are billed too, so over-quota users are
-  // blocked before any lookup. Doing it here also lets a cache hit short-circuit
-  // WITHOUT paying for rate limiting, model scoring, or strategy instantiation
-  // (all of which live in llmRequestPipeline on the miss path below).
-  const preQuota = await quotaPort.checkGenerationQuota(user.id);
-  if (!preQuota.canGenerate) {
-    throwQuotaExceeded(
-      event,
-      preQuota.subscription,
-      "Quota exceeded. Please upgrade to continue generating content.",
-    );
-  }
-
-  const effectiveWorkspaceId = saveWorkspaceId || workspaceId;
-
-  // ── Semantic cache lookup (BEFORE model selection) ───────────────────────
-  const cacheCheck = await cachePort.checkSemanticCache({
-    text,
-    task,
-    itemCount,
-  });
-
-  if (cacheCheck.hit && cacheCheck.value) {
-    const requestId = randomUUID();
-    console.info("[llm.gateway] Cache hit:", {
-      requestId,
-      task,
-      textLength: text.length,
-    });
-
-    await publishGenerationRequested({
-      userId: user.id,
-      requestId,
-      task,
-      materialId,
-      workspaceId,
-      tokenEstimate,
-      itemCount,
-    });
-
-    const cacheHitResult = await completeGatewayCacheHit({
-      quotaPort,
-      userId: user.id,
-      requestId,
-      task,
-      cachedValue: cacheCheck.value,
-      itemCount,
-      tokenEstimate,
-      requestStartTime,
-    });
-
-    const response = cacheHitResult.response;
-
-    // #8: record cache hits in LlmGatewayLog (0 new tokens) for hit-rate stats.
-    await logGatewayCacheHit({
-      requestId,
-      userId: user.id,
-      workspaceId: effectiveWorkspaceId,
-      modelId: String(response.selectedModelId),
-      provider: String(response.provider),
-      task,
-      latencyMs: response.latencyMs,
-      itemCount,
-      tokenEstimate,
-      depth,
-    });
-
-    const headers: Record<string, string> = {};
-    headers["x-gateway-request-id"] = String(response.requestId);
-    headers["x-gateway-model-id"] = String(response.selectedModelId);
-    headers["x-gateway-provider"] = String(response.provider);
-    headers["x-gateway-latency-ms"] = String(response.latencyMs);
-    headers["x-llm-task"] = String(response.task);
-    headers["x-llm-save-requested"] = String(!!save);
-    headers["x-llm-can-save"] = String(canSave);
-    const generatedCount =
-      response.task === "flashcards"
-        ? response.flashcards.length
-        : response.quiz.length;
-    headers["x-llm-generated-count"] = String(generatedCount);
-    headers["x-llm-saved-count"] = "0";
-    Object.assign(headers, quotaHeaders(cacheHitResult.updatedQuota));
-
-    return { response, headers };
-  }
-
-  // ── Cache miss → full pipeline (rate limit, model selection, strategy) ────
-  const { llmRequestPipeline } = await import(
-    "../../../utils/llm/llmRequestPipeline"
+    generationConfig?.maxItems,
   );
-  const ctx: LlmPipelineContext = await llmRequestPipeline(event, {
+
+  const ctx = await llmRequestPipeline(event, {
     quotaPort,
     task,
     inputText: text,
-    requiredCapability,
     checkQuota: true,
     incrementQuota: true,
-    preferredModelId,
     user,
-    precheckedQuota: preQuota,
   });
 
-  await publishGenerationRequested({
-    userId: user.id,
-    requestId: ctx.requestId,
-    task,
-    materialId,
-    workspaceId,
-    tokenEstimate,
-    itemCount,
-  });
-
-  let result: FlashcardDTO[] | QuizQuestionDTO[];
+  let generation: OpenRouterGeneration<GenerationResult> | undefined;
+  let savedCount: number | undefined;
+  let deletedCount: number | undefined;
+  let deletedReviewsCount: number | undefined;
 
   try {
-    if (task === "flashcards") {
-      result = await ctx.strategy.generateFlashcards(text, { itemCount });
-    } else {
-      result = await ctx.strategy.generateQuiz(text, { itemCount });
+    generation =
+      task === "flashcards"
+        ? await ctx.ai.generateFlashcards(text, itemCount)
+        : await ctx.ai.generateQuiz(text, itemCount);
+
+    if (canSave && effectiveWorkspaceId) {
+      const saved = await saveGeneratedArtifacts({
+        prisma,
+        userId: user.id,
+        task,
+        workspaceId: effectiveWorkspaceId,
+        materialId,
+        replace,
+        loadedMaterialType,
+        result: generation.value,
+      });
+      savedCount = saved.savedCount;
+      deletedCount = saved.deletedCount;
+      deletedReviewsCount = saved.deletedReviewsCount;
     }
-    result = result.map((item) => ({
-      ...item,
-      sourceMetadata: normalizeSourceMetadata(item.sourceMetadata),
-    })) as FlashcardDTO[] | QuizQuestionDTO[];
 
-    console.info("[llm.gateway] Generation successful:", {
-      requestId: ctx.requestId,
-      modelId: ctx.selectedModel.modelId,
-      task,
-      count: result.length,
+    const finalized = await ctx.finalize({
+      generation,
+      workspaceId: effectiveWorkspaceId,
     });
+    const common = {
+      savedCount,
+      deletedCount,
+      deletedReviewsCount,
+      subscription: finalized.updatedQuota
+        ? toSubscriptionSnapshot(finalized.updatedQuota)
+        : undefined,
+      requestId: ctx.requestId,
+      selectedModelId: finalized.actualModel,
+      provider: "openrouter",
+      latencyMs: Date.now() - requestStartTime,
+      cached: false,
+      itemCount,
+      tokenEstimate,
+    };
+    const response: GatewayGenerateResponse =
+      task === "flashcards"
+        ? {
+            ...common,
+            task: "flashcards",
+            flashcards: generation.value as FlashcardDTO[],
+          }
+        : {
+            ...common,
+            task: "quiz",
+            quiz: generation.value as QuizQuestionDTO[],
+          };
 
-    await publishGenerationSucceeded({
-      userId: user.id,
-      requestId: ctx.requestId,
-      task,
-      generatedCount: result.length,
-      modelId: ctx.selectedModel.modelId,
-    });
-  } catch (err) {
-    await ctx.fail(err, effectiveWorkspaceId);
-    console.error("[llm.gateway] Generation failed:", {
-      requestId: ctx.requestId,
-      modelId: ctx.selectedModel.modelId,
-      task,
-      error: err,
-    });
-    const message =
-      err instanceof Error && /quota/i.test(err.message)
-        ? "Quota exceeded. Please check your API plan/billing or try again later."
-        : "Generation failed. Please try again.";
-    if (/quota exceeded|rate limit|429/i.test(message)) {
-      throw Errors.rateLimit(message);
+    const headers: Record<string, string> = {
+      "x-llm-save-requested": String(Boolean(save)),
+      "x-llm-can-save": String(canSave),
+      "x-llm-generated-count": String(generation.value.length),
+      "x-llm-saved-count": String(savedCount ?? 0),
+      "x-llm-task": task,
+      "x-gateway-request-id": ctx.requestId,
+      "x-gateway-model-id": finalized.actualModel,
+      "x-gateway-provider": "openrouter",
+      "x-gateway-latency-ms": String(finalized.totalLatencyMs),
+    };
+    if (finalized.updatedQuota) {
+      Object.assign(headers, quotaHeaders(finalized.updatedQuota));
     }
-    throw Errors.server(message);
+    return { response, headers };
+  } catch (error) {
+    await ctx.fail(error, {
+      workspaceId: effectiveWorkspaceId,
+      generation,
+    });
+    if (error instanceof OpenRouterRequestError) {
+      throwMappedOpenRouterError(error);
+    }
+    if (error && typeof error === "object" && "statusCode" in error) {
+      throw error;
+    }
+    throw Errors.server("Generation failed. Please try again.");
   }
-
-  const completion = await completeGatewayGeneration({
-    prisma,
-    ctx,
-    cachePort,
-    task,
-    text,
-    result,
-    canSave,
-    workspaceId: effectiveWorkspaceId,
-    materialId,
-    replace,
-    loadedMaterialType,
-    depth,
-    itemCount,
-    tokenEstimate,
-  });
-  const { response, finalizeResult, savedCount, deletedCount, deletedReviewsCount } =
-    completion;
-  const { updatedQuota, totalLatencyMs } = finalizeResult;
-
-  const headers: Record<string, string> = {
-    "x-llm-save-requested": String(!!save),
-    "x-llm-can-save": String(canSave),
-    "x-llm-generated-count": String(result.length),
-    "x-llm-saved-count": String(savedCount ?? 0),
-    "x-llm-task": task,
-    "x-gateway-request-id": ctx.requestId,
-    "x-gateway-model-id": ctx.selectedModel.modelId,
-    "x-gateway-provider": ctx.selectedModel.provider,
-    "x-gateway-latency-ms": String(totalLatencyMs),
-  };
-
-  if (updatedQuota) {
-    Object.assign(headers, quotaHeaders(updatedQuota));
-  }
-
-  console.info("[llm.gateway] Request completed", {
-    requestId: ctx.requestId,
-    modelId: ctx.selectedModel.modelId,
-    task,
-    generatedCount: result.length,
-    savedCount,
-    deletedCount,
-    deletedReviewsCount,
-    materialId,
-    latencyMs: totalLatencyMs,
-    subscription: updatedQuota,
-  });
-
-  return {
-    response,
-    headers,
-  };
 }

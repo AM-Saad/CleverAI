@@ -1,5 +1,4 @@
 import { createError } from "h3";
-import { useRuntimeConfig } from "#imports";
 import Redis from "ioredis";
 
 export type MemCounter = Map<string, { count: number; timestamp: number }>;
@@ -16,7 +15,10 @@ function markRedisUnavailable(error: unknown) {
   const now = Date.now();
   const message = (error as any)?.message || error;
   if (now >= redisUnavailableUntil) {
-    console.warn("[rateLimit] Redis unavailable, using memory limiter:", message);
+    console.warn(
+      "[rateLimit] Redis unavailable, using memory limiter:",
+      message,
+    );
   }
   redisUnavailableUntil = now + REDIS_RETRY_COOLDOWN_MS;
   redisClient?.disconnect();
@@ -56,7 +58,7 @@ export function getRedisClient(): Redis | null {
 
 export async function checkRedisLimit(
   key: string,
-  max: number
+  max: number,
 ): Promise<{ used: boolean; remaining?: number }> {
   try {
     const client = getRedisClient();
@@ -81,6 +83,14 @@ export async function checkRedisLimit(
       });
     return { used: true, remaining: Math.max(0, max - count) };
   } catch (e) {
+    if (
+      e &&
+      typeof e === "object" &&
+      "statusCode" in e &&
+      (e as { statusCode?: number }).statusCode === 429
+    ) {
+      throw e;
+    }
     // Fall back to in-memory limiter on any Redis error
     markRedisUnavailable(e);
     return { used: false };
@@ -104,7 +114,7 @@ export async function applyLimit(
   max: number,
   mem: MemCounter,
   now: number,
-  windowMs: number
+  windowMs: number,
 ): Promise<number> {
   const redisRes = await checkRedisLimit(key, max);
   if (redisRes.used) return Math.max(0, redisRes.remaining ?? 0);
@@ -127,13 +137,13 @@ export function setRateLimitHeaders(
   overallRemaining: number,
   userRemaining: number,
   ipRemaining: number,
-  now: number
+  now: number,
 ) {
   event.node.res.setHeader("X-RateLimit-Remaining", String(overallRemaining));
   event.node.res.setHeader("X-RateLimit-Remaining-User", String(userRemaining));
   event.node.res.setHeader("X-RateLimit-Remaining-IP", String(ipRemaining));
   const resetSeconds = Math.ceil(
-    WINDOW_SEC - (now % (WINDOW_SEC * 1000)) / 1000
+    WINDOW_SEC - (now % (WINDOW_SEC * 1000)) / 1000,
   );
   event.node.res.setHeader("X-RateLimit-Reset", String(resetSeconds));
   if (overallRemaining === 0)
@@ -155,7 +165,7 @@ const _llmIpRateLimitMap: MemCounter = new Map();
 export async function enforceLlmRateLimit(
   event: any,
   userId: string,
-  options: { userMax: number; ipMax: number }
+  options: { userMax: number; ipMax: number },
 ): Promise<void> {
   const now = Date.now();
   const windowMs = WINDOW_SEC * 1000;
@@ -164,7 +174,7 @@ export async function enforceLlmRateLimit(
     options.userMax,
     _llmUserRateLimitMap,
     now,
-    windowMs
+    windowMs,
   );
   const clientIp = getClientIp(event);
   const ipRemaining = await applyLimit(
@@ -172,13 +182,13 @@ export async function enforceLlmRateLimit(
     options.ipMax,
     _llmIpRateLimitMap,
     now,
-    windowMs
+    windowMs,
   );
   setRateLimitHeaders(
     event,
     Math.min(userRemaining, ipRemaining),
     userRemaining,
     ipRemaining,
-    now
+    now,
   );
 }

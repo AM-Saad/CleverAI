@@ -1,5 +1,4 @@
 // server/utils/safeGetServerSession.ts
-import { getServerSession } from "#auth";
 import type { H3Event } from "h3";
 
 /**
@@ -7,9 +6,12 @@ import type { H3Event } from "h3";
  * Returns null if session is not found or if an error occurs.
  */
 export async function safeGetServerSession(
-  event: H3Event
+  event: H3Event,
 ): Promise<unknown | null> {
   try {
+    // Lazy import avoids evaluating the auth runtime while Nitro discovers
+    // server utilities during prepare/typecheck.
+    const { getServerSession } = await import("#auth");
     const session = await getServerSession(event);
     return session;
   } catch (error) {

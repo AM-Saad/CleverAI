@@ -1,165 +1,58 @@
 # Cognilo
 
-Cognilo is an AI-powered learning platform built with **Nuxt 4 + TypeScript**. It generates flashcards and quizzes from study materials using multiple LLM backends, and reinforces retention with spaced repetition (SM-2). Its local-first PWA runtime is being verified against the offline acceptance matrix before any public “full offline support” claim.
+Cognilo is a Nuxt 4 learning platform with notes, materials, flashcards, quizzes, language learning, SM-2 review, and local-first PWA behavior.
 
----
+## AI policy
 
-## Features
+All model inference goes through OpenRouter. There are no direct provider SDKs, browser model downloads, model registry, or local pricing catalog.
 
-| Area | Description |
-|------|-------------|
-| **Flashcards & Quizzes** | AI-generated from uploaded PDF, DOCX, or TXT materials |
-| **Spaced Repetition (SM-2)** | Optimal review scheduling for flashcards, materials, and questions |
-| **XP & Gamification** | Experience points, achievements, streaks, daily targets |
-| **Notes** | Rich-text local-first notes with IndexedDB persistence and background sync |
-| **Materials Management** | Upload PDF, DOCX, or TXT files; auto-extract content for generation |
-| **Daily** | Day-planner: recurring/one-off action items placed on calendar days, plus one rich-text note per day |
-| **Kanban Board** | Drag-and-drop columns and items for task organization |
-| **User Tags** | Color-coded tags for organizing board items |
-| **On-Device AI** | Local math recognition, speech-to-text, text-to-speech, text summarization via web workers |
-| **MyScript Integration** | Stroke-based handwriting math recognition (server-proxied API) |
-| **Push Notifications** | Scheduled review reminders with quiet hours and snooze |
-| **PWA & Offline** | Installable PWA with downloaded-workspace offline packs, durable local mutations, and explicit capability states |
-| **Subscription & Quota** | FREE / PRO / ENTERPRISE tiers with generation limits |
-| **Multiple LLM Backends** | OpenAI, Google Gemini, DeepSeek, Groq — smart routing by cost/latency/health |
-| **Sharing & Public Links** | Share workspaces/files with other users or via public URL |
-| **Passkey Authentication** | WebAuthn/passkey login alongside credentials |
+- Server adapter: `server/utils/llm/openRouter.ts`
+- Request lifecycle: `server/utils/llm/llmRequestPipeline.ts`
+- Usage audit: `server/utils/llm/usageLogger.ts` and Prisma `LlmUsage`
+- Full audit and SOLID assessment: `docs/AI_AUDIT.md`
+- Full flow and invariants: `docs/LLM_GENERATION_FLOW.md`
 
----
+OpenRouter chooses the concrete model when `OPENROUTER_MODEL=openrouter/auto`. The returned concrete model and OpenRouter-reported cost are audit data; they are not application configuration.
 
-## Tech Stack
-
-| Layer | Technologies |
-|-------|-------------|
-| **Framework** | Nuxt 4, Vue 3.5 (Composition API), TypeScript 5 |
-| **Styling** | TailwindCSS v4 + Nuxt UI v4 — see [DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md) / [COMPONENT_SYSTEM.md](./docs/COMPONENT_SYSTEM.md) |
-| **State** | Pinia, IndexedDB (offline) |
-| **Editor** | Tiptap v3 (rich text), KaTeX (math rendering), mathjs |
-| **Realtime collab** | Hocuspocus + Yjs (per-note collaboration rooms) |
-| **Server** | Nitro (H3), Prisma 4.8, MongoDB |
-| **Auth** | @sidebase/nuxt-auth (NextAuth.js), bcrypt, SimpleWebAuthn (passkeys) |
-| **Caching** | Redis (rate limiting, semantic caching) — in-memory fallback |
-| **Validation** | Zod 4 (shared contracts client + server) |
-| **AI Providers** | OpenAI SDK, @google/generative-ai, DeepSeek API, Groq API, OpenRouter |
-| **On-Device AI** | @huggingface/transformers (web worker) |
-| **PWA** | Workbox 7, web-push, Background Sync |
-| **Testing** | Playwright |
-
----
-
-## LLM Providers
-
-Five provider strategies are implemented via the Strategy pattern:
-
-| Provider | Strategy File | Models |
-|----------|--------------|--------|
-| **OpenAI** | `OpenAIStrategy.ts` | gpt-3.5-turbo, gpt-4o-mini, gpt-4o |
-| **Google** | `GeminiStrategy.ts` | gemini-2.0-flash-lite, gemini-1.5-flash-8b |
-| **DeepSeek** | `DeepSeekStrategy.ts` | deepseek-chat, deepseek-reasoner |
-| **Groq** | `GroqStrategy.ts` | llama-3.1-8b-instant, qwen-qwq-32b, llama-4-scout-17b |
-| **OpenRouter** | `OpenRouterStrategy.ts` | routes to third-party-hosted models |
-
-Models are managed via the `LlmModelRegistry` database table. The gateway (`/api/llm.gateway`) selects the best model automatically using a scoring algorithm that weighs cost, latency, health, and capability.
-
----
-
-## Development Setup
-
-1. **Install dependencies**:
-   ```bash
-   yarn install
-   ```
-2. **Set environment variables** in `.env`:
-   ```env
-   DATABASE_URL=mongodb://username:password@host:port/dbname
-   REDIS_URL=rediss://default:YOUR_PASSWORD@YOUR_HOST:YOUR_PORT
-   OPENAI_API_KEY=your_openai_key
-   GOOGLE_AI_API_KEY=your_google_ai_key
-   DEEPSEEK_API_KEY=your_deepseek_key    # optional
-   ```
-3. **Sync database schema**:
-   ```bash
-   yarn db:sync     # prisma generate + db push
-   yarn db:seed     # seed LLM pricing data
-   ```
-4. **Run the dev server**:
-   ```bash
-   yarn dev
-   ```
-5. **Build for production**:
-   ```bash
-   yarn build
-   yarn start
-   ```
-
-### Application Surfaces
-
-The app can also run as three independently-deployable Nitro surfaces (`platform`, `daily`, `learning`) selected via `APP_SURFACE` — default is `all` (today's single process). See [docs/architecture/app-surfaces.md](./docs/architecture/app-surfaces.md).
+## Setup
 
 ```bash
-yarn dev:platform   # yarn dev:daily / yarn dev:learning
-yarn build:platform # yarn build:daily / yarn build:learning
-yarn start:platform  # yarn start:daily / yarn start:learning
+yarn install
+cp .env.example .env
+yarn db:sync
+yarn dev
 ```
 
-### Key Scripts
+Required AI configuration:
 
-| Script | Purpose |
-|--------|---------|
-| `yarn dev` | Build AI worker + start dev server on port 8080 |
-| `yarn build:inject` | Build SW + AI worker + Nuxt production bundle |
-| `yarn db:sync` | Generate Prisma client + push schema to MongoDB |
-| `yarn db:seed` | Seed LLM pricing data |
-| `yarn offline:backfill` | Backfill position keys and initial offline reconciliation state before enabling offline-v2 for existing data |
-| `yarn db:studio` | Open Prisma Studio GUI |
-| `yarn typecheck` | Run TypeScript type checking |
-| `yarn lint` | ESLint + Prettier check |
-| `yarn test:unit` | Run unit tests |
-| `yarn test:pwa-offline` | Playwright PWA offline test |
-| `yarn arch:check` | Enforce layer import boundaries |
-| `yarn design:check` / `design:boundaries` / `design:contrast` | Design-system gates — see [DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md) |
-| `yarn collab:dev` | Run the Hocuspocus realtime-collab server |
-
-> **Note**: MongoDB uses `@map("_id")` for IDs and `BigInt` for micro-dollar pricing fields. Use `yarn db:sync` instead of migrations — MongoDB ignores Prisma migrations.
-
----
-
-## Rate Limiting
-
-The `/api/llm.gateway` endpoint is protected by a rate limiter:
-
-- **User**: 5 requests/minute (by `user.id`)
-- **IP**: 20 requests/minute (by client IP)
-- **Storage**: Redis primary, in-memory `Map` fallback
-- **Headers**: `X-RateLimit-Remaining`, `X-RateLimit-Remaining-User`, `X-RateLimit-Remaining-IP`, `X-RateLimit-Reset`, `Retry-After`
-
----
-
-## Documentation
-
-Detailed documentation in `docs/`:
-
-| Document | Description |
-|----------|-------------|
-| [ARCHITECTURE.md](./docs/ARCHITECTURE.md) | System design, data model, module architecture |
-| [architecture/app-surfaces.md](./docs/architecture/app-surfaces.md) | Platform/Daily/Learning deployable-surface split |
-| [DESIGN_SYSTEM.md](./docs/DESIGN_SYSTEM.md) | Design tokens: authoring, generation, enforcement gates |
-| [COMPONENT_SYSTEM.md](./docs/COMPONENT_SYSTEM.md) | Component layers, primitives, boundary enforcement |
-| [FEATURES.md](./docs/FEATURES.md) | Detailed feature documentation |
-| [LLM_GENERATION_FLOW.md](./docs/LLM_GENERATION_FLOW.md) | End-to-end LLM generation trace |
-| [DEVELOPMENT.md](./docs/DEVELOPMENT.md) | Testing, debugging, developer workflows |
-| [MAINTENANCE.md](./docs/MAINTENANCE.md) | Known issues, tech debt, roadmap |
-| [PWA.md](./docs/PWA.md) | PWA implementation and caching strategy |
-
----
-
-## Mock Mode
-
-For testing without API costs:
-
-```bash
-# .env
-OPENAI_MOCK=1
-GEMINI_MOCK=1
-DEEPSEEK_MOCK=1
+```dotenv
+OPENROUTER_API_KEY=sk-or-v1-...
+OPENROUTER_MODEL=openrouter/auto
+OPENROUTER_TIMEOUT_MS=45000
 ```
+
+`REDIS_URL` is recommended in production for distributed rate limits. Without it, limits fall back to process memory.
+
+## Commands
+
+| Command                            | Purpose                                               |
+| ---------------------------------- | ----------------------------------------------------- |
+| `yarn dev`                         | Build icons and start Nuxt on port 8080               |
+| `yarn build`                       | Build service worker, icons, client, and Nitro server |
+| `yarn test:unit`                   | Run unit tests                                        |
+| `yarn typecheck`                   | Run Nuxt TypeScript checks                            |
+| `yarn db:sync`                     | Generate Prisma Client and push Mongo schema          |
+| `yarn db:remove-legacy-ai`         | Dry-run legacy AI DB cleanup                          |
+| `yarn db:remove-legacy-ai --apply` | Drop old model/pricing/gateway collections and fields |
+
+The cleanup command is intentionally dry-run by default. Back up the database before using `--apply`.
+
+## Main directories
+
+- `app/`: Vue UI, composables, services, local-first client runtime
+- `server/`: API routes and server modules
+- `shared/`: Zod contracts and shared domain utilities
+- `prisma/`: MongoDB schema
+- `sw-src/`: service worker source
+- `scripts/`: verification and maintenance commands
+- `docs/`: detailed architecture and operating notes

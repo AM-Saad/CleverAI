@@ -38,7 +38,6 @@ model User {
   notifications             Notification[]
   scheduledNotifications    ScheduledNotification[]
   notificationPreferences   UserNotificationPreferences?
-  llmGatewayLogs            LlmGatewayLog[]
   languageWords             LanguageWord[]               @relation("UserLanguageWords")
   languagePreferences       UserLanguagePreferences?
   dailyNotes                DailyNote[]                  @relation("UserDailyNotes")
@@ -196,8 +195,6 @@ model Workspace {
   userId                    String                     @db.ObjectId
   createdAt                 DateTime                   @default(now())
   updatedAt                 DateTime                   @updatedAt
-  llmModel                  String                     @default("gpt-3.5")
-  llmGatewayLogs            LlmGatewayLog[]
   boardColumns              BoardColumn[]
   boardItems                BoardItem[]
   externalBoardMappings     ExternalBoardMapping[]
@@ -216,8 +213,6 @@ model Material {
   content     String
   type        String? // "video" | "audio" | "text" | "pdf" | etc.
   metadata    Json?
-  llmModel    String?     @default("gpt-3.5")
-  llmPrompt   String?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   // Relations to generated content
@@ -625,24 +620,12 @@ model GradeRequest {
   @@index([processedAt])
 }
 
-model LlmPrice {
-  id                String  @id @default(auto()) @map("_id") @db.ObjectId
-  provider          String // "openai" | "google"
-  model             String // "gpt-4o" | "gemini-1.5-pro" | ...
-  // If you want exact math, store integer minor units (see note below).
-  inputPer1kMicros  BigInt // price per 1k input tokens, in micro-dollars (USD * 1_000_000)
-  outputPer1kMicros BigInt // price per 1k output tokens, in micro-dollars (USD * 1_000_000)
-  isActive          Boolean @default(true)
-
-  @@unique([provider, model], map: "provider_model")
-}
-
 model LlmUsage {
   id                        String  @id @default(auto()) @map("_id") @db.ObjectId
-  provider                  String // "openai" | "google"
-  model                     String
-  inputPer1kMicrosSnapshot  BigInt? // snapshot of price used at call time
-  outputPer1kMicrosSnapshot BigInt? // snapshot of price used at call time
+  provider                  String  @default("openrouter")
+  model                     String // requested OpenRouter model or router slug
+  actualModel               String? // concrete model reported by OpenRouter
+  appRequestId              String? @unique
 
   promptTokens     Int
   completionTokens Int
@@ -662,6 +645,8 @@ model LlmUsage {
   userId      String?
   workspaceId String?
   feature     String? // "flashcards" | "quiz" | "chat" | etc.
+  latencyMs   Int?
+  cacheHit    Boolean @default(false)
 
   // Debug/audit
   createdAt    DateTime @default(now())
@@ -744,6 +729,7 @@ enum CreditTxType {
   AD_REWARD
   STRIPE_PURCHASE
   GENERATION_SPEND
+  GENERATION_REFUND
   SUBSCRIPTION_BONUS
   ADMIN_GRANT
 }
@@ -854,68 +840,6 @@ model UserNotificationPreferences {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("userNotificationPreferences")
-}
-
-// =========================
-// LLM GATEWAY MODELS
-// =========================
-
-model LlmModelRegistry {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  modelId         String   @unique // "openai-gpt4o-mini"
-  provider        String // "openai", "google", "deepseek"
-  modelName       String // "gpt-4o-mini"
-  inputCostPer1M  Float // USD per 1M input tokens
-  outputCostPer1M Float // USD per 1M output tokens
-  capabilities    String[] // ["text", "multimodal"]
-  maxTokens       Int? // context window
-  latencyBudgetMs Int      @default(500)
-  avgLatencyMs    Int? // rolling average
-  healthStatus    String   @default("healthy") // "healthy"|"degraded"|"down"
-  lastHealthCheck DateTime @default(now())
-  priority        Int      @default(5) // 1=highest, 10=lowest
-  enabled         Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-
-  @@index([provider, enabled])
-  @@index([priority, healthStatus])
-  @@map("llm_model_registry")
-}
-
-model LlmGatewayLog {
-  id                  String     @id @default(auto()) @map("_id") @db.ObjectId
-  userId              String     @db.ObjectId
-  user                User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  workspaceId         String?    @db.ObjectId
-  workspace           Workspace? @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
-  materialId          String?    @db.ObjectId // Material used for generation
-  requestId           String     @unique // UUID for tracing
-  selectedModelId     String // from LlmModelRegistry
-  provider            String
-  task                String // "flashcards", "quiz", "chat"
-  inputTokens         Int
-  outputTokens        Int
-  totalTokens         Int
-  inputCostUsdMicros  BigInt
-  outputCostUsdMicros BigInt
-  totalCostUsdMicros  BigInt
-  latencyMs           Int
-  cached              Boolean    @default(false)
-  cacheHit            Boolean    @default(false)
-  status              String // "success"|"error"|"quota_exceeded"|"rate_limited"
-  errorCode           String?
-  errorMessage        String?
-  routingScore        Float? // Score used for model selection
-  itemCount           Int? // Adaptive item count for generation
-  tokenEstimate       Int? // Estimated tokens for input text
-  depth               String? // Generation depth: "quick", "balanced", "deep"
-  createdAt           DateTime   @default(now())
-
-  @@index([userId, createdAt])
-  @@index([selectedModelId, status])
-  @@index([task, status])
-  @@map("llm_gateway_logs")
 }
 
 // =========================

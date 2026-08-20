@@ -102,6 +102,22 @@ export default defineNuxtConfig({
     "@nuxt/devtools",
     "@vueuse/nuxt",
   ],
+  // Fonts are loaded by the existing stylesheet link. Never download remote
+  // font assets during a production build; builds must be network-independent.
+  fonts: {
+    providers: {
+      adobe: false,
+      bunny: false,
+      fontshare: false,
+      fontsource: false,
+      google: false,
+      googleicons: false,
+    },
+    families: [
+      { name: "Saira", provider: "none" },
+      { name: "Nunito", provider: "none" },
+    ],
+  },
   // App icons are local SVGs in a sprite; @nuxt/icon exists only for Nuxt UI's
   // own internal `i-lucide-*` defaults (select chevrons, checkbox ticks, ...).
   // Inline those into the client bundle: the server-bundle route would be an
@@ -113,19 +129,49 @@ export default defineNuxtConfig({
   icon: {
     clientBundle: {
       icons: [
-        "lucide:arrow-down", "lucide:arrow-left", "lucide:arrow-right",
-        "lucide:arrow-up", "lucide:arrow-up-right", "lucide:check",
-        "lucide:chevron-down", "lucide:chevron-left", "lucide:chevron-right",
-        "lucide:chevron-up", "lucide:chevrons-left", "lucide:chevrons-right",
-        "lucide:circle-alert", "lucide:circle-check", "lucide:circle-x",
-        "lucide:copy", "lucide:copy-check", "lucide:ellipsis", "lucide:eye",
-        "lucide:eye-off", "lucide:file", "lucide:folder", "lucide:folder-open",
-        "lucide:grip-vertical", "lucide:hash", "lucide:info", "lucide:lightbulb",
-        "lucide:loader-circle", "lucide:menu", "lucide:minus", "lucide:monitor",
-        "lucide:moon", "lucide:panel-left-close", "lucide:panel-left-open",
-        "lucide:plus", "lucide:rotate-ccw", "lucide:search", "lucide:square",
-        "lucide:sun", "lucide:terminal", "lucide:triangle-alert",
-        "lucide:upload", "lucide:x",
+        "lucide:arrow-down",
+        "lucide:arrow-left",
+        "lucide:arrow-right",
+        "lucide:arrow-up",
+        "lucide:arrow-up-right",
+        "lucide:check",
+        "lucide:chevron-down",
+        "lucide:chevron-left",
+        "lucide:chevron-right",
+        "lucide:chevron-up",
+        "lucide:chevrons-left",
+        "lucide:chevrons-right",
+        "lucide:circle-alert",
+        "lucide:circle-check",
+        "lucide:circle-x",
+        "lucide:copy",
+        "lucide:copy-check",
+        "lucide:ellipsis",
+        "lucide:eye",
+        "lucide:eye-off",
+        "lucide:file",
+        "lucide:folder",
+        "lucide:folder-open",
+        "lucide:grip-vertical",
+        "lucide:hash",
+        "lucide:info",
+        "lucide:lightbulb",
+        "lucide:loader-circle",
+        "lucide:menu",
+        "lucide:minus",
+        "lucide:monitor",
+        "lucide:moon",
+        "lucide:panel-left-close",
+        "lucide:panel-left-open",
+        "lucide:plus",
+        "lucide:rotate-ccw",
+        "lucide:search",
+        "lucide:square",
+        "lucide:sun",
+        "lucide:terminal",
+        "lucide:triangle-alert",
+        "lucide:upload",
+        "lucide:x",
       ],
       scan: true,
     },
@@ -156,7 +202,7 @@ export default defineNuxtConfig({
           "GOOGLE_CLIENT_SECRET",
           "DATABASE_URL",
           "SW",
-          "OPENAI_API_KEY",
+          "OPENROUTER_API_KEY",
         ];
         const missing = required.filter(
           (k) => !process.env[k as keyof NodeJS.ProcessEnv],
@@ -349,9 +395,6 @@ export default defineNuxtConfig({
       assetsInlineLimit: 4096, // inline assets under 4kb for better performance and reduce requests
       minify: "esbuild",
       target: "es2022", // Support BigInt and modern JS features
-      rollupOptions: {
-        external: ["@huggingface/transformers", "onnxruntime-web"], // Don't bundle transformers - causes ONNX Runtime webpack errors
-      },
     },
     esbuild: {
       target: "es2022", // Support BigInt and modern JS features
@@ -370,10 +413,6 @@ export default defineNuxtConfig({
         "yjs",
         "y-websocket",
       ],
-      exclude: ["@huggingface/transformers"], // Exclude transformers from optimization to avoid issues
-    },
-    worker: {
-      format: "es", // Use ES modules for workers to preserve module dependencies
     },
   },
   ssr: false,
@@ -395,17 +434,11 @@ export default defineNuxtConfig({
   runtimeConfig: {
     // Server-only
     redisUrl: process.env.REDIS_URL,
-    openaiKey: process.env.OPENAI_API_KEY,
-    geminiKey: process.env.GEMINI_API_KEY,
-    deepseekKey: process.env.DEEPSEEK_API_KEY,
     openrouterKey: process.env.OPENROUTER_API_KEY,
-    groqKey: process.env.GROQ_API_KEY,
-    // Dev-only: Force a specific model for testing (e.g., 'deepseek-chat', 'gpt-4o-mini')
-    devLlmModelOverride: process.env.DEV_LLM_MODEL_OVERRIDE,
+    openrouterModel: process.env.OPENROUTER_MODEL || "openrouter/auto",
+    openrouterTimeoutMs: process.env.OPENROUTER_TIMEOUT_MS || "45000",
     databaseUrl: process.env.DATABASE_URL,
     RESEND_API_KEY: process.env.RESEND_API_KEY,
-    myscriptApplicationKey: process.env.MYSCRIPT_APPLICATION_KEY,
-    myscriptHmacKey: process.env.MYSCRIPT_HMAC_KEY,
 
     // Auth / secrets (server only)
     auth: {
@@ -425,8 +458,6 @@ export default defineNuxtConfig({
     learningUpstream,
 
     VAPID_PRIVATE_KEY: process.env.VAPID_PRIVATE_KEY,
-
-    enableLlmGateway: process.env.ENABLE_LLM_GATEWAY === "true",
 
     // Public (exposed to client)
     public: {
@@ -449,8 +480,6 @@ export default defineNuxtConfig({
       // staged rollout. It defaults on for this pre-user environment.
       offlineV2: process.env.NUXT_PUBLIC_OFFLINE_V2 !== "false",
       appSurface,
-
-      enableLlmGateway: process.env.ENABLE_LLM_GATEWAY === "true",
     },
   },
 });

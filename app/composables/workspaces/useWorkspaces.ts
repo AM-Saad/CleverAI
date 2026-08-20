@@ -7,7 +7,10 @@ import {
   type CreateWorkspaceDTO,
   type UpdateWorkspaceDTO,
 } from "@@/shared/utils/workspace.contract";
-import { listOfflineEntities, putOfflineEntities } from "~/utils/offline-v2/repository";
+import {
+  listOfflineEntities,
+  putOfflineEntities,
+} from "~/utils/offline-v2/repository";
 import { useOfflineRuntime } from "~/composables/offline/useOfflineRuntime";
 import { Result } from "~/types/Result";
 const WorkspaceResponse = z
@@ -33,7 +36,8 @@ const WorkspaceStudyContentResponseSchema = WorkspaceStudyContentResponse;
 const workspaceIdAliases = new Map<string, string>();
 
 function recordWorkspaceIdMap(idMap: Record<string, string>) {
-  for (const [tempId, serverId] of Object.entries(idMap)) workspaceIdAliases.set(tempId, serverId);
+  for (const [tempId, serverId] of Object.entries(idMap))
+    workspaceIdAliases.set(tempId, serverId);
 }
 
 function resolveWorkspaceId(id: string) {
@@ -44,8 +48,11 @@ let workspaceAliasListenerRegistered = false;
 function ensureWorkspaceAliasListener() {
   if (workspaceAliasListenerRegistered || typeof window === "undefined") return;
   window.addEventListener("offline-v2-entity-id-remapped", (event) => {
-    const detail = (event as CustomEvent<{ entity?: string; idMap?: Record<string, string> }>).detail;
-    if (detail?.entity === "workspace" && detail.idMap) recordWorkspaceIdMap(detail.idMap);
+    const detail = (
+      event as CustomEvent<{ entity?: string; idMap?: Record<string, string> }>
+    ).detail;
+    if (detail?.entity === "workspace" && detail.idMap)
+      recordWorkspaceIdMap(detail.idMap);
   });
   workspaceAliasListenerRegistered = true;
 }
@@ -65,8 +72,14 @@ export function useWorkspaces() {
     dataKey,
     async () => {
       if (!offline.isOnline.value && offline.accountId.value) {
-        const local = await listOfflineEntities<WorkspaceSummary>(offline.accountId.value, "workspace");
-        return { success: true, data: local.map((record) => record.data) } as any;
+        const local = await listOfflineEntities<WorkspaceSummary>(
+          offline.accountId.value,
+          "workspace",
+        );
+        return {
+          success: true,
+          data: local.map((record) => record.data),
+        } as any;
       }
       // The app shell exists on the sign-in page, so this composable can mount
       // before Auth.js has established a session. Keep that anonymous cache
@@ -75,30 +88,41 @@ export function useWorkspaces() {
       if (status.value !== "authenticated" || !offline.accountId.value) {
         return Result.success<WorkspaceSummary[]>([]);
       }
-      const result = await $api.workspaces.getWorkspaces(WorkspacesResponseSchema);
+      const result = await $api.workspaces.getWorkspaces(
+        WorkspacesResponseSchema,
+      );
       if (result.success && offline.accountId.value) {
-        await putOfflineEntities(result.data.map((workspace) => ({
-          id: `${offline.accountId.value}:workspace:${workspace.id}`,
-          accountId: offline.accountId.value,
-          entity: "workspace" as const,
-          entityId: workspace.id,
-          version: 0,
-          updatedAt: Date.now(),
-          data: workspace as unknown as Record<string, unknown>,
-        })));
+        await putOfflineEntities(
+          result.data.map((workspace) => ({
+            id: `${offline.accountId.value}:workspace:${workspace.id}`,
+            accountId: offline.accountId.value,
+            entity: "workspace" as const,
+            entityId: workspace.id,
+            version: 0,
+            updatedAt: Date.now(),
+            data: workspace as unknown as Record<string, unknown>,
+          })),
+        );
       }
       return result;
-    }
+    },
   );
   if (import.meta.client) {
     const handleRemap = (event: Event) => {
-      const detail = (event as CustomEvent<{ entity?: string; idMap?: Record<string, string> }>).detail;
+      const detail = (
+        event as CustomEvent<{
+          entity?: string;
+          idMap?: Record<string, string>;
+        }>
+      ).detail;
       if (detail?.entity !== "workspace" || !detail.idMap) return;
       recordWorkspaceIdMap(detail.idMap);
       void refresh();
     };
     window.addEventListener("offline-v2-entity-id-remapped", handleRemap);
-    onScopeDispose(() => window.removeEventListener("offline-v2-entity-id-remapped", handleRemap));
+    onScopeDispose(() =>
+      window.removeEventListener("offline-v2-entity-id-remapped", handleRemap),
+    );
   }
   return {
     workspaces: data,
@@ -108,7 +132,9 @@ export function useWorkspaces() {
   };
 }
 
-export function useCreateWorkspace(refreshWorkspaces?: () => void | Promise<void>) {
+export function useCreateWorkspace(
+  refreshWorkspaces?: () => void | Promise<void>,
+) {
   ensureWorkspaceAliasListener();
   const { $api } = useNuxtApp();
   // Use centralized operation handling - all errors constructed by FetchFactory
@@ -127,12 +153,19 @@ export function useCreateWorkspace(refreshWorkspaces?: () => void | Promise<void
           description: payload.description ?? null,
           metadata: payload.metadata ?? null,
           order: Date.now(),
-          llmModel: "gpt-3.5",
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         },
       });
-      const local = { id: entityId, title: payload.title, description: payload.description ?? null, metadata: payload.metadata ?? null, order: Date.now(), llmModel: "gpt-3.5", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as WorkspaceSummary;
+      const local = {
+        id: entityId,
+        title: payload.title,
+        description: payload.description ?? null,
+        metadata: payload.metadata ?? null,
+        order: Date.now(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as WorkspaceSummary;
       if (refreshWorkspaces) await refreshWorkspaces();
       return local;
     }
@@ -162,20 +195,40 @@ export const useWorkspace = (id: string) => {
     async () => {
       const resolvedId = resolveWorkspaceId(id);
       if (!offline.isOnline.value && offline.accountId.value) {
-        const local = await listOfflineEntities<WorkspaceSummary>(offline.accountId.value, "workspace");
-        const workspace = local.find((record) => record.entityId === resolvedId)?.data;
-        return workspace ? { success: true, data: workspace } as any : { success: false, error: { message: "This workspace has not been downloaded for offline use." } } as any;
+        const local = await listOfflineEntities<WorkspaceSummary>(
+          offline.accountId.value,
+          "workspace",
+        );
+        const workspace = local.find(
+          (record) => record.entityId === resolvedId,
+        )?.data;
+        return workspace
+          ? ({ success: true, data: workspace } as any)
+          : ({
+              success: false,
+              error: {
+                message:
+                  "This workspace has not been downloaded for offline use.",
+              },
+            } as any);
       }
       return $api.workspaces.getWorkspace(resolvedId, WorkspaceResponseSchema);
-    }
+    },
   );
   if (import.meta.client) {
     const handleRemap = (event: Event) => {
-      const detail = (event as CustomEvent<{ entity?: string; idMap?: Record<string, string> }>).detail;
+      const detail = (
+        event as CustomEvent<{
+          entity?: string;
+          idMap?: Record<string, string>;
+        }>
+      ).detail;
       if (detail?.entity === "workspace" && detail.idMap?.[id]) void refresh();
     };
     window.addEventListener("offline-v2-entity-id-remapped", handleRemap);
-    onScopeDispose(() => window.removeEventListener("offline-v2-entity-id-remapped", handleRemap));
+    onScopeDispose(() =>
+      window.removeEventListener("offline-v2-entity-id-remapped", handleRemap),
+    );
   }
 
   return {
@@ -195,19 +248,43 @@ export const useWorkspaceStudyContent = (id: string) => {
     async () => {
       const resolvedId = resolveWorkspaceId(id);
       if (!offline.isOnline.value && offline.accountId.value) {
-        const stored = await listOfflineEntities<Record<string, unknown>>(offline.accountId.value, "studyContent", resolvedId);
-        return { success: true, data: { flashcards: stored.filter((record) => "front" in record.data).map((record) => record.data), questions: stored.filter((record) => "question" in record.data).map((record) => record.data) } } as any;
+        const stored = await listOfflineEntities<Record<string, unknown>>(
+          offline.accountId.value,
+          "studyContent",
+          resolvedId,
+        );
+        return {
+          success: true,
+          data: {
+            flashcards: stored
+              .filter((record) => "front" in record.data)
+              .map((record) => record.data),
+            questions: stored
+              .filter((record) => "question" in record.data)
+              .map((record) => record.data),
+          },
+        } as any;
       }
-      return $api.workspaces.getStudyContent(resolvedId, WorkspaceStudyContentResponseSchema);
-    }
+      return $api.workspaces.getStudyContent(
+        resolvedId,
+        WorkspaceStudyContentResponseSchema,
+      );
+    },
   );
   if (import.meta.client) {
     const handleRemap = (event: Event) => {
-      const detail = (event as CustomEvent<{ entity?: string; idMap?: Record<string, string> }>).detail;
+      const detail = (
+        event as CustomEvent<{
+          entity?: string;
+          idMap?: Record<string, string>;
+        }>
+      ).detail;
       if (detail?.entity === "workspace" && detail.idMap?.[id]) void refresh();
     };
     window.addEventListener("offline-v2-entity-id-remapped", handleRemap);
-    onScopeDispose(() => window.removeEventListener("offline-v2-entity-id-remapped", handleRemap));
+    onScopeDispose(() =>
+      window.removeEventListener("offline-v2-entity-id-remapped", handleRemap),
+    );
   }
 
   return {
@@ -228,7 +305,13 @@ export function useDeleteWorkspace(refreshWorkspaces: () => void) {
   const deleteWorkspace = async (id: string) => {
     id = resolveWorkspaceId(id);
     if (!offline.isOnline.value) {
-      await offline.queue({ entity: "workspace", operation: "workspace.delete", entityId: id, changedFields: ["deleted"], payload: {} });
+      await offline.queue({
+        entity: "workspace",
+        operation: "workspace.delete",
+        entityId: id,
+        changedFields: ["deleted"],
+        payload: {},
+      });
       refreshWorkspaces();
       return { deleted: true } as any;
     }
@@ -256,14 +339,18 @@ export function useUpdateWorkspace() {
   const updateOperation = useOperation<WorkspaceSummary>();
   const offline = useOfflineRuntime();
 
-  const updateWorkspace = async (
-    payload: UpdateWorkspaceDTO
-  ) => {
+  const updateWorkspace = async (payload: UpdateWorkspaceDTO) => {
     payload = { ...payload, id: resolveWorkspaceId(payload.id) };
     if (!offline.isOnline.value) {
       const data = { ...payload } as Record<string, unknown>;
       delete data.id;
-      await offline.queue({ entity: "workspace", operation: "workspace.update", entityId: payload.id, changedFields: Object.keys(data), payload: data });
+      await offline.queue({
+        entity: "workspace",
+        operation: "workspace.update",
+        entityId: payload.id,
+        changedFields: Object.keys(data),
+        payload: data,
+      });
       return { id: payload.id, ...data } as WorkspaceSummary;
     }
     return await updateOperation.execute(async () => {

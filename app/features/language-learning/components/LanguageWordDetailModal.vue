@@ -1,18 +1,34 @@
 <template>
-  <UiModal v-model:open="open" :title="word?.word ?? 'Word details'" :description="word ? detailSubtitle : undefined"
-    icon="document">
+  <UiModal
+    v-model:open="open"
+    :title="word?.word ?? 'Word details'"
+    :description="word ? detailSubtitle : undefined"
+    icon="document"
+  >
     <div v-if="word" class="word-detail">
       <div class="word-detail__hero">
         <div>
           <div class="word-detail__word-row">
             <UiTitle tag="h3" size="lg" dir="auto">{{ word.word }}</UiTitle>
-            <UiPill :label="statusLabel" :color="statusColor" size="sm" variant="outline" active max-width="120px" />
+            <UiPill
+              :label="statusLabel"
+              :color="statusColor"
+              size="sm"
+              variant="outline"
+              active
+              max-width="120px"
+            />
           </div>
           <UiParagraph v-if="word.phonetic" size="sm" color="content-secondary">
             {{ word.phonetic }}
           </UiParagraph>
         </div>
-        <UiIconButton icon="volume-2" :label="`Hear ${word.word}`" :loading="speakingWord" @click="hearWord" />
+        <UiIconButton
+          icon="volume-2"
+          :label="`Hear ${word.word}`"
+          :loading="speakingWord"
+          @click="hearWord"
+        />
       </div>
 
       <UiPanel v-if="word.translation" variant="subtle" size="sm">
@@ -23,31 +39,63 @@
       <section class="word-detail__section">
         <UiSubtitle tag="h4" size="sm">Definition</UiSubtitle>
         <div v-if="word.meanings?.length" class="word-detail__stack">
-          <UiPanel v-for="(meaning, index) in word.meanings" :key="`${word.id}:meaning:${index}`" variant="surface"
-            size="sm">
+          <UiPanel
+            v-for="(meaning, index) in word.meanings"
+            :key="`${word.id}:meaning:${index}`"
+            variant="surface"
+            size="sm"
+          >
             <div class="word-detail__meaning-head">
               <span>{{ index + 1 }}</span>
-              <UiPill v-if="meaning.partOfSpeech" :label="meaning.partOfSpeech" size="sm" max-width="120px" />
+              <UiPill
+                v-if="meaning.partOfSpeech"
+                :label="meaning.partOfSpeech"
+                size="sm"
+                max-width="120px"
+              />
             </div>
             <UiParagraph dir="auto">{{ meaning.definition }}</UiParagraph>
-            <UiParagraph v-if="meaning.translation" size="sm" color="primary" dir="auto">
+            <UiParagraph
+              v-if="meaning.translation"
+              size="sm"
+              color="primary"
+              dir="auto"
+            >
               {{ meaning.translation }}
             </UiParagraph>
-            <UiParagraph v-if="meaning.example" size="sm" color="content-secondary" dir="auto">
+            <UiParagraph
+              v-if="meaning.example"
+              size="sm"
+              color="content-secondary"
+              dir="auto"
+            >
               “{{ meaning.example }}”
             </UiParagraph>
           </UiPanel>
         </div>
-        <UiAlert v-else tone="neutral" title="No generated definition"
-          description="Capture this word again with translation enabled to enrich its lexical details." />
+        <UiAlert
+          v-else
+          tone="neutral"
+          title="No generated definition"
+          description="Capture this word again with translation enabled to enrich its lexical details."
+        />
       </section>
 
       <section v-if="word.examples?.length" class="word-detail__section">
         <UiSubtitle tag="h4" size="sm">Examples</UiSubtitle>
-        <UiPanel v-for="(example, index) in word.examples" :key="`${word.id}:example:${index}`" variant="subtle"
-          size="sm">
+        <UiPanel
+          v-for="(example, index) in word.examples"
+          :key="`${word.id}:example:${index}`"
+          variant="subtle"
+          size="sm"
+        >
           <UiParagraph dir="auto">{{ example.text }}</UiParagraph>
-          <UiParagraph v-if="example.translation" size="sm" color="content-secondary" dir="auto">
+          <UiParagraph
+            v-if="example.translation"
+            size="sm"
+            color="content-secondary"
+            dir="auto"
+          >
             {{ example.translation }}
           </UiParagraph>
         </UiPanel>
@@ -61,17 +109,33 @@
               Written in {{ learnedLanguage }}
             </UiParagraph>
           </div>
-          <UiButton size="sm" variant="soft" tone="primary" leading-icon="sparkles" :loading="generatingStory"
-            @click="emit('generate-story', word)">
+          <UiButton
+            size="sm"
+            variant="soft"
+            tone="primary"
+            leading-icon="sparkles"
+            :loading="generatingStory"
+            @click="emit('generate-story', word)"
+          >
             {{ story ? "Regenerate story" : "Generate story" }}
           </UiButton>
         </div>
 
         <UiPanel v-if="story" variant="surface" size="sm">
           <div class="word-detail__story-head">
-            <UiPill label="Learning story" color="var(--color-primary)" size="sm" max-width="140px" />
-            <UiIconButton icon="book-audio" label="Hear story" size="sm" :loading="speakingStory"
-              @click="hearStory" />
+            <UiPill
+              label="Learning story"
+              color="var(--color-primary)"
+              size="sm"
+              max-width="140px"
+            />
+            <UiIconButton
+              icon="book-audio"
+              label="Hear story"
+              size="sm"
+              :loading="speakingStory"
+              @click="hearStory"
+            />
           </div>
           <UiParagraph class="word-detail__story" dir="auto">
             {{ cleanStoryText(story.storyText) }}
@@ -105,8 +169,13 @@
         <UiButton variant="ghost" tone="neutral" @click="open = false">
           Close
         </UiButton>
-        <UiButton v-if="canEnroll" tone="primary" leading-icon="book-plus" :loading="enrolling"
-          @click="emit('enroll', word)">
+        <UiButton
+          v-if="canEnroll"
+          tone="primary"
+          leading-icon="book-plus"
+          :loading="enrolling"
+          @click="emit('enroll', word)"
+        >
           Add to review
         </UiButton>
       </div>
@@ -120,7 +189,7 @@ import {
   getLanguageLabel,
   type LanguageStoryPreview,
 } from "@shared/utils/language.contract";
-import { useTextToSpeechWorker } from "~/composables/ai/useTextToSpeechWorker";
+import { useTextToSpeech } from "~/composables/ai/useTextToSpeech";
 
 const open = defineModel<boolean>("open", { default: false });
 const props = withDefaults(
@@ -139,7 +208,7 @@ const emit = defineEmits<{
   (event: "enroll", word: LanguageWord): void;
 }>();
 
-const ttsWorker = useTextToSpeechWorker();
+const ttsWorker = useTextToSpeech();
 const speakingWord = ref(false);
 const speakingStory = ref(false);
 let activeAudio: HTMLAudioElement | null = null;

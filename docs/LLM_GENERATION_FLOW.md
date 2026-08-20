@@ -1,733 +1,83 @@
-# 🔄 LLM Generation Flow Analysis
+# OpenRouter Generation Architecture
 
-## Complete End-to-End Trace: User Action → Flashcard/Quiz Creation
+## Non-negotiable boundary
 
----
+OpenRouter is the only inference integration. Application code must not call a model vendor directly, download a browser model, introduce provider SDKs, or add model/pricing configuration to MongoDB.
 
-## 📊 High-Level Architecture
+The flow is: client feature, authenticated API, shared rate limit, atomic quota reservation, OpenRouter adapter, strict output validation, application persistence, usage audit, response.
 
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                              FRONTEND (Nuxt 4)                              │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  features/materials/GenerateButton.vue → useGenerateFromMaterial           │
-│         ↓                                        ↓                         │
-│   [UI Trigger]                         GatewayService.ts                   │
-│         ↓                      ↓                       ↓                    │
-│                         [State Machine]         [HTTP Client]              │
-└──────────────────────────────────┬──────────────────────────────────────────┘
-                                   │ POST /api/llm.gateway
-                                   ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         SERVER (Nitro / H3)                                 │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  llm.gateway.post.ts                                                        │
-│       │ parse/auth only                                                     │
-│       ▼                                                                     │
-│  ai-generation/application/runGatewayGeneration                             │
-│       ├─→ prepareGatewayGeneration                                          │
-│       ├─→ llmRequestPipeline (quota, rate limits, model, strategy)          │
-│       ├─→ SemanticGenerationCachePort                                       │
-│       ├─→ LLM strategy call                                                 │
-│       ├─→ completeGatewayGeneration / saveGeneratedArtifacts                │
-│       └─→ plain response + headers                                          │
-└──────────────────────────────────┬──────────────────────────────────────────┘
-                                   │
-                                   ▼
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                         EXTERNAL SERVICES                                   │
-├─────────────────────────────────────────────────────────────────────────────┤
-│  OpenAI API (GPT-3.5/4o)  │  Google AI (Gemini)  │  DeepSeek API           │
-│                           │                      │  Redis (Rate Limit)     │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+## Components
 
----
+| Component                    | Responsibility                                                                                |
+| ---------------------------- | --------------------------------------------------------------------------------------------- |
+| `openRouter.ts`              | HTTP transport, timeout/retry, structured schemas, multimodal payloads, response measurement  |
+| `llmRequestPipeline.ts`      | Authentication, shared rate limit, quota reservation/refund, one request ID, settlement       |
+| `usageLogger.ts`             | One `LlmUsage` audit record with requested/actual model, tokens, native cost, status, latency |
+| `generationQuota.ts`         | Atomic free-quota or credit reservation and compensating refund                               |
+| `runGatewayGeneration.ts`    | Flashcard/quiz use case and optional exact persistence                                        |
+| Language application modules | Translation/story parsing and persistence                                                     |
 
-## 🎯 Step-by-Step Flow
+## Entry points
 
-### **Phase 1: User Initiates Generation**
+- `POST /api/llm.gateway`: flashcards and quizzes
+- `POST /api/ai/summarize`: text summary
+- `POST /api/ai/math-recognize`: handwritten image to LaTeX
+- `POST /api/ai/transcribe`: audio transcription
+- `POST /api/language/translate`: lexical translation/definition
+- `POST /api/language/generate-story`: language story
 
-#### [GenerateButton.vue](app/features/materials/components/GenerateButton.vue)
+Browser speech synthesis remains native platform output. It performs no model inference.
 
-```vue
-<!-- User clicks dropdown menu option -->
-<DropdownMenuItem @click="generate.startGenerate('flashcards')">
-  Flashcards
-</DropdownMenuItem>
-```
+## Request lifecycle
 
-**What happens:**
-- Displays quota badge (`x/10 remaining`)
-- Dropdown menu with "Flashcards" and "Questions" options
-- Triggers `generate.startGenerate(type)` on click
+1. Validate request shape and resource ownership.
+2. Authenticate the user.
+3. Enforce shared user and IP rate buckets. Redis is authoritative when available; a real 429 is never converted to fallback success.
+4. Confirm the OpenRouter key exists.
+5. Check quota, then reserve it atomically before the remote request.
+6. Call `https://openrouter.ai/api/v1/chat/completions` with timeout, bounded retry, provider fallback, privacy filtering, response caching, and usage inclusion.
+7. Reject empty, truncated, malformed, wrong-shape, or wrong-count output.
+8. Persist requested artifacts. Reviewed previews use commit endpoints, never a second generation call.
+9. Finalize once: write `LlmUsage`, expose actual model and quota headers, return.
+10. On failure: refund the app reservation once and write an error audit. If OpenRouter returned usable output before application persistence failed, its tokens and cost remain in the audit.
 
----
+## Data policy
 
-### **Phase 2: Composable State Machine**
+`LlmUsage` is audit data, not routing configuration. It stores:
 
-#### [useGenerateFromMaterial.ts](app/features/materials/composables/useGenerateFromMaterial.ts)
+- provider (`openrouter`)
+- requested router/model slug and actual model reported by OpenRouter
+- app and provider request IDs
+- input/output/total tokens
+- OpenRouter-reported total cost in integer micro-dollars
+- status/error, latency, cache status, feature, user/workspace context
 
-```typescript
-export function useGenerateFromMaterial(materialId: Ref<string>) {
-  const state = ref<GenerationState>('idle');
-  const existingContent = ref<ExistingContent | null>(null);
-  
-  // Step 1: Check for existing content
-  async function checkExistingContent(): Promise<ExistingContent | null> {
-    const response = await $api.materials.getGeneratedContent(materialId.value);
-    return response.success ? response.data : null;
-  }
-  
-  // Step 2: Start generation (shows confirmation if content exists)
-  async function startGenerate(type: GenerationType) {
-    existingContent.value = await checkExistingContent();
-    
-    if (existingContent.value?.hasContent) {
-      // Show RegenerateConfirmDialog (user chooses replace or not)
-      state.value = 'confirm-regenerate';
-      return;
-    }
-    
-    await executeGeneration(type);
-  }
-  
-  // Step 3: Execute the actual generation
-  async function executeGeneration(type: GenerationType, replace = false) {
-    state.value = 'generating';
-    
-    const result = await gatewayService.generateFlashcards(text, {
-      materialId: materialId.value,
-      save: true,
-      replace, // User-controlled replace behavior
-    });
-    
-    state.value = 'complete';
-  }
-}
-```
+There is no `LlmPrice`, `LlmModelRegistry`, or `LlmGatewayLog`. Pricing is never calculated from a local table.
 
-**Key Decision Points:**
-| Condition | Action |
-|-----------|--------|
-| No existing content | Proceed directly to generation |
-| Has existing flashcards/questions | Show `RegenerateConfirmDialog` |
-| User confirms regeneration | Execute with append or progress-preserving replace mode |
-| User cancels | Return to idle state |
+Language word/story rows may retain the actual model string that produced content. This is immutable provenance, not a selectable model registry.
 
-**Regeneration Behavior:**
-- **`replace=false` (default)**: Append new items to existing collection
-- **`replace=true`**: Preserve exact matches, suspend removed items, create changed/new items
-- Review history stays attached to preserved and suspended items
+## Configuration
 
----
+- `OPENROUTER_API_KEY`: required server secret
+- `OPENROUTER_MODEL`: optional; defaults to `openrouter/auto`
+- `OPENROUTER_TIMEOUT_MS`: optional; defaults to 45000
+- `REDIS_URL`: optional distributed limiter; memory fallback is per process
 
-### **Phase 3: Frontend Service Layer**
+No model selector is accepted from public generation requests.
 
-#### [GatewayService.ts](app/services/GatewayService.ts)
+## Failure semantics
 
-```typescript
-export class GatewayService {
-  private fetchFactory: FetchFactory;
-  
-  async generateFlashcards(
-    text: string,
-    options?: {
-      workspaceId?: string;
-      materialId?: string;
-      save?: boolean;
-      replace?: boolean;
-      preferredModelId?: string;
-      requiredCapability?: 'text' | 'multimodal' | 'reasoning';
-      generationConfig?: GenerationConfig;
-    }
-  ): Promise<GatewayGenerateResponse> {
-    return this.generate({
-      task: 'flashcards',
-      text,
-      ...options,
-    });
-  }
-  
-  private async generate(request: GatewayGenerateRequest) {
-    return await this.fetchFactory.post<GatewayGenerateResponse>(
-      '/api/llm.gateway',
-      request
-    );
-  }
-}
-```
+- OpenRouter 4xx/5xx status is preserved.
+- 408/5xx and network failures receive at most one retry by default; 429 is not retried.
+- Timeout becomes 504; network failure becomes 502; missing key becomes 503.
+- Invalid model output becomes 502 and is never silently converted to an empty array.
+- Persistence errors are not swallowed.
+- Quota storage failures fail closed.
 
----
+## Tests
 
-### **Phase 4: Server Gateway Adapter + Application Service**
+`scripts/run-unit-tests.ts` covers actual-model/cost/cache measurement, strict structured-output rejection, upstream status preservation, quota reservation, and refund. Production verification also requires Prisma validation, `yarn typecheck`, and `yarn build`.
 
-#### [llm.gateway.post.ts](server/api/llm.gateway.post.ts)
+## Database cleanup
 
-The route is now a thin adapter:
-
-- capture request start time
-- authenticate with `requireRole`
-- parse `GatewayGenerateRequest`
-- call `runGatewayGeneration`
-- set returned headers
-- return `success(response)`
-
-Core lifecycle orchestration lives in `server/modules/ai-generation/application/runGatewayGeneration.ts`.
-
----
-
-#### **Step 4.1: Authentication**
-
-```typescript
-// Must be authenticated user
-const user = await requireRole(event, ["USER"]);
-const userId = user.id;
-```
-
----
-
-#### **Step 4.2: Application Orchestration**
-
-`runGatewayGeneration` delegates quota, rate limiting, model selection, and provider execution to `llmRequestPipeline`. Quota behavior is exposed through the `QuotaPort` interface and the Prisma implementation lives in `server/modules/subscription`.
-
----
-
-#### **Step 4.3: Rate Limiting**
-
-```typescript
-const now = Date.now();
-const windowMs = WINDOW_SEC * 1000;  // 60 seconds
-const clientIp = getClientIp(event);
-
-// Per-user limit: 5 requests/minute
-const userRemaining = await applyLimit(
-  `rl:llm:user:${userId}`,
-  5,
-  userRateLimitMap,
-  now,
-  windowMs
-);
-
-// Per-IP limit: 20 requests/minute
-const ipRemaining = await applyLimit(
-  `rl:llm:ip:${clientIp}`,
-  20,
-  ipRateLimitMap,
-  now,
-  windowMs
-);
-
-setRateLimitHeaders(event, Math.min(userRemaining, ipRemaining), userRemaining, ipRemaining, now);
-```
-
-**Rate Limiter Logic ([rateLimit.ts](server/utils/llm/rateLimit.ts)):**
-- **Primary:** Redis (INCR + EXPIRE)
-- **Fallback:** In-memory Map (for dev/serverless)
-- Throws 429 if limit exceeded
-
----
-
-#### **Step 4.4: Request Validation**
-
-```typescript
-import { GatewayGenerateRequest } from '~/shared/utils/llm-generate.contract';
-
-const body = await readBody(event);
-const parsed = GatewayGenerateRequest.safeParse(body);
-```
-
-**Request Schema:**
-```typescript
-const GatewayGenerateRequest = z.object({
-  task: z.enum(['flashcards', 'quiz']),
-  text: z.string().min(1).max(100000).optional(),
-  workspaceId: z.string().optional(),
-  materialId: z.string().optional(),
-  preferredModelId: z.string().optional(),
-  requiredCapability: z.enum(['text', 'multimodal', 'reasoning']).optional(),
-  generationConfig: z.object({
-    depth: z.enum(['quick', 'balanced', 'deep']).optional(),
-    maxItems: z.number().int().positive().optional(),
-  }).optional(),
-  save: z.boolean().default(false),
-  replace: z.boolean().default(false),
-});
-```
-
-**Material/Workspace Permissions:**
-- If `materialId` is provided, the gateway loads the material and replaces `text` with `material.content`.
-- Ownership is enforced via `material.workspace.userId === user.id`.
-- If `save` is true, workspace/material ownership is required before saving.
-- If no `materialId` is provided, `text` is required and must be non-empty.
-
----
-
-#### **Step 4.5: Adaptive Item Count + Semantic Cache Lookup**
-
-```typescript
-const tokenEstimate = estimateTokensFromText(text);
-const depth = generationConfig?.depth ?? 'balanced';
-const itemCount = computeAdaptiveItemCount(tokenEstimate, depth, generationConfig?.maxItems);
-
-const cacheCheck = await checkSemanticCache(text, task, itemCount);
-
-if (cacheCheck.hit && cacheCheck.value) {
-  // Return cached response immediately (skip LLM call)
-  return {
-    success: true,
-    ...cacheCheck.value,
-    cached: true,
-    itemCount,
-    tokenEstimate
-  };
-}
-```
-
-**Important:** Cached responses still increment quota usage and are logged for cost accounting.
-
-**Cache Implementation:**
-- TTL: 7 days
-- Key: derived from `text + task + itemCount` (prompt versioned in tokenEstimate util)
-- Storage: Redis or in-memory fallback
-
----
-
-#### **Step 4.6: Model Selection (Smart Routing)**
-
-```typescript
-const selectedModel = await selectBestModel({
-  userId: user.id,
-  task,
-  inputText: text,
-  estimatedOutputTokens: task === 'flashcards' ? 500 : 800,
-  userTier: quotaCheck.subscription.tier,
-  preferredModelId,
-  requiredCapability,
-});
-```
-
-**Routing Algorithm ([routing.ts](server/utils/llm/routing.ts)):**
-
-```typescript
-function computeModelScore(model: LlmModelRegistry, inputTokens: number, outputTokens: number, ctx: RoutingContext) {
-  const inputCost = (inputTokens / 1_000_000) * model.inputCostPer1M
-  const outputCost = (outputTokens / 1_000_000) * model.outputCostPer1M
-  const baseCost = inputCost + outputCost
-
-  const latencyMs = model.avgLatencyMs ?? model.latencyBudgetMs
-  const latencyOverage = Math.max(0, latencyMs - model.latencyBudgetMs)
-  const latencyPenalty = (latencyOverage / 1000) * 0.001
-
-  const priorityPenalty = model.priority * 0.001
-  const capabilityBonus = ctx.requiredCapability && model.capabilities.includes(ctx.requiredCapability)
-    ? -0.005 : 0
-  const healthPenalty = model.healthStatus === 'degraded' ? 0.01 : 0
-
-  return baseCost + latencyPenalty + priorityPenalty + capabilityBonus + healthPenalty
-}
-```
-
-**Selection Logic:**
-- If `preferredModelId` is provided and enabled/healthy → use it.
-- Otherwise score all enabled, healthy candidates and choose lowest score.
-- For PRO+ users, prefer healthy over degraded if top two are close.
-
-**Scoring Formula:**
-```
-score = baseCost (input+output USD)
-  + latencyPenalty (over budget)
-  + priorityPenalty (higher = worse)
-  + healthPenalty (degraded = worse)
-  + capabilityBonus (match = better)
-```
-
----
-
-#### **Step 4.7: Strategy Instantiation**
-
-```typescript
-const strategy = await getLLMStrategyFromRegistry(selectedModel.modelId);
-```
-
-**Factory Logic ([LLMFactory.ts](server/utils/llm/LLMFactory.ts)):**
-
-```typescript
-export async function getLLMStrategyFromRegistry(modelId: string): Promise<LLMStrategy> {
-  const model = await prisma.llmModelRegistry.findUnique({
-    where: { modelId }
-  });
-  
-  if (!model) throw new Error(`Model ${modelId} not found`);
-  
-  switch (model.provider) {
-    case 'openai':
-      return new OpenAIStrategy(model.modelId);
-    case 'google':
-      return new GeminiStrategy(model.modelId);
-    default:
-      throw new Error(`Unsupported provider: ${model.provider}`);
-  }
-}
-```
-
----
-
-#### **Step 4.8: LLM API Call**
-
-```typescript
-const generationResult = await strategy.generateFlashcards(text, {
-  itemCount
-});
-```
-
-**OpenAIStrategy Implementation ([OpenAIStrategy.ts](server/utils/llm/OpenAIStrategy.ts)):**
-
-```typescript
-export class OpenAIStrategy implements LLMStrategy {
-  private client: OpenAI;
-  
-  async generateFlashcards(text: string, options?: LLMOptions): Promise<Flashcard[]> {
-    // Mock mode for testing
-    if (process.env.OPENAI_MOCK === '1') {
-      return [
-        { front: 'Mock Question 1', back: 'Mock Answer 1' },
-        { front: 'Mock Question 2', back: 'Mock Answer 2' },
-      ];
-    }
-    
-    const systemPrompt = `You are a flashcard generator. Create flashcards from the provided text.
-    Return JSON array: [{"front": "question", "back": "answer"}, ...]`;
-    
-    const response = await this.client.chat.completions.create({
-      model: this.modelId,  // e.g., 'gpt-3.5-turbo' or 'gpt-4o'
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: text }
-      ],
-      temperature: 0.7,
-      max_tokens: 4000,
-    });
-    
-    // Measure usage
-    if (options?.onMeasure && response.usage) {
-      options.onMeasure({
-        promptTokens: response.usage.prompt_tokens,
-        completionTokens: response.usage.completion_tokens,
-        totalTokens: response.usage.total_tokens,
-      });
-    }
-    
-    // Parse JSON from response
-    const content = response.choices[0].message.content;
-    const flashcards = JSON.parse(content);
-    
-    return flashcards;
-  }
-}
-```
-
----
-
-#### **Step 4.9: Database Transaction (Save/Replace)**
-
-`saveGeneratedArtifacts` performs replacement in one transaction:
-
-1. Match generated items to existing items using normalized content.
-2. Keep matching item IDs and unsuspend their review rows.
-3. Mark unmatched active items as drafts and suspend their review rows.
-4. Create and enroll only changed/new items.
-
-**Key Changes from Previous Implementation:**
-1. **Append-Only by Default**: `replace` parameter controls active-set replacement
-2. **Progress Preservation**: replacement suspends stale reviews instead of deleting history
-3. **Questions Support**: Full transaction support for quiz questions with same pattern as flashcards
-4. **User-Controlled**: Frontend shows `RegenerateConfirmDialog` allowing users to choose replace behavior
-
----
-
-#### **Step 4.10: Quota Increment**
-
-```typescript
-const updatedSubscription = await incrementGenerationCount(userId);
-```
-
-**Increment Logic:**
-- Only increments for FREE tier users
-- PRO tier: no decrement (unlimited)
-
----
-
-#### **Step 4.11: Cache Set**
-
-```typescript
-await setSemanticCache(text, task, {
-  ...(task === 'flashcards' ? { flashcards: generationResult } : { quiz: generationResult }),
-  modelId: selectedModel.modelId,
-  provider: selectedModel.provider,
-}, CACHE_TTL_SECONDS, itemCount);  // 7 days
-```
-
----
-
-#### **Step 4.12: Analytics Logging**
-
-```typescript
-await logGatewayRequest({
-  requestId,
-  userId,
-  workspaceId,
-  selectedModel,
-  task,
-  inputTokens: estimatedInputTokens,
-  outputTokens: estimatedOutputTokens,
-  totalTokens: estimatedInputTokens + estimatedOutputTokens,
-  latencyMs,
-  cached: false,
-  cacheHit: false,
-  status: 'success',
-  itemCount,
-  tokenEstimate,
-  depth,
-});
-```
-
----
-
-### **Phase 5: Response**
-
-```typescript
-return {
-  task,
-  flashcards | quiz,
-  savedCount,
-  deletedCount,
-  deletedReviewsCount,
-  subscription,
-  requestId,
-  selectedModelId,
-  provider,
-  latencyMs,
-  cached,
-  itemCount,
-  tokenEstimate,
-};
-```
-
----
-
-## 🔀 Alternative Paths
-
-The legacy `/api/llm.generate` route has been removed. All generation traffic now goes through `/api/llm.gateway`, which is the single supported path for routing, quota enforcement, caching, and usage logging.
-
----
-
-## 🧪 Mock Mode
-
-For testing without API costs:
-
-```bash
-# .env
-OPENAI_MOCK=1
-GEMINI_MOCK=1
-```
-
-**Mock Output (OpenAIStrategy):**
-```json
-[
-  { "front": "Mock Question 1", "back": "Mock Answer 1" },
-  { "front": "Mock Question 2", "back": "Mock Answer 2" }
-]
-```
-
----
-
-## ⚙️ Configuration Points
-
-### Environment Variables
-
-| Variable | Purpose | Required |
-|----------|---------|----------|
-| `OPENAI_API_KEY` | OpenAI API access | Yes (prod) |
-| `GOOGLE_AI_API_KEY` | Gemini API access | Yes (prod) |
-| `DEEPSEEK_API_KEY` | DeepSeek API access | No (optional provider) |
-| `REDIS_URL` | Rate limiting & caching | No (fallback: memory) |
-| `OPENAI_MOCK` | Skip real API calls | No (dev only) |
-| `GEMINI_MOCK` | Skip real API calls | No (dev only) |
-| `DEEPSEEK_MOCK` | Skip real API calls | No (dev only) |
-
-### Model Registry (Prisma)
-
-```prisma
-model LlmModelRegistry {
-  id             String   @id @default(auto()) @map("_id") @db.ObjectId
-  provider       String   // "openai" | "google" | "deepseek"
-  modelId        String   // "gpt-3.5-turbo" | "gemini-2.0-flash" | "deepseek-chat"
-  displayName    String
-  capabilities   String[] // ["flashcard", "quiz"]
-  costPer1kTokens Float
-  avgLatencyMs   Int
-  priority       Int
-  healthScore    Float    @default(1.0)
-  isActive       Boolean  @default(true)
-}
-```
-
----
-
-## 📈 Metrics & Observability
-
-### Response Headers
-
-```
-X-RateLimit-Remaining: 4
-X-RateLimit-Remaining-User: 4
-X-RateLimit-Remaining-IP: 19
-X-RateLimit-Reset: 45
-```
-
-### Logged Analytics
-
-```typescript
-{
-  userId: "user_123",
-  task: "flashcards",
-  modelId: "model_abc",
-  promptTokens: 1500,
-  completionTokens: 500,
-  latencyMs: 2340,
-  cached: false,
-  success: true
-}
-```
-
----
-
-## 🚨 Error Handling
-
-| Error | HTTP Code | Trigger |
-|-------|-----------|---------|
-| Not authenticated | 401 | Missing/invalid session |
-| Quota exceeded | 400 | FREE tier, 0 remaining |
-| Rate limited | 429 | >5/min user or >20/min IP |
-| Validation failed | 400 | Invalid request body |
-| Model not found | 404 | Invalid preferredModelId or registry entry missing |
-| LLM API error | 500 | Provider failure or generation error |
-
----
-
-## 🔄 Complete Sequence Diagram
-
-```
-User                UI                  Composable           Service            Server              LLM
- │                   │                      │                   │                  │                  │
- │──Click Generate──▶│                      │                   │                  │                  │
- │                   │──startGenerate()────▶│                   │                  │                  │
- │                   │                      │──checkExisting───▶│──GET /content───▶│                  │
- │                   │                      │◀─────────────────────────────────────│                  │
- │                   │◀─[Show Confirm?]─────│                   │                  │                  │
- │──Confirm─────────▶│                      │                   │                  │                  │
- │                   │──executeGeneration()─▶│                   │                  │                  │
- │                   │                      │──generateCards───▶│                  │                  │
- │                   │                      │                   │──POST /gateway──▶│                  │
- │                   │                      │                   │                  │──checkAuth()     │
- │                   │                      │                   │                  │──checkQuota()    │
- │                   │                      │                   │                  │──applyLimit()    │
- │                   │                      │                   │                  │──checkCache()    │
- │                   │                      │                   │                  │──selectModel()   │
- │                   │                      │                   │                  │──────────────────▶│
- │                   │                      │                   │                  │◀───flashcards────│
- │                   │                      │                   │                  │──$transaction()  │
- │                   │                      │                   │                  │──incrementQuota()│
- │                   │                      │                   │                  │──setCache()      │
- │                   │                      │                   │◀─────response────│                  │
- │                   │                      │◀──────────────────│                  │                  │
- │                   │◀──updateUI───────────│                   │                  │                  │
- │◀──Show Success────│                      │                   │                  │                  │
-```
-
----
-
-## 🏗️ Key Architectural Decisions
-
-### 1. **Strategy Pattern for LLM Providers**
-- **Interface:** `LLMStrategy` defines contract (`generateFlashcards`, `generateQuiz`)
-- **Implementations:** `OpenAIStrategy`, `GeminiStrategy`
-- **Benefits:** Easy to add new providers (Anthropic, Mistral, etc.)
-
-### 2. **Smart Routing with Scoring Algorithm**
-- **Goal:** Optimize cost/performance trade-off
-- **Factors:** Cost per 1M tokens (input/output), latency budget overage, priority penalty, capability bonus, health penalty
-- **User Tier Awareness:** PRO users get health-aware fallback, FREE users get lowest score
-
-### 3. **Dual Rate Limiting (Redis + Memory)**
-- **Primary:** Redis for distributed rate limiting (production)
-- **Fallback:** In-memory Map for development/serverless environments
-- **Limits:** 5 req/min per user, 20 req/min per IP
-
-### 4. **Semantic Caching**
-- **Key:** Derived from `text + task + itemCount` (prompt versioned)
-- **TTL:** 7 days
-- **Benefit:** Skips LLM call but **does not** bypass quota/cost accounting
-
-### 5. **User-Controlled, Progress-Preserving Replace**
-- **Default Behavior:** Append new content
-- **Replace Option:** Replace active material content after draft review
-- **Unchanged Items:** Keep IDs and SM-2 progress
-- **Removed Items:** Become suspended drafts; history remains
-- **Changed/New Items:** Receive fresh review rows
-- **Transaction:** Entire active-set update commits atomically
-
-### 6. **Question Enrollment Integration**
-- **Polymorphic CardReview:** `resourceType` field supports "material", "flashcard", and "question"
-- **Queue Fetching:** Questions fetched in parallel with materials and flashcards for optimal performance
-- **UI Parity:** Questions.vue matches FlashCards.vue pattern with enrollment tracking and status indicators
-- **Same SM-2 Algorithm:** Questions use identical spaced repetition logic as flashcards
-
----
-
-## 📚 Related Documentation
-
-- [ARCHITECTURE.md](../ARCHITECTURE.md) - Overall system architecture
-- [DEVELOPMENT.md](./DEVELOPMENT.md) - Development workflows
-- [AI_WORKER_ARCHITECTURE.md](./AI_WORKER_ARCHITECTURE.md) - Offline AI architecture
-
----
-
-## 🔍 Debugging Tips
-
-### Enable Mock Mode
-```bash
-# .env
-OPENAI_MOCK=1
-GEMINI_MOCK=1
-```
-
-### Check Rate Limit Status
-```bash
-curl -H "Cookie: your-session-cookie" \
-  http://localhost:3000/api/llm.gateway
-# Look at response headers:
-# X-RateLimit-Remaining-User
-# X-RateLimit-Remaining-IP
-```
-
-### View LLM Usage Logs
-```typescript
-// Check GatewayRequestLog in Prisma Studio
-yarn db:studio
-// Navigate to GatewayRequestLog table
-```
-
-### Test Model Selection
-```typescript
-// server/utils/llm/routing.ts
-console.log('Model scores:', scored);
-// Will show score breakdown for each candidate model
-```
-
----
-
-**Document Version:** 1.0  
-**Last Updated:** January 1, 2026  
-**Maintainer:** Development Team
+Run `yarn db:remove-legacy-ai` to preview removal. After backup, run `yarn db:remove-legacy-ai --apply` to drop legacy catalog/gateway collections and unset retired fields. Historical `LlmUsage` remains for audit.
