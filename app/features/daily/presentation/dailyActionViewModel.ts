@@ -30,8 +30,8 @@ function activePlacement(item: DayItemDTO, dateKey: string) {
 function timingLabel(item: DayItemDTO, dateKey: string) {
   const placement = activePlacement(item, dateKey);
   const mode = placement?.timingMode ?? item.actionItem.timingMode;
-  if (mode === "ALL_DAY") return "All day";
-  return placement?.localTime ?? item.actionItem.localTime ?? "Timed";
+  if (mode === "ALL_DAY") return "All Day";
+  return `At ${placement?.localTime ?? item.actionItem.localTime ?? "Timed"}`
 }
 
 function overdue(item: DayItemDTO, dateKey: string, today: string, now: Date) {

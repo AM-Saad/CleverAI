@@ -6,14 +6,17 @@ Legacy feature components are reported here, not deleted automatically.
 
 | Surface | Route roots | Reachable components |
 |---|---:|---:|
-| shell | 2 | 29 |
-| launcher | 1 | 5 |
-| daily | 2 | 38 |
-| learning | 9 | 54 |
+| shell | 2 | 30 |
+| launcher | 1 | 6 |
+| daily | 2 | 47 |
+| learning | 9 | 63 |
 | account | 10 | 37 |
-| user | 3 | 16 |
-| platform | 4 | 57 |
+| user | 3 | 19 |
+| platform | 4 | 59 |
 
-## Orphan feature components (0)
+## Orphan feature components (4)
 
-_None._
+- `app/features/learning-shell/components/CognitiveStateBanner.vue`
+- `app/features/learning-shell/components/KnowledgeOrbitChart.vue`
+- `app/features/learning-shell/components/MemoryTimeMachine.vue`
+- `app/features/learning-shell/components/TimeBoxedMissions.vue`

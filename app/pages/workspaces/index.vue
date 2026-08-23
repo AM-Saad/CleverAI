@@ -1,6 +1,6 @@
 <template>
   <div class="ws">
-    <AppPageHeader title="Workspaces" subtitle="Choose a workspace to continue" back-to="/learn" />
+    <AppPageHeader title="Workspaces" back-to="/learn" />
 
     <div v-if="loading && !workspaces.length" class="ws__list">
       <UiSkeleton v-for="i in 3" :key="i" class="h-[68px] w-full rounded-[var(--component-card-radius)]" />

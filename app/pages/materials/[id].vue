@@ -1,61 +1,36 @@
 <template>
   <div class="md">
-    <AppPageHeader
-      :title="material?.title || 'Material'"
-      subtitle="Source and generated study content"
-      back-to="/materials"
-    >
+    <AppPageHeader :title="material?.title || 'Material'" subtitle="Source and generated study content"
+      :back-to="'/workspaces/' + material?.workspaceId">
       <template v-if="material" #actions>
-        <UiActionMenu
-          :items="materialMenuItems"
-          :label="`Actions for ${material.title || 'untitled material'}`"
-        />
+        <UiActionMenu :items="materialMenuItems" :label="`Actions for ${material.title || 'untitled material'}`" />
       </template>
     </AppPageHeader>
 
-    <WorkspacePill v-if="material" class="md__wspill" />
 
     <div v-if="loading" class="md__list">
       <UiSkeleton class="h-16 w-full rounded-[var(--component-card-radius)]" />
       <UiSkeleton class="h-40 w-full rounded-[var(--component-card-radius)]" />
     </div>
 
-    <UiEmptyState
-      v-else-if="loadError"
-      icon="triangle-alert"
-      title="Couldn't load this material"
-      :description="loadError"
-      action-label="Try again"
-      @action="loadMaterial"
-    >
+    <UiEmptyState v-else-if="loadError" icon="triangle-alert" title="Couldn't load this material"
+      :description="loadError" action-label="Try again" @action="loadMaterial">
       <template #actions>
-        <UiButton size="sm" tone="neutral" variant="ghost" to="/materials">
+        <UiButton size="sm" tone="neutral" variant="ghost" :to="'workspaces/' + material?.workspaceId">
           Back to materials
         </UiButton>
       </template>
     </UiEmptyState>
 
     <template v-else-if="material">
-      <UiAlert
-        v-if="isOffline"
-        tone="info"
-        icon="cloud-off"
-        title="Offline view"
-        description="You can read saved material and study items. AI generation will be available after you reconnect."
-      />
+      <UiAlert v-if="isOffline" tone="info" icon="cloud-off" title="Offline view"
+        description="You can read saved material and study items. AI generation will be available after you reconnect." />
 
       <!-- source meta -->
       <div class="md__source">
         <span class="md__source-tile">{{ typeLabel }}</span>
         <div>
-          <UiTitle
-            tag="div"
-            size="base"
-            weight="bold"
-            tight
-            color="content-on-surface-strong"
-            dir="auto"
-          >
+          <UiTitle tag="div" size="base" weight="bold" tight color="content-on-surface-strong" dir="auto">
             {{ material.title || "Untitled material" }}
           </UiTitle>
           <UiParagraph size="xs" color="content-secondary">{{
@@ -66,57 +41,29 @@
 
       <!-- preview -->
       <section class="md__preview">
-        <UiLabel size="sm" weight="bold" color="content-secondary" uppercase
-          >Source preview</UiLabel
-        >
-        <div
-          id="material-source-preview"
-          class="md__preview-body"
-          :class="{
-            'md__preview-body--expanded': previewExpanded,
-            'md__preview-body--clipped': previewCanExpand && !previewExpanded,
-          }"
-        >
+        <UiLabel size="sm" weight="bold" color="content-secondary" uppercase>Source preview</UiLabel>
+        <div id="material-source-preview" class="md__preview-body" :class="{
+          'md__preview-body--expanded': previewExpanded,
+          'md__preview-body--clipped': previewCanExpand && !previewExpanded,
+        }">
           <UiParagraph size="sm" dir="auto" class="md__preview-text">{{
             previewText
           }}</UiParagraph>
         </div>
-        <UiButton
-          v-if="previewCanExpand"
-          tone="neutral"
-          variant="link"
-          size="sm"
-          :trailing-icon="previewExpanded ? 'chevron-up' : 'chevron-down'"
-          :aria-expanded="previewExpanded"
-          aria-controls="material-source-preview"
-          @click="previewExpanded = !previewExpanded"
-        >
+        <UiButton v-if="previewCanExpand" tone="neutral" variant="link" size="sm"
+          :trailing-icon="previewExpanded ? 'chevron-up' : 'chevron-down'" :aria-expanded="previewExpanded"
+          aria-controls="material-source-preview" @click="previewExpanded = !previewExpanded">
           {{ previewExpanded ? "See less" : "See more" }}
         </UiButton>
       </section>
 
-      <UiAlert
-        v-if="sourceWasTruncated"
-        tone="warning"
-        icon="triangle-alert"
-        title="Only part of this file was imported"
-        :description="truncationDescription"
-      />
+      <UiAlert v-if="sourceWasTruncated" tone="warning" icon="triangle-alert"
+        title="Only part of this file was imported" :description="truncationDescription" />
 
-      <UiAlert
-        v-if="contentError"
-        tone="error"
-        icon="triangle-alert"
-        title="Study content couldn't be loaded"
-        :description="contentError"
-      >
+      <UiAlert v-if="contentError" tone="error" icon="triangle-alert" title="Study content couldn't be loaded"
+        :description="contentError">
         <template #actions>
-          <UiButton
-            size="xs"
-            tone="neutral"
-            variant="soft"
-            @click="loadGeneratedContent"
-          >
+          <UiButton size="xs" tone="neutral" variant="soft" @click="loadGeneratedContent">
             Try again
           </UiButton>
         </template>
@@ -146,91 +93,42 @@
         </div>
       </div> -->
 
-      <MaterialStudyContent
-        v-if="counts.flashcardsCount > 0 || counts.questionsCount > 0"
-        :flashcards="generatedContent.flashcards"
-        :questions="generatedContent.questions"
-        @study="startMaterialReview"
-      />
+      <MaterialStudyContent v-if="counts.flashcardsCount > 0 || counts.questionsCount > 0"
+        :flashcards="generatedContent.flashcards" :questions="generatedContent.questions"
+        @study="startMaterialReview" />
 
       <!-- pinned generate -->
       <div class="md__pinned">
-        <UiButton
-          block
-          tone="primary"
-          size="lg"
-          leading-icon="sparkles"
-          :disabled="isOffline"
-          @click="openGenerate"
-        >
+        <UiButton block tone="primary" size="lg" leading-icon="sparkles" :disabled="isOffline" @click="openGenerate">
           Generate from this
         </UiButton>
       </div>
     </template>
 
-    <UiEmptyState
-      v-else
-      icon="file-x"
-      title="Material not found"
-      description="This material may have been removed or is not available offline."
-      action-label="Back to materials"
-      @action="navigateTo('/materials')"
-    />
+    <UiEmptyState v-else icon="file-x" title="Material not found"
+      description="This material may have been removed or is not available offline." action-label="Back to materials"
+      @action="navigateTo('/materials')" />
 
     <!-- generate / result sheet -->
-    <UiSheet
-      :open="sheetOpen"
-      :title="phase === 'result' ? 'Review before adding' : 'Generate'"
-      @update:open="setSheetOpen"
-    >
+    <UiSheet :open="sheetOpen" :title="phase === 'result' ? 'Review before adding' : 'Generate'"
+      @update:open="setSheetOpen">
       <!-- config -->
       <template v-if="phase === 'config'">
         <div class="gen">
-          <UiSegmentedControl
-            v-model="genType"
-            label="Generation type"
-            full-width
-            :items="genTypeItems"
-          />
+          <UiSegmentedControl v-model="genType" label="Generation type" full-width :items="genTypeItems" />
 
-          <UiLabel
-            tag="label"
-            for="generation-count"
-            size="sm"
-            weight="bold"
-            color="content-secondary"
-            class="gen__label"
-            >{{ maxItems }}
-            {{ genType === "quiz" ? "questions" : "cards" }}</UiLabel
-          >
-          <UiSlider
-            id="generation-count"
-            v-model="maxItems"
-            :min="4"
-            :max="30"
-            :step="1"
-          />
+          <UiLabel tag="label" for="generation-count" size="sm" weight="bold" color="content-secondary"
+            class="gen__label">{{ maxItems }}
+            {{ genType === "quiz" ? "questions" : "cards" }}</UiLabel>
+          <UiSlider id="generation-count" v-model="maxItems" :min="4" :max="30" :step="1" />
 
-          <UiLabel
-            size="sm"
-            weight="bold"
-            color="content-secondary"
-            class="gen__label"
-            >Coverage</UiLabel
-          >
-          <UiSegmentedControl
-            v-model="depth"
-            label="Coverage"
-            full-width
-            :items="difficultyItems"
-          />
+          <UiLabel size="sm" weight="bold" color="content-secondary" class="gen__label">Coverage</UiLabel>
+          <UiSegmentedControl v-model="depth" label="Coverage" full-width :items="difficultyItems" />
 
           <div class="gen__quota" :class="{ 'gen__quota--warn': lowQuota }">
             <UiIcon name="info" class="h-4 w-4" />
             <span>{{ quotaText }}</span>
-            <NuxtLink v-if="lowQuota" to="/pricing" class="gen__pro"
-              >Go Pro</NuxtLink
-            >
+            <NuxtLink v-if="lowQuota" to="/pricing" class="gen__pro">Go Pro</NuxtLink>
           </div>
         </div>
       </template>
@@ -246,81 +144,49 @@
           </UiParagraph>
         </div>
         <div v-else class="gen__review">
-          <UiAlert
-            v-if="gen.generationMode.value === 'replace'"
-            tone="warning"
-            icon="triangle-alert"
-            title="Replace mode"
-            :description="replaceDraftDescription"
-          />
+          <UiAlert v-if="gen.generationMode.value === 'replace'" tone="warning" icon="triangle-alert"
+            title="Replace mode" :description="replaceDraftDescription" />
 
           <div class="gen__review-tools">
             <div class="gen__select-all">
-              <UiCheckbox
-                v-model="allSelected"
-                :label="`Select all ${editableDraftItems.length}`"
-              />
+              <UiCheckbox v-model="allSelected" :label="`Select all ${editableDraftItems.length}`" />
               <UiParagraph size="xs" color="content-secondary">
                 {{ selectedCount }} selected
               </UiParagraph>
             </div>
             <div class="gen__filters" aria-label="Review item filter">
-              <UiButton
-                size="xs"
-                tone="neutral"
-                :variant="reviewFilter === 'all' ? 'soft' : 'ghost'"
-                @click="reviewFilter = 'all'"
-              >
+              <UiButton size="xs" tone="neutral" :variant="reviewFilter === 'all' ? 'soft' : 'ghost'"
+                @click="reviewFilter = 'all'">
                 All {{ editableDraftItems.length }}
               </UiButton>
-              <UiButton
-                size="xs"
-                tone="neutral"
-                :variant="reviewFilter === 'selected' ? 'soft' : 'ghost'"
-                @click="reviewFilter = 'selected'"
-              >
+              <UiButton size="xs" tone="neutral" :variant="reviewFilter === 'selected' ? 'soft' : 'ghost'"
+                @click="reviewFilter = 'selected'">
                 Selected {{ selectedCount }}
               </UiButton>
             </div>
           </div>
 
-          <UiAlert
-            v-if="invalidSelectedCount > 0"
-            tone="error"
-            icon="triangle-alert"
+          <UiAlert v-if="invalidSelectedCount > 0" tone="error" icon="triangle-alert"
             title="Some selected items need attention"
-            :description="`Fix empty fields in ${invalidSelectedCount} selected ${invalidSelectedCount === 1 ? 'item' : 'items'} before adding.`"
-          />
+            :description="`Fix empty fields in ${invalidSelectedCount} selected ${invalidSelectedCount === 1 ? 'item' : 'items'} before adding.`" />
 
           <ul class="gen__result">
-            <li
-              v-for="{ item, index } in visibleDraftItems"
-              :key="index"
-              class="gen__card"
-              :class="{
-                'gen__card--excluded':
-                  !isSelected(index) && editingIndex !== index,
-              }"
-            >
+            <li v-for="{ item, index } in visibleDraftItems" :key="index" class="gen__card" :class="{
+              'gen__card--excluded':
+                !isSelected(index) && editingIndex !== index,
+            }">
               <div class="gen__card-head">
                 <div class="gen__card-select">
-                  <UiCheckbox
-                    :model-value="isSelected(index)"
+                  <UiCheckbox :model-value="isSelected(index)"
                     :aria-label="`Include ${item.kind === 'quiz' ? 'question' : 'flashcard'} ${index + 1}`"
-                    @update:model-value="setSelected(index, $event === true)"
-                  />
+                    @update:model-value="setSelected(index, $event === true)" />
                   <UiLabel size="sm" weight="bold" color="content-secondary">
                     {{ item.kind === "quiz" ? "Question" : "Card" }}
                     {{ index + 1 }}
                   </UiLabel>
                 </div>
-                <UiButton
-                  size="xs"
-                  tone="neutral"
-                  variant="ghost"
-                  :leading-icon="editingIndex === index ? 'check' : 'pencil'"
-                  @click="toggleEdit(index)"
-                >
+                <UiButton size="xs" tone="neutral" variant="ghost"
+                  :leading-icon="editingIndex === index ? 'check' : 'pencil'" @click="toggleEdit(index)">
                   {{ editingIndex === index ? "Done" : "Edit" }}
                 </UiButton>
               </div>
@@ -328,76 +194,30 @@
               <div class="gen__item-copy">
                 <template v-if="editingIndex === index">
                   <div v-if="item.kind === 'flashcard'" class="gen__edit">
-                    <UiFormField
-                      label="Front"
-                      :error="fieldError(item.front, 'Front')"
-                      required
-                    >
-                      <UiTextarea
-                        v-model="item.front"
-                        :rows="2"
-                        :maxrows="5"
-                        autoresize
-                        maxlength="10000"
-                        :error="!item.front.trim()"
-                      />
+                    <UiFormField label="Front" :error="fieldError(item.front, 'Front')" required>
+                      <UiTextarea v-model="item.front" :rows="2" :maxrows="5" autoresize maxlength="10000"
+                        :error="!item.front.trim()" />
                     </UiFormField>
-                    <UiFormField
-                      label="Back"
-                      :error="fieldError(item.back, 'Back')"
-                      required
-                    >
-                      <UiTextarea
-                        v-model="item.back"
-                        :rows="3"
-                        :maxrows="7"
-                        autoresize
-                        maxlength="20000"
-                        :error="!item.back.trim()"
-                      />
+                    <UiFormField label="Back" :error="fieldError(item.back, 'Back')" required>
+                      <UiTextarea v-model="item.back" :rows="3" :maxrows="7" autoresize maxlength="20000"
+                        :error="!item.back.trim()" />
                     </UiFormField>
                   </div>
                   <div v-else class="gen__edit">
-                    <UiFormField
-                      label="Question"
-                      :error="fieldError(item.question, 'Question')"
-                      required
-                    >
-                      <UiTextarea
-                        v-model="item.question"
-                        :rows="2"
-                        :maxrows="5"
-                        autoresize
-                        maxlength="10000"
-                        :error="!item.question.trim()"
-                      />
+                    <UiFormField label="Question" :error="fieldError(item.question, 'Question')" required>
+                      <UiTextarea v-model="item.question" :rows="2" :maxrows="5" autoresize maxlength="10000"
+                        :error="!item.question.trim()" />
                     </UiFormField>
                     <fieldset class="gen__choice-editor">
                       <legend>Answer choices</legend>
-                      <div
-                        v-for="(_, choiceIndex) in item.choices"
-                        :key="choiceIndex"
-                        class="gen__choice-edit"
-                      >
-                        <UiInput
-                          v-model="item.choices[choiceIndex]"
-                          :aria-label="`Choice ${choiceLetter(choiceIndex)}`"
-                          maxlength="10000"
-                          :error="!item.choices[choiceIndex]?.trim()"
-                        />
-                        <UiButton
-                          size="xs"
-                          :tone="
-                            item.answerIndex === choiceIndex
-                              ? 'primary'
-                              : 'neutral'
-                          "
-                          :variant="
-                            item.answerIndex === choiceIndex ? 'soft' : 'ghost'
-                          "
-                          :aria-pressed="item.answerIndex === choiceIndex"
-                          @click="item.answerIndex = choiceIndex"
-                        >
+                      <div v-for="(_, choiceIndex) in item.choices" :key="choiceIndex" class="gen__choice-edit">
+                        <UiInput v-model="item.choices[choiceIndex]" :aria-label="`Choice ${choiceLetter(choiceIndex)}`"
+                          maxlength="10000" :error="!item.choices[choiceIndex]?.trim()" />
+                        <UiButton size="xs" :tone="item.answerIndex === choiceIndex
+                          ? 'primary'
+                          : 'neutral'
+                          " :variant="item.answerIndex === choiceIndex ? 'soft' : 'ghost'
+                            " :aria-pressed="item.answerIndex === choiceIndex" @click="item.answerIndex = choiceIndex">
                           {{
                             item.answerIndex === choiceIndex
                               ? "Correct"
@@ -410,40 +230,22 @@
                 </template>
 
                 <template v-else>
-                  <UiParagraph
-                    size="sm"
-                    weight="bold"
-                    color="content-on-surface-strong"
-                    dir="auto"
-                  >
+                  <UiParagraph size="sm" weight="bold" color="content-on-surface-strong" dir="auto">
                     {{ item.kind === "flashcard" ? item.front : item.question }}
                   </UiParagraph>
-                  <UiParagraph
-                    v-if="item.kind === 'flashcard'"
-                    size="sm"
-                    color="content-secondary"
-                    dir="auto"
-                    class="gen__a"
-                  >
+                  <UiParagraph v-if="item.kind === 'flashcard'" size="sm" color="content-secondary" dir="auto"
+                    class="gen__a">
                     {{ item.back }}
                   </UiParagraph>
                   <ol v-else class="gen__choices">
-                    <li
-                      v-for="(choice, choiceIndex) in item.choices"
-                      :key="choiceIndex"
-                      :class="{
-                        'gen__choice--correct':
-                          choiceIndex === item.answerIndex,
-                      }"
-                    >
+                    <li v-for="(choice, choiceIndex) in item.choices" :key="choiceIndex" :class="{
+                      'gen__choice--correct':
+                        choiceIndex === item.answerIndex,
+                    }">
                       <span>{{ choiceLetter(choiceIndex) }}</span>
                       <span dir="auto">{{ choice }}</span>
-                      <UiIcon
-                        v-if="choiceIndex === item.answerIndex"
-                        name="check"
-                        class="h-3 w-3"
-                        aria-label="Correct answer"
-                      />
+                      <UiIcon v-if="choiceIndex === item.answerIndex" name="check" class="h-3 w-3"
+                        aria-label="Correct answer" />
                     </li>
                   </ol>
                 </template>
@@ -451,74 +253,41 @@
             </li>
           </ul>
 
-          <UiEmptyState
-            v-if="reviewFilter === 'selected' && selectedCount === 0"
-            icon="list-checks"
-            title="No items selected"
-            description="Switch to All and choose items to add."
-            action-label="Show all"
-            @action="reviewFilter = 'all'"
-          />
+          <UiEmptyState v-if="reviewFilter === 'selected' && selectedCount === 0" icon="list-checks"
+            title="No items selected" description="Switch to All and choose items to add." action-label="Show all"
+            @action="reviewFilter = 'all'" />
         </div>
       </template>
 
       <template #footer>
         <div v-if="phase === 'config'">
-          <UiButton
-            block
-            tone="primary"
-            size="lg"
-            leading-icon="sparkles"
-            :loading="gen.preparing.value"
-            :disabled="isOffline"
-            @click="runGenerate"
-          >
+          <UiButton block tone="primary" size="lg" leading-icon="sparkles" :loading="gen.preparing.value"
+            :disabled="isOffline" @click="runGenerate">
             Generate {{ maxItems }}
             {{ genType === "quiz" ? "questions" : "cards" }}
           </UiButton>
         </div>
         <div v-else-if="phase === 'result'" class="gen__footer">
-          <UiButton variant="ghost" tone="neutral" @click="discard"
-            >Discard</UiButton
-          >
-          <UiButton
-            block
-            tone="primary"
-            :loading="adding"
-            :disabled="!canCommitDraft"
-            @click="addSelected"
-          >
+          <UiButton variant="ghost" tone="neutral" @click="discard">Discard</UiButton>
+          <UiButton block tone="primary" :loading="adding" :disabled="!canCommitDraft" @click="addSelected">
             Add {{ selectedCount }} to review
           </UiButton>
         </div>
       </template>
     </UiSheet>
 
-    <UiModal
-      v-model:open="gen.showConfirmDialog.value"
-      title="This material already has study items"
-      :description="existingContentDescription"
-      icon="copy"
-      @close="gen.cancelRegenerate"
-    >
+    <UiModal v-model:open="gen.showConfirmDialog.value" title="This material already has study items"
+      :description="existingContentDescription" icon="copy" @close="gen.cancelRegenerate">
       <UiParagraph size="sm" color="content-secondary">
         Choose whether the new draft should be added alongside the existing
         items or replace them after you review and confirm it.
       </UiParagraph>
       <template #footer>
         <div class="gen__confirm-actions">
-          <UiButton
-            tone="neutral"
-            variant="ghost"
-            @click="gen.cancelRegenerate"
-          >
+          <UiButton tone="neutral" variant="ghost" @click="gen.cancelRegenerate">
             Cancel
           </UiButton>
-          <UiButton
-            tone="neutral"
-            variant="soft"
-            @click="confirmGeneration(false)"
-          >
+          <UiButton tone="neutral" variant="soft" @click="confirmGeneration(false)">
             Add alongside
           </UiButton>
           <UiButton tone="error" @click="confirmGeneration(true)">
@@ -528,56 +297,28 @@
       </template>
     </UiModal>
 
-    <UiModal
-      v-model:open="renameOpen"
-      title="Rename material"
-      description="Use a clear name you can recognize later."
-      icon="pencil"
-      @close="closeRename"
-    >
-      <UiFormField
-        label="Material name"
-        :error="renameError ?? undefined"
-        required
-      >
-        <UiInput
-          v-model="renameTitle"
-          autofocus
-          maxlength="240"
-          :error="Boolean(renameError)"
-          @keydown.enter="saveRename"
-        />
+    <UiModal v-model:open="renameOpen" title="Rename material" description="Use a clear name you can recognize later."
+      icon="pencil" @close="closeRename">
+      <UiFormField label="Material name" :error="renameError ?? undefined" required>
+        <UiInput v-model="renameTitle" autofocus maxlength="240" :error="Boolean(renameError)"
+          @keydown.enter="saveRename" />
       </UiFormField>
       <template #footer>
         <div class="gen__confirm-actions">
           <UiButton tone="neutral" variant="ghost" @click="closeRename">
             Cancel
           </UiButton>
-          <UiButton
-            tone="primary"
-            :loading="savingName"
-            :disabled="!renameTitle.trim()"
-            @click="saveRename"
-          >
+          <UiButton tone="primary" :loading="savingName" :disabled="!renameTitle.trim()" @click="saveRename">
             Save name
           </UiButton>
         </div>
       </template>
     </UiModal>
 
-    <UiModal
-      v-model:open="deleteOpen"
-      title="Delete this material?"
-      :description="deleteDescription"
-      icon="trash-2"
-      @close="closeDelete"
-    >
-      <UiAlert
-        tone="warning"
-        icon="triangle-alert"
-        title="Study data will be removed"
-        :description="deleteStudyDescription"
-      />
+    <UiModal v-model:open="deleteOpen" title="Delete this material?" :description="deleteDescription" icon="trash-2"
+      @close="closeDelete">
+      <UiAlert tone="warning" icon="triangle-alert" title="Study data will be removed"
+        :description="deleteStudyDescription" />
       <template #footer>
         <div class="gen__confirm-actions">
           <UiButton tone="neutral" variant="ghost" @click="closeDelete">
@@ -754,9 +495,9 @@ const sourceMeta = computed(() => {
     typeof meta?.pageCount === "number" ? `${meta.pageCount} pages · ` : "";
   const date = material.value?.createdAt
     ? new Date(material.value.createdAt as string).toLocaleDateString(
-        undefined,
-        { month: "short", day: "numeric" },
-      )
+      undefined,
+      { month: "short", day: "numeric" },
+    )
     : "";
   return `${pages}uploaded ${date}`;
 });
@@ -901,14 +642,14 @@ watch(
     editableDraftItems.value =
       result.type === "flashcards"
         ? (result.flashcards ?? []).map((card) => ({
-            ...card,
-            kind: "flashcard" as const,
-          }))
+          ...card,
+          kind: "flashcard" as const,
+        }))
         : (result.quiz ?? []).map((question) => ({
-            ...question,
-            choices: [...question.choices],
-            kind: "quiz" as const,
-          }));
+          ...question,
+          choices: [...question.choices],
+          kind: "quiz" as const,
+        }));
     selectedIndices.value = editableDraftItems.value.map((_, index) => index);
     editingIndex.value = null;
     reviewFilter.value = "all";
@@ -964,33 +705,33 @@ async function addSelected() {
     const response =
       draft.type === "flashcards"
         ? await $api.materials.commitGeneratedContent(materialId.value, {
-            task: "flashcards",
-            mode: gen.generationMode.value,
-            items: editableDraftItems.value
-              .filter(
-                (item, index): item is EditableFlashcard =>
-                  selected.has(index) && item.kind === "flashcard",
-              )
-              .map(({ kind: _kind, ...item }) => ({
-                ...item,
-                front: item.front.trim(),
-                back: item.back.trim(),
-              })),
-          })
+          task: "flashcards",
+          mode: gen.generationMode.value,
+          items: editableDraftItems.value
+            .filter(
+              (item, index): item is EditableFlashcard =>
+                selected.has(index) && item.kind === "flashcard",
+            )
+            .map(({ kind: _kind, ...item }) => ({
+              ...item,
+              front: item.front.trim(),
+              back: item.back.trim(),
+            })),
+        })
         : await $api.materials.commitGeneratedContent(materialId.value, {
-            task: "quiz",
-            mode: gen.generationMode.value,
-            items: editableDraftItems.value
-              .filter(
-                (item, index): item is EditableQuizQuestion =>
-                  selected.has(index) && item.kind === "quiz",
-              )
-              .map(({ kind: _kind, ...item }) => ({
-                ...item,
-                question: item.question.trim(),
-                choices: item.choices.map((choice) => choice.trim()),
-              })),
-          });
+          task: "quiz",
+          mode: gen.generationMode.value,
+          items: editableDraftItems.value
+            .filter(
+              (item, index): item is EditableQuizQuestion =>
+                selected.has(index) && item.kind === "quiz",
+            )
+            .map(({ kind: _kind, ...item }) => ({
+              ...item,
+              question: item.question.trim(),
+              choices: item.choices.map((choice) => choice.trim()),
+            })),
+        });
 
     if (!response.success) {
       toast.add({

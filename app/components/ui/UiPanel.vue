@@ -56,7 +56,7 @@ const panel = tv({
     variant: {
       surface: { root: "border-secondary bg-surface" },
       subtle: { root: "border-secondary bg-surface-subtle" },
-      transparent: { root: "border-secondary bg-transparent" },
+      transparent: { root: "border-transparent bg-transparent" },
     },
     size: {
       xs: { header: "p-2", content: "p-2", footer: "p-2" },

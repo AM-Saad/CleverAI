@@ -184,6 +184,7 @@ import {
   buildActionItemUpdateMutation,
   buildRecurrenceRule,
 } from "../app/features/daily/domain/actionItemMutation";
+import { parseActionInput } from "../app/features/daily/domain/parseActionInput";
 import { createDateDialInteractionGate } from "../app/features/daily/presentation/dateDialInteraction";
 import { shouldShowDayRolloverAttention } from "../app/features/daily/presentation/dayRolloverAttention";
 import {
@@ -465,6 +466,62 @@ test("Daily calendar labels do not shift across local timezones", () => {
     "Wednesday, July 22",
   );
   assert.equal(formatDateKey("not-a-date", "en-US"), "not-a-date");
+});
+
+test("smart action input resolves schedules from real now and keeps safe fallbacks", () => {
+  const context = {
+    referenceInstant: new Date("2026-08-21T10:00:00.000Z"), // 13:00 Cairo
+    timeZone: "Africa/Cairo",
+    // Deliberately unrelated to real today: relative phrases must ignore it.
+    selectedDateKey: "2026-07-10",
+    locale: "en-US",
+  };
+
+  const tomorrow = parseActionInput("Clean dishes /tomorrow at 3PM", context);
+  assert.equal(tomorrow.title, "Clean dishes");
+  assert.equal(tomorrow.dateKey, "2026-08-22");
+  assert.equal(tomorrow.localTime, "15:00");
+  assert.equal(tomorrow.timingMode, "TIMED");
+  assert.equal(
+    tomorrow.tokens.every((token) => token.accepted),
+    true,
+  );
+
+  const nextWeekday = parseActionInput("Call Sara next Tuesday", context);
+  assert.equal(nextWeekday.dateKey, "2026-08-25");
+  assert.equal(nextWeekday.title, "Call Sara");
+
+  const timeOnly = parseActionInput("Write plan at 4pm", context);
+  assert.equal(timeOnly.dateKey, context.selectedDateKey);
+  assert.equal(timeOnly.localTime, "16:00");
+  assert.equal(timeOnly.title, "Write plan");
+
+  const repeated = parseActionInput(
+    "Gym every Mon, Wed and Fri at 7am for 6 times",
+    context,
+  );
+  // Selected date is already Friday, so first occurrence stays on that day.
+  assert.equal(repeated.dateKey, "2026-07-10");
+  assert.deepEqual(repeated.recurrence?.weekdays, [
+    "MONDAY",
+    "WEDNESDAY",
+    "FRIDAY",
+  ]);
+  assert.equal(repeated.recurrence?.ends, "AFTER_COUNT");
+  assert.equal(repeated.recurrence?.count, 6);
+
+  const monthly = parseActionInput("Pay rent every month on the 1st", context);
+  assert.equal(monthly.dateKey, "2026-08-01");
+  assert.equal(monthly.recurrence?.monthDay, 1);
+
+  const ordinaryTitle = parseActionInput("Buy May flowers", context);
+  assert.equal(ordinaryTitle.title, "Buy May flowers");
+  assert.equal(ordinaryTitle.tokens.length, 0);
+
+  const ambiguous = parseActionInput("Call Tue or Wed", context);
+  assert.deepEqual(ambiguous.issues, ["Choose one date"]);
+  assert.equal(ambiguous.title, "Call Tue or Wed");
+  assert.equal(ambiguous.dateKey, context.selectedDateKey);
 });
 
 test("Daily date dial waits for touch release after native pointer cancellation", () => {

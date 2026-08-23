@@ -4,35 +4,15 @@
       <div>
         <div class="action-section__title-row">
           <UiIcon name="action-items-sketch" size="20px" color="primary" />
-          <UiTitle
-            id="actions-title"
-            class="unselectable"
-            tag="h2"
-            size="sm"
-            :weight="'extrabold'"
-            @click="isExpanded = !isExpanded"
-            >Action items</UiTitle
-          >
-          <UiIconButton
-            :icon="isExpanded ? 'chevron-down' : 'chevron-right'"
-            :label="
-              isExpanded ? 'Collapse action items' : 'Expand action items'
-            "
-            size="xs"
-            variant="ghost"
-            class="action-section__chevron-btn"
-            @click="isExpanded = !isExpanded"
-          />
+          <UiTitle id="actions-title" class="unselectable cursor-pointer" tag="h2" size="sm" :weight="'extrabold'"
+            @click="isExpanded = !isExpanded">Action items</UiTitle>
+          <UiIconButton :icon="isExpanded ? 'chevron-down' : 'chevron-right'" :label="isExpanded ? 'Collapse action items' : 'Expand action items'
+            " size="xs" variant="ghost" class="action-section__chevron-btn" @click="isExpanded = !isExpanded" />
         </div>
         <!-- <UiParagraph>{{ openCount }} open · {{ completedCount }} completed</UiParagraph> -->
       </div>
-      <UiIconButton
-        :icon="quickAddOpen ? 'x' : 'plus'"
-        :label="quickAddOpen ? 'Close quick add' : 'Add action item'"
-        size="sm"
-        :pressed="quickAddOpen"
-        @click="toggleQuickAdd"
-      />
+      <UiIconButton :icon="quickAddOpen ? 'x' : 'plus'" :label="quickAddOpen ? 'Close quick add' : 'Add action item'"
+        size="sm" :pressed="quickAddOpen" @click="toggleQuickAdd" />
     </div>
 
     <template v-if="isExpanded">
@@ -40,11 +20,7 @@
         <div v-if="quickAddOpen" class="quick-add">
           <div class="quick-add__inner">
             <div class="quick-add__content">
-              <ActionItemQuickAddForm
-                ref="quickAdd"
-                :date-key="dateKey"
-                @cancel="quickAddOpen = false"
-              />
+              <ActionItemQuickAddForm ref="quickAdd" :date-key="dateKey" @cancel="quickAddOpen = false" />
             </div>
           </div>
         </div>
@@ -54,62 +30,35 @@
       animated form. Crossfading them keeps the region from popping while the
       form is still easing open. -->
       <Transition name="content-swap" mode="out-in">
-        <DailyActionList
-          v-if="items.length"
-          key="list"
-          :date-key="dateKey"
-          :items="items"
-          :conflicts="conflicts"
-          :occurrence-conflicts="occurrenceConflicts"
-          :resolving-action-item-id="resolvingActionItemId"
-          :resolving-occurrence-id="resolvingOccurrenceId"
-          @edit="quickAddOpen = false"
-          @toggle="emit('toggle', $event.occurrenceKey, $event.completed)"
-          @move="emit('move', $event)"
-          @remove="emit('remove', $event)"
-          @resolve-conflict="emit('resolve-conflict', $event)"
+        <DailyActionList v-if="items.length" key="list" :date-key="dateKey" :items="items" :conflicts="conflicts"
+          :occurrence-conflicts="occurrenceConflicts" :resolving-action-item-id="resolvingActionItemId"
+          :resolving-occurrence-id="resolvingOccurrenceId" @edit="quickAddOpen = false"
+          @toggle="emit('toggle', $event.occurrenceKey, $event.completed)" @move="emit('move', $event)"
+          @remove="emit('remove', $event)" @resolve-conflict="emit('resolve-conflict', $event)"
           @resolve-occurrence-conflict="
             emit('resolve-occurrence-conflict', $event)
-          "
-        />
+            " />
         <ActionItemListSkeleton v-else-if="loading" key="skeleton" />
-        <UiEmptyState
-          v-else-if="!quickAddOpen"
-          key="empty"
-          icon="list"
-          description="Plan something for this day, or leave it open."
-        >
+        <UiEmptyState v-else-if="!quickAddOpen" key="empty" icon="list"
+          description="Plan something for this day, or leave it open.">
         </UiEmptyState>
       </Transition>
 
-      <div
-        v-if="orphanActionConflicts.length || orphanOccurrenceConflicts.length"
-        class="action-section__conflicts"
-      >
-        <DailyActionConflictPanel
-          v-for="conflict in orphanActionConflicts"
-          :key="conflict.mutationId"
-          :conflict="conflict"
-          :resolving="resolvingActionItemId === conflict.actionItemId"
-          @resolve="
+      <div v-if="orphanActionConflicts.length || orphanOccurrenceConflicts.length" class="action-section__conflicts">
+        <DailyActionConflictPanel v-for="conflict in orphanActionConflicts" :key="conflict.mutationId"
+          :conflict="conflict" :resolving="resolvingActionItemId === conflict.actionItemId" @resolve="
             emit('resolve-conflict', {
               actionItemId: conflict.actionItemId,
               strategy: $event,
             })
-          "
-        />
-        <DailyOccurrenceConflictPanel
-          v-for="conflict in orphanOccurrenceConflicts"
-          :key="conflict.mutationId"
-          :conflict="conflict"
-          :resolving="resolvingOccurrenceId === conflict.occurrenceId"
-          @resolve="
+            " />
+        <DailyOccurrenceConflictPanel v-for="conflict in orphanOccurrenceConflicts" :key="conflict.mutationId"
+          :conflict="conflict" :resolving="resolvingOccurrenceId === conflict.occurrenceId" @resolve="
             emit('resolve-occurrence-conflict', {
               occurrenceId: conflict.occurrenceId,
               strategy: $event,
             })
-          "
-        />
+            " />
       </div>
 
       <!-- <div v-if="movedItems.length" class="moved-list">
@@ -294,6 +243,7 @@ function toggleQuickAdd() {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .quick-add-enter-active,
   .quick-add-leave-active,
   .content-swap-enter-active,

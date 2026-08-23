@@ -1,15 +1,26 @@
 <template>
-  <form ref="formEl" class="inline-action" aria-label="Quick add action item" @submit.prevent="submit"
+  <form class="inline-action" aria-label="Quick add action item" @submit.prevent="submit"
     @keydown.esc.prevent="emit('cancel')">
     <div class="inline-action__main">
       <!-- Deliberately not disabled while saving: the commit is local and
       near-instant, and toggling `disabled` mid-save yanks focus (and drops IME
       composition) right as the user starts the next item. `saving` still guards
       re-entry in submit(). -->
-      <UiInput v-model="title" aria-label="Action item title" placeholder="What needs to happen?" autocomplete="off" />
-      <UiButton type="submit" icon="plus" :loading="saving" :disabled="!title.trim()">
+      <SmartActionInput ref="titleEl" v-model="title" :tokens="parsed.tokens" aria-label="Action item title"
+        placeholder="What needs to happen?" />
+      <UiButton type="submit" icon="plus" size="lg" :loading="saving"
+        :disabled="!parsed.title.trim() || parsed.issues.length > 0">
         Add
       </UiButton>
+    </div>
+
+    <div v-if="parsed.tokens.length" class="inline-action__interpretation" aria-live="polite">
+      <UiIcon name="calendar-clock" size="14px" />
+      <span>{{ previewSummary }}</span>
+      <span v-if="parsed.issues.length" class="inline-action__warning">
+        {{ parsed.issues.join(" · ") }}
+      </span>
+      <span class="inline-action__explain">Hover highlighted text for details</span>
     </div>
 
     <!-- Timing and repeat stay out of the way until there is something to apply
@@ -20,7 +31,8 @@
       <div v-if="optionsVisible" class="reveal">
         <div class="reveal__inner">
           <div ref="optionsEl" class="inline-action__options">
-            <UiSegmentedControl v-model="timingMode" label="Action timing" :items="timingOptions" />
+            <UiSegmentedControl :model-value="timingMode" label="Action timing" :items="timingOptions"
+              @update:model-value="setTimingMode" />
             <!-- Same collapse as the options panel, turned on its side: the
             track width animates so the repeat select is pushed across rather
             than teleporting, and the gap rides inside the clip so it can't
@@ -29,14 +41,14 @@
               <div v-if="timingMode === 'TIMED'" class="time-slide">
                 <div class="time-slide__inner">
                   <div class="time-slide__content">
-                    <UiInput v-model="localTime" class="inline-action__time" aria-label="Action time" type="time"
-                      size="xs" required />
+                    <UiInput :model-value="localTime" class="inline-action__time" aria-label="Action time" type="time"
+                      size="xs" required @update:model-value="setLocalTime" />
                   </div>
                 </div>
               </div>
             </Transition>
-            <UiSelect v-model="frequency" class="inline-action__repeat" aria-label="Repeat" size="sm"
-              :items="repeatOptions" value-key="value" label-key="label" />
+            <UiSelect :model-value="frequency" class="inline-action__repeat" aria-label="Repeat" size="sm"
+              :items="repeatOptions" value-key="value" label-key="label" @update:model-value="setFrequency" />
             <span class="inline-action__tail">
               <UiParagraph size="xs" color="content-secondary" class="inline-action__hint">
                 Enter adds · Esc closes
@@ -54,13 +66,15 @@
 
 <script setup lang="ts">
 import type { RecurrenceRuleDTO } from "@shared/utils/daily.contract";
+import { formatDateKey } from "@shared/utils/daily-recurrence";
 import {
   buildRecurrenceRule,
   type RecurrenceChoice,
 } from "../domain/actionItemMutation";
+import { parseActionInput } from "../domain/parseActionInput";
 import { useDaily } from "../composables/useDaily";
 import { useReflowEase } from "../composables/useReflowEase";
-import UiIconButton from "~/components/ui/UiIconButton.vue";
+import SmartActionInput from "./SmartActionInput.vue";
 
 const props = defineProps<{ dateKey: string }>();
 const emit = defineEmits<{
@@ -71,13 +85,28 @@ const emit = defineEmits<{
 const DEFAULT_TIME = "09:00";
 
 const daily = useDaily();
-const formEl = ref<HTMLFormElement | null>(null);
+const toast = useToast();
+const titleEl = ref<InstanceType<typeof SmartActionInput> | null>(null);
 const title = ref("");
 const timingMode = ref<"ALL_DAY" | "TIMED">("ALL_DAY");
 const localTime = ref(DEFAULT_TIME);
 const frequency = ref<RecurrenceChoice>("NONE");
+const timingTouched = ref(false);
+const recurrenceTouched = ref(false);
+const draftReference = ref(new Date());
+const draftTimeZone = ref(
+  import.meta.client ? Intl.DateTimeFormat().resolvedOptions().timeZone : "UTC",
+);
 const saving = ref(false);
 const error = ref<string | null>(null);
+
+const parsed = computed(() =>
+  parseActionInput(title.value, {
+    referenceInstant: draftReference.value,
+    timeZone: draftTimeZone.value,
+    selectedDateKey: props.dateKey,
+  }),
+);
 
 /** Options appear once there is a title to apply them to. */
 const optionsVisible = computed(() => Boolean(title.value.trim()));
@@ -87,6 +116,10 @@ type ActionDraft = {
   timingMode: "ALL_DAY" | "TIMED";
   localTime: string;
   frequency: RecurrenceChoice;
+  timingTouched: boolean;
+  recurrenceTouched: boolean;
+  reference: Date;
+  timeZone: string;
 };
 
 const readDraft = (): ActionDraft => ({
@@ -94,6 +127,10 @@ const readDraft = (): ActionDraft => ({
   timingMode: timingMode.value,
   localTime: localTime.value,
   frequency: frequency.value,
+  timingTouched: timingTouched.value,
+  recurrenceTouched: recurrenceTouched.value,
+  reference: draftReference.value,
+  timeZone: draftTimeZone.value,
 });
 
 function writeDraft(draft: ActionDraft) {
@@ -101,6 +138,10 @@ function writeDraft(draft: ActionDraft) {
   timingMode.value = draft.timingMode;
   localTime.value = draft.localTime;
   frequency.value = draft.frequency;
+  timingTouched.value = draft.timingTouched;
+  recurrenceTouched.value = draft.recurrenceTouched;
+  draftReference.value = draft.reference;
+  draftTimeZone.value = draft.timeZone;
 }
 
 /** Back to a clean slate between quick-adds.
@@ -115,6 +156,10 @@ function resetDraft() {
     timingMode: "ALL_DAY",
     localTime: DEFAULT_TIME,
     frequency: "NONE",
+    timingTouched: false,
+    recurrenceTouched: false,
+    reference: new Date(),
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
   });
 }
 
@@ -138,18 +183,103 @@ const repeatOptions = [
 ] as const;
 
 function focus() {
-  nextTick(() => formEl.value?.querySelector("input")?.focus());
+  nextTick(() => titleEl.value?.focus());
 }
 
-function recurrence(): RecurrenceRuleDTO | null {
+function recurrence(startDate: string): RecurrenceRuleDTO | null {
   return buildRecurrenceRule({
     frequency: frequency.value,
-    startDate: props.dateKey,
+    startDate,
   });
 }
 
+function setTimingMode(value: string) {
+  if (value !== "ALL_DAY" && value !== "TIMED") return;
+  timingTouched.value = true;
+  timingMode.value = value;
+}
+
+function setLocalTime(value: string | number | null | undefined) {
+  timingTouched.value = true;
+  localTime.value = String(value ?? DEFAULT_TIME);
+}
+
+function setFrequency(value: unknown) {
+  if (
+    typeof value !== "string" ||
+    !["NONE", "DAILY", "WEEKLY", "MONTHLY", "YEARLY"].includes(value)
+  ) {
+    return;
+  }
+  recurrenceTouched.value = true;
+  frequency.value = value as RecurrenceChoice;
+}
+
+function formatTime(value: string) {
+  const [hour, minute] = value.split(":").map(Number);
+  return new Intl.DateTimeFormat(undefined, {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(2000, 0, 1, hour, minute)));
+}
+
+const previewSummary = computed(() => {
+  const date = formatDateKey(parsed.value.dateKey, undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+  const mode = timingTouched.value ? timingMode.value : parsed.value.timingMode;
+  const timeValue = timingTouched.value
+    ? localTime.value
+    : (parsed.value.localTime ?? DEFAULT_TIME);
+  const time = mode === "TIMED" ? formatTime(timeValue) : "All day";
+  const repeat =
+    frequency.value === "NONE"
+      ? ""
+      : ` · ${frequency.value[0]}${frequency.value.slice(1).toLowerCase()}`;
+  return `${date} · ${time}${repeat}`;
+});
+
+watch(title, (next, previous) => {
+  if (!previous.trim() && next.trim()) {
+    draftReference.value = new Date();
+    draftTimeZone.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  }
+});
+
+watch(
+  parsed,
+  (value) => {
+    if (!timingTouched.value) {
+      timingMode.value = value.timingMode;
+      localTime.value = value.localTime ?? DEFAULT_TIME;
+    }
+    if (!recurrenceTouched.value) {
+      frequency.value = value.recurrence?.frequency ?? "NONE";
+    }
+  },
+  { immediate: true },
+);
+
+async function undoCreated(dateKey: string, actionItemId: string) {
+  try {
+    await daily.archiveAction(dateKey, actionItemId);
+    toast.add({ title: "Action item removed", color: "neutral" });
+  } catch (undoError) {
+    toast.add({
+      title: "Couldn’t undo action item",
+      description:
+        undoError instanceof Error ? undoError.message : "Try again.",
+      color: "error",
+    });
+  }
+}
+
 async function submit() {
-  const value = title.value.trim();
+  const interpretation = parsed.value;
+  const value = interpretation.title.trim();
   if (!value || saving.value) return;
 
   saving.value = true;
@@ -157,10 +287,18 @@ async function submit() {
   // Snapshot everything the save needs before touching the refs — the reset
   // below rewinds them, and `recurrence()` reads `frequency` off the live ref.
   const draft = readDraft();
+  const submittedTimingMode = draft.timingTouched
+    ? draft.timingMode
+    : interpretation.timingMode;
+  const submittedLocalTime = draft.timingTouched
+    ? draft.localTime
+    : interpretation.localTime;
   const submitted = {
-    timingMode: draft.timingMode,
-    localTime: draft.timingMode === "TIMED" ? draft.localTime : null,
-    recurrence: recurrence(),
+    timingMode: submittedTimingMode,
+    localTime: submittedTimingMode === "TIMED" ? submittedLocalTime : null,
+    recurrence: draft.recurrenceTouched
+      ? recurrence(interpretation.dateKey)
+      : interpretation.recurrence,
   };
   // The form stays open for the next item, so clear the field up front rather
   // than after the save resolves — the whole point of it is rattling off
@@ -169,12 +307,35 @@ async function submit() {
   resetDraft();
   focus();
   try {
-    await daily.createAction({
+    const created = await daily.createAction({
       title: value,
-      dateKey: props.dateKey,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      dateKey: interpretation.dateKey,
+      timezone: interpretation.timezone,
       ...submitted,
     });
+    if (interpretation.tokens.some((token) => token.accepted)) {
+      const actions = [
+        {
+          label: "Undo",
+          onClick: () =>
+            undoCreated(interpretation.dateKey, created.actionItemId),
+        },
+      ];
+      if (interpretation.dateKey !== props.dateKey) {
+        actions.unshift({
+          label: "View",
+          onClick: async () => {
+            await navigateTo(`/day/${interpretation.dateKey}`);
+          },
+        });
+      }
+      toast.add({
+        title: "Action item created",
+        description: `${value} · ${interpretation.summary}`,
+        color: "success",
+        actions,
+      });
+    }
     emit("saved");
   } catch (submitError) {
     // Only restore the draft if the field is still untouched — the user may
@@ -202,7 +363,7 @@ defineExpose({ focus });
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-3);
+  padding: var(--space-1);
   /* border: 1px solid var(--color-border); */
   border-radius: var(--radius-lg);
   /* background: var(--color-surface-subtle); */
@@ -213,6 +374,23 @@ defineExpose({ focus });
   display: flex;
   align-items: center;
   gap: var(--space-2);
+}
+
+.inline-action__interpretation {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--color-content-secondary);
+  font-size: var(--text-xs);
+}
+
+.inline-action__warning {
+  color: var(--color-warning-text);
+}
+
+.inline-action__explain {
+  margin-inline-start: auto;
+  white-space: nowrap;
 }
 
 .inline-action__main> :first-child {
@@ -393,6 +571,10 @@ defineExpose({ focus });
   }
 
   .inline-action__hint {
+    display: none;
+  }
+
+  .inline-action__explain {
     display: none;
   }
 }

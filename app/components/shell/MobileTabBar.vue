@@ -87,7 +87,7 @@ function isActive(to: string) {
 <style scoped>
 .ds-tabbar {
   flex-shrink: 0;
-  height: calc(74px + env(safe-area-inset-bottom));
+  height: calc(64px + env(safe-area-inset-bottom));
   padding-bottom: env(safe-area-inset-bottom);
   display: grid;
   grid-template-columns: repeat(4, 1fr);

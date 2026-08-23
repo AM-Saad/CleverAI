@@ -1,13 +1,8 @@
 <template>
   <header class="app-page-header">
     <div class="app-page-header__leading">
-      <UiIconButton
-        v-if="backTo"
-        icon="chevron-left"
-        :label="backLabel ?? 'Back'"
-        size="sm"
-        @click="navigateTo(backTo)"
-      />
+      <UiIconButton v-if="backTo" icon="chevron-left" :label="backLabel ?? 'Back'" size="sm" variant="soft"
+        @click="navigateTo(backTo)" />
       <NuxtLink v-else to="/" class="app-page-header__apps">
         <UiIcon name="layout-grid" class="h-4 w-4" />
         Apps
@@ -15,7 +10,12 @@
       <div class="min-w-0">
         <UiLabel v-if="eyebrow" tag="p" size="sm" weight="bold" color="primary" uppercase>{{ eyebrow }}</UiLabel>
         <UiTitle tag="h1" size="xl" weight="bold" color="content-on-background">
-          {{ title }}
+          <UiButton v-if="titleClickable" variant="ghost" tone="neutral" class="app-page-header__title-button"
+            aria-haspopup="dialog" @click="emit('titleClick')">
+            <UiAnimatedText :text="title" class="app-page-header__animated-title" />
+            <UiIcon name="chevron-down" class="h-4 w-4 shrink-0" />
+          </UiButton>
+          <template v-else>{{ title }}</template>
         </UiTitle>
         <UiParagraph v-if="subtitle" size="xs" color="content-secondary">
           {{ subtitle }}
@@ -24,12 +24,8 @@
     </div>
     <div class="app-page-header__actions">
       <slot name="actions" />
-      <NuxtLink
-        v-if="accountTo"
-        :to="accountTo"
-        class="app-page-header__account"
-        :aria-label="accountLabel ?? 'Account settings'"
-      >
+      <NuxtLink v-if="accountTo" :to="accountTo" class="app-page-header__account"
+        :aria-label="accountLabel ?? 'Account settings'">
         <UiIcon name="user-round" class="h-5 w-5" />
       </NuxtLink>
     </div>
@@ -39,6 +35,8 @@
 <script setup lang="ts">
 defineProps<{
   title: string;
+  /** Renders the title as a button (e.g. to open the workspace switcher). */
+  titleClickable?: boolean;
   subtitle?: string;
   eyebrow?: string;
   backTo?: string | Record<string, unknown>;
@@ -46,6 +44,8 @@ defineProps<{
   accountTo?: string | Record<string, unknown>;
   accountLabel?: string;
 }>();
+
+const emit = defineEmits<{ titleClick: [] }>();
 </script>
 
 <style scoped>
@@ -69,16 +69,32 @@ defineProps<{
   min-width: 0;
   gap: var(--space-2);
 }
+
 .app-page-header__actions {
   flex-shrink: 0;
   gap: var(--space-2);
 }
+
+.app-page-header__title-button {
+  gap: var(--space-1);
+  margin-left: calc(var(--space-2) * -1);
+  padding: 0 var(--space-2);
+  max-width: 100%;
+  font: inherit;
+  color: inherit;
+}
+
+.app-page-header__animated-title {
+  max-width: 100%;
+}
+
 .app-page-header__apps {
   gap: var(--space-2);
   color: var(--color-content-secondary);
   font-size: var(--text-sm);
   font-weight: 700;
 }
+
 .app-page-header__account {
   width: var(--target-touch);
   height: var(--target-touch);

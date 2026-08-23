@@ -1,53 +1,26 @@
 <template>
-  <article
-    class="action-row"
-    :class="{ 'action-row--completed': item.completed }"
-  >
+  <article class="action-row" :class="{ 'action-row--completed': item.completed }">
     <div class="action-row_content">
-      <UiCheckbox
-        :model-value="item.completed"
-        :overdue="item.overdue"
-        :aria-label="
-          item.overdue
-            ? `Mark ${item.title} complete (overdue)`
-            : `Mark ${item.title} complete`
-        "
-        @update:model-value="$emit('toggle', Boolean($event))"
-      />
-      <UiButton
-        type="button"
-        tone="neutral"
-        variant="link"
-        class="action-row__main"
-        :aria-label="
-          conflicted
-            ? `${item.title} has a sync conflict`
-            : `Edit ${item.title}`
-        "
-        :disabled="conflicted"
-        @click="$emit('edit')"
-      >
+      <UiCheckbox :model-value="item.completed" :overdue="item.overdue" :aria-label="item.overdue
+          ? `Mark ${item.title} complete (overdue)`
+          : `Mark ${item.title} complete`
+        " @update:model-value="$emit('toggle', Boolean($event))" />
+      <UiButton type="button" tone="neutral" variant="link" class="action-row__main" :aria-label="conflicted
+          ? `${item.title} has a sync conflict`
+          : `Edit ${item.title}`
+        " :disabled="conflicted" @click="$emit('edit')">
         <div ref="titleViewport" class="action-row__title" :title="item.title">
-          <UiParagraph
-            tag="p"
-            size="sm"
-            :color="item.completed ? 'disabled' : 'content-on-surface'"
-            class="leading-none"
-            :class="{ 'line-through': item.completed }"
-          >
-            <span
-              class="action-row__title-track"
-              :class="{
-                'action-row__title-track--scrolling': isTitleOverflowing,
-              }"
-              aria-hidden="true"
-            >
+          <UiParagraph tag="p" size="sm" :color="item.completed ? 'disabled' : 'content-on-surface'"
+            class="leading-none" :class="{ 'line-through': item.completed }">
+            <span class="action-row__title-track" :class="{
+              'action-row__title-track--scrolling': isTitleOverflowing,
+            }" aria-hidden="true">
               <span class="action-row__title-copy">
                 <span ref="titleText">{{ item.title }}</span>
               </span>
               <span v-if="isTitleOverflowing" class="action-row__title-copy">{{
                 item.title
-              }}</span>
+                }}</span>
             </span>
             <!-- <span v-if="item.overdue" class="action-row__overdue">Overdue</span> -->
           </UiParagraph>
@@ -57,40 +30,20 @@
 
     <div class="action-row__actions">
       <div class="action-row__meta">
-        <span
-          v-if="item.recurrenceLabel"
-          class="action-row__repeat"
-          :aria-label="item.recurrenceLabel"
-          :title="item.recurrenceLabel"
-        >
+        <span v-if="item.recurrenceLabel" class="action-row__repeat" :aria-label="item.recurrenceLabel"
+          :title="item.recurrenceLabel">
           <UiIcon name="repeat-2" class="h-3.5 w-3.5" />
-          <!-- {{ item.recurrenceLabel }} -->
+          {{ item.recurrenceLabel }}
         </span>
-        <UiPill
-          v-if="item.timingLabel"
-          size="sm"
-          :label="item.timingLabel"
-          :color="
-            item.overdue
-              ? 'var(--color-error)'
-              : 'var(--color-content-secondary)'
-          "
-          variant="soft"
-        />
+        <UiPill v-if="item.timingLabel" size="sm" :label="item.timingLabel" :color="item.overdue
+            ? 'var(--color-error)'
+            : 'var(--color-content-secondary)'
+          " variant="soft" />
       </div>
       <!-- <UiIconButton icon="pencil" label="Edit action item" size="sm" :disabled="conflicted"
         @click="$emit('edit')" /> -->
-      <UiIconButton
-        icon="calendar-clock"
-        label="Move action item"
-        size="sm"
-        @click="$emit('move')"
-      />
-      <UiActionMenu
-        :items="actionMenuItems"
-        label="Action item options"
-        :disabled="conflicted"
-      />
+      <UiIconButton icon="calendar-clock" label="Move action item" size="sm" @click="$emit('move')" />
+      <UiActionMenu :items="actionMenuItems" label="Action item options" :disabled="conflicted" />
     </div>
   </article>
 </template>
@@ -226,20 +179,16 @@ onBeforeUnmount(() => titleResizeObserver?.disconnect());
 
 .action-row__title:has(.action-row__title-track--scrolling) p {
   --mask-fade-left: 0%;
-  mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    black var(--mask-fade-left),
-    black 88%,
-    transparent 100%
-  );
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent 0%,
-    black var(--mask-fade-left),
-    black 88%,
-    transparent 100%
-  );
+  mask-image: linear-gradient(to right,
+      transparent 0%,
+      black var(--mask-fade-left),
+      black 88%,
+      transparent 100%);
+  -webkit-mask-image: linear-gradient(to right,
+      transparent 0%,
+      black var(--mask-fade-left),
+      black 88%,
+      transparent 100%);
   transition: --mask-fade-left var(--duration-slow) var(--ease-standard);
   transition-delay: 0.5s;
 }
@@ -309,7 +258,7 @@ onBeforeUnmount(() => titleResizeObserver?.disconnect());
     text-overflow: ellipsis;
   }
 
-  .action-row__title-copy + .action-row__title-copy {
+  .action-row__title-copy+.action-row__title-copy {
     display: none;
   }
 }

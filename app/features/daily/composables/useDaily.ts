@@ -472,6 +472,7 @@ export function useDaily() {
     });
     await projectDate(input.dateKey);
     settleOnlineActionSave([input.dateKey]);
+    return { actionItemId: itemId, occurrenceKey: key };
   }
 
   async function updateAction(input: DailyUpdateActionInput) {

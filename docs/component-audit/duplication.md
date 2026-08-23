@@ -13,7 +13,38 @@ paralleling the canonical `features/<feature>/components/`. Pick one, delete the
 _none_
 
 
-## input/form field — 24 components → `UiFormField (label+error+UInput)`
+## card/panel — 26 components → `UiCard`
+
+| Component | tier | signals |
+|---|---|---|
+| `UsageStatistics` | component | card-chrome |
+| `BoardCardSheet` | feature | btn×3, input×1 |
+| `DailyActionConflictPanel` | feature | — |
+| `DailyNoteConflictPanel` | feature | — |
+| `DailyOccurrenceConflictPanel` | feature | — |
+| `LanguageCapturePanel` | feature | — |
+| `CanvasNoteEditor` | feature | card-chrome |
+| `MathNoteEditor` | feature | card-chrome |
+| `TextNote` | feature | card-chrome |
+| `ReviewCardView` | feature | btn×1 |
+| `ReviewSessionCard` | feature | — |
+| `design-system` | page | card-chrome |
+| `CardStack` | primitive | — |
+| `FlipCard` | primitive | btn×1 |
+| `UiCard` | primitive | — |
+| `UiColorModeToggle` | primitive | card-chrome, btn×1 |
+| `UiInteractiveCard` | primitive | — |
+| `UiItemCard` | primitive | — |
+| `UiListCard` | primitive | — |
+| `UiPanel` | primitive | — |
+| `CreditsWallet` | shared | card-chrome |
+| `InAppNotificationsPanel` | shared | — |
+| `LocalSyncStatus` | shared | card-chrome |
+| `NoteToolbar` | shared | card-chrome |
+| `SplitPaneLayout` | shared | — |
+| `TiptapEditor` | shared | card-chrome, btn×1 |
+
+## input/form field — 25 components → `UiFormField (label+error+UInput)`
 
 | Component | tier | signals |
 |---|---|---|
@@ -21,8 +52,9 @@ _none_
 | `UpsertWorkspaceForm` | component | — |
 | `BoardCardSheet` | feature | btn×3, input×1 |
 | `BoardColumnsSheet` | feature | btn×2, input×2 |
-| `ActionItemForm` | feature | — |
+| `ActionItemQuickAddForm` | feature | — |
 | `RescheduleActionForm` | feature | — |
+| `SmartActionInput` | feature | — |
 | `MobileNoteEditor` | feature | btn×2, input×2 |
 | `NoteGroupsSheet` | feature | btn×3, input×2 |
 | `QuickNoteEditor` | feature | input×1 |
@@ -39,35 +71,8 @@ _none_
 | `AutocompleteInput` | shared | — |
 | `CodeBlockNode` | shared | — |
 | `NoteColorPickerButton` | shared | input×1 |
-| `PaperComponent` | shared | btn×1, input×2 |
+| `PaperComponent` | shared | input×2 |
 | `TiptapBubbleMenu` | shared | input×1 |
-
-## card/panel — 22 components → `UiCard`
-
-| Component | tier | signals |
-|---|---|---|
-| `UsageStatistics` | component | card-chrome |
-| `BoardCardSheet` | feature | btn×3, input×1 |
-| `DailyNoteConflictPanel` | feature | — |
-| `LanguageCapturePanel` | feature | — |
-| `CanvasNoteEditor` | feature | card-chrome |
-| `MathNoteEditor` | feature | card-chrome |
-| `TextNote` | feature | card-chrome |
-| `ReviewCardView` | feature | btn×1 |
-| `ReviewSessionCard` | feature | — |
-| `design-system` | page | card-chrome |
-| `UiCard` | primitive | — |
-| `UiColorModeToggle` | primitive | card-chrome, btn×1 |
-| `UiInteractiveCard` | primitive | — |
-| `UiItemCard` | primitive | — |
-| `UiListCard` | primitive | — |
-| `UiPanel` | primitive | — |
-| `CreditsWallet` | shared | card-chrome |
-| `InAppNotificationsPanel` | shared | — |
-| `LocalSyncStatus` | shared | card-chrome |
-| `NoteToolbar` | shared | card-chrome |
-| `SplitPaneLayout` | shared | — |
-| `TiptapEditor` | shared | card-chrome, btn×1 |
 
 ## modal/dialog/drawer — 21 components → `UiModal / UiConfirmDialog / UiDrawer`
 
@@ -80,7 +85,7 @@ _none_
 | `UpdateProfileModal` | component | — |
 | `BoardCardSheet` | feature | btn×3, input×1 |
 | `BoardColumnsSheet` | feature | btn×2, input×2 |
-| `ActionItemSheet` | feature | — |
+| `DeleteActionItemDialog` | feature | — |
 | `RescheduleActionSheet` | feature | — |
 | `LanguageWordDetailModal` | feature | — |
 | `AiResultSheet` | feature | — |
@@ -118,10 +123,11 @@ _none_
 | `NoteColorPickerButton` | shared | input×1 |
 | `NoteToolbarButton` | shared | — |
 
-## skeleton/loading — 3 components → `UiSkeleton`
+## skeleton/loading — 4 components → `UiSkeleton`
 
 | Component | tier | signals |
 |---|---|---|
+| `ActionItemListSkeleton` | feature | — |
 | `AiShimmer` | primitive | — |
 | `UiLoadingState` | primitive | — |
 | `UiSkeleton` | primitive | — |

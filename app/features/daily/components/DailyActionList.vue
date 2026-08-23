@@ -139,7 +139,10 @@ watch(
 
 <style scoped>
 .action-list {
-  overflow: hidden;
+  max-height: calc(var(--space-12) * 4.5);
+  overflow-y: auto;
+  mask-image: var(--mask-fade-y);
+  -webkit-mask-image: var(--mask-fade-y);
   /* background: var(--color-surface-subtle); */
 }
 

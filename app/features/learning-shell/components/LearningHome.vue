@@ -9,53 +9,67 @@
       </UiTitle>
     </header>
 
-    <UiPanel variant="surface" size="lg" radius="2xl" shadow="sm" :tone="pulseTone" :class-name="['learning-pulse', `learning-pulse--${pulseSource}`].join(' ')
-      ">
-      <div class="learning-pulse__content">
-        <div class="learning-pulse__topline">
-          <UiBadge :tone="pulseBadgeTone" variant="soft" icon="home">
-            Your Learning Pulse
-          </UiBadge>
-          <UiParagraph size="xs" color="content-secondary">
-            {{ pulseTimeLabel }}
-          </UiParagraph>
-        </div>
+    <LearningPulse :status="pulseSource">
+      <template #topline>
+        <UiBadge :tone="pulseBadgeTone" variant="soft" icon="home">
+          Your Learning Pulse
+        </UiBadge>
+        <UiParagraph size="xs" color="content-secondary">
+          {{ pulseTimeLabel }}
+        </UiParagraph>
+      </template>
 
-        <div class="learning-pulse__copy" aria-live="polite">
-          <UiTitle tag="h2" size="sm" weight="medium" color="content-on-surface-strong">
-            {{ pulseTitle }}
-          </UiTitle>
-          <UiParagraph size="xs" color="content-secondary">
-            {{ pulseDescription }}
-          </UiParagraph>
-        </div>
+      <template #copy>
+        <UiTitle tag="h2" size="sm" weight="medium" color="content-on-surface-strong">
+          {{ pulseTitle }}
+        </UiTitle>
+        <UiParagraph size="xs" color="content-secondary">
+          {{ pulseDescription }}
+        </UiParagraph>
+      </template>
 
-        <div v-if="showPulseSignals" class="learning-pulse__signals">
-          <span v-if="workspaceDue > 0">
-            <!-- <UiIcon name="layers" class="h-3.5 w-3.5" /> -->
-            {{ workspaceDueLabel }}
-          </span>
-          <span v-if="languageDue > 0">
-            <UiIcon name="languages" class="h-3.5 w-3.5" />
-            {{ languageDueLabel }}
-          </span>
-          <span v-if="tomorrowTotal > 0">
-            <UiIcon name="calendar-clock" class="h-3.5 w-3.5" />
-            {{ tomorrowDueLabel }}
-          </span>
-        </div>
+      <template v-if="showPulseSignals" #signals>
+        <span v-if="workspaceDue > 0">
+          <!-- <UiIcon name="layers" class="h-3.5 w-3.5" /> -->
+          {{ workspaceDueLabel }}
+        </span>
+        <span v-if="languageDue > 0">
+          <UiIcon name="languages" class="h-3.5 w-3.5" />
+          {{ languageDueLabel }}
+        </span>
+        <span v-if="tomorrowTotal > 0">
+          <UiIcon name="calendar-clock" class="h-3.5 w-3.5" />
+          {{ tomorrowDueLabel }}
+        </span>
+      </template>
 
-        <UiButton v-if="pulseSource === 'error'" size="lg" block tone="neutral" variant="soft" leading-icon="refresh-cw"
-          :loading="pulseLoading" @click="refresh">
+      <template #action>
+        <UiButton
+          v-if="pulseSource === 'error'"
+          size="lg"
+          block
+          tone="neutral"
+          variant="soft"
+          leading-icon="refresh-cw"
+          :loading="pulseLoading"
+          @click="refresh"
+        >
           Try again
         </UiButton>
-        <UiButton v-else :to="pulseActionTo" size="lg" block :tone="pulseSource === 'done' ? 'neutral' : 'primary'"
-          :variant="pulseSource === 'done' ? 'soft' : 'solid'" trailing-icon="arrow-right" :loading="pulseLoading"
-          :disabled="pulseLoading">
+        <UiButton
+          v-else
+          :to="pulseActionTo"
+          size="lg"
+          :tone="pulseSource === 'done' ? 'neutral' : 'primary'"
+          :variant="pulseSource === 'done' ? 'soft' : 'solid'"
+          trailing-icon="arrow-right"
+          :loading="pulseLoading"
+          :disabled="pulseLoading"
+        >
           {{ pulseActionLabel }}
         </UiButton>
-      </div>
-    </UiPanel>
+      </template>
+    </LearningPulse>
 
     <section class="learning-home__section" aria-labelledby="learning-areas-title">
       <!-- <div class="learning-home__section-heading">
@@ -223,6 +237,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import LearningPulse from "~/features/learning-shell/components/LearningPulse.vue";
 import { useLearningHomeExperience } from "~/features/learning-shell/composables/useLearningHomeExperience";
 
 type Confidence = "know" | "unsure" | "forgot";
@@ -297,14 +312,6 @@ const pulseActionLabel = computed(() => {
   }
   if (pulseSource.value === "done") return "Explore something new";
   return "Create first workspace";
-});
-const pulseTone = computed(() => {
-  if (pulseSource.value === "error") return "error" as const;
-  if (pulseSource.value === "done") return "success" as const;
-  if (pulseSource.value === "workspace" || pulseSource.value === "language") {
-    return "info" as const;
-  }
-  return "neutral" as const;
 });
 const pulseBadgeTone = computed(() => {
   if (pulseSource.value === "error") return "error" as const;
@@ -473,16 +480,12 @@ watch(
 .learning-home__section-heading,
 .learning-area__content,
 .learning-area__copy,
-.learning-pulse__content,
-.learning-pulse__copy,
 .learning-spark__content,
 .learning-spark__bet,
 .learning-spark__answer,
 .learning-spark__skeletons {
   display: flex;
   flex-direction: column;
-
-
 }
 
 .learning-home__header {
@@ -498,7 +501,6 @@ watch(
 }
 
 .learning-home__section-heading--row,
-.learning-pulse__topline,
 .learning-spark__answer-topline,
 .learning-postcard__content,
 .learning-spark__empty {
@@ -514,62 +516,6 @@ watch(
 
 .learning-home__section-heading--row>div {
   min-width: 0;
-}
-
-.learning-pulse {
-  --pulse-accent: var(--color-accent-indigo);
-  position: relative;
-  isolation: isolate;
-  border: 0;
-  border-color: color-mix(in srgb,
-      var(--pulse-accent) 24%,
-      var(--color-secondary));
-  background:
-    radial-gradient(circle at 92% 8%,
-      color-mix(in srgb, var(--pulse-accent) 18%, transparent),
-      transparent 38%),
-    var(--color-surface);
-}
-
-.learning-pulse--language {
-  --pulse-accent: var(--color-accent-purple);
-}
-
-.learning-pulse--done {
-  --pulse-accent: var(--color-success);
-}
-
-.learning-pulse--error {
-  --pulse-accent: var(--color-error);
-}
-
-.learning-pulse__content {
-  position: relative;
-  z-index: 1;
-  gap: var(--space-4);
-}
-
-.learning-pulse__copy {
-  gap: var(--space-1);
-  max-width: 34rem;
-}
-
-.learning-pulse__signals {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-.learning-pulse__signals span {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-subtle);
-  color: var(--color-content-secondary);
-  font-size: var(--text-xs);
-  font-weight: 600;
 }
 
 .learning-home__areas {

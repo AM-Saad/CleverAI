@@ -1,39 +1,17 @@
 <template>
-  <UiSheet
-    :open="isSwitcherOpen"
-    title="Switch workspace"
-    @update:open="onOpenChange"
-  >
+  <UiSheet :open="isSwitcherOpen" title="Switch workspace" @update:open="onOpenChange">
     <template #header>
       <div class="wss__head">
-        <UiTitle
-          tag="h2"
-          size="lg"
-          weight="bold"
-          color="content-on-surface-strong"
-          class="wss__title"
-        >
+        <UiTitle tag="h2" size="lg" weight="bold" color="content-on-surface-strong" class="wss__title">
           Switch workspace
         </UiTitle>
         <div class="wss__actions">
-          <UiButton
-            size="xs"
-            variant="soft"
-            tone="primary"
-            icon="plus"
-            aria-label="Create new workspace"
-            @click="createNew"
-          >
+          <UiButton size="xs" variant="soft" tone="primary" icon="plus" aria-label="Create new workspace"
+            @click="createNew">
             New
           </UiButton>
-          <UiButton
-            size="xs"
-            variant="ghost"
-            tone="neutral"
-            icon="folder-kanban"
-            aria-label="Manage all workspaces"
-            @click="openWorkspaces"
-          >
+          <UiButton size="xs" variant="ghost" tone="neutral" icon="folder-kanban" aria-label="Manage all workspaces"
+            @click="openWorkspaces">
             Manage
           </UiButton>
         </div>
@@ -43,67 +21,33 @@
     <div class="wss">
       <!-- recents quick-hop chips -->
       <div v-if="recentChips.length > 1" class="wss__recents">
-        <UiPill
-          v-for="w in recentChips"
-          :key="w.id"
-          clickable
-          selectable
-          :active="w.id === activeId"
-          :label="w.title"
-          @click="select(w)"
-        >
+        <UiPill v-for="w in recentChips" :key="w.id" clickable selectable :active="w.id === activeId" :label="w.title"
+          @click="select(w)">
           <template #indicator>
             <UiPillIndicator :color="accentFor(w)" />
           </template>
         </UiPill>
       </div>
 
-      <UiInput
-        v-if="workspaces.length > 6"
-        v-model="query"
-        placeholder="Search workspaces…"
-        icon="search"
-      />
+      <UiInput v-if="workspaces.length > 6" v-model="query" placeholder="Search workspaces…" icon="search" />
 
       <ul class="wss__list">
         <li v-for="w in filtered" :key="w.id">
-          <UiListCard
-            clickable
-            selectable
-            :selected="w.id === activeId"
-            :title="w.title"
-            :description="metaFor(w.id)"
-            leading-background="var(--color-surface-subtle)"
-            :leading-color="accentFor(w)"
-            @click="select(w)"
-          >
+          <UiListCard clickable selectable :selected="w.id === activeId" :title="w.title" :description="metaFor(w.id)"
+            leading-background="var(--color-surface-subtle)" :leading-color="accentFor(w)" size="sm" @click="select(w)">
             <template #leading>
-              <span
-                class="wss__dot"
-                :style="{ background: accentFor(w) }"
-                aria-hidden="true"
-              />
+              <span class="wss__dot" :style="{ background: accentFor(w) }" aria-hidden="true" />
             </template>
             <template v-if="caughtUp(w.id)" #trailing>
-              <UiPill
-                size="sm"
-                label="caught up"
-                color="var(--color-success)"
-                variant="outline"
-                active
-                max-width="120px"
-              >
+              <UiPill size="sm" label="caught up" color="var(--color-success)" variant="outline" active
+                max-width="120px">
                 <template #icon>
                   <UiPillIcon name="check" size="sm" />
                 </template>
               </UiPill>
             </template>
             <template v-if="w.id === activeId" #action>
-              <UiIcon
-                name="check"
-                class="h-[18px] w-[18px]"
-                aria-hidden="true"
-              />
+              <UiIcon name="check" class="h-[18px] w-[18px]" aria-hidden="true" />
             </template>
           </UiListCard>
         </li>
@@ -250,8 +194,9 @@ watch(isSwitcherOpen, (open) => {
 
 .wss__recents {
   display: flex;
-  flex-wrap: wrap;
+  /* flex-wrap: wrap; */
   gap: var(--space-2);
+  overflow-y: auto;
 }
 
 .wss__list {
