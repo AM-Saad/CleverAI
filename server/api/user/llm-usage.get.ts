@@ -106,7 +106,7 @@ export default defineEventHandler(async (event) => {
       byFeature[feature].usdMicros += usage.totalUsdMicros || BigInt(0);
 
       // Group by model
-      const model = usage.model || "unknown";
+      const model = usage.actualModel || usage.model || "unknown";
       if (!byModel[model]) {
         byModel[model] = { calls: 0, tokens: 0, usdMicros: BigInt(0) };
       }
@@ -115,7 +115,9 @@ export default defineEventHandler(async (event) => {
       byModel[model].usdMicros += usage.totalUsdMicros || BigInt(0);
 
       // Group by day
-      const dateStr = usage.createdAt.toISOString().split("T")[0] ?? usage.createdAt.toISOString();
+      const dateStr =
+        usage.createdAt.toISOString().split("T")[0] ??
+        usage.createdAt.toISOString();
       if (!byDay[dateStr]) {
         byDay[dateStr] = {
           date: dateStr,
@@ -174,7 +176,7 @@ export default defineEventHandler(async (event) => {
       id: usage.id,
       date: usage.createdAt.toISOString(),
       feature: usage.feature || "unknown",
-      model: usage.model,
+      model: usage.actualModel || usage.model,
       tokens: usage.totalTokens,
       usd: usdFromMicros(usage.totalUsdMicros),
     }));
@@ -195,6 +197,9 @@ export default defineEventHandler(async (event) => {
       recentUsage,
     };
   } catch (error: unknown) {
+    if (error && typeof error === "object" && "statusCode" in error) {
+      throw error;
+    }
     console.error("Error fetching user LLM usage:", error);
     setResponseStatus(event, 500);
     return {

@@ -9,11 +9,18 @@ import {
 } from "@shared/utils/language.contract";
 import { translationPrompt } from "@server/utils/llm/languagePrompts";
 import { parseLexicalEntry } from "../domain/lexicalEntry";
-import type { QuotaPort } from "@server/modules/subscription/ports/QuotaPort";
+import type {
+  ConsumedQuota,
+  QuotaPort,
+} from "@server/modules/subscription/ports/QuotaPort";
 import { maybeAutoEnrollLanguageWord } from "./autoEnrollLanguageWord";
 import { createHash } from "node:crypto";
 import { saveLanguageWord } from "./saveLanguageWord";
 import { reviewModeForLanguageWord } from "../../../../shared/utils/language-review-card";
+import {
+  OpenRouterRequestError,
+  type OpenRouterGeneration,
+} from "@server/utils/llm/openRouter";
 
 const OBJECT_ID_RE = /^[a-f\d]{24}$/i;
 
@@ -99,7 +106,7 @@ export async function captureLanguageWord(input: {
   billSharedTranslationHit: (
     event: H3Event,
     userId: string,
-  ) => Promise<unknown>;
+  ) => Promise<ConsumedQuota>;
 }): Promise<CaptureWordResponse> {
   const prisma = input.event.context.prisma;
   const { data, user } = input;
@@ -166,7 +173,10 @@ export async function captureLanguageWord(input: {
     });
 
     if (sharedTranslation) {
-      await input.billSharedTranslationHit(input.event, user.id);
+      const reservation = await input.billSharedTranslationHit(
+        input.event,
+        user.id,
+      );
       if (data.translateOnly) {
         return {
           translationId: sharedTranslation.id,
@@ -186,17 +196,22 @@ export async function captureLanguageWord(input: {
           sharedCacheHit: true,
         };
       }
-      return saveLanguageWord({
-        prisma,
-        userId: user.id,
-        data: {
-          translationId: sharedTranslation.id,
-          sourceText,
-          sourceContext,
-          sourceType: data.sourceType ?? "manual",
-          sourceRefId: data.sourceRefId,
-        },
-      });
+      try {
+        return await saveLanguageWord({
+          prisma,
+          userId: user.id,
+          data: {
+            translationId: sharedTranslation.id,
+            sourceText,
+            sourceContext,
+            sourceType: data.sourceType ?? "manual",
+            sourceRefId: data.sourceRefId,
+          },
+        });
+      } catch (error) {
+        await input.quotaPort.refundGeneration(user.id, reservation);
+        throw error;
+      }
     }
   }
 
@@ -208,7 +223,7 @@ export async function captureLanguageWord(input: {
     explicitSourceLang ? getLanguageLabel(explicitSourceLang) : "auto-detect",
   );
 
-  const { llmRequestPipeline } =
+  const { llmRequestPipeline, throwMappedOpenRouterError } =
     await import("@server/utils/llm/llmRequestPipeline");
   const ctx = await llmRequestPipeline(input.event, {
     quotaPort: input.quotaPort,
@@ -222,9 +237,10 @@ export async function captureLanguageWord(input: {
   });
 
   let rawText = "";
-  let didFinalize = false;
+  let generation: OpenRouterGeneration<string> | undefined;
   try {
-    rawText = await ctx.strategy.generateText(prompt);
+    generation = await ctx.ai.generateText(prompt);
+    rawText = generation.value;
     const entry = parseLexicalEntry(rawText, sourceText);
 
     if (data.includeTranslation && !entry.translation) {
@@ -239,9 +255,6 @@ export async function captureLanguageWord(input: {
     if (!/^[a-z]{2,3}$/.test(resolvedSourceLang)) {
       throw Errors.server("Source language response is invalid");
     }
-
-    await ctx.finalize({ outputText: rawText });
-    didFinalize = true;
 
     const metadata = withSourceRefMetadata(
       {
@@ -273,7 +286,7 @@ export async function captureLanguageWord(input: {
         difficulty: entry.difficulty ?? null,
         isPhrase: entry.isPhrase,
         metadata: metadata as any,
-        modelId: ctx.selectedModel.modelId,
+        modelId: generation.measurement.actualModel,
       },
       create: {
         sourceText,
@@ -290,7 +303,7 @@ export async function captureLanguageWord(input: {
         difficulty: entry.difficulty ?? null,
         isPhrase: entry.isPhrase,
         metadata: metadata as any,
-        modelId: ctx.selectedModel.modelId,
+        modelId: generation.measurement.actualModel,
       },
     });
 
@@ -303,9 +316,11 @@ export async function captureLanguageWord(input: {
         orderBy: { createdAt: "desc" },
       });
       if (existingWord) {
-        return serializeCapturedWord(existingWord, false);
+        const result = serializeCapturedWord(existingWord, false);
+        await ctx.finalize({ generation });
+        return result;
       }
-      return {
+      const result: CaptureWordResponse = {
         translationId: translationEntry.id,
         word: sourceText,
         translation: entry.translation,
@@ -321,9 +336,11 @@ export async function captureLanguageWord(input: {
         saved: false,
         cached: false,
       };
+      await ctx.finalize({ generation });
+      return result;
     }
 
-    return saveLanguageWord({
+    const result = await saveLanguageWord({
       prisma,
       userId: user.id,
       data: {
@@ -334,9 +351,12 @@ export async function captureLanguageWord(input: {
         sourceRefId: data.sourceRefId,
       },
     });
+    await ctx.finalize({ generation });
+    return result;
   } catch (err) {
-    if (!didFinalize) {
-      await ctx.fail(err);
+    await ctx.fail(err, { generation });
+    if (err instanceof OpenRouterRequestError) {
+      throwMappedOpenRouterError(err);
     }
     if (err && typeof err === "object" && "statusCode" in err) {
       throw err;

@@ -6,6 +6,7 @@
 ---
 
 ## Table of Contents
+
 1. [System Overview](#system-overview)
 2. [Technology Stack](#technology-stack)
 3. [Directory Structure](#directory-structure)
@@ -24,9 +25,9 @@ Cognilo is a **Nuxt 4** application providing AI-powered flashcard generation, q
 
 - **Hybrid SSR/SPA**: Server-side rendering with client-side hydration
 - **Local-First Notes**: IndexedDB persistence with background sync
-- **Strategy Pattern LLM**: Pluggable AI providers (OpenAI, Google Gemini, DeepSeek, Groq, OpenRouter)
+- **Single AI Boundary**: All inference goes through authenticated OpenRouter server APIs
 - **PWA-Native**: Full offline support via Workbox service worker
-- **On-Device AI**: Web worker–based math recognition, speech-to-text, summarization
+- **Validated AI Output**: Server-side schemas reject malformed or incomplete generation
 - **Realtime Collaboration**: Hocuspocus + Yjs per-note collaboration rooms (`server/collab-server.ts`, `yarn collab:dev`)
 - **Independently-Deployable Surfaces**: the same codebase can run as one process (default) or split into `platform`/`daily`/`learning` Nitro surfaces via `APP_SURFACE` — see [architecture/app-surfaces.md](./architecture/app-surfaces.md)
 
@@ -42,7 +43,7 @@ The mobile UI (all routes, all widths) was fully rebuilt in June 2026 as a singl
 │  │ Components  │  │ + IndexedDB │  │ + Push + Background Sync ││
 │  └─────────────┘  └─────────────┘  └──────────────────────────┘│
 │  ┌─────────────────────────────────────────────────────────────┐│
-│  │ AI Worker (Web Worker): Math Recognition, STT, TTS, Summary││
+│  │ AI clients: authenticated OpenRouter APIs; native TTS only ││
 │  └─────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -79,48 +80,45 @@ The mobile UI (all routes, all widths) was fully rebuilt in June 2026 as a singl
 ## Technology Stack
 
 ### Frontend
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Nuxt | 4.x | Meta-framework (SSR/SPA) |
-| Vue | 3.5+ | UI library (Composition API) |
-| TypeScript | 5.x | Type safety |
-| TailwindCSS | 4.x | Utility-first CSS |
-| Pinia | 2.x | State management |
-| Nuxt UI | 4.x | Component library, wrapped by ~50 token-driven `Ui*` primitives — see [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) / [COMPONENT_SYSTEM.md](./COMPONENT_SYSTEM.md) |
-| Tiptap | 3.x | Rich text editor |
-| Hocuspocus / Yjs | 3.x | Realtime per-note collaboration |
-| KaTeX | - | Math rendering |
-| @huggingface/transformers | 3.8 | On-device AI models |
-| motion-v | - | Animations |
-| VueUse | 13.x | Composition utilities |
+
+| Technology       | Version | Purpose                                                                                                                                                     |
+| ---------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nuxt             | 4.x     | Meta-framework (SSR/SPA)                                                                                                                                    |
+| Vue              | 3.5+    | UI library (Composition API)                                                                                                                                |
+| TypeScript       | 5.x     | Type safety                                                                                                                                                 |
+| TailwindCSS      | 4.x     | Utility-first CSS                                                                                                                                           |
+| Pinia            | 2.x     | State management                                                                                                                                            |
+| Nuxt UI          | 4.x     | Component library, wrapped by ~50 token-driven `Ui*` primitives — see [DESIGN_SYSTEM.md](./DESIGN_SYSTEM.md) / [COMPONENT_SYSTEM.md](./COMPONENT_SYSTEM.md) |
+| Tiptap           | 3.x     | Rich text editor                                                                                                                                            |
+| Hocuspocus / Yjs | 3.x     | Realtime per-note collaboration                                                                                                                             |
+| KaTeX            | -       | Math rendering                                                                                                                                              |
+| motion-v         | -       | Animations                                                                                                                                                  |
+| VueUse           | 13.x    | Composition utilities                                                                                                                                       |
 
 ### Backend
-| Technology | Version | Purpose |
-|------------|---------|---------|
-| Nitro / H3 | - | Server engine (bundled with Nuxt) |
-| Prisma | 4.8 | ORM for MongoDB |
-| MongoDB | 5.x | Document database |
-| Redis | - | Rate limiting, semantic caching (optional) |
-| @sidebase/nuxt-auth | 0.9+ | Authentication (NextAuth wrapper) |
-| SimpleWebAuthn | 13.x | Passkey / WebAuthn support |
-| Zod | 4.x | Schema validation (shared contracts) |
-| web-push | 3.x | Push notifications |
 
-### LLM Providers
-| Provider | Strategy | Models |
-|----------|----------|--------|
-| OpenAI | `OpenAIStrategy` | gpt-3.5-turbo, gpt-4o-mini, gpt-4o |
-| Google Gemini | `GeminiStrategy` | gemini-2.0-flash-lite, gemini-1.5-flash-8b |
-| DeepSeek | `DeepSeekStrategy` | deepseek-chat, deepseek-reasoner |
-| Groq | `GroqStrategy` | llama-3.1-8b-instant, qwen-qwq-32b, llama-4-scout-17b |
-| OpenRouter | `OpenRouterStrategy` | (aggregator — routes to many upstream models) |
+| Technology          | Version | Purpose                              |
+| ------------------- | ------- | ------------------------------------ |
+| Nitro / H3          | -       | Server engine (bundled with Nuxt)    |
+| Prisma              | 4.8     | ORM for MongoDB                      |
+| MongoDB             | 5.x     | Document database                    |
+| Redis               | -       | Distributed rate limiting (optional) |
+| @sidebase/nuxt-auth | 0.9+    | Authentication (NextAuth wrapper)    |
+| SimpleWebAuthn      | 13.x    | Passkey / WebAuthn support           |
+| Zod                 | 4.x     | Schema validation (shared contracts) |
+| web-push            | 3.x     | Push notifications                   |
+
+### AI provider
+
+OpenRouter is the sole inference boundary. `server/utils/llm/openRouter.ts` uses native HTTP; no provider SDK or application model registry exists.
 
 ### PWA
-| Technology | Purpose |
-|------------|---------|
-| Workbox 7 | Service worker toolkit |
-| IndexedDB | Client-side persistence |
-| web-push | Push notifications |
+
+| Technology | Purpose                 |
+| ---------- | ----------------------- |
+| Workbox 7  | Service worker toolkit  |
+| IndexedDB  | Client-side persistence |
+| web-push   | Push notifications      |
 
 ---
 
@@ -135,12 +133,10 @@ cognilo/
 │   │   └── ui/                   # ~50 token-driven Ui* primitives — see DESIGN_SYSTEM.md / COMPONENT_SYSTEM.md
 │   ├── composables/              # Vue composables
 │   │   ├── ai/                   # AI-related composables
-│   │   │   ├── useAIStore.ts     # AI worker management
-│   │   │   ├── useLocalMathRecognition.ts
-│   │   │   ├── useMathRecognition.ts
-│   │   │   ├── useSpeachToText.ts
-│   │   │   ├── useTextSummarization.ts
-│   │   │   └── useTextToSpeechWorker.ts
+│   │   │   ├── useMathRecognition.ts   # OpenRouter image API
+│   │   │   ├── useSpeechToText.ts      # OpenRouter audio API
+│   │   │   ├── useTextSummarization.ts # OpenRouter text API
+│   │   │   └── useTextToSpeech.ts      # native platform output
 │   │   ├── workspaces/              # Workspace, notes, materials, review composables
 │   │   │   ├── useWorkspaces.ts
 │   │   │   ├── useNotesStore.ts
@@ -214,7 +210,7 @@ cognilo/
 ├── server/                       # Nitro server
 │   ├── api/                      # API endpoints
 │   │   ├── admin/                # Admin APIs
-│   │   ├── ai/                   # AI proxy (MyScript)
+│   │   ├── ai/                   # Summary, math, transcription APIs
 │   │   ├── auth/                 # Authentication
 │   │   ├── board-columns/        # Kanban columns CRUD
 │   │   ├── board-items/          # Kanban items CRUD
@@ -229,32 +225,21 @@ cognilo/
 │   │   ├── subscription/         # Subscription status
 │   │   ├── templates/            # Templates
 │   │   ├── user/                 # User management
-│   │   ├── ai-worker.get.ts      # AI worker endpoint
-│   │   ├── llm.gateway.post.ts   # Smart LLM gateway
-│   │   └── llm-usage.get.ts      # Usage analytics
+│   │   └── llm.gateway.post.ts   # Flashcard/quiz OpenRouter gateway
 │   ├── services/                 # Backend services
 │   │   ├── NotificationScheduler.ts
 │   │   └── CronManager.ts
 │   └── utils/                    # Server utilities
-│       └── llm/                  # LLM strategies & routing
-│           ├── LLMStrategy.ts    # Strategy interface
-│           ├── LLMFactory.ts     # Factory (legacy + registry)
-│           ├── OpenAIStrategy.ts  # OpenAI provider
-│           ├── GeminiStrategy.ts # Google provider
-│           ├── DeepSeekStrategy.ts # DeepSeek provider
-│           ├── GroqStrategy.ts   # Groq provider
-│           ├── routing.ts        # Smart model selection
-│           ├── cache.ts          # Semantic caching
-│           ├── rateLimit.ts      # Rate limiter
-│           ├── adaptiveCount.ts  # Adaptive item count
-│           ├── gatewayLogger.ts  # Gateway analytics
-│           ├── modelRegistry.ts  # Model registry
-│           ├── prompts.ts        # Prompt templates
-│           └── tokenEstimate.ts  # Token estimation
+│       └── llm/                  # Sole OpenRouter integration
+│           ├── openRouter.ts     # HTTP adapter and output schemas
+│           ├── llmRequestPipeline.ts # auth/rate/quota/settlement
+│           ├── usageLogger.ts    # LlmUsage audit writer
+│           ├── rateLimit.ts      # Redis/memory limiter
+│           ├── adaptiveCount.ts  # bounded requested counts
+│           └── prompts.ts        # prompt templates
 ├── shared/                       # Shared code (client + server)
 │   ├── auth.schemas.ts           # Auth validation
 │   ├── types/                    # Shared types
-│   │   ├── ai-messages.ts
 │   │   ├── offline.ts
 │   │   └── sw-messages.ts
 │   └── utils/                    # Shared contracts (Zod)
@@ -271,12 +256,10 @@ cognilo/
 │       ├── review.contract.ts
 │       ├── user.contract.ts
 │       └── user-tag.contract.ts
-├── sw-src/                       # Service worker + AI worker source
-│   ├── index.ts                  # Workbox SW (push, sync, cache)
-│   └── ai-worker.ts             # On-device AI web worker
+├── sw-src/                       # Service worker source
+│   └── index.ts                  # Workbox SW (push, sync, cache)
 ├── prisma/
-│   ├── schema.prisma             # Database schema
-│   └── seed.ts                   # LLM pricing seed data
+│   └── schema.prisma             # Database schema
 ├── docs/                         # Documentation
 ├── scripts/                      # Build/migration scripts
 └── tests/                        # Playwright tests
@@ -338,7 +321,7 @@ Architecture fitness:
 │              │     │              │     │              │
 │ - email      │     │ - title      │     │ - title      │
 │ - password   │     │ - order      │     │ - type       │
-│ - role       │     │ - llmModel   │     │ - content    │
+│ - role       │     │ - metadata   │     │ - content    │
 │ - passkey    │     │ - metadata   │     │ - metadata   │
 └──────────────┘     └──────────────┘     └──────────────┘
        │                    │                    │
@@ -390,33 +373,30 @@ Architecture fitness:
 
 ### Key Models
 
-| Model | Purpose | Key Fields |
-|-------|---------|------------|
-| `User` | Authentication | email, password, role, passkey_user_id, deletedAt |
-| `Workspace` | Content grouping | title, order, userId, llmModel, metadata, rawText |
-| `Material` | Learning content | title, type, content, metadata, llmModel, workspaceId |
-| `Flashcard` | Q&A pairs | front, back, workspaceId, materialId, sourceRef, status |
-| `Question` | Quiz questions | question, choices, answerIndex, workspaceId, materialId, sourceRef |
-| `Note` | User notes | content (rich text), order, tags, noteType, metadata |
-| `BoardColumn` | Kanban column | name, order, userId |
-| `BoardItem` | Kanban item | content, tags, order, userId, columnId |
-| `UserTag` | Color-coded tag | name, color, order, userId |
-| `CardReview` | SM-2 state | easeFactor, intervalDays, nextReviewAt, resourceType, streak |
-| `XpEvent` | XP tracking | userId, cardId, source, xp |
-| `Achievement` | User achievements | userId, type (enum), streak |
-| `GradeRequest` | Grade idempotency | requestId, cardId, grade |
-| `LlmPrice` | Legacy pricing | provider, model, inputPer1kMicros, outputPer1kMicros |
-| `LlmUsage` | Legacy cost tracking | tokens, cost (micro-dollars), model, userId |
-| `LlmModelRegistry` | Model config | modelId, provider, inputCostPer1M, outputCostPer1M, healthStatus |
-| `LlmGatewayLog` | Gateway analytics | requestId, selectedModelId, latencyMs, cached, depth |
-| `UserSubscription` | Quota management | tier, generationsUsed, generationsQuota |
-| `NotificationSubscription` | Push subscriptions | endpoint, keys, userId, failureCount |
-| `ScheduledNotification` | Due reminders | scheduledFor, sent, type, metadata |
-| `UserNotificationPreferences` | Notification config | timezone, quietHours, activeHours, snoozedUntil |
-| `DailyNote` | One rich-text note per user per day | userId, dateKey, content (Tiptap JSON), version; `@@unique([userId, dateKey])` |
-| `ActionItem` | One-time or recurring action definition | userId, title, timingMode, startDate, recurrence (JSON), lifecycle (enum) |
-| `ActionOccurrence` | A single instance of an ActionItem | actionItemId, occurrenceKey, originalDateKey, status (enum), currentPlacementId |
-| `ActionPlacement` | Where an occurrence currently sits (today or rescheduled) | occurrenceId, dateKey, position, state (enum), movedToPlacementId |
+| Model                         | Purpose                                                   | Key Fields                                                                      |
+| ----------------------------- | --------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| `User`                        | Authentication                                            | email, password, role, passkey_user_id, deletedAt                               |
+| `Workspace`                   | Content grouping                                          | title, order, userId, metadata, rawText                                         |
+| `Material`                    | Learning content                                          | title, type, content, metadata, workspaceId                                     |
+| `Flashcard`                   | Q&A pairs                                                 | front, back, workspaceId, materialId, sourceRef, status                         |
+| `Question`                    | Quiz questions                                            | question, choices, answerIndex, workspaceId, materialId, sourceRef              |
+| `Note`                        | User notes                                                | content (rich text), order, tags, noteType, metadata                            |
+| `BoardColumn`                 | Kanban column                                             | name, order, userId                                                             |
+| `BoardItem`                   | Kanban item                                               | content, tags, order, userId, columnId                                          |
+| `UserTag`                     | Color-coded tag                                           | name, color, order, userId                                                      |
+| `CardReview`                  | SM-2 state                                                | easeFactor, intervalDays, nextReviewAt, resourceType, streak                    |
+| `XpEvent`                     | XP tracking                                               | userId, cardId, source, xp                                                      |
+| `Achievement`                 | User achievements                                         | userId, type (enum), streak                                                     |
+| `GradeRequest`                | Grade idempotency                                         | requestId, cardId, grade                                                        |
+| `LlmUsage`                    | Immutable OpenRouter audit                                | requestedModel, actualModel, tokens, native cost, status, latency, userId       |
+| `UserSubscription`            | Quota management                                          | tier, generationsUsed, generationsQuota                                         |
+| `NotificationSubscription`    | Push subscriptions                                        | endpoint, keys, userId, failureCount                                            |
+| `ScheduledNotification`       | Due reminders                                             | scheduledFor, sent, type, metadata                                              |
+| `UserNotificationPreferences` | Notification config                                       | timezone, quietHours, activeHours, snoozedUntil                                 |
+| `DailyNote`                   | One rich-text note per user per day                       | userId, dateKey, content (Tiptap JSON), version; `@@unique([userId, dateKey])`  |
+| `ActionItem`                  | One-time or recurring action definition                   | userId, title, timingMode, startDate, recurrence (JSON), lifecycle (enum)       |
+| `ActionOccurrence`            | A single instance of an ActionItem                        | actionItemId, occurrenceKey, originalDateKey, status (enum), currentPlacementId |
+| `ActionPlacement`             | Where an occurrence currently sits (today or rescheduled) | occurrenceId, dateKey, position, state (enum), movedToPlacementId               |
 
 ### Constraints & Indexes
 
@@ -426,7 +406,7 @@ Architecture fitness:
 @@unique([endpoint])                  // NotificationSubscription
 @@unique([userId, name])              // UserTag - unique name per user
 @@unique([userId, order])             // Workspace - unique order per user
-@@unique([provider, model])           // LlmPrice
+@@unique([appRequestId])              // LlmUsage - one settlement per app request
 
 // Performance indexes
 @@index([userId, nextReviewAt])       // Due card queries
@@ -460,30 +440,33 @@ server/modules/
 ```
 
 **Dependency rules**:
+
 - `server/api/*` routes are adapters: validate/authenticate, call an application service, return a response.
 - Domain code must not import Prisma, H3/Nitro, Nuxt, `$fetch`, or UI code.
 - Cross-feature behavior goes through ports or domain events, not direct repository calls.
 - Public API URLs stay stable while internal use cases move module-by-module.
 
 **Fitness check**:
+
 - Run `yarn arch:check` before merging module changes.
 - Run `yarn test:unit` for fast module-level regression coverage of the current proof slice.
 - The check scans `server/modules/**` and fails on frontend imports, API route imports, domain-to-infrastructure/application imports, and direct cross-module imports into another module's application or infrastructure layer.
 - The unit runner uses the existing `tsx` dependency and currently covers SM-2, shared review grading, workspace note sync temp ID mapping/deletes, board item sync temp ID mapping/conflicts, generation quota credit-spend behavior, ad-reward idempotency, Stripe purchase idempotency, and generated artifact persistence.
 
 **Current proof slice**:
+
 - Review grading and language grading share `gradeReviewCard`.
 - Review enrollment uses `enrollReviewableResource` plus `ReviewableResourceResolver`.
 - Language word enrollment uses `enrollLanguageWord`.
 - XP and notification side effects are behind ports.
 - Notes and board sync routes delegate conflict detection, temp ID mapping, and apply results to module use cases.
 - Subscription routes now delegate quota checks, credit balance/spend, Stripe checkout intent creation, ad rewards, and Stripe purchase grants to module application services while preserving existing endpoint contracts.
-- AI generation gateway request preparation and completion now live in `prepareGatewayGeneration` and `completeGatewayGeneration`.
-- Semantic cache reads/writes for the gateway now go through `GenerationCachePort`, keeping Redis-backed caching behind a module adapter.
+- AI gateway preparation and exact artifact saving live in the `ai-generation` module; inference and settlement use the shared OpenRouter pipeline.
 - Notes and board frontend features now surface local sync state explicitly through feature-owned status bars plus per-item dirty/error indicators.
 - Notes layout is separate from note content: grouped drawer drag emits layout commands, `notesLayoutController` queues latest workspace layout, and row-level `Local` is reserved for content edits only.
 
 **Notes + Board sync QA checklist**:
+
 - Edit a note offline, refresh, and confirm it rehydrates with a `Local` indicator until sync completes.
 - Move a board item offline, refresh, and confirm the pending column/order still render before reconnecting.
 - Reconnect and confirm both features clear pending indicators after sync.
@@ -494,6 +477,7 @@ server/modules/
 **Purpose**: Rich-text notes with local-first architecture using Tiptap editor.
 
 **Architecture** (single-pane mobile: `notes/index.vue` list → `notes/[id].vue` detail; the old split-pane desktop drawer was removed):
+
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
 │  NoteListRow    │────>│  useNotesStore  │────>│    IndexedDB    │
@@ -509,6 +493,7 @@ server/modules/
 ```
 
 **Key Features**:
+
 - Optimistic updates (instant UI feedback)
 - Debounced content sync
 - Layout command controller for note move/reorder and workspace layout queueing
@@ -522,6 +507,7 @@ server/modules/
 - Metadata support (JSON) for extensible note data
 
 **API Endpoints**:
+
 - `GET /api/notes?workspaceId=` — List notes
 - `POST /api/notes` — Create note
 - `PATCH /api/notes/[id]` — Update note
@@ -539,6 +525,7 @@ server/modules/
 **Purpose**: SM-2 algorithm for optimal learning intervals. Supports flashcards, materials, and questions as reviewable items.
 
 **Domain-Driven Architecture**:
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        Domain Layer                             │
@@ -553,6 +540,7 @@ server/modules/
 ```
 
 **SM-2 Algorithm**:
+
 ```typescript
 // Grade: 0-5 (0-2 = fail, 3-5 = pass)
 // Ease Factor: minimum 1.3 (difficulty modifier)
@@ -560,23 +548,24 @@ server/modules/
 // Source of truth: server/modules/review/domain/sm2.ts (calculateSM2)
 
 if (grade >= 3) {
-  if (repetitions === 0) interval = 1
-  else if (repetitions === 1) interval = 6
-  else interval = Math.round(prevInterval * easeFactor)
-  repetitions++
+  if (repetitions === 0) interval = 1;
+  else if (repetitions === 1) interval = 6;
+  else interval = Math.round(prevInterval * easeFactor);
+  repetitions++;
 } else {
-  repetitions = 0
-  interval = 1
+  repetitions = 0;
+  interval = 1;
 }
 
 // Ease factor is updated on EVERY review (full SuperMemo SM-2 formula),
 // not just on passes:
-easeFactor = easeFactor + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02))
-if (easeFactor < 1.3) easeFactor = 1.3
-if (interval > 180) interval = 180
+easeFactor = easeFactor + (0.1 - (5 - grade) * (0.08 + (5 - grade) * 0.02));
+if (easeFactor < 1.3) easeFactor = 1.3;
+if (interval > 180) interval = 180;
 ```
 
 **API Endpoints**:
+
 - `POST /api/review/enroll` — Enroll card in review (idempotent via upsert)
 - `POST /api/review/grade` — Submit grade (transactional + idempotent via GradeRequest)
 - `GET /api/review/queue?workspaceId=` — Get due cards
@@ -584,43 +573,20 @@ if (interval > 180) interval = 180
 - `GET /api/review/enrollment-status` — Bulk enrollment check
 - `GET /api/review/stats` — Review statistics
 
-### 3. LLM Module
+### 3. AI Module
 
-**Purpose**: AI-powered content generation (flashcards, questions) with smart model routing.
+**Purpose**: AI-powered content generation through one OpenRouter adapter.
 
-**Strategy Pattern**:
-```
-┌──────────────────────┐
-│ getLLMStrategyFrom    │──────────────────────────────────────────┐
-│   Registry()         │                                          │
-└──────────────────────┘                                          │
-         │              │              │              │            │
-         ▼              ▼              ▼              ▼            │
-┌──────────────┐ ┌──────────────┐ ┌──────────────┐ ┌─────────┐   │
-│OpenAIStrategy │ │GeminiStrategy│ │DeepSeekStrat.│ │GroqStrat│   │
-│  (OpenAI)    │ │  (Google)    │ │  (DeepSeek)  │ │ (Groq)  │   │
-└──────────────┘ └──────────────┘ └──────────────┘ └─────────┘   │
-```
+**Flow**: request validation, authentication, shared rate limit, atomic quota reservation, OpenRouter, strict output validation, persistence, usage audit. Failures refund the app reservation once.
 
-**Strategy Interface**:
-```typescript
-interface LLMStrategy {
-  generateFlashcards(input: string, options?: LLMGenerationOptions): Promise<FlashcardDTO[]>
-  generateQuiz(input: string, options?: LLMGenerationOptions): Promise<QuizQuestionDTO[]>
-}
-```
-
-**Gateway Flow**:
-```
-Request → Auth → Quota Check → Rate Limit → Validate → Cache Lookup
-    → Model Selection (scoring) → Strategy → Generate → Save → Log
-```
+See [LLM_GENERATION_FLOW.md](./LLM_GENERATION_FLOW.md) for complete invariants.
 
 ### 4. Materials Module
 
 **Purpose**: Upload and manage learning materials for AI generation.
 
 **Features**:
+
 - PDF upload with text extraction (pdf-parse, mammoth for DOCX)
 - URL content fetching
 - Direct text input
@@ -628,6 +594,7 @@ Request → Auth → Quota Check → Rate Limit → Validate → Cache Lookup
 - Workspace organization
 
 **API Endpoints**:
+
 - `GET /api/materials?workspaceId=` — List materials
 - `POST /api/materials` — Create material
 - `POST /api/materials/upload` — Upload file (PDF, DOCX)
@@ -642,6 +609,7 @@ Request → Auth → Quota Check → Rate Limit → Validate → Cache Lookup
 > **Note**: Workspaces are flat (no hierarchy/nesting). Each workspace has an `order` field for positioning, with a `@@unique([userId, order])` constraint.
 
 **API Endpoints**:
+
 - `GET /api/workspaces` — List user's workspaces
 - `POST /api/workspaces` — Create workspace
 - `GET /api/workspaces/[id]` — Get workspace with contents
@@ -654,10 +622,12 @@ Request → Auth → Quota Check → Rate Limit → Validate → Cache Lookup
 **Purpose**: Drag-and-drop task organization with columns and items.
 
 **Data Model**:
+
 - `BoardColumn` — Named columns owned by user, with `order` field
 - `BoardItem` — Content items with `tags` and `order`, optionally assigned to a column
 
 **API Endpoints**:
+
 - `GET/POST /api/board-columns` — List/create columns
 - `PATCH/DELETE /api/board-columns/[id]` — Update/delete column
 - `PATCH /api/board-columns/reorder` — Reorder columns
@@ -665,19 +635,9 @@ Request → Auth → Quota Check → Rate Limit → Validate → Cache Lookup
 - `PATCH/DELETE /api/board-items/[id]` — Update/delete item
 - `PATCH /api/board-items/reorder` — Reorder items
 
-### 7. On-Device AI Module
+### 7. AI-assisted editing
 
-**Purpose**: Client-side AI features via web workers using @huggingface/transformers.
-
-**Composables**:
-- `useAIStore` — AI worker lifecycle management
-- `useLocalMathRecognition` — Local math OCR model
-- `useMathRecognition` — Math recognition orchestrator (local + MyScript fallback)
-- `useSpeachToText` — Speech-to-text transcription
-- `useTextSummarization` — Text summarization
-- `useTextToSpeechWorker` — Text-to-speech synthesis
-
-**Server proxy**: `POST /api/ai/myscript` — MyScript Cloud API with HMAC-SHA512 signing
+Summary, transcription, and math recognition call authenticated OpenRouter APIs. Text-to-speech uses the browser's native speech synthesis and performs no inference.
 
 ### 8. Daily Module
 
@@ -699,26 +659,27 @@ Request → Auth → Quota Check → Rate Limit → Validate → Cache Lookup
 
 **ServiceFactory** (`app/services/ServiceFactory.ts`) — 14 service bindings:
 
-| Service Key | Class | Purpose |
-|-------------|-------|---------|
-| `workspaces` | `WorkspacesModule` | Workspace CRUD |
-| `materials` | `MaterialService` | Materials CRUD |
-| `notes` | `NoteService` | Notes CRUD |
-| `noteGroups` | `NoteGroupService` | Note group CRUD |
-| `boardItems` | `BoardItemService` | Board items CRUD |
-| `boardColumns` | `BoardColumnService` | Board columns CRUD |
+| Service Key         | Class                     | Purpose                 |
+| ------------------- | ------------------------- | ----------------------- |
+| `workspaces`        | `WorkspacesModule`        | Workspace CRUD          |
+| `materials`         | `MaterialService`         | Materials CRUD          |
+| `notes`             | `NoteService`             | Notes CRUD              |
+| `noteGroups`        | `NoteGroupService`        | Note group CRUD         |
+| `boardItems`        | `BoardItemService`        | Board items CRUD        |
+| `boardColumns`      | `BoardColumnService`      | Board columns CRUD      |
 | `boardIntegrations` | `BoardIntegrationService` | Board integration links |
-| `review` | `ReviewService` | Spaced repetition |
-| `auth` | `AuthModule` | Authentication |
-| `user` | `UserService` | User management |
-| `userTags` | `UserTagService` | Tag management |
-| `gateway` | `GatewayService` | LLM generation |
-| `language` | `LanguageService` | Language learning |
-| `notifications` | `NotificationsService` | Push notification prefs |
+| `review`            | `ReviewService`           | Spaced repetition       |
+| `auth`              | `AuthModule`              | Authentication          |
+| `user`              | `UserService`             | User management         |
+| `userTags`          | `UserTagService`          | Tag management          |
+| `gateway`           | `GatewayService`          | LLM generation          |
+| `language`          | `LanguageService`         | Language learning       |
+| `notifications`     | `NotificationsService`    | Push notification prefs |
 
 Note: there is no `daily` entry — the Daily feature talks to `server/api/daily/**` directly through `dailyLocalRepository.ts` rather than through `ServiceFactory`/`$api`.
 
 **FetchFactory** (`app/services/FetchFactory.ts`):
+
 - Result pattern — never throws
 - Retry with exponential backoff for transient errors
 - Request timeout
@@ -726,16 +687,17 @@ Note: there is no `daily` entry — the Daily feature talks to `server/api/daily
 
 ### Backend Services
 
-| Service | Purpose |
-|---------|---------|
+| Service                 | Purpose                                                                                        |
+| ----------------------- | ---------------------------------------------------------------------------------------------- |
 | `NotificationScheduler` | Schedules review reminders based on `nextReviewAt`, de-duplicates per card, sends via web-push |
-| `CronManager` | Manages scheduled cron jobs for notification dispatch |
+| `CronManager`           | Manages scheduled cron jobs for notification dispatch                                          |
 
 ---
 
 ## Authentication & Authorization
 
 ### Auth Stack
+
 ```
 @sidebase/nuxt-auth (Nuxt module)
         ↓
@@ -749,6 +711,7 @@ Prisma Adapter → MongoDB
 ```
 
 ### Session Flow
+
 1. User submits credentials or authenticates via passkey
 2. NextAuth validates (bcrypt for passwords, WebAuthn for passkeys)
 3. JWT session created
@@ -757,15 +720,16 @@ Prisma Adapter → MongoDB
 6. User data attached to `event.context`
 
 ### Authorization Patterns
+
 ```typescript
 // Server-side: require authenticated user with role
-const user = await requireRole(event, ["USER"])
+const user = await requireRole(event, ["USER"]);
 
 // Resource ownership check
 const workspace = await prisma.workspace.findFirst({
-  where: { id: workspaceId, userId: user.id }
-})
-if (!workspace) throw createError({ statusCode: 403 })
+  where: { id: workspaceId, userId: user.id },
+});
+if (!workspace) throw createError({ statusCode: 403 });
 ```
 
 ---
@@ -775,9 +739,9 @@ if (!workspace) throw createError({ statusCode: 403 })
 ### Service Worker Architecture
 
 **Build Pipeline**:
+
 ```
-sw-src/index.ts  → esbuild → public/sw.js     (service worker)
-sw-src/ai-worker.ts → esbuild → public/ai-worker.js (AI web worker)
+sw-src/index.ts → esbuild → public/sw.js (service worker)
 ```
 
 **Caching Strategies**:
@@ -788,6 +752,7 @@ sw-src/ai-worker.ts → esbuild → public/ai-worker.js (AI web worker)
 | Pages | StaleWhileRevalidate | Balance freshness/speed |
 
 **IndexedDB Stores** (`DB_CONFIG`, `app/utils/constants/pwa.ts`, currently `VERSION: 20`):
+
 - `forms` — Offline form submissions
 - `notes` — Local notes cache
 - `noteGroups` — Local note-group cache
@@ -800,10 +765,12 @@ sw-src/ai-worker.ts → esbuild → public/ai-worker.js (AI web worker)
 - `userTags` — Tag cache
 
 **Background Sync Tags**:
+
 - `form-sync` — Queued form submissions
 - `notes-sync` — Notes synchronization
 
 ### Offline Flow
+
 1. User edits note offline
 2. Note saved to IndexedDB + pendingNotes
 3. Service worker registers `notes-sync` tag
@@ -814,41 +781,11 @@ sw-src/ai-worker.ts → esbuild → public/ai-worker.js (AI web worker)
 
 ---
 
-## LLM Integration
+## AI Integration
 
-### Smart Routing (Gateway)
+`POST /api/llm.gateway` handles flashcards and quizzes. Other AI endpoints use the same lifecycle. `LlmUsage` is the single audit store and records OpenRouter-native usage/cost; it is not a pricing or routing table.
 
-`POST /api/llm.gateway` is the primary LLM endpoint:
-
-1. **Auth** → `requireRole(event, ["USER"])`
-2. **Quota** → Check `UserSubscription` (FREE: 10 generations, PRO: unlimited)
-3. **Rate limit** → 5 req/min per user, 20 req/min per IP
-4. **Validate** → Zod schema (`GatewayGenerateRequest`)
-5. **Adaptive count** → Calculate item count based on input length + depth
-6. **Cache lookup** → Semantic cache (Redis / in-memory, 7-day TTL)
-7. **Model selection** → Score all enabled models by cost + latency + health + capability
-8. **Strategy** → Instantiate via `getLLMStrategyFromRegistry(modelId)`
-9. **Generate** → Call `strategy.generateFlashcards()` or `strategy.generateQuiz()`
-10. **Save** → Transaction: optionally replace old items + cascade delete CardReviews
-11. **Quota increment** → Increment `generationsUsed` for FREE tier
-12. **Cache set** → Store result for future identical prompts
-13. **Log** → `LlmGatewayLog` with full metrics
-
-### Model Selection Scoring
-
-```
-score = baseCost (input + output USD)
-  + latencyPenalty (over budget)
-  + priorityPenalty (higher = worse)
-  + healthPenalty (degraded = worse)
-  + capabilityBonus (match = better)
-```
-
-### Usage Tracking
-
-Two tracking systems:
-- **`LlmUsage`** — Legacy per-call cost tracking with micro-dollar precision
-- **`LlmGatewayLog`** — Gateway analytics with model selection, latency, caching info
+See [LLM_GENERATION_FLOW.md](./LLM_GENERATION_FLOW.md).
 
 ---
 
@@ -856,36 +793,35 @@ Two tracking systems:
 
 All API contracts defined in `shared/utils/` using Zod 4:
 
-| Contract | Purpose |
-|----------|---------|
-| `auth.contract.ts` | Authentication requests |
-| `boardColumn.contract.ts` | Board column CRUD |
-| `boardItem.contract.ts` | Board item CRUD |
-| `flashcard.contract.ts` | Flashcard data |
-| `workspace.contract.ts` | Workspace CRUD |
+| Contract                   | Purpose                 |
+| -------------------------- | ----------------------- |
+| `auth.contract.ts`         | Authentication requests |
+| `boardColumn.contract.ts`  | Board column CRUD       |
+| `boardItem.contract.ts`    | Board item CRUD         |
+| `flashcard.contract.ts`    | Flashcard data          |
+| `workspace.contract.ts`    | Workspace CRUD          |
 | `llm-generate.contract.ts` | LLM generation requests |
-| `material.contract.ts` | Material data |
-| `note.contract.ts` | Note CRUD |
-| `note-sync.contract.ts` | Note sync payloads |
-| `notification.contract.ts` | Notification data |
-| `review.contract.ts` | Spaced repetition |
-| `user.contract.ts` | User data |
-| `user-tag.contract.ts` | User tag CRUD |
+| `material.contract.ts`     | Material data           |
+| `note.contract.ts`         | Note CRUD               |
+| `note-sync.contract.ts`    | Note sync payloads      |
+| `notification.contract.ts` | Notification data       |
+| `review.contract.ts`       | Spaced repetition       |
+| `user.contract.ts`         | User data               |
+| `user-tag.contract.ts`     | User tag CRUD           |
 
 ---
 
 ## Design Patterns Summary
 
-| Pattern | Usage | Location |
-|---------|-------|----------|
-| Strategy | LLM providers | `server/utils/llm/` |
-| Repository | Data access | `app/domain/repositories/` |
-| Factory | Service creation | `app/services/ServiceFactory.ts` |
-| Factory | LLM strategy creation | `server/utils/llm/LLMFactory.ts` |
-| Result | Error handling | `FetchFactory.call()` |
-| Domain-Driven | SR business logic | `app/domain/sr/` |
-| Local-First | Notes persistence | `useNotesStore` + IndexedDB |
-| Optimistic Updates | UI responsiveness | All composables |
+| Pattern            | Usage               | Location                         |
+| ------------------ | ------------------- | -------------------------------- |
+| Adapter            | OpenRouter boundary | `server/utils/llm/openRouter.ts` |
+| Repository         | Data access         | `app/domain/repositories/`       |
+| Factory            | Service creation    | `app/services/ServiceFactory.ts` |
+| Result             | Error handling      | `FetchFactory.call()`            |
+| Domain-Driven      | SR business logic   | `app/domain/sr/`                 |
+| Local-First        | Notes persistence   | `useNotesStore` + IndexedDB      |
+| Optimistic Updates | UI responsiveness   | All composables                  |
 
 ---
 

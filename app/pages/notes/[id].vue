@@ -43,13 +43,28 @@
       <div class="note-actions">
         <p class="note-actions__label">NOTE TYPE</p>
         <div class="note-actions__types">
-          <button v-for="t in NOTE_TYPES" :key="t.value" type="button" class="note-actions__type" :class="{ 'note-actions__type--on': (note?.noteType ?? 'TEXT') === t.value }" @click="convertTo(t.value)"> <!-- design-allow: native note-type selector -->
+          <button
+            v-for="t in NOTE_TYPES"
+            :key="t.value"
+            type="button"
+            class="note-actions__type"
+            :class="{
+              'note-actions__type--on': (note?.noteType ?? 'TEXT') === t.value,
+            }"
+            @click="convertTo(t.value)"
+          >
+            <!-- design-allow: native note-type selector -->
             <UiIcon :name="t.icon" class="h-5 w-5" />
             {{ t.label }}
           </button>
         </div>
 
-        <button type="button" class="note-actions__row" @click="openGroupPicker"> <!-- design-allow: native action row -->
+        <button
+          type="button"
+          class="note-actions__row"
+          @click="openGroupPicker"
+        >
+          <!-- design-allow: native action row -->
           <UiIcon name="folder" class="h-5 w-5" />
           <span class="note-actions__row-grow">Group</span>
           <span class="note-actions__row-value">{{ currentGroupName }}</span>
@@ -75,22 +90,68 @@
     <!-- group picker -->
     <UiSheet v-model:open="groupPickerOpen" title="Add to group">
       <div class="note-groups">
-        <button type="button" class="note-groups__row" :class="{ 'note-groups__row--on': !currentGroupId }" @click="setGroup(null)"> <!-- design-allow: native group option -->
+        <button
+          type="button"
+          class="note-groups__row"
+          :class="{ 'note-groups__row--on': !currentGroupId }"
+          @click="setGroup(null)"
+        >
+          <!-- design-allow: native group option -->
           <span class="note-groups__none" />
           <span class="note-groups__name">None</span>
-          <UiIcon v-if="!currentGroupId" name="check" class="h-[18px] w-[18px] note-groups__check" />
+          <UiIcon
+            v-if="!currentGroupId"
+            name="check"
+            class="h-[18px] w-[18px] note-groups__check"
+          />
         </button>
-        <button v-for="g in editorGroups" :key="g.id" type="button" class="note-groups__row" :class="{ 'note-groups__row--on': currentGroupId === g.id }" @click="setGroup(g.id)"> <!-- design-allow: native group option -->
-          <span class="note-groups__dot" :style="{ background: dotFor(g.id) }" />
+        <button
+          v-for="g in editorGroups"
+          :key="g.id"
+          type="button"
+          class="note-groups__row"
+          :class="{ 'note-groups__row--on': currentGroupId === g.id }"
+          @click="setGroup(g.id)"
+        >
+          <!-- design-allow: native group option -->
+          <span
+            class="note-groups__dot"
+            :style="{ background: dotFor(g.id) }"
+          />
           <span class="note-groups__name">{{ g.title }}</span>
-          <UiIcon v-if="currentGroupId === g.id" name="check" class="h-[18px] w-[18px] note-groups__check" />
+          <UiIcon
+            v-if="currentGroupId === g.id"
+            name="check"
+            class="h-[18px] w-[18px] note-groups__check"
+          />
         </button>
 
         <div v-if="addingGroup" class="note-groups__new">
-          <input ref="groupNameEl" v-model="newGroupName" class="note-groups__input" placeholder="New group name" maxlength="60" @keydown.enter.prevent="createAndAssign" /> <!-- design-allow: native group-name field -->
-          <UiButton size="sm" tone="primary" :loading="creatingGroup" :disabled="!newGroupName.trim()" @click="createAndAssign">Add</UiButton>
+          <input
+            ref="groupNameEl"
+            v-model="newGroupName"
+            class="note-groups__input"
+            placeholder="New group name"
+            maxlength="60"
+            @keydown.enter.prevent="createAndAssign"
+          />
+          <!-- design-allow: native group-name field -->
+          <UiButton
+            size="sm"
+            tone="primary"
+            :loading="creatingGroup"
+            :disabled="!newGroupName.trim()"
+            @click="createAndAssign"
+            >Add</UiButton
+          >
         </div>
-        <button v-else type="button" class="note-groups__add" @click="startAddGroup"> <!-- design-allow: native dashed add control -->
+        <button
+          v-else
+          type="button"
+          class="note-groups__add"
+          @click="startAddGroup"
+        >
+          <!-- design-allow: native dashed add control -->
           <UiIcon name="plus" class="h-4 w-4" /> New group
         </button>
       </div>
@@ -99,7 +160,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
+import {
+  ref,
+  computed,
+  watch,
+  onMounted,
+  onBeforeUnmount,
+  nextTick,
+} from "vue";
 import MobileNoteEditor from "~/features/notes/components/MobileNoteEditor.vue";
 import AiResultSheet from "~/features/notes/components/AiResultSheet.vue";
 import { useActiveWorkspace } from "~/composables/workspaces/useActiveWorkspace";
@@ -107,6 +175,7 @@ import { useNoteGroupsStore } from "~/features/notes/composables/useNoteGroupsSt
 import { useNoteDraft } from "~/features/notes/composables/useNoteDraft";
 import { useViewTransitionMorph } from "~/composables/ui/useViewTransitionMorph";
 import { accentVarFor } from "~/composables/useAccentColor";
+import type { FlashcardDTO } from "~/shared/utils/llm-generate.contract";
 
 const route = useRoute();
 const toast = useToast();
@@ -117,7 +186,9 @@ const { activeId } = useActiveWorkspace();
 const { morphTargetStyle } = useViewTransitionMorph();
 
 const routeId = computed(() => String(route.params.id));
-const store = computed(() => (activeId.value ? useNotesStore(activeId.value) : null));
+const store = computed(() =>
+  activeId.value ? useNotesStore(activeId.value) : null,
+);
 // Draft persistence (echo + debounced durable save + temp→real id resolution)
 // is shared with the quick-capture sheet via useNoteDraft.
 const {
@@ -163,8 +234,12 @@ function convertTo(type: "TEXT" | "CANVAS" | "MATH") {
 const moreOpen = ref(false);
 
 // ── Group assignment ─────────────────────────────────────────────────────────
-const groupsStore = computed(() => (activeId.value ? useNoteGroupsStore(activeId.value) : null));
-const editorGroups = computed(() => groupsStore.value?.orderedGroups.value ?? []);
+const groupsStore = computed(() =>
+  activeId.value ? useNoteGroupsStore(activeId.value) : null,
+);
+const editorGroups = computed(
+  () => groupsStore.value?.orderedGroups.value ?? [],
+);
 const currentGroupId = computed(() => note.value?.groupId ?? null);
 const currentGroupName = computed(() => {
   const id = currentGroupId.value;
@@ -188,7 +263,12 @@ async function setGroup(toGroupId: string | null) {
   const toIndex = Array.from(store.value.notes.value.values()).filter(
     (n) => (n.groupId ?? null) === toGroupId,
   ).length;
-  await store.value.applyLayoutCommand({ type: "MOVE_NOTE", noteId: noteId.value, toGroupId, toIndex });
+  await store.value.applyLayoutCommand({
+    type: "MOVE_NOTE",
+    noteId: noteId.value,
+    toGroupId,
+    toIndex,
+  });
 }
 
 const addingGroup = ref(false);
@@ -229,10 +309,13 @@ const aiOpen = ref(false);
 const aiLoading = ref(false);
 const aiCommitting = ref(false);
 const aiError = ref<string | null>(null);
-const aiCards = ref<{ front: string; back: string }[]>([]);
+const aiCards = ref<FlashcardDTO[]>([]);
 const aiSourceText = ref("");
 
-async function onAi(payload: { kind: "explain" | "rewrite" | "cards"; text: string }) {
+async function onAi(payload: {
+  kind: "explain" | "rewrite" | "cards";
+  text: string;
+}) {
   const text = payload.text?.trim();
   if (!text) {
     toast.add({ title: "Select some text first", color: "warning" });
@@ -245,7 +328,10 @@ async function onAi(payload: { kind: "explain" | "rewrite" | "cards"; text: stri
     return;
   }
   // Explain / Rewrite are selection actions wired in a follow-up pass.
-  toast.add({ title: `${payload.kind === "explain" ? "Explain" : "Rewrite"} is coming soon`, color: "neutral" });
+  toast.add({
+    title: `${payload.kind === "explain" ? "Explain" : "Rewrite"} is coming soon`,
+    color: "neutral",
+  });
 }
 
 async function generateCards() {
@@ -257,11 +343,9 @@ async function generateCards() {
       workspaceId: activeId.value ?? undefined,
       save: false,
     });
-    aiCards.value =
-      res.task === "flashcards"
-        ? res.flashcards.map((c) => ({ front: c.front, back: c.back }))
-        : [];
-    if (!aiCards.value.length) aiError.value = "No cards were generated. Try a longer passage.";
+    aiCards.value = res.task === "flashcards" ? res.flashcards : [];
+    if (!aiCards.value.length)
+      aiError.value = "No cards were generated. Try a longer passage.";
   } catch (err) {
     aiError.value = err instanceof Error ? err.message : "Generation failed.";
   } finally {
@@ -270,15 +354,18 @@ async function generateCards() {
 }
 
 async function commitCards() {
-  if (!aiCards.value.length) return;
+  if (!aiCards.value.length || !activeId.value) return;
   aiCommitting.value = true;
   try {
-    // Persist the reviewed cards; they enter the SM-2 queue as new cards.
-    await $api.gateway.generateFlashcards(aiSourceText.value, {
-      workspaceId: activeId.value ?? undefined,
-      save: true,
+    await $api.gateway.commitGeneratedContent(activeId.value, {
+      task: "flashcards",
+      mode: "append",
+      items: aiCards.value,
     });
-    toast.add({ title: `Added ${aiCards.value.length} cards to review`, color: "success" });
+    toast.add({
+      title: `Added ${aiCards.value.length} cards to review`,
+      color: "success",
+    });
     aiOpen.value = false;
   } catch (err) {
     aiError.value = err instanceof Error ? err.message : "Could not add cards.";
@@ -308,11 +395,18 @@ onMounted(async () => {
   // Capture intents carried from the FAB.
   const action = route.query.action as string | undefined;
   if (action === "ai") {
-    toast.add({ title: "Select any text, then tap ✦ to turn it into cards", color: "neutral" });
+    toast.add({
+      title: "Select any text, then tap ✦ to turn it into cards",
+      color: "neutral",
+    });
   } else if (action === "dictate") {
     await nextTick();
     const ok = editorRef.value?.startDictation?.();
-    if (!ok) toast.add({ title: "Dictation isn't supported on this browser", color: "neutral" });
+    if (!ok)
+      toast.add({
+        title: "Dictation isn't supported on this browser",
+        color: "neutral",
+      });
   }
 });
 
@@ -323,16 +417,25 @@ function goBack() {
 async function share() {
   if (import.meta.client && navigator.share) {
     try {
-      await navigator.share({ title: titleDraft.value || "Note", text: stripHtml(note.value?.content ?? "") });
+      await navigator.share({
+        title: titleDraft.value || "Note",
+        text: stripHtml(note.value?.content ?? ""),
+      });
     } catch {
       /* user cancelled */
     }
   } else {
-    toast.add({ title: "Sharing isn't available on this device", color: "neutral" });
+    toast.add({
+      title: "Sharing isn't available on this device",
+      color: "neutral",
+    });
   }
 }
 function stripHtml(html: string) {
-  return html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 </script>
 

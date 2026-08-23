@@ -1704,13 +1704,13 @@
     };
   }
 
-  // node_modules/workbox-core/_version.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/_version.js
   try {
     self["workbox:core:7.3.0"] && _();
   } catch (e) {
   }
 
-  // node_modules/workbox-core/models/messages/messages.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/models/messages/messages.js
   var messages = {
     "invalid-value": ({ paramName, validValueDescription, value }) => {
       if (!paramName || !validValueDescription) {
@@ -1874,7 +1874,7 @@
     }
   };
 
-  // node_modules/workbox-core/models/messages/messageGenerator.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/models/messages/messageGenerator.js
   var generatorFunction = (code, details = {}) => {
     const message = messages[code];
     if (!message) {
@@ -1884,7 +1884,7 @@
   };
   var messageGenerator = false ? fallback : generatorFunction;
 
-  // node_modules/workbox-core/_private/WorkboxError.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/_private/WorkboxError.js
   var WorkboxError = class extends Error {
     /**
      *
@@ -1902,7 +1902,7 @@
     }
   };
 
-  // node_modules/workbox-core/_private/assert.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/_private/assert.js
   var isArray = (value, details) => {
     if (!Array.isArray(value)) {
       throw new WorkboxError("not-an-array", details);
@@ -1953,7 +1953,7 @@
     isArrayOfClass
   };
 
-  // node_modules/workbox-core/_private/cacheNames.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/_private/cacheNames.js
   var _cacheNameDetails = {
     googleAnalytics: "googleAnalytics",
     precache: "precache-v2",
@@ -1994,7 +1994,7 @@
     }
   };
 
-  // node_modules/workbox-core/_private/logger.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/_private/logger.js
   var logger = false ? null : (() => {
     if (!("__WB_DISABLE_DEV_LOGS" in globalThis)) {
       self.__WB_DISABLE_DEV_LOGS = false;
@@ -2046,20 +2046,20 @@
     return api;
   })();
 
-  // node_modules/workbox-core/_private/waitUntil.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/_private/waitUntil.js
   function waitUntil(event, asyncFn) {
     const returnPromise = asyncFn();
     event.waitUntil(returnPromise);
     return returnPromise;
   }
 
-  // node_modules/workbox-precaching/_version.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/_version.js
   try {
     self["workbox:precaching:7.3.0"] && _();
   } catch (e) {
   }
 
-  // node_modules/workbox-precaching/utils/createCacheKey.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/utils/createCacheKey.js
   var REVISION_SEARCH_PARAM = "__WB_REVISION__";
   function createCacheKey(entry) {
     if (!entry) {
@@ -2092,7 +2092,7 @@
     };
   }
 
-  // node_modules/workbox-precaching/utils/PrecacheInstallReportPlugin.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/utils/PrecacheInstallReportPlugin.js
   var PrecacheInstallReportPlugin = class {
     constructor() {
       this.updatedURLs = [];
@@ -2118,7 +2118,7 @@
     }
   };
 
-  // node_modules/workbox-precaching/utils/PrecacheCacheKeyPlugin.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/utils/PrecacheCacheKeyPlugin.js
   var PrecacheCacheKeyPlugin = class {
     constructor({ precacheController: precacheController2 }) {
       this.cacheKeyWillBeUsed = async ({ request: request2, params }) => {
@@ -2129,7 +2129,7 @@
     }
   };
 
-  // node_modules/workbox-precaching/utils/printCleanupDetails.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/utils/printCleanupDetails.js
   var logGroup = (groupTitle, deletedURLs) => {
     logger.groupCollapsed(groupTitle);
     for (const url of deletedURLs) {
@@ -2146,7 +2146,7 @@
     }
   }
 
-  // node_modules/workbox-precaching/utils/printInstallDetails.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/utils/printInstallDetails.js
   function _nestedGroup(groupTitle, urls) {
     if (urls.length === 0) {
       return;
@@ -2172,7 +2172,7 @@
     }
   }
 
-  // node_modules/workbox-core/_private/canConstructResponseFromBodyStream.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/_private/canConstructResponseFromBodyStream.js
   var supportStatus;
   function canConstructResponseFromBodyStream() {
     if (supportStatus === void 0) {
@@ -2190,7 +2190,7 @@
     return supportStatus;
   }
 
-  // node_modules/workbox-core/copyResponse.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/copyResponse.js
   async function copyResponse(response, modifier) {
     let origin = null;
     if (response.url) {
@@ -2211,13 +2211,13 @@
     return new Response(body, modifiedResponseInit);
   }
 
-  // node_modules/workbox-core/_private/getFriendlyURL.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/_private/getFriendlyURL.js
   var getFriendlyURL = (url) => {
     const urlObj = new URL(String(url), location.href);
     return urlObj.href.replace(new RegExp(`^${location.origin}`), "");
   };
 
-  // node_modules/workbox-core/_private/cacheMatchIgnoreParams.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/_private/cacheMatchIgnoreParams.js
   function stripParams(fullURL, ignoreParams) {
     const strippedURL = new URL(fullURL);
     for (const param of ignoreParams) {
@@ -2241,7 +2241,7 @@
     return;
   }
 
-  // node_modules/workbox-core/_private/Deferred.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/_private/Deferred.js
   var Deferred = class {
     /**
      * Creates a promise and exposes its resolve and reject functions as methods.
@@ -2254,10 +2254,10 @@
     }
   };
 
-  // node_modules/workbox-core/models/quotaErrorCallbacks.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/models/quotaErrorCallbacks.js
   var quotaErrorCallbacks = /* @__PURE__ */ new Set();
 
-  // node_modules/workbox-core/_private/executeQuotaErrorCallbacks.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/_private/executeQuotaErrorCallbacks.js
   async function executeQuotaErrorCallbacks() {
     if (true) {
       logger.log(`About to run ${quotaErrorCallbacks.size} callbacks to clean up caches.`);
@@ -2273,18 +2273,18 @@
     }
   }
 
-  // node_modules/workbox-core/_private/timeout.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/_private/timeout.js
   function timeout(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
-  // node_modules/workbox-strategies/_version.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-strategies/_version.js
   try {
     self["workbox:strategies:7.3.0"] && _();
   } catch (e) {
   }
 
-  // node_modules/workbox-strategies/StrategyHandler.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-strategies/StrategyHandler.js
   function toRequest(input) {
     return typeof input === "string" ? new Request(input) : input;
   }
@@ -2703,7 +2703,7 @@
     }
   };
 
-  // node_modules/workbox-strategies/Strategy.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-strategies/Strategy.js
   var Strategy = class {
     /**
      * Creates a new instance of the strategy and sets all documented option
@@ -2853,7 +2853,7 @@
     }
   };
 
-  // node_modules/workbox-precaching/PrecacheStrategy.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/PrecacheStrategy.js
   var PrecacheStrategy = class _PrecacheStrategy extends Strategy {
     /**
      *
@@ -3011,7 +3011,7 @@
     }
   };
 
-  // node_modules/workbox-precaching/PrecacheController.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/PrecacheController.js
   var PrecacheController = class {
     /**
      * Create a new PrecacheController.
@@ -3265,7 +3265,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   };
 
-  // node_modules/workbox-precaching/utils/getOrCreatePrecacheController.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/utils/getOrCreatePrecacheController.js
   var precacheController;
   var getOrCreatePrecacheController = () => {
     if (!precacheController) {
@@ -3274,13 +3274,13 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     return precacheController;
   };
 
-  // node_modules/workbox-routing/_version.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-routing/_version.js
   try {
     self["workbox:routing:7.3.0"] && _();
   } catch (e) {
   }
 
-  // node_modules/workbox-routing/utils/constants.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-routing/utils/constants.js
   var defaultMethod = "GET";
   var validMethods = [
     "DELETE",
@@ -3291,7 +3291,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     "PUT"
   ];
 
-  // node_modules/workbox-routing/utils/normalizeHandler.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-routing/utils/normalizeHandler.js
   var normalizeHandler = (handler) => {
     if (handler && typeof handler === "object") {
       if (true) {
@@ -3316,7 +3316,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   };
 
-  // node_modules/workbox-routing/Route.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-routing/Route.js
   var Route = class {
     /**
      * Constructor for Route class.
@@ -3355,7 +3355,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   };
 
-  // node_modules/workbox-routing/RegExpRoute.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-routing/RegExpRoute.js
   var RegExpRoute = class extends Route {
     /**
      * If the regular expression contains
@@ -3396,7 +3396,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   };
 
-  // node_modules/workbox-routing/Router.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-routing/Router.js
   var Router = class {
     /**
      * Initializes a new Router.
@@ -3709,7 +3709,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   };
 
-  // node_modules/workbox-routing/utils/getOrCreateDefaultRouter.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-routing/utils/getOrCreateDefaultRouter.js
   var defaultRouter;
   var getOrCreateDefaultRouter = () => {
     if (!defaultRouter) {
@@ -3720,7 +3720,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     return defaultRouter;
   };
 
-  // node_modules/workbox-routing/registerRoute.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-routing/registerRoute.js
   function registerRoute(capture, handler, method) {
     let route;
     if (typeof capture === "string") {
@@ -3766,7 +3766,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     return route;
   }
 
-  // node_modules/workbox-precaching/utils/removeIgnoredSearchParams.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/utils/removeIgnoredSearchParams.js
   function removeIgnoredSearchParams(urlObject, ignoreURLParametersMatching = []) {
     for (const paramName of [...urlObject.searchParams.keys()]) {
       if (ignoreURLParametersMatching.some((regExp) => regExp.test(paramName))) {
@@ -3776,7 +3776,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     return urlObject;
   }
 
-  // node_modules/workbox-precaching/utils/generateURLVariations.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/utils/generateURLVariations.js
   function* generateURLVariations(url, { ignoreURLParametersMatching = [/^utm_/, /^fbclid$/], directoryIndex = "index.html", cleanURLs = true, urlManipulation } = {}) {
     const urlObject = new URL(url, location.href);
     urlObject.hash = "";
@@ -3801,7 +3801,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   }
 
-  // node_modules/workbox-precaching/PrecacheRoute.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/PrecacheRoute.js
   var PrecacheRoute = class extends Route {
     /**
      * @param {PrecacheController} precacheController A `PrecacheController`
@@ -3838,14 +3838,14 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   };
 
-  // node_modules/workbox-precaching/addRoute.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/addRoute.js
   function addRoute(options) {
     const precacheController2 = getOrCreatePrecacheController();
     const precacheRoute = new PrecacheRoute(precacheController2, options);
     registerRoute(precacheRoute);
   }
 
-  // node_modules/workbox-precaching/utils/deleteOutdatedCaches.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/utils/deleteOutdatedCaches.js
   var SUBSTRING_TO_FIND = "-precache-";
   var deleteOutdatedCaches = async (currentPrecacheName, substringToFind = SUBSTRING_TO_FIND) => {
     const cacheNames2 = await self.caches.keys();
@@ -3856,7 +3856,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     return cacheNamesToDelete;
   };
 
-  // node_modules/workbox-precaching/cleanupOutdatedCaches.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/cleanupOutdatedCaches.js
   function cleanupOutdatedCaches() {
     self.addEventListener("activate", (event) => {
       const cacheName = cacheNames.getPrecacheName();
@@ -3870,19 +3870,19 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     });
   }
 
-  // node_modules/workbox-precaching/precache.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/precache.js
   function precache(entries) {
     const precacheController2 = getOrCreatePrecacheController();
     precacheController2.precache(entries);
   }
 
-  // node_modules/workbox-precaching/precacheAndRoute.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-precaching/precacheAndRoute.js
   function precacheAndRoute(entries, options) {
     precache(entries);
     addRoute(options);
   }
 
-  // node_modules/workbox-strategies/utils/messages.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-strategies/utils/messages.js
   var messages2 = {
     strategyStart: (strategyName, request2) => `Using ${strategyName} to respond to '${getFriendlyURL(request2.url)}'`,
     printFinalResponse: (response) => {
@@ -3894,7 +3894,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   };
 
-  // node_modules/workbox-strategies/CacheFirst.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-strategies/CacheFirst.js
   var CacheFirst = class extends Strategy {
     /**
      * @private
@@ -3953,7 +3953,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   };
 
-  // node_modules/workbox-strategies/plugins/cacheOkAndOpaquePlugin.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-strategies/plugins/cacheOkAndOpaquePlugin.js
   var cacheOkAndOpaquePlugin = {
     /**
      * Returns a valid response (to allow caching) if the status is 200 (OK) or
@@ -3973,7 +3973,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   };
 
-  // node_modules/workbox-strategies/StaleWhileRevalidate.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-strategies/StaleWhileRevalidate.js
   var StaleWhileRevalidate = class extends Strategy {
     /**
      * @param {Object} [options]
@@ -4047,13 +4047,13 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   };
 
-  // node_modules/workbox-core/_private/dontWaitFor.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/_private/dontWaitFor.js
   function dontWaitFor(promise) {
     void promise.then(() => {
     });
   }
 
-  // node_modules/idb/build/wrap-idb-value.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/idb/build/wrap-idb-value.js
   var instanceOfAny = (object, constructors) => constructors.some((c) => object instanceof c);
   var idbProxyableTypes;
   var cursorAdvanceMethods;
@@ -4196,7 +4196,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
   }
   var unwrap = (value) => reverseTransformCache.get(value);
 
-  // node_modules/idb/build/index.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/idb/build/index.js
   function openDB(name, version, { blocked, upgrade, blocking, terminated } = {}) {
     const request2 = indexedDB.open(name, version);
     const openPromise = wrap(request2);
@@ -4271,13 +4271,13 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     has: (target, prop) => !!getMethod(target, prop) || oldTraps.has(target, prop)
   }));
 
-  // node_modules/workbox-expiration/_version.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-expiration/_version.js
   try {
     self["workbox:expiration:7.3.0"] && _();
   } catch (e) {
   }
 
-  // node_modules/workbox-expiration/models/CacheTimestampsModel.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-expiration/models/CacheTimestampsModel.js
   var DB_NAME = "workbox-expiration";
   var CACHE_OBJECT_STORE = "cache-entries";
   var normalizeURL = (unNormalizedUrl) => {
@@ -4418,7 +4418,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   };
 
-  // node_modules/workbox-expiration/CacheExpiration.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-expiration/CacheExpiration.js
   var CacheExpiration = class {
     /**
      * To construct a new CacheExpiration instance you must provide at least
@@ -4558,7 +4558,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   };
 
-  // node_modules/workbox-core/registerQuotaErrorCallback.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-core/registerQuotaErrorCallback.js
   function registerQuotaErrorCallback(callback) {
     if (true) {
       finalAssertExports.isType(callback, "function", {
@@ -4573,7 +4573,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
     }
   }
 
-  // node_modules/workbox-expiration/ExpirationPlugin.js
+  // ../../../../../../private/tmp/cleverai-openrouter/node_modules/workbox-expiration/ExpirationPlugin.js
   var ExpirationPlugin = class {
     /**
      * @param {ExpirationPluginOptions} config
@@ -4866,9 +4866,7 @@ This is generally NOT safe. Learn more at https://bit.ly/wb-precache`;
       ]
     });
     registerRoute(
-      ({ url, request: request2 }) => url.origin === self.location.origin && !isViteDevelopmentAsset(url) && // Exclude the AI worker script — it's loaded via Blob URL in the plugin,
-      // but direct loads must not get the CacheFirst/offline-stub treatment either.
-      !url.pathname.endsWith("/ai-worker.js") && (url.pathname.startsWith("/_nuxt/") || request2.destination === "script" || request2.destination === "style"),
+      ({ url, request: request2 }) => url.origin === self.location.origin && !isViteDevelopmentAsset(url) && (url.pathname.startsWith("/_nuxt/") || request2.destination === "script" || request2.destination === "style"),
       async ({ event, request: request2 }) => {
         try {
           return await assetsStrategy.handle({ event, request: request2 });

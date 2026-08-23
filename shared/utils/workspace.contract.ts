@@ -1,12 +1,14 @@
 // shared/workspace.contract.ts
 import { z } from "zod";
-import { LLMEnum } from "./llm";
 
 const trim = (v: unknown) => (typeof v === "string" ? v.trim() : v);
 const dateish = z.string().datetime().or(z.date()).or(z.string());
 const optionalPosition = z.preprocess(
   (value) => (value === null ? undefined : value),
-  z.string().regex(/^[0-9A-Za-z]+$/).optional(),
+  z
+    .string()
+    .regex(/^[0-9A-Za-z]+$/)
+    .optional(),
 );
 
 export const WorkspaceSummarySchema = z.object({
@@ -16,7 +18,6 @@ export const WorkspaceSummarySchema = z.object({
   metadata: z.record(z.string(), z.unknown()).nullable(),
   order: z.number(),
   position: optionalPosition,
-  llmModel: LLMEnum,
   createdAt: dateish,
   updatedAt: dateish,
 });
@@ -54,8 +55,6 @@ const WorkspaceMaterialRelation = z
     content: z.string(),
     type: z.string().nullable().optional(),
     metadata: z.record(z.string(), z.unknown()).nullable().optional(),
-    llmModel: z.string().nullable().optional(),
-    llmPrompt: z.string().nullable().optional(),
     createdAt: z.string().datetime().or(z.date()).or(z.string()).optional(),
     updatedAt: z.string().datetime().or(z.date()).or(z.string()).optional(),
   })
@@ -70,7 +69,6 @@ export const WorkspaceSchema = z.object({
   order: z.number().optional(),
   position: optionalPosition,
   rawText: z.string().nullable().optional(), // Keep for backward compatibility, but deprecated
-  llmModel: LLMEnum,
   createdAt: dateish,
   updatedAt: dateish,
   flashcards: z.array(WorkspaceFlashcardRelation).optional(),

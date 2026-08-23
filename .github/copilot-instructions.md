@@ -4,11 +4,11 @@ Be concise. When coding, prefer small, incremental changes with tests or smoke c
 
 - Project type: Nuxt 4 (`compatibilityVersion: 4`, app source in `app/`), TypeScript, Vue 3.5, Pinia, Tailwind CSS v4 + Nuxt UI v4. Server code lives under `server/` and shared types/validation live in `shared/`.
 - Common commands (see `package.json`):
-  - Dev: `yarn dev` (runs `ai-worker:build` then `nuxt dev` on :8080)
+  - Dev: `yarn dev` (starts Nuxt on :8080)
   - Build: `yarn build` or `yarn build:inject` (runs service-worker build + checks)
   - Preview prod locally: `yarn preview`
   - Tests: Playwright PWA tests `yarn test:pwa-offline`
-  - Prisma: `yarn db:sync`, `yarn db:studio`, `yarn db:seed`
+  - Prisma: `yarn db:sync`, `yarn db:studio`
   - Lint/format: `yarn lint`, `yarn lintfix`, `yarn format`
 
 - Key files to consult for feature changes:
@@ -16,12 +16,12 @@ Be concise. When coding, prefer small, incremental changes with tests or smoke c
   - `package.json` — scripts and dependencies.
   - `docs/DEVELOPMENT.md` — developer workflows, service worker, cron, notification testing.
   - `ARCHITECTURE.md` — high-level architecture and design decisions.
-  - `server/utils/llm/*` and `server/services/*` — LLM strategy implementations, token and cost accounting.
+  - `server/utils/llm/*` — the single OpenRouter adapter, request lifecycle, and usage audit.
   - `shared/utils/*.contract.ts` — Zod schemas used across client/server; add/modify here for shared types.
 
 - Important patterns & conventions (do not change without considering impact):
-  - Strategy pattern for LLMs (`server/utils/llm/`). Current providers: OpenAI, Gemini, DeepSeek, Groq, OpenRouter (`*Strategy.ts`). Add a new provider via a new `LLMStrategy` implementation registered in `LLMFactory.ts` (`getLLMStrategy()` / `getLLMStrategyFromRegistry()`). Log usage through the `onMeasure` callback so cost accounting (`llmCost.ts` + `gatewayLogger.ts`) stays consistent.
-  - Rate limiting: implemented centrally (Redis primary, in-memory fallback). Keys sometimes include `{ model }` to enforce per-model limits.
+  - OpenRouter is the only inference integration. Do not add direct provider SDKs, browser models, a database model registry, or a local price table. Use `llmRequestPipeline.ts` and log native usage through `usageLogger.ts`.
+  - Rate limiting is centralized with Redis primary and in-memory fallback.
   - Validation: Zod schemas in `shared/` are authoritative for request/response shapes.
   - Service layer: frontend `serviceFactory` + `FetchFactory` stdizes API calls; prefer adding or extending services rather than scattering fetches across components.
   - PWA: SW built from `sw-src/` via `yarn sw:build`; `build:inject` wires SW into production build.
@@ -33,8 +33,8 @@ Be concise. When coding, prefer small, incremental changes with tests or smoke c
   - For cron/notifications, `docs/DEVELOPMENT.md` contains curl examples and debug UIs; use `ENABLE_CRON` and `CRON_SECRET_TOKEN` in `.env` for local testing.
 
 - Examples to reference in PRs or edits:
-  - Adding an LLM provider: follow `server/utils/llm/OpenAIStrategy.ts` (or any `*Strategy.ts`) + register in `LLMFactory.ts`.
-  - Persisting LLM usage: follow the `LlmUsage` shape and `logLlmUsage()` call sites (`server/utils/llmCost.ts`).
+  - Adding an AI task: add the smallest method to `openRouter.ts`, enter through `llmRequestPipeline.ts`, validate output, and settle only after persistence.
+  - Persisting AI usage: use `usageLogger.ts`; never recompute OpenRouter prices locally.
   - New API route: place under `server/api/` and use shared `Zod` contracts for request validation.
 
 - Safety & environment notes:

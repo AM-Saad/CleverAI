@@ -1,6 +1,5 @@
 <script setup lang="ts">
-// import { useMathRecognition } from "~/composables/ai/useMathRecognition";
-import { useLocalMathRecognition } from "~/composables/ai/useLocalMathRecognition";
+import { useMathRecognition } from "~/composables/ai/useMathRecognition";
 import { useInfiniteCanvas } from "~/composables/ui/useInfiniteCanvas";
 import katex from "katex";
 import "katex/dist/katex.min.css";
@@ -41,16 +40,14 @@ const emit = defineEmits<{
   (e: "delete"): void;
 }>();
 
-// ── AI composable (Using new Local AI hook while preserving the old file) ──
+// ── OpenRouter math recognition ──
 const {
-  recognizeWithLocalAI,
+  recognizeWithOpenRouter,
   restoreScope,
   getScope,
   isRecognizing,
   recognitionError,
-  isDownloading,
-  progress
-} = useLocalMathRecognition();
+} = useMathRecognition();
 
 // ── Toast ──
 const toast = useToast();
@@ -59,7 +56,7 @@ const toast = useToast();
 
 // ── Lines (recognised strokes) ──
 const lines = ref<MathNoteMetadata["lines"]>(
-  props.initialMetadata?.lines ?? []
+  props.initialMetadata?.lines ?? [],
 );
 
 // ── Stroke timeout for auto-recognition ──
@@ -82,7 +79,7 @@ const {
   clearArea: _clearArea,
   clearAll: _clearAll,
   redrawAll,
-  setupCanvas
+  setupCanvas,
 } = useInfiniteCanvas({
   initialStrokes: props.initialMetadata?.strokes ?? [],
   lines: lines,
@@ -91,7 +88,7 @@ const {
     strokeTimer = setTimeout(() => {
       triggerRecognition();
     }, STROKE_TIMEOUT_MS);
-  }
+  },
 });
 
 // ── Overlay state ──
@@ -116,7 +113,10 @@ onMounted(async () => {
 });
 
 let lastProcessedStrokeIndex = 0;
-let globalMinX = Infinity, globalMinY = Infinity, globalMaxX = -Infinity, globalMaxY = -Infinity;
+let globalMinX = Infinity,
+  globalMinY = Infinity,
+  globalMaxX = -Infinity,
+  globalMaxY = -Infinity;
 
 function updateBounds() {
   for (let j = lastProcessedStrokeIndex; j < allStrokes.value.length; j++) {
@@ -140,21 +140,25 @@ async function triggerRecognition() {
   // 1. Calculate the global bounding box of ALL ink incrementally
   updateBounds();
 
-  let minX = globalMinX, minY = globalMinY, maxX = globalMaxX, maxY = globalMaxY;
+  let minX = globalMinX,
+    minY = globalMinY,
+    maxX = globalMaxX,
+    maxY = globalMaxY;
 
   // Fallback if no valid points
   if (minX === Infinity) {
-    minX = 0; minY = 0;
+    minX = 0;
+    minY = 0;
     maxX = canvas.getBoundingClientRect().width;
     maxY = canvas.getBoundingClientRect().height;
   }
 
   // 2. Normalize strokes so the top-left starts at 0,0 locally
-  // This ensures MyScript always processes the strokes accurately regardless of camera pan
-  const normalizedStrokes = allStrokes.value.map(s => ({
+  // Normalized coordinates keep the recognition image independent of camera pan.
+  const normalizedStrokes = allStrokes.value.map((s) => ({
     ...s,
-    x: s.x.map(x => x - minX),
-    y: s.y.map(y => y - minY)
+    x: s.x.map((x) => x - minX),
+    y: s.y.map((y) => y - minY),
   }));
 
   const strokeBox = pendingBounds.value
@@ -170,10 +174,14 @@ async function triggerRecognition() {
   };
 
   try {
-    const outcome = await recognizeWithLocalAI(normalizedStrokes, normalizedStrokeBox, {
-      width: Math.ceil(maxX - minX) || 1,
-      height: Math.ceil(maxY - minY) || 1,
-    });
+    const outcome = await recognizeWithOpenRouter(
+      normalizedStrokes,
+      normalizedStrokeBox,
+      {
+        width: Math.ceil(maxX - minX) || 1,
+        height: Math.ceil(maxY - minY) || 1,
+      },
+    );
 
     // Shift result bounding box back to world coordinates
     if (outcome.boundingBox) {
@@ -189,7 +197,8 @@ async function triggerRecognition() {
       console.warn("[MathNoteEditor] Recognition returned empty LaTeX.");
       toast.add({
         title: "Low Confidence",
-        description: "Could not clearly recognize the math. Please write more clearly or try again.",
+        description:
+          "Could not clearly recognize the math. Please write more clearly or try again.",
         color: "warning",
         icon: "triangle-alert",
       });
@@ -215,7 +224,11 @@ async function triggerRecognition() {
     }
 
     // Show overlay at the bounding box location
-    showOverlay(outcome.latex, outcome.result, outcome.boundingBox ?? strokeBox);
+    showOverlay(
+      outcome.latex,
+      outcome.result,
+      outcome.boundingBox ?? strokeBox,
+    );
 
     // Reset pending bounds for the next batch of strokes
     pendingBounds.value = null;
@@ -243,7 +256,10 @@ function clearCanvas() {
   overlays.value = [];
   _clearCanvas();
   lastProcessedStrokeIndex = 0;
-  globalMinX = Infinity; globalMinY = Infinity; globalMaxX = -Infinity; globalMaxY = -Infinity;
+  globalMinX = Infinity;
+  globalMinY = Infinity;
+  globalMaxX = -Infinity;
+  globalMaxY = -Infinity;
 }
 
 function clearAll() {
@@ -259,7 +275,10 @@ function clearAll() {
 function clearArea() {
   _clearArea();
   lastProcessedStrokeIndex = 0;
-  globalMinX = Infinity; globalMinY = Infinity; globalMaxX = -Infinity; globalMaxY = -Infinity;
+  globalMinX = Infinity;
+  globalMinY = Infinity;
+  globalMaxX = -Infinity;
+  globalMaxY = -Infinity;
 
   // Capture updated state and emit
   getScope().then((scope) => {
@@ -277,7 +296,7 @@ function clearArea() {
 function showOverlay(
   latex: string,
   result: string | null,
-  box: { minX: number; minY: number; maxX: number; maxY: number }
+  box: { minX: number; minY: number; maxX: number; maxY: number },
 ) {
   const id = ++overlayIdCounter;
   overlays.value.push({ id, latex, result, box, visible: true });
@@ -312,60 +331,95 @@ const isExpressionsCollapsed = ref(true);
 <template>
   <div class="math-note-editor flex flex-col gap-3 h-full">
     <!-- Toolbar -->
-    <SharedNoteToolbar :is-fullscreen="isFullscreen" :readonly="props.readonly" @toggleFullscreen="emit('toggle-fullscreen')"
-      @delete="emit('delete')">
-      <shared-note-toolbar-button variant="primary" :disabled="isRecognizing" @click="onRecognizeClick"
+    <SharedNoteToolbar
+      :is-fullscreen="isFullscreen"
+      :readonly="props.readonly"
+      @toggleFullscreen="emit('toggle-fullscreen')"
+      @delete="emit('delete')"
+    >
+      <shared-note-toolbar-button
+        variant="primary"
+        :disabled="isRecognizing"
+        @click="onRecognizeClick"
         :title="isRecognizing ? 'Solving...' : 'Solve Math'"
-        :icon="isRecognizing ? 'reload' : 'generate'" />
+        :icon="isRecognizing ? 'reload' : 'generate'"
+      />
 
       <div class="w-px h-6 bg-surface-strong mx-1 shrink-0" />
 
-      <shared-note-toolbar-button :disabled="!pendingBounds" @click="clearArea" icon="delete"
-        title="Clear area" />
+      <shared-note-toolbar-button
+        :disabled="!pendingBounds"
+        @click="clearArea"
+        icon="delete"
+        title="Clear area"
+      />
 
-      <shared-note-toolbar-button @click="clearCanvas" icon="reload" title="Clear canvas" />
+      <shared-note-toolbar-button
+        @click="clearCanvas"
+        icon="reload"
+        title="Clear canvas"
+      />
 
-      <shared-note-toolbar-button @click="clearAll" variant="danger" icon="reload" title="Reset all" />
+      <shared-note-toolbar-button
+        @click="clearAll"
+        variant="danger"
+        icon="reload"
+        title="Reset all"
+      />
     </SharedNoteToolbar>
 
     <!-- Error banner -->
-    <div v-if="recognitionError" class="rounded-[var(--radius-md)] bg-error/10 px-3 py-2 text-sm text-error-text mx-2">
+    <div
+      v-if="recognitionError"
+      class="rounded-[var(--radius-md)] bg-error/10 px-3 py-2 text-sm text-error-text mx-2"
+    >
       {{ recognitionError.message }}
     </div>
 
     <!-- Canvas with overlay layer -->
     <SharedNoteContentArea :style="edgeGlowStyle">
       <!-- @wheel MUST NOT be .passive because we call e.preventDefault() -->
-      <canvas ref="canvasRef" class="w-full h-full touch-none"
+      <canvas
+        ref="canvasRef"
+        class="w-full h-full touch-none"
         :style="{ cursor: props.readonly ? 'default' : 'crosshair' }"
-        @pointerdown="!props.readonly && startStroke($event)" @pointermove="!props.readonly && continueStroke($event)"
-        @pointerup="!props.readonly && endStroke($event)" @pointerleave="!props.readonly && endStroke($event)"
-        @wheel="onWheel" />
+        @pointerdown="!props.readonly && startStroke($event)"
+        @pointermove="!props.readonly && continueStroke($event)"
+        @pointerup="!props.readonly && endStroke($event)"
+        @pointerleave="!props.readonly && endStroke($event)"
+        @wheel="onWheel"
+      />
 
       <!-- Recognition-in-progress overlay -->
-      <div v-if="isRecognizing || isDownloading"
-        class="absolute inset-0 flex flex-col items-center justify-center rounded-[var(--radius-lg)] bg-background/70 backdrop-blur-sm dark:bg-surface/90 z-10 transition-opacity">
+      <div
+        v-if="isRecognizing"
+        class="absolute inset-0 flex flex-col items-center justify-center rounded-[var(--radius-lg)] bg-background/70 backdrop-blur-sm dark:bg-surface/90 z-10 transition-opacity"
+      >
         <div class="flex items-center gap-2 mb-2">
           <UiIcon name="sparkles" class="h-5 w-5 text-primary animate-pulse" />
           <span class="text-sm font-medium text-content-on-surface">
-            {{ isDownloading ? "Fetching local AI model..." : "Recognising locally..." }}
+            Recognising…
           </span>
-        </div>
-        <div v-if="isDownloading && progress > 0" class="w-48 h-1.5 bg-secondary rounded-[var(--radius-sm)] overflow-hidden">
-          <div class="h-full bg-primary transition-all duration-300" :style="{ width: `${progress}%` }"></div>
         </div>
       </div>
 
       <!-- KaTeX result overlays at bounding box positions -->
       <TransitionGroup name="overlay-fade">
-        <div v-for="overlay in overlays" :key="overlay.id" v-show="overlay.visible"
+        <div
+          v-for="overlay in overlays"
+          :key="overlay.id"
+          v-show="overlay.visible"
           class="absolute pointer-events-none px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-success/15 border border-success/30 backdrop-blur-sm text-xs"
           :style="{
             left: `${worldToScreen(overlay.box.minX, Math.max(0, overlay.box.minY - 28)).x}px`,
             top: `${worldToScreen(overlay.box.minX, Math.max(0, overlay.box.minY - 28)).y}px`,
-          }">
+          }"
+        >
           <span class="text-success-text" v-html="renderLatex(overlay.latex)" />
-          <span v-if="overlay.result !== null" class="ml-1 font-bold text-success-text">
+          <span
+            v-if="overlay.result !== null"
+            class="ml-1 font-bold text-success-text"
+          >
             = {{ overlay.result }}
           </span>
         </div>
@@ -382,21 +436,37 @@ const isExpressionsCollapsed = ref(true);
         @click="isExpressionsCollapsed = !isExpressionsCollapsed"
       >
         <span>Recognised expressions ({{ lines.length }})</span>
-        <UiIcon :name="isExpressionsCollapsed ? 'chevron-down' : 'chevron-up'"
-          class="h-4 w-4 transition-transform duration-200" />
+        <UiIcon
+          :name="isExpressionsCollapsed ? 'chevron-down' : 'chevron-up'"
+          class="h-4 w-4 transition-transform duration-200"
+        />
       </UiButton>
 
       <!-- Motion container -->
-      <motion.div :animate="isExpressionsCollapsed ? 'collapsed' : 'open'" :variants="{
-        open: { opacity: 1, height: 'auto', marginTop: '8px' },
-        collapsed: { opacity: 0, height: 0, marginTop: '0px' }
-      }" :transition="{ type: 'spring', bounce: 0, duration: 0.4 }" class="overflow-hidden">
+      <motion.div
+        :animate="isExpressionsCollapsed ? 'collapsed' : 'open'"
+        :variants="{
+          open: { opacity: 1, height: 'auto', marginTop: '8px' },
+          collapsed: { opacity: 0, height: 0, marginTop: '0px' },
+        }"
+        :transition="{ type: 'spring', bounce: 0, duration: 0.4 }"
+        class="overflow-hidden"
+      >
         <div class="space-y-2 pb-1 overflow-y-auto max-h-60 pr-1">
-          <div v-for="(line, idx) in lines" :key="idx"
-            class="flex items-baseline gap-3 rounded-[var(--radius-md)] border border-secondary bg-surface px-3 py-2 font-mono text-sm">
+          <div
+            v-for="(line, idx) in lines"
+            :key="idx"
+            class="flex items-baseline gap-3 rounded-[var(--radius-md)] border border-secondary bg-surface px-3 py-2 font-mono text-sm"
+          >
             <!-- LaTeX preview rendered via KaTeX -->
-            <span class="flex-1 text-content-on-surface" v-html="renderLatex(line.latex)" />
-            <span v-if="line.result !== null" class="font-bold text-success-text">
+            <span
+              class="flex-1 text-content-on-surface"
+              v-html="renderLatex(line.latex)"
+            />
+            <span
+              v-if="line.result !== null"
+              class="font-bold text-success-text"
+            >
               = {{ line.result }}
             </span>
           </div>

@@ -6,6 +6,7 @@
 ---
 
 ## Table of Contents
+
 1. [Quick Start](#quick-start)
 2. [Environment Setup](#environment-setup)
 3. [Common Commands](#common-commands)
@@ -58,9 +59,10 @@ NEXTAUTH_URL="http://localhost:3000"
 GOOGLE_CLIENT_ID="..."
 GOOGLE_CLIENT_SECRET="..."
 
-# LLM Providers (at least one required)
-OPENAI_API_KEY="sk-..."
-GOOGLE_GENERATIVE_AI_API_KEY="..."
+# Sole model-inference provider
+OPENROUTER_API_KEY="sk-or-v1-..."
+OPENROUTER_MODEL="openrouter/auto"
+OPENROUTER_TIMEOUT_MS="45000"
 
 # Push Notifications
 VAPID_PUBLIC_KEY="..."
@@ -85,9 +87,10 @@ DEBUG_MODE="true"
 ### Nuxt Dev Server Checks
 
 The following env vars are checked on startup (`nuxt.config.ts` → `hooks.ready`):
+
 - `DATABASE_URL`
 - `NEXTAUTH_SECRET`
-- `OPENAI_API_KEY` or `GOOGLE_GENERATIVE_AI_API_KEY`
+- `OPENROUTER_API_KEY`
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`
 
 Missing vars show warnings but don't fail startup.
@@ -99,7 +102,7 @@ Missing vars show warnings but don't fail startup.
 ### Development
 
 ```bash
-# Start dev server (builds AI worker first) — single-surface, port 8080
+# Start the single-surface dev server on port 8080
 yarn dev
 
 # Surface-scoped dev servers (see docs/architecture/app-surfaces.md)
@@ -120,7 +123,7 @@ yarn typecheck
 ### Building & Running
 
 ```bash
-# Production build (SW + AI worker build/check, icons, nuxt build, SW injection)
+# Production build (service worker, icons, Nuxt, SW injection)
 yarn build
 # same command, explicit name:
 yarn build:inject
@@ -130,7 +133,7 @@ yarn build:platform
 yarn build:daily
 yarn build:learning
 
-# Runs sw:build/sw:check/ai-worker:build/ai-worker:check/generate:icons
+# Runs sw:build/sw:check/generate:icons
 # (invoked automatically by build:inject/preview; rarely run standalone)
 yarn prebuild
 
@@ -168,11 +171,14 @@ yarn db:generate
 # Open Prisma Studio
 yarn db:studio
 
-# Seed sample data
-yarn db:seed
+# Preview legacy AI catalog/field cleanup (no writes)
+yarn db:remove-legacy-ai
+
+# Apply only after a database backup
+yarn db:remove-legacy-ai --apply
 ```
 
-### Service Worker & AI Worker
+### Service Worker
 
 ```bash
 # Build service worker only (sw-src/index.ts -> public/sw.js)
@@ -181,11 +187,6 @@ yarn sw:build
 # Verify the SW placeholder comment is present (scripts/check-sw-placeholder.cjs)
 yarn sw:check
 
-# Build the AI worker bundle (sw-src/ai-worker.ts -> public/ai-worker.js)
-yarn ai-worker:build
-
-# Verify the AI worker build (scripts/check-ai-worker.cjs)
-yarn ai-worker:check
 ```
 
 ### Code Generation
@@ -324,15 +325,15 @@ sw-src/                 # Service worker source
 
 ### Key Configuration Files
 
-| File | Purpose |
-|------|---------|
-| `nuxt.config.ts` | Nuxt configuration |
-| `package.json` | Dependencies and scripts |
-| `tsconfig.json` | TypeScript config |
+| File                   | Purpose                                                     |
+| ---------------------- | ----------------------------------------------------------- |
+| `nuxt.config.ts`       | Nuxt configuration                                          |
+| `package.json`         | Dependencies and scripts                                    |
+| `tsconfig.json`        | TypeScript config                                           |
 | `prisma/schema.prisma` | Database schema (root-level — there is no `server/prisma/`) |
-| `playwright.config.ts` | E2E test config |
-| `eslint.config.mjs` | Linting rules |
-| `components.json` | shadcn-vue config |
+| `playwright.config.ts` | E2E test config                                             |
+| `eslint.config.mjs`    | Linting rules                                               |
+| `components.json`      | shadcn-vue config                                           |
 
 ---
 
@@ -343,16 +344,18 @@ sw-src/                 # Service worker source
 New features live under `app/features/<feature>/` (client) and `server/modules/<feature>/` (server) — **not** the older flat `app/services/` / `app/composables/` / `app/components/` layout. The worked example below follows `daily`, the newest feature (`app/features/daily/`, `server/modules/daily/`).
 
 1. **Define the contract** in `shared/utils/<feature>.contract.ts` (Zod schema, authoritative for both client and server — see `shared/utils/daily.contract.ts`):
+
 ```typescript
 // shared/utils/feature.contract.ts
 export const FeatureSchema = z.object({
   id: z.string(),
   name: z.string(),
-})
-export type FeatureDTO = z.infer<typeof FeatureSchema>
+});
+export type FeatureDTO = z.infer<typeof FeatureSchema>;
 ```
 
 2. **Add a database model** in `prisma/schema.prisma` (root-level — there is no `server/prisma/`):
+
 ```prisma
 model Feature {
   id   String @id @default(auto()) @map("_id") @db.ObjectId
@@ -361,39 +364,43 @@ model Feature {
 ```
 
 3. **Add server-side domain/application logic** in `server/modules/<feature>/domain/` and `server/modules/<feature>/application/` (e.g. `server/modules/daily/domain/ensureOccurrence.ts`), then call it from an API route in `server/api/<feature>/`:
+
 ```typescript
 // server/api/features/index.get.ts
 export default defineEventHandler(async (event) => {
-  const user = event.context.user
-  if (!user) throw createError({ statusCode: 401 })
+  const user = event.context.user;
+  if (!user) throw createError({ statusCode: 401 });
 
-  return prisma.feature.findMany({ where: { userId: user.id } })
-})
+  return prisma.feature.findMany({ where: { userId: user.id } });
+});
 ```
 
 4. **Add a local repository + composable** in `app/features/<feature>/repositories/` and `app/features/<feature>/composables/` (mirrors `app/features/daily/repositories/dailyLocalRepository.ts` + `app/features/daily/composables/useDaily.ts`). Feature-internal files use **explicit imports** for anything outside Nuxt/Vue's own globals — sibling subfolders via relative paths, shared contracts via the `@shared`/`~/shared` alias:
+
 ```typescript
 // app/features/feature/composables/useFeature.ts
-import type { FeatureDTO } from "@shared/utils/feature.contract"
-import { getFeatureSnapshot } from "../repositories/featureLocalRepository"
+import type { FeatureDTO } from "@shared/utils/feature.contract";
+import { getFeatureSnapshot } from "../repositories/featureLocalRepository";
 
 export function useFeature() {
-  const { $api } = useNuxtApp() // Nuxt/Vue globals (ref, useNuxtApp, ...) stay auto-imported everywhere
-  return useDataFetch('features', () => $api.features.getAll())
+  const { $api } = useNuxtApp(); // Nuxt/Vue globals (ref, useNuxtApp, ...) stay auto-imported everywhere
+  return useDataFetch("features", () => $api.features.getAll());
 }
 ```
 
 5. **Add domain/presentation helpers** where useful — pure logic in `app/features/<feature>/domain/` (e.g. `projectLocalDay.ts`), view-model shaping in `app/features/<feature>/presentation/` (e.g. `dailyActionViewModel.ts`).
 
 6. **Build the UI component** in `app/features/<feature>/components/`. `app/features/**` is **not** auto-imported (unlike `app/components/**`), so pages/containers import it explicitly by path — the real pattern used in `app/pages/day/[date].vue`:
+
 ```vue
 <script setup lang="ts">
-import DailyActionSection from "~/features/daily/components/DailyActionSection.vue"
-import { useDaily } from "~/features/daily/composables/useDaily"
+import DailyActionSection from "~/features/daily/components/DailyActionSection.vue";
+import { useDaily } from "~/features/daily/composables/useDaily";
 </script>
 ```
 
 7. **Keep an old auto-imported name working, if one existed**: if the feature previously had an auto-imported composable/service under the flat layout, leave a thin re-export shim in the old location instead of touching every call site. This is a real existing pattern — `app/composables/board/useBoardColumnsStore.ts` in full:
+
 ```typescript
 export {
   useBoardColumnsStore,
@@ -401,6 +408,7 @@ export {
   type BoardColumnState,
 } from "~/features/board/composables/useBoardColumnsStore";
 ```
+
 A brand-new feature with no pre-existing name to preserve (e.g. `daily`) skips this step entirely.
 
 ### Modifying Existing Code
@@ -418,11 +426,13 @@ A brand-new feature with no pre-existing name to preserve (e.g. `daily`) skips t
 ### Floating Debug Panel
 
 **Access Methods**:
+
 - Purple beaker icon (bottom-right in dev)
 - Keyboard: `Ctrl/Cmd + Shift + D`
 - URL: `?debug=true`
 
 **Features**:
+
 - System status (server time, timezone)
 - Quick actions for all major systems
 - Preset test scenarios
@@ -432,28 +442,29 @@ A brand-new feature with no pre-existing name to preserve (e.g. `daily`) skips t
 
 ```typescript
 // Browser console - check SW status
-navigator.serviceWorker.getRegistrations().then(regs => {
-  regs.forEach(reg => {
-    console.log('State:', reg.active?.state)
-    console.log('Script:', reg.active?.scriptURL)
-  })
-})
+navigator.serviceWorker.getRegistrations().then((regs) => {
+  regs.forEach((reg) => {
+    console.log("State:", reg.active?.state);
+    console.log("Script:", reg.active?.scriptURL);
+  });
+});
 
 // Test SW messages
 navigator.serviceWorker.controller?.postMessage({
-  type: 'TEST_MESSAGE',
-  payload: { test: true }
-})
+  type: "TEST_MESSAGE",
+  payload: { test: true },
+});
 
 // Force SW update
-navigator.serviceWorker.getRegistration().then(reg => {
-  reg?.update()
-})
+navigator.serviceWorker.getRegistration().then((reg) => {
+  reg?.update();
+});
 ```
 
 ### Spaced Repetition Debug
 
 Access via gear icon during card review:
+
 - Apply custom SM-2 values
 - Reset card state
 - Load preset scenarios (new card, learning, difficult)
@@ -473,18 +484,18 @@ mongosh
 
 ```javascript
 // Check IndexedDB stores (name/version source of truth: app/utils/constants/pwa.ts DB_CONFIG)
-const db = await indexedDB.open('recwide_db', 20)
+const db = await indexedDB.open("recwide_db", 20);
 db.onsuccess = (e) => {
-  const stores = e.target.result.objectStoreNames
-  console.log('Stores:', Array.from(stores))
-}
+  const stores = e.target.result.objectStoreNames;
+  console.log("Stores:", Array.from(stores));
+};
 
 // Check push subscription
-navigator.serviceWorker.ready.then(reg => {
-  reg.pushManager.getSubscription().then(sub => {
-    console.log('Push subscription:', sub?.toJSON())
-  })
-})
+navigator.serviceWorker.ready.then((reg) => {
+  reg.pushManager.getSubscription().then((sub) => {
+    console.log("Push subscription:", sub?.toJSON());
+  });
+});
 ```
 
 ---
@@ -522,6 +533,7 @@ tests/
 ### Manual Testing Scenarios
 
 **Offline Testing**:
+
 1. Open DevTools → Network → "Offline"
 2. Navigate app (should work from cache)
 3. Edit notes (should queue to IndexedDB)
@@ -529,6 +541,7 @@ tests/
 5. Verify sync occurs
 
 **Push Notification Testing**:
+
 ```bash
 # Test via cron endpoint
 curl -X POST http://localhost:3000/api/cron/send-notifications \
@@ -560,34 +573,37 @@ Production build with hashed assets
 ### Key SW Features
 
 **Caching** (Workbox):
+
 ```typescript
 // NetworkFirst for API
 registerRoute(
-  ({ url }) => url.pathname.startsWith('/api/'),
-  new NetworkFirst({ cacheName: 'api-cache' })
-)
+  ({ url }) => url.pathname.startsWith("/api/"),
+  new NetworkFirst({ cacheName: "api-cache" }),
+);
 ```
 
 **Push Handling**:
+
 ```typescript
-self.addEventListener('push', (event) => {
-  const data = event.data?.json()
+self.addEventListener("push", (event) => {
+  const data = event.data?.json();
   event.waitUntil(
     self.registration.showNotification(data.title, {
       body: data.body,
-      data: { url: data.url }
-    })
-  )
-})
+      data: { url: data.url },
+    }),
+  );
+});
 ```
 
 **Background Sync**:
+
 ```typescript
-self.addEventListener('sync', (event) => {
-  if (event.tag === 'notes-sync') {
-    event.waitUntil(syncNotes())
+self.addEventListener("sync", (event) => {
+  if (event.tag === "notes-sync") {
+    event.waitUntil(syncNotes());
   }
-})
+});
 ```
 
 ### IndexedDB Management
@@ -595,18 +611,18 @@ self.addEventListener('sync', (event) => {
 ```typescript
 // IndexedDB name/version/stores — single source of truth is
 // app/utils/constants/pwa.ts (DB_CONFIG). Do not hardcode these elsewhere.
-import { DB_CONFIG } from '~/utils/constants/pwa'
+import { DB_CONFIG } from "~/utils/constants/pwa";
 
-DB_CONFIG.NAME    // 'recwide_db'
-DB_CONFIG.VERSION // 20 — bump whenever a store is added/changed; see the
-                  // version-history comment above DB_CONFIG in that file
-DB_CONFIG.STORES  // 19 stores as of this writing: FORMS, NOTES, NOTE_GROUPS,
-                  // PENDING_NOTES, PENDING_NOTE_GROUP_CHANGES,
-                  // PENDING_NOTE_LAYOUTS, NOTE_SYNC_CONFLICTS, BOARD_ITEMS,
-                  // PENDING_BOARD_ITEMS, BOARD_COLUMNS, USER_TAGS,
-                  // OFFLINE_ENTITIES, OFFLINE_MUTATIONS, OFFLINE_CONFLICTS,
-                  // OFFLINE_PACKS, OFFLINE_BLOBS, OFFLINE_SESSIONS,
-                  // OFFLINE_SYNC_META, OFFLINE_LEGACY_RECOVERY
+DB_CONFIG.NAME; // 'recwide_db'
+DB_CONFIG.VERSION; // 20 — bump whenever a store is added/changed; see the
+// version-history comment above DB_CONFIG in that file
+DB_CONFIG.STORES; // 19 stores as of this writing: FORMS, NOTES, NOTE_GROUPS,
+// PENDING_NOTES, PENDING_NOTE_GROUP_CHANGES,
+// PENDING_NOTE_LAYOUTS, NOTE_SYNC_CONFLICTS, BOARD_ITEMS,
+// PENDING_BOARD_ITEMS, BOARD_COLUMNS, USER_TAGS,
+// OFFLINE_ENTITIES, OFFLINE_MUTATIONS, OFFLINE_CONFLICTS,
+// OFFLINE_PACKS, OFFLINE_BLOBS, OFFLINE_SESSIONS,
+// OFFLINE_SYNC_META, OFFLINE_LEGACY_RECOVERY
 ```
 
 ---
@@ -633,23 +649,25 @@ yarn db:studio
 # Reset database (DANGER - drops all data)
 npx prisma db push --force-reset
 
-# Seed sample data
-yarn db:seed
 ```
 
 ### Migration Scripts
 
 One-off data-migration script in `scripts/`:
+
 - `annotate-cardreview-resourcetype.ts`
 
 Versioned migrations in `scripts/migrations/`:
+
 - `backfill-offline-v2.ts` (also runnable via `yarn offline:backfill`)
 - `dedupe-offline-mutation-receipts.ts`
 - `migrate-board-notes-to-board-items.ts`
 - `migrate-note-types.ts`
 - `migrate-workspace.ts`
+- `remove-legacy-ai.ts` (dry-run by default; use the package command above)
 
 Run with:
+
 ```bash
 npx tsx scripts/script-name.ts
 # or, for scripts/migrations/:
@@ -682,20 +700,22 @@ npx tsx scripts/migrations/script-name.ts
 ### Error Handling
 
 **Server**:
+
 ```typescript
 throw createError({
   statusCode: 400,
-  statusMessage: 'Bad Request',
-  data: { code: 'VALIDATION_ERROR' }
-})
+  statusMessage: "Bad Request",
+  data: { code: "VALIDATION_ERROR" },
+});
 ```
 
 **Client (FetchFactory)**:
+
 ```typescript
-const result = await $api.service.method()
+const result = await $api.service.method();
 if (!result.success) {
   // result.error is APIError
-  console.error(result.error.code, result.error.message)
+  console.error(result.error.code, result.error.message);
 }
 ```
 
@@ -704,47 +724,35 @@ if (!result.success) {
 ```typescript
 // Data fetching
 export function useFeatures() {
-  const { $api } = useNuxtApp()
-  return useDataFetch('features', () => $api.features.getAll())
+  const { $api } = useNuxtApp();
+  return useDataFetch("features", () => $api.features.getAll());
 }
 
 // Operations
 export function useFeatureOperations() {
-  const createOp = useOperation()
-  
-  const create = (data) => createOp.execute(() => 
-    $api.features.create(data)
-  )
-  
+  const createOp = useOperation();
+
+  const create = (data) => createOp.execute(() => $api.features.create(data));
+
   return {
     create,
     creating: createOp.pending,
-    createError: createOp.typedError
-  }
+    createError: createOp.typedError,
+  };
 }
 ```
 
-### LLM Strategy Pattern
+### OpenRouter Boundary
 
 ```typescript
-// Adding new provider
-// 1. Create strategy
-export class NewProviderStrategy implements LLMStrategy {
-  async generate(messages, options, onMeasure) {
-    // Implementation
-    onMeasure?.({ promptTokens, completionTokens, model })
-    return result
-  }
-}
-
-// 2. Register in factory
-// server/utils/llm/LLMFactory.ts
-const strategies = {
-  'gpt-3.5-turbo': OpenAIStrategy,
-  'gemini-2.0-flash-lite': GeminiStrategy,
-  'new-model': NewProviderStrategy,
-}
+// Feature routes acquire a shared lifecycle and call only its OpenRouter client.
+const ctx = await beginLlmRequest(event, { feature, workspaceId });
+const generation = await ctx.ai.generateText(prompt);
+await persist(generation.value);
+await ctx.finalize(generation);
 ```
+
+Do not add vendor SDKs, public model selectors, browser inference, model/pricing collections, or direct calls around the lifecycle. Add a task method or schema to `openRouter.ts`; keep feature persistence in its application module. See [LLM_GENERATION_FLOW.md](./LLM_GENERATION_FLOW.md).
 
 ### Contract-First Development
 
@@ -754,19 +762,19 @@ const strategies = {
 
 ```typescript
 // shared/feature.contract.ts
-import { z } from 'zod'
+import { z } from "zod";
 
 export const CreateFeatureSchema = z.object({
   name: z.string().min(1).max(100),
-})
+});
 
 export const FeatureSchema = CreateFeatureSchema.extend({
   id: z.string(),
   createdAt: z.date(),
-})
+});
 
-export type Feature = z.infer<typeof FeatureSchema>
-export type CreateFeature = z.infer<typeof CreateFeatureSchema>
+export type Feature = z.infer<typeof FeatureSchema>;
+export type CreateFeature = z.infer<typeof CreateFeatureSchema>;
 ```
 
 ---
@@ -776,6 +784,7 @@ export type CreateFeature = z.infer<typeof CreateFeatureSchema>
 ### Pre-commit Hooks
 
 Husky + lint-staged configured:
+
 ```bash
 # Install hooks
 yarn pre-commit
@@ -796,6 +805,7 @@ chore/task-description
 ### Commit Messages
 
 Follow conventional commits:
+
 ```
 feat: add new feature
 fix: resolve bug
@@ -811,6 +821,7 @@ refactor: restructure code
 ### Common Issues
 
 **"NEXTAUTH_SECRET required"**:
+
 ```bash
 # Generate secret
 openssl rand -base64 32
@@ -819,29 +830,32 @@ NEXTAUTH_SECRET="generated-secret"
 ```
 
 **Service Worker not updating**:
+
 ```javascript
 // Force unregister all SWs
-navigator.serviceWorker.getRegistrations().then(regs => {
-  regs.forEach(reg => reg.unregister())
-})
+navigator.serviceWorker.getRegistrations().then((regs) => {
+  regs.forEach((reg) => reg.unregister());
+});
 // Clear caches
-caches.keys().then(keys => {
-  keys.forEach(key => caches.delete(key))
-})
+caches.keys().then((keys) => {
+  keys.forEach((key) => caches.delete(key));
+});
 // Hard refresh
-location.reload(true)
+location.reload(true);
 ```
 
 **Prisma Client outdated**:
+
 ```bash
 npx prisma generate
 # Restart dev server
 ```
 
 **IndexedDB errors**:
+
 ```javascript
 // Delete database
-indexedDB.deleteDatabase('recwide_db')
+indexedDB.deleteDatabase("recwide_db");
 // Refresh page
 ```
 

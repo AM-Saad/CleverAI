@@ -7,7 +7,6 @@ export default [
       ".output-*/**",
       "node_modules/**",
       "public/sw.js",
-      "public/ai-worker.js",
     ],
   },
 ];

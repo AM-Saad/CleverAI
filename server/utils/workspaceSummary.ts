@@ -6,7 +6,6 @@ export const workspaceSummarySelect = {
   description: true,
   metadata: true,
   order: true,
-  llmModel: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.WorkspaceSelect;

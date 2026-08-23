@@ -277,9 +277,6 @@ import type { RouteHandlerCallbackOptions } from "workbox-core/types";
     ({ url, request }: { url: URL; request: Request }) =>
       url.origin === self.location.origin &&
       !isViteDevelopmentAsset(url) &&
-      // Exclude the AI worker script — it's loaded via Blob URL in the plugin,
-      // but direct loads must not get the CacheFirst/offline-stub treatment either.
-      !url.pathname.endsWith("/ai-worker.js") &&
       (url.pathname.startsWith("/_nuxt/") ||
         request.destination === "script" ||
         request.destination === "style"),

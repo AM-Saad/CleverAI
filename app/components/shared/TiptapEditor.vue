@@ -1,7 +1,9 @@
 <template>
-  <div v-if="editor" ref="editorContainerRef"
-    class="container relative flex flex-col p-1 h-full min-h-0 w-full overflow-y-auto">
-
+  <div
+    v-if="editor"
+    ref="editorContainerRef"
+    class="container relative flex flex-col p-1 h-full min-h-0 w-full overflow-y-auto"
+  >
     <div class="flex flex-col w-full min-w-0">
       <UiContextMenu :items="contextMenuItems">
         <EditorContent :editor="editor" class="flex-1 min-w-0 w-full pt-6" />
@@ -9,25 +11,49 @@
     </div>
 
     <!-- Bubble Menu (floating toolbar on text selection) -->
-    <SharedTiptapBubbleMenu :editor="editor" :context="editorContext" :readonly="props.readonly"
-      @ai-action="handleBubbleAiAction" />
+    <SharedTiptapBubbleMenu
+      :editor="editor"
+      :context="editorContext"
+      :readonly="props.readonly"
+      @ai-action="handleBubbleAiAction"
+    />
 
     <!-- Autocomplete floating dropdown -->
     <Transition name="auto-suggestions">
-      <UiOverlaySurface v-if="autoPosition && autoSuggestions.length"
-        :style="{ top: autoPosition.top + 'px', left: autoPosition.left + 'px' }" kind="popover" layer="popover"
-        size="xs" class-name="absolute min-w-36 overflow-hidden p-0" role="listbox" aria-label="Suggestions">
+      <UiOverlaySurface
+        v-if="autoPosition && autoSuggestions.length"
+        :style="{
+          top: autoPosition.top + 'px',
+          left: autoPosition.left + 'px',
+        }"
+        kind="popover"
+        layer="popover"
+        size="xs"
+        class-name="absolute min-w-36 overflow-hidden p-0"
+        role="listbox"
+        aria-label="Suggestions"
+      >
         <!-- design-allow: ARIA listbox option, not a standard action button -->
-        <button v-for="(item, i) in autoSuggestions" :key="item" type="button" role="option"
-          :aria-selected="i === autoActiveIndex" :class="[
+        <button
+          v-for="(item, i) in autoSuggestions"
+          :key="item"
+          type="button"
+          role="option"
+          :aria-selected="i === autoActiveIndex"
+          :class="[
             'w-full text-left px-3 py-1.5 text-sm flex items-center justify-between gap-3 transition-colors',
             i === autoActiveIndex
               ? 'bg-primary/10 text-primary'
               : 'text-content-on-surface hover:bg-surface-strong',
-          ]" @mousedown.prevent="acceptSuggestion(item)">
+          ]"
+          @mousedown.prevent="acceptSuggestion(item)"
+        >
           <span>{{ item }}</span>
-          <kbd v-if="i === 0"
-            class="shrink-0 hidden sm:inline-flex items-center rounded-[var(--radius-md)] border border-secondary px-1 py-0.5 text-[10px] font-mono text-content-secondary">Tab</kbd>
+          <kbd
+            v-if="i === 0"
+            class="shrink-0 hidden sm:inline-flex items-center rounded-[var(--radius-md)] border border-secondary px-1 py-0.5 text-[10px] font-mono text-content-secondary"
+            >Tab</kbd
+          >
         </button>
       </UiOverlaySurface>
     </Transition>
@@ -35,12 +61,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, shallowRef, nextTick, onBeforeUnmount, onMounted, watch, computed } from "vue";
+import {
+  ref,
+  shallowRef,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  watch,
+  computed,
+} from "vue";
 import { designTokenValues } from "~/design-system/tokens.generated";
 import type { NavigationMenuItem } from "@nuxt/ui";
-import type {
-  Selection as PMSelection,
-} from "prosemirror-state";
+import type { Selection as PMSelection } from "prosemirror-state";
 import Document from "@tiptap/extension-document";
 import { ListItem, TaskItem, TaskList } from "@tiptap/extension-list";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -48,7 +80,12 @@ import { Color, TextStyle } from "@tiptap/extension-text-style";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import { Extension, type AnyExtension } from "@tiptap/core";
-import { Table, TableRow, TableHeader, TableCell } from "@tiptap/extension-table";
+import {
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
+} from "@tiptap/extension-table";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { common, createLowlight } from "lowlight";
 // note: explicit Drop cursor intentionally omitted to avoid duplicate warnings
@@ -59,30 +96,37 @@ import { HocuspocusProvider } from "@hocuspocus/provider";
 import { IndexeddbPersistence } from "y-indexeddb";
 import * as Y from "yjs";
 import { normalizeWorkspaceNoteContent } from "@@/shared/utils/workspaceNote";
-import { useTextSummarization } from '~/composables/ai/useTextSummarization';
-import { usePredictionaryInput } from '~/composables/usePredictionaryInput';
-import { useEditorContext } from '~/composables/editor/useEditorContext';
+import { useTextSummarization } from "~/composables/ai/useTextSummarization";
+import { usePredictionaryInput } from "~/composables/usePredictionaryInput";
+import { useEditorContext } from "~/composables/editor/useEditorContext";
 import {
   createEditorActions,
   getActionsForCategory,
   getContextMenuGroups,
   toMenuItems,
-} from '~/composables/editor/useEditorActionRegistry';
-import { KeyboardShortcutsExtension } from '~/extensions/tiptap/KeyboardShortcuts';
+} from "~/composables/editor/useEditorActionRegistry";
+import { KeyboardShortcutsExtension } from "~/extensions/tiptap/KeyboardShortcuts";
 
-import CodeBlockNode from './CodeBlockNode.vue';
-import TaskItemNode from './TaskItemNode.vue';
-import Paper from './Paper.js';
+import CodeBlockNode from "./CodeBlockNode.vue";
+import TaskItemNode from "./TaskItemNode.vue";
+import Paper from "./Paper.js";
 
 // Create lowlight instance with common languages (~35 languages)
 const lowlight = createLowlight(common);
 
-
 // ---------- Types ----------
 type CollaborationHandle = {
   ydoc?: Y.Doc;
-  provider?: { destroy?: () => void; disconnect?: () => void; on?: (event: string, fn: Function) => void };
-  indexedDbProvider?: { destroy?: () => void; on?: (event: string, fn: Function) => void; whenSynced?: Promise<unknown> };
+  provider?: {
+    destroy?: () => void;
+    disconnect?: () => void;
+    on?: (event: string, fn: Function) => void;
+  };
+  indexedDbProvider?: {
+    destroy?: () => void;
+    on?: (event: string, fn: Function) => void;
+    whenSynced?: Promise<unknown>;
+  };
   collaborationExtension?: unknown;
   cursorExtension?: unknown;
   cleanup?: () => Promise<void>;
@@ -146,7 +190,9 @@ const WorkspaceNoteBehavior = Extension.create({
           return false;
         }
 
-        const previousNode = this.editor.state.doc.resolve($from.before($from.depth) - 1).nodeBefore;
+        const previousNode = this.editor.state.doc.resolve(
+          $from.before($from.depth) - 1,
+        ).nodeBefore;
         if (previousNode?.type.name !== "heading") {
           return false;
         }
@@ -169,8 +215,6 @@ const CustomTaskItem = TaskItem.extend({
 //   content: "paper",
 // });
 
-
-
 // ---------- reactive refs ----------
 const editor = shallowRef<Editor | null>(null);
 const isApplyingExternalValue = ref(false);
@@ -179,28 +223,34 @@ const emit = defineEmits<{
   (e: "update:modelValue", value: string): void;
   (e: "addToMaterial", value: string): void;
   (e: "blur"): void;
-  (e: "collaboration-status", value: {
-    connected?: boolean;
-    synced?: boolean;
-    indexedDbSynced?: boolean;
-    unsyncedChanges?: number;
-    error?: string | null;
-  }): void;
+  (
+    e: "collaboration-status",
+    value: {
+      connected?: boolean;
+      synced?: boolean;
+      indexedDbSynced?: boolean;
+      unsyncedChanges?: number;
+      error?: string | null;
+    },
+  ): void;
 }>();
 const collaborationHandle = ref<CollaborationHandle>(null);
 const { data: authData } = useAuth();
-const props = withDefaults(defineProps<{
-  id?: string;
-  isFullScreen?: boolean;
-  modelValue: string;
-  /** When true, editor is not editable (passive split-pane mode) */
-  readonly?: boolean;
-  documentMode?: "default" | "workspace-note";
-  collaboration?: CollaborationConfig | null;
-}>(), {
-  documentMode: "default",
-  collaboration: null,
-});
+const props = withDefaults(
+  defineProps<{
+    id?: string;
+    isFullScreen?: boolean;
+    modelValue: string;
+    /** When true, editor is not editable (passive split-pane mode) */
+    readonly?: boolean;
+    documentMode?: "default" | "workspace-note";
+    collaboration?: CollaborationConfig | null;
+  }>(),
+  {
+    documentMode: "default",
+    collaboration: null,
+  },
+);
 const activeDocumentId = ref<string | null>(props.id ?? null);
 
 const normalizeEditorContent = (value?: string | null) => {
@@ -211,7 +261,10 @@ const normalizeEditorContent = (value?: string | null) => {
   return normalizeWorkspaceNoteContent(value);
 };
 
-const applyExternalContent = (value: string | null | undefined, options: { force?: boolean } = {}) => {
+const applyExternalContent = (
+  value: string | null | undefined,
+  options: { force?: boolean } = {},
+) => {
   if (!editor.value) return;
 
   const normalizedValue = normalizeEditorContent(value);
@@ -238,21 +291,25 @@ const editorContainerRef = ref<HTMLElement | null>(null);
 const autoActiveIndex = ref(0);
 const autoPosition = ref<{ top: number; left: number } | null>(null);
 const dismissedSuggestionWord = ref<string | null>(null);
-const { suggestions: autoSuggestions, onInput: autoOnInput, onAccept: autoOnAccept } = usePredictionaryInput();
+const {
+  suggestions: autoSuggestions,
+  onInput: autoOnInput,
+  onAccept: autoOnAccept,
+} = usePredictionaryInput();
 
 function getCurrentWord(): string {
-  if (!editor.value) return '';
+  if (!editor.value) return "";
   const state = editor.value.state;
   const { from } = state.selection;
   try {
     const textBefore = state.doc.textBetween(
       Math.max(0, state.selection.$from.start()),
       from,
-      '\n',
+      "\n",
     );
-    return textBefore.match(/(\S+)$/)?.[1] ?? '';
+    return textBefore.match(/(\S+)$/)?.[1] ?? "";
   } catch {
-    return '';
+    return "";
   }
 }
 
@@ -260,20 +317,22 @@ function acceptSuggestion(word: string) {
   if (!editor.value || props.readonly || !word) return;
   const state = editor.value.state;
   const { from } = state.selection;
-  let currentWord = '';
+  let currentWord = "";
   try {
     const textBefore = state.doc.textBetween(
       Math.max(0, state.selection.$from.start()),
       from,
-      '\n',
+      "\n",
     );
-    currentWord = textBefore.match(/(\S+)$/)?.[1] ?? '';
-  } catch { /* ignore */ }
+    currentWord = textBefore.match(/(\S+)$/)?.[1] ?? "";
+  } catch {
+    /* ignore */
+  }
   editor.value
     .chain()
     .focus()
     .deleteRange({ from: from - currentWord.length, to: from })
-    .insertContent(word + ' ')
+    .insertContent(word + " ")
     .run();
   autoOnAccept(word);
   autoActiveIndex.value = 0;
@@ -281,7 +340,9 @@ function acceptSuggestion(word: string) {
   autoPosition.value = null;
 }
 
-function closeSuggestions(options: { clearInput?: boolean; dismissCurrentWord?: boolean } = {}) {
+function closeSuggestions(
+  options: { clearInput?: boolean; dismissCurrentWord?: boolean } = {},
+) {
   if (options.dismissCurrentWord) {
     dismissedSuggestionWord.value = getCurrentWord() || null;
   }
@@ -289,7 +350,7 @@ function closeSuggestions(options: { clearInput?: boolean; dismissCurrentWord?: 
   autoActiveIndex.value = 0;
   autoPosition.value = null;
   if (options.clearInput) {
-    autoOnInput('');
+    autoOnInput("");
   }
 }
 
@@ -356,23 +417,23 @@ const isSpeaking = ref(false);
 const ttsAvailable = ref(false);
 const ttsError = ref<Error | null>(null);
 
-// Check if browser supports Web Speech API
+// Native speech synthesis is output-only; all model inference stays on OpenRouter.
 onMounted(() => {
-  ttsAvailable.value = 'speechSynthesis' in window;
+  ttsAvailable.value = "speechSynthesis" in window;
   if (!ttsAvailable.value) {
-    ttsError.value = new Error('Text-to-speech not supported in this browser');
+    ttsError.value = new Error("Text-to-speech not supported in this browser");
   }
 });
 
 async function handleReadAloud() {
   const selectedText = getSelectedText();
   if (!selectedText || !selectedText.trim()) {
-    console.warn('No text selected to read aloud');
+    console.warn("No text selected to read aloud");
     return;
   }
 
   if (!ttsAvailable.value) {
-    console.error('Text-to-speech not available');
+    console.error("Text-to-speech not available");
     return;
   }
 
@@ -387,13 +448,13 @@ async function handleReadAloud() {
 
     // Configure voice (use default or find English voice)
     const voices = window.speechSynthesis.getVoices();
-    const englishVoice = voices.find(voice => voice.lang.startsWith('en'));
+    const englishVoice = voices.find((voice) => voice.lang.startsWith("en"));
     if (englishVoice) {
       utterance.voice = englishVoice;
     }
 
     // Configure speech parameters
-    utterance.rate = 1.0;  // Speed (0.1 to 10)
+    utterance.rate = 1.0; // Speed (0.1 to 10)
     utterance.pitch = 1.0; // Pitch (0 to 2)
     utterance.volume = 1.0; // Volume (0 to 1)
 
@@ -402,14 +463,14 @@ async function handleReadAloud() {
     };
 
     utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event);
-      ttsError.value = new Error('Failed to synthesize speech');
+      console.error("Speech synthesis error:", event);
+      ttsError.value = new Error("Failed to synthesize speech");
       isSpeaking.value = false;
     };
 
     window.speechSynthesis.speak(utterance);
   } catch (error) {
-    console.error('Text-to-speech error:', error);
+    console.error("Text-to-speech error:", error);
     ttsError.value = error as Error;
     isSpeaking.value = false;
   }
@@ -420,8 +481,6 @@ function stopSpeaking() {
   isSpeaking.value = false;
 }
 
-
-
 // ---------- AI Summarization Integration ----------
 const {
   startSummarization,
@@ -429,7 +488,7 @@ const {
   isSummarizing,
   isDownloading,
   progress: summaryProgress,
-  summaryError
+  summaryError,
 } = useTextSummarization({
   immediate: false,
 });
@@ -441,7 +500,7 @@ const summaryInsertPosition = ref<number | null>(null);
 watch(currentSummary, (summary) => {
   if (props.readonly) return;
   if (summary && summaryInsertPosition.value !== null && editor.value) {
-    console.log('Summary ready, inserting into editor:', summary);
+    console.log("Summary ready, inserting into editor:", summary);
 
     editor.value
       .chain()
@@ -450,7 +509,7 @@ watch(currentSummary, (summary) => {
       .insertContent(`\n\n**Summary:** ${summary}\n\n`)
       .run();
 
-    console.log('Summary inserted at position:', summaryInsertPosition.value);
+    console.log("Summary inserted at position:", summaryInsertPosition.value);
     summaryInsertPosition.value = null; // Reset
   }
 });
@@ -459,7 +518,7 @@ function handleSummarize() {
   if (props.readonly) return;
   const selectedText = getSelectedText();
   if (!selectedText || !selectedText.trim()) {
-    console.warn('No text selected to summarize');
+    console.warn("No text selected to summarize");
     return;
   }
 
@@ -468,8 +527,11 @@ function handleSummarize() {
     const { to } = editor.value.state.selection;
     summaryInsertPosition.value = to;
 
-    console.log('Starting non-blocking summarization for text:', selectedText.substring(0, 100) + '...');
-    console.log('Will insert at position:', to);
+    console.log(
+      "Starting non-blocking summarization for text:",
+      selectedText.substring(0, 100) + "...",
+    );
+    console.log("Will insert at position:", to);
 
     // Start summarization in background (non-blocking)
     startSummarization(selectedText, {
@@ -479,7 +541,6 @@ function handleSummarize() {
   }
 }
 
-
 // ─── Editor Context & Action Registry ────────────────────────────
 const { context: editorContext } = useEditorContext(editor);
 const registeredActions = createEditorActions();
@@ -488,10 +549,10 @@ const registeredActions = createEditorActions();
 function handleBubbleAiAction(actionId: string) {
   if (props.readonly) return;
   switch (actionId) {
-    case 'summarize':
+    case "summarize":
       handleSummarize();
       break;
-    case 'readAloud':
+    case "readAloud":
       isSpeaking.value ? stopSpeaking() : handleReadAloud();
       break;
   }
@@ -503,19 +564,25 @@ const contextMenuItems = computed(() => {
   const ed = editor.value;
   if (!ed) return [];
 
-  const groups: Array<Array<{
-    label: string;
-    icon: string;
-    disabled?: boolean;
-    onSelect: () => void;
-  }>> = [];
+  const groups: Array<
+    Array<{
+      label: string;
+      icon: string;
+      disabled?: boolean;
+      onSelect: () => void;
+    }>
+  > = [];
 
   // Editing actions are only active if not readonly
   if (!props.readonly) {
     // ── Group 1: Context-specific actions ──────────────────────
     // Table actions (when cursor is inside a table)
     if (ctx.isInTable) {
-      const tableActions = getActionsForCategory(registeredActions, 'table', ctx);
+      const tableActions = getActionsForCategory(
+        registeredActions,
+        "table",
+        ctx,
+      );
       if (tableActions.length) {
         groups.push(toMenuItems(tableActions, ed));
       }
@@ -523,7 +590,7 @@ const contextMenuItems = computed(() => {
 
     // Task actions (when cursor is inside a task item)
     if (ctx.isInTaskItem) {
-      const taskActions = getActionsForCategory(registeredActions, 'task', ctx);
+      const taskActions = getActionsForCategory(registeredActions, "task", ctx);
       if (taskActions.length) {
         groups.push(toMenuItems(taskActions, ed));
       }
@@ -531,7 +598,11 @@ const contextMenuItems = computed(() => {
 
     // ── Group 2: Formatting (when text is selected, not in code block)
     if (ctx.hasSelection && !ctx.isInCodeBlock) {
-      const formatActions = getActionsForCategory(registeredActions, 'formatting', ctx);
+      const formatActions = getActionsForCategory(
+        registeredActions,
+        "formatting",
+        ctx,
+      );
       if (formatActions.length) {
         groups.push(toMenuItems(formatActions, ed));
       }
@@ -539,7 +610,11 @@ const contextMenuItems = computed(() => {
 
     // ── Group 3: Insert actions (when no selection or general use)
     if (!ctx.isInCodeBlock && !ctx.isInTable) {
-      const insertActions = getActionsForCategory(registeredActions, 'insert', ctx);
+      const insertActions = getActionsForCategory(
+        registeredActions,
+        "insert",
+        ctx,
+      );
       if (insertActions.length) {
         groups.push(toMenuItems(insertActions, ed));
       }
@@ -560,12 +635,12 @@ const contextMenuItems = computed(() => {
   // Add to Material (only if not readonly)
   if (!props.readonly) {
     aiAndCustomActions.push({
-      label: 'Add To Material',
-      icon: 'book-marked',
+      label: "Add To Material",
+      icon: "book-marked",
       disabled: !hasSelection,
       onSelect: () => {
         if (selectedText) {
-          emit('addToMaterial', selectedText);
+          emit("addToMaterial", selectedText);
         }
       },
     });
@@ -573,8 +648,16 @@ const contextMenuItems = computed(() => {
 
   // Read Aloud
   aiAndCustomActions.push({
-    label: isSpeaking.value ? 'Stop Reading' : ttsError.value ? 'TTS Unavailable' : 'Read Aloud',
-    icon: isSpeaking.value ? 'volume-x' : ttsError.value ? 'alert-circle' : 'volume-2',
+    label: isSpeaking.value
+      ? "Stop Reading"
+      : ttsError.value
+        ? "TTS Unavailable"
+        : "Read Aloud",
+    icon: isSpeaking.value
+      ? "volume-x"
+      : ttsError.value
+        ? "alert-circle"
+        : "volume-2",
     disabled: !hasSelection || !ttsAvailable.value,
     onSelect: isSpeaking.value ? stopSpeaking : handleReadAloud,
   });
@@ -582,15 +665,15 @@ const contextMenuItems = computed(() => {
   // Summarize
   aiAndCustomActions.push({
     label: isSummarizing.value
-      ? 'Summarizing...'
+      ? "Summarizing..."
       : isDownloading.value
-        ? 'Downloading Model...'
-        : 'Summarize Text',
+        ? "Downloading Model..."
+        : "Summarize Text",
     icon: isSummarizing.value
-      ? 'loader'
+      ? "loader"
       : isDownloading.value
-        ? 'download'
-        : 'sparkles',
+        ? "download"
+        : "sparkles",
     disabled: !hasSelection || isSummarizing.value || isDownloading.value,
     onSelect: handleSummarize,
   });
@@ -609,8 +692,8 @@ const contextMenuItems = computed(() => {
 
   if (!props.readonly) {
     clipboardActions.push({
-      label: 'Select All',
-      icon: 'check-square',
+      label: "Select All",
+      icon: "check-square",
       onSelect: () => {
         ed.commands.selectAll();
       },
@@ -618,37 +701,37 @@ const contextMenuItems = computed(() => {
   }
 
   clipboardActions.push({
-    label: 'Copy',
-    icon: 'copy',
+    label: "Copy",
+    icon: "copy",
     disabled: !hasSelection,
     onSelect: () => {
-      document.execCommand('copy');
+      document.execCommand("copy");
     },
   });
 
   if (!props.readonly) {
     clipboardActions.push({
-      label: 'Cut',
-      icon: 'scissors',
+      label: "Cut",
+      icon: "scissors",
       disabled: !hasSelection,
       onSelect: () => {
-        document.execCommand('cut');
+        document.execCommand("cut");
       },
     });
 
     clipboardActions.push({
-      label: 'Paste',
-      icon: 'clipboard',
+      label: "Paste",
+      icon: "clipboard",
       onSelect: async () => {
         try {
           if (navigator.clipboard && navigator.clipboard.readText) {
             const text = await navigator.clipboard.readText();
             ed.commands.insertContent(text);
           } else {
-            document.execCommand('paste');
+            document.execCommand("paste");
           }
         } catch {
-          document.execCommand('paste');
+          document.execCommand("paste");
         }
       },
     });
@@ -675,7 +758,7 @@ watch(
 
     applyExternalContent(value, { force: switchedDocument });
   },
-  { immediate: true }
+  { immediate: true },
 );
 
 watch(
@@ -689,7 +772,7 @@ watch(
         stopSpeaking();
       }
     }
-  }
+  },
 );
 
 // End Navigation menu items
@@ -738,7 +821,10 @@ function isBodyEmpty(ed: any): boolean {
   if (!ed) return true;
   let hasTextOrLeaf = false;
   ed.state.doc.descendants((node: any) => {
-    if (props.documentMode === "workspace-note" && node.type.name === "heading") {
+    if (
+      props.documentMode === "workspace-note" &&
+      node.type.name === "heading"
+    ) {
       return;
     }
     if (node.isText && node.text && node.text.trim().length > 0) {
@@ -757,8 +843,8 @@ const CustomTableCell = TableCell.extend({
       ...this.parent?.(),
       backgroundColor: {
         default: null,
-        parseHTML: element => element.style.backgroundColor || null,
-        renderHTML: attributes => {
+        parseHTML: (element) => element.style.backgroundColor || null,
+        renderHTML: (attributes) => {
           if (!attributes.backgroundColor) {
             return {};
           }
@@ -777,8 +863,8 @@ const CustomTableHeader = TableHeader.extend({
       ...this.parent?.(),
       backgroundColor: {
         default: null,
-        parseHTML: element => element.style.backgroundColor || null,
-        renderHTML: attributes => {
+        parseHTML: (element) => element.style.backgroundColor || null,
+        renderHTML: (attributes) => {
           if (!attributes.backgroundColor) {
             return {};
           }
@@ -816,7 +902,9 @@ const createCollaborationHandle = async (): Promise<{
   // Yjs IndexedDB names are otherwise global to this browser profile. Scope
   // persisted CRDT state by account before workspace/note so another account
   // can never attach to the previous account's local document.
-  const accountId = String((authData.value?.user as { id?: string } | undefined)?.id ?? "unverified");
+  const accountId = String(
+    (authData.value?.user as { id?: string } | undefined)?.id ?? "unverified",
+  );
   const localDocName = `notes:${accountId}:${config.workspaceId}:${config.noteId}:${field}`;
   const indexedDbProvider = new IndexeddbPersistence(localDocName, ydoc);
   indexedDbProvider.on("synced", () => {
@@ -832,9 +920,11 @@ const createCollaborationHandle = async (): Promise<{
   // Build the local Yjs document first. A disconnected browser must not keep
   // a collaboration socket alive; reconnect attaches this same CRDT document
   // and lets Yjs merge it with the server document.
-  if (typeof navigator === "undefined" || !navigator.onLine) provider.disconnect();
+  if (typeof navigator === "undefined" || !navigator.onLine)
+    provider.disconnect();
   const reconnect = () => {
-    if (navigator.onLine) (provider as unknown as { connect?: () => void }).connect?.();
+    if (navigator.onLine)
+      (provider as unknown as { connect?: () => void }).connect?.();
   };
   window.addEventListener("online", reconnect);
 
@@ -901,7 +991,7 @@ onMounted(async () => {
   // create editor instance
   // Autocomplete Tiptap extension — handles Tab / Arrow / Escape while dropdown is open
   const AutocompleteExtension = Extension.create({
-    name: 'predictionary',
+    name: "predictionary",
     addKeyboardShortcuts() {
       return {
         Tab: () => {
@@ -939,7 +1029,8 @@ onMounted(async () => {
         },
         Enter: () => {
           if (autoPosition.value && autoSuggestions.value.length > 0) {
-            const activeSuggestion = autoSuggestions.value[autoActiveIndex.value];
+            const activeSuggestion =
+              autoSuggestions.value[autoActiveIndex.value];
             if (activeSuggestion) {
               acceptSuggestion(activeSuggestion);
               return true;
@@ -954,7 +1045,11 @@ onMounted(async () => {
   const GenericPlaceholder = Placeholder.configure({
     emptyNodeClass: "is-editor-node-empty",
     placeholder: ({ node, pos, editor: ed }) => {
-      if (props.documentMode === "workspace-note" && node.type.name === "heading" && pos === 0) {
+      if (
+        props.documentMode === "workspace-note" &&
+        node.type.name === "heading" &&
+        pos === 0
+      ) {
         return "What's the title?";
       }
       if (node.type.name === "paragraph" && isBodyEmpty(ed)) {
@@ -967,7 +1062,9 @@ onMounted(async () => {
     showOnlyWhenEditable: true,
   });
 
-  let collaborationSetup: Awaited<ReturnType<typeof createCollaborationHandle>> = {
+  let collaborationSetup: Awaited<
+    ReturnType<typeof createCollaborationHandle>
+  > = {
     handle: null,
     extensions: [],
   };
@@ -988,9 +1085,13 @@ onMounted(async () => {
         codeBlock: false,
         undoRedo: collaborationExtensions.length ? false : undefined,
       }),
-      props.documentMode === "workspace-note" ? WorkspaceNoteDocument : CustomDocument,
+      props.documentMode === "workspace-note"
+        ? WorkspaceNoteDocument
+        : CustomDocument,
       GenericPlaceholder,
-      ...(props.documentMode === "workspace-note" ? [WorkspaceNoteBehavior] : []),
+      ...(props.documentMode === "workspace-note"
+        ? [WorkspaceNoteBehavior]
+        : []),
       ...collaborationExtensions,
       Color.configure({ types: [TextStyle.name, ListItem.name] }),
       TextStyle,
@@ -1015,7 +1116,9 @@ onMounted(async () => {
       }),
       Paper,
     ],
-    content: collaborationExtensions.length ? undefined : normalizeEditorContent(props.modelValue),
+    content: collaborationExtensions.length
+      ? undefined
+      : normalizeEditorContent(props.modelValue),
     editable: !props.readonly,
     editorProps: {
       attributes: { dir: "auto" },
@@ -1138,7 +1241,6 @@ function getSelectedText(): string | null {
   word-break: normal;
 }
 
-
 .ProseMirror p,
 .ProseMirror h1,
 .ProseMirror h2,
@@ -1168,7 +1270,9 @@ function getSelectedText(): string | null {
 /* Autocomplete dropdown transition */
 .auto-suggestions-enter-active,
 .auto-suggestions-leave-active {
-  transition: opacity 0.1s ease, transform 0.1s ease;
+  transition:
+    opacity 0.1s ease,
+    transform 0.1s ease;
 }
 
 .auto-suggestions-enter-from,
@@ -1298,11 +1402,16 @@ function getSelectedText(): string | null {
 
 /* ======= Inline code ======= */
 .tiptap code {
-  background-color: color-mix(in srgb, var(--color-accent-purple) 12%, transparent);
+  background-color: color-mix(
+    in srgb,
+    var(--color-accent-purple) 12%,
+    transparent
+  );
   border-radius: 0.35rem;
   color: var(--color-primary);
   font-size: 0.82rem;
-  font-family: "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace;
+  font-family:
+    "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace;
   padding: 0.2em 0.4em;
   font-weight: 500;
 }
@@ -1326,7 +1435,8 @@ function getSelectedText(): string | null {
   justify-content: space-between;
   padding: 0.35rem 0.75rem;
   background: var(--syntax-bg);
-  border-bottom: 1px solid color-mix(in srgb, var(--color-white) 6%, transparent);
+  border-bottom: 1px solid
+    color-mix(in srgb, var(--color-white) 6%, transparent);
   user-select: none;
 }
 
@@ -1362,7 +1472,8 @@ function getSelectedText(): string | null {
 .code-block-lang-select:focus {
   outline: none;
   border-color: color-mix(in srgb, var(--color-accent-purple) 50%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent-purple) 15%, transparent);
+  box-shadow: 0 0 0 2px
+    color-mix(in srgb, var(--color-accent-purple) 15%, transparent);
 }
 
 .code-block-lang-icon {
@@ -1405,7 +1516,8 @@ function getSelectedText(): string | null {
   padding: 1rem 1.25rem !important;
   overflow-x: auto;
   scrollbar-width: thin;
-  scrollbar-color: color-mix(in srgb, var(--color-white) 10%, transparent) transparent;
+  scrollbar-color: color-mix(in srgb, var(--color-white) 10%, transparent)
+    transparent;
 }
 
 .code-block-wrapper pre::-webkit-scrollbar {
@@ -1426,7 +1538,8 @@ function getSelectedText(): string | null {
   padding: 0 !important;
   border-radius: 0 !important;
   color: var(--syntax-text);
-  font-family: "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace;
+  font-family:
+    "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace;
   font-size: 0.8rem;
   line-height: 1.65;
   font-weight: 400;
@@ -1437,7 +1550,8 @@ function getSelectedText(): string | null {
 .tiptap pre {
   background: var(--syntax-bg-inline);
   color: var(--syntax-text);
-  font-family: "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace;
+  font-family:
+    "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", monospace;
   margin: 1.25rem 0;
   padding: 1rem 1.25rem;
   overflow-x: auto;
@@ -1586,10 +1700,9 @@ function getSelectedText(): string | null {
   content: "\201D";
 }
 
-.tiptap blockquote+p {
+.tiptap blockquote + p {
   text-align: right;
 }
-
 
 .tiptap hr {
   border: none;
@@ -1612,7 +1725,7 @@ ul[data-type="taskList"] li {
 }
 
 /* label/checkbox layout inside task item */
-ul[data-type="taskList"] li>label {
+ul[data-type="taskList"] li > label {
   flex: 0 0 auto;
   margin-right: 0.5rem;
   user-select: none;
@@ -1620,13 +1733,13 @@ ul[data-type="taskList"] li>label {
   align-items: center;
 }
 
-ul[data-type="taskList"] li[data-checked="true"]>div p {
+ul[data-type="taskList"] li[data-checked="true"] > div p {
   text-decoration: line-through;
   opacity: 0.7;
 }
 
 /* content wrapper (the editable text) */
-ul[data-type="taskList"] li>div {
+ul[data-type="taskList"] li > div {
   flex: 1 1 auto;
 }
 

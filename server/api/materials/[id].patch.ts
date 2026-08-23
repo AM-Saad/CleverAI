@@ -40,9 +40,6 @@ export default defineEventHandler(async (event) => {
   if (typeof data.title === "string") updateData.title = data.title;
   if (typeof data.content === "string") updateData.content = data.content;
   if (typeof data.type === "string") updateData.type = data.type;
-  if (typeof data.llmModel === "string") updateData.llmModel = data.llmModel;
-  if (typeof data.llmPrompt === "string" || data.llmPrompt === null)
-    updateData.llmPrompt = data.llmPrompt;
   if (data.metadata !== undefined)
     updateData.metadata = data.metadata
       ? JSON.parse(JSON.stringify(data.metadata))

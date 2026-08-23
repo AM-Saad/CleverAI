@@ -38,7 +38,6 @@ export default defineEventHandler(async (event) => {
       title: data.title,
       content: data.content,
       type: data.type,
-      llmModel: data.llmModel,
       metadata: data.metadata
         ? JSON.parse(JSON.stringify(data.metadata))
         : null,

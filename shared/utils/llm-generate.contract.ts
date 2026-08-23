@@ -1,6 +1,5 @@
 // shared/llm-generate.contract.ts
 import { z } from "zod";
-import { LLMEnum } from "./llm";
 
 // Source metadata for Context Bridge feature
 export const SourceMetadataSchema = z
@@ -68,7 +67,7 @@ export const GenerationConfigSchema = z.object({
 export type GenerationConfig = z.infer<typeof GenerationConfigSchema>;
 
 /**
- * Gateway request schema - extends base generation with routing options
+ * OpenRouter generation request schema.
  */
 export const GatewayGenerateRequest = z
   .object({
@@ -78,9 +77,6 @@ export const GatewayGenerateRequest = z
     materialId: z.string().optional(), // Generate from specific material
     save: z.boolean().optional(),
     replace: z.boolean().optional(),
-    // Gateway-specific options:
-    preferredModelId: z.string().optional(), // e.g., 'gpt-4o-mini', 'gemini-flash-8b'
-    requiredCapability: z.enum(["text", "multimodal", "reasoning"]).optional(),
     generationConfig: GenerationConfigSchema.optional(), // Adaptive generation config
   })
   .refine((data) => data.text || data.materialId, {
@@ -105,7 +101,6 @@ export const GatewayGenerateResponse = z.union([
     provider: z.string(),
     latencyMs: z.number(),
     cached: z.boolean(),
-    routingScore: z.number().optional(),
     itemCount: z.number().optional(), // Number of items generated (adaptive)
     tokenEstimate: z.number().optional(), // Estimated tokens for input
   }),
@@ -122,7 +117,6 @@ export const GatewayGenerateResponse = z.union([
     provider: z.string(),
     latencyMs: z.number(),
     cached: z.boolean(),
-    routingScore: z.number().optional(),
     itemCount: z.number().optional(), // Number of items generated (adaptive)
     tokenEstimate: z.number().optional(), // Estimated tokens for input
   }),

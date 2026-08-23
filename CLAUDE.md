@@ -12,15 +12,15 @@ Stack: **Nuxt 4** (`compatibilityVersion: 4`, `srcDir: app/`), Vue 3.5, TypeScri
 
 - `app/` — frontend (Nuxt srcDir). `components/`, `pages/`, `layouts/`, `composables/`, `services/`, `features/`, `design-system/`.
 - `app/features/<feature>/` — **the canonical place for feature code**: `components/`, `containers/` (data/logic, imported by pages), `composables/`, `services/`. Features are: `board, integrations, language-learning, materials, notes, notifications, review`.
-- `server/` — Nitro API routes + server services (LLM strategies, cron, notifications).
+- `server/` — Nitro API routes + server services (OpenRouter AI, cron, notifications).
 - `shared/` — **Zod contracts** in `shared/utils/*.contract.ts` (e.g. `note.contract.ts`, `workspace.contract.ts`), authoritative for request/response shapes across client+server.
 - Aliases: `~`/`@` → `app/`; `@server` → `server/`; `~/shared`,`#shared`,`@shared` → `shared/`.
 
 ## Commands
 
-- Dev: `yarn dev` (builds AI worker, `nuxt dev` on :8080). Build: `yarn build` (frontend+nitro) / `yarn build:inject` (with SW).
+- Dev: `yarn dev` (`nuxt dev` on :8080). Build: `yarn build` (frontend+Nitro+SW).
 - Lint: `yarn lint` / `yarn lintfix`. Unit tests: `yarn test:unit`. PWA e2e: `yarn test:pwa-offline`.
-- Prisma: `yarn db:sync`, `yarn db:studio`, `yarn db:seed`.
+- Prisma: `yarn db:sync`, `yarn db:studio`. Legacy AI cleanup: `yarn db:remove-legacy-ai` (dry-run by default).
 - **Design system:** `yarn design:tokens` (regenerate), `yarn design:check` (token gate), `yarn design:boundaries` (component gate), `yarn design:contrast` (WCAG AA), `yarn design:audit` / `yarn design:components` (reports).
 - Boundaries: `yarn arch:check` (layer import rules).
 
@@ -31,18 +31,20 @@ Full specs: [app/DESIGN.md](app/DESIGN.md), [docs/DESIGN_SYSTEM.md](docs/DESIGN_
 **Tokens** — single source of truth is [app/design-system/tokens/index.cjs](app/design-system/tokens/index.cjs). Edit there, then `yarn design:tokens` to regenerate `tokens.generated.{css,ts}` (**never hand-edit the generated files**). `themeTokens` → Tailwind utilities (`bg-surface`, `text-content-secondary`, gradient `from-/to-…`) **and** `var(--…)`. `darkTokens` → `.dark` overrides. `rootTokens` → `:root` vars (`--syntax-*`, `--ds-*`, `--component-*`). JS that needs a literal color reads `designTokenValues` from the generated TS (don't hardcode hex).
 
 **Styling rules (enforced by `yarn design:check`, in pre-commit + CI):**
+
 - No raw hex, no Tailwind palette classes (`text-gray-500`), no built-in `rounded-*`/`shadow-*`. Use token utilities (`bg-surface`, `rounded-[var(--radius-lg)]`, `shadow-[var(--shadow-dropdown)]`). Translucency via `color-mix(in srgb, var(--token) N%, transparent)`.
 - Escape hatch: `design-allow` comment on the line, or `design-allow-file` in the file. Use sparingly.
 
 **Components** — primitives live in `app/components/ui/` as **`Ui*`** wrappers, mostly thin wrappers over the already-themed Nuxt UI (`UiButton`→`UButton`, `UiModal`→`DialogModal`, etc.), built with **`tailwind-variants` `tv()`** from [app/components/ui/variants.ts](app/components/ui/variants.ts) (shared `SIZES`/`TONES`). Reference impl: [UiCard.vue](app/components/ui/UiCard.vue).
-- **Policy (enforced by `yarn design:boundaries`):** feature/page code uses `Ui*`, **not** Nuxt UI `U*` directly, and no raw `<button>`/`<input>`/`<dialog>`/ad-hoc modal overlays. The gate is a *regression* gate against the `docs/component-audit/components.json` baseline (no new drift; existing backlog is being migrated incrementally).
+
+- **Policy (enforced by `yarn design:boundaries`):** feature/page code uses `Ui*`, **not** Nuxt UI `U*` directly, and no raw `<button>`/`<input>`/`<dialog>`/ad-hoc modal overlays. The gate is a _regression_ gate against the `docs/component-audit/components.json` baseline (no new drift; existing backlog is being migrated incrementally).
 - Prop vocabulary: `tone` (primary/neutral/success/warning/error/info), `size` (xs–xl), `variant`, boolean `loading`/`disabled`. Wrappers forward all slots + `$attrs`.
 - **Dark mode:** light by default; `UiColorModeToggle` (light/dark/system) sets `.dark` on `<html>`, which flips the token-based UI automatically.
 - **Catalog:** `/design-system` (dev-only route) renders every primitive × states + token palettes. Keep it updated when adding a primitive.
 
 ## Backend conventions
 
-- **LLM:** strategy pattern in `server/utils/llm/` — `getLLMStrategy()`/`getLLMStrategyFromRegistry()` in `LLMFactory.ts`; current providers are OpenAI/Gemini/DeepSeek/Groq/OpenRouter (`*Strategy.ts`). Cost/usage accounting via `llmCost.ts` + `gatewayLogger.ts`.
+- **AI:** OpenRouter only. All inference uses `openRouter.ts` through `llmRequestPipeline.ts`; usage/cost comes from OpenRouter into `LlmUsage`. Never add direct provider SDKs, client-side models, public model selectors, DB model registries, or local price tables.
 - **API:** routes under `server/api/`, validate with the `shared/utils/*.contract.ts` Zod schemas.
 - **Frontend data:** use the `serviceFactory` + `FetchFactory` service layer (`app/services/`); don't scatter `fetch` in components.
 - `yarn arch:check` enforces layer boundaries (e.g. server must not import frontend/app or API-route adapters).

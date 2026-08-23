@@ -17,9 +17,11 @@ export interface ConsumedQuota {
   remaining: number;
   creditBalance: number;
   creditSpent: boolean;
+  reservationKind: "quota" | "credit" | "unlimited";
 }
 
 export interface QuotaPort {
   checkGenerationQuota(userId: string): Promise<QuotaStatus>;
   consumeGeneration(userId: string): Promise<ConsumedQuota>;
+  refundGeneration(userId: string, reservation: ConsumedQuota): Promise<void>;
 }

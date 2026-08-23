@@ -8,6 +8,10 @@ import { languageStoryPrompt } from "@server/utils/llm/languagePrompts";
 import { parseLanguageStoryResponse } from "../domain/storyResponse";
 import { enrollLanguageWord } from "./enrollLanguageWord";
 import type { QuotaPort } from "@server/modules/subscription/ports/QuotaPort";
+import {
+  OpenRouterRequestError,
+  type OpenRouterGeneration,
+} from "@server/utils/llm/openRouter";
 
 type RelatedWordCandidate = { id: string; word: string };
 
@@ -92,7 +96,7 @@ export async function generateLanguageStory(input: {
     getLanguageLabel(nativeLanguage),
   );
 
-  const { llmRequestPipeline } =
+  const { llmRequestPipeline, throwMappedOpenRouterError } =
     await import("@server/utils/llm/llmRequestPipeline");
   const ctx = await llmRequestPipeline(input.event, {
     quotaPort: input.quotaPort,
@@ -104,12 +108,11 @@ export async function generateLanguageStory(input: {
   });
 
   let rawText = "";
-  let didFinalize = false;
+  let generation: OpenRouterGeneration<string> | undefined;
   try {
-    rawText = await ctx.strategy.generateText(prompt);
+    generation = await ctx.ai.generateText(prompt);
+    rawText = generation.value;
     const parsed = parseLanguageStoryResponse(rawText, languageWord.word);
-    const { updatedQuota } = await ctx.finalize({ outputText: rawText });
-    didFinalize = true;
 
     const story = await prisma.languageStory.create({
       data: {
@@ -117,7 +120,7 @@ export async function generateLanguageStory(input: {
         userId: user.id,
         storyText: parsed.storyText,
         sentences: parsed.sentences as any,
-        modelId: ctx.selectedModel.modelId,
+        modelId: generation.measurement.actualModel,
       },
     });
 
@@ -146,6 +149,7 @@ export async function generateLanguageStory(input: {
       status = "story_ready";
     }
 
+    const { updatedQuota } = await ctx.finalize({ generation });
     return {
       storyId: story.id,
       storyText: story.storyText,
@@ -163,8 +167,9 @@ export async function generateLanguageStory(input: {
         : undefined,
     };
   } catch (err) {
-    if (!didFinalize) {
-      await ctx.fail(err);
+    await ctx.fail(err, { generation });
+    if (err instanceof OpenRouterRequestError) {
+      throwMappedOpenRouterError(err);
     }
 
     if (err && typeof err === "object" && "statusCode" in err) {

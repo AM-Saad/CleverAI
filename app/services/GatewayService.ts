@@ -3,6 +3,8 @@ import type { $Fetch } from "ofetch";
 import FetchFactory from "./FetchFactory";
 import type { Result } from "@/types/Result";
 import type {
+  CommitMaterialGenerationRequest,
+  CommitMaterialGenerationResponse,
   GatewayGenerateRequest,
   GatewayGenerateResponse,
   GenerationConfig,
@@ -11,7 +13,7 @@ import type {
 
 /**
  * Gateway Service
- * Handles LLM generation with smart model routing
+ * Handles OpenRouter generation.
  */
 export default class GatewayService extends FetchFactory {
   private RESOURCE = "/api/llm.gateway";
@@ -28,7 +30,7 @@ export default class GatewayService extends FetchFactory {
   async uploadMaterial(
     file: File,
     workspaceId: string,
-    title?: string
+    title?: string,
   ): Promise<Result<UploadMaterialResponse>> {
     const formData = new FormData();
     formData.append("file", file);
@@ -41,17 +43,16 @@ export default class GatewayService extends FetchFactory {
       formData,
       {
         timeout: 120000, // 2 minutes for large files
-      }
+      },
     );
   }
 
   /**
-   * Generate flashcards or quiz using gateway routing
-   * Gateway automatically selects best model based on cost, latency, and capabilities
+   * Generate flashcards or quiz through OpenRouter.
    * Throws on error, returns data directly for compatibility with existing composables
    */
   async generate(
-    request: GatewayGenerateRequest
+    request: GatewayGenerateRequest,
   ): Promise<GatewayGenerateResponse> {
     const result = await this.call<GatewayGenerateResponse>(
       "POST",
@@ -60,7 +61,7 @@ export default class GatewayService extends FetchFactory {
       {
         // Add timeout for long-running LLM requests
         timeout: 60000, // 60 seconds
-      }
+      },
     );
 
     if (!result.success) {
@@ -80,10 +81,8 @@ export default class GatewayService extends FetchFactory {
       materialId?: string;
       save?: boolean;
       replace?: boolean;
-      preferredModelId?: string;
-      requiredCapability?: "text" | "multimodal" | "reasoning";
       generationConfig?: GenerationConfig;
-    }
+    },
   ): Promise<GatewayGenerateResponse> {
     return this.generate({
       task: "flashcards",
@@ -102,15 +101,26 @@ export default class GatewayService extends FetchFactory {
       materialId?: string;
       save?: boolean;
       replace?: boolean;
-      preferredModelId?: string;
-      requiredCapability?: "text" | "multimodal" | "reasoning";
       generationConfig?: GenerationConfig;
-    }
+    },
   ): Promise<GatewayGenerateResponse> {
     return this.generate({
       task: "quiz",
       text,
       ...options,
     });
+  }
+
+  async commitGeneratedContent(
+    workspaceId: string,
+    payload: CommitMaterialGenerationRequest,
+  ): Promise<CommitMaterialGenerationResponse> {
+    const result = await this.call<CommitMaterialGenerationResponse>(
+      "POST",
+      `/api/workspaces/${workspaceId}/generated`,
+      payload,
+    );
+    if (!result.success) throw result.error;
+    return result.data;
   }
 }

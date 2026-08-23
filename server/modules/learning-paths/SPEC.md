@@ -32,8 +32,8 @@ The flagship domain (JavaScript) is **hand-curated** as code. Additional domains
 
 The defensible asset is the **graph structure**, not the content. Flat course apps
 store "Module 1, Module 2." A prerequisite DAG lets us diagnose, route, and visualize
-in ways a flat list cannot. The product's edge is *"a mentor that knows what you don't
-know yet,"* not *"AI can generate a course on any topic"* (a crowded 2026 claim).
+in ways a flat list cannot. The product's edge is _"a mentor that knows what you don't
+know yet,"_ not _"AI can generate a course on any topic"_ (a crowded 2026 claim).
 
 Consequences that this spec deliberately encodes:
 
@@ -51,14 +51,14 @@ Consequences that this spec deliberately encodes:
 
 An atom is **one teachable concept that fits in one question**.
 
-| Field           | Type                          | Notes                                                            |
-| --------------- | ----------------------------- | ---------------------------------------------------------------- |
-| `slug`          | `string` (kebab-case, unique) | Stable identifier; referenced by prerequisites.                  |
-| `name`          | `string`                      | Display name.                                                    |
-| `category`      | `string`                      | Domain-defined grouping (e.g. fundamentals/logic/async).         |
-| `importance`    | `int` 1–10                    | Editorial. See §5 importance scale.                              |
-| `prerequisites` | `string[]` (slugs)            | Directional, acyclic. Must reference existing slugs.             |
-| `tags`          | `string[]` (≥ 1)              | Searchable categories, not identity.                             |
+| Field           | Type                          | Notes                                                    |
+| --------------- | ----------------------------- | -------------------------------------------------------- |
+| `slug`          | `string` (kebab-case, unique) | Stable identifier; referenced by prerequisites.          |
+| `name`          | `string`                      | Display name.                                            |
+| `category`      | `string`                      | Domain-defined grouping (e.g. fundamentals/logic/async). |
+| `importance`    | `int` 1–10                    | Editorial. See §5 importance scale.                      |
+| `prerequisites` | `string[]` (slugs)            | Directional, acyclic. Must reference existing slugs.     |
+| `tags`          | `string[]` (≥ 1)              | Searchable categories, not identity.                     |
 
 ### 3.2 Taxonomy
 
@@ -87,9 +87,9 @@ infrastructure / ports` convention already used by `ai-generation`. The module d
 only on **abstractions it owns** (ports). The host app depends on the module; the module
 never depends on host-app concretes.
 
-**Invariant:** the arrow of dependency points *into* the module, never out. `domain/`
+**Invariant:** the arrow of dependency points _into_ the module, never out. `domain/`
 and `application/` import from `ports/` only — never from `infrastructure/`, never from
-frontend (`~/`, `@/`), never from a host concrete (Prisma client, `getLLMStrategy()`,
+frontend (`~/`, `@/`), never from a host concrete (Prisma client, the OpenRouter adapter,
 auth utilities, Pinia).
 
 ### 4.2 Why
@@ -130,17 +130,17 @@ server/modules/learning-paths/
 
 ### 4.5 Portability ledger
 
-| Layer                              | On extraction day | Why                              |
-| ---------------------------------- | ----------------- | -------------------------------- |
-| `domain/`                          | Copy as-is        | Pure logic, no host imports      |
-| `application/`                     | Copy as-is        | Calls ports only                 |
-| `ports/`                           | Copy as-is        | Interfaces owned by the module   |
-| `shared/.../learning-path.contract`| Copy as-is        | Self-contained Zod               |
-| `taxonomies/seeds/*`               | Copy as-is        | Plain data                       |
-| `app/features/learning-paths/` (UI)| Copy as-is        | Talks only to the HTTP contract  |
-| `infrastructure/` adapters         | Rewrite (small)   | Re-point at new app's infra      |
-| `wire.ts`                          | Rewrite (tiny)    | New composition root             |
-| Prisma model slice                 | Copy the slice    | Per §4.3 it has no foreign reach |
+| Layer                               | On extraction day | Why                              |
+| ----------------------------------- | ----------------- | -------------------------------- |
+| `domain/`                           | Copy as-is        | Pure logic, no host imports      |
+| `application/`                      | Copy as-is        | Calls ports only                 |
+| `ports/`                            | Copy as-is        | Interfaces owned by the module   |
+| `shared/.../learning-path.contract` | Copy as-is        | Self-contained Zod               |
+| `taxonomies/seeds/*`                | Copy as-is        | Plain data                       |
+| `app/features/learning-paths/` (UI) | Copy as-is        | Talks only to the HTTP contract  |
+| `infrastructure/` adapters          | Rewrite (small)   | Re-point at new app's infra      |
+| `wire.ts`                           | Rewrite (tiny)    | New composition root             |
+| Prisma model slice                  | Copy the slice    | Per §4.3 it has no foreign reach |
 
 ---
 
@@ -153,7 +153,7 @@ taxonomy file is judged against.
    questions, it is two atoms; if it is "a question, not a concept," it is not an atom.
 2. **Prerequisites are directional and acyclic.** The graph is a DAG rooted at the
    domain's entry-point atom(s).
-3. **Importance is editorial** — *"how dangerous is it if you don't know this"* — **not
+3. **Importance is editorial** — _"how dangerous is it if you don't know this"_ — **not
    statistical.** It encodes taste, the thing AI cannot yet do well and humans must own.
 4. **Tags are searchable categories, not identity.** An atom is defined by its place in
    the graph, not its tags.
@@ -231,22 +231,22 @@ requestTaxonomy(domain)
   `GenerationCachePort`, so cost flows through `llmCost.ts` / `gatewayLogger.ts` and the
   user never blocks on a 30s spinner.
 - **Tiered rollout, encoded in data** via `provenance` × `status`:
-  - *Curated* — hand-authored seeds (flagship/wedge domains).
-  - *AI-reviewed* — AI draft, validated, human-approved, cached. The deliberate long tail.
-  - *AI-draft* — generated on demand for anything a user types; clearly labelled "beta";
+  - _Curated_ — hand-authored seeds (flagship/wedge domains).
+  - _AI-reviewed_ — AI draft, validated, human-approved, cached. The deliberate long tail.
+  - _AI-draft_ — generated on demand for anything a user types; clearly labelled "beta";
     promotes to AI-reviewed if it gains traction.
 
 ---
 
 ## 9. Ports (the seam, enumerated)
 
-| Port                      | Responsibility                              | Host adapter wraps              |
-| ------------------------- | ------------------------------------------- | ------------------------------- |
-| `LLMPort`                 | `generate(prompt) -> json`                  | `getLLMStrategy()` / LLMFactory |
-| `TaxonomyRepositoryPort`  | load/save taxonomies, atoms, learner progress | Prisma                        |
-| `IdentityPort`            | `currentUserId()`                           | host auth                       |
-| `EventBusPort`            | `emit(domainEvent)`                         | `shared-kernel` DomainEventBus  |
-| `CachePort`               | published-taxonomy + generation caching     | `GenerationCachePort` pattern   |
+| Port                     | Responsibility                                | Host adapter wraps                 |
+| ------------------------ | --------------------------------------------- | ---------------------------------- |
+| `LLMPort`                | `generate(prompt) -> json`                    | shared OpenRouter request pipeline |
+| `TaxonomyRepositoryPort` | load/save taxonomies, atoms, learner progress | Prisma                             |
+| `IdentityPort`           | `currentUserId()`                             | host auth                          |
+| `EventBusPort`           | `emit(domainEvent)`                           | `shared-kernel` DomainEventBus     |
+| `CachePort`              | published-taxonomy + generation caching       | `GenerationCachePort` pattern      |
 
 Adapters live in `infrastructure/`; `wire.ts` is the single composition root that builds
 the application services from concrete adapters.

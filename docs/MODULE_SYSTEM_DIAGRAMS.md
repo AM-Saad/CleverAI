@@ -264,7 +264,7 @@ Current maturity: medium. Frontend feature slice exists; server material routes 
 
 ## AI Generation Module
 
-AI generation coordinates request preparation, model routing, semantic cache, provider execution, quota, and saving artifacts.
+AI generation coordinates request preparation, atomic quota reservation, OpenRouter execution, strict validation, audit, and artifact persistence.
 
 ```mermaid
 flowchart TD
@@ -273,13 +273,10 @@ flowchart TD
   Run --> Pipeline["llmRequestPipeline"]
   Pipeline --> RateLimit["rate limit"]
   Pipeline --> Quota["QuotaPort"]
-  Pipeline --> Router["model routing"]
-  Router --> Strategy["LLM provider strategy"]
-  Run --> Cache["GenerationCachePort"]
-  Strategy --> Complete["completeGatewayGeneration"]
-  Cache --> Complete
-  Complete --> Save["saveGeneratedArtifacts"]
-  Save --> Prisma["Flashcard / Question / LlmGatewayLog"]
+  Pipeline --> OpenRouter["OpenRouter adapter"]
+  OpenRouter --> Validate["strict output validation"]
+  Validate --> Save["saveGeneratedArtifacts"]
+  Save --> Prisma["Flashcard / Question / LlmUsage"]
   Quota --> Subscription["subscription module"]
 ```
 
@@ -287,11 +284,11 @@ Important invariants:
 
 - Public route remains `/api/llm.gateway`.
 - Quota is checked/consumed through `QuotaPort`.
-- Provider calls are isolated behind LLM strategies.
+- Model calls are isolated behind the sole OpenRouter adapter.
 - Generated artifacts are saved inside the ai-generation application flow.
 - The route is thin, but the application still accepts `H3Event` because the pipeline still depends on HTTP request context.
 
-Current maturity: medium-high. The boundary is much better, but HTTP context should eventually be pushed out of application code.
+Current maturity: high. One transport adapter and one lifecycle pipeline serve all model-backed features; application persistence remains feature-owned.
 
 ## Subscription Module
 
